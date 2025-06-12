@@ -43,7 +43,7 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "^0.8.19",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250604.0",
+		"@cloudflare/workers-types": "^4.20250612.0",
 		"@types/mime": "^3.0.4",
 		"esbuild": "catalog:default",
 		"rimraf": "catalog:default",
@@ -51,7 +51,7 @@
 		"vitest": "catalog:default"
 	},
 	"engines": {
-		"node": ">=20.0.0"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

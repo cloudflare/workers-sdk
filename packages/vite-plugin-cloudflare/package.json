@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.5.1",
+	"version": "1.6.0",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -42,7 +42,7 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"@cloudflare/unenv-preset": "2.3.2",
+		"@cloudflare/unenv-preset": "2.3.3",
 		"@mjackson/node-fetch-server": "^0.6.1",
 		"@rollup/plugin-replace": "^6.0.1",
 		"get-port": "^7.1.0",
@@ -57,7 +57,7 @@
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250604.0",
+		"@cloudflare/workers-types": "^4.20250612.0",
 		"@types/node": "catalog:vite-plugin",
 		"@types/ws": "^8.5.13",
 		"magic-string": "^0.30.12",

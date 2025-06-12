@@ -8,8 +8,8 @@ import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
 	LocalRuntimeController,
-	maybeStartOrUpdateMixedModeSession,
 } from "./LocalRuntimeController";
+import { convertCfWorkerInitBindingsToBindings } from "./utils";
 import type { MixedModeSession } from "../mixedMode";
 import type { BundleCompleteEvent } from "./events";
 
@@ -64,7 +64,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	#options = new Map<string, { options: MF.Options; primary: boolean }>();
 
-	#mixedModeSessions = new Map<string, MixedModeSession | undefined>();
+	#mixedModeSessions = new Map<string, MixedModeSession | null>();
 
 	#canStartMiniflare() {
 		return (
@@ -101,11 +101,21 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 			const experimentalMixedMode = data.config.dev.experimentalMixedMode;
 
 			if (experimentalMixedMode && !data.config.dev?.remote) {
-				const mixedModeSession = await maybeStartOrUpdateMixedModeSession(
-					configBundle,
-					this.#mixedModeSessions.get(data.config.name)
+				// note: mixedMode uses (transitively) LocalRuntimeController, so we need to import
+				// from the module lazily in order to avoid circular dependency issues
+				const { maybeStartOrUpdateMixedModeSession } = await import(
+					"../mixedMode"
 				);
-				this.#mixedModeSessions.set(data.config.name, mixedModeSession);
+				const mixedModeSession = await maybeStartOrUpdateMixedModeSession(
+					{
+						name: configBundle.name,
+						bindings:
+							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
+							{},
+					},
+					this.#mixedModeSessions.get(data.config.name) ?? null
+				);
+				this.#mixedModeSessions.set(data.config.name, mixedModeSession ?? null);
 			}
 
 			const { options } = await MF.buildMiniflareOptions(

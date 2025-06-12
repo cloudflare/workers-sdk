@@ -35,7 +35,9 @@ import {
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
 import {
+	getGlobalVirtualModule,
 	injectGlobalCode,
+	isGlobalVirtualModule,
 	isNodeAls,
 	isNodeAlsModule,
 	isNodeCompat,
@@ -600,6 +602,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			// rather than allowing the resolve hook here to alias then to polyfills.
 			enforce: "pre",
 			async resolveId(source, importer, options) {
+				if (isGlobalVirtualModule(source)) {
+					return source;
+				}
 				// See if we can map the `source` to a Node.js compat alias.
 				const result = resolveNodeJSImport(source);
 				if (!result) {
@@ -625,6 +630,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				// We are in build mode so return the absolute path to the polyfill.
 				return this.resolve(result.resolved, importer, options);
+			},
+			load(id) {
+				return getGlobalVirtualModule(id);
 			},
 			async transform(code, id) {
 				// Inject the Node.js compat globals into the entry module for Node.js compat environments.

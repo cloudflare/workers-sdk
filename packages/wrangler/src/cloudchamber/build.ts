@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "fs";
+import { existsSync } from "fs";
 import { join } from "path";
 import {
 	constructBuildCommand,
@@ -6,6 +6,7 @@ import {
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
 	DOMAIN,
+	isDir,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
 import {
@@ -70,11 +71,6 @@ export function pushYargs(yargs: CommonYargsArgvJSON) {
 			demandOption: false,
 		})
 		.positional("TAG", { type: "string", demandOption: true });
-}
-
-export function isDir(path: string) {
-	const stats = statSync(path);
-	return stats.isDirectory();
 }
 
 export async function buildAndMaybePush(

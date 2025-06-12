@@ -1,4 +1,5 @@
 import { spawn, StdioOptions } from "child_process";
+import { existsSync, statSync } from "fs";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = async (
@@ -39,4 +40,49 @@ export const verifyDockerInstalled = async (dockerPath: string) => {
 				`To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false.`
 		);
 	}
+};
+
+export function isDir(path: string) {
+	const stats = statSync(path);
+	return stats.isDirectory();
+}
+
+export const isDockerfile = (image: string): boolean => {
+	// TODO: move this into config validation
+	if (existsSync(image)) {
+		if (isDir(image)) {
+			throw new Error(
+				`${image} is a directory, you should specify a path to the Dockerfile`
+			);
+		}
+		return true;
+	}
+
+	const errorPrefix = `The image "${image}" does not appear to be a valid path to a Dockerfile, or a valid image registry path:\n`;
+	// not found, not a dockerfile, let's try parsing the image ref as an URL?
+	try {
+		new URL(`https://${image}`);
+	} catch (e) {
+		if (e instanceof Error) {
+			throw new Error(errorPrefix + e.message);
+		}
+		throw e;
+	}
+	const imageParts = image.split("/");
+
+	if (!imageParts[imageParts.length - 1].includes(":")) {
+		throw new Error(
+			errorPrefix +
+				`If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)`
+		);
+	}
+
+	// validate URL
+	if (image.includes("://")) {
+		throw new Error(
+			errorPrefix +
+				`Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
+		);
+	}
+	return false;
 };

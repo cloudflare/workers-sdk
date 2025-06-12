@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.49.2
+
+### Patch Changes
+
+- [#9439](https://github.com/cloudflare/workers-sdk/pull/9439) [`8d648e7`](https://github.com/cloudflare/workers-sdk/commit/8d648e7c2f94cf315cdfffad6ee43e01e82a0947) Thanks [@edmundhung](https://github.com/edmundhung)! - update vitest version on hello-world and hello-world-with-assets templates
+
 ## 2.49.1
 
 ### Patch Changes

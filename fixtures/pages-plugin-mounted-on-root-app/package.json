@@ -15,7 +15,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250604.0",
+		"@cloudflare/workers-types": "^4.20250612.0",
 		"@fixture/pages-plugin": "workspace:*",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
@@ -23,7 +23,7 @@
 		"wrangler": "workspace:*"
 	},
 	"engines": {
-		"node": ">=20.0.0"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

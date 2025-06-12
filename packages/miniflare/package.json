@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "4.20250604.0",
+	"version": "4.20250604.1",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -51,7 +51,7 @@
 		"sharp": "^0.33.5",
 		"stoppable": "1.1.0",
 		"undici": "catalog:default",
-		"workerd": "1.20250604.0",
+		"workerd": "1.20250612.0",
 		"ws": "catalog:default",
 		"youch": "3.3.4",
 		"zod": "3.22.3"
@@ -61,7 +61,7 @@
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250604.0",
+		"@cloudflare/workers-types": "^4.20250612.0",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@microsoft/api-extractor": "^7.52.8",
 		"@types/debug": "^4.1.7",
@@ -76,7 +76,7 @@
 		"@typescript-eslint/eslint-plugin": "^6.9.0",
 		"@typescript-eslint/parser": "^6.9.0",
 		"ava": "^6.0.1",
-		"capnp-es": "^0.0.7",
+		"capnp-es": "^0.0.11",
 		"chokidar": "^4.0.1",
 		"concurrently": "^8.2.2",
 		"devalue": "^4.3.0",
@@ -102,7 +102,7 @@
 		"xdg-app-paths": "^8.3.0"
 	},
 	"engines": {
-		"node": ">=20.0.0"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

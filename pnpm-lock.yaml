@@ -86,8 +86,8 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@ianvs/prettier-plugin-sort-imports':
         specifier: 4.2.1
         version: 4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.2.5)
@@ -143,8 +143,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -182,8 +182,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
@@ -200,8 +200,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -221,8 +221,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -245,8 +245,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -278,8 +278,8 @@ importers:
   fixtures/email-worker:
     devDependencies:
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/mimetext':
         specifier: ^2.0.4
         version: 2.0.4
@@ -314,8 +314,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -384,8 +384,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/node':
         specifier: ^20.17.32
         version: 20.17.32
@@ -408,8 +408,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/is-even':
         specifier: ^1.0.2
         version: 1.0.2
@@ -445,8 +445,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -466,8 +466,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       undici:
         specifier: catalog:default
         version: 5.28.5
@@ -484,8 +484,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/pg':
         specifier: ^8.11.2
         version: 8.11.6
@@ -529,8 +529,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -554,8 +554,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@fixture/pages-plugin':
         specifier: workspace:*
         version: link:../pages-plugin-example
@@ -632,8 +632,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -684,8 +684,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@fixture/pages-plugin':
         specifier: workspace:*
         version: link:../pages-plugin-example
@@ -744,8 +744,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -943,8 +943,8 @@ importers:
   fixtures/secrets-store:
     devDependencies:
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -967,8 +967,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/is-even':
         specifier: ^1.0.2
         version: 1.0.2
@@ -997,8 +997,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vitest-pool-workers
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@microlabs/otel-cf-workers':
         specifier: 1.0.0-rc.45
         version: 1.0.0-rc.45(@opentelemetry/api@1.7.0)
@@ -1036,6 +1036,21 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/vitest-pool-workers-mixed-mode:
+    devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: workspace:*
+        version: link:../../packages/vitest-pool-workers
+      typescript:
+        specifier: ^5.5.2
+        version: 5.8.2
+      vitest:
+        specifier: ~3.0.7
+        version: 3.0.9(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/wasm-app: {}
 
   fixtures/wildcard-modules:
@@ -1044,8 +1059,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       undici:
         specifier: ^5.28.4
         version: 5.28.5
@@ -1081,8 +1096,8 @@ importers:
   fixtures/worker-ts:
     devDependencies:
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1099,8 +1114,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       run-script-os:
         specifier: ^1.1.6
         version: 1.1.6
@@ -1123,8 +1138,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1144,8 +1159,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1165,8 +1180,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1186,8 +1201,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1207,8 +1222,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/jest-image-snapshot':
         specifier: ^6.4.0
         version: 6.4.0
@@ -1240,8 +1255,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250508.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       playwright-chromium:
         specifier: catalog:default
         version: 1.49.1
@@ -1264,8 +1279,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1282,8 +1297,8 @@ importers:
   fixtures/workflow-multiple:
     devDependencies:
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1401,6 +1416,9 @@ importers:
       undici:
         specifier: catalog:default
         version: 5.28.5
+      vitest:
+        specifier: catalog:default
+        version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   packages/create-cloudflare:
     devDependencies:
@@ -1429,8 +1447,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@iarna/toml':
         specifier: ^3.0.0
         version: 3.0.0
@@ -1570,8 +1588,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-worker
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -1625,8 +1643,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-worker
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       mustache:
         specifier: ^4.2.0
         version: 4.2.0
@@ -1656,8 +1674,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/mime':
         specifier: ^3.0.4
         version: 3.0.4
@@ -1701,8 +1719,8 @@ importers:
         specifier: catalog:default
         version: 5.28.5
       workerd:
-        specifier: 1.20250604.0
-        version: 1.20250604.0
+        specifier: 1.20250612.0
+        version: 1.20250612.0
       ws:
         specifier: catalog:default
         version: 8.18.0
@@ -1726,8 +1744,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-shared
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
@@ -1771,8 +1789,8 @@ importers:
         specifier: ^6.0.1
         version: 6.1.1(@ava/typescript@4.1.0)(encoding@0.1.13)
       capnp-es:
-        specifier: ^0.0.7
-        version: 0.0.7(typescript@5.7.3)
+        specifier: ^0.0.11
+        version: 0.0.11(typescript@5.7.3)
       chokidar:
         specifier: ^4.0.1
         version: 4.0.1
@@ -1872,7 +1890,7 @@ importers:
     devDependencies:
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.8.19
-        version: 0.8.19(@cloudflare/workers-types@4.20250604.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
+        version: 0.8.19(@cloudflare/workers-types@4.20250612.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared
@@ -1880,8 +1898,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -1908,8 +1926,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-worker
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -1957,8 +1975,8 @@ importers:
         specifier: workspace:^
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       esbuild:
         specifier: catalog:default
         version: 0.25.4
@@ -2018,8 +2036,8 @@ importers:
   packages/vite-plugin-cloudflare:
     dependencies:
       '@cloudflare/unenv-preset':
-        specifier: 2.3.2
-        version: 2.3.2(unenv@2.0.0-rc.17)(workerd@1.20250604.0)
+        specifier: 2.3.3
+        version: 2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250604.0)
       '@mjackson/node-fetch-server':
         specifier: ^0.6.1
         version: 0.6.1
@@ -2058,8 +2076,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/node':
         specifier: ^20.17.32
         version: 20.17.32
@@ -2112,8 +2130,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2133,8 +2151,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2154,8 +2172,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2175,8 +2193,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2196,8 +2214,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2217,8 +2235,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2238,8 +2256,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2259,8 +2277,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2280,8 +2298,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2301,8 +2319,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2322,8 +2340,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2343,8 +2361,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2364,8 +2382,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2385,8 +2403,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2406,8 +2424,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2427,8 +2445,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/express':
         specifier: ^5.0.1
         version: 5.0.1
@@ -2460,11 +2478,11 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@remix-run/cloudflare':
         specifier: 2.12.0
-        version: 2.12.0(@cloudflare/workers-types@4.20250604.0)(typescript@5.7.3)
+        version: 2.12.0(@cloudflare/workers-types@4.20250612.0)(typescript@5.7.3)
       '@types/react':
         specifier: ^18.3.11
         version: 18.3.18
@@ -2496,8 +2514,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2517,8 +2535,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/node':
         specifier: ^20.17.32
         version: 20.17.32
@@ -2548,7 +2566,7 @@ importers:
     dependencies:
       partyserver:
         specifier: ^0.0.64
-        version: 0.0.64(@cloudflare/workers-types@4.20250604.0)
+        version: 0.0.64(@cloudflare/workers-types@4.20250612.0)
       partysocket:
         specifier: ^1.0.3
         version: 1.0.3
@@ -2566,8 +2584,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@tailwindcss/vite':
         specifier: ^4.0.15
         version: 4.0.15(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
@@ -2602,8 +2620,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@prisma/adapter-d1':
         specifier: ^6.3.0
         version: 6.3.1
@@ -2639,8 +2657,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/react':
         specifier: ^19.1.0
         version: 19.1.0
@@ -2673,8 +2691,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/react':
         specifier: ^19.0.0
         version: 19.0.7
@@ -2710,8 +2728,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/react':
         specifier: ^19.0.0
         version: 19.0.7
@@ -2740,8 +2758,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2761,8 +2779,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2789,8 +2807,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/react':
         specifier: ^19.0.0
         version: 19.0.7
@@ -2822,8 +2840,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2843,8 +2861,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2864,8 +2882,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@vitejs/plugin-basic-ssl':
         specifier: ^2.0.0
         version: 2.0.0(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
@@ -2888,8 +2906,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2909,8 +2927,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2930,8 +2948,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2951,8 +2969,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2997,8 +3015,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/node':
         specifier: ^20.17.32
         version: 20.17.32
@@ -3012,8 +3030,8 @@ importers:
         specifier: catalog:default
         version: 3.2.3
       capnp-es:
-        specifier: ^0.0.7
-        version: 0.0.7(typescript@5.7.3)
+        specifier: ^0.0.11
+        version: 0.0.11(typescript@5.7.3)
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
@@ -3201,13 +3219,13 @@ importers:
         version: link:../eslint-config-worker
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.7.0
-        version: 0.7.8(@cloudflare/workers-types@4.20250604.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)
+        version: 0.7.8(@cloudflare/workers-types@4.20250612.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@sentry/cli':
         specifier: ^2.37.0
         version: 2.41.1(encoding@0.1.13)
@@ -3250,8 +3268,8 @@ importers:
         specifier: workspace:*
         version: link:../vitest-pool-workers
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/node':
         specifier: ^20.17.32
         version: 20.17.32
@@ -3288,13 +3306,13 @@ importers:
         version: link:../eslint-config-worker
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.8.19
-        version: 0.8.19(@cloudflare/workers-types@4.20250604.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
+        version: 0.8.19(@cloudflare/workers-types@4.20250612.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@types/mime':
         specifier: ^3.0.4
         version: 3.0.4
@@ -3317,8 +3335,8 @@ importers:
         specifier: workspace:*
         version: link:../kv-asset-handler
       '@cloudflare/unenv-preset':
-        specifier: 2.3.2
-        version: 2.3.2(unenv@2.0.0-rc.17)(workerd@1.20250604.0)
+        specifier: 2.3.3
+        version: 2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250604.0)
       blake3-wasm:
         specifier: 2.1.5
         version: 2.1.5
@@ -3335,8 +3353,8 @@ importers:
         specifier: 2.0.0-rc.17
         version: 2.0.0-rc.17
       workerd:
-        specifier: 1.20250604.0
-        version: 1.20250604.0
+        specifier: 1.20250612.0
+        version: 1.20250612.0
     optionalDependencies:
       fsevents:
         specifier: ~2.3.2
@@ -3367,8 +3385,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
+        specifier: ^4.20250612.0
+        version: 4.20250612.0
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
@@ -4191,8 +4209,8 @@ packages:
       workerd:
         optional: true
 
-  '@cloudflare/unenv-preset@2.3.2':
-    resolution: {integrity: sha512-MtUgNl+QkQyhQvv5bbWP+BpBC1N0me4CHHuP2H4ktmOMKdB/6kkz/lo+zqiA4mEazb4y+1cwyNjVrQ2DWeE4mg==}
+  '@cloudflare/unenv-preset@2.3.3':
+    resolution: {integrity: sha512-/M3MEcj3V2WHIRSW1eAQBPRJ6JnGQHc6JKMAPLkDb7pLs3m6X9ES/+K3ceGqxI6TKeF32AWAi7ls0AYzVxCP0A==}
     peerDependencies:
       unenv: 2.0.0-rc.17
       workerd: ^1.20250508.0
@@ -4243,8 +4261,8 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@cloudflare/workerd-darwin-64@1.20250604.0':
-    resolution: {integrity: sha512-PI6AWAzhHg75KVhYkSWFBf3HKCHstpaKg4nrx6LYZaEvz0TaTz+JQpYU2fNAgGFmVsK5xEzwFTGh3DAVAKONPw==}
+  '@cloudflare/workerd-darwin-64@1.20250612.0':
+    resolution: {integrity: sha512-IpL/tOvNY04n2hvp/XGdOGjeMDycEjbwJL8gJ0kenBFBa13EE82I61ceA56kuCiEdb1vBv3O+xiD9zN6AuQlmQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
@@ -4267,8 +4285,8 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
-  '@cloudflare/workerd-darwin-arm64@1.20250604.0':
-    resolution: {integrity: sha512-hOiZZSop7QRQgGERtTIy9eU5GvPpIsgE2/BDsUdHMl7OBZ7QLniqvgDzLNDzj0aTkCldm9Yl/Z+C7aUgRdOccw==}
+  '@cloudflare/workerd-darwin-arm64@1.20250612.0':
+    resolution: {integrity: sha512-Hb9GWzLT4ydBYfGE29jxZFkx58NEA+oRMuGP358A6PUZ9UEDYWTDhskVQovhjELZMgOppUYXN2v/Je3sO1anpg==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
@@ -4291,8 +4309,8 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@cloudflare/workerd-linux-64@1.20250604.0':
-    resolution: {integrity: sha512-S0R9r7U4nv9qejYygQj01hArC4KUbQQ4u29rvegR0MGoXZY8AHIEuJxon0kE7r7aWFJxvl4W3tOH+5hwW51LYw==}
+  '@cloudflare/workerd-linux-64@1.20250612.0':
+    resolution: {integrity: sha512-7kOA1sCfl9m2osolplDM9XqyBPf5KupvDs4UbD2kQq0zfd+u6acLz/YB9Q5tsVQIyhQoP32Oe+kr6IZJBImq9A==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
@@ -4315,8 +4333,8 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-  '@cloudflare/workerd-linux-arm64@1.20250604.0':
-    resolution: {integrity: sha512-BTFU/rXpNy03wpeueI2P7q1vVjbg2V6mCyyFGqDqMn2gSVYXH1G0zFNolV13PQXa0HgaqM6oYnqtAxluqbA+kQ==}
+  '@cloudflare/workerd-linux-arm64@1.20250612.0':
+    resolution: {integrity: sha512-x2UsZhfacZftD/kpDE2mtAlrLZPmkwRInFHJc7uIl8mvovQqVKMBkexH7dkfrgvBV98S2hOjxqFKP9mETuQQAQ==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
@@ -4339,8 +4357,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@cloudflare/workerd-windows-64@1.20250604.0':
-    resolution: {integrity: sha512-tW/U9/qDmDZBeoEVcK5skb2uouVAMXMzt7o/uGvaIFLeZsQkOp4NBmvoQQd+nbOc7nVCJIwFoSMokd89AhzCkA==}
+  '@cloudflare/workerd-windows-64@1.20250612.0':
+    resolution: {integrity: sha512-CeYe4OM5doIVGsOtrmDTrIBV2/wa/SPREEXH/N7ZCEs7mRhsTNFOwmctC0CYe3ZiutJ02dJmmyh/CIij2mkOLQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
@@ -4348,8 +4366,8 @@ packages:
   '@cloudflare/workers-types@4.20240614.0':
     resolution: {integrity: sha512-fnV3uXD1Hpq5EWnY7XYb+smPcjzIoUFiZpTSV/Tk8qKL3H+w6IqcngZwXQBZ/2U/DwYkDilXHW3FfPhnyD7FZA==}
 
-  '@cloudflare/workers-types@4.20250604.0':
-    resolution: {integrity: sha512-//sQvI1x8wfd23o41QLF3z1Kj2ULAoUJ59zhIOCNjRRyaVoed/vtSVGo3porvTHXWz7C6E5f3duquCfElIqzKQ==}
+  '@cloudflare/workers-types@4.20250612.0':
+    resolution: {integrity: sha512-3VsbEh0nqOWWH+jsJ2W41Ty6qlN1jQ+4R3lBA3gPor0U6LB3e4OA04jg7wyCyJmikBN6KsBcPRp3kj0es/9q2w==}
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -7198,6 +7216,9 @@ packages:
   '@vitest/expect@2.1.9':
     resolution: {integrity: sha512-UJCIkTBenHeKT1TTlKMJWy1laZewsRIzYighyYiJKZreqtdxSos/S1t+ktRMQWu2CKqaarrkeszJx1cgC5tGZw==}
 
+  '@vitest/expect@3.0.9':
+    resolution: {integrity: sha512-5eCqRItYgIML7NNVgJj6TVCmdzE7ZVgJhruW0ziSQV4V7PvLkDL1bBkBdcTs/VuIz0IxPb5da1IDSqc1TR9eig==}
+
   '@vitest/expect@3.2.3':
     resolution: {integrity: sha512-W2RH2TPWVHA1o7UmaFKISPvdicFJH+mjykctJFoAkUw+SPTJTGjUNdKscFBrqM7IPnCVu6zihtKYa7TkZS1dkQ==}
 
@@ -7206,6 +7227,17 @@ packages:
     peerDependencies:
       msw: ^2.4.9
       vite: ^5.0.0
+    peerDependenciesMeta:
+      msw:
+        optional: true
+      vite:
+        optional: true
+
+  '@vitest/mocker@3.0.9':
+    resolution: {integrity: sha512-ryERPIBOnvevAkTq+L1lD+DTFBRcjueL9lOUfXsLfwP92h4e+Heb+PjiqS3/OURWPtywfafK0kj++yDFjWUmrA==}
+    peerDependencies:
+      msw: ^2.4.9
+      vite: ^5.0.0 || ^6.0.0
     peerDependenciesMeta:
       msw:
         optional: true
@@ -7229,11 +7261,17 @@ packages:
   '@vitest/pretty-format@2.1.9':
     resolution: {integrity: sha512-KhRIdGV2U9HOUzxfiHmY8IFHTdqtOhIzCpd8WRdJiE7D/HUcZVD0EgQCVjm+Q9gkUXWgBvMmTtZgIG48wq7sOQ==}
 
+  '@vitest/pretty-format@3.0.9':
+    resolution: {integrity: sha512-OW9F8t2J3AwFEwENg3yMyKWweF7oRJlMyHOMIhO5F3n0+cgQAJZBjNgrF8dLwFTEXl5jUqBLXd9QyyKv8zEcmA==}
+
   '@vitest/pretty-format@3.2.3':
     resolution: {integrity: sha512-yFglXGkr9hW/yEXngO+IKMhP0jxyFw2/qys/CK4fFUZnSltD+MU7dVYGrH8rvPcK/O6feXQA+EU33gjaBBbAng==}
 
   '@vitest/runner@2.1.9':
     resolution: {integrity: sha512-ZXSSqTFIrzduD63btIfEyOmNcBmQvgOVsPNPe0jYtESiXkhd8u2erDLnMxmGrDCwHCCHE7hxwRDCT3pt0esT4g==}
+
+  '@vitest/runner@3.0.9':
+    resolution: {integrity: sha512-NX9oUXgF9HPfJSwl8tUZCMP1oGx2+Sf+ru6d05QjzQz4OwWg0psEzwY6VexP2tTHWdOkhKHUIZH+fS6nA7jfOw==}
 
   '@vitest/runner@3.2.3':
     resolution: {integrity: sha512-83HWYisT3IpMaU9LN+VN+/nLHVBCSIUKJzGxC5RWUOsK1h3USg7ojL+UXQR3b4o4UBIWCYdD2fxuzM7PQQ1u8w==}
@@ -7241,11 +7279,17 @@ packages:
   '@vitest/snapshot@2.1.9':
     resolution: {integrity: sha512-oBO82rEjsxLNJincVhLhaxxZdEtV0EFHMK5Kmx5sJ6H9L183dHECjiefOAdnqpIgT5eZwT04PoggUnW88vOBNQ==}
 
+  '@vitest/snapshot@3.0.9':
+    resolution: {integrity: sha512-AiLUiuZ0FuA+/8i19mTYd+re5jqjEc2jZbgJ2up0VY0Ddyyxg/uUtBDpIFAy4uzKaQxOW8gMgBdAJJ2ydhu39A==}
+
   '@vitest/snapshot@3.2.3':
     resolution: {integrity: sha512-9gIVWx2+tysDqUmmM1L0hwadyumqssOL1r8KJipwLx5JVYyxvVRfxvMq7DaWbZZsCqZnu/dZedaZQh4iYTtneA==}
 
   '@vitest/spy@2.1.9':
     resolution: {integrity: sha512-E1B35FwzXXTs9FHNK6bDszs7mtydNi5MIfUWpceJ8Xbfb1gBMscAnwLbEu+B44ed6W3XjL9/ehLPHR1fkf1KLQ==}
+
+  '@vitest/spy@3.0.9':
+    resolution: {integrity: sha512-/CcK2UDl0aQ2wtkp3YVWldrpLRNCfVcIOFGlVGKO4R5eajsH393Z1yiXLVQ7vWsj26JOEjeZI0x5sm5P4OGUNQ==}
 
   '@vitest/spy@3.2.3':
     resolution: {integrity: sha512-JHu9Wl+7bf6FEejTCREy+DmgWe+rQKbK+y32C/k5f4TBIAlijhJbRBIRIOCEpVevgRsCQR2iHRUH2/qKVM/plw==}
@@ -7265,6 +7309,9 @@ packages:
 
   '@vitest/utils@2.1.9':
     resolution: {integrity: sha512-v0psaMSkNJ3A2NMrUEHFRzJtDPFn+/VWZ5WxImB21T9fjucJRmS7xCS3ppEnARb9y11OAzaD+P2Ps+b+BGX5iQ==}
+
+  '@vitest/utils@3.0.9':
+    resolution: {integrity: sha512-ilHM5fHhZ89MCp5aAaM9uhfl1c2JdxVxl3McqsdVyVNN6JffnEen8UMCdRTzOhGXNQGo5GNL9QugHrz727Wnng==}
 
   '@vitest/utils@3.2.3':
     resolution: {integrity: sha512-4zFBCU5Pf+4Z6v+rwnZ1HU1yzOKKvDkMXZrymE2PBlbjKJRlrOxbvpfPSvJTGRIwGoahaOGvp+kbCoxifhzJ1Q==}
@@ -7773,6 +7820,15 @@ packages:
 
   caniuse-lite@1.0.30001669:
     resolution: {integrity: sha512-DlWzFDJqstqtIVx1zeSpIMLjunf5SmwOw0N2Ck/QSQdS8PLS4+9HrLaYei4w8BIAL7IB/UEDu889d8vhCTPA0w==}
+
+  capnp-es@0.0.11:
+    resolution: {integrity: sha512-/M2sGcTIjA2UQC6mnqidCUcfGdVmXGV8DDmNRXMU0ZdiK7TmALjxzJwlLc0UQb/YNy3/xu5OgKktLede69fsnw==}
+    hasBin: true
+    peerDependencies:
+      typescript: ^5.7.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   capnp-es@0.0.7:
     resolution: {integrity: sha512-gjDJBgNbdPA2PilGjAixf5op2HTI7jaBGc5Gs0zrAjfG9/6hqPwjTIC7dGPxrU4Y0a3WnzX1I5r/XUa9jVRSWw==}
@@ -12587,6 +12643,11 @@ packages:
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
 
+  vite-node@3.0.9:
+    resolution: {integrity: sha512-w3Gdx7jDcuT9cNn9jExXgOyKmf5UOTb6WMHz8LGAm54eS1Elf5OuBhCxl6zJxGhEeIkgsE1WbHuoL0mj/UXqXg==}
+    engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
+    hasBin: true
+
   vite-node@3.2.3:
     resolution: {integrity: sha512-gc8aAifGuDIpZHrPjuHyP4dpQmYXqWw7D1GmDnWeNWP654UEXzVfQ5IHPSK5HaHkwB/+p1atpYpSdw/2kOv8iQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
@@ -12699,6 +12760,34 @@ packages:
       jsdom: '*'
     peerDependenciesMeta:
       '@edge-runtime/vm':
+        optional: true
+      '@types/node':
+        optional: true
+      '@vitest/browser':
+        optional: true
+      '@vitest/ui':
+        optional: true
+      happy-dom:
+        optional: true
+      jsdom:
+        optional: true
+
+  vitest@3.0.9:
+    resolution: {integrity: sha512-BbcFDqNyBlfSpATmTtXOAOj71RNKDDvjBM/uPfnxxVGrG+FSH2RQIwgeEngTaTkuU/h0ScFvf+tRcKfYXzBybQ==}
+    engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
+    hasBin: true
+    peerDependencies:
+      '@edge-runtime/vm': '*'
+      '@types/debug': ^4.1.12
+      '@types/node': ^20.17.32
+      '@vitest/browser': 3.0.9
+      '@vitest/ui': 3.0.9
+      happy-dom: '*'
+      jsdom: '*'
+    peerDependenciesMeta:
+      '@edge-runtime/vm':
+        optional: true
+      '@types/debug':
         optional: true
       '@types/node':
         optional: true
@@ -12839,8 +12928,8 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
-  workerd@1.20250604.0:
-    resolution: {integrity: sha512-sHz9R1sxPpnyq3ptrI/5I96sYTMA2+Ljm75oJDbmEcZQwNyezpu9Emerzt3kzzjCJQqtdscGOidWv4RKGZXzAA==}
+  workerd@1.20250612.0:
+    resolution: {integrity: sha512-YWCjj4uZf3eH32epQy/c7tKWOInAswgFRAJoH6I/EY08OJKDfoJtKvRZj5f675KoJlKTPAoJ1ig/oE+RUKP3uw==}
     engines: {node: '>=16'}
     hasBin: true
 
@@ -14192,11 +14281,11 @@ snapshots:
     optionalDependencies:
       workerd: 1.20250417.0
 
-  '@cloudflare/unenv-preset@2.3.2(unenv@2.0.0-rc.17)(workerd@1.20250604.0)':
+  '@cloudflare/unenv-preset@2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250604.0)':
     dependencies:
       unenv: 2.0.0-rc.17
     optionalDependencies:
-      workerd: 1.20250604.0
+      workerd: 1.20250612.0
 
   '@cloudflare/util-en-garde@8.0.10':
     dependencies:
@@ -14213,7 +14302,7 @@ snapshots:
       lodash.memoize: 4.1.2
       marked: 0.3.19
 
-  '@cloudflare/vitest-pool-workers@0.7.8(@cloudflare/workers-types@4.20250604.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)':
+  '@cloudflare/vitest-pool-workers@0.7.8(@cloudflare/workers-types@4.20250612.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)':
     dependencies:
       '@vitest/runner': 3.2.3
       '@vitest/snapshot': 3.2.3
@@ -14224,14 +14313,14 @@ snapshots:
       miniflare: 3.20250310.0
       semver: 7.7.1
       vitest: 2.1.9(@types/node@20.17.32)(@vitest/ui@2.1.9)(lightningcss@1.29.2)
-      wrangler: 3.114.1(@cloudflare/workers-types@4.20250604.0)
+      wrangler: 3.114.1(@cloudflare/workers-types@4.20250612.0)
       zod: 3.22.3
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - bufferutil
       - utf-8-validate
 
-  '@cloudflare/vitest-pool-workers@0.8.19(@cloudflare/workers-types@4.20250604.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)':
+  '@cloudflare/vitest-pool-workers@0.8.19(@cloudflare/workers-types@4.20250612.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)':
     dependencies:
       '@vitest/runner': 3.2.3
       '@vitest/snapshot': 3.2.3
@@ -14241,7 +14330,7 @@ snapshots:
       miniflare: 4.20250417.0
       semver: 7.7.1
       vitest: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-      wrangler: 4.12.1(@cloudflare/workers-types@4.20250604.0)
+      wrangler: 4.12.1(@cloudflare/workers-types@4.20250612.0)
       zod: 3.22.3
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
@@ -14257,7 +14346,7 @@ snapshots:
   '@cloudflare/workerd-darwin-64@1.20250508.0':
     optional: true
 
-  '@cloudflare/workerd-darwin-64@1.20250604.0':
+  '@cloudflare/workerd-darwin-64@1.20250612.0':
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20250310.0':
@@ -14269,7 +14358,7 @@ snapshots:
   '@cloudflare/workerd-darwin-arm64@1.20250508.0':
     optional: true
 
-  '@cloudflare/workerd-darwin-arm64@1.20250604.0':
+  '@cloudflare/workerd-darwin-arm64@1.20250612.0':
     optional: true
 
   '@cloudflare/workerd-linux-64@1.20250310.0':
@@ -14281,7 +14370,7 @@ snapshots:
   '@cloudflare/workerd-linux-64@1.20250508.0':
     optional: true
 
-  '@cloudflare/workerd-linux-64@1.20250604.0':
+  '@cloudflare/workerd-linux-64@1.20250612.0':
     optional: true
 
   '@cloudflare/workerd-linux-arm64@1.20250310.0':
@@ -14293,7 +14382,7 @@ snapshots:
   '@cloudflare/workerd-linux-arm64@1.20250508.0':
     optional: true
 
-  '@cloudflare/workerd-linux-arm64@1.20250604.0':
+  '@cloudflare/workerd-linux-arm64@1.20250612.0':
     optional: true
 
   '@cloudflare/workerd-windows-64@1.20250310.0':
@@ -14305,12 +14394,12 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20250508.0':
     optional: true
 
-  '@cloudflare/workerd-windows-64@1.20250604.0':
+  '@cloudflare/workerd-windows-64@1.20250612.0':
     optional: true
 
   '@cloudflare/workers-types@4.20240614.0': {}
 
-  '@cloudflare/workers-types@4.20250604.0': {}
+  '@cloudflare/workers-types@4.20250612.0': {}
 
   '@colors/colors@1.5.0':
     optional: true
@@ -15629,10 +15718,10 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.3.3
 
-  '@remix-run/cloudflare@2.12.0(@cloudflare/workers-types@4.20250604.0)(typescript@5.7.3)':
+  '@remix-run/cloudflare@2.12.0(@cloudflare/workers-types@4.20250612.0)(typescript@5.7.3)':
     dependencies:
       '@cloudflare/kv-asset-handler': 0.1.3
-      '@cloudflare/workers-types': 4.20250604.0
+      '@cloudflare/workers-types': 4.20250612.0
       '@remix-run/server-runtime': 2.12.0(typescript@5.7.3)
     optionalDependencies:
       typescript: 5.7.3
@@ -17131,6 +17220,13 @@ snapshots:
       chai: 5.2.0
       tinyrainbow: 1.2.0
 
+  '@vitest/expect@3.0.9':
+    dependencies:
+      '@vitest/spy': 3.0.9
+      '@vitest/utils': 3.0.9
+      chai: 5.2.0
+      tinyrainbow: 2.0.0
+
   '@vitest/expect@3.2.3':
     dependencies:
       '@types/chai': 5.2.2
@@ -17142,6 +17238,14 @@ snapshots:
   '@vitest/mocker@2.1.9(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))':
     dependencies:
       '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.17
+    optionalDependencies:
+      vite: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
+
+  '@vitest/mocker@3.0.9(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))':
+    dependencies:
+      '@vitest/spy': 3.0.9
       estree-walker: 3.0.3
       magic-string: 0.30.17
     optionalDependencies:
@@ -17164,6 +17268,10 @@ snapshots:
     dependencies:
       tinyrainbow: 1.2.0
 
+  '@vitest/pretty-format@3.0.9':
+    dependencies:
+      tinyrainbow: 2.0.0
+
   '@vitest/pretty-format@3.2.3':
     dependencies:
       tinyrainbow: 2.0.0
@@ -17172,6 +17280,11 @@ snapshots:
     dependencies:
       '@vitest/utils': 2.1.9
       pathe: 1.1.2
+
+  '@vitest/runner@3.0.9':
+    dependencies:
+      '@vitest/utils': 3.0.9
+      pathe: 2.0.3
 
   '@vitest/runner@3.2.3':
     dependencies:
@@ -17185,6 +17298,12 @@ snapshots:
       magic-string: 0.30.17
       pathe: 1.1.2
 
+  '@vitest/snapshot@3.0.9':
+    dependencies:
+      '@vitest/pretty-format': 3.0.9
+      magic-string: 0.30.17
+      pathe: 2.0.3
+
   '@vitest/snapshot@3.2.3':
     dependencies:
       '@vitest/pretty-format': 3.2.3
@@ -17192,6 +17311,10 @@ snapshots:
       pathe: 2.0.3
 
   '@vitest/spy@2.1.9':
+    dependencies:
+      tinyspy: 3.0.2
+
+  '@vitest/spy@3.0.9':
     dependencies:
       tinyspy: 3.0.2
 
@@ -17233,6 +17356,12 @@ snapshots:
       '@vitest/pretty-format': 2.1.9
       loupe: 3.1.2
       tinyrainbow: 1.2.0
+
+  '@vitest/utils@3.0.9':
+    dependencies:
+      '@vitest/pretty-format': 3.0.9
+      loupe: 3.1.3
+      tinyrainbow: 2.0.0
 
   '@vitest/utils@3.2.3':
     dependencies:
@@ -17877,6 +18006,10 @@ snapshots:
       lodash.uniq: 4.5.0
 
   caniuse-lite@1.0.30001669: {}
+
+  capnp-es@0.0.11(typescript@5.7.3):
+    optionalDependencies:
+      typescript: 5.7.3
 
   capnp-es@0.0.7(typescript@5.7.3):
     optionalDependencies:
@@ -21053,9 +21186,9 @@ snapshots:
 
   parseurl@1.3.3: {}
 
-  partyserver@0.0.64(@cloudflare/workers-types@4.20250604.0):
+  partyserver@0.0.64(@cloudflare/workers-types@4.20250612.0):
     dependencies:
-      '@cloudflare/workers-types': 4.20250604.0
+      '@cloudflare/workers-types': 4.20250612.0
       nanoid: 5.1.0
 
   partysocket@1.0.3:
@@ -23144,6 +23277,27 @@ snapshots:
       - supports-color
       - terser
 
+  vite-node@3.0.9(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.4.1(supports-color@9.2.2)
+      es-module-lexer: 1.7.0
+      pathe: 2.0.3
+      vite: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+    transitivePeerDependencies:
+      - '@types/node'
+      - jiti
+      - less
+      - lightningcss
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - tsx
+      - yaml
+
   vite-node@3.2.3(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)(supports-color@9.2.2):
     dependencies:
       cac: 6.7.14
@@ -23258,6 +23412,45 @@ snapshots:
       - sugarss
       - supports-color
       - terser
+
+  vitest@3.0.9(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2):
+    dependencies:
+      '@vitest/expect': 3.0.9
+      '@vitest/mocker': 3.0.9(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
+      '@vitest/pretty-format': 3.2.3
+      '@vitest/runner': 3.0.9
+      '@vitest/snapshot': 3.0.9
+      '@vitest/spy': 3.0.9
+      '@vitest/utils': 3.0.9
+      chai: 5.2.0
+      debug: 4.4.1(supports-color@9.2.2)
+      expect-type: 1.2.1
+      magic-string: 0.30.17
+      pathe: 2.0.3
+      std-env: 3.9.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.2
+      tinypool: 1.1.0
+      tinyrainbow: 2.0.0
+      vite: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
+      vite-node: 3.0.9(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 20.17.32
+      '@vitest/ui': 3.2.3(vitest@3.2.3)
+    transitivePeerDependencies:
+      - jiti
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - tsx
+      - yaml
 
   vitest@3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2):
     dependencies:
@@ -23454,17 +23647,17 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20250508.0
       '@cloudflare/workerd-windows-64': 1.20250508.0
 
-  workerd@1.20250604.0:
+  workerd@1.20250612.0:
     optionalDependencies:
-      '@cloudflare/workerd-darwin-64': 1.20250604.0
-      '@cloudflare/workerd-darwin-arm64': 1.20250604.0
-      '@cloudflare/workerd-linux-64': 1.20250604.0
-      '@cloudflare/workerd-linux-arm64': 1.20250604.0
-      '@cloudflare/workerd-windows-64': 1.20250604.0
+      '@cloudflare/workerd-darwin-64': 1.20250612.0
+      '@cloudflare/workerd-darwin-arm64': 1.20250612.0
+      '@cloudflare/workerd-linux-64': 1.20250612.0
+      '@cloudflare/workerd-linux-arm64': 1.20250612.0
+      '@cloudflare/workerd-windows-64': 1.20250612.0
 
   workerpool@6.5.1: {}
 
-  wrangler@3.114.1(@cloudflare/workers-types@4.20250604.0):
+  wrangler@3.114.1(@cloudflare/workers-types@4.20250612.0):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.3.4
       '@cloudflare/unenv-preset': 2.0.2(unenv@2.0.0-rc.14)(workerd@1.20250310.0)
@@ -23477,14 +23670,14 @@ snapshots:
       unenv: 2.0.0-rc.14
       workerd: 1.20250310.0
     optionalDependencies:
-      '@cloudflare/workers-types': 4.20250604.0
+      '@cloudflare/workers-types': 4.20250612.0
       fsevents: 2.3.3
       sharp: 0.33.5
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  wrangler@4.12.1(@cloudflare/workers-types@4.20250604.0):
+  wrangler@4.12.1(@cloudflare/workers-types@4.20250612.0):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.4.0
       '@cloudflare/unenv-preset': 2.3.1(unenv@2.0.0-rc.15)(workerd@1.20250417.0)
@@ -23495,7 +23688,7 @@ snapshots:
       unenv: 2.0.0-rc.15
       workerd: 1.20250417.0
     optionalDependencies:
-      '@cloudflare/workers-types': 4.20250604.0
+      '@cloudflare/workers-types': 4.20250612.0
       fsevents: 2.3.3
       sharp: 0.33.5
     transitivePeerDependencies:
