@@ -541,10 +541,26 @@ export interface EnvironmentNonInheritable {
 	/**
 	 * Container related configuration
 	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
 	 * @default []
 	 * @nonInheritable
 	 */
 	containers?: ContainerApp[];
+
+	/**
+	 * Container engine configuration.
+	 * Either the Docker unix socket i.e. `unix:/var/run/docker.sock` or a full configuration.
+	 * Note that windows is not supported at the moment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	containerEngine?: ContainerEngine;
 
 	/**
 	 * These specify any Workers KV Namespaces you want to
@@ -1094,3 +1110,14 @@ export interface Observability {
 		invocation_logs?: boolean;
 	};
 }
+
+export type DockerConfiguration = {
+	/** Socket used by miniflare to communicate with Docker */
+	socketPath: string;
+};
+
+export type ContainerEngine =
+	| {
+			localDocker: DockerConfiguration;
+	  }
+	| string;

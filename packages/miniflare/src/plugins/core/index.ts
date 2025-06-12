@@ -1,6 +1,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import fs from "fs/promises";
+import { platform } from "node:os";
 import path from "path";
 import { Readable } from "stream";
 import tls from "tls";
@@ -18,6 +19,7 @@ import {
 	ServiceDesignator,
 	supportedCompatibilityDate,
 	Worker_Binding,
+	Worker_ContainerEngine,
 	Worker_DurableObjectNamespace,
 	Worker_Module,
 } from "../../runtime";
@@ -168,6 +170,16 @@ const CoreOptionsSchemaInput = z.intersection(
 		// There is an issue with the connect() API and the globalOutbound workerd setting that impacts TCP ingress
 		// We should default it to true once https://github.com/cloudflare/workerd/pull/4145 is resolved
 		stripCfConnectingIp: z.boolean().default(false),
+
+		/** Configuration used to connect to the container engine */
+		containerEngine: z
+			.union([
+				z.object({
+					localDocker: z.object({ socketPath: z.string() }),
+				}),
+				z.string(),
+			])
+			.optional(),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
@@ -793,6 +805,7 @@ export const CORE_PLUGIN: Plugin<
 										options.hasAssetsAndIsVitest
 									);
 								}),
+					containerEngine: getContainerEngine(options.containerEngine),
 				},
 			});
 		}
@@ -1025,6 +1038,29 @@ function getWorkerScript(
 		code = withSourceURL(code, scriptPath);
 		return { serviceWorkerScript: code };
 	}
+}
+
+/**
+ * Returns the Container engine configuration
+ * @param engineOrSocketPath Either a full engine config or a unix socket
+ * @returns The container engine, default to local Docker at `unix:/var/run/docker.sock`
+ */
+function getContainerEngine(
+	engineOrSocketPath: Worker_ContainerEngine | string | undefined
+): Worker_ContainerEngine {
+	if (!engineOrSocketPath) {
+		// TODO: workerd does not support win named pipes
+		const socketPath =
+			platform() === "win32" ? "TODO" : "unix:/var/run/docker.sock";
+
+		return { localDocker: { socketPath } };
+	}
+
+	if (typeof engineOrSocketPath === "string") {
+		return { localDocker: { socketPath: engineOrSocketPath } };
+	}
+
+	return engineOrSocketPath;
 }
 
 export * from "./errors";

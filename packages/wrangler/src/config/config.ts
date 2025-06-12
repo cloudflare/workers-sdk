@@ -365,6 +365,7 @@ export const defaultWranglerConfig: Config = {
 	define: {},
 	cloudchamber: {},
 	containers: undefined,
+	containerEngine: undefined,
 	send_email: [],
 	browser: undefined,
 	unsafe: {},
