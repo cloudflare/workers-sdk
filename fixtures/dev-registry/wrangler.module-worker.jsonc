@@ -20,6 +20,11 @@
 			"binding": "WORKER_ENTRYPOINT_B",
 			"service": "worker-entrypoint-b",
 		},
+		{
+			"binding": "NAMED_ENTRYPOINT",
+			"service": "unknown-worker",
+			"entrypoint": "UnknownEntrypoint",
+		},
 	],
 	"tail_consumers": [
 		{

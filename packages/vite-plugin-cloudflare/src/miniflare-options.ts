@@ -81,9 +81,10 @@ function getWorkerToWorkerEntrypointNamesMap(
 					value.name === kCurrentWorker ? worker.name : value.name;
 				const entrypointNames =
 					workerToWorkerEntrypointNamesMap.get(targetWorkerName);
-				assert(entrypointNames, missingWorkerErrorMessage(targetWorkerName));
 
-				entrypointNames.add(value.entrypoint);
+				if (entrypointNames) {
+					entrypointNames.add(value.entrypoint);
+				}
 			}
 		}
 	}
