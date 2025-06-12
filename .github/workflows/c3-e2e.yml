@@ -39,7 +39,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
-          node-version: 20
+          node-version: 20.11.1
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
@@ -49,7 +49,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/run-c3-e2e
         with:
-          node-version: 20
+          node-version: 20.11.1
           packageManager: ${{ matrix.pm.name }}
           packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: false
@@ -61,7 +61,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/run-c3-e2e
         with:
-          node-version: 20
+          node-version: 20.11.1
           packageManager: ${{ matrix.pm.name }}
           packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: false
@@ -101,7 +101,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
-          node-version: 20
+          node-version: 20.11.1
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
@@ -111,7 +111,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/run-c3-e2e
         with:
-          node-version: 20
+          node-version: 20.11.1
           packageManager: ${{ matrix.pm.name }}
           packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: false
@@ -123,7 +123,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/run-c3-e2e
         with:
-          node-version: 20
+          node-version: 20.11.1
           packageManager: ${{ matrix.pm.name }}
           packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: false
