@@ -141,15 +141,9 @@ export function resolvePluginConfig(
 	let staticRouting: StaticRouting | undefined;
 
 	if (Array.isArray(entryWorkerConfig.assets?.run_worker_first)) {
-		const { parsed, errorMessage } = parseStaticRouting(
+		staticRouting = parseStaticRouting(
 			entryWorkerConfig.assets.run_worker_first
 		);
-
-		if (errorMessage) {
-			throw new Error(errorMessage);
-		}
-
-		staticRouting = parsed;
 	}
 
 	const workers = {
