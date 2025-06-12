@@ -229,6 +229,15 @@ export interface DevConfig {
 	 * Host to forward requests to, defaults to the host of the first route of project
 	 */
 	host: string | undefined;
+
+	/**
+	 * When developing, whether to build and connect to containers. This requires a Docker daemon to be running.
+	 * Defaults to `true`.
+	 *
+	 * @inheritable
+	 * @default true
+	 */
+	enable_containers: boolean;
 }
 
 export type RawDevConfig = Partial<DevConfig>;
@@ -276,6 +285,8 @@ export const defaultWranglerConfig: Config = {
 		local_protocol: "http",
 		upstream_protocol: "http",
 		host: undefined,
+		// Note this one is also workers only
+		enable_containers: true,
 	},
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/
@@ -304,6 +315,7 @@ export const defaultWranglerConfig: Config = {
 	ai: undefined,
 	images: undefined,
 	version_metadata: undefined,
+	unsafe_hello_world: [],
 
 	/*====================================================*/
 	/*           Fields supported by Workers only         */

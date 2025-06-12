@@ -12,6 +12,7 @@ import type {
 	CfD1Database,
 	CfDispatchNamespace,
 	CfDurableObject,
+	CfHelloWorld,
 	CfHyperdrive,
 	CfKvNamespace,
 	CfLogfwdrBinding,
@@ -183,6 +184,12 @@ export interface StartDevWorkerInput {
 
 		/** Whether the experimental mixed mode feature should be enabled */
 		experimentalMixedMode?: boolean;
+
+		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
+		enableContainers?: boolean;
+
+		/** Path to the docker executable. Defaults to 'docker' */
+		dockerPath?: string;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
@@ -276,6 +283,7 @@ export type Binding =
 	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
+	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
 
