@@ -23,6 +23,7 @@ import {
 	sanitisePath,
 } from "../../workers";
 import { UnsafeUniqueKey } from "./constants";
+import type { DOContainerOptions } from "../do";
 
 export const DEFAULT_PERSIST_ROOT = ".mf";
 
@@ -47,6 +48,7 @@ export type DurableObjectClassNames = Map<
 			enableSql?: boolean;
 			unsafeUniqueKey?: UnsafeUniqueKey;
 			unsafePreventEviction?: boolean;
+			container?: DOContainerOptions;
 		}
 	>
 >;

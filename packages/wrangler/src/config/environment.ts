@@ -541,6 +541,9 @@ export interface EnvironmentNonInheritable {
 	/**
 	 * Container related configuration
 	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
 	 * @default []
 	 * @nonInheritable
 	 */
@@ -1094,3 +1097,14 @@ export interface Observability {
 		invocation_logs?: boolean;
 	};
 }
+
+export type DockerConfiguration = {
+	/** Socket used by miniflare to communicate with Docker */
+	socketPath: string;
+};
+
+export type ContainerEngine =
+	| {
+			localDocker: DockerConfiguration;
+	  }
+	| string;

@@ -344,6 +344,7 @@ function getDurableObjectClassNames(
 				enableSql,
 				unsafeUniqueKey,
 				unsafePreventEviction,
+				container,
 			} = normaliseDurableObject(designator);
 			// Get or create `Map` mapping class name to optional unsafe unique key
 			let classNames = serviceClassNames.get(serviceName);
@@ -385,6 +386,7 @@ function getDurableObjectClassNames(
 					enableSql,
 					unsafeUniqueKey,
 					unsafePreventEviction,
+					container,
 				});
 			}
 		}

@@ -26,6 +26,11 @@ export class ContainerController {
 		this.#containerOptions = containerOptions;
 		this.#sharedOptions = sharedOptions;
 		this.#logger = logger;
+		if (process.platform === "win32") {
+			throw new Error(
+				"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container part of your application."
+			);
+		}
 	}
 
 	updateConfig(
