@@ -50,5 +50,5 @@ export function getFirstAvailablePort(start: number) {
 }
 
 export function withTrailingSlash(path: string): string {
-	return path[path.length - 1] !== "/" ? `${path}/` : path;
+	return path.endsWith("/") ? path : `${path}/`;
 }
