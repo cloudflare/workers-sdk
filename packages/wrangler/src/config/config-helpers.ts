@@ -123,10 +123,6 @@ function findRedirectedWranglerConfig(
 					Found both a user configuration file at "${path.relative(".", userConfigPath)}"
 					and a deploy configuration file at "${path.relative(".", deployConfigPath)}".
 					But these do not share the same base path so it is not clear which should be used.
-
-
-					===a= ${path.join(path.dirname(userConfigPath), PATH_TO_DEPLOY_CONFIG)}
-					===b= ${deployConfigPath}
 				`);
 			}
 		}
