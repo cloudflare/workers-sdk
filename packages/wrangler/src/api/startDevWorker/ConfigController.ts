@@ -433,6 +433,9 @@ function resolveContainerConfig(
 	config: Config
 ): StartDevWorkerOptions["containers"] {
 	const containers: WorkerOptions["containers"] = {};
+	if (!config.dev.enable_containers) {
+		return containers;
+	}
 	for (const container of config.containers ?? []) {
 		containers[container.class_name] = {
 			image: container.image ?? container.configuration.image,

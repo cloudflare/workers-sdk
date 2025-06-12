@@ -738,28 +738,32 @@ export const CORE_PLUGIN: Plugin<
 						classNamesEntries.map<Worker_DurableObjectNamespace>(
 							([
 								className,
-								{ enableSql, unsafeUniqueKey, unsafePreventEviction },
-							]) => {
-								if (unsafeUniqueKey === kUnsafeEphemeralUniqueKey) {
-									return {
-										className,
-										enableSql,
-										ephemeralLocal: kVoid,
-										preventEviction: unsafePreventEviction,
-									};
-								} else {
-									return {
-										className,
-										enableSql,
-										// This `uniqueKey` will (among other things) be used as part of the
-										// path when persisting to the file-system. `-` is invalid in
-										// JavaScript class names, but safe on filesystems (incl. Windows).
-										uniqueKey:
-											unsafeUniqueKey ?? `${options.name ?? ""}-${className}`,
-										preventEviction: unsafePreventEviction,
-									};
-								}
-							}
+								{
+									enableSql,
+									unsafeUniqueKey,
+									unsafePreventEviction: preventEviction,
+									container,
+								},
+							]) =>
+								unsafeUniqueKey === kUnsafeEphemeralUniqueKey
+									? {
+											className,
+											enableSql,
+											ephemeralLocal: kVoid,
+											preventEviction,
+											container,
+										}
+									: {
+											className,
+											enableSql,
+											// This `uniqueKey` will (among other things) be used as part of the
+											// path when persisting to the file-system. `-` is invalid in
+											// JavaScript class names, but safe on filesystems (incl. Windows).
+											uniqueKey:
+												unsafeUniqueKey ?? `${options.name ?? ""}-${className}`,
+											preventEviction,
+											container,
+										}
 						),
 					durableObjectStorage:
 						classNamesEntries.length === 0
