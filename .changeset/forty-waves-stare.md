@@ -1,5 +1,5 @@
 ---
-"@cloudflare/vitest-pool-workers": minor
+"@cloudflare/vitest-pool-workers": patch
 ---
 
 Add support for Vitest 3.2.x
