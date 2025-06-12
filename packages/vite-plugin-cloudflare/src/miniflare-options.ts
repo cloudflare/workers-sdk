@@ -14,8 +14,7 @@ import colors from "picocolors";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
 import {
-	experimental_pickRemoteBindings,
-	experimental_startMixedModeSession,
+	experimental_maybeStartOrUpdateMixedModeSession,
 	unstable_convertConfigBindingsToStartWorkerBindings,
 	unstable_getMiniflareWorkerOptions,
 } from "wrangler";
@@ -219,6 +218,12 @@ function logUnknownTails(
 	}
 }
 
+/** Map that maps worker configPaths to their existing mixed mode session (if any) */
+const mixedModeSessionsMap = new Map<
+	string,
+	Experimental_MixedModeSession | null
+>();
+
 export async function getDevMiniflareOptions(
 	resolvedPluginConfig: ResolvedPluginConfig,
 	viteDevServer: vite.ViteDevServer,
@@ -312,10 +317,32 @@ export async function getDevMiniflareOptions(
 			? await Promise.all(
 					Object.entries(resolvedPluginConfig.workers).map(
 						async ([environmentName, workerConfig]) => {
+							const bindings =
+								unstable_convertConfigBindingsToStartWorkerBindings(
+									workerConfig
+								);
+
+							const preExistingMixedModeSession = workerConfig.configPath
+								? mixedModeSessionsMap.get(workerConfig.configPath)
+								: undefined;
+
 							const mixedModeSession = resolvedPluginConfig.experimental
 								.mixedMode
-								? await maybeStartOrUpdateMixedModeSession(workerConfig)
+								? await experimental_maybeStartOrUpdateMixedModeSession(
+										{
+											name: workerConfig.name,
+											bindings: bindings ?? {},
+										},
+										preExistingMixedModeSession ?? null
+									)
 								: undefined;
+
+							if (workerConfig.configPath && mixedModeSession) {
+								mixedModeSessionsMap.set(
+									workerConfig.configPath,
+									mixedModeSession
+								);
+							}
 
 							const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
 								{
@@ -598,9 +625,26 @@ export async function getPreviewMiniflareOptions(
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
 			workerConfigs.map(async (workerConfig, i) => {
-				const mixedModeSession = mixedModeEnabled
-					? await maybeStartOrUpdateMixedModeSession(workerConfig)
+				const bindings =
+					unstable_convertConfigBindingsToStartWorkerBindings(workerConfig);
+
+				const preExistingMixedModeSession = workerConfig.configPath
+					? mixedModeSessionsMap.get(workerConfig.configPath)
 					: undefined;
+
+				const mixedModeSession = mixedModeEnabled
+					? await experimental_maybeStartOrUpdateMixedModeSession(
+							{
+								name: workerConfig.name,
+								bindings: bindings ?? {},
+							},
+							preExistingMixedModeSession ?? null
+						)
+					: undefined;
+
+				if (workerConfig.configPath && mixedModeSession) {
+					mixedModeSessionsMap.set(workerConfig.configPath, mixedModeSession);
+				}
 
 				const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
 					workerConfig,
@@ -703,43 +747,4 @@ function miniflareLogLevelFromViteLogLevel(
 		case "silent":
 			return LogLevel.NONE;
 	}
-}
-
-/** Map containing all the potential worker mixed mode existing sessions, it maps a worker name to its mixed mode session */
-const mixedModeSessionsMap = new Map<string, Experimental_MixedModeSession>();
-
-async function maybeStartOrUpdateMixedModeSession(
-	workerConfig: WorkerConfig | Unstable_Config
-): Promise<Experimental_MixedModeSession | undefined> {
-	const workerRemoteBindings = experimental_pickRemoteBindings(
-		unstable_convertConfigBindingsToStartWorkerBindings(workerConfig) ?? {}
-	);
-
-	assert(workerConfig.name, "Found workerConfig without a name");
-
-	let mixedModeSession = mixedModeSessionsMap.get(workerConfig.name);
-
-	// TODO(DEVX-1893): here we can save the converted remote bindings
-	//             and on new iterations we can diff the old and new
-	//             converted remote bindings, if they are all the
-	//             same we can just leave the mixedModeSession untouched
-	if (mixedModeSession === undefined) {
-		if (Object.keys(workerRemoteBindings).length > 0) {
-			mixedModeSession = await experimental_startMixedModeSession(
-				workerRemoteBindings,
-				{
-					workerName: workerConfig.name,
-				}
-			);
-			mixedModeSessionsMap.set(workerConfig.name, mixedModeSession);
-		}
-	} else {
-		// Note: we always call updateBindings even when there are zero remote bindings, in these
-		//       cases we could terminate the remote session if we wanted, that's probably
-		//       something to consider down the line
-		await mixedModeSession.updateBindings(workerRemoteBindings);
-	}
-
-	await mixedModeSession?.ready;
-	return mixedModeSession;
 }

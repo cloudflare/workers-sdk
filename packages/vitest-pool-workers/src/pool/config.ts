@@ -13,6 +13,7 @@ import { getProjectPath, getRelativeProjectPath } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
+import type { Experimental_MixedModeSession } from "wrangler";
 import type { ParseParams, ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
@@ -43,6 +44,11 @@ const WorkersPoolOptionsSchema = z.object({
 	 * the same storage.
 	 */
 	isolatedStorage: z.boolean().default(true),
+	/**
+	 * Enables experimental mixed mode to access remote resources configured
+	 * with `remote: true` in the wrangler configuration file.
+	 */
+	experimental_mixedMode: z.boolean().optional(),
 	/**
 	 * Runs all tests in this project serially in the same worker, using the same
 	 * module cache. This can significantly speed up tests if you've got lots of
@@ -171,6 +177,12 @@ function filterTails(
 	});
 }
 
+/** Map that maps worker configPaths to their existing mixed mode session (if any) */
+const mixedModeSessionsMap = new Map<
+	string,
+	Experimental_MixedModeSession | null
+>();
+
 async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
@@ -235,6 +247,21 @@ async function parseCustomPoolOptions(
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
 
+		const preExistingMixedModeSession = options.wrangler?.configPath
+			? mixedModeSessionsMap.get(options.wrangler.configPath)
+			: undefined;
+
+		const mixedModeSession = options.experimental_mixedMode
+			? await wrangler.experimental_maybeStartOrUpdateMixedModeSession(
+					configPath,
+					preExistingMixedModeSession ?? null
+				)
+			: undefined;
+
+		if (options.wrangler?.configPath && mixedModeSession) {
+			mixedModeSessionsMap.set(options.wrangler.configPath, mixedModeSession);
+		}
+
 		const { workerOptions, externalWorkers, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(
 				configPath,
@@ -242,6 +269,8 @@ async function parseCustomPoolOptions(
 				{
 					imagesLocalMode: true,
 					overrides: { assets: options.miniflare.assets },
+					mixedModeConnectionString:
+						mixedModeSession?.mixedModeConnectionString,
 				}
 			);
 
