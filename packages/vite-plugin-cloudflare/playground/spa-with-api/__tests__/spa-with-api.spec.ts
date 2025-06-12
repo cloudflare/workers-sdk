@@ -14,7 +14,7 @@ test("returns the home page directly without invoking the Worker", async () => {
 	expect(await response.headerValue("is-worker-response")).toBe(null);
 });
 
-test("returns the home page for API route on navigation request ('sec-fetch-mode: navigate' header included)", async () => {
+test("returns the home page for not found route on navigation request ('sec-fetch-mode: navigate' header included)", async () => {
 	await page.goto(`${viteTestUrl}/api/`);
 	const content = await page.textContent("h1");
 	expect(content).toBe("Vite + React");
@@ -35,7 +35,7 @@ test("returns the Worker fallback response for not found route on non-navigation
 });
 
 test.runIf(!isBuild)(
-	"returns file for API route when the route matches a file in dev",
+	"returns the file for API route when the route matches a file in dev",
 	async () => {
 		const text = await getTextResponse("/api/some-file.txt");
 		expect(text).toBe(`Some file content.\n`);
