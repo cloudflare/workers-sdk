@@ -113,26 +113,41 @@ const apiFetchResponse = async (
 	}
 };
 
-const apiFetch = async (
+async function apiFetch<T>(
 	path: string,
 	init = { method: "GET" },
 	failSilently = false,
 	queryParams = {}
-) => {
-	const response = await apiFetchResponse(
-		path,
-		init,
-		failSilently,
-		queryParams
-	);
+) {
+	let page = 1;
+	let result: unknown[] = [];
+	while (true) {
+		const response = await apiFetchResponse(path, init, failSilently, {
+			...queryParams,
+			page,
+		});
 
-	if (!response || response.ok === false) {
-		return false;
+		if (!response || response.ok === false) {
+			return false;
+		}
+
+		const json = (await response.json()) as ApiSuccessBody;
+		if ("result_info" in json && Array.isArray(json.result)) {
+			const result_info = json.result_info as {
+				page: number;
+				count: number;
+			};
+			if (result_info.count === 0) {
+				return result;
+			}
+			result = [...result, ...json.result];
+			console.log(result_info, result_info.page, result_info.count);
+			page = result_info.page + 1;
+		} else {
+			return json.result;
+		}
 	}
-
-	const json = (await response.json()) as ApiSuccessBody;
-	return json.result;
-};
+}
 
 export const listTmpE2EProjects = async () => {
 	const pageSize = 10;
