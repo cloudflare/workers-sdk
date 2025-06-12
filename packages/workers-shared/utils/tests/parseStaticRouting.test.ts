@@ -33,7 +33,6 @@ describe("parseStaticRouting", () => {
 
 	it("throws when a rule is too long", () => {
 		const rule = `/api/${"a".repeat(130)}`;
-		// const { errorMessage } = parseStaticRouting([rule]);
 		expect(() => parseStaticRouting([rule])).toThrowErrorMatchingInlineSnapshot(
 			`
 			[Error: Invalid routes in \`run_worker_first\`:
