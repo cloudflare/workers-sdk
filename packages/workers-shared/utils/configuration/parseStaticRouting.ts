@@ -5,10 +5,7 @@ import type { StaticRouting } from "../types";
 // but router Worker expects the rules to be split into two arrays, which we do here.
 // This logic is translated from assets/staticrouting.go.
 
-export function parseStaticRouting(input: string[]): {
-	parsed: StaticRouting;
-	errorMessage: string | undefined;
-} {
+export function parseStaticRouting(input: string[]): StaticRouting {
 	if (input.length === 0) {
 		throw new Error(
 			"No `run_worker_first` rules were provided; must provide at least 1 rule."
@@ -16,7 +13,7 @@ export function parseStaticRouting(input: string[]): {
 	}
 	if (input.length > MAX_ROUTES_RULES) {
 		throw new Error(
-			`Too many rules were provided; ${input.length} rules provided exceeds max of ${MAX_ROUTES_RULES}`
+			`Too many \`run_worker_first\` rules were provided; ${input.length} rules provided exceeds max of ${MAX_ROUTES_RULES}.`
 		);
 	}
 
@@ -40,23 +37,24 @@ export function parseStaticRouting(input: string[]): {
 
 	if (assetWorkerRules.length > 0 && userWorkerRules.length === 0) {
 		throw new Error(
-			`Only negative rules were provided; must provide at least 1 non-negative rule`
+			"Only negative `run_worker_first` rules were provided; must provide at least 1 non-negative rule"
 		);
 	}
 
 	const invalidAssetWorkerRules =
 		validateStaticRoutingRules(rawAssetWorkerRules);
 	const invalidUserWorkerRules = validateStaticRoutingRules(userWorkerRules);
-
 	const errorMessage = formatInvalidRoutes([
 		...invalidRules,
 		...invalidUserWorkerRules,
 		...invalidAssetWorkerRules,
 	]);
-	return {
-		parsed: { asset_worker: assetWorkerRules, user_worker: userWorkerRules },
-		errorMessage,
-	};
+
+	if (errorMessage) {
+		throw new Error(errorMessage);
+	}
+
+	return { asset_worker: assetWorkerRules, user_worker: userWorkerRules };
 }
 
 function validateStaticRoutingRules(rules: string[]): string[] {
@@ -88,5 +86,5 @@ const formatInvalidRoutes = (invalidRules: string[]) => {
 	if (invalidRules.length === 0) {
 		return undefined;
 	}
-	return `Invalid routes in run_worker_first:\n` + invalidRules.join("\n");
+	return `Invalid routes in \`run_worker_first\`:\n` + invalidRules.join("\n");
 };
