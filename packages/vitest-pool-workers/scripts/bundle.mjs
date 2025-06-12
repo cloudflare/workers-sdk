@@ -35,8 +35,8 @@ function map(specifier, target) {
 	return { [filePath]: targetPath };
 }
 const fetchMockPathMap = {
-	...map("undici/lib/client.js", "src/mock-agent/client.cjs"),
-	...map("undici/lib/pool.js", "src/mock-agent/pool.cjs"),
+	...map("undici/lib/dispatcher/client.js", "src/mock-agent/client.cjs"),
+	...map("undici/lib/dispatcher/pool.js", "src/mock-agent/pool.cjs"),
 	...map(
 		"undici/lib/mock/pending-interceptors-formatter.js",
 		"src/mock-agent/pending-interceptor-formatter.cjs"

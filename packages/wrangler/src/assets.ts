@@ -19,7 +19,7 @@ import {
 import chalk from "chalk";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
-import { File, FormData } from "undici";
+import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
 import { formatTime } from "./deploy/deploy";
 import { FatalError, UserError } from "./errors";

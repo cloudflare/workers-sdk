@@ -115,7 +115,7 @@ globalThis.fetch = async (input, init) => {
 	});
 
 	// Dispatch the request through the mock agent
-	const dispatchHandlers: Dispatcher.DispatchHandlers = {
+	const dispatchHandlers: Dispatcher.DispatchHandler = {
 		onConnect(abort) {
 			if (abortSignalAborted) {
 				abort();
@@ -153,7 +153,7 @@ globalThis.fetch = async (input, init) => {
 			responseChunks.push(chunk);
 			return true;
 		},
-		onComplete(_trailers) {
+		onComplete(_trailers: unknown) {
 			if (abortSignalAborted) {
 				responseReject(
 					castAsAbortError(new Error("The operation was aborted"))
@@ -184,7 +184,7 @@ globalThis.fetch = async (input, init) => {
 				responseResolve(maybeResponse);
 			}
 		},
-		onBodySent(_chunk) {}, // (ignored)
+		onBodySent(_chunk: unknown) {}, // (ignored)
 	};
 
 	fetchMock.dispatch(dispatchOptions, dispatchHandlers);
