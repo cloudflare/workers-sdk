@@ -552,7 +552,7 @@ export interface EnvironmentNonInheritable {
 	/**
 	 * Container engine configuration.
 	 * Either the Docker unix socket i.e. `unix:/var/run/docker.sock` or a full configuration.
-	 * Note that windows is not supported at the moment.
+	 * Note that windows is only supported via WSL at the moment
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.

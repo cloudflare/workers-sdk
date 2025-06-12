@@ -1050,10 +1050,10 @@ function getContainerEngine(
 ): Worker_ContainerEngine {
 	if (!engineOrSocketPath) {
 		// TODO: workerd does not support win named pipes
-		const socketPath =
-			platform() === "win32" ? "TODO" : "unix:/var/run/docker.sock";
-
-		return { localDocker: { socketPath } };
+		engineOrSocketPath =
+			platform() === "win32"
+				? "//./pipe/docker_engine"
+				: "unix:/var/run/docker.sock";
 	}
 
 	if (typeof engineOrSocketPath === "string") {
