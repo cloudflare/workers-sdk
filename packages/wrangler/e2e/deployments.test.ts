@@ -15,6 +15,9 @@ const normalize = (str: string) =>
 	}).replaceAll(/^Author:.*$/gm, "Author:      person@example.com");
 
 describe("deployments", { timeout: TIMEOUT }, () => {
+	// Note that we are sharing the workerName and helper across all these tests,
+	// which means that these tests are not isolated from each other.
+	// Seeded files will leak between tests.
 	const workerName = generateResourceName();
 	const helper = new WranglerE2ETestHelper();
 	let deployedUrl: string;
@@ -198,6 +201,7 @@ type AssetTestCase = {
 	content?: string;
 	redirect?: string;
 };
+
 function generateInitialAssets(workerName: string) {
 	return {
 		"public/index.html": dedent`
@@ -215,7 +219,7 @@ function generateInitialAssets(workerName: string) {
 	};
 }
 
-const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
+async function checkAssets(testCases: AssetTestCase[], deployedUrl: string) {
 	for (const testCase of testCases) {
 		await vi.waitFor(
 			async () => {
@@ -247,20 +251,20 @@ const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
 			}
 		);
 	}
-};
+}
 
 describe("Workers + Assets deployment", () => {
-	const helper = new WranglerE2ETestHelper();
-	let deployedUrl: string | undefined;
+	let helper: WranglerE2ETestHelper;
+	let workerName: string;
+
+	beforeEach(() => {
+		// We are recreating the helper on each test to ensure they are isolated from each other.
+		helper = new WranglerE2ETestHelper();
+		// Use a new user Worker in each test
+		workerName = generateResourceName();
+	});
 
 	describe("Workers", () => {
-		let workerName: string;
-
-		beforeEach(() => {
-			// deploy a new user Worker in each test
-			workerName = generateResourceName();
-		});
-
 		afterEach(async () => {
 			// clean up user Worker after each test
 			await helper.run(`wrangler delete`);
@@ -302,7 +306,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				// Tests html_handling = "auto_trailing_slash" (default):
@@ -392,7 +396,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				// because html handling has now been set to "none", only exact matches will be served
@@ -474,7 +478,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				// Tests html_handling = "auto_trailing_slash" (default):
@@ -559,7 +563,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				{
@@ -633,7 +637,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				{ path: "/index.html", content: "<h1>index.html</h1>" },
@@ -651,12 +655,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 	describe("Workers for Platforms", () => {
 		let dispatchNamespaceName: string;
 		let dispatchWorkerName: string;
-		let workerName: string;
 
 		beforeEach(async () => {
-			// deploy a new user Worker in each test
-			workerName = generateResourceName();
-
 			// set up a new dispatch Worker in each test
 			dispatchNamespaceName = generateResourceName("dispatch");
 			dispatchWorkerName = generateResourceName();
@@ -749,7 +749,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				// Tests html_handling = "auto_trailing_slash" (default):
@@ -862,7 +862,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				// because html handling has now been set to "none", only exact matches will be served
@@ -973,7 +973,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				{
@@ -992,8 +992,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			await checkAssets(testCases, deployedUrl);
 		});
 	});
+
 	describe("durable objects [containers]", () => {
-		const workerName = generateResourceName();
 		beforeEach(async () => {
 			await helper.seed({
 				"wrangler.toml": dedent`
