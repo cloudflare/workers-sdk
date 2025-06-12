@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.19.1",
+	"version": "4.20.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -78,6 +78,7 @@
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
 		"@cloudflare/cli": "workspace:*",
+		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",

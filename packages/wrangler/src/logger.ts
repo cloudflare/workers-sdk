@@ -68,6 +68,18 @@ overrideLoggerLevel.getStore;
 
 export type TableRow<Keys extends string> = Record<Keys, string>;
 
+function consoleMethodToLoggerLevel(
+	method: Exclude<keyof Console, "Console">
+): LoggerLevel {
+	if (method in LOGGER_LEVELS) {
+		return method as LoggerLevel;
+	}
+	// categorize anything different from the common console methods as
+	// a standard log (in the future if need be we can add logic here to
+	// associate different methods to different log levels)
+	return "log";
+}
+
 export class Logger {
 	constructor() {}
 
@@ -127,7 +139,11 @@ export class Logger {
 		if (typeof console[method] !== "function") {
 			throw new Error(`console.${method}() is not a function`);
 		}
-		if (LOGGER_LEVELS[this.loggerLevel] !== LOGGER_LEVELS.none) {
+
+		if (
+			LOGGER_LEVELS[this.loggerLevel] >=
+			LOGGER_LEVELS[consoleMethodToLoggerLevel(method)]
+		) {
 			Logger.#beforeLogHook?.();
 			(console[method] as (...args: unknown[]) => unknown).apply(console, args);
 			Logger.#afterLogHook?.();

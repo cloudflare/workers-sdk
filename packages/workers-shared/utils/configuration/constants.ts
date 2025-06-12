@@ -11,3 +11,8 @@ export const UNSET_OPERATOR = "! ";
 
 export const SPLAT_REGEX = /\*/g;
 export const PLACEHOLDER_REGEX = /:[A-Za-z]\w*/g;
+
+/** Max number of rules in `run_worker_first` */
+export const MAX_ROUTES_RULES = 100;
+/** Max char length of each rule in `run_worker_first` */
+export const MAX_ROUTES_RULE_LENGTH = 100;

@@ -224,6 +224,11 @@ export interface CfSecretsStoreSecrets {
 	secret_name: string;
 }
 
+export interface CfHelloWorld {
+	binding: string;
+	enable_timer?: boolean;
+}
+
 export interface CfHyperdrive {
 	binding: string;
 	id: string;
@@ -258,6 +263,7 @@ export interface CfDispatchNamespace {
 export interface CfMTlsCertificate {
 	binding: string;
 	certificate_id: string;
+	remote?: boolean;
 }
 
 export interface CfLogfwdr {
@@ -381,6 +387,7 @@ export interface CfWorkerInit {
 		pipelines: CfPipeline[] | undefined;
 		unsafe: CfUnsafe | undefined;
 		assets: CfAssetsBinding | undefined;
+		unsafe_hello_world: CfHelloWorld[] | undefined;
 	};
 
 	containers?: { class_name: string }[];
@@ -409,6 +416,7 @@ export interface CfWorkerInit {
 				jwt: string;
 				routerConfig: RouterConfig;
 				assetConfig: AssetConfig;
+				run_worker_first?: string[] | boolean;
 				_redirects?: string;
 				_headers?: string;
 		  }

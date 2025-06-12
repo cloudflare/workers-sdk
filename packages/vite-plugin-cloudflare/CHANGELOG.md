@@ -1,5 +1,39 @@
 # @cloudflare/vite-plugin
 
+## 1.6.0
+
+### Minor Changes
+
+- [#9510](https://github.com/cloudflare/workers-sdk/pull/9510) [`590d69b`](https://github.com/cloudflare/workers-sdk/commit/590d69b7b46954947d0b3f9dacd7da7417e736b7) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Enhanced build support for Workers with assets.
+
+  Assets that are imported in the entry Worker are now automatically moved to the client build output. This enables importing assets in your Worker and accessing them via the [assets binding](https://developers.cloudflare.com/workers/static-assets/binding/#binding). See [Static Asset Handling](https://vite.dev/guide/assets) to find out about all the ways you can import assets in Vite.
+
+  Additionally, a broader range of build scenarios are now supported. These are:
+
+  - Assets only build with client entry/entries
+  - Assets only build with no client entry/entries that includes `public` directory assets
+  - Worker(s) + assets build with client entry/entries
+  - Worker(s) + assets build with no client entry/entries that includes imported and/or `public` directory assets
+  - Worker(s) build with no assets
+
+### Patch Changes
+
+- [#9513](https://github.com/cloudflare/workers-sdk/pull/9513) [`0e50072`](https://github.com/cloudflare/workers-sdk/commit/0e500720bf70016fa4ea21fc8959c4bd764ebc38) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Ensure that .dev.vars files cannot be accessed via the dev server or preview server.
+
+- Updated dependencies [[`1914b87`](https://github.com/cloudflare/workers-sdk/commit/1914b87e254bb733298cb0c0e96bb0bd234acde4), [`931f467`](https://github.com/cloudflare/workers-sdk/commit/931f467e39f70abfd0e1c08172f330e6e3de02a3), [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1), [`80b8bd9`](https://github.com/cloudflare/workers-sdk/commit/80b8bd93e6dd931a7b216645a6f249642c420dee), [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1), [`9e4cd16`](https://github.com/cloudflare/workers-sdk/commit/9e4cd16ce1639cc6763f5c50b9478eece7f4be73), [`92305af`](https://github.com/cloudflare/workers-sdk/commit/92305af0a7efa68fc0e13e3549f88d19f3cb069b), [`0b2ba45`](https://github.com/cloudflare/workers-sdk/commit/0b2ba4590ca59f1d95d7262e64adeefebe6a3e7e)]:
+  - wrangler@4.20.0
+  - miniflare@4.20250604.1
+  - @cloudflare/unenv-preset@2.3.3
+
+## 1.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`4ab5a40`](https://github.com/cloudflare/workers-sdk/commit/4ab5a4027d8a180e8ed300bc63d4d4d41848bcd5), [`485cd08`](https://github.com/cloudflare/workers-sdk/commit/485cd08679eaa3a47e9951c708b80f5c33a0a097), [`66edd2f`](https://github.com/cloudflare/workers-sdk/commit/66edd2f3bdae3a5fa437311a038a47aba366a64c), [`d1a1787`](https://github.com/cloudflare/workers-sdk/commit/d1a1787b27467417830f5d5c7bb8e7a14d346e9c), [`e3b3ef5`](https://github.com/cloudflare/workers-sdk/commit/e3b3ef51cfbdb5ffa15ebe81656460c340a2bba4), [`1f84092`](https://github.com/cloudflare/workers-sdk/commit/1f84092851e7a71681e99417cfd63c982bfa1d58), [`3261957`](https://github.com/cloudflare/workers-sdk/commit/3261957aba6bd8c02014206ad6fa219badde4a35)]:
+  - miniflare@4.20250604.0
+  - wrangler@4.19.2
+  - @cloudflare/unenv-preset@2.3.3
+
 ## 1.5.0
 
 ### Minor Changes
