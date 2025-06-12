@@ -1,15 +1,15 @@
 import assert from "node:assert";
 import { z } from "zod";
 import {
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
 } from "../shared";
 
 const AISchema = z.object({
 	binding: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
+	remoteProxyConnectionString: z.custom<RemoteProxyConnectionString>(),
 });
 
 export const AIOptionsSchema = z.object({
@@ -26,8 +26,8 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 		}
 
 		assert(
-			options.ai.mixedModeConnectionString,
-			"Workers AI only supports Mixed Mode"
+			options.ai.remoteProxyConnectionString,
+			"Workers AI only supports running remotely"
 		);
 
 		return [
@@ -61,8 +61,8 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 		return [
 			{
 				name: `${AI_PLUGIN_NAME}:${options.ai.binding}`,
-				worker: mixedModeClientWorker(
-					options.ai.mixedModeConnectionString,
+				worker: remoteProxyClientWorker(
+					options.ai.remoteProxyConnectionString,
 					options.ai.binding
 				),
 			},

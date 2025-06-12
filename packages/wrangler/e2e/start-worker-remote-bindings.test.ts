@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
-describe("startWorker - mixed mode", () => {
+describe("startWorker - remote bindings", () => {
 	const remoteWorkerName = generateResourceName();
 	const helper = new WranglerE2ETestHelper();
 
@@ -31,11 +31,11 @@ describe("startWorker - mixed mode", () => {
 	});
 
 	describe.each([true, false])(
-		`with experimentalMixedMode %s`,
-		(experimentalMixedMode) => {
+		`with experimentalRemoteBindings %s`,
+		(experimentalRemoteBindings) => {
 			const testOpts: NonNullable<Parameters<typeof it>[1]> = {
-				fails: !experimentalMixedMode,
-				retry: !experimentalMixedMode ? 0 : undefined,
+				fails: !experimentalRemoteBindings,
+				retry: !experimentalRemoteBindings ? 0 : undefined,
 			};
 
 			it("allows connecting to a remote worker", testOpts, async () => {
@@ -48,7 +48,7 @@ describe("startWorker - mixed mode", () => {
 							{
 								binding: "REMOTE_WORKER",
 								service: remoteWorkerName,
-								remote: true,
+								experimental_remote: true,
 							},
 						],
 					}),
@@ -58,7 +58,7 @@ describe("startWorker - mixed mode", () => {
 				const worker = await unstable_startWorker({
 					config: `${helper.tmpPath}/wrangler.json`,
 					dev: {
-						experimentalMixedMode,
+						experimentalRemoteBindings,
 					},
 				});
 
@@ -83,7 +83,7 @@ describe("startWorker - mixed mode", () => {
 							{
 								binding: "REMOTE_WORKER",
 								service: remoteWorkerName,
-								remote: true,
+								experimental_remote: true,
 							},
 						],
 					}),
@@ -94,7 +94,7 @@ describe("startWorker - mixed mode", () => {
 				const worker = await unstable_startWorker({
 					config: `${helper.tmpPath}/wrangler.json`,
 					dev: {
-						experimentalMixedMode,
+						experimentalRemoteBindings,
 					},
 				});
 

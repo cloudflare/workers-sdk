@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-expose new `experimental_maybeStartOrUpdateMixedModeSession` utility
+expose new `experimental_maybeStartOrUpdateRemoteProxySession` utility

@@ -15,7 +15,7 @@ export default defineWorkersConfig({
 	test: {
 		poolOptions: {
 			workers: {
-				experimental_mixedMode: true,
+				experimental_remoteBindings: true,
 				wrangler: { configPath: "./wrangler.json" },
 			},
 		},

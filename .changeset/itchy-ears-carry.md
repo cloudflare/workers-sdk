@@ -2,4 +2,4 @@
 "@cloudflare/vitest-pool-workers": patch
 ---
 
-add experimental support for mixed mode
+add experimental support for remote bindings

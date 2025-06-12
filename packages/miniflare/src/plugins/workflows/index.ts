@@ -5,10 +5,10 @@ import { Service } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
-	MixedModeConnectionString,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
+	RemoteProxyConnectionString,
 } from "../shared";
 
 export const WorkflowsOptionsSchema = z.object({
@@ -18,8 +18,8 @@ export const WorkflowsOptionsSchema = z.object({
 				name: z.string(),
 				className: z.string(),
 				scriptName: z.string().optional(),
-				mixedModeConnectionString: z
-					.custom<MixedModeConnectionString>()
+				remoteProxyConnectionString: z
+					.custom<RemoteProxyConnectionString>()
 					.optional(),
 			})
 		)

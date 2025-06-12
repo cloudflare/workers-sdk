@@ -48,7 +48,7 @@ import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,
-	MixedModeConnectionString,
+	RemoteProxyConnectionString,
 	SourceOptions,
 	WorkerOptions,
 } from "miniflare";
@@ -325,42 +325,42 @@ function getRemoteId(id: string | symbol | undefined): string | null {
 
 function kvNamespaceEntry(
 	{ binding, id: originalId, remote }: CfKvNamespace,
-	mixedModeConnectionString?: MixedModeConnectionString
+	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
-	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 ] {
 	const id = getRemoteId(originalId) ?? binding;
-	if (!mixedModeConnectionString || !remote) {
+	if (!remoteProxyConnectionString || !remote) {
 		return [binding, { id }];
 	}
-	return [binding, { id, mixedModeConnectionString }];
+	return [binding, { id, remoteProxyConnectionString }];
 }
 function r2BucketEntry(
 	{ binding, bucket_name, remote }: CfR2Bucket,
-	mixedModeConnectionString?: MixedModeConnectionString
+	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
-	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 ] {
 	const id = getRemoteId(bucket_name) ?? binding;
-	if (!mixedModeConnectionString || !remote) {
+	if (!remoteProxyConnectionString || !remote) {
 		return [binding, { id }];
 	}
-	return [binding, { id, mixedModeConnectionString }];
+	return [binding, { id, remoteProxyConnectionString }];
 }
 function d1DatabaseEntry(
 	{ binding, database_id, preview_database_id, remote }: CfD1Database,
-	mixedModeConnectionString?: MixedModeConnectionString
+	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
-	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 ] {
 	const id = getRemoteId(preview_database_id ?? database_id) ?? binding;
-	if (!mixedModeConnectionString || !remote) {
+	if (!remoteProxyConnectionString || !remote) {
 		return [binding, { id }];
 	}
-	return [binding, { id, mixedModeConnectionString }];
+	return [binding, { id, remoteProxyConnectionString }];
 }
 function queueProducerEntry(
 	{
@@ -369,20 +369,20 @@ function queueProducerEntry(
 		delivery_delay: deliveryDelay,
 		remote,
 	}: CfQueue,
-	mixedModeConnectionString?: MixedModeConnectionString
+	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
 	{
 		queueName: string;
 		deliveryDelay: number | undefined;
-		mixedModeConnectionString?: MixedModeConnectionString;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
-	if (!mixedModeConnectionString || !remote) {
+	if (!remoteProxyConnectionString || !remote) {
 		return [binding, { queueName, deliveryDelay }];
 	}
 
-	return [binding, { queueName, deliveryDelay, mixedModeConnectionString }];
+	return [binding, { queueName, deliveryDelay, remoteProxyConnectionString }];
 }
 function pipelineEntry(pipeline: CfPipeline): [string, string] {
 	return [pipeline.binding, pipeline.pipeline];
@@ -398,17 +398,17 @@ function workflowEntry(
 		script_name: scriptName,
 		remote,
 	}: CfWorkflow,
-	mixedModeConnectionString?: MixedModeConnectionString
+	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
 	{
 		name: string;
 		className: string;
 		scriptName?: string;
-		mixedModeConnectionString?: MixedModeConnectionString;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
-	if (!mixedModeConnectionString || !remote) {
+	if (!remoteProxyConnectionString || !remote) {
 		return [
 			binding,
 			{
@@ -425,7 +425,7 @@ function workflowEntry(
 			name,
 			className,
 			scriptName,
-			mixedModeConnectionString,
+			remoteProxyConnectionString,
 		},
 	];
 }
@@ -436,22 +436,28 @@ function dispatchNamespaceEntry({
 }: CfDispatchNamespace): [string, { namespace: string }];
 function dispatchNamespaceEntry(
 	{ binding, namespace, remote }: CfDispatchNamespace,
-	mixedModeConnectionString: MixedModeConnectionString
+	remoteProxyConnectionString: RemoteProxyConnectionString
 ): [
 	string,
-	{ namespace: string; mixedModeConnectionString: MixedModeConnectionString },
+	{
+		namespace: string;
+		remoteProxyConnectionString: RemoteProxyConnectionString;
+	},
 ];
 function dispatchNamespaceEntry(
 	{ binding, namespace, remote }: CfDispatchNamespace,
-	mixedModeConnectionString?: MixedModeConnectionString
+	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
-	{ namespace: string; mixedModeConnectionString?: MixedModeConnectionString },
+	{
+		namespace: string;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+	},
 ] {
-	if (!mixedModeConnectionString || !remote) {
+	if (!remoteProxyConnectionString || !remote) {
 		return [binding, { namespace }];
 	}
-	return [binding, { namespace, mixedModeConnectionString }];
+	return [binding, { namespace, remoteProxyConnectionString }];
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, any] {
@@ -520,8 +526,8 @@ type MiniflareBindingsConfig = Pick<
 //  each plugin options schema and use those
 export function buildMiniflareBindingOptions(
 	config: MiniflareBindingsConfig,
-	mixedModeConnectionString: MixedModeConnectionString | undefined,
-	mixedModeEnabled: boolean
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
+	remoteBindingsEnabled: boolean
 ): {
 	bindingOptions: WorkerOptionsBindings;
 	internalObjects: CfDurableObject[];
@@ -556,12 +562,12 @@ export function buildMiniflareBindingOptions(
 
 	const notFoundServices = new Set<string>();
 	for (const service of config.services ?? []) {
-		if (mixedModeConnectionString && service.remote) {
+		if (remoteProxyConnectionString && service.experimental_remote) {
 			serviceBindings[service.binding] = {
 				name: service.service,
 				props: service.props,
 				entrypoint: service.entrypoint,
-				mixedModeConnectionString,
+				remoteProxyConnectionString,
 			};
 			continue;
 		}
@@ -779,7 +785,7 @@ export function buildMiniflareBindingOptions(
 	}
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
-	if (bindings.ai?.binding && !mixedModeEnabled) {
+	if (bindings.ai?.binding && !remoteBindingsEnabled) {
 		externalWorkers.push({
 			name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
 			modules: [
@@ -801,15 +807,15 @@ export function buildMiniflareBindingOptions(
 		};
 	}
 
-	if (bindings.ai && mixedModeEnabled) {
+	if (bindings.ai && remoteBindingsEnabled) {
 		warnOrError("ai", bindings.ai.remote, "always-remote");
 	}
 
-	if (bindings.browser && mixedModeEnabled) {
+	if (bindings.browser && remoteBindingsEnabled) {
 		warnOrError("browser", bindings.browser.remote, "remote");
 	}
 
-	if (bindings.mtls_certificates && mixedModeEnabled) {
+	if (bindings.mtls_certificates && remoteBindingsEnabled) {
 		for (const mtls of bindings.mtls_certificates) {
 			warnOrError("ai", mtls.remote, "always-remote");
 		}
@@ -819,7 +825,7 @@ export function buildMiniflareBindingOptions(
 	if (
 		bindings.images?.binding &&
 		!config.imagesLocalMode &&
-		!mixedModeEnabled
+		!remoteBindingsEnabled
 	) {
 		externalWorkers.push({
 			name: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
@@ -842,7 +848,7 @@ export function buildMiniflareBindingOptions(
 		};
 	}
 
-	if (bindings.vectorize && !mixedModeEnabled) {
+	if (bindings.vectorize && !remoteBindingsEnabled) {
 		for (const vectorizeBinding of bindings.vectorize) {
 			const bindingName = vectorizeBinding.binding;
 			const indexName = vectorizeBinding.index_name;
@@ -888,31 +894,31 @@ export function buildMiniflareBindingOptions(
 		wasmBindings,
 
 		ai:
-			bindings.ai && mixedModeConnectionString
+			bindings.ai && remoteProxyConnectionString
 				? {
 						binding: bindings.ai.binding,
-						mixedModeConnectionString,
+						remoteProxyConnectionString,
 					}
 				: undefined,
 
 		kvNamespaces: Object.fromEntries(
 			bindings.kv_namespaces?.map((kv) =>
-				kvNamespaceEntry(kv, mixedModeConnectionString)
+				kvNamespaceEntry(kv, remoteProxyConnectionString)
 			) ?? []
 		),
 		r2Buckets: Object.fromEntries(
 			bindings.r2_buckets?.map((r2) =>
-				r2BucketEntry(r2, mixedModeConnectionString)
+				r2BucketEntry(r2, remoteProxyConnectionString)
 			) ?? []
 		),
 		d1Databases: Object.fromEntries(
 			bindings.d1_databases?.map((d1) =>
-				d1DatabaseEntry(d1, mixedModeConnectionString)
+				d1DatabaseEntry(d1, remoteProxyConnectionString)
 			) ?? []
 		),
 		queueProducers: Object.fromEntries(
 			bindings.queues?.map((queue) =>
-				queueProducerEntry(queue, mixedModeConnectionString)
+				queueProducerEntry(queue, remoteProxyConnectionString)
 			) ?? []
 		),
 		queueConsumers: Object.fromEntries(
@@ -930,7 +936,7 @@ export function buildMiniflareBindingOptions(
 		),
 		workflows: Object.fromEntries(
 			bindings.workflows?.map((workflow) =>
-				workflowEntry(workflow, mixedModeConnectionString)
+				workflowEntry(workflow, remoteProxyConnectionString)
 			) ?? []
 		),
 		secretsStoreSecrets: Object.fromEntries(
@@ -949,25 +955,27 @@ export function buildMiniflareBindingOptions(
 			send_email: bindings.send_email,
 		},
 		images:
-			bindings.images && (config.imagesLocalMode || mixedModeEnabled)
+			bindings.images && (config.imagesLocalMode || remoteBindingsEnabled)
 				? {
 						binding: bindings.images.binding,
-						mixedModeConnectionString:
-							bindings.images.remote && mixedModeConnectionString
-								? mixedModeConnectionString
+						remoteProxyConnectionString:
+							bindings.images.remote && remoteProxyConnectionString
+								? remoteProxyConnectionString
 								: undefined,
 					}
 				: undefined,
 		browserRendering:
-			mixedModeEnabled && mixedModeConnectionString && bindings.browser?.remote
+			remoteBindingsEnabled &&
+			remoteProxyConnectionString &&
+			bindings.browser?.remote
 				? {
 						binding: bindings.browser.binding,
-						mixedModeConnectionString,
+						remoteProxyConnectionString,
 					}
 				: undefined,
 
 		vectorize:
-			mixedModeEnabled && mixedModeConnectionString
+			remoteBindingsEnabled && remoteProxyConnectionString
 				? Object.fromEntries(
 						bindings.vectorize
 							?.filter((v) => {
@@ -979,7 +987,7 @@ export function buildMiniflareBindingOptions(
 									vectorize.binding,
 									{
 										index_name: vectorize.index_name,
-										mixedModeConnectionString,
+										remoteProxyConnectionString,
 									},
 								];
 							}) ?? []
@@ -987,7 +995,7 @@ export function buildMiniflareBindingOptions(
 				: undefined,
 
 		dispatchNamespaces:
-			mixedModeEnabled && mixedModeConnectionString
+			remoteBindingsEnabled && remoteProxyConnectionString
 				? Object.fromEntries(
 						bindings.dispatch_namespaces
 							?.filter((d) => {
@@ -997,7 +1005,7 @@ export function buildMiniflareBindingOptions(
 							.map((dispatchNamespace) =>
 								dispatchNamespaceEntry(
 									dispatchNamespace,
-									mixedModeConnectionString
+									remoteProxyConnectionString
 								)
 							) ?? []
 					)
@@ -1049,7 +1057,7 @@ export function buildMiniflareBindingOptions(
 		),
 
 		mtlsCertificates:
-			mixedModeEnabled && mixedModeConnectionString
+			remoteBindingsEnabled && remoteProxyConnectionString
 				? Object.fromEntries(
 						bindings.mtls_certificates
 							?.filter((d) => {
@@ -1059,7 +1067,7 @@ export function buildMiniflareBindingOptions(
 							.map((mtlsCertificate) => [
 								mtlsCertificate.binding,
 								{
-									mixedModeConnectionString,
+									remoteProxyConnectionString,
 									certificate_id: mtlsCertificate.certificate_id,
 								},
 							]) ?? []
@@ -1255,8 +1263,8 @@ export async function buildMiniflareOptions(
 	log: Log,
 	config: Omit<ConfigBundle, "rules">,
 	proxyToUserWorkerAuthenticationSecret: UUID,
-	mixedModeConnectionString: MixedModeConnectionString | undefined,
-	mixedModeEnabled: boolean
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
+	remoteBindingsEnabled: boolean
 ): Promise<{
 	options: Options;
 	internalObjects: CfDurableObject[];
@@ -1271,7 +1279,7 @@ export async function buildMiniflareOptions(
 		}
 	}
 
-	if (!mixedModeEnabled) {
+	if (!remoteBindingsEnabled) {
 		if (config.bindings.ai) {
 			if (!didWarnAiAccountUsage) {
 				didWarnAiAccountUsage = true;
@@ -1307,8 +1315,8 @@ export async function buildMiniflareOptions(
 	const { bindingOptions, internalObjects, externalWorkers } =
 		buildMiniflareBindingOptions(
 			config,
-			mixedModeConnectionString,
-			mixedModeEnabled
+			remoteProxyConnectionString,
+			remoteBindingsEnabled
 		);
 	const sitesOptions = buildSitesOptions(config);
 	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);

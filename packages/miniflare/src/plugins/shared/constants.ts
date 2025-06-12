@@ -1,12 +1,12 @@
-import SCRIPT_MIXED_MODE_CLIENT from "worker:shared/mixed-mode-client";
 import SCRIPT_OBJECT_ENTRY from "worker:shared/object-entry";
+import SCRIPT_REMOTE_PROXY_CLIENT from "worker:shared/remote-proxy-client";
 import {
 	Worker,
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
 import { CoreBindings, SharedBindings } from "../../workers";
-import { MixedModeConnectionString } from ".";
+import { RemoteProxyConnectionString } from ".";
 
 export const SOCKET_ENTRY = "entry";
 export const SOCKET_ENTRY_LOCAL = "entry:local";
@@ -73,8 +73,8 @@ export function objectEntryWorker(
 	};
 }
 
-export function mixedModeClientWorker(
-	mixedModeConnectionString: MixedModeConnectionString,
+export function remoteProxyClientWorker(
+	remoteProxyConnectionString: RemoteProxyConnectionString,
 	binding: string
 ) {
 	return {
@@ -82,13 +82,13 @@ export function mixedModeClientWorker(
 		modules: [
 			{
 				name: "index.worker.js",
-				esModule: SCRIPT_MIXED_MODE_CLIENT(),
+				esModule: SCRIPT_REMOTE_PROXY_CLIENT(),
 			},
 		],
 		bindings: [
 			{
-				name: "mixedModeConnectionString",
-				text: mixedModeConnectionString.href,
+				name: "remoteProxyConnectionString",
+				text: remoteProxyConnectionString.href,
 			},
 			{
 				name: "binding",

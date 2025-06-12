@@ -379,7 +379,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			async configurePreviewServer(vitePreviewServer) {
 				const workerConfigs = getWorkerConfigs(
 					vitePreviewServer.config.root,
-					pluginConfig.experimental?.mixedMode ?? false
+					pluginConfig.experimental?.remoteBindings ?? false
 				);
 
 				const inputInspectorPort = await getInputInspectorPortOption(
@@ -392,7 +392,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						vitePreviewServer,
 						workerConfigs,
 						pluginConfig.persistState ?? true,
-						!!pluginConfig.experimental?.mixedMode,
+						!!pluginConfig.experimental?.remoteBindings,
 						inputInspectorPort
 					)
 				);
@@ -732,7 +732,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			async configurePreviewServer(vitePreviewServer) {
 				const workerConfigs = getWorkerConfigs(
 					vitePreviewServer.config.root,
-					pluginConfig.experimental?.mixedMode ?? false
+					pluginConfig.experimental?.remoteBindings ?? false
 				);
 
 				if (workerConfigs.length >= 1 && pluginConfig.inspectorPort !== false) {

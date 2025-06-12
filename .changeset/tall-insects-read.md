@@ -4,4 +4,4 @@
 "wrangler": patch
 ---
 
-performance improvement: restart a mixed mode session only if the worker's remote bindings have changed
+performance improvement: restart a remote proxy session only if the worker's remote bindings have changed
