@@ -19,5 +19,5 @@ of the following commands:
 - wrangler secret delete
 - wrangler triggers deploy (TODO: manually test)
 
-this is a measure we're putting in place to try to prevent developers from accidentally apply
+this is a measure we're putting in place to try to prevent developers from accidentally applying
 changes to an incorrect (potentially even production) environment
