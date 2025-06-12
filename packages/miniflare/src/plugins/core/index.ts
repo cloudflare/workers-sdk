@@ -165,9 +165,7 @@ const CoreOptionsSchemaInput = z.intersection(
 		tails: z.array(ServiceDesignatorSchema).optional(),
 
 		// Strip the CF-Connecting-IP header from outbound fetches
-		// There is an issue with the connect() API and the globalOutbound workerd setting that impacts TCP ingress
-		// We should default it to true once https://github.com/cloudflare/workerd/pull/4145 is resolved
-		stripCfConnectingIp: z.boolean().default(false),
+		stripCfConnectingIp: z.boolean().default(true),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
@@ -839,6 +837,7 @@ export const CORE_PLUGIN: Plugin<
 						},
 					],
 					compatibilityDate: "2025-01-01",
+					compatibilityFlags: ["connect_pass_through", "experimental"],
 					globalOutbound: getGlobalOutbound(workerIndex, options),
 				},
 			});
