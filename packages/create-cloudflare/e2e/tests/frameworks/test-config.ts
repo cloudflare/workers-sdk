@@ -1,9 +1,23 @@
-import { keys, LONG_TIMEOUT } from "../helpers";
+import { detectPackageManager } from "../../../src/helpers/packageManagers";
+import {
+	frameworkToTestFilter,
+	isExperimental,
+	keys,
+	LONG_TIMEOUT,
+} from "../../helpers/constants";
+import type { FrameworkTestConfig } from "../../helpers/framework-helpers";
 
-// These are ordered based on speed and reliability for ease of debugging
-export default function getFrameworkTestConfig(pm: string) {
-	return {
-		"react-router": {
+export type NamedFrameworkTestConfig = FrameworkTestConfig & {
+	name: string;
+};
+
+/**
+ * Gets the list of non-experimental framework test configurations.
+ */
+function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
+	return [
+		{
+			name: "react-router",
 			unsupportedOSs: ["win32"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
@@ -19,7 +33,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			nodeCompat: false,
 			flags: ["--no-install", "--no-git-init"],
 		},
-		"astro:pages": {
+		{
+			name: "astro:pages",
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
@@ -28,6 +43,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Hello, Astronaut!",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
@@ -48,7 +64,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				"strict",
 			],
 		},
-		"astro:workers": {
+		{
+			name: "astro:workers",
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
@@ -57,6 +74,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Hello, Astronaut!",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
@@ -77,7 +95,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				"strict",
 			],
 		},
-		"docusaurus:pages": {
+		{
+			name: "docusaurus:pages",
 			argv: ["--platform", "pages"],
 			unsupportedPms: ["bun"],
 			testCommitMessage: true,
@@ -88,6 +107,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Dinosaurs are cool",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Dinosaurs are cool",
 			},
@@ -104,7 +124,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				},
 			],
 		},
-		"docusaurus:workers": {
+		{
+			name: "docusaurus:workers",
 			argv: ["--platform", "workers"],
 			unsupportedPms: ["bun"],
 			testCommitMessage: true,
@@ -115,6 +136,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Dinosaurs are cool",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Dinosaurs are cool",
 			},
@@ -127,7 +149,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				},
 			],
 		},
-		analog: {
+		{
+			name: "analog",
 			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
@@ -140,6 +163,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "The fullstack meta-framework for Angular!",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/api/v1/test",
 				expectedText: "C3_TEST",
 			},
@@ -152,7 +176,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			nodeCompat: false,
 			flags: ["--skipTailwind"],
 		},
-		"angular:pages": {
+		{
+			name: "angular:pages",
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
@@ -163,13 +188,15 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Congratulations! Your app is running.",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Congratulations! Your app is running.",
 			},
 			nodeCompat: false,
 			flags: ["--style", "sass"],
 		},
-		"angular:workers": {
+		{
+			name: "angular:workers",
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
@@ -180,13 +207,15 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Congratulations! Your app is running.",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Congratulations! Your app is running.",
 			},
 			nodeCompat: false,
 			flags: ["--style", "sass"],
 		},
-		"gatsby:pages": {
+		{
+			name: "gatsby:pages",
 			argv: ["--platform", "pages"],
 			unsupportedPms: ["bun", "pnpm"],
 			promptHandlers: [
@@ -202,12 +231,14 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Gatsby!",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Gatsby!",
 			},
 			nodeCompat: false,
 		},
-		"gatsby:workers": {
+		{
+			name: "gatsby:workers",
 			argv: ["--platform", "workers"],
 			unsupportedPms: ["bun", "pnpm"],
 			promptHandlers: [
@@ -223,12 +254,14 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Gatsby!",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Gatsby!",
 			},
 			nodeCompat: false,
 		},
-		"hono:pages": {
+		{
+			name: "hono:pages",
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
@@ -237,6 +270,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Hello!",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Hello!",
 			},
@@ -248,7 +282,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				},
 			],
 		},
-		"hono:workers": {
+		{
+			name: "hono:workers",
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
@@ -257,6 +292,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Hello Hono!",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/message",
 				expectedText: "Hello Hono!",
 			},
@@ -268,7 +304,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				},
 			],
 		},
-		"qwik:pages": {
+		{
+			name: "qwik:pages",
 			argv: ["--platform", "pages"],
 			promptHandlers: [
 				{
@@ -284,12 +321,14 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Welcome to Qwik",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Welcome to Qwik",
 			},
 			nodeCompat: true,
 		},
-		"qwik:workers": {
+		{
+			name: "qwik:workers",
 			argv: ["--platform", "workers"],
 			promptHandlers: [
 				{
@@ -306,12 +345,14 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Welcome to Qwik",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Welcome to Qwik",
 			},
 			nodeCompat: true,
 		},
-		"remix:pages": {
+		{
+			name: "remix:pages",
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
@@ -322,6 +363,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Welcome to Remix",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
@@ -334,7 +376,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			nodeCompat: false,
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
-		"remix:workers": {
+		{
+			name: "remix:workers",
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
@@ -345,13 +388,15 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Welcome to Remix",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
 			nodeCompat: false,
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
-		"next:pages": {
+		{
+			name: "next:pages",
 			argv: ["--platform", "pages"],
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
@@ -362,19 +407,21 @@ export default function getFrameworkTestConfig(pm: string) {
 			// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
 			unsupportedOSs: ["win32"],
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Create Next App",
 			},
 			nodeCompat: true,
 			flags: ["--yes", "--no-install", "--import-alias", "@/*"],
 		},
-		"next:workers": {
+		{
+			name: "next:workers",
 			argv: ["--platform", "workers"],
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
 			flags: ["--yes", "--import-alias", "@/*"],
 			verifyPreview: {
-				previewArgs: ["--"],
+				previewArgs: ["--", "--inspector-port=0"],
 				route: "/test",
 				expectedText: "Create Next App",
 			},
@@ -391,7 +438,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				"yarn",
 			],
 		},
-		"nuxt:pages": {
+		{
+			name: "nuxt:pages",
 			promptHandlers: [
 				{
 					matcher: /Would you like to install any of the official modules\?/,
@@ -409,6 +457,7 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			nodeCompat: false,
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
@@ -419,7 +468,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "C3_TEST",
 			},
 		},
-		"nuxt:workers": {
+		{
+			name: "nuxt:workers",
 			promptHandlers: [
 				{
 					matcher: /Would you like to install any of the official modules\?/,
@@ -436,12 +486,14 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Welcome to Nuxt!",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
 			nodeCompat: false,
 		},
-		"react:pages": {
+		{
+			name: "react:pages",
 			argv: ["--platform", "pages"],
 			promptHandlers: [
 				{
@@ -457,12 +509,14 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Vite + React",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Vite + React",
 			},
 			nodeCompat: false,
 		},
-		"react:workers": {
+		{
+			name: "react:workers",
 			argv: ["--platform", "workers"],
 			promptHandlers: [
 				{
@@ -491,7 +545,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			nodeCompat: false,
 		},
-		solid: {
+		{
+			name: "solid",
 			promptHandlers: [
 				{
 					matcher: /Which template would you like to use/,
@@ -499,6 +554,9 @@ export default function getFrameworkTestConfig(pm: string) {
 				},
 			],
 			flags: ["--ts"],
+			extraEnv: {
+				BEGIT_GH_API_KEY: process.env.GITHUB_TOKEN,
+			},
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["npm", "yarn"],
@@ -508,12 +566,14 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Hello world",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Hello world",
 			},
 			nodeCompat: true,
 		},
-		"svelte:pages": {
+		{
+			name: "svelte:pages",
 			argv: ["--platform", "pages"],
 			flags: [
 				"--no-install",
@@ -531,6 +591,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "SvelteKit app",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
@@ -542,7 +603,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			nodeCompat: false,
 		},
-		"svelte:workers": {
+		{
+			name: "svelte:workers",
 			argv: ["--platform", "workers"],
 			flags: [
 				"--no-install",
@@ -560,12 +622,14 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "SvelteKit app",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
 			nodeCompat: false,
 		},
-		"vue:pages": {
+		{
+			name: "vue:pages",
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
@@ -574,13 +638,15 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Vite App",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Vite App",
 			},
 			nodeCompat: false,
 			flags: ["--ts"],
 		},
-		"vue:workers": {
+		{
+			name: "vue:workers",
 			argv: ["--platform", "workers", "--ts"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
@@ -595,5 +661,37 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			nodeCompat: false,
 		},
-	};
+	];
+}
+
+/**
+ * Gets the list of experimental framework test configurations.
+ */
+function getExperimentalFrameworkTestConfig() {
+	return [
+		// None right now
+	];
+}
+
+/**
+ * Get a list of Framework test configurations based on the provided `options`.
+ *
+ * @param options - An object containing the following properties:
+ *   - isExperimentalMode: A boolean indicating if experimental mode is enabled.
+ *   - FrameworkTestFilter: A string that can be used to filter the tests by "name" or "name:(pages|workers)".
+ */
+export function getFrameworksTests(): NamedFrameworkTestConfig[] {
+	const packageManager = detectPackageManager();
+	const frameworkTests = isExperimental
+		? getExperimentalFrameworkTestConfig()
+		: getFrameworkTestConfig(packageManager.name);
+	return frameworkTests.filter((testConfig) => {
+		if (!frameworkToTestFilter) {
+			return true;
+		}
+		if (frameworkToTestFilter.includes(":")) {
+			return testConfig.name === frameworkToTestFilter;
+		}
+		return testConfig.name.split(":")[0] === frameworkToTestFilter;
+	});
 }
