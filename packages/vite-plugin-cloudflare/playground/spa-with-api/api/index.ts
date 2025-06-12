@@ -1,4 +1,4 @@
-import asset from "./asset.txt?url";
+import asset from "./asset.txt?no-inline";
 
 interface Env {
 	ASSETS: Fetcher;
