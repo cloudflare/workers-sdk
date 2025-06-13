@@ -1,4 +1,4 @@
-From 6bca6c563e616596aa75a88f1d52b8f9150ba93c Mon Sep 17 00:00:00 2001
+From c43fb074f72c73e4c7ad9dd02c061870298a4347 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 16:07:24 +0100
 Subject: [PATCH 7/8] Limit heap profiling modes available
@@ -8,7 +8,7 @@ Subject: [PATCH 7/8] Limit heap profiling modes available
  1 file changed, 2 insertions(+), 6 deletions(-)
 
 diff --git a/front_end/panels/profiler/HeapProfilerPanel.ts b/front_end/panels/profiler/HeapProfilerPanel.ts
-index c5670bd8e4..cbb63b9a8a 100644
+index b25d9e65fc..9a19052de2 100644
 --- a/front_end/panels/profiler/HeapProfilerPanel.ts
 +++ b/front_end/panels/profiler/HeapProfilerPanel.ts
 @@ -25,12 +25,8 @@ export class HeapProfilerPanel extends ProfilesPanel implements UI.ContextMenu.P
