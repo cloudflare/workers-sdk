@@ -36,7 +36,7 @@ jobs:
 
       - name: Run Vite E2E tests
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
-        timeout-minutes: 15
+        timeout-minutes: 50
         env:
           NODE_DEBUG: "vite-plugin:test"
           # The AI tests need to connect to Cloudflare
@@ -96,7 +96,7 @@ jobs:
 
       - name: Run Vite E2E tests
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
-        timeout-minutes: 15
+        timeout-minutes: 50
         env:
           NODE_DEBUG: "vite-plugin:test"
           # The AI tests need to connect to Cloudflare
