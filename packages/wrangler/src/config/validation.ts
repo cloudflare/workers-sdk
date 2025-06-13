@@ -178,9 +178,7 @@ export function normalizeAndValidateConfig(
 
 	//TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
 	const envName = args.env;
-	assert(
-		envName === undefined || envName === "" || typeof envName === "string"
-	);
+	assert(envName === undefined || typeof envName === "string");
 
 	let activeEnv = topLevelEnv;
 
