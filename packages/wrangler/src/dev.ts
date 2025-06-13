@@ -382,6 +382,7 @@ export type StartDevOptions = DevArguments &
 		onReady?: (ip: string, port: number) => void;
 		enableIpc?: boolean;
 		dockerPath?: string;
+		containerEngine?: string;
 	};
 
 async function updateDevEnvRegistry(

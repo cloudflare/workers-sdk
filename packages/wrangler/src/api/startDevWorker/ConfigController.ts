@@ -12,7 +12,10 @@ import {
 } from "../../dev";
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
-import { getDockerPath } from "../../environment-variables/misc-variables";
+import {
+	getDockerHost,
+	getDockerPath,
+} from "../../environment-variables/misc-variables";
 import { UserError } from "../../errors";
 import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
@@ -155,6 +158,7 @@ async function resolveDevConfig(
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
+		containerEngine: input.dev?.containerEngine ?? getDockerHost(),
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -433,6 +437,9 @@ function resolveContainerConfig(
 	config: Config
 ): StartDevWorkerOptions["containers"] {
 	const containers: WorkerOptions["containers"] = {};
+	if (!config.dev.enable_containers) {
+		return containers;
+	}
 	for (const container of config.containers ?? []) {
 		containers[container.class_name] = {
 			image: container.image ?? container.configuration.image,

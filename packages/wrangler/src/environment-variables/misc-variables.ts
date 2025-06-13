@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
@@ -249,5 +250,17 @@ export const getDockerPath = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CONTAINERS_DOCKER_PATH",
 	defaultValue() {
 		return "docker";
+	},
+});
+
+/**
+ * `WRANGLER_DOCKER_HOST` specifies the Docker socket to connect to.
+ */
+export const getDockerHost = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_DOCKER_HOST",
+	defaultValue() {
+		return os.platform() === "win32"
+			? "//./pipe/docker_engine"
+			: "unix:/var/run/docker.sock";
 	},
 });
