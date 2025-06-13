@@ -28,6 +28,7 @@ import { getClassNamesWhichUseSQLite } from "./class-names-sqlite";
 import type { ServiceFetch } from "../api";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
+import type { ContainerEngine } from "../config/environment";
 import type {
 	CfD1Database,
 	CfDispatchNamespace,
@@ -208,6 +209,7 @@ export interface ConfigBundle {
 	enableContainers: boolean | undefined;
 	dockerPath: string | undefined;
 	containers: WorkerOptions["containers"];
+	containerEngine: ContainerEngine | undefined;
 }
 
 export class WranglerLog extends Log {

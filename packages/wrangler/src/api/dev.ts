@@ -2,8 +2,8 @@ import events from "node:events";
 import { fetch, Request } from "undici";
 import { startDev } from "../dev";
 import {
+	getDockerHost,
 	getDockerPath,
-	getDockerSocket,
 } from "../environment-variables/misc-variables";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
@@ -228,8 +228,7 @@ export async function unstable_dev(
 		nodeCompat: undefined,
 		enableContainers: options?.experimental?.enableContainers ?? false,
 		dockerPath: options?.experimental?.dockerPath ?? getDockerPath(),
-		containerEngine:
-			options?.experimental?.containerEngine ?? getDockerSocket(),
+		containerEngine: options?.experimental?.containerEngine ?? getDockerHost(),
 	};
 
 	//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time

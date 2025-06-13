@@ -13,8 +13,8 @@ import {
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import {
+	getDockerHost,
 	getDockerPath,
-	getDockerSocket,
 } from "../../environment-variables/misc-variables";
 import { UserError } from "../../errors";
 import { getFlag } from "../../experimental-flags";
@@ -158,7 +158,7 @@ async function resolveDevConfig(
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
-		containerEngine: input.dev?.containerEngine ?? getDockerSocket(),
+		containerEngine: input.dev?.containerEngine ?? getDockerHost(),
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
