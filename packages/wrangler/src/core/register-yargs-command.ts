@@ -2,7 +2,6 @@ import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { experimental_readRawConfig, readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";
-import { findWranglerConfig } from "../config/config-helpers";
 import { FatalError, UserError } from "../errors";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
