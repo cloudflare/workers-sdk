@@ -35,6 +35,33 @@ const MOCK_DEPLOYMENTS_COMPLEX_RESPONSE = `
 			}"
 		`;
 
+const MOCK_DEPLOYMENTS_DEV_INSTANCE_RESPONSE = `
+			"{
+			    \\"id\\": \\"1\\",
+			    \\"type\\": \\"default\\",
+			    \\"created_at\\": \\"123\\",
+			    \\"account_id\\": \\"123\\",
+			    \\"vcpu\\": 0.0625,
+			    \\"memory\\": \\"256MB\\",
+			    \\"memory_mib\\": 256,
+			    \\"disk\\": {
+			        \\"size\\": \\"2GB\\",
+			        \\"size_mb\\": 2000
+			    },
+			    \\"version\\": 1,
+			    \\"image\\": \\"hello\\",
+			    \\"location\\": {
+			        \\"name\\": \\"sfo06\\",
+			        \\"enabled\\": true
+			    },
+			    \\"network\\": {
+			        \\"ipv4\\": \\"1.1.1.1\\"
+			    },
+			    \\"placements_ref\\": \\"http://ref\\",
+			    \\"node_group\\": \\"metal\\"
+			}"
+		`;
+
 function mockDeploymentPost() {
 	msw.use(
 		http.post(
@@ -111,16 +138,17 @@ describe("cloudchamber create", () => {
 			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
-			      --json          Return output as clean JSON  [boolean] [default: false]
-			      --image         Image to use for your deployment  [string]
-			      --location      Location on Cloudflare's network where your deployment will run  [string]
-			      --var           Container environment variables  [array]
-			      --label         Deployment labels  [array]
-			      --all-ssh-keys  To add all SSH keys configured on your account to be added to this deployment, set this option to true  [boolean]
-			      --ssh-key-id    ID of the SSH key to add to the deployment  [array]
-			      --vcpu          Number of vCPUs to allocate to this deployment.  [number]
-			      --memory        Amount of memory (GiB, MiB...) to allocate to this deployment. Ex: 4GiB.  [string]
-			      --ipv4          Include an IPv4 in the deployment  [boolean]"
+			      --json           Return output as clean JSON  [boolean] [default: false]
+			      --image          Image to use for your deployment  [string]
+			      --location       Location on Cloudflare's network where your deployment will run  [string]
+			      --var            Container environment variables  [array]
+			      --label          Deployment labels  [array]
+			      --all-ssh-keys   To add all SSH keys configured on your account to be added to this deployment, set this option to true  [boolean]
+			      --ssh-key-id     ID of the SSH key to add to the deployment  [array]
+			      --instance-type  Instance type to allocate to this deployment. One of 'dev', 'basic', or 'standard'.  [string]
+			      --vcpu           Number of vCPUs to allocate to this deployment.  [number]
+			      --memory         Amount of memory (GiB, MiB...) to allocate to this deployment. Ex: 4GiB.  [string]
+			      --ipv4           Include an IPv4 in the deployment  [boolean]"
 		`);
 	});
 
@@ -179,6 +207,30 @@ describe("cloudchamber create", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
+	it("should fail with a nice message when instance type is invalid (json)", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await runWrangler(
+			"cloudchamber create --image hello:world --location sfo06 --instance-type invalid --json"
+		);
+		expect(std.out).toMatchInlineSnapshot(
+			`"{\\"error\\":\\"instance_type is expected to be one of 'dev', 'basic', or 'standard', but got invalid\\"}"`
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should fail with a nice message when instance type is set with memory (json)", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await runWrangler(
+			"cloudchamber create --image hello:world --location sfo06 --instance-type dev --memory 400GB --json"
+		);
+		expect(std.out).toMatchInlineSnapshot(
+			`"{\\"error\\":\\"instance_type is mutually exclusive with 'memory' and 'vcpu'. They cannot be set together.\\"}"`
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
 	it("should create deployment (detects no interactivity)", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
@@ -193,8 +245,47 @@ describe("cloudchamber create", () => {
 		expect(std.out).toMatchInlineSnapshot(MOCK_DEPLOYMENTS_COMPLEX_RESPONSE);
 	});
 
+	it("should create deployment with instance type (detects no interactivity)", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		mockGetKey();
+		msw.use(
+			http.post(
+				"*/deployments/v2",
+				async ({ request }) => {
+					expect(await request.json()).toEqual({
+						image: "hello:world",
+						location: "sfo06",
+						ssh_public_key_ids: [],
+						environment_variables: [
+							{
+								name: "HELLO",
+								value: "WORLD",
+							},
+							{
+								name: "YOU",
+								value: "CONQUERED",
+							},
+						],
+						instance_type: "dev",
+						network: {
+							assign_ipv4: "predefined",
+						},
+					});
+					return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
+				},
+				{ once: true }
+			)
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		await runWrangler(
+			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --instance-type dev --ipv4 true"
+		);
+		expect(std.out).toMatchInlineSnapshot(MOCK_DEPLOYMENTS_COMPLEX_RESPONSE);
+	});
+
 	it("properly reads wrangler config", async () => {
-		// This is very similar to the previous test except config
+		// This is very similar to the previous tests except config
 		// is set in wrangler and not overridden by the CLI
 		setIsTTY(false);
 		setWranglerConfig({

@@ -113,6 +113,7 @@ export { ImageRegistryProtocolIsReferencedError } from "./models/ImageRegistryPr
 export { ImageRegistryProtocolNotFound } from "./models/ImageRegistryProtocolNotFound";
 export type { ImageRegistryProtocols } from "./models/ImageRegistryProtocols";
 export type { ImageRegistryProtoDomain } from "./models/ImageRegistryProtoDomain";
+export { InstanceType } from "./models/InstanceType";
 export type { InternalError } from "./models/InternalError";
 export type { IP } from "./models/IP";
 export type { IPAllocation } from "./models/IPAllocation";
