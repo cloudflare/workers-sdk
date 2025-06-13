@@ -9,12 +9,15 @@ import type {
 	ZoneNameRoute,
 } from "../../config/environment";
 import type {
+	CfAIBinding,
 	CfAnalyticsEngineDataset,
+	CfBrowserBinding,
 	CfD1Database,
 	CfDispatchNamespace,
 	CfDurableObject,
 	CfHelloWorld,
 	CfHyperdrive,
+	CfImagesBinding,
 	CfKvNamespace,
 	CfLogfwdrBinding,
 	CfModule,
@@ -267,9 +270,9 @@ export type Binding =
 	| ({ type: "send_email" } & NameOmit<CfSendEmailBindings>)
 	| { type: "wasm_module"; source: BinaryFile }
 	| { type: "text_blob"; source: File }
-	| { type: "browser" }
-	| { type: "ai" }
-	| { type: "images" }
+	| ({ type: "browser" } & BindingOmit<CfBrowserBinding>)
+	| ({ type: "ai" } & BindingOmit<CfAIBinding>)
+	| ({ type: "images" } & BindingOmit<CfImagesBinding>)
 	| { type: "version_metadata" }
 	| { type: "data_blob"; source: BinaryFile }
 	| ({ type: "durable_object_namespace" } & NameOmit<CfDurableObject>)

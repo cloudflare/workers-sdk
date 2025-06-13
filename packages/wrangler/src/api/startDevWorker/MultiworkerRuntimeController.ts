@@ -5,11 +5,7 @@ import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { castErrorCause } from "./events";
-import {
-	convertToConfigBundle,
-	LocalRuntimeController,
-} from "./LocalRuntimeController";
-import { convertCfWorkerInitBindingsToBindings } from "./utils";
+import { LocalRuntimeController } from "./LocalRuntimeController";
 import type { RemoteProxySession } from "../remoteBindings";
 import type { BundleCompleteEvent } from "./events";
 import type { Binding } from "./index";
@@ -103,8 +99,6 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
-			const configBundle = await convertToConfigBundle(data);
-
 			const experimentalRemoteBindings =
 				data.config.dev.experimentalRemoteBindings;
 
@@ -116,10 +110,8 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				);
 				const remoteProxySession = await maybeStartOrUpdateRemoteProxySession(
 					{
-						name: configBundle.name,
-						bindings:
-							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
-							{},
+						name: data.config.name,
+						bindings: data.config.bindings ?? {},
 					},
 					this.#remoteProxySessionsData.get(data.config.name) ?? null
 				);
@@ -131,7 +123,8 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 			const { options } = await MF.buildMiniflareOptions(
 				this.#log,
-				await convertToConfigBundle(data),
+				data.config,
+				data.bundle,
 				this.#proxyToUserWorkerAuthenticationSecret,
 				this.#remoteProxySessionsData.get(data.config.name)?.session
 					?.remoteProxyConnectionString,
