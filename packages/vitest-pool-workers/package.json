@@ -24,6 +24,7 @@
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/vitest-pool-workers"
 	},
+	"type": "module",
 	"license": "MIT",
 	"exports": {
 		".": {
