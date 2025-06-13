@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.114.10
+
+### Patch Changes
+
+- [#9453](https://github.com/cloudflare/workers-sdk/pull/9453) [`0e2949c`](https://github.com/cloudflare/workers-sdk/commit/0e2949c52865163908969fbc98a1f4e7b7575f89) Thanks [@emily-shen](https://github.com/emily-shen)! - Point to the right location for docs on telemetry
+
 ## 3.114.9
 
 ### Patch Changes
