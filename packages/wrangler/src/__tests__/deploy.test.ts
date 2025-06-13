@@ -13006,6 +13006,65 @@ export default{
 			await runWrangler("deploy ./index.js");
 		});
 	});
+
+	describe("multi-env warning", () => {
+		it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+			writeWorkerSource();
+			writeWranglerConfig({
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the deploy command.[0m
+
+				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+				  the target environment using the \`-e|--env\` flag.
+				  If your intention is to use the top-level environment of your configuration simply pass an empty
+				  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+
+				"
+			`);
+		});
+
+		it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+			writeWorkerSource();
+			writeWranglerConfig({
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				env: "test",
+				legacyEnv: true,
+			});
+
+			await runWrangler("deploy -e test");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+			writeWorkerSource();
+			writeWranglerConfig({
+				main: "./index.js",
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */

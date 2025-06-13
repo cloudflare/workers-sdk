@@ -182,7 +182,7 @@ export function normalizeAndValidateConfig(
 
 	let activeEnv = topLevelEnv;
 
-	if (envName !== undefined) {
+	if (envName) {
 		if (isRedirectedConfig) {
 			// Note: we error if the user is specifying an environment, but not for pages
 			//       commands where the environment is always set (to either "preview" or "production")

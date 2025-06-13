@@ -222,6 +222,7 @@ export const deployCommand = createCommand({
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			MIXED_MODE: false,
 		}),
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	validateArgs(args) {
 		if (args.nodeCompat) {
