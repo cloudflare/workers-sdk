@@ -15,7 +15,6 @@ export const triggersNamespace = createNamespace({
 });
 export const triggersDeployCommand = createCommand({
 	metadata: {
-		displayName: "triggers deploy",
 		description: "Updates the triggers of your current deployment",
 		status: "experimental",
 		owner: "Workers: Authoring and Testing",

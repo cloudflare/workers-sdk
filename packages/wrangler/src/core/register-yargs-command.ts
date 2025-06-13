@@ -90,12 +90,12 @@ export function createRegisterYargsCommand(
 				registerSubTreeCallback();
 			},
 			// Only attach the handler for commands, not namespaces
-			def.type === "command" ? createHandler(def) : undefined
+			def.type === "command" ? createHandler(def, def.command) : undefined
 		);
 	};
 }
 
-function createHandler(def: CommandDefinition) {
+function createHandler(def: CommandDefinition, commandName: string) {
 	return async function handler(args: HandlerArgs<NamedArgDefinitions>) {
 		// eslint-disable-next-line no-useless-catch
 		try {
@@ -180,7 +180,7 @@ function createHandler(def: CommandDefinition) {
 						if (availableEnvs.length > 0) {
 							logger.warn(
 								dedent`
-										Multiple environments are defined in the Wrangler configuration file, but no target environment was specified for the${def.metadata.displayName ? ` ${def.metadata.displayName}` : ""} command.
+										Multiple environments are defined in the Wrangler configuration file, but no target environment was specified for the ${commandName.replace(/^wrangler\s+/, "")} command.
 										To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify the target environment using the \`-e|--env\` flag.
 									`
 							);

@@ -101,7 +101,6 @@ type Props = {
 
 export const versionsUploadCommand = createCommand({
 	metadata: {
-		displayName: "versions upload",
 		description: "Uploads your Worker code and config as a new Version",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",

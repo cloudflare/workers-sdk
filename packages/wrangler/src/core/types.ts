@@ -21,8 +21,6 @@ export type DeepFlatten<T> = T extends object
 
 export type Command = `wrangler${string}`;
 export type Metadata = {
-	/** The name of the command to be used for logs */
-	displayName?: string;
 	description: string;
 	status: "experimental" | "alpha" | "private-beta" | "open-beta" | "stable";
 	statusMessage?: string;

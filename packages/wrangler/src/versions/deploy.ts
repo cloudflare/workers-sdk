@@ -42,7 +42,6 @@ type OptionalPercentage = number | null; // null means automatically assign (eve
 
 export const versionsDeployCommand = createCommand({
 	metadata: {
-		displayName: "versions deploy",
 		description:
 			"Safely roll out new Versions of your Worker by splitting traffic between multiple Versions",
 		owner: "Workers: Authoring and Testing",

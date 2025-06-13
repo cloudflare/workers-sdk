@@ -137,7 +137,6 @@ export const secretNamespace = createNamespace({
 });
 export const secretPutCommand = createCommand({
 	metadata: {
-		displayName: "secret put",
 		description: "Create or update a secret variable for a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
@@ -254,7 +253,6 @@ export const secretPutCommand = createCommand({
 
 export const secretDeleteCommand = createCommand({
 	metadata: {
-		displayName: "secret delete",
 		description: "Delete a secret variable from a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
@@ -394,7 +392,6 @@ export const secretListCommand = createCommand({
 
 export const secretBulkCommand = createCommand({
 	metadata: {
-		displayName: "secret bulk",
 		description: "Bulk upload secrets for a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
