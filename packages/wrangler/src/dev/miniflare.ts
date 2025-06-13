@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { DEV_CONTAINER_REPO } from "@cloudflare/containers-shared";
 import { CoreHeaders, HttpOptions_Style, Log, LogLevel } from "miniflare";
 import {
 	EXTERNAL_AI_WORKER_NAME,
@@ -1372,8 +1373,6 @@ export async function buildMiniflareOptions(
 	return { options, internalObjects, entrypointNames };
 }
 
-export const CONTAINER_IMAGE_PREFIX = "cloudflare-dev";
-
 /**
  * Returns the Container options for the DO class name.
  *
@@ -1392,6 +1391,6 @@ function getContainerOptions(
 	const container = containers[className];
 
 	return {
-		imageName: `${CONTAINER_IMAGE_PREFIX}/${container.name}`,
+		imageName: `${DEV_CONTAINER_REPO}/${container.name}`,
 	};
 }

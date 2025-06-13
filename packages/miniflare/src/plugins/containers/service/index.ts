@@ -19,14 +19,18 @@ export class ContainerController {
 	#sharedOptions: ContainersSharedOptions;
 	#logger: Log;
 	#dockerInstalled: boolean = false;
+	#buildId: string;
+	#imagesBuilt: Set<string> = new Set();
 	constructor(
 		containerOptions: { [className: string]: ContainerOptions },
 		sharedOptions: ContainersSharedOptions,
-		logger: Log
+		logger: Log,
+		buildId: string
 	) {
 		this.#containerOptions = containerOptions;
 		this.#sharedOptions = sharedOptions;
 		this.#logger = logger;
+		this.#buildId = buildId;
 		if (platform() === "win32") {
 			throw new Error(
 				"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container part of your application."
@@ -61,7 +65,7 @@ export class ContainerController {
 
 	async buildContainer(options: ContainerOptions) {
 		// just let the tag default to latest
-		const tag = `${MF_CONTAINER_PREFIX}/${options.name}`;
+		const tag = `${MF_CONTAINER_PREFIX}/${options.name}:${this.#buildId}`;
 		const { buildCmd, dockerfile } = await constructBuildCommand({
 			tag,
 			pathToDockerfile: options.image,
@@ -71,6 +75,7 @@ export class ContainerController {
 		});
 		await dockerBuild(this.#sharedOptions.dockerPath, { buildCmd, dockerfile });
 		await this.checkExposedPorts(tag);
+		this.#imagesBuilt.add(tag);
 	}
 
 	async checkExposedPorts(imageTag: string) {

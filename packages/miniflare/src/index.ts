@@ -1,5 +1,5 @@
 import assert from "assert";
-import crypto from "crypto";
+import crypto, { randomUUID } from "crypto";
 import { Abortable } from "events";
 import fs from "fs";
 import { mkdir, writeFile } from "fs/promises";
@@ -329,7 +329,8 @@ function validateOptions(
 // all Durable Object bindings, noting that bindings may be defined for objects
 // in other services.
 function getDurableObjectClassNames(
-	allWorkerOpts: PluginWorkerOptions[]
+	allWorkerOpts: PluginWorkerOptions[],
+	containerBuildId: string | undefined
 ): DurableObjectClassNames {
 	const serviceClassNames: DurableObjectClassNames = new Map();
 	for (const workerOpts of allWorkerOpts) {
@@ -345,7 +346,7 @@ function getDurableObjectClassNames(
 				unsafeUniqueKey,
 				unsafePreventEviction,
 				container,
-			} = normaliseDurableObject(designator);
+			} = normaliseDurableObject(designator, containerBuildId);
 			// Get or create `Map` mapping class name to optional unsafe unique key
 			let classNames = serviceClassNames.get(serviceName);
 			if (classNames === undefined) {
@@ -467,7 +468,7 @@ function getExternalServiceEntrypoints(
 					unsafePreventEviction,
 					enableSql: useSQLite,
 					mixedModeConnectionString,
-				} = normaliseDurableObject(designator);
+				} = normaliseDurableObject(designator, undefined);
 
 				if (
 					// Skip if it is a remote durable object
@@ -907,6 +908,8 @@ export class Miniflare {
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
 	#containerController?: ContainerController;
+	// TODO: expose build, and also reset build id function
+	#containerBuildId = randomUUID().slice(0, 8);
 
 	#cfObject?: Record<string, any> = {};
 
@@ -1543,7 +1546,10 @@ export class Miniflare {
 		const externalServices = this.#devRegistry.isEnabled()
 			? getExternalServiceEntrypoints(allWorkerOpts, loopbackHost, loopbackPort)
 			: null;
-		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
+		const durableObjectClassNames = getDurableObjectClassNames(
+			allWorkerOpts,
+			this.#containerBuildId
+		);
 		const wrappedBindingNames = getWrappedBindingNames(
 			allWorkerOpts,
 			durableObjectClassNames
@@ -1900,7 +1906,8 @@ export class Miniflare {
 				this.#containerController = new ContainerController(
 					containerOptions,
 					this.#sharedOpts.containers,
-					this.#log
+					this.#log,
+					this.#containerBuildId
 				);
 				await this.#containerController.buildAllContainers();
 			} else {
@@ -2197,7 +2204,7 @@ export class Miniflare {
 						).reduce<WorkerDefinition["durableObjects"]>(
 							(internalObjects, [bindingName, designator]) => {
 								const { className, scriptName, mixedModeConnectionString } =
-									normaliseDurableObject(designator);
+									normaliseDurableObject(designator, undefined);
 
 								if (
 									// If the scriptName is undefined, it defaults to the current worker
@@ -2672,6 +2679,8 @@ export class Miniflare {
 			await this.#stopLoopbackServer();
 			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
 			await fs.promises.rm(this.#tmpPath, { force: true, recursive: true });
+
+			await this.#containerController?.cleanupContainers();
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();
