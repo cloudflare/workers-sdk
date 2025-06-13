@@ -10,13 +10,12 @@ import type { NodeJSCompatMode } from "miniflare";
 /**
  * Returns the list of ESBuild plugins to use for a given compat mode.
  */
-export async function getNodeJSCompatPlugins({
+export function getNodeJSCompatPlugins({
 	mode,
-	unenvResolvePaths,
 }: {
 	mode: NodeJSCompatMode;
 	unenvResolvePaths?: string[];
-}): Promise<Plugin[]> {
+}): Plugin[] {
 	switch (mode) {
 		case "als":
 			return [asyncLocalStoragePlugin, nodejsCompatPlugin(mode)];
@@ -30,7 +29,7 @@ export async function getNodeJSCompatPlugins({
 		case "v1":
 			return [nodejsCompatPlugin(mode)];
 		case "v2":
-			return [await nodejsHybridPlugin(unenvResolvePaths)];
+			return [nodejsHybridPlugin()];
 		case null:
 			return [nodejsCompatPlugin(mode)];
 	}
