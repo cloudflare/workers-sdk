@@ -211,7 +211,9 @@ function getWranglerCommand(command: string) {
 		"Commands must start with `wrangler` (e.g. `wrangler dev`) but got " +
 			command
 	);
-	const wranglerBin = `${__dirname}/../../../packages/wrangler/bin/wrangler.js`;
+	const wranglerBin = path.resolve(
+		`${__dirname}/../../../packages/wrangler/bin/wrangler.js`
+	);
 	return `${wranglerBin} ${command.slice("wrangler ".length)}`;
 }
 
