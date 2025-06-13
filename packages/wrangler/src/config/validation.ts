@@ -2451,6 +2451,24 @@ const validateContainerAppConfig: ValidatorFn = (
 				`"containers.image" should be defined and a string`
 			);
 		}
+
+		if (
+			"configuration" in containerAppOptional &&
+			containerAppOptional.configuration !== undefined &&
+			"instance_type" in containerAppOptional.configuration &&
+			containerAppOptional.configuration?.instance_type !== undefined
+		) {
+			if (
+				typeof containerAppOptional.configuration.instance_type !== "string" ||
+				!["dev", "basic", "standard"].includes(
+					containerAppOptional.configuration.instance_type
+				)
+			) {
+				diagnostics.errors.push(
+					`"containers.configuration.instance_type" should be either 'dev', 'basic', or 'standard', but got ${containerAppOptional.configuration.instance_type}`
+				);
+			}
+		}
 	}
 
 	if (diagnostics.errors.length > 0) {
@@ -2487,6 +2505,23 @@ const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 			}
 		});
 	});
+
+	if ("instance_type" in value && value.instance_type !== undefined) {
+		if (
+			typeof value.instance_type !== "string" ||
+			!["dev", "basic", "standard"].includes(value.instance_type)
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have "instance_type" as 'dev', 'basic', or 'standard', but got ${value.instance_type}`
+			);
+		}
+
+		if (("memory" in value && value.memory !== undefined) || ("vcpu" in value && value.vcpu !== "undefined")) {
+			diagnostics.errors.push(
+				`"${field}" bindings should not set either "memory" or "vcpu" with "instance_type"`
+			)
+		}
+	}
 
 	return isValid;
 };
