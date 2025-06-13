@@ -7,7 +7,7 @@ import {
 	applyEyeballConfigDefaults,
 	applyRouterConfigDefaults,
 } from "./configuration";
-import limitedResponse from "./limited-response.html";
+import { renderLimitedResponse } from "./limited-response";
 import type AssetWorker from "../../asset-worker";
 import type {
 	EyeballRouterConfig,
@@ -96,7 +96,7 @@ export default {
 				}
 				if (eyeballConfig.limitedAssetsOnly) {
 					analytics.setData({ userWorkerFreeTierLimiting: true });
-					return new Response(limitedResponse, {
+					return new Response(renderLimitedResponse(maybeSecondRequest), {
 						status: 429,
 						headers: {
 							"Content-Type": "text/html",
