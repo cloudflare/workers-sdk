@@ -178,11 +178,13 @@ export function normalizeAndValidateConfig(
 
 	//TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
 	const envName = args.env;
-	assert(envName === undefined || typeof envName === "string");
+	assert(
+		envName === undefined || envName === "" || typeof envName === "string"
+	);
 
 	let activeEnv = topLevelEnv;
 
-	if (envName !== undefined) {
+	if (envName) {
 		if (isRedirectedConfig) {
 			// Note: we error if the user is specifying an environment, but not for pages
 			//       commands where the environment is always set (to either "preview" or "production")

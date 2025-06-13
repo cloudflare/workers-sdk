@@ -169,7 +169,7 @@ function createHandler(def: CommandDefinition, commandName: string) {
 						: defaultWranglerConfig;
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
-					if (!args.env && config.configPath) {
+					if (!("env" in args) && config.configPath) {
 						const { rawConfig } = experimental_readRawConfig(
 							{
 								config: config.configPath,
@@ -182,6 +182,7 @@ function createHandler(def: CommandDefinition, commandName: string) {
 								dedent`
 										Multiple environments are defined in the Wrangler configuration file, but no target environment was specified for the ${commandName.replace(/^wrangler\s+/, "")} command.
 										To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify the target environment using the \`-e|--env\` flag.
+										If your intention is to use the top-level environment of your configuration simply pass an empty string to the flag to target such environment.
 									`
 							);
 						}
