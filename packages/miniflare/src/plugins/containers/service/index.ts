@@ -4,8 +4,11 @@ import {
 	constructBuildCommand,
 	dockerBuild,
 	dockerImageInspect,
+	dockerListContainers,
+	runDockerCmd,
 	verifyDockerInstalled,
 } from "@cloudflare/containers-shared";
+import { dim } from "kleur/colors";
 import { Log } from "../../../shared";
 import { ContainerOptions, ContainersSharedOptions } from "../index";
 
@@ -87,6 +90,47 @@ export class ContainerController {
 			throw new Error(
 				`The container "${imageTag.replace(MF_CONTAINER_PREFIX + "/", "")}" does not expose any ports.\n` +
 					"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort()` in your Dockerfile."
+			);
+		}
+	}
+
+	async cleanupContainers() {
+		if (!this.#dockerInstalled || this.#imagesBuilt.size === 0) {
+			return;
+		}
+
+		this.#logger.info(dim("Cleaning up containers..."));
+
+		try {
+			// Find all containers (stopped and running) for each built image in parallel
+			const containerPromises = Array.from(this.#imagesBuilt).map(
+				async (imageTag) => {
+					return await dockerListContainers(this.#sharedOptions.dockerPath, {
+						all: true,
+						ancestor: imageTag,
+					});
+				}
+			);
+			const containerResults = await Promise.all(containerPromises);
+			const allContainerIds = containerResults.flat();
+			if (allContainerIds.length === 0) {
+				return;
+			}
+
+			// Workerd should have stopped all containers, but clean up any in case. This might take a while.
+			await runDockerCmd(
+				this.#sharedOptions.dockerPath,
+				["stop", ...allContainerIds],
+				["inherit", "pipe", "pipe"]
+			);
+			await runDockerCmd(
+				this.#sharedOptions.dockerPath,
+				["rm", ...allContainerIds],
+				["inherit", "pipe", "pipe"]
+			);
+		} catch (error) {
+			this.#logger.warn(
+				`Failed to cleanup containers: ${error instanceof Error ? error.message : String(error)}. You may need to manually stop and/or remove any containers started during dev.`
 			);
 		}
 	}

@@ -29,6 +29,78 @@ export const runDockerCmd = async (
 	});
 };
 
+export const runDockerCmdWithOutput = async (
+	dockerPath: string,
+	args: string[]
+): Promise<string> => {
+	const child = spawn(dockerPath, args, {
+		stdio: ["inherit", "pipe", "pipe"],
+	});
+
+	let stdout = "";
+	let stderr = "";
+
+	child.stdout?.on("data", (data) => {
+		stdout += data.toString();
+	});
+
+	child.stderr?.on("data", (data) => {
+		stderr += data.toString();
+	});
+
+	let errorHandled = false;
+	await new Promise<void>((resolve, reject) => {
+		child.on("close", (code) => {
+			if (code === 0) {
+				resolve();
+			} else if (!errorHandled) {
+				errorHandled = true;
+				reject(
+					new Error(
+						`Docker command exited with code: ${code}. stderr: ${stderr}`
+					)
+				);
+			}
+		});
+		child.on("error", (err) => {
+			if (!errorHandled) {
+				errorHandled = true;
+				reject(new Error(`Docker command failed: ${err.message}`));
+			}
+		});
+	});
+
+	return stdout.trim();
+};
+
+export const dockerListContainers = async (
+	dockerPath: string,
+	options: {
+		all?: boolean;
+		ancestor?: string;
+		format?: string;
+	} = {}
+): Promise<string[]> => {
+	const args = ["ps"];
+
+	if (options.all) {
+		args.push("-a");
+	}
+
+	if (options.ancestor) {
+		args.push("--filter", `ancestor=${options.ancestor}`);
+	}
+
+	if (options.format) {
+		args.push("--format", options.format);
+	} else {
+		args.push("--format", "{{.ID}}");
+	}
+
+	const output = await runDockerCmdWithOutput(dockerPath, args);
+	return output ? output.split("\n").filter((line) => line.trim()) : [];
+};
+
 export const verifyDockerInstalled = async (dockerPath: string) => {
 	try {
 		await runDockerCmd(dockerPath, ["info"], ["inherit", "pipe", "pipe"]);

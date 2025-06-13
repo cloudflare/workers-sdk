@@ -347,6 +347,7 @@ function getDurableObjectClassNames(
 				unsafePreventEviction,
 				container,
 			} = normaliseDurableObject(designator, containerBuildId);
+			console.log("hi", container);
 			// Get or create `Map` mapping class name to optional unsafe unique key
 			let classNames = serviceClassNames.get(serviceName);
 			if (classNames === undefined) {
@@ -1550,6 +1551,7 @@ export class Miniflare {
 			allWorkerOpts,
 			this.#containerBuildId
 		);
+		console.log("do", durableObjectClassNames);
 		const wrappedBindingNames = getWrappedBindingNames(
 			allWorkerOpts,
 			durableObjectClassNames
