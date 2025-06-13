@@ -155,7 +155,7 @@ function createHandler(def: CommandDefinition, commandName: string) {
 				: {
 						MULTIWORKER: false,
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
-						MIXED_MODE: args.experimentalMixedMode ?? false,
+						REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
 					};
 
 			await run(experimentalFlags, () => {

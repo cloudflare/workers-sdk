@@ -266,7 +266,7 @@ export function printBindings(
 					type: friendlyBindingNames.vectorize,
 					value: index_name,
 					mode: getMode({
-						isSimulatedLocally: getFlag("MIXED_MODE")
+						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
 							? remote
 								? false
 								: undefined
@@ -424,7 +424,7 @@ export function printBindings(
 			value: undefined,
 			mode: getMode({
 				isSimulatedLocally:
-					getFlag("MIXED_MODE") && browser.remote ? false : undefined,
+					getFlag("REMOTE_BINDINGS") && browser.remote ? false : undefined,
 			}),
 		});
 	}
@@ -435,7 +435,7 @@ export function printBindings(
 			type: friendlyBindingNames.images,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally: getFlag("MIXED_MODE")
+				isSimulatedLocally: getFlag("REMOTE_BINDINGS")
 					? images.remote === true || images.remote === undefined
 						? false
 						: undefined
@@ -450,7 +450,7 @@ export function printBindings(
 			type: friendlyBindingNames.ai,
 			value: ai.staging ? `staging` : undefined,
 			mode: getMode({
-				isSimulatedLocally: getFlag("MIXED_MODE")
+				isSimulatedLocally: getFlag("REMOTE_BINDINGS")
 					? ai.remote === true || ai.remote === undefined
 						? false
 						: undefined
@@ -541,7 +541,7 @@ export function printBindings(
 						? `${namespace} (outbound -> ${outbound.service})`
 						: namespace,
 					mode: getMode({
-						isSimulatedLocally: getFlag("MIXED_MODE")
+						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
 							? remote
 								? false
 								: undefined
@@ -560,7 +560,7 @@ export function printBindings(
 					type: friendlyBindingNames.mtls_certificates,
 					value: certificate_id,
 					mode: getMode({
-						isSimulatedLocally: getFlag("MIXED_MODE")
+						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
 							? remote === true || remote === undefined
 								? false
 								: undefined
@@ -766,17 +766,17 @@ export function warnOrError(
 	}
 	if (remote === false && supports === "remote") {
 		throw new UserError(
-			`${friendlyBindingNames[type]} bindings do not support local development. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+			`${friendlyBindingNames[type]} bindings do not support local development. You may be able to set \`experimental_remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
 		);
 	}
 	if (remote === undefined && supports === "remote") {
 		logger.warn(
-			`${friendlyBindingNames[type]} bindings do not support local development, and so parts of your Worker may not work correctly. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+			`${friendlyBindingNames[type]} bindings do not support local development, and so parts of your Worker may not work correctly. You may be able to set \`experimental_remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
 		);
 	}
 	if (remote === undefined && supports === "always-remote") {
 		logger.warn(
-			`${friendlyBindingNames[type]} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.`
+			`${friendlyBindingNames[type]} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`experimental_remote: true\` for the binding definition in your configuration file.`
 		);
 	}
 }

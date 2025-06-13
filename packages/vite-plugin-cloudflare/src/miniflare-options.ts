@@ -14,7 +14,7 @@ import colors from "picocolors";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
 import {
-	experimental_maybeStartOrUpdateMixedModeSession,
+	experimental_maybeStartOrUpdateRemoteProxySession,
 	unstable_convertConfigBindingsToStartWorkerBindings,
 	unstable_getMiniflareWorkerOptions,
 } from "wrangler";
@@ -37,7 +37,7 @@ import type {
 import type { MiniflareOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
-	Experimental_MixedModeSession,
+	Experimental_RemoteProxySession,
 	SourcelessWorkerOptions,
 	Unstable_Binding,
 	Unstable_Config,
@@ -222,11 +222,11 @@ function logUnknownTails(
 	}
 }
 
-/** Map that maps worker configPaths to their existing mixed mode session data (if any) */
-const mixedModeSessionsDataMap = new Map<
+/** Map that maps worker configPaths to their existing remote proxy session data (if any) */
+const remoteProxySessionsDataMap = new Map<
 	string,
 	{
-		session: Experimental_MixedModeSession;
+		session: Experimental_RemoteProxySession;
 		remoteBindings: Record<string, Unstable_Binding>;
 	} | null
 >();
@@ -358,25 +358,25 @@ export async function getDevMiniflareOptions(
 									workerConfig
 								);
 
-							const preExistingMixedModeSession = workerConfig.configPath
-								? mixedModeSessionsDataMap.get(workerConfig.configPath)
+							const preExistingRemoteProxySession = workerConfig.configPath
+								? remoteProxySessionsDataMap.get(workerConfig.configPath)
 								: undefined;
 
-							const mixedModeSessionData = resolvedPluginConfig.experimental
-								.mixedMode
-								? await experimental_maybeStartOrUpdateMixedModeSession(
+							const remoteProxySessionData = resolvedPluginConfig.experimental
+								.remoteBindings
+								? await experimental_maybeStartOrUpdateRemoteProxySession(
 										{
 											name: workerConfig.name,
 											bindings: bindings ?? {},
 										},
-										preExistingMixedModeSession ?? null
+										preExistingRemoteProxySession ?? null
 									)
 								: undefined;
 
-							if (workerConfig.configPath && mixedModeSessionData) {
-								mixedModeSessionsDataMap.set(
+							if (workerConfig.configPath && remoteProxySessionData) {
+								remoteProxySessionsDataMap.set(
 									workerConfig.configPath,
-									mixedModeSessionData
+									remoteProxySessionData
 								);
 							}
 
@@ -387,9 +387,11 @@ export async function getDevMiniflareOptions(
 								},
 								resolvedPluginConfig.cloudflareEnv,
 								{
-									mixedModeConnectionString:
-										mixedModeSessionData?.session?.mixedModeConnectionString,
-									mixedModeEnabled: resolvedPluginConfig.experimental.mixedMode,
+									remoteProxyConnectionString:
+										remoteProxySessionData?.session
+											?.remoteProxyConnectionString,
+									remoteBindingsEnabled:
+										resolvedPluginConfig.experimental.remoteBindings,
 								}
 							);
 
@@ -654,7 +656,7 @@ export async function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
 	workerConfigs: Unstable_Config[],
 	persistState: PersistState,
-	mixedModeEnabled: boolean,
+	remoteBindingsEnabled: boolean,
 	inspectorPort: number | false
 ): Promise<MiniflareOptions> {
 	const resolvedViteConfig = vitePreviewServer.config;
@@ -664,24 +666,24 @@ export async function getPreviewMiniflareOptions(
 				const bindings =
 					unstable_convertConfigBindingsToStartWorkerBindings(workerConfig);
 
-				const preExistingMixedModeSessionData = workerConfig.configPath
-					? mixedModeSessionsDataMap.get(workerConfig.configPath)
+				const preExistingRemoteProxySessionData = workerConfig.configPath
+					? remoteProxySessionsDataMap.get(workerConfig.configPath)
 					: undefined;
 
-				const mixedModeSessionData = mixedModeEnabled
-					? await experimental_maybeStartOrUpdateMixedModeSession(
+				const remoteProxySessionData = remoteBindingsEnabled
+					? await experimental_maybeStartOrUpdateRemoteProxySession(
 							{
 								name: workerConfig.name,
 								bindings: bindings ?? {},
 							},
-							preExistingMixedModeSessionData ?? null
+							preExistingRemoteProxySessionData ?? null
 						)
 					: undefined;
 
-				if (workerConfig.configPath && mixedModeSessionData) {
-					mixedModeSessionsDataMap.set(
+				if (workerConfig.configPath && remoteProxySessionData) {
+					remoteProxySessionsDataMap.set(
 						workerConfig.configPath,
-						mixedModeSessionData
+						remoteProxySessionData
 					);
 				}
 
@@ -689,9 +691,9 @@ export async function getPreviewMiniflareOptions(
 					workerConfig,
 					undefined,
 					{
-						mixedModeConnectionString:
-							mixedModeSessionData?.session?.mixedModeConnectionString,
-						mixedModeEnabled,
+						remoteProxyConnectionString:
+							remoteProxySessionData?.session?.remoteProxyConnectionString,
+						remoteBindingsEnabled,
 					}
 				);
 

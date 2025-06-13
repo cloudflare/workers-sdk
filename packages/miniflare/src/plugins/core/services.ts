@@ -3,7 +3,7 @@ import { Request, Response } from "../../http";
 import {
 	HOST_CAPNP_CONNECT,
 	Miniflare,
-	MixedModeConnectionString,
+	RemoteProxyConnectionString,
 } from "../../index";
 import {
 	ExternalServer,
@@ -104,7 +104,9 @@ export const ServiceDesignatorSchema = z.union([
 		name: z.union([z.string(), z.literal(kCurrentWorker)]),
 		entrypoint: z.ostring(),
 		props: z.record(z.unknown()).optional(),
-		mixedModeConnectionString: z.custom<MixedModeConnectionString>().optional(),
+		remoteProxyConnectionString: z
+			.custom<RemoteProxyConnectionString>()
+			.optional(),
 	}),
 	z.object({ network: NetworkSchema }),
 	z.object({ external: ExternalServerSchema }),
