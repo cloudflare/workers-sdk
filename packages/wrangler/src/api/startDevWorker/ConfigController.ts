@@ -438,7 +438,6 @@ function resolveContainerConfig(
 			image: container.image ?? container.configuration.image,
 			maxInstances: container.max_instances,
 			imageBuildContext: container.image_build_context,
-			exposedPorts: container.dev_exposed_ports,
 			name: container.name,
 		};
 	}
