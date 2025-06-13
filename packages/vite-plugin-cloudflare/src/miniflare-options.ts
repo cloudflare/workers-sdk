@@ -23,9 +23,11 @@ import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
 	kRequestType,
+	PUBLIC_DIR_PREFIX,
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { additionalModuleRE } from "./shared";
+import { withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
@@ -283,27 +285,56 @@ export async function getDevMiniflareOptions(
 				CONFIG: assetsConfig,
 			},
 			serviceBindings: {
-				__VITE_ASSET_EXISTS__: async (request) => {
+				__VITE_HTML_EXISTS__: async (request) => {
 					const { pathname } = new URL(request.url);
-					let exists = false;
 
 					if (pathname.endsWith(".html")) {
-						try {
-							const filePath = path.join(resolvedViteConfig.root, pathname);
-							const stats = await fsp.stat(filePath);
-							exists = stats.isFile();
-						} catch (error) {}
+						const { root, publicDir } = resolvedViteConfig;
+						const publicDirInRoot = publicDir.startsWith(
+							withTrailingSlash(root)
+						);
+						const publicPath = withTrailingSlash(publicDir.slice(root.length));
+
+						// Assets in the public directory should be served at the root path
+						if (publicDirInRoot && pathname.startsWith(publicPath)) {
+							return MiniflareResponse.json(null);
+						}
+
+						const publicDirFilePath = path.join(publicDir, pathname);
+						const rootDirFilePath = path.join(root, pathname);
+
+						for (const resolvedPath of [publicDirFilePath, rootDirFilePath]) {
+							try {
+								const stats = await fsp.stat(resolvedPath);
+
+								if (stats.isFile()) {
+									return MiniflareResponse.json(
+										resolvedPath === publicDirFilePath
+											? `${PUBLIC_DIR_PREFIX}${pathname}`
+											: pathname
+									);
+								}
+							} catch (error) {}
+						}
 					}
 
-					return MiniflareResponse.json(exists);
+					return MiniflareResponse.json(null);
 				},
-				__VITE_FETCH_ASSET__: async (request) => {
+				__VITE_FETCH_HTML__: async (request) => {
 					const { pathname } = new URL(request.url);
-					const filePath = path.join(resolvedViteConfig.root, pathname);
+					const { root, publicDir } = resolvedViteConfig;
+					const isInPublicDir = pathname.startsWith(PUBLIC_DIR_PREFIX);
+					const resolvedPath = isInPublicDir
+						? path.join(publicDir, pathname.slice(PUBLIC_DIR_PREFIX.length))
+						: path.join(root, pathname);
 
 					try {
-						let html = await fsp.readFile(filePath, "utf-8");
-						html = await viteDevServer.transformIndexHtml(pathname, html);
+						let html = await fsp.readFile(resolvedPath, "utf-8");
+
+						// HTML files in the public directory should not be transformed
+						if (!isInPublicDir) {
+							html = await viteDevServer.transformIndexHtml(resolvedPath, html);
+						}
 
 						return new MiniflareResponse(html, {
 							headers: { "Content-Type": "text/html" },
