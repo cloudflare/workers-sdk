@@ -5,11 +5,7 @@ import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { castErrorCause } from "./events";
-import {
-	convertToConfigBundle,
-	LocalRuntimeController,
-} from "./LocalRuntimeController";
-import { convertCfWorkerInitBindingsToBindings } from "./utils";
+import { LocalRuntimeController } from "./LocalRuntimeController";
 import type { MixedModeSession } from "../mixedMode";
 import type { BundleCompleteEvent } from "./events";
 import type { Binding } from "./index";
@@ -103,8 +99,6 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
-			const configBundle = await convertToConfigBundle(data);
-
 			const experimentalMixedMode = data.config.dev.experimentalMixedMode;
 
 			if (experimentalMixedMode && !data.config.dev?.remote) {
@@ -115,10 +109,8 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				);
 				const mixedModeSession = await maybeStartOrUpdateMixedModeSession(
 					{
-						name: configBundle.name,
-						bindings:
-							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
-							{},
+						name: data.config.name,
+						bindings: data.config.bindings ?? {},
 					},
 					this.#mixedModeSessionsData.get(data.config.name) ?? null
 				);
@@ -130,7 +122,8 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 			const { options } = await MF.buildMiniflareOptions(
 				this.#log,
-				await convertToConfigBundle(data),
+				data.config,
+				data.bundle,
 				this.#proxyToUserWorkerAuthenticationSecret,
 				this.#mixedModeSessionsData.get(data.config.name)?.session
 					?.mixedModeConnectionString,
