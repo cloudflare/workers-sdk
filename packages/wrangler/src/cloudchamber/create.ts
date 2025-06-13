@@ -18,12 +18,14 @@ import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
 import {
 	checkEverythingIsSet,
+	checkInstanceType,
 	collectEnvironmentVariables,
 	collectLabels,
 	interactWithUser,
 	loadAccountSpinner,
 	parseImageName,
 	promptForEnvironmentVariables,
+	promptForInstanceType,
 	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
@@ -40,6 +42,7 @@ import type {
 } from "../yargs-types";
 import type { Arg } from "@cloudflare/cli/interactive";
 import type {
+	CreateDeploymentV2RequestBody,
 	EnvironmentVariable,
 	Label,
 	SSHPublicKeyID,
@@ -90,6 +93,13 @@ export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 			array: true,
 			demandOption: false,
 			describe: "ID of the SSH key to add to the deployment",
+		})
+		.option("instance-type", {
+			requiresArg: true,
+			type: "string",
+			demandOption: false,
+			describe:
+				"Instance type to allocate to this deployment. One of 'dev', 'basic', or 'standard'.",
 		})
 		.option("vcpu", {
 			requiresArg: true,
@@ -151,16 +161,24 @@ export async function createCommand(
 				? { assign_ipv4: AssignIPv4.PREDEFINED }
 				: { assign_ipv6: AssignIPv6.PREDEFINED };
 		const memoryMib = resolveMemory(args, config.cloudchamber);
-		const deployment = await DeploymentsService.createDeploymentV2({
+		const vcpu = args.vcpu ?? config.cloudchamber.vcpu;
+		const instanceType = checkInstanceType(args, config.cloudchamber);
+
+		const deploymentRequest: CreateDeploymentV2RequestBody = {
 			image: body.image,
 			location: body.location,
 			ssh_public_key_ids: keysToAdd,
 			environment_variables: environmentVariables,
 			labels: labels,
-			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
+			instance_type: instanceType,
 			network: network,
-			memory_mib: memoryMib,
-		});
+		};
+		if (instanceType === undefined) {
+			deploymentRequest.vcpu = vcpu;
+			deploymentRequest.memory_mib = memoryMib;
+		}
+		const deployment =
+			await DeploymentsService.createDeploymentV2(deploymentRequest);
 		console.log(JSON.stringify(deployment, null, 4));
 		return;
 	}
@@ -301,13 +319,16 @@ async function handleCreateCommand(
 		Math.round(
 			parseByteSize(account.defaults.memory ?? "2000MiB", 1024) / (1024 * 1024)
 		);
+	const vcpu = args.vcpu ?? config.cloudchamber.vcpu ?? account.defaults.vcpus;
+	const instanceType = await promptForInstanceType(true);
 
 	renderDeploymentConfiguration("create", {
-		image,
-		location,
-		network,
-		vcpu: args.vcpu ?? config.cloudchamber.vcpu ?? account.defaults.vcpus,
-		memoryMib,
+		image: image,
+		location: location,
+		network: network,
+		instanceType: instanceType,
+		vcpu: vcpu,
+		memoryMib: memoryMib,
 		environmentVariables: selectedEnvironmentVariables,
 		labels: selectedLabels,
 		env: args.env,
@@ -325,17 +346,23 @@ async function handleCreateCommand(
 
 	const { start, stop } = spinner();
 	start("Creating your container", "your container will be created shortly");
+	const deploymentRequest: CreateDeploymentV2RequestBody = {
+		image: image,
+		location: location,
+		ssh_public_key_ids: keys,
+		environment_variables: environmentVariables,
+		labels: labels,
+		instance_type: instanceType,
+		vcpu: undefined,
+		memory_mib: undefined,
+		network: network,
+	};
+	if (instanceType === undefined) {
+		deploymentRequest.vcpu = vcpu;
+		deploymentRequest.memory_mib = memoryMib;
+	}
 	const [deployment, err] = await wrap(
-		DeploymentsService.createDeploymentV2({
-			image,
-			location: location,
-			ssh_public_key_ids: keys,
-			environment_variables: environmentVariables,
-			labels: labels,
-			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
-			memory_mib: memoryMib,
-			network,
-		})
+		DeploymentsService.createDeploymentV2(deploymentRequest)
 	);
 	if (err) {
 		stop();
