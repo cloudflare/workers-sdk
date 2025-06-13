@@ -29,9 +29,9 @@ describe
 
 		const projectPath = seed("mixed-mode", "pnpm");
 
-		beforeAll(() => {
+		beforeAll(async () => {
 			const tmp = fs.mkdtempSync(`${os.tmpdir()}/vite-plugin-e2e-tmp`);
-			[
+			for (const worker of [
 				{
 					name: remoteWorkerName,
 					content:
@@ -42,19 +42,19 @@ describe
 					content:
 						"export default { fetch() { return new Response('Hello from an alternative remote worker'); } };",
 				},
-			].forEach((worker) => {
+			]) {
 				fs.writeFileSync(`${tmp}/index.js`, worker.content);
-				runWrangler(
+				await runWrangler(
 					`wrangler deploy index.js --name ${worker.name} --compatibility-date 2025-01-01`,
 					{ cwd: tmp }
 				);
-			});
+			}
 		}, 35_000);
 
-		afterAll(() => {
-			[remoteWorkerName, alternativeRemoteWorkerName].forEach((worker) => {
-				runWrangler(`wrangler delete --name ${worker}`);
-			});
+		afterAll(async () => {
+			for (const worker of [remoteWorkerName, alternativeRemoteWorkerName]) {
+				await runWrangler(`wrangler delete --name ${worker}`);
+			}
 		});
 
 		describe.each(commands)('with "%s" command', (command) => {
