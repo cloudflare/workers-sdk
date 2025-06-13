@@ -170,14 +170,10 @@ function createHandler(def: CommandDefinition) {
 						: defaultWranglerConfig;
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
-					if (!args.env) {
-						const { configPath } = findWranglerConfig(process.cwd(), {
-							useRedirectIfAvailable: true,
-						});
-
+					if (!args.env && config.configPath) {
 						const { rawConfig } = experimental_readRawConfig(
 							{
-								config: configPath,
+								config: config.configPath,
 							},
 							{ hideWarnings: true }
 						);
