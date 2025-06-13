@@ -4,18 +4,42 @@ import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics, DISPATCH_TYPE, STATIC_ROUTING_DECISION } from "./analytics";
 import { applyConfigurationDefaults } from "./configuration";
-import type AssetWorker from "../../asset-worker";
+import type AssetWorker from "../../asset-worker/src/worker";
 import type {
+	EyeballRouterConfig,
 	JaegerTracing,
 	RouterConfig,
 	UnsafePerformanceTimer,
 } from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
+const limitedResponse = `<html>
+	<head>
+		<title>This website is temporarily limited</title>
+	</head>
+	<body>
+		<h1>This website has been temporarily rate limited</h1>
+		<p>
+			You cannot access this site because the owner has reached their plan
+			limits. Check back later once traffic has gone down.
+		</p>
+		<p>
+			If you are owner of this website, prevent this from happening again by
+			upgrading your plan on the
+			<a
+				href="https://dash.cloudflare.com/?account=workers/plans"
+				target="_blank"
+				>Cloudflare Workers dashboard</a
+			>.
+		</p>
+	</body>
+</html>`;
+
 export interface Env {
 	ASSET_WORKER: Service<AssetWorker>;
 	USER_WORKER: Fetcher;
 	CONFIG: RouterConfig;
+	EYEBALL_CONFIG: EyeballRouterConfig;
 
 	SENTRY_DSN: string;
 	ENVIRONMENT: Environment;
@@ -55,7 +79,10 @@ export default {
 			);
 
 			const hasStaticRouting = env.CONFIG.static_routing !== undefined;
-			const config = applyConfigurationDefaults(env.CONFIG);
+			const [config, eyeballConfig] = applyConfigurationDefaults(
+				env.CONFIG,
+				env.EYEBALL_CONFIG
+			);
 
 			const url = new URL(request.url);
 
@@ -77,6 +104,48 @@ export default {
 
 			const maybeSecondRequest = request.clone();
 
+			let asset: "static_routing" | "ignored" | true | false = false;
+
+			const routeToUserWorker = async () => {
+				if (!config.has_user_worker) {
+					throw new Error(
+						"Fetch for user worker without having a user worker binding"
+					);
+				}
+				if (eyeballConfig.limitedAssetsOnly) {
+					analytics.setData({ userWorkerFreeTierLimiting: true });
+					return new Response(limitedResponse, {
+						status: 429,
+						headers: {
+							"Content-Type": "text/html",
+						},
+					});
+				}
+				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
+				userWorkerInvocation = true;
+				return env.JAEGER.enterSpan("dispatch_worker", async (span) => {
+					span.setTags({
+						hasUserWorker: true,
+						asset: asset,
+						dispatchType: DISPATCH_TYPE.WORKER,
+					});
+					return env.USER_WORKER.fetch(maybeSecondRequest);
+				});
+			};
+
+			const routeToAssets = async () => {
+				analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
+				return await env.JAEGER.enterSpan("dispatch_assets", async (span) => {
+					span.setTags({
+						hasUserWorker: config.has_user_worker,
+						asset: asset,
+						dispatchType: DISPATCH_TYPE.ASSETS,
+					});
+
+					return env.ASSET_WORKER.fetch(maybeSecondRequest);
+				});
+			};
+
 			if (config.static_routing) {
 				// evaluate "exclude" rules
 				const excludeRulesMatcher = generateStaticRoutingRuleMatcher(
@@ -89,18 +158,10 @@ export default {
 				) {
 					// direct to asset worker
 					analytics.setData({
-						dispatchtype: DISPATCH_TYPE.ASSETS,
 						staticRoutingDecision: STATIC_ROUTING_DECISION.ROUTED,
 					});
-					return await env.JAEGER.enterSpan("dispatch_assets", async (span) => {
-						span.setTags({
-							hasUserWorker: config.has_user_worker,
-							asset: "static_routing",
-							dispatchType: DISPATCH_TYPE.ASSETS,
-						});
-
-						return env.ASSET_WORKER.fetch(maybeSecondRequest);
-					});
+					asset = "static_routing";
+					return await routeToAssets();
 				}
 				// evaluate "include" rules
 				const includeRulesMatcher = generateStaticRoutingRuleMatcher(
@@ -118,19 +179,10 @@ export default {
 					}
 					// direct to user worker
 					analytics.setData({
-						dispatchtype: DISPATCH_TYPE.WORKER,
 						staticRoutingDecision: STATIC_ROUTING_DECISION.ROUTED,
 					});
-					return await env.JAEGER.enterSpan("dispatch_worker", async (span) => {
-						span.setTags({
-							hasUserWorker: true,
-							asset: "static_routing",
-							dispatchType: DISPATCH_TYPE.WORKER,
-						});
-
-						userWorkerInvocation = true;
-						return env.USER_WORKER.fetch(maybeSecondRequest);
-					});
+					asset = "static_routing";
+					return await routeToUserWorker();
 				}
 
 				analytics.setData({
@@ -143,53 +195,19 @@ export default {
 			// User's configuration indicates they want user-Worker to run ahead of any
 			// assets. Do not provide any fallback logic.
 			if (config.invoke_user_worker_ahead_of_assets) {
-				if (!config.has_user_worker) {
-					throw new Error(
-						"Fetch for user worker without having a user worker binding"
-					);
-				}
-
-				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
-				return await env.JAEGER.enterSpan("dispatch_worker", async (span) => {
-					span.setTags({
-						hasUserWorker: true,
-						asset: "ignored",
-						dispatchType: DISPATCH_TYPE.WORKER,
-					});
-
-					userWorkerInvocation = true;
-					return env.USER_WORKER.fetch(maybeSecondRequest);
-				});
+				asset = "ignored";
+				return await routeToUserWorker();
 			}
 
 			// If we have a user-Worker, but no assets, dispatch to Worker script
 			const assetsExist = await env.ASSET_WORKER.unstable_canFetch(request);
+			asset = assetsExist;
 			if (config.has_user_worker && !assetsExist) {
-				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
-
-				return await env.JAEGER.enterSpan("dispatch_worker", async (span) => {
-					span.setTags({
-						hasUserWorker: config.has_user_worker,
-						asset: assetsExist,
-						dispatchType: DISPATCH_TYPE.WORKER,
-					});
-
-					userWorkerInvocation = true;
-					return env.USER_WORKER.fetch(maybeSecondRequest);
-				});
+				return await routeToUserWorker();
 			}
 
 			// Otherwise, we either don't have a user worker, OR we have matching assets and should fetch from the assets binding
-			analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
-			return await env.JAEGER.enterSpan("dispatch_assets", async (span) => {
-				span.setTags({
-					hasUserWorker: config.has_user_worker,
-					asset: assetsExist,
-					dispatchType: DISPATCH_TYPE.ASSETS,
-				});
-
-				return env.ASSET_WORKER.fetch(maybeSecondRequest);
-			});
+			return await routeToAssets();
 		} catch (err) {
 			if (userWorkerInvocation) {
 				// Don't send user Worker errors to sentry; we have no way to distinguish between
