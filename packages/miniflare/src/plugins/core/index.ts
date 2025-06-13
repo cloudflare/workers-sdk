@@ -116,6 +116,7 @@ const UnusableStringSchema = z.string().transform(() => undefined);
 export const UnsafeDirectSocketSchema = z.object({
 	host: z.ostring(),
 	port: z.onumber(),
+	serviceName: z.ostring(),
 	entrypoint: z.ostring(),
 	proxy: z.oboolean(),
 });

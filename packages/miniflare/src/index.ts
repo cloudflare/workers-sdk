@@ -1773,6 +1773,7 @@ export class Miniflare {
 			for (let j = 0; j < directSockets.length; j++) {
 				const previousDirectSocket = previousDirectSockets[j];
 				const directSocket = directSockets[j];
+				const serviceName = directSocket.serviceName ?? workerName;
 				const entrypoint = directSocket.entrypoint ?? "default";
 				const name = getDirectSocketName(i, entrypoint);
 				const address = this.#getSocketAddress(
@@ -1789,7 +1790,7 @@ export class Miniflare {
 								name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`,
 							}
 						: {
-								name: getUserServiceName(workerName),
+								name: getUserServiceName(serviceName),
 								entrypoint: entrypoint === "default" ? undefined : entrypoint,
 							};
 
