@@ -5,6 +5,7 @@ import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import {
 	ApiError,
 	DeploymentMutationError,
+	InstanceType,
 	OpenAPI,
 } from "@cloudflare/containers-shared";
 import { version as wranglerVersion } from "../../package.json";
@@ -41,9 +42,11 @@ import type {
 import type { Arg } from "@cloudflare/cli/interactive";
 import type {
 	CompleteAccountCustomer,
+	CreateApplicationRequest,
 	EnvironmentVariable,
 	Label,
 	NetworkParameters,
+	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
 
 export type CommonCloudchamberConfiguration = { json: boolean };
@@ -313,6 +316,7 @@ export function renderDeploymentConfiguration(
 	{
 		image,
 		location,
+		instanceType,
 		vcpu,
 		memoryMib,
 		environmentVariables,
@@ -322,6 +326,7 @@ export function renderDeploymentConfiguration(
 	}: {
 		image: string;
 		location: string;
+		instanceType?: InstanceType;
 		vcpu: number;
 		memoryMib: number;
 		environmentVariables: EnvironmentVariable[] | undefined;
@@ -359,13 +364,17 @@ export function renderDeploymentConfiguration(
 	const containerInformation = [
 		["image", image],
 		["location", idToLocationName(location)],
-		["vCPU", `${vcpu}`],
-		["memory", `${memoryMib} MiB`],
 		["environment variables", environmentVariablesText],
 		["labels", labelsText],
 		...(network === undefined
 			? []
 			: [["IPv4", network.assign_ipv4 === "predefined" ? "yes" : "no"]]),
+		...(instanceType === undefined
+			? [
+					["vCPU", `${vcpu}`],
+					["memory", `${memoryMib} MiB`],
+				]
+			: [["instance type", `${instanceType}`]]),
 	] as const;
 
 	updateStatus(
@@ -645,6 +654,38 @@ export async function promptForLabels(
 	return [];
 }
 
+export async function promptForInstanceType(
+	allowSkipping: boolean
+): Promise<InstanceType | undefined> {
+	let options = [
+		{ label: "dev: 1/16 vCPU, 256 MiB memory, 2 GB disk", value: "dev" },
+		{ label: "basic: 1/4 vCPU, 1 GiB memory, 4 GB disk", value: "basic" },
+		{ label: "standard: 1/2 vCPU, 4 GiB memory, 4 GB disk", value: "standard" },
+	];
+	if (allowSkipping) {
+		options = [{ label: "Do not set", value: "skip" }].concat(options);
+	}
+	const action = await inputPrompt({
+		question: "Which instance type should we use for your container?",
+		label: "",
+		defaultValue: false,
+		helpText: "",
+		type: "select",
+		options,
+	});
+
+	switch (action) {
+		case "dev":
+			return InstanceType.DEV;
+		case "basic":
+			return InstanceType.BASIC;
+		case "standard":
+			return InstanceType.STANDARD;
+		default:
+			return undefined;
+	}
+}
+
 // Return the amount of memory to use (in MiB) for a deployment given the
 // provided arguments and configuration.
 export function resolveMemory(
@@ -674,4 +715,96 @@ export function resolveAppDiskSize(
 	}
 	const disk = app.configuration.disk?.size ?? "2GB";
 	return Math.round(parseByteSize(disk));
+}
+
+// Checks that instance type is one of 'dev', 'basic', or 'standard' and that it is not being set alongside memory or vcpu.
+// Returns the instance type to use if correctly set.
+export function checkInstanceType(
+	args: {
+		instanceType: string | undefined;
+		memory: string | undefined;
+		vcpu: number | undefined;
+	},
+	config: CloudchamberConfig
+): InstanceType | undefined {
+	const instance_type = args.instanceType ?? config.instance_type;
+	if (instance_type === undefined) {
+		return undefined;
+	}
+
+	// If instance_type is specified as an argument, it will override any
+	// memory or vcpu specified in the config
+	if (args.memory !== undefined || args.vcpu !== undefined) {
+		throw new UserError(
+			`instance_type is mutually exclusive with 'memory' and 'vcpu'. They cannot be set together.`
+		);
+	}
+
+	switch (instance_type) {
+		case "dev":
+			return InstanceType.DEV;
+		case "basic":
+			return InstanceType.BASIC;
+		case "standard":
+			return InstanceType.STANDARD;
+		default:
+			throw new UserError(
+				`instance_type is expected to be one of 'dev', 'basic', or 'standard', but got ${instance_type}`
+			);
+	}
+}
+
+// infers the instance type from a given configuration
+function inferInstanceType(
+	configuration: UserDeploymentConfiguration
+): InstanceType | undefined {
+	if (
+		configuration?.disk?.size_mb !== undefined &&
+		configuration?.memory_mib !== undefined &&
+		configuration?.vcpu !== undefined
+	) {
+		if (
+			configuration.disk.size_mb === 2000 &&
+			configuration.memory_mib === 256 &&
+			configuration.vcpu === 0.0625
+		) {
+			return InstanceType.DEV;
+		} else if (
+			configuration.disk.size_mb === 4000 &&
+			configuration.memory_mib === 1024 &&
+			configuration.vcpu === 0.25
+		) {
+			return InstanceType.BASIC;
+		} else if (
+			configuration.disk.size_mb === 4000 &&
+			configuration.memory_mib === 4096 &&
+			configuration.vcpu === 0.5
+		) {
+			return InstanceType.STANDARD;
+		}
+	}
+
+	return undefined;
+}
+
+// removes any disk, memory, or vcpu that have been set in an objects configuration. Used for rendering
+// diffs.
+export function cleanForInstanceType(
+	app: CreateApplicationRequest
+): ContainerApp {
+	if (!("configuration" in app)) {
+		return app as ContainerApp;
+	}
+
+	const instance_type = inferInstanceType(app.configuration);
+	if (instance_type !== undefined) {
+		app.configuration.instance_type = instance_type;
+	}
+
+	delete app.configuration.disk;
+	delete app.configuration.memory;
+	delete app.configuration.memory_mib;
+	delete app.configuration.vcpu;
+
+	return app as ContainerApp;
 }

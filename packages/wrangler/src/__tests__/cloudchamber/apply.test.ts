@@ -886,4 +886,192 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		/* eslint-enable */
 	});
+
+	test("can apply an application, and there is no changes (two applications)", async () => {
+		setIsTTY(false);
+		const app = {
+			name: "my-container-app",
+			instances: 3,
+			class_name: "DurableObjectClass",
+			configuration: {
+				image: "./Dockerfile",
+				labels: [
+					{
+						name: "name",
+						value: "value",
+					},
+					{
+						name: "name-2",
+						value: "value-2",
+					},
+				],
+				secrets: [
+					{
+						name: "MY_SECRET",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME",
+					},
+					{
+						name: "MY_SECRET_1",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_1",
+					},
+					{
+						name: "MY_SECRET_2",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_2",
+					},
+				],
+			},
+		};
+		writeAppConfiguration(app, { ...app, name: "my-container-app-2" });
+
+		const completeApp = {
+			id: "abc",
+			name: "my-container-app",
+			instances: 3,
+			created_at: new Date().toString(),
+			class_name: "DurableObjectClass",
+			account_id: "1",
+			scheduling_policy: SchedulingPolicy.REGIONAL,
+			configuration: {
+				image: "./Dockerfile",
+				labels: [
+					{
+						name: "name",
+						value: "value",
+					},
+					{
+						name: "name-2",
+						value: "value-2",
+					},
+				],
+				secrets: [
+					{
+						name: "MY_SECRET",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME",
+					},
+					{
+						name: "MY_SECRET_1",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_1",
+					},
+					{
+						name: "MY_SECRET_2",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_2",
+					},
+				],
+			},
+
+			constraints: {
+				tier: 1,
+			},
+		};
+
+		mockGetApplications([
+			{ ...completeApp, version: 1 },
+			{ ...completeApp, version: 1, name: "my-container-app-2", id: "abc2" },
+		]);
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ no changes my-container-app
+			│
+			├ no changes my-container-app-2
+			│
+			╰ No changes to be made
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
+	test("can apply a simple existing application (instance type)", async () => {
+		setIsTTY(false);
+		writeAppConfiguration({
+			name: "my-container-app",
+			class_name: "DurableObjectClass",
+			instances: 4,
+			configuration: {
+				image: "./Dockerfile",
+				instance_type: "standard",
+			},
+			constraints: {
+				tier: 2,
+			},
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 3,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tier: 3,
+				},
+			},
+		]);
+		const applicationReqBodyPromise = mockModifyApplication();
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [[containers]]
+			│ - instances = 3
+			│ + instances = 4
+			│   name = \\"my-container-app\\"
+			│
+			│   [containers.configuration]
+			│   image = \\"./Dockerfile\\"
+			│ - instance_type = \\"dev\\"
+			│ + instance_type = \\"standard\\"
+			│
+			│   [containers.constraints]
+			│   ...
+			│ - tier = 3
+			│ + tier = 2
+			│
+			├ Do you want to apply these changes?
+			│ yes
+			│
+			├ Loading
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.constraints?.tier).toEqual(2);
+		expect(app.instances).toEqual(4);
+		/* eslint-enable */
+	});
 });
