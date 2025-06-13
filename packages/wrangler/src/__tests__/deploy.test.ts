@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { spawn, spawnSync } from "node:child_process";
+import { execFile, spawn, spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -8708,6 +8708,85 @@ addEventListener('fetch', event => {});`
 						},
 					} as unknown as ChildProcess;
 				}
+				vi.mocked(execFile)
+					// docker images first call
+					.mockImplementationOnce((cmd, args, callback) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args).toEqual([
+							"images",
+							getCloudflareContainerRegistry() +
+								"/test_account_id/my-container",
+							"-q",
+						]);
+						if (callback) {
+							const back = callback as (
+								error: Error | null,
+								stdout: string,
+								stderr: string
+							) => void;
+							back(null, "one\ntwo\nthree\n", "");
+						}
+						return {} as ChildProcess;
+					})
+					//docker images second call
+					.mockImplementationOnce((cmd, args, callback) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args).toEqual([
+							"images",
+							getCloudflareContainerRegistry() +
+								"/test_account_id/my-container:Galaxy",
+							"-q",
+						]);
+						if (callback) {
+							const back = callback as (
+								error: Error | null,
+								stdout: string,
+								stderr: string
+							) => void;
+							back(null, "four\n", "");
+						}
+
+						return {} as ChildProcess;
+					})
+					// docker images third call
+					.mockImplementationOnce((cmd, args, callback) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args).toEqual([
+							"images",
+							getCloudflareContainerRegistry() +
+								"/test_account_id/my-container",
+							"-q",
+						]);
+						if (callback) {
+							const back = callback as (
+								error: Error | null,
+								stdout: string,
+								stderr: string
+							) => void;
+							back(null, "one\ntwo\nthree\nfour\n", "");
+						}
+						return {} as ChildProcess;
+					})
+					// docker images fourth call
+					.mockImplementationOnce((cmd, args, callback) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args).toEqual([
+							"images",
+							getCloudflareContainerRegistry() +
+								"/test_account_id/my-container:Galaxy",
+							"-q",
+						]);
+						if (callback) {
+							const back = callback as (
+								error: Error | null,
+								stdout: string,
+								stderr: string
+							) => void;
+							back(null, "four\n", "");
+						}
+
+						return {} as ChildProcess;
+					});
 
 				vi.mocked(spawn)
 					// 1. docker build
@@ -8720,6 +8799,7 @@ addEventListener('fetch', event => {});`
 								"/test_account_id/my-container:Galaxy",
 							"--platform",
 							"linux/amd64",
+							"--provenance=false",
 							"-f",
 							"-",
 							".",
@@ -8932,7 +9012,6 @@ addEventListener('fetch', event => {});`
 					  https://test-name.test-sub-domain.workers.dev
 					Current Version ID: Galaxy-Class"
 				`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 

@@ -6,6 +6,7 @@ import {
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
 	getCloudflareRegistryWithAccountNamespace,
+	getDockerImageIds,
 	isDir,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
@@ -99,10 +100,40 @@ export async function buildAndMaybePush(
 			},
 			logger
 		);
+		// Lets grab the current image:ids that match our repository so
+		// we can compare to the result after the build to know if
+		// anything changed.
+		let idsBeforeBuild;
+		if (containerConfig) {
+			idsBeforeBuild = await getDockerImageIds(
+				pathToDocker,
+				getCloudflareRegistryWithAccountNamespace(
+					cloudflareAccountID,
+					containerConfig.name
+				)
+			);
+		}
 		await dockerBuild(pathToDocker, {
 			buildCmd,
 			dockerfile,
 		});
+		let idAfterBuild;
+		if (containerConfig) {
+			idAfterBuild = await getDockerImageIds(pathToDocker, imageTag);
+		}
+
+		// default changed to true since it is safer to default to updating
+		// the image than not updating
+		let changed = true;
+		if (
+			idAfterBuild &&
+			idAfterBuild.length == 1 &&
+			idsBeforeBuild &&
+			idsBeforeBuild.includes(idAfterBuild[0])
+		) {
+			changed = false;
+		}
+
 		// ensure the account is not allowed to build anything that exceeds the current
 		// account's disk size limits
 		const inspectOutput = await dockerImageInspect(pathToDocker, {
@@ -124,9 +155,16 @@ export async function buildAndMaybePush(
 			containerApp: containerConfig,
 		});
 
-		if (push) {
+		if (push && changed) {
 			await dockerLoginManagedRegistry(pathToDocker);
 			await runDockerCmd(pathToDocker, ["push", imageTag]);
+		} else if (push && !changed) {
+			logger.log("No changes to image, not pushing");
+			logger.debug(
+				`Untagging built image: ${imageTag} since there was no change.`
+			);
+			await runDockerCmd(pathToDocker, ["image", "rm", imageTag]);
+			return "";
 		}
 		return imageTag;
 	} catch (error) {
