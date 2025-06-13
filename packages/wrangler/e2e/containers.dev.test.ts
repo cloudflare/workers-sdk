@@ -148,5 +148,60 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				`The Docker CLI does not appear to installed. Please ensure that the Docker CLI is installed. You can specify an executable with the environment variable WRANGLER_CONTAINERS_DOCKER_PATH.`
 			);
 		});
+
+		it.only("cleans up containers on exit", async () => {
+			await helper.seed({
+				"src/index.ts": dedent`
+							  export default {
+								async fetch(req, env) {
+								  const url = new URL(req.url)
+								  if (url.pathname === "/do") {
+									  const id = env.MY_DO.idFromName(url.pathname);
+									  const stub = env.MY_DO.get(id);
+									  try {
+										return await stub.fetch(req);
+									  } catch (err) {
+										return new Response("Error fetching from stub: " + err.message, { status: 400 });
+									  }
+								  }
+
+								  return new Response("not found", { status: 404 });
+												},
+											};
+
+							  export class Container implements DurableObject {
+								constructor(ctx) {
+								  this.ctx = ctx;
+								}
+
+								async fetch(_: Request) {
+								  if (!this.ctx.container) {
+									return new Response('this.ctx.container not defined', { status: 500 });
+								  }
+
+								  if (!this.ctx.container.running) {
+									this.ctx.container.start();
+									this.monitor = this.ctx.container.monitor();
+								  }
+
+								  return this.ctx.container.getTcpPort(80).fetch(new Request("http://foo"));
+								}
+							  }`,
+			});
+
+			const worker = helper.runLongLived("wrangler dev");
+			const { url } = await worker.waitForReady();
+			await worker.readUntil(/Container\(s\) built and ready/);
+			// doesn't work yet because workerd hasn't been updated
+			await expect(
+				fetch(`${url}/do`).then((r) => r.text())
+			).resolves.toMatchInlineSnapshot();
+
+			// TODO docker ps to check a container is running
+			await worker.stop();
+			expect(worker.output).toContain("Cleaning up containers...");
+			expect(worker.output).toContain("Containers cleaned up");
+			// TODO docker ps to check a container is not running
+		});
 	}
 );
