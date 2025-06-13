@@ -12,6 +12,12 @@ import {
 	UnsafeUniqueKey,
 } from "../shared";
 
+// Options for a container attached to the DO
+export const DOContainerOptionsSchema = z.object({
+	imageName: z.string(),
+});
+export type DOContainerOptions = z.infer<typeof DOContainerOptionsSchema>;
+
 export const DurableObjectsOptionsSchema = z.object({
 	durableObjects: z
 		.record(
@@ -33,6 +39,7 @@ export const DurableObjectsOptionsSchema = z.object({
 					mixedModeConnectionString: z
 						.custom<MixedModeConnectionString>()
 						.optional(),
+					container: z.custom<DOContainerOptions>().optional(),
 				}),
 			])
 		)
@@ -45,7 +52,8 @@ export const DurableObjectsSharedOptionsSchema = z.object({
 export function normaliseDurableObject(
 	designator: NonNullable<
 		z.infer<typeof DurableObjectsOptionsSchema>["durableObjects"]
-	>[string]
+	>[string],
+	containerBuildId: string | undefined
 ): {
 	className: string;
 	scriptName: string | undefined;
@@ -54,6 +62,7 @@ export function normaliseDurableObject(
 	unsafeUniqueKey: UnsafeUniqueKey | undefined;
 	unsafePreventEviction: boolean | undefined;
 	mixedModeConnectionString: MixedModeConnectionString | undefined;
+	container: DOContainerOptions | undefined;
 } {
 	const isObject = typeof designator === "object";
 	const className = isObject ? designator.className : designator;
@@ -70,6 +79,11 @@ export function normaliseDurableObject(
 	const mixedModeConnectionString = isObject
 		? designator.mixedModeConnectionString
 		: undefined;
+	const container = isObject ? designator.container : undefined;
+
+	if (container?.imageName && containerBuildId) {
+		container.imageName = `${container.imageName}:${containerBuildId}`;
+	}
 	return {
 		className,
 		scriptName,
@@ -78,6 +92,7 @@ export function normaliseDurableObject(
 		unsafeUniqueKey,
 		unsafePreventEviction,
 		mixedModeConnectionString,
+		container,
 	};
 }
 
@@ -94,7 +109,10 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 	getBindings(options) {
 		return Object.entries(options.durableObjects ?? {}).map<Worker_Binding>(
 			([name, klass]) => {
-				const { className, serviceName } = normaliseDurableObject(klass);
+				const { className, serviceName } = normaliseDurableObject(
+					klass,
+					undefined
+				);
 				return {
 					name,
 					durableObjectNamespace: { className, serviceName },

@@ -1,10 +1,14 @@
+import { platform } from "os";
 import path from "path";
 import {
 	constructBuildCommand,
 	dockerBuild,
 	dockerImageInspect,
+	dockerListContainers,
+	runDockerCmd,
 	verifyDockerInstalled,
 } from "@cloudflare/containers-shared";
+import { dim } from "kleur/colors";
 import { Log } from "../../../shared";
 import { ContainerOptions, ContainersSharedOptions } from "../index";
 
@@ -18,14 +22,23 @@ export class ContainerController {
 	#sharedOptions: ContainersSharedOptions;
 	#logger: Log;
 	#dockerInstalled: boolean = false;
+	#buildId: string;
+	#imagesBuilt: Set<string> = new Set();
 	constructor(
 		containerOptions: { [className: string]: ContainerOptions },
 		sharedOptions: ContainersSharedOptions,
-		logger: Log
+		logger: Log,
+		buildId: string
 	) {
 		this.#containerOptions = containerOptions;
 		this.#sharedOptions = sharedOptions;
 		this.#logger = logger;
+		this.#buildId = buildId;
+		if (platform() === "win32") {
+			throw new Error(
+				"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container part of your application."
+			);
+		}
 	}
 
 	updateConfig(
@@ -55,7 +68,7 @@ export class ContainerController {
 
 	async buildContainer(options: ContainerOptions) {
 		// just let the tag default to latest
-		const tag = `${MF_CONTAINER_PREFIX}/${options.name}`;
+		const tag = `${MF_CONTAINER_PREFIX}/${options.name}:${this.#buildId}`;
 		const { buildCmd, dockerfile } = await constructBuildCommand({
 			tag,
 			pathToDockerfile: options.image,
@@ -65,6 +78,7 @@ export class ContainerController {
 		});
 		await dockerBuild(this.#sharedOptions.dockerPath, { buildCmd, dockerfile });
 		await this.checkExposedPorts(tag);
+		this.#imagesBuilt.add(tag);
 	}
 
 	async checkExposedPorts(imageTag: string) {
@@ -76,6 +90,47 @@ export class ContainerController {
 			throw new Error(
 				`The container "${imageTag.replace(MF_CONTAINER_PREFIX + "/", "")}" does not expose any ports.\n` +
 					"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort()` in your Dockerfile."
+			);
+		}
+	}
+
+	async cleanupContainers() {
+		if (!this.#dockerInstalled || this.#imagesBuilt.size === 0) {
+			return;
+		}
+
+		this.#logger.info(dim("Cleaning up containers..."));
+
+		try {
+			// Find all containers (stopped and running) for each built image in parallel
+			const containerPromises = Array.from(this.#imagesBuilt).map(
+				async (imageTag) => {
+					return await dockerListContainers(this.#sharedOptions.dockerPath, {
+						all: true,
+						ancestor: imageTag,
+					});
+				}
+			);
+			const containerResults = await Promise.all(containerPromises);
+			const allContainerIds = containerResults.flat();
+			if (allContainerIds.length === 0) {
+				return;
+			}
+
+			// Workerd should have stopped all containers, but clean up any in case. This might take a while.
+			await runDockerCmd(
+				this.#sharedOptions.dockerPath,
+				["stop", ...allContainerIds],
+				["inherit", "pipe", "pipe"]
+			);
+			await runDockerCmd(
+				this.#sharedOptions.dockerPath,
+				["rm", ...allContainerIds],
+				["inherit", "pipe", "pipe"]
+			);
+		} catch (error) {
+			this.#logger.warn(
+				`Failed to cleanup containers: ${error instanceof Error ? error.message : String(error)}. You may need to manually stop and/or remove any containers started during dev.`
 			);
 		}
 	}

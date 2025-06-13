@@ -1,4 +1,8 @@
-import type { Environment, RawEnvironment } from "./environment";
+import type {
+	ContainerEngine,
+	Environment,
+	RawEnvironment,
+} from "./environment";
 import type { CamelCaseKey } from "yargs";
 
 /**
@@ -238,6 +242,12 @@ export interface DevConfig {
 	 * @default true
 	 */
 	enable_containers: boolean;
+
+	/**
+	 * Either the Docker unix socket i.e. `unix:/var/run/docker.sock` or a full configuration.
+	 * Note that windows is only supported via WSL at the moment
+	 */
+	container_engine: ContainerEngine | undefined;
 }
 
 export type RawDevConfig = Partial<DevConfig>;
@@ -287,6 +297,7 @@ export const defaultWranglerConfig: Config = {
 		host: undefined,
 		// Note this one is also workers only
 		enable_containers: true,
+		container_engine: undefined,
 	},
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/
