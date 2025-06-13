@@ -331,6 +331,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
+				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
+
 				if (resolvedPluginConfig.type === "workers") {
 					const entryWorkerConfig = getWorkerConfig(
 						resolvedPluginConfig.entryWorkerEnvironmentName
@@ -367,8 +369,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							return userWorker.fetch(request, { redirect: "manual" });
 						});
 
-						// pre middleware
-						viteDevServer.middlewares.use(async (req, res, next) => {
+						preMiddleware = async (req, res, next) => {
+							// Only the URL pathname is used to match rules
 							const request = new Request(new URL(req.url!, UNKNOWN_HOST));
 
 							if (req[kRequestType] === "asset") {
@@ -381,11 +383,30 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							} else {
 								next();
 							}
-						});
+						};
 					}
 				}
 
 				return () => {
+					if (preMiddleware) {
+						const middlewareStack = viteDevServer.middlewares.stack;
+						const cachedTransformMiddlewareIndex = middlewareStack.findIndex(
+							(middleware) =>
+								"name" in middleware.handle &&
+								middleware.handle.name === "viteCachedTransformMiddleware"
+						);
+						assert(
+							cachedTransformMiddlewareIndex !== -1,
+							"Failed to find viteCachedTransformMiddleware"
+						);
+
+						// Insert our middleware after the host check middleware to prevent DNS rebinding attacks
+						middlewareStack.splice(cachedTransformMiddlewareIndex, 0, {
+							route: "",
+							handle: preMiddleware,
+						});
+					}
+
 					// post middleware
 					viteDevServer.middlewares.use(
 						createRequestHandler(async (request, req) => {
