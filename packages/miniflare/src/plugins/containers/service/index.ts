@@ -3,6 +3,11 @@ import {
 	constructBuildCommand,
 	dockerBuild,
 	dockerImageInspect,
+	dockerLoginManagedRegistry,
+	getCloudflareContainerRegistry,
+	isCloudflareRegistryLink,
+	isDockerfile,
+	runDockerCmd,
 	verifyDockerInstalled,
 } from "@cloudflare/containers-shared";
 import { Log } from "../../../shared";
@@ -46,10 +51,21 @@ export class ContainerController {
 		}
 		this.#logger.info("Building container(s)...");
 		for (const options of Object.values(this.#containerOptions)) {
-			await this.buildContainer(options);
+			if (isDockerfile(options.image)) {
+				await this.buildContainer(options);
+			} else {
+				if (!isCloudflareRegistryLink(options.image)) {
+					throw new Error(
+						`Image "${options.image}" is a registry link but does not point to the Cloudflare container registry.\n` +
+							`All images must use ${getCloudflareContainerRegistry()}, which is the default registry for Wrangler. To use an existing image from another repository, see https://developers.cloudflare.com/containers/image-management/#using-existing-images`
+					);
+				}
+
+				await this.pullImage(options.image);
+			}
 		}
 		// Miniflare will log 'Ready on...' before the containers are built, but that is actually the proxy server.
-		// The actual user worker's miniflare instance is blocked until the containers are built
+		// The actual User Worker's miniflare instance is blocked until the containers are built
 		this.#logger.info("Container(s) built and ready");
 	}
 
@@ -76,6 +92,26 @@ export class ContainerController {
 			throw new Error(
 				`The container "${imageTag.replace(MF_CONTAINER_PREFIX + "/", "")}" does not expose any ports.\n` +
 					"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort()` in your Dockerfile."
+			);
+		}
+	}
+
+	// TODO should this live in containers-shared?
+	async pullImage(image: string) {
+		try {
+			await dockerLoginManagedRegistry(this.#sharedOptions.dockerPath);
+			await runDockerCmd(this.#sharedOptions.dockerPath, ["pull", image]);
+			// const tag = `${MF_CONTAINER_PREFIX}/${options.name}`;
+			// this needs to be tested cause we might have to extract the actual image tag
+			// await runDockerCmd(this.#sharedOptions.dockerPath, ["tag", image, tag]);
+			this.#logger.info(`Successfully pulled image: ${image}`);
+		} catch (error) {
+			if (error instanceof Error) {
+				throw new Error(error.message);
+			}
+
+			throw new Error(
+				`An unknown error occurred while attempting to pull ${image} from the Cloudflare container registry`
 			);
 		}
 	}
