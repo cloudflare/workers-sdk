@@ -4,7 +4,6 @@ import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics, DISPATCH_TYPE, STATIC_ROUTING_DECISION } from "./analytics";
 import { applyConfigurationDefaults } from "./configuration";
-import limitedResponse from "./limited-response.html";
 import type AssetWorker from "../../asset-worker/src/worker";
 import type {
 	EyeballRouterConfig,
@@ -13,6 +12,28 @@ import type {
 	UnsafePerformanceTimer,
 } from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
+
+const limitedResponse = `<html>
+	<head>
+		<title>This website is temporarily limited</title>
+	</head>
+	<body>
+		<h1>This website has been temporarily rate limited</h1>
+		<p>
+			You cannot access this site because the owner has reached their plan
+			limits. Check back later once traffic has gone down.
+		</p>
+		<p>
+			If you are owner of this website, prevent this from happening again by
+			upgrading your plan on the
+			<a
+				href="https://dash.cloudflare.com/?account=workers/plans"
+				target="_blank"
+				>Cloudflare Workers dashboard</a
+			>.
+		</p>
+	</body>
+</html>`;
 
 export interface Env {
 	ASSET_WORKER: Service<AssetWorker>;
