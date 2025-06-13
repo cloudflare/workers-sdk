@@ -476,7 +476,7 @@ describe("wrangler secret", () => {
 						  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 						  the target environment using the \`-e|--env\` flag.
 						  If your intention is to use the top-level environment of your configuration simply pass an empty
-						  string to the flag to target such environment.
+						  string to the flag to target such environment. For example \`--env=\\"\\"\`.
 
 						"
 					`);
@@ -704,7 +704,7 @@ describe("wrangler secret", () => {
 					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 					  the target environment using the \`-e|--env\` flag.
 					  If your intention is to use the top-level environment of your configuration simply pass an empty
-					  string to the flag to target such environment.
+					  string to the flag to target such environment. For example \`--env=\\"\\"\`.
 
 					"
 				`);
@@ -1361,7 +1361,7 @@ describe("wrangler secret", () => {
 					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 					  the target environment using the \`-e|--env\` flag.
 					  If your intention is to use the top-level environment of your configuration simply pass an empty
-					  string to the flag to target such environment.
+					  string to the flag to target such environment. For example \`--env=\\"\\"\`.
 
 					"
 				`);
