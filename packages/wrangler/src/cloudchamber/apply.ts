@@ -333,6 +333,7 @@ export async function apply(
 			image: "docker.io/cloudflare/hello-world:1.0",
 			instances: 2,
 			name: config.name ?? "my-containers-application",
+			instance_type: "dev",
 		};
 		const endConfig: JsonMap =
 			args.env !== undefined

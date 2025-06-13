@@ -159,6 +159,30 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		placements_ref: "http://ref",
 		node_group: NodeGroup.METAL,
 	},
+	{
+		id: "5",
+		type: DeploymentType.DEFAULT,
+		created_at: "123",
+		account_id: "123",
+		vcpu: 0.0625,
+		memory: "256MB",
+		memory_mib: 256,
+		disk: {
+			size: "2GB",
+			size_mb: 2000,
+		},
+		version: 1,
+		image: "hello",
+		location: {
+			name: "sfo06",
+			enabled: true,
+		},
+		network: {
+			ipv4: "1.1.1.1",
+		},
+		placements_ref: "http://ref",
+		node_group: NodeGroup.METAL,
+	},
 ];
 
 export const MOCK_PLACEMENTS: PlacementWithEvents[] = [
