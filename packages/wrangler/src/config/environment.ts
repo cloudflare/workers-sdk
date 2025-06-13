@@ -34,6 +34,7 @@ export type Route =
 export type CloudchamberConfig = {
 	image?: string;
 	location?: string;
+	instance_type?: "dev" | "basic" | "standard";
 	vcpu?: number;
 	memory?: string;
 	ipv4?: boolean;
@@ -78,6 +79,7 @@ export type ContainerApp = {
 	/* Configuration of the container */
 	configuration: {
 		image: string;
+		instance_type?: "dev" | "basic" | "standard";
 		labels?: { name: string; value: string }[];
 		secrets?: { name: string; type: "env"; secret: string }[];
 		disk?: { size: string };
