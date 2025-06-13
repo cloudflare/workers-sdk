@@ -25,6 +25,7 @@
 		"directory": "packages/vitest-pool-workers"
 	},
 	"license": "MIT",
+	"type": "module",
 	"exports": {
 		".": {
 			"types": "./types/cloudflare-test.d.ts",
