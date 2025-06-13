@@ -56,7 +56,7 @@ export class ContainerController {
 			} else {
 				if (!isCloudflareRegistryLink(options.image)) {
 					throw new Error(
-						`Image ${options.image} is a registry link but does not point to the Cloudflare container registry.\n` +
+						`Image "${options.image}" is a registry link but does not point to the Cloudflare container registry.\n` +
 							`All images must use ${getCloudflareContainerRegistry()}, which is the default registry for Wrangler. To use an existing image from another repository, see https://developers.cloudflare.com/containers/image-management/#using-existing-images`
 					);
 				}
@@ -101,6 +101,9 @@ export class ContainerController {
 		try {
 			await dockerLoginManagedRegistry(this.#sharedOptions.dockerPath);
 			await runDockerCmd(this.#sharedOptions.dockerPath, ["pull", image]);
+			// const tag = `${MF_CONTAINER_PREFIX}/${options.name}`;
+			// this needs to be tested cause we might have to extract the actual image tag
+			// await runDockerCmd(this.#sharedOptions.dockerPath, ["tag", image, tag]);
 			this.#logger.info(`Successfully pulled image: ${image}`);
 		} catch (error) {
 			if (error instanceof Error) {
