@@ -77,6 +77,24 @@ export default {
 
 			const maybeSecondRequest = request.clone();
 
+			let shouldBlockNonImageResponse = false;
+			if (url.pathname === "/_next/image") {
+				// is a next image
+				const queryURLParam = url.searchParams.get("url");
+				if (queryURLParam && !queryURLParam.startsWith("/")) {
+					// that's a remote resource
+					if (
+						maybeSecondRequest.method !== "GET" ||
+						maybeSecondRequest.headers.get("sec-fetch-dest") !== "image"
+					) {
+						// that was not loaded via a browser's <img> tag
+						shouldBlockNonImageResponse = true;
+						analytics.setData({ abuseMitigationURLHost: queryURLParam });
+					}
+					// otherwise, we're good
+				}
+			}
+
 			if (config.static_routing) {
 				// evaluate "exclude" rules
 				const excludeRulesMatcher = generateStaticRoutingRuleMatcher(
@@ -129,6 +147,17 @@ export default {
 						});
 
 						userWorkerInvocation = true;
+						if (shouldBlockNonImageResponse) {
+							const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
+							if (
+								!resp.headers.get("content-type")?.startsWith("image/") &&
+								resp.status !== 304
+							) {
+								analytics.setData({ abuseMitigationBlocked: true });
+								return new Response("Blocked", { status: 403 });
+							}
+							return resp;
+						}
 						return env.USER_WORKER.fetch(maybeSecondRequest);
 					});
 				}
@@ -158,6 +187,17 @@ export default {
 					});
 
 					userWorkerInvocation = true;
+					if (shouldBlockNonImageResponse) {
+						const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
+						if (
+							!resp.headers.get("content-type")?.startsWith("image/") &&
+							resp.status !== 304
+						) {
+							analytics.setData({ abuseMitigationBlocked: true });
+							return new Response("Blocked", { status: 403 });
+						}
+						return resp;
+					}
 					return env.USER_WORKER.fetch(maybeSecondRequest);
 				});
 			}
@@ -175,6 +215,17 @@ export default {
 					});
 
 					userWorkerInvocation = true;
+					if (shouldBlockNonImageResponse) {
+						const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
+						if (
+							!resp.headers.get("content-type")?.startsWith("image/") &&
+							resp.status !== 304
+						) {
+							analytics.setData({ abuseMitigationBlocked: true });
+							return new Response("Blocked", { status: 403 });
+						}
+						return resp;
+					}
 					return env.USER_WORKER.fetch(maybeSecondRequest);
 				});
 			}
