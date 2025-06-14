@@ -9,6 +9,7 @@ import { ParseError, parseJSON } from "../parse";
 import { getAccessToken } from "../user/access";
 import { isAbortError } from "../utils/isAbortError";
 import type { CfWorkerContext } from "../deployment-bundle/worker";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
 import type { CfWorkerInitWithName } from "./remote";
 import type { HeadersInit } from "undici";
@@ -71,12 +72,24 @@ export interface CfPreviewSession {
 }
 
 /**
- * A preview mode.
+ * Session configuration for realish preview. This is sent to the API as the
+ * `wrangler-session-config` form data part.
  *
- * * If true, then using a `workers.dev` subdomain.
- * * Otherwise, a list of routes under a single zone.
+ * Only one of `workers_dev` and `routes` can be specified:
+ * * If `workers_dev` is set, the preview will run using a `workers.dev` subdomain.
+ * * If `routes` is set, the preview will run using the list of routes provided, which must be under a single zone
+ *
+ * `minimal_mode` is a flag to tell the API to enable "raw" mode bindings in this session
  */
-type CfPreviewMode = { workers_dev: boolean } | { routes: string[] };
+type CfPreviewMode =
+	| {
+			workers_dev: true;
+			minimal_mode?: boolean;
+	  }
+	| {
+			routes: string[];
+			minimal_mode?: boolean;
+	  };
 
 /**
  * A preview token.
@@ -140,6 +153,7 @@ function switchHost(
  * Generates a preview session token.
  */
 export async function createPreviewSession(
+	complianceConfig: ComplianceConfig,
 	account: CfAccount,
 	ctx: CfWorkerContext,
 	abortSignal: AbortSignal
@@ -150,6 +164,7 @@ export async function createPreviewSession(
 		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
 	const { exchange_url } = await fetchResult<{ exchange_url: string }>(
+		complianceConfig,
 		initUrl,
 		undefined,
 		undefined,
@@ -216,11 +231,13 @@ export async function createPreviewSession(
  * Creates a preview token.
  */
 async function createPreviewToken(
+	complianceConfig: ComplianceConfig,
 	account: CfAccount,
 	worker: CfWorkerInitWithName,
 	ctx: CfWorkerContext,
 	session: CfPreviewSession,
-	abortSignal: AbortSignal
+	abortSignal: AbortSignal,
+	minimal_mode?: boolean
 ): Promise<CfPreviewToken> {
 	const { value, host, inspectorUrl, prewarmUrl } = session;
 	const { accountId } = account;
@@ -245,13 +262,15 @@ async function createPreviewToken(
 							})
 						: // if there aren't any patterns, then just match on all routes
 							["*/*"],
+				minimal_mode,
 			}
-		: { workers_dev: true };
+		: { workers_dev: true, minimal_mode };
 
 	const formData = createWorkerUploadForm(worker);
 	formData.set("wrangler-session-config", JSON.stringify(mode));
 
 	const { preview_token } = await fetchResult<{ preview_token: string }>(
+		complianceConfig,
 		url,
 		{
 			method: "POST",
@@ -292,18 +311,22 @@ async function createPreviewToken(
  * const {value, host} = await createWorker(init, acct);
  */
 export async function createWorkerPreview(
+	complianceConfig: ComplianceConfig,
 	init: CfWorkerInitWithName,
 	account: CfAccount,
 	ctx: CfWorkerContext,
 	session: CfPreviewSession,
-	abortSignal: AbortSignal
+	abortSignal: AbortSignal,
+	minimal_mode?: boolean
 ): Promise<CfPreviewToken> {
 	const token = await createPreviewToken(
+		complianceConfig,
 		account,
 		init,
 		ctx,
 		session,
-		abortSignal
+		abortSignal,
+		minimal_mode
 	);
 	const accessToken = await getAccessToken(token.prewarmUrl.hostname);
 

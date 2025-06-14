@@ -1,8 +1,3 @@
-interface EmbeddingResponse {
-	shape: number[];
-	data: number[][];
-}
-
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		const path = new URL(request.url).pathname;
@@ -12,7 +7,7 @@ export default {
 				"This is a story about an orange cloud",
 				"This is a story about a llama",
 			];
-			const modelResp: EmbeddingResponse = await env.AI.run(
+			const modelResp: Ai_Cf_Baai_Bge_Base_En_V1_5_Output = await env.AI.run(
 				"@cf/baai/bge-base-en-v1.5",
 				{
 					text: stories,

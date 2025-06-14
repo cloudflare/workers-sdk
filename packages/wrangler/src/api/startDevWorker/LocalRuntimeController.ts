@@ -6,8 +6,12 @@ import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { convertBindingsToCfWorkerInitBindings } from "./utils";
+import {
+	convertBindingsToCfWorkerInitBindings,
+	convertCfWorkerInitBindingsToBindings,
+} from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
+import type { MixedModeSession } from "../mixedMode";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -15,7 +19,7 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { File, StartDevWorkerOptions } from "./types";
+import type { Binding, File, StartDevWorkerOptions } from "./types";
 
 async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
@@ -89,6 +93,7 @@ export async function convertToConfigBundle(
 		format: event.bundle.entry.format,
 		compatibilityDate: event.config.compatibilityDate,
 		compatibilityFlags: event.config.compatibilityFlags,
+		complianceRegion: event.config.complianceRegion,
 		bindings,
 		migrations: event.config.migrations,
 		workerDefinitions: event.config.dev?.registry,
@@ -104,7 +109,15 @@ export async function convertToConfigBundle(
 		initialPort: undefined,
 		initialIp: "127.0.0.1",
 		rules: [],
-		inspectorPort: 0,
+		...(event.config.dev.inspector === false
+			? {
+					inspect: false,
+					inspectorPort: undefined,
+				}
+			: {
+					inspect: true,
+					inspectorPort: 0,
+				}),
 		localPersistencePath: event.config.dev.persist,
 		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
@@ -114,13 +127,15 @@ export async function convertToConfigBundle(
 		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
 		localUpstream: event.config.dev?.origin?.hostname,
 		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
-		inspect: true,
 		services: bindings.services,
 		serviceBindings: fetchers,
 		bindVectorizeToProd: event.config.dev?.bindVectorizeToProd ?? false,
 		imagesLocalMode: event.config.dev?.imagesLocalMode ?? false,
 		testScheduled: !!event.config.dev.testScheduled,
 		tails: event.config.tailConsumers,
+		containers: event.config.containers ?? {},
+		enableContainers: event.config.dev.enableContainers ?? true,
+		dockerPath: event.config.dev.dockerPath ?? "docker",
 	};
 }
 
@@ -143,17 +158,47 @@ export class LocalRuntimeController extends RuntimeController {
 	#mutex = new Mutex();
 	#mf?: Miniflare;
 
+	#mixedModeSessionData: {
+		session: MixedModeSession;
+		remoteBindings: Record<string, Binding>;
+	} | null = null;
+
 	onBundleStart(_: BundleStartEvent) {
 		// Ignored in local runtime
 	}
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
+			const configBundle = await convertToConfigBundle(data);
+
+			const experimentalMixedMode =
+				data.config.dev.experimentalMixedMode ?? false;
+
+			if (experimentalMixedMode && !data.config.dev?.remote) {
+				// note: mixedMode uses (transitively) LocalRuntimeController, so we need to import
+				// from the module lazily in order to avoid circular dependency issues
+				const { maybeStartOrUpdateMixedModeSession } = await import(
+					"../mixedMode"
+				);
+
+				this.#mixedModeSessionData = await maybeStartOrUpdateMixedModeSession(
+					{
+						name: configBundle.name,
+						bindings:
+							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
+							{},
+					},
+					this.#mixedModeSessionData ?? null
+				);
+			}
+
 			const { options, internalObjects, entrypointNames } =
 				await MF.buildMiniflareOptions(
 					this.#log,
-					await convertToConfigBundle(data),
-					this.#proxyToUserWorkerAuthenticationSecret
+					configBundle,
+					this.#proxyToUserWorkerAuthenticationSecret,
+					this.#mixedModeSessionData?.session?.mixedModeConnectionString,
+					!!experimentalMixedMode
 				);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
@@ -169,7 +214,13 @@ export class LocalRuntimeController extends RuntimeController {
 			// `inspectorUrl` for this set of `options`, we protect `#mf` with a mutex,
 			// so only one update can happen at a time.
 			const userWorkerUrl = await this.#mf.ready;
-			const userWorkerInspectorUrl = await this.#mf.getInspectorURL();
+			// TODO: Miniflare should itself return undefined on
+			//       `getInspectorURL` when no inspector is in use
+			//       (currently the function just hangs)
+			const userWorkerInspectorUrl =
+				options.inspectorPort === undefined
+					? undefined
+					: await this.#mf.getInspectorURL();
 			// If we received a new `bundleComplete` event before we were able to
 			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 			if (id !== this.#currentBundleId) {
@@ -193,12 +244,16 @@ export class LocalRuntimeController extends RuntimeController {
 						hostname: userWorkerUrl.hostname,
 						port: userWorkerUrl.port,
 					},
-					userWorkerInspectorUrl: {
-						protocol: userWorkerInspectorUrl.protocol,
-						hostname: userWorkerInspectorUrl.hostname,
-						port: userWorkerInspectorUrl.port,
-						pathname: `/core:user:${getName(data.config)}`,
-					},
+					...(userWorkerInspectorUrl
+						? {
+								userWorkerInspectorUrl: {
+									protocol: userWorkerInspectorUrl.protocol,
+									hostname: userWorkerInspectorUrl.hostname,
+									port: userWorkerInspectorUrl.port,
+									pathname: `/core:user:${getName(data.config)}`,
+								},
+							}
+						: {}),
 					userWorkerInnerUrlOverrides: {
 						protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
 						hostname: data.config?.dev?.origin?.hostname,
@@ -253,6 +308,13 @@ export class LocalRuntimeController extends RuntimeController {
 
 		await this.#mf?.dispose();
 		this.#mf = undefined;
+
+		if (this.#mixedModeSessionData) {
+			logger.log(chalk.dim("⎔ Shutting down remote connection..."));
+		}
+
+		await this.#mixedModeSessionData?.session?.dispose();
+		this.#mixedModeSessionData = null;
 
 		logger.debug("LocalRuntimeController teardown complete");
 	};

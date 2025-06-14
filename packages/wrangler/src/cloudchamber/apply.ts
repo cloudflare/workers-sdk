@@ -10,8 +10,6 @@ import {
 } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { bold, brandColor, dim, green, red } from "@cloudflare/cli/colors";
-import { formatConfigSnippet } from "../config";
-import { UserError } from "../errors";
 import {
 	ApiError,
 	ApplicationsService,
@@ -19,7 +17,9 @@ import {
 	DeploymentMutationError,
 	RolloutsService,
 	SchedulingPolicy,
-} from "./client";
+} from "@cloudflare/containers-shared";
+import { formatConfigSnippet } from "../config";
+import { UserError } from "../errors";
 import { promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
 import type { Config } from "../config";
@@ -36,7 +36,7 @@ import type {
 	ModifyApplicationRequestBody,
 	ModifyDeploymentV2RequestBody,
 	UserDeploymentConfiguration,
-} from "./client";
+} from "@cloudflare/containers-shared";
 import type { JsonMap } from "@iarna/toml";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
@@ -139,6 +139,7 @@ function containerAppToCreateApplication(
 	delete (app as Record<string, unknown>)["image_build_context"];
 	delete (app as Record<string, unknown>)["image_vars"];
 	delete (app as Record<string, unknown>)["rollout_step_percentage"];
+	delete (app as Record<string, unknown>)["rollout_kind"];
 
 	return app;
 }
@@ -366,6 +367,7 @@ export async function apply(
 				id: ApplicationID;
 				name: ApplicationName;
 				rollout_step_percentage?: number;
+				rollout_kind: CreateApplicationRolloutRequest.kind;
 		  }
 	)[] = [];
 
@@ -499,19 +501,24 @@ export async function apply(
 				}
 			}
 
-			actions.push({
-				action: "modify",
-				application: createApplicationToModifyApplication(appConfig),
-				id: application.id,
-				name: application.name,
-				// The rollout logic is still pretty much attached
-				// to the fact of the container application using DOs.
-				// When we allow rollouts on non-DO, this should not be necessary.
-				rollout_step_percentage:
-					application.durable_objects !== undefined
-						? appConfigNoDefaults.rollout_step_percentage ?? 25
-						: undefined,
-			});
+			if (appConfigNoDefaults.rollout_kind !== "none") {
+				actions.push({
+					action: "modify",
+					application: createApplicationToModifyApplication(appConfig),
+					id: application.id,
+					name: application.name,
+					rollout_step_percentage:
+						application.durable_objects !== undefined
+							? appConfigNoDefaults.rollout_step_percentage ?? 25
+							: appConfigNoDefaults.rollout_step_percentage,
+					rollout_kind:
+						appConfigNoDefaults.rollout_kind == "full_manual"
+							? CreateApplicationRolloutRequest.kind.FULL_MANUAL
+							: CreateApplicationRolloutRequest.kind.FULL_AUTO,
+				});
+			} else {
+				log("Skipping application rollout");
+			}
 
 			printLine("");
 			continue;
@@ -675,6 +682,7 @@ export async function apply(
 								(action.application
 									.configuration as ModifyDeploymentV2RequestBody) ?? {},
 							step_percentage: action.rollout_step_percentage,
+							kind: action.rollout_kind,
 						}),
 						{
 							json: args.json,

@@ -58,7 +58,18 @@ const generateASSETSBinding: (
 	require("./miniflare-cli/assets").default;
 export { generateASSETSBinding as unstable_generateASSETSBinding };
 
-export { experimental_readRawConfig } from "./config";
+export {
+	experimental_readRawConfig,
+	type ConfigBindingOptions as Experimental_ConfigBindingOptions,
+} from "./config";
 export { experimental_patchConfig } from "./config/patch-config";
 
-export { startMixedModeSession as experimental_startMixedModeSession } from "./api";
+export {
+	startMixedModeSession as experimental_startMixedModeSession,
+	type StartMixedModeSessionOptions as experimental_StartMixedModeSessionOptions,
+	maybeStartOrUpdateMixedModeSession as experimental_maybeStartOrUpdateMixedModeSession,
+	pickRemoteBindings as experimental_pickRemoteBindings,
+	type Binding as Unstable_Binding,
+	type MixedModeSession as Experimental_MixedModeSession,
+	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
+} from "./api";

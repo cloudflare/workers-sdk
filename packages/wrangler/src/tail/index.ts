@@ -111,6 +111,7 @@ export const tailCommand = createCommand({
 		// Worker names can't contain "." (and most routes should), so use that as a discriminator
 		if (args.worker?.includes(".")) {
 			scriptName = await getWorkerForZone(
+				config,
 				{
 					worker: args.worker,
 					accountId,
@@ -145,6 +146,7 @@ export const tailCommand = createCommand({
 		const filters = translateCLICommandToFilterMessage(cliFilters);
 
 		const { tail, expiration, deleteTail } = await createTail(
+			config,
 			accountId,
 			scriptName,
 			filters,

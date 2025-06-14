@@ -15,6 +15,9 @@ const normalize = (str: string) =>
 	}).replaceAll(/^Author:.*$/gm, "Author:      person@example.com");
 
 describe("deployments", { timeout: TIMEOUT }, () => {
+	// Note that we are sharing the workerName and helper across all these tests,
+	// which means that these tests are not isolated from each other.
+	// Seeded files will leak between tests.
 	const workerName = generateResourceName();
 	const helper = new WranglerE2ETestHelper();
 	let deployedUrl: string;
@@ -198,6 +201,7 @@ type AssetTestCase = {
 	content?: string;
 	redirect?: string;
 };
+
 function generateInitialAssets(workerName: string) {
 	return {
 		"public/index.html": dedent`
@@ -215,7 +219,7 @@ function generateInitialAssets(workerName: string) {
 	};
 }
 
-const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
+async function checkAssets(testCases: AssetTestCase[], deployedUrl: string) {
 	for (const testCase of testCases) {
 		await vi.waitFor(
 			async () => {
@@ -224,35 +228,43 @@ const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
 				const url = r.url;
 
 				if (testCase.content) {
-					expect(text).toContain(testCase.content);
+					expect(
+						text,
+						`expected content for ${testCase.path} to be ${testCase.content}`
+					).toContain(testCase.content);
 				}
 				if (testCase.redirect) {
-					expect(new URL(url).pathname).toEqual(
-						new URL(testCase.redirect, deployedUrl).pathname
-					);
+					expect(
+						new URL(url).pathname,
+						`expected redirect for ${testCase.path} to be ${testCase.redirect}`
+					).toEqual(new URL(testCase.redirect, deployedUrl).pathname);
 				} else {
-					expect(new URL(url).pathname).toEqual(
-						new URL(testCase.path, deployedUrl).pathname
-					);
+					expect(
+						new URL(url).pathname,
+						`unexpected pathname for ${testCase.path}`
+					).toEqual(new URL(testCase.path, deployedUrl).pathname);
 				}
 			},
-			{ interval: 1_000, timeout: 40_000 }
+			{
+				interval: 1_000,
+				timeout: 40_000,
+			}
 		);
 	}
-};
+}
 
 describe("Workers + Assets deployment", () => {
-	const helper = new WranglerE2ETestHelper();
-	let deployedUrl: string | undefined;
+	let helper: WranglerE2ETestHelper;
+	let workerName: string;
+
+	beforeEach(() => {
+		// We are recreating the helper on each test to ensure they are isolated from each other.
+		helper = new WranglerE2ETestHelper();
+		// Use a new user Worker in each test
+		workerName = generateResourceName();
+	});
 
 	describe("Workers", () => {
-		let workerName: string;
-
-		beforeEach(() => {
-			// deploy a new user Worker in each test
-			workerName = generateResourceName();
-		});
-
 		afterEach(async () => {
 			// clean up user Worker after each test
 			await helper.run(`wrangler delete`);
@@ -285,7 +297,6 @@ Uploaded 2 of 3 assets
 Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
-No bindings found.
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -295,7 +306,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				// Tests html_handling = "auto_trailing_slash" (default):
@@ -374,8 +385,8 @@ Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Assets:
-  - Binding: ASSETS
+Binding            Resource
+env.ASSETS         Assets
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -385,7 +396,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				// because html handling has now been set to "none", only exact matches will be served
@@ -467,7 +478,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				// Tests html_handling = "auto_trailing_slash" (default):
@@ -541,8 +552,8 @@ Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Assets:
-  - Binding: ASSETS
+Binding            Resource
+env.ASSETS         Assets
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -552,7 +563,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				{
@@ -570,17 +581,82 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			];
 			await checkAssets(testCases, deployedUrl);
 		});
+
+		it("runs the user Worker ahead of matching assets for matching run_worker_first routes", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+							[assets]
+							directory = "public"
+							binding = "ASSETS"
+							html_handling = "none"
+							not_found_handling = "404-page"
+							run_worker_first = ["/api/*", "!/api/assets/*"]
+					`,
+				"src/index.ts": dedent`
+							export default {
+								async fetch(request, env) {
+									return new Response("Hello World from User Worker!")
+								}
+							}`,
+				...generateInitialAssets(workerName),
+				"public/api/index.html": "<h1>api/index.html</h1>",
+				"public/api/assets/test.html": "<h1>api/assets/test.html</h1>",
+			});
+
+			// deploy user Worker && verify output
+			const output = await helper.run(`wrangler deploy`);
+			const normalizedStdout = normalize(output.stdout);
+
+			expect(normalizedStdout).toContain(dedent`
+				🌀 Building list of assets...
+				✨ Read 7 files from the assets directory /tmpdir
+				🌀 Starting asset upload...
+				🌀 Found 5 new or modified static assets to upload. Proceeding with upload...
+				+ /404.html
+				+ /api/index.html
+				+ /index.html
+				+ /api/assets/test.html
+				+ /[boop].html
+			`);
+			expect(normalizedStdout).toContain(dedent`
+				✨ Success! Uploaded 5 files (TIMINGS)
+				Total Upload: xx KiB / gzip: xx KiB
+				Your Worker has access to the following bindings:
+				Binding            Resource
+				env.ASSETS         Assets
+				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+				Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+				  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+				Current Version ID: 00000000-0000-0000-0000-000000000000
+			`);
+
+			const match = output.stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			const deployedUrl = match.groups.url;
+
+			const testCases: AssetTestCase[] = [
+				{ path: "/index.html", content: "<h1>index.html</h1>" },
+				{ path: "/missing.html", content: "<h1>404.html</h1>" },
+				{ path: "/api/", content: "Hello World from User Worker!" },
+				{ path: "/api/foo.html", content: "Hello World from User Worker!" },
+				{ path: "/api/assets/missing", content: "404.html" },
+				{ path: "/api/assets/test.html", content: "api/assets/test.html" },
+			];
+
+			await checkAssets(testCases, deployedUrl);
+		});
 	});
 
 	describe("Workers for Platforms", () => {
 		let dispatchNamespaceName: string;
 		let dispatchWorkerName: string;
-		let workerName: string;
 
 		beforeEach(async () => {
-			// deploy a new user Worker in each test
-			workerName = generateResourceName();
-
 			// set up a new dispatch Worker in each test
 			dispatchNamespaceName = generateResourceName("dispatch");
 			dispatchWorkerName = generateResourceName();
@@ -651,7 +727,6 @@ Uploaded 2 of 3 assets
 Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
-No bindings found.
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
@@ -663,8 +738,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			normalizedStdout = normalize(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Dispatch Namespaces:
-  - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Binding                                                                   Resource
+env.DISPATCH (tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000)      Dispatch Namespace
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -674,7 +749,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				// Tests html_handling = "auto_trailing_slash" (default):
@@ -763,8 +838,8 @@ Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Assets:
-  - Binding: ASSETS
+Binding            Resource
+env.ASSETS         Assets
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
@@ -776,8 +851,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			normalizedStdout = normalize(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Dispatch Namespaces:
-  - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Binding                                                                   Resource
+env.DISPATCH (tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000)      Dispatch Namespace
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -787,7 +862,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				// because html handling has now been set to "none", only exact matches will be served
@@ -874,8 +949,8 @@ Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Assets:
-  - Binding: ASSETS
+Binding            Resource
+env.ASSETS         Assets
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
@@ -887,8 +962,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			normalizedStdout = normalize(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Dispatch Namespaces:
-  - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Binding                                                                   Resource
+env.DISPATCH (tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000)      Dispatch Namespace
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -898,7 +973,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
 				{
@@ -917,8 +992,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			await checkAssets(testCases, deployedUrl);
 		});
 	});
+
 	describe("durable objects [containers]", () => {
-		const workerName = generateResourceName();
 		beforeEach(async () => {
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -980,40 +1055,44 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			});
 		});
 
-		it("can fetch DO container", async () => {
-			const output = await helper.run(`wrangler deploy`);
+		it(
+			"can fetch DO container",
+			{ timeout: 60 * 3 * 1000, retry: 3 },
+			async () => {
+				const output = await helper.run(`wrangler deploy`);
 
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			const matchApplicationId = output.stdout.match(
-				/([(]Application ID: (?<applicationId>.+?)[)])/
-			);
-			assert(matchApplicationId?.groups);
-			const url = match.groups.url;
-			try {
-				await vi.waitFor(
-					async () => {
-						const response = await fetch(`${url}/do`);
-						if (!response.ok) {
-							throw new Error(
-								"Durable object transient error: " + (await response.text())
-							);
-						}
-
-						expect(await response.text()).toEqual("hello from container");
-					},
-
-					// big timeout for containers
-					// (3m)
-					{ timeout: 60 * 3 * 1000, interval: 1000 }
+				const match = output.stdout.match(
+					/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 				);
-			} finally {
-				await helper.run(
-					`wrangler containers delete ${matchApplicationId.groups.applicationId}`
+				assert(match?.groups);
+				const matchApplicationId = output.stdout.match(
+					/([(]Application ID: (?<applicationId>.+?)[)])/
 				);
+				assert(matchApplicationId?.groups);
+				const url = match.groups.url;
+				try {
+					await vi.waitFor(
+						async () => {
+							const response = await fetch(`${url}/do`);
+							if (!response.ok) {
+								throw new Error(
+									"Durable object transient error: " + (await response.text())
+								);
+							}
+
+							expect(await response.text()).toEqual("hello from container");
+						},
+
+						// big timeout for containers
+						// (3m)
+						{ timeout: 60 * 3 * 1000, interval: 1000 }
+					);
+				} finally {
+					await helper.run(
+						`wrangler containers delete ${matchApplicationId.groups.applicationId}`
+					);
+				}
 			}
-		});
+		);
 	});
 });

@@ -1,9 +1,11 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
+import { cp } from "node:fs/promises";
 import { onTestFinished } from "vitest";
 import { generateResourceName } from "./generate-resource-name";
 import { makeRoot, removeFiles, seed } from "./setup";
 import {
+	MINIFLARE_IMPORT,
 	runWrangler,
 	WRANGLER_IMPORT,
 	WranglerLongLivedCommand,
@@ -17,8 +19,16 @@ import type { WranglerCommandOptions } from "./wrangler";
 export class WranglerE2ETestHelper {
 	tmpPath = makeRoot();
 
-	async seed(files: Record<string, string | Uint8Array>) {
-		await seed(this.tmpPath, files);
+	async seed(files: Record<string, string | Uint8Array>): Promise<void>;
+	async seed(sourceDir: string): Promise<void>;
+	async seed(
+		filesOrSourceDir: Record<string, string | Uint8Array> | string
+	): Promise<void> {
+		if (typeof filesOrSourceDir === "string") {
+			await cp(filesOrSourceDir, this.tmpPath, { recursive: true });
+		} else {
+			await seed(this.tmpPath, filesOrSourceDir);
+		}
 	}
 
 	async removeFiles(files: string[]) {
@@ -30,17 +40,28 @@ export class WranglerE2ETestHelper {
 		return import(WRANGLER_IMPORT.href);
 	}
 
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	importMiniflare(): Promise<typeof import("miniflare")> {
+		return import(MINIFLARE_IMPORT.href);
+	}
+
 	runLongLived(
 		wranglerCommand: string,
-		{ cwd = this.tmpPath, ...options }: WranglerCommandOptions = {}
+		{
+			cwd = this.tmpPath,
+			stopOnTestFinished = true,
+			...options
+		}: WranglerCommandOptions & { stopOnTestFinished?: boolean } = {}
 	): WranglerLongLivedCommand {
 		const wrangler = new WranglerLongLivedCommand(wranglerCommand, {
 			cwd,
 			...options,
 		});
-		onTestFinished(async () => {
-			await wrangler.stop();
-		});
+		if (stopOnTestFinished) {
+			onTestFinished(async () => {
+				await wrangler.stop();
+			});
+		}
 		return wrangler;
 	}
 
@@ -64,28 +85,6 @@ export class WranglerE2ETestHelper {
 		const id = match[1];
 		onTestFinished(async () => {
 			await this.run(`wrangler kv namespace delete --namespace-id ${id}`);
-		});
-		return id;
-	}
-
-	async secretsStore(isLocal: boolean) {
-		const name = generateResourceName("secrets-store");
-		if (isLocal) {
-			return name;
-		}
-		const result = await this.run(
-			`wrangler secrets-store store create ${name} --remote`
-		);
-
-		const regex = /ID:\s*(\w{32})/;
-		const match = result.output.match(regex);
-
-		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
-		const id = match[1];
-		onTestFinished(async () => {
-			if (!isLocal) {
-				await this.run(`wrangler secrets-store store delete ${id} --remote`);
-			}
 		});
 		return id;
 	}
@@ -128,8 +127,8 @@ export class WranglerE2ETestHelper {
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
 		onTestFinished(async () => {
-			await this.run(`wrangler d1 delete -y ${id}`);
-		});
+			await this.run(`wrangler d1 delete -y ${name}`);
+		}, 15_000);
 
 		return { id, name };
 	}

@@ -1085,7 +1085,7 @@ describe("middleware", () => {
 				expect(await res.json()).toEqual([{ id: 1, value: "one" }]);
 				res = await worker.fetch("http://localhost/bad");
 				expect(res.status).toBe(500);
-				// TODO: in miniflare 3 we don't have the `pretty-error` middleware implemented.
+				// TODO: in miniflare we don't have the `pretty-error` middleware implemented.
 				// instead it uses `middleware-miniflare3-json-error`, which outputs JSON rather than text.
 				// expect(res.headers.get("Content-Type")).toBe(
 				// 	"text/html; charset=UTF-8"

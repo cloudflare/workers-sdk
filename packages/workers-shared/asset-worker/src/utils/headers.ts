@@ -6,9 +6,9 @@ import {
 import { CACHE_CONTROL_BROWSER } from "../constants";
 import { HEADERS_VERSION } from "../handler";
 import { generateRulesMatcher, replacer } from "./rules-engine";
-import type { Env } from "..";
-import type { AssetConfig } from "../../../utils/types";
+import type { AssetConfig, JaegerTracing } from "../../../utils/types";
 import type { AssetIntentWithResolver } from "../handler";
+import type { Env } from "../worker";
 
 /**
  * Returns a Headers object that contains additional headers (to those
@@ -66,7 +66,7 @@ export function attachCustomHeaders(
 	configuration: Required<AssetConfig>,
 	env: Env
 ) {
-	const jaeger = env.JAEGER ?? mockJaegerBinding();
+	const jaeger: JaegerTracing = env.JAEGER ?? mockJaegerBinding();
 	return jaeger.enterSpan("add_headers", (span) => {
 		// Iterate through rules and find rules that match the path
 		const headersMatcher = generateRulesMatcher(
@@ -75,8 +75,8 @@ export function attachCustomHeaders(
 				: {},
 			({ set = {}, unset = [] }, replacements) => {
 				const replacedSet: Record<string, string> = {};
-				Object.keys(set).forEach((key) => {
-					replacedSet[key] = replacer(set[key], replacements);
+				Object.entries(set).forEach(([key, value]) => {
+					replacedSet[key] = replacer(value, replacements);
 				});
 				return {
 					set: replacedSet,
@@ -96,12 +96,12 @@ export function attachCustomHeaders(
 				response.headers.delete(key);
 				span.addLogs({ remove_header: key });
 			});
-			Object.keys(set).forEach((key) => {
+			Object.entries(set).forEach(([key, value]) => {
 				if (setMap.has(key.toLowerCase())) {
-					response.headers.append(key, set[key]);
+					response.headers.append(key, value);
 					span.addLogs({ append_header: key });
 				} else {
-					response.headers.set(key, set[key]);
+					response.headers.set(key, value);
 					setMap.add(key.toLowerCase());
 					span.addLogs({ add_header: key });
 				}

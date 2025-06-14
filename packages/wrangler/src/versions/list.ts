@@ -51,7 +51,7 @@ export const versionsListCommand = createCommand({
 
 		const versionCache: VersionCache = new Map();
 		const versions = (
-			await fetchDeployableVersions(accountId, workerName, versionCache)
+			await fetchDeployableVersions(config, accountId, workerName, versionCache)
 		).sort((a, b) =>
 			a.metadata.created_on.localeCompare(b.metadata.created_on)
 		);

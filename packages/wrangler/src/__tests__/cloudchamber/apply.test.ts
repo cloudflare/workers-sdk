@@ -1,8 +1,11 @@
 import * as fs from "node:fs";
+import {
+	SchedulingPolicy,
+	SecretAccessType,
+} from "@cloudflare/containers-shared";
 import * as TOML from "@iarna/toml";
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
-import { SchedulingPolicy, SecretAccessType } from "../../cloudchamber/client";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -10,12 +13,12 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount } from "./utils";
+import type { ContainerApp } from "../../config/environment";
 import type {
 	Application,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
-} from "../../cloudchamber/client";
-import type { ContainerApp } from "../../config/environment";
+} from "@cloudflare/containers-shared";
 
 function writeAppConfiguration(...app: ContainerApp[]) {
 	fs.writeFileSync(
@@ -291,6 +294,88 @@ describe("cloudchamber apply", () => {
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
+			│
+			│
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
+	test("can skip a simple existing application and create other", async () => {
+		setIsTTY(false);
+		writeAppConfiguration(
+			{
+				name: "my-container-app",
+				instances: 4,
+				class_name: "DurableObjectClass",
+				configuration: {
+					image: "./Dockerfile",
+				},
+				rollout_kind: "none",
+			},
+			{
+				name: "my-container-app-2",
+				instances: 1,
+				class_name: "DurableObjectClass2",
+				configuration: {
+					image: "other-app/Dockerfile",
+				},
+			}
+		);
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 3,
+				created_at: new Date().toString(),
+				account_id: "1",
+				version: 1,
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+				},
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		mockCreateApplication({ id: "abc" } as Application);
+		await runWrangler("cloudchamber apply --json");
+
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [[containers]]
+			│ - instances = 3
+			│ + instances = 4
+			│   name = \\"my-container-app\\"
+			│ Skipping application rollout
+			│
+			├ NEW my-container-app-2
+			│
+			│   [[containers]]
+			│   name = \\"my-container-app-2\\"
+			│   instances = 1
+			│   scheduling_policy = \\"regional\\"
+			│
+			│   [containers.configuration]
+			│   image = \\"other-app/Dockerfile\\"
+			│
+			│   [containers.constraints]
+			│   tier = 1
+			│
+			├ Do you want to apply these changes?
+			│ yes
 			│
 			│
 			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)

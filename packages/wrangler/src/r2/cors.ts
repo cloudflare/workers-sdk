@@ -46,7 +46,12 @@ export const r2BucketCORSListCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		logger.log(`Listing CORS rules for bucket '${bucket}'...`);
-		const corsPolicy = await getCORSPolicy(accountId, bucket, jurisdiction);
+		const corsPolicy = await getCORSPolicy(
+			config,
+			accountId,
+			bucket,
+			jurisdiction
+		);
 
 		if (corsPolicy.length === 0) {
 			logger.log(
@@ -120,7 +125,13 @@ export const r2BucketCORSSetCommand = createCommand({
 		logger.log(
 			`Setting CORS configuration (${corsConfig.rules.length} rules) for bucket '${bucket}'...`
 		);
-		await putCORSPolicy(accountId, bucket, corsConfig.rules, jurisdiction);
+		await putCORSPolicy(
+			config,
+			accountId,
+			bucket,
+			corsConfig.rules,
+			jurisdiction
+		);
 		logger.log(`✨ Set CORS configuration for bucket '${bucket}'.`);
 	},
 });
@@ -166,7 +177,7 @@ export const r2BucketCORSDeleteCommand = createCommand({
 		}
 
 		logger.log(`Deleting the CORS configuration for bucket '${bucket}'...`);
-		await deleteCORSPolicy(accountId, bucket, jurisdiction);
+		await deleteCORSPolicy(config, accountId, bucket, jurisdiction);
 		logger.log(`CORS configuration deleted for bucket '${bucket}'.`);
 	},
 });

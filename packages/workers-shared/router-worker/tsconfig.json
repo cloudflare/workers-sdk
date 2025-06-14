@@ -9,6 +9,8 @@
 		"isolatedModules": true,
 		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
 		"strict": true,
 		"skipLibCheck": true
 	}

@@ -14,6 +14,7 @@ import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { Interface } from "node:readline";
 
 function createFetchResult(
@@ -167,8 +168,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"script-name\\"
 					✨ Success! Uploaded secret secret-name"
 				`);
@@ -187,8 +187,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"script-name\\"
 					✨ Success! Uploaded secret the-key"
 				`);
@@ -214,8 +213,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"script-name-some-env\\"
 					✨ Success! Uploaded secret the-key"
 				`);
@@ -241,8 +239,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"script-name\\" (some-env)
 					✨ Success! Uploaded secret the-key"
 				`);
@@ -259,8 +256,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -290,8 +286,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"non-existent-worker\\"
 					Aborting. No secrets added."
 				`);
@@ -318,8 +313,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"script-name\\"
 					✨ Success! Uploaded secret the-key"
 				`);
@@ -336,8 +330,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"script-name\\"
 					✨ Success! Uploaded secret the-key"
 				`);
@@ -357,8 +350,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 
 					[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 				`);
@@ -391,8 +383,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"non-existent-worker\\"
 					✨ Success! Uploaded secret the-key"
 				`);
@@ -433,8 +424,7 @@ describe("wrangler secret", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 						"
 						 ⛅️ wrangler x.x.x
-						------------------
-
+						──────────────────
 						🌀 Creating the secret for the Worker \\"script-name\\"
 						✨ Success! Uploaded secret the-key"
 					`);
@@ -467,6 +457,49 @@ describe("wrangler secret", () => {
 						  \`account-name-2\`: \`account-id-2\`
 						  \`account-name-3\`: \`account-id-3\`]
 					`);
+				});
+			});
+
+			describe("multi-env warning", () => {
+				it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+					writeWranglerConfig({
+						env: {
+							test: {},
+						},
+					});
+					mockStdIn.send("the-secret");
+					mockPutRequest({ name: "the-key", text: "the-secret" });
+					await runWrangler("secret put the-key --name script-name");
+					expect(std.warn).toMatchInlineSnapshot(`
+						"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret put command.[0m
+
+						  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+						  the target environment using the \`-e|--env\` flag.
+						  If your intention is to use the top-level environment of your configuration simply pass an empty
+						  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+
+						"
+					`);
+				});
+
+				it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+					writeWranglerConfig({
+						env: {
+							test: {},
+						},
+					});
+					mockStdIn.send("the-secret");
+					mockPutRequest({ name: "the-key", text: "the-secret" }, "test", true);
+					await runWrangler("secret put the-key --name script-name -e test");
+					expect(std.warn).toMatchInlineSnapshot(`""`);
+				});
+
+				it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+					writeWranglerConfig();
+					mockStdIn.send("the-secret");
+					mockPutRequest({ name: "the-key", text: "the-secret" });
+					await runWrangler("secret put the-key --name script-name");
+					expect(std.warn).toMatchInlineSnapshot(`""`);
 				});
 			});
 		});
@@ -576,8 +609,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Deleting the secret the-key on the Worker script-name
 				✨ Success! Deleted secret the-key"
 			`);
@@ -600,8 +632,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Deleting the secret the-key on the Worker script-name-some-env
 				✨ Success! Deleted secret the-key"
 			`);
@@ -623,8 +654,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Deleting the secret the-key on the Worker script-name (some-env)
 				✨ Success! Deleted secret the-key"
 			`);
@@ -642,8 +672,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -654,6 +683,62 @@ describe("wrangler secret", () => {
 			expect(error).toMatchInlineSnapshot(
 				`[Error: Required Worker name missing. Please specify the Worker name in your Wrangler configuration file, or pass it as an argument with \`--name <worker-name>\`]`
 			);
+		});
+
+		describe("multi-env warning", () => {
+			it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
+				mockDeleteRequest({ scriptName: "script-name", secretName: "the-key" });
+				mockConfirm({
+					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
+					result: true,
+				});
+				await runWrangler("secret delete the-key --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret delete command.[0m
+
+					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+					  the target environment using the \`-e|--env\` flag.
+					  If your intention is to use the top-level environment of your configuration simply pass an empty
+					  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+
+					"
+				`);
+			});
+
+			it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
+				mockDeleteRequest(
+					{ scriptName: "script-name", secretName: "the-key" },
+					"test",
+					true
+				);
+				mockConfirm({
+					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name-test?",
+					result: true,
+				});
+				await runWrangler("secret delete the-key --name script-name -e test");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+				writeWranglerConfig();
+				mockDeleteRequest({ scriptName: "script-name", secretName: "the-key" });
+				mockConfirm({
+					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
+					result: true,
+				});
+				await runWrangler("secret delete the-key --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
 		});
 	});
 
@@ -784,8 +869,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					Secret Name: the-secret-name
 					"
 				`);
@@ -856,8 +940,7 @@ describe("wrangler secret", () => {
 				`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\" "
 			`
 			);
@@ -884,8 +967,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: secret1
 				✨ Successfully created secret for key: password
@@ -913,8 +995,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: secret-name-1
 				✨ Successfully created secret for key: secret-name-2
@@ -939,8 +1020,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: SECRET_NAME_1
 				✨ Successfully created secret for key: SECRET_NAME_2
@@ -1001,8 +1081,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 
 				🚨 Secrets failed to upload
@@ -1036,8 +1115,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 
 				🚨 Secrets failed to upload
@@ -1095,8 +1173,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 
 				🚨 Secrets failed to upload
@@ -1191,8 +1268,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: secret-name-2
 				✨ Successfully created secret for key: secret-name-3
@@ -1224,8 +1300,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"non-existent-worker\\"
 				Aborting. No secrets added."
 			`);
@@ -1256,8 +1331,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: secret-name-1
 				✨ Successfully created secret for key: secret-name-2
@@ -1265,6 +1339,64 @@ describe("wrangler secret", () => {
 				Finished processing secrets file:
 				✨ 2 secrets successfully uploaded"
 			`);
+		});
+
+		describe("multi-env warning", () => {
+			it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+					env: {
+						test: {},
+					},
+				});
+				writeFileSync("secret.json", JSON.stringify({}));
+
+				mockBulkRequest();
+
+				await runWrangler("secret bulk ./secret.json --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret bulk command.[0m
+
+					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+					  the target environment using the \`-e|--env\` flag.
+					  If your intention is to use the top-level environment of your configuration simply pass an empty
+					  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+
+					"
+				`);
+			});
+
+			it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+					env: {
+						test: {},
+					},
+				});
+				writeFileSync("secret.json", JSON.stringify({}));
+
+				mockBulkRequest();
+
+				await runWrangler(
+					"secret bulk ./secret.json --name script-name -e test"
+				);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+				});
+				writeFileSync("secret.json", JSON.stringify({}));
+
+				mockBulkRequest();
+
+				await runWrangler("secret bulk ./secret.json --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
 		});
 	});
 });

@@ -8,18 +8,20 @@ import {
 import { processArgument } from "@cloudflare/cli/args";
 import { dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
-import { ApplicationsService } from "../cloudchamber/client";
+import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
 import { loadAccountSpinner } from "../cloudchamber/common";
 import { wrap } from "../cloudchamber/helpers/wrap";
 import { UserError } from "../errors";
 import isInteractive from "../is-interactive";
-import type { Application } from "../cloudchamber/client/models/Application";
-import type { ListApplications } from "../cloudchamber/client/models/ListApplications";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
+import type {
+	Application,
+	ListApplications,
+} from "@cloudflare/containers-shared";
 
 export function deleteYargs(args: CommonYargsArgvJSON) {
 	return args.positional("ID", {
@@ -38,33 +40,51 @@ export async function deleteCommand(
 			"You must provide an ID. Use 'wrangler containers list` to view your containers."
 		);
 	}
-	if (deleteArgs.json || !isInteractive()) {
+
+	if (deleteArgs.json) {
 		const container = await ApplicationsService.deleteApplication(
 			deleteArgs.ID
 		);
 		console.log(JSON.stringify(container, null, 4));
 		return;
 	}
+
 	startSection("Delete your container");
-	const yes = await inputPrompt({
-		question:
-			"Are you sure that you want to delete these containers? The associated DO container will lose access to the containers.",
-		type: "confirm",
-		label: "",
-	});
-	if (!yes) {
-		cancel("The operation has been cancelled");
-		return;
+	if (isInteractive()) {
+		const yes = await inputPrompt({
+			question:
+				"Are you sure that you want to delete these containers? The associated DO container will lose access to the containers.",
+			type: "confirm",
+			label: "",
+		});
+		if (!yes) {
+			cancel("The operation has been cancelled");
+			return;
+		}
 	}
 
 	const [, err] = await wrap(
 		ApplicationsService.deleteApplication(deleteArgs.ID)
 	);
 	if (err) {
-		throw new UserError(
-			`There has been an internal error deleting your containers.\n ${err.message}`
+		if (err instanceof ApiError) {
+			if (err.status === 400 || err.status === 404) {
+				const body = JSON.parse(err.body);
+				throw new UserError(
+					`There has been an error deleting the container.\n${body.error}`
+				);
+			}
+
+			throw new Error(
+				`There has been an unknown error deleting the container.\n${JSON.stringify(err.body)}`
+			);
+		}
+
+		throw new Error(
+			`There has been an internal error deleting your containers.\n${err.message}`
 		);
 	}
+
 	endSection("Your container has been deleted");
 }
 

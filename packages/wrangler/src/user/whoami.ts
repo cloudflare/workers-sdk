@@ -1,27 +1,44 @@
 import chalk from "chalk";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { isAuthenticationError } from "../deploy/deploy";
+import { getCloudflareComplianceRegion } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { fetchMembershipRoles } from "./membership";
 import { getAPIToken, getAuthFromEnv, getScopes } from ".";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
-export async function whoami(accountFilter?: string) {
+export async function whoami(
+	complianceConfig: ComplianceConfig,
+	accountFilter?: string
+) {
 	logger.log("Getting User settings...");
-	const user = await getUserInfo();
+	const user = await getUserInfo(complianceConfig);
 	if (!user) {
-		return void logger.log(
-			"You are not authenticated. Please run `wrangler login`."
-		);
+		logger.log("You are not authenticated. Please run `wrangler login`.");
+		return;
 	}
+	printUserEmail(user);
 	if (user.authType === "API Token") {
 		logger.log(
 			"ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment."
 		);
 	}
-	await printUserEmail(user);
-	await printAccountList(user);
-	await printTokenPermissions(user);
-	await printMembershipInfo(user, accountFilter);
+	printComplianceRegion(complianceConfig);
+	printAccountList(user);
+	printTokenPermissions(user);
+	await printMembershipInfo(complianceConfig, user, accountFilter);
+}
+
+function printComplianceRegion(complianceConfig: ComplianceConfig) {
+	const complianceRegion = getCloudflareComplianceRegion(complianceConfig);
+	if (complianceRegion !== "public") {
+		const complianceRegionSource = complianceConfig?.compliance_region
+			? "Wrangler configuration"
+			: "`CLOUDFLARE_COMPLIANCE_REGION` environment variable";
+		logger.log(
+			`🌍 The compliance region is set to "${chalk.blue(complianceRegion)}" via the ${complianceRegionSource}.`
+		);
+	}
 }
 
 function printUserEmail(user: UserInfo) {
@@ -61,7 +78,11 @@ function printTokenPermissions(user: UserInfo) {
 	}
 }
 
-async function printMembershipInfo(user: UserInfo, accountFilter?: string) {
+async function printMembershipInfo(
+	complianceConfig: ComplianceConfig,
+	user: UserInfo,
+	accountFilter?: string
+) {
 	try {
 		if (!accountFilter) {
 			return;
@@ -73,7 +94,10 @@ async function printMembershipInfo(user: UserInfo, accountFilter?: string) {
 		if (!selectedAccount) {
 			return;
 		}
-		const membershipRoles = await fetchMembershipRoles(selectedAccount.id);
+		const membershipRoles = await fetchMembershipRoles(
+			complianceConfig,
+			selectedAccount.id
+		);
 		if (!membershipRoles) {
 			return;
 		}
@@ -104,7 +128,9 @@ export interface UserInfo {
 	tokenPermissions: string[] | undefined;
 }
 
-export async function getUserInfo(): Promise<UserInfo | undefined> {
+export async function getUserInfo(
+	complianceConfig: ComplianceConfig
+): Promise<UserInfo | undefined> {
 	const apiToken = getAPIToken();
 	if (!apiToken) {
 		return;
@@ -121,15 +147,23 @@ export async function getUserInfo(): Promise<UserInfo | undefined> {
 			: usingEnvAuth
 				? "API Token"
 				: "OAuth Token",
-		email: "authEmail" in apiToken ? apiToken.authEmail : await getEmail(),
-		accounts: await getAccounts(),
+		email:
+			"authEmail" in apiToken
+				? apiToken.authEmail
+				: await getEmail(complianceConfig),
+		accounts: await getAccounts(complianceConfig),
 		tokenPermissions,
 	};
 }
 
-async function getEmail(): Promise<string | undefined> {
+async function getEmail(
+	complianceConfig: ComplianceConfig
+): Promise<string | undefined> {
 	try {
-		const { email } = await fetchResult<{ email: string }>("/user");
+		const { email } = await fetchResult<{ email: string }>(
+			complianceConfig,
+			"/user"
+		);
 		return email;
 	} catch (e) {
 		const unauthorizedAccess = 9109;
@@ -143,8 +177,10 @@ async function getEmail(): Promise<string | undefined> {
 
 type AccountInfo = { name: string; id: string };
 
-async function getAccounts(): Promise<AccountInfo[]> {
-	return await fetchPagedListResult<AccountInfo>("/accounts");
+async function getAccounts(
+	complianceConfig: ComplianceConfig
+): Promise<AccountInfo[]> {
+	return await fetchPagedListResult<AccountInfo>(complianceConfig, "/accounts");
 }
 
 async function getTokenPermissions(): Promise<string[] | undefined> {

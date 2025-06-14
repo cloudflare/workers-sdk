@@ -1,5 +1,6 @@
 import bin from "./modules/bin-example.bin";
 import html from "./modules/html-example.html";
+import text2 from "./modules/text__example__2.txt";
 import text from "./modules/text-example.txt";
 import wasm from "./modules/wasm-example.wasm";
 import init from "./modules/wasm-example.wasm?init";
@@ -18,6 +19,11 @@ export default {
 			}
 			case "/text": {
 				return new Response(text, {
+					headers: { "Content-Type": "text/plain" },
+				});
+			}
+			case "/text2": {
+				return new Response(text2, {
 					headers: { "Content-Type": "text/plain" },
 				});
 			}

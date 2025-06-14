@@ -21,7 +21,12 @@ export function mockAccount() {
 		http.get(
 			"*/me",
 			async () => {
-				return HttpResponse.json({});
+				return HttpResponse.json({
+					external_account_id: "test_account_id",
+					limits: {
+						disk_mb_per_deployment: 2000,
+					},
+				});
 			},
 			{ once: true }
 		)

@@ -13,6 +13,7 @@ import { getProjectPath, getRelativeProjectPath } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
+import type { Experimental_MixedModeSession, Unstable_Binding } from "wrangler";
 import type { ParseParams, ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
@@ -43,6 +44,11 @@ const WorkersPoolOptionsSchema = z.object({
 	 * the same storage.
 	 */
 	isolatedStorage: z.boolean().default(true),
+	/**
+	 * Enables experimental mixed mode to access remote resources configured
+	 * with `remote: true` in the wrangler configuration file.
+	 */
+	experimental_mixedMode: z.boolean().optional(),
 	/**
 	 * Runs all tests in this project serially in the same worker, using the same
 	 * module cache. This can significantly speed up tests if you've got lots of
@@ -139,6 +145,47 @@ function parseWorkerOptions(
 
 const log = new Log(LogLevel.WARN, { prefix: "vpw" });
 
+function filterTails(
+	tails: WorkerOptions["tails"],
+	userWorkers?: { name?: string }[]
+) {
+	// Only connect the tail consumers that represent Workers that are defined in the Vitest config. Warn that a tail will be omitted otherwise
+	// This _differs from service bindings_ because tail consumers are "optional" in a sense, and shouldn't affect the runtime behaviour of a Worker
+	return tails?.filter((tailService) => {
+		let name: string;
+		if (typeof tailService === "string") {
+			name = tailService;
+		} else if (
+			typeof tailService === "object" &&
+			"name" in tailService &&
+			typeof tailService.name === "string"
+		) {
+			name = tailService.name;
+		} else {
+			// Don't interfere with network-based tail connections (e.g. via the dev registry), or kCurrentWorker
+			return true;
+		}
+		const found = userWorkers?.some((w) => w.name === name);
+
+		if (!found) {
+			log.warn(
+				`Tail consumer "${name}" was not found in your config. Make sure you add it if you'd like to simulate receiving tail events locally.`
+			);
+		}
+
+		return found;
+	});
+}
+
+/** Map that maps worker configPaths to their existing mixed mode session data (if any) */
+const mixedModeSessionsDataMap = new Map<
+	string,
+	{
+		session: Experimental_MixedModeSession;
+		remoteBindings: Record<string, Unstable_Binding>;
+	} | null
+>();
+
 async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
@@ -202,11 +249,35 @@ async function parseCustomPoolOptions(
 
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
+
+		const preExistingMixedModeSessionData = options.wrangler?.configPath
+			? mixedModeSessionsDataMap.get(options.wrangler.configPath)
+			: undefined;
+
+		const mixedModeSessionData = options.experimental_mixedMode
+			? await wrangler.experimental_maybeStartOrUpdateMixedModeSession(
+					configPath,
+					preExistingMixedModeSessionData ?? null
+				)
+			: null;
+
+		if (options.wrangler?.configPath && mixedModeSessionData) {
+			mixedModeSessionsDataMap.set(
+				options.wrangler.configPath,
+				mixedModeSessionData
+			);
+		}
+
 		const { workerOptions, externalWorkers, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(
 				configPath,
 				options.wrangler.environment,
-				{ imagesLocalMode: true }
+				{
+					imagesLocalMode: true,
+					overrides: { assets: options.miniflare.assets },
+					mixedModeConnectionString:
+						mixedModeSessionData?.session?.mixedModeConnectionString,
+				}
 			);
 
 		const wrappedBindings = Object.values(workerOptions.wrappedBindings ?? {});
@@ -238,6 +309,11 @@ async function parseCustomPoolOptions(
 			workerOptions,
 			options.miniflare as SourcelessWorkerOptions
 		);
+
+		options.miniflare = {
+			...options.miniflare,
+			tails: filterTails(workerOptions.tails, options.miniflare.workers),
+		};
 
 		// Record any Wrangler `define`s
 		options.defines = define;

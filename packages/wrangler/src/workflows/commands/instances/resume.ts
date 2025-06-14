@@ -34,6 +34,7 @@ export const workflowsInstancesResumeCommand = createCommand({
 		if (id == "latest") {
 			const instances = (
 				await fetchResult<Instance[]>(
+					config,
 					`/accounts/${accountId}/workflows/${args.name}/instances`
 				)
 			).sort((a, b) => b.created_on.localeCompare(a.created_on));
@@ -49,6 +50,7 @@ export const workflowsInstancesResumeCommand = createCommand({
 		}
 
 		await fetchResult(
+			config,
 			`/accounts/${accountId}/workflows/${args.name}/instances/${id}/status`,
 			{
 				method: "PATCH",

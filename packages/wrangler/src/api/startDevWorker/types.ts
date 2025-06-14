@@ -12,6 +12,7 @@ import type {
 	CfD1Database,
 	CfDispatchNamespace,
 	CfDurableObject,
+	CfHelloWorld,
 	CfHyperdrive,
 	CfKvNamespace,
 	CfLogfwdrBinding,
@@ -41,6 +42,7 @@ import type {
 	NodeJSCompatMode,
 	Request,
 	Response,
+	WorkerOptions,
 } from "miniflare";
 import type * as undici from "undici";
 
@@ -48,7 +50,7 @@ type MiniflareWorker = Awaited<ReturnType<Miniflare["getWorker"]>>;
 export interface Worker {
 	ready: Promise<void>;
 	url: Promise<URL>;
-	inspectorUrl: Promise<URL>;
+	inspectorUrl: Promise<URL | undefined>;
 	config: StartDevWorkerOptions;
 	setConfig: ConfigController["set"];
 	patchConfig: ConfigController["patch"];
@@ -75,11 +77,15 @@ export interface StartDevWorkerInput {
 	/** The compatibility flags for the workerd runtime. */
 	compatibilityFlags?: string[];
 
+	/** Specify the compliance region mode of the Worker. */
+	complianceRegion?: Config["compliance_region"];
+
 	env?: string;
 
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
 	migrations?: DurableObjectMigration[];
+	containers?: WorkerOptions["containers"];
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
@@ -132,10 +138,10 @@ export interface StartDevWorkerInput {
 
 	/** Options applying to the worker's development preview environment. */
 	dev?: {
-		/** Options applying to the worker's inspector server. */
-		inspector?: { hostname?: string; port?: number; secure?: boolean };
-		/** Whether the worker runs on the edge or locally. */
-		remote?: boolean;
+		/** Options applying to the worker's inspector server. False disables the inspector server. */
+		inspector?: { hostname?: string; port?: number; secure?: boolean } | false;
+		/** Whether the worker runs on the edge or locally. Can also be set to "minimal" for minimal mode. */
+		remote?: boolean | "minimal";
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
 		auth?: AsyncHook<CfAccount, [Pick<Config, "account_id">]>; // provide config.account_id as a hook param
 		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. */
@@ -175,6 +181,15 @@ export interface StartDevWorkerInput {
 
 		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
 		multiworkerPrimary?: boolean;
+
+		/** Whether the experimental mixed mode feature should be enabled */
+		experimentalMixedMode?: boolean;
+
+		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
+		enableContainers?: boolean;
+
+		/** Path to the docker executable. Defaults to 'docker' */
+		dockerPath?: string;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
@@ -208,6 +223,7 @@ export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 	entrypoint: string;
 	assets?: AssetsOptions;
 	name: string;
+	complianceRegion: Config["compliance_region"];
 };
 
 export type HookValues = string | number | boolean | object | undefined | null;
@@ -267,6 +283,7 @@ export type Binding =
 	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
+	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
 

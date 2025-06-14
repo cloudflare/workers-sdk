@@ -24,7 +24,7 @@ function captureLastWriteCall(spy: MockInstance): Buffer | undefined {
 
 export function mockProcess() {
 	beforeEach(() => {
-		writeSpy = vi.spyOn(process.stdout, "write");
+		writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 	});
 	afterEach(() => {
 		writeSpy.mockRestore();

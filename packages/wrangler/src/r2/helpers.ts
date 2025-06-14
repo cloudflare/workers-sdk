@@ -5,11 +5,12 @@ import prettyBytes from "pretty-bytes";
 import { fetchGraphqlResult, fetchResult } from "../cfetch";
 import { fetchR2Objects } from "../cfetch/internal";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
-import { buildPersistOptions } from "../dev/miniflare";
+import { getDefaultPersistRoot } from "../dev/miniflare";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getQueue, getQueueById } from "../queues/client";
 import type { Config } from "../config";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
@@ -51,6 +52,7 @@ export interface R2BucketMetricsGraphQLResponse {
  * Fetch a list of all the buckets under the given `accountId`.
  */
 export async function listR2Buckets(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	jurisdiction?: string
 ): Promise<R2BucketInfo[]> {
@@ -60,7 +62,7 @@ export async function listR2Buckets(
 	}
 	const results = await fetchResult<{
 		buckets: R2BucketInfo[];
-	}>(`/accounts/${accountId}/r2/buckets`, { headers });
+	}>(complianceConfig, `/accounts/${accountId}/r2/buckets`, { headers });
 	return results.buckets;
 }
 
@@ -79,6 +81,7 @@ export function tablefromR2BucketsListResponse(buckets: R2BucketInfo[]): {
 }
 
 export async function getR2Bucket(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
@@ -88,6 +91,7 @@ export async function getR2Bucket(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	const result = await fetchResult<R2BucketInfo>(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}`,
 		{
 			method: "GET",
@@ -98,6 +102,7 @@ export async function getR2Bucket(
 }
 
 export async function getR2BucketMetrics(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
@@ -142,7 +147,7 @@ export async function getR2BucketMetrics(
 		},
 	};
 	const storageMetricsResult =
-		await fetchGraphqlResult<R2BucketMetricsGraphQLResponse>({
+		await fetchGraphqlResult<R2BucketMetricsGraphQLResponse>(complianceConfig, {
 			method: "POST",
 			body: JSON.stringify({
 				query: storageMetricsQuery,
@@ -179,6 +184,7 @@ export async function getR2BucketMetrics(
  * A bucket must be explicitly deleted to be replaced.
  */
 export async function createR2Bucket(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	location?: string,
@@ -189,15 +195,19 @@ export async function createR2Bucket(
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
-	return await fetchResult<void>(`/accounts/${accountId}/r2/buckets`, {
-		method: "POST",
-		body: JSON.stringify({
-			name: bucketName,
-			...(storageClass !== undefined && { storageClass }),
-			...(location !== undefined && { locationHint: location }),
-		}),
-		headers,
-	});
+	return await fetchResult<void>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				name: bucketName,
+				...(storageClass !== undefined && { storageClass }),
+				...(location !== undefined && { locationHint: location }),
+			}),
+			headers,
+		}
+	);
 }
 
 /**
@@ -205,6 +215,7 @@ export async function createR2Bucket(
  * within the account given by `accountId`.
  */
 export async function updateR2BucketStorageClass(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	storageClass: string,
@@ -216,6 +227,7 @@ export async function updateR2BucketStorageClass(
 	}
 	headers["cf-r2-storage-class"] = storageClass;
 	return await fetchResult<void>(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}`,
 		{
 			method: "PATCH",
@@ -228,6 +240,7 @@ export async function updateR2BucketStorageClass(
  * Delete a bucket with the given name
  */
 export async function deleteR2Bucket(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
@@ -237,6 +250,7 @@ export async function deleteR2Bucket(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	return await fetchResult<void>(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}`,
 		{ method: "DELETE", headers }
 	);
@@ -246,20 +260,28 @@ export function bucketAndKeyFromObjectPath(objectPath = ""): {
 	bucket: string;
 	key: string;
 } {
-	const match = /^([^/]+)\/(.*)/.exec(objectPath);
-	if (match === null) {
+	// Path format is `<bucket>/<key>`
+	const match = /^(?<bucket>[^/]+)\/(?<key>.*)/.exec(objectPath);
+	if (match === null || !match.groups) {
 		throw new UserError(
 			`The object path must be in the form of {bucket}/{key} you provided ${objectPath}`
 		);
 	}
+	const { bucket, key } = match.groups;
+	if (!isValidR2BucketName(bucket)) {
+		throw new UserError(
+			`The bucket name "${bucket}" is invalid. ${bucketFormatMessage}`
+		);
+	}
 
-	return { bucket: match[1], key: match[2] };
+	return { bucket, key };
 }
 
 /**
  * Downloads an object
  */
 export async function getR2Object(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	objectName: string,
@@ -270,6 +292,7 @@ export async function getR2Object(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	const response = await fetchR2Objects(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
 		{
 			method: "GET",
@@ -284,6 +307,7 @@ export async function getR2Object(
  * Uploads an object
  */
 export async function putR2Object(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	objectName: string,
@@ -317,6 +341,7 @@ export async function putR2Object(
 	}
 
 	const result = await fetchR2Objects(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
 		{
 			body: object,
@@ -333,6 +358,7 @@ export async function putR2Object(
  * Delete an Object
  */
 export async function deleteR2Object(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	objectName: string,
@@ -343,6 +369,7 @@ export async function deleteR2Object(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	await fetchR2Objects(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
 		{ method: "DELETE", headers }
 	);
@@ -358,7 +385,7 @@ export async function usingLocalBucket<T>(
 	) => Promise<T>
 ): Promise<T> {
 	const persist = getLocalPersistencePath(persistTo, config);
-	const persistOptions = buildPersistOptions(persist);
+	const defaultPersistRoot = getDefaultPersistRoot(persist);
 	const mf = new Miniflare({
 		modules: true,
 		// TODO(soon): import `reduceError()` from `miniflare:shared`
@@ -390,7 +417,7 @@ export async function usingLocalBucket<T>(
 				}
 			}
 		}`,
-		...persistOptions,
+		defaultPersistRoot,
 		r2Buckets: { BUCKET: bucketName },
 	});
 	const bucket = await mf.getR2Bucket("BUCKET");
@@ -417,6 +444,7 @@ type SippyConfig = {
  * Retreive the sippy upstream bucket for the bucket with the given name
  */
 export async function getR2Sippy(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
@@ -426,6 +454,7 @@ export async function getR2Sippy(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	return await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
 		{ method: "GET", headers }
 	);
@@ -435,6 +464,7 @@ export async function getR2Sippy(
  * Disable sippy on the bucket with the given name
  */
 export async function deleteR2Sippy(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
@@ -444,6 +474,7 @@ export async function deleteR2Sippy(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	return await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
 		{ method: "DELETE", headers }
 	);
@@ -475,6 +506,7 @@ export type SippyPutParams = {
  * Enable sippy on the bucket with the given name
  */
 export async function putR2Sippy(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	params: SippyPutParams,
@@ -487,6 +519,7 @@ export async function putR2Sippy(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	return await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
 		{ method: "PUT", body: JSON.stringify(params), headers }
 	);
@@ -503,12 +536,17 @@ type R2Warehouse = {
  * Retreive the warehouse for the bucket with the given name
  */
 export async function getR2Catalog(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string
 ): Promise<R2Warehouse> {
-	return await fetchResult(`/accounts/${accountId}/r2-catalog/${bucketName}`, {
-		method: "GET",
-	});
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}`,
+		{
+			method: "GET",
+		}
+	);
 }
 
 type R2WarehouseEnableResponse = {
@@ -520,10 +558,12 @@ type R2WarehouseEnableResponse = {
  * Activate the R2 bucket as an Iceberg warehouse
  */
 export async function enableR2Catalog(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string
 ): Promise<R2WarehouseEnableResponse> {
 	return await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/r2-catalog/${bucketName}/enable`,
 		{
 			method: "POST",
@@ -535,10 +575,12 @@ export async function enableR2Catalog(
  * Deactivate the R2 bucket as an Iceberg warehouse
  */
 export async function disableR2Catalog(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string
 ): Promise<R2WarehouseEnableResponse> {
 	return await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/r2-catalog/${bucketName}/disable`,
 		{
 			method: "POST",
@@ -665,6 +707,7 @@ export function tableFromNotificationGetResponse(
 }
 
 export async function listEventNotificationConfig(
+	config: Config,
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
@@ -673,6 +716,7 @@ export async function listEventNotificationConfig(
 	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
 	logger.log(`Fetching notification rules for bucket ${bucketName}...`);
 	const res = await fetchResult<GetNotificationConfigResponse>(
+		config,
 		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration`,
 		{ method: "GET", headers }
 	);
@@ -690,7 +734,8 @@ export async function listEventNotificationConfig(
 			Object.values(oldDetail).map(async (oldQueue) => {
 				const newQueue: GetQueueDetail = {
 					queueId: oldQueue.queue,
-					queueName: (await getQueueById(accountId, oldQueue.queue)).queue_name,
+					queueName: (await getQueueById(config, accountId, oldQueue.queue))
+						.queue_name,
 					rules: oldQueue.rules.map((oldRule) => {
 						const newRule: GetNotificationRule = {
 							ruleId: "",
@@ -755,6 +800,7 @@ export async function putEventNotificationConfig(
 		)} (${actions.join(",")})`
 	);
 	return await fetchResult<void>(
+		config,
 		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
 		{ method: "PUT", body: JSON.stringify(body), headers }
 	);
@@ -781,6 +827,7 @@ export async function deleteEventNotificationConfig(
 				: {};
 
 		return await fetchResult<null>(
+			config,
 			`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
 			{ method: "DELETE", body: JSON.stringify(body), headers }
 		);
@@ -789,6 +836,7 @@ export async function deleteEventNotificationConfig(
 			`Deleting event notification rules associated with queue ${queueName}...`
 		);
 		return await fetchResult<null>(
+			config,
 			`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
 			{ method: "DELETE", headers }
 		);
@@ -814,6 +862,7 @@ export interface CustomDomainInfo {
 }
 
 export async function getCustomDomain(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	domainName: string,
@@ -825,6 +874,7 @@ export async function getCustomDomain(
 	}
 
 	const result = await fetchResult<CustomDomainInfo>(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom/${domainName}`,
 		{
 			method: "GET",
@@ -836,9 +886,10 @@ export async function getCustomDomain(
 }
 
 export async function attachCustomDomainToBucket(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
-	config: CustomDomainConfig,
+	domainConfig: CustomDomainConfig,
 	jurisdiction?: string
 ): Promise<void> {
 	const headers: HeadersInit = {
@@ -849,12 +900,13 @@ export async function attachCustomDomainToBucket(
 	}
 
 	await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom`,
 		{
 			method: "POST",
 			headers,
 			body: JSON.stringify({
-				...config,
+				...domainConfig,
 				enabled: true,
 			}),
 		}
@@ -862,6 +914,7 @@ export async function attachCustomDomainToBucket(
 }
 
 export async function removeCustomDomainFromBucket(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	domainName: string,
@@ -873,6 +926,7 @@ export async function removeCustomDomainFromBucket(
 	}
 
 	await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom/${domainName}`,
 		{
 			method: "DELETE",
@@ -908,6 +962,7 @@ export function tableFromCustomDomainListResponse(
 }
 
 export async function listCustomDomainsOfBucket(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
@@ -919,19 +974,24 @@ export async function listCustomDomainsOfBucket(
 
 	const result = await fetchResult<{
 		domains: CustomDomainInfo[];
-	}>(`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom`, {
-		method: "GET",
-		headers,
-	});
+	}>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
 
 	return result.domains;
 }
 
 export async function configureCustomDomainSettings(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	domainName: string,
-	config: CustomDomainConfig,
+	domainConfig: CustomDomainConfig,
 	jurisdiction?: string
 ): Promise<void> {
 	const headers: HeadersInit = {
@@ -942,11 +1002,12 @@ export async function configureCustomDomainSettings(
 	}
 
 	await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom/${domainName}`,
 		{
 			method: "PUT",
 			headers,
-			body: JSON.stringify(config),
+			body: JSON.stringify(domainConfig),
 		}
 	);
 }
@@ -958,6 +1019,7 @@ export interface R2DevDomainInfo {
 }
 
 export async function getR2DevDomain(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
@@ -968,6 +1030,7 @@ export async function getR2DevDomain(
 	}
 
 	const result = await fetchResult<R2DevDomainInfo>(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/managed`,
 		{
 			method: "GET",
@@ -978,6 +1041,7 @@ export async function getR2DevDomain(
 }
 
 export async function updateR2DevDomain(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	enabled: boolean,
@@ -991,6 +1055,7 @@ export async function updateR2DevDomain(
 	}
 
 	const result = await fetchResult<R2DevDomainInfo>(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/managed`,
 		{
 			method: "PUT",
@@ -1082,6 +1147,7 @@ export function tableFromLifecycleRulesResponse(rules: LifecycleRule[]): {
 }
 
 export async function getLifecycleRules(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucket: string,
 	jurisdiction?: string
@@ -1092,6 +1158,7 @@ export async function getLifecycleRules(
 	}
 
 	const result = await fetchResult<{ rules: LifecycleRule[] }>(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucket}/lifecycle`,
 		{
 			method: "GET",
@@ -1102,6 +1169,7 @@ export async function getLifecycleRules(
 }
 
 export async function putLifecycleRules(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucket: string,
 	rules: LifecycleRule[],
@@ -1114,11 +1182,15 @@ export async function putLifecycleRules(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 
-	await fetchResult(`/accounts/${accountId}/r2/buckets/${bucket}/lifecycle`, {
-		method: "PUT",
-		headers,
-		body: JSON.stringify({ rules: rules }),
-	});
+	await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucket}/lifecycle`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify({ rules: rules }),
+		}
+	);
 }
 
 // bucket lock rules
@@ -1173,6 +1245,7 @@ function formatLockCondition(condition: BucketLockRuleCondition): string {
 }
 
 export async function getBucketLockRules(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucket: string,
 	jurisdiction?: string
@@ -1183,6 +1256,7 @@ export async function getBucketLockRules(
 	}
 
 	const result = await fetchResult<{ rules: BucketLockRule[] }>(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucket}/lock`,
 		{
 			method: "GET",
@@ -1193,6 +1267,7 @@ export async function getBucketLockRules(
 }
 
 export async function putBucketLockRules(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucket: string,
 	rules: BucketLockRule[],
@@ -1205,11 +1280,15 @@ export async function putBucketLockRules(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 
-	await fetchResult(`/accounts/${accountId}/r2/buckets/${bucket}/lock`, {
-		method: "PUT",
-		headers,
-		body: JSON.stringify({ rules: rules }),
-	});
+	await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucket}/lock`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify({ rules: rules }),
+		}
+	);
 }
 
 // bucket lock rules
@@ -1264,6 +1343,7 @@ export interface CORSRule {
 }
 
 export async function getCORSPolicy(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
@@ -1274,6 +1354,7 @@ export async function getCORSPolicy(
 	}
 
 	const result = await fetchResult<{ rules: CORSRule[] }>(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/cors`,
 		{
 			method: "GET",
@@ -1304,6 +1385,7 @@ export function tableFromCORSPolicyResponse(rules: CORSRule[]): {
 }
 
 export async function putCORSPolicy(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	rules: CORSRule[],
@@ -1316,14 +1398,19 @@ export async function putCORSPolicy(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 
-	await fetchResult(`/accounts/${accountId}/r2/buckets/${bucketName}/cors`, {
-		method: "PUT",
-		headers,
-		body: JSON.stringify({ rules: rules }),
-	});
+	await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/cors`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify({ rules: rules }),
+		}
+	);
 }
 
 export async function deleteCORSPolicy(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
@@ -1333,20 +1420,31 @@ export async function deleteCORSPolicy(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 
-	await fetchResult(`/accounts/${accountId}/r2/buckets/${bucketName}/cors`, {
-		method: "DELETE",
-		headers,
-	});
+	await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/cors`,
+		{
+			method: "DELETE",
+			headers,
+		}
+	);
 }
 
 /**
- * R2 bucket names must only contain alphanumeric and - characters.
+ * R2 bucket names must:
+ * - contain lower case letters, numbers, and `-`
+ * - start and end with with a lower case letter or number
+ * - be between 6 and 63 characters long
+ *
+ * See https://developers.cloudflare.com/r2/buckets/create-buckets/#bucket-level-operations
  */
 export function isValidR2BucketName(name: string | undefined): name is string {
 	return (
 		typeof name === "string" && /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(name)
 	);
 }
+
+export const bucketFormatMessage = `Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.`;
 
 const CHUNK_SIZE = 1024;
 export async function createFileReadableStream(filePath: string) {

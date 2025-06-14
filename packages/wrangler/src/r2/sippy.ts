@@ -243,7 +243,13 @@ export const r2BucketSippyEnableCommand = createCommand({
 			);
 		}
 
-		await putR2Sippy(accountId, args.name, sippyConfig, args.jurisdiction);
+		await putR2Sippy(
+			config,
+			accountId,
+			args.name,
+			sippyConfig,
+			args.jurisdiction
+		);
 
 		logger.log(`✨ Successfully enabled Sippy on the '${args.name}' bucket.`);
 	},
@@ -272,7 +278,7 @@ export const r2BucketSippyDisableCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		await deleteR2Sippy(accountId, args.name, args.jurisdiction);
+		await deleteR2Sippy(config, accountId, args.name, args.jurisdiction);
 
 		logger.log(`✨ Successfully disabled Sippy on the '${args.name}' bucket.`);
 	},
@@ -303,6 +309,7 @@ export const r2BucketSippyGetCommand = createCommand({
 
 		try {
 			const sippyConfig = await getR2Sippy(
+				config,
 				accountId,
 				args.name,
 				args.jurisdiction

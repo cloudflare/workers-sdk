@@ -30,9 +30,9 @@ import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { MockInstance } from "vitest";
 
 vi.mock("../metrics/helpers");
-vi.unmock("../metrics/metrics-config");
 vi.mock("../metrics/send-event");
 vi.mock("../package-manager");
+vi.mocked(getMetricsConfig).mockReset();
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 declare module globalThis {
@@ -44,7 +44,7 @@ describe("metrics", () => {
 	let isCISpy: MockInstance;
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
-	runInTempDir();
+	runInTempDir({ homedir: "foo" });
 
 	beforeEach(async () => {
 		isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
@@ -566,7 +566,7 @@ describe("metrics", () => {
 
 						To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
 						You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
-						Learn more at https://github.com/cloudflare/workers-sdk/tree/main/telemetry.md
+						Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
 						"
 					`);
 					expect(std.out).not.toContain(

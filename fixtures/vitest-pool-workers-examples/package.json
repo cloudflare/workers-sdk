@@ -1,18 +1,18 @@
 {
-	"name": "@cloudflare/vitest-pool-workers-examples",
+	"name": "@fixture/vitest-pool-workers",
 	"private": true,
 	"type": "module",
 	"scripts": {
 		"check:type": "node tsc-all.mjs",
 		"list": "vitest --config vitest.workers.config.ts list",
-		"test": "vitest --config vitest.workers.config.ts --reporter basic",
+		"test": "vitest --config vitest.workers.config.ts",
 		"test:ci": "run-script-os",
-		"test:ci:default": "vitest run --config vitest.workers.config.ts --reporter basic",
-		"test:ci:win32": "vitest run --config vitest.workers.config.ts --reporter basic --exclude test/sqlite-in-do.test.ts"
+		"test:ci:default": "vitest run --config vitest.workers.config.ts",
+		"test:ci:win32": "vitest run --config vitest.workers.config.ts --exclude test/sqlite-in-do.test.ts"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250507.0",
+		"@cloudflare/workers-types": "^4.20250612.0",
 		"@microlabs/otel-cf-workers": "1.0.0-rc.45",
 		"@types/node": "catalog:default",
 		"discord-api-types": "0.37.98",

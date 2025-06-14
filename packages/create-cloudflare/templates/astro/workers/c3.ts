@@ -44,11 +44,19 @@ const updateAstroConfig = () => {
 			const b = recast.types.builders;
 			n.node.arguments = [
 				b.objectExpression([
+					// platformProxy: {
+					//   enabled: true,
+					// },
 					b.objectProperty(
 						b.identifier("platformProxy"),
 						b.objectExpression([
 							b.objectProperty(b.identifier("enabled"), b.booleanLiteral(true)),
 						]),
+					),
+					// imageService: "cloudflare",
+					b.objectProperty(
+						b.identifier("imageService"),
+						b.stringLiteral("cloudflare"),
 					),
 				]),
 			];

@@ -2,20 +2,19 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
-import {
-	getContentType,
-	MAX_ASSET_COUNT,
-	MAX_ASSET_SIZE,
-	normalizeFilePath,
-} from "@cloudflare/workers-shared";
+import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	CF_ASSETS_IGNORE_FILENAME,
 	HEADERS_FILENAME,
+	MAX_ASSET_COUNT,
+	MAX_ASSET_SIZE,
 	REDIRECTS_FILENAME,
 } from "@cloudflare/workers-shared/utils/constants";
 import {
 	createAssetsIgnoreFunction,
+	getContentType,
 	maybeGetFile,
+	normalizeFilePath,
 } from "@cloudflare/workers-shared/utils/helpers";
 import chalk from "chalk";
 import PQueue from "p-queue";
@@ -34,6 +33,7 @@ import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
@@ -56,6 +56,7 @@ const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 const MAX_DIFF_LINES = 100;
 
 export const syncAssets = async (
+	complianceConfig: ComplianceConfig,
 	accountId: string | undefined,
 	assetDirectory: string,
 	scriptName: string,
@@ -74,6 +75,7 @@ export const syncAssets = async (
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
 	const initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
+		complianceConfig,
 		url,
 		{
 			headers: { "Content-Type": "application/json" },
@@ -166,6 +168,7 @@ export const syncAssets = async (
 
 			try {
 				const res = await fetchResult<UploadResponse>(
+					complianceConfig,
 					`/accounts/${accountId}/workers/assets/upload?base64=true`,
 					{
 						method: "POST",
@@ -387,44 +390,48 @@ export type AssetsOptions = {
 	assetConfig: AssetConfig;
 	_redirects?: string;
 	_headers?: string;
+	run_worker_first?: boolean | string[];
 };
 
 export function getAssetsOptions(
 	args: { assets: string | undefined; script?: string },
-	config: Config
+	config: Config,
+	overrides?: Partial<AssetsOptions>
 ): AssetsOptions | undefined {
-	const assets = args.assets ? { directory: args.assets } : config.assets;
-
-	if (!assets) {
+	if (!overrides && !config.assets && !args.assets) {
 		return;
 	}
 
-	const { directory, binding } = assets;
+	const assets = {
+		...config.assets,
+		...(args.assets && { directory: args.assets }),
+		...overrides,
+	};
 
-	if (directory === undefined) {
+	if (assets.directory === undefined) {
 		throw new UserError(
 			"The `assets` property in your configuration is missing the required `directory` property.",
 			{ telemetryMessage: true }
 		);
 	}
 
-	if (directory === "") {
+	if (assets.directory === "") {
 		throw new UserError("`The assets directory cannot be an empty string.", {
 			telemetryMessage: true,
 		});
 	}
 
 	const assetsBasePath = getAssetsBasePath(config, args.assets);
-	const resolvedAssetsPath = path.resolve(assetsBasePath, directory);
+	const directory = path.resolve(assetsBasePath, assets.directory);
 
-	if (!existsSync(resolvedAssetsPath)) {
+	if (!existsSync(directory)) {
 		const sourceOfTruthMessage = args.assets
 			? '"--assets" command line argument'
 			: '"assets.directory" field in your configuration file';
 
 		throw new UserError(
 			`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
-				`${resolvedAssetsPath}`,
+				`${directory}`,
 
 			{
 				telemetryMessage: `The assets directory specified does not exist`,
@@ -434,10 +441,24 @@ export function getAssetsOptions(
 
 	const routerConfig: RouterConfig = {
 		has_user_worker: Boolean(args.script || config.main),
-		invoke_user_worker_ahead_of_assets: config.assets?.run_worker_first,
 	};
 
-	// User Worker ahead of assets, but no assets binding provided
+	if (typeof config.assets?.run_worker_first === "boolean") {
+		routerConfig.invoke_user_worker_ahead_of_assets =
+			config.assets.run_worker_first;
+	} else if (Array.isArray(config.assets?.run_worker_first)) {
+		const { parsed, errorMessage } = parseStaticRouting(
+			config.assets.run_worker_first
+		);
+		if (errorMessage) {
+			throw new UserError(errorMessage, {
+				telemetryMessage: "invalid run_worker_first rules",
+			});
+		}
+		routerConfig.static_routing = parsed;
+	}
+
+	// User Worker always ahead of assets, but no assets binding provided
 	if (
 		routerConfig.invoke_user_worker_ahead_of_assets &&
 		!config?.assets?.binding
@@ -450,21 +471,20 @@ export function getAssetsOptions(
 		);
 	}
 
-	// Using run_worker_first = true but didn't provide a Worker script
+	// Using run_worker_first but didn't provide a Worker script
 	if (
 		!routerConfig.has_user_worker &&
-		routerConfig.invoke_user_worker_ahead_of_assets === true
+		(routerConfig.invoke_user_worker_ahead_of_assets === true ||
+			routerConfig.static_routing)
 	) {
 		throw new UserError(
-			"Cannot set run_worker_first=true without a Worker script.\n" +
+			"Cannot set run_worker_first without a Worker script.\n" +
 				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`)."
 		);
 	}
 
-	const redirects = maybeGetFile(
-		path.join(resolvedAssetsPath, REDIRECTS_FILENAME)
-	);
-	const headers = maybeGetFile(path.join(resolvedAssetsPath, HEADERS_FILENAME));
+	const _redirects = maybeGetFile(path.join(directory, REDIRECTS_FILENAME));
+	const _headers = maybeGetFile(path.join(directory, HEADERS_FILENAME));
 
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
@@ -476,12 +496,14 @@ export function getAssetsOptions(
 	};
 
 	return {
-		directory: resolvedAssetsPath,
-		binding,
+		directory,
+		binding: assets.binding,
 		routerConfig,
 		assetConfig,
-		_redirects: redirects,
-		_headers: headers,
+		_redirects,
+		_headers,
+		// raw static routing rules for upload. routerConfig.static_routing contains the rules processed for dev.
+		run_worker_first: config.assets?.run_worker_first,
 	};
 }
 

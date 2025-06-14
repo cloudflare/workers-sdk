@@ -58,6 +58,7 @@ export const r2BucketNotificationListCommand = createCommand({
 		const apiCreds = requireApiToken();
 		const { bucket, jurisdiction = "" } = args;
 		const resp = await listEventNotificationConfig(
+			config,
 			apiCreds,
 			accountId,
 			bucket,

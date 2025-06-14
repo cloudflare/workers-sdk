@@ -1,5 +1,5 @@
 {
-	"name": "nodejs-als-app",
+	"name": "@fixture/nodejs-als",
 	"private": true,
 	"scripts": {
 		"build": "wrangler deploy --dry-run --outdir=./dist",
@@ -9,7 +9,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250507.0",
+		"@cloudflare/workers-types": "^4.20250612.0",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"

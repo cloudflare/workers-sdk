@@ -6,14 +6,14 @@ import {
 } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { UserError } from "../../errors";
-import { pollRegistriesUntilCondition } from "../cli";
 import {
 	ApiError,
 	ImageRegistriesService,
 	ImageRegistryAlreadyExistsError,
 	ImageRegistryNotAllowedError,
-} from "../client";
+} from "@cloudflare/containers-shared";
+import { UserError } from "../../errors";
+import { pollRegistriesUntilCondition } from "../cli";
 import {
 	checkEverythingIsSet,
 	handleFailure,
@@ -28,7 +28,7 @@ import type {
 	CommonYargsArgvSanitizedJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../../yargs-types";
-import type { ImageRegistryPermissions } from "../client";
+import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
 function configureImageRegistryOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs

@@ -7,6 +7,7 @@
 	</head>
 	<body>
 		<h1 id="heading"></h1>
+		<p>This page comes from a static asset stored at `public/index.html` as configured in `wrangler.jsonc`.</p>
 		<script>
 			fetch('/message')
 				.then((resp) => resp.text())

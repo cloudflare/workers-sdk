@@ -40,9 +40,13 @@ export const d1InfoCommand = createCommand({
 			name
 		);
 
-		const result = await getDatabaseInfoFromIdOrName(accountId, db.uuid);
+		const result = await getDatabaseInfoFromIdOrName(
+			config,
+			accountId,
+			db.uuid
+		);
 
-		const output: Record<string, string | number> = { ...result };
+		const output: Record<string, string | number | object> = { ...result };
 		if (output["file_size"]) {
 			output["database_size"] = output["file_size"];
 			delete output["file_size"];
@@ -54,10 +58,12 @@ export const d1InfoCommand = createCommand({
 			const today = new Date();
 			const yesterday = new Date(new Date(today).setDate(today.getDate() - 1));
 
-			const graphqlResult = await fetchGraphqlResult<D1MetricsGraphQLResponse>({
-				method: "POST",
-				body: JSON.stringify({
-					query: `query getD1MetricsOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
+			const graphqlResult = await fetchGraphqlResult<D1MetricsGraphQLResponse>(
+				config,
+				{
+					method: "POST",
+					body: JSON.stringify({
+						query: `query getD1MetricsOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
 								viewer {
 									accounts(filter: {accountTag: $accountTag}) {
 										d1AnalyticsAdaptiveGroups(limit: 10000, filter: $filter) {
@@ -74,24 +80,25 @@ export const d1InfoCommand = createCommand({
 								}
 							}
 						}`,
-					operationName: "getD1MetricsOverviewQuery",
-					variables: {
-						accountTag: accountId,
-						filter: {
-							AND: [
-								{
-									datetimeHour_geq: yesterday.toISOString(),
-									datetimeHour_leq: today.toISOString(),
-									databaseId: db.uuid,
-								},
-							],
+						operationName: "getD1MetricsOverviewQuery",
+						variables: {
+							accountTag: accountId,
+							filter: {
+								AND: [
+									{
+										datetimeHour_geq: yesterday.toISOString(),
+										datetimeHour_leq: today.toISOString(),
+										databaseId: db.uuid,
+									},
+								],
+							},
 						},
+					}),
+					headers: {
+						"Content-Type": "application/json",
 					},
-				}),
-				headers: {
-					"Content-Type": "application/json",
-				},
-			});
+				}
+			);
 
 			const metrics = {
 				readQueries: 0,
@@ -118,6 +125,12 @@ export const d1InfoCommand = createCommand({
 		if (json) {
 			logger.log(JSON.stringify(output, null, 2));
 		} else {
+			// Selectively bring the nested read_replication info at the top level.
+			if (result.read_replication) {
+				output["read_replication.mode"] = result.read_replication.mode;
+				delete output["read_replication"];
+			}
+
 			// Snip off the "uuid" property from the response and use those as the header
 			const entries = Object.entries(output).filter(
 				// also remove any version that isn't "alpha"
@@ -134,6 +147,10 @@ export const d1InfoCommand = createCommand({
 					k === "rows_written_24h"
 				) {
 					value = v.toLocaleString();
+				} else if (typeof v === "object") {
+					// There shouldn't be any, but in the worst case we missed something
+					// or added a nested object in the response, serialize it instead of showing `[object Object]`.
+					value = JSON.stringify(v);
 				} else {
 					value = String(v);
 				}

@@ -180,7 +180,6 @@ miniflare-dist
 packages/wrangler/wrangler.toml
 packages/wrangler/Dockerfile
 packages/wrangler/src/cloudchamber/internal
-packages/prerelease-registry/_worker.bundle
 packages/wranglerjs-compat-webpack-plugin/lib
 .wrangler-1-cache
 emitted-types/
@@ -234,3 +233,4 @@ dist/**
 .e2e-test-report/
 
 .dev.vars
+.node-cache/

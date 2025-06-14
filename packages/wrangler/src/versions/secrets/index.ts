@@ -7,6 +7,7 @@ import {
 } from "../../deployment-bundle/create-worker-upload-form";
 import { FatalError, UserError } from "../../errors";
 import { getMetricsUsageHeaders } from "../../metrics";
+import type { Config } from "../../config";
 import type { Observability } from "../../config/environment";
 import type {
 	WorkerMetadata as CfWorkerMetadata,
@@ -81,6 +82,7 @@ interface ScriptSettings {
 type CfUnsafeMetadata = Record<string, unknown>;
 
 interface CopyLatestWorkerVersionArgs {
+	config: Config;
 	accountId: string;
 	scriptName: string;
 	versionId: string;
@@ -94,6 +96,7 @@ interface CopyLatestWorkerVersionArgs {
 
 // TODO: This is a naive implementation, replace later
 export async function copyWorkerVersionWithNewSecrets({
+	config,
 	accountId,
 	scriptName,
 	versionId,
@@ -106,11 +109,13 @@ export async function copyWorkerVersionWithNewSecrets({
 }: CopyLatestWorkerVersionArgs) {
 	// Grab the specific version info
 	const versionInfo = await fetchResult<VersionDetails>(
+		config,
 		`/accounts/${accountId}/workers/scripts/${scriptName}/versions/${versionId}`
 	);
 
 	// Naive implementation ahead, don't worry too much about it -- we will replace it
 	const { mainModule, modules, sourceMaps } = await parseModules(
+		config,
 		accountId,
 		scriptName,
 		versionId
@@ -118,6 +123,7 @@ export async function copyWorkerVersionWithNewSecrets({
 
 	// Grab the script settings
 	const scriptSettings = await fetchResult<ScriptSettings>(
+		config,
 		`/accounts/${accountId}/workers/scripts/${scriptName}/script-settings`
 	);
 
@@ -194,6 +200,7 @@ export async function copyWorkerVersionWithNewSecrets({
 		etag: string | null;
 		deployment_id: string | null;
 	}>(
+		config,
 		`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
 		{
 			method: "POST",
@@ -212,6 +219,7 @@ export async function copyWorkerVersionWithNewSecrets({
 }
 
 async function parseModules(
+	config: Config,
 	accountId: string,
 	scriptName: string,
 	versionId: string
@@ -222,6 +230,7 @@ async function parseModules(
 }> {
 	// Pull the Worker content - https://developers.cloudflare.com/api/operations/worker-script-get-content
 	const contentRes = await performApiFetch(
+		config,
 		`/accounts/${accountId}/workers/scripts/${scriptName}/content/v2?version=${versionId}`
 	);
 	if (

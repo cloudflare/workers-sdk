@@ -19,6 +19,8 @@ const generate = async (ctx: C3Context) => {
 	logRaw(""); // newline
 };
 
+const envInterfaceName = "CloudflareBindings";
+
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "hono",
@@ -33,12 +35,13 @@ const config: TemplateConfig = {
 	generate,
 	transformPackageJson: async () => ({
 		scripts: {
-			"cf-typegen": "wrangler types --env-interface CloudflareBindings",
+			"cf-typegen": `wrangler types --env-interface ${envInterfaceName}`,
 			preview: "vite build && wrangler pages dev",
 		},
 	}),
 	devScript: "dev",
 	deployScript: "deploy",
 	previewScript: "preview",
+	envInterfaceName,
 };
 export default config;

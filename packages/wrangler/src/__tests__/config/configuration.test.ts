@@ -77,6 +77,7 @@ describe("normalizeAndValidateConfig()", () => {
 				port: undefined, // the default of 8787 is set at runtime
 				upstream_protocol: "http",
 				host: undefined,
+				enable_containers: true,
 			},
 			containers: undefined,
 			cloudchamber: {},
@@ -103,6 +104,7 @@ describe("normalizeAndValidateConfig()", () => {
 			},
 			r2_buckets: [],
 			secrets_store_secrets: [],
+			unsafe_hello_world: [],
 			services: [],
 			analytics_engine_datasets: [],
 			route: undefined,
@@ -114,7 +116,7 @@ describe("normalizeAndValidateConfig()", () => {
 			ai: undefined,
 			version_metadata: undefined,
 			triggers: {
-				crons: [],
+				crons: undefined,
 			},
 			unsafe: {
 				bindings: undefined,
@@ -155,6 +157,7 @@ describe("normalizeAndValidateConfig()", () => {
 					port: 9999,
 					local_protocol: "https",
 					upstream_protocol: "http",
+					enable_containers: false,
 				},
 			};
 
@@ -180,6 +183,7 @@ describe("normalizeAndValidateConfig()", () => {
 					port: "FOO",
 					local_protocol: "wss",
 					upstream_protocol: "ws",
+					enable_containers: true,
 				},
 			};
 
@@ -973,11 +977,11 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 				],
 				r2_buckets: [
-					{ binding: "R2_BINDING_1", bucket_name: "R2_BUCKET_1" },
+					{ binding: "R2_BINDING_1", bucket_name: "r2-bucket-1" },
 					{
 						binding: "R2_BINDING_2",
-						bucket_name: "R2_BUCKET_2",
-						preview_bucket_name: "R2_PREVIEW_2",
+						bucket_name: "r2-bucket-2",
+						preview_bucket_name: "r2-preview-2",
 					},
 				],
 				services: [
@@ -2858,10 +2862,16 @@ describe("normalizeAndValidateConfig()", () => {
 							{ binding: 2333, bucket_name: 2444 },
 							{
 								binding: "R2_BINDING_2",
-								bucket_name: "R2_BUCKET_2",
+								bucket_name: "r2-bucket-2",
 								preview_bucket_name: 2555,
 							},
-							{ binding: "R2_BINDING_1", bucket_name: "" },
+							{ binding: "R2_BINDING_3", bucket_name: "INVALID-NAME" },
+							{
+								binding: "R2_BINDING_4",
+								bucket_name: "bucket",
+								preview_bucket_name: "INVALID-NAME",
+							},
+							{ binding: "R2_BINDING_5", bucket_name: "" },
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -2871,15 +2881,17 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			            - \\"r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
-			            - \\"r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
-			            - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-			            - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-			            - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}.
-			            - \\"r2_buckets[4]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\",\\"bucket_name\\":\\"\\"}."
-		        `);
+					"Processing wrangler configuration:
+					  - \\"r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
+					  - \\"r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
+					  - \\"r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
+					  - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
+					  - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
+					  - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"r2-bucket-2\\",\\"preview_bucket_name\\":2555}.
+					  - r2_buckets[4].bucket_name=\\"INVALID-NAME\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
+					  - r2_buckets[5].preview_bucket_name= \\"INVALID-NAME\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
+					  - \\"r2_buckets[6]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_5\\",\\"bucket_name\\":\\"\\"}."
+				`);
 			});
 
 			it("should allow the bucket_name field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
@@ -3598,6 +3610,96 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}.
 					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"store_id\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}.
 					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"secret_name\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}."
+				`);
+			});
+		});
+
+		describe("[unsafe_hello_world]", () => {
+			it("should error if unsafe_hello_world is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ unsafe_hello_world: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"unsafe_hello_world\\" should be an array but got {}."
+		`);
+			});
+
+			it("should error if unsafe_hello_world is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ unsafe_hello_world: null },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"unsafe_hello_world\\" should be an array but got null."
+		`);
+			});
+
+			it("should accept valid bindings", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						unsafe_hello_world: [
+							{
+								binding: "VALID",
+								enable_timer: true,
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if hello_world.bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						unsafe_hello_world: [
+							// @ts-expect-error Test if empty object is caught
+							{},
+							{
+								binding: "VALID",
+								// @ts-expect-error Test if enable_timer is not a boolean
+								enable_timer: "yes",
+							},
+							{
+								// @ts-expect-error Test if binding is not a string
+								binding: null,
+								invalid: true,
+								enable_timer: false,
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in unsafe_hello_world[2] field: \\"invalid\\""
+				`);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"unsafe_hello_world[0]\\" bindings must have a string \\"binding\\" field but got {}.
+					  - \\"unsafe_hello_world[1]\\" bindings must have a boolean \\"enable_timer\\" field but got {\\"binding\\":\\"VALID\\",\\"enable_timer\\":\\"yes\\"}.
+					  - \\"unsafe_hello_world[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"enable_timer\\":false}."
 				`);
 			});
 		});
@@ -5237,16 +5339,17 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			              - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
-			              - \\"env.ENV1.r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
-			              - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-			              - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-			              - \\"env.ENV1.r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
+					    - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
+					    - \\"env.ENV1.r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
+					    - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
+					    - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
+					    - env.ENV1.r2_buckets[3].bucket_name=\\"R2_BUCKET_2\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
+					    - \\"env.ENV1.r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
+				`);
 			});
 		});
 
@@ -6262,6 +6365,82 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
+		});
+	});
+
+	describe("mixed mode", () => {
+		it("should ignore remote configs when specified without MIXED_MODE enabled", () => {
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				kv_namespaces: [
+					{
+						binding: "KV",
+						id: "xxxx-xxxx-xxxx-xxxx",
+						remote: true,
+					},
+				],
+				r2_buckets: [
+					{
+						binding: "R2",
+						bucket_name: "my-r2",
+						remote: 5 as unknown as boolean,
+					},
+				],
+			};
+			const { diagnostics } = run(
+				{
+					RESOURCES_PROVISION: false,
+					MULTIWORKER: false,
+					MIXED_MODE: false,
+				},
+				() =>
+					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
+						env: undefined,
+					})
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - Unexpected fields found in kv_namespaces[0] field: \\"remote\\"
+				  - Unexpected fields found in r2_buckets[0] field: \\"remote\\""
+			`);
+		});
+
+		it("should error on non boolean remote values", () => {
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				kv_namespaces: [
+					{
+						binding: "KV",
+						id: "xxxx-xxxx-xxxx-xxxx",
+						remote: "hello" as unknown as boolean,
+					},
+				],
+				r2_buckets: [
+					{
+						binding: "R2",
+						bucket_name: "my-r2",
+						remote: 5 as unknown as boolean,
+					},
+				],
+			};
+			const { diagnostics } = run(
+				{
+					RESOURCES_PROVISION: false,
+					MULTIWORKER: false,
+					MIXED_MODE: true,
+				},
+				() =>
+					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
+						env: undefined,
+					})
+			);
+
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - \\"kv_namespaces[0]\\" should, optionally, have a boolean \\"remote\\" field but got {\\"binding\\":\\"KV\\",\\"id\\":\\"xxxx-xxxx-xxxx-xxxx\\",\\"remote\\":\\"hello\\"}.
+				  - \\"r2_buckets[0]\\" should, optionally, have a boolean \\"remote\\" field but got {\\"binding\\":\\"R2\\",\\"bucket_name\\":\\"my-r2\\",\\"remote\\":5}."
+			`);
 		});
 	});
 });

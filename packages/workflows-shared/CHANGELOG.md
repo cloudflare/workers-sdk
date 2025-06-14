@@ -1,5 +1,11 @@
 # @cloudflare/workflows-shared
 
+## 0.3.4
+
+### Patch Changes
+
+- [#9367](https://github.com/cloudflare/workers-sdk/pull/9367) [`2e12e6e`](https://github.com/cloudflare/workers-sdk/commit/2e12e6e6f37d35805fcf6b0f8916cb4136543837) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Fix instance hydration after abort. Some use cases were causing instances to not be properly rehydrated after server shutdown, which would cause the instance to be lost.
+
 ## 0.3.3
 
 ### Patch Changes

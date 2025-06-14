@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
-import { logger } from "../../logger";
+import { logger, runWithLogLevel } from "../../logger";
 import { formatMessage, ParseError } from "../../parse";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
@@ -20,7 +20,16 @@ export class DevEnv extends EventEmitter {
 	async startWorker(options: StartDevWorkerInput): Promise<Worker> {
 		const worker = createWorkerObject(this);
 
-		await this.config.set(options);
+		try {
+			await this.config.set(options, true);
+		} catch (e) {
+			const error = new Error("An error occurred when starting the server", {
+				cause: e,
+			});
+			this.proxy.ready.reject(error);
+			await worker.dispose();
+			throw e;
+		}
 
 		return worker;
 	}
@@ -89,23 +98,25 @@ export class DevEnv extends EventEmitter {
 	// *********************
 
 	async teardown() {
-		logger.debug("DevEnv teardown beginning...");
+		await runWithLogLevel(this.config.latestInput?.dev?.logLevel, async () => {
+			logger.debug("DevEnv teardown beginning...");
 
-		await Promise.all([
-			this.config.teardown(),
-			this.bundler.teardown(),
-			...this.runtimes.map((runtime) => runtime.teardown()),
-			this.proxy.teardown(),
-		]);
+			await Promise.all([
+				this.config.teardown(),
+				this.bundler.teardown(),
+				...this.runtimes.map((runtime) => runtime.teardown()),
+				this.proxy.teardown(),
+			]);
 
-		this.config.removeAllListeners();
-		this.bundler.removeAllListeners();
-		this.runtimes.forEach((runtime) => runtime.removeAllListeners());
-		this.proxy.removeAllListeners();
+			this.config.removeAllListeners();
+			this.bundler.removeAllListeners();
+			this.runtimes.forEach((runtime) => runtime.removeAllListeners());
+			this.proxy.removeAllListeners();
 
-		this.emit("teardown");
+			this.emit("teardown");
 
-		logger.debug("DevEnv teardown complete");
+			logger.debug("DevEnv teardown complete");
+		});
 	}
 
 	emitErrorEvent(ev: ErrorEvent) {
@@ -148,8 +159,8 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			assert(devEnv.config.latestConfig);
 			return devEnv.config.latestConfig;
 		},
-		setConfig(config) {
-			return devEnv.config.set(config);
+		async setConfig(config, throwErrors) {
+			return devEnv.config.set(config, throwErrors);
 		},
 		patchConfig(config) {
 			return devEnv.config.patch(config);
@@ -179,7 +190,7 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			return w.scheduled(...args);
 		},
 		async dispose() {
-			await devEnv.teardown();
+			await devEnv.proxy.ready.promise.finally(() => devEnv.teardown());
 		},
 		raw: devEnv,
 	};

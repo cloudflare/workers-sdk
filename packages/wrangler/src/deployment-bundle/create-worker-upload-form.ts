@@ -61,12 +61,12 @@ export type WorkerMetadataBinding =
 	| { type: "json"; name: string; json: Json }
 	| { type: "wasm_module"; name: string; part: string }
 	| { type: "text_blob"; name: string; part: string }
-	| { type: "browser"; name: string }
-	| { type: "ai"; name: string; staging?: boolean }
-	| { type: "images"; name: string }
+	| { type: "browser"; name: string; raw?: boolean }
+	| { type: "ai"; name: string; staging?: boolean; raw?: boolean }
+	| { type: "images"; name: string; raw?: boolean }
 	| { type: "version_metadata"; name: string }
 	| { type: "data_blob"; name: string; part: string }
-	| { type: "kv_namespace"; name: string; namespace_id: string }
+	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
 	| {
 			type: "send_email";
 			name: string;
@@ -87,20 +87,35 @@ export type WorkerMetadataBinding =
 			workflow_name: string;
 			class_name: string;
 			script_name?: string;
+			raw?: boolean;
 	  }
-	| { type: "queue"; name: string; queue_name: string; delivery_delay?: number }
+	| {
+			type: "queue";
+			name: string;
+			queue_name: string;
+			delivery_delay?: number;
+			raw?: boolean;
+	  }
 	| {
 			type: "r2_bucket";
 			name: string;
 			bucket_name: string;
 			jurisdiction?: string;
+			raw?: boolean;
 	  }
-	| { type: "d1"; name: string; id: string; internalEnv?: string }
+	| {
+			type: "d1";
+			name: string;
+			id: string;
+			internalEnv?: string;
+			raw?: boolean;
+	  }
 	| {
 			type: "vectorize";
 			name: string;
 			index_name: string;
 			internalEnv?: string;
+			raw?: boolean;
 	  }
 	| { type: "hyperdrive"; name: string; id: string }
 	| {
@@ -132,6 +147,11 @@ export type WorkerMetadataBinding =
 			secret_name: string;
 	  }
 	| {
+			type: "unsafe_hello_world";
+			name: string;
+			enable_timer?: boolean;
+	  }
+	| {
 			type: "logfwdr";
 			name: string;
 			destination: string;
@@ -141,7 +161,7 @@ export type WorkerMetadataBinding =
 export type AssetConfigMetadata = {
 	html_handling?: AssetConfig["html_handling"];
 	not_found_handling?: AssetConfig["not_found_handling"];
-	run_worker_first?: boolean;
+	run_worker_first?: boolean | string[];
 	_redirects?: string;
 	_headers?: string;
 };
@@ -213,7 +233,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	const assetConfig: AssetConfigMetadata = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
-		run_worker_first: assets?.routerConfig.invoke_user_worker_ahead_of_assets,
+		run_worker_first: assets?.run_worker_first,
 		_redirects: assets?._redirects,
 		_headers: assets?._headers,
 	};
@@ -245,7 +265,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	});
 
-	bindings.kv_namespaces?.forEach(({ id, binding }) => {
+	bindings.kv_namespaces?.forEach(({ id, binding, raw }) => {
 		if (id === undefined) {
 			throw new UserError(`${binding} bindings must have an "id" field`);
 		}
@@ -260,6 +280,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 				name: binding,
 				type: "kv_namespace",
 				namespace_id: id,
+				raw,
 			});
 		}
 	});
@@ -293,49 +314,56 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	);
 
-	bindings.workflows?.forEach(({ binding, name, class_name, script_name }) => {
-		metadataBindings.push({
-			type: "workflow",
-			name: binding,
-			workflow_name: name,
-			class_name,
-			...(script_name && { script_name }),
-		});
-	});
+	bindings.workflows?.forEach(
+		({ binding, name, class_name, script_name, raw }) => {
+			metadataBindings.push({
+				type: "workflow",
+				name: binding,
+				workflow_name: name,
+				class_name,
+				script_name,
+				raw,
+			});
+		}
+	);
 
-	bindings.queues?.forEach(({ binding, queue_name, delivery_delay }) => {
+	bindings.queues?.forEach(({ binding, queue_name, delivery_delay, raw }) => {
 		metadataBindings.push({
 			type: "queue",
 			name: binding,
 			queue_name,
 			delivery_delay,
+			raw,
 		});
 	});
 
-	bindings.r2_buckets?.forEach(({ binding, bucket_name, jurisdiction }) => {
-		if (bucket_name === undefined) {
-			throw new UserError(
-				`${binding} bindings must have a "bucket_name" field`
-			);
-		}
+	bindings.r2_buckets?.forEach(
+		({ binding, bucket_name, jurisdiction, raw }) => {
+			if (bucket_name === undefined) {
+				throw new UserError(
+					`${binding} bindings must have a "bucket_name" field`
+				);
+			}
 
-		if (bucket_name === INHERIT_SYMBOL) {
-			metadataBindings.push({
-				name: binding,
-				type: "inherit",
-			});
-		} else {
-			metadataBindings.push({
-				name: binding,
-				type: "r2_bucket",
-				bucket_name,
-				jurisdiction,
-			});
+			if (bucket_name === INHERIT_SYMBOL) {
+				metadataBindings.push({
+					name: binding,
+					type: "inherit",
+				});
+			} else {
+				metadataBindings.push({
+					name: binding,
+					type: "r2_bucket",
+					bucket_name,
+					jurisdiction,
+					raw,
+				});
+			}
 		}
-	});
+	);
 
 	bindings.d1_databases?.forEach(
-		({ binding, database_id, database_internal_env }) => {
+		({ binding, database_id, database_internal_env, raw }) => {
 			if (database_id === undefined) {
 				throw new UserError(
 					`${binding} bindings must have a "database_id" field`
@@ -353,16 +381,18 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 					type: "d1",
 					id: database_id,
 					internalEnv: database_internal_env,
+					raw,
 				});
 			}
 		}
 	);
 
-	bindings.vectorize?.forEach(({ binding, index_name }) => {
+	bindings.vectorize?.forEach(({ binding, index_name, raw }) => {
 		metadataBindings.push({
 			name: binding,
 			type: "vectorize",
 			index_name: index_name,
+			raw,
 		});
 	});
 
@@ -384,6 +414,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			});
 		}
 	);
+
+	bindings.unsafe_hello_world?.forEach(({ binding, enable_timer }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "unsafe_hello_world",
+			enable_timer,
+		});
+	});
 
 	bindings.services?.forEach(
 		({ binding, service, environment, entrypoint, props }) => {
@@ -470,6 +508,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		metadataBindings.push({
 			name: bindings.browser.binding,
 			type: "browser",
+			raw: bindings.browser.raw,
 		});
 	}
 
@@ -478,6 +517,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			name: bindings.ai.binding,
 			staging: bindings.ai.staging,
 			type: "ai",
+			raw: bindings.ai.raw,
 		});
 	}
 
@@ -485,6 +525,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		metadataBindings.push({
 			name: bindings.images.binding,
 			type: "images",
+			raw: bindings.images.raw,
 		});
 	}
 

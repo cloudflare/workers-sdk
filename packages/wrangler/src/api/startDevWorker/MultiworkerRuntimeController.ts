@@ -9,7 +9,10 @@ import {
 	convertToConfigBundle,
 	LocalRuntimeController,
 } from "./LocalRuntimeController";
+import { convertCfWorkerInitBindingsToBindings } from "./utils";
+import type { MixedModeSession } from "../mixedMode";
 import type { BundleCompleteEvent } from "./events";
+import type { Binding } from "./index";
 
 // Ensure DO references from other workers have the same SQL setting as the DO definition in it's original Worker
 function ensureMatchingSql(options: MF.Options) {
@@ -62,6 +65,14 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	#options = new Map<string, { options: MF.Options; primary: boolean }>();
 
+	#mixedModeSessionsData = new Map<
+		string,
+		{
+			session: MixedModeSession;
+			remoteBindings: Record<string, Binding>;
+		} | null
+	>();
+
 	#canStartMiniflare() {
 		return (
 			[...this.#options.values()].some((o) => o.primary) &&
@@ -92,10 +103,38 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
+			const configBundle = await convertToConfigBundle(data);
+
+			const experimentalMixedMode = data.config.dev.experimentalMixedMode;
+
+			if (experimentalMixedMode && !data.config.dev?.remote) {
+				// note: mixedMode uses (transitively) LocalRuntimeController, so we need to import
+				// from the module lazily in order to avoid circular dependency issues
+				const { maybeStartOrUpdateMixedModeSession } = await import(
+					"../mixedMode"
+				);
+				const mixedModeSession = await maybeStartOrUpdateMixedModeSession(
+					{
+						name: configBundle.name,
+						bindings:
+							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
+							{},
+					},
+					this.#mixedModeSessionsData.get(data.config.name) ?? null
+				);
+				this.#mixedModeSessionsData.set(
+					data.config.name,
+					mixedModeSession ?? null
+				);
+			}
+
 			const { options } = await MF.buildMiniflareOptions(
 				this.#log,
 				await convertToConfigBundle(data),
-				this.#proxyToUserWorkerAuthenticationSecret
+				this.#proxyToUserWorkerAuthenticationSecret,
+				this.#mixedModeSessionsData.get(data.config.name)?.session
+					?.mixedModeConnectionString,
+				!!experimentalMixedMode
 			);
 
 			this.#options.set(data.config.name, {
@@ -207,6 +246,18 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 		await this.#mf?.dispose();
 		this.#mf = undefined;
+
+		if (this.#mixedModeSessionsData.size > 0) {
+			logger.log(chalk.dim("⎔ Shutting down remote connections..."));
+		}
+
+		await Promise.all(
+			[...this.#mixedModeSessionsData.values()].map((mixedModeSessionData) =>
+				mixedModeSessionData?.session?.dispose()
+			)
+		);
+
+		this.#mixedModeSessionsData.clear();
 
 		logger.debug("MultiworkerRuntimeController teardown complete");
 	};

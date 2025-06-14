@@ -2,10 +2,10 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { createMiddleware } from "@hattip/adapter-node";
+import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
 import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
-import { Miniflare } from "miniflare";
+import { Miniflare, Response as MiniflareResponse } from "miniflare";
 import colors from "picocolors";
 import * as vite from "vite";
 import {
@@ -13,11 +13,17 @@ import {
 	matchAdditionalModule,
 } from "./additional-modules";
 import { hasAssetsConfigChanged } from "./asset-config";
+import { createBuildApp } from "./build";
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
 } from "./cloudflare-environment";
-import { DEFAULT_INSPECTOR_PORT } from "./constants";
+import {
+	ASSET_WORKER_NAME,
+	DEFAULT_INSPECTOR_PORT,
+	kRequestType,
+	ROUTER_WORKER_NAME,
+} from "./constants";
 import {
 	addDebugToVitePrintUrls,
 	debuggingPath,
@@ -29,7 +35,9 @@ import {
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
 import {
+	getGlobalVirtualModule,
 	injectGlobalCode,
+	isGlobalVirtualModule,
 	isNodeAls,
 	isNodeAlsModule,
 	isNodeCompat,
@@ -46,7 +54,6 @@ import {
 	cleanUrl,
 	getFirstAvailablePort,
 	getOutputDirectory,
-	getRouterWorker,
 	toMiniflareRequest,
 } from "./utils";
 import { handleWebSocket } from "./websockets";
@@ -81,9 +88,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
 
-	// This is set when the client environment is built to determine if the entry Worker should include assets
-	let hasClientBuild = false;
-
 	return [
 		{
 			name: "vite-plugin-cloudflare",
@@ -111,8 +115,20 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					}
 				}
 
+				const defaultDeniedFiles = [
+					".env",
+					".env.*",
+					"*.{crt,pem}",
+					"**/.git/**",
+				];
+
 				return {
 					appType: "custom",
+					server: {
+						fs: {
+							deny: [...defaultDeniedFiles, ".dev.vars", ".dev.vars.*"],
+						},
+					},
 					environments:
 						resolvedPluginConfig.type === "workers"
 							? {
@@ -124,7 +140,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 													createCloudflareEnvironmentOptions(
 														workerConfig,
 														userConfig,
-														environmentName
+														{
+															name: environmentName,
+															isEntry:
+																resolvedPluginConfig.type === "workers" &&
+																environmentName ===
+																	resolvedPluginConfig.entryWorkerEnvironmentName,
+														}
 													),
 												];
 											}
@@ -140,42 +162,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					builder: {
 						buildApp:
 							userConfig.builder?.buildApp ??
-							(async (builder) => {
-								const clientEnvironment = builder.environments.client;
-								const defaultHtmlPath = path.resolve(
-									builder.config.root,
-									"index.html"
-								);
-
-								if (
-									clientEnvironment &&
-									(clientEnvironment.config.build.rollupOptions.input ||
-										fs.existsSync(defaultHtmlPath))
-								) {
-									await builder.build(clientEnvironment);
-								}
-
-								if (resolvedPluginConfig.type === "workers") {
-									const workerEnvironments = Object.keys(
-										resolvedPluginConfig.workers
-									).map((environmentName) => {
-										const environment = builder.environments[environmentName];
-
-										assert(
-											environment,
-											`${environmentName} environment not found`
-										);
-
-										return environment;
-									});
-
-									await Promise.all(
-										workerEnvironments.map((environment) =>
-											builder.build(environment)
-										)
-									);
-								}
-							}),
+							createBuildApp(resolvedPluginConfig),
 					},
 				};
 			},
@@ -221,7 +208,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						this.environment.name ===
 						resolvedPluginConfig.entryWorkerEnvironmentName;
 
-					if (isEntryWorker && hasClientBuild) {
+					if (isEntryWorker) {
 						const workerOutputDirectory = this.environment.config.build.outDir;
 						const clientOutputDirectory =
 							resolvedViteConfig.environments.client?.build.outDir;
@@ -294,11 +281,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 			writeBundle() {
-				// This relies on the assumption that the client environment is built first
-				// Composable `buildApp` hooks could provide a more robust alternative in future
-				if (this.environment.name === "client") {
-					hasClientBuild = true;
-				}
 				// These conditions ensure the deploy config is emitted once per application build as `writeBundle` is called for each environment.
 				// If Vite introduces an additional hook that runs after the application has built then we could use that instead.
 				if (
@@ -334,56 +316,71 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					viteDevServer
 				);
 
+				const miniflareDevOptions = await getDevMiniflareOptions(
+					resolvedPluginConfig,
+					viteDevServer,
+					inputInspectorPort
+				);
+
 				if (!miniflare) {
-					miniflare = new Miniflare(
-						getDevMiniflareOptions(
-							resolvedPluginConfig,
-							viteDevServer,
-							inputInspectorPort
-						)
-					);
+					miniflare = new Miniflare(miniflareDevOptions);
 				} else {
-					await miniflare.setOptions(
-						getDevMiniflareOptions(
-							resolvedPluginConfig,
-							viteDevServer,
-							inputInspectorPort
-						)
-					);
+					await miniflare.setOptions(miniflareDevOptions);
 				}
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
-
-				const middleware = createMiddleware(
-					async ({ request }) => {
-						assert(miniflare, `Miniflare not defined`);
-						const routerWorker = await getRouterWorker(miniflare);
-
-						return routerWorker.fetch(toMiniflareRequest(request), {
-							redirect: "manual",
-						}) as any;
-					},
-					{ alwaysCallNext: false }
-				);
 
 				// The HTTP server is not available in middleware mode
 				if (viteDevServer.httpServer) {
 					handleWebSocket(viteDevServer.httpServer, async () => {
 						assert(miniflare, `Miniflare not defined`);
-						const routerWorker = await getRouterWorker(miniflare);
+						const routerWorker = await miniflare.getWorker(ROUTER_WORKER_NAME);
 
 						return routerWorker.fetch;
 					});
 				}
 
 				return () => {
-					viteDevServer.middlewares.use((req, res, next) => {
-						middleware(req, res, next);
+					viteDevServer.middlewares.use(async (req, res, next) => {
+						try {
+							assert(miniflare, `Miniflare not defined`);
+							const request = createRequest(req, res);
+							let response: MiniflareResponse;
+
+							if (req[kRequestType] === "asset") {
+								const assetWorker =
+									await miniflare.getWorker(ASSET_WORKER_NAME);
+								response = await assetWorker.fetch(
+									toMiniflareRequest(request),
+									{ redirect: "manual" }
+								);
+							} else {
+								const routerWorker =
+									await miniflare.getWorker(ROUTER_WORKER_NAME);
+								response = await routerWorker.fetch(
+									toMiniflareRequest(request),
+									{ redirect: "manual" }
+								);
+							}
+
+							// Vite uses HTTP/2 when `server.https` is enabled
+							if (req.httpVersionMajor === 2) {
+								// HTTP/2 disallows use of the `transfer-encoding` header
+								response.headers.delete("transfer-encoding");
+							}
+
+							await sendResponse(res, response as any);
+						} catch (error) {
+							next(error);
+						}
 					});
 				};
 			},
 			async configurePreviewServer(vitePreviewServer) {
-				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
+				const workerConfigs = getWorkerConfigs(
+					vitePreviewServer.config.root,
+					pluginConfig.experimental?.mixedMode ?? false
+				);
 
 				const inputInspectorPort = await getInputInspectorPortOption(
 					pluginConfig,
@@ -391,21 +388,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 
 				const miniflare = new Miniflare(
-					getPreviewMiniflareOptions(
+					await getPreviewMiniflareOptions(
 						vitePreviewServer,
 						workerConfigs,
 						pluginConfig.persistState ?? true,
+						!!pluginConfig.experimental?.mixedMode,
 						inputInspectorPort
 					)
-				);
-
-				const middleware = createMiddleware(
-					({ request }) => {
-						return miniflare.dispatchFetch(toMiniflareRequest(request), {
-							redirect: "manual",
-						}) as any;
-					},
-					{ alwaysCallNext: false }
 				);
 
 				handleWebSocket(
@@ -414,9 +403,39 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
-				vitePreviewServer.middlewares.use((req, res, next) => {
-					middleware(req, res, next);
+				vitePreviewServer.middlewares.use(async (req, res, next) => {
+					try {
+						const request = createRequest(req, res);
+						const response = await miniflare.dispatchFetch(
+							toMiniflareRequest(request),
+							{ redirect: "manual" }
+						);
+
+						// Vite uses HTTP/2 when `preview.https` is enabled
+						if (req.httpVersionMajor === 2) {
+							// HTTP/2 disallows use of the `transfer-encoding` header
+							response.headers.delete("transfer-encoding");
+						}
+
+						await sendResponse(res, response as any);
+					} catch (error) {
+						next(error);
+					}
 				});
+			},
+		},
+		// Plugin to provide a fallback entry file
+		{
+			name: "vite-plugin-cloudflare:fallback-entry",
+			resolveId(source) {
+				if (source === "virtual:__cloudflare_fallback_entry__") {
+					return `\0virtual:__cloudflare_fallback_entry__`;
+				}
+			},
+			load(id) {
+				if (id === "\0virtual:__cloudflare_fallback_entry__") {
+					return ``;
+				}
 			},
 		},
 		// Plugin to support `.wasm?init` extension
@@ -583,6 +602,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			// rather than allowing the resolve hook here to alias then to polyfills.
 			enforce: "pre",
 			async resolveId(source, importer, options) {
+				if (isGlobalVirtualModule(source)) {
+					return source;
+				}
 				// See if we can map the `source` to a Node.js compat alias.
 				const result = resolveNodeJSImport(source);
 				if (!result) {
@@ -608,6 +630,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				// We are in build mode so return the absolute path to the polyfill.
 				return this.resolve(result.resolved, importer, options);
+			},
+			load(id) {
+				return getGlobalVirtualModule(id);
 			},
 			async transform(code, id) {
 				// Inject the Node.js compat globals into the entry module for Node.js compat environments.
@@ -705,7 +730,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 			async configurePreviewServer(vitePreviewServer) {
-				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
+				const workerConfigs = getWorkerConfigs(
+					vitePreviewServer.config.root,
+					pluginConfig.experimental?.mixedMode ?? false
+				);
 
 				if (workerConfigs.length >= 1 && pluginConfig.inspectorPort !== false) {
 					addDebugToVitePrintUrls(vitePreviewServer);

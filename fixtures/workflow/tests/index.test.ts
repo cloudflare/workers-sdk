@@ -94,7 +94,7 @@ describe("Workflows", () => {
 		});
 	});
 
-	test("batchCreate should create multiple instances and run them seperatly", async ({
+	test("batchCreate should create multiple instances and run them separately", async ({
 		expect,
 	}) => {
 		await expect(fetchJson(`http://${ip}:${port}/createBatch`)).resolves
@@ -172,5 +172,25 @@ describe("Workflows", () => {
 			},
 			{ timeout: 5000 }
 		);
+	});
+
+	it("should persist instances across lifetimes", async ({ expect }) => {
+		await fetchJson(`http://${ip}:${port}/create?workflowName=something`);
+
+		await stop?.();
+
+		const { port: portChild2, stop: stopChild2Process } = await runWranglerDev(
+			resolve(__dirname, ".."),
+			[`--port=0`, `--inspector-port=0`]
+		);
+
+		try {
+			const result = await fetchJson(
+				`http://${ip}:${portChild2}/status?workflowName=something`
+			);
+			expect(result).not.toBeUndefined();
+		} finally {
+			await stopChild2Process?.();
+		}
 	});
 });

@@ -135,6 +135,12 @@ export type CommandDefinition<
 		printResourceLocation?:
 			| ((args?: HandlerArgs<NamedArgDefs>) => boolean)
 			| boolean;
+
+		/**
+		 * If true, check for environments in the wrangler config, if there are some and the user hasn't specified an environment
+		 * using the `-e|--env` cli flag, show a warning suggesting that one should instead be specified.
+		 */
+		warnIfMultipleEnvsConfiguredButNoneSpecified?: boolean;
 	};
 
 	/**

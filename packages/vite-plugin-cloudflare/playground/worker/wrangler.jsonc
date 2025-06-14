@@ -2,4 +2,11 @@
 	"name": "worker",
 	"main": "./src/index.ts",
 	"compatibility_date": "2024-12-30",
+	"services": [
+		{
+			"binding": "TEST_IF_VITE_CRASH_WITH_UNKNOWN_NAMED_ENTRYPOINT",
+			"service": "unknown-worker",
+			"entrypoint": "NamedEntrypoint",
+		},
+	],
 }

@@ -1,0 +1,26 @@
+{
+	"name": "@fixture/workers-with-assets-static-routing",
+	"private": true,
+	"scripts": {
+		"check:type": "tsc",
+		"dev": "wrangler dev",
+		"dev:spa": "wrangler dev -c spa.wrangler.jsonc",
+		"pretest:ci": "pnpm playwright install chromium",
+		"test:ci": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./test/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250612.0",
+		"playwright-chromium": "catalog:default",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"node": "20.19.2",
+		"extends": "../../package.json"
+	}
+}

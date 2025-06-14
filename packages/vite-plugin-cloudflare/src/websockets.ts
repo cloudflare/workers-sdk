@@ -1,7 +1,7 @@
+import { createHeaders } from "@mjackson/node-fetch-server";
 import { coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
-import { nodeHeadersToWebHeaders } from "./utils";
 import type { MaybePromise } from "./utils";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
@@ -28,7 +28,7 @@ export function handleWebSocket(
 				return;
 			}
 
-			const headers = nodeHeadersToWebHeaders(request.headers);
+			const headers = createHeaders(request);
 			const fetcher = await getFetcher();
 			const response = await fetcher(url, {
 				headers,

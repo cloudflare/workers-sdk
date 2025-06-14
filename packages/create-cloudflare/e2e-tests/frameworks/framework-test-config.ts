@@ -16,10 +16,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Hello from Cloudflare",
 				previewArgs: ["--host=127.0.0.1"],
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
+			nodeCompat: false,
 			flags: ["--no-install", "--no-git-init"],
 		},
 		"astro:pages": {
@@ -34,12 +31,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuild: {
-				outputDir: "./dist",
-				script: "build",
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
+			nodeCompat: true,
 			flags: [
 				"--skip-houston",
 				"--no-install",
@@ -62,12 +54,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuild: {
-				outputDir: "./dist",
-				script: "build",
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
+			nodeCompat: true,
 			flags: [
 				"--skip-houston",
 				"--no-install",
@@ -92,6 +79,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Dinosaurs are cool",
 			},
+			nodeCompat: false,
 			flags: [`--package-manager`, pm],
 			promptHandlers: [
 				// {
@@ -118,6 +106,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Dinosaurs are cool",
 			},
+			nodeCompat: false,
 			flags: [`--package-manager`, pm],
 			promptHandlers: [
 				{
@@ -142,16 +131,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/api/v1/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
-			verifyBuild: {
-				outputDir: "./dist/analog/public",
-				script: "build",
-				route: "/api/v1/test",
-				expectedText: "C3_TEST",
-			},
+			nodeCompat: false,
 			flags: ["--skipTailwind"],
 		},
 		"angular:pages": {
@@ -168,6 +148,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Congratulations! Your app is running.",
 			},
+			nodeCompat: false,
 			flags: ["--style", "sass"],
 		},
 		"angular:workers": {
@@ -184,6 +165,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Congratulations! Your app is running.",
 			},
+			nodeCompat: false,
 			flags: ["--style", "sass"],
 		},
 		"gatsby:pages": {
@@ -205,6 +187,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Gatsby!",
 			},
+			nodeCompat: false,
 		},
 		"gatsby:workers": {
 			argv: ["--platform", "workers"],
@@ -225,6 +208,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Gatsby!",
 			},
+			nodeCompat: false,
 		},
 		"hono:pages": {
 			argv: ["--platform", "pages"],
@@ -238,6 +222,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Hello!",
 			},
+			nodeCompat: false,
 			promptHandlers: [
 				{
 					matcher: /Do you want to install project dependencies\?/,
@@ -257,6 +242,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/message",
 				expectedText: "Hello Hono!",
 			},
+			nodeCompat: false,
 			promptHandlers: [
 				{
 					matcher: /Do you want to install project dependencies\?/,
@@ -283,10 +269,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Welcome to Qwik",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
+			nodeCompat: true,
 		},
 		"qwik:workers": {
 			argv: ["--platform", "workers"],
@@ -308,10 +291,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Welcome to Qwik",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
+			nodeCompat: true,
 		},
 		"remix:pages": {
 			argv: ["--platform", "pages"],
@@ -327,16 +307,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
-			verifyBuild: {
-				outputDir: "./build/client",
-				script: "build",
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
+			nodeCompat: false,
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
 		"remix:workers": {
@@ -353,27 +324,13 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
+			nodeCompat: false,
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
 		"next:pages": {
 			argv: ["--platform", "pages"],
 			timeout: LONG_TIMEOUT,
-			unsupportedPms: ["pnpm"],
-			promptHandlers: [
-				{
-					matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
-					input: ["y"],
-				},
-			],
 			testCommitMessage: true,
-			verifyBuildCfTypes: {
-				outputFile: "env.d.ts",
-				envInterfaceName: "CloudflareEnv",
-			},
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Create Next App",
@@ -384,36 +341,14 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Create Next App",
 			},
-			flags: [
-				"--typescript",
-				"--no-install",
-				"--eslint",
-				"--tailwind",
-				"--src-dir",
-				"--app",
-				"--turbopack",
-				"--import-alias",
-				"@/*",
-			],
+			nodeCompat: true,
+			flags: ["--yes", "--no-install", "--import-alias", "@/*"],
 		},
 		"next:workers": {
 			argv: ["--platform", "workers"],
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
-			flags: [
-				"--ts",
-				"--tailwind",
-				"--eslint",
-				"--app",
-				"--turbopack",
-				"--import-alias",
-				"@/*",
-				"--src-dir",
-			],
-			verifyBuildCfTypes: {
-				outputFile: "cloudflare-env.d.ts",
-				envInterfaceName: "CloudflareEnv",
-			},
+			flags: ["--yes", "--import-alias", "@/*"],
 			verifyPreview: {
 				previewArgs: ["--"],
 				route: "/test",
@@ -423,6 +358,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Create Next App",
 			},
+			nodeCompat: true,
 			// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
 			unsupportedOSs: ["win32"],
 			unsupportedPms: [
@@ -447,17 +383,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Welcome to Nuxt!",
 			},
+			nodeCompat: false,
 			verifyPreview: {
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
-			verifyBuild: {
-				outputDir: "./dist",
-				script: "build",
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
@@ -482,10 +409,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
+			nodeCompat: false,
 		},
 		"react:pages": {
 			argv: ["--platform", "pages"],
@@ -506,6 +430,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Vite + React",
 			},
+			nodeCompat: false,
 		},
 		"react:workers": {
 			argv: ["--platform", "workers"],
@@ -534,6 +459,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				// not actually running the client side JS.
 				expectedText: "Vite + React + TS",
 			},
+			nodeCompat: false,
 		},
 		solid: {
 			promptHandlers: [
@@ -541,11 +467,8 @@ export default function getFrameworkTestConfig(pm: string) {
 					matcher: /Which template would you like to use/,
 					input: [keys.enter],
 				},
-				{
-					matcher: /Use Typescript/,
-					input: [keys.enter],
-				},
 			],
+			flags: ["--ts"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["npm", "yarn"],
@@ -558,6 +481,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Hello world",
 			},
+			nodeCompat: true,
 		},
 		"svelte:pages": {
 			argv: ["--platform", "pages"],
@@ -580,12 +504,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuild: {
-				outputDir: ".svelte-kit/cloudflare",
-				script: "build",
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
+			nodeCompat: false,
 		},
 		"svelte:workers": {
 			argv: ["--platform", "workers"],
@@ -608,6 +527,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: false,
 		},
 		"vue:pages": {
 			argv: ["--platform", "pages"],
@@ -621,6 +541,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Vite App",
 			},
+			nodeCompat: false,
 			flags: ["--ts"],
 		},
 		"vue:workers": {
@@ -636,6 +557,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Vite App",
 			},
+			nodeCompat: false,
 		},
 	};
 }

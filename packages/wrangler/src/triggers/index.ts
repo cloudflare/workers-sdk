@@ -49,6 +49,9 @@ export const triggersDeployCommand = createCommand({
 			hidden: true,
 		},
 	},
+	behaviour: {
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+	},
 	async handler(args, { config }) {
 		const assetsOptions = getAssetsOptions({ assets: undefined }, config);
 		metrics.sendMetricsEvent(

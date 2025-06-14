@@ -4,6 +4,7 @@ import { spinner } from "@cloudflare/cli/interactive";
 import PQueue from "p-queue";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
+import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
@@ -93,6 +94,7 @@ export const upload = async (
 		} else {
 			return (
 				await fetchResult<{ jwt: string }>(
+					COMPLIANCE_REGION_CONFIG_PUBLIC,
 					`/accounts/${args.accountId}/pages/projects/${args.projectName}/upload-token`
 				)
 			).jwt;
@@ -113,16 +115,20 @@ export const upload = async (
 		}
 
 		try {
-			return await fetchResult<string[]>(`/pages/assets/check-missing`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${jwt}`,
-				},
-				body: JSON.stringify({
-					hashes: files.map(({ hash }) => hash),
-				}),
-			});
+			return await fetchResult<string[]>(
+				COMPLIANCE_REGION_CONFIG_PUBLIC,
+				`/pages/assets/check-missing`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${jwt}`,
+					},
+					body: JSON.stringify({
+						hashes: files.map(({ hash }) => hash),
+					}),
+				}
+			);
 		} catch (e) {
 			if (attempts < MAX_CHECK_MISSING_ATTEMPTS) {
 				// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
@@ -216,14 +222,18 @@ export const upload = async (
 
 			try {
 				logger.debug("POST /pages/assets/upload");
-				const res = await fetchResult(`/pages/assets/upload`, {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${jwt}`,
-					},
-					body: JSON.stringify(payload),
-				});
+				const res = await fetchResult(
+					COMPLIANCE_REGION_CONFIG_PUBLIC,
+					`/pages/assets/upload`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${jwt}`,
+						},
+						body: JSON.stringify(payload),
+					}
+				);
 				logger.debug("result:", res);
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
@@ -304,16 +314,20 @@ export const upload = async (
 
 	const doUpsertHashes = async (): Promise<void> => {
 		try {
-			return await fetchResult(`/pages/assets/upsert-hashes`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${jwt}`,
-				},
-				body: JSON.stringify({
-					hashes: files.map(({ hash }) => hash),
-				}),
-			});
+			return await fetchResult(
+				COMPLIANCE_REGION_CONFIG_PUBLIC,
+				`/pages/assets/upsert-hashes`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${jwt}`,
+					},
+					body: JSON.stringify({
+						hashes: files.map(({ hash }) => hash),
+					}),
+				}
+			);
 		} catch (e) {
 			await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
 
@@ -325,16 +339,20 @@ export const upload = async (
 				jwt = await fetchJwt();
 			}
 
-			return await fetchResult(`/pages/assets/upsert-hashes`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${jwt}`,
-				},
-				body: JSON.stringify({
-					hashes: files.map(({ hash }) => hash),
-				}),
-			});
+			return await fetchResult(
+				COMPLIANCE_REGION_CONFIG_PUBLIC,
+				`/pages/assets/upsert-hashes`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${jwt}`,
+					},
+					body: JSON.stringify({
+						hashes: files.map(({ hash }) => hash),
+					}),
+				}
+			);
 		}
 	};
 

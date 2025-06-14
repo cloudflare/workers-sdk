@@ -1,5 +1,5 @@
 {
-	"name": "workers-assets-with-user-worker",
+	"name": "@fixture/workers-assets",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",
@@ -10,7 +10,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250507.0",
+		"@cloudflare/workers-types": "^4.20250612.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

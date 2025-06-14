@@ -69,7 +69,6 @@ export default class extends WorkerEntrypoint<Env> {
 			return new Response(null, { status: 404 });
 		}
 
-		console.log(url.pathname);
 		let handle: WorkflowInstance;
 		if (url.pathname === "/createBatch") {
 			// creates two instances
@@ -85,7 +84,6 @@ export default class extends WorkerEntrypoint<Env> {
 				handle = await this.env.WORKFLOW.create({ id });
 			}
 		} else if (url.pathname === "/createDemo2") {
-			console.log("I'm here", id);
 			if (id === null) {
 				handle = await this.env.WORKFLOW2.create();
 			} else {

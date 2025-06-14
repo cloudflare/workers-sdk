@@ -1,3 +1,4 @@
+import assert from "assert";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -23,6 +24,8 @@ export default function registerDevHotKeys(
 			handler: async () => {
 				const { inspectorUrl } = await devEnv.proxy.ready.promise;
 
+				assert(inspectorUrl, "Error: no inspectorUrl available");
+
 				// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
 				await openInspector(
 					parseInt(inspectorUrl.port),
@@ -33,8 +36,6 @@ export default function registerDevHotKeys(
 		{
 			keys: ["l"],
 			disabled: () => args.forceLocal ?? false,
-			label: () =>
-				`turn ${devEnv.config.latestConfig?.dev?.remote ? "on" : "off"} local mode`,
 			handler: async () => {
 				await devEnv.config.patch({
 					dev: {

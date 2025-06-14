@@ -2,7 +2,6 @@
 // so extract it separately from the other exports
 import {
 	Cipher,
-	constants,
 	createCipher,
 	createDecipher,
 	Decipher,
@@ -11,7 +10,7 @@ import {
 } from "unenv/node/crypto";
 import type nodeCrypto from "node:crypto";
 
-export { Cipher, constants, Decipher } from "unenv/node/crypto";
+export { Cipher, Decipher } from "unenv/node/crypto";
 
 const workerdCrypto = process.getBuiltinModule("node:crypto");
 
@@ -19,6 +18,7 @@ export const {
 	Certificate,
 	checkPrime,
 	checkPrimeSync,
+	constants,
 	// @ts-expect-error
 	Cipheriv,
 	createCipheriv,
@@ -106,7 +106,6 @@ export default {
 	Sign,
 	Verify,
 	X509Certificate,
-	// @ts-expect-error @types/node is out of date - this is a bug in typings
 	constants,
 	createCipheriv,
 	createDecipheriv,

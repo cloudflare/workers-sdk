@@ -19,6 +19,7 @@ import type {
 	CfWorkerContext,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ParseError } from "../parse";
 import type { LegacyAssetPaths } from "../sites";
 import type { CfAccount } from "./create-worker-preview";
@@ -87,6 +88,7 @@ export type CfWorkerInitWithName = Required<Pick<CfWorkerInit, "name">> &
 export async function createRemoteWorkerInit(props: {
 	bundle: EsbuildBundle;
 	modules: CfModule[];
+	complianceConfig: ComplianceConfig;
 	accountId: string;
 	name: string;
 	legacyEnv: boolean | undefined;
@@ -98,6 +100,7 @@ export async function createRemoteWorkerInit(props: {
 	bindings: CfWorkerInit["bindings"];
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
+	minimal_mode?: boolean;
 }) {
 	const { entrypointSource: content, modules } = withSourceURLs(
 		props.bundle.path,
@@ -115,6 +118,7 @@ export async function createRemoteWorkerInit(props: {
 	);
 
 	const workersSitesAssets = await syncWorkersSite(
+		props.complianceConfig,
 		props.accountId,
 		// When we're using the newer service environments, we wouldn't
 		// have added the env name on to the script name. However, we must
@@ -137,7 +141,12 @@ export async function createRemoteWorkerInit(props: {
 	}
 
 	const assetsJwt = props.assets
-		? await syncAssets(props.accountId, props.assets.directory, props.name)
+		? await syncAssets(
+				props.complianceConfig,
+				props.accountId,
+				props.assets.directory,
+				props.name
+			)
 		: undefined;
 
 	const init: CfWorkerInitWithName = {
@@ -179,18 +188,20 @@ export async function createRemoteWorkerInit(props: {
 						assetConfig: props.assets.assetConfig,
 						_redirects: props.assets._redirects,
 						_headers: props.assets._headers,
+						run_worker_first: props.assets.run_worker_first,
 					}
 				: undefined,
 		placement: undefined, // no placement in dev
 		tail_consumers: undefined, // no tail consumers in dev - TODO revisit?
 		limits: undefined, // no limits in preview - not supported yet but can be added
-		observability: undefined, // no observability in dev
+		observability: undefined, // no observability in dev,
 	};
 
 	return init;
 }
 
 export async function getWorkerAccountAndContext(props: {
+	complianceConfig: ComplianceConfig;
 	accountId: string;
 	env: string | undefined;
 	legacyEnv: boolean | undefined;
@@ -205,7 +216,7 @@ export async function getWorkerAccountAndContext(props: {
 	};
 
 	// What zone should the realish preview for this Worker run on?
-	const zoneId = await getZoneIdForPreview({
+	const zoneId = await getZoneIdForPreview(props.complianceConfig, {
 		host: props.host,
 		routes: props.routes,
 		accountId: props.accountId,

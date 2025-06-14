@@ -34,6 +34,10 @@ export default {
 				return await testTls();
 			case "/test-crypto":
 				return await testCrypto();
+			case "/test-sqlite":
+				return await testSqlite();
+			case "/test-http":
+				return await testHttp();
 		}
 
 		return new Response(
@@ -45,6 +49,8 @@ export default {
 <a href="test-immediate">Test setImmediate</a>
 <a href="test-tls">node:tls</a>
 <a href="test-crypto">node:crypto</a>
+<a href="test-sqlite">node:sqlite</a>
+<a href="test-http">node:http</a>
 `,
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
@@ -140,6 +146,9 @@ function testBasicNodejsProperties() {
 }
 
 function testProcessBehavior() {
+	assert.strictEqual(typeof process.version, "string");
+	assert.strictEqual(typeof process.versions.node, "string");
+
 	const originalProcess = process;
 	try {
 		assert.notEqual(process, undefined);
@@ -219,6 +228,8 @@ async function testTls() {
 		true
 	);
 
+	assert.strictEqual(typeof tls.convertALPNProtocols, "function");
+
 	return new Response("OK");
 }
 
@@ -238,6 +249,31 @@ async function testCrypto() {
 	data += decipher.update(cipher.final());
 	data += decipher.final();
 	assert.strictEqual(data, "Hello World");
+
+	assert.strictEqual(crypto.constants.DH_UNABLE_TO_CHECK_GENERATOR, 4);
+	assert.strictEqual(crypto.constants.RSA_PSS_SALTLEN_DIGEST, -1);
+	assert.strictEqual(
+		crypto.constants.SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION,
+		262144
+	);
+	assert.strictEqual(crypto.constants.SSL_OP_NO_TICKET, 16384);
+
+	return new Response("OK");
+}
+
+async function testSqlite() {
+	const sqlite = await import("node:sqlite");
+
+	assert.strictEqual(typeof sqlite.DatabaseSync, "function");
+
+	return new Response("OK");
+}
+
+async function testHttp() {
+	const http = await import("node:http");
+
+	const agent = new http.Agent();
+	assert.strictEqual(typeof agent.options, "object");
 
 	return new Response("OK");
 }

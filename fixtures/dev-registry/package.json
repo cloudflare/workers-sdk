@@ -1,0 +1,21 @@
+{
+	"name": "@fixture/dev-registry",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"check:types": "tsc --build",
+		"test": "vitest",
+		"test:ci": "vitest run",
+		"vite": "vite dev",
+		"wrangler": "wrangler dev"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250612.0",
+		"typescript": "catalog:default",
+		"vite": "catalog:vite-plugin",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	}
+}

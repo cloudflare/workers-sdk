@@ -8,11 +8,8 @@ export default function getFrameworkTestConfigExperimental() {
 					matcher: /Which template would you like to use/,
 					input: [keys.enter],
 				},
-				{
-					matcher: /Use Typescript/,
-					input: [keys.enter],
-				},
 			],
+			flags: ["--ts"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["npm", "yarn"],
@@ -25,6 +22,7 @@ export default function getFrameworkTestConfigExperimental() {
 				route: "/",
 				expectedText: "Hello world",
 			},
+			nodeCompat: true,
 		},
 	};
 }

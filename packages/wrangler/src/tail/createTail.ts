@@ -2,7 +2,9 @@ import { HttpsProxyAgent } from "https-proxy-agent";
 import WebSocket from "ws";
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
+import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
 import { proxy } from "../utils/constants";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Outcome, TailFilterMessage } from "./filters";
 import type { Request } from "undici";
 
@@ -90,6 +92,7 @@ export async function createPagesTail({
 	debug = false,
 }: CreatePagesTailOptions) {
 	const tailRecord = await fetchResult<TailCreationApiResponse>(
+		COMPLIANCE_REGION_CONFIG_PUBLIC,
 		`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}/tails`,
 		{
 			method: "POST",
@@ -99,6 +102,7 @@ export async function createPagesTail({
 
 	const deleteTail = async () =>
 		fetchResult(
+			COMPLIANCE_REGION_CONFIG_PUBLIC,
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}/tails/${tailRecord.id}`,
 			{ method: "DELETE" }
 		);
@@ -144,6 +148,7 @@ export async function createPagesTail({
  * @returns a websocket connection, an expiration, and a function to call to delete the tail
  */
 export async function createTail(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
 	filters: TailFilterMessage,
@@ -160,15 +165,19 @@ export async function createTail(
 		id: tailId,
 		url: websocketUrl,
 		expires_at: expiration,
-	} = await fetchResult<TailCreationApiResponse>(createTailUrl, {
-		method: "POST",
-		body: JSON.stringify(filters),
-	});
+	} = await fetchResult<TailCreationApiResponse>(
+		complianceConfig,
+		createTailUrl,
+		{
+			method: "POST",
+			body: JSON.stringify(filters),
+		}
+	);
 
 	// delete the tail (not yet!)
 	const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId, env);
 	async function deleteTail() {
-		await fetchResult(deleteUrl, { method: "DELETE" });
+		await fetchResult(complianceConfig, deleteUrl, { method: "DELETE" });
 	}
 
 	const p = proxy ? { agent: new HttpsProxyAgent(proxy) } : {};

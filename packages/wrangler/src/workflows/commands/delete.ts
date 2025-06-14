@@ -9,7 +9,6 @@ export const workflowsDeleteCommand = createCommand({
 			"Delete workflow - when deleting a workflow, it will also delete it's own instances",
 		owner: "Product: Workflows",
 		status: "stable",
-		hidden: true,
 	},
 
 	args: {
@@ -24,7 +23,7 @@ export const workflowsDeleteCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		await fetchResult(`/accounts/${accountId}/workflows/${args.name}`, {
+		await fetchResult(config, `/accounts/${accountId}/workflows/${args.name}`, {
 			method: "DELETE",
 		});
 
