@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 Migrate Workers Containers commands to Containers API Endpoints

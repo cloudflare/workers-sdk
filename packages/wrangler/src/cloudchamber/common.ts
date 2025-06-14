@@ -196,7 +196,7 @@ export async function fillOpenAPIConfiguration(
 	}
 
 	const scopes = getScopes();
-	const needsToken = !scopes?.find((s) => s === scope);
+	const needsToken = !scopes?.some((s) => s === scope);
 	const neededScopes: Scope[] = [scope];
 	const scopesToSet: Scope[] =
 		scopes == undefined
