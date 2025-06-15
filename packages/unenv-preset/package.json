@@ -38,7 +38,7 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "unbuild",
+		"build": "obuild",
 		"check:lint": "eslint",
 		"check:type": "tsc --noEmit",
 		"test:ci": "vitest run",
@@ -46,8 +46,8 @@
 	},
 	"devDependencies": {
 		"@types/node-unenv": "npm:@types/node@^22.14.0",
+		"obuild": "^0.2.1",
 		"typescript": "catalog:default",
-		"unbuild": "^3.2.0",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
