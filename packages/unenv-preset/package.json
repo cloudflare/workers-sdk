@@ -46,7 +46,7 @@
 	},
 	"devDependencies": {
 		"@types/node-unenv": "npm:@types/node@^22.14.0",
-		"obuild": "^0.0.7",
+		"obuild": "^0.2.1",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",
