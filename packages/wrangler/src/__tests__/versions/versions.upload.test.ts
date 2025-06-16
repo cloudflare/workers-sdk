@@ -27,7 +27,7 @@ describe("versions upload", () => {
 			http.get(
 				`*/accounts/:accountId/workers/services/:scriptName`,
 				({ params }) => {
-					expect(params.scriptName).toEqual("test-name");
+					expect(params.scriptName).toMatch(/^test-name(-test)?/);
 
 					return HttpResponse.json(
 						createFetchResult({
@@ -66,7 +66,7 @@ describe("versions upload", () => {
 						return HttpResponse.error();
 					}
 
-					expect(params.scriptName).toEqual("test-name");
+					expect(params.scriptName).toMatch(/^test-name(-test)?/);
 
 					return HttpResponse.json(
 						createFetchResult({
@@ -209,6 +209,88 @@ describe("versions upload", () => {
 		`);
 
 		expect(std.info).toContain("Retrying API call after error...");
+	});
+
+	describe("multi-env warning", () => {
+		it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+			mockGetScript();
+			mockUploadVersion(true);
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+
+			// Setup
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			const result = runWrangler("versions upload");
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the versions upload command.[0m
+
+				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+				  the target environment using the \`-e|--env\` flag.
+				  If your intention is to use the top-level environment of your configuration simply pass an empty
+				  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+
+				"
+			`);
+		});
+
+		it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+			mockGetScript();
+			mockUploadVersion(true);
+			mockGetWorkerSubdomain({
+				enabled: true,
+				previews_enabled: false,
+				legacyEnv: true,
+				env: "test",
+			});
+
+			// Setup
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			const result = runWrangler("versions upload -e test");
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+			mockGetScript();
+			mockUploadVersion(true);
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+
+			// Setup
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			const result = runWrangler("versions upload");
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 });
 

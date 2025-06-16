@@ -287,7 +287,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 	},
 ];
 
-describe.skip("Wrangler Mixed Mode E2E Tests", () => {
+describe("Wrangler Mixed Mode E2E Tests", () => {
 	describe.each(testCases)("$name", (testCase) => {
 		let helper: WranglerE2ETestHelper;
 

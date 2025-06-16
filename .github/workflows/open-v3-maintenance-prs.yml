@@ -52,6 +52,10 @@ jobs:
 
             Depending on your changes, running `git rebase --onto v3-maintenance main ${{ github.head_ref }}` might be a good starting point.
 
+            Notes:
+            - your PR branch should be named `v3-backport-${{ github.event.number }}`
+            - add the `skip-v3-pr` label to the current PR to stop this workflow from failing
+
       - name: "Comment on PR with backport PR details"
         if: steps.open_pr.outputs.has_wrangler_patch == 'true' && success()
         uses: marocchino/sticky-pull-request-comment@daa4a82a0a3f6c162c02b83fa44b3ab83946f7cb

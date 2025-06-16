@@ -1,20 +1,9 @@
-# syntax=docker/dockerfile:1
+FROM node:22-alpine
 
-FROM golang:1.24 AS build
-# Set destination for COPY
-WORKDIR /app
+WORKDIR /usr/src/app
+RUN echo '{"name": "simple-node-app", "version": "1.0.0", "dependencies": {"ws": "^8.0.0"}}' > package.json
+RUN npm install
 
-# Download Go modules
-COPY container/go.mod container/go.sum ./
-RUN go mod download
-
-# Copy container src
-COPY container/*.go ./
-# Build
-RUN CGO_ENABLED=0 GOOS=linux go build -o /server
-
-FROM debian:latest
-COPY --from=build /server /server
+COPY ./container/simple-node-app.js app.js
 EXPOSE 8080
-# Run
-CMD ["/server"]
+CMD [ "node", "app.js" ]

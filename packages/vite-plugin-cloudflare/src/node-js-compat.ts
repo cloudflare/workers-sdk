@@ -68,27 +68,74 @@ export function isNodeAlsModule(path: string) {
 }
 
 /**
+ * Map of module identifiers to
+ * - `injectedName`: the name injected on `globalThis`
+ * - `exportName`: the export name from the module
+ * - `importName`: the imported name
+ */
+const injectsByModule = new Map<
+	string,
+	{ injectedName: string; exportName: string; importName: string }[]
+>();
+/**
+ * Map of virtual module (prefixed by `virtualModulePrefix`) to injectable module id,
+ * which then maps via `injectsByModule` to the global code to be injected.
+ */
+const virtualModulePathToSpecifier = new Map<string, string>();
+const virtualModulePrefix = `\0_nodejs_global_inject-`;
+
+for (const [injectedName, moduleSpecifier] of Object.entries(env.inject)) {
+	const [module, exportName, importName] = Array.isArray(moduleSpecifier)
+		? [moduleSpecifier[0], moduleSpecifier[1], moduleSpecifier[1]]
+		: [moduleSpecifier, "default", "defaultExport"];
+
+	if (!injectsByModule.has(module)) {
+		injectsByModule.set(module, []);
+		virtualModulePathToSpecifier.set(
+			virtualModulePrefix + module.replaceAll("/", "-"),
+			module
+		);
+	}
+	const injects = injectsByModule.get(module);
+	assert(injects, `expected injects for ${module} to be defined`);
+	injects.push({ injectedName, exportName, importName });
+}
+
+/**
+ * Does the given module id resolve to a virtual module corresponding to a global injection module?
+ */
+export function isGlobalVirtualModule(modulePath: string) {
+	return virtualModulePathToSpecifier.has(modulePath);
+}
+
+/**
+ * Get the contents of the virtual module corresponding to a global injection module.
+ */
+export function getGlobalVirtualModule(modulePath: string) {
+	const module = virtualModulePathToSpecifier.get(modulePath);
+	if (!module) {
+		return undefined;
+	}
+	const injects = injectsByModule.get(module);
+	assert(injects, `expected injects for ${module} to be defined`);
+
+	const imports = injects.map(({ exportName, importName }) =>
+		importName === exportName ? exportName : `${exportName} as ${importName}`
+	);
+
+	return (
+		`import { ${imports.join(", ")} } from "${module}";\n` +
+		`${injects.map(({ injectedName, importName }) => `globalThis.${injectedName} = ${importName};`).join("\n")}`
+	);
+}
+
+/**
  * Gets the necessary global polyfills to inject into the entry-point of the user's code.
  */
 export function injectGlobalCode(id: string, code: string) {
-	const injectedCode = Object.entries(env.inject)
-		.map(([globalName, globalInject]) => {
-			if (typeof globalInject === "string") {
-				const moduleSpecifier = globalInject;
-				// the mapping is a simple string, indicating a default export, so the string is just the module specifier.
-				return `import var_${globalName} from "${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName};\n`;
-			}
-
-			// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and an export name.
-			const [moduleSpecifier, exportName] = globalInject;
-			assert(
-				moduleSpecifier !== undefined,
-				"Expected moduleSpecifier to be defined"
-			);
-			assert(exportName !== undefined, "Expected exportName to be defined");
-			return `import var_${globalName} from "${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName}.${exportName};\n`;
-		})
-		.join("\n");
+	const injectedCode = Array.from(virtualModulePathToSpecifier.keys())
+		.map((moduleId) => `import "${moduleId}";\n`)
+		.join("");
 
 	// Some globals are not injected using the approach above but are added to globalThis via side-effect imports of polyfills from the unenv-preset.
 	const polyfillCode = env.polyfill

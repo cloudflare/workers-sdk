@@ -16,14 +16,19 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"check:lint": "eslint src --ext ts",
-		"check:type": "tsc"
+		"check:type": "tsc -p ./tsconfig.json && pnpm run type:tests",
+		"test": "vitest",
+		"test:ci": "pnpm run test run",
+		"test:watch": "pnpm run test --testTimeout=50000 --watch",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/node": "catalog:default",
 		"typescript": "catalog:default",
-		"undici": "catalog:default"
+		"undici": "catalog:default",
+		"vitest": "catalog:default"
 	},
 	"engines": {
 		"node": ">20.0.0"

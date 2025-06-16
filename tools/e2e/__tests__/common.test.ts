@@ -46,7 +46,7 @@ describe("listTmpE2EProjects()", () => {
 			.intercept({
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
 				query: {
-					per_page: 10,
+					per_page: 100,
 					page: 1,
 				},
 			})
@@ -65,6 +65,13 @@ describe("listTmpE2EProjects()", () => {
 						{ name: "pages-project-5", created_on: nowStr },
 						{ name: "pages-project-6", created_on: oldTimeStr },
 					],
+					result_info: {
+						page: 1,
+						per_page: 10,
+						count: 10,
+						total_count: 12,
+						total_pages: 2,
+					},
 				})
 			);
 
@@ -73,7 +80,7 @@ describe("listTmpE2EProjects()", () => {
 			.intercept({
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
 				query: {
-					per_page: 10,
+					per_page: 100,
 					page: 2,
 				},
 			})
@@ -84,6 +91,13 @@ describe("listTmpE2EProjects()", () => {
 						{ name: "tmp-e2e-project-5", created_on: nowStr },
 						{ name: "tmp-e2e-project-6", created_on: oldTimeStr },
 					],
+					result_info: {
+						page: 2,
+						per_page: 10,
+						count: 2,
+						total_count: 12,
+						total_pages: 2,
+					},
 				})
 			);
 
@@ -124,8 +138,6 @@ describe("listTmpKVNamespaces()", () => {
 				query: {
 					per_page: 100,
 					page: 1,
-					direction: "asc",
-					order: "title",
 				},
 			})
 			.reply(
@@ -144,6 +156,13 @@ describe("listTmpKVNamespaces()", () => {
 						{ id: "kv-10", title: "kv-10" },
 						...Array(90).fill({ id: "kv-10", title: "kv-10" }),
 					],
+					result_info: {
+						page: 1,
+						per_page: 10,
+						count: 10,
+						total_count: 11,
+						total_pages: 2,
+					},
 				})
 			);
 		agent
@@ -154,14 +173,19 @@ describe("listTmpKVNamespaces()", () => {
 				query: {
 					per_page: 100,
 					page: 2,
-					direction: "asc",
-					order: "title",
 				},
 			})
 			.reply(
 				200,
 				JSON.stringify({
 					result: [{ id: "kv-tmp-e2e-11", title: "kv-11" }],
+					result_info: {
+						page: 2,
+						per_page: 10,
+						count: 2,
+						total_count: 12,
+						total_pages: 2,
+					},
 				})
 			);
 
@@ -219,6 +243,13 @@ describe("listTmpDatabases()", () => {
 							created_at: oldTimeStr,
 						}),
 					],
+					result_info: {
+						page: 1,
+						per_page: 10,
+						count: 50,
+						total_count: 12,
+						total_pages: 2,
+					},
 				})
 			);
 		agent
@@ -238,6 +269,13 @@ describe("listTmpDatabases()", () => {
 						{ uuid: "11", name: "db-11", created_at: nowStr },
 						{ uuid: "12", name: "db-12", created_at: oldTimeStr },
 					],
+					result_info: {
+						page: 2,
+						per_page: 10,
+						count: 2,
+						total_count: 12,
+						total_pages: 2,
+					},
 				})
 			);
 
@@ -274,6 +312,7 @@ describe("listTmpE2EWorkers()", () => {
 			.get("https://api.cloudflare.com")
 			.intercept({
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/workers/scripts`,
+				query: { per_page: 100, page: 1 },
 				method: "GET",
 			})
 			.reply(

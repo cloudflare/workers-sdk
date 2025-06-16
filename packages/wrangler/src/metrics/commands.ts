@@ -74,7 +74,7 @@ export const telemetryStatusCommand = createCommand({
 		logger.log(
 			"To configure telemetry globally on this machine, you can run `wrangler telemetry disable / enable`.\n" +
 				"You can override this for individual projects with the environment variable `WRANGLER_SEND_METRICS=true/false`.\n" +
-				"Learn more at https://github.com/cloudflare/workers-sdk/tree/main/telemetry.md\n"
+				"Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md\n"
 		);
 	},
 });

@@ -87,7 +87,7 @@ export type ReadyEvent = {
 	type: "ready";
 	proxyWorker: Miniflare;
 	url: URL;
-	inspectorUrl: URL;
+	inspectorUrl: URL | undefined;
 };
 
 // ProxyWorker
@@ -148,7 +148,7 @@ export type UrlOriginAndPathnameParts = Pick<
 
 export type ProxyData = {
 	userWorkerUrl: UrlOriginParts;
-	userWorkerInspectorUrl: UrlOriginAndPathnameParts;
+	userWorkerInspectorUrl?: UrlOriginAndPathnameParts;
 	userWorkerInnerUrlOverrides?: Partial<UrlOriginParts>;
 	headers: Record<string, string>;
 	liveReload?: boolean;

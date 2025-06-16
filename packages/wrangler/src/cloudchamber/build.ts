@@ -1,11 +1,12 @@
-import { existsSync, statSync } from "fs";
+import { existsSync } from "fs";
 import { join } from "path";
 import {
 	constructBuildCommand,
 	dockerBuild,
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
-	DOMAIN,
+	getCloudflareRegistryWithAccountNamespace,
+	isDir,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
 import {
@@ -72,19 +73,21 @@ export function pushYargs(yargs: CommonYargsArgvJSON) {
 		.positional("TAG", { type: "string", demandOption: true });
 }
 
-export function isDir(path: string) {
-	const stats = statSync(path);
-	return stats.isDirectory();
-}
-
 export async function buildAndMaybePush(
 	args: BuildArgs,
 	pathToDocker: string,
 	push: boolean,
 	containerConfig?: ContainerApp
 ): Promise<string> {
-	const imageTag = DOMAIN + "/" + args.tag;
 	try {
+		// account is also used to check limits below, so it is better to just pull the entire
+		// account information here
+		const account = await loadAccount();
+		const cloudflareAccountID = account.external_account_id;
+		const imageTag = getCloudflareRegistryWithAccountNamespace(
+			cloudflareAccountID,
+			args.tag
+		);
 		const { buildCmd, dockerfile } = await constructBuildCommand(
 			{
 				tag: imageTag,
@@ -102,13 +105,10 @@ export async function buildAndMaybePush(
 		});
 		// ensure the account is not allowed to build anything that exceeds the current
 		// account's disk size limits
-		const account = await loadAccount();
-
 		const inspectOutput = await dockerImageInspect(pathToDocker, {
 			imageTag,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 		});
-		console.dir("hi" + JSON.stringify(inspectOutput));
 
 		const [sizeStr, layerStr] = inspectOutput.split(" ");
 		const size = parseInt(sizeStr, 10);
@@ -172,8 +172,11 @@ export async function pushCommand(
 ) {
 	try {
 		await dockerLoginManagedRegistry(args.pathToDocker);
-
-		const newTag = DOMAIN + "/" + args.TAG;
+		const account = await loadAccount();
+		const newTag = getCloudflareRegistryWithAccountNamespace(
+			account.external_account_id,
+			args.TAG
+		);
 		const dockerPath = args.pathToDocker ?? getDockerPath();
 		await runDockerCmd(dockerPath, ["tag", args.TAG, newTag]);
 		await runDockerCmd(dockerPath, ["push", newTag]);

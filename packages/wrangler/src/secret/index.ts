@@ -142,6 +142,9 @@ export const secretPutCommand = createCommand({
 		owner: "Workers: Deploy and Config",
 	},
 	positionalArgs: ["key"],
+	behaviour: {
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+	},
 	args: {
 		key: {
 			describe: "The variable name to be accessible in the Worker",
@@ -255,6 +258,9 @@ export const secretDeleteCommand = createCommand({
 		owner: "Workers: Deploy and Config",
 	},
 	positionalArgs: ["key"],
+	behaviour: {
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+	},
 	args: {
 		key: {
 			describe: "The variable name to be accessible in the Worker",
@@ -391,6 +397,9 @@ export const secretBulkCommand = createCommand({
 		owner: "Workers: Deploy and Config",
 	},
 	positionalArgs: ["file"],
+	behaviour: {
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+	},
 	args: {
 		file: {
 			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,

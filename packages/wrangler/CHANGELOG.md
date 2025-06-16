@@ -1,5 +1,40 @@
 # wrangler
 
+## 4.20.0
+
+### Minor Changes
+
+- [#9509](https://github.com/cloudflare/workers-sdk/pull/9509) [`0b2ba45`](https://github.com/cloudflare/workers-sdk/commit/0b2ba4590ca59f1d95d7262e64adeefebe6a3e7e) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add static routing options via 'run_worker_first' to Wrangler
+
+  Implements the proposal noted here https://github.com/cloudflare/workers-sdk/discussions/9143.
+
+  This is now usable in `wrangler dev` and in production - just specify the routes that should hit the worker first with `run_worker_first` in your Wrangler config. You can also omit certain paths with `!` negative rules.
+
+### Patch Changes
+
+- [#9507](https://github.com/cloudflare/workers-sdk/pull/9507) [`1914b87`](https://github.com/cloudflare/workers-sdk/commit/1914b87e254bb733298cb0c0e96bb0bd234acde4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - slightly improve wrangler dev bindings loggings
+
+  improve the bindings loggings by:
+
+  - removing the unnecessary (and potentially incorrect) `[connected]` suffix for remote bindings
+  - making sure that the modes presented in the bindings logs are correctly aligned
+
+- [#9475](https://github.com/cloudflare/workers-sdk/pull/9475) [`931f467`](https://github.com/cloudflare/workers-sdk/commit/931f467e39f70abfd0e1c08172f330e6e3de02a3) Thanks [@edmundhung](https://github.com/edmundhung)! - add hello world binding that serves as as an explanatory example.
+
+- [#9443](https://github.com/cloudflare/workers-sdk/pull/9443) [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add workerName option to startMixedModeSession API
+
+- [#9541](https://github.com/cloudflare/workers-sdk/pull/9541) [`80b8bd9`](https://github.com/cloudflare/workers-sdk/commit/80b8bd93e6dd931a7b216645a6f249642c420dee) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - make workers created with `startWorker` await the `ready` promise on `dispose`
+
+- [#9443](https://github.com/cloudflare/workers-sdk/pull/9443) [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add mixed-mode support for mtls bindings
+
+- [#9515](https://github.com/cloudflare/workers-sdk/pull/9515) [`9e4cd16`](https://github.com/cloudflare/workers-sdk/commit/9e4cd16ce1639cc6763f5c50b9478eece7f4be73) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - make sure that remote binding errors are surfaced when using mixed (hybrid) mode
+
+- [#9516](https://github.com/cloudflare/workers-sdk/pull/9516) [`92305af`](https://github.com/cloudflare/workers-sdk/commit/92305af0a7efa68fc0e13e3549f88d19f3cb069b) Thanks [@IRCody](https://github.com/IRCody)! - Reorder deploy output when deploying a container worker so the worker url is printed last and the worker triggers aren't deployed until the container has been built and deployed successfully.
+
+- Updated dependencies [[`931f467`](https://github.com/cloudflare/workers-sdk/commit/931f467e39f70abfd0e1c08172f330e6e3de02a3), [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1), [`0b2ba45`](https://github.com/cloudflare/workers-sdk/commit/0b2ba4590ca59f1d95d7262e64adeefebe6a3e7e)]:
+  - miniflare@4.20250604.1
+  - @cloudflare/unenv-preset@2.3.3
+
 ## 4.19.2
 
 ### Patch Changes

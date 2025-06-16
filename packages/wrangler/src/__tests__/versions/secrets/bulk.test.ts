@@ -279,4 +279,66 @@ describe("versions secret bulk", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
+
+	describe("multi-env warning", () => {
+		it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+			vi.spyOn(readline, "createInterface").mockImplementation(
+				() =>
+					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
+					JSON.stringify({
+						SECRET_1: "secret-1",
+					}) as unknown as Interface
+			);
+
+			writeWranglerConfig({ env: { test: {} } });
+			mockSetupApiCalls();
+			mockPostVersion();
+
+			await runWrangler(`versions secret bulk --name script-name`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the versions secret bulk command.[0m
+
+				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+				  the target environment using the \`-e|--env\` flag.
+				  If your intention is to use the top-level environment of your configuration simply pass an empty
+				  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+
+				"
+			`);
+		});
+
+		it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+			vi.spyOn(readline, "createInterface").mockImplementation(
+				() =>
+					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
+					JSON.stringify({
+						SECRET_1: "secret-1",
+					}) as unknown as Interface
+			);
+
+			writeWranglerConfig({ env: { test: {} } });
+			mockSetupApiCalls();
+			mockPostVersion();
+
+			await runWrangler(`versions secret bulk --name script-name --env test`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+			vi.spyOn(readline, "createInterface").mockImplementation(
+				() =>
+					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
+					JSON.stringify({
+						SECRET_1: "secret-1",
+					}) as unknown as Interface
+			);
+
+			writeWranglerConfig();
+			mockSetupApiCalls();
+			mockPostVersion();
+
+			await runWrangler(`versions secret bulk --name script-name`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+	});
 });

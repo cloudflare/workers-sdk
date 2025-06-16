@@ -13,6 +13,7 @@ import {
 	matchAdditionalModule,
 } from "./additional-modules";
 import { hasAssetsConfigChanged } from "./asset-config";
+import { createBuildApp } from "./build";
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
@@ -34,7 +35,9 @@ import {
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
 import {
+	getGlobalVirtualModule,
 	injectGlobalCode,
+	isGlobalVirtualModule,
 	isNodeAls,
 	isNodeAlsModule,
 	isNodeCompat,
@@ -84,9 +87,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	const additionalModulePaths = new Set<string>();
 
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
-
-	// This is set when the client environment is built to determine if the entry Worker should include assets
-	let hasClientBuild = false;
 
 	return [
 		{
@@ -140,7 +140,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 													createCloudflareEnvironmentOptions(
 														workerConfig,
 														userConfig,
-														environmentName
+														{
+															name: environmentName,
+															isEntry:
+																resolvedPluginConfig.type === "workers" &&
+																environmentName ===
+																	resolvedPluginConfig.entryWorkerEnvironmentName,
+														}
 													),
 												];
 											}
@@ -156,42 +162,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					builder: {
 						buildApp:
 							userConfig.builder?.buildApp ??
-							(async (builder) => {
-								const clientEnvironment = builder.environments.client;
-								const defaultHtmlPath = path.resolve(
-									builder.config.root,
-									"index.html"
-								);
-
-								if (
-									clientEnvironment &&
-									(clientEnvironment.config.build.rollupOptions.input ||
-										fs.existsSync(defaultHtmlPath))
-								) {
-									await builder.build(clientEnvironment);
-								}
-
-								if (resolvedPluginConfig.type === "workers") {
-									const workerEnvironments = Object.keys(
-										resolvedPluginConfig.workers
-									).map((environmentName) => {
-										const environment = builder.environments[environmentName];
-
-										assert(
-											environment,
-											`${environmentName} environment not found`
-										);
-
-										return environment;
-									});
-
-									await Promise.all(
-										workerEnvironments.map((environment) =>
-											builder.build(environment)
-										)
-									);
-								}
-							}),
+							createBuildApp(resolvedPluginConfig),
 					},
 				};
 			},
@@ -237,7 +208,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						this.environment.name ===
 						resolvedPluginConfig.entryWorkerEnvironmentName;
 
-					if (isEntryWorker && hasClientBuild) {
+					if (isEntryWorker) {
 						const workerOutputDirectory = this.environment.config.build.outDir;
 						const clientOutputDirectory =
 							resolvedViteConfig.environments.client?.build.outDir;
@@ -310,11 +281,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 			writeBundle() {
-				// This relies on the assumption that the client environment is built first
-				// Composable `buildApp` hooks could provide a more robust alternative in future
-				if (this.environment.name === "client") {
-					hasClientBuild = true;
-				}
 				// These conditions ensure the deploy config is emitted once per application build as `writeBundle` is called for each environment.
 				// If Vite introduces an additional hook that runs after the application has built then we could use that instead.
 				if (
@@ -456,6 +422,20 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						next(error);
 					}
 				});
+			},
+		},
+		// Plugin to provide a fallback entry file
+		{
+			name: "vite-plugin-cloudflare:fallback-entry",
+			resolveId(source) {
+				if (source === "virtual:__cloudflare_fallback_entry__") {
+					return `\0virtual:__cloudflare_fallback_entry__`;
+				}
+			},
+			load(id) {
+				if (id === "\0virtual:__cloudflare_fallback_entry__") {
+					return ``;
+				}
 			},
 		},
 		// Plugin to support `.wasm?init` extension
@@ -622,6 +602,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			// rather than allowing the resolve hook here to alias then to polyfills.
 			enforce: "pre",
 			async resolveId(source, importer, options) {
+				if (isGlobalVirtualModule(source)) {
+					return source;
+				}
 				// See if we can map the `source` to a Node.js compat alias.
 				const result = resolveNodeJSImport(source);
 				if (!result) {
@@ -647,6 +630,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				// We are in build mode so return the absolute path to the polyfill.
 				return this.resolve(result.resolved, importer, options);
+			},
+			load(id) {
+				return getGlobalVirtualModule(id);
 			},
 			async transform(code, id) {
 				// Inject the Node.js compat globals into the entry module for Node.js compat environments.

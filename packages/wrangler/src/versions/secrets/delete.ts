@@ -18,6 +18,7 @@ export const versionsSecretDeleteCommand = createCommand({
 	},
 	behaviour: {
 		printConfigWarnings: false,
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	args: {
 		key: {

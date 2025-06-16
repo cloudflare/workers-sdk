@@ -4,7 +4,8 @@ import * as $ from "capnp-es";
 export const _capnpFileId = BigInt("0xe6afd26682091c01");
 /**
  * Top-level configuration for a workerd instance.
- * */
+ *
+ */
 export class Config extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Config",
@@ -38,7 +39,8 @@ export class Config extends $.Struct {
 	 *
 	 * The "internet" service backs the global `fetch()` function in a Worker, unless that Worker's
 	 * configuration specifies some other service using the `globalOutbound` setting.
-	 * */
+	 *
+	 */
 	get services(): $.List<Service> {
 		return $.utils.getList(0, Config._Services, this);
 	}
@@ -60,7 +62,8 @@ export class Config extends $.Struct {
 	/**
 	 * List of sockets on which this server will listen, and the services that will be exposed
 	 * through them.
-	 * */
+	 *
+	 */
 	get sockets(): $.List<Socket> {
 		return $.utils.getList(1, Config._Sockets, this);
 	}
@@ -87,7 +90,8 @@ export class Config extends $.Struct {
 	 * WARNING: Use at your own risk. V8 flags can have all sorts of wild effects including completely
 	 *   breaking everything. V8 flags also generally do not come with any guarantee of stability
 	 *   between V8 versions. Most users should not set any V8 flags.
-	 * */
+	 *
+	 */
 	get v8Flags(): $.List<string> {
 		return $.utils.getList(2, $.TextList, this);
 	}
@@ -109,7 +113,8 @@ export class Config extends $.Struct {
 	/**
 	 * Extensions provide capabilities to all workers. Extensions are usually prepared separately
 	 * and are late-linked with the app using this config field.
-	 * */
+	 *
+	 */
 	get extensions(): $.List<Extension> {
 		return $.utils.getList(3, Config._Extensions, this);
 	}
@@ -132,7 +137,8 @@ export class Config extends $.Struct {
 	 * A list of gates which are enabled.
 	 * These are used to gate features/changes in workerd and in our internal repo. See the equivalent
 	 * config definition in our internal repo for more details.
-	 * */
+	 *
+	 */
 	get autogates(): $.List<string> {
 		return $.utils.getList(4, $.TextList, this);
 	}
@@ -196,7 +202,31 @@ export class Socket_Https extends $.Struct {
 	}
 }
 export const Socket_Which = {
+	/**
+	 * Each socket has a unique name which can be used on the command line to override the socket's
+	 * address with `--socket-addr <name>=<addr>` or `--socket-fd <name>=<fd>`.
+	 *
+	 */
 	HTTP: 0,
+	/**
+	 * Address/port on which this socket will listen. Optional; if not specified, then you will be
+	 * required to specify the socket on the command line with with `--socket-addr <name>=<addr>` or
+	 * `--socket-fd <name>=<fd>`.
+	 *
+	 * Examples:
+	 * - "*:80": Listen on port 80 on all local IPv4 and IPv6 interfaces.
+	 * - "1.2.3.4": Listen on the specific IPv4 address on the default port for the protocol.
+	 * - "1.2.3.4:80": Listen on the specific IPv4 address and port.
+	 * - "1234:5678::abcd": Listen on the specific IPv6 address on the default port for the protocol.
+	 * - "[1234:5678::abcd]:80": Listen on the specific IPv6 address and port.
+	 * - "unix:/path/to/socket": Listen on a Unix socket.
+	 * - "unix-abstract:name": On Linux, listen on the given "abstract" Unix socket name.
+	 * - "example.com:80": Perform a DNS lookup to determine the address, and then listen on it. If
+	 *     this resolves to multiple addresses, listen on all of them.
+	 *
+	 * (These are the formats supported by KJ's parseAddress().)
+	 *
+	 */
 	HTTPS: 1,
 } as const;
 export type Socket_Which = (typeof Socket_Which)[keyof typeof Socket_Which];
@@ -211,7 +241,8 @@ export class Socket extends $.Struct {
 	/**
 	 * Each socket has a unique name which can be used on the command line to override the socket's
 	 * address with `--socket-addr <name>=<addr>` or `--socket-fd <name>=<fd>`.
-	 * */
+	 *
+	 */
 	get name(): string {
 		return $.utils.getText(0, this);
 	}
@@ -235,7 +266,8 @@ export class Socket extends $.Struct {
 	 *     this resolves to multiple addresses, listen on all of them.
 	 *
 	 * (These are the formats supported by KJ's parseAddress().)
-	 * */
+	 *
+	 */
 	get address(): string {
 		return $.utils.getText(1, this);
 	}
@@ -289,7 +321,8 @@ export class Socket extends $.Struct {
 	}
 	/**
 	 * Service name which should handle requests on this socket.
-	 * */
+	 *
+	 */
 	get service(): ServiceDesignator {
 		return $.utils.getStruct(4, ServiceDesignator, this);
 	}
@@ -310,17 +343,42 @@ export class Socket extends $.Struct {
 	}
 }
 export const Service_Which = {
+	/**
+	 * Name of the service. Used only to refer to the service from elsewhere in the config file.
+	 * Services are not accessible unless you explicitly configure them to be, such as through a
+	 * `Socket` or through a binding from another Worker.
+	 *
+	 */
 	UNSPECIFIED: 0,
+	/**
+	 * (This catches when someone forgets to specify one of the union members. Do not set this.)
+	 *
+	 */
 	WORKER: 1,
+	/**
+	 * A Worker!
+	 *
+	 */
 	NETWORK: 2,
+	/**
+	 * A service that implements access to a network. fetch() requests are routed according to
+	 * the URL hostname.
+	 *
+	 */
 	EXTERNAL: 3,
+	/**
+	 * A service that forwards all requests to a specific remote server. Typically used to
+	 * connect to a back-end server on your internal network.
+	 *
+	 */
 	DISK: 4,
 } as const;
 export type Service_Which = (typeof Service_Which)[keyof typeof Service_Which];
 /**
  * Defines a named service. Each server has a list of named services. The names are private,
  * used to refer to the services within this same config file.
- * */
+ *
+ */
 export class Service extends $.Struct {
 	static readonly UNSPECIFIED = Service_Which.UNSPECIFIED;
 	static readonly WORKER = Service_Which.WORKER;
@@ -336,7 +394,8 @@ export class Service extends $.Struct {
 	 * Name of the service. Used only to refer to the service from elsewhere in the config file.
 	 * Services are not accessible unless you explicitly configure them to be, such as through a
 	 * `Socket` or through a binding from another Worker.
-	 * */
+	 *
+	 */
 	get name(): string {
 		return $.utils.getText(0, this);
 	}
@@ -358,7 +417,8 @@ export class Service extends $.Struct {
 	}
 	/**
 	 * A Worker!
-	 * */
+	 *
+	 */
 	get worker(): Worker {
 		$.utils.testWhich("worker", $.utils.getUint16(0, this), 1, this);
 		return $.utils.getStruct(1, Worker, this);
@@ -387,7 +447,8 @@ export class Service extends $.Struct {
 	/**
 	 * A service that implements access to a network. fetch() requests are routed according to
 	 * the URL hostname.
-	 * */
+	 *
+	 */
 	get network(): Network {
 		$.utils.testWhich("network", $.utils.getUint16(0, this), 2, this);
 		return $.utils.getStruct(1, Network, this);
@@ -416,7 +477,8 @@ export class Service extends $.Struct {
 	/**
 	 * A service that forwards all requests to a specific remote server. Typically used to
 	 * connect to a back-end server on your internal network.
-	 * */
+	 *
+	 */
 	get external(): ExternalServer {
 		$.utils.testWhich("external", $.utils.getUint16(0, this), 3, this);
 		return $.utils.getStruct(1, ExternalServer, this);
@@ -446,7 +508,8 @@ export class Service extends $.Struct {
 	 * An HTTP service backed by a directory on disk, supporting a basic HTTP GET/PUT. Generally
 	 * not intended to be exposed directly to the internet; typically you want to bind this into
 	 * a Worker that adds logic for setting Content-Type and the like.
-	 * */
+	 *
+	 */
 	get disk(): DiskDirectory {
 		$.utils.testWhich("disk", $.utils.getUint16(0, this), 4, this);
 		return $.utils.getStruct(1, DiskDirectory, this);
@@ -473,14 +536,23 @@ export class Service extends $.Struct {
 	}
 }
 export const ServiceDesignator_Props_Which = {
+	/**
+	 * Empty object. (This is the default.)
+	 *
+	 */
 	EMPTY: 0,
+	/**
+	 * A JSON-encoded value.
+	 *
+	 */
 	JSON: 1,
 } as const;
 export type ServiceDesignator_Props_Which =
 	(typeof ServiceDesignator_Props_Which)[keyof typeof ServiceDesignator_Props_Which];
 /**
  * Value to provide in `ctx.props` in the target worker.
- * */
+ *
+ */
 export class ServiceDesignator_Props extends $.Struct {
 	static readonly EMPTY = ServiceDesignator_Props_Which.EMPTY;
 	static readonly JSON = ServiceDesignator_Props_Which.JSON;
@@ -497,7 +569,8 @@ export class ServiceDesignator_Props extends $.Struct {
 	}
 	/**
 	 * A JSON-encoded value.
-	 * */
+	 *
+	 */
 	get json(): string {
 		$.utils.testWhich("json", $.utils.getUint16(0, this), 1, this);
 		return $.utils.getText(2, this);
@@ -530,7 +603,8 @@ export class ServiceDesignator_Props extends $.Struct {
  * You can write this instead, which is equivalent:
  *
  *     bindings = [(service = "foo")]
- * */
+ *
+ */
 export class ServiceDesignator extends $.Struct {
 	static readonly _capnp = {
 		displayName: "ServiceDesignator",
@@ -539,7 +613,8 @@ export class ServiceDesignator extends $.Struct {
 	};
 	/**
 	 * Name of the service in the Config.services list.
-	 * */
+	 *
+	 */
 	get name(): string {
 		return $.utils.getText(0, this);
 	}
@@ -551,7 +626,8 @@ export class ServiceDesignator extends $.Struct {
 	 * the default entrypoint, whereas `export let foo = {` defines an entrypoint named `foo`. If
 	 * `entrypoint` is specified here, it names an alternate entrypoint to use on the target worker,
 	 * otherwise the default is used.
-	 * */
+	 *
+	 */
 	get entrypoint(): string {
 		return $.utils.getText(1, this);
 	}
@@ -560,7 +636,8 @@ export class ServiceDesignator extends $.Struct {
 	}
 	/**
 	 * Value to provide in `ctx.props` in the target worker.
-	 * */
+	 *
+	 */
 	get props(): ServiceDesignator_Props {
 		return $.utils.getAs(ServiceDesignator_Props, this);
 	}
@@ -572,14 +649,55 @@ export class ServiceDesignator extends $.Struct {
 	}
 }
 export const Worker_Module_Which = {
+	/**
+	 * Name (or path) used to import the module.
+	 *
+	 */
 	ES_MODULE: 0,
+	/**
+	 * An ES module file with imports and exports.
+	 *
+	 * As with `serviceWorkerScript`, above, the value is the raw source code.
+	 *
+	 */
 	COMMON_JS_MODULE: 1,
+	/**
+	 * A common JS module, using require().
+	 *
+	 */
 	TEXT: 2,
+	/**
+	 * A raw text blob. Importing this will produce a string with the value.
+	 *
+	 */
 	DATA: 3,
+	/**
+	 * A raw data blob. Importing this will produce an ArrayBuffer with the value.
+	 *
+	 */
 	WASM: 4,
+	/**
+	 * A Wasm module. The value is a compiled binary Wasm module file. Importing this will produce
+	 * a `WebAssembly.Module` object, which you can then instantiate.
+	 *
+	 */
 	JSON: 5,
-	NODE_JS_COMPAT_MODULE: 6,
+	/**
+	 * Importing this will produce the result of parsing the given text as JSON.
+	 *
+	 */
+	OBSOLETE: 6,
+	/**
+	 * This position used to be the nodeJsCompatModule type that has now been
+	 * obsoleted.
+	 *
+	 */
 	PYTHON_MODULE: 7,
+	/**
+	 * A Python module. All bundles containing this value type are converted into a JS/WASM Worker
+	 * Bundle prior to execution.
+	 *
+	 */
 	PYTHON_REQUIREMENT: 8,
 } as const;
 export type Worker_Module_Which =
@@ -591,8 +709,7 @@ export class Worker_Module extends $.Struct {
 	static readonly DATA = Worker_Module_Which.DATA;
 	static readonly WASM = Worker_Module_Which.WASM;
 	static readonly JSON = Worker_Module_Which.JSON;
-	static readonly NODE_JS_COMPAT_MODULE =
-		Worker_Module_Which.NODE_JS_COMPAT_MODULE;
+	static readonly OBSOLETE = Worker_Module_Which.OBSOLETE;
 	static readonly PYTHON_MODULE = Worker_Module_Which.PYTHON_MODULE;
 	static readonly PYTHON_REQUIREMENT = Worker_Module_Which.PYTHON_REQUIREMENT;
 	static readonly _capnp = {
@@ -602,7 +719,8 @@ export class Worker_Module extends $.Struct {
 	};
 	/**
 	 * Name (or path) used to import the module.
-	 * */
+	 *
+	 */
 	get name(): string {
 		return $.utils.getText(0, this);
 	}
@@ -613,7 +731,8 @@ export class Worker_Module extends $.Struct {
 	 * An ES module file with imports and exports.
 	 *
 	 * As with `serviceWorkerScript`, above, the value is the raw source code.
-	 * */
+	 *
+	 */
 	get esModule(): string {
 		$.utils.testWhich("esModule", $.utils.getUint16(0, this), 0, this);
 		return $.utils.getText(1, this);
@@ -627,7 +746,8 @@ export class Worker_Module extends $.Struct {
 	}
 	/**
 	 * A common JS module, using require().
-	 * */
+	 *
+	 */
 	get commonJsModule(): string {
 		$.utils.testWhich("commonJsModule", $.utils.getUint16(0, this), 1, this);
 		return $.utils.getText(1, this);
@@ -641,7 +761,8 @@ export class Worker_Module extends $.Struct {
 	}
 	/**
 	 * A raw text blob. Importing this will produce a string with the value.
-	 * */
+	 *
+	 */
 	get text(): string {
 		$.utils.testWhich("text", $.utils.getUint16(0, this), 2, this);
 		return $.utils.getText(1, this);
@@ -662,7 +783,8 @@ export class Worker_Module extends $.Struct {
 	}
 	/**
 	 * A raw data blob. Importing this will produce an ArrayBuffer with the value.
-	 * */
+	 *
+	 */
 	get data(): $.Data {
 		$.utils.testWhich("data", $.utils.getUint16(0, this), 3, this);
 		return $.utils.getData(1, this);
@@ -691,7 +813,8 @@ export class Worker_Module extends $.Struct {
 	/**
 	 * A Wasm module. The value is a compiled binary Wasm module file. Importing this will produce
 	 * a `WebAssembly.Module` object, which you can then instantiate.
-	 * */
+	 *
+	 */
 	get wasm(): $.Data {
 		$.utils.testWhich("wasm", $.utils.getUint16(0, this), 4, this);
 		return $.utils.getData(1, this);
@@ -712,7 +835,8 @@ export class Worker_Module extends $.Struct {
 	}
 	/**
 	 * Importing this will produce the result of parsing the given text as JSON.
-	 * */
+	 *
+	 */
 	get json(): string {
 		$.utils.testWhich("json", $.utils.getUint16(0, this), 5, this);
 		return $.utils.getText(1, this);
@@ -725,31 +849,26 @@ export class Worker_Module extends $.Struct {
 		$.utils.setText(1, value, this);
 	}
 	/**
-	 * A Node.js module is a specialization of a commonJsModule that:
-	 * (a) allows for importing Node.js-compat built-ins without the node: specifier-prefix
-	 * (b) exposes the subset of common Node.js globals such as process, Buffer, etc that
-	 *     we implement in the workerd runtime.
-	 * */
-	get nodeJsCompatModule(): string {
-		$.utils.testWhich(
-			"nodeJsCompatModule",
-			$.utils.getUint16(0, this),
-			6,
-			this
-		);
+	 * This position used to be the nodeJsCompatModule type that has now been
+	 * obsoleted.
+	 *
+	 */
+	get obsolete(): string {
+		$.utils.testWhich("obsolete", $.utils.getUint16(0, this), 6, this);
 		return $.utils.getText(1, this);
 	}
-	get _isNodeJsCompatModule(): boolean {
+	get _isObsolete(): boolean {
 		return $.utils.getUint16(0, this) === 6;
 	}
-	set nodeJsCompatModule(value: string) {
+	set obsolete(value: string) {
 		$.utils.setUint16(0, 6, this);
 		$.utils.setText(1, value, this);
 	}
 	/**
 	 * A Python module. All bundles containing this value type are converted into a JS/WASM Worker
 	 * Bundle prior to execution.
-	 * */
+	 *
+	 */
 	get pythonModule(): string {
 		$.utils.testWhich("pythonModule", $.utils.getUint16(0, this), 7, this);
 		return $.utils.getText(1, this);
@@ -765,7 +884,11 @@ export class Worker_Module extends $.Struct {
 	 * A Python package that is required by this bundle. The package must be supported by
 	 * Pyodide (https://pyodide.org/en/stable/usage/packages-in-pyodide.html). All packages listed
 	 * will be installed prior to the execution of the worker.
-	 * */
+	 *
+	 * The value of this field is ignored and should always be an empty string. Only the module
+	 * name matters. The field should have been declared `Void`, but it's difficult to change now.
+	 *
+	 */
 	get pythonRequirement(): string {
 		$.utils.testWhich("pythonRequirement", $.utils.getUint16(0, this), 8, this);
 		return $.utils.getText(1, this);
@@ -784,9 +907,13 @@ export class Worker_Module extends $.Struct {
 		return $.utils.disown(this.namedExports);
 	}
 	/**
-	 * For commonJsModule and nodeJsCompatModule, this is a list of named exports that the
+	 * For commonJsModule modules, this is a list of named exports that the
 	 * module expects to be exported once the evaluation is complete.
-	 * */
+	 *
+	 * (`commonJsModule` should have been a group containing the body and `namedExports`, but it's
+	 * too late to change now.)
+	 *
+	 */
 	get namedExports(): $.List<string> {
 		return $.utils.getList(2, $.TextList, this);
 	}
@@ -807,6 +934,10 @@ export class Worker_Module extends $.Struct {
 	}
 }
 export const Worker_Binding_Type_Which = {
+	/**
+	 * (This catches when someone forgets to specify one of the union members. Do not set this.)
+	 *
+	 */
 	UNSPECIFIED: 0,
 	TEXT: 1,
 	DATA: 2,
@@ -826,7 +957,8 @@ export type Worker_Binding_Type_Which =
 	(typeof Worker_Binding_Type_Which)[keyof typeof Worker_Binding_Type_Which];
 /**
  * Specifies the type of a parameter binding.
- * */
+ *
+ */
 export class Worker_Binding_Type extends $.Struct {
 	static readonly UNSPECIFIED = Worker_Binding_Type_Which.UNSPECIFIED;
 	static readonly TEXT = Worker_Binding_Type_Which.TEXT;
@@ -971,7 +1103,8 @@ export class Worker_Binding_Type extends $.Struct {
 }
 /**
  * The type of a Durable Object namespace binding.
- * */
+ *
+ */
 export class Worker_Binding_DurableObjectNamespaceDesignator extends $.Struct {
 	static readonly _capnp = {
 		displayName: "DurableObjectNamespaceDesignator",
@@ -980,7 +1113,8 @@ export class Worker_Binding_DurableObjectNamespaceDesignator extends $.Struct {
 	};
 	/**
 	 * Exported class name that implements the Durable Object.
-	 * */
+	 *
+	 */
 	get className(): string {
 		return $.utils.getText(0, this);
 	}
@@ -997,7 +1131,8 @@ export class Worker_Binding_DurableObjectNamespaceDesignator extends $.Struct {
 	 *
 	 * (This is intentionally not a ServiceDesignator because you cannot choose an alternate
 	 * entrypoint here; the class name IS the entrypoint.)
-	 * */
+	 *
+	 */
 	get serviceName(): string {
 		return $.utils.getText(1, this);
 	}
@@ -1023,14 +1158,23 @@ export const Worker_Binding_CryptoKey_Usage = {
 export type Worker_Binding_CryptoKey_Usage =
 	(typeof Worker_Binding_CryptoKey_Usage)[keyof typeof Worker_Binding_CryptoKey_Usage];
 export const Worker_Binding_CryptoKey_Algorithm_Which = {
+	/**
+	 * Just a name, like `AES-GCM`.
+	 *
+	 */
 	NAME: 0,
+	/**
+	 * An object, encoded here as JSON.
+	 *
+	 */
 	JSON: 1,
 } as const;
 export type Worker_Binding_CryptoKey_Algorithm_Which =
 	(typeof Worker_Binding_CryptoKey_Algorithm_Which)[keyof typeof Worker_Binding_CryptoKey_Algorithm_Which];
 /**
  * Value for the `algorithm` parameter.
- * */
+ *
+ */
 export class Worker_Binding_CryptoKey_Algorithm extends $.Struct {
 	static readonly NAME = Worker_Binding_CryptoKey_Algorithm_Which.NAME;
 	static readonly JSON = Worker_Binding_CryptoKey_Algorithm_Which.JSON;
@@ -1041,7 +1185,8 @@ export class Worker_Binding_CryptoKey_Algorithm extends $.Struct {
 	};
 	/**
 	 * Just a name, like `AES-GCM`.
-	 * */
+	 *
+	 */
 	get name(): string {
 		$.utils.testWhich("name", $.utils.getUint16(2, this), 0, this);
 		return $.utils.getText(1, this);
@@ -1055,7 +1200,8 @@ export class Worker_Binding_CryptoKey_Algorithm extends $.Struct {
 	}
 	/**
 	 * An object, encoded here as JSON.
-	 * */
+	 *
+	 */
 	get json(): string {
 		$.utils.testWhich("json", $.utils.getUint16(2, this), 1, this);
 		return $.utils.getText(1, this);
@@ -1080,16 +1226,37 @@ export class Worker_Binding_CryptoKey_Algorithm extends $.Struct {
 export const Worker_Binding_CryptoKey_Which = {
 	RAW: 0,
 	HEX: 1,
+	/**
+	 * Raw key material, possibly hex or base64-encoded. Use this for symmetric keys.
+	 *
+	 * Hint: `raw` would typically be used with Cap'n Proto's `embed` syntax to embed an
+	 * external binary key file. `hex` or `base64` could do that too but can also be specified
+	 * inline.
+	 *
+	 */
 	BASE64: 2,
+	/**
+	 * Private key in PEM-encoded PKCS#8 format.
+	 *
+	 */
 	PKCS8: 3,
+	/**
+	 * Public key in PEM-encoded SPKI format.
+	 *
+	 */
 	SPKI: 4,
+	/**
+	 * Key in JSON format.
+	 *
+	 */
 	JWK: 5,
 } as const;
 export type Worker_Binding_CryptoKey_Which =
 	(typeof Worker_Binding_CryptoKey_Which)[keyof typeof Worker_Binding_CryptoKey_Which];
 /**
  * Parameters to crypto.subtle.importKey().
- * */
+ *
+ */
 export class Worker_Binding_CryptoKey extends $.Struct {
 	static readonly RAW = Worker_Binding_CryptoKey_Which.RAW;
 	static readonly HEX = Worker_Binding_CryptoKey_Which.HEX;
@@ -1146,7 +1313,8 @@ export class Worker_Binding_CryptoKey extends $.Struct {
 	 * Hint: `raw` would typically be used with Cap'n Proto's `embed` syntax to embed an
 	 * external binary key file. `hex` or `base64` could do that too but can also be specified
 	 * inline.
-	 * */
+	 *
+	 */
 	get base64(): string {
 		$.utils.testWhich("base64", $.utils.getUint16(0, this), 2, this);
 		return $.utils.getText(0, this);
@@ -1160,7 +1328,8 @@ export class Worker_Binding_CryptoKey extends $.Struct {
 	}
 	/**
 	 * Private key in PEM-encoded PKCS#8 format.
-	 * */
+	 *
+	 */
 	get pkcs8(): string {
 		$.utils.testWhich("pkcs8", $.utils.getUint16(0, this), 3, this);
 		return $.utils.getText(0, this);
@@ -1174,7 +1343,8 @@ export class Worker_Binding_CryptoKey extends $.Struct {
 	}
 	/**
 	 * Public key in PEM-encoded SPKI format.
-	 * */
+	 *
+	 */
 	get spki(): string {
 		$.utils.testWhich("spki", $.utils.getUint16(0, this), 4, this);
 		return $.utils.getText(0, this);
@@ -1188,7 +1358,8 @@ export class Worker_Binding_CryptoKey extends $.Struct {
 	}
 	/**
 	 * Key in JSON format.
-	 * */
+	 *
+	 */
 	get jwk(): string {
 		$.utils.testWhich("jwk", $.utils.getUint16(0, this), 5, this);
 		return $.utils.getText(0, this);
@@ -1202,7 +1373,8 @@ export class Worker_Binding_CryptoKey extends $.Struct {
 	}
 	/**
 	 * Value for the `algorithm` parameter.
-	 * */
+	 *
+	 */
 	get algorithm(): Worker_Binding_CryptoKey_Algorithm {
 		return $.utils.getAs(Worker_Binding_CryptoKey_Algorithm, this);
 	}
@@ -1213,7 +1385,8 @@ export class Worker_Binding_CryptoKey extends $.Struct {
 	 * Is the Worker allowed to export this key to obtain the underlying key material? Setting
 	 * this false ensures that the key cannot be leaked by errant JavaScript code; the key can
 	 * only be used in WebCrypto operations.
-	 * */
+	 *
+	 */
 	get extractable(): boolean {
 		return $.utils.getBit(
 			32,
@@ -1237,7 +1410,8 @@ export class Worker_Binding_CryptoKey extends $.Struct {
 	}
 	/**
 	 * What operations is this key permitted to be used for?
-	 * */
+	 *
+	 */
 	get usages(): $.List<Worker_Binding_CryptoKey_Usage> {
 		return $.utils.getList(
 			2,
@@ -1296,7 +1470,8 @@ export class Worker_Binding_MemoryCacheLimits extends $.Struct {
 }
 /**
  * A binding that wraps a group of (lower-level) bindings in a common API.
- * */
+ *
+ */
 export class Worker_Binding_WrappedBinding extends $.Struct {
 	static readonly _capnp = {
 		displayName: "WrappedBinding",
@@ -1309,7 +1484,8 @@ export class Worker_Binding_WrappedBinding extends $.Struct {
 	 * Wrapper module name.
 	 * The module must be an internal one (provided by extension or registered in the c++ code).
 	 * Module will be instantitated during binding initialization phase.
-	 * */
+	 *
+	 */
 	get moduleName(): string {
 		return $.utils.getText(0, this);
 	}
@@ -1321,7 +1497,8 @@ export class Worker_Binding_WrappedBinding extends $.Struct {
 	 * The function needs to accept a single `env` argument - a dictionary with inner bindings.
 	 * Function will be invoked during initialization phase and its return value will be used as
 	 * resulting binding value.
-	 * */
+	 *
+	 */
 	get entrypoint(): string {
 		return $.utils.getText(
 			1,
@@ -1342,7 +1519,8 @@ export class Worker_Binding_WrappedBinding extends $.Struct {
 	 * Inner bindings that will be created and passed in the env dictionary.
 	 * These bindings shall be used to implement end-user api, and are not available to the
 	 * binding consumers unless "re-exported" in wrapBindings function.
-	 * */
+	 *
+	 */
 	get innerBindings(): $.List<Worker_Binding> {
 		return $.utils.getList(
 			2,
@@ -1371,7 +1549,8 @@ export class Worker_Binding_WrappedBinding extends $.Struct {
 /**
  * Indicates that the Worker requires a binding of the given type, but it won't be specified
  * here. Another Worker can inherit this Worker and fill in this binding.
- * */
+ *
+ */
 export class Worker_Binding_Parameter extends $.Struct {
 	static readonly _capnp = {
 		displayName: "parameter",
@@ -1386,7 +1565,8 @@ export class Worker_Binding_Parameter extends $.Struct {
 	}
 	/**
 	 * Expected type of this parameter.
-	 * */
+	 *
+	 */
 	get type(): Worker_Binding_Type {
 		return $.utils.getStruct(1, Worker_Binding_Type, this);
 	}
@@ -1405,7 +1585,8 @@ export class Worker_Binding_Parameter extends $.Struct {
 	 *
 	 * When a Worker has any non-optional parameters that haven't been filled in, then it can
 	 * only be used for inheritance; it cannot be invoked directly.
-	 * */
+	 *
+	 */
 	get optional(): boolean {
 		return $.utils.getBit(16, this);
 	}
@@ -1419,7 +1600,8 @@ export class Worker_Binding_Parameter extends $.Struct {
 /**
  * A binding for Hyperdrive. Allows workers to use Hyperdrive caching & pooling for Postgres
  * databases.
- * */
+ *
+ */
 export class Worker_Binding_Hyperdrive extends $.Struct {
 	static readonly _capnp = {
 		displayName: "hyperdrive",
@@ -1474,7 +1656,8 @@ export class Worker_Binding_Hyperdrive extends $.Struct {
 }
 /**
  * A binding representing access to an in-memory cache.
- * */
+ *
+ */
 export class Worker_Binding_MemoryCache extends $.Struct {
 	static readonly _capnp = {
 		displayName: "memoryCache",
@@ -1485,7 +1668,8 @@ export class Worker_Binding_MemoryCache extends $.Struct {
 	 * The identifier associated with this cache. Any number of isolates
 	 * can access the same in-memory cache (within the same process), and
 	 * each worker may use any number of in-memory caches.
-	 * */
+	 *
+	 */
 	get id(): string {
 		return $.utils.getText(1, this);
 	}
@@ -1516,23 +1700,115 @@ export class Worker_Binding_MemoryCache extends $.Struct {
 }
 export const Worker_Binding_Which = {
 	UNSPECIFIED: 0,
+	/**
+	 * (This catches when someone forgets to specify one of the union members. Do not set this.)
+	 *
+	 */
 	PARAMETER: 1,
+	/**
+	 * Indicates that the Worker requires a binding of the given type, but it won't be specified
+	 * here. Another Worker can inherit this Worker and fill in this binding.
+	 *
+	 */
 	TEXT: 2,
+	/**
+	 * A string.
+	 *
+	 */
 	DATA: 3,
+	/**
+	 * An ArrayBuffer.
+	 *
+	 */
 	JSON: 4,
+	/**
+	 * A value parsed from JSON.
+	 *
+	 */
 	WASM_MODULE: 5,
+	/**
+	 * A WebAssembly module. The binding will be an instance of `WebAssembly.Module`. Only
+	 * supported when using Service Workers syntax.
+	 *
+	 * DEPRECATED: Please switch to ES modules syntax instead, and embed Wasm modules as modules.
+	 *
+	 */
 	CRYPTO_KEY: 6,
+	/**
+	 * A CryptoKey instance, for use with the WebCrypto API.
+	 *
+	 * Note that by setting `extractable = false`, you can prevent the Worker code from accessing
+	 * or leaking the raw key material; it will only be able to use the key to perform WebCrypto
+	 * operations.
+	 *
+	 */
 	SERVICE: 7,
+	/**
+	 * Binding to a named service (possibly, a worker).
+	 *
+	 */
 	DURABLE_OBJECT_NAMESPACE: 8,
+	/**
+	 * Binding to the durable object namespace implemented by the given class.
+	 *
+	 * In the common case that this refers to a class in the same Worker, you can specify just
+	 * a string, like:
+	 *
+	 *     durableObjectNamespace = "MyClass"
+	 *
+	 */
 	KV_NAMESPACE: 9,
+	/**
+	 * A KV namespace, implemented by the named service. The Worker sees a KvNamespace-typed
+	 * binding. Requests to the namespace will be converted into HTTP requests targeting the
+	 * given service name.
+	 *
+	 */
 	R2BUCKET: 10,
 	R2ADMIN: 11,
+	/**
+	 * R2 bucket and admin API bindings. Similar to KV namespaces, these turn operations into
+	 * HTTP requests aimed at the named service.
+	 *
+	 */
 	WRAPPED: 12,
+	/**
+	 * Wraps a collection of inner bindings in a common api functionality.
+	 *
+	 */
 	QUEUE: 13,
+	/**
+	 * A Queue binding, implemented by the named service. Requests to the
+	 * namespace will be converted into HTTP requests targeting the given
+	 * service name.
+	 *
+	 */
 	FROM_ENVIRONMENT: 14,
+	/**
+	 * Takes the value of an environment variable from the system. The value specified here is
+	 * the name of a system environment variable. The value of the binding is obtained by invoking
+	 * `getenv()` with that name. If the environment variable isn't set, the binding value is
+	 * `null`.
+	 *
+	 */
 	ANALYTICS_ENGINE: 15,
+	/**
+	 * A binding for Analytics Engine. Allows workers to store information through Analytics Engine Events.
+	 * workerd will forward AnalyticsEngineEvents to designated service in the body of HTTP requests
+	 * This binding is subject to change and requires the `--experimental` flag
+	 *
+	 */
 	HYPERDRIVE: 16,
+	/**
+	 * A binding for Hyperdrive. Allows workers to use Hyperdrive caching & pooling for Postgres
+	 * databases.
+	 *
+	 */
 	UNSAFE_EVAL: 17,
+	/**
+	 * A simple binding that enables access to the UnsafeEval API.
+	 *
+	 */
 	MEMORY_CACHE: 18,
 } as const;
 export type Worker_Binding_Which =
@@ -1584,7 +1860,8 @@ export class Worker_Binding extends $.Struct {
 	/**
 	 * Indicates that the Worker requires a binding of the given type, but it won't be specified
 	 * here. Another Worker can inherit this Worker and fill in this binding.
-	 * */
+	 *
+	 */
 	get parameter(): Worker_Binding_Parameter {
 		$.utils.testWhich("parameter", $.utils.getUint16(0, this), 1, this);
 		return $.utils.getAs(Worker_Binding_Parameter, this);
@@ -1601,7 +1878,8 @@ export class Worker_Binding extends $.Struct {
 	}
 	/**
 	 * A string.
-	 * */
+	 *
+	 */
 	get text(): string {
 		$.utils.testWhich("text", $.utils.getUint16(0, this), 2, this);
 		return $.utils.getText(1, this);
@@ -1622,7 +1900,8 @@ export class Worker_Binding extends $.Struct {
 	}
 	/**
 	 * An ArrayBuffer.
-	 * */
+	 *
+	 */
 	get data(): $.Data {
 		$.utils.testWhich("data", $.utils.getUint16(0, this), 3, this);
 		return $.utils.getData(1, this);
@@ -1643,7 +1922,8 @@ export class Worker_Binding extends $.Struct {
 	}
 	/**
 	 * A value parsed from JSON.
-	 * */
+	 *
+	 */
 	get json(): string {
 		$.utils.testWhich("json", $.utils.getUint16(0, this), 4, this);
 		return $.utils.getText(1, this);
@@ -1667,7 +1947,8 @@ export class Worker_Binding extends $.Struct {
 	 * supported when using Service Workers syntax.
 	 *
 	 * DEPRECATED: Please switch to ES modules syntax instead, and embed Wasm modules as modules.
-	 * */
+	 *
+	 */
 	get wasmModule(): $.Data {
 		$.utils.testWhich("wasmModule", $.utils.getUint16(0, this), 5, this);
 		return $.utils.getData(1, this);
@@ -1699,7 +1980,8 @@ export class Worker_Binding extends $.Struct {
 	 * Note that by setting `extractable = false`, you can prevent the Worker code from accessing
 	 * or leaking the raw key material; it will only be able to use the key to perform WebCrypto
 	 * operations.
-	 * */
+	 *
+	 */
 	get cryptoKey(): Worker_Binding_CryptoKey {
 		$.utils.testWhich("cryptoKey", $.utils.getUint16(0, this), 6, this);
 		return $.utils.getStruct(1, Worker_Binding_CryptoKey, this);
@@ -1727,7 +2009,8 @@ export class Worker_Binding extends $.Struct {
 	}
 	/**
 	 * Binding to a named service (possibly, a worker).
-	 * */
+	 *
+	 */
 	get service(): ServiceDesignator {
 		$.utils.testWhich("service", $.utils.getUint16(0, this), 7, this);
 		return $.utils.getStruct(1, ServiceDesignator, this);
@@ -1762,7 +2045,8 @@ export class Worker_Binding extends $.Struct {
 	 * a string, like:
 	 *
 	 *     durableObjectNamespace = "MyClass"
-	 * */
+	 *
+	 */
 	get durableObjectNamespace(): Worker_Binding_DurableObjectNamespaceDesignator {
 		$.utils.testWhich(
 			"durableObjectNamespace",
@@ -1807,7 +2091,8 @@ export class Worker_Binding extends $.Struct {
 	 * A KV namespace, implemented by the named service. The Worker sees a KvNamespace-typed
 	 * binding. Requests to the namespace will be converted into HTTP requests targeting the
 	 * given service name.
-	 * */
+	 *
+	 */
 	get kvNamespace(): ServiceDesignator {
 		$.utils.testWhich("kvNamespace", $.utils.getUint16(0, this), 9, this);
 		return $.utils.getStruct(1, ServiceDesignator, this);
@@ -1861,7 +2146,8 @@ export class Worker_Binding extends $.Struct {
 	/**
 	 * R2 bucket and admin API bindings. Similar to KV namespaces, these turn operations into
 	 * HTTP requests aimed at the named service.
-	 * */
+	 *
+	 */
 	get r2Admin(): ServiceDesignator {
 		$.utils.testWhich("r2Admin", $.utils.getUint16(0, this), 11, this);
 		return $.utils.getStruct(1, ServiceDesignator, this);
@@ -1889,7 +2175,8 @@ export class Worker_Binding extends $.Struct {
 	}
 	/**
 	 * Wraps a collection of inner bindings in a common api functionality.
-	 * */
+	 *
+	 */
 	get wrapped(): Worker_Binding_WrappedBinding {
 		$.utils.testWhich("wrapped", $.utils.getUint16(0, this), 12, this);
 		return $.utils.getStruct(1, Worker_Binding_WrappedBinding, this);
@@ -1919,7 +2206,8 @@ export class Worker_Binding extends $.Struct {
 	 * A Queue binding, implemented by the named service. Requests to the
 	 * namespace will be converted into HTTP requests targeting the given
 	 * service name.
-	 * */
+	 *
+	 */
 	get queue(): ServiceDesignator {
 		$.utils.testWhich("queue", $.utils.getUint16(0, this), 13, this);
 		return $.utils.getStruct(1, ServiceDesignator, this);
@@ -1943,7 +2231,8 @@ export class Worker_Binding extends $.Struct {
 	 * the name of a system environment variable. The value of the binding is obtained by invoking
 	 * `getenv()` with that name. If the environment variable isn't set, the binding value is
 	 * `null`.
-	 * */
+	 *
+	 */
 	get fromEnvironment(): string {
 		$.utils.testWhich("fromEnvironment", $.utils.getUint16(0, this), 14, this);
 		return $.utils.getText(1, this);
@@ -1966,7 +2255,8 @@ export class Worker_Binding extends $.Struct {
 	 * A binding for Analytics Engine. Allows workers to store information through Analytics Engine Events.
 	 * workerd will forward AnalyticsEngineEvents to designated service in the body of HTTP requests
 	 * This binding is subject to change and requires the `--experimental` flag
-	 * */
+	 *
+	 */
 	get analyticsEngine(): ServiceDesignator {
 		$.utils.testWhich("analyticsEngine", $.utils.getUint16(0, this), 15, this);
 		return $.utils.getStruct(1, ServiceDesignator, this);
@@ -1988,7 +2278,8 @@ export class Worker_Binding extends $.Struct {
 	/**
 	 * A binding for Hyperdrive. Allows workers to use Hyperdrive caching & pooling for Postgres
 	 * databases.
-	 * */
+	 *
+	 */
 	get hyperdrive(): Worker_Binding_Hyperdrive {
 		$.utils.testWhich("hyperdrive", $.utils.getUint16(0, this), 16, this);
 		return $.utils.getAs(Worker_Binding_Hyperdrive, this);
@@ -2011,7 +2302,8 @@ export class Worker_Binding extends $.Struct {
 	}
 	/**
 	 * A binding representing access to an in-memory cache.
-	 * */
+	 *
+	 */
 	get memoryCache(): Worker_Binding_MemoryCache {
 		$.utils.testWhich("memoryCache", $.utils.getUint16(0, this), 18, this);
 		return $.utils.getAs(Worker_Binding_MemoryCache, this);
@@ -2033,8 +2325,50 @@ export class Worker_Binding extends $.Struct {
 		return $.utils.getUint16(0, this) as Worker_Binding_Which;
 	}
 }
+export class Worker_DurableObjectNamespace_ContainerOptions extends $.Struct {
+	static readonly _capnp = {
+		displayName: "ContainerOptions",
+		id: "a609621a4d236cd7",
+		size: new $.ObjectSize(0, 1),
+	};
+	/**
+	 * Image name to be used to create the container using supported provider.
+	 * By default, we pull the "latest" tag of this image.
+	 *
+	 */
+	get imageName(): string {
+		return $.utils.getText(0, this);
+	}
+	set imageName(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	toString(): string {
+		return "Worker_DurableObjectNamespace_ContainerOptions_" + super.toString();
+	}
+}
 export const Worker_DurableObjectNamespace_Which = {
+	/**
+	 * Exported class name that implements the Durable Object.
+	 *
+	 * Changing the class name will not break compatibility with existing storage, so long as
+	 * `uniqueKey` stays the same.
+	 *
+	 */
 	UNIQUE_KEY: 0,
+	/**
+	 * A unique, stable ID associated with this namespace. This could be a  GUID, or any other
+	 * string which does not appear anywhere else in the world.
+	 *
+	 * This string is used to ensure that objects of this class have unique identifiers distinct
+	 * from objects of any other class. Object IDs are cryptographically derived from `uniqueKey`
+	 * and validated against it. It is impossible to guess or forge a valid object ID without
+	 * knowing the `uniqueKey`. Hence, if you keep the key secret, you can prevent anyone from
+	 * forging IDs. However, if you don't care if users can forge valid IDs, then it's not a big
+	 * deal if the key leaks.
+	 *
+	 * DO NOT LOSE this key, otherwise it may be difficult or impossible to recover stored data.
+	 *
+	 */
 	EPHEMERAL_LOCAL: 1,
 } as const;
 export type Worker_DurableObjectNamespace_Which =
@@ -2043,17 +2377,20 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 	static readonly UNIQUE_KEY = Worker_DurableObjectNamespace_Which.UNIQUE_KEY;
 	static readonly EPHEMERAL_LOCAL =
 		Worker_DurableObjectNamespace_Which.EPHEMERAL_LOCAL;
+	static readonly ContainerOptions =
+		Worker_DurableObjectNamespace_ContainerOptions;
 	static readonly _capnp = {
 		displayName: "DurableObjectNamespace",
 		id: "b429dd547d15747d",
-		size: new $.ObjectSize(8, 2),
+		size: new $.ObjectSize(8, 3),
 	};
 	/**
 	 * Exported class name that implements the Durable Object.
 	 *
 	 * Changing the class name will not break compatibility with existing storage, so long as
 	 * `uniqueKey` stays the same.
-	 * */
+	 *
+	 */
 	get className(): string {
 		return $.utils.getText(0, this);
 	}
@@ -2072,7 +2409,8 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 	 * deal if the key leaks.
 	 *
 	 * DO NOT LOSE this key, otherwise it may be difficult or impossible to recover stored data.
-	 * */
+	 *
+	 */
 	get uniqueKey(): string {
 		$.utils.testWhich("uniqueKey", $.utils.getUint16(0, this), 0, this);
 		return $.utils.getText(1, this);
@@ -2096,7 +2434,8 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 	 * pinned to memory forever, so we provide this flag to change the default behavior.
 	 *
 	 * Note that this is only supported in Workerd; production Durable Objects cannot toggle eviction.
-	 * */
+	 *
+	 */
 	get preventEviction(): boolean {
 		return $.utils.getBit(16, this);
 	}
@@ -2110,12 +2449,48 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 	 * workerd uses SQLite to back all Durable Objects, but the SQL API is hidden by default to
 	 * emulate behavior of traditional DO namespaces on Cloudflare that aren't SQLite-backed. This
 	 * flag should be enabled when testing code that will run on a SQLite-backed namespace.
-	 * */
+	 *
+	 */
 	get enableSql(): boolean {
 		return $.utils.getBit(17, this);
 	}
 	set enableSql(value: boolean) {
 		$.utils.setBit(17, value, this);
+	}
+	_adoptContainer(
+		value: $.Orphan<Worker_DurableObjectNamespace_ContainerOptions>
+	): void {
+		$.utils.adopt(value, $.utils.getPointer(2, this));
+	}
+	_disownContainer(): $.Orphan<Worker_DurableObjectNamespace_ContainerOptions> {
+		return $.utils.disown(this.container);
+	}
+	/**
+	 * If present, Durable Objects in this namespace have attached containers.
+	 * workerd will talk to the configured container engine to start containers for each
+	 * Durable Object based on the given image. The Durable Object can access the container via the
+	 * ctx.container API. TODO(CloudChamber): add link to docs.
+	 *
+	 */
+	get container(): Worker_DurableObjectNamespace_ContainerOptions {
+		return $.utils.getStruct(
+			2,
+			Worker_DurableObjectNamespace_ContainerOptions,
+			this
+		);
+	}
+	_hasContainer(): boolean {
+		return !$.utils.isNull($.utils.getPointer(2, this));
+	}
+	_initContainer(): Worker_DurableObjectNamespace_ContainerOptions {
+		return $.utils.initStructAt(
+			2,
+			Worker_DurableObjectNamespace_ContainerOptions,
+			this
+		);
+	}
+	set container(value: Worker_DurableObjectNamespace_ContainerOptions) {
+		$.utils.copyFrom(value, $.utils.getPointer(2, this));
 	}
 	toString(): string {
 		return "Worker_DurableObjectNamespace_" + super.toString();
@@ -2124,16 +2499,65 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 		return $.utils.getUint16(0, this) as Worker_DurableObjectNamespace_Which;
 	}
 }
+export class Worker_DockerConfiguration extends $.Struct {
+	static readonly _capnp = {
+		displayName: "DockerConfiguration",
+		id: "e62f96c20d9fb872",
+		size: new $.ObjectSize(0, 1),
+	};
+	/**
+	 * Path to the Docker socket.
+	 *
+	 */
+	get socketPath(): string {
+		return $.utils.getText(0, this);
+	}
+	set socketPath(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	toString(): string {
+		return "Worker_DockerConfiguration_" + super.toString();
+	}
+}
 export const Worker_DurableObjectStorage_Which = {
+	/**
+	 * Default. The worker has no Durable Objects. `durableObjectNamespaces` must be empty, or
+	 * define all namespaces as `ephemeralLocal`, or this must be an abstract worker (meant to be
+	 * inherited by other workers, who will specify `durableObjectStorage`).
+	 *
+	 */
 	NONE: 0,
+	/**
+	 * The `state.storage` API stores in-memory only. All stored data will persist for the
+	 * lifetime of the process, but will be lost upon process exit.
+	 *
+	 * Individual objects will still shut down when idle as normal -- only data stored with the
+	 * `state.storage` interface is persistent for the lifetime of the process.
+	 *
+	 * This mode is intended for local testing purposes.
+	 *
+	 */
 	IN_MEMORY: 1,
+	/**
+	 * ** EXPERIMENTAL; SUBJECT TO BACKWARDS-INCOMPATIBLE CHANGE **
+	 *
+	 * Durable Object data will be stored in a directory on local disk. This field is the name of
+	 * a service, which must be a DiskDirectory service. For each Durable Object class, a
+	 * subdirectory will be created using `uniqueKey` as the name. Within the directory, one or
+	 * more files are created for each object, with names `<id>.<ext>`, where `.<ext>` may be any of
+	 * a number of different extensions depending on the storage mode. (Currently, the main storage
+	 * is a file with the extension `.sqlite`, and in certain situations extra files with the
+	 * extensions `.sqlite-wal`, and `.sqlite-shm` may also be present.)
+	 *
+	 */
 	LOCAL_DISK: 2,
 } as const;
 export type Worker_DurableObjectStorage_Which =
 	(typeof Worker_DurableObjectStorage_Which)[keyof typeof Worker_DurableObjectStorage_Which];
 /**
  * Specifies where this worker's Durable Objects are stored.
- * */
+ *
+ */
 export class Worker_DurableObjectStorage extends $.Struct {
 	static readonly NONE = Worker_DurableObjectStorage_Which.NONE;
 	static readonly IN_MEMORY = Worker_DurableObjectStorage_Which.IN_MEMORY;
@@ -2141,7 +2565,7 @@ export class Worker_DurableObjectStorage extends $.Struct {
 	static readonly _capnp = {
 		displayName: "durableObjectStorage",
 		id: "cc72b3faa57827d4",
-		size: new $.ObjectSize(8, 11),
+		size: new $.ObjectSize(8, 13),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(2, this) === 0;
@@ -2165,7 +2589,8 @@ export class Worker_DurableObjectStorage extends $.Struct {
 	 * a number of different extensions depending on the storage mode. (Currently, the main storage
 	 * is a file with the extension `.sqlite`, and in certain situations extra files with the
 	 * extensions `.sqlite-wal`, and `.sqlite-shm` may also be present.)
-	 * */
+	 *
+	 */
 	get localDisk(): string {
 		$.utils.testWhich("localDisk", $.utils.getUint16(2, this), 2, this);
 		return $.utils.getText(8, this);
@@ -2184,9 +2609,110 @@ export class Worker_DurableObjectStorage extends $.Struct {
 		return $.utils.getUint16(2, this) as Worker_DurableObjectStorage_Which;
 	}
 }
+export const Worker_ContainerEngine_Which = {
+	/**
+	 * No container engine configured. Container operations will not be available.
+	 *
+	 */
+	NONE: 0,
+	/**
+	 * Use local Docker daemon for container operations.
+	 * Only used for local development and testing purposes.
+	 *
+	 */
+	LOCAL_DOCKER: 1,
+} as const;
+export type Worker_ContainerEngine_Which =
+	(typeof Worker_ContainerEngine_Which)[keyof typeof Worker_ContainerEngine_Which];
+export class Worker_ContainerEngine extends $.Struct {
+	static readonly NONE = Worker_ContainerEngine_Which.NONE;
+	static readonly LOCAL_DOCKER = Worker_ContainerEngine_Which.LOCAL_DOCKER;
+	static readonly _capnp = {
+		displayName: "containerEngine",
+		id: "82de68f58dc2eb24",
+		size: new $.ObjectSize(8, 13),
+	};
+	get _isNone(): boolean {
+		return $.utils.getUint16(4, this) === 0;
+	}
+	set none(_: true) {
+		$.utils.setUint16(4, 0, this);
+	}
+	_adoptLocalDocker(value: $.Orphan<Worker_DockerConfiguration>): void {
+		$.utils.setUint16(4, 1, this);
+		$.utils.adopt(value, $.utils.getPointer(12, this));
+	}
+	_disownLocalDocker(): $.Orphan<Worker_DockerConfiguration> {
+		return $.utils.disown(this.localDocker);
+	}
+	/**
+	 * Use local Docker daemon for container operations.
+	 * Only used for local development and testing purposes.
+	 *
+	 */
+	get localDocker(): Worker_DockerConfiguration {
+		$.utils.testWhich("localDocker", $.utils.getUint16(4, this), 1, this);
+		return $.utils.getStruct(12, Worker_DockerConfiguration, this);
+	}
+	_hasLocalDocker(): boolean {
+		return !$.utils.isNull($.utils.getPointer(12, this));
+	}
+	_initLocalDocker(): Worker_DockerConfiguration {
+		$.utils.setUint16(4, 1, this);
+		return $.utils.initStructAt(12, Worker_DockerConfiguration, this);
+	}
+	get _isLocalDocker(): boolean {
+		return $.utils.getUint16(4, this) === 1;
+	}
+	set localDocker(value: Worker_DockerConfiguration) {
+		$.utils.setUint16(4, 1, this);
+		$.utils.copyFrom(value, $.utils.getPointer(12, this));
+	}
+	toString(): string {
+		return "Worker_ContainerEngine_" + super.toString();
+	}
+	which(): Worker_ContainerEngine_Which {
+		return $.utils.getUint16(4, this) as Worker_ContainerEngine_Which;
+	}
+}
 export const Worker_Which = {
+	/**
+	 * The Worker is composed of ES modules that may import each other. The first module in the list
+	 * is the main module, which exports event handlers.
+	 *
+	 */
 	MODULES: 0,
+	/**
+	 * The Worker is composed of one big script that uses global `addEventListener()` to register
+	 * event handlers.
+	 *
+	 * The value of this field is the raw source code. When using Cap'n Proto text format, use the
+	 * `embed` directive to read the code from an external file:
+	 *
+	 *     serviceWorkerScript = embed "worker.js"
+	 *
+	 */
 	SERVICE_WORKER_SCRIPT: 1,
+	/**
+	 * Inherit the configuration of some other Worker by its service name. This Worker is a clone
+	 * of the other worker, but various settings can be modified:
+	 * * `bindings`, if specified, overrides specific named bindings. (Each binding listed in the
+	 *   derived worker must match the name and type of some binding in the inherited worker.)
+	 * * `globalOutbound`, if non-null, overrides the one specified in the inherited worker.
+	 * * `compatibilityDate` and `compatibilityFlags` CANNOT be modified; they must be null.
+	 * * If the inherited worker defines durable object namespaces, then the derived worker must
+	 *   specify `durableObjectStorage` to specify where its instances should be stored. Each
+	 *   devived worker receives its own namespace of objects. `durableObjectUniqueKeyModifier`
+	 *   must also be specified by derived workers.
+	 *
+	 * This can be useful when you want to run the same Worker in multiple configurations or hooked
+	 * up to different back-ends. Note that all derived workers run in the same isolate as the
+	 * base worker; they differ in the content of the `env` object passed to them, which contains
+	 * the bindings. (When using service workers syntax, the global scope contains the bindings;
+	 * in this case each derived worker runs in its own global scope, though still in the same
+	 * isolate.)
+	 *
+	 */
 	INHERIT: 2,
 } as const;
 export type Worker_Which = (typeof Worker_Which)[keyof typeof Worker_Which];
@@ -2197,14 +2723,15 @@ export class Worker extends $.Struct {
 	static readonly Module = Worker_Module;
 	static readonly Binding = Worker_Binding;
 	static readonly DurableObjectNamespace = Worker_DurableObjectNamespace;
+	static readonly DockerConfiguration = Worker_DockerConfiguration;
 	static readonly _capnp = {
 		displayName: "Worker",
 		id: "acfa77e88fd97d1c",
-		size: new $.ObjectSize(8, 11),
+		size: new $.ObjectSize(8, 13),
 		defaultGlobalOutbound: $.readRawPointer(
 			new Uint8Array([
-				0x10, 0x07, 0x50, 0x01, 0x03, 0x00, 0x00, 0x11, 0x09, 0x4a, 0x00, 0x01,
-				0xff, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x00, 0x00, 0x00,
+				16, 7, 80, 1, 3, 0, 0, 17, 9, 74, 0, 1, 255, 105, 110, 116, 101, 114,
+				110, 101, 116, 0, 0, 0,
 			]).buffer
 		),
 	};
@@ -2212,6 +2739,7 @@ export class Worker extends $.Struct {
 	static _Bindings: $.ListCtor<Worker_Binding>;
 	static _DurableObjectNamespaces: $.ListCtor<Worker_DurableObjectNamespace>;
 	static _Tails: $.ListCtor<ServiceDesignator>;
+	static _StreamingTails: $.ListCtor<ServiceDesignator>;
 	_adoptModules(value: $.Orphan<$.List<Worker_Module>>): void {
 		$.utils.setUint16(0, 0, this);
 		$.utils.adopt(value, $.utils.getPointer(0, this));
@@ -2222,7 +2750,8 @@ export class Worker extends $.Struct {
 	/**
 	 * The Worker is composed of ES modules that may import each other. The first module in the list
 	 * is the main module, which exports event handlers.
-	 * */
+	 *
+	 */
 	get modules(): $.List<Worker_Module> {
 		$.utils.testWhich("modules", $.utils.getUint16(0, this), 0, this);
 		return $.utils.getList(0, Worker._Modules, this);
@@ -2249,7 +2778,8 @@ export class Worker extends $.Struct {
 	 * `embed` directive to read the code from an external file:
 	 *
 	 *     serviceWorkerScript = embed "worker.js"
-	 * */
+	 *
+	 */
 	get serviceWorkerScript(): string {
 		$.utils.testWhich(
 			"serviceWorkerScript",
@@ -2284,7 +2814,8 @@ export class Worker extends $.Struct {
 	 * the bindings. (When using service workers syntax, the global scope contains the bindings;
 	 * in this case each derived worker runs in its own global scope, though still in the same
 	 * isolate.)
-	 * */
+	 *
+	 */
 	get inherit(): string {
 		$.utils.testWhich("inherit", $.utils.getUint16(0, this), 2, this);
 		return $.utils.getText(0, this);
@@ -2314,7 +2845,8 @@ export class Worker extends $.Struct {
 	 * `compatibilityDate` must be specified, unless the Worker inhits from another worker, in which
 	 * case it must not be specified. `compatibilityFlags` can optionally be specified when
 	 * `compatibilityDate` is specified.
-	 * */
+	 *
+	 */
 	get compatibilityFlags(): $.List<string> {
 		return $.utils.getList(2, $.TextList, this);
 	}
@@ -2339,7 +2871,8 @@ export class Worker extends $.Struct {
 	 *
 	 * For Workers using ES modules syntax, the bindings are delivered via the `env` object. For
 	 * service workers syntax, each binding shows up as a global variable.
-	 * */
+	 *
+	 */
 	get bindings(): $.List<Worker_Binding> {
 		return $.utils.getList(3, Worker._Bindings, this);
 	}
@@ -2361,7 +2894,8 @@ export class Worker extends $.Struct {
 	/**
 	 * Where should the global "fetch" go to? The default is the service called "internet", which
 	 * should usually be configured to talk to the public internet.
-	 * */
+	 *
+	 */
 	get globalOutbound(): ServiceDesignator {
 		return $.utils.getStruct(
 			4,
@@ -2386,8 +2920,9 @@ export class Worker extends $.Struct {
 		return $.utils.disown(this.cacheApiOutbound);
 	}
 	/**
-	 * List of durable object namespaces in this Worker.
-	 * */
+	 * Where should cache API (i.e. caches.default and caches.open(...)) requests go?
+	 *
+	 */
 	get cacheApiOutbound(): ServiceDesignator {
 		return $.utils.getStruct(7, ServiceDesignator, this);
 	}
@@ -2411,12 +2946,9 @@ export class Worker extends $.Struct {
 		return $.utils.disown(this.durableObjectNamespaces);
 	}
 	/**
-	 * Additional text which is hashed together with `DurableObjectNamespace.uniqueKey`. When using
-	 * worker inheritance, each derived worker must specify a unique modifier to ensure that its
-	 * Durable Object instances have unique IDs from all other workers inheriting the same parent.
+	 * List of durable object namespaces in this Worker.
 	 *
-	 * DO NOT LOSE this value, otherwise it may be difficult or impossible to recover stored data.
-	 * */
+	 */
 	get durableObjectNamespaces(): $.List<Worker_DurableObjectNamespace> {
 		return $.utils.getList(5, Worker._DurableObjectNamespaces, this);
 	}
@@ -2432,8 +2964,13 @@ export class Worker extends $.Struct {
 		$.utils.copyFrom(value, $.utils.getPointer(5, this));
 	}
 	/**
-	 * Specifies where this worker's Durable Objects are stored.
-	 * */
+	 * Additional text which is hashed together with `DurableObjectNamespace.uniqueKey`. When using
+	 * worker inheritance, each derived worker must specify a unique modifier to ensure that its
+	 * Durable Object instances have unique IDs from all other workers inheriting the same parent.
+	 *
+	 * DO NOT LOSE this value, otherwise it may be difficult or impossible to recover stored data.
+	 *
+	 */
 	get durableObjectUniqueKeyModifier(): string {
 		return $.utils.getText(6, this);
 	}
@@ -2441,8 +2978,9 @@ export class Worker extends $.Struct {
 		$.utils.setText(6, value, this);
 	}
 	/**
-	 * Where should cache API (i.e. caches.default and caches.open(...)) requests go?
-	 * */
+	 * Specifies where this worker's Durable Objects are stored.
+	 *
+	 */
 	get durableObjectStorage(): Worker_DurableObjectStorage {
 		return $.utils.getAs(Worker_DurableObjectStorage, this);
 	}
@@ -2464,7 +3002,8 @@ export class Worker extends $.Struct {
 	/**
 	 * List of tail worker services that should receive tail events for this worker.
 	 * See: https://developers.cloudflare.com/workers/observability/logs/tail-workers/
-	 * */
+	 *
+	 */
 	get tails(): $.List<ServiceDesignator> {
 		return $.utils.getList(10, Worker._Tails, this);
 	}
@@ -2477,6 +3016,35 @@ export class Worker extends $.Struct {
 	set tails(value: $.List<ServiceDesignator>) {
 		$.utils.copyFrom(value, $.utils.getPointer(10, this));
 	}
+	_adoptStreamingTails(value: $.Orphan<$.List<ServiceDesignator>>): void {
+		$.utils.adopt(value, $.utils.getPointer(11, this));
+	}
+	_disownStreamingTails(): $.Orphan<$.List<ServiceDesignator>> {
+		return $.utils.disown(this.streamingTails);
+	}
+	/**
+	 * List of streaming tail worker services that should receive tail events for this worker.
+	 * NOTE: This will be deleted in a future refactor, do not depend on this.
+	 *
+	 */
+	get streamingTails(): $.List<ServiceDesignator> {
+		return $.utils.getList(11, Worker._StreamingTails, this);
+	}
+	_hasStreamingTails(): boolean {
+		return !$.utils.isNull($.utils.getPointer(11, this));
+	}
+	_initStreamingTails(length: number): $.List<ServiceDesignator> {
+		return $.utils.initList(11, Worker._StreamingTails, length, this);
+	}
+	set streamingTails(value: $.List<ServiceDesignator>) {
+		$.utils.copyFrom(value, $.utils.getPointer(11, this));
+	}
+	get containerEngine(): Worker_ContainerEngine {
+		return $.utils.getAs(Worker_ContainerEngine, this);
+	}
+	_initContainerEngine(): Worker_ContainerEngine {
+		return $.utils.getAs(Worker_ContainerEngine, this);
+	}
 	toString(): string {
 		return "Worker_" + super.toString();
 	}
@@ -2486,7 +3054,8 @@ export class Worker extends $.Struct {
 }
 /**
  * Talk to the server over encrypted HTTPS.
- * */
+ *
+ */
 export class ExternalServer_Https extends $.Struct {
 	static readonly _capnp = {
 		displayName: "https",
@@ -2532,7 +3101,8 @@ export class ExternalServer_Https extends $.Struct {
 	/**
 	 * If present, expect the host to present a certificate authenticating it as this hostname.
 	 * If `certificateHost` is not provided, then the certificate is checked against `address`.
-	 * */
+	 *
+	 */
 	get certificateHost(): string {
 		return $.utils.getText(3, this);
 	}
@@ -2546,7 +3116,8 @@ export class ExternalServer_Https extends $.Struct {
 /**
  * Connect to the server over raw TCP. Bindings to this service will only support the
  * `connect()` method; `fetch()` will throw an exception.
- * */
+ *
+ */
 export class ExternalServer_Tcp extends $.Struct {
 	static readonly _capnp = {
 		displayName: "tcp",
@@ -2582,8 +3153,32 @@ export class ExternalServer_Tcp extends $.Struct {
 	}
 }
 export const ExternalServer_Which = {
+	/**
+	 * Address/port of the server. Optional; if not specified, then you will be required to specify
+	 * the address on the command line with with `--external-addr <name>=<addr>`.
+	 *
+	 * Examples:
+	 * - "1.2.3.4": Connect to the given IPv4 address on the protocol's default port.
+	 * - "1.2.3.4:80": Connect to the given IPv4 address and port.
+	 * - "1234:5678::abcd": Connect to the given IPv6 address on the protocol's default port.
+	 * - "[1234:5678::abcd]:80": Connect to the given IPv6 address and port.
+	 * - "unix:/path/to/socket": Connect to the given Unix Domain socket by path.
+	 * - "unix-abstract:name": On Linux, connect to the given "abstract" Unix socket name.
+	 * - "example.com:80": Perform a DNS lookup to determine the address, and then connect to it.
+	 *
+	 * (These are the formats supported by KJ's parseAddress().)
+	 *
+	 */
 	HTTP: 0,
+	/**
+	 * Talk to the server over unencrypted HTTP.
+	 *
+	 */
 	HTTPS: 1,
+	/**
+	 * Talk to the server over encrypted HTTPS.
+	 *
+	 */
 	TCP: 2,
 } as const;
 export type ExternalServer_Which =
@@ -2604,7 +3199,8 @@ export type ExternalServer_Which =
  * the request will be delivered to the target server using the protocol specified below. A
  * header like `X-Forwarded-Proto` can be used to pass along the original protocol; see
  * `HttpOptions`.
- * */
+ *
+ */
 export class ExternalServer extends $.Struct {
 	static readonly HTTP = ExternalServer_Which.HTTP;
 	static readonly HTTPS = ExternalServer_Which.HTTPS;
@@ -2628,7 +3224,8 @@ export class ExternalServer extends $.Struct {
 	 * - "example.com:80": Perform a DNS lookup to determine the address, and then connect to it.
 	 *
 	 * (These are the formats supported by KJ's parseAddress().)
-	 * */
+	 *
+	 */
 	get address(): string {
 		return $.utils.getText(0, this);
 	}
@@ -2644,7 +3241,8 @@ export class ExternalServer extends $.Struct {
 	}
 	/**
 	 * Talk to the server over unencrypted HTTP.
-	 * */
+	 *
+	 */
 	get http(): HttpOptions {
 		$.utils.testWhich("http", $.utils.getUint16(0, this), 0, this);
 		return $.utils.getStruct(1, HttpOptions, this);
@@ -2665,7 +3263,8 @@ export class ExternalServer extends $.Struct {
 	}
 	/**
 	 * Talk to the server over encrypted HTTPS.
-	 * */
+	 *
+	 */
 	get https(): ExternalServer_Https {
 		$.utils.testWhich("https", $.utils.getUint16(0, this), 1, this);
 		return $.utils.getAs(ExternalServer_Https, this);
@@ -2683,7 +3282,8 @@ export class ExternalServer extends $.Struct {
 	/**
 	 * Connect to the server over raw TCP. Bindings to this service will only support the
 	 * `connect()` method; `fetch()` will throw an exception.
-	 * */
+	 *
+	 */
 	get tcp(): ExternalServer_Tcp {
 		$.utils.testWhich("tcp", $.utils.getUint16(0, this), 2, this);
 		return $.utils.getAs(ExternalServer_Tcp, this);
@@ -2719,7 +3319,8 @@ export class ExternalServer extends $.Struct {
  *         allow = ["public", "private"],
  *       )
  *     )
- * */
+ *
+ */
 export class Network extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Network",
@@ -2727,8 +3328,7 @@ export class Network extends $.Struct {
 		size: new $.ObjectSize(0, 3),
 		defaultAllow: $.readRawPointer(
 			new Uint8Array([
-				0x10, 0x03, 0x11, 0x01, 0x0e, 0x11, 0x01, 0x3a, 0x3f, 0x70, 0x75, 0x62,
-				0x6c, 0x69, 0x63,
+				16, 3, 17, 1, 14, 17, 1, 58, 63, 112, 117, 98, 108, 105, 99,
 			]).buffer
 		),
 	};
@@ -2781,7 +3381,8 @@ export class Network extends $.Struct {
 	 * out to be permitted, then the system will behave as if the DNS entry did not exist.
 	 *
 	 * (The above is exactly the format supported by kj::Network::restrictPeers().)
-	 * */
+	 *
+	 */
 	get deny(): $.List<string> {
 		return $.utils.getList(1, $.TextList, this);
 	}
@@ -2840,7 +3441,8 @@ export class Network extends $.Struct {
  * is no acceptable format for these, regardless of what the client says it accepts).
  *
  * `HEAD` requests are properly optimized to perform a stat() without actually opening the file.
- * */
+ *
+ */
 export class DiskDirectory extends $.Struct {
 	static readonly _capnp = {
 		displayName: "DiskDirectory",
@@ -2855,7 +3457,8 @@ export class DiskDirectory extends $.Struct {
 	 *
 	 * Relative paths are interpreted relative to the current directory where the server is executed,
 	 * NOT relative to the config file. So, you should usually use absolute paths in the config file.
-	 * */
+	 *
+	 */
 	get path(): string {
 		return $.utils.getText(0, this);
 	}
@@ -2866,7 +3469,8 @@ export class DiskDirectory extends $.Struct {
 	 * Whether to support PUT requests for writing. A PUT will write to a temporary file which
 	 * is atomically moved into place upon successful completion of the upload. Parent directories are
 	 * created as needed.
-	 * */
+	 *
+	 */
 	get writable(): boolean {
 		return $.utils.getBit(0, this, DiskDirectory._capnp.defaultWritable);
 	}
@@ -2879,7 +3483,8 @@ export class DiskDirectory extends $.Struct {
 	 * e.g. a git repository or an `.htaccess` file.
 	 *
 	 * Note that the special links "." and ".." will never be accessible regardless of this setting.
-	 * */
+	 *
+	 */
 	get allowDotfiles(): boolean {
 		return $.utils.getBit(1, this, DiskDirectory._capnp.defaultAllowDotfiles);
 	}
@@ -2891,7 +3496,18 @@ export class DiskDirectory extends $.Struct {
 	}
 }
 export const HttpOptions_Style = {
+	/**
+	 * Normal HTTP. The request line contains only the path, and the separate `Host` header
+	 * specifies the hostname.
+	 *
+	 */
 	HOST: 0,
+	/**
+	 * HTTP proxy protocol. The request line contains a full URL instead of a path. No `Host`
+	 * header is required. This is the protocol used by HTTP forward proxies. This allows you to
+	 * implement such a proxy as a Worker.
+	 *
+	 */
 	PROXY: 1,
 } as const;
 export type HttpOptions_Style =
@@ -2904,7 +3520,8 @@ export class HttpOptions_Header extends $.Struct {
 	};
 	/**
 	 * Case-insensitive.
-	 * */
+	 *
+	 */
 	get name(): string {
 		return $.utils.getText(0, this);
 	}
@@ -2913,7 +3530,8 @@ export class HttpOptions_Header extends $.Struct {
 	}
 	/**
 	 * If null, the header will be removed.
-	 * */
+	 *
+	 */
 	get value(): string {
 		return $.utils.getText(1, this);
 	}
@@ -2927,7 +3545,8 @@ export class HttpOptions_Header extends $.Struct {
 /**
  * Options for using HTTP (as a client or server). In particular, this specifies behavior that is
  * important in the presence of proxy servers, whether forward or reverse.
- * */
+ *
+ */
 export class HttpOptions extends $.Struct {
 	static readonly Style = HttpOptions_Style;
 	static readonly Header = HttpOptions_Header;
@@ -2960,7 +3579,8 @@ export class HttpOptions extends $.Struct {
 	 * like "X-Forwarded-Proto".
 	 *
 	 * This setting is ignored when `style` is `proxy`.
-	 * */
+	 *
+	 */
 	get forwardedProtoHeader(): string {
 		return $.utils.getText(0, this);
 	}
@@ -2970,7 +3590,8 @@ export class HttpOptions extends $.Struct {
 	/**
 	 * If set, then the `request.cf` object will be encoded (as JSON) into / parsed from the header
 	 * with this name. Otherwise, it will be discarded on send / `undefined` on receipt.
-	 * */
+	 *
+	 */
 	get cfBlobHeader(): string {
 		return $.utils.getText(1, this);
 	}
@@ -2990,7 +3611,8 @@ export class HttpOptions extends $.Struct {
 	 * e.g. to add an authorization token to all requests when using `ExternalServer`. It can also
 	 * apply to incoming requests received on a `Socket` to modify the headers that will be delivered
 	 * to the app. Any existing header with the same name is removed.
-	 * */
+	 *
+	 */
 	get injectRequestHeaders(): $.List<HttpOptions_Header> {
 		return $.utils.getList(2, HttpOptions._InjectRequestHeaders, this);
 	}
@@ -3013,7 +3635,8 @@ export class HttpOptions extends $.Struct {
 	}
 	/**
 	 * Same as `injectRequestHeaders` but for responses.
-	 * */
+	 *
+	 */
 	get injectResponseHeaders(): $.List<HttpOptions_Header> {
 		return $.utils.getList(3, HttpOptions._InjectResponseHeaders, this);
 	}
@@ -3036,7 +3659,8 @@ export class HttpOptions extends $.Struct {
 	 * connection. The server will expose a WorkerdBootstrap as the bootstrap interface, allowing
 	 * events to be delivered to the target worker via capnp. Clients will use capnp for non-HTTP
 	 * event types (especially JSRPC).
-	 * */
+	 *
+	 */
 	get capnpConnectHost(): string {
 		return $.utils.getText(4, this);
 	}
@@ -3058,7 +3682,8 @@ export class TlsOptions_Keypair extends $.Struct {
 	 * keys.
 	 *
 	 * Remember that you can use Cap'n Proto's `embed` syntax to reference an external file.
-	 * */
+	 *
+	 */
 	get privateKey(): string {
 		return $.utils.getText(0, this);
 	}
@@ -3068,7 +3693,8 @@ export class TlsOptions_Keypair extends $.Struct {
 	/**
 	 * Certificate chain in PEM format. A chain can be constructed by concatenating multiple
 	 * PEM-encoded certificates, starting with the leaf certificate.
-	 * */
+	 *
+	 */
 	get certificateChain(): string {
 		return $.utils.getText(1, this);
 	}
@@ -3080,6 +3706,10 @@ export class TlsOptions_Keypair extends $.Struct {
 	}
 }
 export const TlsOptions_Version = {
+	/**
+	 * A good default chosen by the code maintainers. May change over time.
+	 *
+	 */
 	GOOD_DEFAULT: 0,
 	SSL3: 1,
 	TLS1DOT0: 2,
@@ -3094,7 +3724,8 @@ export type TlsOptions_Version =
  * on the context.
  *
  * This is based on KJ's TlsContext::Options.
- * */
+ *
+ */
 export class TlsOptions extends $.Struct {
 	static readonly Keypair = TlsOptions_Keypair;
 	static readonly Version = TlsOptions_Version;
@@ -3114,7 +3745,8 @@ export class TlsOptions extends $.Struct {
 	}
 	/**
 	 * The default private key and certificate to use. Optional when acting as a client.
-	 * */
+	 *
+	 */
 	get keypair(): TlsOptions_Keypair {
 		return $.utils.getStruct(0, TlsOptions_Keypair, this);
 	}
@@ -3133,7 +3765,8 @@ export class TlsOptions extends $.Struct {
 	 *
 	 * Typically, when using this, you'd set `trustBrowserCas = false` and list a specific private CA
 	 * in `trustedCertificates`.
-	 * */
+	 *
+	 */
 	get requireClientCerts(): boolean {
 		return $.utils.getBit(0, this, TlsOptions._capnp.defaultRequireClientCerts);
 	}
@@ -3144,7 +3777,8 @@ export class TlsOptions extends $.Struct {
 	 * If true, trust certificates which are signed by one of the CAs that browsers normally trust.
 	 * You should typically set this true when talking to the public internet, but you may want to
 	 * set it false when talking to servers on your internal network.
-	 * */
+	 *
+	 */
 	get trustBrowserCas(): boolean {
 		return $.utils.getBit(1, this, TlsOptions._capnp.defaultTrustBrowserCas);
 	}
@@ -3160,7 +3794,8 @@ export class TlsOptions extends $.Struct {
 	/**
 	 * Additional CA certificates to trust, in PEM format. Remember that you can use Cap'n Proto's
 	 * `embed` syntax to read the certificates from other files.
-	 * */
+	 *
+	 */
 	get trustedCertificates(): $.List<string> {
 		return $.utils.getList(1, $.TextList, this);
 	}
@@ -3176,7 +3811,8 @@ export class TlsOptions extends $.Struct {
 	/**
 	 * Minimum TLS version that will be allowed. Generally you should not override this unless you
 	 * have unusual backwards-compatibility needs.
-	 * */
+	 *
+	 */
 	get minVersion(): TlsOptions_Version {
 		return $.utils.getUint16(
 			2,
@@ -3197,7 +3833,8 @@ export class TlsOptions extends $.Struct {
 	 * - You have extreme backwards-compatibility needs and wish to enable obsolete and/or broken
 	 *   algorithms.
 	 * - You need quickly to disable an algorithm recently discovered to be broken.
-	 * */
+	 *
+	 */
 	get cipherList(): string {
 		return $.utils.getText(2, this);
 	}
@@ -3210,7 +3847,8 @@ export class TlsOptions extends $.Struct {
 }
 /**
  * A module extending workerd functionality.
- * */
+ *
+ */
 export class Extension_Module extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Module",
@@ -3220,7 +3858,8 @@ export class Extension_Module extends $.Struct {
 	};
 	/**
 	 * Full js module name.
-	 * */
+	 *
+	 */
 	get name(): string {
 		return $.utils.getText(0, this);
 	}
@@ -3229,7 +3868,8 @@ export class Extension_Module extends $.Struct {
 	}
 	/**
 	 * Internal modules can be imported by other extension modules only and not the user code.
-	 * */
+	 *
+	 */
 	get internal(): boolean {
 		return $.utils.getBit(0, this, Extension_Module._capnp.defaultInternal);
 	}
@@ -3238,7 +3878,8 @@ export class Extension_Module extends $.Struct {
 	}
 	/**
 	 * Raw source code of ES module.
-	 * */
+	 *
+	 */
 	get esModule(): string {
 		return $.utils.getText(1, this);
 	}
@@ -3251,7 +3892,8 @@ export class Extension_Module extends $.Struct {
 }
 /**
  * Additional capabilities for workers.
- * */
+ *
+ */
 export class Extension extends $.Struct {
 	static readonly Module = Extension_Module;
 	static readonly _capnp = {
@@ -3270,7 +3912,8 @@ export class Extension extends $.Struct {
 	 * List of javascript modules provided by the extension.
 	 * These modules can either be imported directly as user-level api (if not marked internal)
 	 * or used to define more complicated workerd constructs such as wrapped bindings and events.
-	 * */
+	 *
+	 */
 	get modules(): $.List<Extension_Module> {
 		return $.utils.getList(0, Extension._Modules, this);
 	}
@@ -3287,6 +3930,89 @@ export class Extension extends $.Struct {
 		return "Extension_" + super.toString();
 	}
 }
+export class FallbackServiceRequest_Attribute extends $.Struct {
+	static readonly _capnp = {
+		displayName: "Attribute",
+		id: "ecfe563249c01f75",
+		size: new $.ObjectSize(0, 2),
+	};
+	get name(): string {
+		return $.utils.getText(0, this);
+	}
+	set name(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	get value(): string {
+		return $.utils.getText(1, this);
+	}
+	set value(value: string) {
+		$.utils.setText(1, value, this);
+	}
+	toString(): string {
+		return "FallbackServiceRequest_Attribute_" + super.toString();
+	}
+}
+export class FallbackServiceRequest extends $.Struct {
+	static readonly Attribute = FallbackServiceRequest_Attribute;
+	static readonly _capnp = {
+		displayName: "FallbackServiceRequest",
+		id: "daf79e36b3f32800",
+		size: new $.ObjectSize(0, 5),
+	};
+	static _Attributes: $.ListCtor<FallbackServiceRequest_Attribute>;
+	get type(): string {
+		return $.utils.getText(0, this);
+	}
+	set type(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	get specifier(): string {
+		return $.utils.getText(1, this);
+	}
+	set specifier(value: string) {
+		$.utils.setText(1, value, this);
+	}
+	get rawSpecifier(): string {
+		return $.utils.getText(2, this);
+	}
+	set rawSpecifier(value: string) {
+		$.utils.setText(2, value, this);
+	}
+	get referrer(): string {
+		return $.utils.getText(3, this);
+	}
+	set referrer(value: string) {
+		$.utils.setText(3, value, this);
+	}
+	_adoptAttributes(
+		value: $.Orphan<$.List<FallbackServiceRequest_Attribute>>
+	): void {
+		$.utils.adopt(value, $.utils.getPointer(4, this));
+	}
+	_disownAttributes(): $.Orphan<$.List<FallbackServiceRequest_Attribute>> {
+		return $.utils.disown(this.attributes);
+	}
+	get attributes(): $.List<FallbackServiceRequest_Attribute> {
+		return $.utils.getList(4, FallbackServiceRequest._Attributes, this);
+	}
+	_hasAttributes(): boolean {
+		return !$.utils.isNull($.utils.getPointer(4, this));
+	}
+	_initAttributes(length: number): $.List<FallbackServiceRequest_Attribute> {
+		return $.utils.initList(
+			4,
+			FallbackServiceRequest._Attributes,
+			length,
+			this
+		);
+	}
+	set attributes(value: $.List<FallbackServiceRequest_Attribute>) {
+		$.utils.copyFrom(value, $.utils.getPointer(4, this));
+	}
+	toString(): string {
+		return "FallbackServiceRequest_" + super.toString();
+	}
+}
 Config._Services = $.CompositeList(Service);
 Config._Sockets = $.CompositeList(Socket);
 Config._Extensions = $.CompositeList(Extension);
@@ -3297,6 +4023,10 @@ Worker._DurableObjectNamespaces = $.CompositeList(
 	Worker_DurableObjectNamespace
 );
 Worker._Tails = $.CompositeList(ServiceDesignator);
+Worker._StreamingTails = $.CompositeList(ServiceDesignator);
 HttpOptions._InjectRequestHeaders = $.CompositeList(HttpOptions_Header);
 HttpOptions._InjectResponseHeaders = $.CompositeList(HttpOptions_Header);
 Extension._Modules = $.CompositeList(Extension_Module);
+FallbackServiceRequest._Attributes = $.CompositeList(
+	FallbackServiceRequest_Attribute
+);

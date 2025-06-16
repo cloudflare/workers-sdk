@@ -104,11 +104,6 @@ export type ContainerApp = {
 	 *  - manual: The container application will be rollout fully by manually actioning progress steps.
 	 */
 	rollout_kind?: "full_auto" | "none" | "full_manual";
-
-	/**
-	 * Ports to be exposed by the container application. Only applies to dev, on non-linux machines, and if the Dockerfile doesn't already declare exposed ports.
-	 */
-	dev_exposed_ports?: number[];
 };
 
 /**
@@ -358,9 +353,11 @@ interface EnvironmentInheritable {
 	minify: boolean | undefined;
 
 	/**
-	 * Keep function names after javascript transpilations.
+	 * Set the `name` property to the original name for functions and classes renamed during minification.
 	 *
-	 * @default {true}
+	 * See https://esbuild.github.io/api/#keep-names
+	 *
+	 * @default true
 	 * @inheritable
 	 */
 	keep_names: boolean | undefined;

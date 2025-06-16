@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { isDockerfile } from "@cloudflare/containers-shared";
 import { type Config } from "../config";
 import { type ContainerApp } from "../config/environment";
 import { getDockerPath } from "../environment-variables/misc-variables";
@@ -7,7 +7,7 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { fetchVersion } from "../versions/api";
 import { apply } from "./apply";
-import { buildAndMaybePush, isDir } from "./build";
+import { buildAndMaybePush } from "./build";
 import { fillOpenAPIConfiguration } from "./common";
 import type { BuildArgs } from "@cloudflare/containers-shared/src/types";
 
@@ -18,11 +18,22 @@ export async function maybeBuildContainer(
 	dryRun: boolean,
 	pathToDocker: string
 ) {
-	if (
-		!isDockerfile(containerConfig.image ?? containerConfig.configuration.image)
-	) {
-		return containerConfig.image ?? containerConfig.configuration.image;
+	try {
+		if (
+			!isDockerfile(
+				containerConfig.image ?? containerConfig.configuration.image
+			)
+		) {
+			return containerConfig.image ?? containerConfig.configuration.image;
+		}
+	} catch (err) {
+		if (err instanceof Error) {
+			throw new UserError(err.message);
+		}
+
+		throw err;
 	}
+
 	const options = getBuildArguments(containerConfig, imageTag);
 	logger.log("Building image", options.tag);
 	const tag = await buildAndMaybePush(
@@ -126,43 +137,3 @@ export function getBuildArguments(
 		args: container.image_vars,
 	};
 }
-
-export const isDockerfile = (image: string): boolean => {
-	// TODO: move this into config validation
-	if (existsSync(image)) {
-		if (isDir(image)) {
-			throw new UserError(
-				`${image} is a directory, you should specify a path to the Dockerfile`
-			);
-		}
-		return true;
-	}
-
-	const errorPrefix = `The image "${image}" does not appear to be a valid path to a Dockerfile, or a valid image registry path:\n`;
-	// not found, not a dockerfile, let's try parsing the image ref as an URL?
-	try {
-		new URL(`https://${image}`);
-	} catch (e) {
-		if (e instanceof Error) {
-			throw new UserError(errorPrefix + e.message);
-		}
-		throw e;
-	}
-	const imageParts = image.split("/");
-
-	if (!imageParts[imageParts.length - 1].includes(":")) {
-		throw new UserError(
-			errorPrefix +
-				`If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)`
-		);
-	}
-
-	// validate URL
-	if (image.includes("://")) {
-		throw new UserError(
-			errorPrefix +
-				`Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
-		);
-	}
-	return false;
-};

@@ -50,7 +50,7 @@ type MiniflareWorker = Awaited<ReturnType<Miniflare["getWorker"]>>;
 export interface Worker {
 	ready: Promise<void>;
 	url: Promise<URL>;
-	inspectorUrl: Promise<URL>;
+	inspectorUrl: Promise<URL | undefined>;
 	config: StartDevWorkerOptions;
 	setConfig: ConfigController["set"];
 	patchConfig: ConfigController["patch"];
@@ -138,8 +138,8 @@ export interface StartDevWorkerInput {
 
 	/** Options applying to the worker's development preview environment. */
 	dev?: {
-		/** Options applying to the worker's inspector server. */
-		inspector?: { hostname?: string; port?: number; secure?: boolean };
+		/** Options applying to the worker's inspector server. False disables the inspector server. */
+		inspector?: { hostname?: string; port?: number; secure?: boolean } | false;
 		/** Whether the worker runs on the edge or locally. Can also be set to "minimal" for minimal mode. */
 		remote?: boolean | "minimal";
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */

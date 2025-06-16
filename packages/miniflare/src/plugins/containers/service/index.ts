@@ -75,7 +75,7 @@ export class ContainerController {
 		if (output === "0" && process.platform !== "linux") {
 			throw new Error(
 				`The container "${imageTag.replace(MF_CONTAINER_PREFIX + "/", "")}" does not expose any ports.\n` +
-					"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort() in your Dockerfile."
+					"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort()` in your Dockerfile."
 			);
 		}
 	}

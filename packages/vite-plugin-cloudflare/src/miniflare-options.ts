@@ -14,8 +14,7 @@ import colors from "picocolors";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
 import {
-	experimental_pickRemoteBindings,
-	experimental_startMixedModeSession,
+	experimental_maybeStartOrUpdateMixedModeSession,
 	unstable_convertConfigBindingsToStartWorkerBindings,
 	unstable_getMiniflareWorkerOptions,
 } from "wrangler";
@@ -24,9 +23,11 @@ import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
 	kRequestType,
+	PUBLIC_DIR_PREFIX,
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { additionalModuleRE } from "./shared";
+import { withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
@@ -38,6 +39,7 @@ import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
 	Experimental_MixedModeSession,
 	SourcelessWorkerOptions,
+	Unstable_Binding,
 	Unstable_Config,
 } from "wrangler";
 
@@ -82,9 +84,10 @@ function getWorkerToWorkerEntrypointNamesMap(
 					value.name === kCurrentWorker ? worker.name : value.name;
 				const entrypointNames =
 					workerToWorkerEntrypointNamesMap.get(targetWorkerName);
-				assert(entrypointNames, missingWorkerErrorMessage(targetWorkerName));
 
-				entrypointNames.add(value.entrypoint);
+				if (entrypointNames) {
+					entrypointNames.add(value.entrypoint);
+				}
 			}
 		}
 	}
@@ -219,6 +222,15 @@ function logUnknownTails(
 	}
 }
 
+/** Map that maps worker configPaths to their existing mixed mode session data (if any) */
+const mixedModeSessionsDataMap = new Map<
+	string,
+	{
+		session: Experimental_MixedModeSession;
+		remoteBindings: Record<string, Unstable_Binding>;
+	} | null
+>();
+
 export async function getDevMiniflareOptions(
 	resolvedPluginConfig: ResolvedPluginConfig,
 	viteDevServer: vite.ViteDevServer,
@@ -274,27 +286,56 @@ export async function getDevMiniflareOptions(
 				CONFIG: assetsConfig,
 			},
 			serviceBindings: {
-				__VITE_ASSET_EXISTS__: async (request) => {
+				__VITE_HTML_EXISTS__: async (request) => {
 					const { pathname } = new URL(request.url);
-					let exists = false;
 
 					if (pathname.endsWith(".html")) {
-						try {
-							const filePath = path.join(resolvedViteConfig.root, pathname);
-							const stats = await fsp.stat(filePath);
-							exists = stats.isFile();
-						} catch (error) {}
+						const { root, publicDir } = resolvedViteConfig;
+						const publicDirInRoot = publicDir.startsWith(
+							withTrailingSlash(root)
+						);
+						const publicPath = withTrailingSlash(publicDir.slice(root.length));
+
+						// Assets in the public directory should be served at the root path
+						if (publicDirInRoot && pathname.startsWith(publicPath)) {
+							return MiniflareResponse.json(null);
+						}
+
+						const publicDirFilePath = path.join(publicDir, pathname);
+						const rootDirFilePath = path.join(root, pathname);
+
+						for (const resolvedPath of [publicDirFilePath, rootDirFilePath]) {
+							try {
+								const stats = await fsp.stat(resolvedPath);
+
+								if (stats.isFile()) {
+									return MiniflareResponse.json(
+										resolvedPath === publicDirFilePath
+											? `${PUBLIC_DIR_PREFIX}${pathname}`
+											: pathname
+									);
+								}
+							} catch (error) {}
+						}
 					}
 
-					return MiniflareResponse.json(exists);
+					return MiniflareResponse.json(null);
 				},
-				__VITE_FETCH_ASSET__: async (request) => {
+				__VITE_FETCH_HTML__: async (request) => {
 					const { pathname } = new URL(request.url);
-					const filePath = path.join(resolvedViteConfig.root, pathname);
+					const { root, publicDir } = resolvedViteConfig;
+					const isInPublicDir = pathname.startsWith(PUBLIC_DIR_PREFIX);
+					const resolvedPath = isInPublicDir
+						? path.join(publicDir, pathname.slice(PUBLIC_DIR_PREFIX.length))
+						: path.join(root, pathname);
 
 					try {
-						let html = await fsp.readFile(filePath, "utf-8");
-						html = await viteDevServer.transformIndexHtml(pathname, html);
+						let html = await fsp.readFile(resolvedPath, "utf-8");
+
+						// HTML files in the public directory should not be transformed
+						if (!isInPublicDir) {
+							html = await viteDevServer.transformIndexHtml(resolvedPath, html);
+						}
 
 						return new MiniflareResponse(html, {
 							headers: { "Content-Type": "text/html" },
@@ -312,10 +353,32 @@ export async function getDevMiniflareOptions(
 			? await Promise.all(
 					Object.entries(resolvedPluginConfig.workers).map(
 						async ([environmentName, workerConfig]) => {
-							const mixedModeSession = resolvedPluginConfig.experimental
-								.mixedMode
-								? await maybeStartOrUpdateMixedModeSession(workerConfig)
+							const bindings =
+								unstable_convertConfigBindingsToStartWorkerBindings(
+									workerConfig
+								);
+
+							const preExistingMixedModeSession = workerConfig.configPath
+								? mixedModeSessionsDataMap.get(workerConfig.configPath)
 								: undefined;
+
+							const mixedModeSessionData = resolvedPluginConfig.experimental
+								.mixedMode
+								? await experimental_maybeStartOrUpdateMixedModeSession(
+										{
+											name: workerConfig.name,
+											bindings: bindings ?? {},
+										},
+										preExistingMixedModeSession ?? null
+									)
+								: undefined;
+
+							if (workerConfig.configPath && mixedModeSessionData) {
+								mixedModeSessionsDataMap.set(
+									workerConfig.configPath,
+									mixedModeSessionData
+								);
+							}
 
 							const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
 								{
@@ -325,7 +388,7 @@ export async function getDevMiniflareOptions(
 								resolvedPluginConfig.cloudflareEnv,
 								{
 									mixedModeConnectionString:
-										mixedModeSession?.mixedModeConnectionString,
+										mixedModeSessionData?.session?.mixedModeConnectionString,
 									mixedModeEnabled: resolvedPluginConfig.experimental.mixedMode,
 								}
 							);
@@ -598,16 +661,36 @@ export async function getPreviewMiniflareOptions(
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
 			workerConfigs.map(async (workerConfig, i) => {
-				const mixedModeSession = mixedModeEnabled
-					? await maybeStartOrUpdateMixedModeSession(workerConfig)
+				const bindings =
+					unstable_convertConfigBindingsToStartWorkerBindings(workerConfig);
+
+				const preExistingMixedModeSessionData = workerConfig.configPath
+					? mixedModeSessionsDataMap.get(workerConfig.configPath)
 					: undefined;
+
+				const mixedModeSessionData = mixedModeEnabled
+					? await experimental_maybeStartOrUpdateMixedModeSession(
+							{
+								name: workerConfig.name,
+								bindings: bindings ?? {},
+							},
+							preExistingMixedModeSessionData ?? null
+						)
+					: undefined;
+
+				if (workerConfig.configPath && mixedModeSessionData) {
+					mixedModeSessionsDataMap.set(
+						workerConfig.configPath,
+						mixedModeSessionData
+					);
+				}
 
 				const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
 					workerConfig,
 					undefined,
 					{
 						mixedModeConnectionString:
-							mixedModeSession?.mixedModeConnectionString,
+							mixedModeSessionData?.session?.mixedModeConnectionString,
 						mixedModeEnabled,
 					}
 				);
@@ -703,43 +786,4 @@ function miniflareLogLevelFromViteLogLevel(
 		case "silent":
 			return LogLevel.NONE;
 	}
-}
-
-/** Map containing all the potential worker mixed mode existing sessions, it maps a worker name to its mixed mode session */
-const mixedModeSessionsMap = new Map<string, Experimental_MixedModeSession>();
-
-async function maybeStartOrUpdateMixedModeSession(
-	workerConfig: WorkerConfig | Unstable_Config
-): Promise<Experimental_MixedModeSession | undefined> {
-	const workerRemoteBindings = experimental_pickRemoteBindings(
-		unstable_convertConfigBindingsToStartWorkerBindings(workerConfig) ?? {}
-	);
-
-	assert(workerConfig.name, "Found workerConfig without a name");
-
-	let mixedModeSession = mixedModeSessionsMap.get(workerConfig.name);
-
-	// TODO(DEVX-1893): here we can save the converted remote bindings
-	//             and on new iterations we can diff the old and new
-	//             converted remote bindings, if they are all the
-	//             same we can just leave the mixedModeSession untouched
-	if (mixedModeSession === undefined) {
-		if (Object.keys(workerRemoteBindings).length > 0) {
-			mixedModeSession = await experimental_startMixedModeSession(
-				workerRemoteBindings,
-				{
-					workerName: workerConfig.name,
-				}
-			);
-			mixedModeSessionsMap.set(workerConfig.name, mixedModeSession);
-		}
-	} else {
-		// Note: we always call updateBindings even when there are zero remote bindings, in these
-		//       cases we could terminate the remote session if we wanted, that's probably
-		//       something to consider down the line
-		await mixedModeSession.updateBindings(workerRemoteBindings);
-	}
-
-	await mixedModeSession?.ready;
-	return mixedModeSession;
 }

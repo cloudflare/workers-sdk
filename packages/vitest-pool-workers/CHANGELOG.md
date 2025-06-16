@@ -1,5 +1,15 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.38
+
+### Patch Changes
+
+- [#9439](https://github.com/cloudflare/workers-sdk/pull/9439) [`8d648e7`](https://github.com/cloudflare/workers-sdk/commit/8d648e7c2f94cf315cdfffad6ee43e01e82a0947) Thanks [@edmundhung](https://github.com/edmundhung)! - Add support for Vitest 3.2.x
+
+- Updated dependencies [[`1914b87`](https://github.com/cloudflare/workers-sdk/commit/1914b87e254bb733298cb0c0e96bb0bd234acde4), [`931f467`](https://github.com/cloudflare/workers-sdk/commit/931f467e39f70abfd0e1c08172f330e6e3de02a3), [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1), [`80b8bd9`](https://github.com/cloudflare/workers-sdk/commit/80b8bd93e6dd931a7b216645a6f249642c420dee), [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1), [`9e4cd16`](https://github.com/cloudflare/workers-sdk/commit/9e4cd16ce1639cc6763f5c50b9478eece7f4be73), [`92305af`](https://github.com/cloudflare/workers-sdk/commit/92305af0a7efa68fc0e13e3549f88d19f3cb069b), [`0b2ba45`](https://github.com/cloudflare/workers-sdk/commit/0b2ba4590ca59f1d95d7262e64adeefebe6a3e7e)]:
+  - wrangler@4.20.0
+  - miniflare@4.20250604.1
+
 ## 0.8.37
 
 ### Patch Changes

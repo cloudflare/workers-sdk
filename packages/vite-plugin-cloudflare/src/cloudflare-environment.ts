@@ -133,7 +133,7 @@ const target = "es2022";
 export function createCloudflareEnvironmentOptions(
 	workerConfig: WorkerConfig,
 	userConfig: vite.UserConfig,
-	environmentName: string
+	environment: { name: string; isEntry: boolean }
 ): vite.EnvironmentOptions {
 	return {
 		resolve: {
@@ -155,16 +155,12 @@ export function createCloudflareEnvironmentOptions(
 				return new vite.BuildEnvironment(name, config);
 			},
 			target,
-			// We need to enable `emitAssets` in order to support additional modules defined by `rules`
 			emitAssets: true,
-			outDir: getOutputDirectory(userConfig, environmentName),
+			manifest: environment.isEntry,
+			outDir: getOutputDirectory(userConfig, environment.name),
 			copyPublicDir: false,
 			ssr: true,
 			rollupOptions: {
-				// Note: vite starts dev pre-bundling crawling from either optimizeDeps.entries or rollupOptions.input
-				//       so the input value here serves both as the build input as well as the starting point for
-				//       dev pre-bundling crawling (were we not to set this input field we'd have to appropriately set
-				//       optimizeDeps.entries in the dev config)
 				input: workerConfig.main,
 			},
 		},
