@@ -5,11 +5,11 @@ const className = z.string();
 
 export const ContainerSchema = z.object({
 	image: z.string(),
+	imageTag: z.string(),
+	/** currently unimplemented and unused */
 	maxInstances: z.number().optional(),
 	imageBuildContext: z.string().optional(),
 	args: z.record(z.string(), z.string()).default({}),
-	exposedPorts: z.number().array().optional(),
-	name: z.string(),
 });
 export const ContainersOptionsSchema = z.object({
 	containers: z.record(className, ContainerSchema).optional(),

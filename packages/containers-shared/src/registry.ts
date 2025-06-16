@@ -9,3 +9,5 @@ export const getCloudflareRegistryWithAccountNamespace = (
 ): string => {
 	return `${getCloudflareContainerRegistry()}/${accountID}/${tag}`;
 };
+
+export const MF_DEV_CONTAINER_PREFIX = "cloudflare-dev";

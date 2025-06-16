@@ -3,12 +3,12 @@ import {
 	constructBuildCommand,
 	dockerBuild,
 	dockerImageInspect,
+	MF_DEV_CONTAINER_PREFIX,
 	verifyDockerInstalled,
 } from "@cloudflare/containers-shared";
 import { Log } from "../../../shared";
 import { ContainerOptions, ContainersSharedOptions } from "../index";
 
-const MF_CONTAINER_PREFIX = "cloudflare-dev";
 /**
  * ContainerController manages container configuration, building or pulling
  * containers, and cleaning up containers at the end of the dev session.
@@ -60,16 +60,15 @@ export class ContainerController {
 
 	async buildContainer(options: ContainerOptions) {
 		// just let the tag default to latest
-		const tag = `${MF_CONTAINER_PREFIX}/${options.name}`;
 		const { buildCmd, dockerfile } = await constructBuildCommand({
-			tag,
+			tag: options.imageTag,
 			pathToDockerfile: options.image,
 			buildContext: options.imageBuildContext ?? path.dirname(options.image),
 			args: options.args,
 			platform: "linux/amd64",
 		});
 		await dockerBuild(this.#sharedOptions.dockerPath, { buildCmd, dockerfile });
-		await this.checkExposedPorts(tag);
+		await this.checkExposedPorts(options.imageTag);
 	}
 
 	async checkExposedPorts(imageTag: string) {
@@ -79,7 +78,7 @@ export class ContainerController {
 		});
 		if (output === "0" && process.platform !== "linux") {
 			throw new Error(
-				`The container "${imageTag.replace(MF_CONTAINER_PREFIX + "/", "")}" does not expose any ports.\n` +
+				`The container "${imageTag.replace(MF_DEV_CONTAINER_PREFIX + "/", "")}" does not expose any ports.\n` +
 					"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort()` in your Dockerfile."
 			);
 		}
