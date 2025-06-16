@@ -34,7 +34,8 @@ describe("versions deploy", () => {
 	mockApiToken();
 	runInTempDir();
 	mockConsoleMethods();
-	const std = collectCLIOutput();
+	const consoleStd = mockConsoleMethods();
+	const cliStd = collectCLIOutput();
 	const { setIsTTY } = useMockIsTTY();
 
 	beforeEach(() => {
@@ -63,7 +64,7 @@ describe("versions deploy", () => {
 
 			await runWrangler("deploy ./index");
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭  WARNING  Your last deployment has multiple versions. To progress that deployment use \\"wrangler versions deploy\\" instead.
 				│
 				├ Your last deployment has 2 version(s):
@@ -94,7 +95,7 @@ describe("versions deploy", () => {
 
 			await expect(result).resolves.toMatchInlineSnapshot(`undefined`);
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -133,7 +134,7 @@ describe("versions deploy", () => {
 				╰  SUCCESS  Deployed named-worker version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 			`);
 
-			expect(normalizeOutput(std.out)).toContain(
+			expect(normalizeOutput(cliStd.out)).toContain(
 				"No non-versioned settings to sync. Skipping..."
 			);
 		});
@@ -159,7 +160,7 @@ describe("versions deploy", () => {
 				`[Error: You must select at least 1 version to deploy.]`
 			);
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -191,7 +192,7 @@ describe("versions deploy", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -238,7 +239,7 @@ describe("versions deploy", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -285,7 +286,7 @@ describe("versions deploy", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -340,7 +341,7 @@ describe("versions deploy", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -387,7 +388,7 @@ describe("versions deploy", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -442,7 +443,7 @@ describe("versions deploy", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -500,7 +501,7 @@ describe("versions deploy", () => {
 					`[Error: You must select at most 2 versions to deploy.]`
 				);
 
-				expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+				expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 					"╭ Deploy Worker Versions by splitting traffic between multiple versions
 					│
 					├ Fetching latest deployment
@@ -547,7 +548,7 @@ describe("versions deploy", () => {
 
 				await expect(result).resolves.toBeUndefined();
 
-				expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+				expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 					"╭ Deploy Worker Versions by splitting traffic between multiple versions
 					│
 					├ Fetching latest deployment
@@ -602,7 +603,7 @@ describe("versions deploy", () => {
 					╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 33.333%, version 00000000-0000-0000-0000-000000000000 at 33.334%, and version 00000000-0000-0000-0000-000000000000 at 33.333% (TIMINGS)"
 				`);
 
-				expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
+				expect(normalizeOutput(cliStd.err)).toMatchInlineSnapshot(`""`);
 			});
 		});
 
@@ -613,7 +614,7 @@ describe("versions deploy", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -665,7 +666,7 @@ describe("versions deploy", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -723,7 +724,7 @@ describe("versions deploy", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -788,7 +789,7 @@ describe("versions deploy", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -846,7 +847,7 @@ describe("versions deploy", () => {
 				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions/ffffffff-ffff-ffff-ffff-ffffffffffff) failed.]`
 			);
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
 				├ Fetching latest deployment
@@ -877,7 +878,7 @@ describe("versions deploy", () => {
 				`[Error: Percentage value (101%) must be between 0 and 100.]`
 			);
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
 		});
 
 		test("fails if --percentage < 0", async () => {
@@ -889,7 +890,7 @@ describe("versions deploy", () => {
 				`[Error: Percentage value (-1%) must be between 0 and 100.]`
 			);
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
 		});
 
 		test("fails if version-spec percentage > 100", async () => {
@@ -901,7 +902,7 @@ describe("versions deploy", () => {
 				`[Error: Percentage value (101%) must be between 0 and 100.]`
 			);
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
 		});
 
 		test("fails if version-spec percentage < 0", async () => {
@@ -913,7 +914,56 @@ describe("versions deploy", () => {
 				`[Error: Percentage value (-1%) must be between 0 and 100.]`
 			);
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
+		});
+
+		describe("multi-env warning", () => {
+			it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
+
+				await runWrangler(
+					"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+				);
+
+				expect(consoleStd.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the versions deploy command.[0m
+
+					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+					  the target environment using the \`-e|--env\` flag.
+					  If your intention is to use the top-level environment of your configuration simply pass an empty
+					  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+
+					"
+				`);
+			});
+
+			it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
+
+				await runWrangler(
+					"versions deploy 10000000-0000-0000-0000-000000000000 --yes --env test"
+				);
+
+				expect(consoleStd.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+				writeWranglerConfig();
+
+				await runWrangler(
+					"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+				);
+
+				expect(consoleStd.warn).toMatchInlineSnapshot(`""`);
+			});
 		});
 	});
 });

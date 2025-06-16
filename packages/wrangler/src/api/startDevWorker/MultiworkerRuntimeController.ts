@@ -12,6 +12,7 @@ import {
 import { convertCfWorkerInitBindingsToBindings } from "./utils";
 import type { MixedModeSession } from "../mixedMode";
 import type { BundleCompleteEvent } from "./events";
+import type { Binding } from "./index";
 
 // Ensure DO references from other workers have the same SQL setting as the DO definition in it's original Worker
 function ensureMatchingSql(options: MF.Options) {
@@ -64,7 +65,13 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	#options = new Map<string, { options: MF.Options; primary: boolean }>();
 
-	#mixedModeSessions = new Map<string, MixedModeSession | null>();
+	#mixedModeSessionsData = new Map<
+		string,
+		{
+			session: MixedModeSession;
+			remoteBindings: Record<string, Binding>;
+		} | null
+	>();
 
 	#canStartMiniflare() {
 		return (
@@ -113,16 +120,19 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
 							{},
 					},
-					this.#mixedModeSessions.get(data.config.name) ?? null
+					this.#mixedModeSessionsData.get(data.config.name) ?? null
 				);
-				this.#mixedModeSessions.set(data.config.name, mixedModeSession ?? null);
+				this.#mixedModeSessionsData.set(
+					data.config.name,
+					mixedModeSession ?? null
+				);
 			}
 
 			const { options } = await MF.buildMiniflareOptions(
 				this.#log,
 				await convertToConfigBundle(data),
 				this.#proxyToUserWorkerAuthenticationSecret,
-				this.#mixedModeSessions.get(data.config.name)
+				this.#mixedModeSessionsData.get(data.config.name)?.session
 					?.mixedModeConnectionString,
 				!!experimentalMixedMode
 			);
@@ -237,17 +247,17 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
-		if (this.#mixedModeSessions.size > 0) {
+		if (this.#mixedModeSessionsData.size > 0) {
 			logger.log(chalk.dim("⎔ Shutting down remote connections..."));
 		}
 
 		await Promise.all(
-			[...this.#mixedModeSessions.values()].map((mixedModeSession) =>
-				mixedModeSession?.dispose()
+			[...this.#mixedModeSessionsData.values()].map((mixedModeSessionData) =>
+				mixedModeSessionData?.session?.dispose()
 			)
 		);
 
-		this.#mixedModeSessions.clear();
+		this.#mixedModeSessionsData.clear();
 
 		logger.debug("MultiworkerRuntimeController teardown complete");
 	};

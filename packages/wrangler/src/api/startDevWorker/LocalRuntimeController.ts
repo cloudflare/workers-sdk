@@ -19,7 +19,7 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { File, StartDevWorkerOptions } from "./types";
+import type { Binding, File, StartDevWorkerOptions } from "./types";
 
 async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
@@ -158,7 +158,10 @@ export class LocalRuntimeController extends RuntimeController {
 	#mutex = new Mutex();
 	#mf?: Miniflare;
 
-	#mixedModeSession: MixedModeSession | null = null;
+	#mixedModeSessionData: {
+		session: MixedModeSession;
+		remoteBindings: Record<string, Binding>;
+	} | null = null;
 
 	onBundleStart(_: BundleStartEvent) {
 		// Ignored in local runtime
@@ -178,14 +181,14 @@ export class LocalRuntimeController extends RuntimeController {
 					"../mixedMode"
 				);
 
-				this.#mixedModeSession = await maybeStartOrUpdateMixedModeSession(
+				this.#mixedModeSessionData = await maybeStartOrUpdateMixedModeSession(
 					{
 						name: configBundle.name,
 						bindings:
 							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
 							{},
 					},
-					this.#mixedModeSession ?? null
+					this.#mixedModeSessionData ?? null
 				);
 			}
 
@@ -194,7 +197,7 @@ export class LocalRuntimeController extends RuntimeController {
 					this.#log,
 					configBundle,
 					this.#proxyToUserWorkerAuthenticationSecret,
-					this.#mixedModeSession?.mixedModeConnectionString,
+					this.#mixedModeSessionData?.session?.mixedModeConnectionString,
 					!!experimentalMixedMode
 				);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
@@ -306,12 +309,12 @@ export class LocalRuntimeController extends RuntimeController {
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
-		if (this.#mixedModeSession) {
+		if (this.#mixedModeSessionData) {
 			logger.log(chalk.dim("⎔ Shutting down remote connection..."));
 		}
 
-		await this.#mixedModeSession?.dispose();
-		this.#mixedModeSession = null;
+		await this.#mixedModeSessionData?.session?.dispose();
+		this.#mixedModeSessionData = null;
 
 		logger.debug("LocalRuntimeController teardown complete");
 	};

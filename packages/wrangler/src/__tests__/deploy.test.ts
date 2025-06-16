@@ -4,7 +4,7 @@ import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { PassThrough, Writable } from "node:stream";
-import { DOMAIN } from "@cloudflare/containers-shared";
+import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import * as TOML from "@iarna/toml";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
@@ -8716,7 +8716,8 @@ addEventListener('fetch', event => {});`
 						expect(args).toEqual([
 							"build",
 							"-t",
-							DOMAIN + "/my-container:Galaxy",
+							getCloudflareContainerRegistry() +
+								"/test_account_id/my-container:Galaxy",
 							"--platform",
 							"linux/amd64",
 							"-f",
@@ -8754,7 +8755,7 @@ addEventListener('fetch', event => {});`
 						expect(args).toEqual([
 							"image",
 							"inspect",
-							`${DOMAIN}/my-container:Galaxy`,
+							`${getCloudflareContainerRegistry()}/test_account_id/my-container:Galaxy`,
 							"--format",
 							"{{ .Size }} {{ len .RootFS.Layers }}",
 						]);
@@ -8810,7 +8811,10 @@ addEventListener('fetch', event => {});`
 					// 4. docker push
 					.mockImplementationOnce((cmd, args) => {
 						expect(cmd).toBe("/usr/bin/docker");
-						expect(args).toEqual(["push", `${DOMAIN}/my-container:Galaxy`]);
+						expect(args).toEqual([
+							"push",
+							`${getCloudflareContainerRegistry()}/test_account_id/my-container:Galaxy`,
+						]);
 						return defaultChildProcess();
 					});
 
@@ -8860,15 +8864,15 @@ addEventListener('fetch', event => {});`
 				function mockGenerateImageRegistryCredentials() {
 					msw.use(
 						http.post(
-							`*/registries/${DOMAIN}/credentials`,
+							`*/registries/${getCloudflareContainerRegistry()}/credentials`,
 							async ({ request }) => {
 								const json =
 									(await request.json()) as ImageRegistryCredentialsConfiguration;
 								expect(json.permissions).toEqual(["push"]);
 
 								return HttpResponse.json({
-									account_id: "123",
-									registry_host: DOMAIN,
+									account_id: "test_account_id",
+									registry_host: getCloudflareContainerRegistry(),
 									username: "v1",
 									password: "mockpassword",
 								} as AccountRegistryToken);
@@ -8885,7 +8889,9 @@ addEventListener('fetch', event => {});`
 					instances: 10,
 					durable_objects: { namespace_id: "1" },
 					configuration: {
-						image: DOMAIN + "/my-container:Galaxy",
+						image:
+							getCloudflareContainerRegistry() +
+							"/test_account_id/my-container:Galaxy",
 					},
 				});
 
@@ -12998,6 +13004,65 @@ export default{
 			mockGetWorkerSubdomain({ enabled: true });
 
 			await runWrangler("deploy ./index.js");
+		});
+	});
+
+	describe("multi-env warning", () => {
+		it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+			writeWorkerSource();
+			writeWranglerConfig({
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the deploy command.[0m
+
+				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+				  the target environment using the \`-e|--env\` flag.
+				  If your intention is to use the top-level environment of your configuration simply pass an empty
+				  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+
+				"
+			`);
+		});
+
+		it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+			writeWorkerSource();
+			writeWranglerConfig({
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				env: "test",
+				legacyEnv: true,
+			});
+
+			await runWrangler("deploy -e test");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+			writeWorkerSource();
+			writeWranglerConfig({
+				main: "./index.js",
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 	});
 });

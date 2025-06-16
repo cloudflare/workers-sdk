@@ -266,6 +266,7 @@ export const versionsUploadCommand = createCommand({
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			MIXED_MODE: false,
 		}),
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
 		const entry = await getEntry(args, config, "versions upload");

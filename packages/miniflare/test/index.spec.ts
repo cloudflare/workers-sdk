@@ -3035,7 +3035,6 @@ test("Miniflare: strips CF-Connecting-IP", async (t) => {
 	const client = new Miniflare({
 		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
 		modules: true,
-		stripCfConnectingIp: true,
 	});
 	t.teardown(() => client.dispose());
 	t.teardown(() => server.dispose());
