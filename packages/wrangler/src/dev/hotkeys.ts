@@ -1,4 +1,6 @@
 import assert from "assert";
+import { randomUUID } from "crypto";
+import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -57,6 +59,26 @@ export default function registerDevHotKeys(
 			label: "to exit",
 			handler: async () => {
 				await devEnv.teardown();
+			},
+		},
+		{
+			keys: ["r"],
+			label: "rebuild container",
+			// TODO investigate how to hide this.
+			// disabled: () =>
+			// 	(!devEnv.config.latestConfig?.dev?.enableContainers ||
+			// 		!devEnv.config.latestConfig?.containers) ??
+			// 	false,
+			handler: async () => {
+				devEnv.runtimes.map(async (runtime) => {
+					if (runtime instanceof LocalRuntimeController) {
+						await runtime.cleanupContainers();
+					}
+				});
+
+				await devEnv.config.patch({
+					dev: { containerBuildId: randomUUID().slice(0, 8) },
+				});
 			},
 		},
 	]);

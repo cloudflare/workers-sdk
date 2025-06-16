@@ -1,4 +1,5 @@
 import path from "path";
+import { isDeepStrictEqual } from "util";
 import {
 	constructBuildCommand,
 	dockerBuild,
@@ -18,6 +19,7 @@ import { ContainerOptions, ContainersSharedOptions } from "../index";
  */
 export class ContainerController {
 	#containerOptions: { [className: string]: ContainerOptions };
+	#previousContainerOptions: { [className: string]: ContainerOptions } = {};
 	#sharedOptions: ContainersSharedOptions;
 	#logger: Log;
 	#dockerInstalled: boolean = false;
@@ -43,12 +45,21 @@ export class ContainerController {
 		},
 		sharedOptions: ContainersSharedOptions
 	): void {
+		this.#previousContainerOptions = this.#containerOptions;
 		this.#containerOptions = containerOptions;
 		this.#sharedOptions = sharedOptions;
-		// TODO: rebuild containers (only) if the configuration has changed
+
+		if (
+			!isDeepStrictEqual(this.#containerOptions, this.#previousContainerOptions)
+		) {
+			this.buildAllContainers();
+		}
 	}
 
 	async buildAllContainers() {
+		if (this.#sharedOptions.enableContainers === false) {
+			return;
+		}
 		if (!this.#dockerInstalled) {
 			await verifyDockerInstalled(this.#sharedOptions.dockerPath);
 			this.#dockerInstalled = true;
