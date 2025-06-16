@@ -147,7 +147,7 @@ base_dir = \"./some/base_dir\"`,
 					moduleRules: [],
 				},
 				dev: {
-					experimental_remote: true,
+					remote: true,
 					liveReload: true,
 					server: { port: 1234 },
 				},

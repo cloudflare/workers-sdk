@@ -6401,8 +6401,8 @@ describe("normalizeAndValidateConfig()", () => {
 
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - Unexpected fields found in kv_namespaces[0] field: \\"remote\\"
-				  - Unexpected fields found in r2_buckets[0] field: \\"remote\\""
+				  - Unexpected fields found in kv_namespaces[0] field: \\"experimental_remote\\"
+				  - Unexpected fields found in r2_buckets[0] field: \\"experimental_remote\\""
 			`);
 		});
 
@@ -6438,8 +6438,8 @@ describe("normalizeAndValidateConfig()", () => {
 
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - \\"kv_namespaces[0]\\" should, optionally, have a boolean \\"remote\\" field but got {\\"binding\\":\\"KV\\",\\"id\\":\\"xxxx-xxxx-xxxx-xxxx\\",\\"remote\\":\\"hello\\"}.
-				  - \\"r2_buckets[0]\\" should, optionally, have a boolean \\"remote\\" field but got {\\"binding\\":\\"R2\\",\\"bucket_name\\":\\"my-r2\\",\\"remote\\":5}."
+				  - \\"kv_namespaces[0]\\" should, optionally, have a boolean \\"experimental_remote\\" field but got {\\"binding\\":\\"KV\\",\\"id\\":\\"xxxx-xxxx-xxxx-xxxx\\",\\"experimental_remote\\":\\"hello\\"}.
+				  - \\"r2_buckets[0]\\" should, optionally, have a boolean \\"experimental_remote\\" field but got {\\"binding\\":\\"R2\\",\\"bucket_name\\":\\"my-r2\\",\\"experimental_remote\\":5}."
 			`);
 		});
 	});

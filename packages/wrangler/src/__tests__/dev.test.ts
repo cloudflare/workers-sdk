@@ -1740,10 +1740,10 @@ describe.sequential("wrangler dev", () => {
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				    - Unexpected fields found in kv_namespaces[0] field: \\"remote\\"
-				    - Unexpected fields found in queues.producers[0] field: \\"remote\\"
-				    - Unexpected fields found in r2_buckets[0] field: \\"remote\\"
-				    - Unexpected fields found in d1_databases[0] field: \\"remote\\"
+				    - Unexpected fields found in kv_namespaces[0] field: \\"experimental_remote\\"
+				    - Unexpected fields found in queues.producers[0] field: \\"experimental_remote\\"
+				    - Unexpected fields found in r2_buckets[0] field: \\"experimental_remote\\"
+				    - Unexpected fields found in d1_databases[0] field: \\"experimental_remote\\"
 
 				"
 			`);

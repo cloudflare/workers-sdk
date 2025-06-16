@@ -24,7 +24,7 @@ describe
 		const alternativeRemoteWorkerName =
 			"tmp-e2e-vite-plugin-mixed-mode-remote-worker-alt";
 
-		const projectPath = seed("mixed-mode", "pnpm");
+		const projectPath = seed("remote-bindings", "pnpm");
 
 		beforeAll(() => {
 			const tmp = fs.mkdtempSync(`${os.tmpdir()}/vite-plugin-e2e-tmp`);
