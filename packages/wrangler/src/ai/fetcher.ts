@@ -1,6 +1,6 @@
 import { Headers, Response } from "miniflare";
 import { performApiFetch } from "../cfetch";
-import { getAccountId } from "../user";
+import type { MaybePromise } from "../api/startDevWorker/utils";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Request } from "miniflare";
 
@@ -14,14 +14,17 @@ export default function (env) {
 }
 `;
 
-export function getAIFetcher(complianceConfig: ComplianceConfig) {
+export function getAIFetcher(
+	complianceConfig: ComplianceConfig,
+	getAccountId: () => MaybePromise<string>
+) {
 	return async function (request: Request): Promise<Response> {
-		const accountId = await getAccountId(complianceConfig);
-
 		const reqHeaders = new Headers(request.headers);
 		reqHeaders.delete("Host");
 		reqHeaders.delete("Content-Length");
 		reqHeaders.set("X-Forwarded", request.url);
+
+		const accountId = await getAccountId();
 
 		const res = await performApiFetch(
 			complianceConfig,

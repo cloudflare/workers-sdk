@@ -462,7 +462,7 @@ async function getPagesAssetsFetcher(
 async function setupDevEnv(
 	devEnv: DevEnv,
 	configPath: string | undefined,
-	auth: AsyncHook<CfAccount, [Pick<Config, "account_id">]>,
+	auth: AsyncHook<CfAccount, [Partial<Pick<Config, "account_id">>]>,
 	args: Partial<StartDevOptions> & { multiworkerPrimary?: boolean }
 ) {
 	await devEnv.config.set(
@@ -603,9 +603,10 @@ export async function startDev(args: StartDevOptions) {
 			logger.loggerLevel = args.logLevel;
 		}
 
-		const authHook: AsyncHook<CfAccount, [Pick<Config, "account_id">]> = async (
-			config
-		) => {
+		const authHook: AsyncHook<
+			CfAccount,
+			[Partial<Pick<Config, "account_id">>]
+		> = async (config) => {
 			const hotkeysDisplayed = !!unregisterHotKeys;
 			let accountId = args.accountId;
 			if (!accountId) {
