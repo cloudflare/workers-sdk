@@ -16,7 +16,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"miniflare": "workspace:*",
 		"wrangler": "workspace:*",
-		"ws": "^8.8.0"
+		"ws": "^8.17.1"
 	},
 	"engines": {
 		"node": ">=14"
