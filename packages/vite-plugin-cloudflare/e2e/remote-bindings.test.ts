@@ -19,7 +19,7 @@ describe
 	)
 	// Note: the reload test applies changes to the fixture files, so we do want the
 	//       tests to run sequentially in order to avoid race conditions
-	.sequential("remote binding tests", () => {
+	.sequential("remote bindings tests", () => {
 		const remoteWorkerName = "tmp-e2e-vite-plugin-mixed-mode-remote-worker";
 		const alternativeRemoteWorkerName =
 			"tmp-e2e-vite-plugin-mixed-mode-remote-worker-alt";

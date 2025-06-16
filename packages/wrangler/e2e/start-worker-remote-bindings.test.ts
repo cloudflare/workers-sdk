@@ -11,7 +11,9 @@ describe("startWorker - remote bindings", () => {
 	const helper = new WranglerE2ETestHelper();
 
 	beforeAll(async () => {
-		await helper.seed(resolve(__dirname, "./seed-files/mixed-mode-workers"));
+		await helper.seed(
+			resolve(__dirname, "./seed-files/remote-binding-workers")
+		);
 		await helper.seed({
 			"remote-worker.js": dedent/* javascript */ `
 					export default {

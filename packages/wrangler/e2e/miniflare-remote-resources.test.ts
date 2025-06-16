@@ -432,7 +432,9 @@ async function runTestCase<T>(
 	const { experimental_startRemoteProxySession } =
 		await helper.importWrangler();
 	const { Miniflare } = await helper.importMiniflare();
-	await helper.seed(path.resolve(__dirname, "./seed-files/mixed-mode-workers"));
+	await helper.seed(
+		path.resolve(__dirname, "./seed-files/remote-binding-workers")
+	);
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const setupResult = (await testCase.setup?.(helper))!;
 

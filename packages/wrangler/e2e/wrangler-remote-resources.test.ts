@@ -24,7 +24,7 @@ type TestCase<T = void> = {
 	generateWranglerConfig: (setupResult: T) => RawConfig;
 	expectedResponseMatch: string | RegExp;
 	// Flag for resources that can work without remote bindings opt-in
-	worksWithoutMixedMode?: boolean;
+	worksWithoutRemoteBindings?: boolean;
 };
 
 const testCases: TestCase<Record<string, string>>[] = [
@@ -107,7 +107,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 		}),
 		expectedResponseMatch: "This is a response from Workers AI",
 		// AI bindings work without opt in flag flag
-		worksWithoutMixedMode: true,
+		worksWithoutRemoteBindings: true,
 	},
 	{
 		name: "Browser",
@@ -136,8 +136,8 @@ const testCases: TestCase<Record<string, string>>[] = [
 			},
 		}),
 		expectedResponseMatch: "image/avif",
-		// The Images binding "works" without opt in flag because the current default is an older mixed-mode-style implementation
-		worksWithoutMixedMode: true,
+		// The Images binding "works" without opt in flag because the current default is an older remote binding implementation
+		worksWithoutRemoteBindings: true,
 	},
 	{
 		name: "Vectorize",
@@ -297,7 +297,7 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 
 		it("works with remote bindings enabled", async () => {
 			await helper.seed(
-				path.resolve(__dirname, "./seed-files/mixed-mode-workers")
+				path.resolve(__dirname, "./seed-files/remote-binding-workers")
 			);
 
 			await writeWranglerConfig(testCase, helper);
@@ -310,13 +310,13 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 			expect(response).toMatch(testCase.expectedResponseMatch);
 		});
 
-		it.skipIf(testCase.worksWithoutMixedMode)(
+		it.skipIf(testCase.worksWithoutRemoteBindings)(
 			"fails when remote bindings is disabled",
 			// Turn off retries because this test is expected to fail
 			{ retry: 0, fails: true },
 			async () => {
 				await helper.seed(
-					path.resolve(__dirname, "./seed-files/mixed-mode-workers")
+					path.resolve(__dirname, "./seed-files/remote-binding-workers")
 				);
 
 				await writeWranglerConfig(testCase, helper);
@@ -342,7 +342,7 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 			beforeAll(async () => {
 				helper = new WranglerE2ETestHelper();
 				await helper.seed(
-					path.resolve(__dirname, "./seed-files/mixed-mode-workers")
+					path.resolve(__dirname, "./seed-files/remote-binding-workers")
 				);
 
 				await helper.seed({
