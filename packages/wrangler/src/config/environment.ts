@@ -73,7 +73,7 @@ export type ContainerApp = {
 	class_name: string;
 
 	/** The scheduling policy of the application, default is regional */
-	scheduling_policy?: "regional" | "moon";
+	scheduling_policy?: "regional" | "moon" | "default";
 
 	/* Configuration of the container */
 	configuration: {

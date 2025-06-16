@@ -120,7 +120,7 @@ function containerAppToCreateApplication(
 		instances: containerApp.instances ?? 0,
 		scheduling_policy:
 			(containerApp.scheduling_policy as SchedulingPolicy) ??
-			SchedulingPolicy.REGIONAL,
+			SchedulingPolicy.DEFAULT,
 		constraints: {
 			...(containerApp.constraints ??
 				(!skipDefaults ? { tier: 1 } : undefined)),
@@ -389,6 +389,12 @@ export async function apply(
 			const prevApp = sortObjectRecursive<CreateApplicationRequest>(
 				stripUndefined(applicationToCreateApplication(application))
 			);
+
+			// fill up fields that their defaults were changed over-time,
+			// maintaining retrocompatibility with the existing app
+			if (appConfigNoDefaults.scheduling_policy === undefined) {
+				appConfig.scheduling_policy = prevApp.scheduling_policy;
+			}
 
 			if (
 				prevApp.durable_objects !== undefined &&
