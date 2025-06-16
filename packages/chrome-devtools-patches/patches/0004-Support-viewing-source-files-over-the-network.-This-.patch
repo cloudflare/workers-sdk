@@ -1,4 +1,4 @@
-From 79eef448a1e63c2295d67938f92a83093289ffe6 Mon Sep 17 00:00:00 2001
+From b1f97bf51177076f6abb501cf8fe57a77640792e Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 15:26:38 +0100
 Subject: [PATCH 4/8] Support viewing source files over the network. This
@@ -23,20 +23,20 @@ Subject: [PATCH 4/8] Support viewing source files over the network. This
  6 files changed, 15 insertions(+), 40 deletions(-)
 
 diff --git a/front_end/core/common/ParsedURL.ts b/front_end/core/common/ParsedURL.ts
-index 100d9ec45f..d75d6e4f2f 100644
+index d01ab1856d..e29c0eab46 100644
 --- a/front_end/core/common/ParsedURL.ts
 +++ b/front_end/core/common/ParsedURL.ts
-@@ -366,7 +366,7 @@ export class ParsedURL {
+@@ -365,7 +365,7 @@ export class ParsedURL {
+   static completeURL(baseURL: Platform.DevToolsPath.UrlString, href: string): Platform.DevToolsPath.UrlString|null {
      // Return special URLs as-is.
-     const trimmedHref = href.trim();
-     if (trimmedHref.startsWith('data:') || trimmedHref.startsWith('blob:') || trimmedHref.startsWith('javascript:') ||
--        trimmedHref.startsWith('mailto:')) {
-+        trimmedHref.startsWith('mailto:') || trimmedHref.startsWith('wrangler:')) {
+     if (href.startsWith('data:') || href.startsWith('blob:') || href.startsWith('javascript:') ||
+-        href.startsWith('mailto:')) {
++        href.startsWith('mailto:') || href.startsWith('wrangler:')) {
        return href as Platform.DevToolsPath.UrlString;
      }
  
 diff --git a/front_end/core/sdk/PageResourceLoader.ts b/front_end/core/sdk/PageResourceLoader.ts
-index 7b11de87c2..e11fbf3010 100644
+index 722bf5f80a..cede6fbc20 100644
 --- a/front_end/core/sdk/PageResourceLoader.ts
 +++ b/front_end/core/sdk/PageResourceLoader.ts
 @@ -381,7 +381,9 @@ export class PageResourceLoader extends Common.ObjectWrapper.ObjectWrapper<Event
@@ -51,10 +51,10 @@ index 7b11de87c2..e11fbf3010 100644
          success: resource.success,
          content,
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
-index 1a6644df92..1724a33bd4 100644
+index 814bc1fc70..893ac3533f 100644
 --- a/front_end/entrypoints/js_app/js_app.ts
 +++ b/front_end/entrypoints/js_app/js_app.ts
-@@ -17,17 +17,13 @@ import * as Main from '../main/main.js';
+@@ -18,17 +18,13 @@ import * as Main from '../main/main.js';
  
  const UIStrings = {
    /**
@@ -73,10 +73,10 @@ index 1a6644df92..1724a33bd4 100644
     */
 -  showNode: 'Show Scripts',
 +  main: 'Main',
- };
+ } as const;
  
  const str_ = i18n.i18n.registerUIStrings('entrypoints/js_app/js_app.ts', UIStrings);
-@@ -69,8 +65,8 @@ export class JsMainImpl implements Common.Runnable.Runnable {
+@@ -70,8 +66,8 @@ export class JsMainImpl implements Common.Runnable.Runnable {
  UI.ViewManager.registerViewExtension({
    location: UI.ViewManager.ViewLocationValues.NAVIGATOR_VIEW,
    id: 'navigator-network',
@@ -88,23 +88,23 @@ index 1a6644df92..1724a33bd4 100644
    persistence: UI.ViewManager.ViewPersistence.PERMANENT,
    async loadView() {
 diff --git a/front_end/entrypoints/main/MainImpl.ts b/front_end/entrypoints/main/MainImpl.ts
-index fbc6a1bd71..e6bc57bbb0 100644
+index e4ac33c985..04eac3540a 100644
 --- a/front_end/entrypoints/main/MainImpl.ts
 +++ b/front_end/entrypoints/main/MainImpl.ts
-@@ -414,6 +414,8 @@ export class MainImpl {
-       Root.Runtime.ExperimentName.NETWORK_PANEL_FILTER_BAR_REDESIGN,
-       Root.Runtime.ExperimentName.FLOATING_ENTRY_POINTS_FOR_AI_ASSISTANCE,
-       Root.Runtime.ExperimentName.TIMELINE_ALTERNATIVE_NAVIGATION,
+@@ -359,6 +359,8 @@ export class MainImpl {
+     Root.Runtime.experiments.enableExperimentsByDefault([
+       Root.Runtime.ExperimentName.FULL_ACCESSIBILITY_TREE,
+       Root.Runtime.ExperimentName.HIGHLIGHT_ERRORS_ELEMENTS_PANEL,
 +      Root.Runtime.ExperimentName.AUTHORED_DEPLOYED_GROUPING,
 +      Root.Runtime.ExperimentName.JUST_MY_CODE,
        ...(Root.Runtime.Runtime.queryParam('isChromeForTesting') ? ['protocol-monitor'] : []),
      ]);
  
 diff --git a/front_end/panels/sources/NavigatorView.ts b/front_end/panels/sources/NavigatorView.ts
-index d9da41ab84..73f42a22be 100644
+index c4f0cf6319..3c468c11a2 100644
 --- a/front_end/panels/sources/NavigatorView.ts
 +++ b/front_end/panels/sources/NavigatorView.ts
-@@ -795,8 +795,9 @@ export class NavigatorView extends UI.Widget.VBox implements SDK.TargetManager.O
+@@ -823,8 +823,9 @@ export class NavigatorView extends UI.Widget.VBox implements SDK.TargetManager.O
        return matchingContextName;
      }
  
@@ -117,10 +117,10 @@ index d9da41ab84..73f42a22be 100644
  
      const parsedURL = new Common.ParsedURL.ParsedURL(projectOrigin);
 diff --git a/front_end/panels/sources/sources-meta.ts b/front_end/panels/sources/sources-meta.ts
-index f4284da33b..76bb296abb 100644
+index 966e223d5a..20ce18502a 100644
 --- a/front_end/panels/sources/sources-meta.ts
 +++ b/front_end/panels/sources/sources-meta.ts
-@@ -495,32 +495,6 @@ UI.ViewManager.registerViewExtension({
+@@ -517,32 +517,6 @@ UI.ViewManager.registerViewExtension({
    },
  });
  

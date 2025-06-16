@@ -1,4 +1,4 @@
-From 94301beb8effbc0b3a2d11934369d4c6071fe73c Mon Sep 17 00:00:00 2001
+From 83cc44962c8b10698abe61b74e4260a373624115 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 15:05:56 +0100
 Subject: [PATCH 5/8] Support forcing the devtools theme via a query parameter,
@@ -10,10 +10,10 @@ To test, make sure that `?theme=dark`, `?theme=default`, and `?theme=systemPrefe
  1 file changed, 8 insertions(+), 3 deletions(-)
 
 diff --git a/front_end/ui/legacy/theme_support/ThemeSupport.ts b/front_end/ui/legacy/theme_support/ThemeSupport.ts
-index 87d8a05a43..3f5a289fd7 100644
+index 298ba78952..43ee9341ec 100644
 --- a/front_end/ui/legacy/theme_support/ThemeSupport.ts
 +++ b/front_end/ui/legacy/theme_support/ThemeSupport.ts
-@@ -165,14 +165,19 @@ export class ThemeSupport extends EventTarget {
+@@ -152,14 +152,19 @@ export class ThemeSupport extends EventTarget {
    }
  
    #applyThemeToDocument(document: Document): void {
@@ -33,9 +33,9 @@ index 87d8a05a43..3f5a289fd7 100644
 -    const useChromeTheme = Common.Settings.moduleSetting('chrome-theme-colors').get();
 +    // Disable this—it adds blue headers which are out of keeping with Cloudflare styling
 +    const useChromeTheme = false;
-     const hostConfig = Common.Settings.Settings.instance().getHostConfig();
-     const isIncognito = !hostConfig || hostConfig.isOffTheRecord === true;
+     const isIncognito = Root.Runtime.hostConfig.isOffTheRecord === true;
      // Baseline is the name of Chrome's default color theme and there are two of these: default and grayscale.
+     // The collective name for the rest of the color themes is dynamic.
 -- 
 2.39.5 (Apple Git-154)
 

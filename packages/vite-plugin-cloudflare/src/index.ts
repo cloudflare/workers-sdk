@@ -2,10 +2,10 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
+import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
-import { Miniflare, Response as MiniflareResponse } from "miniflare";
+import { Miniflare } from "miniflare";
 import colors from "picocolors";
 import * as vite from "vite";
 import {
@@ -49,12 +49,12 @@ import {
 	resolveNodeJSImport,
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
-import { additionalModuleGlobalRE } from "./shared";
+import { additionalModuleGlobalRE, UNKNOWN_HOST } from "./shared";
 import {
 	cleanUrl,
+	createRequestHandler,
 	getFirstAvailablePort,
 	getOutputDirectory,
-	toMiniflareRequest,
 } from "./utils";
 import { handleWebSocket } from "./websockets";
 import { validateWorkerEnvironmentsResolvedConfigs } from "./worker-environments-validation";
@@ -64,6 +64,7 @@ import type {
 	ResolvedPluginConfig,
 	WorkerConfig,
 } from "./plugin-config";
+import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { Unstable_RawConfig } from "wrangler";
 
 export type { PluginConfig } from "./plugin-config";
@@ -330,50 +331,103 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
-				// The HTTP server is not available in middleware mode
-				if (viteDevServer.httpServer) {
-					handleWebSocket(viteDevServer.httpServer, async () => {
-						assert(miniflare, `Miniflare not defined`);
-						const routerWorker = await miniflare.getWorker(ROUTER_WORKER_NAME);
+				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
-						return routerWorker.fetch;
-					});
+				if (resolvedPluginConfig.type === "workers") {
+					const entryWorkerConfig = getWorkerConfig(
+						resolvedPluginConfig.entryWorkerEnvironmentName
+					);
+					assert(entryWorkerConfig, `No entry Worker config`);
+					const entryWorkerName = entryWorkerConfig.name;
+
+					// The HTTP server is not available in middleware mode
+					if (viteDevServer.httpServer) {
+						handleWebSocket(viteDevServer.httpServer, async () => {
+							assert(miniflare, `Miniflare not defined`);
+							const entryWorker = await miniflare.getWorker(entryWorkerName);
+
+							return entryWorker.fetch;
+						});
+					}
+
+					const staticRouting: StaticRouting | undefined =
+						entryWorkerConfig.assets?.run_worker_first === true
+							? { user_worker: ["/*"] }
+							: resolvedPluginConfig.staticRouting;
+
+					if (staticRouting) {
+						const excludeRulesMatcher = generateStaticRoutingRuleMatcher(
+							staticRouting.asset_worker ?? []
+						);
+						const includeRulesMatcher = generateStaticRoutingRuleMatcher(
+							staticRouting.user_worker
+						);
+						const userWorkerHandler = createRequestHandler(async (request) => {
+							assert(miniflare, `Miniflare not defined`);
+							const userWorker = await miniflare.getWorker(entryWorkerName);
+
+							return userWorker.fetch(request, { redirect: "manual" });
+						});
+
+						preMiddleware = async (req, res, next) => {
+							assert(req.url, `req.url not defined`);
+							// Only the URL pathname is used to match rules
+							const request = new Request(new URL(req.url, UNKNOWN_HOST));
+
+							if (req[kRequestType] === "asset") {
+								next();
+							} else if (excludeRulesMatcher({ request })) {
+								req[kRequestType] === "asset";
+								next();
+							} else if (includeRulesMatcher({ request })) {
+								userWorkerHandler(req, res, next);
+							} else {
+								next();
+							}
+						};
+					}
 				}
 
 				return () => {
-					viteDevServer.middlewares.use(async (req, res, next) => {
-						try {
+					if (preMiddleware) {
+						const middlewareStack = viteDevServer.middlewares.stack;
+						const cachedTransformMiddlewareIndex = middlewareStack.findIndex(
+							(middleware) =>
+								"name" in middleware.handle &&
+								middleware.handle.name === "viteCachedTransformMiddleware"
+						);
+						assert(
+							cachedTransformMiddlewareIndex !== -1,
+							"Failed to find viteCachedTransformMiddleware"
+						);
+
+						// Insert our middleware after the host check middleware to prevent DNS rebinding attacks
+						middlewareStack.splice(cachedTransformMiddlewareIndex, 0, {
+							route: "",
+							handle: preMiddleware,
+						});
+					}
+
+					// post middleware
+					viteDevServer.middlewares.use(
+						createRequestHandler(async (request, req) => {
 							assert(miniflare, `Miniflare not defined`);
-							const request = createRequest(req, res);
-							let response: MiniflareResponse;
 
 							if (req[kRequestType] === "asset") {
 								const assetWorker =
 									await miniflare.getWorker(ASSET_WORKER_NAME);
-								response = await assetWorker.fetch(
-									toMiniflareRequest(request),
-									{ redirect: "manual" }
-								);
+
+								return assetWorker.fetch(request, { redirect: "manual" });
 							} else {
 								const routerWorker =
 									await miniflare.getWorker(ROUTER_WORKER_NAME);
-								response = await routerWorker.fetch(
-									toMiniflareRequest(request),
-									{ redirect: "manual" }
-								);
-							}
 
-							// Vite uses HTTP/2 when `server.https` is enabled
-							if (req.httpVersionMajor === 2) {
-								// HTTP/2 disallows use of the `transfer-encoding` header
-								response.headers.delete("transfer-encoding");
+								return routerWorker.fetch(request, {
+									redirect: "manual",
+								});
 							}
-
-							await sendResponse(res, response as any);
-						} catch (error) {
-							next(error);
-						}
-					});
+						})
+					);
 				};
 			},
 			async configurePreviewServer(vitePreviewServer) {
@@ -403,25 +457,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
-				vitePreviewServer.middlewares.use(async (req, res, next) => {
-					try {
-						const request = createRequest(req, res);
-						const response = await miniflare.dispatchFetch(
-							toMiniflareRequest(request),
-							{ redirect: "manual" }
-						);
-
-						// Vite uses HTTP/2 when `preview.https` is enabled
-						if (req.httpVersionMajor === 2) {
-							// HTTP/2 disallows use of the `transfer-encoding` header
-							response.headers.delete("transfer-encoding");
-						}
-
-						await sendResponse(res, response as any);
-					} catch (error) {
-						next(error);
-					}
-				});
+				vitePreviewServer.middlewares.use(
+					createRequestHandler((request) => {
+						return miniflare.dispatchFetch(request, { redirect: "manual" });
+					})
+				);
 			},
 		},
 		// Plugin to provide a fallback entry file
