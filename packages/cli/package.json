@@ -29,8 +29,8 @@
 		"@typescript-eslint/eslint-plugin": "^5.55.0",
 		"@typescript-eslint/parser": "^5.55.0",
 		"chalk": "^2.4.2",
-		"esbuild": "^0.17.12",
+		"esbuild": "^0.25.0",
 		"log-update": "^5.0.1",
-		"undici": "5.28.4"
+		"undici": "5.29.0"
 	}
 }

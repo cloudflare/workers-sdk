@@ -75,7 +75,7 @@
 		"concurrently": "^8.2.2",
 		"devalue": "^4.3.0",
 		"devtools-protocol": "^0.0.1182435",
-		"esbuild": "^0.16.17",
+		"esbuild": "^0.25.0",
 		"eslint": "^8.6.0",
 		"eslint-config-prettier": "^9.0.0",
 		"eslint-plugin-es": "^4.1.0",
