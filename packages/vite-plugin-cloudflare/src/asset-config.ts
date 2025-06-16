@@ -16,6 +16,7 @@ import {
 } from "@cloudflare/workers-shared/utils/types";
 import type { ResolvedPluginConfig } from "./plugin-config";
 import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types";
+import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
 import type { ResolvedConfig } from "vite";
 import type { Unstable_Config } from "wrangler";
 
@@ -45,7 +46,7 @@ export function getAssetsConfig(
 	resolvedPluginConfig: ResolvedPluginConfig,
 	entryWorkerConfig: Unstable_Config | undefined,
 	resolvedConfig: ResolvedConfig
-) {
+): AssetConfig {
 	const assetsConfig =
 		resolvedPluginConfig.type === "assets-only"
 			? resolvedPluginConfig.config.assets
@@ -69,7 +70,12 @@ export function getAssetsConfig(
 	const config = {
 		...compatibilityOptions,
 		...assetsConfig,
-	};
+		has_static_routing:
+			resolvedPluginConfig.type === "workers" &&
+			resolvedPluginConfig.staticRouting
+				? true
+				: false,
+	} satisfies AssetConfig;
 
 	if (!resolvedPluginConfig.experimental?.headersAndRedirectsDevModeSupport) {
 		return config;

@@ -447,15 +447,9 @@ export function getAssetsOptions(
 		routerConfig.invoke_user_worker_ahead_of_assets =
 			config.assets.run_worker_first;
 	} else if (Array.isArray(config.assets?.run_worker_first)) {
-		const { parsed, errorMessage } = parseStaticRouting(
+		routerConfig.static_routing = parseStaticRouting(
 			config.assets.run_worker_first
 		);
-		if (errorMessage) {
-			throw new UserError(errorMessage, {
-				telemetryMessage: "invalid run_worker_first rules",
-			});
-		}
-		routerConfig.static_routing = parsed;
 	}
 
 	// User Worker always ahead of assets, but no assets binding provided
