@@ -2653,6 +2653,10 @@ export class Miniflare {
 		return result;
 	}
 
+	async unsafeCleanupContainers() {
+		await this.#containerController?.cleanupContainers();
+	}
+
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,

@@ -301,6 +301,11 @@ export class LocalRuntimeController extends RuntimeController {
 		// Ignored in local runtime
 	}
 
+	// NB: in the future we might want to build containers here too?
+	async cleanupContainers() {
+		await this.#mf?.unsafeCleanupContainers();
+	}
+
 	#teardown = async (): Promise<void> => {
 		logger.debug("LocalRuntimeController teardown beginning...");
 
