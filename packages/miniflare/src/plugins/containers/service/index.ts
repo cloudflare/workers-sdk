@@ -4,8 +4,11 @@ import {
 	dockerBuild,
 	dockerImageInspect,
 	MF_DEV_CONTAINER_PREFIX,
+	runDockerCmd,
+	runDockerCmdWithOutput,
 	verifyDockerInstalled,
 } from "@cloudflare/containers-shared";
+import { dim } from "kleur/colors";
 import { Log } from "../../../shared";
 import { ContainerOptions, ContainersSharedOptions } from "../index";
 
@@ -18,6 +21,7 @@ export class ContainerController {
 	#sharedOptions: ContainersSharedOptions;
 	#logger: Log;
 	#dockerInstalled: boolean = false;
+	#imagesBuilt: Set<string> = new Set();
 	constructor(
 		containerOptions: { [className: string]: ContainerOptions },
 		sharedOptions: ContainersSharedOptions,
@@ -67,6 +71,7 @@ export class ContainerController {
 			args: options.args,
 			platform: "linux/amd64",
 		});
+		this.#imagesBuilt.add(options.imageTag);
 		await dockerBuild(this.#sharedOptions.dockerPath, { buildCmd, dockerfile });
 		await this.checkExposedPorts(options.imageTag);
 	}
@@ -82,5 +87,53 @@ export class ContainerController {
 					"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort()` in your Dockerfile."
 			);
 		}
+	}
+
+	async cleanupContainers() {
+		if (this.#imagesBuilt.size === 0) {
+			return;
+		}
+
+		this.#logger.info(dim("Cleaning up containers..."));
+
+		try {
+			// Find all containers (stopped and running) for each built image in parallel
+			const containerPromises = Array.from(this.#imagesBuilt).map(
+				async (imageTag) => {
+					return await this.getContainers(imageTag);
+				}
+			);
+			const containerResults = await Promise.all(containerPromises);
+			const allContainerIds = containerResults.flat();
+			if (allContainerIds.length === 0) {
+				return;
+			}
+
+			// Workerd should have stopped all containers, but clean up any in case. Sends a sigkill.
+			await runDockerCmd(
+				this.#sharedOptions.dockerPath,
+				["rm", "--force", ...allContainerIds],
+				["inherit", "pipe", "pipe"]
+			);
+		} catch (error) {
+			this.#logger.warn(
+				`Failed to cleanup containers: ${error instanceof Error ? error.message : String(error)}. You may need to manually stop and/or remove any containers started during dev.`
+			);
+		}
+	}
+
+	async getContainers(ancestorImage: string) {
+		const output = await runDockerCmdWithOutput(
+			this.#sharedOptions.dockerPath,
+			[
+				"ps",
+				"-a",
+				"--filter",
+				`ancestor=${ancestorImage}`,
+				"--format",
+				"{{.ID}}",
+			]
+		);
+		return output ? output.split("\n").filter((line) => line.trim()) : [];
 	}
 }
