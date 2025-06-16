@@ -9799,9 +9799,16 @@ packages:
     resolution: {integrity: sha512-GhoY8uYqd6iwUl2kgjTm4CZAf6oo5mHK7BPqx3rKgx893YSsy0LGHV6gfqqQvZt/8xM8xeOnfXBCfqclMKkJ5g==}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   es-module-lexer@1.5.4:
     resolution: {integrity: sha512-MVNK56NiMrOwitFB7cqDwq0CQutbw+0BvLshJSse0MUNU+y1FC3bUS/AQg7oUng+/wKrrki7JfmwtVHkVfPLlw==}
 
+||||||| parent of 045d39793 (fix lockfile)
+=======
+  es-module-lexer@1.5.4:
+    resolution: {integrity: sha512-MVNK56NiMrOwitFB7cqDwq0CQutbw+0BvLshJSse0MUNU+y1FC3bUS/AQg7oUng+/wKrrki7JfmwtVHkVfPLlw==}
+
+>>>>>>> 045d39793 (fix lockfile)
   es-module-lexer@1.7.0:
     resolution: {integrity: sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA==}
 ||||||| parent of cb612f036 (fix lockfile)
@@ -20246,8 +20253,14 @@ snapshots:
       safe-array-concat: 1.1.2
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   es-module-lexer@1.5.4: {}
 
+||||||| parent of 045d39793 (fix lockfile)
+=======
+  es-module-lexer@1.5.4: {}
+
+>>>>>>> 045d39793 (fix lockfile)
   es-module-lexer@1.7.0: {}
 ||||||| parent of cb612f036 (fix lockfile)
   es-module-lexer@1.5.4: {}
@@ -24707,7 +24720,7 @@ snapshots:
     dependencies:
       cac: 6.7.14
       debug: 4.4.1(supports-color@9.2.2)
-      es-module-lexer: 1.7.0
+      es-module-lexer: 1.5.4
       pathe: 1.1.2
       vite: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
     transitivePeerDependencies:
