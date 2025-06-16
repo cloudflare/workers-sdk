@@ -370,8 +370,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						});
 
 						preMiddleware = async (req, res, next) => {
+							assert(req.url, `req.url not defined`);
 							// Only the URL pathname is used to match rules
-							const request = new Request(new URL(req.url!, UNKNOWN_HOST));
+							const request = new Request(new URL(req.url, UNKNOWN_HOST));
 
 							if (req[kRequestType] === "asset") {
 								next();

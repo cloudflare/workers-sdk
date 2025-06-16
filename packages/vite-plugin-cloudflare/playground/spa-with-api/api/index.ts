@@ -1,4 +1,4 @@
-import asset from "./asset.txt?no-inline";
+import assetPath from "./asset.txt?no-inline";
 
 interface Env {
 	ASSETS: Fetcher;
@@ -10,7 +10,9 @@ export default {
 
 		if (pathname.startsWith("/api/")) {
 			if (pathname === "/api/asset") {
-				const response = await env.ASSETS.fetch(new URL(asset, request.url));
+				const response = await env.ASSETS.fetch(
+					new URL(assetPath, request.url)
+				);
 				const text = await response.text();
 
 				return new Response(`Modified: ${text}`);
