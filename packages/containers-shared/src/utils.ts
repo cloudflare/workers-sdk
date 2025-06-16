@@ -29,6 +29,45 @@ export const runDockerCmd = async (
 	});
 };
 
+export const runDockerCmdWithOutput = async (
+	dockerPath: string,
+	args: string[]
+): Promise<string> => {
+	const child = spawn(dockerPath, args, {
+		stdio: ["inherit", "pipe", "pipe"],
+	});
+
+	let stdout = "";
+	let stderr = "";
+
+	child.stdout?.on("data", (data) => {
+		stdout += data.toString();
+	});
+
+	child.stderr?.on("data", (data) => {
+		stderr += data.toString();
+	});
+
+	let errorHandled = false;
+
+	return new Promise((resolve, reject) => {
+		child.on("close", (code) => {
+			if (code === 0) {
+				resolve(stdout.trim());
+			} else if (!errorHandled) {
+				errorHandled = true;
+				reject(new Error(`Docker command exited with code: ${code}`));
+			}
+		});
+		child.on("error", (err) => {
+			if (!errorHandled) {
+				errorHandled = true;
+				reject(new Error(`Docker command failed: ${err.message}`));
+			}
+		});
+	});
+};
+
 export const verifyDockerInstalled = async (dockerPath: string) => {
 	try {
 		await runDockerCmd(dockerPath, ["info"], ["inherit", "pipe", "pipe"]);
