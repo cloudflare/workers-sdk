@@ -7,38 +7,14 @@ settings:
 catalogs:
   default:
     '@vitest/runner':
-<<<<<<< HEAD
       specifier: ~3.2.0
       version: 3.2.3
-||||||| parent of cb612f036 (fix lockfile)
-      specifier: ~3.1.1
-      version: 3.1.1
-=======
-      specifier: ~3.1.1
-      version: 3.1.4
->>>>>>> cb612f036 (fix lockfile)
     '@vitest/snapshot':
-<<<<<<< HEAD
       specifier: ~3.2.0
       version: 3.2.3
-||||||| parent of cb612f036 (fix lockfile)
-      specifier: ~3.1.1
-      version: 3.1.1
-=======
-      specifier: ~3.1.1
-      version: 3.1.4
->>>>>>> cb612f036 (fix lockfile)
     '@vitest/ui':
-<<<<<<< HEAD
       specifier: ~3.2.0
       version: 3.2.3
-||||||| parent of cb612f036 (fix lockfile)
-      specifier: ~3.1.1
-      version: 3.1.1
-=======
-      specifier: ~3.1.1
-      version: 3.1.4
->>>>>>> cb612f036 (fix lockfile)
     esbuild:
       specifier: 0.25.4
       version: 0.25.4
@@ -58,16 +34,8 @@ catalogs:
       specifier: ^5.4.14
       version: 5.4.14
     vitest:
-<<<<<<< HEAD
       specifier: ~3.2.0
       version: 3.2.3
-||||||| parent of cb612f036 (fix lockfile)
-      specifier: ~3.1.1
-      version: 3.1.1
-=======
-      specifier: ~3.1.1
-      version: 3.1.4
->>>>>>> cb612f036 (fix lockfile)
     ws:
       specifier: 8.18.0
       version: 8.18.0
@@ -118,16 +86,8 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@ianvs/prettier-plugin-sort-imports':
         specifier: 4.2.1
         version: 4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.2.5)
@@ -175,13 +135,7 @@ importers:
         version: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
 
   fixtures/additional-modules:
     devDependencies:
@@ -189,16 +143,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -207,13 +153,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -231,13 +171,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -248,32 +182,14 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
-<<<<<<< HEAD
-||||||| parent of cb612f036 (fix lockfile)
-      vitest:
-        specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-      vitest:
-        specifier: catalog:default
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -284,16 +200,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -302,13 +210,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -319,16 +221,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -337,13 +231,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -357,16 +245,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -375,13 +255,7 @@ importers:
         version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -396,13 +270,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -410,16 +278,8 @@ importers:
   fixtures/email-worker:
     devDependencies:
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/mimetext':
         specifier: ^2.0.4
         version: 2.0.4
@@ -443,13 +303,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -460,16 +314,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -478,13 +324,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -508,13 +348,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -538,13 +372,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
 
   fixtures/isomorphic-random-example: {}
 
@@ -556,16 +384,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/node':
         specifier: ^20.17.32
         version: 20.17.32
@@ -577,13 +397,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -594,16 +408,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/is-even':
         specifier: ^1.0.2
         version: 1.0.2
@@ -624,13 +430,7 @@ importers:
         version: 7.0.0
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -645,16 +445,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -663,13 +455,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -680,28 +466,14 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       undici:
         specifier: catalog:default
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -712,16 +484,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/pg':
         specifier: ^8.11.2
         version: 8.11.6
@@ -736,13 +500,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -760,13 +518,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -777,16 +529,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -795,13 +539,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -816,16 +554,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@fixture/pages-plugin':
         specifier: workspace:*
         version: link:../pages-plugin-example
@@ -837,13 +567,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -861,13 +585,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -885,13 +603,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -909,13 +621,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -926,16 +632,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -944,13 +642,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -968,13 +660,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -998,16 +684,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@fixture/pages-plugin':
         specifier: workspace:*
         version: link:../pages-plugin-example
@@ -1019,13 +697,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1046,13 +718,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1067,13 +733,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1084,16 +744,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1102,13 +754,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1126,13 +772,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1150,13 +790,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1174,13 +808,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1198,13 +826,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1222,13 +844,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1246,13 +862,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1270,13 +880,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1297,13 +901,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1318,13 +916,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1339,13 +931,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1357,16 +943,8 @@ importers:
   fixtures/secrets-store:
     devDependencies:
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1389,16 +967,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/is-even':
         specifier: ^1.0.2
         version: 1.0.2
@@ -1427,16 +997,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vitest-pool-workers
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@microlabs/otel-cf-workers':
         specifier: 1.0.0-rc.45
         version: 1.0.0-rc.45(@opentelemetry/api@1.7.0)
@@ -1469,7 +1031,6 @@ importers:
         version: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
@@ -1486,11 +1047,6 @@ importers:
       vitest:
         specifier: ~3.0.7
         version: 3.0.9(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1503,16 +1059,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       undici:
         specifier: ^5.28.4
         version: 5.28.5
@@ -1540,13 +1088,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1554,16 +1096,8 @@ importers:
   fixtures/worker-ts:
     devDependencies:
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1580,16 +1114,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       run-script-os:
         specifier: ^1.1.6
         version: 1.1.6
@@ -1601,13 +1127,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1618,16 +1138,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1636,13 +1148,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1653,16 +1159,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1671,13 +1169,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1688,16 +1180,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1706,13 +1190,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1723,16 +1201,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1741,13 +1211,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1758,16 +1222,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/jest-image-snapshot':
         specifier: ^6.4.0
         version: 6.4.0
@@ -1788,7 +1244,6 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
@@ -1814,11 +1269,6 @@ importers:
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1829,16 +1279,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1847,13 +1289,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1861,16 +1297,8 @@ importers:
   fixtures/workflow-multiple:
     devDependencies:
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -1879,13 +1307,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -2025,16 +1447,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@iarna/toml':
         specifier: ^3.0.0
         version: 3.0.0
@@ -2139,13 +1553,7 @@ importers:
         version: 4.2.0(typescript@5.7.3)(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       which-pm-runs:
         specifier: ^1.1.0
         version: 1.1.0
@@ -2180,16 +1588,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-worker
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -2243,16 +1643,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-worker
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       mustache:
         specifier: ^4.2.0
         version: 4.2.0
@@ -2282,16 +1674,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/mime':
         specifier: ^3.0.4
         version: 3.0.4
@@ -2360,16 +1744,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-shared
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
@@ -2514,13 +1890,7 @@ importers:
     devDependencies:
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.8.19
-<<<<<<< HEAD
         version: 0.8.19(@cloudflare/workers-types@4.20250612.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 0.8.19(@cloudflare/workers-types@4.20250604.0)(@vitest/runner@3.1.3)(@vitest/snapshot@3.1.3)(vitest@3.1.1)
-=======
-        version: 0.8.19(@cloudflare/workers-types@4.20250612.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.1.4)
->>>>>>> cb612f036 (fix lockfile)
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared
@@ -2528,16 +1898,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -2549,13 +1911,7 @@ importers:
         version: 0.4.1
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
 
   packages/playground-preview-worker:
     dependencies:
@@ -2570,16 +1926,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-worker
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -2627,16 +1975,8 @@ importers:
         specifier: workspace:^
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       esbuild:
         specifier: catalog:default
         version: 0.25.4
@@ -2672,7 +2012,7 @@ importers:
         version: 2.0.0-rc.17
       workerd:
         specifier: ^1.20250521.0
-        version: 1.20250604.0
+        version: 1.20250612.0
     devDependencies:
       '@types/node-unenv':
         specifier: npm:@types/node@^22.14.0
@@ -2688,13 +2028,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -2702,16 +2036,8 @@ importers:
   packages/vite-plugin-cloudflare:
     dependencies:
       '@cloudflare/unenv-preset':
-<<<<<<< HEAD
         specifier: 2.3.3
-        version: 2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250604.0)
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: 2.3.2
-        version: 2.3.2(unenv@2.0.0-rc.17)(workerd@1.20250604.0)
-=======
-        specifier: 2.3.2
-        version: 2.3.2(unenv@2.0.0-rc.17)(workerd@1.20250612.0)
->>>>>>> cb612f036 (fix lockfile)
+        version: 2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250612.0)
       '@mjackson/node-fetch-server':
         specifier: ^0.6.1
         version: 0.6.1
@@ -2750,16 +2076,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/node':
         specifier: ^20.17.32
         version: 20.17.32
@@ -2783,13 +2101,7 @@ importers:
         version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
 
   packages/vite-plugin-cloudflare/playground:
     devDependencies:
@@ -2818,16 +2130,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2847,16 +2151,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2876,16 +2172,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2905,16 +2193,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2934,16 +2214,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2963,16 +2235,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2992,16 +2256,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3021,16 +2277,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3050,16 +2298,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3079,16 +2319,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3108,16 +2340,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3137,16 +2361,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3166,16 +2382,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3195,16 +2403,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3224,16 +2424,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3253,16 +2445,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/express':
         specifier: ^5.0.1
         version: 5.0.1
@@ -3294,16 +2478,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@remix-run/cloudflare':
         specifier: 2.12.0
         version: 2.12.0(@cloudflare/workers-types@4.20250612.0)(typescript@5.7.3)
@@ -3338,16 +2514,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3367,16 +2535,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/node':
         specifier: ^20.17.32
         version: 20.17.32
@@ -3424,16 +2584,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@tailwindcss/vite':
         specifier: ^4.0.15
         version: 4.0.15(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
@@ -3468,16 +2620,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@prisma/adapter-d1':
         specifier: ^6.3.0
         version: 6.3.1
@@ -3513,16 +2657,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/react':
         specifier: ^19.1.0
         version: 19.1.0
@@ -3555,16 +2691,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/react':
         specifier: ^19.0.0
         version: 19.0.7
@@ -3600,16 +2728,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/react':
         specifier: ^19.0.0
         version: 19.0.7
@@ -3638,7 +2758,6 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
       typescript:
@@ -3662,13 +2781,6 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3695,16 +2807,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/react':
         specifier: ^19.0.0
         version: 19.0.7
@@ -3736,16 +2840,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3765,16 +2861,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3794,16 +2882,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@vitejs/plugin-basic-ssl':
         specifier: ^2.0.0
         version: 2.0.0(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
@@ -3826,16 +2906,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3855,16 +2927,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3884,16 +2948,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3913,16 +2969,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -3967,16 +3015,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/node':
         specifier: ^20.17.32
         version: 20.17.32
@@ -3985,22 +3025,10 @@ importers:
         version: 7.5.1
       '@vitest/runner':
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1
-=======
-        version: 3.1.4
->>>>>>> cb612f036 (fix lockfile)
       '@vitest/snapshot':
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1
-=======
-        version: 3.1.4
->>>>>>> cb612f036 (fix lockfile)
       capnp-es:
         specifier: ^0.0.11
         version: 0.0.11(typescript@5.7.3)
@@ -4015,13 +3043,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
 
   packages/workers-editor-shared:
     dependencies:
@@ -4202,16 +3224,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@sentry/cli':
         specifier: ^2.37.0
         version: 2.41.1(encoding@0.1.13)
@@ -4254,16 +3268,8 @@ importers:
         specifier: workspace:*
         version: link:../vitest-pool-workers
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/node':
         specifier: ^20.17.32
         version: 20.17.32
@@ -4275,13 +3281,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -4306,27 +3306,13 @@ importers:
         version: link:../eslint-config-worker
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.8.19
-<<<<<<< HEAD
         version: 0.8.19(@cloudflare/workers-types@4.20250612.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 0.8.19(@cloudflare/workers-types@4.20250604.0)(@vitest/runner@3.1.3)(@vitest/snapshot@3.1.3)(vitest@3.1.1)
-=======
-        version: 0.8.19(@cloudflare/workers-types@4.20250612.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.1.4)
->>>>>>> cb612f036 (fix lockfile)
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@types/mime':
         specifier: ^3.0.4
         version: 3.0.4
@@ -4341,13 +3327,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
 
   packages/wrangler:
     dependencies:
@@ -4356,7 +3336,7 @@ importers:
         version: link:../kv-asset-handler
       '@cloudflare/unenv-preset':
         specifier: 2.3.3
-        version: 2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250604.0)
+        version: 2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250612.0)
       blake3-wasm:
         specifier: 2.1.5
         version: 2.1.5
@@ -4405,16 +3385,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20250612.0
         version: 4.20250612.0
-||||||| parent of cb612f036 (fix lockfile)
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-=======
-        specifier: ^4.20250604.0
-        version: 4.20250612.0
->>>>>>> cb612f036 (fix lockfile)
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
@@ -4477,13 +3449,7 @@ importers:
         version: 17.0.24
       '@vitest/ui':
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(vitest@3.2.3)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(vitest@3.1.1)
-=======
-        version: 3.1.4(vitest@3.1.4)
->>>>>>> cb612f036 (fix lockfile)
       '@webcontainer/env':
         specifier: ^1.1.0
         version: 1.1.0
@@ -4621,22 +3587,10 @@ importers:
         version: 1.5.4
       vitest:
         specifier: catalog:default
-<<<<<<< HEAD
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-        version: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       vitest-websocket-mock:
         specifier: ^0.4.0
-<<<<<<< HEAD
         version: 0.4.0(vitest@3.2.3)
-||||||| parent of cb612f036 (fix lockfile)
-        version: 0.4.0(vitest@3.1.1)
-=======
-        version: 0.4.0(vitest@3.1.4)
->>>>>>> cb612f036 (fix lockfile)
       ws:
         specifier: catalog:default
         version: 8.18.0
@@ -5301,32 +4255,6 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-<<<<<<< HEAD
-  '@cloudflare/workerd-darwin-64@1.20250508.0':
-    resolution: {integrity: sha512-9x09MrA9Y5RQs3zqWvWns8xHgM2pVNXWpeJ+3hQYu4PrwPFZXtTD6b/iMmOnlYKzINlREq1RGeEybMFyWEUlUg==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [darwin]
-
-  '@cloudflare/workerd-darwin-64@1.20250612.0':
-    resolution: {integrity: sha512-IpL/tOvNY04n2hvp/XGdOGjeMDycEjbwJL8gJ0kenBFBa13EE82I61ceA56kuCiEdb1vBv3O+xiD9zN6AuQlmQ==}
-||||||| parent of 6f60d077a (human fixups)
-  '@cloudflare/workerd-darwin-64@1.20250508.0':
-    resolution: {integrity: sha512-9x09MrA9Y5RQs3zqWvWns8xHgM2pVNXWpeJ+3hQYu4PrwPFZXtTD6b/iMmOnlYKzINlREq1RGeEybMFyWEUlUg==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [darwin]
-
-  '@cloudflare/workerd-darwin-64@1.20250604.0':
-    resolution: {integrity: sha512-PI6AWAzhHg75KVhYkSWFBf3HKCHstpaKg4nrx6LYZaEvz0TaTz+JQpYU2fNAgGFmVsK5xEzwFTGh3DAVAKONPw==}
-=======
-  '@cloudflare/workerd-darwin-64@1.20250604.0':
-    resolution: {integrity: sha512-PI6AWAzhHg75KVhYkSWFBf3HKCHstpaKg4nrx6LYZaEvz0TaTz+JQpYU2fNAgGFmVsK5xEzwFTGh3DAVAKONPw==}
->>>>>>> 6f60d077a (human fixups)
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [darwin]
-
   '@cloudflare/workerd-darwin-64@1.20250612.0':
     resolution: {integrity: sha512-IpL/tOvNY04n2hvp/XGdOGjeMDycEjbwJL8gJ0kenBFBa13EE82I61ceA56kuCiEdb1vBv3O+xiD9zN6AuQlmQ==}
     engines: {node: '>=16'}
@@ -5341,32 +4269,6 @@ packages:
 
   '@cloudflare/workerd-darwin-arm64@1.20250417.0':
     resolution: {integrity: sha512-dSlk18F4i3T1OTzFBxx3pKpXRMP6w2xZ26+oIV32BFWrCi/HxGzUd6gVA0q37oLGqITRt8xU693J4Gl1CwC/Ag==}
-    engines: {node: '>=16'}
-    cpu: [arm64]
-    os: [darwin]
-
-<<<<<<< HEAD
-  '@cloudflare/workerd-darwin-arm64@1.20250508.0':
-    resolution: {integrity: sha512-0Ili+nE2LLRzYue/yPc1pepSyNNg6LxR3/ng/rlQzVQUxPXIXldHFkJ/ynsYwQnAcf6OxasSi/kbTm6yvDoSAQ==}
-    engines: {node: '>=16'}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@cloudflare/workerd-darwin-arm64@1.20250612.0':
-    resolution: {integrity: sha512-Hb9GWzLT4ydBYfGE29jxZFkx58NEA+oRMuGP358A6PUZ9UEDYWTDhskVQovhjELZMgOppUYXN2v/Je3sO1anpg==}
-||||||| parent of 6f60d077a (human fixups)
-  '@cloudflare/workerd-darwin-arm64@1.20250508.0':
-    resolution: {integrity: sha512-0Ili+nE2LLRzYue/yPc1pepSyNNg6LxR3/ng/rlQzVQUxPXIXldHFkJ/ynsYwQnAcf6OxasSi/kbTm6yvDoSAQ==}
-    engines: {node: '>=16'}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@cloudflare/workerd-darwin-arm64@1.20250604.0':
-    resolution: {integrity: sha512-hOiZZSop7QRQgGERtTIy9eU5GvPpIsgE2/BDsUdHMl7OBZ7QLniqvgDzLNDzj0aTkCldm9Yl/Z+C7aUgRdOccw==}
-=======
-  '@cloudflare/workerd-darwin-arm64@1.20250604.0':
-    resolution: {integrity: sha512-hOiZZSop7QRQgGERtTIy9eU5GvPpIsgE2/BDsUdHMl7OBZ7QLniqvgDzLNDzj0aTkCldm9Yl/Z+C7aUgRdOccw==}
->>>>>>> 6f60d077a (human fixups)
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
@@ -5389,32 +4291,6 @@ packages:
     cpu: [x64]
     os: [linux]
 
-<<<<<<< HEAD
-  '@cloudflare/workerd-linux-64@1.20250508.0':
-    resolution: {integrity: sha512-5saVrZ3uVwYxvBa7BaonXjeqB6X0YF3ak05qvBaWcmZ3FNmnarMm2W8842cnbhnckDVBpB/iDo51Sy6Y7y1jcw==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [linux]
-
-  '@cloudflare/workerd-linux-64@1.20250612.0':
-    resolution: {integrity: sha512-7kOA1sCfl9m2osolplDM9XqyBPf5KupvDs4UbD2kQq0zfd+u6acLz/YB9Q5tsVQIyhQoP32Oe+kr6IZJBImq9A==}
-||||||| parent of 6f60d077a (human fixups)
-  '@cloudflare/workerd-linux-64@1.20250508.0':
-    resolution: {integrity: sha512-5saVrZ3uVwYxvBa7BaonXjeqB6X0YF3ak05qvBaWcmZ3FNmnarMm2W8842cnbhnckDVBpB/iDo51Sy6Y7y1jcw==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [linux]
-
-  '@cloudflare/workerd-linux-64@1.20250604.0':
-    resolution: {integrity: sha512-S0R9r7U4nv9qejYygQj01hArC4KUbQQ4u29rvegR0MGoXZY8AHIEuJxon0kE7r7aWFJxvl4W3tOH+5hwW51LYw==}
-=======
-  '@cloudflare/workerd-linux-64@1.20250604.0':
-    resolution: {integrity: sha512-S0R9r7U4nv9qejYygQj01hArC4KUbQQ4u29rvegR0MGoXZY8AHIEuJxon0kE7r7aWFJxvl4W3tOH+5hwW51LYw==}
->>>>>>> 6f60d077a (human fixups)
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [linux]
-
   '@cloudflare/workerd-linux-64@1.20250612.0':
     resolution: {integrity: sha512-7kOA1sCfl9m2osolplDM9XqyBPf5KupvDs4UbD2kQq0zfd+u6acLz/YB9Q5tsVQIyhQoP32Oe+kr6IZJBImq9A==}
     engines: {node: '>=16'}
@@ -5433,32 +4309,6 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-<<<<<<< HEAD
-  '@cloudflare/workerd-linux-arm64@1.20250508.0':
-    resolution: {integrity: sha512-muQe1pkxRi3eaq1Q417xvfGd2SlktbLTzNhT5Yftsx8OecWrYuB8i4ttR6Nr5ER06bfEj0FqQjqJJhcp6wLLUQ==}
-    engines: {node: '>=16'}
-    cpu: [arm64]
-    os: [linux]
-
-  '@cloudflare/workerd-linux-arm64@1.20250612.0':
-    resolution: {integrity: sha512-x2UsZhfacZftD/kpDE2mtAlrLZPmkwRInFHJc7uIl8mvovQqVKMBkexH7dkfrgvBV98S2hOjxqFKP9mETuQQAQ==}
-||||||| parent of 6f60d077a (human fixups)
-  '@cloudflare/workerd-linux-arm64@1.20250508.0':
-    resolution: {integrity: sha512-muQe1pkxRi3eaq1Q417xvfGd2SlktbLTzNhT5Yftsx8OecWrYuB8i4ttR6Nr5ER06bfEj0FqQjqJJhcp6wLLUQ==}
-    engines: {node: '>=16'}
-    cpu: [arm64]
-    os: [linux]
-
-  '@cloudflare/workerd-linux-arm64@1.20250604.0':
-    resolution: {integrity: sha512-BTFU/rXpNy03wpeueI2P7q1vVjbg2V6mCyyFGqDqMn2gSVYXH1G0zFNolV13PQXa0HgaqM6oYnqtAxluqbA+kQ==}
-=======
-  '@cloudflare/workerd-linux-arm64@1.20250604.0':
-    resolution: {integrity: sha512-BTFU/rXpNy03wpeueI2P7q1vVjbg2V6mCyyFGqDqMn2gSVYXH1G0zFNolV13PQXa0HgaqM6oYnqtAxluqbA+kQ==}
->>>>>>> 6f60d077a (human fixups)
-    engines: {node: '>=16'}
-    cpu: [arm64]
-    os: [linux]
-
   '@cloudflare/workerd-linux-arm64@1.20250612.0':
     resolution: {integrity: sha512-x2UsZhfacZftD/kpDE2mtAlrLZPmkwRInFHJc7uIl8mvovQqVKMBkexH7dkfrgvBV98S2hOjxqFKP9mETuQQAQ==}
     engines: {node: '>=16'}
@@ -5473,32 +4323,6 @@ packages:
 
   '@cloudflare/workerd-windows-64@1.20250417.0':
     resolution: {integrity: sha512-PDwATFioff+geVHfgTzSWsxgwjgotrdXStb0EL0lMyMT5zNmHArAnOx83CbDtud63Uv9rVX1BAfPP4tyD1O+5A==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [win32]
-
-<<<<<<< HEAD
-  '@cloudflare/workerd-windows-64@1.20250508.0':
-    resolution: {integrity: sha512-EJj8iTWFMqjgvZUxxNvzK7frA1JMFi3y/9eDIdZPL/OaQh3cmk5Lai5DCXsKYUxfooMBZWYTp53zOLrvuJI8VQ==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [win32]
-
-  '@cloudflare/workerd-windows-64@1.20250612.0':
-    resolution: {integrity: sha512-CeYe4OM5doIVGsOtrmDTrIBV2/wa/SPREEXH/N7ZCEs7mRhsTNFOwmctC0CYe3ZiutJ02dJmmyh/CIij2mkOLQ==}
-||||||| parent of 6f60d077a (human fixups)
-  '@cloudflare/workerd-windows-64@1.20250508.0':
-    resolution: {integrity: sha512-EJj8iTWFMqjgvZUxxNvzK7frA1JMFi3y/9eDIdZPL/OaQh3cmk5Lai5DCXsKYUxfooMBZWYTp53zOLrvuJI8VQ==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [win32]
-
-  '@cloudflare/workerd-windows-64@1.20250604.0':
-    resolution: {integrity: sha512-tW/U9/qDmDZBeoEVcK5skb2uouVAMXMzt7o/uGvaIFLeZsQkOp4NBmvoQQd+nbOc7nVCJIwFoSMokd89AhzCkA==}
-=======
-  '@cloudflare/workerd-windows-64@1.20250604.0':
-    resolution: {integrity: sha512-tW/U9/qDmDZBeoEVcK5skb2uouVAMXMzt7o/uGvaIFLeZsQkOp4NBmvoQQd+nbOc7nVCJIwFoSMokd89AhzCkA==}
->>>>>>> 6f60d077a (human fixups)
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
@@ -8362,19 +7186,11 @@ packages:
   '@vitest/expect@2.1.9':
     resolution: {integrity: sha512-UJCIkTBenHeKT1TTlKMJWy1laZewsRIzYighyYiJKZreqtdxSos/S1t+ktRMQWu2CKqaarrkeszJx1cgC5tGZw==}
 
-<<<<<<< HEAD
   '@vitest/expect@3.0.9':
     resolution: {integrity: sha512-5eCqRItYgIML7NNVgJj6TVCmdzE7ZVgJhruW0ziSQV4V7PvLkDL1bBkBdcTs/VuIz0IxPb5da1IDSqc1TR9eig==}
 
   '@vitest/expect@3.2.3':
     resolution: {integrity: sha512-W2RH2TPWVHA1o7UmaFKISPvdicFJH+mjykctJFoAkUw+SPTJTGjUNdKscFBrqM7IPnCVu6zihtKYa7TkZS1dkQ==}
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/expect@3.1.1':
-    resolution: {integrity: sha512-q/zjrW9lgynctNbwvFtQkGK9+vvHA5UzVi2V8APrp1C6fG6/MuYYkmlx4FubuqLycCeSdHD5aadWfua/Vr0EUA==}
-=======
-  '@vitest/expect@3.1.4':
-    resolution: {integrity: sha512-xkD/ljeliyaClDYqHPNCiJ0plY5YIcM0OlRiZizLhlPmpXWpxnGMyTZXOHFhFeG7w9P5PBeL4IdtJ/HeQwTbQA==}
->>>>>>> cb612f036 (fix lockfile)
 
   '@vitest/mocker@2.1.9':
     resolution: {integrity: sha512-tVL6uJgoUdi6icpxmdrn5YNo3g3Dxv+IHJBr0GXHaEdTcw3F+cPKnsXFhli6nO+f/6SDKPHEK1UN+k+TQv0Ehg==}
@@ -8387,16 +7203,8 @@ packages:
       vite:
         optional: true
 
-<<<<<<< HEAD
   '@vitest/mocker@3.0.9':
     resolution: {integrity: sha512-ryERPIBOnvevAkTq+L1lD+DTFBRcjueL9lOUfXsLfwP92h4e+Heb+PjiqS3/OURWPtywfafK0kj++yDFjWUmrA==}
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/mocker@3.1.1':
-    resolution: {integrity: sha512-bmpJJm7Y7i9BBELlLuuM1J1Q6EQ6K5Ye4wcyOpOMXMcePYKSIYlpcrCm4l/O6ja4VJA5G2aMJiuZkZdnxlC3SA==}
-=======
-  '@vitest/mocker@3.1.4':
-    resolution: {integrity: sha512-8IJ3CvwtSw/EFXqWFL8aCMu+YyYXG2WUSrQbViOZkWTKTVicVwZ/YiEZDSqD00kX+v/+W+OnxhNWoeVKorHygA==}
->>>>>>> cb612f036 (fix lockfile)
     peerDependencies:
       msw: ^2.4.9
       vite: ^5.0.0 || ^6.0.0
@@ -8423,16 +7231,8 @@ packages:
   '@vitest/pretty-format@2.1.9':
     resolution: {integrity: sha512-KhRIdGV2U9HOUzxfiHmY8IFHTdqtOhIzCpd8WRdJiE7D/HUcZVD0EgQCVjm+Q9gkUXWgBvMmTtZgIG48wq7sOQ==}
 
-<<<<<<< HEAD
   '@vitest/pretty-format@3.0.9':
     resolution: {integrity: sha512-OW9F8t2J3AwFEwENg3yMyKWweF7oRJlMyHOMIhO5F3n0+cgQAJZBjNgrF8dLwFTEXl5jUqBLXd9QyyKv8zEcmA==}
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/pretty-format@3.1.1':
-    resolution: {integrity: sha512-dg0CIzNx+hMMYfNmSqJlLSXEmnNhMswcn3sXO7Tpldr0LiGmg3eXdLLhwkv2ZqgHb/d5xg5F7ezNFRA1fA13yA==}
-=======
-  '@vitest/pretty-format@3.1.4':
-    resolution: {integrity: sha512-cqv9H9GvAEoTaoq+cYqUTCGscUjKqlJZC7PRwY5FMySVj5J+xOm1KQcCiYHJOEzOKRUhLH4R2pTwvFlWCEScsg==}
->>>>>>> cb612f036 (fix lockfile)
 
   '@vitest/pretty-format@3.2.3':
     resolution: {integrity: sha512-yFglXGkr9hW/yEXngO+IKMhP0jxyFw2/qys/CK4fFUZnSltD+MU7dVYGrH8rvPcK/O6feXQA+EU33gjaBBbAng==}
@@ -8440,16 +7240,8 @@ packages:
   '@vitest/runner@2.1.9':
     resolution: {integrity: sha512-ZXSSqTFIrzduD63btIfEyOmNcBmQvgOVsPNPe0jYtESiXkhd8u2erDLnMxmGrDCwHCCHE7hxwRDCT3pt0esT4g==}
 
-<<<<<<< HEAD
   '@vitest/runner@3.0.9':
     resolution: {integrity: sha512-NX9oUXgF9HPfJSwl8tUZCMP1oGx2+Sf+ru6d05QjzQz4OwWg0psEzwY6VexP2tTHWdOkhKHUIZH+fS6nA7jfOw==}
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/runner@3.1.1':
-    resolution: {integrity: sha512-X/d46qzJuEDO8ueyjtKfxffiXraPRfmYasoC4i5+mlLEJ10UvPb0XH5M9C3gWuxd7BAQhpK42cJgJtq53YnWVA==}
-=======
-  '@vitest/runner@3.1.4':
-    resolution: {integrity: sha512-djTeF1/vt985I/wpKVFBMWUlk/I7mb5hmD5oP8K9ACRmVXgKTae3TUOtXAEBfslNKPzUQvnKhNd34nnRSYgLNQ==}
->>>>>>> cb612f036 (fix lockfile)
 
   '@vitest/runner@3.2.3':
     resolution: {integrity: sha512-83HWYisT3IpMaU9LN+VN+/nLHVBCSIUKJzGxC5RWUOsK1h3USg7ojL+UXQR3b4o4UBIWCYdD2fxuzM7PQQ1u8w==}
@@ -8457,16 +7249,8 @@ packages:
   '@vitest/snapshot@2.1.9':
     resolution: {integrity: sha512-oBO82rEjsxLNJincVhLhaxxZdEtV0EFHMK5Kmx5sJ6H9L183dHECjiefOAdnqpIgT5eZwT04PoggUnW88vOBNQ==}
 
-<<<<<<< HEAD
   '@vitest/snapshot@3.0.9':
     resolution: {integrity: sha512-AiLUiuZ0FuA+/8i19mTYd+re5jqjEc2jZbgJ2up0VY0Ddyyxg/uUtBDpIFAy4uzKaQxOW8gMgBdAJJ2ydhu39A==}
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/snapshot@3.1.1':
-    resolution: {integrity: sha512-bByMwaVWe/+1WDf9exFxWWgAixelSdiwo2p33tpqIlM14vW7PRV5ppayVXtfycqze4Qhtwag5sVhX400MLBOOw==}
-=======
-  '@vitest/snapshot@3.1.4':
-    resolution: {integrity: sha512-JPHf68DvuO7vilmvwdPr9TS0SuuIzHvxeaCkxYcCD4jTk67XwL45ZhEHFKIuCm8CYstgI6LZ4XbwD6ANrwMpFg==}
->>>>>>> cb612f036 (fix lockfile)
 
   '@vitest/snapshot@3.2.3':
     resolution: {integrity: sha512-9gIVWx2+tysDqUmmM1L0hwadyumqssOL1r8KJipwLx5JVYyxvVRfxvMq7DaWbZZsCqZnu/dZedaZQh4iYTtneA==}
@@ -8474,43 +7258,21 @@ packages:
   '@vitest/spy@2.1.9':
     resolution: {integrity: sha512-E1B35FwzXXTs9FHNK6bDszs7mtydNi5MIfUWpceJ8Xbfb1gBMscAnwLbEu+B44ed6W3XjL9/ehLPHR1fkf1KLQ==}
 
-<<<<<<< HEAD
   '@vitest/spy@3.0.9':
     resolution: {integrity: sha512-/CcK2UDl0aQ2wtkp3YVWldrpLRNCfVcIOFGlVGKO4R5eajsH393Z1yiXLVQ7vWsj26JOEjeZI0x5sm5P4OGUNQ==}
 
   '@vitest/spy@3.2.3':
     resolution: {integrity: sha512-JHu9Wl+7bf6FEejTCREy+DmgWe+rQKbK+y32C/k5f4TBIAlijhJbRBIRIOCEpVevgRsCQR2iHRUH2/qKVM/plw==}
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/spy@3.1.1':
-    resolution: {integrity: sha512-+EmrUOOXbKzLkTDwlsc/xrwOlPDXyVk3Z6P6K4oiCndxz7YLpp/0R0UsWVOKT0IXWjjBJuSMk6D27qipaupcvQ==}
-=======
-  '@vitest/spy@3.1.4':
-    resolution: {integrity: sha512-Xg1bXhu+vtPXIodYN369M86K8shGLouNjoVI78g8iAq2rFoHFdajNvJJ5A/9bPMFcfQqdaCpOgWKEoMQg/s0Yg==}
->>>>>>> cb612f036 (fix lockfile)
 
   '@vitest/ui@2.1.9':
     resolution: {integrity: sha512-izzd2zmnk8Nl5ECYkW27328RbQ1nKvkm6Bb5DAaz1Gk59EbLkiCMa6OLT0NoaAYTjOFS6N+SMYW1nh4/9ljPiw==}
     peerDependencies:
       vitest: 2.1.9
 
-<<<<<<< HEAD
   '@vitest/ui@3.2.3':
     resolution: {integrity: sha512-9aR2tY/WT7GRHGEH/9sSIipJqeA21Eh3C6xmiOVmfyBCFmezUSUFLalpaSmRHlRzWCKQU10yz3AHhKuYcdnZGQ==}
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/ui@3.1.1':
-    resolution: {integrity: sha512-2HpiRIYg3dlvAJBV9RtsVswFgUSJK4Sv7QhpxoP0eBGkYwzGIKP34PjaV00AULQi9Ovl6LGyZfsetxDWY5BQdQ==}
-=======
-  '@vitest/ui@3.1.4':
-    resolution: {integrity: sha512-CFc2Bpb3sz4Sdt53kdNGq+qZKLftBwX4qZLC03CBUc0N1LJrOoL0ZeK0oq/708mtnpwccL0BZCY9d1WuiBSr7Q==}
->>>>>>> cb612f036 (fix lockfile)
     peerDependencies:
-<<<<<<< HEAD
       vitest: 3.2.3
-||||||| parent of cb612f036 (fix lockfile)
-      vitest: 3.1.1
-=======
-      vitest: 3.1.4
->>>>>>> cb612f036 (fix lockfile)
 
   '@vitest/utils@2.1.8':
     resolution: {integrity: sha512-dwSoui6djdwbfFmIgbIjX2ZhIoG7Ex/+xpxyiEgIGzjliY8xGkcpITKTlp6B4MgtGkF2ilvm97cPM96XZaAgcA==}
@@ -8518,16 +7280,8 @@ packages:
   '@vitest/utils@2.1.9':
     resolution: {integrity: sha512-v0psaMSkNJ3A2NMrUEHFRzJtDPFn+/VWZ5WxImB21T9fjucJRmS7xCS3ppEnARb9y11OAzaD+P2Ps+b+BGX5iQ==}
 
-<<<<<<< HEAD
   '@vitest/utils@3.0.9':
     resolution: {integrity: sha512-ilHM5fHhZ89MCp5aAaM9uhfl1c2JdxVxl3McqsdVyVNN6JffnEen8UMCdRTzOhGXNQGo5GNL9QugHrz727Wnng==}
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/utils@3.1.1':
-    resolution: {integrity: sha512-1XIjflyaU2k3HMArJ50bwSh3wKWPD6Q47wz/NUSmRV0zNywPc4w79ARjg/i/aNINHwA+mIALhUVqD9/aUvZNgg==}
-=======
-  '@vitest/utils@3.1.4':
-    resolution: {integrity: sha512-yriMuO1cfFhmiGc8ataN51+9ooHRuURdfAZfwFd3usWynjzpLslZdYnRegTv32qdgtJTsj15FoeZe2g15fY1gg==}
->>>>>>> cb612f036 (fix lockfile)
 
   '@vitest/utils@3.2.3':
     resolution: {integrity: sha512-4zFBCU5Pf+4Z6v+rwnZ1HU1yzOKKvDkMXZrymE2PBlbjKJRlrOxbvpfPSvJTGRIwGoahaOGvp+kbCoxifhzJ1Q==}
@@ -9039,15 +7793,6 @@ packages:
 
   capnp-es@0.0.11:
     resolution: {integrity: sha512-/M2sGcTIjA2UQC6mnqidCUcfGdVmXGV8DDmNRXMU0ZdiK7TmALjxzJwlLc0UQb/YNy3/xu5OgKktLede69fsnw==}
-    hasBin: true
-    peerDependencies:
-      typescript: ^5.7.3
-    peerDependenciesMeta:
-      typescript:
-        optional: true
-
-  capnp-es@0.0.7:
-    resolution: {integrity: sha512-gjDJBgNbdPA2PilGjAixf5op2HTI7jaBGc5Gs0zrAjfG9/6hqPwjTIC7dGPxrU4Y0a3WnzX1I5r/XUa9jVRSWw==}
     hasBin: true
     peerDependencies:
       typescript: ^5.7.3
@@ -9798,29 +8543,11 @@ packages:
   es-iterator-helpers@1.0.15:
     resolution: {integrity: sha512-GhoY8uYqd6iwUl2kgjTm4CZAf6oo5mHK7BPqx3rKgx893YSsy0LGHV6gfqqQvZt/8xM8xeOnfXBCfqclMKkJ5g==}
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   es-module-lexer@1.5.4:
     resolution: {integrity: sha512-MVNK56NiMrOwitFB7cqDwq0CQutbw+0BvLshJSse0MUNU+y1FC3bUS/AQg7oUng+/wKrrki7JfmwtVHkVfPLlw==}
 
-||||||| parent of 045d39793 (fix lockfile)
-=======
-  es-module-lexer@1.5.4:
-    resolution: {integrity: sha512-MVNK56NiMrOwitFB7cqDwq0CQutbw+0BvLshJSse0MUNU+y1FC3bUS/AQg7oUng+/wKrrki7JfmwtVHkVfPLlw==}
-
->>>>>>> 045d39793 (fix lockfile)
   es-module-lexer@1.7.0:
     resolution: {integrity: sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA==}
-||||||| parent of cb612f036 (fix lockfile)
-  es-module-lexer@1.5.4:
-    resolution: {integrity: sha512-MVNK56NiMrOwitFB7cqDwq0CQutbw+0BvLshJSse0MUNU+y1FC3bUS/AQg7oUng+/wKrrki7JfmwtVHkVfPLlw==}
-
-  es-module-lexer@1.6.0:
-    resolution: {integrity: sha512-qqnD1yMU6tk/jnaMosogGySTZP8YtUgAffA9nMN+E/rjxcfRQ6IEk7IiozUjgxKoFHBGjTLnrHB/YC45r/59EQ==}
-=======
-  es-module-lexer@1.7.0:
-    resolution: {integrity: sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA==}
->>>>>>> cb612f036 (fix lockfile)
 
   es-object-atoms@1.0.0:
     resolution: {integrity: sha512-MZ4iQ6JwHOBQjahnjwaC1ZtIBH+2ohjamzAO3oaHcXYup7qxjF2fixyH+Q71voWHeOkI2q/TnJao/KfXYIZWbw==}
@@ -11353,6 +10080,9 @@ packages:
   loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
+
+  loupe@3.1.2:
+    resolution: {integrity: sha512-23I4pFZHmAemUnz8WZXbYRSKYj801VDaNv9ETuMh7IrMc7VuVVSo+Z9iLE3ni30+U48iDWfi30d3twAXBYmnCg==}
 
   loupe@3.1.3:
     resolution: {integrity: sha512-kkIp7XSkP78ZxJEsSxW3712C6teJVoeHHwgo9zJ380de7IYyJ2ISlxojcH2pC5OFLewESmnRi/+XCDIEEVyoug==}
@@ -13874,7 +12604,6 @@ packages:
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
 
-<<<<<<< HEAD
   vite-node@3.0.9:
     resolution: {integrity: sha512-w3Gdx7jDcuT9cNn9jExXgOyKmf5UOTb6WMHz8LGAm54eS1Elf5OuBhCxl6zJxGhEeIkgsE1WbHuoL0mj/UXqXg==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
@@ -13882,13 +12611,6 @@ packages:
 
   vite-node@3.2.3:
     resolution: {integrity: sha512-gc8aAifGuDIpZHrPjuHyP4dpQmYXqWw7D1GmDnWeNWP654UEXzVfQ5IHPSK5HaHkwB/+p1atpYpSdw/2kOv8iQ==}
-||||||| parent of cb612f036 (fix lockfile)
-  vite-node@3.1.1:
-    resolution: {integrity: sha512-V+IxPAE2FvXpTCHXyNem0M+gWm6J7eRyWPR6vYoG/Gl+IscNOjXzztUhimQgTxaAoUoj40Qqimaa0NLIOOAH4w==}
-=======
-  vite-node@3.1.4:
-    resolution: {integrity: sha512-6enNwYnpyDo4hEgytbmc6mYWHXDHYEn0D1/rw4Q+tnHUGtKTJsn8T1YkX6Q18wI5LCrS8CTYlBaiCqxOy2kvUA==}
->>>>>>> cb612f036 (fix lockfile)
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
 
@@ -14011,23 +12733,14 @@ packages:
       jsdom:
         optional: true
 
-<<<<<<< HEAD
   vitest@3.0.9:
     resolution: {integrity: sha512-BbcFDqNyBlfSpATmTtXOAOj71RNKDDvjBM/uPfnxxVGrG+FSH2RQIwgeEngTaTkuU/h0ScFvf+tRcKfYXzBybQ==}
-||||||| parent of cb612f036 (fix lockfile)
-  vitest@3.1.1:
-    resolution: {integrity: sha512-kiZc/IYmKICeBAZr9DQ5rT7/6bD9G7uqQEki4fxazi1jdVl2mWGzedtBs5s6llz59yQhVb7FFY2MbHzHCnT79Q==}
-=======
-  vitest@3.1.4:
-    resolution: {integrity: sha512-Ta56rT7uWxCSJXlBtKgIlApJnT6e6IGmTYxYcmxjJ4ujuZDI59GUQgVDObXXJujOmPDBYXHK1qmaGtneu6TNIQ==}
->>>>>>> cb612f036 (fix lockfile)
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
     peerDependencies:
       '@edge-runtime/vm': '*'
       '@types/debug': ^4.1.12
       '@types/node': ^20.17.32
-<<<<<<< HEAD
       '@vitest/browser': 3.0.9
       '@vitest/ui': 3.0.9
       happy-dom: '*'
@@ -14058,13 +12771,6 @@ packages:
       '@types/node': ^20.17.32
       '@vitest/browser': 3.2.3
       '@vitest/ui': 3.2.3
-||||||| parent of cb612f036 (fix lockfile)
-      '@vitest/browser': 3.1.1
-      '@vitest/ui': 3.1.1
-=======
-      '@vitest/browser': 3.1.4
-      '@vitest/ui': 3.1.4
->>>>>>> cb612f036 (fix lockfile)
       happy-dom: '*'
       jsdom: '*'
     peerDependenciesMeta:
@@ -14175,29 +12881,6 @@ packages:
 
   workerd@1.20250417.0:
     resolution: {integrity: sha512-naz6oJiVODd3/Lkp9l3vtc56HKOOvx+AWDvEsTa5eSfi5SI9V0HYpLYSPblAwrfazbQ4ff1Vl3jkTl/5JxqCAA==}
-    engines: {node: '>=16'}
-    hasBin: true
-
-<<<<<<< HEAD
-  workerd@1.20250508.0:
-    resolution: {integrity: sha512-ffLxe7dXSuGoA6jb3Qx2SClIV1aLHfJQ6RhGhzYHjQgv7dL6fdUOSIIGgzmu2mRKs+WFSujp6c8WgKquco6w3w==}
-    engines: {node: '>=16'}
-    hasBin: true
-
-  workerd@1.20250612.0:
-    resolution: {integrity: sha512-YWCjj4uZf3eH32epQy/c7tKWOInAswgFRAJoH6I/EY08OJKDfoJtKvRZj5f675KoJlKTPAoJ1ig/oE+RUKP3uw==}
-||||||| parent of 6f60d077a (human fixups)
-  workerd@1.20250508.0:
-    resolution: {integrity: sha512-ffLxe7dXSuGoA6jb3Qx2SClIV1aLHfJQ6RhGhzYHjQgv7dL6fdUOSIIGgzmu2mRKs+WFSujp6c8WgKquco6w3w==}
-    engines: {node: '>=16'}
-    hasBin: true
-
-  workerd@1.20250604.0:
-    resolution: {integrity: sha512-sHz9R1sxPpnyq3ptrI/5I96sYTMA2+Ljm75oJDbmEcZQwNyezpu9Emerzt3kzzjCJQqtdscGOidWv4RKGZXzAA==}
-=======
-  workerd@1.20250604.0:
-    resolution: {integrity: sha512-sHz9R1sxPpnyq3ptrI/5I96sYTMA2+Ljm75oJDbmEcZQwNyezpu9Emerzt3kzzjCJQqtdscGOidWv4RKGZXzAA==}
->>>>>>> 6f60d077a (human fixups)
     engines: {node: '>=16'}
     hasBin: true
 
@@ -15006,7 +13689,7 @@ snapshots:
       '@babel/traverse': 7.25.9
       '@babel/types': 7.26.3
       convert-source-map: 2.0.0
-      debug: 4.4.1(supports-color@9.2.2)
+      debug: 4.4.0(supports-color@9.2.2)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -15100,7 +13783,7 @@ snapshots:
       '@babel/parser': 7.26.3
       '@babel/template': 7.25.9
       '@babel/types': 7.26.3
-      debug: 4.4.1(supports-color@9.2.2)
+      debug: 4.4.0(supports-color@9.2.2)
       globals: 11.12.0
     transitivePeerDependencies:
       - supports-color
@@ -15554,13 +14237,7 @@ snapshots:
     optionalDependencies:
       workerd: 1.20250417.0
 
-  '@cloudflare/unenv-preset@2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250604.0)':
-    dependencies:
-      unenv: 2.0.0-rc.17
-    optionalDependencies:
-      workerd: 1.20250612.0
-
-  '@cloudflare/unenv-preset@2.3.2(unenv@2.0.0-rc.17)(workerd@1.20250612.0)':
+  '@cloudflare/unenv-preset@2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250612.0)':
     dependencies:
       unenv: 2.0.0-rc.17
     optionalDependencies:
@@ -15599,13 +14276,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-<<<<<<< HEAD
   '@cloudflare/vitest-pool-workers@0.8.19(@cloudflare/workers-types@4.20250612.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)':
-||||||| parent of cb612f036 (fix lockfile)
-  '@cloudflare/vitest-pool-workers@0.8.19(@cloudflare/workers-types@4.20250604.0)(@vitest/runner@3.1.3)(@vitest/snapshot@3.1.3)(vitest@3.1.1)':
-=======
-  '@cloudflare/vitest-pool-workers@0.8.19(@cloudflare/workers-types@4.20250612.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.1.4)':
->>>>>>> cb612f036 (fix lockfile)
     dependencies:
       '@vitest/runner': 3.2.3
       '@vitest/snapshot': 3.2.3
@@ -15614,16 +14285,8 @@ snapshots:
       devalue: 4.3.2
       miniflare: 4.20250417.0
       semver: 7.7.1
-<<<<<<< HEAD
       vitest: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler: 4.12.1(@cloudflare/workers-types@4.20250612.0)
-||||||| parent of cb612f036 (fix lockfile)
-      vitest: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-      wrangler: 4.12.1(@cloudflare/workers-types@4.20250604.0)
-=======
-      vitest: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-      wrangler: 4.12.1(@cloudflare/workers-types@4.20250612.0)
->>>>>>> cb612f036 (fix lockfile)
       zod: 3.22.3
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
@@ -15636,21 +14299,6 @@ snapshots:
   '@cloudflare/workerd-darwin-64@1.20250417.0':
     optional: true
 
-<<<<<<< HEAD
-  '@cloudflare/workerd-darwin-64@1.20250508.0':
-    optional: true
-
-  '@cloudflare/workerd-darwin-64@1.20250612.0':
-||||||| parent of 6f60d077a (human fixups)
-  '@cloudflare/workerd-darwin-64@1.20250508.0':
-    optional: true
-
-  '@cloudflare/workerd-darwin-64@1.20250604.0':
-=======
-  '@cloudflare/workerd-darwin-64@1.20250604.0':
->>>>>>> 6f60d077a (human fixups)
-    optional: true
-
   '@cloudflare/workerd-darwin-64@1.20250612.0':
     optional: true
 
@@ -15658,21 +14306,6 @@ snapshots:
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20250417.0':
-    optional: true
-
-<<<<<<< HEAD
-  '@cloudflare/workerd-darwin-arm64@1.20250508.0':
-    optional: true
-
-  '@cloudflare/workerd-darwin-arm64@1.20250612.0':
-||||||| parent of 6f60d077a (human fixups)
-  '@cloudflare/workerd-darwin-arm64@1.20250508.0':
-    optional: true
-
-  '@cloudflare/workerd-darwin-arm64@1.20250604.0':
-=======
-  '@cloudflare/workerd-darwin-arm64@1.20250604.0':
->>>>>>> 6f60d077a (human fixups)
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20250612.0':
@@ -15684,21 +14317,6 @@ snapshots:
   '@cloudflare/workerd-linux-64@1.20250417.0':
     optional: true
 
-<<<<<<< HEAD
-  '@cloudflare/workerd-linux-64@1.20250508.0':
-    optional: true
-
-  '@cloudflare/workerd-linux-64@1.20250612.0':
-||||||| parent of 6f60d077a (human fixups)
-  '@cloudflare/workerd-linux-64@1.20250508.0':
-    optional: true
-
-  '@cloudflare/workerd-linux-64@1.20250604.0':
-=======
-  '@cloudflare/workerd-linux-64@1.20250604.0':
->>>>>>> 6f60d077a (human fixups)
-    optional: true
-
   '@cloudflare/workerd-linux-64@1.20250612.0':
     optional: true
 
@@ -15708,21 +14326,6 @@ snapshots:
   '@cloudflare/workerd-linux-arm64@1.20250417.0':
     optional: true
 
-<<<<<<< HEAD
-  '@cloudflare/workerd-linux-arm64@1.20250508.0':
-    optional: true
-
-  '@cloudflare/workerd-linux-arm64@1.20250612.0':
-||||||| parent of 6f60d077a (human fixups)
-  '@cloudflare/workerd-linux-arm64@1.20250508.0':
-    optional: true
-
-  '@cloudflare/workerd-linux-arm64@1.20250604.0':
-=======
-  '@cloudflare/workerd-linux-arm64@1.20250604.0':
->>>>>>> 6f60d077a (human fixups)
-    optional: true
-
   '@cloudflare/workerd-linux-arm64@1.20250612.0':
     optional: true
 
@@ -15730,21 +14333,6 @@ snapshots:
     optional: true
 
   '@cloudflare/workerd-windows-64@1.20250417.0':
-    optional: true
-
-<<<<<<< HEAD
-  '@cloudflare/workerd-windows-64@1.20250508.0':
-    optional: true
-
-  '@cloudflare/workerd-windows-64@1.20250612.0':
-||||||| parent of 6f60d077a (human fixups)
-  '@cloudflare/workerd-windows-64@1.20250508.0':
-    optional: true
-
-  '@cloudflare/workerd-windows-64@1.20250604.0':
-=======
-  '@cloudflare/workerd-windows-64@1.20250604.0':
->>>>>>> 6f60d077a (human fixups)
     optional: true
 
   '@cloudflare/workerd-windows-64@1.20250612.0':
@@ -18573,15 +17161,8 @@ snapshots:
       chai: 5.2.0
       tinyrainbow: 1.2.0
 
-<<<<<<< HEAD
   '@vitest/expect@3.0.9':
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/expect@3.1.1':
-=======
-  '@vitest/expect@3.1.4':
->>>>>>> cb612f036 (fix lockfile)
     dependencies:
-<<<<<<< HEAD
       '@vitest/spy': 3.0.9
       '@vitest/utils': 3.0.9
       chai: 5.2.0
@@ -18592,13 +17173,6 @@ snapshots:
       '@types/chai': 5.2.2
       '@vitest/spy': 3.2.3
       '@vitest/utils': 3.2.3
-||||||| parent of cb612f036 (fix lockfile)
-      '@vitest/spy': 3.1.1
-      '@vitest/utils': 3.1.1
-=======
-      '@vitest/spy': 3.1.4
-      '@vitest/utils': 3.1.4
->>>>>>> cb612f036 (fix lockfile)
       chai: 5.2.0
       tinyrainbow: 2.0.0
 
@@ -18610,15 +17184,8 @@ snapshots:
     optionalDependencies:
       vite: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
 
-<<<<<<< HEAD
   '@vitest/mocker@3.0.9(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))':
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/mocker@3.1.1(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))':
-=======
-  '@vitest/mocker@3.1.4(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))':
->>>>>>> cb612f036 (fix lockfile)
     dependencies:
-<<<<<<< HEAD
       '@vitest/spy': 3.0.9
       estree-walker: 3.0.3
       magic-string: 0.30.17
@@ -18628,11 +17195,6 @@ snapshots:
   '@vitest/mocker@3.2.3(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))':
     dependencies:
       '@vitest/spy': 3.2.3
-||||||| parent of cb612f036 (fix lockfile)
-      '@vitest/spy': 3.1.1
-=======
-      '@vitest/spy': 3.1.4
->>>>>>> cb612f036 (fix lockfile)
       estree-walker: 3.0.3
       magic-string: 0.30.17
     optionalDependencies:
@@ -18647,13 +17209,7 @@ snapshots:
     dependencies:
       tinyrainbow: 1.2.0
 
-<<<<<<< HEAD
   '@vitest/pretty-format@3.0.9':
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/pretty-format@3.1.1':
-=======
-  '@vitest/pretty-format@3.1.4':
->>>>>>> cb612f036 (fix lockfile)
     dependencies:
       tinyrainbow: 2.0.0
 
@@ -18666,21 +17222,9 @@ snapshots:
       '@vitest/utils': 2.1.9
       pathe: 1.1.2
 
-<<<<<<< HEAD
   '@vitest/runner@3.0.9':
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/runner@3.1.1':
-=======
-  '@vitest/runner@3.1.4':
->>>>>>> cb612f036 (fix lockfile)
     dependencies:
-<<<<<<< HEAD
       '@vitest/utils': 3.0.9
-||||||| parent of cb612f036 (fix lockfile)
-      '@vitest/utils': 3.1.1
-=======
-      '@vitest/utils': 3.1.4
->>>>>>> cb612f036 (fix lockfile)
       pathe: 2.0.3
 
   '@vitest/runner@3.2.3':
@@ -18695,21 +17239,9 @@ snapshots:
       magic-string: 0.30.17
       pathe: 1.1.2
 
-<<<<<<< HEAD
   '@vitest/snapshot@3.0.9':
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/snapshot@3.1.1':
-=======
-  '@vitest/snapshot@3.1.4':
->>>>>>> cb612f036 (fix lockfile)
     dependencies:
-<<<<<<< HEAD
       '@vitest/pretty-format': 3.0.9
-||||||| parent of cb612f036 (fix lockfile)
-      '@vitest/pretty-format': 3.1.1
-=======
-      '@vitest/pretty-format': 3.1.4
->>>>>>> cb612f036 (fix lockfile)
       magic-string: 0.30.17
       pathe: 2.0.3
 
@@ -18723,13 +17255,7 @@ snapshots:
     dependencies:
       tinyspy: 3.0.2
 
-<<<<<<< HEAD
   '@vitest/spy@3.0.9':
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/spy@3.1.1':
-=======
-  '@vitest/spy@3.1.4':
->>>>>>> cb612f036 (fix lockfile)
     dependencies:
       tinyspy: 3.0.2
 
@@ -18749,34 +17275,16 @@ snapshots:
       vitest: 2.1.9(@types/node@20.17.32)(@vitest/ui@2.1.9)(lightningcss@1.29.2)
     optional: true
 
-<<<<<<< HEAD
   '@vitest/ui@3.2.3(vitest@3.2.3)':
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/ui@3.1.1(vitest@3.1.1)':
-=======
-  '@vitest/ui@3.1.4(vitest@3.1.4)':
->>>>>>> cb612f036 (fix lockfile)
     dependencies:
-<<<<<<< HEAD
       '@vitest/utils': 3.2.3
-||||||| parent of cb612f036 (fix lockfile)
-      '@vitest/utils': 3.1.1
-=======
-      '@vitest/utils': 3.1.4
->>>>>>> cb612f036 (fix lockfile)
       fflate: 0.8.2
       flatted: 3.3.3
       pathe: 2.0.3
       sirv: 3.0.1
       tinyglobby: 0.2.14
       tinyrainbow: 2.0.0
-<<<<<<< HEAD
       vitest: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-      vitest: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-      vitest: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
 
   '@vitest/utils@2.1.8':
     dependencies:
@@ -18787,24 +17295,12 @@ snapshots:
   '@vitest/utils@2.1.9':
     dependencies:
       '@vitest/pretty-format': 2.1.9
-      loupe: 3.1.3
+      loupe: 3.1.2
       tinyrainbow: 1.2.0
 
-<<<<<<< HEAD
   '@vitest/utils@3.0.9':
-||||||| parent of cb612f036 (fix lockfile)
-  '@vitest/utils@3.1.1':
-=======
-  '@vitest/utils@3.1.4':
->>>>>>> cb612f036 (fix lockfile)
     dependencies:
-<<<<<<< HEAD
       '@vitest/pretty-format': 3.0.9
-||||||| parent of cb612f036 (fix lockfile)
-      '@vitest/pretty-format': 3.1.1
-=======
-      '@vitest/pretty-format': 3.1.4
->>>>>>> cb612f036 (fix lockfile)
       loupe: 3.1.3
       tinyrainbow: 2.0.0
 
@@ -18974,7 +17470,7 @@ snapshots:
 
   agent-base@6.0.2(supports-color@9.2.2):
     dependencies:
-      debug: 4.4.1(supports-color@9.2.2)
+      debug: 4.4.0(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -19332,7 +17828,7 @@ snapshots:
     dependencies:
       bytes: 3.1.2
       content-type: 1.0.5
-      debug: 4.4.1(supports-color@9.2.2)
+      debug: 4.4.0(supports-color@9.2.2)
       http-errors: 2.0.0
       iconv-lite: 0.6.3
       on-finished: 2.4.1
@@ -19456,10 +17952,6 @@ snapshots:
     optionalDependencies:
       typescript: 5.7.3
 
-  capnp-es@0.0.7(typescript@5.7.3):
-    optionalDependencies:
-      typescript: 5.7.3
-
   caseless@0.12.0: {}
 
   cbor@9.0.2:
@@ -19471,7 +17963,7 @@ snapshots:
       assertion-error: 2.0.1
       check-error: 2.1.1
       deep-eql: 5.0.2
-      loupe: 3.1.3
+      loupe: 3.1.2
       pathval: 2.0.0
 
   chai@5.2.0:
@@ -20252,23 +18744,9 @@ snapshots:
       iterator.prototype: 1.1.2
       safe-array-concat: 1.1.2
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   es-module-lexer@1.5.4: {}
 
-||||||| parent of 045d39793 (fix lockfile)
-=======
-  es-module-lexer@1.5.4: {}
-
->>>>>>> 045d39793 (fix lockfile)
   es-module-lexer@1.7.0: {}
-||||||| parent of cb612f036 (fix lockfile)
-  es-module-lexer@1.5.4: {}
-
-  es-module-lexer@1.6.0: {}
-=======
-  es-module-lexer@1.7.0: {}
->>>>>>> cb612f036 (fix lockfile)
 
   es-object-atoms@1.0.0:
     dependencies:
@@ -20993,7 +19471,7 @@ snapshots:
 
   finalhandler@2.1.0:
     dependencies:
-      debug: 4.4.1(supports-color@9.2.2)
+      debug: 4.4.0(supports-color@9.2.2)
       encodeurl: 2.0.0
       escape-html: 1.0.3
       on-finished: 2.4.1
@@ -21381,7 +19859,7 @@ snapshots:
   https-proxy-agent@5.0.1(supports-color@9.2.2):
     dependencies:
       agent-base: 6.0.2(supports-color@9.2.2)
-      debug: 4.4.1(supports-color@9.2.2)
+      debug: 4.4.0(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -22037,6 +20515,8 @@ snapshots:
   loose-envify@1.4.0:
     dependencies:
       js-tokens: 4.0.0
+
+  loupe@3.1.2: {}
 
   loupe@3.1.3: {}
 
@@ -23529,7 +22009,7 @@ snapshots:
 
   router@2.2.0:
     dependencies:
-      debug: 4.4.1(supports-color@9.2.2)
+      debug: 4.4.0(supports-color@9.2.2)
       depd: 2.0.0
       is-promise: 4.0.0
       parseurl: 1.3.3
@@ -23633,7 +22113,7 @@ snapshots:
 
   send@1.2.0:
     dependencies:
-      debug: 4.4.1(supports-color@9.2.2)
+      debug: 4.4.0(supports-color@9.2.2)
       encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1
@@ -24719,7 +23199,7 @@ snapshots:
   vite-node@2.1.9(@types/node@20.17.32)(lightningcss@1.29.2):
     dependencies:
       cac: 6.7.14
-      debug: 4.4.1(supports-color@9.2.2)
+      debug: 4.4.0(supports-color@9.2.2)
       es-module-lexer: 1.5.4
       pathe: 1.1.2
       vite: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
@@ -24734,16 +23214,9 @@ snapshots:
       - supports-color
       - terser
 
-<<<<<<< HEAD
   vite-node@3.0.9(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2):
-||||||| parent of cb612f036 (fix lockfile)
-  vite-node@3.1.1(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)(supports-color@9.2.2):
-=======
-  vite-node@3.1.4(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)(supports-color@9.2.2):
->>>>>>> cb612f036 (fix lockfile)
     dependencies:
       cac: 6.7.14
-<<<<<<< HEAD
       debug: 4.4.1(supports-color@9.2.2)
       es-module-lexer: 1.7.0
       pathe: 2.0.3
@@ -24767,13 +23240,6 @@ snapshots:
       cac: 6.7.14
       debug: 4.4.1(supports-color@9.2.2)
       es-module-lexer: 1.7.0
-||||||| parent of cb612f036 (fix lockfile)
-      debug: 4.4.0(supports-color@9.2.2)
-      es-module-lexer: 1.6.0
-=======
-      debug: 4.4.1(supports-color@9.2.2)
-      es-module-lexer: 1.7.0
->>>>>>> cb612f036 (fix lockfile)
       pathe: 2.0.3
       vite: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
     transitivePeerDependencies:
@@ -24842,23 +23308,11 @@ snapshots:
       jiti: 2.4.2
       lightningcss: 1.29.2
 
-<<<<<<< HEAD
   vitest-websocket-mock@0.4.0(vitest@3.2.3):
-||||||| parent of cb612f036 (fix lockfile)
-  vitest-websocket-mock@0.4.0(vitest@3.1.1):
-=======
-  vitest-websocket-mock@0.4.0(vitest@3.1.4):
->>>>>>> cb612f036 (fix lockfile)
     dependencies:
       '@vitest/utils': 2.1.8
       mock-socket: 9.3.1
-<<<<<<< HEAD
       vitest: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-||||||| parent of cb612f036 (fix lockfile)
-      vitest: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-=======
-      vitest: 3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
 
   vitest@2.1.9(@types/node@20.17.32)(@vitest/ui@2.1.9)(lightningcss@1.29.2):
     dependencies:
@@ -24896,15 +23350,8 @@ snapshots:
       - supports-color
       - terser
 
-<<<<<<< HEAD
   vitest@3.0.9(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2):
-||||||| parent of cb612f036 (fix lockfile)
-  vitest@3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2):
-=======
-  vitest@3.1.4(@types/node@20.17.32)(@vitest/ui@3.1.4)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2):
->>>>>>> cb612f036 (fix lockfile)
     dependencies:
-<<<<<<< HEAD
       '@vitest/expect': 3.0.9
       '@vitest/mocker': 3.0.9(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
       '@vitest/pretty-format': 3.2.3
@@ -24912,23 +23359,6 @@ snapshots:
       '@vitest/snapshot': 3.0.9
       '@vitest/spy': 3.0.9
       '@vitest/utils': 3.0.9
-||||||| parent of cb612f036 (fix lockfile)
-      '@vitest/expect': 3.1.1
-      '@vitest/mocker': 3.1.1(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
-      '@vitest/pretty-format': 3.1.1
-      '@vitest/runner': 3.1.1
-      '@vitest/snapshot': 3.1.1
-      '@vitest/spy': 3.1.1
-      '@vitest/utils': 3.1.1
-=======
-      '@vitest/expect': 3.1.4
-      '@vitest/mocker': 3.1.4(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
-      '@vitest/pretty-format': 3.2.3
-      '@vitest/runner': 3.1.4
-      '@vitest/snapshot': 3.1.4
-      '@vitest/spy': 3.1.4
-      '@vitest/utils': 3.1.4
->>>>>>> cb612f036 (fix lockfile)
       chai: 5.2.0
       debug: 4.4.1(supports-color@9.2.2)
       expect-type: 1.2.1
@@ -24937,27 +23367,13 @@ snapshots:
       std-env: 3.9.0
       tinybench: 2.9.0
       tinyexec: 0.3.2
-<<<<<<< HEAD
       tinypool: 1.1.0
-||||||| parent of cb612f036 (fix lockfile)
-      tinypool: 1.0.2
-=======
-      tinyglobby: 0.2.14
-      tinypool: 1.1.0
->>>>>>> cb612f036 (fix lockfile)
       tinyrainbow: 2.0.0
       vite: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
-<<<<<<< HEAD
       vite-node: 3.0.9(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
-||||||| parent of cb612f036 (fix lockfile)
-      vite-node: 3.1.1(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)(supports-color@9.2.2)
-=======
-      vite-node: 3.1.4(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)(supports-color@9.2.2)
->>>>>>> cb612f036 (fix lockfile)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.17.32
-<<<<<<< HEAD
       '@vitest/ui': 3.2.3(vitest@3.2.3)
     transitivePeerDependencies:
       - jiti
@@ -25001,11 +23417,6 @@ snapshots:
     optionalDependencies:
       '@types/node': 20.17.32
       '@vitest/ui': 3.2.3(vitest@3.2.3)
-||||||| parent of cb612f036 (fix lockfile)
-      '@vitest/ui': 3.1.1(vitest@3.1.1)
-=======
-      '@vitest/ui': 3.1.4(vitest@3.1.4)
->>>>>>> cb612f036 (fix lockfile)
     transitivePeerDependencies:
       - jiti
       - less
@@ -25165,36 +23576,6 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20250417.0
       '@cloudflare/workerd-windows-64': 1.20250417.0
 
-<<<<<<< HEAD
-  workerd@1.20250508.0:
-    optionalDependencies:
-      '@cloudflare/workerd-darwin-64': 1.20250508.0
-      '@cloudflare/workerd-darwin-arm64': 1.20250508.0
-      '@cloudflare/workerd-linux-64': 1.20250508.0
-      '@cloudflare/workerd-linux-arm64': 1.20250508.0
-      '@cloudflare/workerd-windows-64': 1.20250508.0
-
-  workerd@1.20250612.0:
-||||||| parent of 6f60d077a (human fixups)
-  workerd@1.20250508.0:
-    optionalDependencies:
-      '@cloudflare/workerd-darwin-64': 1.20250508.0
-      '@cloudflare/workerd-darwin-arm64': 1.20250508.0
-      '@cloudflare/workerd-linux-64': 1.20250508.0
-      '@cloudflare/workerd-linux-arm64': 1.20250508.0
-      '@cloudflare/workerd-windows-64': 1.20250508.0
-
-  workerd@1.20250604.0:
-=======
-  workerd@1.20250604.0:
->>>>>>> 6f60d077a (human fixups)
-    optionalDependencies:
-      '@cloudflare/workerd-darwin-64': 1.20250612.0
-      '@cloudflare/workerd-darwin-arm64': 1.20250612.0
-      '@cloudflare/workerd-linux-64': 1.20250612.0
-      '@cloudflare/workerd-linux-arm64': 1.20250612.0
-      '@cloudflare/workerd-windows-64': 1.20250612.0
-
   workerd@1.20250612.0:
     optionalDependencies:
       '@cloudflare/workerd-darwin-64': 1.20250612.0
@@ -25202,7 +23583,6 @@ snapshots:
       '@cloudflare/workerd-linux-64': 1.20250612.0
       '@cloudflare/workerd-linux-arm64': 1.20250612.0
       '@cloudflare/workerd-windows-64': 1.20250612.0
-    optional: true
 
   workerpool@6.5.1: {}
 
