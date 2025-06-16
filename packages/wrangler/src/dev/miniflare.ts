@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { MF_DEV_CONTAINER_PREFIX } from "@cloudflare/containers-shared";
 import { CoreHeaders, HttpOptions_Style, Log, LogLevel } from "miniflare";
 import {
 	EXTERNAL_AI_WORKER_NAME,
@@ -28,7 +29,7 @@ import { getClassNamesWhichUseSQLite } from "./class-names-sqlite";
 import type { ServiceFetch } from "../api";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
-import type { ContainerEngine } from "../config/environment";
+import type { ContainerApp, ContainerEngine } from "../config/environment";
 import type {
 	CfD1Database,
 	CfDispatchNamespace,
@@ -208,7 +209,8 @@ export interface ConfigBundle {
 	testScheduled: boolean;
 	enableContainers: boolean | undefined;
 	dockerPath: string | undefined;
-	containers: WorkerOptions["containers"];
+	containers: ContainerApp[] | undefined;
+	containerBuildId: string | undefined;
 	containerEngine: ContainerEngine | undefined;
 }
 
@@ -516,6 +518,7 @@ type MiniflareBindingsConfig = Pick<
 	| "tails"
 	| "complianceRegion"
 	| "containers"
+	| "containerBuildId"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
@@ -1020,7 +1023,7 @@ export function buildMiniflareBindingOptions(
 					{
 						className,
 						useSQLite: classNameToUseSQLite.get(className),
-						container: getContainerOptions(className, config.containers),
+						container: getImageNameFromDOClassName(className, config),
 					},
 				];
 			}),
@@ -1357,7 +1360,7 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
-				containers: config.containers,
+				containers: getContainerOptions(config),
 				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
 				unsafeDirectSockets: entrypointNames.map((name) => ({
 					host: "127.0.0.1",
@@ -1372,26 +1375,51 @@ export async function buildMiniflareOptions(
 	return { options, internalObjects, entrypointNames };
 }
 
-export const CONTAINER_IMAGE_PREFIX = "cloudflare-dev";
+function getContainerOptions(
+	config: Omit<ConfigBundle, "rules">
+): WorkerOptions["containers"] | undefined {
+	if (!config.containers?.length || config.enableContainers === false) {
+		return undefined;
+	}
+	// should be defined if containers are enabled
+	assert(
+		config.containerBuildId,
+		"Build ID should be set if containers are enabled and defined"
+	);
+	const containers: WorkerOptions["containers"] = {};
+	for (const container of config.containers) {
+		containers[container.class_name] = {
+			image: container.image ?? container.configuration.image,
+			imageTag: `${MF_DEV_CONTAINER_PREFIX}/${container.name}:${config.containerBuildId}`,
+			maxInstances: container.max_instances,
+			imageBuildContext: container.image_build_context,
+		};
+	}
+	return containers;
+}
 
 /**
  * Returns the Container options for the DO class name.
- *
- * @param className Do class name
- * @param containers Container configuration
  * @returns The configuration or `undefined` when the DO has no attached container
  */
-function getContainerOptions(
-	className: string,
-	containers: MiniflareBindingsConfig["containers"]
+function getImageNameFromDOClassName(
+	DOClassName: string,
+	config: MiniflareBindingsConfig
 ): DOContainerOptions | undefined {
-	if (!containers || !(className in containers)) {
+	if (!config.containers || !config.containers.length) {
 		return undefined;
 	}
+	assert(
+		config.containerBuildId,
+		"Build ID should be set if containers are defined and enabled"
+	);
 
-	const container = containers[className];
+	const container = config.containers.find((c) => c.class_name === DOClassName);
 
+	if (!container) {
+		return undefined;
+	}
 	return {
-		imageName: `${CONTAINER_IMAGE_PREFIX}/${container.name}`,
+		imageName: `${MF_DEV_CONTAINER_PREFIX}/${container.name}:${config.containerBuildId}`,
 	};
 }

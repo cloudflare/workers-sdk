@@ -52,7 +52,6 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "./types";
-import type { WorkerOptions } from "miniflare";
 
 type ConfigControllerEventMap = ControllerEventMap & {
 	configUpdate: [ConfigUpdateEvent];
@@ -159,6 +158,7 @@ async function resolveDevConfig(
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
 		containerEngine: input.dev?.containerEngine ?? getDockerHost(),
+		containerBuildId: input.dev?.containerBuildId,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -341,7 +341,7 @@ async function resolveConfig(
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
 			exports: entry.exports,
 		},
-		containers: resolveContainerConfig(config),
+		containers: config.containers,
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
@@ -430,25 +430,6 @@ async function resolveConfig(
 	}
 
 	return resolved;
-}
-
-// TODO: move to containers-shared and use to merge config and args for container commands too
-function resolveContainerConfig(
-	config: Config
-): StartDevWorkerOptions["containers"] {
-	const containers: WorkerOptions["containers"] = {};
-	if (!config.dev.enable_containers) {
-		return containers;
-	}
-	for (const container of config.containers ?? []) {
-		containers[container.class_name] = {
-			image: container.image ?? container.configuration.image,
-			maxInstances: container.max_instances,
-			imageBuildContext: container.image_build_context,
-			name: container.name,
-		};
-	}
-	return containers;
 }
 
 export class ConfigController extends Controller<ConfigControllerEventMap> {

@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { randomUUID } from "node:crypto";
 import events from "node:events";
 import path from "node:path";
 import util from "node:util";
@@ -566,6 +567,8 @@ async function setupDevEnv(
 				multiworkerPrimary: args.multiworkerPrimary,
 				enableContainers: args.enableContainers,
 				dockerPath: args.dockerPath,
+				// initialise with a random id
+				containerBuildId: randomUUID().slice(0, 8),
 			},
 			legacy: {
 				site: (configParam) => {
