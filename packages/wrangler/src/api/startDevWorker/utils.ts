@@ -63,6 +63,7 @@ export function unwrapHook<
 	hook: H,
 	...args: Args
 ): H extends undefined ? UnwrapHook<H> | undefined : UnwrapHook<H> {
+	// @ts-expect-error Come on TypeScript!
 	return typeof hook === "function" ? hook(...args) : hook;
 }
 

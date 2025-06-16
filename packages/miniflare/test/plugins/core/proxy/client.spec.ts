@@ -8,7 +8,6 @@ import test, { ThrowsExpectation } from "ava";
 import {
 	DeferredPromise,
 	fetch,
-	File,
 	MessageEvent,
 	Miniflare,
 	ReplaceWorkersTypes,
