@@ -17,14 +17,16 @@ export async function maybeBuildContainer(
 	imageTag: string,
 	dryRun: boolean,
 	pathToDocker: string
-) {
+): Promise<{ image: string; pushed: boolean }> {
 	try {
 		if (
 			!isDockerfile(
 				containerConfig.image ?? containerConfig.configuration.image
 			)
 		) {
-			return containerConfig.image ?? containerConfig.configuration.image;
+			const image =
+				containerConfig.image ?? containerConfig.configuration.image;
+			return { image: image, pushed: false };
 		}
 	} catch (err) {
 		if (err instanceof Error) {
@@ -36,13 +38,13 @@ export async function maybeBuildContainer(
 
 	const options = getBuildArguments(containerConfig, imageTag);
 	logger.log("Building image", options.tag);
-	const tag = await buildAndMaybePush(
+	const buildResult = await buildAndMaybePush(
 		options,
 		pathToDocker,
 		!dryRun,
 		containerConfig
 	);
-	return tag;
+	return buildResult;
 }
 
 export type DeployContainersArgs = {
@@ -105,17 +107,19 @@ export async function deployContainers(
 			],
 		};
 
-		const image = await maybeBuildContainer(
+		const buildResult = await maybeBuildContainer(
 			container,
 			versionId,
 			dryRun,
 			pathToDocker
 		);
+		container.configuration.image = buildResult.image;
+		container.image = buildResult.image;
 
-		container.configuration.image = image;
-		container.image = image;
-
-		await apply({ skipDefaults: false, json: true, env }, configuration);
+		await apply(
+			{ skipDefaults: false, json: true, env, pushed: buildResult.pushed },
+			configuration
+		);
 	}
 }
 
