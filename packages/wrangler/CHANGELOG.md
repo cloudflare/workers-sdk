@@ -1,5 +1,55 @@
 # wrangler
 
+## 4.20.1
+
+### Patch Changes
+
+- [#9536](https://github.com/cloudflare/workers-sdk/pull/9536) [`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - expose `Unstable_Binding` type
+
+- [#9564](https://github.com/cloudflare/workers-sdk/pull/9564) [`1d3293f`](https://github.com/cloudflare/workers-sdk/commit/1d3293f0cbf88a45d7b86bae0fc886e08aa6e841) Thanks [@skepticfx](https://github.com/skepticfx)! - Switch container registry to `registry.cloudflare.com` from `registry.cloudchamber.cfdata.org`.
+  Also adds the env var `CLOUDFLARE_CONTAINER_REGISTRY` to override this
+
+- [#9520](https://github.com/cloudflare/workers-sdk/pull/9520) [`04f9164`](https://github.com/cloudflare/workers-sdk/commit/04f9164bbcea528f9a4075bef47e8edf4cd22ae8) Thanks [@vicb](https://github.com/vicb)! - fix the default value for keep_names (`true`)
+
+- [#9506](https://github.com/cloudflare/workers-sdk/pull/9506) [`36113c2`](https://github.com/cloudflare/workers-sdk/commit/36113c29c8d2338fcd7a6da19f4c59c7e9f65a3b) Thanks [@penalosa](https://github.com/penalosa)! - Strip the `CF-Connecting-IP` header from outgoing fetches
+
+- [#9592](https://github.com/cloudflare/workers-sdk/pull/9592) [`49f5ac7`](https://github.com/cloudflare/workers-sdk/commit/49f5ac7ef2ff041897a56aec6607616689ca87a5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Point to the right location for docs on telemetry
+
+- [#9593](https://github.com/cloudflare/workers-sdk/pull/9593) [`cf33417`](https://github.com/cloudflare/workers-sdk/commit/cf33417320109bc405b105818bf759916b51d2d0) Thanks [@vicb](https://github.com/vicb)! - drop unused `WRANGLER_UNENV_RESOLVE_PATHS` env var
+
+- [#9566](https://github.com/cloudflare/workers-sdk/pull/9566) [`521eeb9`](https://github.com/cloudflare/workers-sdk/commit/521eeb9d7db1da5aae7a1c215d540184f6457301) Thanks [@vicb](https://github.com/vicb)! - Bump `@cloudflare/unenv-preset` to 2.3.3
+
+- [#9344](https://github.com/cloudflare/workers-sdk/pull/9344) [`02e2c1e`](https://github.com/cloudflare/workers-sdk/commit/02e2c1e4dec0a7026c49bf6ab0b3da1f0ddfedd5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add warning about env not specified to potentially risky wrangler commands
+
+  add a warning suggesting users to specify their target environment (via `-e` or `--env`)
+  when their wrangler config file contains some environments and they are calling one
+  of the following commands:
+
+  - wrangler deploy
+  - wrangler versions upload
+  - wrangler versions deploy
+  - wrangler versions secret bulk
+  - wrangler versions secret put
+  - wrangler versions secret delete
+  - wrangler secret bulk
+  - wrangler secret put
+  - wrangler secret delete
+  - wrangler triggers deploy
+
+  this is a measure we're putting in place to try to prevent developers from accidentally applying
+  changes to an incorrect (potentially even production) environment
+
+- [#9344](https://github.com/cloudflare/workers-sdk/pull/9344) [`02e2c1e`](https://github.com/cloudflare/workers-sdk/commit/02e2c1e4dec0a7026c49bf6ab0b3da1f0ddfedd5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - allow passing an empty string to the `-e|--env` flag to target the top-level environment
+
+- [#9536](https://github.com/cloudflare/workers-sdk/pull/9536) [`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - performance improvement: restart a mixed mode session only if the worker's remote bindings have changed
+
+- [#9550](https://github.com/cloudflare/workers-sdk/pull/9550) [`c117904`](https://github.com/cloudflare/workers-sdk/commit/c11790486fc1a5c7c907f5757779b3b8eba29013) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - allow `startWorker` to accept `false` as an `inspector` option (to disable the inspector server)
+
+- [#9473](https://github.com/cloudflare/workers-sdk/pull/9473) [`fae8c02`](https://github.com/cloudflare/workers-sdk/commit/fae8c02bcfb51cb87a01a5185b249f6c5889d0a6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - expose new `experimental_maybeStartOrUpdateMixedModeSession` utility
+
+- Updated dependencies [[`bd528d5`](https://github.com/cloudflare/workers-sdk/commit/bd528d5d53a473b8339574290da0c47797c3b322), [`2177fb4`](https://github.com/cloudflare/workers-sdk/commit/2177fb44f43357d349ff2e2cc4b40d72c929e491), [`36113c2`](https://github.com/cloudflare/workers-sdk/commit/36113c29c8d2338fcd7a6da19f4c59c7e9f65a3b), [`e16fcc7`](https://github.com/cloudflare/workers-sdk/commit/e16fcc747aa7701405eb4f49a73e622425f67527)]:
+  - miniflare@4.20250612.0
+
 ## 4.20.0
 
 ### Minor Changes

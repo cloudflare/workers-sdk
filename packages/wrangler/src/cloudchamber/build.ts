@@ -6,6 +6,7 @@ import {
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
 	getCloudflareRegistryWithAccountNamespace,
+	getDockerImageDigest,
 	isDir,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
@@ -99,10 +100,12 @@ export async function buildAndMaybePush(
 			},
 			logger
 		);
+
 		await dockerBuild(pathToDocker, {
 			buildCmd,
 			dockerfile,
 		});
+
 		// ensure the account is not allowed to build anything that exceeds the current
 		// account's disk size limits
 		const inspectOutput = await dockerImageInspect(pathToDocker, {
@@ -126,7 +129,29 @@ export async function buildAndMaybePush(
 
 		if (push) {
 			await dockerLoginManagedRegistry(pathToDocker);
-			await runDockerCmd(pathToDocker, ["push", imageTag]);
+			try {
+				const repositoryOnly = imageTag.split(":")[0];
+				// if this succeeds it means this image already exists remotely
+				// if it fails it means it doesn't exist remotely and should be pushed.
+				const localDigest = await getDockerImageDigest(pathToDocker, imageTag);
+				const digest = repositoryOnly + "@" + localDigest;
+				await runDockerCmd(
+					pathToDocker,
+					["manifest", "inspect", digest],
+					"ignore"
+				);
+
+				logger.log("Image already exists remotely, skipping push");
+				logger.debug(
+					`Untagging built image: ${imageTag} since there was no change.`
+				);
+				await runDockerCmd(pathToDocker, ["image", "rm", imageTag]);
+				return "";
+			} catch (error) {
+				logger.log(`Image does not exist remotely, pushing: ${imageTag}`);
+
+				await runDockerCmd(pathToDocker, ["push", imageTag]);
+			}
 		}
 		return imageTag;
 	} catch (error) {
