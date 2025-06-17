@@ -266,7 +266,7 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 			message = JSON.stringify(err);
 		}
 
-		throw new UserError("loading Cloudchamber account failed:" + message);
+		throw new UserError("Loading account failed: " + message);
 	}
 }
 
