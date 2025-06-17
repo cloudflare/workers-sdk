@@ -207,90 +207,106 @@ interface AcceptedEncoding {
 	coding: string;
 	weight: number;
 }
+
+/**
+ * Tries to parse an `Accept-Encoding` element, returning an object with
+ * `coding` and `weight` properties, or `undefined` if the element is invalid.
+ *
+ * The `coding` is set to `"identity"` if the coding is `"*"`, and the `weight`
+ * is set to `1` if not specified.
+ */
 function maybeParseAcceptEncodingElement(
 	element: string
 ): AcceptedEncoding | undefined {
 	const match = acceptEncodingElement.exec(element);
 	if (match?.groups == null) return;
 	return {
-		coding: match.groups.coding,
+		coding: match.groups.coding === "*" ? "identity" : match.groups.coding,
 		weight:
 			match.groups.weight === undefined ? 1 : parseFloat(match.groups.weight),
 	};
 }
-function parseAcceptEncoding(header: string): AcceptedEncoding[] {
-	const encodings: AcceptedEncoding[] = [];
+
+/**
+ * Parses the accept-encoding header, returning an array of tuples
+ * containing the encoding and its weight, sorted by weight in descending order.
+ */
+function parseAcceptEncoding(header: string) {
+	const encodings = new Map([["identity", 1]]);
 	for (const element of header.split(",")) {
 		const maybeEncoding = maybeParseAcceptEncodingElement(element.trim());
-		if (maybeEncoding !== undefined) encodings.push(maybeEncoding);
+		if (maybeEncoding !== undefined) {
+			encodings.set(maybeEncoding.coding, maybeEncoding.weight);
+		}
 	}
 	// `Array#sort()` is stable, so original ordering preserved for same weights
-	return encodings.sort((a, b) => b.weight - a.weight);
+	return Array.from(encodings).sort((a, b) => b[1] - a[1]);
 }
+
+/**
+ * Ensures that the response has an acceptable `Content-Encoding` header
+ * based on the `Accept-Encoding` header from the client.
+ *
+ * If the client does not accept any of the supported encodings,
+ * it returns a 415 Unsupported Media Type response.
+ *
+ * If the response already has a `Content-Encoding` header that is acceptable,
+ * it prefers this over the encoding with the highest weight from the `Accept-Encoding` header.
+ */
 function ensureAcceptableEncoding(
 	clientAcceptEncoding: string | null,
 	response: Response
 ): Response {
 	// https://www.rfc-editor.org/rfc/rfc9110#section-12.5.3
 
-	// If the client hasn't specified any acceptable encodings, assume anything is
-	if (clientAcceptEncoding === null) return response;
-	const encodings = parseAcceptEncoding(clientAcceptEncoding);
-	if (encodings.length === 0) return response;
-
-	const contentEncoding = response.headers.get("Content-Encoding");
+	const supportedEncodings = ["gzip", "br", "identity"];
+	const contentEncoding =
+		response.headers.get("Content-Encoding") ?? "identity";
 	const contentType = response.headers.get("Content-Type");
+
+	if (!supportedEncodings.includes(contentEncoding)) {
+		return response; // If the encoding is not supported, return the response as is
+	}
+
+	response = new Response(response.body, response); // Ensure mutable headers
+	response.headers.delete("Content-Encoding"); // Use identity by default
 
 	// if cloudflare's FL does not compress this mime-type, then don't compress locally either
 	if (!isCompressedByCloudflareFL(contentType)) {
 		return response;
 	}
 
-	// If `Content-Encoding` is defined, but unknown, return the response as is
-	if (
-		contentEncoding !== null &&
-		contentEncoding !== "gzip" &&
-		contentEncoding !== "br"
-	) {
+	// If the client hasn't specified any acceptable encodings, go with `identity` encoding
+	if (clientAcceptEncoding === null) {
 		return response;
 	}
 
-	let desiredEncoding: "gzip" | "br" | undefined;
-	let identityDisallowed = false;
+	const acceptableEncodings = parseAcceptEncoding(clientAcceptEncoding);
 
-	for (const encoding of encodings) {
-		if (encoding.weight === 0) {
-			// If we have an `identity;q=0` or `*;q=0` entry, disallow no encoding
-			if (encoding.coding === "identity" || encoding.coding === "*") {
-				identityDisallowed = true;
-			}
-		} else if (encoding.coding === "gzip" || encoding.coding === "br") {
-			// If the client accepts one of our supported encodings, use that
-			desiredEncoding = encoding.coding;
-			break;
-		} else if (encoding.coding === "identity") {
-			// If the client accepts no encoding, use that
-			break;
-		}
+	const acceptedEncoding =
+		// If the content encoding from the response is acceptable, use it (this is the case when the Worker has set a `Content-Encoding` header)
+		acceptableEncodings.find(
+			([coding, weight]) => contentEncoding === coding && weight > 0
+		) ??
+		// Otherwise take the first supported acceptable encoding, since they are sorted by weight
+		acceptableEncodings.find(
+			([coding, weight]) => supportedEncodings.includes(coding) && weight > 0
+		);
+
+	if (acceptedEncoding === undefined) {
+		// If the client doesn't accept any of our supported encodings, including blocking identity, return 415
+		return new Response("Unsupported Media Type", {
+			status: 415 /* Unsupported Media Type */,
+			headers: { "Accept-Encoding": "br, gzip" },
+		});
 	}
 
-	if (desiredEncoding === undefined) {
-		if (identityDisallowed) {
-			return new Response("Unsupported Media Type", {
-				status: 415 /* Unsupported Media Type */,
-				headers: { "Accept-Encoding": "br, gzip" },
-			});
-		}
-		if (contentEncoding === null) return response;
-		response = new Response(response.body, response); // Ensure mutable headers
-		response.headers.delete("Content-Encoding"); // Use identity
-		return response;
-	} else {
-		if (contentEncoding === desiredEncoding) return response;
-		response = new Response(response.body, response); // Ensure mutable headers
-		response.headers.set("Content-Encoding", desiredEncoding); // Use desired
-		return response;
+	const [encoding] = acceptedEncoding;
+	if (encoding !== "identity") {
+		response.headers.set("Content-Encoding", encoding); // Use desired encoding
 	}
+
+	return response;
 }
 
 function colourFromHTTPStatus(status: number): Colorize {
