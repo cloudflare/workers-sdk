@@ -1,3 +1,4 @@
+import { writeFileSync } from "fs";
 import { Data, List, Message, Struct } from "capnp-es";
 import { Config as CapnpConfig } from "./generated";
 import { Config, kVoid } from "./workerd";
@@ -47,6 +48,9 @@ function encodeCapnpStruct(obj: any, struct: Struct) {
 }
 
 export function serializeConfig(config: Config): Buffer {
+	if (process.env.MINIFLARE_WORKERD_CONFIG_DEBUG === "true") {
+		writeFileSync("workerd-config.json", JSON.stringify(config, null, 2));
+	}
 	const message = new Message();
 	const struct = message.initRoot(CapnpConfig);
 	encodeCapnpStruct(config, struct);

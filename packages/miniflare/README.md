@@ -911,3 +911,5 @@ For example:
 ```shell
 $ export MINIFLARE_WORKERD_PATH="<WORKERD_REPO_DIR>/bazel-bin/src/workerd/server/workerd"
 ```
+
+For debugging purposes, you can also set `MINIFLARE_WORKERD_CONFIG_DEBUG=true` which will dump the workerd config to `workerd-config.json` at your project root.
