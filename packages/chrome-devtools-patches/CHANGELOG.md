@@ -1,5 +1,11 @@
 # @cloudflare/chrome-devtools-patches
 
+## 0.1.3
+
+### Patch Changes
+
+- [#9551](https://github.com/cloudflare/workers-sdk/pull/9551) [`b0b59e0`](https://github.com/cloudflare/workers-sdk/commit/b0b59e071393e13e3770fd59fb0cb26136e88272) Thanks [@penalosa](https://github.com/penalosa)! - Update Devtools Patches
+
 ## 0.1.2
 
 ### Patch Changes
