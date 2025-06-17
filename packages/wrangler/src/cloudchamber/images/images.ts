@@ -22,6 +22,7 @@ import {
 } from "../common";
 import { wrap } from "../helpers/wrap";
 import type { Config } from "../../config";
+import type { Scope } from "../../user";
 import type {
 	CommonYargsArgvJSON,
 	CommonYargsArgvSanitizedJSON,
@@ -60,7 +61,7 @@ function credentialsImageRegistryYargs(yargs: CommonYargsArgvJSON) {
 		});
 }
 
-export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
+export const registriesCommand = (yargs: CommonYargsArgvJSON, scope: Scope) => {
 	return yargs
 		.command(
 			"configure",
@@ -91,7 +92,8 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 						}
 
 						await handleConfigureImageRegistryCommand(args, config);
-					}
+					},
+					scope
 				)(args)
 		)
 		.command(
@@ -143,7 +145,8 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 								}
 							);
 						console.log(credentials.password);
-					}
+					},
+					scope
 				)(args);
 			}
 		)
@@ -164,7 +167,8 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 							imageArgs.domain
 						);
 						console.log(JSON.stringify(registry, null, 4));
-					}
+					},
+					scope
 				)(args);
 			}
 		)
@@ -182,7 +186,8 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 							return;
 						}
 						await handleListImageRegistriesCommand(args, config);
-					}
+					},
+					scope
 				)(args)
 		);
 };

@@ -24,6 +24,7 @@ import {
 import { wrap } from "../helpers/wrap";
 import { validatePublicSSHKeyCLI, validateSSHKey } from "./validate";
 import type { Config } from "../../config";
+import type { Scope } from "../../user";
 import type {
 	CommonYargsArgvJSON,
 	CommonYargsArgvSanitizedJSON,
@@ -106,7 +107,7 @@ export async function sshPrompts(
 	return key || undefined;
 }
 
-export const sshCommand = (yargs: CommonYargsArgvJSON) => {
+export const sshCommand = (yargs: CommonYargsArgvJSON, scope: Scope) => {
 	return yargs
 		.command(
 			"list",
@@ -122,7 +123,7 @@ export const sshCommand = (yargs: CommonYargsArgvJSON) => {
 					}
 
 					await handleListSSHKeysCommand(sshArgs, config);
-				})(args)
+				}, scope)(args)
 		)
 		.command(
 			"create",
@@ -153,7 +154,8 @@ export const sshCommand = (yargs: CommonYargsArgvJSON) => {
 						}
 
 						await handleCreateSSHPublicKeyCommand(sshArgs);
-					}
+					},
+					scope
 				)(args)
 		);
 };
