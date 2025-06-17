@@ -653,16 +653,14 @@ function getPreviewModules(
 }
 
 export async function getPreviewMiniflareOptions(
+	resolvedPluginConfig: ResolvedPluginConfig<"preview">,
 	vitePreviewServer: vite.PreviewServer,
-	workerConfigs: Unstable_Config[],
-	persistState: PersistState,
-	remoteBindingsEnabled: boolean,
 	inspectorPort: number | false
 ): Promise<MiniflareOptions> {
 	const resolvedViteConfig = vitePreviewServer.config;
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
-			workerConfigs.map(async (workerConfig, i) => {
+			resolvedPluginConfig.workerConfigs.map(async (workerConfig, i) => {
 				const bindings =
 					unstable_convertConfigBindingsToStartWorkerBindings(workerConfig);
 
@@ -670,7 +668,8 @@ export async function getPreviewMiniflareOptions(
 					? remoteProxySessionsDataMap.get(workerConfig.configPath)
 					: undefined;
 
-				const remoteProxySessionData = remoteBindingsEnabled
+				const remoteProxySessionData = resolvedPluginConfig.experimental
+					.remoteBindings
 					? await experimental_maybeStartOrUpdateRemoteProxySession(
 							{
 								name: workerConfig.name,
@@ -693,7 +692,8 @@ export async function getPreviewMiniflareOptions(
 					{
 						remoteProxyConnectionString:
 							remoteProxySessionData?.session?.remoteProxyConnectionString,
-						remoteBindingsEnabled,
+						remoteBindingsEnabled:
+							resolvedPluginConfig.experimental.remoteBindings,
 					}
 				);
 
@@ -704,7 +704,7 @@ export async function getPreviewMiniflareOptions(
 
 				logUnknownTails(
 					workerOptions.tails,
-					workerConfigs,
+					resolvedPluginConfig.workerConfigs,
 					vitePreviewServer.config.logger.warn
 				);
 
@@ -743,7 +743,7 @@ export async function getPreviewMiniflareOptions(
 		},
 		defaultPersistRoot: getPersistenceRoot(
 			resolvedViteConfig.root,
-			persistState
+			resolvedPluginConfig.persistState
 		),
 		workers,
 	};

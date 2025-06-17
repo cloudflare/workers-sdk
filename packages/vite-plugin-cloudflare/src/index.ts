@@ -29,7 +29,7 @@ import {
 	debuggingPath,
 	getDebugPathHtml,
 } from "./debugging";
-import { getWorkerConfigs, writeDeployConfig } from "./deploy-config";
+import { writeDeployConfig } from "./deploy-config";
 import {
 	getDevMiniflareOptions,
 	getPreviewMiniflareOptions,
@@ -448,11 +448,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			async configurePreviewServer(vitePreviewServer) {
 				assertIsPreview(resolvedPluginConfig);
 
-				const workerConfigs = getWorkerConfigs(
-					vitePreviewServer.config.root,
-					pluginConfig.experimental?.remoteBindings ?? false
-				);
-
 				const inputInspectorPort = await getInputInspectorPortOption(
 					pluginConfig,
 					vitePreviewServer
@@ -460,10 +455,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				const miniflare = new Miniflare(
 					await getPreviewMiniflareOptions(
+						resolvedPluginConfig,
 						vitePreviewServer,
-						workerConfigs,
-						pluginConfig.persistState ?? true,
-						!!pluginConfig.experimental?.remoteBindings,
 						inputInspectorPort
 					)
 				);
@@ -779,16 +772,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 			async configurePreviewServer(vitePreviewServer) {
-				const workerConfigs = getWorkerConfigs(
-					vitePreviewServer.config.root,
-					pluginConfig.experimental?.remoteBindings ?? false
-				);
+				assertIsPreview(resolvedPluginConfig);
 
-				if (workerConfigs.length >= 1 && pluginConfig.inspectorPort !== false) {
+				if (
+					resolvedPluginConfig.workerConfigs.length >= 1 &&
+					pluginConfig.inspectorPort !== false
+				) {
 					addDebugToVitePrintUrls(vitePreviewServer);
 				}
 
-				const workerNames = workerConfigs.map((worker) => {
+				const workerNames = resolvedPluginConfig.workerConfigs.map((worker) => {
 					assert(worker.name, "Expected the Worker to have a name");
 					return worker.name;
 				});

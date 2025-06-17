@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import * as vite from "vite";
+import { getWorkerConfigs } from "./deploy-config";
 import {
 	getValidatedWranglerConfigPath,
 	getWorkerConfig,
@@ -14,6 +15,7 @@ import type {
 	WorkerWithServerLogicResolvedConfig,
 } from "./workers-configs";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
+import type { Unstable_Config } from "wrangler";
 
 export type PersistState = boolean | { path: string };
 
@@ -83,6 +85,7 @@ interface PreviewConfig {
 	type: "preview";
 	persistState: PersistState;
 	experimental: Experimental;
+	workerConfigs: Unstable_Config[];
 }
 
 export type ResolvedPluginConfig<
@@ -108,17 +111,18 @@ export function resolvePluginConfig(
 ): ResolvedPluginConfig {
 	const persistState = pluginConfig.persistState ?? true;
 	const experimental = pluginConfig.experimental ?? {};
+	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 
 	if (viteEnv.isPreview) {
 		return {
 			type: "preview",
 			persistState,
 			experimental,
+			workerConfigs: getWorkerConfigs(root, experimental.mixedMode ?? false),
 		};
 	}
 
 	const configPaths = new Set<string>();
-	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
 		viteEnv.mode,
 		root,
