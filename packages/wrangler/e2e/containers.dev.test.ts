@@ -71,7 +71,7 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			const worker = helper.runLongLived("wrangler dev");
 			// from docker build output:
 			await worker.waitForReady();
-			await worker.readUntil(/Building container/);
+			await worker.readUntil(/Loading container/);
 			await worker.readUntil(/DONE/);
 			// from miniflare output:
 			await worker.readUntil(/Container\(s\) built and ready/);
@@ -86,7 +86,10 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			});
 			const worker = helper.runLongLived("wrangler dev");
 			await worker.waitForReady();
-			expect(worker.output).not.toContain("Building container(s)...");
+			// await worker.exitCode;
+			await worker.stop();
+			const output = await worker.output;
+			expect(output).not.toContain("Loading container image(s)...");
 		});
 
 		it("won't start the container service if enable_containers is set to false via config", async () => {
@@ -98,7 +101,10 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			});
 			const worker = helper.runLongLived("wrangler dev");
 			await worker.waitForReady();
-			expect(worker.output).not.toContain("Building container(s)...");
+			await worker.stop();
+			expect(await worker.output).not.toContain(
+				"Loading container image(s)..."
+			);
 		});
 
 		it("won't start the container service if --enable-containers is set to false via CLI", async () => {
@@ -106,7 +112,10 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				"wrangler dev --enable-containers=false"
 			);
 			await worker.waitForReady();
-			expect(worker.output).not.toContain("Building container(s)...");
+			await worker.stop();
+			expect(await worker.output).not.toContain(
+				"Loading container image(s)..."
+			);
 		});
 
 		describe("make sure ports are exposed if necessary", () => {
@@ -119,23 +128,21 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				});
 			});
 			it.skipIf(process.platform === "linux")(
-				"warns in windows/macos if no ports are exposed, but not on linux",
+				"errors in windows/macos if no ports are exposed",
 				async () => {
 					const worker = helper.runLongLived("wrangler dev");
-					await worker.readUntil(/does not expose any ports/);
-					await worker.readUntil(/Container\(s\) built and ready/);
+					expect(await worker.exitCode).toBe(1);
 				}
 			);
 
 			it.skipIf(process.platform !== "linux")(
-				"doesn't warn in linux if no ports are exposed",
+				"doesn't error in linux if no ports are exposed",
 				async () => {
 					const worker = helper.runLongLived("wrangler dev");
 					await worker.waitForReady();
-					await worker.readUntil(/Building container/);
+					await worker.readUntil(/Loading container/);
 					await worker.readUntil(/DONE/);
 					await worker.readUntil(/Container\(s\) built and ready/);
-					expect(worker.output).not.toContain("does not expose any ports");
 				}
 			);
 		});
