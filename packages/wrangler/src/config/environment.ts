@@ -45,10 +45,13 @@ export type CloudchamberConfig = {
 export type ContainerApp = {
 	// TODO: fill out the entire type
 
-	/** Name of the application*/
+	/** Name of the application */
 	name: string;
 
-	/** Number of application instances */
+	/**
+	 * Number of application instances
+	 * @deprecated Use max_instances instead
+	 */
 	instances?: number;
 
 	/** Number of maximum application instances. Only applicable to Durable Object container applications */
@@ -56,7 +59,7 @@ export type ContainerApp = {
 
 	/**
 	 * The path to a Dockerfile, or an image URI.
-	 * Can be defined both here or by setting the `image` key in the `ContainerApp` configuration
+	 * @deprecated Use configuration.image instead
 	 */
 	image?: string;
 
@@ -70,6 +73,9 @@ export type ContainerApp = {
 	 */
 	image_vars?: Record<string, string>;
 
+	/**
+	 * The class_name of the corresponding Durable Object
+	 */
 	class_name: string;
 
 	/** The scheduling policy of the application, default is regional */
@@ -77,24 +83,42 @@ export type ContainerApp = {
 
 	/* Configuration of the container */
 	configuration: {
+		/**
+		 * The path to a Dockerfile, or an image URI.
+		 */
 		image: string;
+		/**
+		 * @internal
+		 */
 		labels?: { name: string; value: string }[];
+		/**
+		 * @internal
+		 */
 		secrets?: { name: string; type: "env"; secret: string }[];
 		disk?: { size: string };
 	};
 
-	/** Scheduling constraints */
+	/**
+	 * Scheduling constraints
+	 * @internal
+	 */
 	constraints?: {
 		regions?: string[];
 		cities?: string[];
 		tier?: number;
 	};
 
+	/**
+	 * @deprecated Use class_name instead
+	 */
 	durable_objects?: {
 		namespace_id: string;
 	};
 
-	/** How a rollout should be done, defining the size of it */
+	/**
+	 * How a rollout should be done, defining the size of it
+	 * @internal
+	 */
 	rollout_step_percentage?: number;
 
 	/**
@@ -102,6 +126,7 @@ export type ContainerApp = {
 	 *  - full_auto: The container application will be rolled out fully automatically.
 	 *  - none: The container application won't have a roll out or update.
 	 *  - manual: The container application will be rollout fully by manually actioning progress steps.
+	 * @internal
 	 */
 	rollout_kind?: "full_auto" | "none" | "full_manual";
 };
