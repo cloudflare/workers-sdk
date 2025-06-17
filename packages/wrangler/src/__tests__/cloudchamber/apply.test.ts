@@ -148,7 +148,7 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│   name = \\"my-container-app\\"
 			│   instances = 3
-			│   scheduling_policy = \\"regional\\"
+			│   scheduling_policy = \\"default\\"
 			│
 			│   [containers.configuration]
 			│   image = \\"./Dockerfile\\"
@@ -194,7 +194,7 @@ describe("cloudchamber apply", () => {
 				created_at: new Date().toString(),
 				version: 1,
 				account_id: "1",
-				scheduling_policy: SchedulingPolicy.REGIONAL,
+				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
 					image: "./Dockerfile",
 				},
@@ -272,7 +272,7 @@ describe("cloudchamber apply", () => {
 				created_at: new Date().toString(),
 				account_id: "1",
 				version: 1,
-				scheduling_policy: SchedulingPolicy.REGIONAL,
+				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
 					image: "./Dockerfile2",
 				},
@@ -306,7 +306,7 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│   name = \\"my-container-app-2\\"
 			│   max_instances = 3
-			│   scheduling_policy = \\"regional\\"
+			│   scheduling_policy = \\"default\\"
 			│
 			│   [containers.configuration]
 			│   image = \\"other-app/Dockerfile\\"
@@ -364,7 +364,7 @@ describe("cloudchamber apply", () => {
 				created_at: new Date().toString(),
 				account_id: "1",
 				version: 1,
-				scheduling_policy: SchedulingPolicy.REGIONAL,
+				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
 					image: "./Dockerfile",
 				},
@@ -395,7 +395,7 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│   name = \\"my-container-app-2\\"
 			│   instances = 1
-			│   scheduling_policy = \\"regional\\"
+			│   scheduling_policy = \\"default\\"
 			│
 			│   [containers.configuration]
 			│   image = \\"other-app/Dockerfile\\"
@@ -447,7 +447,7 @@ describe("cloudchamber apply", () => {
 				created_at: new Date().toString(),
 				account_id: "1",
 				version: 1,
-				scheduling_policy: SchedulingPolicy.REGIONAL,
+				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
 					image: "./Dockerfile",
 				},
@@ -478,7 +478,7 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│   name = \\"my-container-app-2\\"
 			│   instances = 1
-			│   scheduling_policy = \\"regional\\"
+			│   scheduling_policy = \\"default\\"
 			│
 			│   [containers.configuration]
 			│   image = \\"other-app/Dockerfile\\"
@@ -553,7 +553,7 @@ describe("cloudchamber apply", () => {
 				version: 1,
 				created_at: new Date().toString(),
 				account_id: "1",
-				scheduling_policy: SchedulingPolicy.REGIONAL,
+				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
 					image: "./Dockerfile",
 					labels: [
@@ -629,6 +629,211 @@ describe("cloudchamber apply", () => {
 			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
+	test("can apply an application, and there is no changes (retrocompatibility with regional scheduling policy)", async () => {
+		setIsTTY(false);
+		writeAppConfiguration({
+			class_name: "DurableObjectClass",
+			name: "my-container-app",
+			instances: 3,
+			configuration: {
+				image: "./Dockerfile",
+				labels: [
+					{
+						name: "name",
+						value: "value",
+					},
+					{
+						name: "name-2",
+						value: "value-2",
+					},
+				],
+				secrets: [
+					{
+						name: "MY_SECRET",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME",
+					},
+					{
+						name: "MY_SECRET_1",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_1",
+					},
+					{
+						name: "MY_SECRET_2",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_2",
+					},
+				],
+			},
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 3,
+				version: 1,
+				created_at: new Date().toString(),
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				configuration: {
+					image: "./Dockerfile",
+					labels: [
+						{
+							name: "name",
+							value: "value",
+						},
+						{
+							name: "name-2",
+							value: "value-2",
+						},
+					],
+					secrets: [
+						{
+							name: "MY_SECRET",
+							type: SecretAccessType.ENV,
+							secret: "SECRET_NAME",
+						},
+						{
+							name: "MY_SECRET_1",
+							type: SecretAccessType.ENV,
+							secret: "SECRET_NAME_1",
+						},
+						{
+							name: "MY_SECRET_2",
+							type: SecretAccessType.ENV,
+							secret: "SECRET_NAME_2",
+						},
+					],
+				},
+
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ no changes my-container-app
+			│
+			╰ No changes to be made
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
+	test("can apply an application, and there is no changes (two applications)", async () => {
+		setIsTTY(false);
+		const app = {
+			name: "my-container-app",
+			instances: 3,
+			class_name: "DurableObjectClass",
+			configuration: {
+				image: "./Dockerfile",
+				labels: [
+					{
+						name: "name",
+						value: "value",
+					},
+					{
+						name: "name-2",
+						value: "value-2",
+					},
+				],
+				secrets: [
+					{
+						name: "MY_SECRET",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME",
+					},
+					{
+						name: "MY_SECRET_1",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_1",
+					},
+					{
+						name: "MY_SECRET_2",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_2",
+					},
+				],
+			},
+		};
+		writeAppConfiguration(app, { ...app, name: "my-container-app-2" });
+
+		const completeApp = {
+			id: "abc",
+			name: "my-container-app",
+			instances: 3,
+			created_at: new Date().toString(),
+			class_name: "DurableObjectClass",
+			account_id: "1",
+			scheduling_policy: SchedulingPolicy.DEFAULT,
+			configuration: {
+				image: "./Dockerfile",
+				labels: [
+					{
+						name: "name",
+						value: "value",
+					},
+					{
+						name: "name-2",
+						value: "value-2",
+					},
+				],
+				secrets: [
+					{
+						name: "MY_SECRET",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME",
+					},
+					{
+						name: "MY_SECRET_1",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_1",
+					},
+					{
+						name: "MY_SECRET_2",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_2",
+					},
+				],
+			},
+
+			constraints: {
+				tier: 1,
+			},
+		};
+
+		mockGetApplications([
+			{ ...completeApp, version: 1 },
+			{ ...completeApp, version: 1, name: "my-container-app-2", id: "abc2" },
+		]);
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ no changes my-container-app
+			│
+			├ no changes my-container-app-2
+			│
+			╰ No changes to be made
 
 			"
 		`);
