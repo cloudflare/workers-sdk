@@ -33,7 +33,7 @@ export async function startRemoteProxySession(
 ): Promise<RemoteProxySession> {
 	const proxyServerWorkerWranglerConfig = path.resolve(
 		getBasePath(),
-		"templates/mixedMode/proxyServerWorker/wrangler.jsonc"
+		"templates/remoteBindings/proxyServerWorker/wrangler.jsonc"
 	);
 
 	// Transform all bindings to use "raw" mode
