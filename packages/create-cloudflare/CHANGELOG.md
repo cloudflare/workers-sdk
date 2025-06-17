@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.49.3
+
+### Patch Changes
+
+- [#9608](https://github.com/cloudflare/workers-sdk/pull/9608) Thanks [@penalosa](https://github.com/penalosa)! - Install Opennext v1.3.0
+
 ## 2.49.2
 
 ### Patch Changes
