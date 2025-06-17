@@ -18,6 +18,7 @@ import {
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import { getAccountId } from "../user";
 import { warnOrError } from "../utils/print-bindings";
 import {
 	EXTERNAL_VECTORIZE_WORKER_NAME,
@@ -521,15 +522,15 @@ type MiniflareBindingsConfig = Pick<
 
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
-export function buildMiniflareBindingOptions(
+export async function buildMiniflareBindingOptions(
 	config: MiniflareBindingsConfig,
 	mixedModeConnectionString: MixedModeConnectionString | undefined,
 	mixedModeEnabled: boolean
-): {
+): Promise<{
 	bindingOptions: WorkerOptionsBindings;
 	internalObjects: CfDurableObject[];
 	externalWorkers: WorkerOptions[];
-} {
+}> {
 	const bindings = config.bindings;
 
 	// Setup blob and module bindings
@@ -790,6 +791,9 @@ export function buildMiniflareBindingOptions(
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 	if (bindings.ai?.binding && !mixedModeEnabled) {
+		const complianceConfig = {
+			compliance_region: config.complianceRegion,
+		};
 		externalWorkers.push({
 			name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
 			modules: [
@@ -800,9 +804,9 @@ export function buildMiniflareBindingOptions(
 				},
 			],
 			serviceBindings: {
-				FETCHER: getAIFetcher({
-					compliance_region: config.complianceRegion,
-				}),
+				FETCHER: getAIFetcher(complianceConfig, () =>
+					getAccountId(complianceConfig)
+				),
 			},
 		});
 
@@ -1317,7 +1321,7 @@ export async function buildMiniflareOptions(
 
 	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
 	const { bindingOptions, internalObjects, externalWorkers } =
-		buildMiniflareBindingOptions(
+		await buildMiniflareBindingOptions(
 			config,
 			mixedModeConnectionString,
 			mixedModeEnabled

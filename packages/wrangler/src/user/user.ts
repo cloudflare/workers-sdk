@@ -206,6 +206,7 @@
   */
 
 import assert from "node:assert";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { webcrypto as crypto } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
@@ -457,7 +458,38 @@ export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
 	};
 }
 
+const authLocalStorage = new AsyncLocalStorage<{
+	accountId: string | undefined;
+	apiCredentials: ApiCredentials | undefined;
+}>();
+
+export const runWithAuth = <V>(
+	auth: {
+		accountId: string | undefined;
+		apiCredentials: ApiCredentials | undefined;
+	},
+	cb: () => V
+) => authLocalStorage.run(auth, cb);
+
+export function updateScopedAuth(auth: {
+	accountId: string | undefined;
+	apiCredentials: ApiCredentials | undefined;
+}) {
+	const authLocalStore = authLocalStorage.getStore();
+	assert(
+		authLocalStore,
+		"Trying to update the auth local store but none was found"
+	);
+	authLocalStore.accountId = auth.accountId;
+	authLocalStore.apiCredentials = auth.apiCredentials;
+}
+
 export function getAPIToken(): ApiCredentials | undefined {
+	const authLocalStore = authLocalStorage.getStore();
+	if (authLocalStore?.apiCredentials) {
+		return authLocalStore.apiCredentials;
+	}
+
 	if (LocalState.apiToken) {
 		return { apiToken: LocalState.apiToken };
 	}
@@ -1224,6 +1256,11 @@ export function listScopes(message = "💁 Available scopes:"): void {
 export async function getAccountId(
 	complianceConfig: ComplianceConfig
 ): Promise<string> {
+	const authLocalStore = authLocalStorage.getStore();
+	if (authLocalStore?.accountId) {
+		return authLocalStore.accountId;
+	}
+
 	// check if we have a cached value
 	const cachedAccount = getAccountFromCache();
 	if (cachedAccount && !getCloudflareAccountIdFromEnv()) {

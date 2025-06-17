@@ -168,23 +168,24 @@ async function getMiniflareOptionsFromConfig(
 		tailConsumers: [],
 	});
 
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
-		{
-			name: rawConfig.name,
-			complianceRegion: rawConfig.compliance_region,
-			bindings,
-			workerDefinitions,
-			queueConsumers: undefined,
-			services: rawConfig.services,
-			serviceBindings: {},
-			migrations: rawConfig.migrations,
-			imagesLocalMode: false,
-			tails: [],
-			containers: {},
-		},
-		undefined,
-		false
-	);
+	const { bindingOptions, externalWorkers } =
+		await buildMiniflareBindingOptions(
+			{
+				name: rawConfig.name,
+				complianceRegion: rawConfig.compliance_region,
+				bindings,
+				workerDefinitions,
+				queueConsumers: undefined,
+				services: rawConfig.services,
+				serviceBindings: {},
+				migrations: rawConfig.migrations,
+				imagesLocalMode: false,
+				tails: [],
+				containers: {},
+			},
+			undefined,
+			false
+		);
 
 	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
 
@@ -254,7 +255,7 @@ export interface Unstable_MiniflareWorkerOptions {
 	externalWorkers: WorkerOptions[];
 }
 
-export function unstable_getMiniflareWorkerOptions(
+export async function unstable_getMiniflareWorkerOptions(
 	configPath: string,
 	env?: string,
 	options?: {
@@ -265,8 +266,8 @@ export function unstable_getMiniflareWorkerOptions(
 			assets?: Partial<AssetsOptions>;
 		};
 	}
-): Unstable_MiniflareWorkerOptions;
-export function unstable_getMiniflareWorkerOptions(
+): Promise<Unstable_MiniflareWorkerOptions>;
+export async function unstable_getMiniflareWorkerOptions(
 	config: Config,
 	env?: string,
 	options?: {
@@ -277,8 +278,8 @@ export function unstable_getMiniflareWorkerOptions(
 			assets?: Partial<AssetsOptions>;
 		};
 	}
-): Unstable_MiniflareWorkerOptions;
-export function unstable_getMiniflareWorkerOptions(
+): Promise<Unstable_MiniflareWorkerOptions>;
+export async function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
 	env?: string,
 	options?: {
@@ -289,7 +290,7 @@ export function unstable_getMiniflareWorkerOptions(
 			assets?: Partial<AssetsOptions>;
 		};
 	}
-): Unstable_MiniflareWorkerOptions {
+): Promise<Unstable_MiniflareWorkerOptions> {
 	const config =
 		typeof configOrConfigPath === "string"
 			? readConfig({ config: configOrConfigPath, env })
@@ -304,23 +305,24 @@ export function unstable_getMiniflareWorkerOptions(
 		}));
 
 	const bindings = getBindings(config, env, true, {}, true);
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
-		{
-			name: config.name,
-			complianceRegion: config.compliance_region,
-			bindings,
-			workerDefinitions: null,
-			queueConsumers: config.queues.consumers,
-			services: [],
-			serviceBindings: {},
-			migrations: config.migrations,
-			imagesLocalMode: !!options?.imagesLocalMode,
-			tails: config.tail_consumers,
-			containers: {},
-		},
-		options?.mixedModeConnectionString,
-		options?.mixedModeEnabled ?? false
-	);
+	const { bindingOptions, externalWorkers } =
+		await buildMiniflareBindingOptions(
+			{
+				name: config.name,
+				complianceRegion: config.compliance_region,
+				bindings,
+				workerDefinitions: null,
+				queueConsumers: config.queues.consumers,
+				services: [],
+				serviceBindings: {},
+				migrations: config.migrations,
+				imagesLocalMode: !!options?.imagesLocalMode,
+				tails: config.tail_consumers,
+				containers: {},
+			},
+			options?.mixedModeConnectionString,
+			options?.mixedModeEnabled ?? false
+		);
 
 	// This function is currently only exported for the Workers Vitest pool.
 	// In tests, we don't want to rely on the dev registry, as we can't guarantee

@@ -380,18 +380,20 @@ export async function getDevMiniflareOptions(
 								);
 							}
 
-							const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
-								{
-									...workerConfig,
-									assets: undefined,
-								},
-								resolvedPluginConfig.cloudflareEnv,
-								{
-									mixedModeConnectionString:
-										mixedModeSessionData?.session?.mixedModeConnectionString,
-									mixedModeEnabled: resolvedPluginConfig.experimental.mixedMode,
-								}
-							);
+							const miniflareWorkerOptions =
+								await unstable_getMiniflareWorkerOptions(
+									{
+										...workerConfig,
+										assets: undefined,
+									},
+									resolvedPluginConfig.cloudflareEnv,
+									{
+										mixedModeConnectionString:
+											mixedModeSessionData?.session?.mixedModeConnectionString,
+										mixedModeEnabled:
+											resolvedPluginConfig.experimental.mixedMode,
+									}
+								);
 
 							const { externalWorkers } = miniflareWorkerOptions;
 
@@ -685,7 +687,7 @@ export async function getPreviewMiniflareOptions(
 					);
 				}
 
-				const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
+				const miniflareWorkerOptions = await unstable_getMiniflareWorkerOptions(
 					workerConfig,
 					undefined,
 					{

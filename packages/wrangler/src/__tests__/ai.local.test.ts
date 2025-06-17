@@ -6,7 +6,10 @@ import * as internal from "../cfetch/internal";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import * as user from "../user";
 
-const AIFetcher = getAIFetcher(COMPLIANCE_REGION_CONFIG_UNKNOWN);
+const AIFetcher = getAIFetcher(
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	() => "mock-account-id"
+);
 
 describe("ai", () => {
 	describe("fetcher", () => {
@@ -16,7 +19,6 @@ describe("ai", () => {
 
 		describe("local", () => {
 			it("should send x-forwarded header", async () => {
-				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
 				vi.spyOn(internal, "performApiFetch").mockImplementation(
 					async (config, resource, init = {}) => {
 						const headers = new Headers(init.headers);
@@ -64,7 +66,7 @@ describe("ai", () => {
 				);
 
 				expect(await resp.json()).toEqual({
-					resource: "/accounts/123/ai/run/proxy",
+					resource: "/accounts/mock-account-id/ai/run/proxy",
 				});
 			});
 		});

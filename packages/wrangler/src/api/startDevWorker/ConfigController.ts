@@ -21,9 +21,13 @@ import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
+	getAccountId,
+	getAPIToken,
 	loginOrRefreshIfRequired,
 	requireApiToken,
 	requireAuth,
+	runWithAuth,
+	updateScopedAuth,
 } from "../../user";
 import {
 	DEFAULT_INSPECTOR_PORT,
@@ -480,7 +484,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			this.#updateConfig(input, throwErrors)
 		);
 	}
-	public patch(input: Partial<StartDevWorkerInput>) {
+	public async patch(input: Partial<StartDevWorkerInput>) {
 		assert(
 			this.latestInput,
 			"Cannot call updateConfig without previously calling setConfig"
@@ -491,8 +495,18 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			...input,
 		};
 
-		return runWithLogLevel(config.dev?.logLevel, () =>
-			this.#updateConfig(config)
+		return runWithAuth(
+			{
+				accountId: await getAccountId({
+					compliance_region: config.complianceRegion,
+				}),
+				apiCredentials: getAPIToken(),
+			},
+			() => {
+				return runWithLogLevel(config.dev?.logLevel, () =>
+					this.#updateConfig(config)
+				);
+			}
 		);
 	}
 
@@ -529,6 +543,22 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			if (typeof vitest === "undefined") {
 				void this.#ensureWatchingConfig(fileConfig.configPath);
 			}
+
+			let accountId = undefined;
+			let apiCredentials = undefined;
+
+			if (input.dev?.auth) {
+				const inputAuth = await unwrapHook(input.dev.auth, fileConfig);
+				if (inputAuth) {
+					accountId = inputAuth.accountId;
+					apiCredentials = inputAuth.apiToken;
+				}
+			}
+
+			updateScopedAuth({
+				accountId,
+				apiCredentials,
+			});
 
 			const resolvedConfig = await resolveConfig(fileConfig, input);
 			if (signal.aborted) {
