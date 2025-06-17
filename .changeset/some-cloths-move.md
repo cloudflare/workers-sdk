@@ -17,7 +17,7 @@ of the following commands:
 - wrangler secret bulk
 - wrangler secret put
 - wrangler secret delete
-- wrangler triggers deploy (TODO: manually test)
+- wrangler triggers deploy
 
 this is a measure we're putting in place to try to prevent developers from accidentally applying
 changes to an incorrect (potentially even production) environment
