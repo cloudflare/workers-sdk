@@ -278,6 +278,7 @@ async function parseCustomPoolOptions(
 				{
 					imagesLocalMode: true,
 					overrides: { assets: options.miniflare.assets },
+					remoteBindingsEnabled: options.experimental_remoteBindings,
 					remoteProxyConnectionString:
 						remoteProxySessionData?.session?.remoteProxyConnectionString,
 				}

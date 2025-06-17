@@ -93,7 +93,7 @@ export function pickRemoteBindings(
 				return true;
 			}
 
-			return "remote" in binding && binding["remote"];
+			return "experimental_remote" in binding && binding["experimental_remote"];
 		})
 	);
 }
