@@ -1,8 +1,77 @@
 import assert from "node:assert";
+import getPort, { portNumbers } from "get-port";
 import colors from "picocolors";
+import { DEBUG_PATH, DEFAULT_INSPECTOR_PORT } from "./constants";
+import type { ResolvedPluginConfig } from "./plugin-config";
+import type { Miniflare } from "miniflare";
 import type * as vite from "vite";
 
-export const debuggingPath = "/__debug";
+/**
+ * Gets the inspector port option that should be passed to miniflare based on the user's plugin config
+ *
+ * @param pluginConfig the user plugin configs
+ * @param viteServer the vite (dev or preview) server
+ * @returns the inspector port to require from miniflare or false if debugging is disabled
+ */
+export async function getInputInspectorPortOption(
+	resolvedPluginConfig: ResolvedPluginConfig,
+	viteServer: vite.ViteDevServer | vite.PreviewServer,
+	miniflare?: Miniflare
+) {
+	if (
+		resolvedPluginConfig.inspectorPort === undefined ||
+		resolvedPluginConfig.inspectorPort === 0
+	) {
+		const resolvedInspectorPort = await getResolvedInspectorPort(
+			resolvedPluginConfig,
+			miniflare
+		);
+
+		if (resolvedInspectorPort !== null) {
+			// the user is not specifying an inspector port to use and we're already
+			// using one (this is a server restart) so let's just reuse that
+			return resolvedInspectorPort;
+		}
+	}
+
+	const inputInspectorPort =
+		resolvedPluginConfig.inspectorPort ??
+		(await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT));
+
+	if (
+		resolvedPluginConfig.inspectorPort === undefined &&
+		inputInspectorPort !== DEFAULT_INSPECTOR_PORT
+	) {
+		viteServer.config.logger.warn(
+			colors.dim(
+				`Default inspector port ${DEFAULT_INSPECTOR_PORT} not available, using ${inputInspectorPort} instead\n`
+			)
+		);
+	}
+
+	return inputInspectorPort;
+}
+
+/**
+ * Gets the resolved port of the inspector provided by miniflare
+ *
+ * @param pluginConfig the user's plugin configuration
+ * @returns the resolved port of null if the user opted out of debugging
+ */
+export async function getResolvedInspectorPort(
+	resolvedPluginConfig: ResolvedPluginConfig,
+	miniflare?: Miniflare
+) {
+	if (miniflare && resolvedPluginConfig.inspectorPort !== false) {
+		const miniflareInspectorUrl = await miniflare.getInspectorURL();
+		return Number.parseInt(miniflareInspectorUrl.port);
+	}
+	return null;
+}
+
+function getFirstAvailablePort(start: number) {
+	return getPort({ port: portNumbers(start, 65535) });
+}
 
 /**
  * Modifies the url printing logic to also include a url that developers can use to open devtools to debug their Worker(s)
@@ -28,7 +97,7 @@ export function addDebugToVitePrintUrls(
 					)
 				);
 			server.config.logger.info(
-				`  ${colors.green("➜")}  ${colors.bold("Debug")}:   ${colorDebugUrl(`${protocol}//${hostname}:${port}${debuggingPath}`)}`
+				`  ${colors.green("➜")}  ${colors.bold("Debug")}:   ${colorDebugUrl(`${protocol}//${hostname}:${port}${DEBUG_PATH}`)}`
 			);
 		}
 	};

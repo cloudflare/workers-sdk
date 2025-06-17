@@ -55,23 +55,26 @@ export interface WorkerConfig extends AssetsOnlyConfig {
 	main: Defined<SanitizedWorkerConfig["main"]>;
 }
 
-interface BasePluginConfig {
-	configPaths: Set<string>;
+interface BaseResolvedConfig {
 	persistState: PersistState;
-	cloudflareEnv: string | undefined;
+	inspectorPort: number | false | undefined;
 	experimental: Experimental;
 }
 
-interface AssetsOnlyPluginConfig extends BasePluginConfig {
+interface AssetsOnlyResolvedConfig extends BaseResolvedConfig {
 	type: "assets-only";
+	configPaths: Set<string>;
+	cloudflareEnv: string | undefined;
 	config: AssetsOnlyConfig;
 	rawConfigs: {
 		entryWorker: AssetsOnlyWorkerResolvedConfig;
 	};
 }
 
-interface WorkersPluginConfig extends BasePluginConfig {
+interface WorkersResolvedConfig extends BaseResolvedConfig {
 	type: "workers";
+	configPaths: Set<string>;
+	cloudflareEnv: string | undefined;
 	workers: Record<string, WorkerConfig>;
 	entryWorkerEnvironmentName: string;
 	staticRouting: StaticRouting | undefined;
@@ -81,10 +84,8 @@ interface WorkersPluginConfig extends BasePluginConfig {
 	};
 }
 
-interface PreviewConfig {
+interface PreviewResolvedConfig extends BaseResolvedConfig {
 	type: "preview";
-	persistState: PersistState;
-	experimental: Experimental;
 	workerConfigs: Unstable_Config[];
 }
 
@@ -94,9 +95,9 @@ export type ResolvedPluginConfig<
 		| "workers"
 		| "preview",
 > = { type: T } & (
-	| AssetsOnlyPluginConfig
-	| WorkersPluginConfig
-	| PreviewConfig
+	| AssetsOnlyResolvedConfig
+	| WorkersResolvedConfig
+	| PreviewResolvedConfig
 );
 
 // Worker names can only contain alphanumeric characters and '-' whereas environment names can only contain alphanumeric characters and '$', '_'
@@ -109,16 +110,21 @@ export function resolvePluginConfig(
 	userConfig: vite.UserConfig,
 	viteEnv: vite.ConfigEnv
 ): ResolvedPluginConfig {
-	const persistState = pluginConfig.persistState ?? true;
-	const experimental = pluginConfig.experimental ?? {};
+	const shared = {
+		persistState: pluginConfig.persistState ?? true,
+		inspectorPort: pluginConfig.inspectorPort,
+		experimental: pluginConfig.experimental ?? {},
+	};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 
 	if (viteEnv.isPreview) {
 		return {
+			...shared,
 			type: "preview",
-			persistState,
-			experimental,
-			workerConfigs: getWorkerConfigs(root, experimental.mixedMode ?? false),
+			workerConfigs: getWorkerConfigs(
+				root,
+				shared.experimental.mixedMode ?? false
+			),
 		};
 	}
 
@@ -146,15 +152,14 @@ export function resolvePluginConfig(
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
 		return {
+			...shared,
 			type: "assets-only",
+			cloudflareEnv,
 			config: entryWorkerResolvedConfig.config,
 			configPaths,
-			persistState,
 			rawConfigs: {
 				entryWorker: entryWorkerResolvedConfig,
 			},
-			cloudflareEnv,
-			experimental,
 		};
 	}
 
@@ -216,9 +221,10 @@ export function resolvePluginConfig(
 	}
 
 	return {
+		...shared,
 		type: "workers",
+		cloudflareEnv,
 		configPaths,
-		persistState,
 		workers,
 		entryWorkerEnvironmentName,
 		staticRouting,
@@ -226,8 +232,6 @@ export function resolvePluginConfig(
 			entryWorker: entryWorkerResolvedConfig,
 			auxiliaryWorkers: auxiliaryWorkersResolvedConfigs,
 		},
-		cloudflareEnv,
-		experimental,
 	};
 }
 
