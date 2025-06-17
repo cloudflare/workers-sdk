@@ -1,7 +1,10 @@
 import events from "node:events";
 import { fetch, Request } from "undici";
 import { startDev } from "../dev";
-import { getDockerPath } from "../environment-variables/misc-variables";
+import {
+	getDockerHost,
+	getDockerPath,
+} from "../environment-variables/misc-variables";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import type { Environment } from "../config";
@@ -88,6 +91,7 @@ export interface Unstable_DevOptions {
 		enableIpc?: boolean;
 		enableContainers?: boolean; // Whether to build and connect to containers in dev mode. Defaults to true.
 		dockerPath?: string; // Path to the docker binary, if not on $PATH
+		containerEngine?: string; // Docker socket
 	};
 }
 
@@ -224,6 +228,7 @@ export async function unstable_dev(
 		nodeCompat: undefined,
 		enableContainers: options?.experimental?.enableContainers ?? false,
 		dockerPath: options?.experimental?.dockerPath ?? getDockerPath(),
+		containerEngine: options?.experimental?.containerEngine ?? getDockerHost(),
 	};
 
 	//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time

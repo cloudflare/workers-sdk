@@ -1,6 +1,7 @@
 import type { AssetsOptions } from "../../assets";
 import type { Config } from "../../config";
 import type {
+	ContainerEngine,
 	CustomDomainRoute,
 	DurableObjectMigration,
 	Rule,
@@ -190,6 +191,9 @@ export interface StartDevWorkerInput {
 
 		/** Path to the docker executable. Defaults to 'docker' */
 		dockerPath?: string;
+
+		/** Options for the container engine */
+		containerEngine?: ContainerEngine;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
