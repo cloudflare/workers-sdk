@@ -29,16 +29,18 @@ interface AuxiliaryWorkerConfig extends BaseWorkerConfig {
 	configPath: string;
 }
 
+interface Experimental {
+	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
+	headersAndRedirectsDevModeSupport?: boolean;
+	/** Experimental support for remote bindings (where bindings configured with `remote: true` access remote resources). */
+	remoteBindings?: boolean;
+}
+
 export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
 	persistState?: PersistState;
 	inspectorPort?: number | false;
-	experimental?: {
-		/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
-		headersAndRedirectsDevModeSupport?: boolean;
-		/** Experimental support for remote bindings (where bindings configured with `experimental_experimental_remote: true` access remote resources). */
-		remoteBindings?: boolean;
-	};
+	experimental?: Experimental;
 }
 
 export interface AssetsOnlyConfig extends SanitizedWorkerConfig {
@@ -55,11 +57,7 @@ interface BasePluginConfig {
 	configPaths: Set<string>;
 	persistState: PersistState;
 	cloudflareEnv: string | undefined;
-	experimental: {
-		/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
-		headersAndRedirectsDevModeSupport?: boolean;
-		remoteBindings?: boolean;
-	};
+	experimental: Experimental;
 }
 
 interface AssetsOnlyPluginConfig extends BasePluginConfig {
@@ -70,7 +68,7 @@ interface AssetsOnlyPluginConfig extends BasePluginConfig {
 	};
 }
 
-export interface WorkerPluginConfig extends BasePluginConfig {
+interface WorkersPluginConfig extends BasePluginConfig {
 	type: "workers";
 	workers: Record<string, WorkerConfig>;
 	entryWorkerEnvironmentName: string;
@@ -81,7 +79,22 @@ export interface WorkerPluginConfig extends BasePluginConfig {
 	};
 }
 
-export type ResolvedPluginConfig = AssetsOnlyPluginConfig | WorkerPluginConfig;
+interface PreviewConfig {
+	type: "preview";
+	persistState: PersistState;
+	experimental: Experimental;
+}
+
+export type ResolvedPluginConfig<
+	T extends "assets-only" | "workers" | "preview" =
+		| "assets-only"
+		| "workers"
+		| "preview",
+> = { type: T } & (
+	| AssetsOnlyPluginConfig
+	| WorkersPluginConfig
+	| PreviewConfig
+);
 
 // Worker names can only contain alphanumeric characters and '-' whereas environment names can only contain alphanumeric characters and '$', '_'
 function workerNameToEnvironmentName(workerName: string) {
@@ -93,9 +106,18 @@ export function resolvePluginConfig(
 	userConfig: vite.UserConfig,
 	viteEnv: vite.ConfigEnv
 ): ResolvedPluginConfig {
-	const configPaths = new Set<string>();
 	const persistState = pluginConfig.persistState ?? true;
 	const experimental = pluginConfig.experimental ?? {};
+
+	if (viteEnv.isPreview) {
+		return {
+			type: "preview",
+			persistState,
+			experimental,
+		};
+	}
+
+	const configPaths = new Set<string>();
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
 		viteEnv.mode,
@@ -203,4 +225,24 @@ export function resolvePluginConfig(
 		cloudflareEnv,
 		experimental,
 	};
+}
+
+export function assertIsNotPreview(
+	resolvedPluginConfig: ResolvedPluginConfig
+): asserts resolvedPluginConfig is ResolvedPluginConfig<
+	"assets-only" | "workers"
+> {
+	assert(
+		resolvedPluginConfig.type !== "preview",
+		`Expected "assets-only" or "workers" plugin config`
+	);
+}
+
+export function assertIsPreview(
+	resolvedPluginConfig: ResolvedPluginConfig
+): asserts resolvedPluginConfig is ResolvedPluginConfig<"preview"> {
+	assert(
+		resolvedPluginConfig.type === "preview",
+		`Expected "preview" plugin config`
+	);
 }

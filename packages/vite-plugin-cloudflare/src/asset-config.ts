@@ -25,7 +25,7 @@ import type { Unstable_Config } from "wrangler";
  * and the experimental support for these files is turned on.
  */
 export function hasAssetsConfigChanged(
-	resolvedPluginConfig: ResolvedPluginConfig,
+	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">,
 	resolvedViteConfig: ResolvedConfig,
 	changedFilePath: string
 ) {
@@ -43,7 +43,7 @@ export function hasAssetsConfigChanged(
  * taking into account whether experimental _headers and _redirects support is on.
  */
 export function getAssetsConfig(
-	resolvedPluginConfig: ResolvedPluginConfig,
+	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">,
 	entryWorkerConfig: Unstable_Config | undefined,
 	resolvedConfig: ResolvedConfig
 ): AssetConfig {

@@ -176,7 +176,7 @@ const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 const RUNNER_PATH = "./runner-worker/index.js";
 
 function getEntryWorkerConfig(
-	resolvedPluginConfig: ResolvedPluginConfig
+	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">
 ): WorkerConfig | undefined {
 	if (resolvedPluginConfig.type === "assets-only") {
 		return;
@@ -232,7 +232,7 @@ const remoteProxySessionsDataMap = new Map<
 >();
 
 export async function getDevMiniflareOptions(
-	resolvedPluginConfig: ResolvedPluginConfig,
+	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">,
 	viteDevServer: vite.ViteDevServer,
 	inspectorPort: number | false
 ): Promise<MiniflareOptions> {

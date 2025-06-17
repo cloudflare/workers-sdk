@@ -47,7 +47,7 @@ function getRelativePathToWorkerConfig(
 }
 
 export function writeDeployConfig(
-	resolvedPluginConfig: ResolvedPluginConfig,
+	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">,
 	resolvedViteConfig: vite.ResolvedConfig
 ) {
 	const deployConfigPath = getDeployConfigPath(resolvedViteConfig.root);

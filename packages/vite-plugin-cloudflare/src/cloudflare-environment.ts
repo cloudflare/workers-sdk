@@ -193,14 +193,10 @@ export function createCloudflareEnvironmentOptions(
 }
 
 export function initRunners(
-	resolvedPluginConfig: ResolvedPluginConfig,
+	resolvedPluginConfig: ResolvedPluginConfig<"workers">,
 	viteDevServer: vite.ViteDevServer,
 	miniflare: Miniflare
 ): Promise<void[]> | undefined {
-	if (resolvedPluginConfig.type === "assets-only") {
-		return;
-	}
-
 	return Promise.all(
 		Object.entries(resolvedPluginConfig.workers).map(
 			async ([environmentName, workerConfig]) => {

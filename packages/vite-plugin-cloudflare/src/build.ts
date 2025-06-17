@@ -7,7 +7,7 @@ import type * as vite from "vite";
 import type { Unstable_Config } from "wrangler";
 
 export function createBuildApp(
-	resolvedPluginConfig: ResolvedPluginConfig
+	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">
 ): (builder: vite.ViteBuilder) => Promise<void> {
 	return async (builder) => {
 		const clientEnvironment = builder.environments.client;
