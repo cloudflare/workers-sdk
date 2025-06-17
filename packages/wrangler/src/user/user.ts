@@ -459,18 +459,34 @@ export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
 }
 
 const authLocalStorage = new AsyncLocalStorage<{
-	accountId: string;
-	apiCredentials: ApiCredentials;
+	accountId: string | undefined;
+	apiCredentials: ApiCredentials | undefined;
 }>();
 
 export const runWithAuth = <V>(
-	auth: { accountId: string; apiCredentials: ApiCredentials },
+	auth: {
+		accountId: string | undefined;
+		apiCredentials: ApiCredentials | undefined;
+	},
 	cb: () => V
 ) => authLocalStorage.run(auth, cb);
 
+export function updateScopedAuth(auth: {
+	accountId: string | undefined;
+	apiCredentials: ApiCredentials | undefined;
+}) {
+	const authLocalStore = authLocalStorage.getStore();
+	assert(
+		authLocalStore,
+		"Trying to update the auth local store but none was found"
+	);
+	authLocalStore.accountId = auth.accountId;
+	authLocalStore.apiCredentials = auth.apiCredentials;
+}
+
 export function getAPIToken(): ApiCredentials | undefined {
 	const authLocalStore = authLocalStorage.getStore();
-	if (authLocalStore) {
+	if (authLocalStore?.apiCredentials) {
 		return authLocalStore.apiCredentials;
 	}
 
@@ -1241,7 +1257,7 @@ export async function getAccountId(
 	complianceConfig: ComplianceConfig
 ): Promise<string> {
 	const authLocalStore = authLocalStorage.getStore();
-	if (authLocalStore) {
+	if (authLocalStore?.accountId) {
 		return authLocalStore.accountId;
 	}
 
