@@ -11,7 +11,6 @@ import {
 import { version as wranglerVersion } from "../../package.json";
 import { readConfig } from "../config";
 import { getConfigCache, purgeConfigCaches } from "../config-cache";
-import { containersScope } from "../containers";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -47,8 +46,6 @@ import type {
 	NetworkParameters,
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
-
-export const cloudchamberScope: Scope = "cloudchamber:write";
 
 export type CommonCloudchamberConfiguration = { json: boolean };
 
@@ -109,8 +106,7 @@ export function handleFailure<
 		? K
 		: never,
 >(
-	cb: (args: CommandArgumentsObject, config: Config) => Promise<void>,
-	scope: Scope
+	cb: (args: CommandArgumentsObject, config: Config) => Promise<void>
 ): (
 	args: CommonYargsOptions &
 		CommandArgumentsObject &
@@ -119,7 +115,7 @@ export function handleFailure<
 	return async (args) => {
 		try {
 			const config = readConfig(args);
-			await fillOpenAPIConfiguration(config, args.json, scope);
+			await fillOpenAPIConfiguration(config, args.json);
 			await cb(args, config);
 		} catch (err) {
 			if (!args.json || !isNonInteractiveOrCI()) {
@@ -149,22 +145,11 @@ export async function loadAccountSpinner({ json }: { json?: boolean }) {
  * Gets the API URL depending if the user is using old/admin based authentication.
  *
  */
-async function getAPIUrl(config: Config, scope: Scope) {
+async function getAPIUrl(config: Config) {
 	const api = getCloudflareApiBaseUrl(config);
 	// This one will probably be cache'd already so it won't ask for the accountId again
 	const accountId = config.account_id || (await getAccountId(config));
-	const endpoint =
-		scope === cloudchamberScope
-			? "cloudchamber"
-			: scope === containersScope
-				? "containers"
-				: null;
-	if (endpoint === null) {
-		throw new UserError(
-			"unexpected scope for command: " + JSON.stringify(scope)
-		);
-	}
-	return `${api}/accounts/${accountId}/${endpoint}`;
+	return `${api}/accounts/${accountId}/cloudchamber`;
 }
 
 export async function promiseSpinner<T>(
@@ -190,11 +175,7 @@ export async function promiseSpinner<T>(
 	return t;
 }
 
-export async function fillOpenAPIConfiguration(
-	config: Config,
-	json: boolean,
-	scope: Scope
-) {
+export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	const headers: Record<string, string> =
 		OpenAPI.HEADERS !== undefined ? { ...OpenAPI.HEADERS } : {};
 
@@ -205,14 +186,16 @@ export async function fillOpenAPIConfiguration(
 	}
 
 	const scopes = getScopes();
-	const needsToken = !scopes?.some((s) => s === scope);
-	const neededScopes: Scope[] = [scope];
+	const needsCloudchamberToken = !scopes?.find(
+		(scope) => scope === "cloudchamber:write"
+	);
+	const cloudchamberScope: Scope[] = ["cloudchamber:write"];
 	const scopesToSet: Scope[] =
 		scopes == undefined
-			? neededScopes.concat(DefaultScopeKeys)
-			: neededScopes.concat(scopes);
+			? cloudchamberScope.concat(DefaultScopeKeys)
+			: cloudchamberScope.concat(scopes);
 
-	if (getAuthFromEnv() && needsToken) {
+	if (getAuthFromEnv() && needsCloudchamberToken) {
 		setLoginScopeKeys(scopesToSet);
 		// Wrangler will try to retrieve the oauth token and refresh it
 		// for its internal fetch call even if we have AuthFromEnv.
@@ -222,10 +205,10 @@ export async function fillOpenAPIConfiguration(
 			oauth_token: "_",
 		});
 	} else {
-		if (needsToken && scopes) {
+		if (needsCloudchamberToken && scopes) {
 			logRaw(
 				status.warning +
-					" We need to re-authenticate to add a required token..."
+					" We need to re-authenticate to add a cloudchamber token..."
 			);
 			// cache account id
 			await getAccountId(config);
@@ -269,7 +252,7 @@ export async function fillOpenAPIConfiguration(
 	headers["User-Agent"] = `wrangler/${wranglerVersion}`;
 	OpenAPI.CREDENTIALS = "omit";
 	if (OpenAPI.BASE.length === 0) {
-		const [base, errApiURL] = await wrap(getAPIUrl(config, scope));
+		const [base, errApiURL] = await wrap(getAPIUrl(config));
 		if (errApiURL) {
 			throw new UserError("getting the API url: " + errApiURL.message);
 		}

@@ -365,7 +365,6 @@ const DefaultScopes = {
 
 const OptionalScopes = {
 	"cloudchamber:write": "Manage Cloudchamber",
-	"containers:write": "Manage Workers Containers",
 } as const;
 
 const AllScopes = {

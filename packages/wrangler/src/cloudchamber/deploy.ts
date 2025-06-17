@@ -1,7 +1,6 @@
 import { isDockerfile } from "@cloudflare/containers-shared";
 import { type Config } from "../config";
 import { type ContainerApp } from "../config/environment";
-import { containersScope } from "../containers";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -63,11 +62,7 @@ export async function deployContainers(
 	}
 
 	if (!dryRun) {
-		await fillOpenAPIConfiguration(
-			config,
-			isNonInteractiveOrCI(),
-			containersScope
-		);
+		await fillOpenAPIConfiguration(config, isNonInteractiveOrCI());
 	}
 	const pathToDocker = getDockerPath();
 	for (const container of config.containers) {

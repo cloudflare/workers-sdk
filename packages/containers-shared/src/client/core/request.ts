@@ -9,21 +9,6 @@ import type { ApiRequestOptions } from "./ApiRequestOptions";
 import type { ApiResult } from "./ApiResult";
 import type { OnCancel } from "./CancelablePromise";
 
-interface FetchError {
-	code: number;
-	documentation_url?: string;
-	message: string;
-	error_chain?: FetchError[];
-}
-
-interface FetchResult<ResponseType = unknown> {
-	success: boolean;
-	result: ResponseType;
-	errors: FetchError[];
-	messages?: string[];
-	result_info?: unknown;
-}
-
 const isDefined = <T>(
 	value: T | null | undefined
 ): value is Exclude<T, null | undefined> => {
@@ -212,13 +197,6 @@ const getRequestBody = (options: ApiRequestOptions): any => {
 	return undefined;
 };
 
-const isResponseSchemaV4 = (
-	config: OpenAPIConfig,
-	_options: ApiRequestOptions
-): boolean => {
-	return config.BASE.endsWith("/containers");
-};
-
 export const sendRequest = async (
 	config: OpenAPIConfig,
 	options: ApiRequestOptions,
@@ -341,28 +319,16 @@ export const request = <T>(
 					options.responseHeader
 				);
 
-				const parseResponseSchemaV4 = (body: any): ApiResult => {
-					const fetchResult = body as FetchResult<T>;
-					return {
-						url,
-						ok: response.ok && fetchResult.success,
-						status: response.status,
-						statusText: response.statusText,
-						body: responseHeader ?? fetchResult.result,
-					};
+				const result: ApiResult = {
+					url,
+					ok: response.ok,
+					status: response.status,
+					statusText: response.statusText,
+					body: responseHeader ?? responseBody,
 				};
 
-				const result: ApiResult = isResponseSchemaV4(config, options)
-					? parseResponseSchemaV4(responseBody)
-					: {
-							url,
-							ok: response.ok,
-							status: response.status,
-							statusText: response.statusText,
-							body: responseHeader ?? responseBody,
-						};
-
 				catchErrorCodes(options, result);
+
 				resolve(result.body);
 			}
 		} catch (error) {

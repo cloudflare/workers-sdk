@@ -5,7 +5,6 @@ import {
 import { logger } from "../../logger";
 import { handleFailure, promiseSpinner } from "../common";
 import type { Config } from "../../config";
-import type { Scope } from "../../user";
 import type {
 	CommonYargsArgvJSON,
 	CommonYargsArgvSanitizedJSON,
@@ -22,7 +21,7 @@ interface TagsResponse {
 	tags: string[];
 }
 
-export const imagesCommand = (yargs: CommonYargsArgvJSON, scope: Scope) => {
+export const imagesCommand = (yargs: CommonYargsArgvJSON) => {
 	return yargs
 		.command(
 			"list",
@@ -31,7 +30,7 @@ export const imagesCommand = (yargs: CommonYargsArgvJSON, scope: Scope) => {
 			(args) =>
 				handleFailure(async (_args: CommonYargsArgvSanitizedJSON, config) => {
 					await handleListImagesCommand(args, config);
-				}, scope)(args)
+				})(args)
 		)
 		.command(
 			"delete [image]",
@@ -40,7 +39,7 @@ export const imagesCommand = (yargs: CommonYargsArgvJSON, scope: Scope) => {
 			(args) =>
 				handleFailure(async (_args: CommonYargsArgvSanitizedJSON, config) => {
 					await handleDeleteImageCommand(args, config);
-				}, scope)(args)
+				})(args)
 		);
 };
 
