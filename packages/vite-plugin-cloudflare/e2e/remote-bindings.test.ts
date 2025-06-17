@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import { setTimeout } from "node:timers/promises";
-import { afterAll, beforeAll, describe, test } from "vitest";
+import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import { fetchJson, runLongLived, seed, waitForReady } from "./helpers.js";
 
 const isWindows = os.platform() === "win32";
@@ -98,22 +98,30 @@ describe
 
 			await setTimeout(500);
 
-			expect(await fetchJson(url)).toEqual({
-				localWorkerResponseJson: {
-					remoteWorkerResponse: "Hello from an alternative remote worker",
+			await vi.waitFor(
+				async () => {
+					expect(await fetchJson(url)).toEqual({
+						localWorkerResponseJson: {
+							remoteWorkerResponse: "Hello from an alternative remote worker",
+						},
+						remoteWorkerResponseText: "Hello from a remote worker",
+					});
 				},
-				remoteWorkerResponseText: "Hello from a remote worker",
-			});
+				{ timeout: 5_000, interval: 250 }
+			);
 
 			await writeFile(entryWorkerPath, entryWorkerContent, "utf8");
 
-			await setTimeout(500);
-
-			expect(await fetchJson(url)).toEqual({
-				localWorkerResponse: {
-					remoteWorkerResponse: "Hello from an alternative remote worker",
+			await vi.waitFor(
+				async () => {
+					expect(await fetchJson(url)).toEqual({
+						localWorkerResponse: {
+							remoteWorkerResponse: "Hello from an alternative remote worker",
+						},
+						remoteWorkerResponse: "Hello from a remote worker",
+					});
 				},
-				remoteWorkerResponse: "Hello from a remote worker",
-			});
+				{ timeout: 5_000, interval: 250 }
+			);
 		});
 	});
