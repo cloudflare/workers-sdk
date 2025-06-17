@@ -807,44 +807,53 @@ test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 
 	// Check with `Accept-Encoding: gzip`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "gzip" } });
-	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(res.headers.get("Content-Encoding")).toBe("gzip"); // the Worker marked the response as `gzip`
 	expect(await res.text()).toBe(testBody);
 	res = await fetch(brUrl, { headers: { "Accept-Encoding": "gzip" } });
-	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(res.headers.get("Content-Encoding")).toBe(null); // the Worker marked the response as `br` but only `gzip` and `identity` are allowed so response is `identity`
 	expect(await res.text()).toBe(testBody);
-	// "deflate" isn't an accepted encoding inside Workers, so returned as is
 	res = await fetch(deflateUrl, { headers: { "Accept-Encoding": "gzip" } });
-	expect(res.headers.get("Content-Encoding")).toBe("deflate");
+	expect(res.headers.get("Content-Encoding")).toBe("deflate"); // "deflate" isn't a supported encoding inside Workers, so returned as is, with `deflate` encoding
 	expect(await res.text()).toBe(testBody);
 
 	// Check with `Accept-Encoding: br`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "br" } });
-	expect(res.headers.get("Content-Encoding")).toBe("br");
+	expect(res.headers.get("Content-Encoding")).toBe(null); // the Worker marked the response as `gzip` but only `br` and `identity` are allowed so response is `identity`
 	expect(await res.text()).toBe(testBody);
 	res = await fetch(brUrl, { headers: { "Accept-Encoding": "br" } });
-	expect(res.headers.get("Content-Encoding")).toBe("br");
+	expect(res.headers.get("Content-Encoding")).toBe("br"); // the Worker marked the response as `br`
 	expect(await res.text()).toBe(testBody);
-	// "deflate" isn't an accepted encoding inside Workers, so returned as is
 	res = await fetch(deflateUrl, { headers: { "Accept-Encoding": "br" } });
-	expect(res.headers.get("Content-Encoding")).toBe("deflate");
+	expect(res.headers.get("Content-Encoding")).toBe("deflate"); // "deflate" isn't a supported encoding inside Workers, so returned as is, with `deflate` encoding
+	expect(await res.text()).toBe(testBody);
+
+	// Check with unsupported `Accept-Encoding: deflate`
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "deflate" } });
+	expect(res.headers.get("Content-Encoding")).toBe(null); // the Worker marked the response as `gzip` but only `deflate` and `identity` are allowed so response is `identity`
+	expect(await res.text()).toBe(testBody);
+	res = await fetch(brUrl, { headers: { "Accept-Encoding": "deflate" } });
+	expect(res.headers.get("Content-Encoding")).toBe(null); // the Worker marked the response as `br` but only `deflate` and `identity` are allowed so response is `identity`
+	expect(await res.text()).toBe(testBody);
+	res = await fetch(deflateUrl, { headers: { "Accept-Encoding": "deflate" } });
+	expect(res.headers.get("Content-Encoding")).toBe("deflate"); // "deflate" isn't a supported encoding inside Workers, so returned as is, with `deflate` encoding
 	expect(await res.text()).toBe(testBody);
 
 	// Check with mixed `Accept-Encoding`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "gzip, br" } });
-	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(res.headers.get("Content-Encoding")).toBe("gzip"); // the Worker marked the response as `gzip` and is allowed so response is `gzip`
 	expect(await res.text()).toBe(testBody);
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "br, gzip" } });
-	expect(res.headers.get("Content-Encoding")).toBe("br");
+	expect(res.headers.get("Content-Encoding")).toBe("gzip"); // the Worker marked the response as `gzip` and is allowed so response is `gzip`
 	expect(await res.text()).toBe(testBody);
 	res = await fetch(gzipUrl, {
 		headers: { "Accept-Encoding": "br;q=0.5, gzip" },
 	});
-	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(res.headers.get("Content-Encoding")).toBe("gzip"); // the Worker marked the response as `gzip` and is allowed so response is `gzip`
 	expect(await res.text()).toBe(testBody);
 
 	// Check empty `Accept-Encoding`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "" } });
-	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(res.headers.get("Content-Encoding")).toBe(null); // the Worker marked the response as `gzip` but it is not allowed so response is uncompressed
 	expect(await res.text()).toBe(testBody);
 
 	// Check identity encoding
@@ -857,26 +866,48 @@ test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "zstd, *" } });
 	expect(res.headers.get("Content-Encoding")).toBe(null);
 	expect(await res.text()).toBe(testBody);
+
+	// Check when identity encoding is not allowed
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "gzip, *;q=0" } });
+	expect(res.headers.get("Content-Encoding")).toBe("gzip"); // the Worker marked the response as `gzip` so response is gzip
+	expect(await res.text()).toBe(testBody);
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "br, *;q=0" } });
+	expect(res.headers.get("Content-Encoding")).toBe("br"); // the Worker marked the response as `gzip` but it is not allowed, and neither is `identity` so response is `br`
+	expect(await res.text()).toBe(testBody);
+	res = await fetch(brUrl, { headers: { "Accept-Encoding": "gzip, *;q=0" } });
+	expect(res.headers.get("Content-Encoding")).toBe("gzip"); // the Worker marked the response as `br` but it is not allowed, and neither is `identity` so response is `gzip`
+	expect(await res.text()).toBe(testBody);
+	res = await fetch(brUrl, { headers: { "Accept-Encoding": "br, *;q=0" } });
+	expect(res.headers.get("Content-Encoding")).toBe("br"); // the Worker marked the response as `br` so response is `br`
+	expect(await res.text()).toBe(testBody);
+	res = await fetch(gzipUrl, {
+		headers: { "Accept-Encoding": "br;q=0.5, gzip, *;q=0" },
+	});
+	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(await res.text()).toBe(testBody);
+
 	res = await fetch(gzipUrl, {
 		headers: { "Accept-Encoding": "zstd, identity;q=0" },
 	});
 	expect(res.status).toBe(415);
-	expect(res.headers.get("Accept-Encoding")).toBe("br, gzip");
+	expect(res.headers.get("Accept-Encoding"), "br).toBe(gzip");
 	expect(await res.text()).toBe("Unsupported Media Type");
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "zstd, *;q=0" } });
 	expect(res.status).toBe(415);
-	expect(res.headers.get("Accept-Encoding")).toBe("br, gzip");
+	expect(res.headers.get("Accept-Encoding"), "br).toBe(gzip");
 	expect(await res.text()).toBe("Unsupported Media Type");
 
 	// Check malformed `Accept-Encoding`
-	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": ",(,br,,,q=," } });
+	res = await fetch(gzipUrl, {
+		headers: { "Accept-Encoding": ",(,br,,,q=,*;q=0" },
+	});
 	expect(res.headers.get("Content-Encoding")).toBe("br");
 	expect(await res.text()).toBe(testBody);
 
-	// Check `Content-Type: text/html` is compressed (FL always compresses html)
+	// Check `Content-Type: text/html` is always compressed in FL but not by default in local dev
 	res = await fetch(defaultCompressedUrl);
 	expect(res.headers.get("Content-Type")).toBe("text/html");
-	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(res.headers.get("Content-Encoding")).toBe(null);
 	expect(await res.text()).toBe(testBody);
 
 	// Check `Content-Type: text/event-stream` is not compressed (FL does not compress this mime type)
