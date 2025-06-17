@@ -15,7 +15,7 @@ export async function dockerLoginManagedRegistry(pathToDocker: string) {
 			getCloudflareContainerRegistry(),
 			{
 				expiration_minutes: expirationMinutes,
-				permissions: ["push"] as ImageRegistryPermissions[],
+				permissions: ["push", "pull"] as ImageRegistryPermissions[],
 			}
 		);
 

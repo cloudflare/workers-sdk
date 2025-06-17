@@ -7,7 +7,14 @@ export async function constructBuildCommand(
 	logger?: Logger
 ) {
 	const platform = options.platform ?? "linux/amd64";
-	const buildCmd = ["build", "-t", options.tag, "--platform", platform];
+	const buildCmd = [
+		"build",
+		"-t",
+		options.tag,
+		"--platform",
+		platform,
+		"--provenance=false",
+	];
 
 	if (options.args) {
 		for (const arg in options.args) {
