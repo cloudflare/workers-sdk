@@ -63,13 +63,15 @@ export default function registerDevHotKeys(
 		},
 		{
 			keys: ["r"],
-			label: "rebuild container",
-			// TODO investigate how to hide this.
-			// disabled: () =>
-			// 	(!devEnv.config.latestConfig?.dev?.enableContainers ||
-			// 		!devEnv.config.latestConfig?.containers) ??
-			// 	false,
+			// omitting the label means it won't be printed but is still enabled
+			// label: "rebuild container",
 			handler: async () => {
+				if (
+					!devEnv.config.latestConfig?.dev?.enableContainers ||
+					!devEnv.config.latestConfig?.containers
+				) {
+					return;
+				}
 				const newContainerBuildId = randomUUID().slice(0, 8);
 				// cleanup any existing containers
 				devEnv.runtimes.map(async (runtime) => {
