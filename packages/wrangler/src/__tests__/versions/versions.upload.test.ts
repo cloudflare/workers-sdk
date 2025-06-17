@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { makeRequestAsserter } from "../helpers/assert-request";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -18,6 +19,7 @@ describe("versions upload", () => {
 	mockApiToken();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
+	const assertRequest = makeRequestAsserter(std);
 
 	function mockGetScript() {
 		msw.use(
@@ -171,5 +173,196 @@ describe("versions upload", () => {
 		`);
 
 		expect(std.info).toContain("Retrying API call after error...");
+	});
+
+	test("correctly detects python workers", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+		mockSubDomainRequest();
+
+		// Setup
+		writeWranglerConfig({
+			name: "test-name",
+			main: "./index.py",
+			compatibility_flags: ["python_workers"],
+		});
+		writeWorkerSource({ type: "python", format: "py" });
+		setIsTTY(false);
+
+		await runWrangler("versions upload");
+
+		assertRequest(/.*?workers\/scripts\/test-name\/versions/, {
+			method: "POST",
+			// Make sure the main module (index.py) has a text/x-python content type
+			body: /Content-Disposition: form-data; name="index.py"; filename="index.py"\nContent-Type: text\/x-python/,
+		});
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"┌─┬─┬─┐
+			│ Name │ Type │ Size │
+			├─┼─┼─┤
+			│ another.py │ python │ xx KiB │
+			├─┼─┼─┤
+			│ Total (1 module) │ │ xx KiB │
+			└─┴─┴─┘
+			Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			Uploaded test-name (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
+			Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev"
+		`);
+	});
+
+	describe("multi-env warning", () => {
+		it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+			mockGetScript();
+			mockUploadVersion(true);
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+
+			// Setup
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			const result = runWrangler("versions upload");
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the versions upload command.[0m
+
+				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+				  the target environment using the \`-e|--env\` flag.
+				  If your intention is to use the top-level environment of your configuration simply pass an empty
+				  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+
+				"
+			`);
+		});
+
+		it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+			mockGetScript();
+			mockUploadVersion(true);
+			mockGetWorkerSubdomain({
+				enabled: true,
+				previews_enabled: false,
+				legacyEnv: true,
+				env: "test",
+			});
+
+			// Setup
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			const result = runWrangler("versions upload -e test");
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+			mockGetScript();
+			mockUploadVersion(true);
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+
+			// Setup
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			const result = runWrangler("versions upload");
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+	});
+});
+
+const mockExecSync = vi.fn();
+
+describe("generatePreviewAlias", () => {
+	vi.mock("child_process", () => ({
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		execSync: (...args: any[]) => mockExecSync(...args),
+	}));
+
+	beforeEach(() => {
+		mockExecSync.mockReset();
+	});
+
+	it("returns undefined if not in a git directory", () => {
+		mockExecSync.mockImplementationOnce(() => {
+			throw new Error("not a git repo");
+		});
+
+		const result = generatePreviewAlias("worker");
+		expect(result).toBeUndefined();
+	});
+
+	it("returns undefined if git branch name cannot be retrieved", () => {
+		mockExecSync
+			.mockImplementationOnce(() => {}) // is-inside-work-tree
+			.mockImplementationOnce(() => {
+				throw new Error("failed to get branch");
+			});
+
+		const result = generatePreviewAlias("worker");
+		expect(result).toBeUndefined();
+	});
+
+	it("sanitizes branch names correctly", () => {
+		mockExecSync
+			.mockImplementationOnce(() => {}) // is-inside-work-tree
+			.mockImplementationOnce(() => Buffer.from("feat/awesome-feature"));
+
+		const result = generatePreviewAlias("worker");
+		expect(result).toBe("feat-awesome-feature");
+	});
+
+	it("returns undefined for long branch names which don't fit within DNS label constraints", () => {
+		const longBranch = "a".repeat(70);
+		mockExecSync
+			.mockImplementationOnce(() => {}) // is-inside-work-tree
+			.mockImplementationOnce(() => Buffer.from(longBranch));
+
+		const result = generatePreviewAlias("worker");
+		expect(result).toBeUndefined();
+	});
+
+	it("handles multiple, leading, and trailing dashes", () => {
+		mockExecSync
+			.mockImplementationOnce(() => {}) // is-inside-work-tree
+			.mockImplementationOnce(() => Buffer.from("--some--branch--name--"));
+
+		const result = generatePreviewAlias("testscript");
+		expect(result).toBe("some-branch-name");
+	});
+
+	it("lowercases branch names", () => {
+		mockExecSync
+			.mockImplementationOnce(() => {}) // is-inside-work-tree
+			.mockImplementationOnce(() => Buffer.from("HEAD/feature/work"));
+
+		const result = generatePreviewAlias("testscript");
+		expect(result).toBe("head-feature-work");
 	});
 });
