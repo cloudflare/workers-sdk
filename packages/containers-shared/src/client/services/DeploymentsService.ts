@@ -15,10 +15,72 @@ import type { IPV4 } from "../models/IPV4";
 import type { ListDeploymentsV2 } from "../models/ListDeploymentsV2";
 import type { LocationID } from "../models/LocationID";
 import type { ModifyDeploymentV2RequestBody } from "../models/ModifyDeploymentV2RequestBody";
+import type { ModifyUserDeploymentConfiguration } from "../models/ModifyUserDeploymentConfiguration";
 import type { PlacementID } from "../models/PlacementID";
 import type { ReplaceDeploymentRequestBody } from "../models/ReplaceDeploymentRequestBody";
 
 export class DeploymentsService {
+	/**
+	 * Get a specific deployment within an application
+	 * Get a deployment by its app and deployment IDs
+	 * @param applicationId
+	 * @param deploymentId
+	 * @returns DeploymentV2 Get a specific deployment along with its respective placements
+	 * @throws ApiError
+	 */
+	public static getApplicationsV3Deployment(
+		applicationId: ApplicationID,
+		deploymentId: DeploymentID
+	): CancelablePromise<DeploymentV2> {
+		return __request(OpenAPI, {
+			method: "GET",
+			url: "/applications/{application_id}/deployments/{deployment_id}",
+			path: {
+				application_id: applicationId,
+				deployment_id: deploymentId,
+			},
+			errors: {
+				400: `Unknown account`,
+				401: `Unauthorized`,
+				404: `Deployment not found`,
+				500: `Deployment Get Error`,
+			},
+		});
+	}
+
+	/**
+	 * Recreate an existing deployment within an application.
+	 * The given existing deployment is deleted and a replacement deployment is created. The latter retains some properties of the former that cannot be set by the client.
+	 *
+	 * @param applicationId
+	 * @param deploymentId
+	 * @param requestBody
+	 * @returns DeploymentV2 Deployment created
+	 * @throws ApiError
+	 */
+	public static recreateDeploymentV3(
+		applicationId: ApplicationID,
+		deploymentId: DeploymentID,
+		requestBody: ModifyUserDeploymentConfiguration
+	): CancelablePromise<DeploymentV2> {
+		return __request(OpenAPI, {
+			method: "POST",
+			url: "/applications/{application_id}/deployments/{deployment_id}/recreate",
+			path: {
+				application_id: applicationId,
+				deployment_id: deploymentId,
+			},
+			body: requestBody,
+			mediaType: "application/json",
+			errors: {
+				400: `Could not create the deployment because of input/limits reasons, more details in the error code`,
+				401: `Unauthorized`,
+				404: `Deployment not found`,
+				500: `Deployment Creation Error`,
+			},
+		});
+	}
+
 	/**
 	 * Create a new deployment
 	 * Creates a new deployment. A Deployment represents an intent to run one container, with image, in a particular location
@@ -157,6 +219,36 @@ export class DeploymentsService {
 				401: `Unauthorized`,
 				404: `Deployment not found`,
 				500: `Deployment Delete Error`,
+			},
+		});
+	}
+
+	/**
+	 * Recreate an existing deployment.
+	 * The given existing deployment is deleted and a replacement deployment is created. The latter retains some properties of the former that cannot be set by the client.
+	 *
+	 * @param deploymentId
+	 * @param requestBody
+	 * @returns DeploymentV2 Deployment created
+	 * @throws ApiError
+	 */
+	public static recreateDeployment(
+		deploymentId: DeploymentID,
+		requestBody: CreateDeploymentV2RequestBody
+	): CancelablePromise<DeploymentV2> {
+		return __request(OpenAPI, {
+			method: "POST",
+			url: "/deployments/{deployment_id}/recreate",
+			path: {
+				deployment_id: deploymentId,
+			},
+			body: requestBody,
+			mediaType: "application/json",
+			errors: {
+				400: `Could not create the deployment because of input/limits reasons, more details in the error code`,
+				401: `Unauthorized`,
+				404: `Deployment not found`,
+				500: `Deployment Creation Error`,
 			},
 		});
 	}

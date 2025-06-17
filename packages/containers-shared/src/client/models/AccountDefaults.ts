@@ -11,7 +11,7 @@ export type AccountDefaults = {
 	vcpus: number;
 	memory_mib?: number;
 	/**
-	 * DEPRECATED in favor of memory_mib
+	 * DEPRECATED
 	 * @deprecated
 	 */
 	memory: MemorySizeWithUnit;
