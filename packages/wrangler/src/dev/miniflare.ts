@@ -1344,8 +1344,6 @@ export async function buildMiniflareOptions(
 		// Instead of hiding all logs from this Miniflare instance, we specifically hide the request logs,
 		// allowing other logs to be shown to the user (such as details about emails being triggered)
 		logRequests: false,
-		dockerPath: config.dockerPath,
-		enableContainers: config.enableContainers,
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,
@@ -1360,7 +1358,6 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
-				containers: getContainerOptions(config),
 				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
 				unsafeDirectSockets: entrypointNames.map((name) => ({
 					host: "127.0.0.1",
@@ -1373,29 +1370,6 @@ export async function buildMiniflareOptions(
 		],
 	};
 	return { options, internalObjects, entrypointNames };
-}
-
-function getContainerOptions(
-	config: Omit<ConfigBundle, "rules">
-): WorkerOptions["containers"] | undefined {
-	if (!config.containers?.length || config.enableContainers === false) {
-		return undefined;
-	}
-	// should be defined if containers are enabled
-	assert(
-		config.containerBuildId,
-		"Build ID should be set if containers are enabled and defined"
-	);
-	const containers: WorkerOptions["containers"] = {};
-	for (const container of config.containers) {
-		containers[container.class_name] = {
-			image: container.image ?? container.configuration.image,
-			imageTag: `${MF_DEV_CONTAINER_PREFIX}/${container.name}:${config.containerBuildId}`,
-			maxInstances: container.max_instances,
-			imageBuildContext: container.image_build_context,
-		};
-	}
-	return containers;
 }
 
 /**

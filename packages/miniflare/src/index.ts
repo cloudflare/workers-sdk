@@ -38,8 +38,6 @@ import {
 	Response,
 } from "./http";
 import {
-	ContainerController,
-	ContainerOptions,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
@@ -906,7 +904,6 @@ export class Miniflare {
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
-	#containerController?: ContainerController;
 
 	#cfObject?: Record<string, any> = {};
 
@@ -1592,10 +1589,6 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
-		let containerOptions: {
-			[className: string]: ContainerOptions;
-		} = {};
-
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			const pluginExtensions = await plugin.getExtensions?.({
 				// @ts-expect-error `CoreOptionsSchema` has required options which are
@@ -1625,14 +1618,6 @@ export class Miniflare {
 				// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
 				// The asset plugin needs this so that it can set the binding between the RouterWorker and the UserWorker
 				workerOpts.assets.assets.workerName = workerOpts.core.name;
-			}
-
-			if (workerOpts.containers.containers) {
-				// we don't care which worker this container belongs to, as they are id'd already by the DO classname
-				containerOptions = {
-					...containerOptions,
-					...workerOpts.containers.containers,
-				};
 			}
 
 			// Collect all bindings from this worker
@@ -1889,25 +1874,6 @@ export class Miniflare {
 				allWorkerRoutes.set(INBOUND_DO_PROXY_SERVICE_NAME, [
 					`*/${INBOUND_DO_PROXY_SERVICE_PATH}`,
 				]);
-			}
-		}
-
-		if (
-			Object.keys(containerOptions).length &&
-			sharedOpts.containers.enableContainers
-		) {
-			if (this.#containerController === undefined) {
-				this.#containerController = new ContainerController(
-					containerOptions,
-					this.#sharedOpts.containers,
-					this.#log
-				);
-				await this.#containerController.buildAllContainers();
-			} else {
-				this.#containerController.updateConfig(
-					containerOptions,
-					this.#sharedOpts.containers
-				);
 			}
 		}
 
@@ -2653,10 +2619,6 @@ export class Miniflare {
 		return result;
 	}
 
-	async unsafeCleanupContainers() {
-		await this.#containerController?.cleanupContainers();
-	}
-
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
@@ -2673,9 +2635,6 @@ export class Miniflare {
 			// Cleanup as much as possible even if `#init()` threw
 			await this.#proxyClient?.dispose();
 			await this.#runtime?.dispose();
-
-			// cleanup any container instances, if they any still exist
-			await this.#containerController?.cleanupContainers();
 
 			await this.#stopLoopbackServer();
 			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
