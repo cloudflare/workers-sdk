@@ -1,0 +1,12 @@
+{
+	"name": "vitest-remote-bindings-fixture-test",
+	"main": "src/index.js",
+	"compatibility_date": "2025-06-01",
+	"services": [
+		{
+			"binding": "MY_WORKER",
+			"service": "my-worker-test",
+			"experimental_remote": true
+		}
+	]
+}

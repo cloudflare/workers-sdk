@@ -7,12 +7,12 @@
 		{
 			"binding": "LOCAL_WORKER",
 			"service": "cloudflare-vite-e2e-mixed-mode-auxiliary-worker",
-			"remote": false,
+			"experimental_remote": false,
 		},
 		{
 			"binding": "REMOTE_WORKER",
 			"service": "tmp-e2e-vite-plugin-mixed-mode-remote-worker",
-			"remote": true,
+			"experimental_remote": true,
 		},
 	],
 }

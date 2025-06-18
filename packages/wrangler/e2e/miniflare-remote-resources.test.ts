@@ -9,19 +9,19 @@ import {
 } from "./helpers/cert";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
-import type { startMixedModeSession } from "../src/api";
+import type { startRemoteProxySession } from "../src/api";
 import type { RawConfig } from "../src/config";
-import type { MixedModeConnectionString, WorkerOptions } from "miniflare";
+import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 import type { ExpectStatic } from "vitest";
 
 type TestCase<T = void> = {
 	name: string;
 	scriptPath: string;
-	mixedModeSessionConfig:
-		| Parameters<typeof startMixedModeSession>
-		| ((setup: T) => Parameters<typeof startMixedModeSession>);
+	remoteProxySessionConfig:
+		| Parameters<typeof startRemoteProxySession>
+		| ((setup: T) => Parameters<typeof startRemoteProxySession>);
 	miniflareConfig: (
-		connection: MixedModeConnectionString,
+		connection: RemoteProxyConnectionString,
 		setup: T
 	) => Partial<WorkerOptions>;
 	setup?: (helper: WranglerE2ETestHelper) => Promise<T> | T;
@@ -31,7 +31,7 @@ const testCases: TestCase<string>[] = [
 	{
 		name: "AI",
 		scriptPath: "ai.js",
-		mixedModeSessionConfig: [
+		remoteProxySessionConfig: [
 			{
 				AI: {
 					type: "ai",
@@ -41,7 +41,7 @@ const testCases: TestCase<string>[] = [
 		miniflareConfig: (connection) => ({
 			ai: {
 				binding: "AI",
-				mixedModeConnectionString: connection,
+				remoteProxyConnectionString: connection,
 			},
 		}),
 		matches: [expect.stringMatching(/This is a response from Workers AI/)],
@@ -49,7 +49,7 @@ const testCases: TestCase<string>[] = [
 	{
 		name: "Browser",
 		scriptPath: "browser.js",
-		mixedModeSessionConfig: [
+		remoteProxySessionConfig: [
 			{
 				BROWSER: {
 					type: "browser",
@@ -59,7 +59,7 @@ const testCases: TestCase<string>[] = [
 		miniflareConfig: (connection) => ({
 			browserRendering: {
 				binding: "BROWSER",
-				mixedModeConnectionString: connection,
+				remoteProxyConnectionString: connection,
 			},
 		}),
 		matches: [expect.stringMatching(/sessionId/)],
@@ -92,7 +92,7 @@ const testCases: TestCase<string>[] = [
 			});
 			return targetWorkerName;
 		},
-		mixedModeSessionConfig: (target) => [
+		remoteProxySessionConfig: (target) => [
 			{
 				SERVICE: {
 					type: "service",
@@ -109,12 +109,12 @@ const testCases: TestCase<string>[] = [
 			serviceBindings: {
 				SERVICE: {
 					name: target,
-					mixedModeConnectionString: connection,
+					remoteProxyConnectionString: connection,
 				},
 				SERVICE_WITH_ENTRYPOINT: {
 					name: target,
 					entrypoint: "CustomEntrypoint",
-					mixedModeConnectionString: connection,
+					remoteProxyConnectionString: connection,
 				},
 			},
 		}),
@@ -137,7 +137,7 @@ const testCases: TestCase<string>[] = [
 			);
 			return ns;
 		},
-		mixedModeSessionConfig: (ns) => [
+		remoteProxySessionConfig: (ns) => [
 			{
 				KV_BINDING: {
 					type: "kv_namespace",
@@ -149,7 +149,7 @@ const testCases: TestCase<string>[] = [
 			kvNamespaces: {
 				KV_BINDING: {
 					id: ns,
-					mixedModeConnectionString: connection,
+					remoteProxyConnectionString: connection,
 				},
 			},
 		}),
@@ -173,7 +173,7 @@ const testCases: TestCase<string>[] = [
 			});
 			return name;
 		},
-		mixedModeSessionConfig: (name) => [
+		remoteProxySessionConfig: (name) => [
 			{
 				R2_BINDING: {
 					type: "r2_bucket",
@@ -185,7 +185,7 @@ const testCases: TestCase<string>[] = [
 			r2Buckets: {
 				R2_BINDING: {
 					id: name,
-					mixedModeConnectionString: connection,
+					remoteProxyConnectionString: connection,
 				},
 			},
 		}),
@@ -209,7 +209,7 @@ const testCases: TestCase<string>[] = [
 			);
 			return id;
 		},
-		mixedModeSessionConfig: (id) => [
+		remoteProxySessionConfig: (id) => [
 			{
 				DB: {
 					type: "d1",
@@ -221,7 +221,7 @@ const testCases: TestCase<string>[] = [
 			d1Databases: {
 				DB: {
 					id: id,
-					mixedModeConnectionString: connection,
+					remoteProxyConnectionString: connection,
 				},
 			},
 		}),
@@ -238,7 +238,7 @@ const testCases: TestCase<string>[] = [
 			);
 			return name;
 		},
-		mixedModeSessionConfig: (name) => [
+		remoteProxySessionConfig: (name) => [
 			{
 				VECTORIZE_BINDING: {
 					type: "vectorize",
@@ -250,7 +250,7 @@ const testCases: TestCase<string>[] = [
 			vectorize: {
 				VECTORIZE_BINDING: {
 					index_name: name,
-					mixedModeConnectionString: connection,
+					remoteProxyConnectionString: connection,
 				},
 			},
 		}),
@@ -263,7 +263,7 @@ const testCases: TestCase<string>[] = [
 	{
 		name: "Images",
 		scriptPath: "images.js",
-		mixedModeSessionConfig: [
+		remoteProxySessionConfig: [
 			{
 				IMAGES: {
 					type: "images",
@@ -273,7 +273,7 @@ const testCases: TestCase<string>[] = [
 		miniflareConfig: (connection) => ({
 			images: {
 				binding: "IMAGES",
-				mixedModeConnectionString: connection,
+				remoteProxyConnectionString: connection,
 			},
 		}),
 		matches: [expect.stringContaining(`image/avif`)],
@@ -300,7 +300,7 @@ const testCases: TestCase<string>[] = [
 
 			return namespace;
 		},
-		mixedModeSessionConfig: (namespace) => [
+		remoteProxySessionConfig: (namespace) => [
 			{
 				DISPATCH: {
 					type: "dispatch_namespace",
@@ -312,7 +312,7 @@ const testCases: TestCase<string>[] = [
 			dispatchNamespaces: {
 				DISPATCH: {
 					namespace: namespace,
-					mixedModeConnectionString: connection,
+					remoteProxyConnectionString: connection,
 				},
 			},
 		}),
@@ -377,7 +377,7 @@ const mtlsTest: TestCase<{ certificateId: string; workerName: string }> = {
 
 		return { certificateId, workerName };
 	},
-	mixedModeSessionConfig: ({ certificateId, workerName }) => [
+	remoteProxySessionConfig: ({ certificateId, workerName }) => [
 		{
 			MTLS: {
 				type: "mtls_certificate",
@@ -392,7 +392,7 @@ const mtlsTest: TestCase<{ certificateId: string; workerName: string }> = {
 		mtlsCertificates: {
 			MTLS: {
 				certificate_id: certificateId,
-				mixedModeConnectionString: connection,
+				remoteProxyConnectionString: connection,
 			},
 		},
 	}),
@@ -418,7 +418,7 @@ describe.each([...testCases, mtlsTest])("Mixed Mode for $name", (testCase) => {
 		{ retry: 0, fails: true },
 		async () => {
 			await runTestCase(testCase as TestCase<unknown>, helper, {
-				disableMixedMode: true,
+				disableRemoteBindings: true,
 			});
 		}
 	);
@@ -427,28 +427,31 @@ describe.each([...testCases, mtlsTest])("Mixed Mode for $name", (testCase) => {
 async function runTestCase<T>(
 	testCase: TestCase<T>,
 	helper: WranglerE2ETestHelper,
-	{ disableMixedMode } = { disableMixedMode: false }
+	{ disableRemoteBindings } = { disableRemoteBindings: false }
 ) {
-	const { experimental_startMixedModeSession } = await helper.importWrangler();
+	const { experimental_startRemoteProxySession } =
+		await helper.importWrangler();
 	const { Miniflare } = await helper.importMiniflare();
-	await helper.seed(path.resolve(__dirname, "./seed-files/mixed-mode-workers"));
+	await helper.seed(
+		path.resolve(__dirname, "./seed-files/remote-binding-workers")
+	);
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const setupResult = (await testCase.setup?.(helper))!;
 
-	const mixedModeSessionConfig =
-		typeof testCase.mixedModeSessionConfig === "function"
-			? testCase.mixedModeSessionConfig(setupResult)
-			: testCase.mixedModeSessionConfig;
+	const remoteProxySessionConfig =
+		typeof testCase.remoteProxySessionConfig === "function"
+			? testCase.remoteProxySessionConfig(setupResult)
+			: testCase.remoteProxySessionConfig;
 
-	const mixedModeSession = await experimental_startMixedModeSession(
-		...mixedModeSessionConfig
+	const remoteProxySession = await experimental_startRemoteProxySession(
+		...remoteProxySessionConfig
 	);
 
-	const miniflareConfig = disableMixedMode
+	const miniflareConfig = disableRemoteBindings
 		? // @ts-expect-error Deliberately passing in undefined here to turn off Mixed Mode
 			testCase.miniflareConfig(undefined)
 		: testCase.miniflareConfig(
-				mixedModeSession.mixedModeConnectionString,
+				remoteProxySession.remoteProxyConnectionString,
 				setupResult
 			);
 

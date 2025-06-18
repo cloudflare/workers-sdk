@@ -5,10 +5,10 @@ import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
 	kUnsafeEphemeralUniqueKey,
-	MixedModeConnectionString,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
+	RemoteProxyConnectionString,
 	UnsafeUniqueKey,
 } from "../shared";
 
@@ -36,8 +36,8 @@ export const DurableObjectsOptionsSchema = z.object({
 						.optional(),
 					// Prevents the Durable Object being evicted.
 					unsafePreventEviction: z.boolean().optional(),
-					mixedModeConnectionString: z
-						.custom<MixedModeConnectionString>()
+					remoteProxyConnectionString: z
+						.custom<RemoteProxyConnectionString>()
 						.optional(),
 					container: z.custom<DOContainerOptions>().optional(),
 				}),
@@ -60,7 +60,7 @@ export function normaliseDurableObject(
 	enableSql: boolean | undefined;
 	unsafeUniqueKey: UnsafeUniqueKey | undefined;
 	unsafePreventEviction: boolean | undefined;
-	mixedModeConnectionString: MixedModeConnectionString | undefined;
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined;
 	container: DOContainerOptions | undefined;
 } {
 	const isObject = typeof designator === "object";
@@ -75,8 +75,8 @@ export function normaliseDurableObject(
 	const unsafePreventEviction = isObject
 		? designator.unsafePreventEviction
 		: undefined;
-	const mixedModeConnectionString = isObject
-		? designator.mixedModeConnectionString
+	const remoteProxyConnectionString = isObject
+		? designator.remoteProxyConnectionString
 		: undefined;
 	const container = isObject ? designator.container : undefined;
 	return {
@@ -86,7 +86,7 @@ export function normaliseDurableObject(
 		enableSql,
 		unsafeUniqueKey,
 		unsafePreventEviction,
-		mixedModeConnectionString,
+		remoteProxyConnectionString,
 		container,
 	};
 }

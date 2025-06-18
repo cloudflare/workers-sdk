@@ -160,31 +160,35 @@ export function printBindings(
 
 	if (workflows !== undefined && workflows.length > 0) {
 		output.push(
-			...workflows.map(({ class_name, script_name, binding, remote }) => {
-				let value = class_name;
-				if (script_name) {
-					value += ` (defined in ${script_name})`;
-				}
+			...workflows.map(
+				({ class_name, script_name, binding, experimental_remote }) => {
+					let value = class_name;
+					if (script_name) {
+						value += ` (defined in ${script_name})`;
+					}
 
-				return {
-					name: binding,
-					type: friendlyBindingNames.workflows,
-					value: value,
-					mode: getMode({ isSimulatedLocally: script_name ? !remote : true }),
-				};
-			})
+					return {
+						name: binding,
+						type: friendlyBindingNames.workflows,
+						value: value,
+						mode: getMode({
+							isSimulatedLocally: script_name ? !experimental_remote : true,
+						}),
+					};
+				}
+			)
 		);
 	}
 
 	if (kv_namespaces !== undefined && kv_namespaces.length > 0) {
 		output.push(
-			...kv_namespaces.map(({ binding, id, remote }) => {
+			...kv_namespaces.map(({ binding, id, experimental_remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.kv_namespaces,
 					value: id,
 					mode: getMode({
-						isSimulatedLocally: !remote,
+						isSimulatedLocally: !experimental_remote,
 					}),
 				};
 			})
@@ -217,13 +221,13 @@ export function printBindings(
 
 	if (queues !== undefined && queues.length > 0) {
 		output.push(
-			...queues.map(({ binding, queue_name, remote }) => {
+			...queues.map(({ binding, queue_name, experimental_remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.queues,
 					value: queue_name,
 					mode: getMode({
-						isSimulatedLocally: !remote,
+						isSimulatedLocally: !experimental_remote,
 					}),
 				};
 			})
@@ -238,7 +242,7 @@ export function printBindings(
 					database_name,
 					database_id,
 					preview_database_id,
-					remote,
+					experimental_remote,
 				}) => {
 					const value =
 						typeof database_id == "symbol"
@@ -249,7 +253,7 @@ export function printBindings(
 						name: binding,
 						type: friendlyBindingNames.d1_databases,
 						mode: getMode({
-							isSimulatedLocally: !remote,
+							isSimulatedLocally: !experimental_remote,
 						}),
 						value,
 					};
@@ -260,14 +264,14 @@ export function printBindings(
 
 	if (vectorize !== undefined && vectorize.length > 0) {
 		output.push(
-			...vectorize.map(({ binding, index_name, remote }) => {
+			...vectorize.map(({ binding, index_name, experimental_remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.vectorize,
 					value: index_name,
 					mode: getMode({
-						isSimulatedLocally: getFlag("MIXED_MODE")
-							? remote
+						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
+							? experimental_remote
 								? false
 								: undefined
 							: context.vectorizeBindToProd
@@ -294,23 +298,25 @@ export function printBindings(
 
 	if (r2_buckets !== undefined && r2_buckets.length > 0) {
 		output.push(
-			...r2_buckets.map(({ binding, bucket_name, jurisdiction, remote }) => {
-				const value =
-					typeof bucket_name === "symbol"
-						? bucket_name
-						: bucket_name
-							? `${bucket_name}${jurisdiction ? ` (${jurisdiction})` : ""}`
-							: undefined;
+			...r2_buckets.map(
+				({ binding, bucket_name, jurisdiction, experimental_remote }) => {
+					const value =
+						typeof bucket_name === "symbol"
+							? bucket_name
+							: bucket_name
+								? `${bucket_name}${jurisdiction ? ` (${jurisdiction})` : ""}`
+								: undefined;
 
-				return {
-					name: binding,
-					type: friendlyBindingNames.r2_buckets,
-					value: value,
-					mode: getMode({
-						isSimulatedLocally: !remote,
-					}),
-				};
-			})
+					return {
+						name: binding,
+						type: friendlyBindingNames.r2_buckets,
+						value: value,
+						mode: getMode({
+							isSimulatedLocally: !experimental_remote,
+						}),
+					};
+				}
+			)
 		);
 	}
 
@@ -355,38 +361,40 @@ export function printBindings(
 
 	if (services !== undefined && services.length > 0) {
 		output.push(
-			...services.map(({ binding, service, entrypoint, remote }) => {
-				let value = service;
-				let mode = undefined;
+			...services.map(
+				({ binding, service, entrypoint, experimental_remote }) => {
+					let value = service;
+					let mode = undefined;
 
-				if (entrypoint) {
-					value += `#${entrypoint}`;
-				}
-
-				if (remote) {
-					mode = getMode({ isSimulatedLocally: false });
-				} else if (context.local && context.registry !== null) {
-					const registryDefinition = context.registry?.[service];
-					hasConnectionStatus = true;
-
-					if (
-						registryDefinition &&
-						(!entrypoint ||
-							registryDefinition.entrypointAddresses?.[entrypoint])
-					) {
-						mode = getMode({ isSimulatedLocally: true, connected: true });
-					} else {
-						mode = getMode({ isSimulatedLocally: true, connected: false });
+					if (entrypoint) {
+						value += `#${entrypoint}`;
 					}
-				}
 
-				return {
-					name: binding,
-					type: friendlyBindingNames.services,
-					value,
-					mode,
-				};
-			})
+					if (experimental_remote) {
+						mode = getMode({ isSimulatedLocally: false });
+					} else if (context.local && context.registry !== null) {
+						const registryDefinition = context.registry?.[service];
+						hasConnectionStatus = true;
+
+						if (
+							registryDefinition &&
+							(!entrypoint ||
+								registryDefinition.entrypointAddresses?.[entrypoint])
+						) {
+							mode = getMode({ isSimulatedLocally: true, connected: true });
+						} else {
+							mode = getMode({ isSimulatedLocally: true, connected: false });
+						}
+					}
+
+					return {
+						name: binding,
+						type: friendlyBindingNames.services,
+						value,
+						mode,
+					};
+				}
+			)
 		);
 	}
 
@@ -424,7 +432,9 @@ export function printBindings(
 			value: undefined,
 			mode: getMode({
 				isSimulatedLocally:
-					getFlag("MIXED_MODE") && browser.remote ? false : undefined,
+					getFlag("REMOTE_BINDINGS") && browser.experimental_remote
+						? false
+						: undefined,
 			}),
 		});
 	}
@@ -435,8 +445,9 @@ export function printBindings(
 			type: friendlyBindingNames.images,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally: getFlag("MIXED_MODE")
-					? images.remote === true || images.remote === undefined
+				isSimulatedLocally: getFlag("REMOTE_BINDINGS")
+					? images.experimental_remote === true ||
+						images.experimental_remote === undefined
 						? false
 						: undefined
 					: !!context.imagesLocalMode,
@@ -450,8 +461,9 @@ export function printBindings(
 			type: friendlyBindingNames.ai,
 			value: ai.staging ? `staging` : undefined,
 			mode: getMode({
-				isSimulatedLocally: getFlag("MIXED_MODE")
-					? ai.remote === true || ai.remote === undefined
+				isSimulatedLocally: getFlag("REMOTE_BINDINGS")
+					? ai.experimental_remote === true ||
+						ai.experimental_remote === undefined
 						? false
 						: undefined
 					: false,
@@ -533,41 +545,46 @@ export function printBindings(
 
 	if (dispatch_namespaces !== undefined && dispatch_namespaces.length > 0) {
 		output.push(
-			...dispatch_namespaces.map(({ binding, namespace, outbound, remote }) => {
-				return {
-					name: binding,
-					type: friendlyBindingNames.dispatch_namespaces,
-					value: outbound
-						? `${namespace} (outbound -> ${outbound.service})`
-						: namespace,
-					mode: getMode({
-						isSimulatedLocally: getFlag("MIXED_MODE")
-							? remote
-								? false
-								: undefined
-							: undefined,
-					}),
-				};
-			})
+			...dispatch_namespaces.map(
+				({ binding, namespace, outbound, experimental_remote }) => {
+					return {
+						name: binding,
+						type: friendlyBindingNames.dispatch_namespaces,
+						value: outbound
+							? `${namespace} (outbound -> ${outbound.service})`
+							: namespace,
+						mode: getMode({
+							isSimulatedLocally: getFlag("REMOTE_BINDINGS")
+								? experimental_remote
+									? false
+									: undefined
+								: undefined,
+						}),
+					};
+				}
+			)
 		);
 	}
 
 	if (mtls_certificates !== undefined && mtls_certificates.length > 0) {
 		output.push(
-			...mtls_certificates.map(({ binding, certificate_id, remote }) => {
-				return {
-					name: binding,
-					type: friendlyBindingNames.mtls_certificates,
-					value: certificate_id,
-					mode: getMode({
-						isSimulatedLocally: getFlag("MIXED_MODE")
-							? remote === true || remote === undefined
-								? false
-								: undefined
-							: false,
-					}),
-				};
-			})
+			...mtls_certificates.map(
+				({ binding, certificate_id, experimental_remote }) => {
+					return {
+						name: binding,
+						type: friendlyBindingNames.mtls_certificates,
+						value: certificate_id,
+						mode: getMode({
+							isSimulatedLocally: getFlag("REMOTE_BINDINGS")
+								? experimental_remote === true ||
+									experimental_remote === undefined
+									? false
+									: undefined
+								: false,
+						}),
+					};
+				}
+			)
 		);
 	}
 
@@ -766,17 +783,17 @@ export function warnOrError(
 	}
 	if (remote === false && supports === "remote") {
 		throw new UserError(
-			`${friendlyBindingNames[type]} bindings do not support local development. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+			`${friendlyBindingNames[type]} bindings do not support local development. You may be able to set \`experimental_remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
 		);
 	}
 	if (remote === undefined && supports === "remote") {
 		logger.warn(
-			`${friendlyBindingNames[type]} bindings do not support local development, and so parts of your Worker may not work correctly. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+			`${friendlyBindingNames[type]} bindings do not support local development, and so parts of your Worker may not work correctly. You may be able to set \`experimental_remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
 		);
 	}
 	if (remote === undefined && supports === "always-remote") {
 		logger.warn(
-			`${friendlyBindingNames[type]} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.`
+			`${friendlyBindingNames[type]} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`experimental_remote: true\` for the binding definition in your configuration file.`
 		);
 	}
 }

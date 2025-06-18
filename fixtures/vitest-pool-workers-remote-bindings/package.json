@@ -1,5 +1,5 @@
 {
-	"name": "@fixture/vitest-pool-workers-mixed-mode",
+	"name": "@fixture/vitest-pool-workers-remote-bindings",
 	"private": true,
 	"scripts": {
 		"test": "vitest run --config vitest.workers.config.ts",

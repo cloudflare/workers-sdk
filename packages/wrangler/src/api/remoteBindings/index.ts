@@ -13,27 +13,27 @@ import type {
 	StartDevWorkerInput,
 	Worker,
 } from "../startDevWorker/types";
-import type { MixedModeConnectionString } from "miniflare";
+import type { RemoteProxyConnectionString } from "miniflare";
 
-export type MixedModeSession = Pick<Worker, "ready" | "dispose"> & {
+export type RemoteProxySession = Pick<Worker, "ready" | "dispose"> & {
 	updateBindings: (bindings: StartDevWorkerInput["bindings"]) => Promise<void>;
-	mixedModeConnectionString: MixedModeConnectionString;
+	remoteProxyConnectionString: RemoteProxyConnectionString;
 };
 
-export type StartMixedModeSessionOptions = {
+export type StartRemoteProxySessionOptions = {
 	workerName?: string;
 	auth?: NonNullable<StartDevWorkerInput["dev"]>["auth"];
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
 };
 
-export async function startMixedModeSession(
+export async function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
-	options?: StartMixedModeSessionOptions
-): Promise<MixedModeSession> {
+	options?: StartRemoteProxySessionOptions
+): Promise<RemoteProxySession> {
 	const proxyServerWorkerWranglerConfig = path.resolve(
 		getBasePath(),
-		"templates/mixedMode/proxyServerWorker/wrangler.jsonc"
+		"templates/remoteBindings/proxyServerWorker/wrangler.jsonc"
 	);
 
 	// Transform all bindings to use "raw" mode
@@ -59,8 +59,8 @@ export async function startMixedModeSession(
 		bindings: rawBindings,
 	});
 
-	const mixedModeConnectionString =
-		(await worker.url) as MixedModeConnectionString;
+	const remoteProxyConnectionString =
+		(await worker.url) as RemoteProxyConnectionString;
 
 	const updateBindings = async (
 		newBindings: StartDevWorkerInput["bindings"]
@@ -77,7 +77,7 @@ export async function startMixedModeSession(
 
 	return {
 		ready: worker.ready,
-		mixedModeConnectionString,
+		remoteProxyConnectionString,
 		updateBindings,
 		dispose: worker.dispose,
 	};
@@ -93,36 +93,36 @@ export function pickRemoteBindings(
 				return true;
 			}
 
-			return "remote" in binding && binding["remote"];
+			return "experimental_remote" in binding && binding["experimental_remote"];
 		})
 	);
 }
 
 /**
- * Utility for potentially starting or updating a mixed mode session.
+ * Utility for potentially starting or updating a remote proxy session.
  *
- * It uses an internal map for storing existing mixed mode session indexed by worker names. If no worker name is provided
- * the mixed mode session won't be retrieved nor saved to/from the internal map.
+ * It uses an internal map for storing existing remote proxy session indexed by worker names. If no worker name is provided
+ * the remote proxy session won't be retrieved nor saved to/from the internal map.
  *
  * @param configPathOrWorkerConfig either a file path to a wrangler configuration file or an object containing the name of
  *                                 the target worker alongside its bindings.
- * @param preExistingMixedModeSessionData the data of a pre-existing mixed mode session if there was one null otherwise
- * @returns null if no existing mixed mode session was provided and one should not be created (because the worker is not
- *          defining any remote bindings), the data associated to the created/updated mixed mode session otherwise.
+ * @param preExistingRemoteProxySessionData the data of a pre-existing remote proxy session if there was one null otherwise
+ * @returns null if no existing remote proxy session was provided and one should not be created (because the worker is not
+ *          defining any remote bindings), the data associated to the created/updated remote proxy session otherwise.
  */
-export async function maybeStartOrUpdateMixedModeSession(
+export async function maybeStartOrUpdateRemoteProxySession(
 	configPathOrWorkerConfig:
 		| string
 		| {
 				name?: string;
 				bindings: NonNullable<StartDevWorkerInput["bindings"]>;
 		  },
-	preExistingMixedModeSessionData: {
-		session: MixedModeSession;
+	preExistingRemoteProxySessionData: {
+		session: RemoteProxySession;
 		remoteBindings: Record<string, Binding>;
 	} | null
 ): Promise<{
-	session: MixedModeSession;
+	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
 } | null> {
 	if (typeof configPathOrWorkerConfig === "string") {
@@ -140,33 +140,33 @@ export async function maybeStartOrUpdateMixedModeSession(
 
 	const remoteBindings = pickRemoteBindings(workerConfigs.bindings);
 
-	let mixedModeSession = preExistingMixedModeSessionData?.session;
+	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
 	const remoteBindingsAreSameAsBefore = deepStrictEqual(
 		remoteBindings,
-		preExistingMixedModeSessionData?.remoteBindings
+		preExistingRemoteProxySessionData?.remoteBindings
 	);
 
-	// We only want to perform updates on the mixed mode session if the session's remote bindings have changed
+	// We only want to perform updates on the remote proxy session if the session's remote bindings have changed
 	if (!remoteBindingsAreSameAsBefore) {
-		if (!mixedModeSession) {
+		if (!remoteProxySession) {
 			if (Object.keys(remoteBindings).length > 0) {
-				mixedModeSession = await startMixedModeSession(remoteBindings);
+				remoteProxySession = await startRemoteProxySession(remoteBindings);
 			}
 		} else {
 			// Note: we always call updateBindings even when there are zero remote bindings, in these
 			//       cases we could terminate the remote session if we wanted, that's probably
 			//       something to consider down the line
-			await mixedModeSession.updateBindings(remoteBindings);
+			await remoteProxySession.updateBindings(remoteBindings);
 		}
 	}
 
-	await mixedModeSession?.ready;
-	if (!mixedModeSession) {
+	await remoteProxySession?.ready;
+	if (!remoteProxySession) {
 		return null;
 	}
 	return {
-		session: mixedModeSession,
+		session: remoteProxySession,
 		remoteBindings,
 	};
 }

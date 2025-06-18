@@ -3,13 +3,13 @@ import fs from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import { setTimeout } from "node:timers/promises";
-import { afterAll, beforeAll, describe, test } from "vitest";
+import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import { fetchJson, runLongLived, seed, waitForReady } from "./helpers.js";
 
 const isWindows = os.platform() === "win32";
 const commands = ["dev", "buildAndPreview"] as const;
 
-// These tests focus on mixed mode which require an authed connection to the CF API
+// These tests focus on remote bindings which require an authed connection to the CF API
 // They are skipped if you have not provided the necessary account id and api token.
 describe
 	.skipIf(
@@ -19,12 +19,12 @@ describe
 	)
 	// Note: the reload test applies changes to the fixture files, so we do want the
 	//       tests to run sequentially in order to avoid race conditions
-	.sequential("mixed-mode tests", () => {
+	.sequential("remote bindings tests", () => {
 		const remoteWorkerName = "tmp-e2e-vite-plugin-mixed-mode-remote-worker";
 		const alternativeRemoteWorkerName =
 			"tmp-e2e-vite-plugin-mixed-mode-remote-worker-alt";
 
-		const projectPath = seed("mixed-mode", "pnpm");
+		const projectPath = seed("remote-bindings", "pnpm");
 
 		beforeAll(() => {
 			const tmp = fs.mkdtempSync(`${os.tmpdir()}/vite-plugin-e2e-tmp`);
@@ -98,22 +98,30 @@ describe
 
 			await setTimeout(500);
 
-			expect(await fetchJson(url)).toEqual({
-				localWorkerResponseJson: {
-					remoteWorkerResponse: "Hello from an alternative remote worker",
+			await vi.waitFor(
+				async () => {
+					expect(await fetchJson(url)).toEqual({
+						localWorkerResponseJson: {
+							remoteWorkerResponse: "Hello from an alternative remote worker",
+						},
+						remoteWorkerResponseText: "Hello from a remote worker",
+					});
 				},
-				remoteWorkerResponseText: "Hello from a remote worker",
-			});
+				{ timeout: 5_000, interval: 250 }
+			);
 
 			await writeFile(entryWorkerPath, entryWorkerContent, "utf8");
 
-			await setTimeout(500);
-
-			expect(await fetchJson(url)).toEqual({
-				localWorkerResponse: {
-					remoteWorkerResponse: "Hello from an alternative remote worker",
+			await vi.waitFor(
+				async () => {
+					expect(await fetchJson(url)).toEqual({
+						localWorkerResponse: {
+							remoteWorkerResponse: "Hello from an alternative remote worker",
+						},
+						remoteWorkerResponse: "Hello from a remote worker",
+					});
 				},
-				remoteWorkerResponse: "Hello from a remote worker",
-			});
+				{ timeout: 5_000, interval: 250 }
+			);
 		});
 	});

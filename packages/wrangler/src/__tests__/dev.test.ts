@@ -1676,21 +1676,23 @@ describe.sequential("wrangler dev", () => {
 		);
 	});
 
-	describe("mixed mode", () => {
+	describe("remote bindings", () => {
 		const wranglerConfigWithRemoteBindings = {
-			services: [{ binding: "WorkerA", service: "A", remote: true }],
+			services: [
+				{ binding: "WorkerA", service: "A", experimental_remote: true },
+			],
 			kv_namespaces: [
 				{
 					binding: "KV",
 					id: "xxxx-xxxx-xxxx-xxxx",
-					remote: true,
+					experimental_remote: true,
 				},
 			],
 			r2_buckets: [
 				{
 					binding: "MY_R2",
 					bucket_name: "my-bucket",
-					remote: true,
+					experimental_remote: true,
 				},
 			],
 			queues: {
@@ -1698,7 +1700,7 @@ describe.sequential("wrangler dev", () => {
 					{
 						binding: "MY_QUEUE_PRODUCES",
 						queue: "my-queue",
-						remote: true,
+						experimental_remote: true,
 					},
 				],
 			},
@@ -1706,7 +1708,7 @@ describe.sequential("wrangler dev", () => {
 				{
 					binding: "MY_D1",
 					database_id: "xxx",
-					remote: true,
+					experimental_remote: true,
 				},
 			],
 			workflows: [
@@ -1714,12 +1716,12 @@ describe.sequential("wrangler dev", () => {
 					binding: "MY_WORKFLOW",
 					name: "workflow-name",
 					class_name: "myClass",
-					remote: true,
+					experimental_remote: true,
 				},
 			],
 		};
 
-		it("should ignore remote true settings without the --x-mixed-mode flag (initial logs only test)", async () => {
+		it("should ignore remote true settings without the --x-remote-bindings flag (initial logs only test)", async () => {
 			writeWranglerConfig(wranglerConfigWithRemoteBindings);
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev index.js");
@@ -1738,19 +1740,19 @@ describe.sequential("wrangler dev", () => {
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				    - Unexpected fields found in kv_namespaces[0] field: \\"remote\\"
-				    - Unexpected fields found in queues.producers[0] field: \\"remote\\"
-				    - Unexpected fields found in r2_buckets[0] field: \\"remote\\"
-				    - Unexpected fields found in d1_databases[0] field: \\"remote\\"
+				    - Unexpected fields found in kv_namespaces[0] field: \\"experimental_remote\\"
+				    - Unexpected fields found in queues.producers[0] field: \\"experimental_remote\\"
+				    - Unexpected fields found in r2_buckets[0] field: \\"experimental_remote\\"
+				    - Unexpected fields found in d1_databases[0] field: \\"experimental_remote\\"
 
 				"
 			`);
 		});
 
-		it("should honor the remote true settings with the --x-mixed-mode flag (initial logs only test)", async () => {
+		it("should honor the remote true settings with the --x-remote-bindings flag (initial logs only test)", async () => {
 			writeWranglerConfig(wranglerConfigWithRemoteBindings);
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWranglerUntilConfig("dev --x-mixed-mode index.js");
+			await runWranglerUntilConfig("dev --x-remote-bindings index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker has access to the following bindings:
 				Binding                                          Resource          Mode
