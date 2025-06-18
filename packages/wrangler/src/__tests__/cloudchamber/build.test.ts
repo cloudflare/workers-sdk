@@ -4,6 +4,7 @@ import {
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
 	getCloudflareContainerRegistry,
+	getDockerImageDigest,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
 import { ensureDiskLimits } from "../../cloudchamber/build";
@@ -30,6 +31,7 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 		runDockerCmd: vi.fn(),
 		dockerBuild: vi.fn(),
 		dockerImageInspect: vi.fn(),
+		getDockerImageDigest: vi.fn(),
 	});
 });
 
@@ -45,6 +47,7 @@ describe("buildAndMaybePush", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(dockerImageInspect).mockResolvedValue("53387881 2");
+		vi.mocked(getDockerImageDigest).mockRejectedValue("failed");
 		mkdirSync("./container-context");
 
 		writeFileSync("./container-context/Dockerfile", dockerfile);

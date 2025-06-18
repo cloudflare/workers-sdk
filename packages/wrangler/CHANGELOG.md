@@ -1,5 +1,18 @@
 # wrangler
 
+## 4.20.2
+
+### Patch Changes
+
+- [#9565](https://github.com/cloudflare/workers-sdk/pull/9565) [`b1c9139`](https://github.com/cloudflare/workers-sdk/commit/b1c91395246677a0d9ce8cca549569040302b04b) Thanks [@IRCody](https://github.com/IRCody)! - Ensure that a container applications image configuration is not updated if there were not changes to the image.
+
+- [#9628](https://github.com/cloudflare/workers-sdk/pull/9628) [`92f12f4`](https://github.com/cloudflare/workers-sdk/commit/92f12f442d752aad132fd2f5acdad26abd99694e) Thanks [@gpanders](https://github.com/gpanders)! - Remove "Cloudchamber" from user facing error messages
+
+- [#9576](https://github.com/cloudflare/workers-sdk/pull/9576) [`2671e77`](https://github.com/cloudflare/workers-sdk/commit/2671e778435b9e3380c0d34718824409be494c33) Thanks [@vicb](https://github.com/vicb)! - Add core local dev functionality for containers.
+  Adds a new WRANGLER_DOCKER_HOST env var to customise what socket to connect to.
+- Updated dependencies [[`828b7df`](https://github.com/cloudflare/workers-sdk/commit/828b7dffada8c4b5ea77d3ccddb923815c19671d), [`2671e77`](https://github.com/cloudflare/workers-sdk/commit/2671e778435b9e3380c0d34718824409be494c33)]:
+  - miniflare@4.20250617.0
+
 ## 4.20.1
 
 ### Patch Changes
