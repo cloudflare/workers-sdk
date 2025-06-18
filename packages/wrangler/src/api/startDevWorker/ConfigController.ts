@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import { isDockerfile } from "@cloudflare/containers-shared";
 import { watch } from "chokidar";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
@@ -402,11 +403,12 @@ async function resolveConfig(
 		);
 	}
 
-	if (resolved.containers) {
-		// for containers, we need to make sure the OpenAPI config
-		// (such as baseUrl, etc) is properly set, otherwise Docker
-		// commands such as pushing/pulling to/from a registry will
-		// not work
+	// for pulling containers, we need to make sure the OpenAPI config for the
+	// container API client is properly set
+	const needsPulling = resolved.containers?.some(
+		(c) => !isDockerfile(c.image ?? c.configuration.image)
+	);
+	if (needsPulling && !resolved.dev.remote) {
 		await fillOpenAPIConfiguration(config, isNonInteractiveOrCI());
 	}
 
