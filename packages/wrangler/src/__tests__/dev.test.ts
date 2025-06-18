@@ -1122,6 +1122,7 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev");
+			assert(typeof config.dev.inspector === "object");
 			expect(config.dev.inspector?.port).toEqual(9229);
 		});
 
@@ -1132,6 +1133,7 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev --inspector-port=9999");
+			assert(typeof config.dev.inspector === "object");
 			expect(config.dev.inspector?.port).toEqual(9999);
 		});
 
@@ -1144,6 +1146,7 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev");
+			assert(typeof config.dev.inspector === "object");
 			expect(config.dev.inspector?.port).toEqual(9999);
 		});
 
@@ -1521,7 +1524,7 @@ describe.sequential("wrangler dev", () => {
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`
-				[Error: Cannot set run_worker_first=true without a Worker script.
+				[Error: Cannot set run_worker_first without a Worker script.
 				Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
 			`
 			);
@@ -1585,8 +1588,8 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker has access to the following bindings:
 				Binding              Resource      Mode
-				env.WorkerA (A)      Worker      local [not connected]
-				env.WorkerB (B)      Worker      local [not connected]
+				env.WorkerA (A)      Worker        local [not connected]
+				env.WorkerB (B)      Worker        local [not connected]
 
 				"
 			`);
@@ -1607,8 +1610,8 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker has access to the following bindings:
 				Binding              Resource      Mode
-				env.WorkerA (A)      Worker      local [not connected]
-				env.WorkerB (B)      Worker      local [not connected]
+				env.WorkerA (A)      Worker        local [not connected]
+				env.WorkerB (B)      Worker        local [not connected]
 
 				"
 			`);
@@ -1756,7 +1759,7 @@ describe.sequential("wrangler dev", () => {
 				env.MY_QUEUE_PRODUCES (my-queue)                 Queue             remote
 				env.MY_D1 (xxx)                                  D1 Database       remote
 				env.MY_R2 (my-bucket)                            R2 Bucket         remote
-				env.WorkerA (A)                                  Worker            remote [connected]
+				env.WorkerA (A)                                  Worker            remote
 
 				"
 			`);

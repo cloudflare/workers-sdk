@@ -6,19 +6,17 @@
 		"container:build": "wrangler containers build ./ -t container-fixture",
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
-		"start": "wrangler dev",
-		"test:ci": "vitest run",
-		"test:watch": "vitest"
+		"start": "wrangler dev"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250525.0",
+		"@cloudflare/workers-types": "^4.20250617.0",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
+		"node": "20.19.2",
 		"extends": "../../package.json"
 	}
 }

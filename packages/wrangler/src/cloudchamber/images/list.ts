@@ -1,5 +1,8 @@
+import {
+	getCloudflareContainerRegistry,
+	ImageRegistriesService,
+} from "@cloudflare/containers-shared";
 import { logger } from "../../logger";
-import { ImageRegistriesService } from "../client";
 import { handleFailure, promiseSpinner } from "../common";
 import type { Config } from "../../config";
 import type {
@@ -7,10 +10,7 @@ import type {
 	CommonYargsArgvSanitizedJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../../yargs-types";
-import type { ImageRegistryPermissions } from "../client";
-
-// cloudflare managed registry
-const domain = "registry.cloudchamber.cfdata.org";
+import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
 interface CatalogResponse {
 	repositories: string[];
@@ -68,7 +68,7 @@ async function handleDeleteImageCommand(
 		}
 		return await promiseSpinner(
 			getCreds().then(async (creds) => {
-				const url = new URL(`https://${domain}`);
+				const url = new URL(`https://${getCloudflareContainerRegistry()}`);
 				const baseUrl = `${url.protocol}//${url.host}`;
 				const [image, tag] = args.image.split(":");
 				await deleteTag(baseUrl, image, tag, creds);
@@ -157,7 +157,7 @@ async function ListTags(
 }
 
 async function listTags(repo: string, creds: string): Promise<string[]> {
-	const url = new URL(`https://${domain}`);
+	const url = new URL(`https://${getCloudflareContainerRegistry()}`);
 	const baseUrl = `${url.protocol}//${url.host}`;
 	const tagsUrl = `${baseUrl}/v2/${repo}/tags/list`;
 
@@ -172,7 +172,7 @@ async function listTags(repo: string, creds: string): Promise<string[]> {
 }
 
 async function listRepos(creds: string): Promise<string[]> {
-	const url = new URL(`https://${domain}`);
+	const url = new URL(`https://${getCloudflareContainerRegistry()}`);
 
 	const catalogUrl = `${url.protocol}//${url.host}/v2/_catalog`;
 
@@ -239,10 +239,13 @@ async function deleteTag(
 }
 
 async function getCreds(): Promise<string> {
-	return await ImageRegistriesService.generateImageRegistryCredentials(domain, {
-		expiration_minutes: 5,
-		permissions: ["pull", "push"] as ImageRegistryPermissions[],
-	}).then(async (credentials) => {
+	return await ImageRegistriesService.generateImageRegistryCredentials(
+		getCloudflareContainerRegistry(),
+		{
+			expiration_minutes: 5,
+			permissions: ["pull", "push"] as ImageRegistryPermissions[],
+		}
+	).then(async (credentials) => {
 		return Buffer.from(`v1:${credentials.password}`).toString("base64");
 	});
 }

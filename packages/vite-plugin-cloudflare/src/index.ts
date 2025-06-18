@@ -2,7 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
+import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
@@ -13,11 +13,17 @@ import {
 	matchAdditionalModule,
 } from "./additional-modules";
 import { hasAssetsConfigChanged } from "./asset-config";
+import { createBuildApp } from "./build";
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
 } from "./cloudflare-environment";
-import { DEFAULT_INSPECTOR_PORT } from "./constants";
+import {
+	ASSET_WORKER_NAME,
+	DEFAULT_INSPECTOR_PORT,
+	kRequestType,
+	ROUTER_WORKER_NAME,
+} from "./constants";
 import {
 	addDebugToVitePrintUrls,
 	debuggingPath,
@@ -29,7 +35,9 @@ import {
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
 import {
+	getGlobalVirtualModule,
 	injectGlobalCode,
+	isGlobalVirtualModule,
 	isNodeAls,
 	isNodeAlsModule,
 	isNodeCompat,
@@ -41,13 +49,12 @@ import {
 	resolveNodeJSImport,
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
-import { additionalModuleGlobalRE } from "./shared";
+import { additionalModuleGlobalRE, UNKNOWN_HOST } from "./shared";
 import {
 	cleanUrl,
+	createRequestHandler,
 	getFirstAvailablePort,
 	getOutputDirectory,
-	getRouterWorker,
-	toMiniflareRequest,
 } from "./utils";
 import { handleWebSocket } from "./websockets";
 import { validateWorkerEnvironmentsResolvedConfigs } from "./worker-environments-validation";
@@ -57,6 +64,7 @@ import type {
 	ResolvedPluginConfig,
 	WorkerConfig,
 } from "./plugin-config";
+import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { Unstable_RawConfig } from "wrangler";
 
 export type { PluginConfig } from "./plugin-config";
@@ -80,9 +88,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	const additionalModulePaths = new Set<string>();
 
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
-
-	// This is set when the client environment is built to determine if the entry Worker should include assets
-	let hasClientBuild = false;
 
 	return [
 		{
@@ -111,8 +116,20 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					}
 				}
 
+				const defaultDeniedFiles = [
+					".env",
+					".env.*",
+					"*.{crt,pem}",
+					"**/.git/**",
+				];
+
 				return {
 					appType: "custom",
+					server: {
+						fs: {
+							deny: [...defaultDeniedFiles, ".dev.vars", ".dev.vars.*"],
+						},
+					},
 					environments:
 						resolvedPluginConfig.type === "workers"
 							? {
@@ -124,7 +141,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 													createCloudflareEnvironmentOptions(
 														workerConfig,
 														userConfig,
-														environmentName
+														{
+															name: environmentName,
+															isEntry:
+																resolvedPluginConfig.type === "workers" &&
+																environmentName ===
+																	resolvedPluginConfig.entryWorkerEnvironmentName,
+														}
 													),
 												];
 											}
@@ -140,42 +163,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					builder: {
 						buildApp:
 							userConfig.builder?.buildApp ??
-							(async (builder) => {
-								const clientEnvironment = builder.environments.client;
-								const defaultHtmlPath = path.resolve(
-									builder.config.root,
-									"index.html"
-								);
-
-								if (
-									clientEnvironment &&
-									(clientEnvironment.config.build.rollupOptions.input ||
-										fs.existsSync(defaultHtmlPath))
-								) {
-									await builder.build(clientEnvironment);
-								}
-
-								if (resolvedPluginConfig.type === "workers") {
-									const workerEnvironments = Object.keys(
-										resolvedPluginConfig.workers
-									).map((environmentName) => {
-										const environment = builder.environments[environmentName];
-
-										assert(
-											environment,
-											`${environmentName} environment not found`
-										);
-
-										return environment;
-									});
-
-									await Promise.all(
-										workerEnvironments.map((environment) =>
-											builder.build(environment)
-										)
-									);
-								}
-							}),
+							createBuildApp(resolvedPluginConfig),
 					},
 				};
 			},
@@ -221,7 +209,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						this.environment.name ===
 						resolvedPluginConfig.entryWorkerEnvironmentName;
 
-					if (isEntryWorker && hasClientBuild) {
+					if (isEntryWorker) {
 						const workerOutputDirectory = this.environment.config.build.outDir;
 						const clientOutputDirectory =
 							resolvedViteConfig.environments.client?.build.outDir;
@@ -294,11 +282,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 			writeBundle() {
-				// This relies on the assumption that the client environment is built first
-				// Composable `buildApp` hooks could provide a more robust alternative in future
-				if (this.environment.name === "client") {
-					hasClientBuild = true;
-				}
 				// These conditions ensure the deploy config is emitted once per application build as `writeBundle` is called for each environment.
 				// If Vite introduces an additional hook that runs after the application has built then we could use that instead.
 				if (
@@ -348,41 +331,103 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
-				// The HTTP server is not available in middleware mode
-				if (viteDevServer.httpServer) {
-					handleWebSocket(viteDevServer.httpServer, async () => {
-						assert(miniflare, `Miniflare not defined`);
-						const routerWorker = await getRouterWorker(miniflare);
+				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
-						return routerWorker.fetch;
-					});
+				if (resolvedPluginConfig.type === "workers") {
+					const entryWorkerConfig = getWorkerConfig(
+						resolvedPluginConfig.entryWorkerEnvironmentName
+					);
+					assert(entryWorkerConfig, `No entry Worker config`);
+					const entryWorkerName = entryWorkerConfig.name;
+
+					// The HTTP server is not available in middleware mode
+					if (viteDevServer.httpServer) {
+						handleWebSocket(viteDevServer.httpServer, async () => {
+							assert(miniflare, `Miniflare not defined`);
+							const entryWorker = await miniflare.getWorker(entryWorkerName);
+
+							return entryWorker.fetch;
+						});
+					}
+
+					const staticRouting: StaticRouting | undefined =
+						entryWorkerConfig.assets?.run_worker_first === true
+							? { user_worker: ["/*"] }
+							: resolvedPluginConfig.staticRouting;
+
+					if (staticRouting) {
+						const excludeRulesMatcher = generateStaticRoutingRuleMatcher(
+							staticRouting.asset_worker ?? []
+						);
+						const includeRulesMatcher = generateStaticRoutingRuleMatcher(
+							staticRouting.user_worker
+						);
+						const userWorkerHandler = createRequestHandler(async (request) => {
+							assert(miniflare, `Miniflare not defined`);
+							const userWorker = await miniflare.getWorker(entryWorkerName);
+
+							return userWorker.fetch(request, { redirect: "manual" });
+						});
+
+						preMiddleware = async (req, res, next) => {
+							assert(req.url, `req.url not defined`);
+							// Only the URL pathname is used to match rules
+							const request = new Request(new URL(req.url, UNKNOWN_HOST));
+
+							if (req[kRequestType] === "asset") {
+								next();
+							} else if (excludeRulesMatcher({ request })) {
+								req[kRequestType] === "asset";
+								next();
+							} else if (includeRulesMatcher({ request })) {
+								userWorkerHandler(req, res, next);
+							} else {
+								next();
+							}
+						};
+					}
 				}
 
 				return () => {
-					viteDevServer.middlewares.use(async (req, res, next) => {
-						try {
+					if (preMiddleware) {
+						const middlewareStack = viteDevServer.middlewares.stack;
+						const cachedTransformMiddlewareIndex = middlewareStack.findIndex(
+							(middleware) =>
+								"name" in middleware.handle &&
+								middleware.handle.name === "viteCachedTransformMiddleware"
+						);
+						assert(
+							cachedTransformMiddlewareIndex !== -1,
+							"Failed to find viteCachedTransformMiddleware"
+						);
+
+						// Insert our middleware after the host check middleware to prevent DNS rebinding attacks
+						middlewareStack.splice(cachedTransformMiddlewareIndex, 0, {
+							route: "",
+							handle: preMiddleware,
+						});
+					}
+
+					// post middleware
+					viteDevServer.middlewares.use(
+						createRequestHandler(async (request, req) => {
 							assert(miniflare, `Miniflare not defined`);
-							const routerWorker = await getRouterWorker(miniflare);
 
-							const request = createRequest(req, res);
-							const response = await routerWorker.fetch(
-								toMiniflareRequest(request),
-								{
+							if (req[kRequestType] === "asset") {
+								const assetWorker =
+									await miniflare.getWorker(ASSET_WORKER_NAME);
+
+								return assetWorker.fetch(request, { redirect: "manual" });
+							} else {
+								const routerWorker =
+									await miniflare.getWorker(ROUTER_WORKER_NAME);
+
+								return routerWorker.fetch(request, {
 									redirect: "manual",
-								}
-							);
-
-							// Vite uses HTTP/2 when `server.https` is enabled
-							if (req.httpVersionMajor === 2) {
-								// HTTP/2 disallows use of the `transfer-encoding` header
-								response.headers.delete("transfer-encoding");
+								});
 							}
-
-							await sendResponse(res, response as any);
-						} catch (error) {
-							next(error);
-						}
-					});
+						})
+					);
 				};
 			},
 			async configurePreviewServer(vitePreviewServer) {
@@ -412,25 +457,25 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
-				vitePreviewServer.middlewares.use(async (req, res, next) => {
-					try {
-						const request = createRequest(req, res);
-						const response = await miniflare.dispatchFetch(
-							toMiniflareRequest(request),
-							{ redirect: "manual" }
-						);
-
-						// Vite uses HTTP/2 when `preview.https` is enabled
-						if (req.httpVersionMajor === 2) {
-							// HTTP/2 disallows use of the `transfer-encoding` header
-							response.headers.delete("transfer-encoding");
-						}
-
-						await sendResponse(res, response as any);
-					} catch (error) {
-						next(error);
-					}
-				});
+				vitePreviewServer.middlewares.use(
+					createRequestHandler((request) => {
+						return miniflare.dispatchFetch(request, { redirect: "manual" });
+					})
+				);
+			},
+		},
+		// Plugin to provide a fallback entry file
+		{
+			name: "vite-plugin-cloudflare:fallback-entry",
+			resolveId(source) {
+				if (source === "virtual:__cloudflare_fallback_entry__") {
+					return `\0virtual:__cloudflare_fallback_entry__`;
+				}
+			},
+			load(id) {
+				if (id === "\0virtual:__cloudflare_fallback_entry__") {
+					return ``;
+				}
 			},
 		},
 		// Plugin to support `.wasm?init` extension
@@ -597,6 +642,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			// rather than allowing the resolve hook here to alias then to polyfills.
 			enforce: "pre",
 			async resolveId(source, importer, options) {
+				if (isGlobalVirtualModule(source)) {
+					return source;
+				}
 				// See if we can map the `source` to a Node.js compat alias.
 				const result = resolveNodeJSImport(source);
 				if (!result) {
@@ -622,6 +670,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				// We are in build mode so return the absolute path to the polyfill.
 				return this.resolve(result.resolved, importer, options);
+			},
+			load(id) {
+				return getGlobalVirtualModule(id);
 			},
 			async transform(code, id) {
 				// Inject the Node.js compat globals into the entry module for Node.js compat environments.

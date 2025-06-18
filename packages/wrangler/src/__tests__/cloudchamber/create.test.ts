@@ -10,7 +10,7 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
-import type { SSHPublicKeyItem } from "../../cloudchamber/client";
+import type { SSHPublicKeyItem } from "@cloudflare/containers-shared";
 
 const MOCK_DEPLOYMENTS_COMPLEX_RESPONSE = `
 			"{

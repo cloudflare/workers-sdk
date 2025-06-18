@@ -1,6 +1,7 @@
 import type { AssetsOptions } from "../../assets";
 import type { Config } from "../../config";
 import type {
+	ContainerEngine,
 	CustomDomainRoute,
 	DurableObjectMigration,
 	Rule,
@@ -12,6 +13,7 @@ import type {
 	CfD1Database,
 	CfDispatchNamespace,
 	CfDurableObject,
+	CfHelloWorld,
 	CfHyperdrive,
 	CfKvNamespace,
 	CfLogfwdrBinding,
@@ -49,7 +51,7 @@ type MiniflareWorker = Awaited<ReturnType<Miniflare["getWorker"]>>;
 export interface Worker {
 	ready: Promise<void>;
 	url: Promise<URL>;
-	inspectorUrl: Promise<URL>;
+	inspectorUrl: Promise<URL | undefined>;
 	config: StartDevWorkerOptions;
 	setConfig: ConfigController["set"];
 	patchConfig: ConfigController["patch"];
@@ -137,8 +139,8 @@ export interface StartDevWorkerInput {
 
 	/** Options applying to the worker's development preview environment. */
 	dev?: {
-		/** Options applying to the worker's inspector server. */
-		inspector?: { hostname?: string; port?: number; secure?: boolean };
+		/** Options applying to the worker's inspector server. False disables the inspector server. */
+		inspector?: { hostname?: string; port?: number; secure?: boolean } | false;
 		/** Whether the worker runs on the edge or locally. Can also be set to "minimal" for minimal mode. */
 		remote?: boolean | "minimal";
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
@@ -180,6 +182,18 @@ export interface StartDevWorkerInput {
 
 		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
 		multiworkerPrimary?: boolean;
+
+		/** Whether the experimental mixed mode feature should be enabled */
+		experimentalMixedMode?: boolean;
+
+		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
+		enableContainers?: boolean;
+
+		/** Path to the docker executable. Defaults to 'docker' */
+		dockerPath?: string;
+
+		/** Options for the container engine */
+		containerEngine?: ContainerEngine;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
@@ -273,6 +287,7 @@ export type Binding =
 	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
+	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
 

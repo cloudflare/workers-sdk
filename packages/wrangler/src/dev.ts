@@ -159,6 +159,11 @@ export const dev = createCommand({
 			describe:
 				"Host to act as origin in local mode, defaults to dev.host or route",
 		},
+		"enable-containers": {
+			type: "boolean",
+			describe: "Whether to build and enable containers during development",
+			hidden: true,
+		},
 		site: {
 			describe: "Root folder of static assets for Workers Sites",
 			type: "string",
@@ -376,6 +381,8 @@ export type StartDevOptions = DevArguments &
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number) => void;
 		enableIpc?: boolean;
+		dockerPath?: string;
+		containerEngine?: string;
 	};
 
 async function updateDevEnvRegistry(
@@ -513,6 +520,7 @@ async function setupDevEnv(
 					vectorize: undefined,
 					hyperdrive: undefined,
 					secrets_store_secrets: undefined,
+					unsafe_hello_world: undefined,
 					services: args.services,
 					analytics_engine_datasets: undefined,
 					dispatch_namespaces: undefined,
@@ -556,6 +564,8 @@ async function setupDevEnv(
 				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
+				enableContainers: args.enableContainers,
+				dockerPath: args.dockerPath,
 			},
 			legacy: {
 				site: (configParam) => {
@@ -1021,6 +1031,7 @@ export function getBindings(
 		assets: configParam.assets?.binding
 			? { binding: configParam.assets?.binding }
 			: undefined,
+		unsafe_hello_world: configParam.unsafe_hello_world,
 	};
 
 	return bindings;

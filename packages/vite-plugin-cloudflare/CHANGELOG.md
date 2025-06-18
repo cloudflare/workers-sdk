@@ -1,5 +1,164 @@
 # @cloudflare/vite-plugin
 
+## 1.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`828b7df`](https://github.com/cloudflare/workers-sdk/commit/828b7dffada8c4b5ea77d3ccddb923815c19671d), [`b1c9139`](https://github.com/cloudflare/workers-sdk/commit/b1c91395246677a0d9ce8cca549569040302b04b), [`92f12f4`](https://github.com/cloudflare/workers-sdk/commit/92f12f442d752aad132fd2f5acdad26abd99694e), [`2671e77`](https://github.com/cloudflare/workers-sdk/commit/2671e778435b9e3380c0d34718824409be494c33)]:
+  - miniflare@4.20250617.0
+  - wrangler@4.20.2
+
+## 1.7.0
+
+### Minor Changes
+
+- [#9575](https://github.com/cloudflare/workers-sdk/pull/9575) [`5601fc3`](https://github.com/cloudflare/workers-sdk/commit/5601fc32f8cb7b4867eb758f77590fa70f0a4b4f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support `run_worker_first`.
+
+  `run_worker_first` has been expanded to accept an array of routes that should go directly to your Worker. Additionally, routes can be omitted by adding a `!` prefix. These negative routes will be treated as assets.
+
+  This is a new way to define routing explicitly and, when provided, overrides the implicit routing behavior.
+
+  ```jsonc
+  {
+  	"assets": {
+  		"not_found_handling": "single-page-application",
+  		"run_worker_first": [
+  			"/api/*", // These routes go directly to the Worker
+  			"!/api/docs/*", // These routes are still treated as assets
+  		],
+  	},
+  }
+  ```
+
+  The previous behavior of setting `"run_worker_first": true` to always invoke your Worker is also now supported.
+
+### Patch Changes
+
+- [#9583](https://github.com/cloudflare/workers-sdk/pull/9583) [`70ba9fb`](https://github.com/cloudflare/workers-sdk/commit/70ba9fbf905a9ba5fe158d0bc8d48f6bf31712a2) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: avoid crashing on unknown service bindings at startup
+
+  With Dev Registry support, the plugin no longer throws an assertion error during startup when a service binding references a named entrypoint from an unknown worker. Instead, an appropriate runtime error will be returned if the worker cannot be resolved.
+
+- [#9548](https://github.com/cloudflare/workers-sdk/pull/9548) [`0174e39`](https://github.com/cloudflare/workers-sdk/commit/0174e3996e393080abfb28226ce1ad1e7d5d8e50) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Enable HTML handling for HTML files in the public directory.
+
+  It is generally encouraged to use [HTML files as entry points](https://vite.dev/guide/features#html) in Vite so that their dependencies are bundled. However, if you have plain HTML files that should simply be copied to the root of the output directory as-is, you can place these in the [public directory](https://vite.dev/guide/assets#the-public-directory) and they will now work as expected in dev.
+
+- [#9566](https://github.com/cloudflare/workers-sdk/pull/9566) [`521eeb9`](https://github.com/cloudflare/workers-sdk/commit/521eeb9d7db1da5aae7a1c215d540184f6457301) Thanks [@vicb](https://github.com/vicb)! - Bump `@cloudflare/unenv-preset` to 2.3.3
+
+- [#9581](https://github.com/cloudflare/workers-sdk/pull/9581) [`6bc0a2f`](https://github.com/cloudflare/workers-sdk/commit/6bc0a2f288b63613b29658be239996b66beb908a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that globals are polyfilled before every import
+
+- [#9536](https://github.com/cloudflare/workers-sdk/pull/9536) [`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - performance improvement: restart a mixed mode session only if the worker's remote bindings have changed
+
+- Updated dependencies [[`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8), [`bd528d5`](https://github.com/cloudflare/workers-sdk/commit/bd528d5d53a473b8339574290da0c47797c3b322), [`2177fb4`](https://github.com/cloudflare/workers-sdk/commit/2177fb44f43357d349ff2e2cc4b40d72c929e491), [`1d3293f`](https://github.com/cloudflare/workers-sdk/commit/1d3293f0cbf88a45d7b86bae0fc886e08aa6e841), [`04f9164`](https://github.com/cloudflare/workers-sdk/commit/04f9164bbcea528f9a4075bef47e8edf4cd22ae8), [`36113c2`](https://github.com/cloudflare/workers-sdk/commit/36113c29c8d2338fcd7a6da19f4c59c7e9f65a3b), [`49f5ac7`](https://github.com/cloudflare/workers-sdk/commit/49f5ac7ef2ff041897a56aec6607616689ca87a5), [`cf33417`](https://github.com/cloudflare/workers-sdk/commit/cf33417320109bc405b105818bf759916b51d2d0), [`521eeb9`](https://github.com/cloudflare/workers-sdk/commit/521eeb9d7db1da5aae7a1c215d540184f6457301), [`02e2c1e`](https://github.com/cloudflare/workers-sdk/commit/02e2c1e4dec0a7026c49bf6ab0b3da1f0ddfedd5), [`02e2c1e`](https://github.com/cloudflare/workers-sdk/commit/02e2c1e4dec0a7026c49bf6ab0b3da1f0ddfedd5), [`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8), [`e16fcc7`](https://github.com/cloudflare/workers-sdk/commit/e16fcc747aa7701405eb4f49a73e622425f67527), [`c117904`](https://github.com/cloudflare/workers-sdk/commit/c11790486fc1a5c7c907f5757779b3b8eba29013), [`fae8c02`](https://github.com/cloudflare/workers-sdk/commit/fae8c02bcfb51cb87a01a5185b249f6c5889d0a6)]:
+  - wrangler@4.20.1
+  - miniflare@4.20250612.0
+
+## 1.6.0
+
+### Minor Changes
+
+- [#9510](https://github.com/cloudflare/workers-sdk/pull/9510) [`590d69b`](https://github.com/cloudflare/workers-sdk/commit/590d69b7b46954947d0b3f9dacd7da7417e736b7) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Enhanced build support for Workers with assets.
+
+  Assets that are imported in the entry Worker are now automatically moved to the client build output. This enables importing assets in your Worker and accessing them via the [assets binding](https://developers.cloudflare.com/workers/static-assets/binding/#binding). See [Static Asset Handling](https://vite.dev/guide/assets) to find out about all the ways you can import assets in Vite.
+
+  Additionally, a broader range of build scenarios are now supported. These are:
+
+  - Assets only build with client entry/entries
+  - Assets only build with no client entry/entries that includes `public` directory assets
+  - Worker(s) + assets build with client entry/entries
+  - Worker(s) + assets build with no client entry/entries that includes imported and/or `public` directory assets
+  - Worker(s) build with no assets
+
+### Patch Changes
+
+- [#9513](https://github.com/cloudflare/workers-sdk/pull/9513) [`0e50072`](https://github.com/cloudflare/workers-sdk/commit/0e500720bf70016fa4ea21fc8959c4bd764ebc38) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Ensure that .dev.vars files cannot be accessed via the dev server or preview server.
+
+- Updated dependencies [[`1914b87`](https://github.com/cloudflare/workers-sdk/commit/1914b87e254bb733298cb0c0e96bb0bd234acde4), [`931f467`](https://github.com/cloudflare/workers-sdk/commit/931f467e39f70abfd0e1c08172f330e6e3de02a3), [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1), [`80b8bd9`](https://github.com/cloudflare/workers-sdk/commit/80b8bd93e6dd931a7b216645a6f249642c420dee), [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1), [`9e4cd16`](https://github.com/cloudflare/workers-sdk/commit/9e4cd16ce1639cc6763f5c50b9478eece7f4be73), [`92305af`](https://github.com/cloudflare/workers-sdk/commit/92305af0a7efa68fc0e13e3549f88d19f3cb069b), [`0b2ba45`](https://github.com/cloudflare/workers-sdk/commit/0b2ba4590ca59f1d95d7262e64adeefebe6a3e7e)]:
+  - wrangler@4.20.0
+  - miniflare@4.20250604.1
+  - @cloudflare/unenv-preset@2.3.3
+
+## 1.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`4ab5a40`](https://github.com/cloudflare/workers-sdk/commit/4ab5a4027d8a180e8ed300bc63d4d4d41848bcd5), [`485cd08`](https://github.com/cloudflare/workers-sdk/commit/485cd08679eaa3a47e9951c708b80f5c33a0a097), [`66edd2f`](https://github.com/cloudflare/workers-sdk/commit/66edd2f3bdae3a5fa437311a038a47aba366a64c), [`d1a1787`](https://github.com/cloudflare/workers-sdk/commit/d1a1787b27467417830f5d5c7bb8e7a14d346e9c), [`e3b3ef5`](https://github.com/cloudflare/workers-sdk/commit/e3b3ef51cfbdb5ffa15ebe81656460c340a2bba4), [`1f84092`](https://github.com/cloudflare/workers-sdk/commit/1f84092851e7a71681e99417cfd63c982bfa1d58), [`3261957`](https://github.com/cloudflare/workers-sdk/commit/3261957aba6bd8c02014206ad6fa219badde4a35)]:
+  - miniflare@4.20250604.0
+  - wrangler@4.19.2
+  - @cloudflare/unenv-preset@2.3.3
+
+## 1.5.0
+
+### Minor Changes
+
+- [#9341](https://github.com/cloudflare/workers-sdk/pull/9341) [`2cef3ab`](https://github.com/cloudflare/workers-sdk/commit/2cef3ab4f9c3c24c3e85d61967ce7dd9a4423ea4) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support loading all asset types via assets binding. Previously only HTML assets could be loaded via the assets binding. The binding now integrates with Vite's internal middleware to load all asset types.
+
+### Patch Changes
+
+- Updated dependencies [[`db2cdc6`](https://github.com/cloudflare/workers-sdk/commit/db2cdc6b1e77473762d0b4fcbad8e50ae2fe712c)]:
+  - wrangler@4.19.1
+
+## 1.4.0
+
+### Minor Changes
+
+- [#9173](https://github.com/cloudflare/workers-sdk/pull/9173) [`fac2f9d`](https://github.com/cloudflare/workers-sdk/commit/fac2f9dfa67b9c9b3ab0979acbb79f8e020a9cfb) Thanks [@edmundhung](https://github.com/edmundhung)! - Enable cross-process Service bindings and Tail workers with the Dev Registry
+
+  You can now run workers in separate dev sessions—whether `vite dev` or `wrangler dev`—and they’ll automatically discover and connect to each other:
+
+  **Worker A**
+
+  ```jsonc
+  // ./worker-a/wrangler.jsonc
+  {
+  	"name": "worker-a",
+  	"main": "./src/index.ts",
+  	"services": [
+  		{
+  			"binding": "SERVICE",
+  			"service": "worker-b",
+  		},
+  	],
+  }
+  ```
+
+  **Worker B**
+
+  ```jsonc
+  // ./worker-b/wrangler.jsonc
+  {
+  	"name": "worker-b",
+  	"main": "./src/index.ts",
+  	"tail_consumers": [
+  		{
+  			"service": "worker-a",
+  		},
+  	],
+  }
+  ```
+
+  Then run both workers in separate terminals:
+
+  ```sh
+  # Terminal 1
+  cd worker-a
+  vite dev
+
+  # Terminal 2
+  cd worker-b
+  vite dev
+  # or `wrangler dev` if you prefer
+  ```
+
+  That's it!
+
+### Patch Changes
+
+- [#9410](https://github.com/cloudflare/workers-sdk/pull/9410) [`87f3843`](https://github.com/cloudflare/workers-sdk/commit/87f38432ee25aa57efce394baed5712484e3202e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - silence `remote` wrangler config warnings when mixed mode is enabled
+
+- Updated dependencies [[`03b8c1c`](https://github.com/cloudflare/workers-sdk/commit/03b8c1ca535a5198ee69001243f6ff3e7b6dac13), [`8c7ce77`](https://github.com/cloudflare/workers-sdk/commit/8c7ce7728ccc467aa19b60c8f32c90e6f06442d1), [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc), [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc), [`b3be057`](https://github.com/cloudflare/workers-sdk/commit/b3be05734456852eb06dc573634b358569e65876), [`87f3843`](https://github.com/cloudflare/workers-sdk/commit/87f38432ee25aa57efce394baed5712484e3202e), [`fac2f9d`](https://github.com/cloudflare/workers-sdk/commit/fac2f9dfa67b9c9b3ab0979acbb79f8e020a9cfb), [`92719a5`](https://github.com/cloudflare/workers-sdk/commit/92719a535bf6bae9d660a05d5c8f8823004929c5)]:
+  - wrangler@4.19.0
+  - miniflare@4.20250525.1
+
 ## 1.3.1
 
 ### Patch Changes

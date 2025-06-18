@@ -31,12 +31,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuild: {
-				outputDir: "./dist",
-				script: "build",
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
 			nodeCompat: true,
 			flags: [
 				"--skip-houston",
@@ -57,12 +51,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Hello, Astronaut!",
 			},
 			verifyPreview: {
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			verifyBuild: {
-				outputDir: "./dist",
-				script: "build",
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
@@ -140,12 +128,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "The fullstack meta-framework for Angular!",
 			},
 			verifyPreview: {
-				route: "/api/v1/test",
-				expectedText: "C3_TEST",
-			},
-			verifyBuild: {
-				outputDir: "./dist/analog/public",
-				script: "build",
 				route: "/api/v1/test",
 				expectedText: "C3_TEST",
 			},
@@ -325,12 +307,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuild: {
-				outputDir: "./build/client",
-				script: "build",
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
 			nodeCompat: false,
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
@@ -409,12 +385,6 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			nodeCompat: false,
 			verifyPreview: {
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			verifyBuild: {
-				outputDir: "./dist",
-				script: "build",
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
@@ -497,11 +467,8 @@ export default function getFrameworkTestConfig(pm: string) {
 					matcher: /Which template would you like to use/,
 					input: [keys.enter],
 				},
-				{
-					matcher: /Use Typescript/,
-					input: [keys.enter],
-				},
 			],
+			flags: ["--ts"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["npm", "yarn"],
@@ -534,12 +501,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "SvelteKit app",
 			},
 			verifyPreview: {
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			verifyBuild: {
-				outputDir: ".svelte-kit/cloudflare",
-				script: "build",
 				route: "/test",
 				expectedText: "C3_TEST",
 			},

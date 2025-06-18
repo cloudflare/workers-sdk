@@ -1,5 +1,64 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.40
+
+### Patch Changes
+
+- Updated dependencies [[`828b7df`](https://github.com/cloudflare/workers-sdk/commit/828b7dffada8c4b5ea77d3ccddb923815c19671d), [`b1c9139`](https://github.com/cloudflare/workers-sdk/commit/b1c91395246677a0d9ce8cca549569040302b04b), [`92f12f4`](https://github.com/cloudflare/workers-sdk/commit/92f12f442d752aad132fd2f5acdad26abd99694e), [`2671e77`](https://github.com/cloudflare/workers-sdk/commit/2671e778435b9e3380c0d34718824409be494c33)]:
+  - miniflare@4.20250617.0
+  - wrangler@4.20.2
+
+## 0.8.39
+
+### Patch Changes
+
+- [#9595](https://github.com/cloudflare/workers-sdk/pull/9595) [`9793e5b`](https://github.com/cloudflare/workers-sdk/commit/9793e5bf254da449f96c7bceaaf65a9f6987fa71) Thanks [@vicb](https://github.com/vicb)! - Add `type: module` in package.json
+
+- [#9473](https://github.com/cloudflare/workers-sdk/pull/9473) [`fae8c02`](https://github.com/cloudflare/workers-sdk/commit/fae8c02bcfb51cb87a01a5185b249f6c5889d0a6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add experimental support for mixed mode
+
+- [#9536](https://github.com/cloudflare/workers-sdk/pull/9536) [`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - performance improvement: restart a mixed mode session only if the worker's remote bindings have changed
+
+- [#9495](https://github.com/cloudflare/workers-sdk/pull/9495) [`5710518`](https://github.com/cloudflare/workers-sdk/commit/5710518954f8495d40745e2d7b1e35760a19fd37) Thanks [@vicb](https://github.com/vicb)! - bump capnp-es to 0.0.10
+
+- Updated dependencies [[`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8), [`bd528d5`](https://github.com/cloudflare/workers-sdk/commit/bd528d5d53a473b8339574290da0c47797c3b322), [`2177fb4`](https://github.com/cloudflare/workers-sdk/commit/2177fb44f43357d349ff2e2cc4b40d72c929e491), [`1d3293f`](https://github.com/cloudflare/workers-sdk/commit/1d3293f0cbf88a45d7b86bae0fc886e08aa6e841), [`04f9164`](https://github.com/cloudflare/workers-sdk/commit/04f9164bbcea528f9a4075bef47e8edf4cd22ae8), [`36113c2`](https://github.com/cloudflare/workers-sdk/commit/36113c29c8d2338fcd7a6da19f4c59c7e9f65a3b), [`49f5ac7`](https://github.com/cloudflare/workers-sdk/commit/49f5ac7ef2ff041897a56aec6607616689ca87a5), [`cf33417`](https://github.com/cloudflare/workers-sdk/commit/cf33417320109bc405b105818bf759916b51d2d0), [`521eeb9`](https://github.com/cloudflare/workers-sdk/commit/521eeb9d7db1da5aae7a1c215d540184f6457301), [`02e2c1e`](https://github.com/cloudflare/workers-sdk/commit/02e2c1e4dec0a7026c49bf6ab0b3da1f0ddfedd5), [`02e2c1e`](https://github.com/cloudflare/workers-sdk/commit/02e2c1e4dec0a7026c49bf6ab0b3da1f0ddfedd5), [`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8), [`e16fcc7`](https://github.com/cloudflare/workers-sdk/commit/e16fcc747aa7701405eb4f49a73e622425f67527), [`c117904`](https://github.com/cloudflare/workers-sdk/commit/c11790486fc1a5c7c907f5757779b3b8eba29013), [`fae8c02`](https://github.com/cloudflare/workers-sdk/commit/fae8c02bcfb51cb87a01a5185b249f6c5889d0a6)]:
+  - wrangler@4.20.1
+  - miniflare@4.20250612.0
+
+## 0.8.38
+
+### Patch Changes
+
+- [#9439](https://github.com/cloudflare/workers-sdk/pull/9439) [`8d648e7`](https://github.com/cloudflare/workers-sdk/commit/8d648e7c2f94cf315cdfffad6ee43e01e82a0947) Thanks [@edmundhung](https://github.com/edmundhung)! - Add support for Vitest 3.2.x
+
+- Updated dependencies [[`1914b87`](https://github.com/cloudflare/workers-sdk/commit/1914b87e254bb733298cb0c0e96bb0bd234acde4), [`931f467`](https://github.com/cloudflare/workers-sdk/commit/931f467e39f70abfd0e1c08172f330e6e3de02a3), [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1), [`80b8bd9`](https://github.com/cloudflare/workers-sdk/commit/80b8bd93e6dd931a7b216645a6f249642c420dee), [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1), [`9e4cd16`](https://github.com/cloudflare/workers-sdk/commit/9e4cd16ce1639cc6763f5c50b9478eece7f4be73), [`92305af`](https://github.com/cloudflare/workers-sdk/commit/92305af0a7efa68fc0e13e3549f88d19f3cb069b), [`0b2ba45`](https://github.com/cloudflare/workers-sdk/commit/0b2ba4590ca59f1d95d7262e64adeefebe6a3e7e)]:
+  - wrangler@4.20.0
+  - miniflare@4.20250604.1
+
+## 0.8.37
+
+### Patch Changes
+
+- [#9454](https://github.com/cloudflare/workers-sdk/pull/9454) [`9c30aec`](https://github.com/cloudflare/workers-sdk/commit/9c30aecaa2e6422ef83d9d6d82d8ea10cdf28dfe) Thanks [@Enchan1207](https://github.com/Enchan1207)! - fix test filtering by pattern that contains non-ascii characters.
+
+- Updated dependencies [[`4ab5a40`](https://github.com/cloudflare/workers-sdk/commit/4ab5a4027d8a180e8ed300bc63d4d4d41848bcd5), [`485cd08`](https://github.com/cloudflare/workers-sdk/commit/485cd08679eaa3a47e9951c708b80f5c33a0a097), [`66edd2f`](https://github.com/cloudflare/workers-sdk/commit/66edd2f3bdae3a5fa437311a038a47aba366a64c), [`d1a1787`](https://github.com/cloudflare/workers-sdk/commit/d1a1787b27467417830f5d5c7bb8e7a14d346e9c), [`e3b3ef5`](https://github.com/cloudflare/workers-sdk/commit/e3b3ef51cfbdb5ffa15ebe81656460c340a2bba4), [`1f84092`](https://github.com/cloudflare/workers-sdk/commit/1f84092851e7a71681e99417cfd63c982bfa1d58)]:
+  - miniflare@4.20250604.0
+  - wrangler@4.19.2
+
+## 0.8.36
+
+### Patch Changes
+
+- Updated dependencies [[`db2cdc6`](https://github.com/cloudflare/workers-sdk/commit/db2cdc6b1e77473762d0b4fcbad8e50ae2fe712c)]:
+  - wrangler@4.19.1
+
+## 0.8.35
+
+### Patch Changes
+
+- Updated dependencies [[`03b8c1c`](https://github.com/cloudflare/workers-sdk/commit/03b8c1ca535a5198ee69001243f6ff3e7b6dac13), [`8c7ce77`](https://github.com/cloudflare/workers-sdk/commit/8c7ce7728ccc467aa19b60c8f32c90e6f06442d1), [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc), [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc), [`b3be057`](https://github.com/cloudflare/workers-sdk/commit/b3be05734456852eb06dc573634b358569e65876), [`87f3843`](https://github.com/cloudflare/workers-sdk/commit/87f38432ee25aa57efce394baed5712484e3202e), [`fac2f9d`](https://github.com/cloudflare/workers-sdk/commit/fac2f9dfa67b9c9b3ab0979acbb79f8e020a9cfb), [`92719a5`](https://github.com/cloudflare/workers-sdk/commit/92719a535bf6bae9d660a05d5c8f8823004929c5)]:
+  - wrangler@4.19.0
+  - miniflare@4.20250525.1
+
 ## 0.8.34
 
 ### Patch Changes

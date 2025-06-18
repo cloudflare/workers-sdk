@@ -33,14 +33,11 @@ import {
 	validateTypedArray,
 } from "./validation-helpers";
 import { configFileName, formatConfigSnippet } from ".";
-import type {
-	CreateApplicationRequest,
-	UserDeploymentConfiguration,
-} from "../cloudchamber/client";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
+	ContainerEngine,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -49,6 +46,10 @@ import type {
 	TailConsumer,
 } from "./environment";
 import type { TypeofType, ValidatorFn } from "./validation-helpers";
+import type {
+	CreateApplicationRequest,
+	UserDeploymentConfiguration,
+} from "@cloudflare/containers-shared";
 
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
@@ -60,6 +61,8 @@ export type NormalizeAndValidateConfigArgs = {
 	localProtocol?: string;
 	upstreamProtocol?: string;
 	script?: string;
+	enableContainers?: boolean;
+	containerEngine?: ContainerEngine;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -75,6 +78,12 @@ export function isPagesConfig(rawConfig: RawConfig): boolean {
  * and copying over inheritable fields into named environments.
  *
  * Any errors or warnings from the validation are available in the returned `diagnostics` object.
+ *
+ * @param rawConfig The config loaded from `configPath`
+ * @param configPath The path to the config file
+ * @param userConfigPath
+ * @param args
+ * @returns The normalized `config` and `diagnostics` message
  */
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
@@ -181,7 +190,7 @@ export function normalizeAndValidateConfig(
 
 	let activeEnv = topLevelEnv;
 
-	if (envName !== undefined) {
+	if (envName) {
 		if (isRedirectedConfig) {
 			// Note: we error if the user is specifying an environment, but not for pages
 			//       commands where the environment is always set (to either "preview" or "production")
@@ -462,6 +471,8 @@ function normalizeAndValidateDev(
 		localProtocol: localProtocolArg,
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
+		enableContainers: enableContainersArg,
+		containerEngine: containerEngineArg,
 	} = args;
 	assert(
 		localProtocolArg === undefined ||
@@ -474,6 +485,15 @@ function normalizeAndValidateDev(
 			upstreamProtocolArg === "https"
 	);
 	assert(remoteArg === undefined || typeof remoteArg === "boolean");
+	assert(
+		enableContainersArg === undefined ||
+			typeof enableContainersArg === "boolean"
+	);
+	assert(
+		containerEngineArg === undefined ||
+			typeof containerEngineArg === "string" ||
+			typeof containerEngineArg?.localDocker?.socketPath === "string"
+	);
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
 		// will only listen on the IPv4 loopback `127.0.0.1`, not the IPv6 `::1`:
@@ -491,6 +511,7 @@ function normalizeAndValidateDev(
 			? "https"
 			: local_protocol,
 		host,
+		enable_containers = enableContainersArg ?? true,
 		...rest
 	} = rawDev;
 	validateAdditionalProperties(diagnostics, "dev", Object.keys(rest), []);
@@ -521,7 +542,24 @@ function normalizeAndValidateDev(
 		["http", "https"]
 	);
 	validateOptionalProperty(diagnostics, "dev", "host", host, "string");
-	return { ip, port, inspector_port, local_protocol, upstream_protocol, host };
+	validateOptionalProperty(
+		diagnostics,
+		"dev",
+		"enable_containers",
+		enable_containers,
+		"boolean"
+	);
+
+	return {
+		ip,
+		port,
+		inspector_port,
+		local_protocol,
+		upstream_protocol,
+		host,
+		enable_containers,
+		container_engine: containerEngineArg,
+	};
 }
 
 function normalizeAndValidateAssets(
@@ -1382,6 +1420,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateSecretsStoreSecretBinding),
 			[]
 		),
+		unsafe_hello_world: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"unsafe_hello_world",
+			validateBindingArray(envName, validateHelloWorldBinding),
+			[]
+		),
 		version_metadata: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2077,15 +2125,33 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			["single-page-application", "404-page", "none"]
 		) && isValid;
 
-	isValid =
-		validateOptionalProperty(
-			diagnostics,
-			field,
-			"run_worker_first",
-			(value as Assets).run_worker_first,
-			"boolean"
-		) && isValid;
-
+	if ((value as Assets).run_worker_first !== undefined) {
+		if (typeof (value as Assets).run_worker_first === "boolean") {
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"run_worker_first",
+					(value as Assets).run_worker_first,
+					"boolean"
+				) && isValid;
+		} else if (Array.isArray((value as Assets).run_worker_first)) {
+			isValid =
+				validateOptionalTypedArray(
+					diagnostics,
+					"assets.run_worker_first",
+					(value as Assets).run_worker_first,
+					"string"
+				) && isValid;
+		} else {
+			diagnostics.errors.push(
+				`The field "${field}.run_worker_first" should be an array of strings or a boolean, but got ${JSON.stringify(
+					(value as Assets).run_worker_first
+				)}.`
+			);
+			isValid = false;
+		}
+	}
 	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"directory",
@@ -3158,7 +3224,12 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"certificate_id",
+		...(getFlag("MIXED_MODE") ? ["remote"] : []),
 	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
 
 	return isValid;
 };
@@ -3378,6 +3449,39 @@ const validateSecretsStoreSecretBinding: ValidatorFn = (
 		"binding",
 		"store_id",
 		"secret_name",
+	]);
+
+	return isValid;
+};
+
+const validateHelloWorldBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"unsafe_hello_world" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isOptionalProperty(value, "enable_timer", "boolean")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a boolean "enable_timer" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"enable_timer",
 	]);
 
 	return isValid;

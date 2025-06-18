@@ -24,7 +24,6 @@ describe("findPackageNames()", () => {
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/kv-asset-handler",
 				"@cloudflare/pages-shared",
-				"@cloudflare/prerelease-registry",
 				"@cloudflare/quick-edit",
 				"@cloudflare/unenv-preset",
 				"@cloudflare/vitest-pool-workers",

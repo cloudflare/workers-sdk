@@ -80,6 +80,7 @@ export type ContainerApp = {
 		image: string;
 		labels?: { name: string; value: string }[];
 		secrets?: { name: string; type: "env"; secret: string }[];
+		disk?: { size: string };
 	};
 
 	/** Scheduling constraints */
@@ -103,11 +104,6 @@ export type ContainerApp = {
 	 *  - manual: The container application will be rollout fully by manually actioning progress steps.
 	 */
 	rollout_kind?: "full_auto" | "none" | "full_manual";
-
-	/**
-	 * Ports to be exposed by the container application. Only applies to dev, on non-linux machines, and if the Dockerfile doesn't already declare exposed ports.
-	 */
-	dev_exposed_ports?: number[];
 };
 
 /**
@@ -357,9 +353,11 @@ interface EnvironmentInheritable {
 	minify: boolean | undefined;
 
 	/**
-	 * Keep function names after javascript transpilations.
+	 * Set the `name` property to the original name for functions and classes renamed during minification.
 	 *
-	 * @default {true}
+	 * See https://esbuild.github.io/api/#keep-names
+	 *
+	 * @default true
 	 * @inheritable
 	 */
 	keep_names: boolean | undefined;
@@ -542,6 +540,9 @@ export interface EnvironmentNonInheritable {
 
 	/**
 	 * Container related configuration
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
 	 *
 	 * @default []
 	 * @nonInheritable
@@ -920,6 +921,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The uuid of the uploaded mTLS certificate */
 		certificate_id: string;
+		/** Whether the mtls fetcher should be remote or not (only available under `--x-mixed-mode`) */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -991,6 +994,23 @@ export interface EnvironmentNonInheritable {
 		/** Name of the secret */
 		secret_name: string;
 	}[];
+
+	/**
+	 * **DO NOT USE**. Hello World Binding Config to serve as an explanatory example.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	unsafe_hello_world: {
+		/** The binding name used to refer to the bound service. */
+		binding: string;
+
+		/** Whether the timer is enabled */
+		enable_timer?: boolean;
+	}[];
 }
 
 /**
@@ -1057,10 +1077,11 @@ export type Assets = {
 	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
 	/**
-	 * If true, route every request to the User Worker, whether or not it matches an asset.
-	 * If false, then respond to requests that match an asset with that asset directly.
-	 * */
-	run_worker_first?: boolean;
+	 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
+	 *
+	 * Can also be `true`, indicating that every request should be routed to the User Worker.
+	 */
+	run_worker_first?: string[] | boolean;
 };
 
 export interface Observability {
@@ -1076,3 +1097,14 @@ export interface Observability {
 		invocation_logs?: boolean;
 	};
 }
+
+export type DockerConfiguration = {
+	/** Socket used by miniflare to communicate with Docker */
+	socketPath: string;
+};
+
+export type ContainerEngine =
+	| {
+			localDocker: DockerConfiguration;
+	  }
+	| string;

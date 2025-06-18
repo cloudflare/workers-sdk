@@ -28,6 +28,7 @@ import { getClassNamesWhichUseSQLite } from "./class-names-sqlite";
 import type { ServiceFetch } from "../api";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
+import type { ContainerEngine } from "../config/environment";
 import type {
 	CfD1Database,
 	CfDispatchNamespace,
@@ -47,6 +48,7 @@ import type { LoggerLevel } from "../logger";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
+	DOContainerOptions,
 	MiniflareOptions,
 	MixedModeConnectionString,
 	SourceOptions,
@@ -204,7 +206,10 @@ export interface ConfigBundle {
 	bindVectorizeToProd: boolean;
 	imagesLocalMode: boolean;
 	testScheduled: boolean;
+	enableContainers: boolean | undefined;
+	dockerPath: string | undefined;
 	containers: WorkerOptions["containers"];
+	containerEngine: ContainerEngine | undefined;
 }
 
 export class WranglerLog extends Log {
@@ -494,6 +499,8 @@ type WorkerOptionsBindings = Pick<
 	| "browserRendering"
 	| "vectorize"
 	| "dispatchNamespaces"
+	| "mtlsCertificates"
+	| "helloWorld"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -698,13 +705,17 @@ export function buildMiniflareBindingOptions(
 	// registered in the dev registry)
 	const internalObjects: CfDurableObject[] = [];
 	const externalObjects: CfDurableObject[] = [];
-	const externalWorkers: WorkerOptions[] = [];
 	for (const binding of bindings.durable_objects?.bindings ?? []) {
-		const internal =
+		const isInternal =
 			binding.script_name === undefined || binding.script_name === config.name;
-		(internal ? internalObjects : externalObjects).push(binding);
+		if (isInternal) {
+			internalObjects.push(binding);
+		} else {
+			externalObjects.push(binding);
+		}
 	}
 
+	const externalWorkers: WorkerOptions[] = [];
 	if (config.workerDefinitions !== null) {
 		// Setup Durable Object bindings and proxy worker
 		externalWorkers.push({
@@ -712,11 +723,14 @@ export function buildMiniflareBindingOptions(
 			// Bind all internal objects, so they're accessible by all other sessions
 			// that proxy requests for our objects to this worker
 			durableObjects: Object.fromEntries(
-				internalObjects.map(({ class_name }) => {
-					const useSQLite = classNameToUseSQLite.get(class_name);
+				internalObjects.map(({ class_name: className }) => {
 					return [
-						class_name,
-						{ className: class_name, scriptName: getName(config), useSQLite },
+						className,
+						{
+							className,
+							scriptName: getName(config),
+							useSQLite: classNameToUseSQLite.get(className),
+						},
 					];
 				})
 			),
@@ -803,6 +817,12 @@ export function buildMiniflareBindingOptions(
 
 	if (bindings.browser && mixedModeEnabled) {
 		warnOrError("browser", bindings.browser.remote, "remote");
+	}
+
+	if (bindings.mtls_certificates && mixedModeEnabled) {
+		for (const mtls of bindings.mtls_certificates) {
+			warnOrError("ai", mtls.remote, "always-remote");
+		}
 	}
 
 	// Uses the implementation in miniflare instead if the users enable local mode
@@ -929,6 +949,12 @@ export function buildMiniflareBindingOptions(
 				binding,
 			]) ?? []
 		),
+		helloWorld: Object.fromEntries(
+			bindings.unsafe_hello_world?.map((binding) => [
+				binding.binding,
+				binding,
+			]) ?? []
+		),
 		email: {
 			send_email: bindings.send_email,
 		},
@@ -988,42 +1014,44 @@ export function buildMiniflareBindingOptions(
 				: undefined,
 
 		durableObjects: Object.fromEntries([
-			...internalObjects.map(({ name, class_name }) => {
-				const useSQLite = classNameToUseSQLite.get(class_name);
+			...internalObjects.map(({ name, class_name: className }) => {
 				return [
 					name,
 					{
-						className: class_name,
-						useSQLite,
+						className,
+						useSQLite: classNameToUseSQLite.get(className),
+						container: getContainerOptions(className, config.containers),
 					},
 				];
 			}),
-			...externalObjects.map(({ name, class_name, script_name }) => {
-				const identifier = getIdentifier(`do_${script_name}_${class_name}`);
-				const useSQLite = classNameToUseSQLite.get(class_name);
-				return config.workerDefinitions === null
-					? [
-							name,
-							{
-								className: class_name,
-								scriptName: script_name,
-							},
-						]
-					: [
-							name,
-							{
-								className: identifier,
-								scriptName: EXTERNAL_SERVICE_WORKER_NAME,
-								useSQLite,
-								// Matches the unique key Miniflare will generate for this object in
-								// the target session. We need to do this so workerd generates the
-								// same IDs it would if this were part of the same process. workerd
-								// doesn't allow IDs from Durable Objects with different unique keys
-								// to be used with each other.
-								unsafeUniqueKey: `${script_name}-${class_name}`,
-							},
-						];
-			}),
+			...externalObjects.map(
+				({ name, class_name: className, script_name: scriptName }) => {
+					const identifier = getIdentifier(`do_${scriptName}_${className}`);
+					const useSQLite = classNameToUseSQLite.get(className);
+					return config.workerDefinitions === null
+						? [
+								name,
+								{
+									className,
+									scriptName,
+								},
+							]
+						: [
+								name,
+								{
+									className: identifier,
+									scriptName: EXTERNAL_SERVICE_WORKER_NAME,
+									useSQLite,
+									// Matches the unique key Miniflare will generate for this object in
+									// the target session. We need to do this so workerd generates the
+									// same IDs it would if this were part of the same process. workerd
+									// doesn't allow IDs from Durable Objects with different unique keys
+									// to be used with each other.
+									unsafeUniqueKey: `${scriptName}-${className}`,
+								},
+							];
+				}
+			),
 		]),
 
 		ratelimits: Object.fromEntries(
@@ -1031,6 +1059,25 @@ export function buildMiniflareBindingOptions(
 				?.filter((b) => b.type == "ratelimit")
 				.map(ratelimitEntry) ?? []
 		),
+
+		mtlsCertificates:
+			mixedModeEnabled && mixedModeConnectionString
+				? Object.fromEntries(
+						bindings.mtls_certificates
+							?.filter((d) => {
+								warnOrError("mtls_certificates", d.remote, "remote");
+								return d.remote;
+							})
+							.map((mtlsCertificate) => [
+								mtlsCertificate.binding,
+								{
+									mixedModeConnectionString,
+									certificate_id: mtlsCertificate.certificate_id,
+								},
+							]) ?? []
+					)
+				: undefined,
+
 		serviceBindings,
 		wrappedBindings: wrappedBindings,
 		tails,
@@ -1294,7 +1341,8 @@ export async function buildMiniflareOptions(
 		// Instead of hiding all logs from this Miniflare instance, we specifically hide the request logs,
 		// allowing other logs to be shown to the user (such as details about emails being triggered)
 		logRequests: false,
-
+		dockerPath: config.dockerPath,
+		enableContainers: config.enableContainers,
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,
@@ -1322,4 +1370,28 @@ export async function buildMiniflareOptions(
 		],
 	};
 	return { options, internalObjects, entrypointNames };
+}
+
+export const CONTAINER_IMAGE_PREFIX = "cloudflare-dev";
+
+/**
+ * Returns the Container options for the DO class name.
+ *
+ * @param className Do class name
+ * @param containers Container configuration
+ * @returns The configuration or `undefined` when the DO has no attached container
+ */
+function getContainerOptions(
+	className: string,
+	containers: MiniflareBindingsConfig["containers"]
+): DOContainerOptions | undefined {
+	if (!containers || !(className in containers)) {
+		return undefined;
+	}
+
+	const container = containers[className];
+
+	return {
+		imageName: `${CONTAINER_IMAGE_PREFIX}/${container.name}`,
+	};
 }

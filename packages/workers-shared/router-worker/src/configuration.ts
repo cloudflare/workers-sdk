@@ -10,5 +10,8 @@ export const applyConfigurationDefaults = (
 		account_id: configuration?.account_id ?? -1,
 		script_id: configuration?.script_id ?? -1,
 		debug: configuration?.debug ?? false,
+		static_routing: configuration?.static_routing ?? {
+			user_worker: [],
+		},
 	};
 };

@@ -1,5 +1,176 @@
 # wrangler
 
+## 4.20.2
+
+### Patch Changes
+
+- [#9565](https://github.com/cloudflare/workers-sdk/pull/9565) [`b1c9139`](https://github.com/cloudflare/workers-sdk/commit/b1c91395246677a0d9ce8cca549569040302b04b) Thanks [@IRCody](https://github.com/IRCody)! - Ensure that a container applications image configuration is not updated if there were not changes to the image.
+
+- [#9628](https://github.com/cloudflare/workers-sdk/pull/9628) [`92f12f4`](https://github.com/cloudflare/workers-sdk/commit/92f12f442d752aad132fd2f5acdad26abd99694e) Thanks [@gpanders](https://github.com/gpanders)! - Remove "Cloudchamber" from user facing error messages
+
+- [#9576](https://github.com/cloudflare/workers-sdk/pull/9576) [`2671e77`](https://github.com/cloudflare/workers-sdk/commit/2671e778435b9e3380c0d34718824409be494c33) Thanks [@vicb](https://github.com/vicb)! - Add core local dev functionality for containers.
+  Adds a new WRANGLER_DOCKER_HOST env var to customise what socket to connect to.
+- Updated dependencies [[`828b7df`](https://github.com/cloudflare/workers-sdk/commit/828b7dffada8c4b5ea77d3ccddb923815c19671d), [`2671e77`](https://github.com/cloudflare/workers-sdk/commit/2671e778435b9e3380c0d34718824409be494c33)]:
+  - miniflare@4.20250617.0
+
+## 4.20.1
+
+### Patch Changes
+
+- [#9536](https://github.com/cloudflare/workers-sdk/pull/9536) [`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - expose `Unstable_Binding` type
+
+- [#9564](https://github.com/cloudflare/workers-sdk/pull/9564) [`1d3293f`](https://github.com/cloudflare/workers-sdk/commit/1d3293f0cbf88a45d7b86bae0fc886e08aa6e841) Thanks [@skepticfx](https://github.com/skepticfx)! - Switch container registry to `registry.cloudflare.com` from `registry.cloudchamber.cfdata.org`.
+  Also adds the env var `CLOUDFLARE_CONTAINER_REGISTRY` to override this
+
+- [#9520](https://github.com/cloudflare/workers-sdk/pull/9520) [`04f9164`](https://github.com/cloudflare/workers-sdk/commit/04f9164bbcea528f9a4075bef47e8edf4cd22ae8) Thanks [@vicb](https://github.com/vicb)! - fix the default value for keep_names (`true`)
+
+- [#9506](https://github.com/cloudflare/workers-sdk/pull/9506) [`36113c2`](https://github.com/cloudflare/workers-sdk/commit/36113c29c8d2338fcd7a6da19f4c59c7e9f65a3b) Thanks [@penalosa](https://github.com/penalosa)! - Strip the `CF-Connecting-IP` header from outgoing fetches
+
+- [#9592](https://github.com/cloudflare/workers-sdk/pull/9592) [`49f5ac7`](https://github.com/cloudflare/workers-sdk/commit/49f5ac7ef2ff041897a56aec6607616689ca87a5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Point to the right location for docs on telemetry
+
+- [#9593](https://github.com/cloudflare/workers-sdk/pull/9593) [`cf33417`](https://github.com/cloudflare/workers-sdk/commit/cf33417320109bc405b105818bf759916b51d2d0) Thanks [@vicb](https://github.com/vicb)! - drop unused `WRANGLER_UNENV_RESOLVE_PATHS` env var
+
+- [#9566](https://github.com/cloudflare/workers-sdk/pull/9566) [`521eeb9`](https://github.com/cloudflare/workers-sdk/commit/521eeb9d7db1da5aae7a1c215d540184f6457301) Thanks [@vicb](https://github.com/vicb)! - Bump `@cloudflare/unenv-preset` to 2.3.3
+
+- [#9344](https://github.com/cloudflare/workers-sdk/pull/9344) [`02e2c1e`](https://github.com/cloudflare/workers-sdk/commit/02e2c1e4dec0a7026c49bf6ab0b3da1f0ddfedd5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add warning about env not specified to potentially risky wrangler commands
+
+  add a warning suggesting users to specify their target environment (via `-e` or `--env`)
+  when their wrangler config file contains some environments and they are calling one
+  of the following commands:
+
+  - wrangler deploy
+  - wrangler versions upload
+  - wrangler versions deploy
+  - wrangler versions secret bulk
+  - wrangler versions secret put
+  - wrangler versions secret delete
+  - wrangler secret bulk
+  - wrangler secret put
+  - wrangler secret delete
+  - wrangler triggers deploy
+
+  this is a measure we're putting in place to try to prevent developers from accidentally applying
+  changes to an incorrect (potentially even production) environment
+
+- [#9344](https://github.com/cloudflare/workers-sdk/pull/9344) [`02e2c1e`](https://github.com/cloudflare/workers-sdk/commit/02e2c1e4dec0a7026c49bf6ab0b3da1f0ddfedd5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - allow passing an empty string to the `-e|--env` flag to target the top-level environment
+
+- [#9536](https://github.com/cloudflare/workers-sdk/pull/9536) [`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - performance improvement: restart a mixed mode session only if the worker's remote bindings have changed
+
+- [#9550](https://github.com/cloudflare/workers-sdk/pull/9550) [`c117904`](https://github.com/cloudflare/workers-sdk/commit/c11790486fc1a5c7c907f5757779b3b8eba29013) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - allow `startWorker` to accept `false` as an `inspector` option (to disable the inspector server)
+
+- [#9473](https://github.com/cloudflare/workers-sdk/pull/9473) [`fae8c02`](https://github.com/cloudflare/workers-sdk/commit/fae8c02bcfb51cb87a01a5185b249f6c5889d0a6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - expose new `experimental_maybeStartOrUpdateMixedModeSession` utility
+
+- Updated dependencies [[`bd528d5`](https://github.com/cloudflare/workers-sdk/commit/bd528d5d53a473b8339574290da0c47797c3b322), [`2177fb4`](https://github.com/cloudflare/workers-sdk/commit/2177fb44f43357d349ff2e2cc4b40d72c929e491), [`36113c2`](https://github.com/cloudflare/workers-sdk/commit/36113c29c8d2338fcd7a6da19f4c59c7e9f65a3b), [`e16fcc7`](https://github.com/cloudflare/workers-sdk/commit/e16fcc747aa7701405eb4f49a73e622425f67527)]:
+  - miniflare@4.20250612.0
+
+## 4.20.0
+
+### Minor Changes
+
+- [#9509](https://github.com/cloudflare/workers-sdk/pull/9509) [`0b2ba45`](https://github.com/cloudflare/workers-sdk/commit/0b2ba4590ca59f1d95d7262e64adeefebe6a3e7e) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add static routing options via 'run_worker_first' to Wrangler
+
+  Implements the proposal noted here https://github.com/cloudflare/workers-sdk/discussions/9143.
+
+  This is now usable in `wrangler dev` and in production - just specify the routes that should hit the worker first with `run_worker_first` in your Wrangler config. You can also omit certain paths with `!` negative rules.
+
+### Patch Changes
+
+- [#9507](https://github.com/cloudflare/workers-sdk/pull/9507) [`1914b87`](https://github.com/cloudflare/workers-sdk/commit/1914b87e254bb733298cb0c0e96bb0bd234acde4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - slightly improve wrangler dev bindings loggings
+
+  improve the bindings loggings by:
+
+  - removing the unnecessary (and potentially incorrect) `[connected]` suffix for remote bindings
+  - making sure that the modes presented in the bindings logs are correctly aligned
+
+- [#9475](https://github.com/cloudflare/workers-sdk/pull/9475) [`931f467`](https://github.com/cloudflare/workers-sdk/commit/931f467e39f70abfd0e1c08172f330e6e3de02a3) Thanks [@edmundhung](https://github.com/edmundhung)! - add hello world binding that serves as as an explanatory example.
+
+- [#9443](https://github.com/cloudflare/workers-sdk/pull/9443) [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add workerName option to startMixedModeSession API
+
+- [#9541](https://github.com/cloudflare/workers-sdk/pull/9541) [`80b8bd9`](https://github.com/cloudflare/workers-sdk/commit/80b8bd93e6dd931a7b216645a6f249642c420dee) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - make workers created with `startWorker` await the `ready` promise on `dispose`
+
+- [#9443](https://github.com/cloudflare/workers-sdk/pull/9443) [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add mixed-mode support for mtls bindings
+
+- [#9515](https://github.com/cloudflare/workers-sdk/pull/9515) [`9e4cd16`](https://github.com/cloudflare/workers-sdk/commit/9e4cd16ce1639cc6763f5c50b9478eece7f4be73) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - make sure that remote binding errors are surfaced when using mixed (hybrid) mode
+
+- [#9516](https://github.com/cloudflare/workers-sdk/pull/9516) [`92305af`](https://github.com/cloudflare/workers-sdk/commit/92305af0a7efa68fc0e13e3549f88d19f3cb069b) Thanks [@IRCody](https://github.com/IRCody)! - Reorder deploy output when deploying a container worker so the worker url is printed last and the worker triggers aren't deployed until the container has been built and deployed successfully.
+
+- Updated dependencies [[`931f467`](https://github.com/cloudflare/workers-sdk/commit/931f467e39f70abfd0e1c08172f330e6e3de02a3), [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1), [`0b2ba45`](https://github.com/cloudflare/workers-sdk/commit/0b2ba4590ca59f1d95d7262e64adeefebe6a3e7e)]:
+  - miniflare@4.20250604.1
+  - @cloudflare/unenv-preset@2.3.3
+
+## 4.19.2
+
+### Patch Changes
+
+- [#9461](https://github.com/cloudflare/workers-sdk/pull/9461) [`66edd2f`](https://github.com/cloudflare/workers-sdk/commit/66edd2f3bdae3a5fa437311a038a47aba366a64c) Thanks [@skepticfx](https://github.com/skepticfx)! - Enforce disk limits on container builds
+
+- [#9481](https://github.com/cloudflare/workers-sdk/pull/9481) [`d1a1787`](https://github.com/cloudflare/workers-sdk/commit/d1a1787b27467417830f5d5c7bb8e7a14d346e9c) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Force autogenerated aliases to be fully lowercased.
+
+- [#9480](https://github.com/cloudflare/workers-sdk/pull/9480) [`1f84092`](https://github.com/cloudflare/workers-sdk/commit/1f84092851e7a71681e99417cfd63c982bfa1d58) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add `experimentalMixedMode` dev option to `unstable_startWorker`
+
+  add an new `experimentalMixedMode` dev option to `unstable_startWorker`
+  that allows developers to programmatically start a new mixed mode
+  session using startWorker.
+
+  Example usage:
+
+  ```js
+  // index.mjs
+  import { unstable_startWorker } from "wrangler";
+
+  await unstable_startWorker({
+  	dev: {
+  		experimentalMixedMode: true,
+  	},
+  });
+  ```
+
+  ```json
+  // wrangler.jsonc
+  {
+  	"$schema": "node_modules/wrangler/config-schema.json",
+  	"name": "programmatic-start-worker-example",
+  	"main": "src/index.ts",
+  	"compatibility_date": "2025-06-01",
+  	"services": [
+  		{ "binding": "REMOTE_WORKER", "service": "remote-worker", "remote": true }
+  	]
+  }
+  ```
+
+- Updated dependencies [[`4ab5a40`](https://github.com/cloudflare/workers-sdk/commit/4ab5a4027d8a180e8ed300bc63d4d4d41848bcd5), [`485cd08`](https://github.com/cloudflare/workers-sdk/commit/485cd08679eaa3a47e9951c708b80f5c33a0a097), [`e3b3ef5`](https://github.com/cloudflare/workers-sdk/commit/e3b3ef51cfbdb5ffa15ebe81656460c340a2bba4), [`3261957`](https://github.com/cloudflare/workers-sdk/commit/3261957aba6bd8c02014206ad6fa219badde4a35)]:
+  - miniflare@4.20250604.0
+  - @cloudflare/unenv-preset@2.3.3
+
+## 4.19.1
+
+### Patch Changes
+
+- [#9456](https://github.com/cloudflare/workers-sdk/pull/9456) [`db2cdc6`](https://github.com/cloudflare/workers-sdk/commit/db2cdc6b1e77473762d0b4fcbad8e50ae2fe712c) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Fix bug causing preview alias to always be generated.
+
+## 4.19.0
+
+### Minor Changes
+
+- [#9401](https://github.com/cloudflare/workers-sdk/pull/9401) [`03b8c1c`](https://github.com/cloudflare/workers-sdk/commit/03b8c1ca535a5198ee69001243f6ff3e7b6dac13) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Provide ability for Wrangler to upload preview aliases during version upload.
+
+### Patch Changes
+
+- [#9390](https://github.com/cloudflare/workers-sdk/pull/9390) [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc) Thanks [@penalosa](https://github.com/penalosa)! - Support additional Mixed Mode resources in Wrangler:
+
+  - AI
+  - Browser
+  - Images
+  - Vectorize
+  - Dispatch Namespaces
+
+- [#9395](https://github.com/cloudflare/workers-sdk/pull/9395) [`b3be057`](https://github.com/cloudflare/workers-sdk/commit/b3be05734456852eb06dc573634b358569e65876) Thanks [@Maximo-Guk](https://github.com/Maximo-Guk)! - Add WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST for Workers CI
+
+- [#9410](https://github.com/cloudflare/workers-sdk/pull/9410) [`87f3843`](https://github.com/cloudflare/workers-sdk/commit/87f38432ee25aa57efce394baed5712484e3202e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - enable consumers of `unstable_readConfig` to silence `remote` warnings
+
+- Updated dependencies [[`8c7ce77`](https://github.com/cloudflare/workers-sdk/commit/8c7ce7728ccc467aa19b60c8f32c90e6f06442d1), [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc), [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc), [`fac2f9d`](https://github.com/cloudflare/workers-sdk/commit/fac2f9dfa67b9c9b3ab0979acbb79f8e020a9cfb), [`92719a5`](https://github.com/cloudflare/workers-sdk/commit/92719a535bf6bae9d660a05d5c8f8823004929c5)]:
+  - miniflare@4.20250525.1
+
 ## 4.18.0
 
 ### Minor Changes

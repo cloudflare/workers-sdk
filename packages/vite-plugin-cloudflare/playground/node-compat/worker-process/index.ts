@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { stderr } from "./early-process-access";
 
 export default {
 	async fetch() {
@@ -7,6 +8,8 @@ export default {
 } satisfies ExportedHandler;
 
 function testProcessBehaviour() {
+	// workerd does not implement `process.stderr`, it comes from unenv.
+	assert(stderr, "process.stderr was not polyfilled early enough!");
 	const originalProcess = process;
 	try {
 		assert(process !== undefined, "process is missing");

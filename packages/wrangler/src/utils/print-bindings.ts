@@ -37,6 +37,7 @@ export const friendlyBindingNames: Record<
 	pipelines: "Pipeline",
 	secrets_store_secrets: "Secrets Store Secret",
 	assets: "Assets",
+	unsafe_hello_world: "Hello World",
 } as const;
 
 /**
@@ -103,6 +104,7 @@ export function printBindings(
 		mtls_certificates,
 		pipelines,
 		assets,
+		unsafe_hello_world,
 	} = bindings;
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
@@ -338,6 +340,19 @@ export function printBindings(
 		);
 	}
 
+	if (unsafe_hello_world !== undefined && unsafe_hello_world.length > 0) {
+		output.push(
+			...unsafe_hello_world.map(({ binding, enable_timer }) => {
+				return {
+					name: binding,
+					type: friendlyBindingNames.unsafe_hello_world,
+					value: enable_timer ? `Timer enabled` : `Timer disabled`,
+					mode: getMode({ isSimulatedLocally: true }),
+				};
+			})
+		);
+	}
+
 	if (services !== undefined && services.length > 0) {
 		output.push(
 			...services.map(({ binding, service, entrypoint, remote }) => {
@@ -349,7 +364,7 @@ export function printBindings(
 				}
 
 				if (remote) {
-					mode = getMode({ isSimulatedLocally: false, connected: true });
+					mode = getMode({ isSimulatedLocally: false });
 				} else if (context.local && context.registry !== null) {
 					const registryDefinition = context.registry?.[service];
 					hasConnectionStatus = true;
@@ -539,12 +554,18 @@ export function printBindings(
 
 	if (mtls_certificates !== undefined && mtls_certificates.length > 0) {
 		output.push(
-			...mtls_certificates.map(({ binding, certificate_id }) => {
+			...mtls_certificates.map(({ binding, certificate_id, remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.mtls_certificates,
 					value: certificate_id,
-					mode: getMode(),
+					mode: getMode({
+						isSimulatedLocally: getFlag("MIXED_MODE")
+							? remote === true || remote === undefined
+								? false
+								: undefined
+							: false,
+					}),
 				};
 			})
 		);
@@ -579,15 +600,26 @@ export function printBindings(
 			title = "Your Worker has access to the following bindings:";
 		}
 
+		const headings = {
+			binding: "Binding",
+			resource: "Resource",
+			mode: "Mode",
+		} as const;
+
 		const maxValueLength = Math.max(
 			...output.map((b) =>
 				typeof b.value === "symbol" ? "inherited".length : b.value?.length ?? 0
 			)
 		);
 		const maxNameLength = Math.max(...output.map((b) => b.name.length));
-		const maxTypeLength = Math.max(...output.map((b) => b.type.length));
+		const maxTypeLength = Math.max(
+			...output.map((b) => b.type.length),
+			headings.resource.length
+		);
 		const maxModeLength = Math.max(
-			...output.map((b) => (b.mode ? stripAnsi(b.mode).length : "Mode".length))
+			...output.map((b) =>
+				b.mode ? stripAnsi(b.mode).length : headings.mode.length
+			)
 		);
 
 		const hasMode = output.some((b) => b.mode);
@@ -616,7 +648,7 @@ export function printBindings(
 			: " ".repeat(columnGapSpaces);
 
 		logger.log(
-			`${padEndAnsi(dim("Binding"), shouldWrap ? bindingPrefix.length + maxNameLength : bindingLength)}${columnGap}${padEndAnsi(dim("Resource"), maxTypeLength)}${columnGap}${hasMode ? dim("Mode") : ""}`
+			`${padEndAnsi(dim(headings.binding), shouldWrap ? bindingPrefix.length + maxNameLength : bindingLength)}${columnGap}${padEndAnsi(dim(headings.resource), maxTypeLength)}${columnGap}${hasMode ? dim(headings.mode) : ""}`
 		);
 
 		for (const binding of output) {

@@ -1,5 +1,115 @@
 # miniflare
 
+## 4.20250617.0
+
+### Patch Changes
+
+- [#9591](https://github.com/cloudflare/workers-sdk/pull/9591) [`828b7df`](https://github.com/cloudflare/workers-sdk/commit/828b7dffada8c4b5ea77d3ccddb923815c19671d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250612.0  | 1.20250617.0  |
+  | @cloudflare/workers-types | ^4.20250612.0 | ^4.20250617.0 |
+
+- [#9576](https://github.com/cloudflare/workers-sdk/pull/9576) [`2671e77`](https://github.com/cloudflare/workers-sdk/commit/2671e778435b9e3380c0d34718824409be494c33) Thanks [@vicb](https://github.com/vicb)! - Add core local dev functionality for containers.
+  Adds a new WRANGLER_DOCKER_HOST env var to customise what socket to connect to.
+
+## 4.20250612.0
+
+### Patch Changes
+
+- [#9529](https://github.com/cloudflare/workers-sdk/pull/9529) [`bd528d5`](https://github.com/cloudflare/workers-sdk/commit/bd528d5d53a473b8339574290da0c47797c3b322) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250604.0  | 1.20250612.0  |
+  | @cloudflare/workers-types | ^4.20250604.0 | ^4.20250612.0 |
+
+- [#9582](https://github.com/cloudflare/workers-sdk/pull/9582) [`2177fb4`](https://github.com/cloudflare/workers-sdk/commit/2177fb44f43357d349ff2e2cc4b40d72c929e491) Thanks [@vicb](https://github.com/vicb)! - Update capnp generated code from the workerd.capnp
+
+- [#9506](https://github.com/cloudflare/workers-sdk/pull/9506) [`36113c2`](https://github.com/cloudflare/workers-sdk/commit/36113c29c8d2338fcd7a6da19f4c59c7e9f65a3b) Thanks [@penalosa](https://github.com/penalosa)! - Strip the `CF-Connecting-IP` header from outgoing fetches
+
+- [#9493](https://github.com/cloudflare/workers-sdk/pull/9493) [`e16fcc7`](https://github.com/cloudflare/workers-sdk/commit/e16fcc747aa7701405eb4f49a73e622425f67527) Thanks [@vicb](https://github.com/vicb)! - bump capnp-es to 0.0.11 in miniflare
+
+## 4.20250604.1
+
+### Minor Changes
+
+- [#9509](https://github.com/cloudflare/workers-sdk/pull/9509) [`0b2ba45`](https://github.com/cloudflare/workers-sdk/commit/0b2ba4590ca59f1d95d7262e64adeefebe6a3e7e) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add static routing options via 'run_worker_first' to Wrangler
+
+  Implements the proposal noted here https://github.com/cloudflare/workers-sdk/discussions/9143.
+
+  This is now usable in `wrangler dev` and in production - just specify the routes that should hit the worker first with `run_worker_first` in your Wrangler config. You can also omit certain paths with `!` negative rules.
+
+### Patch Changes
+
+- [#9475](https://github.com/cloudflare/workers-sdk/pull/9475) [`931f467`](https://github.com/cloudflare/workers-sdk/commit/931f467e39f70abfd0e1c08172f330e6e3de02a3) Thanks [@edmundhung](https://github.com/edmundhung)! - add hello world binding that serves as as an explanatory example.
+
+- [#9443](https://github.com/cloudflare/workers-sdk/pull/9443) [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add mixed-mode support for mtls bindings
+
+## 4.20250604.0
+
+### Patch Changes
+
+- [#9508](https://github.com/cloudflare/workers-sdk/pull/9508) [`4ab5a40`](https://github.com/cloudflare/workers-sdk/commit/4ab5a4027d8a180e8ed300bc63d4d4d41848bcd5) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: ensure default registry path matches wrangler settings"
+
+- [#9385](https://github.com/cloudflare/workers-sdk/pull/9385) [`485cd08`](https://github.com/cloudflare/workers-sdk/commit/485cd08679eaa3a47e9951c708b80f5c33a0a097) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250525.0  | 1.20250604.0  |
+  | @cloudflare/workers-types | ^4.20250525.0 | ^4.20250604.0 |
+
+- [#9469](https://github.com/cloudflare/workers-sdk/pull/9469) [`e3b3ef5`](https://github.com/cloudflare/workers-sdk/commit/e3b3ef51cfbdb5ffa15ebe81656460c340a2bba4) Thanks [@edmundhung](https://github.com/edmundhung)! - refactor: the dev registry will now create a file watcher only when the Worker has a binding to external services.
+
+## 4.20250525.1
+
+### Minor Changes
+
+- [#9173](https://github.com/cloudflare/workers-sdk/pull/9173) [`fac2f9d`](https://github.com/cloudflare/workers-sdk/commit/fac2f9dfa67b9c9b3ab0979acbb79f8e020a9cfb) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: export `getDefaultDevRegistryPath()` utility
+
+  This provides a default XDG app-path for the Dev Registry, which can be used to set the `unsafeDevRegistryPath` option in Miniflare and will be used by both Wrangler and @cloudflare/vite-plugin.
+
+- [#9313](https://github.com/cloudflare/workers-sdk/pull/9313) [`92719a5`](https://github.com/cloudflare/workers-sdk/commit/92719a535bf6bae9d660a05d5c8f8823004929c5) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: add Dev Registry support
+
+  This change introduces two new options to support cross-process service bindings, durable objects and tail consumers via a file-system based registry, with backward compatibility to Wrangler’s implementation:
+
+  - **`unsafeDevRegistryPath`** (`string`): Filesystem path to the Dev Registry directory.
+  - **`unsafeDevRegistryDurableObjectProxy`** (`boolean`): When enabled, exposes internal Durable Objects to other local dev sessions and allows Workers to connect to external Durable Objects.
+
+  Example usage:
+
+  ```ts
+  import { Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+  	scriptPath: "./dist/worker.js",
+  	unsafeDevRegistryPath: "/registry",
+  	unsafeDevRegistryDurableObjectProxy: true,
+  	// ...other options
+  });
+  ```
+
+### Patch Changes
+
+- [#9440](https://github.com/cloudflare/workers-sdk/pull/9440) [`8c7ce77`](https://github.com/cloudflare/workers-sdk/commit/8c7ce7728ccc467aa19b60c8f32c90e6f06442d1) Thanks [@penalosa](https://github.com/penalosa)! - Preserve original error messages
+
+- [#9390](https://github.com/cloudflare/workers-sdk/pull/9390) [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc) Thanks [@penalosa](https://github.com/penalosa)! - Support additional Mixed Mode resources in Wrangler:
+
+  - AI
+  - Browser
+  - Images
+  - Vectorize
+  - Dispatch Namespaces
+
+- [#9390](https://github.com/cloudflare/workers-sdk/pull/9390) [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc) Thanks [@penalosa](https://github.com/penalosa)! - Additional option for the Miniflare plugin interface to allow defining workerd extensions without having to include deduplication logic.
+
 ## 4.20250525.0
 
 ### Minor Changes
