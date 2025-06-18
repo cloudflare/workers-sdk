@@ -88,7 +88,6 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 	async initRunner(
 		worker: ReplaceWorkersTypes<Fetcher>,
-		root: string,
 		workerConfig: WorkerConfig
 	) {
 		this.#worker = worker;
@@ -98,7 +97,6 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			{
 				headers: {
 					[VITE_DEV_METADATA_HEADER]: JSON.stringify({
-						root,
 						entryPath: workerConfig.main,
 					}),
 					upgrade: "websocket",
@@ -206,7 +204,7 @@ export function initRunners(
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(worker, viteDevServer.config.root, workerConfig);
+				).initRunner(worker, workerConfig);
 			}
 		)
 	);
