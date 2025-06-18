@@ -499,6 +499,42 @@ describe.each([{ cmd: "wrangler dev" }])(
 			await worker.readUntil(/foobar 12/);
 			await worker.readUntil(/end/);
 		});
+
+		it(`prints additional modules when vendored modules are present during ${cmd}`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "index.py"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["python_workers"]
+			`,
+				"arithmetic.py": dedent`
+					def mul(a,b):
+						return a*b`,
+				"index.py": dedent`
+					from arithmetic import mul
+
+					from js import Response
+					def on_fetch(request):
+						return Response.new(f"py hello world {mul(2,3)}")`,
+				"vendor/mod1.py": "print(42)",
+				"vendor/mod2.py": "def hello(): return 42",
+				"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+			});
+			const worker = helper.runLongLived(cmd);
+
+			await worker.waitForReady();
+
+			await worker.readUntil(/Attaching additional modules:/);
+			await worker.readUntil(/Vendored Modules/);
+		});
 	}
 );
 
@@ -1292,7 +1328,7 @@ describe("watch mode", () => {
 
 				({ response, cachedETags } = await fetchWithETag(
 					`${url}/workers/index.html`,
-					cachedETags
+					{}
 				));
 				expect(await response.text()).toBe("Cloudflare Workers!");
 
@@ -1432,6 +1468,7 @@ describe("watch mode", () => {
 					`${url}/index.html`,
 					{}
 				);
+
 				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
 				await helper.seed({
@@ -1586,7 +1623,7 @@ describe("watch mode", () => {
 				expect(response.status).toBe(200);
 				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
-				// verify response from the User Worker
+				// verify response from User Worker
 				response = await fetch(`${url}/hey`);
 				expect(response.status).toBe(200);
 				expect(await response.text()).toBe("Hello from user Worker!");

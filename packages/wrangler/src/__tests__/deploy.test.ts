@@ -12474,6 +12474,67 @@ export default{
 			`);
 		});
 
+		it("should print vendor modules correctly in table", async () => {
+			writeWranglerConfig({
+				main: "index.py",
+				compatibility_flags: ["python_workers"],
+			});
+
+			// Create main Python file
+			const mainPython =
+				"from js import Response;\ndef fetch(request):\n return Response.new('hello')";
+			await fs.promises.writeFile("index.py", mainPython);
+
+			// Create vendor directory and files
+			await fs.promises.mkdir("vendor", { recursive: true });
+			await fs.promises.writeFile(
+				"vendor/module1.so",
+				"binary content for module 1"
+			);
+			await fs.promises.writeFile(
+				"vendor/module2.py",
+				"# Python vendor module 2\nprint('hello')"
+			);
+
+			// Create a regular Python module
+			await fs.promises.writeFile(
+				"helper.py",
+				"# Helper module\ndef helper(): pass"
+			);
+
+			const expectedModules = {
+				"index.py": mainPython,
+				"helper.py": "# Helper module\ndef helper(): pass",
+			};
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.py",
+				expectedModules,
+			});
+
+			await runWrangler("deploy");
+
+			// Check that the table output shows vendor modules aggregated correctly
+			expect(std.out).toMatchInlineSnapshot(`
+				"┌─┬─┬─┐
+				│ Name │ Type │ Size │
+				├─┼─┼─┤
+				│ helper.py │ python │ xx KiB │
+				├─┼─┼─┤
+				│ Vendored Modules │ │ xx KiB │
+				├─┼─┼─┤
+				│ Total (2 modules) │ │ xx KiB │
+				└─┴─┴─┘
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
 		it("should upload python module specified in CLI args", async () => {
 			writeWranglerConfig({
 				compatibility_flags: ["python_workers"],
