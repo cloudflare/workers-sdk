@@ -214,7 +214,7 @@ function getWranglerCommand(command: string) {
 	const wranglerBin = path.resolve(
 		`${__dirname}/../../../packages/wrangler/bin/wrangler.js`
 	);
-	return `${wranglerBin} ${command.slice("wrangler ".length)}`;
+	return `node ${wranglerBin} ${command.slice("wrangler ".length)}`;
 }
 
 export async function runWrangler(
