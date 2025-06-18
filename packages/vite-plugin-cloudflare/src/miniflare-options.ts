@@ -660,7 +660,7 @@ export async function getPreviewMiniflareOptions(
 	const resolvedViteConfig = vitePreviewServer.config;
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
-			resolvedPluginConfig.workerConfigs.map(async (workerConfig, i) => {
+			resolvedPluginConfig.workers.map(async (workerConfig, i) => {
 				const bindings =
 					unstable_convertConfigBindingsToStartWorkerBindings(workerConfig);
 
@@ -704,7 +704,7 @@ export async function getPreviewMiniflareOptions(
 
 				logUnknownTails(
 					workerOptions.tails,
-					resolvedPluginConfig.workerConfigs,
+					resolvedPluginConfig.workers,
 					vitePreviewServer.config.logger.warn
 				);
 

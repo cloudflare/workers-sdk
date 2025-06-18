@@ -86,7 +86,7 @@ interface WorkersResolvedConfig extends BaseResolvedConfig {
 
 interface PreviewResolvedConfig extends BaseResolvedConfig {
 	type: "preview";
-	workerConfigs: Unstable_Config[];
+	workers: Unstable_Config[];
 }
 
 export type ResolvedPluginConfig<
@@ -121,10 +121,7 @@ export function resolvePluginConfig(
 		return {
 			...shared,
 			type: "preview",
-			workerConfigs: getWorkerConfigs(
-				root,
-				shared.experimental.mixedMode ?? false
-			),
+			workers: getWorkerConfigs(root, shared.experimental.mixedMode ?? false),
 		};
 	}
 

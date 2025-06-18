@@ -7,11 +7,7 @@ import type { Miniflare } from "miniflare";
 import type * as vite from "vite";
 
 /**
- * Gets the inspector port option that should be passed to miniflare based on the user's plugin config
- *
- * @param pluginConfig the user plugin configs
- * @param viteServer the vite (dev or preview) server
- * @returns the inspector port to require from miniflare or false if debugging is disabled
+ * Gets the inspector port option that should be passed to Miniflare based on the user's plugin config
  */
 export async function getInputInspectorPortOption(
 	resolvedPluginConfig: ResolvedPluginConfig,
@@ -53,10 +49,7 @@ export async function getInputInspectorPortOption(
 }
 
 /**
- * Gets the resolved port of the inspector provided by miniflare
- *
- * @param pluginConfig the user's plugin configuration
- * @returns the resolved port of null if the user opted out of debugging
+ * Gets the resolved inspector port provided by Miniflare
  */
 export async function getResolvedInspectorPort(
 	resolvedPluginConfig: ResolvedPluginConfig,
@@ -74,9 +67,7 @@ function getFirstAvailablePort(start: number) {
 }
 
 /**
- * Modifies the url printing logic to also include a url that developers can use to open devtools to debug their Worker(s)
- *
- * @param server a vite server (dev or preview)
+ * Modifies the URL printing logic to also include a URL that developers can use to open DevTools to debug their Worker(s)
  */
 export function addDebugToVitePrintUrls(
 	server: vite.ViteDevServer | vite.PreviewServer
@@ -104,27 +95,23 @@ export function addDebugToVitePrintUrls(
 }
 
 /**
- * Generate an HTML text that comprises of a single script that:
- *  - redirects the page to the devtools for the debugging of the first available worker
- *  - opens tags to the devtools for all the remaining workers if any
+ * Generate HTML that comprises a single script that:
+ *  - redirects the page to the DevTools for debugging the first available Worker
+ *  - opens tabs to the DevTools for all the remaining workers if any
  *
- * Note: this works based on the miniflare inspector proxy logic (where workers are available via
- * paths comprised of their names)
- *
- * @param workerNames the names of all the available workers
- * @param inspectorPort the inspector port that miniflare is using
- * @returns the generated html
+ * Note: this works based on the Miniflare inspector proxy logic (where Workers are available via
+ * their names)
  */
 export function getDebugPathHtml(workerNames: string[], inspectorPort: number) {
 	// this function should always be called only when there is at least one worker to debug
 	assert(workerNames.length >= 1, "no workers present to debug");
 
 	const workerDevtoolsUrls = workerNames.map((workerName) => {
-		const localHost = `localhost:${inspectorPort}/${workerName}`;
+		const localhost = `localhost:${inspectorPort}/${workerName}`;
 		const searchParams = new URLSearchParams({
 			theme: "systemPreferred",
 			debugger: "true",
-			ws: localHost,
+			ws: localhost,
 			domain: workerName,
 		});
 		const devtoolsFrontendUrl = `https://devtools.devprod.cloudflare.dev/js_app?${searchParams}`;

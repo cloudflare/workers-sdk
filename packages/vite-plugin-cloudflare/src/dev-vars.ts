@@ -3,14 +3,11 @@ import * as path from "node:path";
 import type { ResolvedPluginConfig } from "./plugin-config";
 
 /**
- * Gets the content of a the potential `.dev.vars` target file
+ * Gets the content of the `.dev.vars` target file
  *
  * Note: This resolves the .dev.vars file path following the same logic
  *       as `loadDotEnv` in `/packages/wrangler/src/config/index.ts`
  *       the two need to be kept in sync
- *
- * @param configPath the path to the worker's wrangler config file
- * @param cloudflareEnv the target cloudflare environment
  */
 export function getDotDevDotVarsContent(
 	configPath: string,
@@ -36,7 +33,7 @@ export function getDotDevDotVarsContent(
 }
 
 /**
- * Returns true if the `changedFile` matches one of a potential .dev.vars file.
+ * Returns `true` if the `changedFile` matches a `.dev.vars` file.
  */
 export function hasDotDevDotVarsFileChanged(
 	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">,

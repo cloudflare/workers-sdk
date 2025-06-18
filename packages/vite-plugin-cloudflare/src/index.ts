@@ -471,7 +471,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		// Plugin to provide a fallback entry file
 		{
 			name: "vite-plugin-cloudflare:fallback-entry",
-			apply: "build",
 			resolveId(source) {
 				if (source === "virtual:__cloudflare_fallback_entry__") {
 					return `\0virtual:__cloudflare_fallback_entry__`;
@@ -772,18 +771,18 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				assertIsPreview(resolvedPluginConfig);
 
 				if (
-					resolvedPluginConfig.workerConfigs.length >= 1 &&
+					resolvedPluginConfig.workers.length >= 1 &&
 					resolvedPluginConfig.inspectorPort !== false
 				) {
 					addDebugToVitePrintUrls(vitePreviewServer);
 				}
 
-				const workerNames = resolvedPluginConfig.workerConfigs.map((worker) => {
+				const workerNames = resolvedPluginConfig.workers.map((worker) => {
 					assert(worker.name, "Expected the Worker to have a name");
 					return worker.name;
 				});
 
-				vitePreviewServer.middlewares.use(async (req, res, next) => {
+				vitePreviewServer.middlewares.use(async (_, res, next) => {
 					const resolvedInspectorPort =
 						await getResolvedInspectorPort(resolvedPluginConfig);
 
