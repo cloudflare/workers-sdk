@@ -1,5 +1,6 @@
 import { spawn, StdioOptions } from "child_process";
 import { existsSync, statSync } from "fs";
+import { dockerLoginManagedRegistry } from "./login";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = async (
@@ -29,7 +30,51 @@ export const runDockerCmd = async (
 	});
 };
 
-export const verifyDockerInstalled = async (dockerPath: string) => {
+export const runDockerCmdWithOutput = async (
+	dockerPath: string,
+	args: string[]
+): Promise<string> => {
+	const child = spawn(dockerPath, args, {
+		stdio: ["inherit", "pipe", "pipe"],
+	});
+
+	let stdout = "";
+	let stderr = "";
+
+	child.stdout?.on("data", (data) => {
+		stdout += data.toString();
+	});
+
+	child.stderr?.on("data", (data) => {
+		stderr += data.toString();
+	});
+
+	let errorHandled = false;
+
+	return new Promise((resolve, reject) => {
+		child.on("close", (code) => {
+			if (code === 0) {
+				resolve(stdout.trim());
+			} else if (!errorHandled) {
+				errorHandled = true;
+				reject(new Error(`Docker command exited with code: ${code}`));
+			}
+		});
+		child.on("error", (err) => {
+			if (!errorHandled) {
+				errorHandled = true;
+				reject(new Error(`Docker command failed: ${err.message}`));
+			}
+		});
+	});
+};
+
+export const verifyLocalDevSupported = async (dockerPath: string) => {
+	if (process.platform === "win32") {
+		throw new Error(
+			"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container part of your application."
+		);
+	}
 	try {
 		await runDockerCmd(dockerPath, ["info"], ["inherit", "pipe", "pipe"]);
 	} catch {
@@ -85,4 +130,50 @@ export const isDockerfile = (image: string): boolean => {
 		);
 	}
 	return false;
+};
+
+/**
+ * Kills and removes any containers which come from the given image tag
+ */
+export const cleanupContainers = async (
+	dockerPath: string,
+	imageTags: Set<string>
+) => {
+	if (imageTags.size === 0) {
+		return true;
+	}
+
+	try {
+		// Find all containers (stopped and running) for each built image in parallel
+		const containerPromises = Array.from(imageTags).map(async (imageTag) => {
+			return await getContainers(dockerPath, imageTag);
+		});
+		const containerResults = await Promise.all(containerPromises);
+		const allContainerIds = containerResults.flat();
+		if (allContainerIds.length === 0) {
+			return true;
+		}
+
+		// Workerd should have stopped all containers, but clean up any in case. Sends a sigkill.
+		await runDockerCmd(
+			dockerPath,
+			["rm", "--force", ...allContainerIds],
+			["inherit", "pipe", "pipe"]
+		);
+		return true;
+	} catch (error) {
+		return false;
+	}
+};
+
+const getContainers = async (dockerPath: string, ancestorImage: string) => {
+	const output = await runDockerCmdWithOutput(dockerPath, [
+		"ps",
+		"-a",
+		"--filter",
+		`ancestor=${ancestorImage}`,
+		"--format",
+		"{{.ID}}",
+	]);
+	return output ? output.split("\n").filter((line) => line.trim()) : [];
 };

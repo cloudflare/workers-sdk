@@ -1,7 +1,9 @@
 import assert from "node:assert";
 import path from "node:path";
+import { isDockerfile } from "@cloudflare/containers-shared";
 import { watch } from "chokidar";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
+import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig } from "../../config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
@@ -18,6 +20,7 @@ import {
 } from "../../environment-variables/misc-variables";
 import { UserError } from "../../errors";
 import { getFlag } from "../../experimental-flags";
+import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -52,7 +55,6 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "./types";
-import type { WorkerOptions } from "miniflare";
 
 type ConfigControllerEventMap = ControllerEventMap & {
 	configUpdate: [ConfigUpdateEvent];
@@ -159,6 +161,7 @@ async function resolveDevConfig(
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
 		containerEngine: input.dev?.containerEngine ?? getDockerHost(),
+		containerBuildId: input.dev?.containerBuildId,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -341,7 +344,7 @@ async function resolveConfig(
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
 			exports: entry.exports,
 		},
-		containers: resolveContainerConfig(config),
+		containers: config.containers,
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
@@ -400,6 +403,15 @@ async function resolveConfig(
 		);
 	}
 
+	// for pulling containers, we need to make sure the OpenAPI config for the
+	// container API client is properly set
+	const needsPulling = resolved.containers?.some(
+		(c) => !isDockerfile(c.image ?? c.configuration.image)
+	);
+	if (needsPulling && !resolved.dev.remote) {
+		await fillOpenAPIConfiguration(config, isNonInteractiveOrCI());
+	}
+
 	// TODO(queues) support remote wrangler dev
 	const queues = extractBindingsOfType("queue", resolved.bindings);
 	if (
@@ -430,25 +442,6 @@ async function resolveConfig(
 	}
 
 	return resolved;
-}
-
-// TODO: move to containers-shared and use to merge config and args for container commands too
-function resolveContainerConfig(
-	config: Config
-): StartDevWorkerOptions["containers"] {
-	const containers: WorkerOptions["containers"] = {};
-	if (!config.dev.enable_containers) {
-		return containers;
-	}
-	for (const container of config.containers ?? []) {
-		containers[container.class_name] = {
-			image: container.image ?? container.configuration.image,
-			maxInstances: container.max_instances,
-			imageBuildContext: container.image_build_context,
-			name: container.name,
-		};
-	}
-	return containers;
 }
 
 export class ConfigController extends Controller<ConfigControllerEventMap> {

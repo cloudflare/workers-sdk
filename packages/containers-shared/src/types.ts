@@ -18,3 +18,13 @@ export type BuildArgs = {
 	/** sets --network=host at build time. only used by workers CI. */
 	setNetworkToHost?: boolean;
 };
+
+/** build/pull agnostic container options */
+export type ContainerDevOptions = {
+	/** may be dockerfile or registry link */
+	image: string;
+	/** formatted as cloudflare-dev/workername-DOclassname:build-id */
+	imageTag: string;
+	imageBuildContext?: string;
+	args?: Record<string, string>;
+};
