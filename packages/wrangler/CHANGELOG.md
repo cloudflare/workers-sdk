@@ -1,5 +1,16 @@
 # wrangler
 
+## 4.20.3
+
+### Patch Changes
+
+- [#9621](https://github.com/cloudflare/workers-sdk/pull/9621) [`08be3ed`](https://github.com/cloudflare/workers-sdk/commit/08be3ed057aad1af8c5a067c57fcbe5896e246b0) Thanks [@gabivlj](https://github.com/gabivlj)! - wrangler containers: 'default' scheduling policy should be the default
+
+- [#9586](https://github.com/cloudflare/workers-sdk/pull/9586) [`d1d34fe`](https://github.com/cloudflare/workers-sdk/commit/d1d34fedd1276803223830b8d6670c1b21e72308) Thanks [@penalosa](https://github.com/penalosa)! - Remove the Mixed Mode naming in favour of "remote bindings"/"remote proxy"
+
+- Updated dependencies [[`d1d34fe`](https://github.com/cloudflare/workers-sdk/commit/d1d34fedd1276803223830b8d6670c1b21e72308)]:
+  - miniflare@4.20250617.1
+
 ## 4.20.2
 
 ### Patch Changes
