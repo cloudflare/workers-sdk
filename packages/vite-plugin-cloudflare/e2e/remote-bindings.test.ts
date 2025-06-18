@@ -1,6 +1,4 @@
-import { execSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import fs from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import { setTimeout } from "node:timers/promises";
@@ -16,14 +14,8 @@ import {
 const isWindows = os.platform() === "win32";
 const commands = ["dev", "buildAndPreview"] as const;
 
-if (
-	isWindows ||
-	!process.env.CLOUDFLARE_ACCOUNT_ID ||
-	!process.env.CLOUDFLARE_API_TOKEN
-) {
-	describe.skip(
-		"Skipping remote bindings tests on Windows or without account credentials."
-	);
+if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
+	describe.skip("Skipping remote bindings tests without account credentials.");
 } else {
 	describe
 		// Note: the reload test applies changes to the fixture files, so we do want the
@@ -57,18 +49,19 @@ if (
 			});
 
 			describe.each(commands)('with "%s" command', (command) => {
-				test("can fetch from both local (/auxiliary) and remote workers", async ({
-					expect,
-				}) => {
-					const proc = await runLongLived("pnpm", command, projectPath);
-					const url = await waitForReady(proc);
-					expect(await fetchJson(url)).toEqual({
-						localWorkerResponse: {
-							remoteWorkerResponse: "Hello from an alternative remote worker",
-						},
-						remoteWorkerResponse: "Hello from a remote worker",
-					});
-				});
+				test.skipIf(isWindows && command === "buildAndPreview")(
+					"can fetch from both local (/auxiliary) and remote workers",
+					async ({ expect }) => {
+						const proc = await runLongLived("pnpm", command, projectPath);
+						const url = await waitForReady(proc);
+						expect(await fetchJson(url)).toEqual({
+							localWorkerResponse: {
+								remoteWorkerResponse: "Hello from an alternative remote worker",
+							},
+							remoteWorkerResponse: "Hello from a remote worker",
+						});
+					}
+				);
 			});
 
 			test("reflects changes applied during dev", async ({ expect }) => {
