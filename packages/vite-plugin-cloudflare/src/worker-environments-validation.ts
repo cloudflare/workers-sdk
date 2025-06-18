@@ -6,7 +6,7 @@ import {
 	isNodeCompat,
 	NODEJS_MODULES_RE,
 } from "./node-js-compat";
-import type { WorkerPluginConfig } from "./plugin-config";
+import type { WorkersResolvedConfig } from "./plugin-config";
 import type * as vite from "vite";
 
 /**
@@ -18,7 +18,7 @@ import type * as vite from "vite";
  * @param resolvedViteConfig the vite resolved config
  */
 export function validateWorkerEnvironmentsResolvedConfigs(
-	resolvedPluginConfig: WorkerPluginConfig,
+	resolvedPluginConfig: WorkersResolvedConfig,
 	resolvedViteConfig: vite.ResolvedConfig
 ) {
 	const workersEnvironmentNames = Object.keys(resolvedPluginConfig.workers);

@@ -1,6 +1,5 @@
 import * as path from "node:path";
 import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
-import getPort, { portNumbers } from "get-port";
 import {
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
@@ -30,10 +29,6 @@ export type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
 export type MaybePromise<T> = Promise<T> | T;
 
 export type Defined<T> = Exclude<T, undefined>;
-
-export function getFirstAvailablePort(start: number) {
-	return getPort({ port: portNumbers(start, 65535) });
-}
 
 export function withTrailingSlash(path: string): string {
 	return path.endsWith("/") ? path : `${path}/`;
