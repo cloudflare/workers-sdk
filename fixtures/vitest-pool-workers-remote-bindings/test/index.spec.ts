@@ -18,7 +18,7 @@ describe("Hello World worker", () => {
 			const response = await env.MY_WORKER.fetch(request, env, ctx);
 			await waitOnExecutionContext(ctx);
 			expect(await response.text()).toMatchInlineSnapshot(
-				`"Hello from a remote worker part of the vitest-pool-workers remote bindings fixture!"`
+				`"Hello from a remote Worker part of the vitest-pool-workers remote bindings fixture!"`
 			);
 		}
 	);
