@@ -5,7 +5,7 @@
 	"containers": [
 		{
 			"configuration": {
-				"image": "registry.cloudflare.com/f7f78ebb28c2a224a9a46a3007350b7a/test:tag",
+				"image": "registry.cloudflare.com/8d783f274e1f82dc46744c297b015a2f/ci-container-dont-delete:latest",
 			},
 			"class_name": "Container",
 			"name": "http2",
