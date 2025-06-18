@@ -1,5 +1,4 @@
 ---
-"@cloudflare/containers-shared": patch
 "wrangler": patch
 ---
 
