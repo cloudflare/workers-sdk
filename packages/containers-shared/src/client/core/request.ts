@@ -9,19 +9,20 @@ import type { ApiRequestOptions } from "./ApiRequestOptions";
 import type { ApiResult } from "./ApiResult";
 import type { OnCancel } from "./CancelablePromise";
 
-interface FetchError {
+interface FetchResponseInfo {
 	code: number;
 	documentation_url?: string;
 	message: string;
-	error_chain?: FetchError[];
+	source?: {
+		pointer?: string;
+	};
 }
 
-interface FetchResult<ResponseType = unknown> {
+interface FetchResult<ResponseType = any> {
 	success: boolean;
 	result: ResponseType;
-	errors: FetchError[];
-	messages?: string[];
-	result_info?: unknown;
+	errors: FetchResponseInfo[];
+	messages?: FetchResponseInfo[];
 }
 
 const isDefined = <T>(
