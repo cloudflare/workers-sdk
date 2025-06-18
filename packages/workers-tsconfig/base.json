@@ -14,6 +14,7 @@
 		"module": "Preserve",
 		"lib": ["ES2022"],
 		"noEmit": true,
-		"noUnusedLocals": true
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
 	}
 }
