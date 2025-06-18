@@ -53,12 +53,14 @@ export async function getInputInspectorPortOption(
  */
 export async function getResolvedInspectorPort(
 	resolvedPluginConfig: ResolvedPluginConfig,
-	miniflare?: Miniflare
+	miniflare: Miniflare | undefined
 ) {
 	if (miniflare && resolvedPluginConfig.inspectorPort !== false) {
 		const miniflareInspectorUrl = await miniflare.getInspectorURL();
+
 		return Number.parseInt(miniflareInspectorUrl.port);
 	}
+
 	return null;
 }
 

@@ -447,7 +447,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					vitePreviewServer
 				);
 
-				const miniflare = new Miniflare(
+				miniflare = new Miniflare(
 					await getPreviewMiniflareOptions(
 						resolvedPluginConfig,
 						vitePreviewServer,
@@ -455,14 +455,17 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					)
 				);
 
-				handleWebSocket(
-					vitePreviewServer.httpServer,
-					() => miniflare.dispatchFetch
-				);
+				handleWebSocket(vitePreviewServer.httpServer, () => {
+					assert(miniflare, `Miniflare not defined`);
+
+					return miniflare.dispatchFetch;
+				});
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 				vitePreviewServer.middlewares.use(
 					createRequestHandler((request) => {
+						assert(miniflare, `Miniflare not defined`);
+
 						return miniflare.dispatchFetch(request, { redirect: "manual" });
 					})
 				);
@@ -739,6 +742,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			//       the preview middleware here can take precedence
 			enforce: "pre",
 			configureServer(viteDevServer) {
+				assertIsNotPreview(resolvedPluginConfig);
+
 				if (
 					resolvedPluginConfig.type === "workers" &&
 					pluginConfig.inspectorPort !== false
@@ -753,18 +758,19 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							)
 						: [];
 
-				viteDevServer.middlewares.use(DEBUG_PATH, async (req, res, next) => {
-					const resolvedInspectorPort =
-						await getResolvedInspectorPort(resolvedPluginConfig);
+				viteDevServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
+					const resolvedInspectorPort = await getResolvedInspectorPort(
+						resolvedPluginConfig,
+						miniflare
+					);
 
 					if (resolvedInspectorPort) {
 						const html = getDebugPathHtml(workerNames, resolvedInspectorPort);
 						res.setHeader("Content-Type", "text/html");
 						res.end(html);
-						return;
+					} else {
+						next();
 					}
-
-					next();
 				});
 			},
 			async configurePreviewServer(vitePreviewServer) {
@@ -782,18 +788,19 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return worker.name;
 				});
 
-				vitePreviewServer.middlewares.use(async (_, res, next) => {
-					const resolvedInspectorPort =
-						await getResolvedInspectorPort(resolvedPluginConfig);
+				vitePreviewServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
+					const resolvedInspectorPort = await getResolvedInspectorPort(
+						resolvedPluginConfig,
+						miniflare
+					);
 
 					if (resolvedInspectorPort) {
 						const html = getDebugPathHtml(workerNames, resolvedInspectorPort);
 						res.setHeader("Content-Type", "text/html");
 						res.end(html);
-						return;
+					} else {
+						next();
 					}
-
-					next();
 				});
 			},
 		},
