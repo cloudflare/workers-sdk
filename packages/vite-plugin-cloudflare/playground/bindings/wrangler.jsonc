@@ -8,4 +8,9 @@
 			"id": "test-kv-id",
 		},
 	],
+	"unsafe_hello_world": [
+		{
+			"binding": "HELLO_WORLD",
+		},
+	],
 }
