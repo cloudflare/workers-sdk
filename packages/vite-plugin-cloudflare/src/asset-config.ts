@@ -17,7 +17,7 @@ import {
 import type { ResolvedPluginConfig } from "./plugin-config";
 import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types";
 import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
-import type { ResolvedConfig } from "vite";
+import type * as vite from "vite";
 import type { Unstable_Config } from "wrangler";
 
 /**
@@ -26,7 +26,7 @@ import type { Unstable_Config } from "wrangler";
  */
 export function hasAssetsConfigChanged(
 	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">,
-	resolvedViteConfig: ResolvedConfig,
+	resolvedViteConfig: vite.ResolvedConfig,
 	changedFilePath: string
 ) {
 	if (!resolvedPluginConfig.experimental?.headersAndRedirectsDevModeSupport) {
@@ -45,7 +45,7 @@ export function hasAssetsConfigChanged(
 export function getAssetsConfig(
 	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">,
 	entryWorkerConfig: Unstable_Config | undefined,
-	resolvedConfig: ResolvedConfig
+	resolvedConfig: vite.ResolvedConfig
 ): AssetConfig {
 	const assetsConfig =
 		resolvedPluginConfig.type === "assets-only"
@@ -130,10 +130,10 @@ export function getAssetsConfig(
 	};
 }
 
-function getRedirectsConfigPath(config: ResolvedConfig): string {
+function getRedirectsConfigPath(config: vite.ResolvedConfig): string {
 	return path.join(config.publicDir, REDIRECTS_FILENAME);
 }
 
-function getHeadersConfigPath(config: ResolvedConfig): string {
+function getHeadersConfigPath(config: vite.ResolvedConfig): string {
 	return path.join(config.publicDir, HEADERS_FILENAME);
 }
