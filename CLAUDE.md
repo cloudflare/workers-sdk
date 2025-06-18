@@ -67,7 +67,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 **Testing Standards:**
 
 - Unit tests with Vitest for all packages
-- Fixture tests in `/fixtures` directory for filesystem/worker scenarios
+- Fixture tests in `/fixtures` directory for filesystem/Worker scenarios
 - E2E tests require real Cloudflare account credentials
 - Use `vitest-pool-workers` for testing actual Workers runtime behavior
 
