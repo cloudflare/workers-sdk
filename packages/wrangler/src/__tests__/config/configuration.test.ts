@@ -2306,6 +2306,122 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[containers]", () => {
+			it("should error if containers is not an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ containers: "test" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers\\" should be an object, but got \\"test\\""
+				`);
+			});
+
+			it("should error if containers is an object that is not an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ containers: { something: "here" } } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers\\" should be an array, but got {\\"something\\":\\"here\\"}"
+				`);
+			});
+
+			it("should error if containers is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ containers: "test" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers\\" should be an object, but got \\"test\\""
+				`);
+			});
+
+			it("should error if containers is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ containers: 22 } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers\\" should be an object, but got 22"
+				`);
+			});
+
+			it("should error if no containers name and no worker name are provided", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								image: "something",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"Must have either a top level name or containers.name defined\\""
+				`);
+			});
+
+			it("should provide a name if no container name is provided and worker name exists", () => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						containers: [
+							{
+								image: "something",
+								class_name: "test-class",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						configuration: {
+							image: "something",
+						},
+						class_name: "test-class",
+						name: "test-worker-name-test-class",
+					},
+				]);
+				config.containers &&
+					expect(config.containers[0].name).toEqual(
+						"test-worker-name-test-class"
+					);
+			});
+		});
+
 		describe("[kv_namespaces]", () => {
 			it("should error if kv_namespaces is an object", () => {
 				const { diagnostics } = normalizeAndValidateConfig(

@@ -1247,7 +1247,7 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"containers",
-			validateContainerAppConfig,
+			validateContainerApp(envName, rawEnv.name),
 			undefined
 		),
 		send_email: notInheritable(
@@ -2366,114 +2366,126 @@ const validateBindingArray =
 		return isValid;
 	};
 
-const validateContainerAppConfig: ValidatorFn = (
-	diagnostics,
-	_field,
-	value
-) => {
-	if (!value) {
-		return true;
-	}
+function validateContainerApp(
+	envName: string,
+	topLevelName: string | undefined
+): ValidatorFn {
+	return (diagnostics, field, value, config) => {
+		if (!value) {
+			return true;
+		}
 
-	if (typeof value !== "object") {
-		diagnostics.errors.push(
-			`"containers" should be an object, but got ${JSON.stringify(value)}`
-		);
-		return false;
-	}
-
-	if (!Array.isArray(value)) {
-		diagnostics.errors.push(
-			`"containers" should be an array, but got ${JSON.stringify(value)}`
-		);
-		return false;
-	}
-
-	for (const containerApp of value) {
-		const containerAppOptional =
-			containerApp as Partial<CreateApplicationRequest> & {
-				image?: string | undefined;
-			};
-		if (!isRequiredProperty(containerAppOptional, "name", "string")) {
+		if (typeof value !== "object") {
 			diagnostics.errors.push(
-				`"containers.name" should be defined and a string`
+				`"containers" should be an object, but got ${JSON.stringify(value)}`
 			);
+			return false;
 		}
 
-		if (
-			"rollout_step_percentage" in containerAppOptional &&
-			containerAppOptional.rollout_step_percentage !== undefined
-		) {
-			if (
-				typeof containerAppOptional.rollout_step_percentage !== "number" ||
-				containerAppOptional.rollout_step_percentage > 100 ||
-				containerAppOptional.rollout_step_percentage < 25
-			) {
-				diagnostics.errors.push(
-					`"containers.rollout_step_percentage" should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
-				);
+		if (!Array.isArray(value)) {
+			diagnostics.errors.push(
+				`"containers" should be an array, but got ${JSON.stringify(value)}`
+			);
+			return false;
+		}
+
+		for (const containerApp of value) {
+			const containerAppOptional =
+				containerApp as Partial<CreateApplicationRequest> & {
+					image?: string | undefined;
+					class_name?: string | undefined;
+				};
+
+			if (!isRequiredProperty(containerAppOptional, "name", "string")) {
+				if (!topLevelName) {
+					diagnostics.errors.push(
+						`"Must have either a top level name or containers.name defined"`
+					);
+				} else {
+					// if there is worker name defined but no name for this container app default to:
+					// worker_name-class_name[-envName].
+					let name = `${topLevelName}-${containerAppOptional.class_name}`;
+					// config is undefined when we are at the top level instead of in a named env
+					name += config === undefined ? "" : `-${envName}`;
+					containerAppOptional.name = name.toLowerCase().replace(/ /g, "");
+				}
 			}
-		}
 
-		if (
-			"rollout_kind" in containerAppOptional &&
-			containerAppOptional.rollout_kind !== undefined
-		) {
 			if (
-				typeof containerAppOptional.rollout_kind !== "string" ||
-				!["full_auto", "full_manual", "none"].includes(
-					containerAppOptional.rollout_kind
+				"rollout_step_percentage" in containerAppOptional &&
+				containerAppOptional.rollout_step_percentage !== undefined
+			) {
+				if (
+					typeof containerAppOptional.rollout_step_percentage !== "number" ||
+					containerAppOptional.rollout_step_percentage > 100 ||
+					containerAppOptional.rollout_step_percentage < 25
+				) {
+					diagnostics.errors.push(
+						`"containers.rollout_step_percentage" should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
+					);
+				}
+			}
+
+			if (
+				"rollout_kind" in containerAppOptional &&
+				containerAppOptional.rollout_kind !== undefined
+			) {
+				if (
+					typeof containerAppOptional.rollout_kind !== "string" ||
+					!["full_auto", "full_manual", "none"].includes(
+						containerAppOptional.rollout_kind
+					)
+				) {
+					diagnostics.errors.push(
+						`"containers.rollout_kind" should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
+					);
+				}
+			}
+
+			if (
+				"image" in containerAppOptional &&
+				containerAppOptional.image !== undefined
+			) {
+				if (containerAppOptional.configuration?.image !== undefined) {
+					diagnostics.errors.push(
+						`"containers.image" and "containers.configuration.image" can't be defined at the same time`
+					);
+					return false;
+				}
+
+				containerAppOptional.configuration ??= {
+					image: containerAppOptional.image,
+				};
+				containerAppOptional.configuration.image = containerAppOptional.image;
+				delete containerAppOptional["image"];
+			}
+
+			if (!("configuration" in containerAppOptional)) {
+				diagnostics.errors.push(`"containers.configuration" should be defined`);
+			} else if (Array.isArray(containerAppOptional.configuration)) {
+				diagnostics.errors.push(
+					`"containers.configuration" is defined as an array, it should be an object`
+				);
+			} else if (
+				!isRequiredProperty(
+					containerAppOptional.configuration as UserDeploymentConfiguration,
+					"image",
+					"string"
 				)
 			) {
 				diagnostics.errors.push(
-					`"containers.rollout_kind" should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
+					`"containers.image" should be defined and a string`
 				);
 			}
 		}
 
-		if (
-			"image" in containerAppOptional &&
-			containerAppOptional.image !== undefined
-		) {
-			if (containerAppOptional.configuration?.image !== undefined) {
-				diagnostics.errors.push(
-					`"containers.image" and "containers.configuration.image" can't be defined at the same time`
-				);
-				return false;
-			}
-
-			containerAppOptional.configuration ??= {
-				image: containerAppOptional.image,
-			};
-			containerAppOptional.configuration.image = containerAppOptional.image;
-			delete containerAppOptional["image"];
+		if (diagnostics.errors.length > 0) {
+			return false;
 		}
 
-		if (!("configuration" in containerAppOptional)) {
-			diagnostics.errors.push(`"containers.configuration" should be defined`);
-		} else if (Array.isArray(containerAppOptional.configuration)) {
-			diagnostics.errors.push(
-				`"containers.configuration" is defined as an array, it should be an object`
-			);
-		} else if (
-			!isRequiredProperty(
-				containerAppOptional.configuration as UserDeploymentConfiguration,
-				"image",
-				"string"
-			)
-		) {
-			diagnostics.errors.push(
-				`"containers.image" should be defined and a string`
-			);
-		}
-	}
-
-	if (diagnostics.errors.length > 0) {
-		return false;
-	}
-
-	return true;
-};
+		return true;
+	};
+}
 
 const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {
