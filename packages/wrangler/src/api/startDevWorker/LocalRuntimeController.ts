@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import {
-	buildAllContainers,
+	buildOrPullImages,
 	cleanupContainers,
 	getDevContainerImageName,
 } from "@cloudflare/containers-shared";
@@ -222,7 +222,7 @@ export class LocalRuntimeController extends RuntimeController {
 				containerOptions &&
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
-				await buildAllContainers(this.#dockerPath, logger, containerOptions);
+				await buildOrPullImages(this.#dockerPath, logger, containerOptions);
 				this.#currentContainerBuildId = data.config.dev.containerBuildId;
 			}
 

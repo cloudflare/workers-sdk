@@ -1,5 +1,6 @@
 import { spawn, StdioOptions } from "child_process";
 import { existsSync, statSync } from "fs";
+import { dockerLoginManagedRegistry } from "./login";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = async (

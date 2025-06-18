@@ -1,10 +1,7 @@
 import { spawn } from "child_process";
 import { readFileSync } from "fs";
 import path from "path";
-import { dockerImageInspect } from "./inspect";
-import { MF_DEV_CONTAINER_PREFIX } from "./registry";
 import { BuildArgs, ContainerDevOptions, Logger } from "./types";
-import { verifyLocalDevSupported } from "./utils";
 
 export async function constructBuildCommand(
 	options: BuildArgs,
@@ -70,23 +67,7 @@ export function dockerBuild(
 	});
 }
 
-// TODO: this should also pull
-export async function buildAllContainers(
-	dockerPath: string,
-	logger: Logger,
-	containerOptions: ContainerDevOptions[]
-) {
-	await verifyLocalDevSupported(dockerPath);
-	logger.info("Loading container image(s)...");
-	for (const options of containerOptions) {
-		await buildContainer(dockerPath, options);
-	}
-	// Miniflare will log 'Ready on...' before the containers are built, but that is actually the proxy server.
-	// The actual user worker's miniflare instance is blocked until the containers are built
-	logger.info("Container(s) built and ready");
-}
-
-async function buildContainer(
+export async function buildImage(
 	dockerPath: string,
 	options: ContainerDevOptions
 ) {
@@ -100,18 +81,4 @@ async function buildContainer(
 	});
 
 	await dockerBuild(dockerPath, { buildCmd, dockerfile });
-	await checkExposedPorts(dockerPath, options.imageTag);
-}
-
-async function checkExposedPorts(dockerPath: string, imageTag: string) {
-	const output = await dockerImageInspect(dockerPath, {
-		imageTag,
-		formatString: "{{ len .Config.ExposedPorts }}",
-	});
-	if (output === "0" && process.platform !== "linux") {
-		throw new Error(
-			`The container "${imageTag.replace(MF_DEV_CONTAINER_PREFIX + "/", "")}" does not expose any ports.\n` +
-				"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort()` in your Dockerfile."
-		);
-	}
 }

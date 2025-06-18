@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { watch } from "chokidar";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
+import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig } from "../../config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
@@ -18,6 +19,7 @@ import {
 } from "../../environment-variables/misc-variables";
 import { UserError } from "../../errors";
 import { getFlag } from "../../experimental-flags";
+import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -398,6 +400,14 @@ async function resolveConfig(
 				"If this is required in your project, please add your use case to the following issue:\n" +
 				"https://github.com/cloudflare/workers-sdk/issues/583."
 		);
+	}
+
+	if (resolved.containers) {
+		// for containers, we need to make sure the OpenAPI config
+		// (such as baseUrl, etc) is properly set, otherwise Docker
+		// commands such as pushing/pulling to/from a registry will
+		// not work
+		await fillOpenAPIConfiguration(config, isNonInteractiveOrCI());
 	}
 
 	// TODO(queues) support remote wrangler dev
