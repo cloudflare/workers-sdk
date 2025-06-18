@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { MF_DEV_CONTAINER_PREFIX } from "@cloudflare/containers-shared";
+import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import { CoreHeaders, HttpOptions_Style, Log, LogLevel } from "miniflare";
 import {
 	EXTERNAL_AI_WORKER_NAME,
@@ -1415,6 +1415,9 @@ function getImageNameFromDOClassName(
 		return undefined;
 	}
 	return {
-		imageName: `${MF_DEV_CONTAINER_PREFIX}/${container.name}:${config.containerBuildId}`,
+		imageName: getDevContainerImageName(
+			container.class_name,
+			config.containerBuildId
+		),
 	};
 }

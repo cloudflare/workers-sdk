@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import {
 	buildAllContainers,
 	cleanupContainers,
-	MF_DEV_CONTAINER_PREFIX,
+	getDevContainerImageName,
 } from "@cloudflare/containers-shared";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
@@ -406,7 +406,10 @@ export async function getContainerOptions(
 	for (const container of config.containers) {
 		containers.push({
 			image: container.image ?? container.configuration.image,
-			imageTag: `${MF_DEV_CONTAINER_PREFIX}/${container.name}:${config.dev.containerBuildId}`,
+			imageTag: getDevContainerImageName(
+				container.class_name,
+				config.dev.containerBuildId
+			),
 			args: container.image_vars,
 			imageBuildContext: container.image_build_context,
 		});
