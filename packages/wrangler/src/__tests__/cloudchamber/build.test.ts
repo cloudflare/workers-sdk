@@ -77,7 +77,8 @@ describe("buildAndMaybePush", () => {
 		});
 		expect(dockerImageInspect).toHaveBeenCalledWith("/custom/docker/path", {
 			imageTag: `${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
-			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+			formatString:
+				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 		});
 		expect(runDockerCmd).toHaveBeenCalledWith("/custom/docker/path", [
 			"push",
@@ -114,7 +115,8 @@ describe("buildAndMaybePush", () => {
 		expect(dockerImageInspect).toHaveBeenCalledOnce();
 		expect(dockerImageInspect).toHaveBeenCalledWith("docker", {
 			imageTag: `${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
-			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+			formatString:
+				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 		});
 		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
 	});

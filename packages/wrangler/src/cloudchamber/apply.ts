@@ -349,7 +349,12 @@ function sortObjectRecursive<T = Record<string | number, unknown>>(
 }
 
 export async function apply(
-	args: { skipDefaults: boolean | undefined; json: boolean; env?: string },
+	args: {
+		skipDefaults: boolean | undefined;
+		json: boolean;
+		env?: string;
+		pushed?: boolean;
+	},
 	config: Config
 ) {
 	startSection(
@@ -413,7 +418,7 @@ export async function apply(
 
 	for (const appConfigNoDefaults of config.containers) {
 		const application = applicationByNames[appConfigNoDefaults.name];
-		if (!appConfigNoDefaults.configuration.image && application) {
+		if (!args.pushed && application) {
 			appConfigNoDefaults.configuration.image = application.configuration.image;
 		}
 
@@ -780,7 +785,12 @@ export async function applyCommand(
 	config: Config
 ) {
 	return apply(
-		{ skipDefaults: args.skipDefaults, env: args.env, json: args.json },
+		{
+			skipDefaults: args.skipDefaults,
+			env: args.env,
+			json: args.json,
+			pushed: false,
+		},
 		config
 	);
 }
