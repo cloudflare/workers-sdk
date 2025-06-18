@@ -64,8 +64,6 @@ export const runWithLogLevel = <V>(
 	cb: () => V
 ) => overrideLoggerLevel.run({ logLevel: overrideLogLevel }, cb);
 
-overrideLoggerLevel.getStore;
-
 export type TableRow<Keys extends string> = Record<Keys, string>;
 
 function consoleMethodToLoggerLevel(

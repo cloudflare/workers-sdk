@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { validateWorkerEnvironmentsResolvedConfigs } from "../worker-environments-validation";
-import type { WorkerPluginConfig } from "../plugin-config";
+import type { WorkersResolvedConfig } from "../plugin-config";
 import type * as vite from "vite";
 
 function getWorkerPluginConfig(
@@ -23,7 +23,7 @@ function getWorkerPluginConfig(
 
 	return {
 		workers,
-	} as WorkerPluginConfig;
+	} as WorkersResolvedConfig;
 }
 
 type WorkerViteConfig = {

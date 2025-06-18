@@ -3,7 +3,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vite from "vite";
 import { unstable_readConfig } from "wrangler";
-import type { ResolvedPluginConfig } from "./plugin-config";
+import type {
+	AssetsOnlyResolvedConfig,
+	WorkersResolvedConfig,
+} from "./plugin-config";
 
 interface DeployConfig {
 	configPath: string;
@@ -14,7 +17,7 @@ function getDeployConfigPath(root: string) {
 	return path.resolve(root, ".wrangler", "deploy", "config.json");
 }
 
-export function getWorkerConfigs(root: string, mixedModeEnabled: boolean) {
+export function getWorkerConfigs(root: string, remoteBindingsEnabled: boolean) {
 	const deployConfigPath = getDeployConfigPath(root);
 	const deployConfig = JSON.parse(
 		fs.readFileSync(deployConfigPath, "utf-8")
@@ -30,7 +33,7 @@ export function getWorkerConfigs(root: string, mixedModeEnabled: boolean) {
 		);
 		return unstable_readConfig(
 			{ config: resolvedConfigPath },
-			{ experimental: { mixedModeEnabled } }
+			{ experimental: { remoteBindingsEnabled } }
 		);
 	});
 }
@@ -47,7 +50,7 @@ function getRelativePathToWorkerConfig(
 }
 
 export function writeDeployConfig(
-	resolvedPluginConfig: ResolvedPluginConfig,
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
 	resolvedViteConfig: vite.ResolvedConfig
 ) {
 	const deployConfigPath = getDeployConfigPath(resolvedViteConfig.root);

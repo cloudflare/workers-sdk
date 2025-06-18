@@ -37,6 +37,7 @@ import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
+	ContainerEngine,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -61,6 +62,7 @@ export type NormalizeAndValidateConfigArgs = {
 	upstreamProtocol?: string;
 	script?: string;
 	enableContainers?: boolean;
+	containerEngine?: ContainerEngine;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -76,6 +78,12 @@ export function isPagesConfig(rawConfig: RawConfig): boolean {
  * and copying over inheritable fields into named environments.
  *
  * Any errors or warnings from the validation are available in the returned `diagnostics` object.
+ *
+ * @param rawConfig The config loaded from `configPath`
+ * @param configPath The path to the config file
+ * @param userConfigPath
+ * @param args
+ * @returns The normalized `config` and `diagnostics` message
  */
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
@@ -464,6 +472,7 @@ function normalizeAndValidateDev(
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
 		enableContainers: enableContainersArg,
+		containerEngine: containerEngineArg,
 	} = args;
 	assert(
 		localProtocolArg === undefined ||
@@ -479,6 +488,11 @@ function normalizeAndValidateDev(
 	assert(
 		enableContainersArg === undefined ||
 			typeof enableContainersArg === "boolean"
+	);
+	assert(
+		containerEngineArg === undefined ||
+			typeof containerEngineArg === "string" ||
+			typeof containerEngineArg?.localDocker?.socketPath === "string"
 	);
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
@@ -544,6 +558,7 @@ function normalizeAndValidateDev(
 		upstream_protocol,
 		host,
 		enable_containers,
+		container_engine: containerEngineArg,
 	};
 }
 
@@ -2176,7 +2191,7 @@ const validateNamedSimpleBinding =
 
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"binding",
-			...(getFlag("MIXED_MODE") ? ["remote"] : []),
+			...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
 		]);
 
 		return isValid;
@@ -2539,7 +2554,7 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		"binding",
 		"id",
 		"preview_id",
-		...(getFlag("MIXED_MODE") ? ["remote"] : []),
+		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
 	]);
 
 	return isValid;
@@ -2613,7 +2628,7 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"queue",
 			"delivery_delay",
-			...(getFlag("MIXED_MODE") ? ["remote"] : []),
+			...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
 		])
 	) {
 		return false;
@@ -2745,7 +2760,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		"bucket_name",
 		"preview_bucket_name",
 		"jurisdiction",
-		...(getFlag("MIXED_MODE") ? ["remote"] : []),
+		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
 	]);
 
 	return isValid;
@@ -2806,7 +2821,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		"migrations_dir",
 		"migrations_table",
 		"preview_database_id",
-		...(getFlag("MIXED_MODE") ? ["remote"] : []),
+		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
 	]);
 
 	return isValid;
@@ -2845,7 +2860,7 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"index_name",
-		...(getFlag("MIXED_MODE") ? ["remote"] : []),
+		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
 	]);
 
 	return isValid;
@@ -3209,7 +3224,7 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"certificate_id",
-		...(getFlag("MIXED_MODE") ? ["remote"] : []),
+		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
 	]);
 
 	if (!isRemoteValid(value, field, diagnostics)) {
@@ -3768,15 +3783,15 @@ function isRemoteValid(
 	fieldPath: string,
 	diagnostics: Diagnostics
 ) {
-	if (!getFlag("MIXED_MODE")) {
-		// the remote config only applies to mixed mode, if mixed mode
-		// is not enabled just return true and skip this validation
+	if (!getFlag("REMOTE_BINDINGS")) {
+		// the remote config only applies to remote bindings, if remote bindings
+		// are not enabled just return true and skip this validation
 		return true;
 	}
 
-	if (!isOptionalProperty(targetObject, "remote", "boolean")) {
+	if (!isOptionalProperty(targetObject, "experimental_remote", "boolean")) {
 		diagnostics.errors.push(
-			`"${fieldPath}" should, optionally, have a boolean "remote" field but got ${JSON.stringify(
+			`"${fieldPath}" should, optionally, have a boolean "experimental_remote" field but got ${JSON.stringify(
 				targetObject
 			)}.`
 		);

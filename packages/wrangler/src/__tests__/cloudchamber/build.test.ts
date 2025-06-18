@@ -4,6 +4,7 @@ import {
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
 	getCloudflareContainerRegistry,
+	getDockerImageDigest,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
 import { ensureDiskLimits } from "../../cloudchamber/build";
@@ -30,6 +31,7 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 		runDockerCmd: vi.fn(),
 		dockerBuild: vi.fn(),
 		dockerImageInspect: vi.fn(),
+		getDockerImageDigest: vi.fn(),
 	});
 });
 
@@ -45,6 +47,7 @@ describe("buildAndMaybePush", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(dockerImageInspect).mockResolvedValue("53387881 2");
+		vi.mocked(getDockerImageDigest).mockRejectedValue("failed");
 		mkdirSync("./container-context");
 
 		writeFileSync("./container-context/Dockerfile", dockerfile);
@@ -65,6 +68,7 @@ describe("buildAndMaybePush", () => {
 				`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
 				"--platform",
 				"linux/amd64",
+				"--provenance=false",
 				"-f",
 				"-",
 				"./container-context",
@@ -95,6 +99,7 @@ describe("buildAndMaybePush", () => {
 				`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
 				"--platform",
 				"linux/amd64",
+				"--provenance=false",
 				"-f",
 				"-",
 				"./container-context",
@@ -104,6 +109,50 @@ describe("buildAndMaybePush", () => {
 		expect(runDockerCmd).toHaveBeenCalledTimes(1);
 		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
 			"push",
+			`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+		]);
+		expect(dockerImageInspect).toHaveBeenCalledOnce();
+		expect(dockerImageInspect).toHaveBeenCalledWith("docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+		});
+		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
+	});
+
+	it("should be able to build image and not push if it already exists in remote", async () => {
+		vi.mocked(getDockerImageDigest).mockResolvedValue("three");
+		vi.mocked(runDockerCmd).mockResolvedValueOnce();
+		await runWrangler(
+			"containers build ./container-context -t test-app:tag -p"
+		);
+		expect(dockerBuild).toHaveBeenCalledWith("docker", {
+			buildCmd: [
+				"build",
+				"-t",
+				`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+				"--platform",
+				"linux/amd64",
+				"--provenance=false",
+				"-f",
+				"-",
+				"./container-context",
+			],
+			dockerfile,
+		});
+		expect(runDockerCmd).toHaveBeenCalledTimes(2);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(
+			1,
+			"docker",
+			[
+				"manifest",
+				"inspect",
+				`${getCloudflareContainerRegistry()}/test_account_id/test-app@three`,
+			],
+			"ignore"
+		);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
+			"image",
+			"rm",
 			`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
 		]);
 		expect(dockerImageInspect).toHaveBeenCalledOnce();
@@ -124,6 +173,7 @@ describe("buildAndMaybePush", () => {
 				`${getCloudflareContainerRegistry()}/test_account_id/test-app`,
 				"--platform",
 				"linux/amd64",
+				"--provenance=false",
 				"-f",
 				"-",
 				"./container-context",
@@ -145,6 +195,7 @@ describe("buildAndMaybePush", () => {
 				`${getCloudflareContainerRegistry()}/test_account_id/test-app`,
 				"--platform",
 				"linux/amd64",
+				"--provenance=false",
 				"--network",
 				"host",
 				"-f",

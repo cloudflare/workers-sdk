@@ -120,7 +120,7 @@ function containerAppToCreateApplication(
 		instances: containerApp.instances ?? 0,
 		scheduling_policy:
 			(containerApp.scheduling_policy as SchedulingPolicy) ??
-			SchedulingPolicy.REGIONAL,
+			SchedulingPolicy.DEFAULT,
 		constraints: {
 			...(containerApp.constraints ??
 				(!skipDefaults ? { tier: 1 } : undefined)),
@@ -377,18 +377,27 @@ export async function apply(
 	log(dim("Container application changes\n"));
 
 	for (const appConfigNoDefaults of config.containers) {
+		const application = applicationByNames[appConfigNoDefaults.name];
+		if (!appConfigNoDefaults.configuration.image && application) {
+			appConfigNoDefaults.configuration.image = application.configuration.image;
+		}
 		const appConfig = containerAppToCreateApplication(
 			appConfigNoDefaults,
 			args.skipDefaults
 		);
 
-		const application = applicationByNames[appConfig.name];
 		if (application !== undefined && application !== null) {
 			// we need to sort the objects (by key) because the diff algorithm works with
 			// lines
 			const prevApp = sortObjectRecursive<CreateApplicationRequest>(
 				stripUndefined(applicationToCreateApplication(application))
 			);
+
+			// fill up fields that their defaults were changed over-time,
+			// maintaining retrocompatibility with the existing app
+			if (appConfigNoDefaults.scheduling_policy === undefined) {
+				appConfig.scheduling_policy = prevApp.scheduling_policy;
+			}
 
 			if (
 				prevApp.durable_objects !== undefined &&

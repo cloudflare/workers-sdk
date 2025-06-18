@@ -1,15 +1,15 @@
 import assert from "node:assert";
 import { z } from "zod";
 import {
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
 } from "../shared";
 
 const MtlsSchema = z.object({
 	certificate_id: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
+	remoteProxyConnectionString: z.custom<RemoteProxyConnectionString>(),
 });
 
 export const MtlsOptionsSchema = z.object({
@@ -26,8 +26,11 @@ export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
 		}
 
 		return Object.entries(options.mtlsCertificates).map(
-			([name, { certificate_id, mixedModeConnectionString }]) => {
-				assert(mixedModeConnectionString, "MTLS only supports Mixed Mode");
+			([name, { certificate_id, remoteProxyConnectionString }]) => {
+				assert(
+					remoteProxyConnectionString,
+					"MTLS only supports running remotely"
+				);
 
 				return {
 					name,
@@ -56,12 +59,15 @@ export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
 		}
 
 		return Object.entries(options.mtlsCertificates).map(
-			([name, { certificate_id, mixedModeConnectionString }]) => {
-				assert(mixedModeConnectionString, "MTLS only supports Mixed Mode");
+			([name, { certificate_id, remoteProxyConnectionString }]) => {
+				assert(
+					remoteProxyConnectionString,
+					"MTLS only supports running remotely"
+				);
 
 				return {
 					name: `${MTLS_PLUGIN_NAME}:${certificate_id}`,
-					worker: mixedModeClientWorker(mixedModeConnectionString, name),
+					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
 				};
 			}
 		);

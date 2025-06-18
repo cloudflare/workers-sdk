@@ -1,5 +1,46 @@
 # miniflare
 
+## 4.20250617.1
+
+### Patch Changes
+
+- [#9586](https://github.com/cloudflare/workers-sdk/pull/9586) [`d1d34fe`](https://github.com/cloudflare/workers-sdk/commit/d1d34fedd1276803223830b8d6670c1b21e72308) Thanks [@penalosa](https://github.com/penalosa)! - Remove the Mixed Mode naming in favour of "remote bindings"/"remote proxy"
+
+## 4.20250617.0
+
+### Patch Changes
+
+- [#9591](https://github.com/cloudflare/workers-sdk/pull/9591) [`828b7df`](https://github.com/cloudflare/workers-sdk/commit/828b7dffada8c4b5ea77d3ccddb923815c19671d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250612.0  | 1.20250617.0  |
+  | @cloudflare/workers-types | ^4.20250612.0 | ^4.20250617.0 |
+
+- [#9576](https://github.com/cloudflare/workers-sdk/pull/9576) [`2671e77`](https://github.com/cloudflare/workers-sdk/commit/2671e778435b9e3380c0d34718824409be494c33) Thanks [@vicb](https://github.com/vicb)! - Add core local dev functionality for containers.
+  Adds a new WRANGLER_DOCKER_HOST env var to customise what socket to connect to.
+
+## 4.20250612.0
+
+### Patch Changes
+
+- [#9529](https://github.com/cloudflare/workers-sdk/pull/9529) [`bd528d5`](https://github.com/cloudflare/workers-sdk/commit/bd528d5d53a473b8339574290da0c47797c3b322) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250604.0  | 1.20250612.0  |
+  | @cloudflare/workers-types | ^4.20250604.0 | ^4.20250612.0 |
+
+- [#9582](https://github.com/cloudflare/workers-sdk/pull/9582) [`2177fb4`](https://github.com/cloudflare/workers-sdk/commit/2177fb44f43357d349ff2e2cc4b40d72c929e491) Thanks [@vicb](https://github.com/vicb)! - Update capnp generated code from the workerd.capnp
+
+- [#9506](https://github.com/cloudflare/workers-sdk/pull/9506) [`36113c2`](https://github.com/cloudflare/workers-sdk/commit/36113c29c8d2338fcd7a6da19f4c59c7e9f65a3b) Thanks [@penalosa](https://github.com/penalosa)! - Strip the `CF-Connecting-IP` header from outgoing fetches
+
+- [#9493](https://github.com/cloudflare/workers-sdk/pull/9493) [`e16fcc7`](https://github.com/cloudflare/workers-sdk/commit/e16fcc747aa7701405eb4f49a73e622425f67527) Thanks [@vicb](https://github.com/vicb)! - bump capnp-es to 0.0.11 in miniflare
+
 ## 4.20250604.1
 
 ### Minor Changes

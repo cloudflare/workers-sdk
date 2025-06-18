@@ -56,7 +56,7 @@ describe("getWorkerConfig", () => {
 	});
 
 	test("should read a simple wrangler.toml file", () => {
-		const { config, raw, nonApplicable } = getWorkerConfig(
+		const { config, nonApplicable } = getWorkerConfig(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined,
 			false

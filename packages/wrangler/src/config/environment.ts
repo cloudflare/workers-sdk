@@ -73,7 +73,7 @@ export type ContainerApp = {
 	class_name: string;
 
 	/** The scheduling policy of the application, default is regional */
-	scheduling_policy?: "regional" | "moon";
+	scheduling_policy?: "regional" | "moon" | "default";
 
 	/* Configuration of the container */
 	configuration: {
@@ -463,8 +463,8 @@ export type WorkflowBinding = {
 	class_name: string;
 	/** The script where the Workflow is defined (if it's external to this Worker) */
 	script_name?: string;
-	/** Whether the Workflow should be remote or not (only available under `--x-mixed-mode`) */
-	remote?: boolean;
+	/** Whether the Workflow should be remote or not (only available under `--x-remote-bindings`) */
+	experimental_remote?: boolean;
 };
 
 /**
@@ -541,6 +541,9 @@ export interface EnvironmentNonInheritable {
 	/**
 	 * Container related configuration
 	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
 	 * @default []
 	 * @nonInheritable
 	 */
@@ -568,8 +571,8 @@ export interface EnvironmentNonInheritable {
 		id?: string;
 		/** The ID of the KV namespace used during `wrangler dev` */
 		preview_id?: string;
-		/** Whether the KV namespace should be remote or not (only available under `--x-mixed-mode`) */
-		remote?: boolean;
+		/** Whether the KV namespace should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -615,8 +618,8 @@ export interface EnvironmentNonInheritable {
 			/** The number of seconds to wait before delivering a message */
 			delivery_delay?: number;
 
-			/** Whether the Queue producer should be remote or not (only available under `--x-mixed-mode`) */
-			remote?: boolean;
+			/** Whether the Queue producer should be remote or not (only available under `--x-remote-bindings`) */
+			experimental_remote?: boolean;
 		}[];
 
 		/** Consumer configuration */
@@ -670,8 +673,8 @@ export interface EnvironmentNonInheritable {
 		preview_bucket_name?: string;
 		/** The jurisdiction that the bucket exists in. Default if not present. */
 		jurisdiction?: string;
-		/** Whether the R2 bucket should be remote or not (only available under `--x-mixed-mode`) */
-		remote?: boolean;
+		/** Whether the R2 bucket should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -700,8 +703,8 @@ export interface EnvironmentNonInheritable {
 		migrations_dir?: string;
 		/** Internal use only. */
 		database_internal_env?: string;
-		/** Whether the D1 database should be remote or not (only available under `--x-mixed-mode`) */
-		remote?: boolean;
+		/** Whether the D1 database should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -720,8 +723,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The name of the index. */
 		index_name: string;
-		/** Whether the Vectorize index should be remote or not (only available under `--x-mixed-mode`) */
-		remote?: boolean;
+		/** Whether the Vectorize index should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -767,8 +770,8 @@ export interface EnvironmentNonInheritable {
 				entrypoint?: string;
 				/** Optional properties that will be made available to the service via ctx.props. */
 				props?: Record<string, unknown>;
-				/** Whether the service binding should be remote or not (only available under `--x-mixed-mode`) */
-				remote?: boolean;
+				/** Whether the service binding should be remote or not (only available under `--x-remote-bindings`) */
+				experimental_remote?: boolean;
 		  }[]
 		| undefined;
 
@@ -804,8 +807,8 @@ export interface EnvironmentNonInheritable {
 	browser:
 		| {
 				binding: string;
-				/** Whether the Browser binding should be remote or not (only available under `--x-mixed-mode`) */
-				remote?: boolean;
+				/** Whether the Browser binding should be remote or not (only available under `--x-remote-bindings`) */
+				experimental_remote?: boolean;
 		  }
 		| undefined;
 
@@ -824,8 +827,8 @@ export interface EnvironmentNonInheritable {
 		| {
 				binding: string;
 				staging?: boolean;
-				/** Whether the AI binding should be remote or not (only available under `--x-mixed-mode`) */
-				remote?: boolean;
+				/** Whether the AI binding should be remote or not (only available under `--x-remote-bindings`) */
+				experimental_remote?: boolean;
 		  }
 		| undefined;
 
@@ -843,8 +846,8 @@ export interface EnvironmentNonInheritable {
 	images:
 		| {
 				binding: string;
-				/** Whether the Images binding should be remote or not (only available under `--x-mixed-mode`) */
-				remote?: boolean;
+				/** Whether the Images binding should be remote or not (only available under `--x-remote-bindings`) */
+				experimental_remote?: boolean;
 		  }
 		| undefined;
 
@@ -918,8 +921,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The uuid of the uploaded mTLS certificate */
 		certificate_id: string;
-		/** Whether the mtls fetcher should be remote or not (only available under `--x-mixed-mode`) */
-		remote?: boolean;
+		/** Whether the mtls fetcher should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -951,8 +954,8 @@ export interface EnvironmentNonInheritable {
 		namespace: string;
 		/** Details about the outbound Worker which will handle outbound requests from your namespace */
 		outbound?: DispatchNamespaceOutbound;
-		/** Whether the Dispatch Namespace should be remote or not (only available under `--x-mixed-mode`) */
-		remote?: boolean;
+		/** Whether the Dispatch Namespace should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -1094,3 +1097,14 @@ export interface Observability {
 		invocation_logs?: boolean;
 	};
 }
+
+export type DockerConfiguration = {
+	/** Socket used by miniflare to communicate with Docker */
+	socketPath: string;
+};
+
+export type ContainerEngine =
+	| {
+			localDocker: DockerConfiguration;
+	  }
+	| string;

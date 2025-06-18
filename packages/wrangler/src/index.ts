@@ -427,17 +427,17 @@ export function createCLIParser(argv: string[]) {
 
 			return true;
 		})
+		.option("experimental-remote-bindings", {
+			describe: `Experimental: Enable Remote Bindings`,
+			type: "boolean",
+			hidden: true,
+			alias: ["x-remote-bindings"],
+		})
 		.option("experimental-provision", {
 			describe: `Experimental: Enable automatic resource provisioning`,
 			type: "boolean",
 			hidden: true,
 			alias: ["x-provision"],
-		})
-		.option("experimental-mixed-mode", {
-			describe: `Experimental: Enable Mixed Mode`,
-			type: "boolean",
-			hidden: true,
-			alias: ["x-mixed-mode"],
 		})
 		.epilogue(
 			`Please report any issues to ${chalk.hex("#3B818D")(

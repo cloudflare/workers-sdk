@@ -1,13 +1,75 @@
 import assert from "node:assert";
+import getPort, { portNumbers } from "get-port";
 import colors from "picocolors";
+import { DEBUG_PATH, DEFAULT_INSPECTOR_PORT } from "./constants";
+import type { ResolvedPluginConfig } from "./plugin-config";
+import type { Miniflare } from "miniflare";
 import type * as vite from "vite";
 
-export const debuggingPath = "/__debug";
+/**
+ * Gets the inspector port option that should be passed to Miniflare based on the user's plugin config
+ */
+export async function getInputInspectorPortOption(
+	resolvedPluginConfig: ResolvedPluginConfig,
+	viteServer: vite.ViteDevServer | vite.PreviewServer,
+	miniflare?: Miniflare
+) {
+	if (
+		resolvedPluginConfig.inspectorPort === undefined ||
+		resolvedPluginConfig.inspectorPort === 0
+	) {
+		const resolvedInspectorPort = await getResolvedInspectorPort(
+			resolvedPluginConfig,
+			miniflare
+		);
+
+		if (resolvedInspectorPort !== null) {
+			// the user is not specifying an inspector port to use and we're already
+			// using one (this is a server restart) so let's just reuse that
+			return resolvedInspectorPort;
+		}
+	}
+
+	const inputInspectorPort =
+		resolvedPluginConfig.inspectorPort ??
+		(await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT));
+
+	if (
+		resolvedPluginConfig.inspectorPort === undefined &&
+		inputInspectorPort !== DEFAULT_INSPECTOR_PORT
+	) {
+		viteServer.config.logger.warn(
+			colors.dim(
+				`Default inspector port ${DEFAULT_INSPECTOR_PORT} not available, using ${inputInspectorPort} instead\n`
+			)
+		);
+	}
+
+	return inputInspectorPort;
+}
 
 /**
- * Modifies the url printing logic to also include a url that developers can use to open devtools to debug their Worker(s)
- *
- * @param server a vite server (dev or preview)
+ * Gets the resolved inspector port provided by Miniflare
+ */
+export async function getResolvedInspectorPort(
+	resolvedPluginConfig: ResolvedPluginConfig,
+	miniflare: Miniflare | undefined
+) {
+	if (miniflare && resolvedPluginConfig.inspectorPort !== false) {
+		const miniflareInspectorUrl = await miniflare.getInspectorURL();
+
+		return Number.parseInt(miniflareInspectorUrl.port);
+	}
+
+	return null;
+}
+
+function getFirstAvailablePort(start: number) {
+	return getPort({ port: portNumbers(start, 65535) });
+}
+
+/**
+ * Modifies the URL printing logic to also include a URL that developers can use to open DevTools to debug their Worker(s)
  */
 export function addDebugToVitePrintUrls(
 	server: vite.ViteDevServer | vite.PreviewServer
@@ -28,34 +90,30 @@ export function addDebugToVitePrintUrls(
 					)
 				);
 			server.config.logger.info(
-				`  ${colors.green("➜")}  ${colors.bold("Debug")}:   ${colorDebugUrl(`${protocol}//${hostname}:${port}${debuggingPath}`)}`
+				`  ${colors.green("➜")}  ${colors.bold("Debug")}:   ${colorDebugUrl(`${protocol}//${hostname}:${port}${DEBUG_PATH}`)}`
 			);
 		}
 	};
 }
 
 /**
- * Generate an HTML text that comprises of a single script that:
- *  - redirects the page to the devtools for the debugging of the first available worker
- *  - opens tags to the devtools for all the remaining workers if any
+ * Generate HTML that comprises a single script that:
+ *  - redirects the page to the DevTools for debugging the first available Worker
+ *  - opens tabs to the DevTools for all the remaining workers if any
  *
- * Note: this works based on the miniflare inspector proxy logic (where workers are available via
- * paths comprised of their names)
- *
- * @param workerNames the names of all the available workers
- * @param inspectorPort the inspector port that miniflare is using
- * @returns the generated html
+ * Note: this works based on the Miniflare inspector proxy logic (where Workers are available via
+ * their names)
  */
 export function getDebugPathHtml(workerNames: string[], inspectorPort: number) {
 	// this function should always be called only when there is at least one worker to debug
 	assert(workerNames.length >= 1, "no workers present to debug");
 
 	const workerDevtoolsUrls = workerNames.map((workerName) => {
-		const localHost = `localhost:${inspectorPort}/${workerName}`;
+		const localhost = `localhost:${inspectorPort}/${workerName}`;
 		const searchParams = new URLSearchParams({
 			theme: "systemPreferred",
 			debugger: "true",
-			ws: localHost,
+			ws: localhost,
 			domain: workerName,
 		});
 		const devtoolsFrontendUrl = `https://devtools.devprod.cloudflare.dev/js_app?${searchParams}`;

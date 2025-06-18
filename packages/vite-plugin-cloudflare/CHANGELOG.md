@@ -1,5 +1,67 @@
 # @cloudflare/vite-plugin
 
+## 1.7.2
+
+### Patch Changes
+
+- [#9586](https://github.com/cloudflare/workers-sdk/pull/9586) [`d1d34fe`](https://github.com/cloudflare/workers-sdk/commit/d1d34fedd1276803223830b8d6670c1b21e72308) Thanks [@penalosa](https://github.com/penalosa)! - Remove the Mixed Mode naming in favour of "remote bindings"/"remote proxy"
+
+- Updated dependencies [[`08be3ed`](https://github.com/cloudflare/workers-sdk/commit/08be3ed057aad1af8c5a067c57fcbe5896e246b0), [`d1d34fe`](https://github.com/cloudflare/workers-sdk/commit/d1d34fedd1276803223830b8d6670c1b21e72308)]:
+  - wrangler@4.20.3
+  - miniflare@4.20250617.1
+
+## 1.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`828b7df`](https://github.com/cloudflare/workers-sdk/commit/828b7dffada8c4b5ea77d3ccddb923815c19671d), [`b1c9139`](https://github.com/cloudflare/workers-sdk/commit/b1c91395246677a0d9ce8cca549569040302b04b), [`92f12f4`](https://github.com/cloudflare/workers-sdk/commit/92f12f442d752aad132fd2f5acdad26abd99694e), [`2671e77`](https://github.com/cloudflare/workers-sdk/commit/2671e778435b9e3380c0d34718824409be494c33)]:
+  - miniflare@4.20250617.0
+  - wrangler@4.20.2
+
+## 1.7.0
+
+### Minor Changes
+
+- [#9575](https://github.com/cloudflare/workers-sdk/pull/9575) [`5601fc3`](https://github.com/cloudflare/workers-sdk/commit/5601fc32f8cb7b4867eb758f77590fa70f0a4b4f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support `run_worker_first`.
+
+  `run_worker_first` has been expanded to accept an array of routes that should go directly to your Worker. Additionally, routes can be omitted by adding a `!` prefix. These negative routes will be treated as assets.
+
+  This is a new way to define routing explicitly and, when provided, overrides the implicit routing behavior.
+
+  ```jsonc
+  {
+  	"assets": {
+  		"not_found_handling": "single-page-application",
+  		"run_worker_first": [
+  			"/api/*", // These routes go directly to the Worker
+  			"!/api/docs/*", // These routes are still treated as assets
+  		],
+  	},
+  }
+  ```
+
+  The previous behavior of setting `"run_worker_first": true` to always invoke your Worker is also now supported.
+
+### Patch Changes
+
+- [#9583](https://github.com/cloudflare/workers-sdk/pull/9583) [`70ba9fb`](https://github.com/cloudflare/workers-sdk/commit/70ba9fbf905a9ba5fe158d0bc8d48f6bf31712a2) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: avoid crashing on unknown service bindings at startup
+
+  With Dev Registry support, the plugin no longer throws an assertion error during startup when a service binding references a named entrypoint from an unknown worker. Instead, an appropriate runtime error will be returned if the worker cannot be resolved.
+
+- [#9548](https://github.com/cloudflare/workers-sdk/pull/9548) [`0174e39`](https://github.com/cloudflare/workers-sdk/commit/0174e3996e393080abfb28226ce1ad1e7d5d8e50) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Enable HTML handling for HTML files in the public directory.
+
+  It is generally encouraged to use [HTML files as entry points](https://vite.dev/guide/features#html) in Vite so that their dependencies are bundled. However, if you have plain HTML files that should simply be copied to the root of the output directory as-is, you can place these in the [public directory](https://vite.dev/guide/assets#the-public-directory) and they will now work as expected in dev.
+
+- [#9566](https://github.com/cloudflare/workers-sdk/pull/9566) [`521eeb9`](https://github.com/cloudflare/workers-sdk/commit/521eeb9d7db1da5aae7a1c215d540184f6457301) Thanks [@vicb](https://github.com/vicb)! - Bump `@cloudflare/unenv-preset` to 2.3.3
+
+- [#9581](https://github.com/cloudflare/workers-sdk/pull/9581) [`6bc0a2f`](https://github.com/cloudflare/workers-sdk/commit/6bc0a2f288b63613b29658be239996b66beb908a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that globals are polyfilled before every import
+
+- [#9536](https://github.com/cloudflare/workers-sdk/pull/9536) [`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - performance improvement: restart a mixed mode session only if the worker's remote bindings have changed
+
+- Updated dependencies [[`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8), [`bd528d5`](https://github.com/cloudflare/workers-sdk/commit/bd528d5d53a473b8339574290da0c47797c3b322), [`2177fb4`](https://github.com/cloudflare/workers-sdk/commit/2177fb44f43357d349ff2e2cc4b40d72c929e491), [`1d3293f`](https://github.com/cloudflare/workers-sdk/commit/1d3293f0cbf88a45d7b86bae0fc886e08aa6e841), [`04f9164`](https://github.com/cloudflare/workers-sdk/commit/04f9164bbcea528f9a4075bef47e8edf4cd22ae8), [`36113c2`](https://github.com/cloudflare/workers-sdk/commit/36113c29c8d2338fcd7a6da19f4c59c7e9f65a3b), [`49f5ac7`](https://github.com/cloudflare/workers-sdk/commit/49f5ac7ef2ff041897a56aec6607616689ca87a5), [`cf33417`](https://github.com/cloudflare/workers-sdk/commit/cf33417320109bc405b105818bf759916b51d2d0), [`521eeb9`](https://github.com/cloudflare/workers-sdk/commit/521eeb9d7db1da5aae7a1c215d540184f6457301), [`02e2c1e`](https://github.com/cloudflare/workers-sdk/commit/02e2c1e4dec0a7026c49bf6ab0b3da1f0ddfedd5), [`02e2c1e`](https://github.com/cloudflare/workers-sdk/commit/02e2c1e4dec0a7026c49bf6ab0b3da1f0ddfedd5), [`3b61c41`](https://github.com/cloudflare/workers-sdk/commit/3b61c41f2c9e98ff023d21d79676d6f9981e52f8), [`e16fcc7`](https://github.com/cloudflare/workers-sdk/commit/e16fcc747aa7701405eb4f49a73e622425f67527), [`c117904`](https://github.com/cloudflare/workers-sdk/commit/c11790486fc1a5c7c907f5757779b3b8eba29013), [`fae8c02`](https://github.com/cloudflare/workers-sdk/commit/fae8c02bcfb51cb87a01a5185b249f6c5889d0a6)]:
+  - wrangler@4.20.1
+  - miniflare@4.20250612.0
+
 ## 1.6.0
 
 ### Minor Changes
