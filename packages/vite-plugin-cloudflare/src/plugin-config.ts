@@ -115,7 +115,10 @@ export function resolvePluginConfig(
 		return {
 			...shared,
 			type: "preview",
-			workers: getWorkerConfigs(root, shared.experimental.mixedMode ?? false),
+			workers: getWorkerConfigs(
+				root,
+				shared.experimental.remoteBindings ?? false
+			),
 		};
 	}
 
