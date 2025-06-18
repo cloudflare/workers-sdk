@@ -15,6 +15,7 @@ import { run } from "../../../experimental-flags";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
+import { convertCfWorkerInitBindingsToBindings } from "../../startDevWorker/utils";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
@@ -148,6 +149,8 @@ async function getMiniflareOptionsFromConfig(
 ): Promise<Partial<MiniflareOptions>> {
 	const bindings = getBindings(rawConfig, env, true, {});
 
+	const standardBindings = convertCfWorkerInitBindingsToBindings(bindings);
+
 	if (rawConfig["durable_objects"]) {
 		const { localBindings } = partitionDurableObjectBindings(rawConfig);
 		if (localBindings.length > 0) {
@@ -170,18 +173,19 @@ async function getMiniflareOptionsFromConfig(
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		{
-			name: rawConfig.name,
+			name: rawConfig.name ?? "worker",
 			complianceRegion: rawConfig.compliance_region,
-			bindings,
-			workerDefinitions,
+			bindings: standardBindings,
+			// @ts-expect-error this is fine
+			dev: { registry: workerDefinitions },
+			triggers: [],
 			queueConsumers: undefined,
-			services: rawConfig.services,
-			serviceBindings: {},
 			migrations: rawConfig.migrations,
 			imagesLocalMode: false,
 			tails: [],
 			containers: {},
 		},
+		undefined,
 		undefined,
 		false
 	);
@@ -304,6 +308,7 @@ export function unstable_getMiniflareWorkerOptions(
 		}));
 
 	const bindings = getBindings(config, env, true, {}, true);
+	// @ts-expect-error this is not fine
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		{
 			name: config.name,
@@ -373,6 +378,8 @@ export function unstable_getMiniflareWorkerOptions(
 	}
 
 	const sitesAssetPaths = getSiteAssetPaths(config);
+	// @ts-expect-error this is not fine
+
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
 	const processedAssetOptions = getAssetsOptions(
 		{ assets: undefined },
@@ -380,7 +387,9 @@ export function unstable_getMiniflareWorkerOptions(
 		options?.overrides?.assets
 	);
 	const assetOptions = processedAssetOptions
-		? buildAssetOptions({ assets: processedAssetOptions })
+		? // @ts-expect-error this is not fine
+
+			buildAssetOptions({ assets: processedAssetOptions })
 		: {};
 
 	const workerOptions: SourcelessWorkerOptions = {

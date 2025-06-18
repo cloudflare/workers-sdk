@@ -1,15 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import {
-	convertBindingsToCfWorkerInitBindings,
-	convertCfWorkerInitBindingsToBindings,
-} from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type { RemoteProxySession } from "../remoteBindings";
 import type {
@@ -19,125 +14,10 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { Binding, File, StartDevWorkerOptions } from "./types";
-
-async function getBinaryFileContents(file: File<string | Uint8Array>) {
-	if ("contents" in file) {
-		if (file.contents instanceof Buffer) {
-			return file.contents;
-		}
-		return Buffer.from(file.contents);
-	}
-	return readFile(file.path);
-}
-async function getTextFileContents(file: File<string | Uint8Array>) {
-	if ("contents" in file) {
-		if (typeof file.contents === "string") {
-			return file.contents;
-		}
-		if (file.contents instanceof Buffer) {
-			return file.contents.toString();
-		}
-		return Buffer.from(file.contents).toString();
-	}
-	return readFile(file.path, "utf8");
-}
+import type { Binding, StartDevWorkerOptions } from "./types";
 
 function getName(config: StartDevWorkerOptions) {
 	return config.name;
-}
-
-export async function convertToConfigBundle(
-	event: BundleCompleteEvent
-): Promise<MF.ConfigBundle> {
-	const { bindings, fetchers } = await convertBindingsToCfWorkerInitBindings(
-		event.config.bindings
-	);
-
-	const crons = [];
-	const queueConsumers = [];
-	for (const trigger of event.config.triggers ?? []) {
-		if (trigger.type === "cron") {
-			crons.push(trigger.cron);
-		} else if (trigger.type === "queue-consumer") {
-			queueConsumers.push(trigger);
-		}
-	}
-	if (event.bundle.entry.format === "service-worker") {
-		// For the service-worker format, blobs are accessible on the global scope
-		for (const module of event.bundle.modules ?? []) {
-			const identifier = MF.getIdentifier(module.name);
-			if (module.type === "text") {
-				bindings.vars ??= {};
-				bindings.vars[identifier] = await getTextFileContents({
-					contents: module.content,
-				});
-			} else if (module.type === "buffer") {
-				bindings.data_blobs ??= {};
-				bindings.data_blobs[identifier] = await getBinaryFileContents({
-					contents: module.content,
-				});
-			} else if (module.type === "compiled-wasm") {
-				bindings.wasm_modules ??= {};
-				bindings.wasm_modules[identifier] = await getBinaryFileContents({
-					contents: module.content,
-				});
-			}
-		}
-		event.bundle = { ...event.bundle, modules: [] };
-	}
-
-	return {
-		name: event.config.name,
-		bundle: event.bundle,
-		format: event.bundle.entry.format,
-		compatibilityDate: event.config.compatibilityDate,
-		compatibilityFlags: event.config.compatibilityFlags,
-		complianceRegion: event.config.complianceRegion,
-		bindings,
-		migrations: event.config.migrations,
-		workerDefinitions: event.config.dev?.registry,
-		legacyAssetPaths: event.config.legacy?.site?.bucket
-			? {
-					baseDirectory: event.config.legacy?.site?.bucket,
-					assetDirectory: "",
-					excludePatterns: event.config.legacy?.site?.exclude ?? [],
-					includePatterns: event.config.legacy?.site?.include ?? [],
-				}
-			: undefined,
-		assets: event.config?.assets,
-		initialPort: undefined,
-		initialIp: "127.0.0.1",
-		rules: [],
-		...(event.config.dev.inspector === false
-			? {
-					inspect: false,
-					inspectorPort: undefined,
-				}
-			: {
-					inspect: true,
-					inspectorPort: 0,
-				}),
-		localPersistencePath: event.config.dev.persist,
-		liveReload: event.config.dev?.liveReload ?? false,
-		crons,
-		queueConsumers,
-		localProtocol: event.config.dev?.server?.secure ? "https" : "http",
-		httpsCertPath: event.config.dev?.server?.httpsCertPath,
-		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
-		localUpstream: event.config.dev?.origin?.hostname,
-		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
-		services: bindings.services,
-		serviceBindings: fetchers,
-		bindVectorizeToProd: event.config.dev?.bindVectorizeToProd ?? false,
-		imagesLocalMode: event.config.dev?.imagesLocalMode ?? false,
-		testScheduled: !!event.config.dev.testScheduled,
-		tails: event.config.tailConsumers,
-		containers: event.config.containers ?? {},
-		enableContainers: event.config.dev.enableContainers ?? true,
-		dockerPath: event.config.dev.dockerPath ?? "docker",
-		containerEngine: event.config.dev.containerEngine,
-	};
 }
 
 export class LocalRuntimeController extends RuntimeController {
@@ -170,8 +50,6 @@ export class LocalRuntimeController extends RuntimeController {
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
-			const configBundle = await convertToConfigBundle(data);
-
 			const experimentalRemoteBindings =
 				data.config.dev.experimentalRemoteBindings ?? false;
 
@@ -185,10 +63,8 @@ export class LocalRuntimeController extends RuntimeController {
 				this.#remoteProxySessionData =
 					await maybeStartOrUpdateRemoteProxySession(
 						{
-							name: configBundle.name,
-							bindings:
-								convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
-								{},
+							name: data.config.name,
+							bindings: data.config.bindings ?? {},
 						},
 						this.#remoteProxySessionData ?? null
 					);
@@ -197,7 +73,8 @@ export class LocalRuntimeController extends RuntimeController {
 			const { options, internalObjects, entrypointNames } =
 				await MF.buildMiniflareOptions(
 					this.#log,
-					configBundle,
+					data.config,
+					data.bundle,
 					this.#proxyToUserWorkerAuthenticationSecret,
 					this.#remoteProxySessionData?.session?.remoteProxyConnectionString,
 					!!experimentalRemoteBindings
