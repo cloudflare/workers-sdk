@@ -4,7 +4,6 @@
 "format-errors": patch
 "playground-preview-worker": patch
 "@cloudflare/quick-edit": patch
-"quick-edit-extension": patch
 "solarflare-theme": patch
 "turbo-r2-archive": patch
 ---
