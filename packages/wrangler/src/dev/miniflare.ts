@@ -327,40 +327,45 @@ function getRemoteId(id: string | symbol | undefined): string | null {
 }
 
 function kvNamespaceEntry(
-	{ binding, id: originalId, remote }: CfKvNamespace,
+	{ binding, id: originalId, experimental_remote }: CfKvNamespace,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
 	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 ] {
 	const id = getRemoteId(originalId) ?? binding;
-	if (!remoteProxyConnectionString || !remote) {
+	if (!remoteProxyConnectionString || !experimental_remote) {
 		return [binding, { id }];
 	}
 	return [binding, { id, remoteProxyConnectionString }];
 }
 function r2BucketEntry(
-	{ binding, bucket_name, remote }: CfR2Bucket,
+	{ binding, bucket_name, experimental_remote }: CfR2Bucket,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
 	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 ] {
 	const id = getRemoteId(bucket_name) ?? binding;
-	if (!remoteProxyConnectionString || !remote) {
+	if (!remoteProxyConnectionString || !experimental_remote) {
 		return [binding, { id }];
 	}
 	return [binding, { id, remoteProxyConnectionString }];
 }
 function d1DatabaseEntry(
-	{ binding, database_id, preview_database_id, remote }: CfD1Database,
+	{
+		binding,
+		database_id,
+		preview_database_id,
+		experimental_remote,
+	}: CfD1Database,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
 	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 ] {
 	const id = getRemoteId(preview_database_id ?? database_id) ?? binding;
-	if (!remoteProxyConnectionString || !remote) {
+	if (!remoteProxyConnectionString || !experimental_remote) {
 		return [binding, { id }];
 	}
 	return [binding, { id, remoteProxyConnectionString }];
@@ -370,7 +375,7 @@ function queueProducerEntry(
 		binding,
 		queue_name: queueName,
 		delivery_delay: deliveryDelay,
-		remote,
+		experimental_remote,
 	}: CfQueue,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
@@ -381,7 +386,7 @@ function queueProducerEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
-	if (!remoteProxyConnectionString || !remote) {
+	if (!remoteProxyConnectionString || !experimental_remote) {
 		return [binding, { queueName, deliveryDelay }];
 	}
 
@@ -399,7 +404,7 @@ function workflowEntry(
 		name,
 		class_name: className,
 		script_name: scriptName,
-		remote,
+		experimental_remote,
 	}: CfWorkflow,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
@@ -411,7 +416,7 @@ function workflowEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
-	if (!remoteProxyConnectionString || !remote) {
+	if (!remoteProxyConnectionString || !experimental_remote) {
 		return [
 			binding,
 			{
@@ -435,10 +440,10 @@ function workflowEntry(
 function dispatchNamespaceEntry({
 	binding,
 	namespace,
-	remote,
+	experimental_remote,
 }: CfDispatchNamespace): [string, { namespace: string }];
 function dispatchNamespaceEntry(
-	{ binding, namespace, remote }: CfDispatchNamespace,
+	{ binding, namespace, experimental_remote }: CfDispatchNamespace,
 	remoteProxyConnectionString: RemoteProxyConnectionString
 ): [
 	string,
@@ -448,7 +453,7 @@ function dispatchNamespaceEntry(
 	},
 ];
 function dispatchNamespaceEntry(
-	{ binding, namespace, remote }: CfDispatchNamespace,
+	{ binding, namespace, experimental_remote }: CfDispatchNamespace,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
@@ -457,7 +462,7 @@ function dispatchNamespaceEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
-	if (!remoteProxyConnectionString || !remote) {
+	if (!remoteProxyConnectionString || !experimental_remote) {
 		return [binding, { namespace }];
 	}
 	return [binding, { namespace, remoteProxyConnectionString }];
@@ -818,16 +823,16 @@ export function buildMiniflareBindingOptions(
 	}
 
 	if (bindings.ai && remoteBindingsEnabled) {
-		warnOrError("ai", bindings.ai.remote, "always-remote");
+		warnOrError("ai", bindings.ai.experimental_remote, "always-remote");
 	}
 
 	if (bindings.browser && remoteBindingsEnabled) {
-		warnOrError("browser", bindings.browser.remote, "remote");
+		warnOrError("browser", bindings.browser.experimental_remote, "remote");
 	}
 
 	if (bindings.mtls_certificates && remoteBindingsEnabled) {
 		for (const mtls of bindings.mtls_certificates) {
-			warnOrError("ai", mtls.remote, "always-remote");
+			warnOrError("ai", mtls.experimental_remote, "always-remote");
 		}
 	}
 
@@ -969,7 +974,7 @@ export function buildMiniflareBindingOptions(
 				? {
 						binding: bindings.images.binding,
 						remoteProxyConnectionString:
-							bindings.images.remote && remoteProxyConnectionString
+							bindings.images.experimental_remote && remoteProxyConnectionString
 								? remoteProxyConnectionString
 								: undefined,
 					}
@@ -977,7 +982,7 @@ export function buildMiniflareBindingOptions(
 		browserRendering:
 			remoteBindingsEnabled &&
 			remoteProxyConnectionString &&
-			bindings.browser?.remote
+			bindings.browser?.experimental_remote
 				? {
 						binding: bindings.browser.binding,
 						remoteProxyConnectionString,
@@ -989,8 +994,8 @@ export function buildMiniflareBindingOptions(
 				? Object.fromEntries(
 						bindings.vectorize
 							?.filter((v) => {
-								warnOrError("vectorize", v.remote, "remote");
-								return v.remote;
+								warnOrError("vectorize", v.experimental_remote, "remote");
+								return v.experimental_remote;
 							})
 							.map((vectorize) => {
 								return [
@@ -1009,8 +1014,12 @@ export function buildMiniflareBindingOptions(
 				? Object.fromEntries(
 						bindings.dispatch_namespaces
 							?.filter((d) => {
-								warnOrError("dispatch_namespaces", d.remote, "remote");
-								return d.remote;
+								warnOrError(
+									"dispatch_namespaces",
+									d.experimental_remote,
+									"remote"
+								);
+								return d.experimental_remote;
 							})
 							.map((dispatchNamespace) =>
 								dispatchNamespaceEntry(
@@ -1073,8 +1082,12 @@ export function buildMiniflareBindingOptions(
 				? Object.fromEntries(
 						bindings.mtls_certificates
 							?.filter((d) => {
-								warnOrError("mtls_certificates", d.remote, "remote");
-								return d.remote;
+								warnOrError(
+									"mtls_certificates",
+									d.experimental_remote,
+									"remote"
+								);
+								return d.experimental_remote;
 							})
 							.map((mtlsCertificate) => [
 								mtlsCertificate.binding,

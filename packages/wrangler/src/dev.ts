@@ -45,8 +45,12 @@ import type {
 } from "./config/environment";
 import type { INHERIT_SYMBOL } from "./deployment-bundle/bindings";
 import type {
+	CfD1Database,
 	CfKvNamespace,
 	CfModule,
+	CfQueue,
+	CfR2Bucket,
+	CfService,
 	CfWorkerInit,
 } from "./deployment-bundle/worker";
 import type { WorkerRegistry } from "./dev-registry";
@@ -876,8 +880,8 @@ export function getBindings(
 			return {
 				binding,
 				id: preview_id ?? id,
-				remote: remoteBindingsEnabled && experimental_remote,
-			};
+				experimental_remote: remoteBindingsEnabled && experimental_remote,
+			} satisfies CfKvNamespace;
 		}
 	);
 	const kvArgs = args.kv || [];
@@ -897,9 +901,9 @@ export function getBindings(
 		if (local) {
 			return {
 				...d1Db,
-				remote: remoteBindingsEnabled && d1Db.experimental_remote,
+				experimental_remote: remoteBindingsEnabled && d1Db.experimental_remote,
 				database_id,
-			};
+			} satisfies CfD1Database;
 		}
 		// if you have a preview_database_id, we'll use it, but we shouldn't force people to use it.
 		if (!d1Db.preview_database_id && !process.env.NO_D1_WARNING) {
@@ -933,8 +937,8 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
-					remote: remoteBindingsEnabled && experimental_remote,
-				};
+					experimental_remote: remoteBindingsEnabled && experimental_remote,
+				} satisfies CfR2Bucket;
 			}
 		) || [];
 	const r2Args = args.r2 || [];
@@ -947,13 +951,16 @@ export function getBindings(
 		servicesConfig,
 		servicesArgs,
 		"binding"
-	).map((service) => ({
-		...service,
-		remote:
-			remoteBindingsEnabled &&
-			"experimental_remote" in service &&
-			!!service.experimental_remote,
-	}));
+	).map(
+		(service) =>
+			({
+				...service,
+				experimental_remote:
+					remoteBindingsEnabled &&
+					"experimental_remote" in service &&
+					!!service.experimental_remote,
+			}) satisfies CfService
+	);
 
 	// Hyperdrive bindings
 	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {
@@ -991,8 +998,8 @@ export function getBindings(
 				binding: queue.binding,
 				queue_name: queue.queue,
 				delivery_delay: queue.delivery_delay,
-				remote: remoteBindingsEnabled && queue.experimental_remote,
-			};
+				experimental_remote: remoteBindingsEnabled && queue.experimental_remote,
+			} satisfies CfQueue;
 		}),
 	];
 

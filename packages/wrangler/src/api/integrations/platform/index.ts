@@ -333,7 +333,10 @@ export function unstable_getMiniflareWorkerOptions(
 			bindings.services.map((binding) => {
 				const name =
 					binding.service === config.name ? kCurrentWorker : binding.service;
-				if (options?.remoteProxyConnectionString && binding.remote) {
+				if (
+					options?.remoteProxyConnectionString &&
+					binding.experimental_remote
+				) {
 					return [
 						binding.binding,
 						{
