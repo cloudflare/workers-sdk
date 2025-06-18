@@ -141,11 +141,11 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 		});
 
 		it("errors if docker is not installed", async () => {
-			vi.stubEnv("WRANGLER_CONTAINERS_DOCKER_PATH", "not-a-real-docker-binary");
+			vi.stubEnv("WRANGLER_DOCKER_BIN", "not-a-real-docker-binary");
 			const worker = helper.runLongLived("wrangler dev");
 			expect(await worker.exitCode).toBe(1);
 			expect(await worker.output).toContain(
-				`The Docker CLI does not appear to installed. Please ensure that the Docker CLI is installed. You can specify an executable with the environment variable WRANGLER_CONTAINERS_DOCKER_PATH.`
+				`The Docker CLI does not appear to installed. Please ensure that the Docker CLI is installed. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN.`
 			);
 		});
 	}
