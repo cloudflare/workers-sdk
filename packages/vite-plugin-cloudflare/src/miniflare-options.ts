@@ -30,9 +30,11 @@ import { additionalModuleRE } from "./shared";
 import { withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
+	AssetsOnlyResolvedConfig,
 	PersistState,
-	ResolvedPluginConfig,
+	PreviewResolvedConfig,
 	WorkerConfig,
+	WorkersResolvedConfig,
 } from "./plugin-config";
 import type { MiniflareOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
@@ -40,7 +42,6 @@ import type {
 	Experimental_RemoteProxySession,
 	SourcelessWorkerOptions,
 	Unstable_Binding,
-	Unstable_Config,
 } from "wrangler";
 
 function getPersistenceRoot(
@@ -176,7 +177,7 @@ const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 const RUNNER_PATH = "./runner-worker/index.js";
 
 function getEntryWorkerConfig(
-	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig
 ): WorkerConfig | undefined {
 	if (resolvedPluginConfig.type === "assets-only") {
 		return;
@@ -232,7 +233,7 @@ const remoteProxySessionsDataMap = new Map<
 >();
 
 export async function getDevMiniflareOptions(
-	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">,
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
 	viteDevServer: vite.ViteDevServer,
 	inspectorPort: number | false
 ): Promise<MiniflareOptions> {
@@ -653,7 +654,7 @@ function getPreviewModules(
 }
 
 export async function getPreviewMiniflareOptions(
-	resolvedPluginConfig: ResolvedPluginConfig<"preview">,
+	resolvedPluginConfig: PreviewResolvedConfig,
 	vitePreviewServer: vite.PreviewServer,
 	inspectorPort: number | false
 ): Promise<MiniflareOptions> {

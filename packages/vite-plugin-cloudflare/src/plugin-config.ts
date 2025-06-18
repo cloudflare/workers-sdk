@@ -61,7 +61,7 @@ interface BaseResolvedConfig {
 	experimental: Experimental;
 }
 
-interface AssetsOnlyResolvedConfig extends BaseResolvedConfig {
+export interface AssetsOnlyResolvedConfig extends BaseResolvedConfig {
 	type: "assets-only";
 	configPaths: Set<string>;
 	cloudflareEnv: string | undefined;
@@ -71,7 +71,7 @@ interface AssetsOnlyResolvedConfig extends BaseResolvedConfig {
 	};
 }
 
-interface WorkersResolvedConfig extends BaseResolvedConfig {
+export interface WorkersResolvedConfig extends BaseResolvedConfig {
 	type: "workers";
 	configPaths: Set<string>;
 	cloudflareEnv: string | undefined;
@@ -84,21 +84,15 @@ interface WorkersResolvedConfig extends BaseResolvedConfig {
 	};
 }
 
-interface PreviewResolvedConfig extends BaseResolvedConfig {
+export interface PreviewResolvedConfig extends BaseResolvedConfig {
 	type: "preview";
 	workers: Unstable_Config[];
 }
 
-export type ResolvedPluginConfig<
-	T extends "assets-only" | "workers" | "preview" =
-		| "assets-only"
-		| "workers"
-		| "preview",
-> = { type: T } & (
+export type ResolvedPluginConfig =
 	| AssetsOnlyResolvedConfig
 	| WorkersResolvedConfig
-	| PreviewResolvedConfig
-);
+	| PreviewResolvedConfig;
 
 // Worker names can only contain alphanumeric characters and '-' whereas environment names can only contain alphanumeric characters and '$', '_'
 function workerNameToEnvironmentName(workerName: string) {
@@ -234,9 +228,9 @@ export function resolvePluginConfig(
 
 export function assertIsNotPreview(
 	resolvedPluginConfig: ResolvedPluginConfig
-): asserts resolvedPluginConfig is ResolvedPluginConfig<
-	"assets-only" | "workers"
-> {
+): asserts resolvedPluginConfig is
+	| AssetsOnlyResolvedConfig
+	| WorkersResolvedConfig {
 	assert(
 		resolvedPluginConfig.type !== "preview",
 		`Expected "assets-only" or "workers" plugin config`
@@ -245,7 +239,7 @@ export function assertIsNotPreview(
 
 export function assertIsPreview(
 	resolvedPluginConfig: ResolvedPluginConfig
-): asserts resolvedPluginConfig is ResolvedPluginConfig<"preview"> {
+): asserts resolvedPluginConfig is PreviewResolvedConfig {
 	assert(
 		resolvedPluginConfig.type === "preview",
 		`Expected "preview" plugin config`

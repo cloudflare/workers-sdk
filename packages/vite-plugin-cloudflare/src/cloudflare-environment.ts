@@ -3,7 +3,7 @@ import * as vite from "vite";
 import { isNodeCompat } from "./node-js-compat";
 import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "./shared";
 import { getOutputDirectory } from "./utils";
-import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
+import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import type {
 	MessageEvent,
@@ -191,7 +191,7 @@ export function createCloudflareEnvironmentOptions(
 }
 
 export function initRunners(
-	resolvedPluginConfig: ResolvedPluginConfig<"workers">,
+	resolvedPluginConfig: WorkersResolvedConfig,
 	viteDevServer: vite.ViteDevServer,
 	miniflare: Miniflare
 ): Promise<void[]> | undefined {

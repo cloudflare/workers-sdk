@@ -1,6 +1,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { ResolvedPluginConfig } from "./plugin-config";
+import type {
+	AssetsOnlyResolvedConfig,
+	WorkersResolvedConfig,
+} from "./plugin-config";
 
 /**
  * Gets the content of the `.dev.vars` target file
@@ -36,7 +39,7 @@ export function getDotDevDotVarsContent(
  * Returns `true` if the `changedFile` matches a `.dev.vars` file.
  */
 export function hasDotDevDotVarsFileChanged(
-	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">,
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
 	changedFilePath: string
 ) {
 	return [...resolvedPluginConfig.configPaths].some((configPath) => {

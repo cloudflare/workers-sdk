@@ -14,7 +14,10 @@ import {
 	HeadersSchema,
 	RedirectsSchema,
 } from "@cloudflare/workers-shared/utils/types";
-import type { ResolvedPluginConfig } from "./plugin-config";
+import type {
+	AssetsOnlyResolvedConfig,
+	WorkersResolvedConfig,
+} from "./plugin-config";
 import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types";
 import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
 import type * as vite from "vite";
@@ -25,7 +28,7 @@ import type { Unstable_Config } from "wrangler";
  * and the experimental support for these files is turned on.
  */
 export function hasAssetsConfigChanged(
-	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">,
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
 	resolvedViteConfig: vite.ResolvedConfig,
 	changedFilePath: string
 ) {
@@ -43,7 +46,7 @@ export function hasAssetsConfigChanged(
  * taking into account whether experimental _headers and _redirects support is on.
  */
 export function getAssetsConfig(
-	resolvedPluginConfig: ResolvedPluginConfig<"assets-only" | "workers">,
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
 	entryWorkerConfig: Unstable_Config | undefined,
 	resolvedConfig: vite.ResolvedConfig
 ): AssetConfig {
