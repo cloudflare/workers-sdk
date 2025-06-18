@@ -189,7 +189,7 @@ export function runCommand(
 		try {
 			childProcess.execSync(command, {
 				cwd,
-				stdio: "pipe", // debuglog.enabled ? "inherit" : "ignore",
+				stdio: "inherit", // debuglog.enabled ? "inherit" : "ignore",
 				env: { ...process.env, ...testEnv, CI: "true" },
 			});
 			break;
