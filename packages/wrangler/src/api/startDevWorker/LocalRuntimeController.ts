@@ -361,9 +361,6 @@ export class LocalRuntimeController extends RuntimeController {
 				);
 			}
 		}
-		if (this.#mixedModeSessionData) {
-			logger.log(chalk.dim("⎔ Shutting down remote connection..."));
-		}
 
 		await this.#remoteProxySessionData?.session?.dispose();
 		this.#remoteProxySessionData = null;
