@@ -106,7 +106,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			},
 		}),
 		expectedResponseMatch: "This is a response from Workers AI",
-		// AI bindings work without opt in flag flag
+		// AI bindings work without opt in flag
 		worksWithoutRemoteBindings: true,
 	},
 	{
