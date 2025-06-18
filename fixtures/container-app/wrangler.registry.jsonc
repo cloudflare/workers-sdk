@@ -1,0 +1,29 @@
+{
+	"name": "container-app-from-registry",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-04-03",
+	"containers": [
+		{
+			"configuration": {
+				"image": "registry.cloudflare.com/f7f78ebb28c2a224a9a46a3007350b7a/test:tag",
+			},
+			"class_name": "Container",
+			"name": "http2",
+			"max_instances": 2,
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "Container",
+				"name": "CONTAINER",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["Container"],
+		},
+	],
+}
