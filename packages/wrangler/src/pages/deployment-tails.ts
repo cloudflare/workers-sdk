@@ -212,10 +212,11 @@ export const pagesDeploymentTailCommand = createCommand({
 			}
 
 			const latestDeployment = envDeployments
+				.filter((d) => d.latest_stage.status === "success")
 				.map((d) => ({ id: d.id, created_on: new Date(d.created_on) }))
 				.sort((a, b) => +b.created_on - +a.created_on)[0];
 
-			deploymentId = latestDeployment.id;
+			deploymentId = latestDeployment?.id;
 		}
 
 		if (!deploymentId || !projectName) {
