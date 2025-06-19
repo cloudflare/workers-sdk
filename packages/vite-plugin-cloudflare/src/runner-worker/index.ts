@@ -3,7 +3,7 @@ import {
 	WorkerEntrypoint,
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
-import { INIT_PATH, VITE_DEV_METADATA_HEADER } from "../shared";
+import { INIT_PATH } from "../shared";
 import { stripInternalEnv } from "./env";
 import { getWorkerEntryExport } from "./module-runner";
 import type { WrapperEnv } from "./env";
@@ -105,7 +105,7 @@ async function getWorkerEntrypointRpcProperty(
 	key: string
 ): Promise<unknown> {
 	const ctor = (await getWorkerEntryExport(
-		entryPath,
+		this.env,
 		entrypoint
 	)) as WorkerEntrypointConstructor;
 	const userEnv = stripInternalEnv(this.env);
@@ -172,8 +172,6 @@ export function createWorkerEntrypointWrapper(
 				const url = new URL(request.url);
 
 				if (url.pathname === INIT_PATH) {
-					const viteDevMetadata = getViteDevMetadata(request);
-					entryPath = viteDevMetadata.entryPath;
 					const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
 
 					return stub.fetch(request);
@@ -198,7 +196,7 @@ export function createWorkerEntrypointWrapper(
 				}
 			}
 
-			const entrypointValue = await getWorkerEntryExport(entryPath, entrypoint);
+			const entrypointValue = await getWorkerEntryExport(this.env, entrypoint);
 			const userEnv = stripInternalEnv(this.env);
 
 			if (typeof entrypointValue === "object" && entrypointValue !== null) {
@@ -319,7 +317,7 @@ export function createDurableObjectWrapper(
 
 		async [kEnsureInstance]() {
 			const ctor = (await getWorkerEntryExport(
-				entryPath,
+				this.env,
 				className
 			)) as DurableObjectConstructor;
 
@@ -369,7 +367,7 @@ export function createWorkflowEntrypointWrapper(
 	for (const key of WORKFLOW_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (...args: unknown[]) {
 			const ctor = (await getWorkerEntryExport(
-				entryPath,
+				this.env,
 				className
 			)) as WorkflowEntrypointConstructor;
 			const userEnv = stripInternalEnv(this.env);
@@ -394,32 +392,4 @@ export function createWorkflowEntrypointWrapper(
 	}
 
 	return Wrapper;
-}
-
-function getViteDevMetadata(request: Request) {
-	const viteDevMetadataHeader = request.headers.get(VITE_DEV_METADATA_HEADER);
-	if (viteDevMetadataHeader === null) {
-		throw new Error(
-			"Unexpected internal error, vite dev metadata header not set"
-		);
-	}
-
-	let parsedViteDevMetadataHeader: Record<string, string>;
-	try {
-		parsedViteDevMetadataHeader = JSON.parse(viteDevMetadataHeader);
-	} catch {
-		throw new Error(
-			`Unexpected internal error, vite dev metadata header JSON parsing failed, value = ${viteDevMetadataHeader}`
-		);
-	}
-
-	const { entryPath } = parsedViteDevMetadataHeader;
-
-	if (entryPath === undefined) {
-		throw new Error(
-			"Unexpected internal error, vite dev metadata header doesn't contain an entryPath value"
-		);
-	}
-
-	return { entryPath };
 }
