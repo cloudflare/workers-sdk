@@ -2393,7 +2393,9 @@ const validateContainerAppConfig: ValidatorFn = (
 		const containerAppOptional =
 			containerApp as Partial<CreateApplicationRequest> & {
 				image?: string | undefined;
+				instance_type?: "dev" | "basic" | "standard";
 			};
+
 		if (!isRequiredProperty(containerAppOptional, "name", "string")) {
 			diagnostics.errors.push(
 				`"containers.name" should be defined and a string`
@@ -2468,19 +2470,17 @@ const validateContainerAppConfig: ValidatorFn = (
 		}
 
 		if (
-			"configuration" in containerAppOptional &&
-			containerAppOptional.configuration !== undefined &&
-			"instance_type" in containerAppOptional.configuration &&
-			containerAppOptional.configuration?.instance_type !== undefined
+			"instance_type" in containerAppOptional &&
+			containerAppOptional.instance_type !== undefined
 		) {
 			if (
-				typeof containerAppOptional.configuration.instance_type !== "string" ||
+				typeof containerAppOptional.instance_type !== "string" ||
 				!["dev", "basic", "standard"].includes(
-					containerAppOptional.configuration.instance_type
+					containerAppOptional.instance_type
 				)
 			) {
 				diagnostics.errors.push(
-					`"containers.configuration.instance_type" should be either 'dev', 'basic', or 'standard', but got ${containerAppOptional.configuration.instance_type}`
+					`"containers.instance_type" should be either 'dev', 'basic', or 'standard', but got ${containerAppOptional.instance_type}`
 				);
 			}
 		}
