@@ -68,7 +68,7 @@ export default function registerDevHotKeys(
 			handler: async () => {
 				if (
 					!devEnv.config.latestConfig?.dev?.enableContainers ||
-					!devEnv.config.latestConfig?.containers
+					!devEnv.config.latestConfig?.containers?.length
 				) {
 					return;
 				}

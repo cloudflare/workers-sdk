@@ -4,7 +4,7 @@ import path from "path";
 import { dockerImageInspect } from "./inspect";
 import { MF_DEV_CONTAINER_PREFIX } from "./registry";
 import { BuildArgs, ContainerDevOptions, Logger } from "./types";
-import { verifyLocalDevSupported } from "./utils";
+import { verifyDockerInstalled } from "./utils";
 
 export async function constructBuildCommand(
 	options: BuildArgs,
@@ -70,20 +70,30 @@ export function dockerBuild(
 	});
 }
 
-// TODO: this should also pull
-export async function buildAllContainers(
+/**
+ *
+ * Builds (or pulls - TODO) the container images for local development. This
+ * will be called before starting the local development server, and by a rebuild
+ * hotkey during development.
+ *
+ * Because this runs when local dev starts, we also do some validation here,
+ * such as checking if the Docker CLI is installed, and if the container images
+ * expose any ports.
+ */
+export async function prepareContainerImagesForDev(
 	dockerPath: string,
-	logger: Logger,
 	containerOptions: ContainerDevOptions[]
 ) {
-	await verifyLocalDevSupported(dockerPath);
-	logger.info("Loading container image(s)...");
+	if (process.platform === "win32") {
+		throw new Error(
+			"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container part of your application."
+		);
+	}
+	await verifyDockerInstalled(dockerPath);
 	for (const options of containerOptions) {
 		await buildContainer(dockerPath, options);
+		await checkExposedPorts(dockerPath, options.imageTag);
 	}
-	// Miniflare will log 'Ready on...' before the containers are built, but that is actually the proxy server.
-	// The actual user worker's miniflare instance is blocked until the containers are built
-	logger.info("Container(s) built and ready");
 }
 
 async function buildContainer(
@@ -100,7 +110,6 @@ async function buildContainer(
 	});
 
 	await dockerBuild(dockerPath, { buildCmd, dockerfile });
-	await checkExposedPorts(dockerPath, options.imageTag);
 }
 
 async function checkExposedPorts(dockerPath: string, imageTag: string) {

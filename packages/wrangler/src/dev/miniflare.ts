@@ -207,8 +207,6 @@ export interface ConfigBundle {
 	bindVectorizeToProd: boolean;
 	imagesLocalMode: boolean;
 	testScheduled: boolean;
-	enableContainers: boolean | undefined;
-	dockerPath: string | undefined;
 	containers: ContainerApp[] | undefined;
 	containerBuildId: string | undefined;
 	containerEngine: ContainerEngine | undefined;

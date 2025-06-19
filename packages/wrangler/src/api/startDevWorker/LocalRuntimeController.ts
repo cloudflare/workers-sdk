@@ -2,9 +2,9 @@ import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import {
-	buildAllContainers,
 	cleanupContainers,
 	getDevContainerImageName,
+	prepareContainerImagesForDev,
 } from "@cloudflare/containers-shared";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
@@ -143,8 +143,6 @@ export async function convertToConfigBundle(
 		tails: event.config.tailConsumers,
 		containers: event.config.containers,
 		containerBuildId: event.config.dev?.containerBuildId,
-		enableContainers: event.config.dev.enableContainers ?? true,
-		dockerPath: event.config.dev.dockerPath ?? "docker",
 		containerEngine: event.config.dev.containerEngine,
 	};
 }
@@ -175,7 +173,7 @@ export class LocalRuntimeController extends RuntimeController {
 
 	// Set of container images that have been seen in the current dev session.
 	// This is used to clean up containers at the end of the dev session.
-	#containerImagesSeen: Set<string> = new Set();
+	#containerImageTagsSeen: Set<string> = new Set();
 	// Stored here, so it can be used in `cleanupContainers()`
 	#dockerPath: string | undefined;
 	// If this doesn't match what is in config, trigger a rebuild.
@@ -217,14 +215,18 @@ export class LocalRuntimeController extends RuntimeController {
 			this.#dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
 			// keep track of them so we can clean up later
 			for (const container of containerOptions ?? []) {
-				this.#containerImagesSeen.add(container.imageTag);
+				this.#containerImageTagsSeen.add(container.imageTag);
 			}
 			if (
 				containerOptions &&
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
-				await buildAllContainers(this.#dockerPath, logger, containerOptions);
+				logger.log(chalk.dim("⎔ Preparing container images..."));
+				await prepareContainerImagesForDev(this.#dockerPath, containerOptions);
 				this.#currentContainerBuildId = data.config.dev.containerBuildId;
+				// Miniflare will have logged 'Ready on...' before the containers are built, but that is actually the proxy server :/
+				// The actual user worker's miniflare instance is blocked until the containers are built
+				logger.log(chalk.dim("⎔ Container images ready"));
 			}
 
 			const { options, internalObjects, entrypointNames } =
@@ -339,7 +341,7 @@ export class LocalRuntimeController extends RuntimeController {
 			this.#dockerPath,
 			"Docker path should have been set if containers are enabled"
 		);
-		await cleanupContainers(this.#dockerPath, this.#containerImagesSeen);
+		await cleanupContainers(this.#dockerPath, this.#containerImageTagsSeen);
 	};
 
 	#teardown = async (): Promise<void> => {
@@ -352,7 +354,7 @@ export class LocalRuntimeController extends RuntimeController {
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
-		if (this.#containerImagesSeen.size > 0) {
+		if (this.#containerImageTagsSeen.size > 0) {
 			try {
 				await this.cleanupContainers();
 			} catch (error) {

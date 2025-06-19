@@ -1,4 +1,4 @@
-import { spawn, StdioOptions } from "child_process";
+import { execFile, spawn, StdioOptions } from "child_process";
 import { existsSync, statSync } from "fs";
 
 /** helper for simple docker command call that don't require any io handling */
@@ -33,47 +33,22 @@ export const runDockerCmdWithOutput = async (
 	dockerPath: string,
 	args: string[]
 ): Promise<string> => {
-	const child = spawn(dockerPath, args, {
-		stdio: ["inherit", "pipe", "pipe"],
-	});
-
-	let stdout = "";
-	let stderr = "";
-
-	child.stdout?.on("data", (data) => {
-		stdout += data.toString();
-	});
-
-	child.stderr?.on("data", (data) => {
-		stderr += data.toString();
-	});
-
-	let errorHandled = false;
-
 	return new Promise((resolve, reject) => {
-		child.on("close", (code) => {
-			if (code === 0) {
-				resolve(stdout.trim());
-			} else if (!errorHandled) {
-				errorHandled = true;
-				reject(new Error(`Docker command exited with code: ${code}`));
+		execFile(dockerPath, args, (error, stdout) => {
+			if (error) {
+				return reject(
+					new Error(
+						`Failed running docker command: ${error.message}. Command: ${dockerPath} ${args.join(" ")}`
+					)
+				);
 			}
-		});
-		child.on("error", (err) => {
-			if (!errorHandled) {
-				errorHandled = true;
-				reject(new Error(`Docker command failed: ${err.message}`));
-			}
+			return resolve(stdout.trim());
 		});
 	});
 };
 
-export const verifyLocalDevSupported = async (dockerPath: string) => {
-	if (process.platform === "win32") {
-		throw new Error(
-			"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container part of your application."
-		);
-	}
+/** throws when docker is not installed */
+export const verifyDockerInstalled = async (dockerPath: string) => {
 	try {
 		await runDockerCmd(dockerPath, ["info"], ["inherit", "pipe", "pipe"]);
 	} catch {
@@ -91,6 +66,7 @@ export function isDir(path: string) {
 	return stats.isDirectory();
 }
 
+/** returns true if it is a dockerfile, false if it is a registry link, throws if neither */
 export const isDockerfile = (image: string): boolean => {
 	// TODO: move this into config validation
 	if (existsSync(image)) {
@@ -138,25 +114,23 @@ export const cleanupContainers = async (
 	dockerPath: string,
 	imageTags: Set<string>
 ) => {
-	if (imageTags.size === 0) {
-		return true;
-	}
-
 	try {
-		// Find all containers (stopped and running) for each built image in parallel
-		const containerPromises = Array.from(imageTags).map(async (imageTag) => {
-			return await getContainers(dockerPath, imageTag);
-		});
-		const containerResults = await Promise.all(containerPromises);
-		const allContainerIds = containerResults.flat();
-		if (allContainerIds.length === 0) {
+		// Find all containers (stopped and running) for each built image
+		const containerIds: string[] = [];
+		for (const imageTag of imageTags) {
+			containerIds.push(
+				...(await getContainerIdsFromImage(dockerPath, imageTag))
+			);
+		}
+
+		if (containerIds.length === 0) {
 			return true;
 		}
 
 		// Workerd should have stopped all containers, but clean up any in case. Sends a sigkill.
 		await runDockerCmd(
 			dockerPath,
-			["rm", "--force", ...allContainerIds],
+			["rm", "--force", ...containerIds],
 			["inherit", "pipe", "pipe"]
 		);
 		return true;
@@ -165,7 +139,10 @@ export const cleanupContainers = async (
 	}
 };
 
-const getContainers = async (dockerPath: string, ancestorImage: string) => {
+const getContainerIdsFromImage = async (
+	dockerPath: string,
+	ancestorImage: string
+) => {
 	const output = await runDockerCmdWithOutput(dockerPath, [
 		"ps",
 		"-a",
@@ -174,5 +151,5 @@ const getContainers = async (dockerPath: string, ancestorImage: string) => {
 		"--format",
 		"{{.ID}}",
 	]);
-	return output ? output.split("\n").filter((line) => line.trim()) : [];
+	return output.split("\n").filter((line) => line.trim());
 };

@@ -26,5 +26,6 @@ export type ContainerDevOptions = {
 	/** formatted as cloudflare-dev/workername-DOclassname:build-id */
 	imageTag: string;
 	imageBuildContext?: string;
+	/** build time args */
 	args?: Record<string, string>;
 };
