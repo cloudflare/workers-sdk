@@ -11,7 +11,7 @@ import {
 	convertCfWorkerInitBindingsToBindings,
 } from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
-import type { MixedModeSession } from "../mixedMode";
+import type { RemoteProxySession } from "../remoteBindings";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -159,8 +159,8 @@ export class LocalRuntimeController extends RuntimeController {
 	#mutex = new Mutex();
 	#mf?: Miniflare;
 
-	#mixedModeSessionData: {
-		session: MixedModeSession;
+	#remoteProxySessionData: {
+		session: RemoteProxySession;
 		remoteBindings: Record<string, Binding>;
 	} | null = null;
 
@@ -172,25 +172,26 @@ export class LocalRuntimeController extends RuntimeController {
 		try {
 			const configBundle = await convertToConfigBundle(data);
 
-			const experimentalMixedMode =
-				data.config.dev.experimentalMixedMode ?? false;
+			const experimentalRemoteBindings =
+				data.config.dev.experimentalRemoteBindings ?? false;
 
-			if (experimentalMixedMode && !data.config.dev?.remote) {
+			if (experimentalRemoteBindings && !data.config.dev?.remote) {
 				// note: mixedMode uses (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
-				const { maybeStartOrUpdateMixedModeSession } = await import(
-					"../mixedMode"
+				const { maybeStartOrUpdateRemoteProxySession } = await import(
+					"../remoteBindings"
 				);
 
-				this.#mixedModeSessionData = await maybeStartOrUpdateMixedModeSession(
-					{
-						name: configBundle.name,
-						bindings:
-							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
-							{},
-					},
-					this.#mixedModeSessionData ?? null
-				);
+				this.#remoteProxySessionData =
+					await maybeStartOrUpdateRemoteProxySession(
+						{
+							name: configBundle.name,
+							bindings:
+								convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
+								{},
+						},
+						this.#remoteProxySessionData ?? null
+					);
 			}
 
 			const { options, internalObjects, entrypointNames } =
@@ -198,8 +199,8 @@ export class LocalRuntimeController extends RuntimeController {
 					this.#log,
 					configBundle,
 					this.#proxyToUserWorkerAuthenticationSecret,
-					this.#mixedModeSessionData?.session?.mixedModeConnectionString,
-					!!experimentalMixedMode
+					this.#remoteProxySessionData?.session?.remoteProxyConnectionString,
+					!!experimentalRemoteBindings
 				);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
@@ -310,12 +311,12 @@ export class LocalRuntimeController extends RuntimeController {
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
-		if (this.#mixedModeSessionData) {
+		if (this.#remoteProxySessionData) {
 			logger.log(chalk.dim("⎔ Shutting down remote connection..."));
 		}
 
-		await this.#mixedModeSessionData?.session?.dispose();
-		this.#mixedModeSessionData = null;
+		await this.#remoteProxySessionData?.session?.dispose();
+		this.#remoteProxySessionData = null;
 
 		logger.debug("LocalRuntimeController teardown complete");
 	};

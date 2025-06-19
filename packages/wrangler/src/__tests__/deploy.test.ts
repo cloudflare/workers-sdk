@@ -4,7 +4,10 @@ import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { PassThrough, Writable } from "node:stream";
-import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
+import {
+	getCloudflareContainerRegistry,
+	SchedulingPolicy,
+} from "@cloudflare/containers-shared";
 import * as TOML from "@iarna/toml";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
@@ -9129,6 +9132,7 @@ addEventListener('fetch', event => {});`
 					name: "my-container",
 					instances: 10,
 					durable_objects: { namespace_id: "1" },
+					scheduling_policy: SchedulingPolicy.DEFAULT,
 				});
 
 				fs.writeFileSync(
@@ -13062,6 +13066,42 @@ export default{
 
 			await runWrangler("deploy ./index.js");
 		});
+	});
+
+	it("should warn about unexpected experimental_remote fields", async () => {
+		writeWorkerSource();
+		writeWranglerConfig({
+			main: "./index.js",
+			kv_namespaces: [
+				{ binding: "MY_KV", id: "kv-id-xxx", experimental_remote: true },
+			],
+		});
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+
+		await runWrangler("deploy");
+
+		expect(std.warn).toContain(
+			'Unexpected fields found in kv_namespaces[0] field: "experimental_remote"'
+		);
+	});
+
+	it("should not warn about experimental_remote fields when --x-remote-bindings is provided", async () => {
+		writeWorkerSource();
+		writeWranglerConfig({
+			main: "./index.js",
+			kv_namespaces: [
+				{ binding: "MY_KV", id: "kv-id-xxx", experimental_remote: true },
+			],
+		});
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+
+		await runWrangler("deploy --x-remote-bindings");
+
+		expect(std.warn).not.toContain(
+			'Unexpected fields found in kv_namespaces[0] field: "experimental_remote"'
+		);
 	});
 
 	describe("multi-env warning", () => {

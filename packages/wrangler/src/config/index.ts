@@ -73,7 +73,7 @@ export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 export type ReadConfigOptions = ResolveConfigPathOptions & {
 	hideWarnings?: boolean;
 	experimental?: {
-		mixedModeEnabled?: boolean;
+		remoteBindingsEnabled?: boolean;
 	};
 };
 
@@ -105,15 +105,15 @@ export function readConfig(
 		options
 	);
 
-	// TODO: here we're overriding the MIXED_MODE flag based on options.experimental?.mixedModeEnabled,
-	//       once the MIXED_MODE flag is removed we should just normally call normalizeAndValidateConfig
+	// TODO: here we're overriding the REMOTE_BINDINGS flag based on options.experimental?.remoteBindingsEnabled,
+	//       once the REMOTE_BINDINGS flag is removed we should just normally call normalizeAndValidateConfig
 	const { diagnostics, config } = run(
 		{
 			RESOURCES_PROVISION: getFlag("RESOURCES_PROVISION") ?? false,
 			MULTIWORKER: getFlag("MULTIWORKER") ?? false,
-			MIXED_MODE:
-				options.experimental?.mixedModeEnabled ??
-				getFlag("MIXED_MODE") ??
+			REMOTE_BINDINGS:
+				options.experimental?.remoteBindingsEnabled ??
+				getFlag("REMOTE_BINDINGS") ??
 				false,
 		},
 		() => {
@@ -259,7 +259,7 @@ function tryLoadDotEnv(basePath: string): DotEnv | undefined {
  * Loads a dotenv file from `envPath`, preferring to read `${envPath}.${env}` if
  * `env` is defined and that file exists.
  *
- * Note: The `getDotDevDotVarsContent` function in the `packages/vite-plugin-cloudflare/src/index.ts` file
+ * Note: The `getDotDevDotVarsContent` function in the `packages/vite-plugin-cloudflare/src/dev-vars.ts` file
  *       follows the same logic implemented here, the two need to be kept in sync, so if you modify some logic
  *       here make sure that, if applicable, the same change is reflected there
  */

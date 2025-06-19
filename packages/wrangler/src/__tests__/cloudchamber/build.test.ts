@@ -119,6 +119,50 @@ describe("buildAndMaybePush", () => {
 		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
 	});
 
+	it("should be able to build image and not push if it already exists in remote", async () => {
+		vi.mocked(getDockerImageDigest).mockResolvedValue("three");
+		vi.mocked(runDockerCmd).mockResolvedValueOnce();
+		await runWrangler(
+			"containers build ./container-context -t test-app:tag -p"
+		);
+		expect(dockerBuild).toHaveBeenCalledWith("docker", {
+			buildCmd: [
+				"build",
+				"-t",
+				`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+				"--platform",
+				"linux/amd64",
+				"--provenance=false",
+				"-f",
+				"-",
+				"./container-context",
+			],
+			dockerfile,
+		});
+		expect(runDockerCmd).toHaveBeenCalledTimes(2);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(
+			1,
+			"docker",
+			[
+				"manifest",
+				"inspect",
+				`${getCloudflareContainerRegistry()}/test_account_id/test-app@three`,
+			],
+			"ignore"
+		);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
+			"image",
+			"rm",
+			`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+		]);
+		expect(dockerImageInspect).toHaveBeenCalledOnce();
+		expect(dockerImageInspect).toHaveBeenCalledWith("docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+		});
+		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
+	});
+
 	it("should be able to build image and not push", async () => {
 		await runWrangler("containers build ./container-context -t test-app");
 		expect(dockerBuild).toHaveBeenCalledTimes(1);

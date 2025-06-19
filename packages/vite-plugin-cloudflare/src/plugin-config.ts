@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import * as vite from "vite";
+import { getWorkerConfigs } from "./deploy-config";
 import {
 	getValidatedWranglerConfigPath,
 	getWorkerConfig,
@@ -14,6 +15,7 @@ import type {
 	WorkerWithServerLogicResolvedConfig,
 } from "./workers-configs";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
+import type { Unstable_Config } from "wrangler";
 
 export type PersistState = boolean | { path: string };
 
@@ -29,16 +31,18 @@ interface AuxiliaryWorkerConfig extends BaseWorkerConfig {
 	configPath: string;
 }
 
+interface Experimental {
+	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
+	headersAndRedirectsDevModeSupport?: boolean;
+	/** Experimental support for remote bindings (where bindings configured with `remote: true` access remote resources). */
+	remoteBindings?: boolean;
+}
+
 export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
 	persistState?: PersistState;
 	inspectorPort?: number | false;
-	experimental?: {
-		/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
-		headersAndRedirectsDevModeSupport?: boolean;
-		/** Experimental support for mixed mode (where bindings configured with `remote: true` access remote resources). */
-		mixedMode?: boolean;
-	};
+	experimental?: Experimental;
 }
 
 export interface AssetsOnlyConfig extends SanitizedWorkerConfig {
@@ -51,27 +55,26 @@ export interface WorkerConfig extends AssetsOnlyConfig {
 	main: Defined<SanitizedWorkerConfig["main"]>;
 }
 
-interface BasePluginConfig {
-	configPaths: Set<string>;
+interface BaseResolvedConfig {
 	persistState: PersistState;
-	cloudflareEnv: string | undefined;
-	experimental: {
-		/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
-		headersAndRedirectsDevModeSupport?: boolean;
-		mixedMode?: boolean;
-	};
+	inspectorPort: number | false | undefined;
+	experimental: Experimental;
 }
 
-interface AssetsOnlyPluginConfig extends BasePluginConfig {
+export interface AssetsOnlyResolvedConfig extends BaseResolvedConfig {
 	type: "assets-only";
+	configPaths: Set<string>;
+	cloudflareEnv: string | undefined;
 	config: AssetsOnlyConfig;
 	rawConfigs: {
 		entryWorker: AssetsOnlyWorkerResolvedConfig;
 	};
 }
 
-export interface WorkerPluginConfig extends BasePluginConfig {
+export interface WorkersResolvedConfig extends BaseResolvedConfig {
 	type: "workers";
+	configPaths: Set<string>;
+	cloudflareEnv: string | undefined;
 	workers: Record<string, WorkerConfig>;
 	entryWorkerEnvironmentName: string;
 	staticRouting: StaticRouting | undefined;
@@ -81,7 +84,15 @@ export interface WorkerPluginConfig extends BasePluginConfig {
 	};
 }
 
-export type ResolvedPluginConfig = AssetsOnlyPluginConfig | WorkerPluginConfig;
+export interface PreviewResolvedConfig extends BaseResolvedConfig {
+	type: "preview";
+	workers: Unstable_Config[];
+}
+
+export type ResolvedPluginConfig =
+	| AssetsOnlyResolvedConfig
+	| WorkersResolvedConfig
+	| PreviewResolvedConfig;
 
 // Worker names can only contain alphanumeric characters and '-' whereas environment names can only contain alphanumeric characters and '$', '_'
 function workerNameToEnvironmentName(workerName: string) {
@@ -93,10 +104,25 @@ export function resolvePluginConfig(
 	userConfig: vite.UserConfig,
 	viteEnv: vite.ConfigEnv
 ): ResolvedPluginConfig {
-	const configPaths = new Set<string>();
-	const persistState = pluginConfig.persistState ?? true;
-	const experimental = pluginConfig.experimental ?? {};
+	const shared = {
+		persistState: pluginConfig.persistState ?? true,
+		inspectorPort: pluginConfig.inspectorPort,
+		experimental: pluginConfig.experimental ?? {},
+	};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
+
+	if (viteEnv.isPreview) {
+		return {
+			...shared,
+			type: "preview",
+			workers: getWorkerConfigs(
+				root,
+				shared.experimental.remoteBindings ?? false
+			),
+		};
+	}
+
+	const configPaths = new Set<string>();
 	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
 		viteEnv.mode,
 		root,
@@ -111,7 +137,7 @@ export function resolvePluginConfig(
 	const entryWorkerResolvedConfig = getWorkerConfig(
 		entryWorkerConfigPath,
 		cloudflareEnv,
-		pluginConfig.experimental?.mixedMode ?? false,
+		pluginConfig.experimental?.remoteBindings ?? false,
 		{
 			visitedConfigPaths: configPaths,
 			isEntryWorker: true,
@@ -120,15 +146,14 @@ export function resolvePluginConfig(
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
 		return {
+			...shared,
 			type: "assets-only",
+			cloudflareEnv,
 			config: entryWorkerResolvedConfig.config,
 			configPaths,
-			persistState,
 			rawConfigs: {
 				entryWorker: entryWorkerResolvedConfig,
 			},
-			cloudflareEnv,
-			experimental,
 		};
 	}
 
@@ -161,7 +186,7 @@ export function resolvePluginConfig(
 		const workerResolvedConfig = getWorkerConfig(
 			workerConfigPath,
 			cloudflareEnv,
-			pluginConfig.experimental?.mixedMode ?? false,
+			pluginConfig.experimental?.remoteBindings ?? false,
 			{
 				visitedConfigPaths: configPaths,
 			}
@@ -190,9 +215,10 @@ export function resolvePluginConfig(
 	}
 
 	return {
+		...shared,
 		type: "workers",
+		cloudflareEnv,
 		configPaths,
-		persistState,
 		workers,
 		entryWorkerEnvironmentName,
 		staticRouting,
@@ -200,7 +226,25 @@ export function resolvePluginConfig(
 			entryWorker: entryWorkerResolvedConfig,
 			auxiliaryWorkers: auxiliaryWorkersResolvedConfigs,
 		},
-		cloudflareEnv,
-		experimental,
 	};
+}
+
+export function assertIsNotPreview(
+	resolvedPluginConfig: ResolvedPluginConfig
+): asserts resolvedPluginConfig is
+	| AssetsOnlyResolvedConfig
+	| WorkersResolvedConfig {
+	assert(
+		resolvedPluginConfig.type !== "preview",
+		`Expected "assets-only" or "workers" plugin config`
+	);
+}
+
+export function assertIsPreview(
+	resolvedPluginConfig: ResolvedPluginConfig
+): asserts resolvedPluginConfig is PreviewResolvedConfig {
+	assert(
+		resolvedPluginConfig.type === "preview",
+		`Expected "preview" plugin config`
+	);
 }

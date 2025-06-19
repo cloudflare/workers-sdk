@@ -23,8 +23,8 @@ import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	MiniflareOptions,
-	MixedModeConnectionString,
 	ModuleRule,
+	RemoteProxyConnectionString,
 	WorkerOptions,
 } from "miniflare";
 
@@ -114,8 +114,8 @@ export async function getPlatformProxy<
 		{
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
-			// TODO: when possible mixed mode should be made available for getPlatformProxy
-			MIXED_MODE: false,
+			// TODO: when possible remote bindings should be made available for getPlatformProxy
+			REMOTE_BINDINGS: false,
 		},
 		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
 	);
@@ -259,8 +259,8 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
-		mixedModeConnectionString?: MixedModeConnectionString;
-		mixedModeEnabled?: boolean;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		remoteBindingsEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -271,8 +271,8 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
-		mixedModeConnectionString?: MixedModeConnectionString;
-		mixedModeEnabled?: boolean;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		remoteBindingsEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -283,8 +283,8 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
-		mixedModeConnectionString?: MixedModeConnectionString;
-		mixedModeEnabled?: boolean;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		remoteBindingsEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -318,8 +318,8 @@ export function unstable_getMiniflareWorkerOptions(
 			tails: config.tail_consumers,
 			containers: {},
 		},
-		options?.mixedModeConnectionString,
-		options?.mixedModeEnabled ?? false
+		options?.remoteProxyConnectionString,
+		options?.remoteBindingsEnabled ?? false
 	);
 
 	// This function is currently only exported for the Workers Vitest pool.
@@ -333,13 +333,16 @@ export function unstable_getMiniflareWorkerOptions(
 			bindings.services.map((binding) => {
 				const name =
 					binding.service === config.name ? kCurrentWorker : binding.service;
-				if (options?.mixedModeConnectionString && binding.remote) {
+				if (
+					options?.remoteProxyConnectionString &&
+					binding.experimental_remote
+				) {
 					return [
 						binding.binding,
 						{
 							name,
 							entrypoint: binding.entrypoint,
-							mixedModeConnectionString: options.mixedModeConnectionString,
+							remoteProxyConnectionString: options.remoteProxyConnectionString,
 						},
 					];
 				}

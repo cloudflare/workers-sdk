@@ -41,10 +41,10 @@ import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
 	kUnsafeEphemeralUniqueKey,
-	mixedModeClientWorker,
 	parseRoutes,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
@@ -299,9 +299,9 @@ function getCustomServiceDesignator(
 	} else if (typeof service === "object") {
 		if ("node" in service) {
 			serviceName = getCustomNodeServiceName(workerIndex, kind, name);
-		} else if ("mixedModeConnectionString" in service) {
+		} else if ("remoteProxyConnectionString" in service) {
 			assert("name" in service && typeof service.name === "string");
-			serviceName = `${CORE_PLUGIN_NAME}:mixed-mode-service:${workerIndex}:${name}`;
+			serviceName = `${CORE_PLUGIN_NAME}:remote-proxy-service:${workerIndex}:${name}`;
 		}
 		// Worker with entrypoint
 		else if ("name" in service) {
@@ -378,17 +378,20 @@ function maybeGetCustomServiceService(
 		};
 	} else if (
 		typeof service === "object" &&
-		service.mixedModeConnectionString !== undefined
+		service.remoteProxyConnectionString !== undefined
 	) {
 		assert(
-			service.mixedModeConnectionString &&
+			service.remoteProxyConnectionString &&
 				service.name &&
 				typeof service.name === "string"
 		);
 
 		return {
-			name: `${CORE_PLUGIN_NAME}:mixed-mode-service:${workerIndex}:${name}`,
-			worker: mixedModeClientWorker(service.mixedModeConnectionString, name),
+			name: `${CORE_PLUGIN_NAME}:remote-proxy-service:${workerIndex}:${name}`,
+			worker: remoteProxyClientWorker(
+				service.remoteProxyConnectionString,
+				name
+			),
 		};
 	}
 }
