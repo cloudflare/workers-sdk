@@ -37,7 +37,6 @@ import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
-	ContainerEngine,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -62,7 +61,6 @@ export type NormalizeAndValidateConfigArgs = {
 	upstreamProtocol?: string;
 	script?: string;
 	enableContainers?: boolean;
-	containerEngine?: ContainerEngine;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -472,7 +470,6 @@ function normalizeAndValidateDev(
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
 		enableContainers: enableContainersArg,
-		containerEngine: containerEngineArg,
 	} = args;
 	assert(
 		localProtocolArg === undefined ||
@@ -488,11 +485,6 @@ function normalizeAndValidateDev(
 	assert(
 		enableContainersArg === undefined ||
 			typeof enableContainersArg === "boolean"
-	);
-	assert(
-		containerEngineArg === undefined ||
-			typeof containerEngineArg === "string" ||
-			typeof containerEngineArg?.localDocker?.socketPath === "string"
 	);
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
@@ -512,6 +504,7 @@ function normalizeAndValidateDev(
 			: local_protocol,
 		host,
 		enable_containers = enableContainersArg ?? true,
+		container_engine,
 		...rest
 	} = rawDev;
 	validateAdditionalProperties(diagnostics, "dev", Object.keys(rest), []);
@@ -550,6 +543,14 @@ function normalizeAndValidateDev(
 		"boolean"
 	);
 
+	validateOptionalProperty(
+		diagnostics,
+		"dev",
+		"container_engine",
+		container_engine,
+		"string"
+	);
+
 	return {
 		ip,
 		port,
@@ -558,7 +559,7 @@ function normalizeAndValidateDev(
 		upstream_protocol,
 		host,
 		enable_containers,
-		container_engine: containerEngineArg,
+		container_engine,
 	};
 }
 

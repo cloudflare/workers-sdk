@@ -1384,6 +1384,7 @@ export async function buildMiniflareOptions(
 					entrypoint: name,
 					proxy: true,
 				})),
+				containerEngine: config.containerEngine,
 			},
 			...externalWorkers,
 		],
