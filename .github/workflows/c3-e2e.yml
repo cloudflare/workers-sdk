@@ -7,7 +7,7 @@ jobs:
   e2e-vp:
     # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
     #       in .github/workflows/c3-e2e-dependabot.yml
-    if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'every-os' )
+    if: github.head_ref == 'changeset-release/main' || (contains(github.event.*.labels.*.name, 'c3-e2e' ) && contains(github.event.*.labels.*.name, 'every-os' ))
     timeout-minutes: 45
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
