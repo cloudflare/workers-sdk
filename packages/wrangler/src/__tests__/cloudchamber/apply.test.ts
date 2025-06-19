@@ -1030,9 +1030,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   tier = 2
 			│
-			├ Do you want to apply these changes?
-			│ yes
-			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
 			│
@@ -1106,9 +1103,6 @@ describe("cloudchamber apply", () => {
 			│   ...
 			│ - tier = 3
 			│ + tier = 2
-			│
-			├ Do you want to apply these changes?
-			│ yes
 			│
 			├ Loading
 			│
