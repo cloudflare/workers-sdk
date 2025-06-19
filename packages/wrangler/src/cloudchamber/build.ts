@@ -228,7 +228,7 @@ export async function ensureDiskLimits(options: {
 	// if appDiskSize is defined and configured to be more than the accountDiskSize, error
 	if (appDiskSize && appDiskSize > accountDiskSize) {
 		throw new UserError(
-			`Exceeded account limits: Your container is configured to use a disk size of ${appDiskSize / MB} MB. However, that exceeds the account limit of ${accountDiskSize / MB}`
+			`OH NOOOOO! Exceeded account limits: Your container is configured to use a disk size of ${appDiskSize / MB} MB. However, that exceeds the account limit of ${accountDiskSize / MB}`
 		);
 	}
 	const maxAllowedImageSizeBytes = appDiskSize ?? accountDiskSize;

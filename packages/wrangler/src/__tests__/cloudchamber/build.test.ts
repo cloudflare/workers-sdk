@@ -243,7 +243,9 @@ describe("buildAndMaybePush", () => {
 						},
 					},
 				})
-			).rejects.toThrow("Exceeded account limits");
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Exceeded account limits: Your container is configured to use a disk size of 3000 MB. However, that exceeds the account limit of 2000]`
+			);
 		});
 
 		it("should throw error if image size exceeds allowed size", async () => {
