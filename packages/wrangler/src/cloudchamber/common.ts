@@ -179,7 +179,7 @@ export async function promiseSpinner<T>(
 
 export async function fillOpenAPIConfiguration(
 	config: Config,
-	json: boolean,
+	_json: boolean,
 	scope: typeof containersScope | typeof cloudchamberScope
 ) {
 	const headers: Record<string, string> =
@@ -201,16 +201,6 @@ export async function fillOpenAPIConfiguration(
 	}
 
 	OpenAPI.HEADERS = headers;
-	const [, err] = await wrap(loadAccountSpinner({ json }));
-
-	if (err) {
-		let message = err.message;
-		if (json && err instanceof ApiError) {
-			message = JSON.stringify(err);
-		}
-
-		throw new UserError("Loading account failed: " + message);
-	}
 }
 
 export function interactWithUser(config: { json?: boolean }): boolean {
