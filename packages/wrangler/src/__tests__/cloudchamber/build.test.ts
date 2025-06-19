@@ -57,7 +57,7 @@ describe("buildAndMaybePush", () => {
 	});
 
 	it("should use a custom docker path if provided", async () => {
-		vi.stubEnv("WRANGLER_CONTAINERS_DOCKER_PATH", "/custom/docker/path");
+		vi.stubEnv("WRANGLER_DOCKER_BIN", "/custom/docker/path");
 		await runWrangler(
 			"containers build ./container-context -t test-app:tag -p"
 		);

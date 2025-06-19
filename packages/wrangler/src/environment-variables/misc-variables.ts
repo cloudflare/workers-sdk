@@ -241,12 +241,12 @@ export const getRegistryPath = getEnvironmentVariableFactory({
 });
 
 /**
- * `WRANGLER_CONTAINERS_DOCKER_PATH` specifies the path to a docker binary.
+ * `WRANGLER_DOCKER_BIN` specifies the path to a docker binary.
  *
  * By default it's `docker`.
  */
 export const getDockerPath = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_CONTAINERS_DOCKER_PATH",
+	variableName: "WRANGLER_DOCKER_BIN",
 	defaultValue() {
 		return "docker";
 	},

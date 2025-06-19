@@ -33,25 +33,28 @@ export const cloudchamber = (
 			"delete [deploymentId]",
 			"Delete an existing deployment that is running in the Cloudflare edge",
 			(args) => deleteCommandOptionalYargs(args),
-			(args) => handleFailure(deleteCommand)(args)
+			(args) =>
+				handleFailure(`wrangler cloudchamber delete`, deleteCommand)(args)
 		)
 		.command(
 			"create",
 			"Create a new deployment",
 			(args) => createCommandOptionalYargs(args),
-			(args) => handleFailure(createCommand)(args)
+			(args) =>
+				handleFailure(`wrangler cloudchamber create`, createCommand)(args)
 		)
 		.command(
 			"list [deploymentIdPrefix]",
 			"List and view status of deployments",
 			(args) => listDeploymentsYargs(args),
-			(args) => handleFailure(listCommand)(args)
+			(args) => handleFailure(`wrangler cloudchamber list`, listCommand)(args)
 		)
 		.command(
 			"modify [deploymentId]",
 			"Modify an existing deployment",
 			(args) => modifyCommandOptionalYargs(args),
-			(args) => handleFailure(modifyCommand)(args)
+			(args) =>
+				handleFailure(`wrangler cloudchamber modify`, modifyCommand)(args)
 		)
 		.command("ssh", "Manage the ssh keys of your account", (args) =>
 			sshCommand(args).command(subHelp)
@@ -63,25 +66,25 @@ export const cloudchamber = (
 			"curl <path>",
 			"send a request to an arbitrary cloudchamber endpoint",
 			(args) => yargsCurl(args),
-			(args) => handleFailure(curlCommand)(args)
+			(args) => handleFailure(`wrangler cloudchamber curl`, curlCommand)(args)
 		)
 		.command(
 			"apply",
 			"apply the changes in the container applications to deploy",
 			(args) => applyCommandOptionalYargs(args),
-			(args) => handleFailure(applyCommand)(args)
+			(args) => handleFailure(`wrangler cloudchamber apply`, applyCommand)(args)
 		)
 		.command(
 			"build [PATH]",
 			"build a dockerfile",
 			(args) => buildYargs(args),
-			(args) => handleFailure(buildCommand)(args)
+			(args) => handleFailure(`wrangler cloudchamber build`, buildCommand)(args)
 		)
 		.command(
 			"push [TAG]",
 			"push a tagged image to a Cloudflare managed registry, which is automatically integrated with your account",
 			(args) => pushYargs(args),
-			(args) => handleFailure(pushCommand)(args)
+			(args) => handleFailure(`wrangler cloudchamber push`, pushCommand)(args)
 		)
 		.command(
 			"images",

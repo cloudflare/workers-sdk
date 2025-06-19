@@ -28,18 +28,24 @@ export const imagesCommand = (yargs: CommonYargsArgvJSON) => {
 			"perform operations on images in your Cloudflare managed registry",
 			(args) => listImagesYargs(args),
 			(args) =>
-				handleFailure(async (_args: CommonYargsArgvSanitizedJSON, config) => {
-					await handleListImagesCommand(args, config);
-				})(args)
+				handleFailure(
+					`wrangler containers images list`,
+					async (_args: CommonYargsArgvSanitizedJSON, config) => {
+						await handleListImagesCommand(args, config);
+					}
+				)(args)
 		)
 		.command(
 			"delete [image]",
 			"remove an image from your Cloudflare managed registry",
 			(args) => deleteImageYargs(args),
 			(args) =>
-				handleFailure(async (_args: CommonYargsArgvSanitizedJSON, config) => {
-					await handleDeleteImageCommand(args, config);
-				})(args)
+				handleFailure(
+					`wrangler containers images delete`,
+					async (_args: CommonYargsArgvSanitizedJSON, config) => {
+						await handleDeleteImageCommand(args, config);
+					}
+				)(args)
 		);
 };
 

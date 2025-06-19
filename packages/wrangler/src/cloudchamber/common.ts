@@ -10,6 +10,7 @@ import {
 import { version as wranglerVersion } from "../../package.json";
 import { readConfig } from "../config";
 import { getConfigCache, purgeConfigCaches } from "../config-cache";
+import { constructStatusMessage } from "../core/CommandRegistry";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -26,6 +27,7 @@ import {
 	requireAuth,
 	setLoginScopeKeys,
 } from "../user";
+import { printWranglerBanner } from "../wrangler-banner";
 import { parseByteSize } from "./../parse";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
@@ -103,6 +105,7 @@ export function handleFailure<
 		? K
 		: never,
 >(
+	command: string,
 	cb: (args: CommandArgumentsObject, config: Config) => Promise<void>
 ): (
 	args: CommonYargsOptions &
@@ -111,6 +114,10 @@ export function handleFailure<
 ) => Promise<void> {
 	return async (args) => {
 		try {
+			if (!args.json) {
+				await printWranglerBanner();
+				logger.warn(constructStatusMessage(command, "alpha"));
+			}
 			const config = readConfig(args);
 			await fillOpenAPIConfiguration(config, args.json);
 			await cb(args, config);

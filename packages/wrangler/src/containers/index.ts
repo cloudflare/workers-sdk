@@ -26,13 +26,13 @@ export const containers = (
 			"build [PATH]",
 			"build a dockerfile",
 			(args) => buildYargs(args),
-			(args) => handleFailure(buildCommand)(args)
+			(args) => handleFailure(`wrangler containers build`, buildCommand)(args)
 		)
 		.command(
 			"push [TAG]",
 			"push a tagged image to a Cloudflare managed registry, which is automatically integrated with your account",
 			(args) => pushYargs(args),
-			(args) => handleFailure(pushCommand)(args)
+			(args) => handleFailure(`wrangler containers push`, pushCommand)(args)
 		)
 		.command(
 			"images",
@@ -43,18 +43,18 @@ export const containers = (
 			"info [ID]",
 			"get information about a specific container",
 			(args) => infoYargs(args),
-			(args) => handleFailure(infoCommand)(args)
+			(args) => handleFailure(`wrangler containers info`, infoCommand)(args)
 		)
 		.command(
 			"list",
 			"list containers",
 			(args) => listYargs(args),
-			(args) => handleFailure(listCommand)(args)
+			(args) => handleFailure(`wrangler containers list`, listCommand)(args)
 		)
 		.command(
 			"delete [ID]",
 			"delete a container",
 			(args) => deleteYargs(args),
-			(args) => handleFailure(deleteCommand)(args)
+			(args) => handleFailure(`wrangler containers delete`, deleteCommand)(args)
 		);
 };

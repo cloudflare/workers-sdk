@@ -8668,7 +8668,7 @@ addEventListener('fetch', event => {});`
 			});
 
 			it("should support durable object bindings to SQLite classes with containers (docker flow)", async () => {
-				vi.stubEnv("WRANGLER_CONTAINERS_DOCKER_PATH", "/usr/bin/docker");
+				vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 				function mockGetVersion(versionId: string) {
 					msw.use(
 						http.get(
