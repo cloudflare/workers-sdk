@@ -1,4 +1,3 @@
-import { DurableObject } from "cloudflare:workers";
 import {
 	createWebSocketModuleRunnerTransport,
 	ModuleRunner,
@@ -7,36 +6,16 @@ import { UNKNOWN_HOST } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
 
-let moduleRunner: ModuleRunner | undefined;
+let moduleRunner: ModuleRunner;
 
-export class RunnerObject extends DurableObject<WrapperEnv> {
-	// #moduleRunner: ModuleRunner | undefined;
-
-	override async fetch() {
-		if (moduleRunner) {
-			throw new Error("Runner already initialized");
-		}
-
-		try {
-			const { 0: client, 1: server } = new WebSocketPair();
-			moduleRunner = createModuleRunner(this.env, server);
-
-			return new Response(null, {
-				status: 101,
-				webSocket: client,
-			});
-		} catch (e) {
-			return new Response(e instanceof Error ? e.message : JSON.stringify(e), {
-				status: 500,
-			});
-		}
-	}
-}
-
-function createModuleRunner(
+export async function createModuleRunner(
 	env: WrapperEnv,
 	webSocket: WebSocket
-): ModuleRunner {
+) {
+	if (moduleRunner) {
+		throw new Error("Runner already initialized");
+	}
+
 	const transport = createWebSocketModuleRunnerTransport({
 		createConnection() {
 			webSocket.accept();
@@ -45,7 +24,7 @@ function createModuleRunner(
 		},
 	});
 
-	return new ModuleRunner(
+	moduleRunner = new ModuleRunner(
 		{
 			sourcemapInterceptor: "prepareStackTrace",
 			transport: {
@@ -106,10 +85,6 @@ function createModuleRunner(
 }
 
 export async function getWorkerEntryExport(path: string, entrypoint: string) {
-	if (!moduleRunner) {
-		throw new Error("Runner not initialized");
-	}
-
 	const module = await moduleRunner.import(path);
 	const entrypointValue =
 		typeof module === "object" &&
