@@ -1,5 +1,7 @@
+import type { RunnerObject } from "./module-runner";
+
 export interface WrapperEnv {
-	__VITE_RUNNER_OBJECT__: { get(id: "singleton"): Fetcher };
+	__VITE_RUNNER_OBJECT__: { get(id: "singleton"): RunnerObject };
 	__VITE_INVOKE_MODULE__: {
 		fetch: (request: Request) => Promise<Response>;
 	};
