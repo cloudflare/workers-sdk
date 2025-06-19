@@ -358,6 +358,8 @@ export default async function deploy(props: Props): Promise<{
 
 	let workerExists: boolean = true;
 
+	logger.log("This is a test");
+
 	if (!props.dispatchNamespace && accountId) {
 		try {
 			const serviceMetaData = await fetchResult<{
