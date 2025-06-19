@@ -76,10 +76,12 @@ export type ContainerApp = {
 	/** The scheduling policy of the application, default is regional */
 	scheduling_policy?: "regional" | "moon" | "default";
 
+	/** The instance type to be used for the container */
+	instance_type?: "dev" | "basic" | "standard";
+
 	/* Configuration of the container */
 	configuration: {
 		image: string;
-		instance_type?: "dev" | "basic" | "standard";
 		labels?: { name: string; value: string }[];
 		secrets?: { name: string; type: "env"; secret: string }[];
 		disk?: { size: string };

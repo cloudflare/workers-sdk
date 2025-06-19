@@ -15,6 +15,7 @@ import {
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
+	InstanceType,
 	RolloutsService,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
@@ -114,6 +115,9 @@ function containerAppToCreateApplication(
 ): CreateApplicationRequest {
 	const configuration =
 		containerApp.configuration as UserDeploymentConfiguration;
+	if (containerApp.instance_type !== undefined) {
+		configuration.instance_type = containerApp.instance_type as InstanceType;
+	}
 	const app: CreateApplicationRequest = {
 		...containerApp,
 		configuration,
@@ -140,6 +144,7 @@ function containerAppToCreateApplication(
 	delete (app as Record<string, unknown>)["image_vars"];
 	delete (app as Record<string, unknown>)["rollout_step_percentage"];
 	delete (app as Record<string, unknown>)["rollout_kind"];
+	delete (app as Record<string, unknown>)["instance_type"];
 
 	return app;
 }
@@ -660,7 +665,6 @@ export async function apply(
 							action.application.max_instances !== undefined
 								? undefined
 								: action.application.instances,
-						configuration: undefined,
 					})
 				);
 			} catch (err) {

@@ -993,15 +993,66 @@ describe("cloudchamber apply", () => {
 		/* eslint-enable */
 	});
 
+	test("can apply a simple application (instance type)", async () => {
+		setIsTTY(false);
+		writeAppConfiguration({
+			name: "my-container-app",
+			instances: 3,
+			class_name: "DurableObjectClass",
+			instance_type: "dev",
+			configuration: {
+				image: "./Dockerfile",
+			},
+			constraints: {
+				tier: 2,
+			},
+		});
+		mockGetApplications([]);
+		mockCreateApplication({ id: "abc" } as Application);
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ NEW my-container-app
+			│
+			│   [[containers]]
+			│   name = \\"my-container-app\\"
+			│   instances = 3
+			│   scheduling_policy = \\"default\\"
+			│
+			│   [containers.configuration]
+			│   image = \\"./Dockerfile\\"
+			│   instance_type = \\"dev\\"
+			│
+			│   [containers.constraints]
+			│   tier = 2
+			│
+			├ Do you want to apply these changes?
+			│ yes
+			│
+			│
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
 	test("can apply a simple existing application (instance type)", async () => {
 		setIsTTY(false);
 		writeAppConfiguration({
 			name: "my-container-app",
 			class_name: "DurableObjectClass",
 			instances: 4,
+			instance_type: "standard",
 			configuration: {
 				image: "./Dockerfile",
-				instance_type: "standard",
 			},
 			constraints: {
 				tier: 2,
@@ -1070,8 +1121,7 @@ describe("cloudchamber apply", () => {
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		const app = await applicationReqBodyPromise;
-		expect(app.constraints?.tier).toEqual(2);
-		expect(app.instances).toEqual(4);
+		expect(app.configuration?.instance_type).toEqual("standard");
 		/* eslint-enable */
 	});
 });
