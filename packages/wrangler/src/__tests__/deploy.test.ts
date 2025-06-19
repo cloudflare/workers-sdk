@@ -149,7 +149,7 @@ describe("deploy", () => {
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			  example.com/some-route/*
-			Current Version ID: Galaxy-Class"
+			Current Version ID: Galaxy-Class test test test"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 
