@@ -361,24 +361,16 @@ const DefaultScopes = {
 		"See and change Cloudflare Pipelines configurations and data",
 	"secrets_store:write":
 		"See and change secrets + stores within the Secrets Store",
-} as const;
-
-const OptionalScopes = {
-	"cloudchamber:write": "Manage Cloudchamber",
 	"containers:write": "Manage Workers Containers",
+	"cloudchamber:write": "Manage Cloudchamber",
 } as const;
-
-const AllScopes = {
-	...DefaultScopes,
-	...OptionalScopes,
-};
 
 /**
  * The possible keys for a Scope.
  *
  * "offline_access" is automatically included.
  */
-export type Scope = keyof typeof AllScopes;
+export type Scope = keyof typeof DefaultScopes;
 
 export let DefaultScopeKeys = Object.keys(DefaultScopes) as Scope[];
 
@@ -1216,7 +1208,7 @@ export function listScopes(message = "💁 Available scopes:"): void {
 	logger.log(message);
 	const data = DefaultScopeKeys.map((scope: Scope) => ({
 		Scope: scope,
-		Description: AllScopes[scope],
+		Description: DefaultScopes[scope],
 	}));
 	logger.table(data);
 	// TODO: maybe a good idea to show usage here

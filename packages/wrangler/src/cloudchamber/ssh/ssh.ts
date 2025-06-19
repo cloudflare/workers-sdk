@@ -24,12 +24,13 @@ import {
 import { wrap } from "../helpers/wrap";
 import { validatePublicSSHKeyCLI, validateSSHKey } from "./validate";
 import type { Config } from "../../config";
-import type { Scope } from "../../user";
+import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgvJSON,
 	CommonYargsArgvSanitizedJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../../yargs-types";
+import type { cloudchamberScope } from "../common";
 import type {
 	ListSSHPublicKeys,
 	SSHPublicKeyID,
@@ -107,7 +108,10 @@ export async function sshPrompts(
 	return key || undefined;
 }
 
-export const sshCommand = (yargs: CommonYargsArgvJSON, scope: Scope) => {
+export const sshCommand = (
+	yargs: CommonYargsArgvJSON,
+	scope: typeof cloudchamberScope | typeof containersScope
+) => {
 	return yargs
 		.command(
 			"list",

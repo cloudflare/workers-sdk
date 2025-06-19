@@ -14,11 +14,10 @@ import {
 	listCommand,
 	listYargs,
 } from "./containers";
-import type { Scope } from "../user";
 import type { CommonYargsArgvJSON, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
 
-export const containersScope: Scope = "containers:write";
+export const containersScope = "containers:write" as const;
 
 export const containers = (
 	yargs: CommonYargsArgvJSON,

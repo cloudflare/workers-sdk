@@ -22,12 +22,13 @@ import {
 } from "../common";
 import { wrap } from "../helpers/wrap";
 import type { Config } from "../../config";
-import type { Scope } from "../../user";
+import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgvJSON,
 	CommonYargsArgvSanitizedJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../../yargs-types";
+import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
 function configureImageRegistryOptionalYargs(yargs: CommonYargsArgvJSON) {
@@ -61,7 +62,10 @@ function credentialsImageRegistryYargs(yargs: CommonYargsArgvJSON) {
 		});
 }
 
-export const registriesCommand = (yargs: CommonYargsArgvJSON, scope: Scope) => {
+export const registriesCommand = (
+	yargs: CommonYargsArgvJSON,
+	scope: typeof containersScope | typeof cloudchamberScope
+) => {
 	return yargs
 		.command(
 			"configure",

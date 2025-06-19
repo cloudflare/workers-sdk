@@ -5,12 +5,13 @@ import {
 import { logger } from "../../logger";
 import { handleFailure, promiseSpinner } from "../common";
 import type { Config } from "../../config";
-import type { Scope } from "../../user";
+import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgvJSON,
 	CommonYargsArgvSanitizedJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../../yargs-types";
+import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
 interface CatalogResponse {
@@ -22,7 +23,10 @@ interface TagsResponse {
 	tags: string[];
 }
 
-export const imagesCommand = (yargs: CommonYargsArgvJSON, scope: Scope) => {
+export const imagesCommand = (
+	yargs: CommonYargsArgvJSON,
+	scope: typeof containersScope | typeof cloudchamberScope
+) => {
 	return yargs
 		.command(
 			"list",
