@@ -28,8 +28,8 @@ catalogs:
       specifier: ^5.7.2
       version: 5.7.3
     undici:
-      specifier: ^5.28.5
-      version: 5.28.5
+      specifier: ^5.29.0
+      version: 5.29.0
     vite:
       specifier: ^5.4.14
       version: 5.4.14
@@ -150,7 +150,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -168,7 +168,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -207,7 +207,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -228,7 +228,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -267,7 +267,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -300,7 +300,7 @@ importers:
         version: 2.2.0
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -321,7 +321,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -345,7 +345,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -369,7 +369,7 @@ importers:
         version: 7.1.0
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -452,7 +452,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -470,7 +470,7 @@ importers:
         version: 4.20250617.0
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -497,7 +497,7 @@ importers:
         version: 1.1.1
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -515,7 +515,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -536,7 +536,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -564,7 +564,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -582,7 +582,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -600,7 +600,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -618,7 +618,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -639,7 +639,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -657,7 +657,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -694,7 +694,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -715,7 +715,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -730,7 +730,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -751,7 +751,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -769,7 +769,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -787,7 +787,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -805,7 +805,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -823,7 +823,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -841,7 +841,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -859,7 +859,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -898,7 +898,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -913,7 +913,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -928,7 +928,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -1085,7 +1085,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -1124,7 +1124,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -1145,7 +1145,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -1166,7 +1166,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -1187,7 +1187,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -1208,7 +1208,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -1241,7 +1241,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -1265,7 +1265,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -1286,7 +1286,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -1304,7 +1304,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -1349,7 +1349,7 @@ importers:
         version: 5.0.1
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
 
   packages/cloudflare-workers-bindings-extension:
     devDependencies:
@@ -1415,7 +1415,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -1544,7 +1544,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vite:
         specifier: catalog:default
         version: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
@@ -1717,7 +1717,7 @@ importers:
         version: 1.1.0
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       workerd:
         specifier: 1.20250617.0
         version: 1.20250617.0
@@ -1945,7 +1945,7 @@ importers:
         version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -2025,7 +2025,7 @@ importers:
         version: 3.3.1(typescript@5.7.3)(vue-tsc@2.0.29(typescript@5.7.3))
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -3003,7 +3003,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -3167,7 +3167,7 @@ importers:
         version: 3.12.10
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       vite:
         specifier: catalog:default
         version: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
@@ -3544,7 +3544,7 @@ importers:
         version: 5.7.3
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
       update-check:
         specifier: ^1.5.4
         version: 1.5.4
@@ -3589,7 +3589,7 @@ importers:
         version: 2.2.0
       undici:
         specifier: catalog:default
-        version: 5.28.5
+        version: 5.29.0
 
 packages:
 
@@ -12457,6 +12457,10 @@ packages:
 
   undici@5.28.5:
     resolution: {integrity: sha512-zICwjrDrcrUE0pyyJc1I2QzBkLM8FINsgOrt6WjA+BgajVq9Nxu2PbFFXUrAggLfDXlZGZBVZYw7WNV5KiBiBA==}
+    engines: {node: '>=14.0'}
+
+  undici@5.29.0:
+    resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
     engines: {node: '>=14.0'}
 
   undici@6.21.0:
@@ -23010,6 +23014,10 @@ snapshots:
   undici-types@6.21.0: {}
 
   undici@5.28.5:
+    dependencies:
+      '@fastify/busboy': 2.1.1
+
+  undici@5.29.0:
     dependencies:
       '@fastify/busboy': 2.1.1
 
