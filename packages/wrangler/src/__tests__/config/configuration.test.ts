@@ -2318,7 +2318,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers\\" should be an object, but got \\"test\\""
+					  - \\"containers\\" should be an array, but got \\"test\\""
 				`);
 			});
 
@@ -2348,7 +2348,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers\\" should be an object, but got \\"test\\""
+					  - \\"containers\\" should be an array, but got \\"test\\""
 				`);
 			});
 
@@ -2363,7 +2363,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers\\" should be an object, but got 22"
+					  - \\"containers\\" should be an array, but got 22"
 				`);
 			});
 

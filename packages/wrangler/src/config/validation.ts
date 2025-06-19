@@ -2375,13 +2375,6 @@ function validateContainerApp(
 			return true;
 		}
 
-		if (typeof value !== "object") {
-			diagnostics.errors.push(
-				`"containers" should be an object, but got ${JSON.stringify(value)}`
-			);
-			return false;
-		}
-
 		if (!Array.isArray(value)) {
 			diagnostics.errors.push(
 				`"containers" should be an array, but got ${JSON.stringify(value)}`
