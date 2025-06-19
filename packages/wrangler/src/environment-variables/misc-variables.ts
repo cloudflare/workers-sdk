@@ -260,6 +260,6 @@ export const getDockerHost = getEnvironmentVariableFactory({
 	defaultValue() {
 		return process.platform === "win32"
 			? "//./pipe/docker_engine"
-			: "unix:/var/run/docker.sock";
+			: "unix:///var/run/docker.sock";
 	},
 });
