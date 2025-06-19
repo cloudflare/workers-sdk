@@ -404,7 +404,8 @@ async function resolveConfig(
 	}
 
 	// for pulling containers, we need to make sure the OpenAPI config for the
-	// container API client is properly set
+	// container API client is properly set so that we can get the correct permissions
+	// from the cloudchamber API to pull from the repository.
 	const needsPulling = resolved.containers?.some(
 		(c) => !isDockerfile(c.image ?? c.configuration.image)
 	);
