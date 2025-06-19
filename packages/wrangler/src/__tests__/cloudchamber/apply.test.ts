@@ -135,9 +135,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   tier = 2
 			│
-			├ Do you want to apply these changes?
-			│ yes
-			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
 			│
@@ -196,9 +193,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│ - tier = 3
 			│ + tier = 2
-			│
-			├ Do you want to apply these changes?
-			│ yes
 			│
 			├ Loading
 			│
@@ -287,9 +281,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   tier = 1
 			│
-			├ Do you want to apply these changes?
-			│ yes
-			│
 			├ Loading
 			│
 			│
@@ -374,9 +365,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   tier = 1
 			│
-			├ Do you want to apply these changes?
-			│ yes
-			│
 			│
 			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│
@@ -454,9 +442,6 @@ describe("cloudchamber apply", () => {
 			│
 			│   [containers.constraints]
 			│   tier = 1
-			│
-			├ Do you want to apply these changes?
-			│ yes
 			│
 			├ Loading
 			│
@@ -584,9 +569,6 @@ describe("cloudchamber apply", () => {
 			│
 			│ - [[containers.configuration.secrets]]
 			│   name = \\"MY_SECRET_2\\"
-			│
-			├ Do you want to apply these changes?
-			│ yes
 			│
 			├ Loading
 			│

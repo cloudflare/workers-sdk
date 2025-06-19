@@ -572,19 +572,20 @@ export async function apply(
 		endSection("No changes to be made");
 		return;
 	}
-
-	const yes = await processArgument<boolean>(
-		{ confirm: args.json ? true : undefined },
-		"confirm",
-		{
-			type: "confirm",
-			question: "Do you want to apply these changes?",
-			label: "",
+	if (!args.json) {
+		const yes = await processArgument<boolean>(
+			{ confirm: undefined },
+			"confirm",
+			{
+				type: "confirm",
+				question: "Do you want to apply these changes?",
+				label: "",
+			}
+		);
+		if (!yes) {
+			cancel("Not applying changes");
+			return;
 		}
-	);
-	if (!yes) {
-		cancel("Not applying changes");
-		return;
 	}
 
 	function formatError(err: ApiError): string {
