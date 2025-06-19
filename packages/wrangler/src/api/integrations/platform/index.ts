@@ -11,15 +11,16 @@ import {
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 } from "../../../dev/miniflare";
-import { run } from "../../../experimental-flags";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
+import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
 import type { AssetsOptions } from "../../../assets";
 import type { Config, RawConfig, RawEnvironment } from "../../../config";
+import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	MiniflareOptions,
@@ -58,6 +59,13 @@ export type GetPlatformProxyOptions = {
 	 * If `false` is specified no data is persisted on the filesystem.
 	 */
 	persist?: boolean | { path: string };
+	/**
+	 * Experimental flags (note: these can change at any time and are not version-controlled use at your own risk)
+	 */
+	experimental?: {
+		/** whether access to remove bindings should be enabled */
+		remoteBindings?: boolean;
+	};
 };
 
 /**
@@ -103,6 +111,8 @@ export async function getPlatformProxy<
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
+	const experimentalRemoteBindings = !!options.experimental?.remoteBindings;
+
 	const env = options.environment;
 
 	const rawConfig = readConfig({
@@ -110,20 +120,28 @@ export async function getPlatformProxy<
 		env,
 	});
 
-	const miniflareOptions = await run(
-		{
-			MULTIWORKER: false,
-			RESOURCES_PROVISION: false,
-			// TODO: when possible remote bindings should be made available for getPlatformProxy
-			REMOTE_BINDINGS: false,
-		},
-		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
+	let remoteProxySession: RemoteProxySession | undefined = undefined;
+	if (experimentalRemoteBindings && rawConfig.configPath) {
+		const a = await maybeStartOrUpdateRemoteProxySession(
+			rawConfig.configPath,
+			null
+		);
+		remoteProxySession = a?.session;
+	}
+
+	const miniflareOptions = await getMiniflareOptionsFromConfig(
+		rawConfig,
+		env,
+		options,
+		remoteProxySession?.remoteProxyConnectionString
 	);
 
 	const mf = new Miniflare({
 		script: "",
+		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+		// @ts-ignore
 		modules: true,
-		...(miniflareOptions as Record<string, unknown>),
+		...miniflareOptions,
 	});
 
 	const bindings: Env = await mf.getBindings();
@@ -136,7 +154,10 @@ export async function getPlatformProxy<
 		cf: cf as CfProperties,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
-		dispose: () => mf.dispose(),
+		dispose: async () => {
+			await remoteProxySession?.dispose();
+			await mf.dispose();
+		},
 	};
 }
 
@@ -144,7 +165,8 @@ export async function getPlatformProxy<
 async function getMiniflareOptionsFromConfig(
 	rawConfig: Config,
 	env: string | undefined,
-	options: GetPlatformProxyOptions
+	options: GetPlatformProxyOptions,
+	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): Promise<Partial<MiniflareOptions>> {
 	const bindings = getBindings(rawConfig, env, true, {});
 
@@ -183,8 +205,7 @@ async function getMiniflareOptionsFromConfig(
 			containers: undefined,
 			containerBuildId: undefined,
 		},
-		undefined,
-		false
+		remoteProxyConnectionString
 	);
 
 	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
@@ -320,8 +341,9 @@ export function unstable_getMiniflareWorkerOptions(
 			containers: undefined,
 			containerBuildId: undefined,
 		},
-		options?.remoteProxyConnectionString,
-		options?.remoteBindingsEnabled ?? false
+		options?.remoteBindingsEnabled
+			? options?.remoteProxyConnectionString
+			: undefined
 	);
 
 	// This function is currently only exported for the Workers Vitest pool.

@@ -535,13 +535,14 @@ type MiniflareBindingsConfig = Pick<
 //  each plugin options schema and use those
 export function buildMiniflareBindingOptions(
 	config: MiniflareBindingsConfig,
-	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
-	remoteBindingsEnabled: boolean
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
 ): {
 	bindingOptions: WorkerOptionsBindings;
 	internalObjects: CfDurableObject[];
 	externalWorkers: WorkerOptions[];
 } {
+	const remoteBindingsEnabled = !!remoteProxyConnectionString;
+
 	const bindings = config.bindings;
 
 	// Setup blob and module bindings
@@ -1289,8 +1290,7 @@ export async function buildMiniflareOptions(
 	log: Log,
 	config: Omit<ConfigBundle, "rules">,
 	proxyToUserWorkerAuthenticationSecret: UUID,
-	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
-	remoteBindingsEnabled: boolean
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
 ): Promise<{
 	options: Options;
 	internalObjects: CfDurableObject[];
@@ -1305,6 +1305,7 @@ export async function buildMiniflareOptions(
 		}
 	}
 
+	const remoteBindingsEnabled = !!remoteProxyConnectionString;
 	if (!remoteBindingsEnabled) {
 		if (config.bindings.ai) {
 			if (!didWarnAiAccountUsage) {
@@ -1339,11 +1340,7 @@ export async function buildMiniflareOptions(
 
 	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
 	const { bindingOptions, internalObjects, externalWorkers } =
-		buildMiniflareBindingOptions(
-			config,
-			remoteProxyConnectionString,
-			remoteBindingsEnabled
-		);
+		buildMiniflareBindingOptions(config, remoteProxyConnectionString);
 	const sitesOptions = buildSitesOptions(config);
 	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
 	const assetOptions = buildAssetOptions(config);
