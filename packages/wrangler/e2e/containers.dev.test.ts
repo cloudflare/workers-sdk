@@ -69,12 +69,10 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 		});
 		it(`will build containers when miniflare starts`, async () => {
 			const worker = helper.runLongLived("wrangler dev");
-			// from docker build output:
-			await worker.waitForReady();
-			await worker.readUntil(/Loading container/);
+			await worker.readUntil(/Preparing container/);
 			await worker.readUntil(/DONE/);
 			// from miniflare output:
-			await worker.readUntil(/Container\(s\) built and ready/);
+			await worker.readUntil(/Container image\(s\) ready/);
 		});
 
 		it("won't start the container service if no containers are present", async () => {
@@ -89,7 +87,7 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			// await worker.exitCode;
 			await worker.stop();
 			const output = await worker.output;
-			expect(output).not.toContain("Loading container image(s)...");
+			expect(output).not.toContain("Preparing container image(s)...");
 		});
 
 		it("won't start the container service if enable_containers is set to false via config", async () => {
@@ -103,7 +101,7 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			await worker.waitForReady();
 			await worker.stop();
 			expect(await worker.output).not.toContain(
-				"Loading container image(s)..."
+				"Preparing container image(s)..."
 			);
 		});
 
@@ -114,7 +112,7 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			await worker.waitForReady();
 			await worker.stop();
 			expect(await worker.output).not.toContain(
-				"Loading container image(s)..."
+				"Preparing container image(s)..."
 			);
 		});
 
@@ -139,10 +137,9 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				"doesn't error in linux if no ports are exposed",
 				async () => {
 					const worker = helper.runLongLived("wrangler dev");
-					await worker.waitForReady();
-					await worker.readUntil(/Loading container/);
+					await worker.readUntil(/Preparing container/);
 					await worker.readUntil(/DONE/);
-					await worker.readUntil(/Container\(s\) built and ready/);
+					await worker.readUntil(/Container image\(s\) ready/);
 				}
 			);
 		});

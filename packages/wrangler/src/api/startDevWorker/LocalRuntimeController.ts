@@ -221,12 +221,12 @@ export class LocalRuntimeController extends RuntimeController {
 				containerOptions &&
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
-				logger.log(chalk.dim("⎔ Preparing container images..."));
+				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
 				await prepareContainerImagesForDev(this.#dockerPath, containerOptions);
 				this.#currentContainerBuildId = data.config.dev.containerBuildId;
 				// Miniflare will have logged 'Ready on...' before the containers are built, but that is actually the proxy server :/
 				// The actual user worker's miniflare instance is blocked until the containers are built
-				logger.log(chalk.dim("⎔ Container images ready"));
+				logger.log(chalk.dim("⎔ Container image(s) ready"));
 			}
 
 			const { options, internalObjects, entrypointNames } =
