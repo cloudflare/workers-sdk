@@ -11,14 +11,9 @@ import { execSync } from "child_process";
 import { randomUUID } from "crypto";
 import { cpSync, readFileSync, rmSync, writeFileSync } from "fs";
 
-if (!process.env.TEST_CLOUDFLARE_API_TOKEN) {
-	console.error("TEST_CLOUDFLARE_API_TOKEN must be set");
-	process.exit(1);
-}
-
-if (!process.env.TEST_CLOUDFLARE_ACCOUNT_ID) {
-	console.error("TEST_CLOUDFLARE_ACCOUNT_ID must be set");
-	process.exit(1);
+if (!process.env.TEST_CLOUDFLARE_API_TOKEN || !process.env.TEST_CLOUDFLARE_ACCOUNT_ID) {
+	console.warn("No credentials provided, skipping test...");
+	process.exit(0);
 }
 
 rmSync("./.tmp", { recursive: true, force: true });
