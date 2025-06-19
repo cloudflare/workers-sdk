@@ -15,7 +15,6 @@ import {
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
-	InstanceType,
 	RolloutsService,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
@@ -34,6 +33,7 @@ import type {
 	ApplicationID,
 	ApplicationName,
 	CreateApplicationRequest,
+	InstanceType,
 	ModifyApplicationRequestBody,
 	ModifyDeploymentV2RequestBody,
 	Observability as ObservabilityConfiguration,
