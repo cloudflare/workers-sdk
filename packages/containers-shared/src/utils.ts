@@ -1,4 +1,4 @@
-import { spawn, StdioOptions } from "child_process";
+import { execFile, spawn, StdioOptions } from "child_process";
 import { existsSync, statSync } from "fs";
 
 /** helper for simple docker command call that don't require any io handling */
@@ -29,6 +29,25 @@ export const runDockerCmd = async (
 	});
 };
 
+export const runDockerCmdWithOutput = async (
+	dockerPath: string,
+	args: string[]
+): Promise<string> => {
+	return new Promise((resolve, reject) => {
+		execFile(dockerPath, args, (error, stdout) => {
+			if (error) {
+				return reject(
+					new Error(
+						`Failed running docker command: ${error.message}. Command: ${dockerPath} ${args.join(" ")}`
+					)
+				);
+			}
+			return resolve(stdout.trim());
+		});
+	});
+};
+
+/** throws when docker is not installed */
 export const verifyDockerInstalled = async (dockerPath: string) => {
 	try {
 		await runDockerCmd(dockerPath, ["info"], ["inherit", "pipe", "pipe"]);
@@ -47,6 +66,7 @@ export function isDir(path: string) {
 	return stats.isDirectory();
 }
 
+/** returns true if it is a dockerfile, false if it is a registry link, throws if neither */
 export const isDockerfile = (image: string): boolean => {
 	// TODO: move this into config validation
 	if (existsSync(image)) {
@@ -85,4 +105,51 @@ export const isDockerfile = (image: string): boolean => {
 		);
 	}
 	return false;
+};
+
+/**
+ * Kills and removes any containers which come from the given image tag
+ */
+export const cleanupContainers = async (
+	dockerPath: string,
+	imageTags: Set<string>
+) => {
+	try {
+		// Find all containers (stopped and running) for each built image
+		const containerIds: string[] = [];
+		for (const imageTag of imageTags) {
+			containerIds.push(
+				...(await getContainerIdsFromImage(dockerPath, imageTag))
+			);
+		}
+
+		if (containerIds.length === 0) {
+			return true;
+		}
+
+		// Workerd should have stopped all containers, but clean up any in case. Sends a sigkill.
+		await runDockerCmd(
+			dockerPath,
+			["rm", "--force", ...containerIds],
+			["inherit", "pipe", "pipe"]
+		);
+		return true;
+	} catch (error) {
+		return false;
+	}
+};
+
+const getContainerIdsFromImage = async (
+	dockerPath: string,
+	ancestorImage: string
+) => {
+	const output = await runDockerCmdWithOutput(dockerPath, [
+		"ps",
+		"-a",
+		"--filter",
+		`ancestor=${ancestorImage}`,
+		"--format",
+		"{{.ID}}",
+	]);
+	return output.split("\n").filter((line) => line.trim());
 };

@@ -1,6 +1,10 @@
 import { spawn } from "child_process";
 import { readFileSync } from "fs";
-import { BuildArgs, Logger } from "./types";
+import path from "path";
+import { dockerImageInspect } from "./inspect";
+import { MF_DEV_CONTAINER_PREFIX } from "./registry";
+import { BuildArgs, ContainerDevOptions, Logger } from "./types";
+import { verifyDockerInstalled } from "./utils";
 
 export async function constructBuildCommand(
 	options: BuildArgs,
@@ -64,4 +68,59 @@ export function dockerBuild(
 			}
 		});
 	});
+}
+
+/**
+ *
+ * Builds (or pulls - TODO) the container images for local development. This
+ * will be called before starting the local development server, and by a rebuild
+ * hotkey during development.
+ *
+ * Because this runs when local dev starts, we also do some validation here,
+ * such as checking if the Docker CLI is installed, and if the container images
+ * expose any ports.
+ */
+export async function prepareContainerImagesForDev(
+	dockerPath: string,
+	containerOptions: ContainerDevOptions[]
+) {
+	if (process.platform === "win32") {
+		throw new Error(
+			"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container as part of your application."
+		);
+	}
+	await verifyDockerInstalled(dockerPath);
+	for (const options of containerOptions) {
+		await buildContainer(dockerPath, options);
+		await checkExposedPorts(dockerPath, options.imageTag);
+	}
+}
+
+async function buildContainer(
+	dockerPath: string,
+	options: ContainerDevOptions
+) {
+	// just let the tag default to latest
+	const { buildCmd, dockerfile } = await constructBuildCommand({
+		tag: options.imageTag,
+		pathToDockerfile: options.image,
+		buildContext: options.imageBuildContext ?? path.dirname(options.image),
+		args: options.args,
+		platform: "linux/amd64",
+	});
+
+	await dockerBuild(dockerPath, { buildCmd, dockerfile });
+}
+
+async function checkExposedPorts(dockerPath: string, imageTag: string) {
+	const output = await dockerImageInspect(dockerPath, {
+		imageTag,
+		formatString: "{{ len .Config.ExposedPorts }}",
+	});
+	if (output === "0" && process.platform !== "linux") {
+		throw new Error(
+			`The container "${imageTag.replace(MF_DEV_CONTAINER_PREFIX + "/", "")}" does not expose any ports.\n` +
+				"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort()` in your Dockerfile."
+		);
+	}
 }
