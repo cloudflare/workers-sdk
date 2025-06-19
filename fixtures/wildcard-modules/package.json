@@ -13,7 +13,7 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250617.0",
-		"undici": "^5.28.4",
+		"undici": "^7.10.0",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
