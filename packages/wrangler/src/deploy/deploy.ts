@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
+import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
@@ -764,9 +765,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			config.containers === undefined;
 
 		let workerBundle: FormData;
+		const dockerPath = getDockerPath();
+		if (config.containers) {
+			// lets fail earlier in the case where docker isn't installed
+			// and we have containers so that we don't get into a
+			// disjointed state where the worker updates but the container
+			// fails.
+			await verifyDockerInstalled(dockerPath);
+		}
 
 		if (props.dryRun) {
-			const dockerPath = getDockerPath();
 			if (config.containers) {
 				for (const container of config.containers) {
 					await maybeBuildContainer(

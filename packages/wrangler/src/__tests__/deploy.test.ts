@@ -8667,6 +8667,84 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
+			it("should fail early if no docker is detected when using a container worker", async () => {
+				vi.stubEnv(
+					"WRANGLER_CONTAINERS_DOCKER_PATH",
+					"/usr/bin/bad-docker-path"
+				);
+
+				function defaultChildProcess() {
+					return {
+						stderr: Buffer.from([]),
+						stdout: Buffer.from("i promise I am a successful process"),
+						on: function (reason: string, cbPassed: (code: number) => unknown) {
+							if (reason === "close") {
+								cbPassed(0);
+							}
+
+							return this;
+						},
+					} as unknown as ChildProcess;
+				}
+
+				vi.mocked(spawn).mockImplementationOnce((cmd, args) => {
+					expect(cmd).toBe("/usr/bin/docker");
+					expect(args).toEqual(["info"]);
+					return defaultChildProcess();
+				});
+
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+							configuration: { image: "./Dockerfile" },
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await expect(runWrangler("deploy index.js")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The Docker CLI does not appear to installed. Please ensure that the Docker CLI is installed. You can specify an executable with the environment variable WRANGLER_CONTAINERS_DOCKER_PATH.
+					Other container tooling that is compatible with the Docker CLI may work, but is not yet guaranteed to do so.
+					To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false.]
+				`);
+			});
+
 			it("should support durable object bindings to SQLite classes with containers (docker flow)", async () => {
 				vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 				function mockGetVersion(versionId: string) {
@@ -8735,6 +8813,12 @@ addEventListener('fetch', event => {});`
 					});
 
 				vi.mocked(spawn)
+					// 0. docker info
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args).toEqual(["info"]);
+						return defaultChildProcess();
+					})
 					// 1. docker build
 					.mockImplementationOnce((cmd, args) => {
 						expect(cmd).toBe("/usr/bin/docker");
@@ -9059,6 +9143,26 @@ addEventListener('fetch', event => {});`
 
 			it("should support durable object bindings to SQLite classes with containers", async () => {
 				// note no docker commands have been mocked here!
+				// except docker info so we don't fail early.
+				function defaultChildProcess() {
+					return {
+						stderr: Buffer.from([]),
+						stdout: Buffer.from("i promise I am a successful process"),
+						on: function (reason: string, cbPassed: (code: number) => unknown) {
+							if (reason === "close") {
+								cbPassed(0);
+							}
+
+							return this;
+						},
+					} as unknown as ChildProcess;
+				}
+				vi.stubEnv("WRANGLER_CONTAINERS_DOCKER_PATH", "/usr/bin/docker");
+				vi.mocked(spawn).mockImplementation((cmd, args) => {
+					expect(cmd).toBe("/usr/bin/docker");
+					expect(args).toEqual(["info"]);
+					return defaultChildProcess();
+				});
 				function mockGetVersion(versionId: string) {
 					msw.use(
 						http.get(
