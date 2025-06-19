@@ -11,11 +11,13 @@ import {
 	addUserAgent,
 } from "../cfetch/internal";
 import { readConfig } from "../config";
+import { constructStatusMessage } from "../core/CommandRegistry";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { requireApiToken, requireAuth } from "../user";
+import { printWranglerBanner } from "../wrangler-banner";
 import { parseByteSize } from "./../parse";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
@@ -95,6 +97,7 @@ export function handleFailure<
 		? K
 		: never,
 >(
+	command: string,
 	cb: (args: CommandArgumentsObject, config: Config) => Promise<void>,
 	scope: typeof cloudchamberScope | typeof containersScope
 ): (
@@ -104,6 +107,10 @@ export function handleFailure<
 ) => Promise<void> {
 	return async (args) => {
 		try {
+			if (!args.json) {
+				await printWranglerBanner();
+				logger.warn(constructStatusMessage(command, "alpha"));
+			}
 			const config = readConfig(args);
 			await fillOpenAPIConfiguration(config, args.json, scope);
 			await cb(args, config);

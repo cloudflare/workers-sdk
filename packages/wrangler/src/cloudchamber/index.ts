@@ -33,25 +33,45 @@ export const cloudchamber = (
 			"delete [deploymentId]",
 			"Delete an existing deployment that is running in the Cloudflare edge",
 			(args) => deleteCommandOptionalYargs(args),
-			(args) => handleFailure(deleteCommand, cloudchamberScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber delete`,
+					deleteCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"create",
 			"Create a new deployment",
 			(args) => createCommandOptionalYargs(args),
-			(args) => handleFailure(createCommand, cloudchamberScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber create`,
+					createCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"list [deploymentIdPrefix]",
 			"List and view status of deployments",
 			(args) => listDeploymentsYargs(args),
-			(args) => handleFailure(listCommand, cloudchamberScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber list`,
+					listCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"modify [deploymentId]",
 			"Modify an existing deployment",
 			(args) => modifyCommandOptionalYargs(args),
-			(args) => handleFailure(modifyCommand, cloudchamberScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber modify`,
+					modifyCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command("ssh", "Manage the ssh keys of your account", (args) =>
 			sshCommand(args, cloudchamberScope).command(subHelp)
@@ -63,25 +83,45 @@ export const cloudchamber = (
 			"curl <path>",
 			"send a request to an arbitrary Cloudchamber endpoint",
 			(args) => yargsCurl(args),
-			(args) => handleFailure(curlCommand, cloudchamberScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber curl`,
+					curlCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"apply",
 			"apply the changes in the container applications to deploy",
 			(args) => applyCommandOptionalYargs(args),
-			(args) => handleFailure(applyCommand, cloudchamberScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber apply`,
+					applyCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"build [PATH]",
 			"build a dockerfile",
 			(args) => buildYargs(args),
-			(args) => handleFailure(buildCommand, cloudchamberScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber build`,
+					buildCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"push [TAG]",
 			"push a tagged image to a Cloudflare managed registry, which is automatically integrated with your account",
 			(args) => pushYargs(args),
-			(args) => handleFailure(pushCommand, cloudchamberScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber push`,
+					pushCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"images",

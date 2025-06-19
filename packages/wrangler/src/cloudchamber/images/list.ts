@@ -33,18 +33,26 @@ export const imagesCommand = (
 			"perform operations on images in your Cloudflare managed registry",
 			(args) => listImagesYargs(args),
 			(args) =>
-				handleFailure(async (_args: CommonYargsArgvSanitizedJSON, config) => {
-					await handleListImagesCommand(args, config);
-				}, scope)(args)
+				handleFailure(
+					`wrangler containers images list`,
+					async (_args: CommonYargsArgvSanitizedJSON, config) => {
+						await handleListImagesCommand(args, config);
+					},
+					scope
+				)(args)
 		)
 		.command(
 			"delete [image]",
 			"remove an image from your Cloudflare managed registry",
 			(args) => deleteImageYargs(args),
 			(args) =>
-				handleFailure(async (_args: CommonYargsArgvSanitizedJSON, config) => {
-					await handleDeleteImageCommand(args, config);
-				}, scope)(args)
+				handleFailure(
+					`wrangler containers images delete`,
+					async (_args: CommonYargsArgvSanitizedJSON, config) => {
+						await handleDeleteImageCommand(args, config);
+					},
+					scope
+				)(args)
 		);
 };
 

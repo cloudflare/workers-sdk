@@ -28,13 +28,23 @@ export const containers = (
 			"build [PATH]",
 			"build a dockerfile",
 			(args) => buildYargs(args),
-			(args) => handleFailure(buildCommand, containersScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler containers build`,
+					buildCommand,
+					containersScope
+				)(args)
 		)
 		.command(
 			"push [TAG]",
 			"push a tagged image to a Cloudflare managed registry, which is automatically integrated with your account",
 			(args) => pushYargs(args),
-			(args) => handleFailure(pushCommand, containersScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler containers push`,
+					pushCommand,
+					containersScope
+				)(args)
 		)
 		.command(
 			"images",
@@ -45,18 +55,33 @@ export const containers = (
 			"info [ID]",
 			"get information about a specific container",
 			(args) => infoYargs(args),
-			(args) => handleFailure(infoCommand, containersScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler containers info`,
+					infoCommand,
+					containersScope
+				)(args)
 		)
 		.command(
 			"list",
 			"list containers",
 			(args) => listYargs(args),
-			(args) => handleFailure(listCommand, containersScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler containers list`,
+					listCommand,
+					containersScope
+				)(args)
 		)
 		.command(
 			"delete [ID]",
 			"delete a container",
 			(args) => deleteYargs(args),
-			(args) => handleFailure(deleteCommand, containersScope)(args)
+			(args) =>
+				handleFailure(
+					`wrangler containers delete`,
+					deleteCommand,
+					containersScope
+				)(args)
 		);
 };
