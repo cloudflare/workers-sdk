@@ -264,7 +264,7 @@ export const versionsUploadCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			REMOTE_BINDINGS: false,
+			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
