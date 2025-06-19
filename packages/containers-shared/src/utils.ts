@@ -1,5 +1,7 @@
 import { execFile, spawn, StdioOptions } from "child_process";
 import { existsSync, statSync } from "fs";
+import { dockerImageInspect } from "./inspect";
+import { MF_DEV_CONTAINER_PREFIX } from "./registry";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = async (
@@ -153,3 +155,16 @@ const getContainerIdsFromImage = async (
 	]);
 	return output.split("\n").filter((line) => line.trim());
 };
+
+export async function checkExposedPorts(dockerPath: string, imageTag: string) {
+	const output = await dockerImageInspect(dockerPath, {
+		imageTag,
+		formatString: "{{ len .Config.ExposedPorts }}",
+	});
+	if (output === "0" && process.platform !== "linux") {
+		throw new Error(
+			`The container "${imageTag.replace(MF_DEV_CONTAINER_PREFIX + "/", "")}" does not expose any ports.\n` +
+				"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort()` in your Dockerfile."
+		);
+	}
+}
