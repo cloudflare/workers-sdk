@@ -201,7 +201,7 @@ export async function fillOpenAPIConfiguration(
 	}
 
 	OpenAPI.HEADERS = headers;
-	const [, err] = await wrap(loadAccountSpinner({ json }));
+	/*	const [, err] = await wrap(loadAccountSpinner({ json }));
 
 	if (err) {
 		let message = err.message;
@@ -210,7 +210,7 @@ export async function fillOpenAPIConfiguration(
 		}
 
 		throw new UserError("Loading account failed: " + message);
-	}
+	}*/
 }
 
 export function interactWithUser(config: { json?: boolean }): boolean {
