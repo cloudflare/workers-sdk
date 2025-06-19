@@ -1,0 +1,20 @@
+{
+	"name": "@playground/bindings",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vite build --app",
+		"cf-typegen": "wrangler types --include-runtime=false",
+		"check:types": "tsc --build",
+		"dev": "vite dev",
+		"preview": "vite preview"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250617.0",
+		"typescript": "catalog:default",
+		"vite": "catalog:vite-plugin",
+		"wrangler": "workspace:*"
+	}
+}
