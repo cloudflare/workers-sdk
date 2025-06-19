@@ -17,6 +17,7 @@
 	"scripts": {
 		"check:lint": "eslint src --ext ts",
 		"check:type": "tsc -p ./tsconfig.json && pnpm run type:tests",
+		"deploy": "echo 'no deploy'",
 		"test": "vitest",
 		"test:ci": "pnpm run test run",
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
