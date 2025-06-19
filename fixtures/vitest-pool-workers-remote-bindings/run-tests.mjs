@@ -11,7 +11,10 @@ import { execSync } from "child_process";
 import { randomUUID } from "crypto";
 import { cpSync, readFileSync, rmSync, writeFileSync } from "fs";
 
-if (!process.env.TEST_CLOUDFLARE_API_TOKEN || !process.env.TEST_CLOUDFLARE_ACCOUNT_ID) {
+if (
+	!process.env.TEST_CLOUDFLARE_API_TOKEN ||
+	!process.env.TEST_CLOUDFLARE_ACCOUNT_ID
+) {
 	console.warn("No credentials provided, skipping test...");
 	process.exit(0);
 }
@@ -22,7 +25,9 @@ cpSync("./src", "./.tmp/src", { recursive: true });
 cpSync("./test", "./.tmp/test", { recursive: true });
 cpSync("./vitest.workers.config.ts", "./.tmp/vitest.workers.config.ts");
 
-const remoteWorkerName = `vitest-pool-workers-remote-worker-test-${randomUUID().split("-")[0]}`;
+const remoteWorkerName = `vitest-pool-workers-remote-worker-test-${
+	randomUUID().split("-")[0]
+}`;
 
 const wranglerJson = JSON.parse(readFileSync("./wrangler.json", "utf8"));
 wranglerJson.services[0].service = remoteWorkerName;
@@ -53,11 +58,14 @@ const env = {
 	CLOUDFLARE_ACCOUNT_ID: process.env.TEST_CLOUDFLARE_ACCOUNT_ID,
 };
 
-const deployOut = execSync("pnpm dlx wrangler deploy -c remote-wrangler.json", {
-	stdio: "pipe",
-	cwd: "./.tmp",
-	env,
-});
+const deployOut = execSync(
+	"pnpm dlx wrangler deploy -c remote-wrangler.json",
+	{
+		stdio: "pipe",
+		cwd: "./.tmp",
+		env,
+	}
+);
 
 if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(`${deployOut}`)) {
 	throw new Error(`Failed to deploy ${remoteWorkerName}`);
