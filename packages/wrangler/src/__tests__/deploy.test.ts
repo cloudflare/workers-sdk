@@ -13068,6 +13068,42 @@ export default{
 		});
 	});
 
+	it("should warn about unexpected experimental_remote fields", async () => {
+		writeWorkerSource();
+		writeWranglerConfig({
+			main: "./index.js",
+			kv_namespaces: [
+				{ binding: "MY_KV", id: "kv-id-xxx", experimental_remote: true },
+			],
+		});
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+
+		await runWrangler("deploy");
+
+		expect(std.warn).toContain(
+			'Unexpected fields found in kv_namespaces[0] field: "experimental_remote"'
+		);
+	});
+
+	it("should not warn about experimental_remote fields when --x-remote-bindings is provided", async () => {
+		writeWorkerSource();
+		writeWranglerConfig({
+			main: "./index.js",
+			kv_namespaces: [
+				{ binding: "MY_KV", id: "kv-id-xxx", experimental_remote: true },
+			],
+		});
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+
+		await runWrangler("deploy --x-remote-bindings");
+
+		expect(std.warn).not.toContain(
+			'Unexpected fields found in kv_namespaces[0] field: "experimental_remote"'
+		);
+	});
+
 	describe("multi-env warning", () => {
 		it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
 			writeWorkerSource();
