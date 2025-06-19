@@ -1,5 +1,12 @@
-import { defineBuildConfig } from "obuild/config";
+import { defineBuildConfig } from "unbuild";
 
 export default defineBuildConfig({
-	entries: ["src/runtime/:dist/runtime", "src/index.ts"],
+	declaration: true,
+	rollup: {
+		cjsBridge: true,
+	},
+	entries: [
+		"src/index",
+		{ input: "src/runtime/", outDir: "dist/runtime", format: "esm" },
+	],
 });
