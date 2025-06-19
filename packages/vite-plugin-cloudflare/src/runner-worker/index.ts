@@ -5,8 +5,10 @@ import {
 } from "cloudflare:workers";
 import { INIT_PATH, VITE_DEV_METADATA_HEADER } from "../shared";
 import { stripInternalEnv } from "./env";
-import { createModuleRunner, getWorkerEntryExport } from "./module-runner";
+import { getWorkerEntryExport } from "./module-runner";
 import type { WrapperEnv } from "./env";
+
+export { RunnerObject } from "./module-runner";
 
 interface WorkerEntrypointConstructor<T = unknown> {
 	new (
@@ -169,25 +171,30 @@ export function createWorkerEntrypointWrapper(
 				const request = arg as Request;
 				const url = new URL(request.url);
 
-				let webSocket: WebSocket;
 				if (url.pathname === INIT_PATH) {
-					try {
-						const viteDevMetadata = getViteDevMetadata(request);
-						entryPath = viteDevMetadata.entryPath;
-						const { 0: client, 1: server } = new WebSocketPair();
-						webSocket = client;
-						await createModuleRunner(this.env, server);
-					} catch (e) {
-						return new Response(
-							e instanceof Error ? e.message : JSON.stringify(e),
-							{ status: 500 }
-						);
-					}
+					const viteDevMetadata = getViteDevMetadata(request);
+					entryPath = viteDevMetadata.entryPath;
+					const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
 
-					return new Response(null, {
-						status: 101,
-						webSocket,
-					});
+					return stub.fetch(request);
+
+					// try {
+					// 	const viteDevMetadata = getViteDevMetadata(request);
+					// 	entryPath = viteDevMetadata.entryPath;
+					// 	const { 0: client, 1: server } = new WebSocketPair();
+					// 	webSocket = client;
+					// 	await createModuleRunner(this.env, server);
+					// } catch (e) {
+					// 	return new Response(
+					// 		e instanceof Error ? e.message : JSON.stringify(e),
+					// 		{ status: 500 }
+					// 	);
+					// }
+
+					// return new Response(null, {
+					// 	status: 101,
+					// 	webSocket,
+					// });
 				}
 			}
 
