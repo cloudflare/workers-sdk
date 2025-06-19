@@ -391,7 +391,7 @@ export class LocalRuntimeController extends RuntimeController {
 /**
  * @returns Container options suitable for building or pulling images,
  * with image tag set to well-known dev format.
- * Undefined if containers are not enabled or configured.
+ * Undefined if containers are not enabled or not configured.
  */
 export async function getContainerOptions(
 	config: BundleCompleteEvent["config"]
