@@ -286,7 +286,7 @@ async function handleModifyCommand(
 		"shortly your container will be modified to a new version"
 	);
 	const modifyRequest: ModifyDeploymentV2RequestBody = {
-		image: image,
+		image,
 		location: location,
 		ssh_public_key_ids: keys,
 		environment_variables: selectedEnvironmentVariables,
