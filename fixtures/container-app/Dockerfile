@@ -6,4 +6,3 @@ RUN npm install
 
 COPY ./container/simple-node-app.js app.js
 EXPOSE 8080
-CMD [ "node", "app.js" ]
