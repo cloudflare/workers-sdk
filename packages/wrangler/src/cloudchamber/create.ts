@@ -351,7 +351,7 @@ async function handleCreateCommand(
 		location,
 		ssh_public_key_ids: keys,
 		environment_variables: environmentVariables,
-		labels: labels,
+		labels,
 		instance_type: instanceType,
 		vcpu: undefined,
 		memory_mib: undefined,
