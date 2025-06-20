@@ -1,5 +1,53 @@
 # wrangler
 
+## 4.20.5
+
+### Patch Changes
+
+- [#9688](https://github.com/cloudflare/workers-sdk/pull/9688) [`086e29d`](https://github.com/cloudflare/workers-sdk/commit/086e29daf4c2ad5e3b7b9217b11e2447945bf8c8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add remote bindings support to `getPlatformProxy`
+
+  Example:
+
+  ```json
+  // wrangler.jsonc
+  {
+  	"name": "get-platform-proxy-test",
+  	"services": [
+  		{
+  			"binding": "MY_WORKER",
+  			"service": "my-worker",
+  			"experimental_remote": true
+  		}
+  	]
+  }
+  ```
+
+  ```js
+  // index.mjs
+  import { getPlatformProxy } from "wrangler";
+
+  const { env } = await getPlatformProxy({
+  	experimental: {
+  		remoteBindings: true,
+  	},
+  });
+
+  // env.MY_WORKER.fetch() fetches from the remote my-worker service
+  ```
+
+- [#9558](https://github.com/cloudflare/workers-sdk/pull/9558) [`d5edf52`](https://github.com/cloudflare/workers-sdk/commit/d5edf52b4391c8cf1efe2ba8ae8cdb3edbf3daa3) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - `wrangler containers apply` uses `observability` configuration.
+
+- [#9678](https://github.com/cloudflare/workers-sdk/pull/9678) [`24b2c66`](https://github.com/cloudflare/workers-sdk/commit/24b2c666cf07e83c00c49d13f2fe1bd98e602514) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - remove warnings during config validations on `experimental_remote` fields
+
+  wrangler commands, run without the `--x-remote-bindings` flag, parsing config files containing `experimental_remote` fields currently show warnings stating that the field is not recognized. This is usually more cumbersome than helpful so here we're loosening up this validation and making wrangler always recognize the field even when no `--x-remote-bindings` flag is provided
+
+- [#9633](https://github.com/cloudflare/workers-sdk/pull/9633) [`3f478af`](https://github.com/cloudflare/workers-sdk/commit/3f478af7f124c221c5a6bee6853aff818cb55ecc) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Add support for setting an instance type for containers in wrangler. This allows users to configure memory, disk, and vCPU by setting instance type when interacting with containers.
+
+- [#9596](https://github.com/cloudflare/workers-sdk/pull/9596) [`5162c51`](https://github.com/cloudflare/workers-sdk/commit/5162c5194604f26b2e5018961b761f3450872333) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - add ability to pull images for containers local dev
+
+- Updated dependencies [[`bfb791e`](https://github.com/cloudflare/workers-sdk/commit/bfb791e708706c643d088864a5226b23b0f45d7e), [`5162c51`](https://github.com/cloudflare/workers-sdk/commit/5162c5194604f26b2e5018961b761f3450872333)]:
+  - miniflare@4.20250617.3
+
 ## 4.20.4
 
 ### Patch Changes
