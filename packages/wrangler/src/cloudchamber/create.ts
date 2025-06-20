@@ -326,7 +326,7 @@ async function handleCreateCommand(
 		image,
 		location,
 		network,
-		instanceType: instanceType,
+		instanceType,
 		vcpu: vcpu,
 		memoryMib: memoryMib,
 		environmentVariables: selectedEnvironmentVariables,
