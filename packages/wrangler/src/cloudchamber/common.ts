@@ -736,7 +736,7 @@ export function checkInstanceType(
 	// memory or vcpu specified in the config
 	if (args.memory !== undefined || args.vcpu !== undefined) {
 		throw new UserError(
-			`instance_type is mutually exclusive with 'memory' and 'vcpu'. They cannot be set together.`
+			`Field "instance_type" is mutually exclusive with "memory" and "vcpu". These fields cannot be set together.`
 		);
 	}
 
