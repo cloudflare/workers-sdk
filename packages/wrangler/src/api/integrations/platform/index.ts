@@ -127,13 +127,14 @@ export async function getPlatformProxy<
 		remoteProxySession = maybeRemoteProxySessionWrap?.session;
 	}
 
-	const miniflareOptions = await getMiniflareOptionsFromConfig(
+	const miniflareOptions = await getMiniflareOptionsFromConfig({
 		rawConfig,
 		targetEnvironment,
 		options,
-		remoteProxySession?.remoteProxyConnectionString,
-		experimentalRemoteBindings
-	);
+		remoteProxyConnectionString:
+			remoteProxySession?.remoteProxyConnectionString,
+		remoteBindingsEnabled: experimentalRemoteBindings,
+	});
 
 	const mf = new Miniflare(miniflareOptions);
 
@@ -158,18 +159,28 @@ export async function getPlatformProxy<
  * Builds an options configuration object for the `getPlatformProxy` functionality that
  * can be then passed to the Miniflare constructor
  *
- * @param rawConfig The raw configuration to base the options from
- * @param targetEnvironment The target environment from which to get the binding configuration options
- * @param options The user provided `getPlatformProxy` options
+ * @param args.rawConfig The raw configuration to base the options from
+ * @param args.targetEnvironment The target environment from which to get the binding configuration options
+ * @param args.options The user provided `getPlatformProxy` options
+ * @param args.remoteProxyConnectionString The potential remote proxy connection string to be used to connect the remote bindings
+ * @param args.remoteBindingsEnabled Whether remote bindings are enabled
  * @returns an object ready to be passed to the Miniflare constructor
  */
-async function getMiniflareOptionsFromConfig(
-	rawConfig: Config,
-	targetEnvironment: string | undefined,
-	options: GetPlatformProxyOptions,
-	remoteProxyConnectionString?: RemoteProxyConnectionString,
-	remoteBindingsEnabled = false
-): Promise<MiniflareOptions> {
+async function getMiniflareOptionsFromConfig(args: {
+	rawConfig: Config;
+	targetEnvironment: string | undefined;
+	options: GetPlatformProxyOptions;
+	remoteProxyConnectionString?: RemoteProxyConnectionString;
+	remoteBindingsEnabled: boolean;
+}): Promise<MiniflareOptions> {
+	const {
+		rawConfig,
+		targetEnvironment,
+		options,
+		remoteProxyConnectionString,
+		remoteBindingsEnabled,
+	} = args;
+
 	const bindings = getBindings(rawConfig, targetEnvironment, true, {});
 
 	if (rawConfig["durable_objects"]) {
