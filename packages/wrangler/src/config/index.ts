@@ -3,7 +3,6 @@ import { maybeGetFile } from "@cloudflare/workers-shared";
 import TOML from "@iarna/toml";
 import dotenv from "dotenv";
 import { FatalError, UserError } from "../errors";
-import { getFlag, run } from "../experimental-flags";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
@@ -72,9 +71,6 @@ export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 
 export type ReadConfigOptions = ResolveConfigPathOptions & {
 	hideWarnings?: boolean;
-	experimental?: {
-		remoteBindingsEnabled?: boolean;
-	};
 };
 
 export type ConfigBindingOptions = Pick<
@@ -105,25 +101,11 @@ export function readConfig(
 		options
 	);
 
-	// TODO: here we're overriding the REMOTE_BINDINGS flag based on options.experimental?.remoteBindingsEnabled,
-	//       once the REMOTE_BINDINGS flag is removed we should just normally call normalizeAndValidateConfig
-	const { diagnostics, config } = run(
-		{
-			RESOURCES_PROVISION: getFlag("RESOURCES_PROVISION") ?? false,
-			MULTIWORKER: getFlag("MULTIWORKER") ?? false,
-			REMOTE_BINDINGS:
-				options.experimental?.remoteBindingsEnabled ??
-				getFlag("REMOTE_BINDINGS") ??
-				false,
-		},
-		() => {
-			return normalizeAndValidateConfig(
-				rawConfig,
-				configPath,
-				userConfigPath,
-				args
-			);
-		}
+	const { diagnostics, config } = normalizeAndValidateConfig(
+		rawConfig,
+		configPath,
+		userConfigPath,
+		args
 	);
 
 	if (diagnostics.hasWarnings() && !options?.hideWarnings) {
