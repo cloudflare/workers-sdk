@@ -749,7 +749,7 @@ export function checkInstanceType(
 			return InstanceType.STANDARD;
 		default:
 			throw new UserError(
-				`instance_type is expected to be one of 'dev', 'basic', or 'standard', but got ${instance_type}`
+				`"instance_type" field value is expected to be one of "dev", "basic", or "standard", but got "${instance_type}"`
 			);
 	}
 }
