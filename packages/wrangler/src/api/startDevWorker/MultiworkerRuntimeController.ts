@@ -134,7 +134,8 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				await convertToConfigBundle(data),
 				this.#proxyToUserWorkerAuthenticationSecret,
 				this.#remoteProxySessionsData.get(data.config.name)?.session
-					?.remoteProxyConnectionString
+					?.remoteProxyConnectionString,
+				!!experimentalRemoteBindings
 			);
 
 			this.#options.set(data.config.name, {

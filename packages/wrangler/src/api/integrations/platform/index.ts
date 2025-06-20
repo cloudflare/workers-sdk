@@ -133,7 +133,8 @@ export async function getPlatformProxy<
 		rawConfig,
 		env,
 		options,
-		remoteProxySession?.remoteProxyConnectionString
+		remoteProxySession?.remoteProxyConnectionString,
+		experimentalRemoteBindings
 	);
 
 	const mf = new Miniflare({
@@ -166,7 +167,8 @@ async function getMiniflareOptionsFromConfig(
 	rawConfig: Config,
 	env: string | undefined,
 	options: GetPlatformProxyOptions,
-	remoteProxyConnectionString?: RemoteProxyConnectionString
+	remoteProxyConnectionString?: RemoteProxyConnectionString,
+	remoteBindingsEnabled = false
 ): Promise<Partial<MiniflareOptions>> {
 	const bindings = getBindings(rawConfig, env, true, {});
 
@@ -205,7 +207,8 @@ async function getMiniflareOptionsFromConfig(
 			containers: undefined,
 			containerBuildId: undefined,
 		},
-		remoteProxyConnectionString
+		remoteProxyConnectionString,
+		remoteBindingsEnabled
 	);
 
 	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
@@ -341,9 +344,8 @@ export function unstable_getMiniflareWorkerOptions(
 			containers: undefined,
 			containerBuildId: undefined,
 		},
-		options?.remoteBindingsEnabled
-			? options?.remoteProxyConnectionString
-			: undefined
+		options?.remoteProxyConnectionString,
+		options?.remoteBindingsEnabled ?? false
 	);
 
 	// This function is currently only exported for the Workers Vitest pool.

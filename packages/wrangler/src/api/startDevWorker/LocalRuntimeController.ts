@@ -234,7 +234,8 @@ export class LocalRuntimeController extends RuntimeController {
 					this.#log,
 					configBundle,
 					this.#proxyToUserWorkerAuthenticationSecret,
-					this.#remoteProxySessionData?.session?.remoteProxyConnectionString
+					this.#remoteProxySessionData?.session?.remoteProxyConnectionString,
+					!!experimentalRemoteBindings
 				);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
