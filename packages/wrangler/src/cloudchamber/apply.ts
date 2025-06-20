@@ -20,7 +20,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { formatConfigSnippet } from "../config";
 import { UserError } from "../errors";
-import { promiseSpinner } from "./common";
+import { cleanForInstanceType, promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
 import type { Config } from "../config";
 import type { ContainerApp } from "../config/environment";
@@ -33,6 +33,7 @@ import type {
 	ApplicationID,
 	ApplicationName,
 	CreateApplicationRequest,
+	InstanceType,
 	ModifyApplicationRequestBody,
 	ModifyDeploymentV2RequestBody,
 	UserDeploymentConfiguration,
@@ -114,6 +115,9 @@ function containerAppToCreateApplication(
 ): CreateApplicationRequest {
 	const configuration =
 		containerApp.configuration as UserDeploymentConfiguration;
+	if (containerApp.instance_type !== undefined) {
+		configuration.instance_type = containerApp.instance_type as InstanceType;
+	}
 	const app: CreateApplicationRequest = {
 		...containerApp,
 		configuration,
@@ -140,6 +144,7 @@ function containerAppToCreateApplication(
 	delete (app as Record<string, unknown>)["image_vars"];
 	delete (app as Record<string, unknown>)["rollout_step_percentage"];
 	delete (app as Record<string, unknown>)["rollout_kind"];
+	delete (app as Record<string, unknown>)["instance_type"];
 
 	return app;
 }
@@ -333,6 +338,7 @@ export async function apply(
 			image: "docker.io/cloudflare/hello-world:1.0",
 			instances: 2,
 			name: config.name ?? "my-containers-application",
+			instance_type: "dev",
 		};
 		const endConfig: JsonMap =
 			args.env !== undefined
@@ -411,20 +417,22 @@ export async function apply(
 				);
 			}
 
+			const prevContainer =
+				appConfig.configuration.instance_type !== undefined
+					? cleanForInstanceType(prevApp)
+					: (prevApp as ContainerApp);
+			const nowContainer = mergeDeep(
+				prevContainer as CreateApplicationRequest,
+				sortObjectRecursive<CreateApplicationRequest>(appConfig)
+			) as ContainerApp;
+
 			const prev = formatConfigSnippet(
-				{ containers: [prevApp as ContainerApp] },
+				{ containers: [prevContainer] },
 				config.configPath
 			);
 
 			const now = formatConfigSnippet(
-				{
-					containers: [
-						mergeDeep(
-							prevApp,
-							sortObjectRecursive<CreateApplicationRequest>(appConfig)
-						) as ContainerApp,
-					],
-				},
+				{ containers: [nowContainer] },
 				config.configPath
 			);
 			const results = diffLines(prev, now);
@@ -657,7 +665,6 @@ export async function apply(
 							action.application.max_instances !== undefined
 								? undefined
 								: action.application.instances,
-						configuration: undefined,
 					})
 				);
 			} catch (err) {
