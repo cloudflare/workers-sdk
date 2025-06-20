@@ -113,11 +113,11 @@ export async function getPlatformProxy<
 ): Promise<PlatformProxy<Env, CfProperties>> {
 	const experimentalRemoteBindings = !!options.experimental?.remoteBindings;
 
-	const env = options.environment;
+	const targetEnvironment = options.environment;
 
 	const rawConfig = readConfig({
 		config: options.configPath,
-		env,
+		env: targetEnvironment,
 	});
 
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
@@ -129,18 +129,13 @@ export async function getPlatformProxy<
 
 	const miniflareOptions = await getMiniflareOptionsFromConfig(
 		rawConfig,
-		env,
+		targetEnvironment,
 		options,
 		remoteProxySession?.remoteProxyConnectionString,
 		experimentalRemoteBindings
 	);
 
-	const mf = new Miniflare({
-		script: "",
-		// @ts-expect-error TS doesn't like the spreading of miniflareConfig
-		modules: true,
-		...miniflareOptions,
-	});
+	const mf = new Miniflare(miniflareOptions);
 
 	const bindings: Env = await mf.getBindings();
 
@@ -159,15 +154,23 @@ export async function getPlatformProxy<
 	};
 }
 
-// this is only used by getPlatformProxy
+/**
+ * Builds an options configuration object for the `getPlatformProxy` functionality that
+ * can be then passed to the Miniflare constructor
+ *
+ * @param rawConfig The raw configuration to base the options from
+ * @param targetEnvironment The target environment from which to get the binding configuration options
+ * @param options The user provided `getPlatformProxy` options
+ * @returns an object ready to be passed to the Miniflare constructor
+ */
 async function getMiniflareOptionsFromConfig(
 	rawConfig: Config,
-	env: string | undefined,
+	targetEnvironment: string | undefined,
 	options: GetPlatformProxyOptions,
 	remoteProxyConnectionString?: RemoteProxyConnectionString,
 	remoteBindingsEnabled = false
-): Promise<Partial<MiniflareOptions>> {
-	const bindings = getBindings(rawConfig, env, true, {});
+): Promise<MiniflareOptions> {
+	const bindings = getBindings(rawConfig, targetEnvironment, true, {});
 
 	if (rawConfig["durable_objects"]) {
 		const { localBindings } = partitionDurableObjectBindings(rawConfig);
@@ -229,7 +232,11 @@ async function getMiniflareOptionsFromConfig(
 		defaultPersistRoot,
 	};
 
-	return miniflareOptions;
+	return {
+		script: "",
+		modules: true,
+		...miniflareOptions,
+	};
 }
 
 /**
