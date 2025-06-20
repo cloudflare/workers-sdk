@@ -129,7 +129,6 @@ export async function getPlatformProxy<
 
 	const miniflareOptions = await getMiniflareOptionsFromConfig({
 		rawConfig,
-		env,
 		options,
 		remoteProxyConnectionString:
 			remoteProxySession?.remoteProxyConnectionString,
@@ -160,7 +159,6 @@ export async function getPlatformProxy<
  * can be then passed to the Miniflare constructor
  *
  * @param args.rawConfig The raw configuration to base the options from
- * @param args.env The target environment from which to get the binding configuration options
  * @param args.options The user provided `getPlatformProxy` options
  * @param args.remoteProxyConnectionString The potential remote proxy connection string to be used to connect the remote bindings
  * @param args.remoteBindingsEnabled Whether remote bindings are enabled
@@ -168,20 +166,18 @@ export async function getPlatformProxy<
  */
 async function getMiniflareOptionsFromConfig(args: {
 	rawConfig: Config;
-	env: string | undefined;
 	options: GetPlatformProxyOptions;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
 	remoteBindingsEnabled: boolean;
 }): Promise<MiniflareOptions> {
 	const {
 		rawConfig,
-		env,
 		options,
 		remoteProxyConnectionString,
 		remoteBindingsEnabled,
 	} = args;
 
-	const bindings = getBindings(rawConfig, env, true, {});
+	const bindings = getBindings(rawConfig, options.environment, true, {});
 
 	if (rawConfig["durable_objects"]) {
 		const { localBindings } = partitionDurableObjectBindings(rawConfig);
