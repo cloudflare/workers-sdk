@@ -2366,11 +2366,7 @@ const validateBindingArray =
 		return isValid;
 	};
 
-const validateContainerAppConfig: ValidatorFn = (
-	diagnostics,
-	_field,
-	value
-) => {
+const validateContainerAppConfig: ValidatorFn = (diagnostics, field, value) => {
 	if (!value) {
 		return true;
 	}
@@ -2469,12 +2465,15 @@ const validateContainerAppConfig: ValidatorFn = (
 			);
 		}
 
-validateOptionalProperty(diagnostics, field, "instance_type",  containerAppOptional.instance_type, "string", ["dev", "basic", "standard"])
-			) {
-				diagnostics.errors.push(
-					`"containers.instance_type" should be either 'dev', 'basic', or 'standard', but got ${containerAppOptional.instance_type}`
-				);
-			}
+		if ("instance_type" in containerAppOptional) {
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"instance_type",
+				containerAppOptional.instance_type,
+				"string",
+				["dev", "basic", "standard"]
+			);
 		}
 	}
 
