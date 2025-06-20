@@ -323,7 +323,7 @@ async function handleCreateCommand(
 	const instanceType = await promptForInstanceType(true);
 
 	renderDeploymentConfiguration("create", {
-		image: image,
+		image,
 		location: location,
 		network: network,
 		instanceType: instanceType,
