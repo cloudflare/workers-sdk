@@ -324,7 +324,7 @@ async function handleCreateCommand(
 
 	renderDeploymentConfiguration("create", {
 		image,
-		location: location,
+		location,
 		network: network,
 		instanceType: instanceType,
 		vcpu: vcpu,
