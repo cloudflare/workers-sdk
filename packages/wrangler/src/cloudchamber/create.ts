@@ -328,7 +328,7 @@ async function handleCreateCommand(
 		network,
 		instanceType,
 		vcpu,
-		memoryMib: memoryMib,
+		memoryMib,
 		environmentVariables: selectedEnvironmentVariables,
 		labels: selectedLabels,
 		env: args.env,
