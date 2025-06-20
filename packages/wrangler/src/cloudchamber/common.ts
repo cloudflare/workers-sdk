@@ -783,7 +783,6 @@ function inferInstanceType(
 			return InstanceType.STANDARD;
 		}
 	}
-
 }
 
 // removes any disk, memory, or vcpu that have been set in an objects configuration. Used for rendering
