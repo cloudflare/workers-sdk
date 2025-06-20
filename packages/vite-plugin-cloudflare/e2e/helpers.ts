@@ -301,3 +301,17 @@ async function fixupReplacements(
 		}
 	}
 }
+
+/**
+ * `buildAndPreview` commands (i.e. `vite build && vite preview`) don't work in CI on windows
+ * this needs to be investigated and solved: https://jira.cfdata.org/browse/DEVX-2030
+ *
+ * This minimal utility simply detects if the command is being tested on windows
+ *
+ * @param command the command being tested (either 'dev' or 'buildAndPreview')
+ * @returns true is the command is buildAndPreview and the os is windows
+ */
+export function isBuildAndPreviewOnWindows(command: "dev" | "buildAndPreview") {
+	const isWindows = process.platform === "win32";
+	return isWindows && command === "buildAndPreview";
+}

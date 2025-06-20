@@ -5,13 +5,13 @@ import { setTimeout } from "node:timers/promises";
 import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import {
 	fetchJson,
+	isBuildAndPreviewOnWindows,
 	runCommand,
 	runLongLived,
 	seed,
 	waitForReady,
 } from "./helpers.js";
 
-const isWindows = os.platform() === "win32";
 const commands = ["dev", "buildAndPreview"] as const;
 
 if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
@@ -49,7 +49,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 			});
 
 			describe.each(commands)('with "%s" command', (command) => {
-				test.skipIf(isWindows && command === "buildAndPreview")(
+				test.skipIf(isBuildAndPreviewOnWindows(command))(
 					"can fetch from both local (/auxiliary) and remote workers",
 					async ({ expect }) => {
 						const proc = await runLongLived("pnpm", command, projectPath);
