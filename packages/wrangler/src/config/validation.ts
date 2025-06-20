@@ -2519,7 +2519,7 @@ const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 			!["dev", "basic", "standard"].includes(value.instance_type)
 		) {
 			diagnostics.errors.push(
-				`"${field}" bindings should, optionally, have "instance_type" as 'dev', 'basic', or 'standard', but got ${value.instance_type}`
+				`"instance_type" should be one of 'dev', 'basic', or 'standard', but got ${value.instance_type}`
 			);
 		}
 
