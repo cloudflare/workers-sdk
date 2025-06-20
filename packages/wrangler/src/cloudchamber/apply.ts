@@ -23,7 +23,7 @@ import { UserError } from "../errors";
 import { promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
 import type { Config } from "../config";
-import type { ContainerApp } from "../config/environment";
+import type { ContainerApp, Observability } from "../config/environment";
 import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
@@ -35,6 +35,7 @@ import type {
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 	ModifyDeploymentV2RequestBody,
+	Observability as ObservabilityConfiguration,
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
 import type { JsonMap } from "@iarna/toml";
@@ -108,12 +109,84 @@ function applicationToCreateApplication(
 	return app;
 }
 
+function cleanupObservability(
+	observability: ObservabilityConfiguration | undefined
+) {
+	if (observability === undefined) {
+		return;
+	}
+
+	// `logging` field is deprecated, so if the server returns both `logging` and `logs`
+	// fields, drop the `logging` one.
+	if (observability.logging !== undefined && observability.logs !== undefined) {
+		delete observability.logging;
+	}
+}
+
+function observabilityToConfiguration(
+	observability: Observability | undefined,
+	existingObservabilityConfig: ObservabilityConfiguration | undefined
+): ObservabilityConfiguration | undefined {
+	// Let's use logs for the sake of simplicity of explanation.
+	//
+	// The first column specifies if logs are enabled in the current Wrangler config.
+	// The second column specifies if logs are currently enabled for the application.
+	// The third column specifies what the expected function result should be so that
+	// diff is minimal.
+	//
+	// | Wrangler  | Existing  | Result    |
+	// | --------- | --------- | --------- |
+	// | undefined | undefined | undefined |
+	// | undefined | false     | false     |
+	// | undefined | true      | false     |
+	// | false     | undefined | undefined |
+	// | false     | false     | false     |
+	// | false     | true      | false     |
+	// | true      | undefined | true      |
+	// | true      | false     | true      |
+	// | true      | true      | true      |
+	//
+	// Because the result is the same for Wrangler undefined and false, the table may be
+	// compressed as follows:
+
+	//
+	// | Wrangler          | Existing                 | Result    |
+	// | ----------------- | ------------------------ | --------- |
+	// | false / undefined | undefined                | undefined |
+	// | false / undefined | false / true             | false     |
+	// | true              | undefined / false / true | true      |
+
+	const observabilityLogsEnabled =
+		observability?.logs?.enabled === true ||
+		(observability?.enabled === true && observability?.logs?.enabled !== false);
+	const logsAlreadyEnabled = existingObservabilityConfig?.logs?.enabled;
+
+	if (observabilityLogsEnabled) {
+		return { logs: { enabled: true } };
+	} else {
+		if (logsAlreadyEnabled === undefined) {
+			return undefined;
+		} else {
+			return { logs: { enabled: false } };
+		}
+	}
+}
+
 function containerAppToCreateApplication(
 	containerApp: ContainerApp,
+	observability: Observability | undefined,
+	existingApp: Application | undefined,
 	skipDefaults = false
 ): CreateApplicationRequest {
-	const configuration =
-		containerApp.configuration as UserDeploymentConfiguration;
+	const observabilityConfiguration = observabilityToConfiguration(
+		observability,
+		existingApp?.configuration.observability
+	);
+	const configuration: UserDeploymentConfiguration = {
+		...(containerApp.configuration as UserDeploymentConfiguration),
+		observability: observabilityConfiguration,
+	};
+
 	const app: CreateApplicationRequest = {
 		...containerApp,
 		configuration,
@@ -352,6 +425,9 @@ export async function apply(
 		ApplicationsService.listApplications(),
 		{ json: args.json, message: "Loading applications" }
 	);
+	applications.forEach((app) =>
+		cleanupObservability(app.configuration.observability)
+	);
 	const applicationByNames: Record<ApplicationName, Application> = {};
 	// TODO: this is not correct right now as there can be multiple applications
 	// with the same name.
@@ -381,8 +457,11 @@ export async function apply(
 		if (!appConfigNoDefaults.configuration.image && application) {
 			appConfigNoDefaults.configuration.image = application.configuration.image;
 		}
+
 		const appConfig = containerAppToCreateApplication(
 			appConfigNoDefaults,
+			config.observability,
+			application,
 			args.skipDefaults
 		);
 

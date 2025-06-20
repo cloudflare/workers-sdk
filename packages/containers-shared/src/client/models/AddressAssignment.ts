@@ -7,10 +7,10 @@ import type { PlacementID } from "./PlacementID";
 import type { UnixTimestamp } from "./UnixTimestamp";
 
 /**
- * The allocation that exists when an IP has been assigned to a metal
+ * The allocation that exists when an IP or a port range has been assigned to a metal
  */
-export type IPAllocationPlacement = {
+export type AddressAssignment = {
 	placementID?: PlacementID;
-	expiration: UnixTimestamp;
+	expiration?: UnixTimestamp;
 	deploymentID?: DeploymentID;
 };

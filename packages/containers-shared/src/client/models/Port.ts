@@ -2,6 +2,8 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import type { PortRange } from "./PortRange";
+
 /**
  * Represents a port assignment for a deployment
  */
@@ -16,7 +18,18 @@ export type Port = {
 	 */
 	name: string;
 	/**
-	 * Optional port number, it's assigned only if the user specified it. If it's not specified, the datacenter scheduler will decide it.
+	 * Optional port number, it's assigned only if the user specified it.
+	 * If it's not specified, the datacenter scheduler will decide it.
+	 *
 	 */
 	port?: number;
+	/**
+	 * Choose a port number from a given set of port ranges and use it. It is an optional field.
+	 * If it is set, "port" must not be provided. The same port ranges may be used with multiple ports
+	 * as long as the port ranges are identical for each port. Otherwise no two port ranges must intersect
+	 * and no fixed port must belong to any port range. The total port count for all port ranges should
+	 * be sufficiently large for assigning the requested number of ports.
+	 *
+	 */
+	assign_port?: Array<PortRange>;
 };

@@ -1,9 +1,7 @@
-import * as fs from "node:fs";
 import {
 	SchedulingPolicy,
 	SecretAccessType,
 } from "@cloudflare/containers-shared";
-import * as TOML from "@iarna/toml";
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -12,25 +10,13 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import { mockAccount } from "./utils";
-import type { ContainerApp } from "../../config/environment";
 import type {
 	Application,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 } from "@cloudflare/containers-shared";
-
-function writeAppConfiguration(...app: ContainerApp[]) {
-	fs.writeFileSync(
-		"./wrangler.toml",
-		TOML.stringify({
-			name: "my-container",
-			containers: app,
-		}),
-
-		"utf-8"
-	);
-}
 
 function mockGetApplications(applications: Application[]) {
 	msw.use(
@@ -101,16 +87,21 @@ describe("cloudchamber apply", () => {
 
 	test("can apply a simple application", async () => {
 		setIsTTY(false);
-		writeAppConfiguration({
-			name: "my-container-app",
-			instances: 3,
-			class_name: "DurableObjectClass",
-			configuration: {
-				image: "./Dockerfile",
-			},
-			constraints: {
-				tier: 2,
-			},
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					instances: 3,
+					class_name: "DurableObjectClass",
+					configuration: {
+						image: "./Dockerfile",
+					},
+					constraints: {
+						tier: 2,
+					},
+				},
+			],
 		});
 		mockGetApplications([]);
 		mockCreateApplication({ id: "abc" } as Application);
@@ -147,16 +138,21 @@ describe("cloudchamber apply", () => {
 
 	test("can apply a simple existing application", async () => {
 		setIsTTY(false);
-		writeAppConfiguration({
-			name: "my-container-app",
-			class_name: "DurableObjectClass",
-			instances: 4,
-			configuration: {
-				image: "./Dockerfile",
-			},
-			constraints: {
-				tier: 2,
-			},
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					class_name: "DurableObjectClass",
+					instances: 4,
+					configuration: {
+						image: "./Dockerfile",
+					},
+					constraints: {
+						tier: 2,
+					},
+				},
+			],
 		});
 		mockGetApplications([
 			{
@@ -212,24 +208,27 @@ describe("cloudchamber apply", () => {
 
 	test("can apply a simple existing application and create other (max_instances)", async () => {
 		setIsTTY(false);
-		writeAppConfiguration(
-			{
-				name: "my-container-app",
-				class_name: "DurableObjectClass",
-				max_instances: 3,
-				configuration: {
-					image: "./Dockerfile",
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					class_name: "DurableObjectClass",
+					max_instances: 3,
+					configuration: {
+						image: "./Dockerfile",
+					},
 				},
-			},
-			{
-				name: "my-container-app-2",
-				max_instances: 3,
-				class_name: "DurableObjectClass2",
-				configuration: {
-					image: "other-app/Dockerfile",
+				{
+					name: "my-container-app-2",
+					max_instances: 3,
+					class_name: "DurableObjectClass2",
+					configuration: {
+						image: "other-app/Dockerfile",
+					},
 				},
-			}
-		);
+			],
+		});
 		mockGetApplications([
 			{
 				id: "abc",
@@ -299,25 +298,28 @@ describe("cloudchamber apply", () => {
 
 	test("can skip a simple existing application and create other", async () => {
 		setIsTTY(false);
-		writeAppConfiguration(
-			{
-				name: "my-container-app",
-				instances: 4,
-				class_name: "DurableObjectClass",
-				configuration: {
-					image: "./Dockerfile",
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					instances: 4,
+					class_name: "DurableObjectClass",
+					configuration: {
+						image: "./Dockerfile",
+					},
+					rollout_kind: "none",
 				},
-				rollout_kind: "none",
-			},
-			{
-				name: "my-container-app-2",
-				instances: 1,
-				class_name: "DurableObjectClass2",
-				configuration: {
-					image: "other-app/Dockerfile",
+				{
+					name: "my-container-app-2",
+					instances: 1,
+					class_name: "DurableObjectClass2",
+					configuration: {
+						image: "other-app/Dockerfile",
+					},
 				},
-			}
-		);
+			],
+		});
 		mockGetApplications([
 			{
 				id: "abc",
@@ -378,24 +380,27 @@ describe("cloudchamber apply", () => {
 
 	test("can apply a simple existing application and create other", async () => {
 		setIsTTY(false);
-		writeAppConfiguration(
-			{
-				name: "my-container-app",
-				instances: 4,
-				class_name: "DurableObjectClass",
-				configuration: {
-					image: "./Dockerfile",
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					instances: 4,
+					class_name: "DurableObjectClass",
+					configuration: {
+						image: "./Dockerfile",
+					},
 				},
-			},
-			{
-				name: "my-container-app-2",
-				instances: 1,
-				class_name: "DurableObjectClass2",
-				configuration: {
-					image: "other-app/Dockerfile",
+				{
+					name: "my-container-app-2",
+					instances: 1,
+					class_name: "DurableObjectClass2",
+					configuration: {
+						image: "other-app/Dockerfile",
+					},
 				},
-			}
-		);
+			],
+		});
 		mockGetApplications([
 			{
 				id: "abc",
@@ -461,39 +466,44 @@ describe("cloudchamber apply", () => {
 
 	test("can apply a simple existing application (labels)", async () => {
 		setIsTTY(false);
-		writeAppConfiguration({
-			name: "my-container-app",
-			instances: 4,
-			class_name: "DurableObjectClass",
-			configuration: {
-				image: "./Dockerfile",
-				labels: [
-					{
-						name: "name",
-						value: "value",
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					instances: 4,
+					class_name: "DurableObjectClass",
+					configuration: {
+						image: "./Dockerfile",
+						labels: [
+							{
+								name: "name",
+								value: "value",
+							},
+							{
+								name: "name-1",
+								value: "value-1",
+							},
+							{
+								name: "name-2",
+								value: "value-2",
+							},
+						],
+						secrets: [
+							{
+								name: "MY_SECRET",
+								type: "env",
+								secret: "SECRET_NAME",
+							},
+							{
+								name: "MY_SECRET_2",
+								type: "env",
+								secret: "SECRET_NAME_2",
+							},
+						],
 					},
-					{
-						name: "name-1",
-						value: "value-1",
-					},
-					{
-						name: "name-2",
-						value: "value-2",
-					},
-				],
-				secrets: [
-					{
-						name: "MY_SECRET",
-						type: "env",
-						secret: "SECRET_NAME",
-					},
-					{
-						name: "MY_SECRET_2",
-						type: "env",
-						secret: "SECRET_NAME_2",
-					},
-				],
-			},
+				},
+			],
 		});
 		mockGetApplications([
 			{
@@ -585,40 +595,45 @@ describe("cloudchamber apply", () => {
 
 	test("can apply an application, and there is no changes (retrocompatibility with regional scheduling policy)", async () => {
 		setIsTTY(false);
-		writeAppConfiguration({
-			class_name: "DurableObjectClass",
-			name: "my-container-app",
-			instances: 3,
-			configuration: {
-				image: "./Dockerfile",
-				labels: [
-					{
-						name: "name",
-						value: "value",
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					class_name: "DurableObjectClass",
+					name: "my-container-app",
+					instances: 3,
+					configuration: {
+						image: "./Dockerfile",
+						labels: [
+							{
+								name: "name",
+								value: "value",
+							},
+							{
+								name: "name-2",
+								value: "value-2",
+							},
+						],
+						secrets: [
+							{
+								name: "MY_SECRET",
+								type: SecretAccessType.ENV,
+								secret: "SECRET_NAME",
+							},
+							{
+								name: "MY_SECRET_1",
+								type: SecretAccessType.ENV,
+								secret: "SECRET_NAME_1",
+							},
+							{
+								name: "MY_SECRET_2",
+								type: SecretAccessType.ENV,
+								secret: "SECRET_NAME_2",
+							},
+						],
 					},
-					{
-						name: "name-2",
-						value: "value-2",
-					},
-				],
-				secrets: [
-					{
-						name: "MY_SECRET",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME",
-					},
-					{
-						name: "MY_SECRET_1",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_1",
-					},
-					{
-						name: "MY_SECRET_2",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_2",
-					},
-				],
-			},
+				},
+			],
 		});
 		mockGetApplications([
 			{
@@ -719,7 +734,10 @@ describe("cloudchamber apply", () => {
 				],
 			},
 		};
-		writeAppConfiguration(app, { ...app, name: "my-container-app-2" });
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [app, { ...app, name: "my-container-app-2" }],
+		});
 
 		const completeApp = {
 			id: "abc",
@@ -790,40 +808,45 @@ describe("cloudchamber apply", () => {
 
 	test("can apply an application, and there is no changes", async () => {
 		setIsTTY(false);
-		writeAppConfiguration({
-			class_name: "DurableObjectClass",
-			name: "my-container-app",
-			instances: 3,
-			configuration: {
-				image: "./Dockerfile",
-				labels: [
-					{
-						name: "name",
-						value: "value",
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					class_name: "DurableObjectClass",
+					name: "my-container-app",
+					instances: 3,
+					configuration: {
+						image: "./Dockerfile",
+						labels: [
+							{
+								name: "name",
+								value: "value",
+							},
+							{
+								name: "name-2",
+								value: "value-2",
+							},
+						],
+						secrets: [
+							{
+								name: "MY_SECRET",
+								type: SecretAccessType.ENV,
+								secret: "SECRET_NAME",
+							},
+							{
+								name: "MY_SECRET_1",
+								type: SecretAccessType.ENV,
+								secret: "SECRET_NAME_1",
+							},
+							{
+								name: "MY_SECRET_2",
+								type: SecretAccessType.ENV,
+								secret: "SECRET_NAME_2",
+							},
+						],
 					},
-					{
-						name: "name-2",
-						value: "value-2",
-					},
-				],
-				secrets: [
-					{
-						name: "MY_SECRET",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME",
-					},
-					{
-						name: "MY_SECRET_1",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_1",
-					},
-					{
-						name: "MY_SECRET_2",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_2",
-					},
-				],
-			},
+				},
+			],
 		});
 		mockGetApplications([
 			{
@@ -865,6 +888,700 @@ describe("cloudchamber apply", () => {
 					],
 				},
 
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ no changes my-container-app
+			│
+			╰ No changes to be made
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
+	test("can apply an application, and there is no changes (two applications)", async () => {
+		setIsTTY(false);
+		const app = {
+			name: "my-container-app",
+			instances: 3,
+			class_name: "DurableObjectClass",
+			configuration: {
+				image: "./Dockerfile",
+				labels: [
+					{
+						name: "name",
+						value: "value",
+					},
+					{
+						name: "name-2",
+						value: "value-2",
+					},
+				],
+				secrets: [
+					{
+						name: "MY_SECRET",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME",
+					},
+					{
+						name: "MY_SECRET_1",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_1",
+					},
+					{
+						name: "MY_SECRET_2",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_2",
+					},
+				],
+			},
+		};
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [app, { ...app, name: "my-container-app-2" }],
+		});
+
+		const completeApp = {
+			id: "abc",
+			name: "my-container-app",
+			instances: 3,
+			created_at: new Date().toString(),
+			class_name: "DurableObjectClass",
+			account_id: "1",
+			scheduling_policy: SchedulingPolicy.REGIONAL,
+			configuration: {
+				image: "./Dockerfile",
+				labels: [
+					{
+						name: "name",
+						value: "value",
+					},
+					{
+						name: "name-2",
+						value: "value-2",
+					},
+				],
+				secrets: [
+					{
+						name: "MY_SECRET",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME",
+					},
+					{
+						name: "MY_SECRET_1",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_1",
+					},
+					{
+						name: "MY_SECRET_2",
+						type: SecretAccessType.ENV,
+						secret: "SECRET_NAME_2",
+					},
+				],
+			},
+
+			constraints: {
+				tier: 1,
+			},
+		};
+
+		mockGetApplications([
+			{ ...completeApp, version: 1 },
+			{ ...completeApp, version: 1, name: "my-container-app-2", id: "abc2" },
+		]);
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ no changes my-container-app
+			│
+			├ no changes my-container-app-2
+			│
+			╰ No changes to be made
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
+	test("can enable observability logs (top-level field)", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			observability: { enabled: true },
+			containers: [
+				{
+					name: "my-container-app",
+					class_name: "DurableObjectClass",
+					instances: 1,
+					configuration: {
+						image: "./Dockerfile",
+					},
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 1,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+				},
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		const applicationReqBodyPromise = mockModifyApplication();
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [containers.configuration]
+			│   image = \\"./Dockerfile\\"
+			│
+			│ + [containers.configuration.observability.logs]
+			│ + enabled = true
+			│
+			│   [containers.constraints]
+			│   ...
+			│
+			├ Loading
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.constraints?.tier).toEqual(1);
+		expect(app.instances).toEqual(1);
+		/* eslint-enable */
+	});
+
+	test("can enable observability logs (logs field)", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			observability: { logs: { enabled: true } },
+			containers: [
+				{
+					name: "my-container-app",
+					class_name: "DurableObjectClass",
+					instances: 1,
+					configuration: {
+						image: "./Dockerfile",
+					},
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 1,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+				},
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		const applicationReqBodyPromise = mockModifyApplication();
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [containers.configuration]
+			│   image = \\"./Dockerfile\\"
+			│
+			│ + [containers.configuration.observability.logs]
+			│ + enabled = true
+			│
+			│   [containers.constraints]
+			│   ...
+			│
+			├ Loading
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.constraints?.tier).toEqual(1);
+		expect(app.instances).toEqual(1);
+		/* eslint-enable */
+	});
+
+	test("can disable observability logs (top-level field)", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			observability: { enabled: false },
+			containers: [
+				{
+					name: "my-container-app",
+					class_name: "DurableObjectClass",
+					instances: 1,
+					configuration: {
+						image: "./Dockerfile",
+					},
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 1,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+					observability: {
+						logs: {
+							enabled: true,
+						},
+					},
+				},
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		const applicationReqBodyPromise = mockModifyApplication();
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [containers.configuration.observability.logs]
+			│ - enabled = true
+			│ + enabled = false
+			│
+			│   [containers.constraints]
+			│   ...
+			│
+			├ Loading
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.constraints?.tier).toEqual(1);
+		expect(app.instances).toEqual(1);
+		/* eslint-enable */
+	});
+
+	test("can disable observability logs (logs field)", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			observability: { logs: { enabled: false } },
+			containers: [
+				{
+					name: "my-container-app",
+					class_name: "DurableObjectClass",
+					instances: 1,
+					configuration: {
+						image: "./Dockerfile",
+					},
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 1,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+					observability: {
+						logs: {
+							enabled: true,
+						},
+					},
+				},
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		const applicationReqBodyPromise = mockModifyApplication();
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [containers.configuration.observability.logs]
+			│ - enabled = true
+			│ + enabled = false
+			│
+			│   [containers.constraints]
+			│   ...
+			│
+			├ Loading
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.constraints?.tier).toEqual(1);
+		expect(app.instances).toEqual(1);
+		/* eslint-enable */
+	});
+
+	test("can disable observability logs (absent field)", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					class_name: "DurableObjectClass",
+					instances: 1,
+					configuration: {
+						image: "./Dockerfile",
+					},
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 1,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+					observability: {
+						logs: {
+							enabled: true,
+						},
+					},
+				},
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		const applicationReqBodyPromise = mockModifyApplication();
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [containers.configuration.observability.logs]
+			│ - enabled = true
+			│ + enabled = false
+			│
+			│   [containers.constraints]
+			│   ...
+			│
+			├ Loading
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.constraints?.tier).toEqual(1);
+		expect(app.instances).toEqual(1);
+		/* eslint-enable */
+	});
+
+	test("ignores deprecated observability.logging", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					class_name: "DurableObjectClass",
+					instances: 1,
+					configuration: {
+						image: "./Dockerfile",
+					},
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 1,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+					observability: {
+						logs: {
+							enabled: true,
+						},
+						logging: {
+							enabled: true,
+						},
+					},
+				},
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		const applicationReqBodyPromise = mockModifyApplication();
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [containers.configuration.observability.logs]
+			│ - enabled = true
+			│ + enabled = false
+			│
+			│   [containers.constraints]
+			│   ...
+			│
+			├ Loading
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.constraints?.tier).toEqual(1);
+		expect(app.instances).toEqual(1);
+		/* eslint-enable */
+	});
+
+	test("keeps observability logs enabled", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			observability: { enabled: true },
+			containers: [
+				{
+					name: "my-container-app",
+					class_name: "DurableObjectClass",
+					instances: 1,
+					configuration: {
+						image: "./Dockerfile",
+					},
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 1,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+					observability: {
+						logs: {
+							enabled: true,
+						},
+						logging: {
+							enabled: true,
+						},
+					},
+				},
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ no changes my-container-app
+			│
+			╰ No changes to be made
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
+	test("keeps observability logs disabled (undefined in the app)", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					class_name: "DurableObjectClass",
+					instances: 1,
+					configuration: {
+						image: "./Dockerfile",
+					},
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 1,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+				},
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ no changes my-container-app
+			│
+			╰ No changes to be made
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
+	test("keeps observability logs disabled (false in the app)", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					class_name: "DurableObjectClass",
+					instances: 1,
+					configuration: {
+						image: "./Dockerfile",
+					},
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 1,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+					observability: {
+						logs: {
+							enabled: false,
+						},
+						logging: {
+							enabled: false,
+						},
+					},
+				},
 				constraints: {
 					tier: 1,
 				},
