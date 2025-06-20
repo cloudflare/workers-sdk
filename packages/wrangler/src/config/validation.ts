@@ -2528,7 +2528,7 @@ const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 			("vcpu" in value && value.vcpu !== undefined)
 		) {
 			diagnostics.errors.push(
-				`"${field}" bindings should not set either "memory" or "vcpu" with "instance_type"`
+				`"${field}" configuration should not set either "memory" or "vcpu" with "instance_type"`
 			);
 		}
 	}
