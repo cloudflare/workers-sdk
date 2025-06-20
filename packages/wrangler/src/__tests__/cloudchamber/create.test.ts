@@ -235,7 +235,7 @@ describe("cloudchamber create", () => {
 			"cloudchamber create --image hello:world --location sfo06 --instance-type invalid --json"
 		);
 		expect(std.out).toMatchInlineSnapshot(
-			`"{\\"error\\":\\"instance_type is expected to be one of 'dev', 'basic', or 'standard', but got invalid\\"}"`
+			`"{\\"error\\":\\"/\\"instance_type/\\" field value is expected to be one of /\\"dev/\\", /\\"basic/\\", or /\\"standard/\\", but got /\\"invalid/\\"\\"}"`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
