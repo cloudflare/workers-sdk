@@ -23,6 +23,10 @@ describe("getPlatformProxy remote-bindings", () => {
 	const remoteWorkerName = `get-platform-proxy-remote-worker-test-${randomUUID().split("-")[0]}`;
 
 	before(async () => {
+		// Note: ideally we pass the auth data to `getPlatformProxy`, that currently is not
+		//       possible (DEVX-1857) so we need to make sure that the CLOUDFLARE_ACCOUNT_ID
+		//       and CLOUDFLARE_API_TOKEN env variables are set so that `getPlatformProxy`
+		//       can establish the remote proxy connection
 		process.env.CLOUDFLARE_ACCOUNT_ID = process.env.TEST_CLOUDFLARE_ACCOUNT_ID;
 		process.env.CLOUDFLARE_API_TOKEN = process.env.TEST_CLOUDFLARE_API_TOKEN;
 
