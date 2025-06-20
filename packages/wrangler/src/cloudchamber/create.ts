@@ -179,7 +179,7 @@ export async function createCommand(
 		}
 		const deployment =
 			await DeploymentsService.createDeploymentV2(deploymentRequest);
-		console.log(JSON.stringify(deployment, null, 4));
+		logger.log(JSON.stringify(deployment, null, 4));
 		return;
 	}
 
