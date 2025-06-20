@@ -139,8 +139,7 @@ export async function getPlatformProxy<
 
 	const mf = new Miniflare({
 		script: "",
-		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-		// @ts-ignore
+		// @ts-expect-error TS doesn't like the spreading of miniflareConfig
 		modules: true,
 		...miniflareOptions,
 	});
