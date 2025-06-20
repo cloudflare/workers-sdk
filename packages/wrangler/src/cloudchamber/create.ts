@@ -348,7 +348,7 @@ async function handleCreateCommand(
 	start("Creating your container", "your container will be created shortly");
 	const deploymentRequest: CreateDeploymentV2RequestBody = {
 		image,
-		location: location,
+		location,
 		ssh_public_key_ids: keys,
 		environment_variables: environmentVariables,
 		labels: labels,
