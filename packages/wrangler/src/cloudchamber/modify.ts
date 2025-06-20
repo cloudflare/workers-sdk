@@ -287,7 +287,7 @@ async function handleModifyCommand(
 	);
 	const modifyRequest: ModifyDeploymentV2RequestBody = {
 		image,
-		location: location,
+		location,
 		ssh_public_key_ids: keys,
 		environment_variables: selectedEnvironmentVariables,
 		labels: selectedLabels,
