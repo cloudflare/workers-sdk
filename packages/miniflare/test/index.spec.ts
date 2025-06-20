@@ -333,7 +333,7 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 	};
 
 	await test("gzip");
-	await test("deflate");
+	await test("deflate"); // Workers don't support deflate
 	await test("br");
 	// `undici`'s `fetch()` is currently broken when `Content-Encoding` specifies
 	// multiple encodings. Once https://github.com/nodejs/undici/pull/2159 is
@@ -442,44 +442,53 @@ test("Miniflare: negotiates acceptable encoding", async (t) => {
 
 	// Check with `Accept-Encoding: gzip`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "gzip" } });
-	t.is(res.headers.get("Content-Encoding"), "gzip");
+	t.is(res.headers.get("Content-Encoding"), "gzip"); // the Worker marked the response as `gzip`
 	t.is(await res.text(), testBody);
 	res = await fetch(brUrl, { headers: { "Accept-Encoding": "gzip" } });
-	t.is(res.headers.get("Content-Encoding"), "gzip");
+	t.is(res.headers.get("Content-Encoding"), null); // the Worker marked the response as `br` but only `gzip` and `identity` are allowed so response is `identity`
 	t.is(await res.text(), testBody);
-	// "deflate" isn't an accepted encoding inside Workers, so returned as is
 	res = await fetch(deflateUrl, { headers: { "Accept-Encoding": "gzip" } });
-	t.is(res.headers.get("Content-Encoding"), "deflate");
+	t.is(res.headers.get("Content-Encoding"), "deflate"); // "deflate" isn't a supported encoding inside Workers, so returned as is, with `deflate` encoding
 	t.is(await res.text(), testBody);
 
 	// Check with `Accept-Encoding: br`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "br" } });
-	t.is(res.headers.get("Content-Encoding"), "br");
+	t.is(res.headers.get("Content-Encoding"), null); // the Worker marked the response as `gzip` but only `br` and `identity` are allowed so response is `identity`
 	t.is(await res.text(), testBody);
 	res = await fetch(brUrl, { headers: { "Accept-Encoding": "br" } });
-	t.is(res.headers.get("Content-Encoding"), "br");
+	t.is(res.headers.get("Content-Encoding"), "br"); // the Worker marked the response as `br`
 	t.is(await res.text(), testBody);
-	// "deflate" isn't an accepted encoding inside Workers, so returned as is
 	res = await fetch(deflateUrl, { headers: { "Accept-Encoding": "br" } });
-	t.is(res.headers.get("Content-Encoding"), "deflate");
+	t.is(res.headers.get("Content-Encoding"), "deflate"); // "deflate" isn't a supported encoding inside Workers, so returned as is, with `deflate` encoding
+	t.is(await res.text(), testBody);
+
+	// Check with unsupported `Accept-Encoding: deflate`
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "deflate" } });
+	t.is(res.headers.get("Content-Encoding"), null); // the Worker marked the response as `gzip` but only `deflate` and `identity` are allowed so response is `identity`
+	t.is(await res.text(), testBody);
+	res = await fetch(brUrl, { headers: { "Accept-Encoding": "deflate" } });
+	t.is(res.headers.get("Content-Encoding"), null); // the Worker marked the response as `br` but only `deflate` and `identity` are allowed so response is `identity`
+	t.is(await res.text(), testBody);
+	res = await fetch(deflateUrl, { headers: { "Accept-Encoding": "deflate" } });
+	t.is(res.headers.get("Content-Encoding"), "deflate"); // "deflate" isn't a supported encoding inside Workers, so returned as is, with `deflate` encoding
 	t.is(await res.text(), testBody);
 
 	// Check with mixed `Accept-Encoding`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "gzip, br" } });
-	t.is(res.headers.get("Content-Encoding"), "gzip");
+	t.is(res.headers.get("Content-Encoding"), "gzip"); // the Worker marked the response as `gzip` and is allowed so response is `gzip`
 	t.is(await res.text(), testBody);
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "br, gzip" } });
-	t.is(res.headers.get("Content-Encoding"), "br");
+	t.is(res.headers.get("Content-Encoding"), "gzip"); // the Worker marked the response as `gzip` and is allowed so response is `gzip`
 	t.is(await res.text(), testBody);
 	res = await fetch(gzipUrl, {
 		headers: { "Accept-Encoding": "br;q=0.5, gzip" },
 	});
-	t.is(res.headers.get("Content-Encoding"), "gzip");
+	t.is(res.headers.get("Content-Encoding"), "gzip"); // the Worker marked the response as `gzip` and is allowed so response is `gzip`
 	t.is(await res.text(), testBody);
 
 	// Check empty `Accept-Encoding`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "" } });
-	t.is(res.headers.get("Content-Encoding"), "gzip");
+	t.is(res.headers.get("Content-Encoding"), null); // the Worker marked the response as `gzip` but it is not allowed so response is uncompressed
 	t.is(await res.text(), testBody);
 
 	// Check identity encoding
@@ -492,6 +501,26 @@ test("Miniflare: negotiates acceptable encoding", async (t) => {
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "zstd, *" } });
 	t.is(res.headers.get("Content-Encoding"), null);
 	t.is(await res.text(), testBody);
+
+	// Check when identity encoding is not allowed
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "gzip, *;q=0" } });
+	t.is(res.headers.get("Content-Encoding"), "gzip"); // the Worker marked the response as `gzip` so response is gzip
+	t.is(await res.text(), testBody);
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "br, *;q=0" } });
+	t.is(res.headers.get("Content-Encoding"), "br"); // the Worker marked the response as `gzip` but it is not allowed, and neither is `identity` so response is `br`
+	t.is(await res.text(), testBody);
+	res = await fetch(brUrl, { headers: { "Accept-Encoding": "gzip, *;q=0" } });
+	t.is(res.headers.get("Content-Encoding"), "gzip"); // the Worker marked the response as `br` but it is not allowed, and neither is `identity` so response is `gzip`
+	t.is(await res.text(), testBody);
+	res = await fetch(brUrl, { headers: { "Accept-Encoding": "br, *;q=0" } });
+	t.is(res.headers.get("Content-Encoding"), "br"); // the Worker marked the response as `br` so response is `br`
+	t.is(await res.text(), testBody);
+	res = await fetch(gzipUrl, {
+		headers: { "Accept-Encoding": "br;q=0.5, gzip, *;q=0" },
+	});
+	t.is(res.headers.get("Content-Encoding"), "gzip");
+	t.is(await res.text(), testBody);
+
 	res = await fetch(gzipUrl, {
 		headers: { "Accept-Encoding": "zstd, identity;q=0" },
 	});
@@ -504,14 +533,16 @@ test("Miniflare: negotiates acceptable encoding", async (t) => {
 	t.is(await res.text(), "Unsupported Media Type");
 
 	// Check malformed `Accept-Encoding`
-	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": ",(,br,,,q=," } });
+	res = await fetch(gzipUrl, {
+		headers: { "Accept-Encoding": ",(,br,,,q=,*;q=0" },
+	});
 	t.is(res.headers.get("Content-Encoding"), "br");
 	t.is(await res.text(), testBody);
 
-	// Check `Content-Type: text/html` is compressed (FL always compresses html)
+	// Check `Content-Type: text/html` is always compressed in FL but not by default in local dev
 	res = await fetch(defaultCompressedUrl);
 	t.is(res.headers.get("Content-Type"), "text/html");
-	t.is(res.headers.get("Content-Encoding"), "gzip");
+	t.is(res.headers.get("Content-Encoding"), null);
 	t.is(await res.text(), testBody);
 
 	// Check `Content-Type: text/event-stream` is not compressed (FL does not compress this mime type)
