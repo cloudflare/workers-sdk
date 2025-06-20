@@ -247,7 +247,7 @@ describe("cloudchamber create", () => {
 			"cloudchamber create --image hello:world --location sfo06 --instance-type dev --memory 400GB --json"
 		);
 		expect(std.out).toMatchInlineSnapshot(
-			`"{\\"error\\":\\"instance_type is mutually exclusive with 'memory' and 'vcpu'. They cannot be set together.\\"}"`
+			`"{\\"error\\":\\"Field /\\"instance_type/\\" is mutually exclusive with /\\"memory/\\" and /\\"vcpu/\\". These fields cannot be set together.\\"}"`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
