@@ -3328,7 +3328,7 @@ test("Miniflare: custom Node outbound service", async (t) => {
 	);
 });
 
-test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd-config.json creation", async (t) => {
+test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file creation", async (t) => {
 	const originalEnv = process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
 	const configFilePath = "workerd-config.json";
 
@@ -3362,12 +3362,12 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd-config.json cre
 	await mf.dispatchFetch("http://localhost");
 	t.false(
 		existsSync(configFilePath),
-		"workerd-config.json should not be created when MINIFLARE_WORKERD_CONFIG_DEBUG is not set"
+		"config file should not be created when MINIFLARE_WORKERD_CONFIG_DEBUG is not set"
 	);
 	await mf.dispose();
 
 	// ensure the config file is created with the flag
-	process.env.MINIFLARE_WORKERD_CONFIG_DEBUG = "true";
+	process.env.MINIFLARE_WORKERD_CONFIG_DEBUG = configFilePath;
 	mf = new Miniflare({
 		modules: true,
 		script: `export default {
