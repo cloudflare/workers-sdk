@@ -1,5 +1,11 @@
 # miniflare
 
+## 4.20250617.2
+
+### Patch Changes
+
+- [#9605](https://github.com/cloudflare/workers-sdk/pull/9605) [`17d23d8`](https://github.com/cloudflare/workers-sdk/commit/17d23d8e5fd54737d1c4b9cb487fd6e85cddc9c8) Thanks [@emily-shen](https://github.com/emily-shen)! - Add rebuild hotkey for containers local dev, and clean up containers at the end of a dev session.
+
 ## 4.20250617.1
 
 ### Patch Changes
