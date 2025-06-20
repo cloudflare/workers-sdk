@@ -2469,15 +2469,7 @@ const validateContainerAppConfig: ValidatorFn = (
 			);
 		}
 
-		if (
-			"instance_type" in containerAppOptional &&
-			containerAppOptional.instance_type !== undefined
-		) {
-			if (
-				typeof containerAppOptional.instance_type !== "string" ||
-				!["dev", "basic", "standard"].includes(
-					containerAppOptional.instance_type
-				)
+validateOptionalProperty(diagnostics, field, "instance_type",  containerAppOptional.instance_type, "string", ["dev", "basic", "standard"])
 			) {
 				diagnostics.errors.push(
 					`"containers.instance_type" should be either 'dev', 'basic', or 'standard', but got ${containerAppOptional.instance_type}`
