@@ -32,3 +32,20 @@ export function mockAccount() {
 		)
 	);
 }
+
+export function mockAccountV4() {
+	msw.use(
+		http.get(
+			"*/me",
+			async () => {
+				return HttpResponse.json({ success: true, result: {
+					external_account_id: "test_account_id",
+					limits: {
+						disk_mb_per_deployment: 2000,
+					},
+				}}, { type: "application/json" });
+			},
+			{ once: true }
+		)
+	);
+}

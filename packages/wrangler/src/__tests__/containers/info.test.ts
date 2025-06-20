@@ -53,7 +53,7 @@ describe("containers info", () => {
 				"*/applications/asdf",
 				async ({ request }) => {
 					expect(await request.text()).toEqual("");
-					return HttpResponse.json(MOCK_APPLICATION_SINGLE);
+					return HttpResponse.json(`{"success": true, "result": ${MOCK_APPLICATION_SINGLE}}`);
 				},
 				{ once: true }
 			)

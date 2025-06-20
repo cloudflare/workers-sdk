@@ -40,6 +40,13 @@ export const cloudchamberScope = "cloudchamber:write" as const;
 
 export type CommonCloudchamberConfiguration = { json: boolean };
 
+const containerIdRe = /[^/]{36}/;
+
+export function isValidContainerID(value: string): boolean {
+	const matches = value.match(containerIdRe);
+	return matches !== null;
+}
+
 /**
  * Regular expression for matching an image name.
  *
