@@ -113,11 +113,11 @@ export async function getPlatformProxy<
 ): Promise<PlatformProxy<Env, CfProperties>> {
 	const experimentalRemoteBindings = !!options.experimental?.remoteBindings;
 
-	const targetEnvironment = options.environment;
+	const env = options.environment;
 
 	const rawConfig = readConfig({
 		config: options.configPath,
-		env: targetEnvironment,
+		env,
 	});
 
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
@@ -129,7 +129,7 @@ export async function getPlatformProxy<
 
 	const miniflareOptions = await getMiniflareOptionsFromConfig({
 		rawConfig,
-		targetEnvironment,
+		env,
 		options,
 		remoteProxyConnectionString:
 			remoteProxySession?.remoteProxyConnectionString,
@@ -160,7 +160,7 @@ export async function getPlatformProxy<
  * can be then passed to the Miniflare constructor
  *
  * @param args.rawConfig The raw configuration to base the options from
- * @param args.targetEnvironment The target environment from which to get the binding configuration options
+ * @param args.env The target environment from which to get the binding configuration options
  * @param args.options The user provided `getPlatformProxy` options
  * @param args.remoteProxyConnectionString The potential remote proxy connection string to be used to connect the remote bindings
  * @param args.remoteBindingsEnabled Whether remote bindings are enabled
@@ -168,20 +168,20 @@ export async function getPlatformProxy<
  */
 async function getMiniflareOptionsFromConfig(args: {
 	rawConfig: Config;
-	targetEnvironment: string | undefined;
+	env: string | undefined;
 	options: GetPlatformProxyOptions;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
 	remoteBindingsEnabled: boolean;
 }): Promise<MiniflareOptions> {
 	const {
 		rawConfig,
-		targetEnvironment,
+		env,
 		options,
 		remoteProxyConnectionString,
 		remoteBindingsEnabled,
 	} = args;
 
-	const bindings = getBindings(rawConfig, targetEnvironment, true, {});
+	const bindings = getBindings(rawConfig, env, true, {});
 
 	if (rawConfig["durable_objects"]) {
 		const { localBindings } = partitionDurableObjectBindings(rawConfig);
