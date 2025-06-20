@@ -119,7 +119,7 @@ describe("cloudchamber create", () => {
 			      --label          Deployment labels  [array]
 			      --all-ssh-keys   To add all SSH keys configured on your account to be added to this deployment, set this option to true  [boolean]
 			      --ssh-key-id     ID of the SSH key to add to the deployment  [array]
-			      --instance-type  Instance type to allocate to this deployment. One of 'dev', 'basic', or 'standard'.  [string]
+			      --instance-type  Instance type to allocate to this deployment. One of 'dev', 'basic', or 'standard'.  [choices: \\"dev\\", \\"basic\\", \\"standard\\"]
 			      --vcpu           Number of vCPUs to allocate to this deployment.  [number]
 			      --memory         Amount of memory (GiB, MiB...) to allocate to this deployment. Ex: 4GiB.  [string]
 			      --ipv4           Include an IPv4 in the deployment  [boolean]"
@@ -190,7 +190,7 @@ describe("cloudchamber create", () => {
 			runWrangler("cloudchamber create ")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			` [Error: Processing wrangler.toml configuration:
-  - "cloudchamber" bindings should, optionally, have "instance_type" as 'dev', 'basic', or 'standard', but got invalid]`
+  - "instance_type" should be one of 'dev', 'basic', or 'standard', but got invalid]`
 		);
 	});
 
@@ -214,7 +214,7 @@ describe("cloudchamber create", () => {
 			runWrangler("cloudchamber create ")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			` [Error: Processing wrangler.toml configuration:
-  - "cloudchamber" bindings should not set either "memory" or "vcpu" with "instance_type"]`
+  - "cloudchamber" configuration should not set either "memory" or "vcpu" with "instance_type"]`
 		);
 	});
 
@@ -224,18 +224,6 @@ describe("cloudchamber create", () => {
 		await runWrangler("cloudchamber create --image hello:world --json");
 		expect(std.out).toMatchInlineSnapshot(
 			`"{\\"error\\":\\"location is required but it's not passed as an argument\\"}"`
-		);
-		expect(std.err).toMatchInlineSnapshot(`""`);
-	});
-
-	it("should fail with a nice message when instance type is invalid (json)", async () => {
-		setIsTTY(false);
-		setWranglerConfig({});
-		await runWrangler(
-			"cloudchamber create --image hello:world --location sfo06 --instance-type invalid --json"
-		);
-		expect(std.out).toMatchInlineSnapshot(
-			`"{\\"error\\":\\"/\\"instance_type/\\" field value is expected to be one of /\\"dev/\\", /\\"basic/\\", or /\\"standard/\\", but got /\\"invalid/\\"\\"}"`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
