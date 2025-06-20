@@ -174,6 +174,7 @@ export function runBuild(
 						checkFetch,
 
 						metafile: undefined,
+						splitting: undefined,
 					})
 				: undefined;
 

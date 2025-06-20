@@ -619,7 +619,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// These options are dev-only
 						testScheduled: undefined,
 						watch: undefined,
+
 						metafile: undefined,
+						splitting: undefined,
 					}
 				);
 

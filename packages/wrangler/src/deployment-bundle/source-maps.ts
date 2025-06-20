@@ -12,16 +12,30 @@ export function loadSourceMaps(
 	modules: CfModule[],
 	bundle: Partial<BundleResult>
 ): CfWorkerSourceMap[] {
-	const { sourceMapPath, sourceMapMetadata } = bundle;
+	const sourceMaps: CfWorkerSourceMap[] = [];
+	const { sourceMapPath, sourceMapMetadata, chunks } = bundle;
 	if (sourceMapPath && sourceMapMetadata) {
 		// This worker was bundled by Wrangler, so we already know where
 		// the source map is located.
-		return loadSourceMap(main, sourceMapPath, sourceMapMetadata);
+		sourceMaps.push(...loadSourceMap(main, sourceMapPath, sourceMapMetadata));
+		if (chunks) {
+			for (const chunk of chunks) {
+				const sourceMap = loadSourceMap(main, chunk, {
+					entryDirectory: sourceMapMetadata.entryDirectory,
+					tmpDir: sourceMapMetadata.tmpDir,
+				});
+				if (sourceMap.length > 0) {
+					sourceMaps.push(...sourceMap);
+				}
+			}
+		}
 	} else {
 		// Don't know where source maps are located, so need to find
 		// them by scanning the contents of the user-specified modules.
-		return scanSourceMaps([main, ...modules]);
+		sourceMaps.push(...scanSourceMaps([main, ...modules]));
 	}
+
+	return sourceMaps;
 }
 
 /**

@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
@@ -114,6 +114,7 @@ type Props = {
 	dispatchNamespace: string | undefined;
 	experimentalAutoCreate: boolean;
 	metafile: string | boolean | undefined;
+	experimentalCodeSplitting: boolean;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -533,6 +534,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 
 		const entryDirectory = path.dirname(props.entry.file);
+		const outputDirectory =
+			typeof destination === "string" ? destination : destination.path;
+
 		const moduleCollector = createModuleCollector({
 			wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
 				entryDirectory,
@@ -553,6 +557,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			dependencies,
 			resolvedEntryPointPath,
 			bundleType,
+			chunks = [],
 			...bundle
 		} = props.noBundle
 			? await noBundleWorker(props.entry, props.rules, props.outDir)
@@ -586,7 +591,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							props.compatibilityFlags ?? config.compatibility_flags
 						),
 						plugins: [logBuildOutput(nodejsCompatMode)],
-
+						splitting: props.experimentalCodeSplitting,
 						// Pages specific options used by wrangler pages commands
 						entryName: undefined,
 						inject: undefined,
@@ -679,6 +684,25 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			});
 		}
 
+		if (bundleType === "esm" && chunks && chunks.length > 0) {
+			for (const chunkPath of chunks) {
+				const relativeChunkPath = path.relative(outputDirectory, chunkPath);
+				const hasSourceMap = existsSync(`${chunkPath}.map`);
+				modules.push({
+					name: relativeChunkPath,
+					filePath: chunkPath,
+					content: readFileSync(chunkPath, "utf-8"),
+					type: "esm",
+					sourceMap: hasSourceMap
+						? {
+								name: `${relativeChunkPath}.map`,
+								content: readFileSync(`${chunkPath}.map`, "utf-8"),
+							}
+						: undefined,
+				});
+			}
+		}
+
 		// The upload API only accepts an empty string or no specified placement for the "off" mode.
 		const placement: CfPlacement | undefined =
 			config.placement?.mode === "smart"
@@ -692,6 +716,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			content: content,
 			type: bundleType,
 		};
+
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main,
@@ -1361,6 +1386,7 @@ export async function noBundleWorker(
 	return {
 		modules,
 		dependencies: {} as { [path: string]: { bytesInOutput: number } },
+		chunks: [],
 		resolvedEntryPointPath: entry.file,
 		bundleType,
 	};
