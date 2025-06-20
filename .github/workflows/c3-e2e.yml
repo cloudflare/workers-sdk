@@ -4,20 +4,24 @@ on:
     types: [synchronize, opened, reopened, labeled, unlabeled]
 
 jobs:
-  e2e-vp:
-    # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
-    #       in .github/workflows/c3-e2e-dependabot.yml
-    if: github.head_ref == 'changeset-release/main' || (contains(github.event.*.labels.*.name, 'c3-e2e' ) && contains(github.event.*.labels.*.name, 'every-os' ))
+  e2e:
+    # Runs the non-frameworks C3 E2E tests on all supported operating systems and package managers.
     timeout-minutes: 45
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}${{ matrix.experimental && '-experimental' || '' }}
       cancel-in-progress: true
-    name: ${{ format('Run tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os) }}
+    name: ${{ format('{0}@{1} / {2}{3}', matrix.pm.name, matrix.pm.version, matrix.os, matrix.experimental && ' (experimental)' || '') }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        pm: [{ name: npm, version: "0.0.0" }, { name: yarn, version: "1.0.0" }]
+        experimental: [true, false]
+        os: [ubuntu-latest, macos-latest]
+        pm:
+          [
+            { name: pnpm, version: "9.12.0" },
+            { name: npm, version: "0.0.0" },
+            { name: yarn, version: "1.0.0" },
+          ]
         # include a single windows test with pnpm
         include:
           - os: windows-latest
@@ -35,6 +39,7 @@ jobs:
           filters: |
             everything_but_markdown:
               - '!**/*.md'
+
       - name: Install Dependencies
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
@@ -45,88 +50,41 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
-      - name: E2E Tests (experimental)
+      - if: matrix.pm.name == 'bun'
+        name: Install Bun ${{ matrix.pm.nameVersion }}
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ matrix.pm.nameVersion }}
+
+      # Needed because gatsby requires git
+      - name: Configure Git
+        shell: bash
+        run: |
+          git config --global user.email wrangler@cloudflare.com
+          git config --global user.name 'Wrangler automated PR updater'
+
+      - id: run-e2e
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        uses: ./.github/actions/run-c3-e2e
-        with:
-          node-version: 20.11.1
-          packageManager: ${{ matrix.pm.name }}
-          packageManagerVersion: ${{ matrix.pm.version }}
-          quarantine: false
-          experimental: true
-          accountId: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-          apiToken: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: pnpm run test:e2e:c3
+        env:
+          NODE_VERSION: "20.11.1"
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          E2E_EXPERIMENTAL: ${{ matrix.experimental }}
+          E2E_TEST_PM: ${{ matrix.pm.name }}
+          E2E_TEST_PM_VERSION: ${{ matrix.pm.version }}
+          CI_OS: ${{ runner.os }}
 
-      - name: E2E Tests (non-experimental)
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        uses: ./.github/actions/run-c3-e2e
+      - name: Upload Logs
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
-          node-version: 20.11.1
-          packageManager: ${{ matrix.pm.name }}
-          packageManagerVersion: ${{ matrix.pm.version }}
-          quarantine: false
-          experimental: false
-          accountId: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-          apiToken: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          name: e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}-${{runner.os}}-${{matrix.pm.name}}
+          path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}
+          include-hidden-files: true
 
-  e2e:
-    # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
-    #       in .github/workflows/c3-e2e-dependabot.yml
-    if: contains(github.event.*.labels.*.name, 'c3-e2e' )
-    timeout-minutes: 45
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
-      cancel-in-progress: true
-    name: ${{ format('Run tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os) }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        pm: [{ name: pnpm, version: "9.12.0" }]
-
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            everything_but_markdown:
-              - '!**/*.md'
-      - name: Install Dependencies
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        uses: ./.github/actions/install-dependencies
-        with:
-          node-version: 20.11.1
-          turbo-api: ${{ secrets.TURBO_API }}
-          turbo-team: ${{ secrets.TURBO_TEAM }}
-          turbo-token: ${{ secrets.TURBO_TOKEN }}
-          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-
-      - name: E2E Tests (experimental)
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        uses: ./.github/actions/run-c3-e2e
-        with:
-          node-version: 20.11.1
-          packageManager: ${{ matrix.pm.name }}
-          packageManagerVersion: ${{ matrix.pm.version }}
-          quarantine: false
-          experimental: true
-          accountId: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-          apiToken: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
-
-      - name: E2E Tests (non-experimental)
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        uses: ./.github/actions/run-c3-e2e
-        with:
-          node-version: 20.11.1
-          packageManager: ${{ matrix.pm.name }}
-          packageManagerVersion: ${{ matrix.pm.version }}
-          quarantine: false
-          experimental: false
-          accountId: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-          apiToken: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+      - name: Fail if errors detected
+        shell: bash
+        if: ${{ steps.run-e2e.outcome == 'failure' }}
+        run: exit 1

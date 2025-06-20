@@ -18,7 +18,6 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import solidTemplateExperimental from "templates-experimental/solid/c3";
 import analogTemplate from "templates/analog/c3";
 import angularTemplate from "templates/angular/c3";
 import astroTemplate from "templates/astro/c3";
@@ -188,7 +187,7 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
-			solid: solidTemplateExperimental,
+			// None right now
 		};
 	} else {
 		return {

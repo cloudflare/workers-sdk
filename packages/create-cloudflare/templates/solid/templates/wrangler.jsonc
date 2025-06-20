@@ -1,8 +1,15 @@
 {
   "name": "<TBD>",
+  "main": "./.output/server/index.mjs",
   "compatibility_date": "<TBD>",
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "pages_build_output_dir": "./dist"
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./.output/public"
+  },
+  "observability": {
+    "enabled": true
+  }
 }
