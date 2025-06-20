@@ -355,7 +355,7 @@ async function handleCreateCommand(
 		instance_type: instanceType,
 		vcpu: undefined,
 		memory_mib: undefined,
-		network: network,
+		network,
 	};
 	if (instanceType === undefined) {
 		deploymentRequest.vcpu = vcpu;
