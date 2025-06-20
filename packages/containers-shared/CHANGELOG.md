@@ -1,5 +1,11 @@
 # @cloudflare/containers-shared
 
+## 0.2.1
+
+### Patch Changes
+
+- [#9596](https://github.com/cloudflare/workers-sdk/pull/9596) [`5162c51`](https://github.com/cloudflare/workers-sdk/commit/5162c5194604f26b2e5018961b761f3450872333) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - add ability to pull images for containers local dev
+
 ## 0.2.0
 
 ### Minor Changes
