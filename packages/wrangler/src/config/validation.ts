@@ -2382,59 +2382,43 @@ function validateContainerApp(
 			return false;
 		}
 
-		for (const containerApp of value) {
-			const containerAppOptional =
-				containerApp as Partial<CreateApplicationRequest> & {
-					image?: string | undefined;
-					class_name?: string | undefined;
-				};
+		for (const containerAppOptional of value) {
+			// validate that either a name is set and is a string
+			if (!isOptionalProperty(value, "name", "string")) {
+				diagnostics.errors.push(
+					`the field "name", when present, should be a string.`
+				);
+			}
 
-			if (!isRequiredProperty(containerAppOptional, "name", "string")) {
-				if (!topLevelName) {
+			// or if unset that we can infer a reasonable name
+			if (!containerAppOptional.name) {
+				// we need at a minimum a topLevelName and a containers.class_name or containers.name
+				if (
+					!topLevelName ||
+					!isOptionalProperty(containerAppOptional, "class_name", "string")
+				) {
 					diagnostics.errors.push(
-						`"Must have either a top level name or containers.name defined"`
+						`"Must have either a top level name and a containers.class_name defined or have containers.name defined"`
 					);
 				} else {
 					// if there is worker name defined but no name for this container app default to:
 					// worker_name-class_name[-envName].
 					let name = `${topLevelName}-${containerAppOptional.class_name}`;
 					// config is undefined when we are at the top level instead of in a named env
+					// If we are in a named env, append it to the generated name
+					// so that users can re-use container definitions between different envs without issue.
 					name += config === undefined ? "" : `-${envName}`;
-					containerAppOptional.name = name.toLowerCase().replace(/ /g, "");
+					containerAppOptional.name = name.toLowerCase().replace(/ /g, "-");
 				}
 			}
 
-			if (
-				"rollout_step_percentage" in containerAppOptional &&
-				containerAppOptional.rollout_step_percentage !== undefined
-			) {
-				if (
-					typeof containerAppOptional.rollout_step_percentage !== "number" ||
-					containerAppOptional.rollout_step_percentage > 100 ||
-					containerAppOptional.rollout_step_percentage < 25
-				) {
-					diagnostics.errors.push(
-						`"containers.rollout_step_percentage" should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
-					);
-				}
-			}
-
-			if (
-				"rollout_kind" in containerAppOptional &&
-				containerAppOptional.rollout_kind !== undefined
-			) {
-				if (
-					typeof containerAppOptional.rollout_kind !== "string" ||
-					!["full_auto", "full_manual", "none"].includes(
-						containerAppOptional.rollout_kind
-					)
-				) {
-					diagnostics.errors.push(
-						`"containers.rollout_kind" should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
-					);
-				}
-			}
-
+			// Validate that we have an image configuration for this container app.
+			// For legacy reasons we have to check both at containerAppOptional.image and
+			// containerAppOptional.configuration.image.
+			//
+			//
+			// At the moment logic in other places downstream of this rely on containerAppOptional.configuration.image be set
+			// so we set it here regardless of which place it is set by the user.
 			if (
 				"image" in containerAppOptional &&
 				containerAppOptional.image !== undefined
@@ -2453,6 +2437,36 @@ function validateContainerApp(
 				delete containerAppOptional["image"];
 			}
 
+			// Validate rollout related configs
+			if (
+				!isOptionalProperty(
+					containerAppOptional,
+					"rollout_step_percentage",
+					"number"
+				) &&
+				(containerAppOptional.rollout_step_percentage > 100 ||
+					containerAppOptional.rollout_step_percentage < 25)
+			) {
+				diagnostics.errors.push(
+					`"containers.rollout_step_percentage" should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
+				);
+			}
+
+			if (
+				!isOptionalProperty(containerAppOptional, "rollout_kind", "string") &&
+				"rollout_kind" in containerAppOptional &&
+				!["full_auto", "full_manual", "none"].includes(
+					containerAppOptional.rollout_kind
+				)
+			) {
+				diagnostics.errors.push(
+					`"containers.rollout_kind" should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
+				);
+			}
+
+			// Leaving for legacy reasons
+			// TODO: When cleaning up container.configuration usage in other places clean this up
+			// as well.
 			if (!("configuration" in containerAppOptional)) {
 				diagnostics.errors.push(`"containers.configuration" should be defined`);
 			} else if (Array.isArray(containerAppOptional.configuration)) {

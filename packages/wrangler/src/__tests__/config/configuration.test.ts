@@ -2368,7 +2368,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if no containers name and no worker name are provided", () => {
-				const { diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics, config } = normalizeAndValidateConfig(
 					{
 						containers: [
 							{
@@ -2380,11 +2380,10 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					{ env: undefined }
 				);
-
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"Must have either a top level name or containers.name defined\\""
+					  - \\"Must have either a top level name and a containers.class_name defined or have containers.name defined\\""
 				`);
 			});
 
