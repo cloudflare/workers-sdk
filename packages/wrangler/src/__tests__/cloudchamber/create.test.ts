@@ -119,7 +119,7 @@ describe("cloudchamber create", () => {
 			      --label          Deployment labels  [array]
 			      --all-ssh-keys   To add all SSH keys configured on your account to be added to this deployment, set this option to true  [boolean]
 			      --ssh-key-id     ID of the SSH key to add to the deployment  [array]
-			      --instance-type  Instance type to allocate to this deployment. One of 'dev', 'basic', or 'standard'.  [choices: \\"dev\\", \\"basic\\", \\"standard\\"]
+			      --instance-type  Instance type to allocate to this deployment  [choices: \\"dev\\", \\"basic\\", \\"standard\\"]
 			      --vcpu           Number of vCPUs to allocate to this deployment.  [number]
 			      --memory         Amount of memory (GiB, MiB...) to allocate to this deployment. Ex: 4GiB.  [string]
 			      --ipv4           Include an IPv4 in the deployment  [boolean]"

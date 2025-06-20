@@ -13,6 +13,7 @@ import {
 	AssignIPv6,
 	DeploymentsService,
 } from "@cloudflare/containers-shared";
+import { logger } from "../logger";
 import { parseByteSize } from "./../parse";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
@@ -47,7 +48,6 @@ import type {
 	Label,
 	SSHPublicKeyID,
 } from "@cloudflare/containers-shared";
-import { logger } from "../logger";
 
 const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";
 
@@ -99,8 +99,7 @@ export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 			requiresArg: true,
 			choices: ["dev", "basic", "standard"] as const,
 			demandOption: false,
-			describe:
-				"Instance type to allocate to this deployment. One of 'dev', 'basic', or 'standard'.",
+			describe: "Instance type to allocate to this deployment",
 		})
 		.option("vcpu", {
 			requiresArg: true,
