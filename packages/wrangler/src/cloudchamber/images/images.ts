@@ -22,11 +22,13 @@ import {
 } from "../common";
 import { wrap } from "../helpers/wrap";
 import type { Config } from "../../config";
+import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgvJSON,
 	CommonYargsArgvSanitizedJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../../yargs-types";
+import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
 function configureImageRegistryOptionalYargs(yargs: CommonYargsArgvJSON) {
@@ -60,7 +62,10 @@ function credentialsImageRegistryYargs(yargs: CommonYargsArgvJSON) {
 		});
 }
 
-export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
+export const registriesCommand = (
+	yargs: CommonYargsArgvJSON,
+	scope: typeof containersScope | typeof cloudchamberScope
+) => {
 	return yargs
 		.command(
 			"configure",
@@ -92,7 +97,8 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 						}
 
 						await handleConfigureImageRegistryCommand(args, config);
-					}
+					},
+					scope
 				)(args)
 		)
 		.command(
@@ -145,7 +151,8 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 								}
 							);
 						console.log(credentials.password);
-					}
+					},
+					scope
 				)(args);
 			}
 		)
@@ -167,7 +174,8 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 							imageArgs.domain
 						);
 						console.log(JSON.stringify(registry, null, 4));
-					}
+					},
+					scope
 				)(args);
 			}
 		)
@@ -186,7 +194,8 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 							return;
 						}
 						await handleListImageRegistriesCommand(args, config);
-					}
+					},
+					scope
 				)(args)
 		);
 };

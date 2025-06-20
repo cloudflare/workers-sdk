@@ -142,7 +142,7 @@ function cloneHeaders(
 			: { ...headers };
 }
 
-async function requireLoggedIn(
+export async function requireLoggedIn(
 	complianceConfig: ComplianceConfig
 ): Promise<void> {
 	const loggedIn = await loginOrRefreshIfRequired(complianceConfig);
@@ -151,7 +151,7 @@ async function requireLoggedIn(
 	}
 }
 
-function addAuthorizationHeaderIfUnspecified(
+export function addAuthorizationHeaderIfUnspecified(
 	headers: Record<string, string>,
 	auth: ApiCredentials
 ): void {
@@ -165,7 +165,7 @@ function addAuthorizationHeaderIfUnspecified(
 	}
 }
 
-function addUserAgent(headers: Record<string, string>): void {
+export function addUserAgent(headers: Record<string, string>): void {
 	headers["User-Agent"] = `wrangler/${wranglerVersion}`;
 }
 
