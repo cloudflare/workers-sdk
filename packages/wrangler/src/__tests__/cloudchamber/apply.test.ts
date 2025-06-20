@@ -1603,4 +1603,140 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		/* eslint-enable */
 	});
+
+	test("can apply a simple application (instance type)", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					instances: 3,
+					class_name: "DurableObjectClass",
+					instance_type: "dev",
+					configuration: {
+						image: "./Dockerfile",
+					},
+					constraints: {
+						tier: 2,
+					},
+				},
+			],
+		});
+		mockGetApplications([]);
+		mockCreateApplication({ id: "abc" } as Application);
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ NEW my-container-app
+			│
+			│   [[containers]]
+			│   name = \\"my-container-app\\"
+			│   instances = 3
+			│   scheduling_policy = \\"default\\"
+			│
+			│   [containers.configuration]
+			│   image = \\"./Dockerfile\\"
+			│   instance_type = \\"dev\\"
+			│
+			│   [containers.constraints]
+			│   tier = 2
+			│
+			│
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
+	test("can apply a simple existing application (instance type)", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					instances: 4,
+					class_name: "DurableObjectClass",
+					instance_type: "standard",
+					configuration: {
+						image: "./Dockerfile",
+					},
+					constraints: {
+						tier: 2,
+					},
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 3,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tier: 3,
+				},
+			},
+		]);
+		const applicationReqBodyPromise = mockModifyApplication();
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [[containers]]
+			│ - instances = 3
+			│ + instances = 4
+			│   name = \\"my-container-app\\"
+			│
+			│   [containers.configuration]
+			│   image = \\"./Dockerfile\\"
+			│ - instance_type = \\"dev\\"
+			│ + instance_type = \\"standard\\"
+			│
+			│   [containers.constraints]
+			│   ...
+			│ - tier = 3
+			│ + tier = 2
+			│
+			├ Loading
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.configuration?.instance_type).toEqual("standard");
+		/* eslint-enable */
+	});
 });

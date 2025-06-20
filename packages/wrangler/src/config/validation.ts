@@ -2366,11 +2366,7 @@ const validateBindingArray =
 		return isValid;
 	};
 
-const validateContainerAppConfig: ValidatorFn = (
-	diagnostics,
-	_field,
-	value
-) => {
+const validateContainerAppConfig: ValidatorFn = (diagnostics, field, value) => {
 	if (!value) {
 		return true;
 	}
@@ -2393,7 +2389,9 @@ const validateContainerAppConfig: ValidatorFn = (
 		const containerAppOptional =
 			containerApp as Partial<CreateApplicationRequest> & {
 				image?: string | undefined;
+				instance_type?: "dev" | "basic" | "standard";
 			};
+
 		if (!isRequiredProperty(containerAppOptional, "name", "string")) {
 			diagnostics.errors.push(
 				`"containers.name" should be defined and a string`
@@ -2466,6 +2464,17 @@ const validateContainerAppConfig: ValidatorFn = (
 				`"containers.image" should be defined and a string`
 			);
 		}
+
+		if ("instance_type" in containerAppOptional) {
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"instance_type",
+				containerAppOptional.instance_type,
+				"string",
+				["dev", "basic", "standard"]
+			);
+		}
 	}
 
 	if (diagnostics.errors.length > 0) {
@@ -2502,6 +2511,26 @@ const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 			}
 		});
 	});
+
+	if ("instance_type" in value && value.instance_type !== undefined) {
+		if (
+			typeof value.instance_type !== "string" ||
+			!["dev", "basic", "standard"].includes(value.instance_type)
+		) {
+			diagnostics.errors.push(
+				`"instance_type" should be one of 'dev', 'basic', or 'standard', but got ${value.instance_type}`
+			);
+		}
+
+		if (
+			("memory" in value && value.memory !== undefined) ||
+			("vcpu" in value && value.vcpu !== undefined)
+		) {
+			diagnostics.errors.push(
+				`"${field}" configuration should not set either "memory" or "vcpu" with "instance_type"`
+			);
+		}
+	}
 
 	return isValid;
 };
