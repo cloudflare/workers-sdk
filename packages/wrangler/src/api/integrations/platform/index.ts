@@ -115,20 +115,20 @@ export async function getPlatformProxy<
 
 	const env = options.environment;
 
-	const rawConfig = readConfig({
+	const config = readConfig({
 		config: options.configPath,
 		env,
 	});
 
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
-	if (experimentalRemoteBindings && rawConfig.configPath) {
+	if (experimentalRemoteBindings && config.configPath) {
 		remoteProxySession = (
-			(await maybeStartOrUpdateRemoteProxySession(rawConfig.configPath)) ?? {}
+			(await maybeStartOrUpdateRemoteProxySession(config.configPath)) ?? {}
 		).session;
 	}
 
 	const miniflareOptions = await getMiniflareOptionsFromConfig({
-		rawConfig,
+		config,
 		options,
 		remoteProxyConnectionString:
 			remoteProxySession?.remoteProxyConnectionString,
@@ -158,29 +158,29 @@ export async function getPlatformProxy<
  * Builds an options configuration object for the `getPlatformProxy` functionality that
  * can be then passed to the Miniflare constructor
  *
- * @param args.rawConfig The raw configuration to base the options from
+ * @param args.config The wrangler configuration to base the options from
  * @param args.options The user provided `getPlatformProxy` options
  * @param args.remoteProxyConnectionString The potential remote proxy connection string to be used to connect the remote bindings
  * @param args.remoteBindingsEnabled Whether remote bindings are enabled
  * @returns an object ready to be passed to the Miniflare constructor
  */
 async function getMiniflareOptionsFromConfig(args: {
-	rawConfig: Config;
+	config: Config;
 	options: GetPlatformProxyOptions;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
 	remoteBindingsEnabled: boolean;
 }): Promise<MiniflareOptions> {
 	const {
-		rawConfig,
+		config,
 		options,
 		remoteProxyConnectionString,
 		remoteBindingsEnabled,
 	} = args;
 
-	const bindings = getBindings(rawConfig, options.environment, true, {});
+	const bindings = getBindings(config, options.environment, true, {});
 
-	if (rawConfig["durable_objects"]) {
-		const { localBindings } = partitionDurableObjectBindings(rawConfig);
+	if (config["durable_objects"]) {
+		const { localBindings } = partitionDurableObjectBindings(config);
 		if (localBindings.length > 0) {
 			logger.warn(dedent`
 				You have defined bindings to the following internal Durable Objects:
@@ -193,22 +193,22 @@ async function getMiniflareOptionsFromConfig(args: {
 		}
 	}
 	const workerDefinitions = await getBoundRegisteredWorkers({
-		name: rawConfig.name,
+		name: config.name,
 		services: bindings.services,
-		durableObjects: rawConfig["durable_objects"],
+		durableObjects: config["durable_objects"],
 		tailConsumers: [],
 	});
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		{
-			name: rawConfig.name,
-			complianceRegion: rawConfig.compliance_region,
+			name: config.name,
+			complianceRegion: config.compliance_region,
 			bindings,
 			workerDefinitions,
 			queueConsumers: undefined,
-			services: rawConfig.services,
+			services: config.services,
 			serviceBindings: {},
-			migrations: rawConfig.migrations,
+			migrations: config.migrations,
 			imagesLocalMode: false,
 			tails: [],
 			containers: undefined,
@@ -227,7 +227,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			{
 				script: "",
 				modules: true,
-				name: rawConfig.name,
+				name: config.name,
 				...bindingOptions,
 				serviceBindings: {
 					...serviceBindings,
