@@ -249,15 +249,19 @@ describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 			expect(wrangler.stdout).not.toContain("to exit");
 			expect(wrangler.stdout).not.toContain("rebuild container");
 		});
-		it("should show rebuild containers hotkey if containers are configured", async () => {
-			const wrangler = await startWranglerDev([
-				"dev",
-				"-c",
-				"wrangler.container.jsonc",
-			]);
-			wrangler.pty.kill();
-			expect(wrangler.stdout).toContain("rebuild container");
-		});
+		// docker isn't installed by default on windows/macos runners
+		it.skipIf(process.env.platform !== "linux" && process.env.CI === "true")(
+			"should show rebuild containers hotkey if containers are configured",
+			async () => {
+				const wrangler = await startWranglerDev([
+					"dev",
+					"-c",
+					"wrangler.container.jsonc",
+				]);
+				wrangler.pty.kill();
+				expect(wrangler.stdout).toContain("rebuild container");
+			}
+		);
 	});
 });
 
