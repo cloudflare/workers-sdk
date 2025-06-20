@@ -122,11 +122,9 @@ export async function getPlatformProxy<
 
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
 	if (experimentalRemoteBindings && rawConfig.configPath) {
-		const a = await maybeStartOrUpdateRemoteProxySession(
-			rawConfig.configPath,
-			null
-		);
-		remoteProxySession = a?.session;
+		const maybeRemoteProxySessionWrap =
+			await maybeStartOrUpdateRemoteProxySession(rawConfig.configPath, null);
+		remoteProxySession = maybeRemoteProxySessionWrap?.session;
 	}
 
 	const miniflareOptions = await getMiniflareOptionsFromConfig(
