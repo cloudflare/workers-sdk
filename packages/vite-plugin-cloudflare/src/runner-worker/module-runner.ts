@@ -6,7 +6,16 @@ import { UNKNOWN_HOST } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
 
-let moduleRunner: ModuleRunner;
+// @ts-ignore
+class CustomModuleRunner extends ModuleRunner {
+	override async cachedModule(url: string, importer?: string) {
+		const cachedModule = this.evaluatedModules.getModuleByUrl(url);
+		// @ts-ignore
+		return this.getModuleInformation(url, importer, cachedModule);
+	}
+}
+
+let moduleRunner: CustomModuleRunner;
 
 export async function createModuleRunner(
 	env: WrapperEnv,
@@ -24,7 +33,7 @@ export async function createModuleRunner(
 		},
 	});
 
-	moduleRunner = new ModuleRunner(
+	moduleRunner = new CustomModuleRunner(
 		{
 			sourcemapInterceptor: "prepareStackTrace",
 			transport: {
