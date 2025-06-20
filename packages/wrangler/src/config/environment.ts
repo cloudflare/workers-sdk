@@ -76,7 +76,7 @@ export type ContainerApp = {
 	/** The scheduling policy of the application, default is regional */
 	scheduling_policy?: "regional" | "moon" | "default";
 
-	/** The instance type to be used for the container */
+	/** The instance type to be used for the container. This sets preconfigured options for vcpu and memory */
 	instance_type?: "dev" | "basic" | "standard";
 
 	/* Configuration of the container */
