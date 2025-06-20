@@ -1,11 +1,11 @@
 {
-	"name": "container-app",
+	"name": "container-app-from-registry",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-04-03",
 	"containers": [
 		{
 			"configuration": {
-				"image": "./Dockerfile",
+				"image": "registry.cloudflare.com/8d783f274e1f82dc46744c297b015a2f/ci-container-dont-delete:latest",
 			},
 			"class_name": "Container",
 			"name": "http2",

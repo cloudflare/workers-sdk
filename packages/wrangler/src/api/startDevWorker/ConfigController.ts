@@ -1,7 +1,9 @@
 import assert from "node:assert";
 import path from "node:path";
+import { isDockerfile } from "@cloudflare/containers-shared";
 import { watch } from "chokidar";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
+import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig } from "../../config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
@@ -18,6 +20,7 @@ import {
 } from "../../environment-variables/misc-variables";
 import { UserError } from "../../errors";
 import { getFlag } from "../../experimental-flags";
+import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -398,6 +401,16 @@ async function resolveConfig(
 				"If this is required in your project, please add your use case to the following issue:\n" +
 				"https://github.com/cloudflare/workers-sdk/issues/583."
 		);
+	}
+
+	// for pulling containers, we need to make sure the OpenAPI config for the
+	// container API client is properly set so that we can get the correct permissions
+	// from the cloudchamber API to pull from the repository.
+	const needsPulling = resolved.containers?.some(
+		(c) => !isDockerfile(c.image ?? c.configuration.image)
+	);
+	if (needsPulling && !resolved.dev.remote) {
+		await fillOpenAPIConfiguration(config, isNonInteractiveOrCI());
 	}
 
 	// TODO(queues) support remote wrangler dev

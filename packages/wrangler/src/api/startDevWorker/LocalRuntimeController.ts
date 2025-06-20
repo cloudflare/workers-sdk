@@ -414,6 +414,7 @@ export async function getContainerOptions(
 			),
 			args: container.image_vars,
 			imageBuildContext: container.image_build_context,
+			class_name: container.class_name,
 		});
 	}
 	return containers;
