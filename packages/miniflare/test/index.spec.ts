@@ -3359,7 +3359,9 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 		}`,
 	});
 	// Trigger workerd config serialization by dispatching a request
-	await mf.dispatchFetch("http://localhost");
+	let response = await mf.dispatchFetch("http://localhost");
+	// seems like miniflare doesn't like it if you don't read the response
+	await response.text();
 	t.false(
 		existsSync(configFilePath),
 		"config file should not be created when MINIFLARE_WORKERD_CONFIG_DEBUG is not set"
@@ -3376,7 +3378,8 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 			}
 		}`,
 	});
-	await mf.dispatchFetch("http://localhost");
+	response = await mf.dispatchFetch("http://localhost");
+	await response.text();
 	t.true(
 		existsSync(configFilePath),
 		"workerd-config.json should be created when MINIFLARE_WORKERD_CONFIG_DEBUG=true"
