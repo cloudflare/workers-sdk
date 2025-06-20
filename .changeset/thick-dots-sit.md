@@ -9,8 +9,8 @@ file contains an assets field, correctly returns the appropriate asset binding p
 
 example:
 
-```json
-// wrangler.json
+```jsonc
+// wrangler.jsonc
 {
 	"name": "my-worker",
 	"assets": {
@@ -25,10 +25,8 @@ import { getPlatformProxy } from "wrangler";
 
 const { env, dispose } = await getPlatformProxy();
 
-if (env.ASSETS) {
-	const text = await (await env.ASSETS.fetch("http://0.0.0.0/file.txt")).text();
-	console.log(text); // logs the content of file.txt
-}
+const text = await (await env.ASSETS.fetch("http://0.0.0.0/file.txt")).text();
+console.log(text); // logs the content of file.txt
 
 await dispose();
 ```

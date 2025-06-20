@@ -132,8 +132,7 @@ describe("getPlatformProxy - env", () => {
 		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerConfigFilePath,
 		});
-		const { ASSETS } = env;
-		const res = await ASSETS.fetch("https://0.0.0.0/test.txt");
+		const res = await env.ASSETS.fetch("https://0.0.0.0/test.txt");
 		const text = await res.text();
 		expect(text).toEqual("this is a test text file!\n");
 		await dispose();
