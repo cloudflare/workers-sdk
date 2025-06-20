@@ -123,7 +123,7 @@ export async function getPlatformProxy<
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
 	if (experimentalRemoteBindings && rawConfig.configPath) {
 		const maybeRemoteProxySessionWrap =
-			await maybeStartOrUpdateRemoteProxySession(rawConfig.configPath, null);
+			await maybeStartOrUpdateRemoteProxySession(rawConfig.configPath);
 		remoteProxySession = maybeRemoteProxySessionWrap?.session;
 	}
 
