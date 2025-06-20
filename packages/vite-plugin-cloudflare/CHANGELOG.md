@@ -1,5 +1,15 @@
 # @cloudflare/vite-plugin
 
+## 1.7.3
+
+### Patch Changes
+
+- [#9647](https://github.com/cloudflare/workers-sdk/pull/9647) [`6c6afbd`](https://github.com/cloudflare/workers-sdk/commit/6c6afbd6072b96e78e67d3a863ed849c6aa49472) Thanks [@jamesopstad](https://github.com/jamesopstad)! - In Vite 7, the `applyToEnvironment` hook is called in preview mode. This is now accounted for to ensure compatibility.
+
+- Updated dependencies [[`ffa742f`](https://github.com/cloudflare/workers-sdk/commit/ffa742f32f71cf77a9a451a557c7dc677fad6682), [`8a60fe7`](https://github.com/cloudflare/workers-sdk/commit/8a60fe76ec5ecc734c0eb9f31b4d60e86d5cb06d), [`c489a44`](https://github.com/cloudflare/workers-sdk/commit/c489a44847cf820ec0e1a7f8a9e626bf522d4829), [`8a60fe7`](https://github.com/cloudflare/workers-sdk/commit/8a60fe76ec5ecc734c0eb9f31b4d60e86d5cb06d), [`17d23d8`](https://github.com/cloudflare/workers-sdk/commit/17d23d8e5fd54737d1c4b9cb487fd6e85cddc9c8)]:
+  - wrangler@4.20.4
+  - miniflare@4.20250617.2
+
 ## 1.7.2
 
 ### Patch Changes
