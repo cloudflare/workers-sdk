@@ -33,7 +33,7 @@ export const loginCommand = createCommand({
 				"Use the ip or host address for the temporary login callback server.",
 			type: "string",
 			requiresArg: false,
-			default: "localhost",
+			default: "0.0.0.0",
 		},
 		"callback-port": {
 			describe: "Use the port for the temporary login callback server.",
