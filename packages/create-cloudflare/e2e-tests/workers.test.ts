@@ -178,19 +178,6 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				verifyDeploy: null,
 				verifyPreview: null,
 			},
-			{
-				template: "openapi",
-				quarantine: true,
-				variants: [],
-				verifyDeploy: {
-					route: "/",
-					expectedText: "SwaggerUI",
-				},
-				verifyPreview: {
-					route: "/",
-					expectedText: "SwaggerUI",
-				},
-			},
 		];
 	}
 }
