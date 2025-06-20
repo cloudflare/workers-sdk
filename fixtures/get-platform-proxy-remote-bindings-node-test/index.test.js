@@ -13,12 +13,6 @@ if (
 	process.exit(0);
 }
 
-const env = {
-	...process.env,
-	CLOUDFLARE_API_TOKEN: process.env.TEST_CLOUDFLARE_API_TOKEN,
-	CLOUDFLARE_ACCOUNT_ID: process.env.TEST_CLOUDFLARE_ACCOUNT_ID,
-};
-
 describe("getPlatformProxy remote-bindings", () => {
 	const remoteWorkerName = `get-platform-proxy-remote-worker-test-${randomUUID().split("-")[0]}`;
 
@@ -34,7 +28,6 @@ describe("getPlatformProxy remote-bindings", () => {
 			`pnpm dlx wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-06-19`,
 			{
 				stdio: "pipe",
-				env,
 			}
 		);
 
@@ -86,7 +79,7 @@ describe("getPlatformProxy remote-bindings", () => {
 	});
 
 	after(async () => {
-		execSync(`pnpm dlx wrangler delete --name ${remoteWorkerName}`, { env });
+		execSync(`pnpm dlx wrangler delete --name ${remoteWorkerName}`);
 		rmSync("./.tmp", { recursive: true, force: true });
 	});
 });
