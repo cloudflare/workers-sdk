@@ -15,8 +15,8 @@ example:
 	"name": "my-worker",
 	"assets": {
 		"directory": "./public/",
-		"binding": "ASSETS"
-	}
+		"binding": "ASSETS",
+	},
 }
 ```
 
