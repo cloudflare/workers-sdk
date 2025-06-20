@@ -729,7 +729,7 @@ export function checkInstanceType(
 ): InstanceType | undefined {
 	const instance_type = args.instanceType ?? config.instance_type;
 	if (instance_type === undefined) {
-		return undefined;
+		return;
 	}
 
 	// If instance_type is specified as an argument, it will override any
