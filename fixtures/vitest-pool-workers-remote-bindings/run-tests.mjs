@@ -58,14 +58,11 @@ const env = {
 	CLOUDFLARE_ACCOUNT_ID: process.env.TEST_CLOUDFLARE_ACCOUNT_ID,
 };
 
-const deployOut = execSync(
-	"pnpm dlx wrangler deploy -c remote-wrangler.json",
-	{
-		stdio: "pipe",
-		cwd: "./.tmp",
-		env,
-	}
-);
+const deployOut = execSync("pnpm dlx wrangler deploy -c remote-wrangler.json", {
+	stdio: "pipe",
+	cwd: "./.tmp",
+	env,
+});
 
 if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(`${deployOut}`)) {
 	throw new Error(`Failed to deploy ${remoteWorkerName}`);
