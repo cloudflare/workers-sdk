@@ -93,7 +93,7 @@ function mockGetApplications(applications: Application[]) {
 		http.get(
 			"*/applications",
 			async () => {
-				return HttpResponse.json({success: true, result: applications});
+				return HttpResponse.json({ success: true, result: applications });
 			},
 			{ once: true }
 		)
@@ -8913,7 +8913,7 @@ addEventListener('fetch', event => {});`
 									expect(json).toMatchObject(expected);
 								}
 
-								return HttpResponse.json({success: true, result: json});
+								return HttpResponse.json({ success: true, result: json });
 							},
 							{ once: true }
 						)
@@ -8929,12 +8929,15 @@ addEventListener('fetch', event => {});`
 									(await request.json()) as ImageRegistryCredentialsConfiguration;
 								expect(json.permissions).toEqual(["push", "pull"]);
 
-								return HttpResponse.json({success: true, result: {
-									account_id: "test_account_id",
-									registry_host: getCloudflareContainerRegistry(),
-									username: "v1",
-									password: "mockpassword",
-								} as AccountRegistryToken});
+								return HttpResponse.json({
+									success: true,
+									result: {
+										account_id: "test_account_id",
+										registry_host: getCloudflareContainerRegistry(),
+										username: "v1",
+										password: "mockpassword",
+									} as AccountRegistryToken,
+								});
 							},
 							{ once: true }
 						)
@@ -9121,7 +9124,7 @@ addEventListener('fetch', event => {});`
 									expect(json).toMatchObject(expected);
 								}
 
-								return HttpResponse.json({success: true, result: json});
+								return HttpResponse.json({ success: true, result: json });
 							},
 							{ once: true }
 						)

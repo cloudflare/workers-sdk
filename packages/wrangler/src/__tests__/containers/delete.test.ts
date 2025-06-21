@@ -87,10 +87,13 @@ describe("containers delete", () => {
 				"*/applications/:id",
 				async ({ request }) => {
 					expect(await request.text()).toEqual("");
-					return new HttpResponse(`{"success": false, "errors": [{"code": 1000, "message": "something happened"}]}`, {
-						type: "applicaton/json",
-						status: 500,
-					});
+					return new HttpResponse(
+						`{"success": false, "errors": [{"code": 1000, "message": "something happened"}]}`,
+						{
+							type: "applicaton/json",
+							status: 500,
+						}
+					);
 				},
 				{ once: true }
 			)
@@ -115,7 +118,9 @@ describe("containers delete", () => {
 				"*/applications/:id",
 				async ({ request }) => {
 					expect(await request.text()).toEqual("");
-					return new HttpResponse(`{"success": true, "result": {}}`, {type: "application/json"});
+					return new HttpResponse(`{"success": true, "result": {}}`, {
+						type: "application/json",
+					});
 				},
 				{ once: true }
 			)
@@ -172,8 +177,6 @@ describe("containers delete", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler(`containers delete --json ${testContainerID}`);
-		expect(std.out).toMatchInlineSnapshot(
-			`"{\\"error\\":\\"Not Found\\"}"`
-		);
+		expect(std.out).toMatchInlineSnapshot(`"{\\"error\\":\\"Not Found\\"}"`);
 	});
 });

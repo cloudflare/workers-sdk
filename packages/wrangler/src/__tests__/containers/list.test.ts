@@ -49,7 +49,9 @@ describe("containers list", () => {
 				"*/applications",
 				async ({ request }) => {
 					expect(await request.text()).toEqual("");
-					return HttpResponse.json(`{"success": true, "result": ${JSON.stringify(MOCK_APPLICATIONS, null, 4)}}`);
+					return HttpResponse.json(
+						`{"success": true, "result": ${JSON.stringify(MOCK_APPLICATIONS, null, 4)}}`
+					);
 				},
 				{ once: true }
 			)
