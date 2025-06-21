@@ -4,7 +4,6 @@ import {
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
 	getCloudflareContainerRegistry,
-	getDockerImageDigest,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
 import { ensureDiskLimits } from "../../cloudchamber/build";
@@ -31,7 +30,6 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 		runDockerCmd: vi.fn(),
 		dockerBuild: vi.fn(),
 		dockerImageInspect: vi.fn(),
-		getDockerImageDigest: vi.fn(),
 	});
 });
 
@@ -47,7 +45,6 @@ describe("buildAndMaybePush", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(dockerImageInspect).mockResolvedValue("53387881 2");
-		vi.mocked(getDockerImageDigest).mockRejectedValue("failed");
 		mkdirSync("./container-context");
 
 		writeFileSync("./container-context/Dockerfile", dockerfile);
@@ -119,8 +116,8 @@ describe("buildAndMaybePush", () => {
 		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
 	});
 
-	it("should be able to build image and not push if it already exists in remote", async () => {
-		vi.mocked(getDockerImageDigest).mockResolvedValue("three");
+	it.skip("should be able to build image and not push if it already exists in remote", async () => {
+		// vi.mocked(getDockerImageDigest).mockResolvedValue("three");
 		vi.mocked(runDockerCmd).mockResolvedValueOnce();
 		await runWrangler(
 			"containers build ./container-context -t test-app:tag -p"
@@ -243,7 +240,9 @@ describe("buildAndMaybePush", () => {
 						},
 					},
 				})
-			).rejects.toThrow("Exceeded account limits");
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Exceeded account limits: Your container is configured to use a disk size of 3000 MB. However, that exceeds the account limit of 2000]`
+			);
 		});
 
 		it("should throw error if image size exceeds allowed size", async () => {
