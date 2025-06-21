@@ -1,21 +1,59 @@
+import { DurableObject } from "cloudflare:workers";
 import {
 	createWebSocketModuleRunnerTransport,
 	ModuleRunner,
 } from "vite/module-runner";
-import { UNKNOWN_HOST } from "../shared";
+import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
 
-let moduleRunner: ModuleRunner;
+let entryModule: any;
 
-export async function createModuleRunner(
-	env: WrapperEnv,
-	webSocket: WebSocket
-) {
-	if (moduleRunner) {
-		throw new Error("Runner already initialized");
+export class RunnerObject extends DurableObject<WrapperEnv> {
+	#entryPath: string | undefined;
+	#moduleRunner: ModuleRunner | undefined;
+
+	override async fetch(request: Request) {
+		const { pathname } = new URL(request.url);
+
+		if (pathname !== INIT_PATH) {
+			throw new Error(`RunnerObject received invalid pathname: ${pathname}`);
+		}
+
+		if (this.#moduleRunner) {
+			throw new Error("Runner already initialized");
+		}
+
+		try {
+			const viteDevMetadata = getViteDevMetadata(request);
+			this.#entryPath = viteDevMetadata.entryPath;
+			const { 0: client, 1: server } = new WebSocketPair();
+			this.#moduleRunner = createModuleRunner(this.env, server);
+
+			return new Response(null, {
+				status: 101,
+				webSocket: client,
+			});
+		} catch (e) {
+			return new Response(e instanceof Error ? e.message : JSON.stringify(e), {
+				status: 500,
+			});
+		}
 	}
 
+	async importEntryModule() {
+		if (!(this.#entryPath && this.#moduleRunner)) {
+			throw new Error("Runner not initialized");
+		}
+
+		entryModule = await this.#moduleRunner.import(this.#entryPath);
+	}
+}
+
+function createModuleRunner(
+	env: WrapperEnv,
+	webSocket: WebSocket
+): ModuleRunner {
 	const transport = createWebSocketModuleRunnerTransport({
 		createConnection() {
 			webSocket.accept();
@@ -24,7 +62,7 @@ export async function createModuleRunner(
 		},
 	});
 
-	moduleRunner = new ModuleRunner(
+	return new ModuleRunner(
 		{
 			sourcemapInterceptor: "prepareStackTrace",
 			transport: {
@@ -84,16 +122,48 @@ export async function createModuleRunner(
 	);
 }
 
-export async function getWorkerEntryExport(path: string, entrypoint: string) {
-	const module = await moduleRunner.import(path);
+function getViteDevMetadata(request: Request) {
+	const viteDevMetadataHeader = request.headers.get(VITE_DEV_METADATA_HEADER);
+	if (viteDevMetadataHeader === null) {
+		throw new Error(
+			"Unexpected internal error, vite dev metadata header not set"
+		);
+	}
+
+	let parsedViteDevMetadataHeader: Record<string, string>;
+	try {
+		parsedViteDevMetadataHeader = JSON.parse(viteDevMetadataHeader);
+	} catch {
+		throw new Error(
+			`Unexpected internal error, vite dev metadata header JSON parsing failed, value = ${viteDevMetadataHeader}`
+		);
+	}
+
+	const { entryPath } = parsedViteDevMetadataHeader;
+
+	if (entryPath === undefined) {
+		throw new Error(
+			"Unexpected internal error, vite dev metadata header doesn't contain an entryPath value"
+		);
+	}
+
+	return { entryPath };
+}
+
+export async function getWorkerEntryExport(
+	env: WrapperEnv,
+	entrypoint: string
+) {
+	const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
+	await stub.importEntryModule();
 	const entrypointValue =
-		typeof module === "object" &&
-		module !== null &&
-		entrypoint in module &&
-		module[entrypoint];
+		typeof entryModule === "object" &&
+		entryModule !== null &&
+		entrypoint in entryModule &&
+		entryModule[entrypoint];
 
 	if (!entrypointValue) {
-		throw new Error(`${path} does not export a ${entrypoint} entrypoint.`);
+		throw new Error(`${"TODO"} does not export a ${entrypoint} entrypoint.`);
 	}
 
 	return entrypointValue;

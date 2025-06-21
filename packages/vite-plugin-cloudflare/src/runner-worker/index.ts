@@ -3,10 +3,12 @@ import {
 	WorkerEntrypoint,
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
-import { INIT_PATH, VITE_DEV_METADATA_HEADER } from "../shared";
+import { INIT_PATH } from "../shared";
 import { stripInternalEnv } from "./env";
-import { createModuleRunner, getWorkerEntryExport } from "./module-runner";
+import { getWorkerEntryExport } from "./module-runner";
 import type { WrapperEnv } from "./env";
+
+export { RunnerObject } from "./module-runner";
 
 interface WorkerEntrypointConstructor<T = unknown> {
 	new (
@@ -103,7 +105,7 @@ async function getWorkerEntrypointRpcProperty(
 	key: string
 ): Promise<unknown> {
 	const ctor = (await getWorkerEntryExport(
-		entryPath,
+		this.env,
 		entrypoint
 	)) as WorkerEntrypointConstructor;
 	const userEnv = stripInternalEnv(this.env);
@@ -169,29 +171,32 @@ export function createWorkerEntrypointWrapper(
 				const request = arg as Request;
 				const url = new URL(request.url);
 
-				let webSocket: WebSocket;
 				if (url.pathname === INIT_PATH) {
-					try {
-						const viteDevMetadata = getViteDevMetadata(request);
-						entryPath = viteDevMetadata.entryPath;
-						const { 0: client, 1: server } = new WebSocketPair();
-						webSocket = client;
-						await createModuleRunner(this.env, server);
-					} catch (e) {
-						return new Response(
-							e instanceof Error ? e.message : JSON.stringify(e),
-							{ status: 500 }
-						);
-					}
+					const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
 
-					return new Response(null, {
-						status: 101,
-						webSocket,
-					});
+					return stub.fetch(request);
+
+					// try {
+					// 	const viteDevMetadata = getViteDevMetadata(request);
+					// 	entryPath = viteDevMetadata.entryPath;
+					// 	const { 0: client, 1: server } = new WebSocketPair();
+					// 	webSocket = client;
+					// 	await createModuleRunner(this.env, server);
+					// } catch (e) {
+					// 	return new Response(
+					// 		e instanceof Error ? e.message : JSON.stringify(e),
+					// 		{ status: 500 }
+					// 	);
+					// }
+
+					// return new Response(null, {
+					// 	status: 101,
+					// 	webSocket,
+					// });
 				}
 			}
 
-			const entrypointValue = await getWorkerEntryExport(entryPath, entrypoint);
+			const entrypointValue = await getWorkerEntryExport(this.env, entrypoint);
 			const userEnv = stripInternalEnv(this.env);
 
 			if (typeof entrypointValue === "object" && entrypointValue !== null) {
@@ -312,7 +317,7 @@ export function createDurableObjectWrapper(
 
 		async [kEnsureInstance]() {
 			const ctor = (await getWorkerEntryExport(
-				entryPath,
+				this.env,
 				className
 			)) as DurableObjectConstructor;
 
@@ -362,7 +367,7 @@ export function createWorkflowEntrypointWrapper(
 	for (const key of WORKFLOW_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (...args: unknown[]) {
 			const ctor = (await getWorkerEntryExport(
-				entryPath,
+				this.env,
 				className
 			)) as WorkflowEntrypointConstructor;
 			const userEnv = stripInternalEnv(this.env);
@@ -387,32 +392,4 @@ export function createWorkflowEntrypointWrapper(
 	}
 
 	return Wrapper;
-}
-
-function getViteDevMetadata(request: Request) {
-	const viteDevMetadataHeader = request.headers.get(VITE_DEV_METADATA_HEADER);
-	if (viteDevMetadataHeader === null) {
-		throw new Error(
-			"Unexpected internal error, vite dev metadata header not set"
-		);
-	}
-
-	let parsedViteDevMetadataHeader: Record<string, string>;
-	try {
-		parsedViteDevMetadataHeader = JSON.parse(viteDevMetadataHeader);
-	} catch {
-		throw new Error(
-			`Unexpected internal error, vite dev metadata header JSON parsing failed, value = ${viteDevMetadataHeader}`
-		);
-	}
-
-	const { entryPath } = parsedViteDevMetadataHeader;
-
-	if (entryPath === undefined) {
-		throw new Error(
-			"Unexpected internal error, vite dev metadata header doesn't contain an entryPath value"
-		);
-	}
-
-	return { entryPath };
 }
