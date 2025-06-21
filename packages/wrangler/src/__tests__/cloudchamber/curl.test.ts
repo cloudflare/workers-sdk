@@ -33,7 +33,7 @@ describe("cloudchamber curl", () => {
 		expect(helpStd.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber curl <path>
 
-			send a request to an arbitrary cloudchamber endpoint
+			send a request to an arbitrary Cloudchamber endpoint
 
 			POSITIONALS
 			  path  [string] [required] [default: \\"/\\"]
@@ -172,9 +172,7 @@ describe("cloudchamber curl", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"├ Loading account
-			│
-			>> Body
+			">> Body
 			[
 			    {
 			        \\"id\\": \\"1\\",
@@ -337,8 +335,7 @@ describe("cloudchamber curl", () => {
 			"cloudchamber curl /deployments/v2 --header something:here"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		const text = std.out.split("\n").splice(2).join("\n");
-		const response = JSON.parse(text);
+		const response = JSON.parse(std.out);
 		expect(response.status).toEqual(500);
 		expect(response.statusText).toEqual("Unhandled Exception");
 	});

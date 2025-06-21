@@ -9,20 +9,17 @@ import type { ApiRequestOptions } from "./ApiRequestOptions";
 import type { ApiResult } from "./ApiResult";
 import type { OnCancel } from "./CancelablePromise";
 
-interface FetchError {
+type FetchResponseInfo = {
 	code: number;
-	documentation_url?: string;
 	message: string;
-	error_chain?: FetchError[];
-}
+};
 
-interface FetchResult<ResponseType = unknown> {
+type FetchResult<ResponseType = unknown> = {
 	success: boolean;
-	result: ResponseType;
-	errors: FetchError[];
-	messages?: string[];
-	result_info?: unknown;
-}
+	result?: ResponseType;
+	errors?: FetchResponseInfo[];
+	messages?: FetchResponseInfo[];
+};
 
 const isDefined = <T>(
 	value: T | null | undefined
@@ -219,6 +216,35 @@ const isResponseSchemaV4 = (
 	return config.BASE.endsWith("/containers");
 };
 
+const parseResponseSchemaV4 = <T>(
+	url: string,
+	response: Response,
+	responseHeader: string | undefined,
+	responseBody: any
+): ApiResult => {
+	const fetchResult = (
+		typeof responseBody === "object" ? responseBody : JSON.parse(responseBody)
+	) as FetchResult<T>;
+	const ok = response.ok && fetchResult.success;
+	let result: any;
+	if (ok) {
+		if (fetchResult.result !== undefined) {
+			result = fetchResult.result;
+		} else {
+			result = {};
+		}
+	} else {
+		result = { error: fetchResult.errors?.[0].message };
+	}
+	return {
+		url,
+		ok,
+		status: response.status,
+		statusText: response.statusText,
+		body: responseHeader ?? result,
+	};
+};
+
 export const sendRequest = async (
 	config: OpenAPIConfig,
 	options: ApiRequestOptions,
@@ -341,26 +367,24 @@ export const request = <T>(
 					options.responseHeader
 				);
 
-				const parseResponseSchemaV4 = (body: any): ApiResult => {
-					const fetchResult = body as FetchResult<T>;
-					return {
+				let result: ApiResult;
+
+				if (isResponseSchemaV4(config, options)) {
+					result = parseResponseSchemaV4(
 						url,
-						ok: response.ok && fetchResult.success,
+						response,
+						responseHeader,
+						responseBody
+					);
+				} else {
+					result = {
+						url,
+						ok: response.ok,
 						status: response.status,
 						statusText: response.statusText,
-						body: responseHeader ?? fetchResult.result,
+						body: responseHeader ?? responseBody,
 					};
-				};
-
-				const result: ApiResult = isResponseSchemaV4(config, options)
-					? parseResponseSchemaV4(responseBody)
-					: {
-							url,
-							ok: response.ok,
-							status: response.status,
-							statusText: response.statusText,
-							body: responseHeader ?? responseBody,
-						};
+				}
 
 				catchErrorCodes(options, result);
 				resolve(result.body);
