@@ -6,12 +6,14 @@ import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";
 import { getLocation } from "./cli/locations";
 import {
+	checkInstanceType,
 	collectEnvironmentVariables,
 	collectLabels,
 	interactWithUser,
 	loadAccountSpinner,
 	parseImageName,
 	promptForEnvironmentVariables,
+	promptForInstanceType,
 	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
@@ -27,6 +29,7 @@ import type {
 } from "../yargs-types";
 import type {
 	DeploymentV2,
+	ModifyDeploymentV2RequestBody,
 	SSHPublicKeyID,
 } from "@cloudflare/containers-shared";
 
@@ -71,6 +74,13 @@ export function modifyCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 			demandOption: false,
 			describe: "The new location that the deployment will have from now on",
 		})
+		.option("instance-type", {
+			requiresArg: true,
+			choices: ["dev", "basic", "standard"] as const,
+			demandOption: false,
+			describe:
+				"The new instance type that the deployment will have from now on",
+		})
 		.option("vcpu", {
 			requiresArg: true,
 			type: "number",
@@ -108,18 +118,26 @@ export async function modifyCommand(
 		const labels = collectLabels(modifyArgs.label);
 
 		const memoryMib = resolveMemory(modifyArgs, config.cloudchamber);
+		const vcpu = modifyArgs.vcpu ?? config.cloudchamber.vcpu;
+		const instanceType = checkInstanceType(modifyArgs, config.cloudchamber);
 
+		const modifyRequest: ModifyDeploymentV2RequestBody = {
+			image: modifyArgs.image ?? config.cloudchamber.image,
+			location: modifyArgs.location ?? config.cloudchamber.location,
+			environment_variables: environmentVariables,
+			labels: labels,
+			ssh_public_key_ids: modifyArgs.sshPublicKeyId,
+			instance_type: instanceType,
+			vcpu: undefined,
+			memory_mib: undefined,
+		};
+		if (instanceType === undefined) {
+			modifyRequest.vcpu = vcpu;
+			modifyRequest.memory_mib = memoryMib;
+		}
 		const deployment = await DeploymentsService.modifyDeploymentV2(
 			modifyArgs.deploymentId,
-			{
-				image: modifyArgs.image ?? config.cloudchamber.image,
-				location: modifyArgs.location ?? config.cloudchamber.location,
-				environment_variables: environmentVariables,
-				labels: labels,
-				ssh_public_key_ids: modifyArgs.sshPublicKeyId,
-				vcpu: modifyArgs.vcpu ?? config.cloudchamber.vcpu,
-				memory_mib: memoryMib,
-			}
+			modifyRequest
 		);
 		console.log(JSON.stringify(deployment, null, 4));
 		return;
@@ -236,10 +254,12 @@ async function handleModifyCommand(
 	);
 
 	const memoryMib = resolveMemory(args, config.cloudchamber);
+	const instanceType = await promptForInstanceType(true);
 
 	renderDeploymentConfiguration("modify", {
 		image,
 		location: location ?? deployment.location.name,
+		instanceType: instanceType,
 		vcpu: args.vcpu ?? config.cloudchamber.vcpu ?? deployment.vcpu,
 		memoryMib: memoryMib ?? deployment.memory_mib,
 		env: args.env,
@@ -265,16 +285,20 @@ async function handleModifyCommand(
 		"Modifying your container",
 		"shortly your container will be modified to a new version"
 	);
+	const modifyRequest: ModifyDeploymentV2RequestBody = {
+		image,
+		location,
+		ssh_public_key_ids: keys,
+		environment_variables: selectedEnvironmentVariables,
+		labels: selectedLabels,
+		instance_type: instanceType,
+	};
+	if (instanceType === undefined) {
+		modifyRequest.vcpu = args.vcpu ?? config.cloudchamber.vcpu;
+		modifyRequest.memory_mib = memoryMib;
+	}
 	const [newDeployment, err] = await wrap(
-		DeploymentsService.modifyDeploymentV2(deployment.id, {
-			image,
-			location,
-			ssh_public_key_ids: keys,
-			environment_variables: selectedEnvironmentVariables,
-			labels: selectedLabels,
-			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
-			memory_mib: memoryMib,
-		})
+		DeploymentsService.modifyDeploymentV2(deployment.id, modifyRequest)
 	);
 	stop();
 	if (err) {

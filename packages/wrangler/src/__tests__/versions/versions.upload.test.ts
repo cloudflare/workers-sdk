@@ -211,56 +211,6 @@ describe("versions upload", () => {
 		expect(std.info).toContain("Retrying API call after error...");
 	});
 
-	it("should warn about unexpected experimental_remote fields", async () => {
-		mockGetScript();
-		mockUploadVersion(true);
-		mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
-
-		// Setup
-		writeWranglerConfig({
-			name: "test-name",
-			main: "./index.js",
-			kv_namespaces: [
-				{ binding: "MY_KV", id: "kv-id-xxx", experimental_remote: true },
-			],
-		});
-		writeWorkerSource();
-		setIsTTY(false);
-
-		const result = runWrangler("versions upload");
-
-		await expect(result).resolves.toBeUndefined();
-
-		expect(std.warn).toContain(
-			'Unexpected fields found in kv_namespaces[0] field: "experimental_remote"'
-		);
-	});
-
-	it("should not warn about experimental_remote fields when --x-remote-bindings is provided", async () => {
-		mockGetScript();
-		mockUploadVersion(true);
-		mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
-
-		// Setup
-		writeWranglerConfig({
-			name: "test-name",
-			main: "./index.js",
-			kv_namespaces: [
-				{ binding: "MY_KV", id: "kv-id-xxx", experimental_remote: true },
-			],
-		});
-		writeWorkerSource();
-		setIsTTY(false);
-
-		const result = runWrangler("versions upload --x-remote-bindings");
-
-		await expect(result).resolves.toBeUndefined();
-
-		expect(std.warn).not.toContain(
-			'Unexpected fields found in kv_namespaces[0] field: "experimental_remote"'
-		);
-	});
-
 	describe("multi-env warning", () => {
 		it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
 			mockGetScript();

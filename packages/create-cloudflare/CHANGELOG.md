@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.50.0
+
+### Minor Changes
+
+- [#9305](https://github.com/cloudflare/workers-sdk/pull/9305) [`f116623`](https://github.com/cloudflare/workers-sdk/commit/f116623d561a7a4375e0ed3372bc41c021ddd118) Thanks [@dom96](https://github.com/dom96)! - Add @handler to Python templates.
+
 ## 2.49.4
 
 ### Patch Changes

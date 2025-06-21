@@ -222,10 +222,9 @@ const parseResponseSchemaV4 = <T>(
 	responseHeader: string | undefined,
 	responseBody: any
 ): ApiResult => {
-	const fetchResult =
-		(typeof responseBody === "object"
-		? responseBody
-		: JSON.parse(responseBody)) as FetchResult<T>;
+	const fetchResult = (
+		typeof responseBody === "object" ? responseBody : JSON.parse(responseBody)
+	) as FetchResult<T>;
 	const ok = response.ok && fetchResult.success;
 	let result: any;
 	if (ok) {
