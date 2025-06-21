@@ -638,10 +638,6 @@ export async function startDev(args: StartDevOptions) {
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
-			}
-
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
 				await setupDevEnv(primaryDevEnv, args.config[0], authHook, {
@@ -670,6 +666,9 @@ export async function startDev(args: StartDevOptions) {
 					})
 				))
 			);
+			if (isInteractive() && args.showInteractiveDevSession !== false) {
+				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
+			}
 		} else {
 			devEnv = new DevEnv();
 
@@ -720,11 +719,11 @@ export async function startDev(args: StartDevOptions) {
 				});
 			}
 
+			await setupDevEnv(devEnv, args.config, authHook, args);
+
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
-
-			await setupDevEnv(devEnv, args.config, authHook, args);
 		}
 
 		return {

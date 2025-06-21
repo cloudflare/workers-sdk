@@ -36,6 +36,30 @@ export default function registerDevHotKeys(
 			},
 		},
 		{
+			keys: ["r"],
+			label: "rebuild container(s)",
+			disabled: () => {
+				return (
+					!devEnv.config.latestConfig?.dev?.enableContainers ||
+					!devEnv.config.latestConfig?.containers?.length
+				);
+			},
+			handler: async () => {
+				const newContainerBuildId = randomUUID().slice(0, 8);
+				// cleanup any existing containers
+				devEnv.runtimes.map(async (runtime) => {
+					if (runtime instanceof LocalRuntimeController) {
+						await runtime.cleanupContainers();
+					}
+				});
+
+				// updating the build ID will trigger a rebuild of the containers
+				await devEnv.config.patch({
+					dev: { containerBuildId: newContainerBuildId },
+				});
+			},
+		},
+		{
 			keys: ["l"],
 			disabled: () => args.forceLocal ?? false,
 			handler: async () => {
@@ -59,31 +83,6 @@ export default function registerDevHotKeys(
 			label: "to exit",
 			handler: async () => {
 				await devEnv.teardown();
-			},
-		},
-		{
-			keys: ["r"],
-			// omitting the label means it won't be printed but is still enabled
-			// label: "rebuild container",
-			handler: async () => {
-				if (
-					!devEnv.config.latestConfig?.dev?.enableContainers ||
-					!devEnv.config.latestConfig?.containers?.length
-				) {
-					return;
-				}
-				const newContainerBuildId = randomUUID().slice(0, 8);
-				// cleanup any existing containers
-				devEnv.runtimes.map(async (runtime) => {
-					if (runtime instanceof LocalRuntimeController) {
-						await runtime.cleanupContainers();
-					}
-				});
-
-				// updating the build ID will trigger a rebuild of the containers
-				await devEnv.config.patch({
-					dev: { containerBuildId: newContainerBuildId },
-				});
 			},
 		},
 	]);

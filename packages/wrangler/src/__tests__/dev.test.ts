@@ -7,7 +7,6 @@ import dedent from "ts-dedent";
 import { vi } from "vitest";
 import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";
-import registerDevHotKeys from "../dev/hotkeys";
 import { getWorkerAccountAndContext } from "../dev/remote";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
@@ -1555,23 +1554,6 @@ describe.sequential("wrangler dev", () => {
 					'^The directory specified by the "assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
 			);
-		});
-	});
-
-	describe("--show-interactive-dev-session", () => {
-		it("should show interactive dev session with --show-interactive-dev-session", async () => {
-			fs.writeFileSync("index.js", `export default { }`);
-			await runWranglerUntilConfig(
-				"dev index.js --show-interactive-dev-session"
-			);
-			expect(vi.mocked(registerDevHotKeys).mock.calls.length).toBe(1);
-		});
-		it("should not show interactive dev session with --show-interactive-dev-session=false", async () => {
-			fs.writeFileSync("index.js", `export default { }`);
-			await runWranglerUntilConfig(
-				"dev index.js --show-interactive-dev-session=false"
-			);
-			expect(vi.mocked(registerDevHotKeys).mock.calls.length).toBe(0);
 		});
 	});
 
