@@ -9,7 +9,7 @@ import { processArgument } from "@cloudflare/cli/args";
 import { dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
-import { isValidContainerID, loadAccountSpinner } from "../cloudchamber/common";
+import { loadAccountSpinner } from "../cloudchamber/common";
 import { wrap } from "../cloudchamber/helpers/wrap";
 import { UserError } from "../errors";
 import isInteractive from "../is-interactive";
