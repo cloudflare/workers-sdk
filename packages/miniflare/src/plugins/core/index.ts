@@ -1045,7 +1045,7 @@ function getWorkerScript(
 /**
  * Returns the Container engine configuration
  * @param engineOrSocketPath Either a full engine config or a unix socket
- * @returns The container engine, default to local Docker at `unix:///var/run/docker.sock`
+ * @returns The container engine, defaulting to the default docker socket located on linux/macOS at `unix:///var/run/docker.sock`
  */
 function getContainerEngine(
 	engineOrSocketPath: Worker_ContainerEngine | string | undefined
