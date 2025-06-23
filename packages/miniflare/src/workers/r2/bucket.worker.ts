@@ -272,8 +272,8 @@ function sqlStmts(db: TypedSql) {
 	);
 	const stmtPutPart = db.stmt<Omit<MultipartPartRow, "object_key">>(
 		// For recording metadata when uploading parts
-		`INSERT OR REPLACE INTO _mf_multipart_parts (upload_id, part_number, blob_id, size, etag, checksum_md5)
-    VALUES (:upload_id, :part_number, :blob_id, :size, :etag, :checksum_md5)`
+		`INSERT OR REPLACE INTO _mf_multipart_parts (upload_id, part_number, blob_id, size, etag)
+    VALUES (:upload_id, :part_number, :blob_id, :size, :etag)`
 	);
 	const stmtLinkPart = db.stmt<
 		Pick<MultipartPartRow, "upload_id" | "part_number" | "object_key">
@@ -308,7 +308,7 @@ function sqlStmts(db: TypedSql) {
 		Omit<MultipartPartRow, "blob_id">
 	>(
 		// For getting part metadata when completing uploads
-		`SELECT upload_id, part_number, blob_id, size, etag, checksum_md5, object_key
+		`SELECT upload_id, part_number, blob_id, size, etag, object_key
     FROM _mf_multipart_parts WHERE upload_id = :upload_id`
 	);
 	const stmtListPartsByKey = db.stmt<
@@ -435,6 +435,7 @@ function sqlStmts(db: TypedSql) {
 						part_number: newRow.part_number,
 					})
 				);
+				// throw `New row has ${Object.keys(newRow).length} keys`;
 				stmtPutPart(newRow);
 				return partRow?.blob_id;
 			}
@@ -527,9 +528,7 @@ function sqlStmts(db: TypedSql) {
 
 				// 6. Write object to the database, and link parts with object
 				const totalSize = parts.reduce((acc, { size }) => acc + size, 0);
-				const etag = generateMultipartEtag(
-					parts.map(({ checksum_md5 }) => checksum_md5)
-				);
+				const etag = generateMultipartEtag(parts.map(({ etag }) => etag));
 				const newRow: ObjectRow = {
 					key,
 					blob_id: null,
@@ -963,8 +962,8 @@ export class R2BucketObject extends MiniflareDurableObject {
 		const md5Digest = digests.get("MD5");
 		assert(md5Digest !== undefined);
 
-		// Generate random ETag for this part
-		const etag = generateId();
+		// ETags are Hex MD5s after June 21, 2023
+		const etag = md5Digest.toString("hex");
 
 		// Store the new part in the metadata store, removing the old blob
 		// associated with this part number if any
@@ -976,7 +975,6 @@ export class R2BucketObject extends MiniflareDurableObject {
 				blob_id: blobId,
 				size: valueSize,
 				etag,
-				checksum_md5: md5Digest.toString("hex"),
 			});
 		} catch (e) {
 			// Probably upload not found. In any case, the put transaction failed,
