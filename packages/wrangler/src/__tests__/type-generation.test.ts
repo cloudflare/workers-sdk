@@ -570,7 +570,7 @@ describe("generate types", () => {
 	it("should include stringified process.env types for vars, secrets, and json", async () => {
 		fs.writeFileSync(
 			"./index.ts",
-			`import { DurableObject } from 'cloudflare:workers';
+			`import { DurableObject, WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
 				export default { async fetch () {} };
 				export class DurableDirect extends DurableObject {}
 				export { DurableReexport } from './durable-2.js';
@@ -689,7 +689,7 @@ describe("generate types", () => {
 
 		fs.writeFileSync(
 			"./a/index.ts",
-			`import { DurableObject } from 'cloudflare:workers';
+			`import { DurableObject, WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
 				export default { async fetch () {} };
 				export class DurableDirect extends DurableObject {}
 
