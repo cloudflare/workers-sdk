@@ -1,5 +1,26 @@
 # wrangler
 
+## 4.21.0
+
+### Minor Changes
+
+- [#9692](https://github.com/cloudflare/workers-sdk/pull/9692) [`273952f`](https://github.com/cloudflare/workers-sdk/commit/273952ff89bc7c629c72e064348b7c542d262cb4) Thanks [@dom96](https://github.com/dom96)! - Condenses Python vendored modules in output table
+
+- [#9654](https://github.com/cloudflare/workers-sdk/pull/9654) [`2a5988c`](https://github.com/cloudflare/workers-sdk/commit/2a5988c50aa55d86d036bfb610736d41a2dc9e09) Thanks [@dom96](https://github.com/dom96)! - Python Workers now automatically bundle .so files from vendored packages
+
+### Patch Changes
+
+- [#9695](https://github.com/cloudflare/workers-sdk/pull/9695) [`0e64c35`](https://github.com/cloudflare/workers-sdk/commit/0e64c3515fbecd04da893db6e53a505870432cac) Thanks [@emily-shen](https://github.com/emily-shen)! - Move hotkey registration later in dev start up
+
+  This should have no functional change, but allows us to conditionally render hotkeys based on config.
+
+- [#9098](https://github.com/cloudflare/workers-sdk/pull/9098) [`ef20754`](https://github.com/cloudflare/workers-sdk/commit/ef207546d6224241dab9164fed3b21e360be2c16) Thanks [@jseba](https://github.com/jseba)! - Migrate Workers Containers commands to Containers API Endpoints
+
+  The Workers Containers API was built on top of Cloudchamber, but has now been moved to its own API
+  with a reduced scoping and new token.
+
+- [#9712](https://github.com/cloudflare/workers-sdk/pull/9712) [`2a4c467`](https://github.com/cloudflare/workers-sdk/commit/2a4c467d83df640a9120b8bd7c45d8fd2ae9ed51) Thanks [@emily-shen](https://github.com/emily-shen)! - Make `wrangler container` commands print `open-beta` status
+
 ## 4.20.5
 
 ### Patch Changes
