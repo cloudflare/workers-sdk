@@ -2324,7 +2324,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers\\" should be an array, but got \\"test\\""
+					  - \\"containers\\" field should be an array, but got \\"test\\""
 				`);
 			});
 
@@ -2339,7 +2339,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers\\" should be an array, but got {\\"something\\":\\"here\\"}"
+					  - \\"containers\\" field should be an array, but got {\\"something\\":\\"here\\"}"
 				`);
 			});
 
@@ -2354,7 +2354,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers\\" should be an array, but got \\"test\\""
+					  - \\"containers\\" field should be an array, but got \\"test\\""
 				`);
 			});
 
@@ -2369,7 +2369,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers\\" should be an array, but got 22"
+					  - \\"containers\\" field should be an array, but got 22"
 				`);
 			});
 
@@ -2389,7 +2389,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"Must have either a top level name and a containers.class_name defined or have containers.name defined\\""
+					  - Must have either a top level \\"name\\" and \\"containers.class_name\\" field defined, or have field \\"containers.name\\" defined."
 				`);
 			});
 
