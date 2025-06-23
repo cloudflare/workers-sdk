@@ -2408,7 +2408,7 @@ function validateContainerApp(
 					!isOptionalProperty(containerAppOptional, "class_name", "string")
 				) {
 					diagnostics.errors.push(
-						`"Must have either a top level name and a containers.class_name defined or have containers.name defined"`
+						`Must have either a top level "name" and "containers.class_name" field defined, or have field "containers.name" defined.`
 					);
 				} else if (isOptionalProperty(containerAppOptional, "name", "string")) {
 					// if there is worker name defined but no name for this container app default to:
