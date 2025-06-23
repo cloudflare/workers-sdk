@@ -2470,7 +2470,7 @@ function validateContainerApp(
 				)
 			) {
 				diagnostics.errors.push(
-					`"containers.rollout_kind" should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
+					`"containers.rollout_kind" field should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
 				);
 			}
 
