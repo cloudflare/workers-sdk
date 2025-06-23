@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
 import { UserError } from "../errors";
+import { logger } from "../logger";
 import { INHERIT_SYMBOL } from "./bindings";
 import { handleUnsafeCapnp } from "./capnp";
 import type { Observability } from "../config/environment";
@@ -249,6 +250,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 				},
 				...(compatibility_date && { compatibility_date }),
 				...(compatibility_flags && { compatibility_flags }),
+				...(annotations && { annotations }),
 			})
 		);
 		return formData;
