@@ -2396,7 +2396,7 @@ function validateContainerApp(
 			// validate that either a name is set and is a string
 			if (!isOptionalProperty(value, "name", "string")) {
 				diagnostics.errors.push(
-					`the field "name", when present, should be a string.`
+					`Field "name", when present, should be a string, but got ${JSON.stringify(value)}`
 				);
 			}
 
