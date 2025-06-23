@@ -46,7 +46,7 @@ export type CommonCloudchamberConfiguration = { json: boolean };
 const containerIdRegexp = /[^/]{36}/;
 
 export function isValidContainerID(value: string): boolean {
-	const matches = value.match(containerIdRe);
+	const matches = value.match(containerIdRegexp);
 	return matches !== null;
 }
 
