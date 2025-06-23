@@ -7,7 +7,6 @@ import dedent from "ts-dedent";
 import { vi } from "vitest";
 import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";
-import registerDevHotKeys from "../dev/hotkeys";
 import { getWorkerAccountAndContext } from "../dev/remote";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
@@ -1558,23 +1557,6 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
-	describe("--show-interactive-dev-session", () => {
-		it("should show interactive dev session with --show-interactive-dev-session", async () => {
-			fs.writeFileSync("index.js", `export default { }`);
-			await runWranglerUntilConfig(
-				"dev index.js --show-interactive-dev-session"
-			);
-			expect(vi.mocked(registerDevHotKeys).mock.calls.length).toBe(1);
-		});
-		it("should not show interactive dev session with --show-interactive-dev-session=false", async () => {
-			fs.writeFileSync("index.js", `export default { }`);
-			await runWranglerUntilConfig(
-				"dev index.js --show-interactive-dev-session=false"
-			);
-			expect(vi.mocked(registerDevHotKeys).mock.calls.length).toBe(0);
-		});
-	});
-
 	describe("service bindings", () => {
 		it("should warn when using service bindings", async () => {
 			writeWranglerConfig({
@@ -1734,16 +1716,6 @@ describe.sequential("wrangler dev", () => {
 				env.MY_D1 (xxx)                                  D1 Database       local
 				env.MY_R2 (my-bucket)                            R2 Bucket         local
 				env.WorkerA (A)                                  Worker            local [not connected]
-
-				"
-			`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - Unexpected fields found in kv_namespaces[0] field: \\"experimental_remote\\"
-				    - Unexpected fields found in queues.producers[0] field: \\"experimental_remote\\"
-				    - Unexpected fields found in r2_buckets[0] field: \\"experimental_remote\\"
-				    - Unexpected fields found in d1_databases[0] field: \\"experimental_remote\\"
 
 				"
 			`);

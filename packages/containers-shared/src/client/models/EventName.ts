@@ -16,8 +16,9 @@
  * - RuntimeStartFailed: It's sent when the runtime had an internal error.
  * - SSHStarted: It's sent when the container has gained network connectivity and has opened the SSH port. This event is only sent when SSH keys are configured.
  * - CheckUpdate: Sent when the status of a health or readiness check changes. This may also affect the health status of the placement.
- * - DurableObjectConnected: Sent when a durable object instance connects and gains control of the deployment. THis event is only sent for durable object deployments.
- * It is sent after VMStarted.
+ * - DurableObjectConnected: Sent when a durable object instance connects and gains control of the deployment.
+ * This event is only sent for durable object deployments. It is sent after VMStarted.
+ * - ContainerStarted: It's sent when the container has started running.
  *
  */
 export enum EventName {
@@ -37,4 +38,5 @@ export enum EventName {
 	SERVICE_HEALTH_UPDATES = "ServiceHealthUpdates",
 	CHECK_UPDATE = "CheckUpdate",
 	DURABLE_OBJECT_CONNECTED = "DurableObjectConnected",
+	CONTAINER_STARTED = "ContainerStarted",
 }

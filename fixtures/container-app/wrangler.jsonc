@@ -23,7 +23,7 @@
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["Container"],
+			"new_sqlite_classes": ["Container"],
 		},
 	],
 }

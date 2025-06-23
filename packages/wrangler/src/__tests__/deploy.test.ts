@@ -22,7 +22,7 @@ import {
 import { clearOutputFilePath } from "../output";
 import { sniffUserAgent } from "../package-manager";
 import { writeAuthConfigFile } from "../user";
-import { mockAccount as mockContainersAccount } from "./cloudchamber/utils";
+import { mockAccountV4 as mockContainersAccount } from "./cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -93,7 +93,7 @@ function mockGetApplications(applications: Application[]) {
 		http.get(
 			"*/applications",
 			async () => {
-				return HttpResponse.json(applications);
+				return HttpResponse.json({ success: true, result: applications });
 			},
 			{ once: true }
 		)
@@ -583,7 +583,7 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in.
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -624,7 +624,7 @@ describe("deploy", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"Attempting to login via OAuth...
-					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 					Successfully logged in.
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -8913,7 +8913,7 @@ addEventListener('fetch', event => {});`
 									expect(json).toMatchObject(expected);
 								}
 
-								return HttpResponse.json(json);
+								return HttpResponse.json({ success: true, result: json });
 							},
 							{ once: true }
 						)
@@ -8930,11 +8930,14 @@ addEventListener('fetch', event => {});`
 								expect(json.permissions).toEqual(["push", "pull"]);
 
 								return HttpResponse.json({
-									account_id: "test_account_id",
-									registry_host: getCloudflareContainerRegistry(),
-									username: "v1",
-									password: "mockpassword",
-								} as AccountRegistryToken);
+									success: true,
+									result: {
+										account_id: "test_account_id",
+										registry_host: getCloudflareContainerRegistry(),
+										username: "v1",
+										password: "mockpassword",
+									} as AccountRegistryToken,
+								});
 							},
 							{ once: true }
 						)
@@ -9121,7 +9124,7 @@ addEventListener('fetch', event => {});`
 									expect(json).toMatchObject(expected);
 								}
 
-								return HttpResponse.json(json);
+								return HttpResponse.json({ success: true, result: json });
 							},
 							{ once: true }
 						)
@@ -12474,6 +12477,67 @@ export default{
 			`);
 		});
 
+		it("should print vendor modules correctly in table", async () => {
+			writeWranglerConfig({
+				main: "index.py",
+				compatibility_flags: ["python_workers"],
+			});
+
+			// Create main Python file
+			const mainPython =
+				"from js import Response;\ndef fetch(request):\n return Response.new('hello')";
+			await fs.promises.writeFile("index.py", mainPython);
+
+			// Create vendor directory and files
+			await fs.promises.mkdir("vendor", { recursive: true });
+			await fs.promises.writeFile(
+				"vendor/module1.so",
+				"binary content for module 1"
+			);
+			await fs.promises.writeFile(
+				"vendor/module2.py",
+				"# Python vendor module 2\nprint('hello')"
+			);
+
+			// Create a regular Python module
+			await fs.promises.writeFile(
+				"helper.py",
+				"# Helper module\ndef helper(): pass"
+			);
+
+			const expectedModules = {
+				"index.py": mainPython,
+				"helper.py": "# Helper module\ndef helper(): pass",
+			};
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.py",
+				expectedModules,
+			});
+
+			await runWrangler("deploy");
+
+			// Check that the table output shows vendor modules aggregated correctly
+			expect(std.out).toMatchInlineSnapshot(`
+				"┌─┬─┬─┐
+				│ Name │ Type │ Size │
+				├─┼─┼─┤
+				│ helper.py │ python │ xx KiB │
+				├─┼─┼─┤
+				│ Vendored Modules │ │ xx KiB │
+				├─┼─┼─┤
+				│ Total (3 modules) │ │ xx KiB │
+				└─┴─┴─┘
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
 		it("should upload python module specified in CLI args", async () => {
 			writeWranglerConfig({
 				compatibility_flags: ["python_workers"],
@@ -13066,42 +13130,6 @@ export default{
 
 			await runWrangler("deploy ./index.js");
 		});
-	});
-
-	it("should warn about unexpected experimental_remote fields", async () => {
-		writeWorkerSource();
-		writeWranglerConfig({
-			main: "./index.js",
-			kv_namespaces: [
-				{ binding: "MY_KV", id: "kv-id-xxx", experimental_remote: true },
-			],
-		});
-		mockSubDomainRequest();
-		mockUploadWorkerRequest();
-
-		await runWrangler("deploy");
-
-		expect(std.warn).toContain(
-			'Unexpected fields found in kv_namespaces[0] field: "experimental_remote"'
-		);
-	});
-
-	it("should not warn about experimental_remote fields when --x-remote-bindings is provided", async () => {
-		writeWorkerSource();
-		writeWranglerConfig({
-			main: "./index.js",
-			kv_namespaces: [
-				{ binding: "MY_KV", id: "kv-id-xxx", experimental_remote: true },
-			],
-		});
-		mockSubDomainRequest();
-		mockUploadWorkerRequest();
-
-		await runWrangler("deploy --x-remote-bindings");
-
-		expect(std.warn).not.toContain(
-			'Unexpected fields found in kv_namespaces[0] field: "experimental_remote"'
-		);
 	});
 
 	describe("multi-env warning", () => {
