@@ -2387,7 +2387,7 @@ function validateContainerApp(
 
 		if (!Array.isArray(value)) {
 			diagnostics.errors.push(
-				`"containers" should be an array, but got ${JSON.stringify(value)}`
+				`"containers" field should be an array, but got ${JSON.stringify(value)}`
 			);
 			return false;
 		}
