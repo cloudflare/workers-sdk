@@ -52,7 +52,6 @@ import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
-import type { Rule } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
 import type { RetrieveSourceMapFunction } from "../sourcemap";

@@ -57,7 +57,6 @@ import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
 	Route,
-	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "../config/environment";
