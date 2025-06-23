@@ -2435,7 +2435,7 @@ function validateContainerApp(
 			) {
 				if (containerAppOptional.configuration?.image !== undefined) {
 					diagnostics.errors.push(
-						`"containers.image" and "containers.configuration.image" can't be defined at the same time`
+						`"containers.image" and "containers.configuration.image" fields can't be defined at the same time.`
 					);
 					return false;
 				}
