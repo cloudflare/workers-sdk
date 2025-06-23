@@ -2458,7 +2458,7 @@ function validateContainerApp(
 					containerAppOptional.rollout_step_percentage < 25)
 			) {
 				diagnostics.errors.push(
-					`"containers.rollout_step_percentage" should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
+					`"containers.rollout_step_percentage" field should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
 				);
 			}
 
