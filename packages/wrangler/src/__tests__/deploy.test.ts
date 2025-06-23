@@ -12524,7 +12524,7 @@ export default{
 				├─┼─┼─┤
 				│ Vendored Modules │ │ xx KiB │
 				├─┼─┼─┤
-				│ Total (2 modules) │ │ xx KiB │
+				│ Total (3 modules) │ │ xx KiB │
 				└─┴─┴─┘
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
