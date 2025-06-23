@@ -119,7 +119,10 @@ export function handleFailure<
 		try {
 			if (!args.json) {
 				await printWranglerBanner();
-				logger.warn(constructStatusMessage(command, "alpha"));
+				const commandStatus = command.includes("cloudchamber")
+					? "alpha"
+					: "open-beta";
+				logger.warn(constructStatusMessage(command, commandStatus));
 			}
 			const config = readConfig(args);
 			await fillOpenAPIConfiguration(config, args.json, scope);
