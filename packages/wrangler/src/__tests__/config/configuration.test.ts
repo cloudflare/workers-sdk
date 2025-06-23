@@ -2374,7 +2374,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if no containers name and no worker name are provided", () => {
-				const { diagnostics, config } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						containers: [
 							{

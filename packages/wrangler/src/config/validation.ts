@@ -46,10 +46,7 @@ import type {
 	TailConsumer,
 } from "./environment";
 import type { TypeofType, ValidatorFn } from "./validation-helpers";
-import type {
-	CreateApplicationRequest,
-	UserDeploymentConfiguration,
-} from "@cloudflare/containers-shared";
+import type { UserDeploymentConfiguration } from "@cloudflare/containers-shared";
 
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
