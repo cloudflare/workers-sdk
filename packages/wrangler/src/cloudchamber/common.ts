@@ -43,7 +43,7 @@ export const cloudchamberScope = "cloudchamber:write" as const;
 
 export type CommonCloudchamberConfiguration = { json: boolean };
 
-const containerIdRe = /[^/]{36}/;
+const containerIdRegexp = /[^/]{36}/;
 
 export function isValidContainerID(value: string): boolean {
 	const matches = value.match(containerIdRe);
