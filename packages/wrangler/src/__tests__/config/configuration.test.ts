@@ -29,6 +29,12 @@ describe("readConfig()", () => {
 			    ],
 			    "type": "PythonModule",
 			  },
+			  Object {
+			    "globs": Array [
+			      "vendor/**/*.so",
+			    ],
+			    "type": "Data",
+			  },
 			]
 		`);
 	});
@@ -6480,82 +6486,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
-		});
-	});
-
-	describe("remote bindings", () => {
-		it("should ignore remote configs when specified without REMOTE_BINDINGS enabled", () => {
-			const rawConfig: RawConfig = {
-				name: "my-worker",
-				kv_namespaces: [
-					{
-						binding: "KV",
-						id: "xxxx-xxxx-xxxx-xxxx",
-						experimental_remote: true,
-					},
-				],
-				r2_buckets: [
-					{
-						binding: "R2",
-						bucket_name: "my-r2",
-						experimental_remote: 5 as unknown as boolean,
-					},
-				],
-			};
-			const { diagnostics } = run(
-				{
-					RESOURCES_PROVISION: false,
-					MULTIWORKER: false,
-					REMOTE_BINDINGS: false,
-				},
-				() =>
-					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
-						env: undefined,
-					})
-			);
-
-			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-				"Processing wrangler configuration:
-				  - Unexpected fields found in kv_namespaces[0] field: \\"experimental_remote\\"
-				  - Unexpected fields found in r2_buckets[0] field: \\"experimental_remote\\""
-			`);
-		});
-
-		it("should error on non boolean remote values", () => {
-			const rawConfig: RawConfig = {
-				name: "my-worker",
-				kv_namespaces: [
-					{
-						binding: "KV",
-						id: "xxxx-xxxx-xxxx-xxxx",
-						experimental_remote: "hello" as unknown as boolean,
-					},
-				],
-				r2_buckets: [
-					{
-						binding: "R2",
-						bucket_name: "my-r2",
-						experimental_remote: 5 as unknown as boolean,
-					},
-				],
-			};
-			const { diagnostics } = run(
-				{
-					RESOURCES_PROVISION: false,
-					MULTIWORKER: false,
-					REMOTE_BINDINGS: true,
-				},
-				() =>
-					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
-						env: undefined,
-					})
-			);
-
-			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-				"Processing wrangler configuration:
-				  - \\"kv_namespaces[0]\\" should, optionally, have a boolean \\"experimental_remote\\" field but got {\\"binding\\":\\"KV\\",\\"id\\":\\"xxxx-xxxx-xxxx-xxxx\\",\\"experimental_remote\\":\\"hello\\"}.
-				  - \\"r2_buckets[0]\\" should, optionally, have a boolean \\"experimental_remote\\" field but got {\\"binding\\":\\"R2\\",\\"bucket_name\\":\\"my-r2\\",\\"experimental_remote\\":5}."
-			`);
 		});
 	});
 });

@@ -17,6 +17,7 @@ import type { DNSConfiguration } from "./DNSConfiguration";
 import type { Entrypoint } from "./Entrypoint";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
 import type { Image } from "./Image";
+import type { InstanceType } from "./InstanceType";
 import type { ISO8601Timestamp } from "./ISO8601Timestamp";
 import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
@@ -58,6 +59,7 @@ export type DeploymentV2 = {
 	labels?: Array<Label>;
 	current_placement?: Placement;
 	placements_ref: Ref;
+	instance_type?: InstanceType;
 	/**
 	 * The vcpu of this deployment
 	 */
@@ -79,7 +81,7 @@ export type DeploymentV2 = {
 	 * The disk configuration for this deployment
 	 */
 	disk?: Disk;
-	network?: Network;
+	network: Network;
 	/**
 	 * Deprecated in favor of gpu_memory_mib
 	 * @deprecated

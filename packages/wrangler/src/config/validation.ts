@@ -339,6 +339,16 @@ function applyPythonConfig(
 		if (!config.rules.some((rule) => rule.type === "PythonModule")) {
 			config.rules.push({ type: "PythonModule", globs: ["**/*.py"] });
 		}
+		// When vendoring packages they may include certain files that will not be automatically uploaded,
+		// this would require specifying rules in the wrangler configuration of each worker. Instead of
+		// requiring that, we include the config implicitly here.
+		if (
+			!config.rules.some(
+				(rule) => rule.type === "Data" && rule.globs.includes("vendor/**/*.so")
+			)
+		) {
+			config.rules.push({ type: "Data", globs: ["vendor/**/*.so"] });
+		}
 		if (!config.compatibility_flags.includes("python_workers")) {
 			throw new UserError(
 				"The `python_workers` compatibility flag is required to use Python."
@@ -2191,7 +2201,7 @@ const validateNamedSimpleBinding =
 
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"binding",
-			...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+			"experimental_remote",
 		]);
 
 		return isValid;
@@ -2400,7 +2410,7 @@ function validateContainerApp(
 					diagnostics.errors.push(
 						`"Must have either a top level name and a containers.class_name defined or have containers.name defined"`
 					);
-				} else {
+				} else if (isOptionalProperty(containerAppOptional, "name", "string")) {
 					// if there is worker name defined but no name for this container app default to:
 					// worker_name-class_name[-envName].
 					let name = `${topLevelName}-${containerAppOptional.class_name}`;
@@ -2484,6 +2494,16 @@ function validateContainerApp(
 					`"containers.image" should be defined and a string`
 				);
 			}
+			if ("instance_type" in containerAppOptional) {
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"instance_type",
+					containerAppOptional.instance_type,
+					"string",
+					["dev", "basic", "standard"]
+				);
+			}
 		}
 
 		if (diagnostics.errors.length > 0) {
@@ -2521,6 +2541,26 @@ const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 			}
 		});
 	});
+
+	if ("instance_type" in value && value.instance_type !== undefined) {
+		if (
+			typeof value.instance_type !== "string" ||
+			!["dev", "basic", "standard"].includes(value.instance_type)
+		) {
+			diagnostics.errors.push(
+				`"instance_type" should be one of 'dev', 'basic', or 'standard', but got ${value.instance_type}`
+			);
+		}
+
+		if (
+			("memory" in value && value.memory !== undefined) ||
+			("vcpu" in value && value.vcpu !== undefined)
+		) {
+			diagnostics.errors.push(
+				`"${field}" configuration should not set either "memory" or "vcpu" with "instance_type"`
+			);
+		}
+	}
 
 	return isValid;
 };
@@ -2573,7 +2613,7 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		"binding",
 		"id",
 		"preview_id",
-		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+		"experimental_remote",
 	]);
 
 	return isValid;
@@ -2647,7 +2687,7 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"queue",
 			"delivery_delay",
-			...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+			"experimental_remote",
 		])
 	) {
 		return false;
@@ -2779,7 +2819,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		"bucket_name",
 		"preview_bucket_name",
 		"jurisdiction",
-		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+		"experimental_remote",
 	]);
 
 	return isValid;
@@ -2840,7 +2880,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		"migrations_dir",
 		"migrations_table",
 		"preview_database_id",
-		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+		"experimental_remote",
 	]);
 
 	return isValid;
@@ -2879,7 +2919,7 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"index_name",
-		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+		"experimental_remote",
 	]);
 
 	return isValid;
@@ -3243,7 +3283,7 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"certificate_id",
-		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+		"experimental_remote",
 	]);
 
 	if (!isRemoteValid(value, field, diagnostics)) {
@@ -3802,12 +3842,6 @@ function isRemoteValid(
 	fieldPath: string,
 	diagnostics: Diagnostics
 ) {
-	if (!getFlag("REMOTE_BINDINGS")) {
-		// the remote config only applies to remote bindings, if remote bindings
-		// are not enabled just return true and skip this validation
-		return true;
-	}
-
 	if (!isOptionalProperty(targetObject, "experimental_remote", "boolean")) {
 		diagnostics.errors.push(
 			`"${fieldPath}" should, optionally, have a boolean "experimental_remote" field but got ${JSON.stringify(

@@ -281,39 +281,47 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			},
 		);
 
-		test({ experimental }).skipIf(process.platform === "win32")(
-			"Selecting template by description",
-			async ({ logStream, project }) => {
-				const { output } = await runC3(
-					[project.path, "--no-deploy", "--git=false"],
-					[
-						{
-							matcher: /What would you like to start with\?/,
-							input: {
-								type: "select",
-								target: "Application Starter",
-								assertDescriptionText:
-									"Select from a range of starter applications using various Cloudflare products",
-							},
+		/*
+		 * Skipping in yarn due to node version resolution conflict
+		 * The Openapi C3 template depends on `chanfana`, which has a dependency
+		 * on `yargs-parser`. The latest chanfana version(`2.8.1` at the time
+		 * of this writting) has a dep on `yargs-parser@22` which requires a
+		 * node version of `20.19.0` or higher. Our CI is currently using node
+		 * version `20.11.1`. We currently can't bump the CI node version as other
+		 * tests will fail, therefore skipping for now until we can properly fix
+		 */
+		test({ experimental }).skipIf(
+			process.platform === "win32" || pm === "yarn",
+		)("Selecting template by description", async ({ logStream, project }) => {
+			const { output } = await runC3(
+				[project.path, "--no-deploy", "--git=false"],
+				[
+					{
+						matcher: /What would you like to start with\?/,
+						input: {
+							type: "select",
+							target: "Application Starter",
+							assertDescriptionText:
+								"Select from a range of starter applications using various Cloudflare products",
 						},
-						{
-							matcher: /Which template would you like to use\?/,
-							input: {
-								type: "select",
-								target: "API starter (OpenAPI compliant)",
-								assertDescriptionText:
-									"Get started building a basic API on Workers",
-							},
+					},
+					{
+						matcher: /Which template would you like to use\?/,
+						input: {
+							type: "select",
+							target: "API starter (OpenAPI compliant)",
+							assertDescriptionText:
+								"Get started building a basic API on Workers",
 						},
-					],
-					logStream,
-				);
+					},
+				],
+				logStream,
+			);
 
-				expect(project.path).toExist();
-				expect(output).toContain(`category Application Starter`);
-				expect(output).toContain(`type API starter (OpenAPI compliant)`);
-			},
-		);
+			expect(project.path).toExist();
+			expect(output).toContain(`category Application Starter`);
+			expect(output).toContain(`type API starter (OpenAPI compliant)`);
+		});
 
 		test({ experimental }).skipIf(process.platform === "win32")(
 			"Going back and forth between the category, type, framework and lang prompts",
