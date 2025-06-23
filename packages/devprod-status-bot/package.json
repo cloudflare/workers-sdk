@@ -1,6 +1,6 @@
 {
 	"name": "devprod-status-bot",
-	"version": "1.1.6",
+	"version": "1.1.7",
 	"private": true,
 	"scripts": {
 		"check:lint": "eslint . --max-warnings=0",

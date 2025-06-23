@@ -106,7 +106,8 @@ export function pickRemoteBindings(
  *
  * @param configPathOrWorkerConfig either a file path to a wrangler configuration file or an object containing the name of
  *                                 the target worker alongside its bindings.
- * @param preExistingRemoteProxySessionData the data of a pre-existing remote proxy session if there was one null otherwise
+ * @param preExistingRemoteProxySessionData the optional data of a pre-existing remote proxy session if there was one, this
+ *                                          argument can be omitted or set to null if there is no pre-existing remote proxy session
  * @returns null if no existing remote proxy session was provided and one should not be created (because the worker is not
  *          defining any remote bindings), the data associated to the created/updated remote proxy session otherwise.
  */
@@ -117,7 +118,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 				name?: string;
 				bindings: NonNullable<StartDevWorkerInput["bindings"]>;
 		  },
-	preExistingRemoteProxySessionData: {
+	preExistingRemoteProxySessionData?: {
 		session: RemoteProxySession;
 		remoteBindings: Record<string, Binding>;
 	} | null

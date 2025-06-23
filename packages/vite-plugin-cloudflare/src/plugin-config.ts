@@ -115,10 +115,7 @@ export function resolvePluginConfig(
 		return {
 			...shared,
 			type: "preview",
-			workers: getWorkerConfigs(
-				root,
-				shared.experimental.remoteBindings ?? false
-			),
+			workers: getWorkerConfigs(root),
 		};
 	}
 
@@ -137,7 +134,6 @@ export function resolvePluginConfig(
 	const entryWorkerResolvedConfig = getWorkerConfig(
 		entryWorkerConfigPath,
 		cloudflareEnv,
-		pluginConfig.experimental?.remoteBindings ?? false,
 		{
 			visitedConfigPaths: configPaths,
 			isEntryWorker: true,
@@ -186,7 +182,6 @@ export function resolvePluginConfig(
 		const workerResolvedConfig = getWorkerConfig(
 			workerConfigPath,
 			cloudflareEnv,
-			pluginConfig.experimental?.remoteBindings ?? false,
 			{
 				visitedConfigPaths: configPaths,
 			}

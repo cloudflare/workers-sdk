@@ -17,7 +17,7 @@ function getDeployConfigPath(root: string) {
 	return path.resolve(root, ".wrangler", "deploy", "config.json");
 }
 
-export function getWorkerConfigs(root: string, remoteBindingsEnabled: boolean) {
+export function getWorkerConfigs(root: string) {
 	const deployConfigPath = getDeployConfigPath(root);
 	const deployConfig = JSON.parse(
 		fs.readFileSync(deployConfigPath, "utf-8")
@@ -31,10 +31,7 @@ export function getWorkerConfigs(root: string, remoteBindingsEnabled: boolean) {
 			path.dirname(deployConfigPath),
 			configPath
 		);
-		return unstable_readConfig(
-			{ config: resolvedConfigPath },
-			{ experimental: { remoteBindingsEnabled } }
-		);
+		return unstable_readConfig({ config: resolvedConfigPath });
 	});
 }
 
