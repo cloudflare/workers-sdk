@@ -32,8 +32,7 @@ export type MultipartPartRow = {
 	part_number: number;
 	blob_id: string;
 	size: number; // NOTE: used to identify which parts to read for range requests
-	etag: string; // NOTE: multipart part ETag's are not MD5 checksums
-	checksum_md5: string; // NOTE: used in construction of final object's ETag
+	etag: string;
 	object_key: string | null; // null if in-progress upload
 };
 export const SQL_SCHEMA = `
@@ -61,7 +60,6 @@ CREATE TABLE IF NOT EXISTS _mf_multipart_parts (
     blob_id TEXT NOT NULL,
     size INTEGER NOT NULL,
     etag TEXT NOT NULL,
-    checksum_md5 TEXT NOT NULL,
     object_key TEXT REFERENCES _mf_objects(key) DEFERRABLE INITIALLY DEFERRED,
     PRIMARY KEY (upload_id, part_number)
 );
