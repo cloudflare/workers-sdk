@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as TOML from "@iarna/toml";
 import { http, HttpResponse } from "msw";
+import * as user from "../../user";
 import { msw } from "../helpers/msw";
 import type { CloudchamberConfig } from "../../config/environment";
 
@@ -17,6 +18,9 @@ export function setWranglerConfig(cloudchamber: CloudchamberConfig) {
 }
 
 export function mockAccount() {
+	const spy = vi.spyOn(user, "getScopes");
+	spy.mockImplementationOnce(() => ["cloudchamber:write", "containers:write"]);
+
 	msw.use(
 		http.get(
 			"*/me",
@@ -33,7 +37,10 @@ export function mockAccount() {
 	);
 }
 
-export function mockAccountV4() {
+export function mockAccountV4(scopes: user.Scope[] = ["containers:write"]) {
+	const spy = vi.spyOn(user, "getScopes");
+	spy.mockImplementationOnce(() => scopes);
+
 	msw.use(
 		http.get(
 			"*/me",

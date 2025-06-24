@@ -40,7 +40,6 @@ describe("buildAndMaybePush", () => {
 	runInTempDir();
 	mockApiToken();
 	mockAccountId();
-	mockAccount();
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -48,6 +47,7 @@ describe("buildAndMaybePush", () => {
 		mkdirSync("./container-context");
 
 		writeFileSync("./container-context/Dockerfile", dockerfile);
+		mockAccount();
 	});
 	afterEach(() => {
 		vi.clearAllMocks();
