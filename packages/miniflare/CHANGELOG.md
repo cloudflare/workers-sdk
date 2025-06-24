@@ -1,5 +1,11 @@
 # miniflare
 
+## 4.20250617.4
+
+### Patch Changes
+
+- [#9689](https://github.com/cloudflare/workers-sdk/pull/9689) [`b137a6f`](https://github.com/cloudflare/workers-sdk/commit/b137a6f090b952f7e34236fa86b6667ca895f601) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: correctly pass container engine config to miniflare
+
 ## 4.20250617.3
 
 ### Minor Changes
