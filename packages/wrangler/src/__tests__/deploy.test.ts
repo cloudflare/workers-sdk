@@ -8668,30 +8668,7 @@ addEventListener('fetch', event => {});`
 			});
 
 			it("should fail early if no docker is detected when deploying a container from a dockerfile", async () => {
-				vi.stubEnv(
-					"WRANGLER_CONTAINERS_DOCKER_PATH",
-					"/usr/bin/bad-docker-path"
-				);
-
-				function defaultChildProcess() {
-					return {
-						stderr: Buffer.from([]),
-						stdout: Buffer.from("i promise I am a successful process"),
-						on: function (reason: string, cbPassed: (code: number) => unknown) {
-							if (reason === "close") {
-								cbPassed(0);
-							}
-
-							return this;
-						},
-					} as unknown as ChildProcess;
-				}
-
-				vi.mocked(spawn).mockImplementationOnce((cmd, args) => {
-					expect(cmd).toBe("/usr/bin/docker");
-					expect(args).toEqual(["info"]);
-					return defaultChildProcess();
-				});
+				vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/bad-docker-path");
 
 				fs.writeFileSync(
 					"index.js",
@@ -8745,7 +8722,7 @@ addEventListener('fetch', event => {});`
 				`);
 			});
 
-			it("should support durable object bindings to SQLite classes with containers (docker flow)", async () => {
+			it("should support durable object bindings to SQLite classes with containers (dockerfile flow)", async () => {
 				vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 				function mockGetVersion(versionId: string) {
 					msw.use(
@@ -9141,28 +9118,9 @@ addEventListener('fetch', event => {});`
 				expect(output).toContain("export {\n  ExampleDurableObject,");
 			});
 
-			it("should support durable object bindings to SQLite classes with containers", async () => {
+			it("should support durable object bindings to SQLite classes with containers (image uri flow)", async () => {
 				// note no docker commands have been mocked here!
-				// except docker info so we don't fail early.
-				function defaultChildProcess() {
-					return {
-						stderr: Buffer.from([]),
-						stdout: Buffer.from("i promise I am a successful process"),
-						on: function (reason: string, cbPassed: (code: number) => unknown) {
-							if (reason === "close") {
-								cbPassed(0);
-							}
 
-							return this;
-						},
-					} as unknown as ChildProcess;
-				}
-				vi.stubEnv("WRANGLER_CONTAINERS_DOCKER_PATH", "/usr/bin/docker");
-				vi.mocked(spawn).mockImplementation((cmd, args) => {
-					expect(cmd).toBe("/usr/bin/docker");
-					expect(args).toEqual(["info"]);
-					return defaultChildProcess();
-				});
 				function mockGetVersion(versionId: string) {
 					msw.use(
 						http.get(
