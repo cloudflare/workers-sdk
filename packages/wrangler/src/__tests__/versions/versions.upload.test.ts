@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -18,6 +19,7 @@ describe("versions upload", () => {
 	mockApiToken();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
+	const assertApiRequest = makeApiRequestAsserter(std);
 
 	function mockGetScript() {
 		msw.use(
@@ -171,5 +173,45 @@ describe("versions upload", () => {
 		`);
 
 		expect(std.info).toContain("Retrying API call after error...");
+	});
+
+	test("correctly detects python workers", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+		mockSubDomainRequest();
+
+		// Setup
+		writeWranglerConfig({
+			name: "test-name",
+			main: "./index.py",
+			compatibility_flags: ["python_workers"],
+		});
+		writeWorkerSource({ type: "python", format: "py" });
+		setIsTTY(false);
+
+		await runWrangler("versions upload");
+
+		assertApiRequest(/.*?workers\/scripts\/test-name\/versions/, {
+			method: "POST",
+			// Make sure the main module (index.py) has a text/x-python content type
+			body: /Content-Disposition: form-data; name="index.py"; filename="index.py"\nContent-Type: text\/x-python/,
+		});
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"┌──────────────────┬────────┬──────────┐
+			│ Name             │ Type   │ Size     │
+			├──────────────────┼────────┼──────────┤
+			│ another.py       │ python │ xx KiB │
+			├──────────────────┼────────┼──────────┤
+			│ Total (1 module) │        │ xx KiB │
+			└──────────────────┴────────┴──────────┘
+			Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			No bindings found.
+			Uploaded test-name (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
+			Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev"
+		`);
 	});
 });
