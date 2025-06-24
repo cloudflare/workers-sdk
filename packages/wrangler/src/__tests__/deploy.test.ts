@@ -8667,7 +8667,62 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support durable object bindings to SQLite classes with containers (docker flow)", async () => {
+			it("should fail early if no docker is detected when deploying a container from a dockerfile", async () => {
+				vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/bad-docker-path");
+
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+				fs.writeFileSync("./Dockerfile", "blah");
+
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+							image: "./Dockerfile",
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await expect(runWrangler("deploy index.js")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.
+					Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with WRANGLER_DOCKER_HOST.]
+				`);
+			});
+
+			it("should support durable object bindings to SQLite classes with containers (dockerfile flow)", async () => {
 				vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 				function mockGetVersion(versionId: string) {
 					msw.use(
@@ -8713,6 +8768,12 @@ addEventListener('fetch', event => {});`
 				}
 
 				vi.mocked(spawn)
+					// 0. docker info
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args).toEqual(["info"]);
+						return defaultChildProcess();
+					})
 					// 1. docker build
 					.mockImplementationOnce((cmd, args) => {
 						expect(cmd).toBe("/usr/bin/docker");
@@ -9038,8 +9099,9 @@ addEventListener('fetch', event => {});`
 				expect(output).toContain("export {\n  ExampleDurableObject,");
 			});
 
-			it("should support durable object bindings to SQLite classes with containers", async () => {
+			it("should support durable object bindings to SQLite classes with containers (image uri flow)", async () => {
 				// note no docker commands have been mocked here!
+
 				function mockGetVersion(versionId: string) {
 					msw.use(
 						http.get(
