@@ -2458,12 +2458,10 @@ function validateContainerApp(
 					);
 					return false;
 				}
-
 				// consolidate the image into the configuration object
 				// TODO: consolidate it into the top level image field instead
-				containerAppOptional.configuration ??= {
-					image: containerAppOptional.image,
-				};
+				containerAppOptional.configuration ??= {};
+				containerAppOptional.configuration.image = containerAppOptional.image;
 				delete containerAppOptional["image"];
 			}
 
