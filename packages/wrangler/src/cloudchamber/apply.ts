@@ -191,7 +191,6 @@ function containerAppToInstanceType(
 	) {
 		return InstanceType.DEV;
 	}
-
 }
 
 function containerAppToCreateApplication(
