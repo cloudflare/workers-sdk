@@ -1,5 +1,17 @@
 # wrangler
 
+## 4.21.2
+
+### Patch Changes
+
+- [#9731](https://github.com/cloudflare/workers-sdk/pull/9731) [`75b75f3`](https://github.com/cloudflare/workers-sdk/commit/75b75f3de77aff097f6e6dfeec9a9dd94cfd7c94) Thanks [@gabivlj](https://github.com/gabivlj)! - containers: Check for container scopes before running a container command to give a better error
+
+- [#9641](https://github.com/cloudflare/workers-sdk/pull/9641) [`fdbc9f6`](https://github.com/cloudflare/workers-sdk/commit/fdbc9f604824fb52a382bcd5c286cf73b019e438) Thanks [@IRCody](https://github.com/IRCody)! - Update container builds to use a more robust method for detecting if the currently built image already exists.
+
+- [#9736](https://github.com/cloudflare/workers-sdk/pull/9736) [`55c83a7`](https://github.com/cloudflare/workers-sdk/commit/55c83a7cf9ec101f04ac3e411b5ac687a0615218) Thanks [@gabivlj](https://github.com/gabivlj)! - containers: Do not check scopes if not defined
+
+- [#9667](https://github.com/cloudflare/workers-sdk/pull/9667) [`406fba5`](https://github.com/cloudflare/workers-sdk/commit/406fba5fa22188caa1a7a0fac5579e034d773736) Thanks [@IRCody](https://github.com/IRCody)! - Fail earlier in the deploy process when deploying a container worker if docker is not detected.
+
 ## 4.21.1
 
 ### Patch Changes
