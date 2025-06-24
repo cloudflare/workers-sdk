@@ -78,6 +78,22 @@ function createModuleRunner(
 					const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
 					stub.send(JSON.stringify(data));
 				},
+				async invoke(data) {
+					const response = await env.__VITE_INVOKE_MODULE__.fetch(
+						new Request(UNKNOWN_HOST, {
+							method: "POST",
+							body: JSON.stringify(data),
+						})
+					);
+
+					if (!response.ok) {
+						throw new Error(await response.text());
+					}
+
+					const result = await response.json();
+
+					return result as { result: any } | { error: any };
+				},
 			},
 			hmr: true,
 		},
@@ -158,7 +174,7 @@ export async function getWorkerEntryExport(entrypoint: string) {
 		entryModule[entrypoint];
 
 	if (!entrypointValue) {
-		throw new Error(`${"TODO"} does not export a ${entrypoint} entrypoint.`);
+		throw new Error(`${entryPath} does not export a ${entrypoint} entrypoint.`);
 	}
 
 	return entrypointValue;
