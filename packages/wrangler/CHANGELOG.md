@@ -1,5 +1,24 @@
 # wrangler
 
+## 4.21.1
+
+### Patch Changes
+
+- [#9626](https://github.com/cloudflare/workers-sdk/pull/9626) [`9c938c2`](https://github.com/cloudflare/workers-sdk/commit/9c938c2183e868b6468ad7a2298a74aa01d40f3c) Thanks [@penalosa](https://github.com/penalosa)! - Support `wrangler version upload` for Python Workers
+
+- [#9718](https://github.com/cloudflare/workers-sdk/pull/9718) [`fb83341`](https://github.com/cloudflare/workers-sdk/commit/fb83341bed6ff6571519eb117db19e3e76a83215) Thanks [@mhart](https://github.com/mhart)! - fix error message when docker daemon is not running
+
+- [#9689](https://github.com/cloudflare/workers-sdk/pull/9689) [`b137a6f`](https://github.com/cloudflare/workers-sdk/commit/b137a6f090b952f7e34236fa86b6667ca895f601) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: correctly pass container engine config to miniflare
+
+- [#9722](https://github.com/cloudflare/workers-sdk/pull/9722) [`29e911a`](https://github.com/cloudflare/workers-sdk/commit/29e911abbbd12385aec201cb9589cccd832fb400) Thanks [@emily-shen](https://github.com/emily-shen)! - Update containers config schema.
+
+  Deprecates `containers.configuration` in favour of top level fields. Makes top level `image` required. Deprecates `instances` and `durable_objects`. Makes `name` optional.
+
+- [#9666](https://github.com/cloudflare/workers-sdk/pull/9666) [`f3c5791`](https://github.com/cloudflare/workers-sdk/commit/f3c5791e3abf0b4468ff2a97046fed3e44b2fa4e) Thanks [@IRCody](https://github.com/IRCody)! - Add a reasonable default name for containers that have no defined name.
+
+- Updated dependencies [[`b137a6f`](https://github.com/cloudflare/workers-sdk/commit/b137a6f090b952f7e34236fa86b6667ca895f601)]:
+  - miniflare@4.20250617.4
+
 ## 4.21.0
 
 ### Minor Changes

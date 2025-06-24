@@ -233,14 +233,14 @@ describe("cloudchamber apply", () => {
 			{
 				id: "abc",
 				name: "my-container-app",
-				max_instances: 3,
+				max_instances: 4,
 				instances: 3,
 				created_at: new Date().toString(),
 				account_id: "1",
 				version: 1,
 				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
-					image: "./Dockerfile2",
+					image: "./Dockerfile",
 					disk: {
 						size: "2GB",
 						size_mb: 2000,
@@ -267,10 +267,11 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   [containers.configuration]
-			│ - image = \\"./Dockerfile2\\"
-			│ + image = \\"./Dockerfile\\"
-			│   instance_type = \\"dev\\"
+			│   [[containers]]
+			│   instances = 0
+			│ - max_instances = 4
+			│ + max_instances = 3
+			│   name = \\"my-container-app\\"
 			│
 			├ NEW my-container-app-2
 			│

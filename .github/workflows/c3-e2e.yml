@@ -3,6 +3,10 @@ on:
   pull_request:
     types: [synchronize, opened, reopened, labeled, unlabeled]
 
+env:
+  # TODO: switch back to 20.x onces node@20.x includes a fix for https://github.com/nodejs/node/issues/57869
+  NODE_VERSION: 22
+
 jobs:
   e2e-vp:
     # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
@@ -39,7 +43,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
-          node-version: 20.11.1
+          node-version: ${{ env.NODE_VERSION }}
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
@@ -49,7 +53,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/run-c3-e2e
         with:
-          node-version: 20.11.1
+          node-version: ${{ env.NODE_VERSION }}
           packageManager: ${{ matrix.pm.name }}
           packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: false
@@ -61,7 +65,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/run-c3-e2e
         with:
-          node-version: 20.11.1
+          node-version: ${{ env.NODE_VERSION }}
           packageManager: ${{ matrix.pm.name }}
           packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: false
@@ -101,7 +105,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
-          node-version: 20.11.1
+          node-version: ${{ env.NODE_VERSION }}
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
@@ -111,7 +115,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/run-c3-e2e
         with:
-          node-version: 20.11.1
+          node-version: ${{ env.NODE_VERSION }}
           packageManager: ${{ matrix.pm.name }}
           packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: false
@@ -123,7 +127,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/run-c3-e2e
         with:
-          node-version: 20.11.1
+          node-version: ${{ env.NODE_VERSION }}
           packageManager: ${{ matrix.pm.name }}
           packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: false

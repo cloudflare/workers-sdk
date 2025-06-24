@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { execFile, spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -8711,28 +8711,6 @@ addEventListener('fetch', event => {});`
 						},
 					} as unknown as ChildProcess;
 				}
-				vi.mocked(execFile)
-					// docker images first call
-					.mockImplementationOnce((cmd, args, callback) => {
-						expect(cmd).toBe("/usr/bin/docker");
-						expect(args).toEqual([
-							"images",
-							"--digests",
-							"--format",
-							"{{.Digest}}",
-							getCloudflareContainerRegistry() +
-								"/test_account_id/my-container:Galaxy",
-						]);
-						if (callback) {
-							const back = callback as (
-								error: Error | null,
-								stdout: string,
-								stderr: string
-							) => void;
-							back(null, "three\n", "");
-						}
-						return {} as ChildProcess;
-					});
 
 				vi.mocked(spawn)
 					// 1. docker build
@@ -8783,7 +8761,7 @@ addEventListener('fetch', event => {});`
 							"inspect",
 							`${getCloudflareContainerRegistry()}/test_account_id/my-container:Galaxy`,
 							"--format",
-							"{{ .Size }} {{ len .RootFS.Layers }}",
+							"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 						]);
 
 						const stdout = new PassThrough();
@@ -8803,7 +8781,10 @@ addEventListener('fetch', event => {});`
 
 						// Simulate docker output
 						setImmediate(() => {
-							stdout.emit("data", "123456 4\n");
+							stdout.emit(
+								"data",
+								`123456 4 ["${getCloudflareContainerRegistry()}/test_account_id/my-container@sha256:three"]`
+							);
 						});
 
 						return child as unknown as ChildProcess;
@@ -9172,6 +9153,56 @@ addEventListener('fetch', event => {});`
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should error when no scope for containers", async () => {
+				mockContainersAccount([]);
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							image: "docker.io/hello:world",
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await expect(
+					runWrangler("deploy index.js")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: You need 'containers:write', try logging in again or creating an appropiate API token]`
+				);
 			});
 
 			it("should support durable objects and D1", async () => {

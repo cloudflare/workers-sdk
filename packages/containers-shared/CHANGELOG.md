@@ -1,5 +1,11 @@
 # @cloudflare/containers-shared
 
+## 0.2.2
+
+### Patch Changes
+
+- [#9718](https://github.com/cloudflare/workers-sdk/pull/9718) [`fb83341`](https://github.com/cloudflare/workers-sdk/commit/fb83341bed6ff6571519eb117db19e3e76a83215) Thanks [@mhart](https://github.com/mhart)! - fix error message when docker daemon is not running
+
 ## 0.2.1
 
 ### Patch Changes
