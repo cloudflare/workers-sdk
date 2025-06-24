@@ -7,11 +7,11 @@ import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
 
-let entryModule: any;
+let moduleRunner: ModuleRunner | undefined;
+let entryPath: string | undefined;
 
 export class RunnerObject extends DurableObject<WrapperEnv> {
-	#entryPath: string | undefined;
-	#moduleRunner: ModuleRunner | undefined;
+	#webSocket: WebSocket | undefined;
 
 	override async fetch(request: Request) {
 		const { pathname } = new URL(request.url);
@@ -20,15 +20,17 @@ export class RunnerObject extends DurableObject<WrapperEnv> {
 			throw new Error(`RunnerObject received invalid pathname: ${pathname}`);
 		}
 
-		if (this.#moduleRunner) {
+		if (moduleRunner) {
 			throw new Error("Runner already initialized");
 		}
 
 		try {
 			const viteDevMetadata = getViteDevMetadata(request);
-			this.#entryPath = viteDevMetadata.entryPath;
+			entryPath = viteDevMetadata.entryPath;
 			const { 0: client, 1: server } = new WebSocketPair();
-			this.#moduleRunner = createModuleRunner(this.env, server);
+			server.accept();
+			this.#webSocket = server;
+			moduleRunner = createModuleRunner(this.env, this.#webSocket);
 
 			return new Response(null, {
 				status: 101,
@@ -41,12 +43,12 @@ export class RunnerObject extends DurableObject<WrapperEnv> {
 		}
 	}
 
-	async importEntryModule() {
-		if (!(this.#entryPath && this.#moduleRunner)) {
-			throw new Error("Runner not initialized");
+	send(data: string) {
+		if (!this.#webSocket) {
+			throw Error("No WebSocket");
 		}
 
-		entryModule = await this.#moduleRunner.import(this.#entryPath);
+		this.#webSocket.send(data);
 	}
 }
 
@@ -54,34 +56,27 @@ function createModuleRunner(
 	env: WrapperEnv,
 	webSocket: WebSocket
 ): ModuleRunner {
-	const transport = createWebSocketModuleRunnerTransport({
-		createConnection() {
-			webSocket.accept();
-
-			return webSocket;
-		},
-	});
-
 	return new ModuleRunner(
 		{
 			sourcemapInterceptor: "prepareStackTrace",
 			transport: {
-				...transport,
-				async invoke(data) {
-					const response = await env.__VITE_INVOKE_MODULE__.fetch(
-						new Request(UNKNOWN_HOST, {
-							method: "POST",
-							body: JSON.stringify(data),
-						})
-					);
+				connect({ onMessage }) {
+					webSocket.addEventListener("message", async ({ data }) => {
+						onMessage(JSON.parse(data as any));
+					});
 
-					if (!response.ok) {
-						throw new Error(await response.text());
-					}
-
-					const result = await response.json();
-
-					return result as { result: any } | { error: any };
+					onMessage({
+						type: "custom",
+						event: "vite:ws:connect",
+						data: { webSocket },
+					});
+				},
+				disconnect() {
+					webSocket.close();
+				},
+				send(data) {
+					const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
+					stub.send(JSON.stringify(data));
 				},
 			},
 			hmr: true,
@@ -150,12 +145,12 @@ function getViteDevMetadata(request: Request) {
 	return { entryPath };
 }
 
-export async function getWorkerEntryExport(
-	env: WrapperEnv,
-	entrypoint: string
-) {
-	const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
-	await stub.importEntryModule();
+export async function getWorkerEntryExport(entrypoint: string) {
+	if (!(moduleRunner && entryPath)) {
+		throw new Error("Module runner not initialized");
+	}
+
+	const entryModule = await moduleRunner.import(entryPath);
 	const entrypointValue =
 		typeof entryModule === "object" &&
 		entryModule !== null &&

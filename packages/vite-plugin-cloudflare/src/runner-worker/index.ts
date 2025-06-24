@@ -105,7 +105,6 @@ async function getWorkerEntrypointRpcProperty(
 	key: string
 ): Promise<unknown> {
 	const ctor = (await getWorkerEntryExport(
-		this.env,
 		entrypoint
 	)) as WorkerEntrypointConstructor;
 	const userEnv = stripInternalEnv(this.env);
@@ -196,7 +195,7 @@ export function createWorkerEntrypointWrapper(
 				}
 			}
 
-			const entrypointValue = await getWorkerEntryExport(this.env, entrypoint);
+			const entrypointValue = await getWorkerEntryExport(entrypoint);
 			const userEnv = stripInternalEnv(this.env);
 
 			if (typeof entrypointValue === "object" && entrypointValue !== null) {
@@ -317,7 +316,6 @@ export function createDurableObjectWrapper(
 
 		async [kEnsureInstance]() {
 			const ctor = (await getWorkerEntryExport(
-				this.env,
 				className
 			)) as DurableObjectConstructor;
 
@@ -367,7 +365,6 @@ export function createWorkflowEntrypointWrapper(
 	for (const key of WORKFLOW_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (...args: unknown[]) {
 			const ctor = (await getWorkerEntryExport(
-				this.env,
 				className
 			)) as WorkflowEntrypointConstructor;
 			const userEnv = stripInternalEnv(this.env);
