@@ -130,15 +130,23 @@ export async function buildAndMaybePush(
 		if (push) {
 			await dockerLoginManagedRegistry(pathToDocker);
 			try {
-				// we don't try to parse repoDigests until here because we
-				// don't want to fail on parse errors if we aren't pushing anyways
-				// as it's only relevant when pushing.
+				// We don't try to parse repoDigests until this point
+				// because we don't want to fail on parse errors if we
+				// won't be pushing the image anyways.
+				//
+				// 	A Docker image digest is a unique, cryptographic identifier (SHA-256 hash)
+				//	representing the content of a Docker image. Unlike tags, which can be reused
+				//	or changed, a digest is immutable and ensures that the exact same image is
+				//	pulled every time. This guarantees consistency across different environments
+				//	and deployments.
+				// 	From: https://docs.docker.com/dhi/core-concepts/digests/
 				const parsedDigests = JSON.parse(repoDigests);
+
 				if (!Array.isArray(parsedDigests)) {
 					// If it's not the format we expect, fall back to pushing
 					// since it's annoying but safe.
 					throw new Error(
-						"Expected RepoDigests from docker inspect to be an array but it wasn't"
+						`Expected RepoDigests from docker inspect to be an array but got ${JSON.stringify(parsedDigests)}`
 					);
 				}
 

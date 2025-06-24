@@ -318,7 +318,7 @@ export async function apply(
 		skipDefaults: boolean | undefined;
 		json: boolean;
 		env?: string;
-		pushed?: boolean;
+		imageUpdateRequired?: boolean;
 	},
 	config: Config
 ) {
@@ -383,7 +383,7 @@ export async function apply(
 
 	for (const appConfigNoDefaults of config.containers) {
 		const application = applicationByNames[appConfigNoDefaults.name];
-		if (!args.pushed && application) {
+		if (!args.imageUpdateRequired && application) {
 			appConfigNoDefaults.configuration.image = application.configuration.image;
 		}
 		const appConfig = containerAppToCreateApplication(
@@ -751,7 +751,9 @@ export async function applyCommand(
 			skipDefaults: args.skipDefaults,
 			env: args.env,
 			json: args.json,
-			pushed: false,
+			// For the apply command we want this to default to true
+			// so that the image can be updated if the user modified it.
+			imageUpdateRequired: true,
 		},
 		config
 	);

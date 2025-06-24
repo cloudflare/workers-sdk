@@ -117,7 +117,12 @@ export async function deployContainers(
 		container.image = buildResult.image;
 
 		await apply(
-			{ skipDefaults: false, json: true, env, pushed: buildResult.pushed },
+			{
+				skipDefaults: false,
+				json: true,
+				env,
+				imageUpdateRequired: buildResult.pushed,
+			},
 			configuration
 		);
 	}
