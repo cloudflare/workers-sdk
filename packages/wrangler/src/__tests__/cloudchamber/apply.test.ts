@@ -94,9 +94,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					instances: 3,
 					class_name: "DurableObjectClass",
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 					constraints: {
 						tier: 2,
 					},
@@ -145,9 +143,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 4,
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 					constraints: {
 						tier: 2,
 					},
@@ -215,17 +211,13 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					max_instances: 3,
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 				},
 				{
 					name: "my-container-app-2",
 					max_instances: 3,
 					class_name: "DurableObjectClass2",
-					configuration: {
-						image: "other-app/Dockerfile",
-					},
+					image: "other-app/Dockerfile",
 				},
 			],
 		});
@@ -305,18 +297,14 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					instances: 4,
 					class_name: "DurableObjectClass",
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 					rollout_kind: "none",
 				},
 				{
 					name: "my-container-app-2",
 					instances: 1,
 					class_name: "DurableObjectClass2",
-					configuration: {
-						image: "other-app/Dockerfile",
-					},
+					image: "other-app/Dockerfile",
 				},
 			],
 		});
@@ -387,17 +375,13 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					instances: 4,
 					class_name: "DurableObjectClass",
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 				},
 				{
 					name: "my-container-app-2",
 					instances: 1,
 					class_name: "DurableObjectClass2",
-					configuration: {
-						image: "other-app/Dockerfile",
-					},
+					image: "other-app/Dockerfile",
 				},
 			],
 		});
@@ -473,8 +457,8 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					instances: 4,
 					class_name: "DurableObjectClass",
+					image: "./Dockerfile",
 					configuration: {
-						image: "./Dockerfile",
 						labels: [
 							{
 								name: "name",
@@ -602,8 +586,8 @@ describe("cloudchamber apply", () => {
 					class_name: "DurableObjectClass",
 					name: "my-container-app",
 					instances: 3,
+					image: "./Dockerfile",
 					configuration: {
-						image: "./Dockerfile",
 						labels: [
 							{
 								name: "name",
@@ -703,8 +687,8 @@ describe("cloudchamber apply", () => {
 			name: "my-container-app",
 			instances: 3,
 			class_name: "DurableObjectClass",
+			image: "./Dockerfile",
 			configuration: {
-				image: "./Dockerfile",
 				labels: [
 					{
 						name: "name",
@@ -815,8 +799,8 @@ describe("cloudchamber apply", () => {
 					class_name: "DurableObjectClass",
 					name: "my-container-app",
 					instances: 3,
+					image: "./Dockerfile",
 					configuration: {
-						image: "./Dockerfile",
 						labels: [
 							{
 								name: "name",
@@ -916,8 +900,8 @@ describe("cloudchamber apply", () => {
 			name: "my-container-app",
 			instances: 3,
 			class_name: "DurableObjectClass",
+			image: "./Dockerfile",
 			configuration: {
-				image: "./Dockerfile",
 				labels: [
 					{
 						name: "name",
@@ -1029,9 +1013,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 				},
 			],
 		});
@@ -1097,9 +1079,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 				},
 			],
 		});
@@ -1165,9 +1145,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 				},
 			],
 		});
@@ -1236,9 +1214,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 				},
 			],
 		});
@@ -1306,9 +1282,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 				},
 			],
 		});
@@ -1376,9 +1350,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 				},
 			],
 		});
@@ -1450,9 +1422,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 				},
 			],
 		});
@@ -1507,9 +1477,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 				},
 			],
 		});
@@ -1556,9 +1524,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 				},
 			],
 		});
@@ -1614,9 +1580,7 @@ describe("cloudchamber apply", () => {
 					instances: 3,
 					class_name: "DurableObjectClass",
 					instance_type: "dev",
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 					constraints: {
 						tier: 2,
 					},
@@ -1667,9 +1631,7 @@ describe("cloudchamber apply", () => {
 					instances: 4,
 					class_name: "DurableObjectClass",
 					instance_type: "standard",
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 					constraints: {
 						tier: 2,
 					},

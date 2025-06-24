@@ -8893,7 +8893,7 @@ addEventListener('fetch', event => {});`
 							name: "my-container",
 							instances: 10,
 							class_name: "ExampleDurableObject",
-							configuration: { image: "./Dockerfile" },
+							image: "./Dockerfile",
 						},
 					],
 					migrations: [
@@ -9100,12 +9100,10 @@ addEventListener('fetch', event => {});`
 					},
 					containers: [
 						{
+							image: "docker.io/hello:world",
 							name: "my-container",
 							instances: 10,
 							class_name: "ExampleDurableObject",
-							configuration: {
-								image: "docker.io/hello:world",
-							},
 						},
 					],
 					migrations: [
