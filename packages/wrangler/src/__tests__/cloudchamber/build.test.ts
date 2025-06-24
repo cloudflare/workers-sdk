@@ -13,7 +13,7 @@ import { UserError } from "../../errors";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { mockAccount } from "./utils";
+import { mockAccountV4 as mockAccount } from "./utils";
 import type { CompleteAccountCustomer } from "@cloudflare/containers-shared";
 
 const MiB = 1024 * 1024;
@@ -21,7 +21,7 @@ const defaultConfiguration: ContainerApp = {
 	name: "abc",
 	class_name: "",
 	instances: 0,
-	configuration: { image: "" },
+	image: "",
 };
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	const actual = await importOriginal();
@@ -54,7 +54,7 @@ describe("buildAndMaybePush", () => {
 	});
 
 	it("should use a custom docker path if provided", async () => {
-		vi.stubEnv("WRANGLER_CONTAINERS_DOCKER_PATH", "/custom/docker/path");
+		vi.stubEnv("WRANGLER_DOCKER_BIN", "/custom/docker/path");
 		await runWrangler(
 			"containers build ./container-context -t test-app:tag -p"
 		);

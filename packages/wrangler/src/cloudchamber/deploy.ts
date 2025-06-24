@@ -1,6 +1,7 @@
 import { isDockerfile } from "@cloudflare/containers-shared";
 import { type Config } from "../config";
 import { type ContainerApp } from "../config/environment";
+import { containersScope } from "../containers";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -21,12 +22,13 @@ export async function maybeBuildContainer(
 	try {
 		if (
 			!isDockerfile(
-				containerConfig.image ?? containerConfig.configuration.image
+				containerConfig.image ?? containerConfig.configuration?.image
 			)
 		) {
-			const image =
-				containerConfig.image ?? containerConfig.configuration.image;
-			return { image: image, pushed: false };
+			return {
+				image: containerConfig.image ?? containerConfig.configuration?.image,
+				pushed: false,
+			};
 		}
 	} catch (err) {
 		if (err instanceof Error) {
@@ -64,7 +66,11 @@ export async function deployContainers(
 	}
 
 	if (!dryRun) {
-		await fillOpenAPIConfiguration(config, isNonInteractiveOrCI());
+		await fillOpenAPIConfiguration(
+			config,
+			isNonInteractiveOrCI(),
+			containersScope
+		);
 	}
 	const pathToDocker = getDockerPath();
 	for (const container of config.containers) {
@@ -113,6 +119,7 @@ export async function deployContainers(
 			dryRun,
 			pathToDocker
 		);
+		container.configuration ??= {};
 		container.configuration.image = buildResult.image;
 		container.image = buildResult.image;
 
@@ -136,7 +143,7 @@ export function getBuildArguments(
 	container: ContainerApp,
 	idForImageTag: string
 ): BuildArgs {
-	const imageRef = container.image ?? container.configuration.image;
+	const imageRef = container.image ?? container.configuration?.image;
 	const imageTag = container.name + ":" + idForImageTag.split("-")[0];
 
 	return {

@@ -499,6 +499,44 @@ describe.each([{ cmd: "wrangler dev" }])(
 			await worker.readUntil(/foobar 12/);
 			await worker.readUntil(/end/);
 		});
+
+		it(`prints additional modules when vendored modules are present during ${cmd}`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "index.py"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["python_workers"]
+			`,
+				"arithmetic.py": dedent`
+					def mul(a,b):
+						return a*b`,
+				"index.py": dedent`
+					from arithmetic import mul
+
+					from js import Response
+					def on_fetch(request):
+						return Response.new(f"py hello world {mul(2,3)}")`,
+				"vendor/mod1.py": "print(42)",
+				"vendor/mod2.py": "def hello(): return 42",
+				"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+			});
+			const worker = helper.runLongLived(cmd);
+
+			// Check that the additional modules output includes the vendored modules
+			// This needs to be done before waitForReady() since that consumes the output stream
+			await worker.readUntil(/Attaching additional modules:/);
+			await worker.readUntil(/Vendored Modules/);
+
+			await worker.waitForReady();
+		});
 	}
 );
 

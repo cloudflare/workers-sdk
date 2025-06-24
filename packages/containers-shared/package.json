@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/containers-shared",
-	"version": "0.1.0",
+	"version": "0.2.1",
 	"private": true,
 	"description": "Package that contains shared container functionality for Cloudflare Workers SDK.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/containers-shared#readme",
@@ -17,6 +17,7 @@
 	"scripts": {
 		"check:lint": "eslint src --ext ts",
 		"check:type": "tsc -p ./tsconfig.json && pnpm run type:tests",
+		"deploy": "echo 'no deploy'",
 		"test": "vitest",
 		"test:ci": "pnpm run test run",
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",

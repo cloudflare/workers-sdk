@@ -56,7 +56,7 @@ export const cloudflare: Preset = {
 	meta: {
 		name: "unenv:cloudflare",
 		version,
-		url: import.meta.url,
+		url: __filename,
 	},
 	alias: {
 		// `nodeCompatModules` are implemented in workerd.

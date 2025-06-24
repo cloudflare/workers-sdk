@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { randomUUID } from "node:crypto";
 import events from "node:events";
 import path from "node:path";
 import util from "node:util";
@@ -570,6 +571,8 @@ async function setupDevEnv(
 				multiworkerPrimary: args.multiworkerPrimary,
 				enableContainers: args.enableContainers,
 				dockerPath: args.dockerPath,
+				// initialise with a random id
+				containerBuildId: randomUUID().slice(0, 8),
 			},
 			legacy: {
 				site: (configParam) => {
@@ -635,10 +638,6 @@ export async function startDev(args: StartDevOptions) {
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
-			}
-
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
 				await setupDevEnv(primaryDevEnv, args.config[0], authHook, {
@@ -667,6 +666,9 @@ export async function startDev(args: StartDevOptions) {
 					})
 				))
 			);
+			if (isInteractive() && args.showInteractiveDevSession !== false) {
+				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
+			}
 		} else {
 			devEnv = new DevEnv();
 
@@ -717,11 +719,11 @@ export async function startDev(args: StartDevOptions) {
 				});
 			}
 
+			await setupDevEnv(devEnv, args.config, authHook, args);
+
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
-
-			await setupDevEnv(devEnv, args.config, authHook, args);
 		}
 
 		return {

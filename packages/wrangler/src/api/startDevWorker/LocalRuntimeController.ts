@@ -1,8 +1,15 @@
+import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import {
+	cleanupContainers,
+	getDevContainerImageName,
+	prepareContainerImagesForDev,
+} from "@cloudflare/containers-shared";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
+import { getDockerPath } from "../../environment-variables/misc-variables";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -20,6 +27,7 @@ import type {
 	ReloadStartEvent,
 } from "./events";
 import type { Binding, File, StartDevWorkerOptions } from "./types";
+import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 
 async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
@@ -133,9 +141,8 @@ export async function convertToConfigBundle(
 		imagesLocalMode: event.config.dev?.imagesLocalMode ?? false,
 		testScheduled: !!event.config.dev.testScheduled,
 		tails: event.config.tailConsumers,
-		containers: event.config.containers ?? {},
-		enableContainers: event.config.dev.enableContainers ?? true,
-		dockerPath: event.config.dev.dockerPath ?? "docker",
+		containers: event.config.containers,
+		containerBuildId: event.config.dev?.containerBuildId,
 		containerEngine: event.config.dev.containerEngine,
 	};
 }
@@ -163,6 +170,15 @@ export class LocalRuntimeController extends RuntimeController {
 		session: RemoteProxySession;
 		remoteBindings: Record<string, Binding>;
 	} | null = null;
+
+	// Set of container images that have been seen in the current dev session.
+	// This is used to clean up containers at the end of the dev session.
+	#containerImageTagsSeen: Set<string> = new Set();
+	// Stored here, so it can be used in `cleanupContainers()`
+	#dockerPath: string | undefined;
+	// If this doesn't match what is in config, trigger a rebuild.
+	// Used for the rebuild hotkey
+	#currentContainerBuildId: string | undefined;
 
 	onBundleStart(_: BundleStartEvent) {
 		// Ignored in local runtime
@@ -192,6 +208,25 @@ export class LocalRuntimeController extends RuntimeController {
 						},
 						this.#remoteProxySessionData ?? null
 					);
+			}
+
+			// Assemble container options and build if necessary
+			const containerOptions = await getContainerOptions(data.config);
+			this.#dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
+			// keep track of them so we can clean up later
+			for (const container of containerOptions ?? []) {
+				this.#containerImageTagsSeen.add(container.imageTag);
+			}
+			if (
+				containerOptions &&
+				this.#currentContainerBuildId !== data.config.dev.containerBuildId
+			) {
+				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
+				await prepareContainerImagesForDev(this.#dockerPath, containerOptions);
+				this.#currentContainerBuildId = data.config.dev.containerBuildId;
+				// Miniflare will have logged 'Ready on...' before the containers are built, but that is actually the proxy server :/
+				// The actual user worker's miniflare instance is blocked until the containers are built
+				logger.log(chalk.dim("⎔ Container image(s) ready"));
 			}
 
 			const { options, internalObjects, entrypointNames } =
@@ -301,6 +336,14 @@ export class LocalRuntimeController extends RuntimeController {
 		// Ignored in local runtime
 	}
 
+	cleanupContainers = async () => {
+		assert(
+			this.#dockerPath,
+			"Docker path should have been set if containers are enabled"
+		);
+		await cleanupContainers(this.#dockerPath, this.#containerImageTagsSeen);
+	};
+
 	#teardown = async (): Promise<void> => {
 		logger.debug("LocalRuntimeController teardown beginning...");
 
@@ -311,6 +354,15 @@ export class LocalRuntimeController extends RuntimeController {
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
+		if (this.#containerImageTagsSeen.size > 0) {
+			try {
+				await this.cleanupContainers();
+			} catch (error) {
+				logger.warn(
+					`Failed to clean up containers. You may have to stop and remove them up manually.`
+				);
+			}
+		}
 		if (this.#remoteProxySessionData) {
 			logger.log(chalk.dim("⎔ Shutting down remote connection..."));
 		}
@@ -334,4 +386,36 @@ export class LocalRuntimeController extends RuntimeController {
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
 		this.emit("reloadComplete", data);
 	}
+}
+
+/**
+ * @returns Container options suitable for building or pulling images,
+ * with image tag set to well-known dev format.
+ * Undefined if containers are not enabled or not configured.
+ */
+export async function getContainerOptions(
+	config: BundleCompleteEvent["config"]
+) {
+	if (!config.containers?.length || config.dev.enableContainers === false) {
+		return undefined;
+	}
+	// should be defined if containers are enabled
+	assert(
+		config.dev.containerBuildId,
+		"Build ID should be set if containers are enabled and defined"
+	);
+	const containers: ContainerDevOptions[] = [];
+	for (const container of config.containers) {
+		containers.push({
+			image: container.image ?? container.configuration?.image,
+			imageTag: getDevContainerImageName(
+				container.class_name,
+				config.dev.containerBuildId
+			),
+			args: container.image_vars,
+			imageBuildContext: container.image_build_context,
+			class_name: container.class_name,
+		});
+	}
+	return containers;
 }

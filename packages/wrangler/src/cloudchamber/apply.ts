@@ -19,11 +19,11 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { formatConfigSnippet } from "../config";
-import { UserError } from "../errors";
-import { promiseSpinner } from "./common";
+import { FatalError, UserError } from "../errors";
+import { cleanForInstanceType, promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
 import type { Config } from "../config";
-import type { ContainerApp } from "../config/environment";
+import type { ContainerApp, Observability } from "../config/environment";
 import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
@@ -33,8 +33,10 @@ import type {
 	ApplicationID,
 	ApplicationName,
 	CreateApplicationRequest,
+	InstanceType,
 	ModifyApplicationRequestBody,
 	ModifyDeploymentV2RequestBody,
+	Observability as ObservabilityConfiguration,
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
 import type { JsonMap } from "@iarna/toml";
@@ -108,14 +110,96 @@ function applicationToCreateApplication(
 	return app;
 }
 
+function cleanupObservability(
+	observability: ObservabilityConfiguration | undefined
+) {
+	if (observability === undefined) {
+		return;
+	}
+
+	// `logging` field is deprecated, so if the server returns both `logging` and `logs`
+	// fields, drop the `logging` one.
+	if (observability.logging !== undefined && observability.logs !== undefined) {
+		delete observability.logging;
+	}
+}
+
+function observabilityToConfiguration(
+	observability: Observability | undefined,
+	existingObservabilityConfig: ObservabilityConfiguration | undefined
+): ObservabilityConfiguration | undefined {
+	// Let's use logs for the sake of simplicity of explanation.
+	//
+	// The first column specifies if logs are enabled in the current Wrangler config.
+	// The second column specifies if logs are currently enabled for the application.
+	// The third column specifies what the expected function result should be so that
+	// diff is minimal.
+	//
+	// | Wrangler  | Existing  | Result    |
+	// | --------- | --------- | --------- |
+	// | undefined | undefined | undefined |
+	// | undefined | false     | false     |
+	// | undefined | true      | false     |
+	// | false     | undefined | undefined |
+	// | false     | false     | false     |
+	// | false     | true      | false     |
+	// | true      | undefined | true      |
+	// | true      | false     | true      |
+	// | true      | true      | true      |
+	//
+	// Because the result is the same for Wrangler undefined and false, the table may be
+	// compressed as follows:
+
+	//
+	// | Wrangler          | Existing                 | Result    |
+	// | ----------------- | ------------------------ | --------- |
+	// | false / undefined | undefined                | undefined |
+	// | false / undefined | false / true             | false     |
+	// | true              | undefined / false / true | true      |
+
+	const observabilityLogsEnabled =
+		observability?.logs?.enabled === true ||
+		(observability?.enabled === true && observability?.logs?.enabled !== false);
+	const logsAlreadyEnabled = existingObservabilityConfig?.logs?.enabled;
+
+	if (observabilityLogsEnabled) {
+		return { logs: { enabled: true } };
+	} else {
+		if (logsAlreadyEnabled === undefined) {
+			return undefined;
+		} else {
+			return { logs: { enabled: false } };
+		}
+	}
+}
+
 function containerAppToCreateApplication(
 	containerApp: ContainerApp,
+	observability: Observability | undefined,
+	existingApp: Application | undefined,
 	skipDefaults = false
 ): CreateApplicationRequest {
-	const configuration =
-		containerApp.configuration as UserDeploymentConfiguration;
+	const observabilityConfiguration = observabilityToConfiguration(
+		observability,
+		existingApp?.configuration.observability
+	);
+	const configuration: UserDeploymentConfiguration = {
+		...(containerApp.configuration as UserDeploymentConfiguration),
+		observability: observabilityConfiguration,
+	};
+	if (containerApp.instance_type !== undefined) {
+		configuration.instance_type = containerApp.instance_type as InstanceType;
+	}
+
+	// this should have been set to a default value of worker-name-class-name if unspecified by the user
+	if (containerApp.name === undefined) {
+		throw new FatalError("Container application name failed to be set", 1, {
+			telemetryMessage: true,
+		});
+	}
 	const app: CreateApplicationRequest = {
 		...containerApp,
+		name: containerApp.name,
 		configuration,
 		instances: containerApp.instances ?? 0,
 		scheduling_policy:
@@ -140,6 +224,7 @@ function containerAppToCreateApplication(
 	delete (app as Record<string, unknown>)["image_vars"];
 	delete (app as Record<string, unknown>)["rollout_step_percentage"];
 	delete (app as Record<string, unknown>)["rollout_kind"];
+	delete (app as Record<string, unknown>)["instance_type"];
 
 	return app;
 }
@@ -338,6 +423,7 @@ export async function apply(
 			image: "docker.io/cloudflare/hello-world:1.0",
 			instances: 2,
 			name: config.name ?? "my-containers-application",
+			instance_type: "dev",
 		};
 		const endConfig: JsonMap =
 			args.env !== undefined
@@ -356,6 +442,9 @@ export async function apply(
 	const applications = await promiseSpinner(
 		ApplicationsService.listApplications(),
 		{ json: args.json, message: "Loading applications" }
+	);
+	applications.forEach((app) =>
+		cleanupObservability(app.configuration.observability)
 	);
 	const applicationByNames: Record<ApplicationName, Application> = {};
 	// TODO: this is not correct right now as there can be multiple applications
@@ -382,12 +471,27 @@ export async function apply(
 	log(dim("Container application changes\n"));
 
 	for (const appConfigNoDefaults of config.containers) {
-		const application = applicationByNames[appConfigNoDefaults.name];
+		const application =
+			applicationByNames[
+				appConfigNoDefaults.name ??
+					// we should never actually reach this point, but just in case
+					`${config.name}-${appConfigNoDefaults.class_name}`
+			];
+
+		// while configuration.image is deprecated to the user, we still resolve to this for now.
+		if (!appConfigNoDefaults.configuration?.image && application) {
+			appConfigNoDefaults.configuration ??= {};
+		}
+
 		if (!args.imageUpdateRequired && application) {
+			appConfigNoDefaults.configuration ??= {};
 			appConfigNoDefaults.configuration.image = application.configuration.image;
 		}
+
 		const appConfig = containerAppToCreateApplication(
 			appConfigNoDefaults,
+			config.observability,
+			application,
 			args.skipDefaults
 		);
 
@@ -416,20 +520,22 @@ export async function apply(
 				);
 			}
 
+			const prevContainer =
+				appConfig.configuration.instance_type !== undefined
+					? cleanForInstanceType(prevApp)
+					: (prevApp as ContainerApp);
+			const nowContainer = mergeDeep(
+				prevContainer as CreateApplicationRequest,
+				sortObjectRecursive<CreateApplicationRequest>(appConfig)
+			) as ContainerApp;
+
 			const prev = formatConfigSnippet(
-				{ containers: [prevApp as ContainerApp] },
+				{ containers: [prevContainer] },
 				config.configPath
 			);
 
 			const now = formatConfigSnippet(
-				{
-					containers: [
-						mergeDeep(
-							prevApp,
-							sortObjectRecursive<CreateApplicationRequest>(appConfig)
-						) as ContainerApp,
-					],
-				},
+				{ containers: [nowContainer] },
 				config.configPath
 			);
 			const results = diffLines(prev, now);
@@ -577,19 +683,20 @@ export async function apply(
 		endSection("No changes to be made");
 		return;
 	}
-
-	const yes = await processArgument<boolean>(
-		{ confirm: args.json ? true : undefined },
-		"confirm",
-		{
-			type: "confirm",
-			question: "Do you want to apply these changes?",
-			label: "",
+	if (!args.json) {
+		const yes = await processArgument<boolean>(
+			{ confirm: undefined },
+			"confirm",
+			{
+				type: "confirm",
+				question: "Do you want to apply these changes?",
+				label: "",
+			}
+		);
+		if (!yes) {
+			cancel("Not applying changes");
+			return;
 		}
-	);
-	if (!yes) {
-		cancel("Not applying changes");
-		return;
 	}
 
 	function formatError(err: ApiError): string {
@@ -661,7 +768,6 @@ export async function apply(
 							action.application.max_instances !== undefined
 								? undefined
 								: action.application.instances,
-						configuration: undefined,
 					})
 				);
 			} catch (err) {
