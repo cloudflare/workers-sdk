@@ -44,6 +44,7 @@ export function dockerBuild(
 	return new Promise((resolve, reject) => {
 		const child = spawn(dockerPath, options.buildCmd, {
 			stdio: ["pipe", "inherit", "inherit"],
+			cwd: options.dockerfile,
 		});
 		if (child.stdin !== null) {
 			child.stdin.write(options.dockerfile);
