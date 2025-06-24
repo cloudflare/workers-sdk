@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { generatePreviewAlias } from "../../versions/upload";
-import { makeRequestAsserter } from "../helpers/assert-request";
+import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -22,7 +22,7 @@ describe("versions upload", () => {
 	mockApiToken();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
-	const assertRequest = makeRequestAsserter(std);
+	const assertApiRequest = makeApiRequestAsserter(std);
 
 	function mockGetScript() {
 		msw.use(
@@ -230,7 +230,7 @@ describe("versions upload", () => {
 
 		await runWrangler("versions upload");
 
-		assertRequest(/.*?workers\/scripts\/test-name\/versions/, {
+		assertApiRequest(/.*?workers\/scripts\/test-name\/versions/, {
 			method: "POST",
 			// Make sure the main module (index.py) has a text/x-python content type
 			body: /Content-Disposition: form-data; name="index.py"; filename="index.py"\nContent-Type: text\/x-python/,

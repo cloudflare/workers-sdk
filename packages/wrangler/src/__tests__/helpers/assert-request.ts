@@ -4,15 +4,18 @@ import type { mockConsoleMethods } from "./mock-console";
  * Assert that Wrangler has made a request matching a certain pattern. Unlike MSW (which mocks the return value of the request),
  * this helper asserts that a request has been made. It should be used in combination with MSW—MSW providing the mock API, and this helper being used
  * to make sure the right data is sent to the mock API.
+ *
+ * This works by matching against the contents of Wrangler's debug logging,
+ * which includes Cloudflare API requests that are made
  */
-export function makeRequestAsserter(
+export function makeApiRequestAsserter(
 	console: ReturnType<typeof mockConsoleMethods>
 ) {
 	beforeEach(() => {
 		vi.stubEnv("WRANGLER_LOG", "debug");
 		vi.stubEnv("WRANGLER_LOG_SANITIZE", "false");
 	});
-	return function assertRequest(
+	return function assertApiRequest(
 		url: RegExp,
 		{ method, body }: { method?: string; body?: RegExp }
 	) {
