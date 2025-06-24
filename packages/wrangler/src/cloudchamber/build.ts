@@ -190,7 +190,7 @@ export async function buildAndMaybePush(
 		return { image: imageTag, pushed: pushed };
 	} catch (error) {
 		if (error instanceof Error) {
-			throw new UserError(error.message);
+			throw new UserError(error.message, { cause: error });
 		}
 		throw new UserError("An unknown error occurred");
 	}
