@@ -244,7 +244,7 @@ export interface DevConfig {
 	enable_containers: boolean;
 
 	/**
-	 * Either the Docker unix socket i.e. `unix:/var/run/docker.sock` or a full configuration.
+	 * Either the Docker unix socket i.e. `unix:///var/run/docker.sock` or a full configuration.
 	 * Note that windows is only supported via WSL at the moment
 	 */
 	container_engine: ContainerEngine | undefined;

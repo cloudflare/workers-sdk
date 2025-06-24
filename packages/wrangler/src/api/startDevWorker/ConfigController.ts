@@ -161,7 +161,10 @@ async function resolveDevConfig(
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
-		containerEngine: input.dev?.containerEngine ?? getDockerHost(),
+		containerEngine:
+			input.dev?.containerEngine ??
+			config.dev.container_engine ??
+			getDockerHost(),
 		containerBuildId: input.dev?.containerBuildId,
 	} satisfies StartDevWorkerOptions["dev"];
 }
