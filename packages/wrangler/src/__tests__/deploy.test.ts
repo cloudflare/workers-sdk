@@ -9174,6 +9174,56 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
+			it("should error when no scope for containers", async () => {
+				mockContainersAccount([]);
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							image: "docker.io/hello:world",
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await expect(
+					runWrangler("deploy index.js")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: You need 'containers:write', try logging in again or creating an appropiate API token]`
+				);
+			});
+
 			it("should support durable objects and D1", async () => {
 				writeWranglerConfig({
 					main: "index.js",

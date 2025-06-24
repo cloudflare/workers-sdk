@@ -1206,11 +1206,7 @@ export async function logout(): Promise<void> {
 
 export function listScopes(message = "💁 Available scopes:"): void {
 	logger.log(message);
-	const data = DefaultScopeKeys.map((scope: Scope) => ({
-		Scope: scope,
-		Description: DefaultScopes[scope],
-	}));
-	logger.table(data);
+	printScopes(DefaultScopeKeys);
 	// TODO: maybe a good idea to show usage here
 }
 
@@ -1322,6 +1318,15 @@ export function getAccountFromCache():
  */
 export function getScopes(): Scope[] | undefined {
 	return LocalState.scopes;
+}
+
+export function printScopes(scopes: Scope[]) {
+	const data = scopes.map((scope: Scope) => ({
+		Scope: scope,
+		Description: DefaultScopes[scope],
+	}));
+
+	logger.table(data);
 }
 
 /**
