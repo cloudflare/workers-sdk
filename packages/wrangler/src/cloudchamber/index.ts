@@ -1,6 +1,6 @@
 import { applyCommand, applyCommandOptionalYargs } from "./apply";
 import { buildCommand, buildYargs, pushCommand, pushYargs } from "./build";
-import { handleFailure } from "./common";
+import { cloudchamberScope, handleFailure } from "./common";
 import { createCommand, createCommandOptionalYargs } from "./create";
 import { curlCommand, yargsCurl } from "./curl";
 import { deleteCommand, deleteCommandOptionalYargs } from "./delete";
@@ -34,61 +34,98 @@ export const cloudchamber = (
 			"Delete an existing deployment that is running in the Cloudflare edge",
 			(args) => deleteCommandOptionalYargs(args),
 			(args) =>
-				handleFailure(`wrangler cloudchamber delete`, deleteCommand)(args)
+				handleFailure(
+					`wrangler cloudchamber delete`,
+					deleteCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"create",
 			"Create a new deployment",
 			(args) => createCommandOptionalYargs(args),
 			(args) =>
-				handleFailure(`wrangler cloudchamber create`, createCommand)(args)
+				handleFailure(
+					`wrangler cloudchamber create`,
+					createCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"list [deploymentIdPrefix]",
 			"List and view status of deployments",
 			(args) => listDeploymentsYargs(args),
-			(args) => handleFailure(`wrangler cloudchamber list`, listCommand)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber list`,
+					listCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"modify [deploymentId]",
 			"Modify an existing deployment",
 			(args) => modifyCommandOptionalYargs(args),
 			(args) =>
-				handleFailure(`wrangler cloudchamber modify`, modifyCommand)(args)
+				handleFailure(
+					`wrangler cloudchamber modify`,
+					modifyCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command("ssh", "Manage the ssh keys of your account", (args) =>
-			sshCommand(args).command(subHelp)
+			sshCommand(args, cloudchamberScope).command(subHelp)
 		)
 		.command("registries", "Configure registries via Cloudchamber", (args) =>
-			registriesCommand(args).command(subHelp)
+			registriesCommand(args, cloudchamberScope).command(subHelp)
 		)
 		.command(
 			"curl <path>",
-			"send a request to an arbitrary cloudchamber endpoint",
+			"send a request to an arbitrary Cloudchamber endpoint",
 			(args) => yargsCurl(args),
-			(args) => handleFailure(`wrangler cloudchamber curl`, curlCommand)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber curl`,
+					curlCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"apply",
 			"apply the changes in the container applications to deploy",
 			(args) => applyCommandOptionalYargs(args),
-			(args) => handleFailure(`wrangler cloudchamber apply`, applyCommand)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber apply`,
+					applyCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"build [PATH]",
 			"build a dockerfile",
 			(args) => buildYargs(args),
-			(args) => handleFailure(`wrangler cloudchamber build`, buildCommand)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber build`,
+					buildCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"push [TAG]",
 			"push a tagged image to a Cloudflare managed registry, which is automatically integrated with your account",
 			(args) => pushYargs(args),
-			(args) => handleFailure(`wrangler cloudchamber push`, pushCommand)(args)
+			(args) =>
+				handleFailure(
+					`wrangler cloudchamber push`,
+					pushCommand,
+					cloudchamberScope
+				)(args)
 		)
 		.command(
 			"images",
-			"perform operations on images in your clouchamber registry",
-			(args) => imagesCommand(args).command(subHelp)
+			"perform operations on images in your Cloudchamber registry",
+			(args) => imagesCommand(args, cloudchamberScope).command(subHelp)
 		);
 };

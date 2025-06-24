@@ -1,5 +1,4 @@
-import { mkdir } from "fs/promises";
-import { logRaw, space, status, updateStatus } from "@cloudflare/cli";
+import { space, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import {
@@ -8,33 +7,24 @@ import {
 	InstanceType,
 	OpenAPI,
 } from "@cloudflare/containers-shared";
-import { version as wranglerVersion } from "../../package.json";
+import {
+	addAuthorizationHeaderIfUnspecified,
+	addUserAgent,
+} from "../cfetch/internal";
 import { readConfig } from "../config";
-import { getConfigCache, purgeConfigCaches } from "../config-cache";
 import { constructStatusMessage } from "../core/CommandRegistry";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import {
-	DefaultScopeKeys,
-	getAccountFromCache,
-	getAccountId,
-	getAPIToken,
-	getAuthFromEnv,
-	getScopes,
-	logout,
-	reinitialiseAuthTokens,
-	requireAuth,
-	setLoginScopeKeys,
-} from "../user";
+import { requireApiToken, requireAuth } from "../user";
 import { printWranglerBanner } from "../wrangler-banner";
 import { parseByteSize } from "./../parse";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
 import type { Config } from "../config";
 import type { CloudchamberConfig, ContainerApp } from "../config/environment";
-import type { Scope } from "../user";
+import type { containersScope } from "../containers";
 import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterfaceJSON,
@@ -49,7 +39,16 @@ import type {
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
 
+export const cloudchamberScope = "cloudchamber:write" as const;
+
 export type CommonCloudchamberConfiguration = { json: boolean };
+
+const containerIdRegexp = /[^/]{36}/;
+
+export function isValidContainerID(value: string): boolean {
+	const matches = value.match(containerIdRegexp);
+	return matches !== null;
+}
 
 /**
  * Regular expression for matching an image name.
@@ -109,7 +108,8 @@ export function handleFailure<
 		: never,
 >(
 	command: string,
-	cb: (args: CommandArgumentsObject, config: Config) => Promise<void>
+	cb: (args: CommandArgumentsObject, config: Config) => Promise<void>,
+	scope: typeof cloudchamberScope | typeof containersScope
 ): (
 	args: CommonYargsOptions &
 		CommandArgumentsObject &
@@ -119,10 +119,13 @@ export function handleFailure<
 		try {
 			if (!args.json) {
 				await printWranglerBanner();
-				logger.warn(constructStatusMessage(command, "alpha"));
+				const commandStatus = command.includes("cloudchamber")
+					? "alpha"
+					: "open-beta";
+				logger.warn(constructStatusMessage(command, commandStatus));
 			}
 			const config = readConfig(args);
-			await fillOpenAPIConfiguration(config, args.json);
+			await fillOpenAPIConfiguration(config, args.json, scope);
 			await cb(args, config);
 		} catch (err) {
 			if (!args.json || !isNonInteractiveOrCI()) {
@@ -152,11 +155,16 @@ export async function loadAccountSpinner({ json }: { json?: boolean }) {
  * Gets the API URL depending if the user is using old/admin based authentication.
  *
  */
-async function getAPIUrl(config: Config) {
+async function getAPIUrl(
+	config: Config,
+	accountId: string,
+	scope: typeof cloudchamberScope | typeof containersScope
+) {
 	const api = getCloudflareApiBaseUrl(config);
-	// This one will probably be cache'd already so it won't ask for the accountId again
-	const accountId = config.account_id || (await getAccountId(config));
-	return `${api}/accounts/${accountId}/cloudchamber`;
+
+	const endpoint = scope === cloudchamberScope ? "cloudchamber" : "containers";
+
+	return `${api}/accounts/${accountId}/${endpoint}`;
 }
 
 export async function promiseSpinner<T>(
@@ -182,84 +190,22 @@ export async function promiseSpinner<T>(
 	return t;
 }
 
-export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
+export async function fillOpenAPIConfiguration(
+	config: Config,
+	_json: boolean,
+	scope: typeof containersScope | typeof cloudchamberScope
+) {
 	const headers: Record<string, string> =
 		OpenAPI.HEADERS !== undefined ? { ...OpenAPI.HEADERS } : {};
 
-	// if the config cache folder doesn't exist, it means that there is not a node_modules folder in the tree
-	if (Object.keys(getConfigCache("wrangler-account.json")).length === 0) {
-		await wrap(mkdir("node_modules", {}));
-		purgeConfigCaches();
-	}
+	const accountId = await requireAuth(config);
+	const auth = requireApiToken();
+	addAuthorizationHeaderIfUnspecified(headers, auth);
+	addUserAgent(headers);
 
-	const scopes = getScopes();
-	const needsCloudchamberToken = !scopes?.find(
-		(scope) => scope === "cloudchamber:write"
-	);
-	const cloudchamberScope: Scope[] = ["cloudchamber:write"];
-	const scopesToSet: Scope[] =
-		scopes == undefined
-			? cloudchamberScope.concat(DefaultScopeKeys)
-			: cloudchamberScope.concat(scopes);
-
-	if (getAuthFromEnv() && needsCloudchamberToken) {
-		setLoginScopeKeys(scopesToSet);
-		// Wrangler will try to retrieve the oauth token and refresh it
-		// for its internal fetch call even if we have AuthFromEnv.
-		// Let's mock it
-		reinitialiseAuthTokens({
-			expiration_time: "2300-01-01:00:00:00+00:00",
-			oauth_token: "_",
-		});
-	} else {
-		if (needsCloudchamberToken && scopes) {
-			logRaw(
-				status.warning +
-					" We need to re-authenticate to add a cloudchamber token..."
-			);
-			// cache account id
-			await getAccountId(config);
-			const account = getAccountFromCache();
-			config.account_id = account?.id ?? config.account_id;
-			await promiseSpinner(logout(), { json, message: "Revoking token" });
-			purgeConfigCaches();
-			reinitialiseAuthTokens({});
-		}
-
-		setLoginScopeKeys(scopesToSet);
-
-		// Require either login, or environment variables being set to authenticate
-		//
-		// This will prompt the user for an accountId being chosen if they haven't configured the account id yet
-		const [, err] = await wrap(requireAuth(config));
-		if (err) {
-			throw new UserError(
-				`authenticating with the Cloudflare API: ${err.message}`
-			);
-		}
-	}
-
-	// Get the loaded API token
-	const token = getAPIToken();
-	if (!token) {
-		throw new UserError("unexpected apiToken not existing in credentials");
-	}
-
-	const val = "apiToken" in token ? token.apiToken : null;
-	// Don't try to support this method of authentication
-	if (!val) {
-		throw new UserError(
-			"we don't allow for authKey/email credentials, use `wrangler login` or CLOUDFLARE_API_TOKEN env variable to authenticate"
-		);
-	}
-
-	headers["Authorization"] = `Bearer ${val}`;
-	// These are being set by the internal fetch of wrangler, but we are not using it
-	// due to our OpenAPI codegenerated client.
-	headers["User-Agent"] = `wrangler/${wranglerVersion}`;
 	OpenAPI.CREDENTIALS = "omit";
 	if (OpenAPI.BASE.length === 0) {
-		const [base, errApiURL] = await wrap(getAPIUrl(config));
+		const [base, errApiURL] = await wrap(getAPIUrl(config, accountId, scope));
 		if (errApiURL) {
 			throw new UserError("getting the API url: " + errApiURL.message);
 		}
@@ -268,16 +214,6 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	}
 
 	OpenAPI.HEADERS = headers;
-	const [, err] = await wrap(loadAccountSpinner({ json }));
-
-	if (err) {
-		let message = err.message;
-		if (json && err instanceof ApiError) {
-			message = JSON.stringify(err);
-		}
-
-		throw new UserError("Loading account failed: " + message);
-	}
 }
 
 export function interactWithUser(config: { json?: boolean }): boolean {

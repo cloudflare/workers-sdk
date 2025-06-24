@@ -5,6 +5,7 @@ import { watch } from "chokidar";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig } from "../../config";
+import { containersScope } from "../../containers";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
 	getBindings,
@@ -413,7 +414,11 @@ async function resolveConfig(
 		(c) => !isDockerfile(c.image ?? c.configuration.image)
 	);
 	if (needsPulling && !resolved.dev.remote) {
-		await fillOpenAPIConfiguration(config, isNonInteractiveOrCI());
+		await fillOpenAPIConfiguration(
+			config,
+			isNonInteractiveOrCI(),
+			containersScope
+		);
 	}
 
 	// TODO(queues) support remote wrangler dev
