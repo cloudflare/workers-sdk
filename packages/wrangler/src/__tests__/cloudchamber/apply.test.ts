@@ -118,15 +118,12 @@ describe("cloudchamber apply", () => {
 			│   instances = 3
 			│   scheduling_policy = \\"default\\"
 			│
-			│   [containers.configuration]
-			│   image = \\"./Dockerfile\\"
-			│   instance_type = \\"dev\\"
-			│
 			│   [containers.constraints]
 			│   tier = 2
 			│
 			│   [containers.configuration]
 			│   image = \\"./Dockerfile\\"
+			│   instance_type = \\"dev\\"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
