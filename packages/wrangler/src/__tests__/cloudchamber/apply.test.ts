@@ -1841,9 +1841,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					instances: 4,
 					class_name: "DurableObjectClass",
-					configuration: {
-						image: "./Dockerfile",
-					},
+					image: "./Dockerfile",
 					constraints: {
 						tier: 2,
 					},
