@@ -9,13 +9,7 @@ import { Request, RequestInfo, RequestInit } from "./request";
 import { Response } from "./response";
 import { coupleWebSocket, WebSocketPair } from "./websocket";
 
-const ignored = [
-	"transfer-encoding",
-	"connection",
-	"keep-alive",
-	"expect",
-	"set-cookie",
-];
+const ignored = ["transfer-encoding", "connection", "keep-alive", "expect"];
 
 export async function fetch(
 	input: RequestInfo,
@@ -146,8 +140,16 @@ function convertUndiciHeadersToStandard(
 		const standardHeaders = new undici.Headers();
 		for (const [name, value] of headers) {
 			if (!ignored.includes(name)) {
-				assert(typeof value === "string");
-				standardHeaders.set(name, value);
+				if (!value) {
+					continue;
+				}
+				if (typeof value === "string") {
+					standardHeaders.append(name, value);
+				} else {
+					for (const v of value) {
+						standardHeaders.append(name, v);
+					}
+				}
 			}
 		}
 		return standardHeaders;
@@ -155,8 +157,16 @@ function convertUndiciHeadersToStandard(
 		const standardHeaders = new undici.Headers();
 		for (const [name, value] of Object.entries(headers)) {
 			if (!ignored.includes(name)) {
-				assert(typeof value === "string");
-				standardHeaders.set(name, value);
+				if (!value) {
+					continue;
+				}
+				if (typeof value === "string") {
+					standardHeaders.append(name, value);
+				} else {
+					for (const v of value) {
+						standardHeaders.append(name, v);
+					}
+				}
 			}
 		}
 		return standardHeaders;
