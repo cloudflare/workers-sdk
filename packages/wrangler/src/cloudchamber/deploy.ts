@@ -22,10 +22,10 @@ export async function maybeBuildContainer(
 	try {
 		if (
 			!isDockerfile(
-				containerConfig.image ?? containerConfig.configuration.image
+				containerConfig.image ?? containerConfig.configuration?.image
 			)
 		) {
-			return containerConfig.image ?? containerConfig.configuration.image;
+			return containerConfig.image ?? containerConfig.configuration?.image;
 		}
 	} catch (err) {
 		if (err instanceof Error) {
@@ -117,6 +117,7 @@ export async function deployContainers(
 			pathToDocker
 		);
 
+		container.configuration ??= {};
 		container.configuration.image = image;
 		container.image = image;
 
@@ -132,7 +133,7 @@ export function getBuildArguments(
 	container: ContainerApp,
 	idForImageTag: string
 ): BuildArgs {
-	const imageRef = container.image ?? container.configuration.image;
+	const imageRef = container.image ?? container.configuration?.image;
 	const imageTag = container.name + ":" + idForImageTag.split("-")[0];
 
 	return {
