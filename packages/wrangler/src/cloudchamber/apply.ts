@@ -1,4 +1,3 @@
-import { assert } from "node:console";
 import {
 	cancel,
 	endSection,
