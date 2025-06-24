@@ -1,0 +1,8 @@
+{
+	"name": "@cloudflare-dev-module-resolution/excludes",
+	"type": "module",
+	"exports": {
+		".": "./index.js",
+		"./plugin": "./plugin.js"
+	}
+}

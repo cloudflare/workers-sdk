@@ -12,6 +12,7 @@
 		"preview:nodejs-compat": "vite preview -c ./vite.config.nodejs-compat.ts"
 	},
 	"devDependencies": {
+		"@cloudflare-dev-module-resolution/excludes": "file:./packages/optimize-excludes",
 		"@cloudflare-dev-module-resolution/imports": "file:./packages/imports",
 		"@cloudflare-dev-module-resolution/requires": "file:./packages/requires",
 		"@cloudflare/vite-plugin": "workspace:*",
