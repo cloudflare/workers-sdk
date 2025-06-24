@@ -3,7 +3,10 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
-import { verifyDockerInstalled } from "@cloudflare/containers-shared";
+import {
+	isDockerfile,
+	verifyDockerInstalled,
+} from "@cloudflare/containers-shared";
 import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
@@ -766,12 +769,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		let workerBundle: FormData;
 		const dockerPath = getDockerPath();
+
+		// lets fail earlier in the case where docker isn't installed
+		// and we have containers so that we don't get into a
+		// disjointed state where the worker updates but the container
+		// fails.
 		if (config.containers) {
-			// lets fail earlier in the case where docker isn't installed
-			// and we have containers so that we don't get into a
-			// disjointed state where the worker updates but the container
-			// fails.
-			await verifyDockerInstalled(dockerPath);
+			// if you have a registry url specified, you don't need docker
+			const hasDockerfiles = config.containers?.some((container) =>
+				isDockerfile(container.image ?? container.configuration?.image)
+			);
+			if (hasDockerfiles) {
+				await verifyDockerInstalled(dockerPath, false);
+			}
 		}
 
 		if (props.dryRun) {

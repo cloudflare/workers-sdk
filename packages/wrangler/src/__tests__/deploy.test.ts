@@ -8667,7 +8667,7 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should fail early if no docker is detected when using a container worker", async () => {
+			it("should fail early if no docker is detected when deploying a container from a dockerfile", async () => {
 				vi.stubEnv(
 					"WRANGLER_CONTAINERS_DOCKER_PATH",
 					"/usr/bin/bad-docker-path"
@@ -8697,6 +8697,7 @@ addEventListener('fetch', event => {});`
 					"index.js",
 					`export class ExampleDurableObject {}; export default{};`
 				);
+				fs.writeFileSync("./Dockerfile", "blah");
 
 				writeWranglerConfig({
 					durable_objects: {
@@ -8712,7 +8713,7 @@ addEventListener('fetch', event => {});`
 							name: "my-container",
 							instances: 10,
 							class_name: "ExampleDurableObject",
-							configuration: { image: "./Dockerfile" },
+							image: "./Dockerfile",
 						},
 					],
 					migrations: [
@@ -8739,9 +8740,8 @@ addEventListener('fetch', event => {});`
 
 				await expect(runWrangler("deploy index.js")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-					[Error: The Docker CLI does not appear to installed. Please ensure that the Docker CLI is installed. You can specify an executable with the environment variable WRANGLER_CONTAINERS_DOCKER_PATH.
-					Other container tooling that is compatible with the Docker CLI may work, but is not yet guaranteed to do so.
-					To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false.]
+					[Error: The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.
+					Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with WRANGLER_DOCKER_HOST.]
 				`);
 			});
 
