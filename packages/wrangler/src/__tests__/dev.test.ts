@@ -1235,6 +1235,48 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
+	describe("container engine", () => {
+		it("should default to docker socket", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev");
+			expect(config.dev.containerEngine).toEqual(
+				process.platform === "win32"
+					? "//./pipe/docker_engine"
+					: "unix:///var/run/docker.sock"
+			);
+		});
+
+		it("should be able to be set by config", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				dev: {
+					port: 8888,
+					container_engine: "test.sock",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+
+			const config = await runWranglerUntilConfig("dev");
+			expect(config.dev.containerEngine).toEqual("test.sock");
+		});
+		it("should be able to be set by env var", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				dev: {
+					port: 8888,
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			vi.stubEnv("WRANGLER_DOCKER_HOST", "blah.sock");
+
+			const config = await runWranglerUntilConfig("dev");
+			expect(config.dev.containerEngine).toEqual("blah.sock");
+		});
+	});
+
 	describe("durable_objects", () => {
 		it("should warn if there are remote Durable Objects, or missing migrations for local Durable Objects", async () => {
 			writeWranglerConfig({
