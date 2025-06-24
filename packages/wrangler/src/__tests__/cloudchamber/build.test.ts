@@ -22,7 +22,7 @@ const defaultConfiguration: ContainerApp = {
 	name: "abc",
 	class_name: "",
 	instances: 0,
-	configuration: { image: "" },
+	image: "",
 };
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	const actual = await importOriginal();

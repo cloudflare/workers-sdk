@@ -45,7 +45,6 @@ import type {
 	TailConsumer,
 } from "./environment";
 import type { TypeofType, ValidatorFn } from "./validation-helpers";
-import type { UserDeploymentConfiguration } from "@cloudflare/containers-shared";
 
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
@@ -2398,9 +2397,23 @@ function validateContainerApp(
 				);
 			}
 
-			// or if unset that we can infer a reasonable name
+			validateRequiredProperty(
+				diagnostics,
+				field,
+				"class_name",
+				containerAppOptional.class_name,
+				"string"
+			);
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"name",
+				containerAppOptional.name,
+				"string"
+			);
+			// try and add a default name
 			if (!containerAppOptional.name) {
-				// we need at a minimum a topLevelName and a containers.class_name or containers.name
+				// we need topLevelName and a containers.class_name if containers.name is not defined
 				if (
 					!topLevelName ||
 					!isOptionalProperty(containerAppOptional, "class_name", "string")
@@ -2408,16 +2421,24 @@ function validateContainerApp(
 					diagnostics.errors.push(
 						`Must have either a top level "name" and "containers.class_name" field defined, or have field "containers.name" defined.`
 					);
-				} else if (isOptionalProperty(containerAppOptional, "name", "string")) {
-					// if there is worker name defined but no name for this container app default to:
-					// worker_name-class_name[-envName].
-					let name = `${topLevelName}-${containerAppOptional.class_name}`;
-					// config is undefined when we are at the top level instead of in a named env
-					// If we are in a named env, append it to the generated name
-					// so that users can re-use container definitions between different envs without issue.
-					name += config === undefined ? "" : `-${envName}`;
-					containerAppOptional.name = name.toLowerCase().replace(/ /g, "-");
 				}
+				// if there is worker name defined but no name for this container app default to:
+				// worker_name-class_name[-envName].
+				let name = `${topLevelName}-${containerAppOptional.class_name}`;
+				// config is undefined when we are at the top level instead of in a named env
+				// If we are in a named env, append it to the generated name
+				// so that users can re-use container definitions between different envs without issue.
+				name += config === undefined ? "" : `-${envName}`;
+				containerAppOptional.name = name.toLowerCase().replace(/ /g, "-");
+			}
+
+			if (
+				!containerAppOptional.configuration?.image &&
+				!containerAppOptional.image
+			) {
+				diagnostics.errors.push(
+					`"containers.image" field must be defined for each container app. This should be the path to your Dockerfile or a image URI pointing to the Cloudflare registry.`
+				);
 			}
 
 			// Validate that we have an image configuration for this container app.
@@ -2438,10 +2459,11 @@ function validateContainerApp(
 					return false;
 				}
 
+				// consolidate the image into the configuration object
+				// TODO: consolidate it into the top level image field instead
 				containerAppOptional.configuration ??= {
 					image: containerAppOptional.image,
 				};
-				containerAppOptional.configuration.image = containerAppOptional.image;
 				delete containerAppOptional["image"];
 			}
 
@@ -2475,21 +2497,9 @@ function validateContainerApp(
 			// Leaving for legacy reasons
 			// TODO: When cleaning up container.configuration usage in other places clean this up
 			// as well.
-			if (!("configuration" in containerAppOptional)) {
-				diagnostics.errors.push(`"containers.configuration" should be defined`);
-			} else if (Array.isArray(containerAppOptional.configuration)) {
+			if (Array.isArray(containerAppOptional.configuration)) {
 				diagnostics.errors.push(
 					`"containers.configuration" is defined as an array, it should be an object`
-				);
-			} else if (
-				!isRequiredProperty(
-					containerAppOptional.configuration as UserDeploymentConfiguration,
-					"image",
-					"string"
-				)
-			) {
-				diagnostics.errors.push(
-					`"containers.image" should be defined and a string`
 				);
 			}
 			if ("instance_type" in containerAppOptional) {

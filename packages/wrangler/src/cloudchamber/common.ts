@@ -649,7 +649,7 @@ export function resolveAppDiskSize(
 	if (app === undefined) {
 		return undefined;
 	}
-	const disk = app.configuration.disk?.size ?? "2GB";
+	const disk = app.configuration?.disk?.size ?? "2GB";
 	return Math.round(parseByteSize(disk));
 }
 
