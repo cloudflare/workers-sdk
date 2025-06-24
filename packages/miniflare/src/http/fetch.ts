@@ -241,6 +241,7 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 
 			const headers = convertUndiciHeadersToStandard(options.headers ?? {});
 
+			// ...and add special Miniflare headers for runtime requests
 			this.addHeaders(headers, path);
 
 			options.headers = headers;
