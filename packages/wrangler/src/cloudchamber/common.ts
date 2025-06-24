@@ -201,7 +201,7 @@ export async function fillOpenAPIConfiguration(
 	const accountId = await requireAuth(config);
 	const auth = requireApiToken();
 	const scopes = getScopes();
-	if (!scopes?.includes(scope)) {
+	if (scopes !== undefined && !scopes.includes(scope)) {
 		logger.error(`You don't have '${scope}' in your list of scopes`);
 		printScopes(scopes ?? []);
 		throw new UserError(
