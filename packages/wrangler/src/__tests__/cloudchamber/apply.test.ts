@@ -118,11 +118,11 @@ describe("cloudchamber apply", () => {
 			│   instances = 3
 			│   scheduling_policy = \\"default\\"
 			│
-			│   [containers.configuration]
-			│   image = \\"./Dockerfile\\"
-			│
 			│   [containers.constraints]
 			│   tier = 2
+			│
+			│   [containers.configuration]
+			│   image = \\"./Dockerfile\\"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -1603,12 +1603,12 @@ describe("cloudchamber apply", () => {
 			│   instances = 3
 			│   scheduling_policy = \\"default\\"
 			│
+			│   [containers.constraints]
+			│   tier = 2
+			│
 			│   [containers.configuration]
 			│   image = \\"./Dockerfile\\"
 			│   instance_type = \\"dev\\"
-			│
-			│   [containers.constraints]
-			│   tier = 2
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
