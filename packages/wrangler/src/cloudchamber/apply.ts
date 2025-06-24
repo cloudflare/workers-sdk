@@ -399,7 +399,12 @@ function sortObjectRecursive<T = Record<string | number, unknown>>(
 }
 
 export async function apply(
-	args: { skipDefaults: boolean | undefined; json: boolean; env?: string },
+	args: {
+		skipDefaults: boolean | undefined;
+		json: boolean;
+		env?: string;
+		imageUpdateRequired?: boolean;
+	},
 	config: Config
 ) {
 	startSection(
@@ -475,6 +480,10 @@ export async function apply(
 
 		// while configuration.image is deprecated to the user, we still resolve to this for now.
 		if (!appConfigNoDefaults.configuration?.image && application) {
+			appConfigNoDefaults.configuration ??= {};
+		}
+
+		if (!args.imageUpdateRequired && application) {
 			appConfigNoDefaults.configuration ??= {};
 			appConfigNoDefaults.configuration.image = application.configuration.image;
 		}
@@ -844,7 +853,14 @@ export async function applyCommand(
 	config: Config
 ) {
 	return apply(
-		{ skipDefaults: args.skipDefaults, env: args.env, json: args.json },
+		{
+			skipDefaults: args.skipDefaults,
+			env: args.env,
+			json: args.json,
+			// For the apply command we want this to default to true
+			// so that the image can be updated if the user modified it.
+			imageUpdateRequired: true,
+		},
 		config
 	);
 }
