@@ -4,6 +4,7 @@ import { patchConfig } from "./client";
 import {
 	getCacheOptionsFromArgs,
 	getMtlsFromArgs,
+	getOriginConnectionLimitFromArgs,
 	getOriginFromArgs,
 	upsertOptions,
 } from ".";
@@ -36,6 +37,7 @@ export const hyperdriveUpdateCommand = createCommand({
 			origin,
 			caching: getCacheOptionsFromArgs(args),
 			mtls: getMtlsFromArgs(args),
+			origin_connection_limit: getOriginConnectionLimitFromArgs(args),
 		});
 		logger.log(
 			`✅ Updated ${updated.id} Hyperdrive config\n`,
