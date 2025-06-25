@@ -15,6 +15,7 @@ import {
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
+	InstanceType,
 	RolloutsService,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
@@ -33,7 +34,6 @@ import type {
 	ApplicationID,
 	ApplicationName,
 	CreateApplicationRequest,
-	InstanceType,
 	ModifyApplicationRequestBody,
 	ModifyDeploymentV2RequestBody,
 	Observability as ObservabilityConfiguration,
@@ -173,6 +173,26 @@ function observabilityToConfiguration(
 	}
 }
 
+function containerAppToInstanceType(
+	containerApp: ContainerApp
+): InstanceType | undefined {
+	if (containerApp.instance_type !== undefined) {
+		return containerApp.instance_type as InstanceType;
+	}
+
+	// if no other configuration is set, we fall back to the default "dev" instance type
+	const configuration =
+		containerApp.configuration as UserDeploymentConfiguration;
+	if (
+		configuration.disk === undefined &&
+		configuration.vcpu === undefined &&
+		configuration.memory === undefined &&
+		configuration.memory_mib === undefined
+	) {
+		return InstanceType.DEV;
+	}
+}
+
 function containerAppToCreateApplication(
 	containerApp: ContainerApp,
 	observability: Observability | undefined,
@@ -183,13 +203,12 @@ function containerAppToCreateApplication(
 		observability,
 		existingApp?.configuration.observability
 	);
+	const instanceType = containerAppToInstanceType(containerApp);
 	const configuration: UserDeploymentConfiguration = {
 		...(containerApp.configuration as UserDeploymentConfiguration),
 		observability: observabilityConfiguration,
+		instance_type: instanceType,
 	};
-	if (containerApp.instance_type !== undefined) {
-		configuration.instance_type = containerApp.instance_type as InstanceType;
-	}
 
 	// this should have been set to a default value of worker-name-class-name if unspecified by the user
 	if (containerApp.name === undefined) {
