@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
 import { UserError } from "../errors";
-import { logger } from "../logger";
 import { INHERIT_SYMBOL } from "./bindings";
 import { handleUnsafeCapnp } from "./capnp";
 import type { Observability } from "../config/environment";
@@ -238,23 +237,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		_redirects: assets?._redirects,
 		_headers: assets?._headers,
 	};
+	const assetsOnly = assets && !assets.routerConfig.has_user_worker;
 
-	// short circuit if static assets upload only
-	if (assets && !assets.routerConfig.has_user_worker) {
-		formData.set(
-			"metadata",
-			JSON.stringify({
-				assets: {
-					jwt: assets.jwt,
-					config: assetConfig,
-				},
-				...(compatibility_date && { compatibility_date }),
-				...(compatibility_flags && { compatibility_flags }),
-				...(annotations && { annotations }),
-			})
-		);
-		return formData;
-	}
 	let { modules } = worker;
 
 	const metadataBindings: WorkerMetadataBinding[] = rawBindings ?? [];
@@ -581,102 +565,107 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		);
 	}
 
-	const manifestModuleName = "__STATIC_CONTENT_MANIFEST";
-	const hasManifest = modules?.some(({ name }) => name === manifestModuleName);
-	if (hasManifest && main.type === "esm") {
-		assert(modules !== undefined);
-		// Each modules-format worker has a virtual file system for module
-		// resolution. For example, uploading modules with names `1.mjs`,
-		// `a/2.mjs` and `a/b/3.mjs`, creates virtual directories `a` and `a/b`.
-		// `1.mjs` is in the virtual root directory.
-		//
-		// The above code adds the `__STATIC_CONTENT_MANIFEST` module to the root
-		// directory. This means `import manifest from "__STATIC_CONTENT_MANIFEST"`
-		// will only work if the importing module is also in the root. If the
-		// importing module was `a/b/3.mjs` for example, the import would need to
-		// be `import manifest from "../../__STATIC_CONTENT_MANIFEST"`.
-		//
-		// When Wrangler bundles all user code, this isn't a problem, as code is
-		// only ever uploaded to the root. However, once `--no-bundle` or
-		// `find_additional_modules` is enabled, the user controls the directory
-		// structure.
-		//
-		// To fix this, if we've got a modules-format worker, we add stub modules
-		// in each subdirectory that re-export the manifest module from the root.
-		// This allows the manifest to be imported as `__STATIC_CONTENT_MANIFEST`
-		// in every directory, whilst avoiding duplication of the manifest.
-
-		// Collect unique subdirectories
-		const subDirs = new Set(
-			modules.map((module) => path.posix.dirname(module.name))
+	// We set a no-op main module if there are only assets, but we don't want to actually include it in the upload
+	if (!assetsOnly) {
+		const manifestModuleName = "__STATIC_CONTENT_MANIFEST";
+		const hasManifest = modules?.some(
+			({ name }) => name === manifestModuleName
 		);
-		for (const subDir of subDirs) {
-			// Ignore `.` as it's not a subdirectory, and we don't want to
-			// register the manifest module in the root twice.
-			if (subDir === ".") {
-				continue;
-			}
-			const relativePath = path.posix.relative(subDir, manifestModuleName);
-			const filePath = path.posix.join(subDir, manifestModuleName);
-			modules.push({
-				name: filePath,
-				filePath,
-				content: `export { default } from ${JSON.stringify(relativePath)};`,
-				type: "esm",
-			});
-		}
-	}
+		if (hasManifest && main.type === "esm") {
+			assert(modules !== undefined);
+			// Each modules-format worker has a virtual file system for module
+			// resolution. For example, uploading modules with names `1.mjs`,
+			// `a/2.mjs` and `a/b/3.mjs`, creates virtual directories `a` and `a/b`.
+			// `1.mjs` is in the virtual root directory.
+			//
+			// The above code adds the `__STATIC_CONTENT_MANIFEST` module to the root
+			// directory. This means `import manifest from "__STATIC_CONTENT_MANIFEST"`
+			// will only work if the importing module is also in the root. If the
+			// importing module was `a/b/3.mjs` for example, the import would need to
+			// be `import manifest from "../../__STATIC_CONTENT_MANIFEST"`.
+			//
+			// When Wrangler bundles all user code, this isn't a problem, as code is
+			// only ever uploaded to the root. However, once `--no-bundle` or
+			// `find_additional_modules` is enabled, the user controls the directory
+			// structure.
+			//
+			// To fix this, if we've got a modules-format worker, we add stub modules
+			// in each subdirectory that re-export the manifest module from the root.
+			// This allows the manifest to be imported as `__STATIC_CONTENT_MANIFEST`
+			// in every directory, whilst avoiding duplication of the manifest.
 
-	if (main.type === "commonjs") {
-		// This is a service-worker format worker.
-		for (const module of Object.values([...(modules || [])])) {
-			if (module.name === "__STATIC_CONTENT_MANIFEST") {
-				// Add the manifest to the form data.
-				formData.set(
-					module.name,
-					new File([module.content], module.name, {
-						type: "text/plain",
-					})
-				);
-				// And then remove it from the modules collection
-				modules = modules?.filter((m) => m !== module);
-			} else if (
-				module.type === "compiled-wasm" ||
-				module.type === "text" ||
-				module.type === "buffer"
-			) {
-				// Convert all wasm/text/data modules into `wasm_module`/`text_blob`/`data_blob` bindings.
-				// The "name" of the module is a file path. We use it
-				// to instead be a "part" of the body, and a reference
-				// that we can use inside our source. This identifier has to be a valid
-				// JS identifier, so we replace all non alphanumeric characters
-				// with an underscore.
-				const name = module.name.replace(/[^a-zA-Z0-9_$]/g, "_");
-				metadataBindings.push({
-					name,
-					type:
-						module.type === "compiled-wasm"
-							? "wasm_module"
-							: module.type === "text"
-								? "text_blob"
-								: "data_blob",
-					part: name,
+			// Collect unique subdirectories
+			const subDirs = new Set(
+				modules.map((module) => path.posix.dirname(module.name))
+			);
+			for (const subDir of subDirs) {
+				// Ignore `.` as it's not a subdirectory, and we don't want to
+				// register the manifest module in the root twice.
+				if (subDir === ".") {
+					continue;
+				}
+				const relativePath = path.posix.relative(subDir, manifestModuleName);
+				const filePath = path.posix.join(subDir, manifestModuleName);
+				modules.push({
+					name: filePath,
+					filePath,
+					content: `export { default } from ${JSON.stringify(relativePath)};`,
+					type: "esm",
 				});
+			}
+		}
 
-				// Add the module to the form data.
-				formData.set(
-					name,
-					new File([module.content], module.name, {
+		if (main.type === "commonjs") {
+			// This is a service-worker format worker.
+			for (const module of Object.values([...(modules || [])])) {
+				if (module.name === "__STATIC_CONTENT_MANIFEST") {
+					// Add the manifest to the form data.
+					formData.set(
+						module.name,
+						new File([module.content], module.name, {
+							type: "text/plain",
+						})
+					);
+					// And then remove it from the modules collection
+					modules = modules?.filter((m) => m !== module);
+				} else if (
+					module.type === "compiled-wasm" ||
+					module.type === "text" ||
+					module.type === "buffer"
+				) {
+					// Convert all wasm/text/data modules into `wasm_module`/`text_blob`/`data_blob` bindings.
+					// The "name" of the module is a file path. We use it
+					// to instead be a "part" of the body, and a reference
+					// that we can use inside our source. This identifier has to be a valid
+					// JS identifier, so we replace all non alphanumeric characters
+					// with an underscore.
+					const name = module.name.replace(/[^a-zA-Z0-9_$]/g, "_");
+					metadataBindings.push({
+						name,
 						type:
 							module.type === "compiled-wasm"
-								? "application/wasm"
+								? "wasm_module"
 								: module.type === "text"
-									? "text/plain"
-									: "application/octet-stream",
-					})
-				);
-				// And then remove it from the modules collection
-				modules = modules?.filter((m) => m !== module);
+									? "text_blob"
+									: "data_blob",
+						part: name,
+					});
+
+					// Add the module to the form data.
+					formData.set(
+						name,
+						new File([module.content], module.name, {
+							type:
+								module.type === "compiled-wasm"
+									? "application/wasm"
+									: module.type === "text"
+										? "text/plain"
+										: "application/octet-stream",
+						})
+					);
+					// And then remove it from the modules collection
+					modules = modules?.filter((m) => m !== module);
+				}
 			}
 		}
 	}
@@ -712,10 +701,19 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		keep_bindings.push(...keepBindings);
 	}
 
+	let mainModuleName:
+		| { main_module: string }
+		| { body_part: string }
+		| undefined = undefined;
+	if (!assetsOnly) {
+		if (main.type !== "commonjs") {
+			mainModuleName = { main_module: main.name };
+		} else {
+			mainModuleName = { body_part: main.name };
+		}
+	}
 	const metadata: WorkerMetadata = {
-		...(main.type !== "commonjs"
-			? { main_module: main.name }
-			: { body_part: main.name }),
+		...(mainModuleName !== undefined && mainModuleName),
 		bindings: metadataBindings,
 		containers:
 			worker.containers === undefined
@@ -758,22 +756,25 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		);
 	}
 
-	for (const module of [main].concat(modules || [])) {
-		formData.set(
-			module.name,
-			new File([module.content], module.name, {
-				type: toMimeType(module.type ?? main.type ?? "esm"),
-			})
-		);
-	}
+	// We set a no-op main module if there are only assets, but we don't want to actually include it in the upload
+	if (!assetsOnly) {
+		for (const module of [main].concat(modules || [])) {
+			formData.set(
+				module.name,
+				new File([module.content], module.name, {
+					type: toMimeType(module.type ?? main.type ?? "esm"),
+				})
+			);
+		}
 
-	for (const sourceMap of sourceMaps || []) {
-		formData.set(
-			sourceMap.name,
-			new File([sourceMap.content], sourceMap.name, {
-				type: "application/source-map",
-			})
-		);
+		for (const sourceMap of sourceMaps || []) {
+			formData.set(
+				sourceMap.name,
+				new File([sourceMap.content], sourceMap.name, {
+					type: "application/source-map",
+				})
+			);
+		}
 	}
 
 	return formData;
