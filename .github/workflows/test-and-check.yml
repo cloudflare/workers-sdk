@@ -105,10 +105,11 @@ jobs:
             label: v22, Linux
             node_version: 22
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/interactive-dev-tests"'
-          - os: ubuntu-24.04-arm
-            label: v24, Linux
-            node_version: 24
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/interactive-dev-tests"'
+          # Skipped until we upgrade to undici v7, because of https://github.com/nodejs/undici/issues/4285
+          # - os: ubuntu-24.04-arm
+          #   label: v24, Linux
+          #   node_version: 24
+          #   filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/interactive-dev-tests"'
 
     runs-on: ${{ matrix.os }}
     steps:
