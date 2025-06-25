@@ -41,43 +41,11 @@ export function validateDescription(
 		return [];
 	}
 
-	if (/- \[x\] TODO \(before merge\)/i.test(body)) {
-		errors.push(
-			"All TODO checkboxes in your PR description must be unchecked before merging"
-		);
-	}
-
 	if (
-		!(
-			/- \[x\] Tests included/i.test(body) ||
-			/- \[x\] Tests not necessary because: .+/i.test(body)
-		)
+		!(/- \[x\] Tests included/i.test(body) || parsedLabels.includes("no-tests"))
 	) {
 		errors.push(
-			"Your PR must include tests, or provide justification for why no tests are required"
-		);
-	}
-
-	if (/- \[x\] I don't know/i.test(body)) {
-		errors.push(
-			"Your PR cannot be merged with a status of `I don't know` for e2e tests. When your PR is reviewed by the Wrangler team they'll decide whether e2e tests need to be run"
-		);
-	}
-
-	if (
-		!(
-			/- \[x\] Required/i.test(body) ||
-			/- \[x\] Not required because: .+/i.test(body)
-		)
-	) {
-		errors.push(
-			"Your PR must run E2E tests, or provide justification for why running them is not required"
-		);
-	}
-
-	if (/- \[x\] Required/i.test(body) && !parsedLabels.includes("e2e")) {
-		errors.push(
-			"Since your PR requires E2E tests to be run, it needs to have the `e2e` label applied on GitHub"
+			"Your PR must include tests, or provide justification for why no tests are required in the PR description and apply the `no-tests` label"
 		);
 	}
 
