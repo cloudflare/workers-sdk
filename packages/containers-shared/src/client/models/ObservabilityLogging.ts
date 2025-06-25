@@ -3,7 +3,8 @@
 /* eslint-disable */
 
 /**
- * Logging settings.
+ * Observability logging settings.
+ * @deprecated
  */
 export type ObservabilityLogging = {
 	enabled?: boolean;

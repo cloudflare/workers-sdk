@@ -1,5 +1,7 @@
 import { execFile, spawn, StdioOptions } from "child_process";
 import { existsSync, statSync } from "fs";
+import { dockerImageInspect } from "./inspect";
+import { ContainerDevOptions } from "./types";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = async (
@@ -48,15 +50,18 @@ export const runDockerCmdWithOutput = async (
 };
 
 /** throws when docker is not installed */
-export const verifyDockerInstalled = async (dockerPath: string) => {
+export const verifyDockerInstalled = async (
+	dockerPath: string,
+	isDev = true
+) => {
 	try {
 		await runDockerCmd(dockerPath, ["info"], ["inherit", "pipe", "pipe"]);
 	} catch {
-		// We assume this command is unlikely to fail for reasons other than the Docker CLI not being installed or not being in the PATH.
+		// We assume this command is unlikely to fail for reasons other than the Docker daemon not running, or the Docker CLI not being installed or in the PATH.
 		throw new Error(
-			`The Docker CLI does not appear to installed. Please ensure that the Docker CLI is installed. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN.\n` +
-				`Other container tooling that is compatible with the Docker CLI may work, but is not yet guaranteed to do so.\n` +
-				`To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false.`
+			`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.\n` +
+				`Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with WRANGLER_DOCKER_HOST.` +
+				`${isDev ? "\nTo suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false." : ""}`
 		);
 	}
 };
@@ -153,3 +158,27 @@ const getContainerIdsFromImage = async (
 	]);
 	return output.split("\n").filter((line) => line.trim());
 };
+
+/**
+ * While all ports are exposed in prod, a limitation of local dev with docker is that
+ * non-linux users will have to manually expose ports in their Dockerfile.
+ * We want to fail early and clearly if a user tries to develop with a container
+ * that has no ports exposed and is definitely not accessible.
+ *
+ * (A user could still use `getTCPPort()` on a port that is not exposed, but we leave that error for runtime.)
+ */
+export async function checkExposedPorts(
+	dockerPath: string,
+	options: ContainerDevOptions
+) {
+	const output = await dockerImageInspect(dockerPath, {
+		imageTag: options.imageTag,
+		formatString: "{{ len .Config.ExposedPorts }}",
+	});
+	if (output === "0" && process.platform !== "linux") {
+		throw new Error(
+			`The container "${options.class_name}" does not expose any ports.\n` +
+				"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort()` in your Dockerfile."
+		);
+	}
+}

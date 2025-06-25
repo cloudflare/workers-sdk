@@ -10,6 +10,7 @@ import type { DNSConfiguration } from "./DNSConfiguration";
 import type { Entrypoint } from "./Entrypoint";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
 import type { Image } from "./Image";
+import type { InstanceType } from "./InstanceType";
 import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
 import type { NetworkParameters } from "./NetworkParameters";
@@ -31,8 +32,11 @@ export type UserDeploymentConfiguration = {
 	 * A list of objects with secret names and the their access types from the account
 	 */
 	secrets?: Array<DeploymentSecretMap>;
+	instance_type?: InstanceType;
 	/**
-	 * Specify the vcpu to be used for the deployment. The default will be the one configured for the account.
+	 * Specify the vcpu to be used for the deployment. Vcpu must be at least 0.0625. The input value will be rounded to
+	 * the nearest 0.0001. The default will be the one configured for the account.
+	 *
 	 */
 	vcpu?: number;
 	/**
@@ -57,15 +61,6 @@ export type UserDeploymentConfiguration = {
 	 */
 	labels?: Array<Label>;
 	network?: NetworkParameters;
-	/**
-	 * Deprecated in favor of gpu_memory_mib
-	 * @deprecated
-	 */
-	gpu_memory?: MemorySizeWithUnit;
-	/**
-	 * Specify the GPU memory to be used for the deployment, in MiB. (Mandatory for gVisor deployments)
-	 */
-	gpu_memory_mib?: number;
 	command?: Command;
 	entrypoint?: Entrypoint;
 	dns?: DNSConfiguration;

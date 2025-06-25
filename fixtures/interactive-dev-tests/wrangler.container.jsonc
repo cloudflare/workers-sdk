@@ -1,0 +1,29 @@
+{
+	"name": "container-app",
+	"main": "src/container.mjs",
+	"compatibility_date": "2025-04-03",
+	"containers": [
+		{
+			"configuration": {
+				"image": "./Dockerfile",
+			},
+			"class_name": "Container",
+			"name": "http2",
+			"max_instances": 2,
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "Container",
+				"name": "CONTAINER",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["Container"],
+		},
+	],
+}

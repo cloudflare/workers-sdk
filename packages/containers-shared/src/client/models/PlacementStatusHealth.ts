@@ -19,5 +19,4 @@ export enum PlacementStatusHealth {
 	FAILED = "failed",
 	STOPPED = "stopped",
 	UNHEALTHY = "unhealthy",
-	DO_CONNECTED = "do_connected",
 }

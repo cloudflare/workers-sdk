@@ -1,5 +1,39 @@
 # create-cloudflare
 
+## 2.50.1
+
+### Patch Changes
+
+- [#9700](https://github.com/cloudflare/workers-sdk/pull/9700) [`bb8b987`](https://github.com/cloudflare/workers-sdk/commit/bb8b987d22b1386cf33b85125addd500866ec6ab) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.3.3 | 15.3.4 |
+
+- [#9701](https://github.com/cloudflare/workers-sdk/pull/9701) [`9bc830c`](https://github.com/cloudflare/workers-sdk/commit/9bc830c0e630fd15e9c6a71cd28cd05195abc822) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.14.4 | 5.14.5 |
+
+- [#9702](https://github.com/cloudflare/workers-sdk/pull/9702) [`9f449be`](https://github.com/cloudflare/workers-sdk/commit/9f449beb3f7b610190fcd79580ebdc53ae079176) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To     |
+  | ---------- | ----- | ------ |
+  | sv         | 0.8.7 | 0.8.12 |
+
+## 2.50.0
+
+### Minor Changes
+
+- [#9305](https://github.com/cloudflare/workers-sdk/pull/9305) [`f116623`](https://github.com/cloudflare/workers-sdk/commit/f116623d561a7a4375e0ed3372bc41c021ddd118) Thanks [@dom96](https://github.com/dom96)! - Add @handler to Python templates.
+
 ## 2.49.4
 
 ### Patch Changes

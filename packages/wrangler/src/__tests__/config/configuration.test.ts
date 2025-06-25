@@ -29,6 +29,12 @@ describe("readConfig()", () => {
 			    ],
 			    "type": "PythonModule",
 			  },
+			  Object {
+			    "globs": Array [
+			      "vendor/**/*.so",
+			    ],
+			    "type": "Data",
+			  },
 			]
 		`);
 	});
@@ -2303,6 +2309,122 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"cloudchamber\\" bindings should, optionally, have a boolean \\"ipv4\\" field but got {\\"image\\":123,\\"location\\":123,\\"vcpu\\":\\"invalid\\",\\"memory\\":123,\\"ipv4\\":\\"invalid\\"}.
 					  - \\"cloudchamber\\" bindings should, optionally, have a number \\"vcpu\\" field but got {\\"image\\":123,\\"location\\":123,\\"vcpu\\":\\"invalid\\",\\"memory\\":123,\\"ipv4\\":\\"invalid\\"}."
 				`);
+			});
+		});
+
+		describe("[containers]", () => {
+			it("should error if containers is not an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ containers: "test" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers\\" field should be an array, but got \\"test\\""
+				`);
+			});
+
+			it("should error if containers is an object that is not an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ containers: { something: "here" } } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers\\" field should be an array, but got {\\"something\\":\\"here\\"}"
+				`);
+			});
+
+			it("should error if containers is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ containers: "test" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers\\" field should be an array, but got \\"test\\""
+				`);
+			});
+
+			it("should error if containers is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ containers: 22 } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers\\" field should be an array, but got 22"
+				`);
+			});
+
+			it("should error if no containers name and no worker name are provided", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								image: "something",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers.class_name\\" is a required field.
+					  - Must have either a top level \\"name\\" and \\"containers.class_name\\" field defined, or have field \\"containers.name\\" defined."
+				`);
+			});
+
+			it("should provide a name if no container name is provided and worker name exists", () => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						containers: [
+							{
+								image: "something",
+								class_name: "test-class",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						configuration: {
+							image: "something",
+						},
+						class_name: "test-class",
+						name: "test-worker-name-test-class",
+					},
+				]);
+				config.containers &&
+					expect(config.containers[0].name).toEqual(
+						"test-worker-name-test-class"
+					);
 			});
 		});
 
@@ -6365,82 +6487,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
-		});
-	});
-
-	describe("remote bindings", () => {
-		it("should ignore remote configs when specified without REMOTE_BINDINGS enabled", () => {
-			const rawConfig: RawConfig = {
-				name: "my-worker",
-				kv_namespaces: [
-					{
-						binding: "KV",
-						id: "xxxx-xxxx-xxxx-xxxx",
-						experimental_remote: true,
-					},
-				],
-				r2_buckets: [
-					{
-						binding: "R2",
-						bucket_name: "my-r2",
-						experimental_remote: 5 as unknown as boolean,
-					},
-				],
-			};
-			const { diagnostics } = run(
-				{
-					RESOURCES_PROVISION: false,
-					MULTIWORKER: false,
-					REMOTE_BINDINGS: false,
-				},
-				() =>
-					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
-						env: undefined,
-					})
-			);
-
-			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-				"Processing wrangler configuration:
-				  - Unexpected fields found in kv_namespaces[0] field: \\"experimental_remote\\"
-				  - Unexpected fields found in r2_buckets[0] field: \\"experimental_remote\\""
-			`);
-		});
-
-		it("should error on non boolean remote values", () => {
-			const rawConfig: RawConfig = {
-				name: "my-worker",
-				kv_namespaces: [
-					{
-						binding: "KV",
-						id: "xxxx-xxxx-xxxx-xxxx",
-						experimental_remote: "hello" as unknown as boolean,
-					},
-				],
-				r2_buckets: [
-					{
-						binding: "R2",
-						bucket_name: "my-r2",
-						experimental_remote: 5 as unknown as boolean,
-					},
-				],
-			};
-			const { diagnostics } = run(
-				{
-					RESOURCES_PROVISION: false,
-					MULTIWORKER: false,
-					REMOTE_BINDINGS: true,
-				},
-				() =>
-					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
-						env: undefined,
-					})
-			);
-
-			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-				"Processing wrangler configuration:
-				  - \\"kv_namespaces[0]\\" should, optionally, have a boolean \\"experimental_remote\\" field but got {\\"binding\\":\\"KV\\",\\"id\\":\\"xxxx-xxxx-xxxx-xxxx\\",\\"experimental_remote\\":\\"hello\\"}.
-				  - \\"r2_buckets[0]\\" should, optionally, have a boolean \\"experimental_remote\\" field but got {\\"binding\\":\\"R2\\",\\"bucket_name\\":\\"my-r2\\",\\"experimental_remote\\":5}."
-			`);
 		});
 	});
 });

@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { generatePreviewAlias } from "../../versions/upload";
+import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -21,6 +22,7 @@ describe("versions upload", () => {
 	mockApiToken();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
+	const assertApiRequest = makeApiRequestAsserter(std);
 
 	function mockGetScript() {
 		msw.use(
@@ -211,54 +213,43 @@ describe("versions upload", () => {
 		expect(std.info).toContain("Retrying API call after error...");
 	});
 
-	it("should warn about unexpected experimental_remote fields", async () => {
+	test("correctly detects python workers", async () => {
 		mockGetScript();
 		mockUploadVersion(true);
-		mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+		mockSubDomainRequest();
 
 		// Setup
 		writeWranglerConfig({
 			name: "test-name",
-			main: "./index.js",
-			kv_namespaces: [
-				{ binding: "MY_KV", id: "kv-id-xxx", experimental_remote: true },
-			],
+			main: "./index.py",
+			compatibility_flags: ["python_workers"],
 		});
-		writeWorkerSource();
+		writeWorkerSource({ type: "python", format: "py" });
 		setIsTTY(false);
 
-		const result = runWrangler("versions upload");
+		await runWrangler("versions upload");
 
-		await expect(result).resolves.toBeUndefined();
-
-		expect(std.warn).toContain(
-			'Unexpected fields found in kv_namespaces[0] field: "experimental_remote"'
-		);
-	});
-
-	it("should not warn about experimental_remote fields when --x-remote-bindings is provided", async () => {
-		mockGetScript();
-		mockUploadVersion(true);
-		mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
-
-		// Setup
-		writeWranglerConfig({
-			name: "test-name",
-			main: "./index.js",
-			kv_namespaces: [
-				{ binding: "MY_KV", id: "kv-id-xxx", experimental_remote: true },
-			],
+		assertApiRequest(/.*?workers\/scripts\/test-name\/versions/, {
+			method: "POST",
+			// Make sure the main module (index.py) has a text/x-python content type
+			body: /Content-Disposition: form-data; name="index.py"; filename="index.py"\nContent-Type: text\/x-python/,
 		});
-		writeWorkerSource();
-		setIsTTY(false);
 
-		const result = runWrangler("versions upload --x-remote-bindings");
-
-		await expect(result).resolves.toBeUndefined();
-
-		expect(std.warn).not.toContain(
-			'Unexpected fields found in kv_namespaces[0] field: "experimental_remote"'
-		);
+		expect(std.out).toMatchInlineSnapshot(`
+			"┌─┬─┬─┐
+			│ Name │ Type │ Size │
+			├─┼─┼─┤
+			│ another.py │ python │ xx KiB │
+			├─┼─┼─┤
+			│ Total (1 module) │ │ xx KiB │
+			└─┴─┴─┘
+			Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			Uploaded test-name (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
+			Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev"
+		`);
 	});
 
 	describe("multi-env warning", () => {

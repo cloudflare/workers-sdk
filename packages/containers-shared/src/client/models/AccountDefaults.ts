@@ -9,10 +9,14 @@ import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
  */
 export type AccountDefaults = {
 	vcpus: number;
-	memory_mib?: number;
+	memory_mib: number;
 	/**
-	 * DEPRECATED in favor of memory_mib
+	 * Default disk size in MB
+	 */
+	disk_mb?: number;
+	/**
+	 * Deprecated in favor of memory_mib
 	 * @deprecated
 	 */
-	memory: MemorySizeWithUnit;
+	memory?: MemorySizeWithUnit;
 };

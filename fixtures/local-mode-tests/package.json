@@ -14,7 +14,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250617.0",
+		"@cloudflare/workers-types": "^4.20250620.0",
 		"@types/node": "catalog:default",
 		"buffer": "^6.0.3",
 		"typescript": "catalog:default",

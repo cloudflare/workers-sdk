@@ -407,13 +407,14 @@ export async function getContainerOptions(
 	const containers: ContainerDevOptions[] = [];
 	for (const container of config.containers) {
 		containers.push({
-			image: container.image ?? container.configuration.image,
+			image: container.image ?? container.configuration?.image,
 			imageTag: getDevContainerImageName(
 				container.class_name,
 				config.dev.containerBuildId
 			),
 			args: container.image_vars,
 			imageBuildContext: container.image_build_context,
+			class_name: container.class_name,
 		});
 	}
 	return containers;

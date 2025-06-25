@@ -1,5 +1,29 @@
 # miniflare
 
+## 4.20250617.4
+
+### Patch Changes
+
+- [#9689](https://github.com/cloudflare/workers-sdk/pull/9689) [`b137a6f`](https://github.com/cloudflare/workers-sdk/commit/b137a6f090b952f7e34236fa86b6667ca895f601) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: correctly pass container engine config to miniflare
+
+## 4.20250617.3
+
+### Minor Changes
+
+- [#9640](https://github.com/cloudflare/workers-sdk/pull/9640) [`bfb791e`](https://github.com/cloudflare/workers-sdk/commit/bfb791e708706c643d088864a5226b23b0f45d7e) Thanks [@emily-shen](https://github.com/emily-shen)! - Add ability to dump workerd config into a file for debugging.
+
+  You can enable this by setting `MINIFLARE_WORKERD_CONFIG_DEBUG` to a file path where you want the config to be written.
+
+### Patch Changes
+
+- [#9596](https://github.com/cloudflare/workers-sdk/pull/9596) [`5162c51`](https://github.com/cloudflare/workers-sdk/commit/5162c5194604f26b2e5018961b761f3450872333) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - add ability to pull images for containers local dev
+
+## 4.20250617.2
+
+### Patch Changes
+
+- [#9605](https://github.com/cloudflare/workers-sdk/pull/9605) [`17d23d8`](https://github.com/cloudflare/workers-sdk/commit/17d23d8e5fd54737d1c4b9cb487fd6e85cddc9c8) Thanks [@emily-shen](https://github.com/emily-shen)! - Add rebuild hotkey for containers local dev, and clean up containers at the end of a dev session.
+
 ## 4.20250617.1
 
 ### Patch Changes

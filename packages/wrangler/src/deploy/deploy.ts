@@ -3,6 +3,10 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
+import {
+	isDockerfile,
+	verifyDockerInstalled,
+} from "@cloudflare/containers-shared";
 import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
@@ -12,17 +16,13 @@ import { configFileName, formatConfigSnippet } from "../config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
-import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
-import {
-	findAdditionalModules,
-	writeAdditionalModules,
-} from "../deployment-bundle/find-additional-modules";
 import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
+import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
@@ -63,7 +63,6 @@ import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
 	Route,
-	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "../config/environment";
@@ -769,9 +768,23 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			config.containers === undefined;
 
 		let workerBundle: FormData;
+		const dockerPath = getDockerPath();
+
+		// lets fail earlier in the case where docker isn't installed
+		// and we have containers so that we don't get into a
+		// disjointed state where the worker updates but the container
+		// fails.
+		if (config.containers) {
+			// if you have a registry url specified, you don't need docker
+			const hasDockerfiles = config.containers?.some((container) =>
+				isDockerfile(container.image ?? container.configuration?.image)
+			);
+			if (hasDockerfiles) {
+				await verifyDockerInstalled(dockerPath, false);
+			}
+		}
 
 		if (props.dryRun) {
-			const dockerPath = getDockerPath();
 			if (config.containers) {
 				for (const container of config.containers) {
 					await maybeBuildContainer(
@@ -1345,23 +1358,4 @@ export async function updateQueueConsumers(
 	}
 
 	return updateConsumers;
-}
-
-export async function noBundleWorker(
-	entry: Entry,
-	rules: Rule[],
-	outDir: string | undefined
-) {
-	const modules = await findAdditionalModules(entry, rules);
-	if (outDir) {
-		await writeAdditionalModules(modules, outDir);
-	}
-
-	const bundleType = getBundleType(entry.format, entry.file);
-	return {
-		modules,
-		dependencies: {} as { [path: string]: { bytesInOutput: number } },
-		resolvedEntryPointPath: entry.file,
-		bundleType,
-	};
 }

@@ -37,7 +37,6 @@ import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
-	ContainerEngine,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -46,10 +45,6 @@ import type {
 	TailConsumer,
 } from "./environment";
 import type { TypeofType, ValidatorFn } from "./validation-helpers";
-import type {
-	CreateApplicationRequest,
-	UserDeploymentConfiguration,
-} from "@cloudflare/containers-shared";
 
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
@@ -62,7 +57,6 @@ export type NormalizeAndValidateConfigArgs = {
 	upstreamProtocol?: string;
 	script?: string;
 	enableContainers?: boolean;
-	containerEngine?: ContainerEngine;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -339,6 +333,16 @@ function applyPythonConfig(
 		if (!config.rules.some((rule) => rule.type === "PythonModule")) {
 			config.rules.push({ type: "PythonModule", globs: ["**/*.py"] });
 		}
+		// When vendoring packages they may include certain files that will not be automatically uploaded,
+		// this would require specifying rules in the wrangler configuration of each worker. Instead of
+		// requiring that, we include the config implicitly here.
+		if (
+			!config.rules.some(
+				(rule) => rule.type === "Data" && rule.globs.includes("vendor/**/*.so")
+			)
+		) {
+			config.rules.push({ type: "Data", globs: ["vendor/**/*.so"] });
+		}
 		if (!config.compatibility_flags.includes("python_workers")) {
 			throw new UserError(
 				"The `python_workers` compatibility flag is required to use Python."
@@ -472,7 +476,6 @@ function normalizeAndValidateDev(
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
 		enableContainers: enableContainersArg,
-		containerEngine: containerEngineArg,
 	} = args;
 	assert(
 		localProtocolArg === undefined ||
@@ -488,11 +491,6 @@ function normalizeAndValidateDev(
 	assert(
 		enableContainersArg === undefined ||
 			typeof enableContainersArg === "boolean"
-	);
-	assert(
-		containerEngineArg === undefined ||
-			typeof containerEngineArg === "string" ||
-			typeof containerEngineArg?.localDocker?.socketPath === "string"
 	);
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
@@ -512,6 +510,7 @@ function normalizeAndValidateDev(
 			: local_protocol,
 		host,
 		enable_containers = enableContainersArg ?? true,
+		container_engine,
 		...rest
 	} = rawDev;
 	validateAdditionalProperties(diagnostics, "dev", Object.keys(rest), []);
@@ -550,6 +549,14 @@ function normalizeAndValidateDev(
 		"boolean"
 	);
 
+	validateOptionalProperty(
+		diagnostics,
+		"dev",
+		"container_engine",
+		container_engine,
+		"string"
+	);
+
 	return {
 		ip,
 		port,
@@ -558,7 +565,7 @@ function normalizeAndValidateDev(
 		upstream_protocol,
 		host,
 		enable_containers,
-		container_engine: containerEngineArg,
+		container_engine,
 	};
 }
 
@@ -1247,7 +1254,7 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"containers",
-			validateContainerAppConfig,
+			validateContainerApp(envName, rawEnv.name),
 			undefined
 		),
 		send_email: notInheritable(
@@ -2191,7 +2198,7 @@ const validateNamedSimpleBinding =
 
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"binding",
-			...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+			"experimental_remote",
 		]);
 
 		return isValid;
@@ -2366,114 +2373,152 @@ const validateBindingArray =
 		return isValid;
 	};
 
-const validateContainerAppConfig: ValidatorFn = (
-	diagnostics,
-	_field,
-	value
-) => {
-	if (!value) {
-		return true;
-	}
-
-	if (typeof value !== "object") {
-		diagnostics.errors.push(
-			`"containers" should be an object, but got ${JSON.stringify(value)}`
-		);
-		return false;
-	}
-
-	if (!Array.isArray(value)) {
-		diagnostics.errors.push(
-			`"containers" should be an array, but got ${JSON.stringify(value)}`
-		);
-		return false;
-	}
-
-	for (const containerApp of value) {
-		const containerAppOptional =
-			containerApp as Partial<CreateApplicationRequest> & {
-				image?: string | undefined;
-			};
-		if (!isRequiredProperty(containerAppOptional, "name", "string")) {
-			diagnostics.errors.push(
-				`"containers.name" should be defined and a string`
-			);
+function validateContainerApp(
+	envName: string,
+	topLevelName: string | undefined
+): ValidatorFn {
+	return (diagnostics, field, value, config) => {
+		if (!value) {
+			return true;
 		}
 
-		if (
-			"rollout_step_percentage" in containerAppOptional &&
-			containerAppOptional.rollout_step_percentage !== undefined
-		) {
-			if (
-				typeof containerAppOptional.rollout_step_percentage !== "number" ||
-				containerAppOptional.rollout_step_percentage > 100 ||
-				containerAppOptional.rollout_step_percentage < 25
-			) {
+		if (!Array.isArray(value)) {
+			diagnostics.errors.push(
+				`"containers" field should be an array, but got ${JSON.stringify(value)}`
+			);
+			return false;
+		}
+
+		for (const containerAppOptional of value) {
+			// validate that either a name is set and is a string
+			if (!isOptionalProperty(value, "name", "string")) {
 				diagnostics.errors.push(
-					`"containers.rollout_step_percentage" should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
+					`Field "name", when present, should be a string, but got ${JSON.stringify(value)}`
 				);
 			}
-		}
 
-		if (
-			"rollout_kind" in containerAppOptional &&
-			containerAppOptional.rollout_kind !== undefined
-		) {
+			validateRequiredProperty(
+				diagnostics,
+				field,
+				"class_name",
+				containerAppOptional.class_name,
+				"string"
+			);
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"name",
+				containerAppOptional.name,
+				"string"
+			);
+			// try and add a default name
+			if (!containerAppOptional.name) {
+				// we need topLevelName and a containers.class_name if containers.name is not defined
+				if (
+					!topLevelName ||
+					!isOptionalProperty(containerAppOptional, "class_name", "string")
+				) {
+					diagnostics.errors.push(
+						`Must have either a top level "name" and "containers.class_name" field defined, or have field "containers.name" defined.`
+					);
+				}
+				// if there is worker name defined but no name for this container app default to:
+				// worker_name-class_name[-envName].
+				let name = `${topLevelName}-${containerAppOptional.class_name}`;
+				// config is undefined when we are at the top level instead of in a named env
+				// If we are in a named env, append it to the generated name
+				// so that users can re-use container definitions between different envs without issue.
+				name += config === undefined ? "" : `-${envName}`;
+				containerAppOptional.name = name.toLowerCase().replace(/ /g, "-");
+			}
+
 			if (
-				typeof containerAppOptional.rollout_kind !== "string" ||
+				!containerAppOptional.configuration?.image &&
+				!containerAppOptional.image
+			) {
+				diagnostics.errors.push(
+					`"containers.image" field must be defined for each container app. This should be the path to your Dockerfile or a image URI pointing to the Cloudflare registry.`
+				);
+			}
+
+			// Validate that we have an image configuration for this container app.
+			// For legacy reasons we have to check both at containerAppOptional.image and
+			// containerAppOptional.configuration.image.
+			//
+			//
+			// At the moment logic in other places downstream of this rely on containerAppOptional.configuration.image be set
+			// so we set it here regardless of which place it is set by the user.
+			if (
+				"image" in containerAppOptional &&
+				containerAppOptional.image !== undefined
+			) {
+				if (containerAppOptional.configuration?.image !== undefined) {
+					diagnostics.errors.push(
+						`"containers.image" and "containers.configuration.image" fields can't be defined at the same time.`
+					);
+					return false;
+				}
+				// consolidate the image into the configuration object
+				// TODO: consolidate it into the top level image field instead
+				containerAppOptional.configuration ??= {};
+				containerAppOptional.configuration.image = containerAppOptional.image;
+				delete containerAppOptional["image"];
+			}
+
+			// Validate rollout related configs
+			if (
+				!isOptionalProperty(
+					containerAppOptional,
+					"rollout_step_percentage",
+					"number"
+				) &&
+				(containerAppOptional.rollout_step_percentage > 100 ||
+					containerAppOptional.rollout_step_percentage < 25)
+			) {
+				diagnostics.errors.push(
+					`"containers.rollout_step_percentage" field should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
+				);
+			}
+
+			if (
+				!isOptionalProperty(containerAppOptional, "rollout_kind", "string") &&
+				"rollout_kind" in containerAppOptional &&
 				!["full_auto", "full_manual", "none"].includes(
 					containerAppOptional.rollout_kind
 				)
 			) {
 				diagnostics.errors.push(
-					`"containers.rollout_kind" should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
+					`"containers.rollout_kind" field should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
 				);
 			}
-		}
 
-		if (
-			"image" in containerAppOptional &&
-			containerAppOptional.image !== undefined
-		) {
-			if (containerAppOptional.configuration?.image !== undefined) {
+			// Leaving for legacy reasons
+			// TODO: When cleaning up container.configuration usage in other places clean this up
+			// as well.
+			if (Array.isArray(containerAppOptional.configuration)) {
 				diagnostics.errors.push(
-					`"containers.image" and "containers.configuration.image" can't be defined at the same time`
+					`"containers.configuration" is defined as an array, it should be an object`
 				);
-				return false;
 			}
-
-			containerAppOptional.configuration ??= {
-				image: containerAppOptional.image,
-			};
-			containerAppOptional.configuration.image = containerAppOptional.image;
-			delete containerAppOptional["image"];
+			if ("instance_type" in containerAppOptional) {
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"instance_type",
+					containerAppOptional.instance_type,
+					"string",
+					["dev", "basic", "standard"]
+				);
+			}
 		}
 
-		if (!("configuration" in containerAppOptional)) {
-			diagnostics.errors.push(`"containers.configuration" should be defined`);
-		} else if (Array.isArray(containerAppOptional.configuration)) {
-			diagnostics.errors.push(
-				`"containers.configuration" is defined as an array, it should be an object`
-			);
-		} else if (
-			!isRequiredProperty(
-				containerAppOptional.configuration as UserDeploymentConfiguration,
-				"image",
-				"string"
-			)
-		) {
-			diagnostics.errors.push(
-				`"containers.image" should be defined and a string`
-			);
+		if (diagnostics.errors.length > 0) {
+			return false;
 		}
-	}
 
-	if (diagnostics.errors.length > 0) {
-		return false;
-	}
-
-	return true;
-};
+		return true;
+	};
+}
 
 const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -2502,6 +2547,26 @@ const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 			}
 		});
 	});
+
+	if ("instance_type" in value && value.instance_type !== undefined) {
+		if (
+			typeof value.instance_type !== "string" ||
+			!["dev", "basic", "standard"].includes(value.instance_type)
+		) {
+			diagnostics.errors.push(
+				`"instance_type" should be one of 'dev', 'basic', or 'standard', but got ${value.instance_type}`
+			);
+		}
+
+		if (
+			("memory" in value && value.memory !== undefined) ||
+			("vcpu" in value && value.vcpu !== undefined)
+		) {
+			diagnostics.errors.push(
+				`"${field}" configuration should not set either "memory" or "vcpu" with "instance_type"`
+			);
+		}
+	}
 
 	return isValid;
 };
@@ -2554,7 +2619,7 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		"binding",
 		"id",
 		"preview_id",
-		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+		"experimental_remote",
 	]);
 
 	return isValid;
@@ -2628,7 +2693,7 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"queue",
 			"delivery_delay",
-			...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+			"experimental_remote",
 		])
 	) {
 		return false;
@@ -2760,7 +2825,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		"bucket_name",
 		"preview_bucket_name",
 		"jurisdiction",
-		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+		"experimental_remote",
 	]);
 
 	return isValid;
@@ -2821,7 +2886,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		"migrations_dir",
 		"migrations_table",
 		"preview_database_id",
-		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+		"experimental_remote",
 	]);
 
 	return isValid;
@@ -2860,7 +2925,7 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"index_name",
-		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+		"experimental_remote",
 	]);
 
 	return isValid;
@@ -3224,7 +3289,7 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"certificate_id",
-		...(getFlag("REMOTE_BINDINGS") ? ["experimental_remote"] : []),
+		"experimental_remote",
 	]);
 
 	if (!isRemoteValid(value, field, diagnostics)) {
@@ -3783,12 +3848,6 @@ function isRemoteValid(
 	fieldPath: string,
 	diagnostics: Diagnostics
 ) {
-	if (!getFlag("REMOTE_BINDINGS")) {
-		// the remote config only applies to remote bindings, if remote bindings
-		// are not enabled just return true and skip this validation
-		return true;
-	}
-
 	if (!isOptionalProperty(targetObject, "experimental_remote", "boolean")) {
 		diagnostics.errors.push(
 			`"${fieldPath}" should, optionally, have a boolean "experimental_remote" field but got ${JSON.stringify(
