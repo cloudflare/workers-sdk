@@ -1,5 +1,57 @@
 # wrangler
 
+## 4.21.2
+
+### Patch Changes
+
+- [#9731](https://github.com/cloudflare/workers-sdk/pull/9731) [`75b75f3`](https://github.com/cloudflare/workers-sdk/commit/75b75f3de77aff097f6e6dfeec9a9dd94cfd7c94) Thanks [@gabivlj](https://github.com/gabivlj)! - containers: Check for container scopes before running a container command to give a better error
+
+- [#9641](https://github.com/cloudflare/workers-sdk/pull/9641) [`fdbc9f6`](https://github.com/cloudflare/workers-sdk/commit/fdbc9f604824fb52a382bcd5c286cf73b019e438) Thanks [@IRCody](https://github.com/IRCody)! - Update container builds to use a more robust method for detecting if the currently built image already exists.
+
+- [#9736](https://github.com/cloudflare/workers-sdk/pull/9736) [`55c83a7`](https://github.com/cloudflare/workers-sdk/commit/55c83a7cf9ec101f04ac3e411b5ac687a0615218) Thanks [@gabivlj](https://github.com/gabivlj)! - containers: Do not check scopes if not defined
+
+- [#9667](https://github.com/cloudflare/workers-sdk/pull/9667) [`406fba5`](https://github.com/cloudflare/workers-sdk/commit/406fba5fa22188caa1a7a0fac5579e034d773736) Thanks [@IRCody](https://github.com/IRCody)! - Fail earlier in the deploy process when deploying a container worker if docker is not detected.
+
+## 4.21.1
+
+### Patch Changes
+
+- [#9626](https://github.com/cloudflare/workers-sdk/pull/9626) [`9c938c2`](https://github.com/cloudflare/workers-sdk/commit/9c938c2183e868b6468ad7a2298a74aa01d40f3c) Thanks [@penalosa](https://github.com/penalosa)! - Support `wrangler version upload` for Python Workers
+
+- [#9718](https://github.com/cloudflare/workers-sdk/pull/9718) [`fb83341`](https://github.com/cloudflare/workers-sdk/commit/fb83341bed6ff6571519eb117db19e3e76a83215) Thanks [@mhart](https://github.com/mhart)! - fix error message when docker daemon is not running
+
+- [#9689](https://github.com/cloudflare/workers-sdk/pull/9689) [`b137a6f`](https://github.com/cloudflare/workers-sdk/commit/b137a6f090b952f7e34236fa86b6667ca895f601) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: correctly pass container engine config to miniflare
+
+- [#9722](https://github.com/cloudflare/workers-sdk/pull/9722) [`29e911a`](https://github.com/cloudflare/workers-sdk/commit/29e911abbbd12385aec201cb9589cccd832fb400) Thanks [@emily-shen](https://github.com/emily-shen)! - Update containers config schema.
+
+  Deprecates `containers.configuration` in favour of top level fields. Makes top level `image` required. Deprecates `instances` and `durable_objects`. Makes `name` optional.
+
+- [#9666](https://github.com/cloudflare/workers-sdk/pull/9666) [`f3c5791`](https://github.com/cloudflare/workers-sdk/commit/f3c5791e3abf0b4468ff2a97046fed3e44b2fa4e) Thanks [@IRCody](https://github.com/IRCody)! - Add a reasonable default name for containers that have no defined name.
+
+- Updated dependencies [[`b137a6f`](https://github.com/cloudflare/workers-sdk/commit/b137a6f090b952f7e34236fa86b6667ca895f601)]:
+  - miniflare@4.20250617.4
+
+## 4.21.0
+
+### Minor Changes
+
+- [#9692](https://github.com/cloudflare/workers-sdk/pull/9692) [`273952f`](https://github.com/cloudflare/workers-sdk/commit/273952ff89bc7c629c72e064348b7c542d262cb4) Thanks [@dom96](https://github.com/dom96)! - Condenses Python vendored modules in output table
+
+- [#9654](https://github.com/cloudflare/workers-sdk/pull/9654) [`2a5988c`](https://github.com/cloudflare/workers-sdk/commit/2a5988c50aa55d86d036bfb610736d41a2dc9e09) Thanks [@dom96](https://github.com/dom96)! - Python Workers now automatically bundle .so files from vendored packages
+
+### Patch Changes
+
+- [#9695](https://github.com/cloudflare/workers-sdk/pull/9695) [`0e64c35`](https://github.com/cloudflare/workers-sdk/commit/0e64c3515fbecd04da893db6e53a505870432cac) Thanks [@emily-shen](https://github.com/emily-shen)! - Move hotkey registration later in dev start up
+
+  This should have no functional change, but allows us to conditionally render hotkeys based on config.
+
+- [#9098](https://github.com/cloudflare/workers-sdk/pull/9098) [`ef20754`](https://github.com/cloudflare/workers-sdk/commit/ef207546d6224241dab9164fed3b21e360be2c16) Thanks [@jseba](https://github.com/jseba)! - Migrate Workers Containers commands to Containers API Endpoints
+
+  The Workers Containers API was built on top of Cloudchamber, but has now been moved to its own API
+  with a reduced scoping and new token.
+
+- [#9712](https://github.com/cloudflare/workers-sdk/pull/9712) [`2a4c467`](https://github.com/cloudflare/workers-sdk/commit/2a4c467d83df640a9120b8bd7c45d8fd2ae9ed51) Thanks [@emily-shen](https://github.com/emily-shen)! - Make `wrangler container` commands print `open-beta` status
+
 ## 4.20.5
 
 ### Patch Changes

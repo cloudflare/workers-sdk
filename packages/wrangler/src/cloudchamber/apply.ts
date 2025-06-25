@@ -19,7 +19,7 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { formatConfigSnippet } from "../config";
-import { UserError } from "../errors";
+import { FatalError, UserError } from "../errors";
 import { cleanForInstanceType, promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
 import type { Config } from "../config";
@@ -191,8 +191,15 @@ function containerAppToCreateApplication(
 		configuration.instance_type = containerApp.instance_type as InstanceType;
 	}
 
+	// this should have been set to a default value of worker-name-class-name if unspecified by the user
+	if (containerApp.name === undefined) {
+		throw new FatalError("Container application name failed to be set", 1, {
+			telemetryMessage: true,
+		});
+	}
 	const app: CreateApplicationRequest = {
 		...containerApp,
+		name: containerApp.name,
 		configuration,
 		instances: containerApp.instances ?? 0,
 		scheduling_policy:
@@ -392,7 +399,12 @@ function sortObjectRecursive<T = Record<string | number, unknown>>(
 }
 
 export async function apply(
-	args: { skipDefaults: boolean | undefined; json: boolean; env?: string },
+	args: {
+		skipDefaults: boolean | undefined;
+		json: boolean;
+		env?: string;
+		imageUpdateRequired?: boolean;
+	},
 	config: Config
 ) {
 	startSection(
@@ -459,8 +471,20 @@ export async function apply(
 	log(dim("Container application changes\n"));
 
 	for (const appConfigNoDefaults of config.containers) {
-		const application = applicationByNames[appConfigNoDefaults.name];
-		if (!appConfigNoDefaults.configuration.image && application) {
+		const application =
+			applicationByNames[
+				appConfigNoDefaults.name ??
+					// we should never actually reach this point, but just in case
+					`${config.name}-${appConfigNoDefaults.class_name}`
+			];
+
+		// while configuration.image is deprecated to the user, we still resolve to this for now.
+		if (!appConfigNoDefaults.configuration?.image && application) {
+			appConfigNoDefaults.configuration ??= {};
+		}
+
+		if (!args.imageUpdateRequired && application) {
+			appConfigNoDefaults.configuration ??= {};
 			appConfigNoDefaults.configuration.image = application.configuration.image;
 		}
 
@@ -829,7 +853,14 @@ export async function applyCommand(
 	config: Config
 ) {
 	return apply(
-		{ skipDefaults: args.skipDefaults, env: args.env, json: args.json },
+		{
+			skipDefaults: args.skipDefaults,
+			env: args.env,
+			json: args.json,
+			// For the apply command we want this to default to true
+			// so that the image can be updated if the user modified it.
+			imageUpdateRequired: true,
+		},
 		config
 	);
 }

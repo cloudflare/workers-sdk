@@ -46,59 +46,96 @@ export type CloudchamberConfig = {
 export type ContainerApp = {
 	// TODO: fill out the entire type
 
-	/** Name of the application*/
-	name: string;
+	/**
+	 * Name of the application
+	 * @optional Defaults to `worker_name-class_name` if not specified.
+	 */
+	name?: string;
 
-	/** Number of application instances */
+	/**
+	 * Number of application instances
+	 * @deprecated
+	 * @hidden
+	 */
 	instances?: number;
 
-	/** Number of maximum application instances. Only applicable to Durable Object container applications */
+	/**
+	 * Number of maximum application instances.
+	 * @optional
+	 */
 	max_instances?: number;
 
 	/**
-	 * The path to a Dockerfile, or an image URI.
-	 * Can be defined both here or by setting the `image` key in the `ContainerApp` configuration
+	 * The path to a Dockerfile, or an image URI for the Cloudflare registry.
 	 */
-	image?: string;
+	image: string;
 
 	/**
-	 * Build context of the application. By default it is the directory of `image`.
+	 * Build context of the application.
+	 * @optional - defaults to the directory of `image`.
 	 */
 	image_build_context?: string;
 
 	/**
-	 * Image variables to be passed along the image
+	 * Image variables to be passed along the image at build time.
+	 * @optional
 	 */
 	image_vars?: Record<string, string>;
 
+	/**
+	 * The class name of the Durable Object the container is connected to.
+	 */
 	class_name: string;
 
-	/** The scheduling policy of the application, default is regional */
+	/**
+	 * The scheduling policy of the application
+	 * @optional
+	 * @default "default"
+	 */
 	scheduling_policy?: "regional" | "moon" | "default";
 
-	/** The instance type to be used for the container. This sets preconfigured options for vcpu and memory */
+	/**
+	 * The instance type to be used for the container. This sets preconfigured options for vcpu and memory
+	 * @optional
+	 */
 	instance_type?: "dev" | "basic" | "standard";
 
-	/* Configuration of the container */
-	configuration: {
-		image: string;
+	/**
+	 * @deprecated Use top level `containers` fields instead.
+	 * `configuration.image` should be `image`
+	 * `configuration.disk` should be set via `instance_type`
+	 * @hidden
+	 */
+	configuration?: {
+		image?: string;
 		labels?: { name: string; value: string }[];
 		secrets?: { name: string; type: "env"; secret: string }[];
 		disk?: { size: string };
 	};
 
-	/** Scheduling constraints */
+	/**
+	 * Scheduling constraints
+	 * @hidden
+	 */
 	constraints?: {
 		regions?: string[];
 		cities?: string[];
 		tier?: number;
 	};
 
+	/**
+	 * @deprecated use the `class_name` field instead.
+	 * @hidden
+	 */
 	durable_objects?: {
 		namespace_id: string;
 	};
 
-	/** How a rollout should be done, defining the size of it */
+	/**
+	 * How a rollout should be done, defining the size of it
+	 * @optional
+	 * @default 25
+	 * */
 	rollout_step_percentage?: number;
 
 	/**
@@ -106,6 +143,8 @@ export type ContainerApp = {
 	 *  - full_auto: The container application will be rolled out fully automatically.
 	 *  - none: The container application won't have a roll out or update.
 	 *  - manual: The container application will be rollout fully by manually actioning progress steps.
+	 * @optional
+	 * @default "full_auto"
 	 */
 	rollout_kind?: "full_auto" | "none" | "full_manual";
 };

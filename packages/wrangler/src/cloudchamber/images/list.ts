@@ -6,11 +6,13 @@ import { logger } from "../../logger";
 import { getAccountId } from "../../user";
 import { handleFailure, promiseSpinner } from "../common";
 import type { Config } from "../../config";
+import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgvJSON,
 	CommonYargsArgvSanitizedJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../../yargs-types";
+import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
 interface CatalogResponse {
@@ -22,7 +24,10 @@ interface TagsResponse {
 	tags: string[];
 }
 
-export const imagesCommand = (yargs: CommonYargsArgvJSON) => {
+export const imagesCommand = (
+	yargs: CommonYargsArgvJSON,
+	scope: typeof containersScope | typeof cloudchamberScope
+) => {
 	return yargs
 		.command(
 			"list",
@@ -33,7 +38,8 @@ export const imagesCommand = (yargs: CommonYargsArgvJSON) => {
 					`wrangler containers images list`,
 					async (_args: CommonYargsArgvSanitizedJSON, config) => {
 						await handleListImagesCommand(args, config);
-					}
+					},
+					scope
 				)(args)
 		)
 		.command(
@@ -45,7 +51,8 @@ export const imagesCommand = (yargs: CommonYargsArgvJSON) => {
 					`wrangler containers images delete`,
 					async (_args: CommonYargsArgvSanitizedJSON, config) => {
 						await handleDeleteImageCommand(args, config);
-					}
+					},
+					scope
 				)(args)
 		);
 };

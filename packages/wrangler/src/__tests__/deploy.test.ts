@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { execFile, spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -22,7 +22,7 @@ import {
 import { clearOutputFilePath } from "../output";
 import { sniffUserAgent } from "../package-manager";
 import { writeAuthConfigFile } from "../user";
-import { mockAccount as mockContainersAccount } from "./cloudchamber/utils";
+import { mockAccountV4 as mockContainersAccount } from "./cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -93,7 +93,7 @@ function mockGetApplications(applications: Application[]) {
 		http.get(
 			"*/applications",
 			async () => {
-				return HttpResponse.json(applications);
+				return HttpResponse.json({ success: true, result: applications });
 			},
 			{ once: true }
 		)
@@ -583,7 +583,7 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in.
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -624,7 +624,7 @@ describe("deploy", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"Attempting to login via OAuth...
-					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 					Successfully logged in.
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -8667,7 +8667,62 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support durable object bindings to SQLite classes with containers (docker flow)", async () => {
+			it("should fail early if no docker is detected when deploying a container from a dockerfile", async () => {
+				vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/bad-docker-path");
+
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+				fs.writeFileSync("./Dockerfile", "blah");
+
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+							image: "./Dockerfile",
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await expect(runWrangler("deploy index.js")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.
+					Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with WRANGLER_DOCKER_HOST.]
+				`);
+			});
+
+			it("should support durable object bindings to SQLite classes with containers (dockerfile flow)", async () => {
 				vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 				function mockGetVersion(versionId: string) {
 					msw.use(
@@ -8711,30 +8766,14 @@ addEventListener('fetch', event => {});`
 						},
 					} as unknown as ChildProcess;
 				}
-				vi.mocked(execFile)
-					// docker images first call
-					.mockImplementationOnce((cmd, args, callback) => {
-						expect(cmd).toBe("/usr/bin/docker");
-						expect(args).toEqual([
-							"images",
-							"--digests",
-							"--format",
-							"{{.Digest}}",
-							getCloudflareContainerRegistry() +
-								"/test_account_id/my-container:Galaxy",
-						]);
-						if (callback) {
-							const back = callback as (
-								error: Error | null,
-								stdout: string,
-								stderr: string
-							) => void;
-							back(null, "three\n", "");
-						}
-						return {} as ChildProcess;
-					});
 
 				vi.mocked(spawn)
+					// 0. docker info
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args).toEqual(["info"]);
+						return defaultChildProcess();
+					})
 					// 1. docker build
 					.mockImplementationOnce((cmd, args) => {
 						expect(cmd).toBe("/usr/bin/docker");
@@ -8783,7 +8822,7 @@ addEventListener('fetch', event => {});`
 							"inspect",
 							`${getCloudflareContainerRegistry()}/test_account_id/my-container:Galaxy`,
 							"--format",
-							"{{ .Size }} {{ len .RootFS.Layers }}",
+							"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 						]);
 
 						const stdout = new PassThrough();
@@ -8803,7 +8842,10 @@ addEventListener('fetch', event => {});`
 
 						// Simulate docker output
 						setImmediate(() => {
-							stdout.emit("data", "123456 4\n");
+							stdout.emit(
+								"data",
+								`123456 4 ["${getCloudflareContainerRegistry()}/test_account_id/my-container@sha256:three"]`
+							);
 						});
 
 						return child as unknown as ChildProcess;
@@ -8893,7 +8935,7 @@ addEventListener('fetch', event => {});`
 							name: "my-container",
 							instances: 10,
 							class_name: "ExampleDurableObject",
-							configuration: { image: "./Dockerfile" },
+							image: "./Dockerfile",
 						},
 					],
 					migrations: [
@@ -8913,7 +8955,7 @@ addEventListener('fetch', event => {});`
 									expect(json).toMatchObject(expected);
 								}
 
-								return HttpResponse.json(json);
+								return HttpResponse.json({ success: true, result: json });
 							},
 							{ once: true }
 						)
@@ -8930,11 +8972,14 @@ addEventListener('fetch', event => {});`
 								expect(json.permissions).toEqual(["push", "pull"]);
 
 								return HttpResponse.json({
-									account_id: "test_account_id",
-									registry_host: getCloudflareContainerRegistry(),
-									username: "v1",
-									password: "mockpassword",
-								} as AccountRegistryToken);
+									success: true,
+									result: {
+										account_id: "test_account_id",
+										registry_host: getCloudflareContainerRegistry(),
+										username: "v1",
+										password: "mockpassword",
+									} as AccountRegistryToken,
+								});
 							},
 							{ once: true }
 						)
@@ -9054,8 +9099,9 @@ addEventListener('fetch', event => {});`
 				expect(output).toContain("export {\n  ExampleDurableObject,");
 			});
 
-			it("should support durable object bindings to SQLite classes with containers", async () => {
+			it("should support durable object bindings to SQLite classes with containers (image uri flow)", async () => {
 				// note no docker commands have been mocked here!
+
 				function mockGetVersion(versionId: string) {
 					msw.use(
 						http.get(
@@ -9097,12 +9143,10 @@ addEventListener('fetch', event => {});`
 					},
 					containers: [
 						{
+							image: "docker.io/hello:world",
 							name: "my-container",
 							instances: 10,
 							class_name: "ExampleDurableObject",
-							configuration: {
-								image: "docker.io/hello:world",
-							},
 						},
 					],
 					migrations: [
@@ -9121,7 +9165,7 @@ addEventListener('fetch', event => {});`
 									expect(json).toMatchObject(expected);
 								}
 
-								return HttpResponse.json(json);
+								return HttpResponse.json({ success: true, result: json });
 							},
 							{ once: true }
 						)
@@ -9171,6 +9215,56 @@ addEventListener('fetch', event => {});`
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should error when no scope for containers", async () => {
+				mockContainersAccount([]);
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							image: "docker.io/hello:world",
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await expect(
+					runWrangler("deploy index.js")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: You need 'containers:write', try logging in again or creating an appropiate API token]`
+				);
 			});
 
 			it("should support durable objects and D1", async () => {

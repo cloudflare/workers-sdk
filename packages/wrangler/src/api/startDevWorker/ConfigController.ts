@@ -5,6 +5,7 @@ import { watch } from "chokidar";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig } from "../../config";
+import { containersScope } from "../../containers";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
 	getBindings,
@@ -160,7 +161,10 @@ async function resolveDevConfig(
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
-		containerEngine: input.dev?.containerEngine ?? getDockerHost(),
+		containerEngine:
+			input.dev?.containerEngine ??
+			config.dev.container_engine ??
+			getDockerHost(),
 		containerBuildId: input.dev?.containerBuildId,
 	} satisfies StartDevWorkerOptions["dev"];
 }
@@ -407,10 +411,14 @@ async function resolveConfig(
 	// container API client is properly set so that we can get the correct permissions
 	// from the cloudchamber API to pull from the repository.
 	const needsPulling = resolved.containers?.some(
-		(c) => !isDockerfile(c.image ?? c.configuration.image)
+		(c) => !isDockerfile(c.image ?? c.configuration?.image)
 	);
 	if (needsPulling && !resolved.dev.remote) {
-		await fillOpenAPIConfiguration(config, isNonInteractiveOrCI());
+		await fillOpenAPIConfiguration(
+			config,
+			isNonInteractiveOrCI(),
+			containersScope
+		);
 	}
 
 	// TODO(queues) support remote wrangler dev

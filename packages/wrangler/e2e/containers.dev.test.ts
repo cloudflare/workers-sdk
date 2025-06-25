@@ -149,7 +149,10 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			const worker = helper.runLongLived("wrangler dev");
 			expect(await worker.exitCode).toBe(1);
 			expect(await worker.output).toContain(
-				`The Docker CLI does not appear to installed. Please ensure that the Docker CLI is installed. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN.`
+				`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.`
+			);
+			expect(await worker.output).toContain(
+				`To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false.`
 			);
 		});
 	}
