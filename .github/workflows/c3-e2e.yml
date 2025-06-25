@@ -1,4 +1,4 @@
-name: C3 E2E Tests
+name: E2E
 on:
   merge_group:
   pull_request:
@@ -16,20 +16,22 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
       cancel-in-progress: true
-    name: ${{ format('Run tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os) }}
+    name: ${{ format('C3 ({0})', matrix.label) }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        pm:
-          [
-            { name: npm, version: "0.0.0" },
-            { name: yarn, version: "1.0.0" },
-            { name: pnpm, version: "9.12.0" },
-          ]
-        # include a single windows test with pnpm
         include:
           - os: windows-latest
+            label: pnpm, Windows
+            pm: { name: pnpm, version: "9.12.0" }
+          - os: ubuntu-latest
+            label: npm, Linux
+            pm: { name: npm, version: "0.0.0" }
+          - os: ubuntu-latest
+            label: yarn, Linux
+            pm: { name: yarn, version: "1.0.0" }
+          - os: ubuntu-latest
+            label: pnpm, Linux
             pm: { name: pnpm, version: "9.12.0" }
     runs-on: ${{ matrix.os }}
     steps:

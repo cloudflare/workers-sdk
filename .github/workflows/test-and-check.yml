@@ -83,30 +83,30 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-${{ matrix.node_version }}-test
       cancel-in-progress: true
 
-    name: ${{ format('Tests ({0})', matrix.os_name) }}
+    name: ${{ format('Tests ({0})', matrix.label) }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: macos-latest
-            os_name: macOS
+            label: v20, macOS
             node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --summarize'
           - os: ubuntu-24.04-arm
-            os_name: Linux
+            label: v20, Linux
             node_version: 20.19.1
             # ./tools _only_ runs here because they're only intended to run in CI
             filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: windows-latest
-            os_name: Windows
+            label: v20, Windows
             node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: ubuntu-24.04-arm
-            os_name: v22, Linux
+            label: v22, Linux
             node_version: 22
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler"'
           - os: ubuntu-24.04-arm
-            os_name: v24, Linux
+            label: v24, Linux
             node_version: 24
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler"'
 
@@ -148,7 +148,7 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
-          CI_OS: ${{ matrix.os_name }}
+          CI_OS: ${{ matrix.label }}
 
       - name: Upload turbo logs
         if: always()
