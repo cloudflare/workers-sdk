@@ -1,4 +1,5 @@
 name: Run CI on behalf of External Forks
+
 on:
   workflow_dispatch:
     inputs:
@@ -12,15 +13,16 @@ on:
         description: "Confirm that the PR has been reviewed for use/leakage of secrets"
         type: boolean
         required: true
+
+permissions:
+  pull-requests: write
+  contents: write
+
 jobs:
   create-draft-pr:
     name: Create Draft PR
     if: ${{ inputs.reviewed == true }}
     runs-on: ubuntu-latest
-    permissions:
-      # We use the default token to create the draft PR only
-      pull-requests: write
-      contents: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4

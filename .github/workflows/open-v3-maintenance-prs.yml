@@ -8,6 +8,10 @@ on:
     paths:
       - ".changeset/**.md"
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   open-pr:
     if: ${{

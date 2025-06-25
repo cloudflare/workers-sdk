@@ -4,6 +4,9 @@ on:
     paths:
       - "packages/create-cloudflare/src/frameworks/package.json"
 
+permissions:
+  contents: write
+
 jobs:
   generate-changeset:
     runs-on: ubuntu-22.04

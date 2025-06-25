@@ -7,6 +7,9 @@ on:
     paths:
       - "packages/workers-shared/**"
 
+permissions:
+  contents: read
+
 jobs:
   deploy-workers:
     name: "Deploy Workers Shared Staging"

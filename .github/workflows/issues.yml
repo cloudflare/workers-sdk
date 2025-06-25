@@ -4,6 +4,9 @@ on:
   issues:
     types: [opened, transferred]
 
+permissions:
+  issues: write
+
 jobs:
   add-to-project:
     name: Add issue to project

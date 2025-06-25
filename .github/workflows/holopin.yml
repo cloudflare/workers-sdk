@@ -5,6 +5,9 @@ on:
       - closed
       - labeled
 
+permissions:
+  pull-requests: write
+
 jobs:
   issue_lava_lamp_holobyte:
     name: Issue Lava Lamp Holobyte

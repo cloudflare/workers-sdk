@@ -1,4 +1,5 @@
 name: Release a hotfix
+
 on:
   workflow_dispatch:
     inputs:
@@ -14,6 +15,10 @@ on:
         type: string
         default: hotfix
         required: true
+
+permissions:
+  contents: read
+
 jobs:
   hotfix-release:
     name: Hotfix Release
