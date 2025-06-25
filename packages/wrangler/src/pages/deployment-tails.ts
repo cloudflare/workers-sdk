@@ -169,7 +169,10 @@ export async function Handler({
 	);
 
 	const envDeployments = deployments.filter(
-		(d) => d.environment === environment
+		(d) =>
+			d.environment === environment &&
+			d.latest_stage.name === "deploy" &&
+			d.latest_stage.status === "success"
 	);
 
 	// Deployment is URL
