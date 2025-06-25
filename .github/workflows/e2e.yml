@@ -9,7 +9,7 @@ jobs:
   e2e-wrangler-test:
     name: ${{ format('Wrangler ({0})', matrix.label) }}
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-wrangler
       cancel-in-progress: true
     timeout-minutes: 60
     strategy:
@@ -74,7 +74,7 @@ jobs:
   e2e-vite-test:
     name: ${{ format('Vite ({0})', matrix.label) }}
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-vite
       cancel-in-progress: true
     timeout-minutes: 60
     strategy:
