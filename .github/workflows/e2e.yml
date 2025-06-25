@@ -1,91 +1,32 @@
 name: E2E tests
 
 on:
+  merge_group:
   pull_request:
     types: [synchronize, opened, reopened, labeled, unlabeled]
-  repository_dispatch:
 
 jobs:
-  e2e-test-vp:
-    name: "E2E tests"
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
-      cancel-in-progress: true
-    timeout-minutes: 60
-    if: github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare' && (github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'every-os' ))
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-13, windows-2022]
-        node: ["20.19.1"]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
-        with:
-          node-version: ${{ matrix.node }}
-          turbo-api: ${{ secrets.TURBO_API }}
-          turbo-team: ${{ secrets.TURBO_TEAM }}
-          turbo-token: ${{ secrets.TURBO_TOKEN }}
-          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-
-      - name: Run Vite E2E tests
-        run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
-        timeout-minutes: 15
-        env:
-          NODE_DEBUG: "vite-plugin:test"
-          # The AI tests need to connect to Cloudflare
-          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          CI_OS: ${{ matrix.os }}
-
-      - name: Run Wrangler E2E tests
-        run: pnpm run test:e2e:wrangler
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-          HYPERDRIVE_DATABASE_URL: ${{ secrets.TEST_HYPERDRIVE_DATABASE_URL}}
-          WRANGLER: node --no-warnings ${{ github.workspace}}/packages/wrangler/bin/wrangler.js
-          WRANGLER_IMPORT: ${{ github.workspace}}/packages/wrangler/wrangler-dist/cli.js
-          MINIFLARE_IMPORT: ${{ github.workspace}}/packages/miniflare/dist/src/index.js
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
-          CI_OS: ${{ matrix.os }}
-
-      - name: Upload turbo logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
-          path: .turbo/runs
-
   e2e-test:
     name: "E2E tests"
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
       cancel-in-progress: true
     timeout-minutes: 60
-    if: github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare'
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04-arm]
+        os: [macos-13, windows-2022, ubuntu-22.04-arm]
         node: ["20.19.1"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
+        if: github.event.pull_request.head.repo.owner.login == 'cloudflare'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Install Dependencies
+        if: github.event.pull_request.head.repo.owner.login == 'cloudflare'
         uses: ./.github/actions/install-dependencies
         with:
           node-version: ${{ matrix.node }}
@@ -94,7 +35,13 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
+      - name: Bump package versions
+        run: node .github/changeset-version.js
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - name: Run Vite E2E tests
+        if: github.event.pull_request.head.repo.owner.login == 'cloudflare'
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
         timeout-minutes: 15
         env:
@@ -106,6 +53,7 @@ jobs:
           CI_OS: ${{ matrix.os }}
 
       - name: Run Wrangler E2E tests
+        if: github.event.pull_request.head.repo.owner.login == 'cloudflare'
         run: pnpm run test:e2e:wrangler
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
