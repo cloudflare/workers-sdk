@@ -24,11 +24,7 @@ jobs:
       cancel-in-progress: true
 
     name: "Checks"
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04-arm, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
