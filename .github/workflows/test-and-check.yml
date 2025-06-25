@@ -104,11 +104,11 @@ jobs:
           - os: ubuntu-24.04-arm
             os_name: v22, Linux
             node_version: 22
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground --filter="!./packages/kv-asset-handler"'
+            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler"'
           - os: ubuntu-24.04-arm
             os_name: v24, Linux
             node_version: 24
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground --filter="!./packages/kv-asset-handler"'
+            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler"'
 
     runs-on: ${{ matrix.os }}
     steps:
