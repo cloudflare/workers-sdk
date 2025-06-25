@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
-// @ts-ignore
-import testDepPlugin from "@cloudflare-dev-module-resolution/excludes/plugin";
 import { cloudflare } from "@cloudflare/vite-plugin";
+// @ts-ignore
+import testDepPlugin from "@playground/module-resolution-excludes/plugin";
 import { defineConfig } from "vite";
 
 export default defineConfig({

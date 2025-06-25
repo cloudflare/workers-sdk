@@ -1,17 +1,15 @@
-/**
-/**
- * @returns {import('vite').Plugin}
- */
+const testId = "virtual:test-dep/internal";
+
 export default function testDepPlugin() {
 	return {
 		name: "test-dep-plugin",
 		resolveId(id) {
-			if (id === "virtual:test-dep/internal") {
-				return "\0" + id;
+			if (id === testId) {
+				return `\0${testId}`;
 			}
 		},
 		load(id) {
-			if (id === "\0virtual:test-dep/internal") {
+			if (id === `\0${testId}`) {
 				return 'export default "ok"';
 			}
 		},

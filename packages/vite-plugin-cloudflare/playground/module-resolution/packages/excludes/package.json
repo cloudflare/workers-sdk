@@ -1,5 +1,5 @@
 {
-	"name": "@cloudflare-dev-module-resolution/excludes",
+	"name": "@playground/module-resolution-excludes",
 	"type": "module",
 	"exports": {
 		".": "./index.js",
