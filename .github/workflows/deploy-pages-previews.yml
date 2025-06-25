@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: read
+  # pull-request:write permission needed so that the workflow can comment on PRs
   pull-requests: write
 
 jobs:

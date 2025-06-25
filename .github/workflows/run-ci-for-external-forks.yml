@@ -15,6 +15,7 @@ on:
         required: true
 
 permissions:
+  # content:write and pull-request:write permissions needed to create PRs
   pull-requests: write
   contents: write
 

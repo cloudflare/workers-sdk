@@ -6,6 +6,7 @@ on:
       - main
 
 permissions:
+  # content:write and pull-request:write permissions needed to create changeset PRs
   contents: write
   pull-requests: write
 

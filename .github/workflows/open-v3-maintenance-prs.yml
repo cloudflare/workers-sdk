@@ -9,6 +9,7 @@ on:
       - ".changeset/**.md"
 
 permissions:
+  # content:write and pull-request:write permissions needed to create PRs
   contents: write
   pull-requests: write
 

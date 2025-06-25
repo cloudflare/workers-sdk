@@ -6,8 +6,9 @@ on:
       - "packages/miniflare/package.json"
 
 permissions:
+  # content:write permission needed to update add changesets to dependabot PRs
+  # (see tools/dependabot/generate-dependabot-pr-changesets.ts)
   contents: write
-  pull-requests: write
 
 jobs:
   generate-changeset:

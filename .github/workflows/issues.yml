@@ -5,6 +5,7 @@ on:
     types: [opened, transferred]
 
 permissions:
+  # issues:write permission needed so that the workflow can comment on issues
   issues: write
 
 jobs:
