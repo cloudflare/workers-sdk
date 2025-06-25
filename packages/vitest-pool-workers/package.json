@@ -65,7 +65,7 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250617.0",
+		"@cloudflare/workers-types": "^4.20250620.0",
 		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
 		"@vitest/runner": "catalog:default",

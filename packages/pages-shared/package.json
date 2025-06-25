@@ -25,7 +25,7 @@
 		"@cloudflare/vitest-pool-workers": "^0.8.19",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250617.0",
+		"@cloudflare/workers-types": "^4.20250620.0",
 		"concurrently": "^8.2.2",
 		"glob": "^10.4.5",
 		"html-rewriter-wasm": "^0.4.1",

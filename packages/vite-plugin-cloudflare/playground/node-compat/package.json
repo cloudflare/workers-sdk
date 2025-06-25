@@ -45,7 +45,7 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250617.0",
+		"@cloudflare/workers-types": "^4.20250620.0",
 		"@types/node": "catalog:vite-plugin",
 		"@types/pg": "^8.11.2",
 		"cross-fetch": "^4.0.0",
