@@ -123,6 +123,7 @@ describe("cloudchamber apply", () => {
 			│
 			│   [containers.configuration]
 			│   image = \\"./Dockerfile\\"
+			│   instance_type = \\"dev\\"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -161,6 +162,13 @@ describe("cloudchamber apply", () => {
 				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
 					image: "./Dockerfile",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 3,
@@ -233,6 +241,13 @@ describe("cloudchamber apply", () => {
 				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
 					image: "./Dockerfile",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -267,6 +282,7 @@ describe("cloudchamber apply", () => {
 			│
 			│   [containers.configuration]
 			│   image = \\"other-app/Dockerfile\\"
+			│   instance_type = \\"dev\\"
 			│
 			│   [containers.constraints]
 			│   tier = 1
@@ -318,6 +334,13 @@ describe("cloudchamber apply", () => {
 				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
 					image: "./Dockerfile",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -350,6 +373,7 @@ describe("cloudchamber apply", () => {
 			│
 			│   [containers.configuration]
 			│   image = \\"other-app/Dockerfile\\"
+			│   instance_type = \\"dev\\"
 			│
 			│   [containers.constraints]
 			│   tier = 1
@@ -395,6 +419,13 @@ describe("cloudchamber apply", () => {
 				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
 					image: "./Dockerfile",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -427,6 +458,7 @@ describe("cloudchamber apply", () => {
 			│
 			│   [containers.configuration]
 			│   image = \\"other-app/Dockerfile\\"
+			│   instance_type = \\"dev\\"
 			│
 			│   [containers.constraints]
 			│   tier = 1
@@ -526,6 +558,13 @@ describe("cloudchamber apply", () => {
 							secret: "SECRET_NAME_2",
 						},
 					],
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -656,6 +695,13 @@ describe("cloudchamber apply", () => {
 							secret: "SECRET_NAME_2",
 						},
 					],
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 
 				constraints: {
@@ -759,6 +805,13 @@ describe("cloudchamber apply", () => {
 						secret: "SECRET_NAME_2",
 					},
 				],
+				disk: {
+					size: "2GB",
+					size_mb: 2000,
+				},
+				vcpu: 0.0625,
+				memory: "256MB",
+				memory_mib: 256,
 			},
 
 			constraints: {
@@ -869,6 +922,13 @@ describe("cloudchamber apply", () => {
 							secret: "SECRET_NAME_2",
 						},
 					],
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 
 				constraints: {
@@ -972,6 +1032,13 @@ describe("cloudchamber apply", () => {
 						secret: "SECRET_NAME_2",
 					},
 				],
+				disk: {
+					size: "2GB",
+					size_mb: 2000,
+				},
+				vcpu: 0.0625,
+				memory: "256MB",
+				memory_mib: 256,
 			},
 
 			constraints: {
@@ -1027,6 +1094,13 @@ describe("cloudchamber apply", () => {
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
 					image: "./Dockerfile",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -1044,7 +1118,8 @@ describe("cloudchamber apply", () => {
 			├ EDIT my-container-app
 			│
 			│   [containers.configuration]
-			│   image = \\"./Dockerfile\\"
+			│   ...
+			│   instance_type = \\"dev\\"
 			│
 			│ + [containers.configuration.observability.logs]
 			│ + enabled = true
@@ -1093,6 +1168,13 @@ describe("cloudchamber apply", () => {
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
 					image: "./Dockerfile",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -1110,7 +1192,8 @@ describe("cloudchamber apply", () => {
 			├ EDIT my-container-app
 			│
 			│   [containers.configuration]
-			│   image = \\"./Dockerfile\\"
+			│   ...
+			│   instance_type = \\"dev\\"
 			│
 			│ + [containers.configuration.observability.logs]
 			│ + enabled = true
@@ -1164,6 +1247,13 @@ describe("cloudchamber apply", () => {
 							enabled: true,
 						},
 					},
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -1233,6 +1323,13 @@ describe("cloudchamber apply", () => {
 							enabled: true,
 						},
 					},
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -1301,6 +1398,13 @@ describe("cloudchamber apply", () => {
 							enabled: true,
 						},
 					},
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -1372,6 +1476,13 @@ describe("cloudchamber apply", () => {
 							enabled: true,
 						},
 					},
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -1444,6 +1555,13 @@ describe("cloudchamber apply", () => {
 							enabled: true,
 						},
 					},
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -1491,6 +1609,13 @@ describe("cloudchamber apply", () => {
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
 					image: "./Dockerfile",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -1546,6 +1671,13 @@ describe("cloudchamber apply", () => {
 							enabled: false,
 						},
 					},
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
 				},
 				constraints: {
 					tier: 1,
@@ -1698,6 +1830,86 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		const app = await applicationReqBodyPromise;
 		expect(app.configuration?.instance_type).toEqual("standard");
+		/* eslint-enable */
+	});
+
+	test("falls back on dev instance type when instance type is absent", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					instances: 4,
+					class_name: "DurableObjectClass",
+					image: "./Dockerfile",
+					constraints: {
+						tier: 2,
+					},
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 3,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+					disk: {
+						size: "4GB",
+						size_mb: 4000,
+					},
+					vcpu: 0.25,
+					memory: "1024MB",
+					memory_mib: 1024,
+				},
+				constraints: {
+					tier: 3,
+				},
+			},
+		]);
+		const applicationReqBodyPromise = mockModifyApplication();
+		await runWrangler("cloudchamber apply --json");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [[containers]]
+			│ - instances = 3
+			│ + instances = 4
+			│   name = \\"my-container-app\\"
+			│
+			│   [containers.configuration]
+			│   image = \\"./Dockerfile\\"
+			│ - instance_type = \\"basic\\"
+			│ + instance_type = \\"dev\\"
+			│
+			│   [containers.constraints]
+			│   ...
+			│ - tier = 3
+			│ + tier = 2
+			│
+			├ Loading
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.configuration?.instance_type).toEqual("dev");
 		/* eslint-enable */
 	});
 });
