@@ -175,7 +175,7 @@ async function getMiniflareOptionsFromConfig(
 	let processedAssetOptions: AssetsOptions | undefined;
 
 	try {
-		processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
+		processedAssetOptions = getAssetsOptions({ assets: undefined }, rawConfig);
 	} catch (e) {
 		const isNonExistentError = e instanceof NonExistentAssetsDirError;
 		// we want to loosen up the assets directory existence restriction here,
