@@ -1,5 +1,17 @@
 # wrangler
 
+## 3.114.10
+
+### Patch Changes
+
+- [#9713](https://github.com/cloudflare/workers-sdk/pull/9713) [`3ff9592`](https://github.com/cloudflare/workers-sdk/commit/3ff95926947ff0a76cf94027ee5c03704e4fede8) Thanks [@penalosa](https://github.com/penalosa)! - Support `wrangler version upload` for Python Workers
+
+- [#9453](https://github.com/cloudflare/workers-sdk/pull/9453) [`0e2949c`](https://github.com/cloudflare/workers-sdk/commit/0e2949c52865163908969fbc98a1f4e7b7575f89) Thanks [@emily-shen](https://github.com/emily-shen)! - Point to the right location for docs on telemetry
+
+- [#9594](https://github.com/cloudflare/workers-sdk/pull/9594) [`0f2f75d`](https://github.com/cloudflare/workers-sdk/commit/0f2f75d6ecf521777321e44d6a1e6e074594ecc4) Thanks [@vicb](https://github.com/vicb)! - drop unused `WRANGLER_UNENV_RESOLVE_PATHS` env var
+
+- [#9631](https://github.com/cloudflare/workers-sdk/pull/9631) [`e101451`](https://github.com/cloudflare/workers-sdk/commit/e101451a29ec341530d2f619baa055034ededc83) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Remove "Cloudchamber" from user facing error messages
+
 ## 3.114.9
 
 ### Patch Changes
