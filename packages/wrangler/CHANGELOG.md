@@ -1,5 +1,38 @@
 # wrangler
 
+## 3.114.11
+
+### Patch Changes
+
+- [#9694](https://github.com/cloudflare/workers-sdk/pull/9694) [`dacfc35`](https://github.com/cloudflare/workers-sdk/commit/dacfc3521da735e8d0d748e5b42ccb826660676c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add support for assets bindings to `getPlatformProxy`
+
+  this change makes sure that that `getPlatformProxy`, when the input configuration
+  file contains an assets field, correctly returns the appropriate asset binding proxy
+
+  example:
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+  	"name": "my-worker",
+  	"assets": {
+  		"directory": "./public/",
+  		"binding": "ASSETS",
+  	},
+  }
+  ```
+
+  ```js
+  import { getPlatformProxy } from "wrangler";
+
+  const { env, dispose } = await getPlatformProxy();
+
+  const text = await (await env.ASSETS.fetch("http://0.0.0.0/file.txt")).text();
+  console.log(text); // logs the content of file.txt
+
+  await dispose();
+  ```
+
 ## 3.114.10
 
 ### Patch Changes
