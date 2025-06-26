@@ -135,6 +135,7 @@ jobs:
           node-version: ${{ matrix.node_version }}
 
       - name: Bump package versions
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         run: node tools/changeset-version.js
         env:
           GITHUB_TOKEN: ${{ github.token }}
