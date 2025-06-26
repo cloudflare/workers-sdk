@@ -136,5 +136,5 @@ async function runLongLivedWrangler(
 	}
 
 	const { ip, port } = await ready;
-	return { ip, port, stop, getOutput, clearOutput };
+	return { ip, port, stop, getOutput, clearOutput, wranglerProcess };
 }

@@ -55,7 +55,10 @@ export default function registerDevHotKeys(
 
 				// updating the build ID will trigger a rebuild of the containers
 				await devEnv.config.patch({
-					dev: { containerBuildId: newContainerBuildId },
+					dev: {
+						...devEnv.config.latestConfig?.dev,
+						containerBuildId: newContainerBuildId,
+					},
 				});
 			},
 		},

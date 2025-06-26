@@ -4,9 +4,7 @@
 	"compatibility_date": "2025-04-03",
 	"containers": [
 		{
-			"configuration": {
-				"image": "./Dockerfile",
-			},
+			"image": "./Dockerfile",
 			"class_name": "Container",
 			"name": "http2",
 			"max_instances": 2,

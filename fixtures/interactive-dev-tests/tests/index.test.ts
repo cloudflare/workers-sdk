@@ -1,12 +1,20 @@
 import assert from "node:assert";
-import childProcess from "node:child_process";
+import childProcess, { execSync } from "node:child_process";
 import fs from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import rl from "node:readline";
 import stream from "node:stream";
 import stripAnsi from "strip-ansi";
 import { fetch } from "undici";
-import { afterEach, describe as baseDescribe, expect, it } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	describe as baseDescribe,
+	beforeAll,
+	expect,
+	it,
+} from "vitest";
 import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 import type pty from "@cdktf/node-pty-prebuilt-multiarch";
 
@@ -249,19 +257,6 @@ describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 			expect(wrangler.stdout).not.toContain("to exit");
 			expect(wrangler.stdout).not.toContain("rebuild container");
 		});
-		// docker isn't installed by default on windows/macos runners
-		it.skipIf(process.env.platform !== "linux" && process.env.CI === "true")(
-			"should show rebuild containers hotkey if containers are configured",
-			async () => {
-				const wrangler = await startWranglerDev([
-					"dev",
-					"-c",
-					"wrangler.container.jsonc",
-				]);
-				wrangler.pty.kill();
-				expect(wrangler.stdout).toContain("rebuild container");
-			}
-		);
 	});
 });
 
@@ -292,3 +287,114 @@ it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {
 		expect(duringProcesses.length).toBeGreaterThan(beginProcesses.length);
 	}
 });
+
+baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
+	"container dev",
+	{ retry: 1, timeout: 90000 },
+	() => {
+		let tmpDir: string;
+		let wrangler: PtyProcess;
+		beforeAll(async () => {
+			tmpDir = fs.mkdtempSync(path.join(tmpdir(), "wrangler-container-"));
+			fs.cpSync(
+				path.resolve(__dirname, "..", "container-app"),
+				path.join(tmpDir),
+				{
+					recursive: true,
+				}
+			);
+			const ids = getContainerIds();
+			if (ids.length > 0) {
+				execSync("docker rm -f " + ids.join(" "), {
+					encoding: "utf8",
+				});
+			}
+			wrangler = await startWranglerDev(["dev", "--cwd", "./container-app"]);
+		});
+		afterAll(async () => {
+			const ids = getContainerIds();
+			if (ids.length > 0) {
+				execSync("docker rm -f " + ids.join(" "), {
+					encoding: "utf8",
+				});
+			}
+
+			try {
+				fs.rmSync(tmpDir, { recursive: true, force: true });
+			} catch (e) {
+				// It seems that Windows doesn't let us delete this, with errors like:
+				//
+				// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
+				// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+				// Serialized Error: {
+				// 	"code": "EBUSY",
+				// 	"errno": -4082,
+				// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
+				// 	"syscall": "rmdir",
+				// }
+				console.error(e);
+			}
+		});
+
+		it("should rebuild a container when the hotkey is pressed", async () => {
+			console.log("initial url", wrangler.url);
+			await fetch(wrangler.url + "/start");
+
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+
+			let status = await fetch(wrangler.url + "/status");
+			expect(await status.json()).toBe(true);
+			let res = await fetch(wrangler.url + "/fetch");
+			expect(await res.text()).toBe("Hello World! FOO");
+
+			fs.writeFileSync(
+				path.join(tmpDir, "container-src", "simple-node-app.js"),
+				`const { createServer } = require("http");
+
+			// Create HTTP server
+			const server = createServer(function (req, res) {
+				res.writeHead(200, { "Content-Type": "text/plain" });
+				res.write("Blah! " + process.env.MESSAGE);
+				res.end();
+			});
+
+			server.listen(8080, function () {
+				console.log("Server listening on port 8080");
+			});`,
+				"utf-8"
+			);
+
+			wrangler.pty.write("r");
+
+			await new Promise((resolve) => setTimeout(resolve, 5000));
+
+			status = await fetch(wrangler.url + "/status");
+			expect(await status.json()).toBe(false);
+
+			await fetch(wrangler.url + "/start");
+			await new Promise((resolve) => setTimeout(resolve, 2000));
+			// 			await new Promise((resolve) => setTimeout(resolve, 1500));
+			status = await fetch(wrangler.url + "/status");
+			expect(await status.json()).toBe(true);
+			res = await fetch(wrangler.url + "/fetch");
+			expect(await res.text()).toBe("Blah! FOO");
+		});
+
+		// // docker isn't installed by default on windows/macos runners
+		// it("should print rebuild containers hotkey", async () => {
+		// 	wrangler.pty.kill();
+		// 	expect(wrangler.stdout).toContain("rebuild container");
+		// });
+	}
+);
+// todo cleanup containers after
+
+const getContainerIds = () => {
+	// note the -a to include stopped containers
+	const ids = execSync("docker ps -a -q");
+	return ids
+		.toString()
+		.trim()
+		.split("\n")
+		.filter((id) => id.trim() !== "");
+};

@@ -4,9 +4,8 @@
 	"compatibility_date": "2025-04-03",
 	"containers": [
 		{
-			"configuration": {
-				"image": "registry.cloudflare.com/8d783f274e1f82dc46744c297b015a2f/ci-container-dont-delete:latest",
-			},
+			// This is the same container as built by the dockerfile except it is pulled from the registry
+			"image": "registry.cloudflare.com/8d783f274e1f82dc46744c297b015a2f/ci-container-dont-delete:latest",
 			"class_name": "Container",
 			"name": "http2",
 			"max_instances": 2,

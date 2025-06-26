@@ -6,6 +6,7 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20250620.0",
 		"@fixture/shared": "workspace:*",
 		"strip-ansi": "^7.1.0",
 		"undici": "catalog:default",
