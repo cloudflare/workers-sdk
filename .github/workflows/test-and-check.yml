@@ -88,16 +88,16 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            description: v20, macOS
+            description: macOS
             node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --summarize'
           - os: ubuntu-24.04-arm
-            description: v20, Linux
+            description: Linux
             node_version: 20.19.1
             # ./tools _only_ runs here because they're only intended to run in CI
             filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: windows-latest
-            description: v20, Windows
+            description: Windows
             node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: ubuntu-24.04-arm
