@@ -21,8 +21,9 @@ import {
 	resolveImageName,
 	RolloutsService,
 } from "@cloudflare/containers-shared";
-import { inferInstanceType, promiseSpinner } from "../cloudchamber/common";
+import { promiseSpinner } from "../cloudchamber/common";
 import { Diff } from "../cloudchamber/helpers/diff";
+import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
 import { formatConfigSnippet } from "../config";
 import { FatalError, UserError } from "../errors";
 import { getAccountId } from "../user";
