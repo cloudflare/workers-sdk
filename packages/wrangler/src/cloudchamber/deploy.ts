@@ -65,13 +65,14 @@ export async function deployContainers(
 		return;
 	}
 
-	if (!dryRun) {
-		await fillOpenAPIConfiguration(
-			config,
-			isNonInteractiveOrCI(),
-			containersScope
-		);
-	}
+	// Always fill OpenAPI configuration when containers are defined, even in dry-run mode
+	// because maybeBuildContainer needs to call loadAccount() which requires API access
+	await fillOpenAPIConfiguration(
+		config,
+		isNonInteractiveOrCI(),
+		containersScope
+	);
+
 	const pathToDocker = getDockerPath();
 	for (const container of config.containers) {
 		const version = await fetchVersion(
@@ -123,15 +124,18 @@ export async function deployContainers(
 		container.configuration.image = buildResult.image;
 		container.image = buildResult.image;
 
-		await apply(
-			{
-				skipDefaults: false,
-				json: true,
-				env,
-				imageUpdateRequired: buildResult.pushed,
-			},
-			configuration
-		);
+		// Only apply the configuration if not in dry-run mode
+		if (!dryRun) {
+			await apply(
+				{
+					skipDefaults: false,
+					json: true,
+					env,
+					imageUpdateRequired: buildResult.pushed,
+				},
+				configuration
+			);
+		}
 	}
 }
 
