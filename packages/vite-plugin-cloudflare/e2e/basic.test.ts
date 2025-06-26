@@ -1,7 +1,12 @@
 import { describe, test } from "vitest";
-import { fetchJson, runLongLived, seed, waitForReady } from "./helpers.js";
+import {
+	fetchJson,
+	isBuildAndPreviewOnWindows,
+	runLongLived,
+	seed,
+	waitForReady,
+} from "./helpers.js";
 
-const isWindows = process.platform === "win32";
 const packageManagers = ["pnpm", , "npm", "yarn"] as const;
 const commands = ["dev", "buildAndPreview"] as const;
 
@@ -11,7 +16,7 @@ describe("basic e2e tests", () => {
 
 		describe.each(commands)('with "%s" command', (command) => {
 			describe("node compatibility", () => {
-				test.skipIf(command === "buildAndPreview")(
+				test.skipIf(isBuildAndPreviewOnWindows(command))(
 					"can serve a Worker request",
 					async ({ expect }) => {
 						const proc = await runLongLived(pm, command, projectPath);
@@ -28,7 +33,7 @@ describe("basic e2e tests", () => {
 			describe.skipIf(
 				!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN
 			)("Workers AI", () => {
-				test.skipIf(command === "buildAndPreview")(
+				test.skipIf(isBuildAndPreviewOnWindows(command))(
 					"can serve a Worker request",
 					async ({ expect }) => {
 						const proc = await runLongLived(pm, command, projectPath);
