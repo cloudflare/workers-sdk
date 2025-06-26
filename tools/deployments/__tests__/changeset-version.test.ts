@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 // @ts-expect-error This is a JS file
-import { getNextMiniflareVersion } from "../../changeset-version";
+import { getNextMiniflareVersion } from "../../../.github/changeset-version";
 
 // prettier-ignore
 const miniflareVersionTestCases = [
