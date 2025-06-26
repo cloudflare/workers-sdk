@@ -1,61 +1,61 @@
 * @cloudflare/wrangler
 
-# D&C ownership
-/packages/workers-shared @cloudflare/deploy-config @cloudflare/wrangler
-
-# Pages ownership
-/packages/pages-shared/ @cloudflare/pages @cloudflare/wrangler
-/packages/wrangler/pages/ @cloudflare/pages @cloudflare/wrangler
-/packages/wrangler/src/api/pages/ @cloudflare/pages @cloudflare/wrangler
-/packages/wrangler/src/pages/ @cloudflare/pages @cloudflare/wrangler
-/packages/wrangler/src/__tests__/pages/ @cloudflare/pages @cloudflare/wrangler
-
-# D1 ownership
-/packages/wrangler/src/api/d1/ @cloudflare/d1 @cloudflare/wrangler
-/packages/wrangler/src/d1/ @cloudflare/d1 @cloudflare/wrangler
-/packages/wrangler/src/__tests__/d1/ @cloudflare/d1 @cloudflare/wrangler
-
-# Cloudchamber ownership
-/packages/wrangler/src/cloudchamber/ @cloudflare/cloudchamber @cloudflare/wrangler
-
-# C3 ownership
-/packages/create-cloudflare/ @cloudflare/c3 @cloudflare/wrangler
-
-# Workers KV ownership
-/packages/wrangler/src/kv @cloudflare/workers-kv @cloudflare/wrangler
-/packages/wrangler/src/__tests__/kv.local.test.ts @cloudflare/workers-kv @cloudflare/wrangler
-/packages/wrangler/src/__tests__/kv.test.ts @cloudflare/workers-kv @cloudflare/wrangler
-/packages/miniflare/src/workers/kv @cloudflare/workers-kv @cloudflare/wrangler
-/packages/miniflare/test/plugins/kv @cloudflare/workers-kv @cloudflare/wrangler
-
-# kv-asset-handler ownership
-/packages/kv-asset-handler/ @cloudflare/wrangler
-
-# Workflows ownership
-/packages/workflows-shared/ @cloudflare/workflows @cloudflare/wrangler
-
-# unenv-preset ownership
-/packages/unenv-preset/ @cloudflare/workers-frameworks @cloudflare/wrangler
-
-# vite-plugin-cloudflare ownership
-/packages/vite-plugin-cloudflare/ @cloudflare/workers-frameworks @cloudflare/wrangler
-/packages/workers-tsconfig/ @cloudflare/workers-frameworks @cloudflare/wrangler
-
-# Owners intentionally left blank on these shared directories / files
-# to avoid noisy review requests
-/.changeset/
-/fixtures/
-pnpm-lock.yaml
-
-# Only wrangler-admins are needed to approve releases
-# Product teams can request hold on release by reaching out to wrangler-admins
-**/CHANGELOG.md @cloudflare/wrangler-admins
-**/package.json @cloudflare/wrangler
-
-# Require admin review on changes to dependencies & dependency bundling
-/packages/wrangler/scripts/deps.ts
-/packages/wrangler/package.json
-/packages/miniflare/package.json
-
-# To allow dependabot updates to C3 frameworks to be approved by C3 team
-/packages/create-cloudflare/**/package.json @cloudflare/wrangler @cloudflare/c3
+# # D&C ownership
+# /packages/workers-shared @cloudflare/deploy-config @cloudflare/wrangler
+#
+# # Pages ownership
+# /packages/pages-shared/ @cloudflare/pages @cloudflare/wrangler
+# /packages/wrangler/pages/ @cloudflare/pages @cloudflare/wrangler
+# /packages/wrangler/src/api/pages/ @cloudflare/pages @cloudflare/wrangler
+# /packages/wrangler/src/pages/ @cloudflare/pages @cloudflare/wrangler
+# /packages/wrangler/src/__tests__/pages/ @cloudflare/pages @cloudflare/wrangler
+#
+# # D1 ownership
+# /packages/wrangler/src/api/d1/ @cloudflare/d1 @cloudflare/wrangler
+# /packages/wrangler/src/d1/ @cloudflare/d1 @cloudflare/wrangler
+# /packages/wrangler/src/__tests__/d1/ @cloudflare/d1 @cloudflare/wrangler
+#
+# # Cloudchamber ownership
+# /packages/wrangler/src/cloudchamber/ @cloudflare/cloudchamber @cloudflare/wrangler
+#
+# # C3 ownership
+# /packages/create-cloudflare/ @cloudflare/c3 @cloudflare/wrangler
+#
+# # Workers KV ownership
+# /packages/wrangler/src/kv @cloudflare/workers-kv @cloudflare/wrangler
+# /packages/wrangler/src/__tests__/kv.local.test.ts @cloudflare/workers-kv @cloudflare/wrangler
+# /packages/wrangler/src/__tests__/kv.test.ts @cloudflare/workers-kv @cloudflare/wrangler
+# /packages/miniflare/src/workers/kv @cloudflare/workers-kv @cloudflare/wrangler
+# /packages/miniflare/test/plugins/kv @cloudflare/workers-kv @cloudflare/wrangler
+#
+# # kv-asset-handler ownership
+# /packages/kv-asset-handler/ @cloudflare/wrangler
+#
+# # Workflows ownership
+# /packages/workflows-shared/ @cloudflare/workflows @cloudflare/wrangler
+#
+# # unenv-preset ownership
+# /packages/unenv-preset/ @cloudflare/workers-frameworks @cloudflare/wrangler
+#
+# # vite-plugin-cloudflare ownership
+# /packages/vite-plugin-cloudflare/ @cloudflare/workers-frameworks @cloudflare/wrangler
+# /packages/workers-tsconfig/ @cloudflare/workers-frameworks @cloudflare/wrangler
+#
+# # Owners intentionally left blank on these shared directories / files
+# # to avoid noisy review requests
+# /.changeset/
+# /fixtures/
+# pnpm-lock.yaml
+#
+# # Only wrangler-admins are needed to approve releases
+# # Product teams can request hold on release by reaching out to wrangler-admins
+# **/CHANGELOG.md @cloudflare/wrangler-admins
+# **/package.json @cloudflare/wrangler
+#
+# # Require admin review on changes to dependencies & dependency bundling
+# /packages/wrangler/scripts/deps.ts
+# /packages/wrangler/package.json
+# /packages/miniflare/package.json
+#
+# # To allow dependabot updates to C3 frameworks to be approved by C3 team
+# /packages/create-cloudflare/**/package.json @cloudflare/wrangler @cloudflare/c3

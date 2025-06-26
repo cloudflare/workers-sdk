@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 add support for assets bindings to `getPlatformProxy`
