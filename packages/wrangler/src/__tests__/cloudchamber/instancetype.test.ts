@@ -20,7 +20,9 @@ describe("instance type limit check tests", () => {
 					disk_mb_per_deployment: 2000,
 				},
 			} as CompleteAccountCustomer)
-		).rejects.toThrow("Exceeded account limits: Your configured instance type uses 4000 MB of disk. However, that exceeds the account limit of 2000");
+		).rejects.toThrow(
+			"Exceeded account limits: Your configured instance type uses 4000 MB of disk. However, that exceeds the account limit of 2000"
+		);
 	});
 
 	it("should throw error if instance type memory exceeds account limit", async () => {
@@ -31,7 +33,9 @@ describe("instance type limit check tests", () => {
 					memory_mib_per_deployment: 1024,
 				},
 			} as CompleteAccountCustomer)
-		).rejects.toThrow("Exceeded account limits: Your configured instance type uses 4096 MiB of memory. However, that exceeds the account limit of 1024");
+		).rejects.toThrow(
+			"Exceeded account limits: Your configured instance type uses 4096 MiB of memory. However, that exceeds the account limit of 1024"
+		);
 	});
 
 	it("should throw error if instance type vcpu exceeds account limit", async () => {
@@ -42,7 +46,9 @@ describe("instance type limit check tests", () => {
 					vcpu_per_deployment: 0.25,
 				},
 			} as CompleteAccountCustomer)
-		).rejects.toThrow("Exceeded account limits: Your configured instance type uses 0.5 vCPU. However, that exceeds the account limit of 0.25");
+		).rejects.toThrow(
+			"Exceeded account limits: Your configured instance type uses 0.5 vCPU. However, that exceeds the account limit of 0.25"
+		);
 	});
 
 	it("should not throw when instance type is within limits", async () => {
