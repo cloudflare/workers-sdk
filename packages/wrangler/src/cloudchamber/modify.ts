@@ -6,20 +6,23 @@ import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";
 import { getLocation } from "./cli/locations";
 import {
-	checkInstanceType,
 	collectEnvironmentVariables,
 	collectLabels,
 	interactWithUser,
 	loadAccountSpinner,
 	parseImageName,
 	promptForEnvironmentVariables,
-	promptForInstanceType,
 	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
 	resolveMemory,
 } from "./common";
 import { wrap } from "./helpers/wrap";
+import {
+	checkInstanceType,
+	checkInstanceTypeAgainstLimits,
+	promptForInstanceType,
+} from "./instancetype/instancetype";
 import { loadAccount } from "./locations";
 import { sshPrompts } from "./ssh/ssh";
 import type { Config } from "../config";
@@ -134,6 +137,9 @@ export async function modifyCommand(
 		if (instanceType === undefined) {
 			modifyRequest.vcpu = vcpu;
 			modifyRequest.memory_mib = memoryMib;
+		} else {
+			const account = await loadAccount();
+			await checkInstanceTypeAgainstLimits(instanceType, account);
 		}
 		const deployment = await DeploymentsService.modifyDeploymentV2(
 			modifyArgs.deploymentId,
@@ -280,6 +286,7 @@ async function handleModifyCommand(
 		return;
 	}
 
+	const account = await loadAccount();
 	const { start, stop } = spinner();
 	start(
 		"Modifying your container",
@@ -296,13 +303,15 @@ async function handleModifyCommand(
 	if (instanceType === undefined) {
 		modifyRequest.vcpu = args.vcpu ?? config.cloudchamber.vcpu;
 		modifyRequest.memory_mib = memoryMib;
+	} else {
+		await checkInstanceTypeAgainstLimits(instanceType, account);
 	}
 	const [newDeployment, err] = await wrap(
 		DeploymentsService.modifyDeploymentV2(deployment.id, modifyRequest)
 	);
 	stop();
 	if (err) {
-		renderDeploymentMutationError(await loadAccount(), err);
+		renderDeploymentMutationError(account, err);
 		return;
 	}
 
