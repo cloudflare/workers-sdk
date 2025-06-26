@@ -1,5 +1,7 @@
 {
 	"name": "@playground/module-resolution-requires",
+	"version": "1.0.0",
+	"private": true,
 	"exports": {
 		"./ext": {
 			"default": "./ext.js",
