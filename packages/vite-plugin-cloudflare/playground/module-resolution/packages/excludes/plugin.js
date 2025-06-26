@@ -10,7 +10,7 @@ export default function testDepPlugin() {
 		},
 		load(id) {
 			if (id === `\0${testId}`) {
-				return 'export default "ok"';
+				return `export const virtualExport = "Export from virtual module";`;
 			}
 		},
 	};

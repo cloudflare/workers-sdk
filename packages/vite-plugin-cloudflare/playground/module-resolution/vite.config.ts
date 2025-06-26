@@ -13,7 +13,7 @@ export default defineConfig({
 	environments: {
 		worker: {
 			optimizeDeps: {
-				exclude: ["@cloudflare-dev-module-resolution/excludes"],
+				exclude: ["@playground/module-resolution-excludes"],
 			},
 		},
 	},

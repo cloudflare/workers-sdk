@@ -1,3 +1,3 @@
-import virtual from "virtual:test-dep/internal";
+import { virtualExport } from "virtual:test-dep/internal";
 
-export default virtual;
+export { virtualExport };
