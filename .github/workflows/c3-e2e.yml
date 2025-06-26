@@ -2,7 +2,6 @@ name: E2E
 on:
   merge_group:
   pull_request:
-    types: [synchronize, opened, reopened, labeled, unlabeled]
 
 env:
   # TODO: switch back to 20.x onces node@20.x includes a fix for https://github.com/nodejs/node/issues/57869
@@ -16,22 +15,22 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
       cancel-in-progress: true
-    name: ${{ format('C3 ({0})', matrix.label) }}
+    name: ${{ format('C3 ({0})', matrix.description) }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            label: pnpm, Windows
+            description: pnpm, Windows
             pm: { name: pnpm, version: "9.12.0" }
           - os: ubuntu-latest
-            label: npm, Linux
+            description: npm, Linux
             pm: { name: npm, version: "0.0.0" }
           - os: ubuntu-latest
-            label: yarn, Linux
+            description: yarn, Linux
             pm: { name: yarn, version: "1.0.0" }
           - os: ubuntu-latest
-            label: pnpm, Linux
+            description: pnpm, Linux
             pm: { name: pnpm, version: "9.12.0" }
     runs-on: ${{ matrix.os }}
     steps:

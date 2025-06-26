@@ -3,7 +3,6 @@ name: CI
 on:
   merge_group:
   pull_request:
-    types: [synchronize, opened, reopened, labeled, unlabeled]
 
 jobs:
   add-to-project:
@@ -83,26 +82,26 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-${{ matrix.node_version }}-test
       cancel-in-progress: true
 
-    name: ${{ format('Tests ({0})', matrix.label) }}
+    name: ${{ format('Tests ({0})', matrix.description) }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: macos-latest
-            label: v20, macOS
+            description: v20, macOS
             node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --summarize'
           - os: ubuntu-24.04-arm
-            label: v20, Linux
+            description: v20, Linux
             node_version: 20.19.1
             # ./tools _only_ runs here because they're only intended to run in CI
             filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: windows-latest
-            label: v20, Windows
+            description: v20, Windows
             node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: ubuntu-24.04-arm
-            label: v22, Linux
+            description: v22, Linux
             node_version: 22
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/interactive-dev-tests"'
           # Skipped until we upgrade to undici v7, because of https://github.com/nodejs/undici/issues/4285
@@ -149,7 +148,7 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
-          CI_OS: ${{ matrix.label }}
+          CI_OS: ${{ matrix.description }}
 
       - name: Upload turbo logs
         if: always()

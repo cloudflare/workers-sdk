@@ -42,7 +42,10 @@ export function validateDescription(
 	}
 
 	if (
-		!(/- \[x\] Tests included/i.test(body) || parsedLabels.includes("no-tests"))
+		!(
+			/- \[x\] Tests included/i.test(body) ||
+			/- \[x\] Tests not necessary because: .+/i.test(body)
+		)
 	) {
 		errors.push(
 			"Your PR must include tests, or provide justification for why no tests are required in the PR description and apply the `no-tests` label"

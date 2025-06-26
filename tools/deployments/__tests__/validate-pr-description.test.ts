@@ -25,6 +25,7 @@ The following selections do not need to be completed if this PR only contains ch
 
 - Tests
   - [ ] Tests included
+  - [ ] Tests not necessary because:
 - Public documentation
   - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
   - [ ] Documentation not necessary because:
@@ -50,7 +51,7 @@ In particular, for non-trivial changes, please always engage on the issue or cre
 		`);
 	});
 
-	it("should bypass changesets + tests check with label", () => {
+	it("should bypass changesets check with label", () => {
 		expect(
 			validateDescription(
 				"",
@@ -67,6 +68,7 @@ The following selections do not need to be completed if this PR only contains ch
 
 - Tests
   - [ ] Tests included
+  - [x] Tests not necessary because: test
 - Public documentation
   - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
   - [x] Documentation not necessary because: test
@@ -78,7 +80,7 @@ The following selections do not need to be completed if this PR only contains ch
 Have you read our [Contributing guide](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md)?
 In particular, for non-trivial changes, please always engage on the issue or create a discussion or feature request issue first before writing your code.
 -->`,
-				'["no-changeset-required", "no-tests"]',
+				'["no-changeset-required"]',
 				"[]"
 			)
 		).toMatchInlineSnapshot(`[]`);
@@ -101,6 +103,7 @@ The following selections do not need to be completed if this PR only contains ch
 
 - Tests
   - [x] Tests included
+  - [ ] Tests not necessary because:
 - Public documentation
   - [x] Cloudflare docs PR(s): https://github.com/cloudflare/cloudflare-docs/pull/100
   - [ ] Documentation not necessary because: test

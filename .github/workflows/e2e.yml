@@ -3,11 +3,10 @@ name: E2E
 on:
   merge_group:
   pull_request:
-    types: [synchronize, opened, reopened, labeled, unlabeled]
 
 jobs:
   e2e-wrangler-test:
-    name: ${{ format('Wrangler ({0})', matrix.label) }}
+    name: ${{ format('Wrangler ({0})', matrix.description) }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-wrangler
       cancel-in-progress: true
@@ -17,13 +16,13 @@ jobs:
       matrix:
         include:
           - os: macos-13
-            label: v20, macOS
+            description: v20, macOS
             node: 20.19.1
           - os: windows-2022
-            label: v20, Windows
+            description: v20, Windows
             node: 20.19.1
           - os: ubuntu-22.04-arm
-            label: v20, Linux
+            description: v20, Linux
             node: 20.19.1
 
     runs-on: ${{ matrix.os }}
@@ -72,7 +71,7 @@ jobs:
           path: .turbo/runs
 
   e2e-vite-test:
-    name: ${{ format('Vite ({0})', matrix.label) }}
+    name: ${{ format('Vite ({0})', matrix.description) }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-vite
       cancel-in-progress: true
@@ -81,13 +80,13 @@ jobs:
       matrix:
         include:
           - os: macos-13
-            label: v20, macOS
+            description: v20, macOS
             node: 20.19.1
           - os: windows-2022
-            label: v20, Windows
+            description: v20, Windows
             node: 20.19.1
           - os: ubuntu-22.04-arm
-            label: v20, Linux
+            description: v20, Linux
             node: 20.19.1
     runs-on: ${{ matrix.os }}
     steps:
