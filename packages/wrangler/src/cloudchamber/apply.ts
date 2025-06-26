@@ -21,8 +21,13 @@ import {
 import { formatConfigSnippet } from "../config";
 import { FatalError, UserError } from "../errors";
 import { getAccountId } from "../user";
-import { cleanForInstanceType, promiseSpinner } from "./common";
+import { promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
+import {
+	checkInstanceTypeAgainstLimits,
+	cleanForInstanceType,
+} from "./instancetype/instancetype";
+import { loadAccount } from "./locations";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";
 import type {
@@ -533,11 +538,16 @@ export async function apply(
 			appConfigNoDefaults.configuration.image = application.configuration.image;
 		}
 
+		const account = await loadAccount();
 		const appConfig = containerAppToCreateApplication(
 			appConfigNoDefaults,
 			config.observability,
 			application,
 			args.skipDefaults
+		);
+		await checkInstanceTypeAgainstLimits(
+			appConfig.configuration.instance_type,
+			account
 		);
 
 		if (application !== undefined && application !== null) {

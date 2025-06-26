@@ -12,9 +12,10 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
-import { mockAccount } from "./utils";
 import type {
+	AccountLimit,
 	Application,
+	CompleteAccountCustomer,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 } from "@cloudflare/containers-shared";
@@ -45,6 +46,18 @@ function mockCreateApplication(
 				}
 				expect(body).toHaveProperty("instances");
 				return HttpResponse.json(response);
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockAccount(account: CompleteAccountCustomer) {
+	msw.use(
+		http.get(
+			"*/me",
+			async () => {
+				return HttpResponse.json(account);
 			},
 			{ once: true }
 		)
@@ -91,7 +104,17 @@ describe("cloudchamber apply", () => {
 
 	mockAccountId();
 	mockApiToken();
-	beforeEach(mockAccount);
+	beforeEach(() => {
+		mockAccount({
+			external_account_id: "test_account_id",
+			// set limits to allow all instance types
+			limits: {
+				disk_mb_per_deployment: 4000,
+				memory_mib_per_deployment: 4096,
+				vcpu_per_deployment: 1,
+			} as AccountLimit,
+		} as CompleteAccountCustomer);
+	});
 	runInTempDir();
 	afterEach(() => {
 		patchConsole(() => {});
