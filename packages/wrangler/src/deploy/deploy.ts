@@ -11,8 +11,10 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { deployContainers, maybeBuildContainer } from "../cloudchamber/deploy";
 import { configFileName, formatConfigSnippet } from "../config";
+import { containersScope } from "../containers";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -30,6 +32,7 @@ import { getMigrationsToUpload } from "../durable";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -786,6 +789,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		if (props.dryRun) {
 			if (config.containers) {
+				// Set up OpenAPI configuration for container building in dry-run mode
+				// This is needed because maybeBuildContainer calls loadAccount() which requires API access
+				await fillOpenAPIConfiguration(
+					config,
+					isNonInteractiveOrCI(),
+					containersScope
+				);
+
 				for (const container of config.containers) {
 					await maybeBuildContainer(
 						container,

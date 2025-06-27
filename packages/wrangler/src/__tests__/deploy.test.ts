@@ -11084,6 +11084,159 @@ export default{
 				}
 			`);
 		});
+
+		it("should not fail with 'Failed to parse URL from /me' error when using containers with Dockerfile in dry-run", async () => {
+			// This test ensures that the fix for the container dry-run URL parsing error works
+			// Previously, dry-run with containers + Dockerfile would fail with "Failed to parse URL from /me"
+			// because OpenAPI configuration wasn't set up before making API calls during container building
+
+			// Set up Docker binary path (required for container tests)
+			vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
+
+			// Mock Docker commands that would be called during container building
+			function defaultChildProcess() {
+				return {
+					stderr: Buffer.from([]),
+					stdout: Buffer.from("i promise I am a successful process"),
+					on: function (reason: string, cbPassed: (code: number) => unknown) {
+						if (reason === "close") {
+							cbPassed(0);
+						}
+						return this;
+					},
+				} as unknown as ChildProcess;
+			}
+
+			vi.mocked(spawn)
+				// Mock docker info command
+				.mockImplementationOnce((cmd, args) => {
+					expect(cmd).toBe("/usr/bin/docker");
+					expect(args).toEqual(["info"]);
+					return defaultChildProcess();
+				})
+				// Mock docker build command
+				.mockImplementationOnce((cmd, args) => {
+					expect(cmd).toBe("/usr/bin/docker");
+					// In dry-run mode, we expect docker build to be called but not push
+					expect(args[0]).toBe("build");
+					let dockerfile = "";
+					const readable = new Writable({
+						write(chunk) {
+							dockerfile += chunk;
+						},
+						final() {},
+					});
+					return {
+						pid: -1,
+						error: undefined,
+						stderr: Buffer.from([]),
+						stdout: Buffer.from("i promise I am a successful docker build"),
+						stdin: readable,
+						status: 0,
+						signal: null,
+						output: [null],
+						on: (reason: string, cbPassed: (code: number) => unknown) => {
+							if (reason === "exit") {
+								expect(dockerfile).toEqual(
+									"FROM node:18-alpine\nCMD echo 'test'"
+								);
+								cbPassed(0);
+							}
+						},
+					} as unknown as ChildProcess;
+				})
+				// Mock docker image inspect command
+				.mockImplementationOnce((cmd, args) => {
+					expect(cmd).toBe("/usr/bin/docker");
+					expect(args[0]).toBe("image");
+					expect(args[1]).toBe("inspect");
+
+					const stdout = new PassThrough();
+					const stderr = new PassThrough();
+
+					const child = {
+						stdout,
+						stderr,
+						on(event: string, cb: (code: number) => void) {
+							if (event === "close") {
+								setImmediate(() => cb(0));
+							}
+							return this;
+						},
+					};
+
+					// Simulate docker image inspect output
+					setImmediate(() => {
+						stdout.emit("data", `123456 4 []`);
+					});
+
+					return child as unknown as ChildProcess;
+				});
+
+			writeWranglerConfig({
+				durable_objects: {
+					bindings: [
+						{
+							name: "CONTAINER_BINDING",
+							class_name: "TestContainer",
+						},
+					],
+				},
+				containers: [
+					{
+						name: "test-container",
+						class_name: "TestContainer",
+						image: "./Dockerfile", // This is the key - local Dockerfile that triggers the build
+						max_instances: 10,
+					},
+				],
+				migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+			});
+
+			fs.writeFileSync(
+				"index.js",
+				`export class TestContainer {}; export default {
+					async fetch(request) {
+						return new Response('Hello from container!');
+					},
+				};`
+			);
+
+			// Create a simple Dockerfile
+			fs.writeFileSync("Dockerfile", "FROM node:18-alpine\nCMD echo 'test'");
+
+			// Mock the necessary CloudChamber account API calls
+			const { mockAccountV4 } = await import("./cloudchamber/utils");
+			mockAccountV4(["containers:write"]);
+
+			// Also mock the CloudChamber account endpoint specifically that loadAccount() calls
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/cloudchamber/account",
+					() => {
+						return HttpResponse.json({
+							success: true,
+							result: {
+								external_account_id: "test-account-id",
+								account_tag: "test-account",
+								locations: [],
+								limits: {
+									disk_mb_per_deployment: 2000,
+								},
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			// This should NOT fail with "Failed to parse URL from /me" error
+			// The fix ensures OpenAPI configuration is set up before container building in dry-run
+			await runWrangler("deploy index.js --dry-run");
+
+			expect(std.out).toContain("--dry-run: exiting now.");
+			expect(std.err).not.toContain("Failed to parse URL from /me");
+		});
 	});
 
 	describe("--node-compat", () => {
