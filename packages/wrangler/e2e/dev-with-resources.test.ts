@@ -55,7 +55,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 						if (pathname === "/") {
 							return new Response("modules");
 						} else if (pathname === "/error") {
-							throw new Error("monkey");
+							throw new Error("🙈");
 						} else {
 							return new Response(null, { status: 404 });
 						}
@@ -76,10 +76,10 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 		});
 		const text = await res.text();
 		if (isLocal) {
-			expect(text).toContain("Error: monkey");
+			expect(text).toContain("Error: 🙈");
 			expect(text).toContain("src/index.ts:7:10");
 		}
-		await worker.readUntil(/Error: monkey/, 30_000);
+		await worker.readUntil(/Error: 🙈/, 30_000);
 		await worker.readUntil(/src\/index\.ts:7:10/, 30_000);
 	});
 
@@ -96,7 +96,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 					if (pathname === "/") {
 						event.respondWith(new Response("service worker"));
 					} else if (pathname === "/error") {
-						throw new Error("monkey");
+						throw new Error("🙈");
 					} else {
 						event.respondWith(new Response(null, { status: 404 }));
 					}
@@ -115,10 +115,10 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 		});
 		const text = await res.text();
 		if (isLocal) {
-			expect(text).toContain("Error: monkey");
+			expect(text).toContain("Error: 🙈");
 			expect(text).toContain("src/index.ts:6:9");
 		}
-		await worker.readUntil(/Error: monkey/, 30_000);
+		await worker.readUntil(/Error: 🙈/, 30_000);
 		await worker.readUntil(/src\/index\.ts:6:9/, 30_000);
 	});
 
