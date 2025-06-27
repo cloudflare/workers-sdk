@@ -44,7 +44,8 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Bump package versions
-        run: node tools/changeset-version.js
+        if: github.event.pull_request.head.repo.owner.login == 'cloudflare'
+        run: node .github/changeset-version.js
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
@@ -107,7 +108,8 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Bump package versions
-        run: node tools/changeset-version.js
+        if: github.event.pull_request.head.repo.owner.login == 'cloudflare'
+        run: node .github/changeset-version.js
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
