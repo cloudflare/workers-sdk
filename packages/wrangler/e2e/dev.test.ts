@@ -1014,7 +1014,7 @@ describe("zone selection", () => {
 		const text = await fetchText(url);
 
 		expect(text).toMatchInlineSnapshot(
-			`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
+			`"https://wrangler-testing.testing.devprod.cloudflare.dev/hello"`
 		);
 	});
 
