@@ -130,7 +130,7 @@ export class CallSite implements NodeJS.CallSite {
 	getMethodName(): string | null {
 		return this.opts.methodName;
 	}
-	getFileName(): string | undefined {
+	getFileName(): string | null {
 		return this.opts.fileName ?? undefined;
 	}
 	getScriptNameOrSourceURL(): string {

@@ -32,7 +32,6 @@ describe("findPackageNames()", () => {
 				"@cloudflare/workflows-shared",
 				"@cloudflare/containers-shared",
 				"@cloudflare/vite-plugin",
-				"cloudflare-workers-bindings-extension",
 				"create-cloudflare",
 				"devprod-status-bot",
 				"edge-preview-authenticated-proxy",
