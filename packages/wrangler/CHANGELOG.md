@@ -1,5 +1,46 @@
 # wrangler
 
+## 4.22.0
+
+### Minor Changes
+
+- [#7871](https://github.com/cloudflare/workers-sdk/pull/7871) [`f2a8d4a`](https://github.com/cloudflare/workers-sdk/commit/f2a8d4a91e64f991882100639577ed529d28feb4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add support for assets bindings to `getPlatformProxy`
+
+  this change makes sure that that `getPlatformProxy`, when the input configuration
+  file contains an assets field, correctly returns the appropriate asset binding proxy
+
+  example:
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+  	"name": "my-worker",
+  	"assets": {
+  		"directory": "./public/",
+  		"binding": "ASSETS",
+  	},
+  }
+  ```
+
+  ```js
+  import { getPlatformProxy } from "wrangler";
+
+  const { env, dispose } = await getPlatformProxy();
+
+  const text = await (await env.ASSETS.fetch("http://0.0.0.0/file.txt")).text();
+  console.log(text); // logs the content of file.txt
+
+  await dispose();
+  ```
+
+### Patch Changes
+
+- [#9717](https://github.com/cloudflare/workers-sdk/pull/9717) [`d2f2f72`](https://github.com/cloudflare/workers-sdk/commit/d2f2f726a15a973285e161a36740b535cefcaafa) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Containers should default to a "dev" instance type when no instance type is specified in the wrangler config
+
+- [#9620](https://github.com/cloudflare/workers-sdk/pull/9620) [`1b967ea`](https://github.com/cloudflare/workers-sdk/commit/1b967ea0ef6f794b202d4bc74aac3aa0ee07f9a5) Thanks [@gpanders](https://github.com/gpanders)! - Simplify containers images list output format
+
+- [#9684](https://github.com/cloudflare/workers-sdk/pull/9684) [`94a340e`](https://github.com/cloudflare/workers-sdk/commit/94a340e1215b3ac5fe9d56b57e2ddaa7c8263be7) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Select only successfully deployed deployments when tailing.
+
 ## 4.21.2
 
 ### Patch Changes
