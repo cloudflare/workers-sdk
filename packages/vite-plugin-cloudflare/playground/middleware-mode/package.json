@@ -8,7 +8,7 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250617.0",
+		"@cloudflare/workers-types": "^4.20250620.0",
 		"@types/express": "^5.0.1",
 		"express": "^5.1.0",
 		"typescript": "catalog:default",

@@ -73,7 +73,7 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.17",
-		"workerd": "1.20250617.0"
+		"workerd": "1.20250620.0"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -84,7 +84,7 @@
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250617.0",
+		"@cloudflare/workers-types": "^4.20250620.0",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@sentry/node": "^7.86.0",
@@ -159,7 +159,7 @@
 		"yargs": "^17.7.2"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20250617.0"
+		"@cloudflare/workers-types": "^4.20250620.0"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {
