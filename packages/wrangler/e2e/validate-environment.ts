@@ -15,9 +15,4 @@ assert(
 	"You must provide a CLOUDFLARE_API_TOKEN as an environment variable"
 );
 
-assert(
-	process.env.CLOUDFLARE_ACCOUNT_ID === "8d783f274e1f82dc46744c297b015a2f",
-	"You must run Wrangler's e2e tests against DevProd Testing"
-);
-
 export const setup = () => {};

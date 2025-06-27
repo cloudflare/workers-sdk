@@ -353,7 +353,8 @@ WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLO
 1. Go to ["My Profile" > "User API Tokens"](https://dash.cloudflare.com/profile/api-tokens)
 1. Click "Create Token"
 1. Use the "Edit Cloudflare Workers" template
-1. Set "Account Resources" to "Include" "DevProd Testing" (you can use any account you have access to)
+1. Set "Account Resources" to "Include" the account you want to use for running the test
+   (Note for the internal wrangler team, here we use the "DevProd Testing" account)
 1. Set "Zone Resources" to "All zones from an account" and the same account as above
 1. Click "Continue to summary"
 1. Verify your token works by running the curl command provided
