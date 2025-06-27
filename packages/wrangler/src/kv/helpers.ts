@@ -17,6 +17,9 @@ const API_MAX = 10000;
 // The const below are lowered from the API's true capacity to help avoid
 // hammering it with large requests.
 export const BATCH_KEY_MAX = API_MAX / 10;
+// Limit the number of errors to logs during a bulk put.
+// They might end up filling memory for invalid inputs.
+export const BATCH_MAX_ERRORS_WARNINGS = 12;
 
 type KvArgs = {
 	binding?: string;

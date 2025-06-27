@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
+import { BATCH_MAX_ERRORS_WARNINGS } from "../kv/helpers";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -1742,6 +1743,81 @@ describe("wrangler", () => {
 
 			          "
 		        `);
+			});
+
+			it("should cap the number of errors", async () => {
+				const keyValues = [...Array(BATCH_MAX_ERRORS_WARNINGS + 5).keys()];
+
+				writeFileSync("./keys.json", JSON.stringify(keyValues));
+				await expect(
+					runWrangler(
+						`kv bulk put --remote --namespace-id some-namespace-id keys.json`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Unexpected JSON input from "keys.json".
+					Each item in the array should be an object that matches:
+
+					interface KeyValue {
+					  key: string;
+					  value: string;
+					  expiration?: number;
+					  expiration_ttl?: number;
+					  metadata?: object;
+					  base64?: boolean;
+					}
+
+					The item at index 0 is 0
+					The item at index 1 is 1
+					The item at index 2 is 2
+					The item at index 3 is 3
+					The item at index 4 is 4
+					The item at index 5 is 5
+					The item at index 6 is 6
+					The item at index 7 is 7
+					The item at index 8 is 8
+					The item at index 9 is 9
+					The item at index 10 is 10
+					The item at index 11 is 11
+					...]
+				`);
+
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should cap the number of warnings", async () => {
+				const keyValues: KeyValue[] = new Array(
+					BATCH_MAX_ERRORS_WARNINGS + 5
+				).fill({
+					key: "k",
+					value: "v",
+					invalid: true,
+				});
+				writeFileSync("./keys.json", JSON.stringify(keyValues));
+				const requests = mockPutRequest("some-namespace-id", keyValues);
+				await runWrangler(
+					`kv bulk put --remote --namespace-id some-namespace-id keys.json`
+				);
+				expect(requests.count).toEqual(1);
+
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in \\"keys.json\\".[0m
+
+					  The item at index 0 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 1 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 2 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 3 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 4 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 5 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 6 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 7 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 8 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 9 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 10 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 11 contains unexpected properties: [\\"invalid\\"].
+					  ...
+
+					"
+				`);
 			});
 		});
 
