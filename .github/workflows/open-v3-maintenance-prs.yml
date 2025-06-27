@@ -63,4 +63,4 @@ jobs:
         with:
           header: v3-backport
           message: |
-            These changes have been automatically backported to Wrangler v3 :tada: You can view the automatically updated PR at https://github.com/cloudflare/workers-sdk/compare/v3-maintenance...v3-maintenance-${{ github.event.number }}. Please check that PR for correctness, and make sure it's merged after this one. Thank you for helping us keep Wrangler v3 supported!
+            These changes have been automatically backported to Wrangler v3 :tada: You can view the automatically updated PR at https://github.com/cloudflare/workers-sdk/compare/v3-maintenance...v3-backport-${{ github.event.number }}. Please check that PR for correctness, and make sure it's merged after this one. Thank you for helping us keep Wrangler v3 supported!
