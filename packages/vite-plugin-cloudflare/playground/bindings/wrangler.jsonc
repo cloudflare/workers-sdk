@@ -1,0 +1,16 @@
+{
+	"name": "worker",
+	"main": "./src/index.ts",
+	"compatibility_date": "2024-12-30",
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "test-kv-id",
+		},
+	],
+	"unsafe_hello_world": [
+		{
+			"binding": "HELLO_WORLD",
+		},
+	],
+}

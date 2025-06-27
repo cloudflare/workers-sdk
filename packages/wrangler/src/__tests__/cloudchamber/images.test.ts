@@ -230,15 +230,13 @@ describe("cloudchamber image list", () => {
 		await runWrangler("cloudchamber images list");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"┌─┬─┐
-			│ REPOSITORY │ TAG │
-			├─┼─┤
-			│ one │ hundred ten │
-			├─┼─┤
-			│ two │ thousand twenty │
-			├─┼─┤
-			│ three │ million thirty │
-			└─┴─┘"
+			"REPOSITORY  TAG
+			one         hundred
+			one         ten
+			two         thousand
+			two         twenty
+			three       million
+			three       thirty"
 		`);
 	});
 	it("should list images with a filter", async () => {
@@ -276,11 +274,9 @@ describe("cloudchamber image list", () => {
 		await runWrangler("cloudchamber images list --filter '^two$'");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"┌─┬─┐
-			│ REPOSITORY │ TAG │
-			├─┼─┤
-			│ two │ thousand twenty │
-			└─┴─┘"
+			"REPOSITORY  TAG
+			two         thousand
+			two         twenty"
 		`);
 	});
 	it("should filter out repos with no non-sha tags", async () => {
@@ -320,15 +316,13 @@ describe("cloudchamber image list", () => {
 		await runWrangler("cloudchamber images list");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"┌─┬─┐
-			│ REPOSITORY │ TAG │
-			├─┼─┤
-			│ one │ hundred ten │
-			├─┼─┤
-			│ two │ thousand twenty │
-			├─┼─┤
-			│ three │ million thirty │
-			└─┴─┘"
+			"REPOSITORY  TAG
+			one         hundred
+			one         ten
+			two         thousand
+			two         twenty
+			three       million
+			three       thirty"
 		`);
 	});
 	it("should list repos with json flag set", async () => {

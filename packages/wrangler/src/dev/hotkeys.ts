@@ -1,4 +1,6 @@
 import assert from "assert";
+import { randomUUID } from "crypto";
+import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -31,6 +33,30 @@ export default function registerDevHotKeys(
 					parseInt(inspectorUrl.port),
 					devEnv.config.latestConfig?.name
 				);
+			},
+		},
+		{
+			keys: ["r"],
+			label: "rebuild container(s)",
+			disabled: () => {
+				return (
+					!devEnv.config.latestConfig?.dev?.enableContainers ||
+					!devEnv.config.latestConfig?.containers?.length
+				);
+			},
+			handler: async () => {
+				const newContainerBuildId = randomUUID().slice(0, 8);
+				// cleanup any existing containers
+				devEnv.runtimes.map(async (runtime) => {
+					if (runtime instanceof LocalRuntimeController) {
+						await runtime.cleanupContainers();
+					}
+				});
+
+				// updating the build ID will trigger a rebuild of the containers
+				await devEnv.config.patch({
+					dev: { containerBuildId: newContainerBuildId },
+				});
 			},
 		},
 		{

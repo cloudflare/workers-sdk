@@ -1,6 +1,8 @@
-import type { RouterConfig } from "../../utils/types";
+import type { EyeballRouterConfig, RouterConfig } from "../../utils/types";
 
-export const applyConfigurationDefaults = (
+type RequiredEyeballRouterConfig = Required<Exclude<EyeballRouterConfig, null>>;
+
+export const applyRouterConfigDefaults = (
 	configuration?: RouterConfig
 ): Required<RouterConfig> => {
 	return {
@@ -13,5 +15,13 @@ export const applyConfigurationDefaults = (
 		static_routing: configuration?.static_routing ?? {
 			user_worker: [],
 		},
+	};
+};
+
+export const applyEyeballConfigDefaults = (
+	eyeballConfiguration?: EyeballRouterConfig
+): RequiredEyeballRouterConfig => {
+	return {
+		limitedAssetsOnly: eyeballConfiguration?.limitedAssetsOnly ?? false,
 	};
 };

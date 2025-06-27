@@ -5,12 +5,18 @@ import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
 	kUnsafeEphemeralUniqueKey,
-	MixedModeConnectionString,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
+	RemoteProxyConnectionString,
 	UnsafeUniqueKey,
 } from "../shared";
+
+// Options for a container attached to the DO
+export const DOContainerOptionsSchema = z.object({
+	imageName: z.string(),
+});
+export type DOContainerOptions = z.infer<typeof DOContainerOptionsSchema>;
 
 export const DurableObjectsOptionsSchema = z.object({
 	durableObjects: z
@@ -30,9 +36,10 @@ export const DurableObjectsOptionsSchema = z.object({
 						.optional(),
 					// Prevents the Durable Object being evicted.
 					unsafePreventEviction: z.boolean().optional(),
-					mixedModeConnectionString: z
-						.custom<MixedModeConnectionString>()
+					remoteProxyConnectionString: z
+						.custom<RemoteProxyConnectionString>()
 						.optional(),
+					container: z.custom<DOContainerOptions>().optional(),
 				}),
 			])
 		)
@@ -53,7 +60,8 @@ export function normaliseDurableObject(
 	enableSql: boolean | undefined;
 	unsafeUniqueKey: UnsafeUniqueKey | undefined;
 	unsafePreventEviction: boolean | undefined;
-	mixedModeConnectionString: MixedModeConnectionString | undefined;
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined;
+	container: DOContainerOptions | undefined;
 } {
 	const isObject = typeof designator === "object";
 	const className = isObject ? designator.className : designator;
@@ -67,9 +75,10 @@ export function normaliseDurableObject(
 	const unsafePreventEviction = isObject
 		? designator.unsafePreventEviction
 		: undefined;
-	const mixedModeConnectionString = isObject
-		? designator.mixedModeConnectionString
+	const remoteProxyConnectionString = isObject
+		? designator.remoteProxyConnectionString
 		: undefined;
+	const container = isObject ? designator.container : undefined;
 	return {
 		className,
 		scriptName,
@@ -77,7 +86,8 @@ export function normaliseDurableObject(
 		enableSql,
 		unsafeUniqueKey,
 		unsafePreventEviction,
-		mixedModeConnectionString,
+		remoteProxyConnectionString,
+		container,
 	};
 }
 

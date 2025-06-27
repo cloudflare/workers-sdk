@@ -1,8 +1,7 @@
 {
-	"name": "api",
+	"name": "worker",
 	"main": "./api/index.ts",
-	"compatibility_date": "2024-12-30",
-	"compatibility_flags": ["assets_navigation_prefers_asset_serving"],
+	"compatibility_date": "2025-06-04",
 	"assets": {
 		"not_found_handling": "single-page-application",
 		"binding": "ASSETS",

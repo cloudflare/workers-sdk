@@ -23,6 +23,7 @@ import {
 	sanitisePath,
 } from "../../workers";
 import { UnsafeUniqueKey } from "./constants";
+import type { DOContainerOptions } from "../do";
 
 export const DEFAULT_PERSIST_ROOT = ".mf";
 
@@ -47,6 +48,7 @@ export type DurableObjectClassNames = Map<
 			enableSql?: boolean;
 			unsafeUniqueKey?: UnsafeUniqueKey;
 			unsafePreventEviction?: boolean;
+			container?: DOContainerOptions;
 		}
 	>
 >;
@@ -140,8 +142,8 @@ export function namespaceKeys(
 	}
 }
 
-export type MixedModeConnectionString = URL & {
-	__brand: "MixedModeConnectionString";
+export type RemoteProxyConnectionString = URL & {
+	__brand: "RemoteProxyConnectionString";
 };
 
 export function namespaceEntries(
@@ -149,12 +151,15 @@ export function namespaceEntries(
 		| Record<
 				string,
 				| string
-				| { id: string; mixedModeConnectionString?: MixedModeConnectionString }
+				| {
+						id: string;
+						remoteProxyConnectionString?: RemoteProxyConnectionString;
+				  }
 		  >
 		| string[]
 ): [
 	bindingName: string,
-	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 ][] {
 	if (Array.isArray(namespaces)) {
 		return namespaces.map((bindingName) => [bindingName, { id: bindingName }]);
@@ -167,7 +172,7 @@ export function namespaceEntries(
 				key,
 				{
 					id: value.id,
-					mixedModeConnectionString: value.mixedModeConnectionString,
+					remoteProxyConnectionString: value.remoteProxyConnectionString,
 				},
 			];
 		});

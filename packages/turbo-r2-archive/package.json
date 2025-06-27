@@ -1,6 +1,6 @@
 {
 	"name": "turbo-r2-archive",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"private": true,
 	"description": "TurboRepo API Compliant Remote Caching w/ Cloudflare Workers using R2",
 	"keywords": [

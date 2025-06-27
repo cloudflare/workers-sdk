@@ -10,7 +10,7 @@ export interface CommonYargsOptions {
 	config: string | undefined;
 	env: string | undefined;
 	"experimental-provision": boolean | undefined;
-	"experimental-mixed-mode": boolean | undefined;
+	"experimental-remote-bindings": boolean | undefined;
 }
 
 /**

@@ -43,7 +43,7 @@ export class MethodNotAllowedResponse extends Response {
 export class InternalServerErrorResponse extends Response {
 	static readonly status = 500;
 
-	constructor(err: Error, init?: ResponseInit) {
+	constructor(_: Error, init?: ResponseInit) {
 		super(null, {
 			...init,
 			status: InternalServerErrorResponse.status,

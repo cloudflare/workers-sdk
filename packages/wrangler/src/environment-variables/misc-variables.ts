@@ -241,13 +241,25 @@ export const getRegistryPath = getEnvironmentVariableFactory({
 });
 
 /**
- * `WRANGLER_CONTAINERS_DOCKER_PATH` specifies the path to a docker binary.
+ * `WRANGLER_DOCKER_BIN` specifies the path to a docker binary.
  *
  * By default it's `docker`.
  */
 export const getDockerPath = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_CONTAINERS_DOCKER_PATH",
+	variableName: "WRANGLER_DOCKER_BIN",
 	defaultValue() {
 		return "docker";
+	},
+});
+
+/**
+ * `WRANGLER_DOCKER_HOST` specifies the Docker socket to connect to.
+ */
+export const getDockerHost = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_DOCKER_HOST",
+	defaultValue() {
+		return process.platform === "win32"
+			? "//./pipe/docker_engine"
+			: "unix:///var/run/docker.sock";
 	},
 });

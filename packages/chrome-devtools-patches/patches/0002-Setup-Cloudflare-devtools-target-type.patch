@@ -1,47 +1,48 @@
-From 06c925f4b3b765ac35d77ed504b626656a89581c Mon Sep 17 00:00:00 2001
+From 0b2f719ec57d77ac8837ffa62293b3c1cb97551f Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 16:06:06 +0100
 Subject: [PATCH 2/8] Setup Cloudflare devtools target type
 
 ---
- front_end/core/sdk/Target.ts           | 4 ++++
+ front_end/core/sdk/Target.ts           | 5 +++++
  front_end/entrypoints/js_app/js_app.ts | 2 +-
- 2 files changed, 5 insertions(+), 1 deletion(-)
+ 2 files changed, 6 insertions(+), 1 deletion(-)
 
 diff --git a/front_end/core/sdk/Target.ts b/front_end/core/sdk/Target.ts
-index 0b3f0f9def..ee384b197e 100644
+index 2437d6aac1..e9a3318268 100644
 --- a/front_end/core/sdk/Target.ts
 +++ b/front_end/core/sdk/Target.ts
-@@ -86,6 +86,9 @@ export class Target extends ProtocolClient.InspectorBackend.TargetBase {
-       case Type.TAB:
-         this.#capabilitiesMask = Capability.TARGET | Capability.TRACING;
+@@ -98,6 +98,10 @@ export class Target extends ProtocolClient.InspectorBackend.TargetBase {
          break;
+       case Type.NODE_WORKER:
+         this.#capabilitiesMask = Capability.JS | Capability.NETWORK | Capability.TARGET;
++        break;
 +      case Type.CLOUDFLARE:
 +        this.#capabilitiesMask = Capability.JS | Capability.NETWORK;
 +        break;
      }
      this.#typeInternal = type;
      this.#parentTargetInternal = parentTarget;
-@@ -260,6 +263,7 @@ export enum Type {
+@@ -298,6 +302,7 @@ export enum Type {
    AUCTION_WORKLET = 'auction-worklet',
    WORKLET = 'worklet',
    TAB = 'tab',
 +  CLOUDFLARE = 'cloudflare',
+   NODE_WORKER = 'node-worker',
  }
  
- export const enum Capability {
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
-index 6a154030b6..1a6644df92 100644
+index 2dbb4eca42..814bc1fc70 100644
 --- a/front_end/entrypoints/js_app/js_app.ts
 +++ b/front_end/entrypoints/js_app/js_app.ts
-@@ -60,7 +60,7 @@ export class JsMainImpl implements Common.Runnable.Runnable {
+@@ -61,7 +61,7 @@ export class JsMainImpl implements Common.Runnable.Runnable {
      Host.userMetrics.actionTaken(Host.UserMetrics.Action.ConnectToNodeJSDirectly);
      void SDK.Connections.initMainConnection(async () => {
        const target = SDK.TargetManager.TargetManager.instance().createTarget(
 -          'main', i18nString(UIStrings.main), SDK.Target.Type.NODE, null);
 +          'main', i18nString(UIStrings.main), SDK.Target.Type.CLOUDFLARE, null);
        void target.runtimeAgent().invoke_runIfWaitingForDebugger();
-     }, Components.TargetDetachedDialog.TargetDetachedDialog.webSocketConnectionLost);
+     }, Components.TargetDetachedDialog.TargetDetachedDialog.connectionLost);
    }
 -- 
 2.39.5 (Apple Git-154)

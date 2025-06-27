@@ -1,0 +1,19 @@
+{
+	"name": "@fixture/get-platform-proxy-remote-bindings-node-test",
+	"private": true,
+	"description": "",
+	"license": "ISC",
+	"author": "",
+	"type": "module",
+	"scripts": {
+		"test:ci": "node --test"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250617.0",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

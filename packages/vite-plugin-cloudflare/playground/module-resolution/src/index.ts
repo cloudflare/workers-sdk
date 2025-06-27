@@ -2,19 +2,27 @@ const modules = import.meta.glob("../src/**/*.ts");
 
 export default {
 	async fetch(request) {
-		const url = new URL(request.url);
-		const path = url.pathname;
+		const { pathname } = new URL(request.url);
 
-		const filePath = `${path.replace(/^\//, "./")}.ts`;
+		if (pathname === "/@alias/test") {
+			const { test } = await import("@alias/test");
+			return test();
+		}
+
+		if (pathname === "/optimize-deps/exclude") {
+			const { virtualExport } = await import(
+				//@ts-ignore
+				"@playground/module-resolution-excludes"
+			);
+
+			return new Response(virtualExport);
+		}
+
+		const filePath = `${pathname.replace(/^\//, "./")}.ts`;
 
 		if (modules[filePath]) {
 			const mod = await modules[filePath]();
 			return Response.json((mod as { default: unknown }).default);
-		}
-
-		if (path === "/@alias/test") {
-			const { test } = await import("@alias/test");
-			return test();
 		}
 
 		const html = `<!DOCTYPE html>
@@ -26,7 +34,11 @@ export default {
               <hr />
               <h2>Available Routes</h2>
               <ul>
-              ${[...Object.keys(modules), "/@alias/test"]
+              ${[
+								...Object.keys(modules),
+								"/@alias/test",
+								"optimize-deps/exclude",
+							]
 								.map((path) => path.replace(/^\.\//, "/").replace(/\.ts$/, ""))
 								.map(
 									(route) =>

@@ -12,6 +12,7 @@ import type {
 	DefinitionTree,
 	DefinitionTreeNode,
 	InternalDefinition,
+	Metadata,
 	NamedArgDefinitions,
 	NamespaceDefinition,
 } from "./types";
@@ -461,10 +462,10 @@ export class CommandRegistry {
 				` [${def.metadata.status}]`
 			);
 
-			const indefiniteArticle = "aeiou".includes(def.metadata.status[0])
-				? "an"
-				: "a";
-			def.metadata.statusMessage ??= `🚧 \`${def.command}\` is ${indefiniteArticle} ${def.metadata.status} command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose`;
+			def.metadata.statusMessage ??= constructStatusMessage(
+				def.command,
+				def.metadata.status
+			);
 		}
 
 		if (def.type === "command") {
@@ -512,3 +513,11 @@ type RegisterCommand = (
 	def: InternalDefinition,
 	registerSubTreeCallback: () => void
 ) => void;
+
+export function constructStatusMessage(
+	command: string,
+	status: Metadata["status"]
+) {
+	const indefiniteArticle = "aeiou".includes(status[0]) ? "an" : "a";
+	return `🚧 \`${command}\` is ${indefiniteArticle} ${status} command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose`;
+}

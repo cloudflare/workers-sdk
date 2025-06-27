@@ -16,5 +16,6 @@ export type ModifyMeRequestBody = {
 		memory?: MemorySizeWithUnit;
 		memory_mib?: number;
 		vcpus?: number;
+		disk_mb?: number;
 	};
 };

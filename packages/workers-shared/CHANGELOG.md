@@ -1,5 +1,15 @@
 # @cloudflare/workers-shared
 
+## 0.18.0
+
+### Minor Changes
+
+- [#9661](https://github.com/cloudflare/workers-sdk/pull/9661) [`e216a76`](https://github.com/cloudflare/workers-sdk/commit/e216a76fba20acf06faad2d9b310a189fe3ccb08) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Limit free tier requests in the Router worker
+
+### Patch Changes
+
+- [#9635](https://github.com/cloudflare/workers-sdk/pull/9635) [`b066cf8`](https://github.com/cloudflare/workers-sdk/commit/b066cf836a5fc8436068be42bf74100c4bcd58ea) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Block possibly vulnerable requests to the router worker
+
 ## 0.17.6
 
 ### Patch Changes

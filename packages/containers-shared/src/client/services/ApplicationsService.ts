@@ -13,6 +13,8 @@ import type { ApplicationStatus } from "../models/ApplicationStatus";
 import type { CreateApplicationJobRequest } from "../models/CreateApplicationJobRequest";
 import type { CreateApplicationRequest } from "../models/CreateApplicationRequest";
 import type { CreateApplicationRolloutRequest } from "../models/CreateApplicationRolloutRequest";
+import type { DeploymentID } from "../models/DeploymentID";
+import type { DeploymentV2 } from "../models/DeploymentV2";
 import type { EmptyResponse } from "../models/EmptyResponse";
 import type { GenericMessageResponse } from "../models/GenericMessageResponse";
 import type { Image } from "../models/Image";
@@ -21,6 +23,7 @@ import type { ListApplications } from "../models/ListApplications";
 import type { ListDeploymentsV2 } from "../models/ListDeploymentsV2";
 import type { ModifyApplicationJobRequest } from "../models/ModifyApplicationJobRequest";
 import type { ModifyApplicationRequestBody } from "../models/ModifyApplicationRequestBody";
+import type { ModifyUserDeploymentConfiguration } from "../models/ModifyUserDeploymentConfiguration";
 import type { RolloutID } from "../models/RolloutID";
 import type { UpdateApplicationRolloutRequest } from "../models/UpdateApplicationRolloutRequest";
 import type { UpdateRolloutResponse } from "../models/UpdateRolloutResponse";
@@ -327,17 +330,25 @@ export class ApplicationsService {
 	 * List rollouts
 	 * List all rollouts within an application
 	 * @param applicationId
+	 * @param limit The amount of rollouts to return. By default it is all of them.
+	 * @param last The last rollout that was used to paginate
 	 * @returns ApplicationRollout
 	 * @throws ApiError
 	 */
 	public static listApplicationRollouts(
-		applicationId: ApplicationID
+		applicationId: ApplicationID,
+		limit?: number,
+		last?: string
 	): CancelablePromise<Array<ApplicationRollout>> {
 		return __request(OpenAPI, {
 			method: "GET",
 			url: "/applications/{application_id}/rollouts",
 			path: {
 				application_id: applicationId,
+			},
+			query: {
+				limit: limit,
+				last: last,
 			},
 			errors: {
 				401: `Unauthorized`,
@@ -453,6 +464,67 @@ export class ApplicationsService {
 				401: `Unauthorized`,
 				404: `Response body when an Application is not found`,
 				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Get a specific deployment within an application
+	 * Get a deployment by its app and deployment IDs
+	 * @param applicationId
+	 * @param deploymentId
+	 * @returns DeploymentV2 Get a specific deployment along with its respective placements
+	 * @throws ApiError
+	 */
+	public static getApplicationsV3Deployment(
+		applicationId: ApplicationID,
+		deploymentId: DeploymentID
+	): CancelablePromise<DeploymentV2> {
+		return __request(OpenAPI, {
+			method: "GET",
+			url: "/applications/{application_id}/deployments/{deployment_id}",
+			path: {
+				application_id: applicationId,
+				deployment_id: deploymentId,
+			},
+			errors: {
+				400: `Unknown account`,
+				401: `Unauthorized`,
+				404: `Deployment not found`,
+				500: `Deployment Get Error`,
+			},
+		});
+	}
+
+	/**
+	 * Recreate an existing deployment within an application.
+	 * The given existing deployment is deleted and a replacement deployment is created. The latter retains some properties of the former that cannot be set by the client.
+	 *
+	 * @param applicationId
+	 * @param deploymentId
+	 * @param requestBody
+	 * @returns DeploymentV2 Deployment created
+	 * @throws ApiError
+	 */
+	public static recreateDeploymentV3(
+		applicationId: ApplicationID,
+		deploymentId: DeploymentID,
+		requestBody: ModifyUserDeploymentConfiguration
+	): CancelablePromise<DeploymentV2> {
+		return __request(OpenAPI, {
+			method: "POST",
+			url: "/applications/{application_id}/deployments/{deployment_id}/recreate",
+			path: {
+				application_id: applicationId,
+				deployment_id: deploymentId,
+			},
+			body: requestBody,
+			mediaType: "application/json",
+			errors: {
+				400: `Could not create the deployment because of input/limits reasons, more details in the error code`,
+				401: `Unauthorized`,
+				404: `Deployment not found`,
+				500: `Deployment Creation Error`,
 			},
 		});
 	}

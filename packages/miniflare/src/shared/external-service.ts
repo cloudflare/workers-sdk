@@ -6,7 +6,7 @@ import {
 	kCurrentWorker,
 	ServiceDesignatorSchema,
 } from "../plugins/core";
-import { MixedModeConnectionString } from "../plugins/shared";
+import { RemoteProxyConnectionString } from "../plugins/shared";
 import {
 	HttpOptions,
 	HttpOptions_Style,
@@ -21,24 +21,24 @@ export function normaliseServiceDesignator(
 ): {
 	serviceName: string | undefined;
 	entrypoint: string | undefined;
-	mixedModeConnectionString: MixedModeConnectionString | undefined;
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined;
 } {
 	let serviceName: string | undefined;
 	let entrypoint: string | undefined;
-	let mixedModeConnectionString: MixedModeConnectionString | undefined;
+	let remoteProxyConnectionString: RemoteProxyConnectionString | undefined;
 
 	if (typeof service === "string") {
 		serviceName = service;
 	} else if (typeof service === "object" && "name" in service) {
 		serviceName = service.name !== kCurrentWorker ? service.name : undefined;
 		entrypoint = service.entrypoint;
-		mixedModeConnectionString = service.mixedModeConnectionString;
+		remoteProxyConnectionString = service.remoteProxyConnectionString;
 	}
 
 	return {
 		serviceName,
 		entrypoint,
-		mixedModeConnectionString,
+		remoteProxyConnectionString,
 	};
 }
 

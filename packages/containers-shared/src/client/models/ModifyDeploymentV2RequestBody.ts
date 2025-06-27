@@ -9,6 +9,7 @@ import type { Disk } from "./Disk";
 import type { DNSConfiguration } from "./DNSConfiguration";
 import type { Entrypoint } from "./Entrypoint";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
+import type { InstanceType } from "./InstanceType";
 import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
 import type { Observability } from "./Observability";
@@ -34,6 +35,7 @@ export type ModifyDeploymentV2RequestBody = {
 	 * A list of objects with secret names and the their access types from the account
 	 */
 	secrets?: Array<DeploymentSecretMap>;
+	instance_type?: InstanceType;
 	/**
 	 * The new vcpu that the deployment will have from now on
 	 */
@@ -59,15 +61,6 @@ export type ModifyDeploymentV2RequestBody = {
 	 * Deployment labels
 	 */
 	labels?: Array<Label>;
-	/**
-	 * Deprecated in favor of gpu_memory_mib
-	 * @deprecated
-	 */
-	gpu_memory?: MemorySizeWithUnit;
-	/**
-	 * Specify the GPU memory to be used for the deployment. (Mandatory for gVisor deployments)
-	 */
-	gpu_memory_mib?: number;
 	command?: Command;
 	entrypoint?: Entrypoint;
 	dns?: DNSConfiguration;

@@ -33,6 +33,10 @@ type Data = {
 	userWorkerAhead?: boolean;
 	// double6 - Routing performed based on the _routes.json (if provided)
 	staticRoutingDecision?: STATIC_ROUTING_DECISION;
+	// double7 - Whether the request was blocked by abuse mitigation or not
+	abuseMitigationBlocked?: boolean;
+	// double8 - User worker invocation denied due to free tier limiting
+	userWorkerFreeTierLimiting?: boolean;
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -45,6 +49,8 @@ type Data = {
 	version?: string;
 	// blob5 - Region of the colo (e.g. WEUR)
 	coloRegion?: string;
+	// blob6 - URL for analysis
+	abuseMitigationURLHost?: string;
 };
 
 export class Analytics {
@@ -88,6 +94,8 @@ export class Analytics {
 					? -1
 					: Number(this.data.userWorkerAhead),
 				this.data.staticRoutingDecision ?? STATIC_ROUTING_DECISION.NOT_PROVIDED, // double6
+				this.data.abuseMitigationBlocked ? 1 : 0, // double7
+				this.data.userWorkerFreeTierLimiting ? 1 : 0, // double8
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes
@@ -95,6 +103,7 @@ export class Analytics {
 				this.data.error?.substring(0, 256), // blob3 - trim to 256 bytes
 				this.data.version, // blob4
 				this.data.coloRegion, // blob5
+				this.data.abuseMitigationURLHost, // blob6
 			],
 		});
 	}

@@ -1,5 +1,17 @@
 # @cloudflare/chrome-devtools-patches
 
+## 0.1.4
+
+### Patch Changes
+
+- [#9649](https://github.com/cloudflare/workers-sdk/pull/9649) [`ec9b417`](https://github.com/cloudflare/workers-sdk/commit/ec9b417f8ed711e7b5044410e83d781f123a6a62) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - patch release to trigger a test release
+
+## 0.1.3
+
+### Patch Changes
+
+- [#9551](https://github.com/cloudflare/workers-sdk/pull/9551) [`b0b59e0`](https://github.com/cloudflare/workers-sdk/commit/b0b59e071393e13e3770fd59fb0cb26136e88272) Thanks [@penalosa](https://github.com/penalosa)! - Update Devtools Patches
+
 ## 0.1.2
 
 ### Patch Changes

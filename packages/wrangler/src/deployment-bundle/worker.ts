@@ -82,7 +82,7 @@ export interface CfVars {
 export interface CfKvNamespace {
 	binding: string;
 	id?: string | typeof INHERIT_SYMBOL;
-	remote?: boolean;
+	experimental_remote?: boolean;
 	raw?: boolean;
 }
 
@@ -124,7 +124,7 @@ export interface CfTextBlobBindings {
 export interface CfBrowserBinding {
 	binding: string;
 	raw?: boolean;
-	remote?: boolean;
+	experimental_remote?: boolean;
 }
 
 /**
@@ -134,7 +134,7 @@ export interface CfBrowserBinding {
 export interface CfAIBinding {
 	binding: string;
 	staging?: boolean;
-	remote?: boolean;
+	experimental_remote?: boolean;
 	raw?: boolean;
 }
 
@@ -144,7 +144,7 @@ export interface CfAIBinding {
 export interface CfImagesBinding {
 	binding: string;
 	raw?: boolean;
-	remote?: boolean;
+	experimental_remote?: boolean;
 }
 
 /**
@@ -178,7 +178,7 @@ export interface CfWorkflow {
 	class_name: string;
 	binding: string;
 	script_name?: string;
-	remote?: boolean;
+	experimental_remote?: boolean;
 	raw?: boolean;
 }
 
@@ -186,7 +186,7 @@ export interface CfQueue {
 	binding: string;
 	queue_name: string;
 	delivery_delay?: number;
-	remote?: boolean;
+	experimental_remote?: boolean;
 	raw?: boolean;
 }
 
@@ -194,7 +194,7 @@ export interface CfR2Bucket {
 	binding: string;
 	bucket_name?: string | typeof INHERIT_SYMBOL;
 	jurisdiction?: string;
-	remote?: boolean;
+	experimental_remote?: boolean;
 	raw?: boolean;
 }
 
@@ -207,7 +207,7 @@ export interface CfD1Database {
 	database_internal_env?: string;
 	migrations_table?: string;
 	migrations_dir?: string;
-	remote?: boolean;
+	experimental_remote?: boolean;
 	raw?: boolean;
 }
 
@@ -215,7 +215,7 @@ export interface CfVectorize {
 	binding: string;
 	index_name: string;
 	raw?: boolean;
-	remote?: boolean;
+	experimental_remote?: boolean;
 }
 
 export interface CfSecretsStoreSecrets {
@@ -241,7 +241,7 @@ export interface CfService {
 	environment?: string;
 	entrypoint?: string;
 	props?: Record<string, unknown>;
-	remote?: boolean;
+	experimental_remote?: boolean;
 }
 
 export interface CfAnalyticsEngineDataset {
@@ -257,13 +257,13 @@ export interface CfDispatchNamespace {
 		environment?: string;
 		parameters?: string[];
 	};
-	remote?: boolean;
+	experimental_remote?: boolean;
 }
 
 export interface CfMTlsCertificate {
 	binding: string;
 	certificate_id: string;
-	remote?: boolean;
+	experimental_remote?: boolean;
 }
 
 export interface CfLogfwdr {

@@ -9,6 +9,18 @@ import type { ApiRequestOptions } from "./ApiRequestOptions";
 import type { ApiResult } from "./ApiResult";
 import type { OnCancel } from "./CancelablePromise";
 
+type FetchResponseInfo = {
+	code: number;
+	message: string;
+};
+
+type FetchResult<ResponseType = unknown> = {
+	success: boolean;
+	result?: ResponseType;
+	errors?: FetchResponseInfo[];
+	messages?: FetchResponseInfo[];
+};
+
 const isDefined = <T>(
 	value: T | null | undefined
 ): value is Exclude<T, null | undefined> => {
@@ -197,6 +209,42 @@ const getRequestBody = (options: ApiRequestOptions): any => {
 	return undefined;
 };
 
+const isResponseSchemaV4 = (
+	config: OpenAPIConfig,
+	_options: ApiRequestOptions
+): boolean => {
+	return config.BASE.endsWith("/containers");
+};
+
+const parseResponseSchemaV4 = <T>(
+	url: string,
+	response: Response,
+	responseHeader: string | undefined,
+	responseBody: any
+): ApiResult => {
+	const fetchResult = (
+		typeof responseBody === "object" ? responseBody : JSON.parse(responseBody)
+	) as FetchResult<T>;
+	const ok = response.ok && fetchResult.success;
+	let result: any;
+	if (ok) {
+		if (fetchResult.result !== undefined) {
+			result = fetchResult.result;
+		} else {
+			result = {};
+		}
+	} else {
+		result = { error: fetchResult.errors?.[0].message };
+	}
+	return {
+		url,
+		ok,
+		status: response.status,
+		statusText: response.statusText,
+		body: responseHeader ?? result,
+	};
+};
+
 export const sendRequest = async (
 	config: OpenAPIConfig,
 	options: ApiRequestOptions,
@@ -319,16 +367,26 @@ export const request = <T>(
 					options.responseHeader
 				);
 
-				const result: ApiResult = {
-					url,
-					ok: response.ok,
-					status: response.status,
-					statusText: response.statusText,
-					body: responseHeader ?? responseBody,
-				};
+				let result: ApiResult;
+
+				if (isResponseSchemaV4(config, options)) {
+					result = parseResponseSchemaV4(
+						url,
+						response,
+						responseHeader,
+						responseBody
+					);
+				} else {
+					result = {
+						url,
+						ok: response.ok,
+						status: response.status,
+						statusText: response.statusText,
+						body: responseHeader ?? responseBody,
+					};
+				}
 
 				catchErrorCodes(options, result);
-
 				resolve(result.body);
 			}
 		} catch (error) {

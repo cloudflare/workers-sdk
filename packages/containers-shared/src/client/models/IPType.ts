@@ -8,5 +8,4 @@
 export enum IPType {
 	V4 = "v4",
 	V6 = "v6",
-	V6DYNAMIC = "v6dynamic",
 }

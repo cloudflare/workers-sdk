@@ -12,7 +12,7 @@ export type Disk = {
 	 * Deprecated in favor of size_mb.
 	 * @deprecated
 	 */
-	size: DiskSizeWithUnit;
+	size?: DiskSizeWithUnit;
 	/**
 	 * Size of the disk, in MB.
 	 */

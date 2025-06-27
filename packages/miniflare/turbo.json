@@ -8,7 +8,7 @@
 		},
 		"test:ci": {
 			"dependsOn": ["build"],
-			"env": ["MINIFLARE_WORKERD_PATH"]
+			"env": ["MINIFLARE_WORKERD_PATH", "MINIFLARE_WORKERD_CONFIG_DEBUG"]
 		}
 	}
 }

@@ -2,12 +2,15 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import colors from "picocolors";
-import type { ResolvedPluginConfig } from "./plugin-config";
+import type {
+	AssetsOnlyResolvedConfig,
+	WorkersResolvedConfig,
+} from "./plugin-config";
 import type * as vite from "vite";
 import type { Unstable_Config } from "wrangler";
 
 export function createBuildApp(
-	resolvedPluginConfig: ResolvedPluginConfig
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig
 ): (builder: vite.ViteBuilder) => Promise<void> {
 	return async (builder) => {
 		const clientEnvironment = builder.environments.client;

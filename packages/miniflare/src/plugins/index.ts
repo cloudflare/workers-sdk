@@ -12,7 +12,6 @@ import {
 	BROWSER_RENDERING_PLUGIN_NAME,
 } from "./browser-rendering";
 import { CACHE_PLUGIN, CACHE_PLUGIN_NAME } from "./cache";
-import { CONTAINER_PLUGIN, CONTAINER_PLUGIN_NAME } from "./containers";
 import { CORE_PLUGIN, CORE_PLUGIN_NAME } from "./core";
 import { D1_PLUGIN, D1_PLUGIN_NAME } from "./d1";
 import {
@@ -55,7 +54,6 @@ export const PLUGINS = {
 	[DISPATCH_NAMESPACE_PLUGIN_NAME]: DISPATCH_NAMESPACE_PLUGIN,
 	[IMAGES_PLUGIN_NAME]: IMAGES_PLUGIN,
 	[VECTORIZE_PLUGIN_NAME]: VECTORIZE_PLUGIN,
-	[CONTAINER_PLUGIN_NAME]: CONTAINER_PLUGIN,
 	[MTLS_PLUGIN_NAME]: MTLS_PLUGIN,
 	[HELLO_WORLD_PLUGIN_NAME]: HELLO_WORLD_PLUGIN,
 };
@@ -116,7 +114,6 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof DISPATCH_NAMESPACE_PLUGIN.options> &
 	z.input<typeof IMAGES_PLUGIN.options> &
 	z.input<typeof VECTORIZE_PLUGIN.options> &
-	z.input<typeof CONTAINER_PLUGIN.options> &
 	z.input<typeof MTLS_PLUGIN.options> &
 	z.input<typeof HELLO_WORLD_PLUGIN.options>;
 
@@ -129,7 +126,6 @@ export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof WORKFLOWS_PLUGIN.sharedOptions> &
 	z.input<typeof SECRET_STORE_PLUGIN.sharedOptions> &
 	z.input<typeof ANALYTICS_ENGINE_PLUGIN.sharedOptions> &
-	z.input<typeof CONTAINER_PLUGIN.sharedOptions> &
 	z.input<typeof HELLO_WORLD_PLUGIN.sharedOptions>;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
@@ -188,7 +184,5 @@ export * from "./browser-rendering";
 export * from "./dispatch-namespace";
 export * from "./images";
 export * from "./vectorize";
-export * from "./containers";
-export { ContainerController } from "./containers/service";
 export * from "./mtls";
 export * from "./hello-world";

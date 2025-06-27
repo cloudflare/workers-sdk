@@ -14,9 +14,13 @@ import {
 	HeadersSchema,
 	RedirectsSchema,
 } from "@cloudflare/workers-shared/utils/types";
-import type { ResolvedPluginConfig } from "./plugin-config";
+import type {
+	AssetsOnlyResolvedConfig,
+	WorkersResolvedConfig,
+} from "./plugin-config";
 import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types";
-import type { ResolvedConfig } from "vite";
+import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
+import type * as vite from "vite";
 import type { Unstable_Config } from "wrangler";
 
 /**
@@ -24,8 +28,8 @@ import type { Unstable_Config } from "wrangler";
  * and the experimental support for these files is turned on.
  */
 export function hasAssetsConfigChanged(
-	resolvedPluginConfig: ResolvedPluginConfig,
-	resolvedViteConfig: ResolvedConfig,
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
+	resolvedViteConfig: vite.ResolvedConfig,
 	changedFilePath: string
 ) {
 	if (!resolvedPluginConfig.experimental?.headersAndRedirectsDevModeSupport) {
@@ -42,10 +46,10 @@ export function hasAssetsConfigChanged(
  * taking into account whether experimental _headers and _redirects support is on.
  */
 export function getAssetsConfig(
-	resolvedPluginConfig: ResolvedPluginConfig,
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
 	entryWorkerConfig: Unstable_Config | undefined,
-	resolvedConfig: ResolvedConfig
-) {
+	resolvedConfig: vite.ResolvedConfig
+): AssetConfig {
 	const assetsConfig =
 		resolvedPluginConfig.type === "assets-only"
 			? resolvedPluginConfig.config.assets
@@ -69,7 +73,12 @@ export function getAssetsConfig(
 	const config = {
 		...compatibilityOptions,
 		...assetsConfig,
-	};
+		has_static_routing:
+			resolvedPluginConfig.type === "workers" &&
+			resolvedPluginConfig.staticRouting
+				? true
+				: false,
+	} satisfies AssetConfig;
 
 	if (!resolvedPluginConfig.experimental?.headersAndRedirectsDevModeSupport) {
 		return config;
@@ -124,10 +133,10 @@ export function getAssetsConfig(
 	};
 }
 
-function getRedirectsConfigPath(config: ResolvedConfig): string {
+function getRedirectsConfigPath(config: vite.ResolvedConfig): string {
 	return path.join(config.publicDir, REDIRECTS_FILENAME);
 }
 
-function getHeadersConfigPath(config: ResolvedConfig): string {
+function getHeadersConfigPath(config: vite.ResolvedConfig): string {
 	return path.join(config.publicDir, HEADERS_FILENAME);
 }

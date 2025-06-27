@@ -227,6 +227,42 @@ describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 			expect(duringProcesses.length).toBeGreaterThan(beginProcesses.length);
 		}
 	});
+	describe("--show-interactive-dev-session", () => {
+		it("should show hotkeys when interactive", async () => {
+			const wrangler = await startWranglerDev(args);
+			wrangler.pty.kill();
+			expect(wrangler.stdout).toContain("open a browser");
+			expect(wrangler.stdout).toContain("open devtools");
+			expect(wrangler.stdout).toContain("clear console");
+			expect(wrangler.stdout).toContain("to exit");
+			expect(wrangler.stdout).not.toContain("rebuild container");
+		});
+		it("should not show hotkeys with --show-interactive-dev-session=false", async () => {
+			const wrangler = await startWranglerDev([
+				...args,
+				"--show-interactive-dev-session=false",
+			]);
+			wrangler.pty.kill();
+			expect(wrangler.stdout).not.toContain("open a browser");
+			expect(wrangler.stdout).not.toContain("open devtools");
+			expect(wrangler.stdout).not.toContain("clear console");
+			expect(wrangler.stdout).not.toContain("to exit");
+			expect(wrangler.stdout).not.toContain("rebuild container");
+		});
+		// docker isn't installed by default on windows/macos runners
+		it.skipIf(process.env.platform !== "linux" && process.env.CI === "true")(
+			"should show rebuild containers hotkey if containers are configured",
+			async () => {
+				const wrangler = await startWranglerDev([
+					"dev",
+					"-c",
+					"wrangler.container.jsonc",
+				]);
+				wrangler.pty.kill();
+				expect(wrangler.stdout).toContain("rebuild container");
+			}
+		);
+	});
 });
 
 it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {

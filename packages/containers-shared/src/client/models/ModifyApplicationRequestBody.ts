@@ -13,11 +13,17 @@ import type { SchedulingPolicy } from "./SchedulingPolicy";
  */
 export type ModifyApplicationRequestBody = {
 	/**
+	 * The name for this application
+	 */
+	name?: string;
+	/**
 	 * Number of deployments to maintain within this applicaiton. This can be used to scale the appliation up/down.
 	 */
 	instances?: number;
 	/**
 	 * Maximum number of instances that the application will allow. This is relevant for applications that auto-scale.
+	 * It will reduce the number of running instances if there are more than `max_instances`.
+	 *
 	 */
 	max_instances?: number;
 	affinities?: ApplicationAffinities;

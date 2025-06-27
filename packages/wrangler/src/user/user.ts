@@ -361,23 +361,16 @@ const DefaultScopes = {
 		"See and change Cloudflare Pipelines configurations and data",
 	"secrets_store:write":
 		"See and change secrets + stores within the Secrets Store",
-} as const;
-
-const OptionalScopes = {
+	"containers:write": "Manage Workers Containers",
 	"cloudchamber:write": "Manage Cloudchamber",
 } as const;
-
-const AllScopes = {
-	...DefaultScopes,
-	...OptionalScopes,
-};
 
 /**
  * The possible keys for a Scope.
  *
  * "offline_access" is automatically included.
  */
-export type Scope = keyof typeof AllScopes;
+export type Scope = keyof typeof DefaultScopes;
 
 export let DefaultScopeKeys = Object.keys(DefaultScopes) as Scope[];
 
@@ -1213,11 +1206,7 @@ export async function logout(): Promise<void> {
 
 export function listScopes(message = "💁 Available scopes:"): void {
 	logger.log(message);
-	const data = DefaultScopeKeys.map((scope: Scope) => ({
-		Scope: scope,
-		Description: AllScopes[scope],
-	}));
-	logger.table(data);
+	printScopes(DefaultScopeKeys);
 	// TODO: maybe a good idea to show usage here
 }
 
@@ -1329,6 +1318,15 @@ export function getAccountFromCache():
  */
 export function getScopes(): Scope[] | undefined {
 	return LocalState.scopes;
+}
+
+export function printScopes(scopes: Scope[]) {
+	const data = scopes.map((scope: Scope) => ({
+		Scope: scope,
+		Description: DefaultScopes[scope],
+	}));
+
+	logger.table(data);
 }
 
 /**

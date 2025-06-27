@@ -12,14 +12,14 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
 	SERVICE_LOOPBACK,
 } from "../shared";
 
@@ -30,8 +30,8 @@ export const D1OptionsSchema = z.object({
 			z.record(
 				z.object({
 					id: z.string(),
-					mixedModeConnectionString: z
-						.custom<MixedModeConnectionString>()
+					remoteProxyConnectionString: z
+						.custom<RemoteProxyConnectionString>()
 						.optional(),
 				})
 			),
@@ -61,10 +61,10 @@ export const D1_PLUGIN: Plugin<
 	getBindings(options) {
 		const databases = namespaceEntries(options.d1Databases);
 		return databases.map<Worker_Binding>(
-			([name, { id, mixedModeConnectionString }]) => {
+			([name, { id, remoteProxyConnectionString }]) => {
 				assert(
-					!(name.startsWith("__D1_BETA__") && mixedModeConnectionString),
-					"Mixed Mode cannot be used with Alpha D1 Databases"
+					!(name.startsWith("__D1_BETA__") && remoteProxyConnectionString),
+					"Alpha D1 Databases cannot run remotely"
 				);
 
 				const binding = name.startsWith("__D1_BETA__")
@@ -106,10 +106,10 @@ export const D1_PLUGIN: Plugin<
 		const persist = sharedOptions.d1Persist;
 		const databases = namespaceEntries(options.d1Databases);
 		const services = databases.map<Service>(
-			([name, { id, mixedModeConnectionString }]) => ({
+			([name, { id, remoteProxyConnectionString }]) => ({
 				name: `${D1_DATABASE_SERVICE_PREFIX}:${id}`,
-				worker: mixedModeConnectionString
-					? mixedModeClientWorker(mixedModeConnectionString, name)
+				worker: remoteProxyConnectionString
+					? remoteProxyClientWorker(remoteProxyConnectionString, name)
 					: objectEntryWorker(D1_DATABASE_OBJECT, id),
 			})
 		);

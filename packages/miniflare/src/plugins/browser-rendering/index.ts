@@ -1,15 +1,15 @@
 import assert from "node:assert";
 import { z } from "zod";
 import {
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
 } from "../shared";
 
 const BrowserRenderingSchema = z.object({
 	binding: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
+	remoteProxyConnectionString: z.custom<RemoteProxyConnectionString>(),
 });
 
 export const BrowserRenderingOptionsSchema = z.object({
@@ -28,8 +28,8 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 		}
 
 		assert(
-			options.browserRendering.mixedModeConnectionString,
-			"Workers Browser Rendering only supports Mixed Mode"
+			options.browserRendering.remoteProxyConnectionString,
+			"Workers Browser Rendering only supports running remotely"
 		);
 
 		return [
@@ -55,15 +55,15 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 		}
 
 		assert(
-			options.browserRendering.mixedModeConnectionString,
-			"Workers Browser Rendering only supports Mixed Mode"
+			options.browserRendering.remoteProxyConnectionString,
+			"Workers Browser Rendering only supports running remotely"
 		);
 
 		return [
 			{
 				name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
-				worker: mixedModeClientWorker(
-					options.browserRendering.mixedModeConnectionString,
+				worker: remoteProxyClientWorker(
+					options.browserRendering.remoteProxyConnectionString,
 					options.browserRendering.binding
 				),
 			},
