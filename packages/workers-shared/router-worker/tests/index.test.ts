@@ -272,6 +272,31 @@ describe("unit tests", async () => {
 		expect(await response.text()).toBe("Blocked");
 	});
 
+	it("blocks /_next/image requests with remote URLs when not fetched as image for next apps host not at the root", async () => {
+		const request = new Request(
+			"https://example.com/some/subpath/_next/image?url=https://evil.com/ssrf"
+		);
+		const ctx = createExecutionContext();
+
+		const env = {
+			CONFIG: {
+				has_user_worker: true,
+				invoke_user_worker_ahead_of_assets: true,
+			},
+			USER_WORKER: {
+				async fetch(_: Request): Promise<Response> {
+					return new Response("<!DOCTYPE html><html></html>", {
+						headers: { "content-type": "text/html" },
+					});
+				},
+			},
+		} as Env;
+
+		const response = await worker.fetch(request, env, ctx);
+		expect(response.status).toBe(403);
+		expect(await response.text()).toBe("Blocked");
+	});
+
 	it("allows /_next/image requests with remote URLs when fetched as image", async () => {
 		const request = new Request(
 			"https://example.com/_next/image?url=https://example.com/image.jpg",
