@@ -237,8 +237,10 @@ export class InspectorProxyController {
 
 	async updateConnection(
 		inspectorPortOption: number,
-		runtimeInspectorPort: number
+		runtimeInspectorPort: number,
+		workerNamesToProxy: Set<string>
 	) {
+		this.workerNamesToProxy = workerNamesToProxy;
 		if (this.inspectorPortOption !== inspectorPortOption) {
 			this.inspectorPortOption = inspectorPortOption;
 			this.#inspectorPort = this.#getInspectorPortToUse();
