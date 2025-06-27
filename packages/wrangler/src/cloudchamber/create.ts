@@ -19,20 +19,23 @@ import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
 import {
 	checkEverythingIsSet,
-	checkInstanceType,
 	collectEnvironmentVariables,
 	collectLabels,
 	interactWithUser,
 	loadAccountSpinner,
 	parseImageName,
 	promptForEnvironmentVariables,
-	promptForInstanceType,
 	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
 	resolveMemory,
 } from "./common";
 import { wrap } from "./helpers/wrap";
+import {
+	checkInstanceType,
+	checkInstanceTypeAgainstLimits,
+	promptForInstanceType,
+} from "./instancetype/instancetype";
 import { loadAccount } from "./locations";
 import { getNetworkInput } from "./network/network";
 import { sshPrompts as promptForSSHKeyAndGetAddedSSHKey } from "./ssh/ssh";
@@ -176,6 +179,9 @@ export async function createCommand(
 		if (instanceType === undefined) {
 			deploymentRequest.vcpu = vcpu;
 			deploymentRequest.memory_mib = memoryMib;
+		} else {
+			const account = await loadAccount();
+			await checkInstanceTypeAgainstLimits(instanceType, account);
 		}
 		const deployment =
 			await DeploymentsService.createDeploymentV2(deploymentRequest);
@@ -360,6 +366,8 @@ async function handleCreateCommand(
 	if (instanceType === undefined) {
 		deploymentRequest.vcpu = vcpu;
 		deploymentRequest.memory_mib = memoryMib;
+	} else {
+		await checkInstanceTypeAgainstLimits(instanceType, account);
 	}
 	const [deployment, err] = await wrap(
 		DeploymentsService.createDeploymentV2(deploymentRequest)
