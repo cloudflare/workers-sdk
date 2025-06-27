@@ -14,18 +14,14 @@ import { createCommand } from "../core/create-command";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
-import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { getEntry } from "../deployment-bundle/entry";
 import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
 import {
-	findAdditionalModules,
-	writeAdditionalModules,
-} from "../deployment-bundle/find-additional-modules";
-import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
+import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
@@ -60,7 +56,6 @@ import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
-import type { Rule } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
@@ -264,7 +259,7 @@ export const versionsUploadCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			MIXED_MODE: false,
+			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
@@ -898,24 +893,6 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
-}
-
-async function noBundleWorker(
-	entry: Entry,
-	rules: Rule[],
-	outDir: string | undefined
-) {
-	const modules = await findAdditionalModules(entry, rules);
-	if (outDir) {
-		await writeAdditionalModules(modules, outDir);
-	}
-
-	return {
-		modules,
-		dependencies: {} as { [path: string]: { bytesInOutput: number } },
-		resolvedEntryPointPath: entry.file,
-		bundleType: getBundleType(entry.format),
-	};
 }
 
 /**

@@ -1,13 +1,21 @@
 import { spawn } from "child_process";
 import { readFileSync } from "fs";
-import { BuildArgs, Logger } from "./types";
+import path from "path";
+import { BuildArgs, ContainerDevOptions, Logger } from "./types";
 
 export async function constructBuildCommand(
 	options: BuildArgs,
 	logger?: Logger
 ) {
 	const platform = options.platform ?? "linux/amd64";
-	const buildCmd = ["build", "-t", options.tag, "--platform", platform];
+	const buildCmd = [
+		"build",
+		"-t",
+		options.tag,
+		"--platform",
+		platform,
+		"--provenance=false",
+	];
 
 	if (options.args) {
 		for (const arg in options.args) {
@@ -57,4 +65,20 @@ export function dockerBuild(
 			}
 		});
 	});
+}
+
+export async function buildImage(
+	dockerPath: string,
+	options: ContainerDevOptions
+) {
+	// just let the tag default to latest
+	const { buildCmd, dockerfile } = await constructBuildCommand({
+		tag: options.imageTag,
+		pathToDockerfile: options.image,
+		buildContext: options.imageBuildContext ?? path.dirname(options.image),
+		args: options.args,
+		platform: "linux/amd64",
+	});
+
+	await dockerBuild(dockerPath, { buildCmd, dockerfile });
 }

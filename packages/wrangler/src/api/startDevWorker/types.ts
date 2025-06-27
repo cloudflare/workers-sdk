@@ -1,6 +1,8 @@
 import type { AssetsOptions } from "../../assets";
 import type { Config } from "../../config";
 import type {
+	ContainerApp,
+	ContainerEngine,
 	CustomDomainRoute,
 	DurableObjectMigration,
 	Rule,
@@ -42,7 +44,6 @@ import type {
 	NodeJSCompatMode,
 	Request,
 	Response,
-	WorkerOptions,
 } from "miniflare";
 import type * as undici from "undici";
 
@@ -85,7 +86,7 @@ export interface StartDevWorkerInput {
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
 	migrations?: DurableObjectMigration[];
-	containers?: WorkerOptions["containers"];
+	containers?: ContainerApp[];
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
@@ -153,7 +154,7 @@ export interface StartDevWorkerInput {
 		/** Whether a script tag is inserted on text/html responses which will reload the page upon file changes. Defaults to false. */
 		liveReload?: boolean;
 
-		/** The local address to reach your worker. Applies to remote: true (remote mode) and remote: false (local mode). */
+		/** The local address to reach your worker. Applies to experimental_remote: true (remote mode) and remote: false (local mode). */
 		server?: {
 			hostname?: string; // --ip
 			port?: number; // --port
@@ -182,14 +183,18 @@ export interface StartDevWorkerInput {
 		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
 		multiworkerPrimary?: boolean;
 
-		/** Whether the experimental mixed mode feature should be enabled */
-		experimentalMixedMode?: boolean;
+		/** Whether the experimental remote bindings feature should be enabled */
+		experimentalRemoteBindings?: boolean;
 
+		containerBuildId?: string;
 		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
 		enableContainers?: boolean;
 
 		/** Path to the docker executable. Defaults to 'docker' */
 		dockerPath?: string;
+
+		/** Options for the container engine */
+		containerEngine?: ContainerEngine;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;

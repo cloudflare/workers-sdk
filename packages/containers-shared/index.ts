@@ -6,3 +6,4 @@ export * from "./src/utils";
 export * from "./src/types";
 export * from "./src/inspect";
 export * from "./src/registry";
+export * from "./src/images";

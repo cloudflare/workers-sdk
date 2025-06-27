@@ -9,6 +9,7 @@ import type { DiskMB } from "./DiskMB";
 import type { Entrypoint } from "./Entrypoint";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
 import type { Image } from "./Image";
+import type { InstanceType } from "./InstanceType";
 import type { ISO8601Timestamp } from "./ISO8601Timestamp";
 import type { JobEvents } from "./JobEvents";
 import type { JobID } from "./JobID";
@@ -29,6 +30,7 @@ export type ApplicationJob = {
 	status: JobStatus;
 	events: JobEvents;
 	image: Image;
+	instance_type?: InstanceType;
 	/**
 	 * Allocated vCPUs for this job
 	 */

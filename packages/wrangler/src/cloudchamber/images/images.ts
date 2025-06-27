@@ -22,11 +22,13 @@ import {
 } from "../common";
 import { wrap } from "../helpers/wrap";
 import type { Config } from "../../config";
+import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgvJSON,
 	CommonYargsArgvSanitizedJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../../yargs-types";
+import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
 function configureImageRegistryOptionalYargs(yargs: CommonYargsArgvJSON) {
@@ -60,7 +62,10 @@ function credentialsImageRegistryYargs(yargs: CommonYargsArgvJSON) {
 		});
 }
 
-export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
+export const registriesCommand = (
+	yargs: CommonYargsArgvJSON,
+	scope: typeof containersScope | typeof cloudchamberScope
+) => {
 	return yargs
 		.command(
 			"configure",
@@ -68,6 +73,7 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 			(args) => configureImageRegistryOptionalYargs(args),
 			(args) =>
 				handleFailure(
+					`wrangler cloudchamber registries configure`,
 					async (
 						imageArgs: StrictYargsOptionsToInterfaceJSON<
 							typeof configureImageRegistryOptionalYargs
@@ -91,7 +97,8 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 						}
 
 						await handleConfigureImageRegistryCommand(args, config);
-					}
+					},
+					scope
 				)(args)
 		)
 		.command(
@@ -119,6 +126,7 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 				// we don't want any kind of spinners
 				args.json = true;
 				return handleFailure(
+					`wrangler cloudchamber registries credentials`,
 					async (
 						imageArgs: StrictYargsOptionsToInterfaceJSON<
 							typeof credentialsImageRegistryYargs
@@ -143,7 +151,8 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 								}
 							);
 						console.log(credentials.password);
-					}
+					},
+					scope
 				)(args);
 			}
 		)
@@ -154,6 +163,7 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 			(args) => {
 				args.json = true;
 				return handleFailure(
+					`wrangler cloudchamber registries remove`,
 					async (
 						imageArgs: StrictYargsOptionsToInterfaceJSON<
 							typeof removeImageRegistryYargs
@@ -164,7 +174,8 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 							imageArgs.domain
 						);
 						console.log(JSON.stringify(registry, null, 4));
-					}
+					},
+					scope
 				)(args);
 			}
 		)
@@ -174,6 +185,7 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 			(args) => args,
 			(args) =>
 				handleFailure(
+					`wrangler cloudchamber registries list`,
 					async (imageArgs: CommonYargsArgvSanitizedJSON, config) => {
 						if (!interactWithUser(imageArgs)) {
 							const registries =
@@ -182,7 +194,8 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 							return;
 						}
 						await handleListImageRegistriesCommand(args, config);
-					}
+					},
+					scope
 				)(args)
 		);
 };

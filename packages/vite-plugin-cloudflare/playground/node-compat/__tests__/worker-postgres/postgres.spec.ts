@@ -12,6 +12,6 @@ test.runIf(!process.env.CI)(
 	"should be able to use pg library to send a query",
 	async () => {
 		const result = await getJsonResponse("/send-query");
-		expect(result!.id).toEqual("1");
+		expect(result!.id).toEqual("21");
 	}
 );

@@ -12,14 +12,14 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
 	SERVICE_LOOPBACK,
 } from "../shared";
 import { KV_PLUGIN_NAME } from "./constants";
@@ -37,8 +37,8 @@ export const KVOptionsSchema = z.object({
 			z.record(
 				z.object({
 					id: z.string(),
-					mixedModeConnectionString: z
-						.custom<MixedModeConnectionString>()
+					remoteProxyConnectionString: z
+						.custom<RemoteProxyConnectionString>()
 						.optional(),
 				})
 			),
@@ -113,10 +113,10 @@ export const KV_PLUGIN: Plugin<
 		const persist = sharedOptions.kvPersist;
 		const namespaces = namespaceEntries(options.kvNamespaces);
 		const services = namespaces.map<Service>(
-			([name, { id, mixedModeConnectionString }]) => ({
+			([name, { id, remoteProxyConnectionString }]) => ({
 				name: `${SERVICE_NAMESPACE_PREFIX}:${id}`,
-				worker: mixedModeConnectionString
-					? mixedModeClientWorker(mixedModeConnectionString, name)
+				worker: remoteProxyConnectionString
+					? remoteProxyClientWorker(remoteProxyConnectionString, name)
 					: objectEntryWorker(KV_NAMESPACE_OBJECT, id),
 			})
 		);
