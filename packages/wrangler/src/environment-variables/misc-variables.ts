@@ -241,6 +241,16 @@ export const getRegistryPath = getEnvironmentVariableFactory({
 });
 
 /**
+ * `WRANGLER_D1_EXTRA_LOCATION_CHOICES` is an internal variable to let D1 team target their testing environments.
+ *
+ * External accounts cannot access testing envionments, so should not set this variable.
+ */
+export const getD1ExtraLocationChoices: () => string | undefined =
+	getEnvironmentVariableFactory({
+		variableName: "WRANGLER_D1_EXTRA_LOCATION_CHOICES",
+	});
+
+/**
  * `WRANGLER_DOCKER_BIN` specifies the path to a docker binary.
  *
  * By default it's `docker`.
