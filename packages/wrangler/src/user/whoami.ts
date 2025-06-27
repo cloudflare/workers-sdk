@@ -3,8 +3,15 @@ import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { isAuthenticationError } from "../deploy/deploy";
 import { getCloudflareComplianceRegion } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
+import { formatMessage } from "../parse";
 import { fetchMembershipRoles } from "./membership";
-import { getAPIToken, getAuthFromEnv, getScopes } from ".";
+import {
+	DefaultScopeKeys,
+	getAPIToken,
+	getAuthFromEnv,
+	getScopes,
+	Scope,
+} from ".";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
 export async function whoami(
@@ -69,12 +76,29 @@ function printTokenPermissions(user: UserInfo) {
 			`🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens.`
 		);
 	}
-	logger.log(
-		`🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.`
-	);
+	logger.log(`🔓 Token Permissions:`);
 	logger.log(`Scope (Access)`);
+
+	// This Set contains all the scopes we expect to see (that Wrangler requests by default)
+	const expectedScopes = new Set(DefaultScopeKeys);
 	for (const [scope, access] of permissions) {
+		// We'll remove scopes from the set of scopes that we expect to see when we see them in the API response
+		expectedScopes.delete(`${scope}:${access}` as Scope);
 		logger.log(`- ${scope} ${access ? `(${access})` : ``}`);
+	}
+
+	// If we've iterated through all scopes in the API response and there are still expected scopes remaining,
+	// then we know that Wrangler may not behave as expected since the current token doesn't have all the expected scopes
+	// Warn, and tell the user how to fix it
+	if (expectedScopes.size > 0) {
+		logger.log("");
+		logger.log(
+			formatMessage({
+				text: "Wrangler is missing some expected Oauth scopes. To fix this, run `wrangler login` to refresh your token. The missing scopes are:",
+				kind: "warning",
+				notes: [...expectedScopes.values()].map((s) => ({ text: `- ${s}` })),
+			})
+		);
 	}
 }
 

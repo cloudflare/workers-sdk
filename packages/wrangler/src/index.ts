@@ -1,5 +1,6 @@
 import os from "node:os";
 import { setTimeout } from "node:timers/promises";
+import { ApiError } from "@cloudflare/containers-shared";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
@@ -1509,10 +1510,21 @@ export async function main(argv: string[]): Promise<void> {
 			// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
 			// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
 			await createCLIParser([...argv, "--help"]).parse();
-		} else if (isAuthenticationError(e)) {
+		} else if (
+			isAuthenticationError(e) ||
+			// Is this a Containers/Cloudchamber-based auth error?
+			// This is different because
+			(e instanceof UserError &&
+				e.cause instanceof ApiError &&
+				e.cause.status === 403)
+		) {
 			mayReport = false;
 			errorType = "AuthenticationError";
-			logger.log(formatMessage(e));
+			if (e.cause instanceof ApiError) {
+				logger.error(e.cause);
+			} else {
+				logger.log(formatMessage(e));
+			}
 			const envAuth = getAuthFromEnv();
 			if (envAuth !== undefined && "apiToken" in envAuth) {
 				const message =
