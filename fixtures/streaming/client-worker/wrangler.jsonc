@@ -1,0 +1,12 @@
+{
+	"$schema": "../../../packages/wrangler/config-schema.json",
+	"name": "client-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-06-01",
+	"services": [
+		{
+			"binding": "WORKER",
+			"service": "main-worker",
+		},
+	],
+}
