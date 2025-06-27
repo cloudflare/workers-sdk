@@ -47,10 +47,10 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250617.0",
 		"@types/node": "catalog:vite-plugin",
-		"@types/pg": "^8.11.2",
+		"@types/pg": "^8.15.4",
 		"cross-fetch": "^4.0.0",
-		"pg": "^8.13.0",
-		"pg-cloudflare": "^1.1.1",
+		"pg": "^8.16.3",
+		"pg-cloudflare": "^1.2.7",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:*"
