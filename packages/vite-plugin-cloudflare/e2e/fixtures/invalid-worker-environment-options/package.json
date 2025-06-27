@@ -7,6 +7,6 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "*",
-		"vite": "^6.2.3"
+		"vite": "^6.1.0"
 	}
 }
