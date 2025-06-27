@@ -4,6 +4,9 @@ on:
   merge_group:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   add-to-project:
     if: github.head_ref != 'changeset-release/main'

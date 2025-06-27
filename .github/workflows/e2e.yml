@@ -4,6 +4,9 @@ on:
   merge_group:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   e2e-wrangler-test:
     name: ${{ format('Wrangler ({0})', matrix.description) }}

@@ -4,6 +4,9 @@ on:
     - cron: "0 3 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   e2e:
     timeout-minutes: 30

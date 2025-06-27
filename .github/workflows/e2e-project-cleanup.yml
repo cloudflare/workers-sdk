@@ -1,10 +1,15 @@
 # This workflow cleans up any leftover projects created by e2e runs.
 
 name: E2E Project Cleanup
+
 on:
   workflow_dispatch:
   schedule:
     - cron: "0 3 * * *" # Run at 3am each day
+
+permissions:
+  contents: read
+
 jobs:
   cleanup:
     timeout-minutes: 30

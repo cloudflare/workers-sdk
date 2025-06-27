@@ -16,9 +16,11 @@ on:
       - main
     paths:
       - "packages/playground-preview-worker/**"
-
   pull_request:
     types: [synchronize, opened, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
 
 jobs:
   e2e-test:
