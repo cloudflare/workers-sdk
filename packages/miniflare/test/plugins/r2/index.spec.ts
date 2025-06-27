@@ -556,29 +556,29 @@ test("put: can copy values", async (t) => {
 		script: `export default {
       async fetch(request, env, ctx) {
         await env.BUCKET.put("key", "0123456789");
-        
+
         let object = await env.BUCKET.get("key");
         await env.BUCKET.put("key-copy", object.body);
         const copy = await (await env.BUCKET.get("key-copy"))?.text();
-        
+
         object = await env.BUCKET.get("key", { range: { offset: 1, length: 4 } });
         await env.BUCKET.put("key-copy-range-1", object.body);
         const copyRange1 = await (await env.BUCKET.get("key-copy-range-1"))?.text();
-        
+
         object = await env.BUCKET.get("key", { range: { length: 3 } });
         await env.BUCKET.put("key-copy-range-2", object.body);
         const copyRange2 = await (await env.BUCKET.get("key-copy-range-2"))?.text();
-        
+
         object = await env.BUCKET.get("key", { range: { suffix: 5 } });
         await env.BUCKET.put("key-copy-range-3", object.body);
         const copyRange3 = await (await env.BUCKET.get("key-copy-range-3"))?.text();
-        
+
         const range = new Headers();
         range.set("Range", "bytes=0-5");
         object = await env.BUCKET.get("key", { range });
         await env.BUCKET.put("key-copy-range-4", object.body);
         const copyRange4 = await (await env.BUCKET.get("key-copy-range-4"))?.text();
-        
+
         return Response.json({ copy, copyRange1, copyRange2, copyRange3, copyRange4 });
       }
     }`,
@@ -1115,16 +1115,6 @@ test("uploadPart", async (t) => {
 	assert(value2 !== null);
 	t.is(await text(value2), "value two");
 
-	// Check upload part with same part number and same value
-	const part1b = await upload.uploadPart(1, "value1");
-	t.is(part1b.partNumber, 1);
-	t.not(part1b.etag, part1.etag);
-
-	// Check upload part with different part number but same value
-	const part100 = await upload.uploadPart(100, "value1");
-	t.is(part100.partNumber, 100);
-	t.not(part100.etag, part1.etag);
-
 	// Check validates key and uploadId
 	let expectations = doesNotExistExpectations("uploadPart");
 	let nonExistentUpload = r2.resumeMultipartUpload("key", "bad");
@@ -1237,31 +1227,16 @@ test("completeMultipartUpload", async (t) => {
 	objectBody = await r2.get("key");
 	t.is(await objectBody?.text(), "1");
 
-	// Check completing with overridden part
-	const upload3 = await r2.createMultipartUpload("key");
-	let part1a = await upload3.uploadPart(1, "value");
-	let part1b = await upload3.uploadPart(1, "value");
-	t.is(part1a.partNumber, part1b.partNumber);
-	t.not(part1a.etag, part1b.etag);
+	// Check ETag is valid MD5
+	const upload4 = await r2.createMultipartUpload("key");
+	part1 = await upload4.uploadPart(1, "1".repeat(PART_SIZE));
+	t.is(part1.etag, "11a36665548da6e3a6336e69cf565d11");
+
 	const notFoundExpectations: ThrowsExpectation<Error> = {
 		instanceOf: Error,
 		message:
 			"completeMultipartUpload: One or more of the specified parts could not be found. (10025)",
 	};
-	await t.throwsAsync(upload3.complete([part1a]), notFoundExpectations);
-	object = await upload3.complete([part1b]);
-	t.is(object.size, 5);
-
-	// Check completing with multiple parts of same part number
-	const upload4 = await r2.createMultipartUpload("key");
-	part1a = await upload4.uploadPart(1, "1".repeat(PART_SIZE));
-	part1b = await upload4.uploadPart(1, "2".repeat(PART_SIZE));
-	const part1c = await upload4.uploadPart(1, "3".repeat(PART_SIZE));
-	await t.throwsAsync(
-		upload4.complete([part1a, part1b, part1c]),
-		internalErrorExpectations("completeMultipartUpload")
-	);
-
 	// Check completing with out-of-order parts
 	const upload5a = await r2.createMultipartUpload("key");
 	part1 = await upload5a.uploadPart(1, "1".repeat(PART_SIZE));
