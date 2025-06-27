@@ -6,7 +6,7 @@ on:
 
 jobs:
   e2e-wrangler-test:
-    name: ${{ format('Wrangler ({0})', matrix.description) }}
+    name: ${{ format('Wrangler E2E ({0})', matrix.description) }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-wrangler
       cancel-in-progress: true
@@ -27,6 +27,21 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
+      # E2E tests cannot run on pull requests created from forks due to security concerns.
+      # In such cases we require a member of the `workers-sdk` maintainers group to manually
+      # run these tests on behalf of the PR.
+      #
+      # In such cases we want CI to fail with a descriptive message, instead of skipping the
+      # tests, which gives the false optics that CI is green. Having CI intentionally fail
+      # for such use cases will act as a reminder that tests need to be manually run, and will
+      # prevent us from accidentally merging fork PRs that are green, but never ran the e2e
+      # tests.
+      - name: Check if fork PR
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo: "E2E tests cannot run on pull requests created from forks due to security reasons. Please reach out to a workers-sdk maintainer to run the E2E tests on behalf of this PR (via https://github.com/cloudflare/workers-sdk/actions/workflows/run-ci-for-external-forks.yml)."
+          exit 1
+
       - name: Checkout Repo
         if: github.event.pull_request.head.repo.owner.login == 'cloudflare'
         uses: actions/checkout@v4
@@ -72,7 +87,7 @@ jobs:
           path: .turbo/runs
 
   e2e-vite-test:
-    name: ${{ format('Vite ({0})', matrix.description) }}
+    name: ${{ format('Vite E2E ({0})', matrix.description) }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-vite
       cancel-in-progress: true
@@ -91,6 +106,21 @@ jobs:
             node: 20.19.1
     runs-on: ${{ matrix.os }}
     steps:
+      # E2E tests cannot run on pull requests created from forks due to security concerns.
+      # In such cases we require a member of the `workers-sdk` maintainers group to manually
+      # run these tests on behalf of the PR.
+      #
+      # In such cases we want CI to fail with a descriptive message, instead of skipping the
+      # tests, which gives the false optics that CI is green. Having CI intentionally fail
+      # for such use cases will act as a reminder that tests need to be manually run, and will
+      # prevent us from accidentally merging fork PRs that are green, but never ran the e2e
+      # tests.
+      - name: Check if fork PR
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo: "E2E tests cannot run on pull requests created from forks due to security reasons. Please reach out to a workers-sdk maintainer to run the E2E tests on behalf of this PR (via https://github.com/cloudflare/workers-sdk/actions/workflows/run-ci-for-external-forks.yml)."
+          exit 1
+
       - name: Checkout Repo
         if: github.event.pull_request.head.repo.owner.login == 'cloudflare'
         uses: actions/checkout@v4
@@ -131,25 +161,3 @@ jobs:
         with:
           name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
           path: .turbo/runs
-
-  # E2E tests cannot run on pull requests created from forks due to security concerns.
-  # In such cases we require a member of the `workers-sdk` maintainers group to manually
-  # run these tests on behalf of the PR.
-  #
-  # If a PR from a fork specifically requests running the e2e tests, by applying the `e2e`
-  # label, we want CI to fail with a descriptive message, instead of skipping the `e2e-tests`
-  # job altogether, which gives the false optics that CI is green. Having CI intentionally
-  # fail for such use cases will act as a reminder that tests need to be manually run, and
-  # will prevent us from accidentally merging fork PRs that are green, but never ran the
-  # e2e tests.
-  e2e-test-forks:
-    name: "E2E tests on forks"
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
-    if: github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' ) && github.event.pull_request.head.repo.full_name != github.repository
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Force Fail
-        run: |
-          echo: "E2E tests cannot run on pull requests created from forks due to security reasons. Please reach out to a workers-sdk maintainer to run the E2E tests on behalf of this PR."
-          exit 1
