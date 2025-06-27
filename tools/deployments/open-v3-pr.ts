@@ -23,7 +23,7 @@ if (require.main === module) {
 					`create`,
 					`--base`,
 					`v3-maintenance`,
-					`--head v3-maintenance-${process.env.PR_NUMBER}`,
+					`--head v3-backport-${process.env.PR_NUMBER}`,
 					`--label "skip-pr-description-validation"`,
 					`--label "skip-v3-pr"`,
 					`--label "v3-backport"`,
