@@ -939,12 +939,7 @@ export class Miniflare {
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 
-		const workerNamesToProxy = new Set(
-			this.#workerOpts
-				.filter(({ core: { unsafeInspectorProxy } }) => !!unsafeInspectorProxy)
-				.map((w) => w.core.name ?? "")
-		);
-
+		const workerNamesToProxy = this.#workerNamesToProxy();
 		const enableInspectorProxy = workerNamesToProxy.size > 0;
 
 		if (enableInspectorProxy) {
@@ -1046,6 +1041,14 @@ export class Miniflare {
 				maybeInstanceRegistry?.delete(this);
 				throw e;
 			});
+	}
+
+	#workerNamesToProxy() {
+		return new Set(
+			this.#workerOpts
+				.filter(({ core: { unsafeInspectorProxy } }) => !!unsafeInspectorProxy)
+				.map((w) => w.core.name ?? "")
+		);
 	}
 
 	#handleReload() {
@@ -2018,7 +2021,8 @@ export class Miniflare {
 			} else {
 				await this.#maybeInspectorProxyController.updateConnection(
 					this.#sharedOpts.core.inspectorPort,
-					maybePort
+					maybePort,
+					this.#workerNamesToProxy()
 				);
 			}
 		}
