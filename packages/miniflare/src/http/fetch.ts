@@ -56,6 +56,14 @@ export async function fetch(
 			rejectUnauthorized = { rejectUnauthorized: false };
 		}
 
+		// @ts-expect-error bun is not typed
+		const isBun = typeof globalThis["Bun"] !== "undefined";
+		if (isBun) {
+			// For whatever reason, But doesn't like manually
+			// inserting the upgrade header, so we need to remove it.
+			delete headers["upgrade"];
+		}
+
 		// Establish web socket connection
 		const ws = new NodeWebSocket(url, protocols, {
 			followRedirects: request.redirect === "follow",
@@ -64,26 +72,44 @@ export async function fetch(
 		});
 
 		const responsePromise = new DeferredPromise<Response>();
-		ws.once("upgrade", (req) => {
-			const headers = headersFromIncomingRequest(req);
-			// Couple web socket with pair and resolve
-			const [worker, client] = Object.values(new WebSocketPair());
-			const couplePromise = coupleWebSocket(ws, client);
-			const response = new Response(null, {
-				status: 101,
-				webSocket: worker,
-				headers,
+
+		// Bun does not support the upgrade event.
+		if (isBun) {
+			ws.once("open", () => {
+				// Couple web socket with pair and resolve
+				const [worker, client] = Object.values(new WebSocketPair());
+				const couplePromise = coupleWebSocket(ws, client);
+				const response = new Response(null, {
+					status: 101,
+					webSocket: worker,
+				});
+				responsePromise.resolve(couplePromise.then(() => response));
 			});
-			responsePromise.resolve(couplePromise.then(() => response));
-		});
-		ws.once("unexpected-response", (_, req) => {
-			const headers = headersFromIncomingRequest(req);
-			const response = new Response(req, {
-				status: req.statusCode,
-				headers,
+			ws.once("error", (err) => {
+				responsePromise.reject(err);
 			});
-			responsePromise.resolve(response);
-		});
+		} else {
+			ws.once("upgrade", (req) => {
+				const headers = headersFromIncomingRequest(req);
+				// Couple web socket with pair and resolve
+				const [worker, client] = Object.values(new WebSocketPair());
+				const couplePromise = coupleWebSocket(ws, client);
+				const response = new Response(null, {
+					status: 101,
+					webSocket: worker,
+					headers,
+				});
+				responsePromise.resolve(couplePromise.then(() => response));
+			});
+			ws.once("unexpected-response", (_, req) => {
+				const headers = headersFromIncomingRequest(req);
+				const response = new Response(req, {
+					status: req.statusCode,
+					headers,
+				});
+				responsePromise.resolve(response);
+			});
+		}
 		return responsePromise;
 	}
 
