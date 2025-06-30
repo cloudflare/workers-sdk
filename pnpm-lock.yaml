@@ -1742,9 +1742,6 @@ importers:
       glob-to-regexp:
         specifier: 0.4.1
         version: 0.4.1
-      npx-import:
-        specifier: ^1.1.4
-        version: 1.1.4
       sharp:
         specifier: ^0.33.5
         version: 0.33.5
@@ -1872,6 +1869,9 @@ importers:
       mime:
         specifier: ^3.0.0
         version: 3.0.0
+      npx-import:
+        specifier: ^1.1.4
+        version: 1.1.4
       postal-mime:
         specifier: ^2.4.3
         version: 2.4.3(patch_hash=ngwql2fj2dlex3jjynq4iizhk4)
