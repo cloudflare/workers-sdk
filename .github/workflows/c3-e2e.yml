@@ -14,24 +14,27 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}${{ matrix.experimental && '-experimental' || '' }}
       cancel-in-progress: true
-    name: ${{ format('C3 ({0}{1})', matrix.description, matrix.experimental && ', experimental' || '') }}
+    name: ${{ format('C3 ({0}, {1}{2})', matrix.os.description, matrix.pm.name, matrix.experimental && ', experimental' || '') }}
     strategy:
       fail-fast: false
       matrix:
         experimental: [true, false]
-        include:
-          - os: windows-latest
-            description: pnpm, Windows
-            pm: { name: pnpm, version: "9.12.0" }
-          - os: ubuntu-latest
-            description: npm, Linux
+        os:
+          [
+            { name: windows-latest, description: Windows },
+            { name: ubuntu-latest, description: Linux },
+          ]
+        pm:
+          [
+            { name: npm, version: "0.0.0" },
+            { name: yarn, version: "1.0.0" },
+            { name: pnpm, version: "9.12.0" },
+          ]
+        exclude:
+          - os: { name: windows-latest, description: Windows }
             pm: { name: npm, version: "0.0.0" }
-          - os: ubuntu-latest
-            description: yarn, Linux
+          - os: { name: windows-latest, description: Windows }
             pm: { name: yarn, version: "1.0.0" }
-          - os: ubuntu-latest
-            description: pnpm, Linux
-            pm: { name: pnpm, version: "9.12.0" }
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -61,18 +64,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - if: matrix.pm.name == 'bun'
-        name: Install Bun ${{ matrix.pm.nameVersion }}
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: ${{ matrix.pm.nameVersion }}
-
       # Needed because gatsby requires git
       - name: Configure Git
         shell: bash
         run: |
           git config --global user.email wrangler@cloudflare.com
-          git config --global user.name 'Wrangler automated PR updater'
+          git config --global user.name 'Wrangler Tester'
 
       - id: run-e2e
         if: steps.changes.outputs.everything_but_markdown == 'true'
