@@ -12,7 +12,7 @@ jobs:
     # Runs the non-frameworks C3 E2E tests on all supported operating systems and package managers.
     timeout-minutes: 45
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}${{ matrix.experimental && '-experimental' || '' }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}${{ matrix.experimental && '-experimental' || '' }}
       cancel-in-progress: true
     name: ${{ format('C3 ({0}, {1}{2})', matrix.os.description, matrix.pm.name, matrix.experimental && ', experimental' || '') }}
     strategy:
