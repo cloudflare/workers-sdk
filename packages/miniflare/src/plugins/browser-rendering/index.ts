@@ -53,11 +53,6 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 			return [];
 		}
 
-		assert(
-			options.browserRendering.remoteProxyConnectionString,
-			"Workers Browser Rendering only supports running remotely"
-		);
-
 		return [
 			{
 				name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
