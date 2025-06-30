@@ -21,17 +21,19 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 
-		void stub.init(
-			0, // accountId: number,
-			{} as DatabaseWorkflow, // workflow: DatabaseWorkflow,
-			{} as DatabaseVersion, // version: DatabaseVersion,
-			{ id } as DatabaseInstance, // instance: DatabaseInstance,
-			{
-				timestamp: new Date(),
-				payload: params as Readonly<typeof params>,
-				instanceId: id,
-			}
-		);
+		void (async () => {
+			using _ = await stub.init(
+				0, // accountId: number,
+				{} as DatabaseWorkflow, // workflow: DatabaseWorkflow,
+				{} as DatabaseVersion, // version: DatabaseVersion,
+				{ id } as DatabaseInstance, // instance: DatabaseInstance,
+				{
+					timestamp: new Date(),
+					payload: params as Readonly<typeof params>,
+					instanceId: id,
+				}
+			);
+		})();
 
 		const handle = new WorkflowHandle(id, stub);
 		return {
