@@ -44,24 +44,14 @@ describe("Local Browser", () => {
 	});
 
 	it("Run a browser, and chec h1 text content", async () => {
-		try {
-			await expect(
-				fetchText(`http://${ip}:${port}/?url=https://example.com&action=select`)
-			).resolves.toEqual("Example Domain");
-		} catch (err) {
-			console.log(err);
-			expect("true").toMatch("false");
-		}
+		await expect(
+			fetchText(`http://${ip}:${port}/?url=https://example.com&action=select`)
+		).resolves.toEqual("Example Domain");
 	});
 
 	it("Run a browser, and chec p text content", async () => {
-		try {
-			await expect(
-				fetchText(`http://${ip}:${port}/?url=https://example.com&action=alter`)
-			).resolves.toEqual("New paragraph text set by Puppeteer!");
-		} catch (err) {
-			console.log(err);
-			expect("true").toMatch("false");
-		}
+		await expect(
+			fetchText(`http://${ip}:${port}/?url=https://example.com&action=alter`)
+		).resolves.toEqual("New paragraph text set by Puppeteer!");
 	});
 });
