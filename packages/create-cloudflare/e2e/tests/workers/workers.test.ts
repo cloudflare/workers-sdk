@@ -3,7 +3,11 @@ import { join } from "path";
 import { readJSON, readToml } from "helpers/files";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteWorker } from "../../../scripts/common";
-import { TEST_TIMEOUT, workerTemplateToTest } from "../../helpers/constants";
+import {
+	isWindows,
+	TEST_TIMEOUT,
+	workerTemplateToTest,
+} from "../../helpers/constants";
 import { debuglog } from "../../helpers/debuglog";
 import { test } from "../../helpers/index";
 import { recreateLogFolder } from "../../helpers/log-stream";
@@ -18,10 +22,7 @@ import { getWorkerTests } from "./test-config";
 const workerTests = getWorkerTests();
 
 describe
-	.skipIf(
-		workerTests.length === 0,
-		// TODO: is this skip necessary?: isWindows
-	)
+	.skipIf(workerTests.length === 0 || isWindows)
 	.concurrent(`E2E: Workers templates`, () => {
 		beforeAll((ctx) => {
 			recreateLogFolder(ctx);
