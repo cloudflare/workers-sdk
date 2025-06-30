@@ -26,6 +26,8 @@ type TestCase<T = void> = {
 	) => Partial<WorkerOptions>;
 	setup?: (helper: WranglerE2ETestHelper) => Promise<T> | T;
 	matches: ExpectStatic[];
+	// Flag for resources that can work without remote bindings opt-in
+	worksWithoutRemoteBindings?: boolean;
 };
 const testCases: TestCase<string>[] = [
 	{
@@ -63,6 +65,7 @@ const testCases: TestCase<string>[] = [
 			},
 		}),
 		matches: [expect.stringMatching(/sessionId/)],
+		worksWithoutRemoteBindings: true,
 	},
 	{
 		name: "Service Binding",
@@ -412,7 +415,7 @@ describe.each([...testCases, mtlsTest])("Mixed Mode for $name", (testCase) => {
 		await runTestCase(testCase as TestCase<unknown>, helper);
 	});
 	// Ensure the test case _relies_ on Mixed Mode, and fails in regular local dev
-	it(
+	it.skipIf(testCase.worksWithoutRemoteBindings)(
 		"fails when disabled",
 		// Turn off retries because this test is expected to fail
 		{ retry: 0, fails: true },
