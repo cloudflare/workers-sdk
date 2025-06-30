@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { format } from "node:util";
 import chalk from "chalk";
 import CLITable from "cli-table3";
@@ -49,7 +50,33 @@ function getLoggerLevel(): LoggerLevel {
 	return "log";
 }
 
+const overrideLoggerLevel = new AsyncLocalStorage<{
+	logLevel: LoggerLevel | undefined;
+}>();
+
+/**
+ * This function runs a callback with a specified log level
+ * The provided log level is stored using AsyncLocalStorage, and will be used
+ * for all logger.* calls that happen within the callback.
+ */
+export const runWithLogLevel = <V>(
+	overrideLogLevel: LoggerLevel | undefined,
+	cb: () => V
+) => overrideLoggerLevel.run({ logLevel: overrideLogLevel }, cb);
+
 export type TableRow<Keys extends string> = Record<Keys, string>;
+
+function consoleMethodToLoggerLevel(
+	method: Exclude<keyof Console, "Console">
+): LoggerLevel {
+	if (method in LOGGER_LEVELS) {
+		return method as LoggerLevel;
+	}
+	// categorize anything different from the common console methods as
+	// a standard log (in the future if need be we can add logic here to
+	// associate different methods to different log levels)
+	return "log";
+}
 
 export class Logger {
 	constructor() {}
@@ -58,7 +85,11 @@ export class Logger {
 	private onceHistory = new Set<string>();
 
 	get loggerLevel() {
-		return this.overrideLoggerLevel ?? getLoggerLevel();
+		return (
+			overrideLoggerLevel.getStore()?.logLevel ??
+			this.overrideLoggerLevel ??
+			getLoggerLevel()
+		);
 	}
 
 	set loggerLevel(val) {
@@ -107,9 +138,14 @@ export class Logger {
 			throw new Error(`console.${method}() is not a function`);
 		}
 
-		Logger.#beforeLogHook?.();
-		(console[method] as (...args: unknown[]) => unknown).apply(console, args);
-		Logger.#afterLogHook?.();
+		if (
+			LOGGER_LEVELS[this.loggerLevel] >=
+			LOGGER_LEVELS[consoleMethodToLoggerLevel(method)]
+		) {
+			Logger.#beforeLogHook?.();
+			(console[method] as (...args: unknown[]) => unknown).apply(console, args);
+			Logger.#afterLogHook?.();
+		}
 	}
 
 	get once() {

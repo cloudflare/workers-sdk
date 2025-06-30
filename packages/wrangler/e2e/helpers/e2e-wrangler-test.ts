@@ -47,15 +47,21 @@ export class WranglerE2ETestHelper {
 
 	runLongLived(
 		wranglerCommand: string,
-		{ cwd = this.tmpPath, ...options }: WranglerCommandOptions = {}
+		{
+			cwd = this.tmpPath,
+			stopOnTestFinished = true,
+			...options
+		}: WranglerCommandOptions & { stopOnTestFinished?: boolean } = {}
 	): WranglerLongLivedCommand {
 		const wrangler = new WranglerLongLivedCommand(wranglerCommand, {
 			cwd,
 			...options,
 		});
-		onTestFinished(async () => {
-			await wrangler.stop();
-		});
+		if (stopOnTestFinished) {
+			onTestFinished(async () => {
+				await wrangler.stop();
+			});
+		}
 		return wrangler;
 	}
 
@@ -121,8 +127,8 @@ export class WranglerE2ETestHelper {
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
 		onTestFinished(async () => {
-			await this.run(`wrangler d1 delete -y ${id}`);
-		});
+			await this.run(`wrangler d1 delete -y ${name}`);
+		}, 15_000);
 
 		return { id, name };
 	}

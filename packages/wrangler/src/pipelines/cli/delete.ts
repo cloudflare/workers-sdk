@@ -25,7 +25,7 @@ export const pipelinesDeleteCommand = createCommand({
 		validateName("pipeline name", name);
 
 		logger.log(`Deleting pipeline ${name}.`);
-		await deletePipeline(accountId, name);
+		await deletePipeline(config, accountId, name);
 
 		logger.log(`Deleted pipeline ${name}.`);
 	},

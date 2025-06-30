@@ -3,7 +3,7 @@ import * as vite from "vite";
 import { isNodeCompat } from "./node-js-compat";
 import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "./shared";
 import { getOutputDirectory } from "./utils";
-import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
+import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import type {
 	MessageEvent,
@@ -88,7 +88,6 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 	async initRunner(
 		worker: ReplaceWorkersTypes<Fetcher>,
-		root: string,
 		workerConfig: WorkerConfig
 	) {
 		this.#worker = worker;
@@ -98,7 +97,6 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			{
 				headers: {
 					[VITE_DEV_METADATA_HEADER]: JSON.stringify({
-						root,
 						entryPath: workerConfig.main,
 					}),
 					upgrade: "websocket",
@@ -133,7 +131,7 @@ const target = "es2022";
 export function createCloudflareEnvironmentOptions(
 	workerConfig: WorkerConfig,
 	userConfig: vite.UserConfig,
-	environmentName: string
+	environment: { name: string; isEntry: boolean }
 ): vite.EnvironmentOptions {
 	return {
 		resolve: {
@@ -155,23 +153,20 @@ export function createCloudflareEnvironmentOptions(
 				return new vite.BuildEnvironment(name, config);
 			},
 			target,
-			// We need to enable `emitAssets` in order to support additional modules defined by `rules`
 			emitAssets: true,
-			outDir: getOutputDirectory(userConfig, environmentName),
+			manifest: environment.isEntry,
+			outDir: getOutputDirectory(userConfig, environment.name),
 			copyPublicDir: false,
 			ssr: true,
 			rollupOptions: {
-				// Note: vite starts dev pre-bundling crawling from either optimizeDeps.entries or rollupOptions.input
-				//       so the input value here serves both as the build input as well as the starting point for
-				//       dev pre-bundling crawling (were we not to set this input field we'd have to appropriately set
-				//       optimizeDeps.entries in the dev config)
 				input: workerConfig.main,
 			},
 		},
 		optimizeDeps: {
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
 			noDiscovery: false,
-			entries: workerConfig.main,
+			// We need to normalize the path as it is treated as a glob and backslashes are therefore treated as escape characters.
+			entries: vite.normalizePath(workerConfig.main),
 			exclude: [...cloudflareBuiltInModules],
 			esbuildOptions: {
 				platform: "neutral",
@@ -197,14 +192,10 @@ export function createCloudflareEnvironmentOptions(
 }
 
 export function initRunners(
-	resolvedPluginConfig: ResolvedPluginConfig,
+	resolvedPluginConfig: WorkersResolvedConfig,
 	viteDevServer: vite.ViteDevServer,
 	miniflare: Miniflare
 ): Promise<void[]> | undefined {
-	if (resolvedPluginConfig.type === "assets-only") {
-		return;
-	}
-
 	return Promise.all(
 		Object.entries(resolvedPluginConfig.workers).map(
 			async ([environmentName, workerConfig]) => {
@@ -214,7 +205,7 @@ export function initRunners(
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(worker, viteDevServer.config.root, workerConfig);
+				).initRunner(worker, workerConfig);
 			}
 		)
 	);

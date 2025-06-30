@@ -1,4 +1,8 @@
-import type { Environment, RawEnvironment } from "./environment";
+import type {
+	ContainerEngine,
+	Environment,
+	RawEnvironment,
+} from "./environment";
 import type { CamelCaseKey } from "yargs";
 
 /**
@@ -229,6 +233,21 @@ export interface DevConfig {
 	 * Host to forward requests to, defaults to the host of the first route of project
 	 */
 	host: string | undefined;
+
+	/**
+	 * When developing, whether to build and connect to containers. This requires a Docker daemon to be running.
+	 * Defaults to `true`.
+	 *
+	 * @inheritable
+	 * @default true
+	 */
+	enable_containers: boolean;
+
+	/**
+	 * Either the Docker unix socket i.e. `unix:///var/run/docker.sock` or a full configuration.
+	 * Note that windows is only supported via WSL at the moment
+	 */
+	container_engine: ContainerEngine | undefined;
 }
 
 export type RawDevConfig = Partial<DevConfig>;
@@ -276,6 +295,9 @@ export const defaultWranglerConfig: Config = {
 		local_protocol: "http",
 		upstream_protocol: "http",
 		host: undefined,
+		// Note this one is also workers only
+		enable_containers: true,
+		container_engine: undefined,
 	},
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/
@@ -304,6 +326,7 @@ export const defaultWranglerConfig: Config = {
 	ai: undefined,
 	images: undefined,
 	version_metadata: undefined,
+	unsafe_hello_world: [],
 
 	/*====================================================*/
 	/*           Fields supported by Workers only         */
@@ -346,6 +369,8 @@ export const defaultWranglerConfig: Config = {
 	upload_source_maps: undefined,
 	assets: undefined,
 	observability: { enabled: true },
+	/** The default here is undefined so that we can delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable. */
+	compliance_region: undefined,
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},

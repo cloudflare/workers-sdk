@@ -5,10 +5,10 @@ import { Service } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
-	MixedModeConnectionString,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
+	RemoteProxyConnectionString,
 } from "../shared";
 
 export const WorkflowsOptionsSchema = z.object({
@@ -18,8 +18,8 @@ export const WorkflowsOptionsSchema = z.object({
 				name: z.string(),
 				className: z.string(),
 				scriptName: z.string().optional(),
-				mixedModeConnectionString: z
-					.custom<MixedModeConnectionString>()
+				remoteProxyConnectionString: z
+					.custom<RemoteProxyConnectionString>()
 					.optional(),
 			})
 		)
@@ -59,10 +59,11 @@ export const WORKFLOWS_PLUGIN: Plugin<
 		);
 	},
 
-	async getServices({ options, sharedOptions, tmpPath }) {
+	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
 		const persistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			tmpPath,
+			defaultPersistRoot,
 			sharedOptions.workflowsPersist
 		);
 		await fs.mkdir(persistPath, { recursive: true });
@@ -130,6 +131,11 @@ export const WORKFLOWS_PLUGIN: Plugin<
 	},
 
 	getPersistPath({ workflowsPersist }, tmpPath) {
-		return getPersistPath(WORKFLOWS_PLUGIN_NAME, tmpPath, workflowsPersist);
+		return getPersistPath(
+			WORKFLOWS_PLUGIN_NAME,
+			tmpPath,
+			undefined,
+			workflowsPersist
+		);
 	},
 };

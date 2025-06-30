@@ -78,6 +78,7 @@ describe("cloudchamber list", () => {
 		        \\"account_id\\": \\"123\\",
 		        \\"vcpu\\": 4,
 		        \\"memory\\": \\"400MB\\",
+		        \\"memory_mib\\": 400,
 		        \\"version\\": 1,
 		        \\"image\\": \\"hello\\",
 		        \\"location\\": {
@@ -85,6 +86,7 @@ describe("cloudchamber list", () => {
 		            \\"enabled\\": true
 		        },
 		        \\"network\\": {
+		            \\"mode\\": \\"public\\",
 		            \\"ipv4\\": \\"1.1.1.1\\"
 		        },
 		        \\"placements_ref\\": \\"http://ref\\",
@@ -97,6 +99,7 @@ describe("cloudchamber list", () => {
 		        \\"account_id\\": \\"123\\",
 		        \\"vcpu\\": 4,
 		        \\"memory\\": \\"400MB\\",
+		        \\"memory_mib\\": 400,
 		        \\"version\\": 2,
 		        \\"image\\": \\"hello\\",
 		        \\"location\\": {
@@ -104,6 +107,7 @@ describe("cloudchamber list", () => {
 		            \\"enabled\\": true
 		        },
 		        \\"network\\": {
+		            \\"mode\\": \\"public\\",
 		            \\"ipv4\\": \\"1.1.1.2\\"
 		        },
 		        \\"current_placement\\": {
@@ -126,6 +130,7 @@ describe("cloudchamber list", () => {
 		        \\"account_id\\": \\"123\\",
 		        \\"vcpu\\": 4,
 		        \\"memory\\": \\"400MB\\",
+		        \\"memory_mib\\": 400,
 		        \\"version\\": 1,
 		        \\"image\\": \\"hello\\",
 		        \\"location\\": {
@@ -133,6 +138,7 @@ describe("cloudchamber list", () => {
 		            \\"enabled\\": true
 		        },
 		        \\"network\\": {
+		            \\"mode\\": \\"public\\",
 		            \\"ipv4\\": \\"1.1.1.1\\"
 		        },
 		        \\"placements_ref\\": \\"http://ref\\",
@@ -145,6 +151,7 @@ describe("cloudchamber list", () => {
 		        \\"account_id\\": \\"123\\",
 		        \\"vcpu\\": 4,
 		        \\"memory\\": \\"400MB\\",
+		        \\"memory_mib\\": 400,
 		        \\"version\\": 2,
 		        \\"image\\": \\"hello\\",
 		        \\"location\\": {
@@ -152,6 +159,7 @@ describe("cloudchamber list", () => {
 		            \\"enabled\\": true
 		        },
 		        \\"network\\": {
+		            \\"mode\\": \\"public\\",
 		            \\"ipv4\\": \\"1.1.1.2\\"
 		        },
 		        \\"current_placement\\": {

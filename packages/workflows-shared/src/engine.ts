@@ -163,7 +163,17 @@ export class Engine extends DurableObject<Env> {
 		_instanceId: string
 	): Promise<InstanceStatus> {
 		if (this.accountId === undefined) {
-			throw new Error("stub not initialized");
+			// Engine could have restarted, so we try to restore from its state
+			const metadata =
+				await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+			if (metadata === undefined) {
+				// metadata was never set, so we assume the engine was never started
+				throw new Error("Engine was never started");
+			}
+
+			this.accountId = metadata.accountId;
+			this.instanceId = metadata.instance.id;
+			this.workflowName = metadata.workflow.name;
 		}
 
 		const res = await this.ctx.storage.get<InstanceStatus>(ENGINE_STATUS_KEY);
@@ -295,12 +305,13 @@ export class Engine extends DurableObject<Env> {
 				}
 			);
 		}
-		this.priorityQueue.popPastEntries();
-		await this.priorityQueue.handleNextAlarm();
 
 		if (this.isRunning) {
 			return;
 		}
+
+		this.priorityQueue.popPastEntries();
+		await this.priorityQueue.handleNextAlarm();
 
 		// We are not running and are possibly starting a new lifetime
 		this.accountId = accountId;

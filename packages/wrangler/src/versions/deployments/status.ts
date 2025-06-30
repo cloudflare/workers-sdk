@@ -57,7 +57,11 @@ export const deploymentsStatusCommand = createCommand({
 			);
 		}
 
-		const latestDeployment = await fetchLatestDeployment(accountId, workerName);
+		const latestDeployment = await fetchLatestDeployment(
+			config,
+			accountId,
+			workerName
+		);
 
 		if (!latestDeployment) {
 			throw new UserError(`The Worker ${workerName} has no deployments.`, {
@@ -72,7 +76,13 @@ export const deploymentsStatusCommand = createCommand({
 
 		const versionCache: VersionCache = new Map();
 		const versionIds = latestDeployment.versions.map((v) => v.version_id);
-		await fetchVersions(accountId, workerName, versionCache, ...versionIds);
+		await fetchVersions(
+			config,
+			accountId,
+			workerName,
+			versionCache,
+			...versionIds
+		);
 
 		const formattedVersions = latestDeployment.versions.map((traffic) => {
 			const version = versionCache.get(traffic.version_id);

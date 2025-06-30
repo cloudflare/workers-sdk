@@ -11,14 +11,14 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
 	SERVICE_LOOPBACK,
 } from "../shared";
 
@@ -29,8 +29,8 @@ export const R2OptionsSchema = z.object({
 			z.record(
 				z.object({
 					id: z.string(),
-					mixedModeConnectionString: z
-						.custom<MixedModeConnectionString>()
+					remoteProxyConnectionString: z
+						.custom<RemoteProxyConnectionString>()
 						.optional(),
 				})
 			),
@@ -74,23 +74,29 @@ export const R2_PLUGIN: Plugin<
 		options,
 		sharedOptions,
 		tmpPath,
+		defaultPersistRoot,
 		log,
 		unsafeStickyBlobs,
 	}) {
 		const persist = sharedOptions.r2Persist;
 		const buckets = namespaceEntries(options.r2Buckets);
 		const services = buckets.map<Service>(
-			([name, { id, mixedModeConnectionString }]) => ({
+			([name, { id, remoteProxyConnectionString }]) => ({
 				name: `${R2_BUCKET_SERVICE_PREFIX}:${id}`,
-				worker: mixedModeConnectionString
-					? mixedModeClientWorker(mixedModeConnectionString, name)
+				worker: remoteProxyConnectionString
+					? remoteProxyClientWorker(remoteProxyConnectionString, name)
 					: objectEntryWorker(R2_BUCKET_OBJECT, id),
 			})
 		);
 
 		if (buckets.length > 0) {
 			const uniqueKey = `miniflare-${R2_BUCKET_OBJECT_CLASS_NAME}`;
-			const persistPath = getPersistPath(R2_PLUGIN_NAME, tmpPath, persist);
+			const persistPath = getPersistPath(
+				R2_PLUGIN_NAME,
+				tmpPath,
+				defaultPersistRoot,
+				persist
+			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {
 				name: R2_STORAGE_SERVICE_NAME,
@@ -139,6 +145,6 @@ export const R2_PLUGIN: Plugin<
 		return services;
 	},
 	getPersistPath({ r2Persist }, tmpPath) {
-		return getPersistPath(R2_PLUGIN_NAME, tmpPath, r2Persist);
+		return getPersistPath(R2_PLUGIN_NAME, tmpPath, undefined, r2Persist);
 	},
 };

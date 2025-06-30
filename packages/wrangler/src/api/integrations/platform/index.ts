@@ -1,5 +1,5 @@
 import { kCurrentWorker, Miniflare } from "miniflare";
-import { getAssetsOptions } from "../../../assets";
+import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
@@ -11,17 +11,23 @@ import {
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 } from "../../../dev/miniflare";
-import { run } from "../../../experimental-flags";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
+import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
 import type { AssetsOptions } from "../../../assets";
 import type { Config, RawConfig, RawEnvironment } from "../../../config";
+import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
-import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
+import type {
+	MiniflareOptions,
+	ModuleRule,
+	RemoteProxyConnectionString,
+	WorkerOptions,
+} from "miniflare";
 
 export { readConfig as unstable_readConfig };
 export type {
@@ -53,6 +59,13 @@ export type GetPlatformProxyOptions = {
 	 * If `false` is specified no data is persisted on the filesystem.
 	 */
 	persist?: boolean | { path: string };
+	/**
+	 * Experimental flags (note: these can change at any time and are not version-controlled use at your own risk)
+	 */
+	experimental?: {
+		/** whether access to remove bindings should be enabled */
+		remoteBindings?: boolean;
+	};
 };
 
 /**
@@ -98,28 +111,31 @@ export async function getPlatformProxy<
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
+	const experimentalRemoteBindings = !!options.experimental?.remoteBindings;
+
 	const env = options.environment;
 
-	const rawConfig = readConfig({
+	const config = readConfig({
 		config: options.configPath,
 		env,
 	});
 
-	const miniflareOptions = await run(
-		{
-			MULTIWORKER: false,
-			RESOURCES_PROVISION: false,
-			// TODO: when possible mixed mode should be made available for getPlatformProxy
-			MIXED_MODE: false,
-		},
-		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
-	);
+	let remoteProxySession: RemoteProxySession | undefined = undefined;
+	if (experimentalRemoteBindings && config.configPath) {
+		remoteProxySession = (
+			(await maybeStartOrUpdateRemoteProxySession(config.configPath)) ?? {}
+		).session;
+	}
 
-	const mf = new Miniflare({
-		script: "",
-		modules: true,
-		...(miniflareOptions as Record<string, unknown>),
+	const miniflareOptions = await getMiniflareOptionsFromConfig({
+		config,
+		options,
+		remoteProxyConnectionString:
+			remoteProxySession?.remoteProxyConnectionString,
+		remoteBindingsEnabled: experimentalRemoteBindings,
 	});
+
+	const mf = new Miniflare(miniflareOptions);
 
 	const bindings: Env = await mf.getBindings();
 
@@ -131,20 +147,40 @@ export async function getPlatformProxy<
 		cf: cf as CfProperties,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
-		dispose: () => mf.dispose(),
+		dispose: async () => {
+			await remoteProxySession?.dispose();
+			await mf.dispose();
+		},
 	};
 }
 
-// this is only used by getPlatformProxy
-async function getMiniflareOptionsFromConfig(
-	rawConfig: Config,
-	env: string | undefined,
-	options: GetPlatformProxyOptions
-): Promise<Partial<MiniflareOptions>> {
-	const bindings = getBindings(rawConfig, env, true, {});
+/**
+ * Builds an options configuration object for the `getPlatformProxy` functionality that
+ * can be then passed to the Miniflare constructor
+ *
+ * @param args.config The wrangler configuration to base the options from
+ * @param args.options The user provided `getPlatformProxy` options
+ * @param args.remoteProxyConnectionString The potential remote proxy connection string to be used to connect the remote bindings
+ * @param args.remoteBindingsEnabled Whether remote bindings are enabled
+ * @returns an object ready to be passed to the Miniflare constructor
+ */
+async function getMiniflareOptionsFromConfig(args: {
+	config: Config;
+	options: GetPlatformProxyOptions;
+	remoteProxyConnectionString?: RemoteProxyConnectionString;
+	remoteBindingsEnabled: boolean;
+}): Promise<MiniflareOptions> {
+	const {
+		config,
+		options,
+		remoteProxyConnectionString,
+		remoteBindingsEnabled,
+	} = args;
 
-	if (rawConfig["durable_objects"]) {
-		const { localBindings } = partitionDurableObjectBindings(rawConfig);
+	const bindings = getBindings(config, options.environment, true, {});
+
+	if (config["durable_objects"]) {
+		const { localBindings } = partitionDurableObjectBindings(config);
 		if (localBindings.length > 0) {
 			logger.warn(dedent`
 				You have defined bindings to the following internal Durable Objects:
@@ -157,25 +193,50 @@ async function getMiniflareOptionsFromConfig(
 		}
 	}
 	const workerDefinitions = await getBoundRegisteredWorkers({
-		name: rawConfig.name,
+		name: config.name,
 		services: bindings.services,
-		durableObjects: rawConfig["durable_objects"],
+		durableObjects: config["durable_objects"],
 		tailConsumers: [],
 	});
 
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: rawConfig.name,
-		bindings,
-		workerDefinitions,
-		queueConsumers: undefined,
-		services: rawConfig.services,
-		serviceBindings: {},
-		migrations: rawConfig.migrations,
-		imagesLocalMode: false,
-		tails: [],
-	});
+	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
+		{
+			name: config.name,
+			complianceRegion: config.compliance_region,
+			bindings,
+			workerDefinitions,
+			queueConsumers: undefined,
+			services: config.services,
+			serviceBindings: {},
+			migrations: config.migrations,
+			imagesLocalMode: false,
+			tails: [],
+			containers: undefined,
+			containerBuildId: undefined,
+		},
+		remoteProxyConnectionString,
+		remoteBindingsEnabled
+	);
 
-	const persistOptions = getMiniflarePersistOptions(options.persist);
+	let processedAssetOptions: AssetsOptions | undefined;
+
+	try {
+		processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
+	} catch (e) {
+		const isNonExistentError = e instanceof NonExistentAssetsDirError;
+		// we want to loosen up the assets directory existence restriction here,
+		// since `getPlatformProxy` can be run when the assets directory doesn't actual
+		// exist, but all other exceptions should still be thrown
+		if (!isNonExistentError) {
+			throw e;
+		}
+	}
+
+	const assetOptions = processedAssetOptions
+		? buildAssetOptions({ assets: processedAssetOptions })
+		: {};
+
+	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
 
 	const serviceBindings = await getServiceBindings(bindings.services);
 
@@ -184,19 +245,24 @@ async function getMiniflareOptionsFromConfig(
 			{
 				script: "",
 				modules: true,
-				name: rawConfig.name,
+				name: config.name,
 				...bindingOptions,
 				serviceBindings: {
 					...serviceBindings,
 					...bindingOptions.serviceBindings,
 				},
+				...assetOptions,
 			},
 			...externalWorkers,
 		],
-		...persistOptions,
+		defaultPersistRoot,
 	};
 
-	return miniflareOptions;
+	return {
+		script: "",
+		modules: true,
+		...miniflareOptions,
+	};
 }
 
 /**
@@ -205,39 +271,19 @@ async function getMiniflareOptionsFromConfig(
  * @param persist The user provided persistence option
  * @returns an object containing the properties to pass to miniflare
  */
-function getMiniflarePersistOptions(
+function getMiniflarePersistRoot(
 	persist: GetPlatformProxyOptions["persist"]
-): Pick<
-	MiniflareOptions,
-	| "kvPersist"
-	| "durableObjectsPersist"
-	| "r2Persist"
-	| "d1Persist"
-	| "workflowsPersist"
-> {
+): string | undefined {
 	if (persist === false) {
 		// the user explicitly asked for no persistance
-		return {
-			kvPersist: false,
-			durableObjectsPersist: false,
-			r2Persist: false,
-			d1Persist: false,
-			workflowsPersist: false,
-		};
+		return;
 	}
 
 	const defaultPersistPath = ".wrangler/state/v3";
-
 	const persistPath =
 		typeof persist === "object" ? persist.path : defaultPersistPath;
 
-	return {
-		kvPersist: `${persistPath}/kv`,
-		durableObjectsPersist: `${persistPath}/do`,
-		r2Persist: `${persistPath}/r2`,
-		d1Persist: `${persistPath}/d1`,
-		workflowsPersist: `${persistPath}/workflows`,
-	};
+	return persistPath;
 }
 
 function deepFreeze<T extends Record<string | number | symbol, unknown>>(
@@ -268,6 +314,8 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		remoteBindingsEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -278,6 +326,8 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		remoteBindingsEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -288,6 +338,8 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		remoteBindingsEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -306,18 +358,25 @@ export function unstable_getMiniflareWorkerOptions(
 			fallthrough: rule.fallthrough,
 		}));
 
-	const bindings = getBindings(config, env, true, {});
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: config.name,
-		bindings,
-		workerDefinitions: null,
-		queueConsumers: config.queues.consumers,
-		services: [],
-		serviceBindings: {},
-		migrations: config.migrations,
-		imagesLocalMode: !!options?.imagesLocalMode,
-		tails: config.tail_consumers,
-	});
+	const bindings = getBindings(config, env, true, {}, true);
+	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
+		{
+			name: config.name,
+			complianceRegion: config.compliance_region,
+			bindings,
+			workerDefinitions: null,
+			queueConsumers: config.queues.consumers,
+			services: [],
+			serviceBindings: {},
+			migrations: config.migrations,
+			imagesLocalMode: !!options?.imagesLocalMode,
+			tails: config.tail_consumers,
+			containers: undefined,
+			containerBuildId: undefined,
+		},
+		options?.remoteProxyConnectionString,
+		options?.remoteBindingsEnabled ?? false
+	);
 
 	// This function is currently only exported for the Workers Vitest pool.
 	// In tests, we don't want to rely on the dev registry, as we can't guarantee
@@ -330,6 +389,19 @@ export function unstable_getMiniflareWorkerOptions(
 			bindings.services.map((binding) => {
 				const name =
 					binding.service === config.name ? kCurrentWorker : binding.service;
+				if (
+					options?.remoteProxyConnectionString &&
+					binding.experimental_remote
+				) {
+					return [
+						binding.binding,
+						{
+							name,
+							entrypoint: binding.entrypoint,
+							remoteProxyConnectionString: options.remoteProxyConnectionString,
+						},
+					];
+				}
 				return [binding.binding, { name, entrypoint: binding.entrypoint }];
 			})
 		);

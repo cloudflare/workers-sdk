@@ -2,16 +2,18 @@ import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
 import {
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 
 const BrowserRenderingSchema = z.object({
 	binding: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>().optional(),
+	remoteProxyConnectionString: z
+		.custom<RemoteProxyConnectionString>()
+		.optional(),
 });
 
 export const BrowserRenderingOptionsSchema = z.object({
@@ -51,12 +53,17 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 			return [];
 		}
 
+		assert(
+			options.browserRendering.remoteProxyConnectionString,
+			"Workers Browser Rendering only supports running remotely"
+		);
+
 		return [
 			{
 				name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
-				worker: options.browserRendering.mixedModeConnectionString
-					? mixedModeClientWorker(
-							options.browserRendering.mixedModeConnectionString,
+				worker: options.browserRendering.remoteProxyConnectionString
+					? remoteProxyClientWorker(
+							options.browserRendering.remoteProxyConnectionString,
 							options.browserRendering.binding
 						)
 					: {

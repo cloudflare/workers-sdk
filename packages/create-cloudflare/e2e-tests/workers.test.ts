@@ -140,6 +140,19 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				argv: ["--category", "hello-world"],
 			},
 			{
+				template: "hello-world-workflows",
+				argv: ["--category", "hello-world"],
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "details",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "details",
+				},
+			},
+			{
 				template: "common",
 				variants: ["ts", "js"],
 				verifyDeploy: {
@@ -164,18 +177,6 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				// Skipped for now, since it's not possible to test scheduled events on deployed Workers
 				verifyDeploy: null,
 				verifyPreview: null,
-			},
-			{
-				template: "openapi",
-				variants: [],
-				verifyDeploy: {
-					route: "/",
-					expectedText: "SwaggerUI",
-				},
-				verifyPreview: {
-					route: "/",
-					expectedText: "SwaggerUI",
-				},
 			},
 		];
 	}

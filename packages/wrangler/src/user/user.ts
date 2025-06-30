@@ -213,6 +213,7 @@ import path from "node:path";
 import url from "node:url";
 import { TextEncoder } from "node:util";
 import TOML from "@iarna/toml";
+import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { configFileName } from "../config";
 import {
@@ -221,7 +222,10 @@ import {
 	saveToConfigCache,
 } from "../config-cache";
 import { NoDefaultValueProvided, select } from "../dialogs";
-import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
+import {
+	getCloudflareApiEnvironmentFromEnv,
+	getCloudflareComplianceRegion,
+} from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -244,6 +248,7 @@ import {
 import { getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ChooseAccountItem } from "./choose-account";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
@@ -356,23 +361,16 @@ const DefaultScopes = {
 		"See and change Cloudflare Pipelines configurations and data",
 	"secrets_store:write":
 		"See and change secrets + stores within the Secrets Store",
-} as const;
-
-const OptionalScopes = {
+	"containers:write": "Manage Workers Containers",
 	"cloudchamber:write": "Manage Cloudchamber",
 } as const;
-
-const AllScopes = {
-	...DefaultScopes,
-	...OptionalScopes,
-};
 
 /**
  * The possible keys for a Scope.
  *
  * "offline_access" is automatically included.
  */
-export type Scope = keyof typeof AllScopes;
+export type Scope = keyof typeof DefaultScopes;
 
 export let DefaultScopeKeys = Object.keys(DefaultScopes) as Scope[];
 
@@ -926,6 +924,7 @@ type LoginProps = {
 };
 
 export async function loginOrRefreshIfRequired(
+	complianceConfig: ComplianceConfig,
 	props?: LoginProps
 ): Promise<boolean> {
 	// TODO: if there already is a token, then try refreshing
@@ -933,7 +932,7 @@ export async function loginOrRefreshIfRequired(
 	if (!getAPIToken()) {
 		// Not logged in.
 		// If we are not interactive, we cannot ask the user to login
-		return !isNonInteractiveOrCI() && (await login(props));
+		return !isNonInteractiveOrCI() && (await login(complianceConfig, props));
 	} else if (isAccessTokenExpired()) {
 		// We're logged in, but the refresh token seems to have expired,
 		// so let's try to refresh it
@@ -943,7 +942,7 @@ export async function loginOrRefreshIfRequired(
 			return true;
 		} else {
 			// If the refresh token isn't valid, then we ask the user to login again
-			return !isNonInteractiveOrCI() && (await login(props));
+			return !isNonInteractiveOrCI() && (await login(complianceConfig, props));
 		}
 	} else {
 		return true;
@@ -1062,6 +1061,7 @@ export async function getOauthToken(options: {
 }
 
 export async function login(
+	complianceConfig: ComplianceConfig,
 	props: LoginProps = {
 		browser: true,
 		callbackHost: "localhost",
@@ -1076,6 +1076,17 @@ export async function login(
 				"environment to log in via OAuth."
 		);
 		return false;
+	}
+
+	const complianceRegion = getCloudflareComplianceRegion(complianceConfig);
+	if (complianceRegion === "fedramp_high") {
+		const configurationSource = complianceConfig?.compliance_region
+			? "`compliance_region` configuration property"
+			: "`CLOUDFLARE_API_ENVIRONMENT` environment variable";
+		throw new UserError(dedent`
+			OAuth login is not supported in the \`${complianceRegion}\` compliance region.
+			Please use a Cloudflare API token (\`CLOUDFLARE_API_TOKEN\` environment variable) or remove the ${configurationSource}.
+		`);
 	}
 
 	logger.log("Attempting to login via OAuth...");
@@ -1195,22 +1206,20 @@ export async function logout(): Promise<void> {
 
 export function listScopes(message = "💁 Available scopes:"): void {
 	logger.log(message);
-	const data = DefaultScopeKeys.map((scope: Scope) => ({
-		Scope: scope,
-		Description: AllScopes[scope],
-	}));
-	logger.table(data);
+	printScopes(DefaultScopeKeys);
 	// TODO: maybe a good idea to show usage here
 }
 
-export async function getAccountId(): Promise<string> {
+export async function getAccountId(
+	complianceConfig: ComplianceConfig
+): Promise<string> {
 	// check if we have a cached value
 	const cachedAccount = getAccountFromCache();
 	if (cachedAccount && !getCloudflareAccountIdFromEnv()) {
 		return cachedAccount.id;
 	}
 
-	const accounts = await getAccountChoices();
+	const accounts = await getAccountChoices(complianceConfig);
 	if (accounts.length === 1) {
 		saveAccountToCache({ id: accounts[0].id, name: accounts[0].name });
 		return accounts[0].id;
@@ -1247,10 +1256,12 @@ ${accounts
 /**
  * Ensure that a user is logged in, and a valid account_id is available.
  */
-export async function requireAuth(config: {
-	account_id?: string;
-}): Promise<string> {
-	const loggedIn = await loginOrRefreshIfRequired();
+export async function requireAuth(
+	config: ComplianceConfig & {
+		account_id?: string;
+	}
+): Promise<string> {
+	const loggedIn = await loginOrRefreshIfRequired(config);
 	if (!loggedIn) {
 		if (isNonInteractiveOrCI()) {
 			throw new UserError(
@@ -1261,7 +1272,7 @@ export async function requireAuth(config: {
 			throw new UserError("Did not login, quitting...");
 		}
 	}
-	const accountId = config.account_id || (await getAccountId());
+	const accountId = config.account_id || (await getAccountId(config));
 	if (!accountId) {
 		throw new UserError("No account id found, quitting...");
 	}
@@ -1307,6 +1318,15 @@ export function getAccountFromCache():
  */
 export function getScopes(): Scope[] | undefined {
 	return LocalState.scopes;
+}
+
+export function printScopes(scopes: Scope[]) {
+	const data = scopes.map((scope: Scope) => ({
+		Scope: scope,
+		Description: DefaultScopes[scope],
+	}));
+
+	logger.table(data);
 }
 
 /**

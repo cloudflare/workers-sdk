@@ -137,7 +137,7 @@ async function startWranglerDev(args: string[], skipWaitingForReady = false) {
 	if (!skipWaitingForReady) {
 		let readyMatch: RegExpMatchArray | null = null;
 		for await (const line of stdoutInterface) {
-			if ((readyMatch = readyRegexp.exec(line)) !== null) break;
+			if ((readyMatch = readyRegexp.exec(stripAnsi(line))) !== null) break;
 		}
 		assert(readyMatch !== null, "Expected ready message");
 		result.url = readyMatch[1];
@@ -227,6 +227,42 @@ describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 			expect(duringProcesses.length).toBeGreaterThan(beginProcesses.length);
 		}
 	});
+	describe("--show-interactive-dev-session", () => {
+		it("should show hotkeys when interactive", async () => {
+			const wrangler = await startWranglerDev(args);
+			wrangler.pty.kill();
+			expect(wrangler.stdout).toContain("open a browser");
+			expect(wrangler.stdout).toContain("open devtools");
+			expect(wrangler.stdout).toContain("clear console");
+			expect(wrangler.stdout).toContain("to exit");
+			expect(wrangler.stdout).not.toContain("rebuild container");
+		});
+		it("should not show hotkeys with --show-interactive-dev-session=false", async () => {
+			const wrangler = await startWranglerDev([
+				...args,
+				"--show-interactive-dev-session=false",
+			]);
+			wrangler.pty.kill();
+			expect(wrangler.stdout).not.toContain("open a browser");
+			expect(wrangler.stdout).not.toContain("open devtools");
+			expect(wrangler.stdout).not.toContain("clear console");
+			expect(wrangler.stdout).not.toContain("to exit");
+			expect(wrangler.stdout).not.toContain("rebuild container");
+		});
+		// docker isn't installed by default on windows/macos runners
+		it.skipIf(process.env.platform !== "linux" && process.env.CI === "true")(
+			"should show rebuild containers hotkey if containers are configured",
+			async () => {
+				const wrangler = await startWranglerDev([
+					"dev",
+					"-c",
+					"wrangler.container.jsonc",
+				]);
+				wrangler.pty.kill();
+				expect(wrangler.stdout).toContain("rebuild container");
+			}
+		);
+	});
 });
 
 it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {
@@ -256,27 +292,3 @@ it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {
 		expect(duringProcesses.length).toBeGreaterThan(beginProcesses.length);
 	}
 });
-
-it.runIf(RUN_IF && nodePtySupported)(
-	"hotkeys should be unregistered when the initial build fails",
-	async () => {
-		const wrangler = await startWranglerDev(
-			["dev", "src/startup-error.ts"],
-			true
-		);
-
-		expect(await wrangler.exitPromise).toBe(1);
-
-		const hotkeysRenderCount = [
-			...wrangler.stdout.matchAll(/\[b\] open a browser/g),
-		];
-
-		const clearHotkeysCount = [
-			// This is the control sequence for moving the cursor up and then clearing from the cursor to the end
-			...wrangler.stdout.matchAll(/\[\dA\[0J/g),
-		];
-
-		// The hotkeys should be rendered the same number of times as the control sequence for clearing them from the screen
-		expect(hotkeysRenderCount.length).toBe(clearHotkeysCount.length);
-	}
-);

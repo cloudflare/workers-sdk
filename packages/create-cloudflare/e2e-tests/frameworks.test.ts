@@ -33,7 +33,6 @@ import {
 	TEST_TIMEOUT,
 	testDeploymentCommitMessage,
 	testGitCommitMessage,
-	waitForExit,
 } from "./helpers";
 import type { TemplateConfig } from "../src/templates";
 import type { RunnerConfig } from "./helpers";
@@ -45,16 +44,10 @@ type FrameworkTestConfig = RunnerConfig & {
 	nodeCompat: boolean;
 	unsupportedPms?: string[];
 	unsupportedOSs?: string[];
-	verifyBuild?: {
-		outputDir: string;
-		script: string;
-		route: string;
-		expectedText: string;
-	};
 	flags?: string[];
 };
 
-const { name: pm, npx } = detectPackageManager();
+const { name: pm } = detectPackageManager();
 
 function getFrameworkTests(opts: {
 	experimental: boolean;
@@ -180,7 +173,6 @@ describe.concurrent(
 						);
 
 						await verifyTypes(testConfig, frameworkConfig, project.path);
-						await verifyBuildScript(testConfig, project.path, logStream);
 					} catch (e) {
 						console.error("ERROR", e);
 						expect.fail(
@@ -402,59 +394,6 @@ const verifyTypes = async (
 	if (nodeCompat) {
 		expect(tsconfigTypes).toContain(`node`);
 	}
-};
-
-const verifyBuildScript = async (
-	{ verifyBuild }: FrameworkTestConfig,
-	projectPath: string,
-	logStream: Writable,
-) => {
-	if (!verifyBuild) {
-		return;
-	}
-
-	const { outputDir, script, route, expectedText } = verifyBuild;
-
-	// Run the build scripts
-	const buildProc = spawnWithLogging(
-		[pm, "run", script],
-		{
-			cwd: projectPath,
-			env: {
-				NODE_ENV: "production",
-			},
-		},
-		logStream,
-	);
-	await waitForExit(buildProc);
-
-	// Run wrangler dev on a random port to avoid colliding with other tests
-	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
-
-	const devProc = spawnWithLogging(
-		[npx, "wrangler", "pages", "dev", outputDir, "--port", `${TEST_PORT}`],
-		{
-			cwd: projectPath,
-		},
-		logStream,
-	);
-
-	// Wait a few seconds for dev server to spin up
-	await sleep(7000);
-
-	// Make a request to the specified test route
-	const res = await fetch(`http://127.0.0.1:${TEST_PORT}${route}`);
-	const body = await res.text();
-
-	// Kill the process gracefully so ports can be cleaned up
-	await kill(devProc);
-
-	// Wait for a second to allow process to exit cleanly. Otherwise, the port might
-	// end up camped and cause future runs to fail
-	await sleep(1000);
-
-	// Verify expectation after killing the process so that it exits cleanly in case of failure
-	expect(body).toContain(expectedText);
 };
 
 function shouldRunTest(frameworkId: string, testConfig: FrameworkTestConfig) {

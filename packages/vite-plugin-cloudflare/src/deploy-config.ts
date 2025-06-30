@@ -3,7 +3,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vite from "vite";
 import { unstable_readConfig } from "wrangler";
-import type { ResolvedPluginConfig } from "./plugin-config";
+import type {
+	AssetsOnlyResolvedConfig,
+	WorkersResolvedConfig,
+} from "./plugin-config";
 
 interface DeployConfig {
 	configPath: string;
@@ -44,7 +47,7 @@ function getRelativePathToWorkerConfig(
 }
 
 export function writeDeployConfig(
-	resolvedPluginConfig: ResolvedPluginConfig,
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
 	resolvedViteConfig: vite.ResolvedConfig
 ) {
 	const deployConfigPath = getDeployConfigPath(resolvedViteConfig.root);

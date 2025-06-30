@@ -293,7 +293,7 @@ PR review is a critical and required step in the process for landing changes. Th
 
 ## PR Previews
 
-Every PR will have an associated pre-release build for all releasable packages within the repository, powered by our [prerelease registry](packages/prerelease-registry). You can find links to prereleases for each package in a comment automatically posted by GitHub Actions on each opened PR ([for example](https://github.com/cloudflare/workers-sdk/pull/7172#issuecomment-2457244715)).
+Every PR will have an associated pre-release build for all releasable packages within the repository, powered by [pkg.pr.new](https://github.com/stackblitz-labs/pkg.pr.new). You can find links to prereleases for each package in a comment automatically posted by GitHub Actions on each opened PR ([for example](https://github.com/cloudflare/workers-sdk/pull/9492#issuecomment-2943757675)).
 
 It's also possible to generate preview builds for the applications in the repository. These aren't generated automatically because they're pretty slow CI jobs, but you can trigger preview builds by adding one of the following labels to your PR:
 
@@ -442,11 +442,12 @@ If a hotfix release of Wrangler, Miniflare, or C3 is required, you should:
 
   - Checkout the previous release of `workers-sdk`
   - Apply the changes that should be in the hotfix
-  - Increment the patch version of the packages that should be released as part of the hotfix
+  - Manually, increment the patch version of the packages that should be released as part of the hotfix
+  - Manually, update the changelog for the package(s) being released.
 
 - Get approvals for that PR, and make sure CI checks are passing
 - Manually trigger a hotfix release from that PR using the ["Release a hotfix"](https://github.com/cloudflare/workers-sdk/actions/workflows/hotfix-release.yml) GitHub action.
   - Make sure you set the dist-tag to `latest`
   - Optionally, you can first publish it to the `hotfix` dist-tag on NPM in order to verify the release.
 - **[CRUCIAL]** Once the hotfix release is out and verified, merge the fixes into main before the next regular release of `workers-sdk`.
-- Make sure that the version number of the next changesets-based release of Wrangler/Miniflare/C3 is greater than the version used for the hotfix by adding a dummy `minor` changeset entry for each of the packages that had a hotfix published.
+  - Make sure that the version number of the released package(s) on `main` are the same as the versions that were released to ensure that any subsequent changesets will bump the version correctly for the next release.

@@ -1,5 +1,236 @@
 # miniflare
 
+## 4.20250617.4
+
+### Patch Changes
+
+- [#9689](https://github.com/cloudflare/workers-sdk/pull/9689) [`b137a6f`](https://github.com/cloudflare/workers-sdk/commit/b137a6f090b952f7e34236fa86b6667ca895f601) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: correctly pass container engine config to miniflare
+
+## 4.20250617.3
+
+### Minor Changes
+
+- [#9640](https://github.com/cloudflare/workers-sdk/pull/9640) [`bfb791e`](https://github.com/cloudflare/workers-sdk/commit/bfb791e708706c643d088864a5226b23b0f45d7e) Thanks [@emily-shen](https://github.com/emily-shen)! - Add ability to dump workerd config into a file for debugging.
+
+  You can enable this by setting `MINIFLARE_WORKERD_CONFIG_DEBUG` to a file path where you want the config to be written.
+
+### Patch Changes
+
+- [#9596](https://github.com/cloudflare/workers-sdk/pull/9596) [`5162c51`](https://github.com/cloudflare/workers-sdk/commit/5162c5194604f26b2e5018961b761f3450872333) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - add ability to pull images for containers local dev
+
+## 4.20250617.2
+
+### Patch Changes
+
+- [#9605](https://github.com/cloudflare/workers-sdk/pull/9605) [`17d23d8`](https://github.com/cloudflare/workers-sdk/commit/17d23d8e5fd54737d1c4b9cb487fd6e85cddc9c8) Thanks [@emily-shen](https://github.com/emily-shen)! - Add rebuild hotkey for containers local dev, and clean up containers at the end of a dev session.
+
+## 4.20250617.1
+
+### Patch Changes
+
+- [#9586](https://github.com/cloudflare/workers-sdk/pull/9586) [`d1d34fe`](https://github.com/cloudflare/workers-sdk/commit/d1d34fedd1276803223830b8d6670c1b21e72308) Thanks [@penalosa](https://github.com/penalosa)! - Remove the Mixed Mode naming in favour of "remote bindings"/"remote proxy"
+
+## 4.20250617.0
+
+### Patch Changes
+
+- [#9591](https://github.com/cloudflare/workers-sdk/pull/9591) [`828b7df`](https://github.com/cloudflare/workers-sdk/commit/828b7dffada8c4b5ea77d3ccddb923815c19671d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250612.0  | 1.20250617.0  |
+  | @cloudflare/workers-types | ^4.20250612.0 | ^4.20250617.0 |
+
+- [#9576](https://github.com/cloudflare/workers-sdk/pull/9576) [`2671e77`](https://github.com/cloudflare/workers-sdk/commit/2671e778435b9e3380c0d34718824409be494c33) Thanks [@vicb](https://github.com/vicb)! - Add core local dev functionality for containers.
+  Adds a new WRANGLER_DOCKER_HOST env var to customise what socket to connect to.
+
+## 4.20250612.0
+
+### Patch Changes
+
+- [#9529](https://github.com/cloudflare/workers-sdk/pull/9529) [`bd528d5`](https://github.com/cloudflare/workers-sdk/commit/bd528d5d53a473b8339574290da0c47797c3b322) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250604.0  | 1.20250612.0  |
+  | @cloudflare/workers-types | ^4.20250604.0 | ^4.20250612.0 |
+
+- [#9582](https://github.com/cloudflare/workers-sdk/pull/9582) [`2177fb4`](https://github.com/cloudflare/workers-sdk/commit/2177fb44f43357d349ff2e2cc4b40d72c929e491) Thanks [@vicb](https://github.com/vicb)! - Update capnp generated code from the workerd.capnp
+
+- [#9506](https://github.com/cloudflare/workers-sdk/pull/9506) [`36113c2`](https://github.com/cloudflare/workers-sdk/commit/36113c29c8d2338fcd7a6da19f4c59c7e9f65a3b) Thanks [@penalosa](https://github.com/penalosa)! - Strip the `CF-Connecting-IP` header from outgoing fetches
+
+- [#9493](https://github.com/cloudflare/workers-sdk/pull/9493) [`e16fcc7`](https://github.com/cloudflare/workers-sdk/commit/e16fcc747aa7701405eb4f49a73e622425f67527) Thanks [@vicb](https://github.com/vicb)! - bump capnp-es to 0.0.11 in miniflare
+
+## 4.20250604.1
+
+### Minor Changes
+
+- [#9509](https://github.com/cloudflare/workers-sdk/pull/9509) [`0b2ba45`](https://github.com/cloudflare/workers-sdk/commit/0b2ba4590ca59f1d95d7262e64adeefebe6a3e7e) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add static routing options via 'run_worker_first' to Wrangler
+
+  Implements the proposal noted here https://github.com/cloudflare/workers-sdk/discussions/9143.
+
+  This is now usable in `wrangler dev` and in production - just specify the routes that should hit the worker first with `run_worker_first` in your Wrangler config. You can also omit certain paths with `!` negative rules.
+
+### Patch Changes
+
+- [#9475](https://github.com/cloudflare/workers-sdk/pull/9475) [`931f467`](https://github.com/cloudflare/workers-sdk/commit/931f467e39f70abfd0e1c08172f330e6e3de02a3) Thanks [@edmundhung](https://github.com/edmundhung)! - add hello world binding that serves as as an explanatory example.
+
+- [#9443](https://github.com/cloudflare/workers-sdk/pull/9443) [`95eb47d`](https://github.com/cloudflare/workers-sdk/commit/95eb47d2c6adcff9a475c0cd507a72bd2e83f3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add mixed-mode support for mtls bindings
+
+## 4.20250604.0
+
+### Patch Changes
+
+- [#9508](https://github.com/cloudflare/workers-sdk/pull/9508) [`4ab5a40`](https://github.com/cloudflare/workers-sdk/commit/4ab5a4027d8a180e8ed300bc63d4d4d41848bcd5) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: ensure default registry path matches wrangler settings"
+
+- [#9385](https://github.com/cloudflare/workers-sdk/pull/9385) [`485cd08`](https://github.com/cloudflare/workers-sdk/commit/485cd08679eaa3a47e9951c708b80f5c33a0a097) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250525.0  | 1.20250604.0  |
+  | @cloudflare/workers-types | ^4.20250525.0 | ^4.20250604.0 |
+
+- [#9469](https://github.com/cloudflare/workers-sdk/pull/9469) [`e3b3ef5`](https://github.com/cloudflare/workers-sdk/commit/e3b3ef51cfbdb5ffa15ebe81656460c340a2bba4) Thanks [@edmundhung](https://github.com/edmundhung)! - refactor: the dev registry will now create a file watcher only when the Worker has a binding to external services.
+
+## 4.20250525.1
+
+### Minor Changes
+
+- [#9173](https://github.com/cloudflare/workers-sdk/pull/9173) [`fac2f9d`](https://github.com/cloudflare/workers-sdk/commit/fac2f9dfa67b9c9b3ab0979acbb79f8e020a9cfb) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: export `getDefaultDevRegistryPath()` utility
+
+  This provides a default XDG app-path for the Dev Registry, which can be used to set the `unsafeDevRegistryPath` option in Miniflare and will be used by both Wrangler and @cloudflare/vite-plugin.
+
+- [#9313](https://github.com/cloudflare/workers-sdk/pull/9313) [`92719a5`](https://github.com/cloudflare/workers-sdk/commit/92719a535bf6bae9d660a05d5c8f8823004929c5) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: add Dev Registry support
+
+  This change introduces two new options to support cross-process service bindings, durable objects and tail consumers via a file-system based registry, with backward compatibility to Wrangler’s implementation:
+
+  - **`unsafeDevRegistryPath`** (`string`): Filesystem path to the Dev Registry directory.
+  - **`unsafeDevRegistryDurableObjectProxy`** (`boolean`): When enabled, exposes internal Durable Objects to other local dev sessions and allows Workers to connect to external Durable Objects.
+
+  Example usage:
+
+  ```ts
+  import { Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+  	scriptPath: "./dist/worker.js",
+  	unsafeDevRegistryPath: "/registry",
+  	unsafeDevRegistryDurableObjectProxy: true,
+  	// ...other options
+  });
+  ```
+
+### Patch Changes
+
+- [#9440](https://github.com/cloudflare/workers-sdk/pull/9440) [`8c7ce77`](https://github.com/cloudflare/workers-sdk/commit/8c7ce7728ccc467aa19b60c8f32c90e6f06442d1) Thanks [@penalosa](https://github.com/penalosa)! - Preserve original error messages
+
+- [#9390](https://github.com/cloudflare/workers-sdk/pull/9390) [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc) Thanks [@penalosa](https://github.com/penalosa)! - Support additional Mixed Mode resources in Wrangler:
+
+  - AI
+  - Browser
+  - Images
+  - Vectorize
+  - Dispatch Namespaces
+
+- [#9390](https://github.com/cloudflare/workers-sdk/pull/9390) [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc) Thanks [@penalosa](https://github.com/penalosa)! - Additional option for the Miniflare plugin interface to allow defining workerd extensions without having to include deduplication logic.
+
+## 4.20250525.0
+
+### Minor Changes
+
+- [#9387](https://github.com/cloudflare/workers-sdk/pull/9387) [`e39a45f`](https://github.com/cloudflare/workers-sdk/commit/e39a45ffa0d783cc99107f8ab02d6b3dd27d4c9f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add `logReady` method to Miniflare `Log` class. This makes it possible to override the messages printed on server start.
+
+- [#9376](https://github.com/cloudflare/workers-sdk/pull/9376) [`fdae3f7`](https://github.com/cloudflare/workers-sdk/commit/fdae3f7665a5cd3b5e25c9de19156ecd54618a7c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add support for Node.js style custom handlers for service bindings and outbound services. This makes it easier to integrate Miniflare with existing Node.js middleware and libraries as `req` and `res` objects can be used directly.
+
+  ```js
+  new Miniflare({
+  	serviceBindings: {
+  		CUSTOM: {
+  			node: (req, res) => {
+  				res.end(`Hello world`);
+  			},
+  		},
+  	},
+  });
+  ```
+
+### Patch Changes
+
+- [#9366](https://github.com/cloudflare/workers-sdk/pull/9366) [`d9d937a`](https://github.com/cloudflare/workers-sdk/commit/d9d937ab6f2868271dde5a8da625773085eaec85) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250523.0  | 1.20250525.0  |
+  | @cloudflare/workers-types | ^4.20250523.0 | ^4.20250525.0 |
+
+## 4.20250523.0
+
+### Minor Changes
+
+- [#9330](https://github.com/cloudflare/workers-sdk/pull/9330) [`34c71ce`](https://github.com/cloudflare/workers-sdk/commit/34c71ce9208ffceefe718fc9ae7282ef95e2f2be) Thanks [@edmundhung](https://github.com/edmundhung)! - Add a new `defaultPersistRoot` option to control where plugins persist data when no path is provided.
+
+  ```js
+  // Before this change / No `defaultPersistRoot`
+  new Miniflare({
+  	kvPersist: undefined, // → "/(tmp)/kv"
+  	d1Persist: true, // → "$PWD/.mf/d1"
+  	r2Persist: false, // → "/(tmp)/r2"
+  	cachePersist: "/my-cache", // → "/my-cache"
+  });
+
+  // With `defaultPersistRoot`
+  new Miniflare({
+  	defaultPersistRoot: "/storage",
+  	kvPersist: undefined, // → "/storage/kv"
+  	d1Persist: true, // → "/storage/d1"
+  	r2Persist: false, // → "/(tmp)/r2"
+  	cachePersist: "/my-cache", // → "/my-cache"
+  });
+  ```
+
+### Patch Changes
+
+- [#9184](https://github.com/cloudflare/workers-sdk/pull/9184) [`f7c82a4`](https://github.com/cloudflare/workers-sdk/commit/f7c82a4a9f1cb1c9abf6d309327a72b5423e44b1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250508.0  | 1.20250520.0  |
+  | @cloudflare/workers-types | ^4.20250508.0 | ^4.20250520.0 |
+
+- [#9346](https://github.com/cloudflare/workers-sdk/pull/9346) [`7ddd865`](https://github.com/cloudflare/workers-sdk/commit/7ddd865fa61b65851149e3d1ac8753002b648e65) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250520.0  | 1.20250523.0  |
+  | @cloudflare/workers-types | ^4.20250520.0 | ^4.20250523.0 |
+
+- [#9335](https://github.com/cloudflare/workers-sdk/pull/9335) [`6479fc5`](https://github.com/cloudflare/workers-sdk/commit/6479fc5228d1249e87c7f668e8efbf88ec5a8f5f) Thanks [@penalosa](https://github.com/penalosa)! - Redesign `wrangler dev` to more clearly present information and have a bit of a glow up ✨
+  ![Screenshot 2025-05-22 at 01 11 43](https://github.com/user-attachments/assets/26cc6209-37a1-4ecb-8e91-daac2f79a095)
+
+- [#9106](https://github.com/cloudflare/workers-sdk/pull/9106) [`e5ae13a`](https://github.com/cloudflare/workers-sdk/commit/e5ae13adebe5ee139cf2c91f0a3bd5992cfd3923) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: decouple KV plugin from secrets store plugin
+
+  The KV plugin previously configured both KV namespace and secrets store bindings with the same service name but different persistence paths, causing conflicts when both were defined. This change copies the KV binding implementation into the secrets store plugin and customizes its service name to prevent collisions.
+
+## 4.20250508.3
+
+### Patch Changes
+
+- [#9277](https://github.com/cloudflare/workers-sdk/pull/9277) [`db5ea8f`](https://github.com/cloudflare/workers-sdk/commit/db5ea8f1f657c29edd62becb839a6e010324d5fb) Thanks [@penalosa](https://github.com/penalosa)! - Support Mixed Mode for more binding types
+
+- [#9245](https://github.com/cloudflare/workers-sdk/pull/9245) [`b87b472`](https://github.com/cloudflare/workers-sdk/commit/b87b472a1a06419c1ded539fa478fa69a688efba) Thanks [@penalosa](https://github.com/penalosa)! - Support Mixed Mode Dispatch Namespaces
+
 ## 4.20250508.2
 
 ### Patch Changes

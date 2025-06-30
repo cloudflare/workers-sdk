@@ -47,6 +47,7 @@ export const versionsSecretsListCommand = createCommand({
 			// Grab the latest version
 			const mostRecentVersions = (
 				await fetchResult<{ items: ApiVersion[] }>(
+					config,
 					`/accounts/${accountId}/workers/scripts/${scriptName}/versions`
 				)
 			).items;
@@ -60,6 +61,7 @@ export const versionsSecretsListCommand = createCommand({
 
 			// Check if the version is in the latest deployment
 			const latestDeployment = await fetchLatestDeployment(
+				config,
 				accountId,
 				scriptName
 			);
@@ -70,10 +72,12 @@ export const versionsSecretsListCommand = createCommand({
 			rollout.set(latestVersion.id, deploymentVersion?.percentage ?? 0);
 		} else {
 			const latestDeployment = await fetchLatestDeployment(
+				config,
 				accountId,
 				scriptName
 			);
 			[versions, rollout] = await fetchDeploymentVersions(
+				config,
 				accountId,
 				scriptName,
 				latestDeployment,

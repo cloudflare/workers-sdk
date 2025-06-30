@@ -1,11 +1,11 @@
 import path from "node:path";
+import { maybeGetFile } from "@cloudflare/workers-shared";
 import TOML from "@iarna/toml";
 import dotenv from "dotenv";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
-import { maybeGetFile } from "../utils/filesystem";
 import { resolveWranglerConfigPath } from "./config-helpers";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
@@ -73,6 +73,22 @@ export type ReadConfigOptions = ResolveConfigPathOptions & {
 	hideWarnings?: boolean;
 };
 
+export type ConfigBindingOptions = Pick<
+	Config,
+	| "ai"
+	| "browser"
+	| "d1_databases"
+	| "dispatch_namespaces"
+	| "durable_objects"
+	| "queues"
+	| "r2_buckets"
+	| "services"
+	| "kv_namespaces"
+	| "mtls_certificates"
+	| "vectorize"
+	| "workflows"
+>;
+
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
@@ -85,7 +101,7 @@ export function readConfig(
 		options
 	);
 
-	const { config, diagnostics } = normalizeAndValidateConfig(
+	const { diagnostics, config } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
 		userConfigPath,
@@ -225,7 +241,7 @@ function tryLoadDotEnv(basePath: string): DotEnv | undefined {
  * Loads a dotenv file from `envPath`, preferring to read `${envPath}.${env}` if
  * `env` is defined and that file exists.
  *
- * Note: The `getDotDevDotVarsContent` function in the `packages/vite-plugin-cloudflare/src/index.ts` file
+ * Note: The `getDotDevDotVarsContent` function in the `packages/vite-plugin-cloudflare/src/dev-vars.ts` file
  *       follows the same logic implemented here, the two need to be kept in sync, so if you modify some logic
  *       here make sure that, if applicable, the same change is reflected there
  */

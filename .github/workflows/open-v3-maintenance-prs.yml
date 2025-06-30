@@ -2,7 +2,8 @@ name: v3 Maintenance
 
 on:
   pull_request:
-    branches: main
+    branches:
+      - main
     types: [synchronize, opened, reopened, labeled, unlabeled]
     paths:
       - ".changeset/**.md"
@@ -52,10 +53,14 @@ jobs:
 
             Depending on your changes, running `git rebase --onto v3-maintenance main ${{ github.head_ref }}` might be a good starting point.
 
+            Notes:
+            - your PR branch should be named `v3-backport-${{ github.event.number }}`
+            - add the `skip-v3-pr` label to the current PR to stop this workflow from failing
+
       - name: "Comment on PR with backport PR details"
         if: steps.open_pr.outputs.has_wrangler_patch == 'true' && success()
         uses: marocchino/sticky-pull-request-comment@daa4a82a0a3f6c162c02b83fa44b3ab83946f7cb
         with:
           header: v3-backport
           message: |
-            These changes have been automatically backported to Wrangler v3 :tada: You can view the automatically updated PR at https://github.com/cloudflare/workers-sdk/compare/v3-maintenance...v3-maintenance-${{ github.event.number }}. Please check that PR for correctness, and make sure it's merged after this one. Thank you for helping us keep Wrangler v3 supported!
+            These changes have been automatically backported to Wrangler v3 :tada: You can view the automatically updated PR at https://github.com/cloudflare/workers-sdk/compare/v3-maintenance...v3-backport-${{ github.event.number }}. Please check that PR for correctness, and make sure it's merged after this one. Thank you for helping us keep Wrangler v3 supported!

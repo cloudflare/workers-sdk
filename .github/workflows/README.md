@@ -92,14 +92,6 @@ See below for a summary of this repo's Actions
     - Public packages are deployed to npm
     - Private packages will run their `deploy` script, if they have one.
 
-### Publish @beta pre-releases (prereleases.yml)
-
-- Triggers
-  - Commits merged to the `main` branch, on the Cloudflare fork.
-- Actions
-  - Publishes the `wrangler` package to npm under the `beta` dist-tag.
-  - Publishes the `create-cloudflare` package to npm under the `beta` dist-tag.
-
 ## Product-specific branch actions
 
 ### D1 (d1.yml)

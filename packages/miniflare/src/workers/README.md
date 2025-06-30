@@ -1,6 +1,6 @@
-# Miniflare 3 Workers
+# Miniflare Workers
 
-This directory contains code for Workers used internally by Miniflare 3. Files
+This directory contains code for Workers used internally by Miniflare. Files
 ending in `*.worker.ts` will be type-checked under
 `@cloudflare/workers-types/experimental`, instead of `@types/node`.
 

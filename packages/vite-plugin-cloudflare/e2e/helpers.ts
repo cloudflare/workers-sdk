@@ -1,4 +1,4 @@
-import childProcess, { ChildProcess } from "node:child_process";
+import childProcess from "node:child_process";
 import events from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -69,16 +69,22 @@ export function seed(fixture: string, pm: "pnpm" | "yarn" | "npm") {
 	return projectPath;
 }
 
+export type AnyString = string & {};
+
 /** Starts a command and wraps its outputs. */
 export async function runLongLived(
 	pm: "pnpm" | "yarn" | "npm",
-	command: "dev" | "buildAndPreview",
-	projectPath: string
+	command: "dev" | "buildAndPreview" | AnyString,
+	projectPath: string,
+	customEnv: Record<string, string | undefined> = {}
 ) {
 	debuglog(`starting \`${command}\` for ${projectPath}`);
 	const process = childProcess.exec(`${pm} run ${command}`, {
 		cwd: projectPath,
-		env: testEnv,
+		env: {
+			...testEnv,
+			...customEnv,
+		},
 	});
 
 	onTestFinished(async () => {

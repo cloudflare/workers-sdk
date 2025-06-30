@@ -49,7 +49,12 @@ export const r2BucketLockListCommand = createCommand({
 
 		logger.log(`Listing lock rules for bucket '${bucket}'...`);
 
-		const rules = await getBucketLockRules(accountId, bucket, jurisdiction);
+		const rules = await getBucketLockRules(
+			config,
+			accountId,
+			bucket,
+			jurisdiction
+		);
 
 		if (rules.length === 0) {
 			logger.log(`There are no lock rules for bucket '${bucket}'.`);
@@ -129,7 +134,12 @@ export const r2BucketLockAddCommand = createCommand({
 	) {
 		const accountId = await requireAuth(config);
 
-		const rules = await getBucketLockRules(accountId, bucket, jurisdiction);
+		const rules = await getBucketLockRules(
+			config,
+			accountId,
+			bucket,
+			jurisdiction
+		);
 
 		if (!name && !isNonInteractiveOrCI() && !force) {
 			name = await prompt("Enter a unique name for the lock rule");
@@ -237,7 +247,7 @@ export const r2BucketLockAddCommand = createCommand({
 		}
 		rules.push(newRule);
 		logger.log(`Adding lock rule '${name}' to bucket '${bucket}'...`);
-		await putBucketLockRules(accountId, bucket, rules, jurisdiction);
+		await putBucketLockRules(config, accountId, bucket, rules, jurisdiction);
 		logger.log(`✨ Added lock rule '${name}' to bucket '${bucket}'.`);
 	},
 });
@@ -275,6 +285,7 @@ export const r2BucketLockRemoveCommand = createCommand({
 		const { bucket, name, jurisdiction } = args;
 
 		const lockPolicies = await getBucketLockRules(
+			config,
 			accountId,
 			bucket,
 			jurisdiction
@@ -295,7 +306,13 @@ export const r2BucketLockRemoveCommand = createCommand({
 		lockPolicies.splice(index, 1);
 
 		logger.log(`Removing lock rule '${name}' from bucket '${bucket}'...`);
-		await putBucketLockRules(accountId, bucket, lockPolicies, jurisdiction);
+		await putBucketLockRules(
+			config,
+			accountId,
+			bucket,
+			lockPolicies,
+			jurisdiction
+		);
 		logger.log(`Lock rule '${name}' removed from bucket '${bucket}'.`);
 	},
 });
@@ -371,7 +388,13 @@ export const r2BucketLockSetCommand = createCommand({
 		logger.log(
 			`Setting lock configuration (${lockRule.rules.length} rules) for bucket '${bucket}'...`
 		);
-		await putBucketLockRules(accountId, bucket, lockRule.rules, jurisdiction);
+		await putBucketLockRules(
+			config,
+			accountId,
+			bucket,
+			lockRule.rules,
+			jurisdiction
+		);
 		logger.log(`✨ Set lock configuration for bucket '${bucket}'.`);
 	},
 });

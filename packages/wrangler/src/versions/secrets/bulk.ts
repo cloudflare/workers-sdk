@@ -17,6 +17,7 @@ export const versionsSecretBulkCommand = createCommand({
 	},
 	behaviour: {
 		printConfigWarnings: false,
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	args: {
 		file: {
@@ -68,6 +69,7 @@ export const versionsSecretBulkCommand = createCommand({
 		// Grab the latest version
 		const versions = (
 			await fetchResult<{ items: WorkerVersion[] }>(
+				config,
 				`/accounts/${accountId}/workers/scripts/${scriptName}/versions`
 			)
 		).items;
@@ -79,6 +81,7 @@ export const versionsSecretBulkCommand = createCommand({
 		const latestVersion = versions[0];
 
 		const newVersion = await copyWorkerVersionWithNewSecrets({
+			config,
 			accountId,
 			scriptName,
 			versionId: latestVersion.id,

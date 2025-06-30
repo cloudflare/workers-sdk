@@ -2,13 +2,13 @@ import assert from "assert";
 import { readFileSync, realpathSync, writeFileSync } from "fs";
 import path from "path";
 import { watch } from "chokidar";
-import { noBundleWorker } from "../../deploy/deploy";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { getBundleType } from "../../deployment-bundle/bundle-type";
 import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../../deployment-bundle/module-collection";
+import { noBundleWorker } from "../../deployment-bundle/no-bundle-worker";
 import { runCustomBuild } from "../../deployment-bundle/run-custom-build";
 import { getAssetChangeMessage } from "../../dev";
 import { runBuild } from "../../dev/use-esbuild";

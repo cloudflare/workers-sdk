@@ -1,12 +1,12 @@
 {
-	"name": "worker-ts",
+	"name": "@fixture/worker-typescript",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20250508.0",
+		"@cloudflare/workers-types": "^4.20250617.0",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

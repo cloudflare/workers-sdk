@@ -1,7 +1,7 @@
-import readline from "readline";
-import { Log } from "miniflare";
+import { dim } from "@cloudflare/cli/colors";
+import stripAnsi from "strip-ansi";
 import { unwrapHook } from "./api/startDevWorker/utils";
-import { Logger, logger } from "./logger";
+import { logger } from "./logger";
 import { onKeyPress } from "./utils/onKeyPress";
 import type { Hook } from "./api";
 
@@ -9,7 +9,7 @@ export default function (
 	options: Array<{
 		keys: string[];
 		disabled?: Hook<boolean>;
-		label: Hook<string>;
+		label?: Hook<string>;
 		handler: () => void | Promise<void>;
 	}>
 ) {
@@ -32,26 +32,32 @@ export default function (
 	 */
 	function formatInstructions() {
 		const instructions = options
-			.filter((option) => !unwrapHook(option.disabled))
-			.map(({ keys, label }) => `[${keys[0]}] ${unwrapHook(label)}`);
+			.filter(
+				(option) => !unwrapHook(option.disabled) && option.label !== undefined
+			)
+			.map(({ keys, label }) => `[${keys[0]}] ${dim(unwrapHook(label))}`);
 
-		let stringifiedInstructions = instructions.join(", ");
+		let stringifiedInstructions = instructions.join(" ");
+		const length = stripAnsi(stringifiedInstructions).length;
 
 		const ADDITIONAL_CHARS = 6; // 3 chars on each side of the instructions for the box and spacing ("│  " and "  │")
-		const willWrap =
-			stringifiedInstructions.length + ADDITIONAL_CHARS >
-			process.stdout.columns;
+		const willWrap = length + ADDITIONAL_CHARS > process.stdout.columns;
 		if (willWrap) {
 			stringifiedInstructions = instructions.join("\n");
 		}
 
 		const maxLineLength = Math.max(
-			...stringifiedInstructions.split("\n").map((line) => line.length)
+			...stringifiedInstructions
+				.split("\n")
+				.map((line) => stripAnsi(line).length)
 		);
 
 		stringifiedInstructions = stringifiedInstructions
 			.split("\n")
-			.map((line) => `│  ${line.padEnd(maxLineLength, " ")}  │`)
+			.map(
+				(line) =>
+					`│  ${line + " ".repeat(Math.max(0, maxLineLength - stripAnsi(line).length))}  │`
+			)
 			.join("\n");
 
 		return (
@@ -94,33 +100,16 @@ export default function (
 		}
 	});
 
-	let previousInstructionsLineCount = 0;
-	function clearPreviousInstructions() {
-		if (previousInstructionsLineCount) {
-			readline.moveCursor(process.stdout, 0, -previousInstructionsLineCount);
-			readline.clearScreenDown(process.stdout);
-		}
-	}
 	function printInstructions() {
 		const bottomFloat = formatInstructions();
 		if (bottomFloat) {
 			console.log(bottomFloat);
-			previousInstructionsLineCount = bottomFloat.split("\n").length;
 		}
 	}
 
-	Logger.registerBeforeLogHook(clearPreviousInstructions);
-	Logger.registerAfterLogHook(printInstructions);
-	Log.unstable_registerBeforeLogHook(clearPreviousInstructions);
-	Log.unstable_registerAfterLogHook(printInstructions);
 	printInstructions();
 
 	return () => {
 		unregisterKeyPress();
-		clearPreviousInstructions();
-		Logger.registerBeforeLogHook(undefined);
-		Logger.registerAfterLogHook(undefined);
-		Log.unstable_registerBeforeLogHook(undefined);
-		Log.unstable_registerAfterLogHook(undefined);
 	};
 }

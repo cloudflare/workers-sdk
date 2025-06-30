@@ -1,7 +1,7 @@
 {
 	"name": "solarflare-theme",
 	"displayName": "Solarflare Theme",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"description": "The official VSCode theme extension for Cloudflare.",
 	"categories": [
 		"Themes"

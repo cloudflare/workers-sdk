@@ -1,16 +1,19 @@
+import {
+	getCloudflareContainerRegistry,
+	ImageRegistriesService,
+} from "@cloudflare/containers-shared";
 import { logger } from "../../logger";
-import { ImageRegistriesService } from "../client";
+import { getAccountId } from "../../user";
 import { handleFailure, promiseSpinner } from "../common";
 import type { Config } from "../../config";
+import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgvJSON,
 	CommonYargsArgvSanitizedJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../../yargs-types";
-import type { ImageRegistryPermissions } from "../client";
-
-// cloudflare managed registry
-const domain = "registry.cloudchamber.cfdata.org";
+import type { cloudchamberScope } from "../common";
+import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
 interface CatalogResponse {
 	repositories: string[];
@@ -21,25 +24,36 @@ interface TagsResponse {
 	tags: string[];
 }
 
-export const imagesCommand = (yargs: CommonYargsArgvJSON) => {
+export const imagesCommand = (
+	yargs: CommonYargsArgvJSON,
+	scope: typeof containersScope | typeof cloudchamberScope
+) => {
 	return yargs
 		.command(
 			"list",
 			"perform operations on images in your Cloudflare managed registry",
 			(args) => listImagesYargs(args),
 			(args) =>
-				handleFailure(async (_args: CommonYargsArgvSanitizedJSON, config) => {
-					await handleListImagesCommand(args, config);
-				})(args)
+				handleFailure(
+					`wrangler containers images list`,
+					async (_args: CommonYargsArgvSanitizedJSON, config) => {
+						await handleListImagesCommand(args, config);
+					},
+					scope
+				)(args)
 		)
 		.command(
 			"delete [image]",
 			"remove an image from your Cloudflare managed registry",
 			(args) => deleteImageYargs(args),
 			(args) =>
-				handleFailure(async (_args: CommonYargsArgvSanitizedJSON, config) => {
-					await handleDeleteImageCommand(args, config);
-				})(args)
+				handleFailure(
+					`wrangler containers images delete`,
+					async (_args: CommonYargsArgvSanitizedJSON, config) => {
+						await handleDeleteImageCommand(args, config);
+					},
+					scope
+				)(args)
 		);
 };
 
@@ -68,7 +82,7 @@ async function handleDeleteImageCommand(
 		}
 		return await promiseSpinner(
 			getCreds().then(async (creds) => {
-				const url = new URL(`https://${domain}`);
+				const url = new URL(`https://${getCloudflareContainerRegistry()}`);
 				const baseUrl = `${url.protocol}//${url.host}`;
 				const [image, tag] = args.image.split(":");
 				await deleteTag(baseUrl, image, tag, creds);
@@ -87,7 +101,7 @@ async function handleDeleteImageCommand(
 						`Failed to delete image ${args.image}: ${gcResponse.status} ${gcResponse.statusText}`
 					);
 				}
-				await logger.log(`Deleted tag: ${args.image}`);
+				logger.log(`Deleted tag: ${args.image}`);
 			}),
 			{ message: "Deleting", json: args.json }
 		);
@@ -98,24 +112,27 @@ async function handleDeleteImageCommand(
 
 async function handleListImagesCommand(
 	args: StrictYargsOptionsToInterfaceJSON<typeof listImagesYargs>,
-	_config: Config
+	config: Config
 ) {
 	try {
 		return await promiseSpinner(
 			getCreds().then(async (creds) => {
 				const repos = await listRepos(creds);
-				const tags: TagsResponse[] = [];
+				const responses: TagsResponse[] = [];
+				const accountId = config.account_id || (await getAccountId(config));
+				const accountIdPrefix = new RegExp(`^${accountId}/`);
+				const filter = new RegExp(args.filter ?? "");
 				for (const repo of repos) {
 					const stripped = repo.replace(/^\/+/, "");
-					const regex = new RegExp(args.filter ?? "");
-					if (regex.test(stripped)) {
+					if (filter.test(stripped)) {
 						// get all tags for repo
-						const repoTags = await listTags(stripped, creds);
-						tags.push({ name: stripped, tags: repoTags });
+						const tags = await listTags(stripped, creds);
+						const name = stripped.replace(accountIdPrefix, "");
+						responses.push({ name, tags });
 					}
 				}
 
-				await ListTags(tags, false, args.json);
+				await ListTags(responses, false, args.json);
 			}),
 			{ message: "Listing", json: args.json }
 		);
@@ -144,20 +161,26 @@ async function ListTags(
 	if (json) {
 		logger.log(JSON.stringify(responses, null, 2));
 	} else {
-		const rows = responses
-			.map((resp) => {
-				return {
-					REPOSITORY: resp.name,
-					TAG: resp.tags.join(" "),
-				};
-			})
-			.flat();
-		logger.table(rows);
+		const rows = responses.flatMap((r) => r.tags.map((t) => [r.name, t]));
+		const headers = ["REPOSITORY", "TAG"];
+		const widths = new Array(headers.length).fill(0);
+
+		// Find the maximum length of each column (except for the last)
+		for (let i = 0; i < widths.length - 1; i++) {
+			widths[i] = rows
+				.map((r) => r[i].length)
+				.reduce((a, b) => Math.max(a, b), headers[i].length);
+		}
+
+		logger.log(headers.map((h, i) => h.padEnd(widths[i], " ")).join("  "));
+		for (const row of rows) {
+			logger.log(row.map((v, i) => v.padEnd(widths[i], " ")).join("  "));
+		}
 	}
 }
 
 async function listTags(repo: string, creds: string): Promise<string[]> {
-	const url = new URL(`https://${domain}`);
+	const url = new URL(`https://${getCloudflareContainerRegistry()}`);
 	const baseUrl = `${url.protocol}//${url.host}`;
 	const tagsUrl = `${baseUrl}/v2/${repo}/tags/list`;
 
@@ -172,7 +195,7 @@ async function listTags(repo: string, creds: string): Promise<string[]> {
 }
 
 async function listRepos(creds: string): Promise<string[]> {
-	const url = new URL(`https://${domain}`);
+	const url = new URL(`https://${getCloudflareContainerRegistry()}`);
 
 	const catalogUrl = `${url.protocol}//${url.host}/v2/_catalog`;
 
@@ -239,10 +262,13 @@ async function deleteTag(
 }
 
 async function getCreds(): Promise<string> {
-	return await ImageRegistriesService.generateImageRegistryCredentials(domain, {
-		expiration_minutes: 5,
-		permissions: ["pull", "push"] as ImageRegistryPermissions[],
-	}).then(async (credentials) => {
+	return await ImageRegistriesService.generateImageRegistryCredentials(
+		getCloudflareContainerRegistry(),
+		{
+			expiration_minutes: 5,
+			permissions: ["pull", "push"] as ImageRegistryPermissions[],
+		}
+	).then(async (credentials) => {
 		return Buffer.from(`v1:${credentials.password}`).toString("base64");
 	});
 }

@@ -55,7 +55,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 						if (pathname === "/") {
 							return new Response("modules");
 						} else if (pathname === "/error") {
-							throw new Error("🙈");
+							throw new Error("monkey");
 						} else {
 							return new Response(null, { status: 404 });
 						}
@@ -76,10 +76,10 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 		});
 		const text = await res.text();
 		if (isLocal) {
-			expect(text).toContain("Error: 🙈");
+			expect(text).toContain("Error: monkey");
 			expect(text).toContain("src/index.ts:7:10");
 		}
-		await worker.readUntil(/Error: 🙈/, 30_000);
+		await worker.readUntil(/Error: monkey/, 30_000);
 		await worker.readUntil(/src\/index\.ts:7:10/, 30_000);
 	});
 
@@ -96,7 +96,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 					if (pathname === "/") {
 						event.respondWith(new Response("service worker"));
 					} else if (pathname === "/error") {
-						throw new Error("🙈");
+						throw new Error("monkey");
 					} else {
 						event.respondWith(new Response(null, { status: 404 }));
 					}
@@ -115,10 +115,10 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 		});
 		const text = await res.text();
 		if (isLocal) {
-			expect(text).toContain("Error: 🙈");
+			expect(text).toContain("Error: monkey");
 			expect(text).toContain("src/index.ts:6:9");
 		}
-		await worker.readUntil(/Error: 🙈/, 30_000);
+		await worker.readUntil(/Error: monkey/, 30_000);
 		await worker.readUntil(/src\/index\.ts:6:9/, 30_000);
 	});
 
@@ -370,6 +370,10 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2025-01-01"
+				# Regression test for https://github.com/cloudflare/workers-sdk/issues/9006
+				kv_namespaces = [
+					${isLocal ? `{ binding = "KV", id = "LOCAL_ONLY" }` : ""}
+				]
 				secrets_store_secrets = [
 					{ binding = "SECRET", store_id = "${storeId}", secret_name = "${secret_name}" }
 				]
@@ -390,6 +394,64 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			headers: { "MF-Disable-Pretty-Error": "true" },
 		});
 		expect(await res.text()).toBe("my-secret-value");
+	});
+
+	it.skipIf(!isLocal)("exposes Hello World bindings", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2025-01-01"
+				unsafe_hello_world = [
+					{ binding = "BINDING" }
+				]
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request, env, ctx) {
+						 if (request.method === "POST") {
+							await env.BINDING.set(await request.text());
+						}
+						const result = await env.BINDING.get();
+						if (!result.value) {
+							return new Response('Not found', { status: 404 });
+						}
+						return Response.json(result);
+					}
+				}
+			`,
+		});
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
+		const { url } = await worker.waitForReady();
+		const res1 = await fetch(url, {
+			headers: { "MF-Disable-Pretty-Error": "true" },
+		});
+		expect(await res1.text()).toBe("Not found");
+		expect(res1.status).toBe(404);
+
+		const res2 = await fetch(url, {
+			method: "POST",
+			body: "hello world",
+			headers: { "MF-Disable-Pretty-Error": "true" },
+		});
+		expect(await res2.json()).toEqual({ value: "hello world" });
+		expect(res2.status).toBe(200);
+
+		const res3 = await fetch(url, {
+			headers: { "MF-Disable-Pretty-Error": "true" },
+		});
+		expect(await res3.json()).toEqual({ value: "hello world" });
+		expect(res3.status).toBe(200);
+
+		const res4 = await fetch(url, {
+			method: "POST",
+			body: "",
+			headers: { "MF-Disable-Pretty-Error": "true" },
+		});
+		expect(await res4.text()).toBe("Not found");
+		expect(res4.status).toBe(404);
 	});
 
 	it("supports Workers Sites bindings", async ({ onTestFinished }) => {

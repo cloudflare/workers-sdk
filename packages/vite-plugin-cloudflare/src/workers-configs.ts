@@ -123,7 +123,7 @@ function readWorkerConfig(
 		notRelevant: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
-		unstable_readConfig({ config: configPath, env }, {});
+		unstable_readConfig({ config: configPath, env });
 	const raw = structuredClone(config) as RawWorkerConfig;
 
 	nullableNonApplicable.forEach((prop) => {

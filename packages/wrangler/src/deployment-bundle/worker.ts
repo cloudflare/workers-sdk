@@ -82,7 +82,7 @@ export interface CfVars {
 export interface CfKvNamespace {
 	binding: string;
 	id?: string | typeof INHERIT_SYMBOL;
-	remote?: boolean;
+	experimental_remote?: boolean;
 	raw?: boolean;
 }
 
@@ -124,6 +124,7 @@ export interface CfTextBlobBindings {
 export interface CfBrowserBinding {
 	binding: string;
 	raw?: boolean;
+	experimental_remote?: boolean;
 }
 
 /**
@@ -133,7 +134,7 @@ export interface CfBrowserBinding {
 export interface CfAIBinding {
 	binding: string;
 	staging?: boolean;
-	remote?: true;
+	experimental_remote?: boolean;
 	raw?: boolean;
 }
 
@@ -143,6 +144,7 @@ export interface CfAIBinding {
 export interface CfImagesBinding {
 	binding: string;
 	raw?: boolean;
+	experimental_remote?: boolean;
 }
 
 /**
@@ -176,7 +178,7 @@ export interface CfWorkflow {
 	class_name: string;
 	binding: string;
 	script_name?: string;
-	remote?: boolean;
+	experimental_remote?: boolean;
 	raw?: boolean;
 }
 
@@ -184,7 +186,7 @@ export interface CfQueue {
 	binding: string;
 	queue_name: string;
 	delivery_delay?: number;
-	remote?: boolean;
+	experimental_remote?: boolean;
 	raw?: boolean;
 }
 
@@ -192,7 +194,7 @@ export interface CfR2Bucket {
 	binding: string;
 	bucket_name?: string | typeof INHERIT_SYMBOL;
 	jurisdiction?: string;
-	remote?: boolean;
+	experimental_remote?: boolean;
 	raw?: boolean;
 }
 
@@ -205,7 +207,7 @@ export interface CfD1Database {
 	database_internal_env?: string;
 	migrations_table?: string;
 	migrations_dir?: string;
-	remote?: boolean;
+	experimental_remote?: boolean;
 	raw?: boolean;
 }
 
@@ -213,12 +215,18 @@ export interface CfVectorize {
 	binding: string;
 	index_name: string;
 	raw?: boolean;
+	experimental_remote?: boolean;
 }
 
 export interface CfSecretsStoreSecrets {
 	binding: string;
 	store_id: string;
 	secret_name: string;
+}
+
+export interface CfHelloWorld {
+	binding: string;
+	enable_timer?: boolean;
 }
 
 export interface CfHyperdrive {
@@ -233,7 +241,7 @@ export interface CfService {
 	environment?: string;
 	entrypoint?: string;
 	props?: Record<string, unknown>;
-	remote?: boolean;
+	experimental_remote?: boolean;
 }
 
 export interface CfAnalyticsEngineDataset {
@@ -249,11 +257,13 @@ export interface CfDispatchNamespace {
 		environment?: string;
 		parameters?: string[];
 	};
+	experimental_remote?: boolean;
 }
 
 export interface CfMTlsCertificate {
 	binding: string;
 	certificate_id: string;
+	experimental_remote?: boolean;
 }
 
 export interface CfLogfwdr {
@@ -377,6 +387,7 @@ export interface CfWorkerInit {
 		pipelines: CfPipeline[] | undefined;
 		unsafe: CfUnsafe | undefined;
 		assets: CfAssetsBinding | undefined;
+		unsafe_hello_world: CfHelloWorld[] | undefined;
 	};
 
 	containers?: { class_name: string }[];
@@ -405,12 +416,12 @@ export interface CfWorkerInit {
 				jwt: string;
 				routerConfig: RouterConfig;
 				assetConfig: AssetConfig;
+				run_worker_first?: string[] | boolean;
 				_redirects?: string;
 				_headers?: string;
 		  }
 		| undefined;
 	observability: Observability | undefined;
-	minimal_mode?: boolean;
 }
 
 export interface CfWorkerContext {

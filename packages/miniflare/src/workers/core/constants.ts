@@ -1,5 +1,6 @@
 export const CoreHeaders = {
-	CUSTOM_SERVICE: "MF-Custom-Service",
+	CUSTOM_FETCH_SERVICE: "MF-Custom-Fetch-Service",
+	CUSTOM_NODE_SERVICE: "MF-Custom-Node-Service",
 	ORIGINAL_URL: "MF-Original-URL",
 	PROXY_SHARED_SECRET: "MF-Proxy-Shared-Secret",
 	DISABLE_PRETTY_ERROR: "MF-Disable-Pretty-Error",

@@ -12,14 +12,14 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
 	SERVICE_LOOPBACK,
 } from "../shared";
 import { KV_PLUGIN_NAME } from "./constants";
@@ -37,8 +37,8 @@ export const KVOptionsSchema = z.object({
 			z.record(
 				z.object({
 					id: z.string(),
-					mixedModeConnectionString: z
-						.custom<MixedModeConnectionString>()
+					remoteProxyConnectionString: z
+						.custom<RemoteProxyConnectionString>()
 						.optional(),
 				})
 			),
@@ -57,7 +57,7 @@ export const KVSharedOptionsSchema = z.object({
 
 const SERVICE_NAMESPACE_PREFIX = `${KV_PLUGIN_NAME}:ns`;
 const KV_STORAGE_SERVICE_NAME = `${KV_PLUGIN_NAME}:storage`;
-const KV_NAMESPACE_OBJECT_CLASS_NAME = "KVNamespaceObject";
+export const KV_NAMESPACE_OBJECT_CLASS_NAME = "KVNamespaceObject";
 const KV_NAMESPACE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: SERVICE_NAMESPACE_PREFIX,
 	className: KV_NAMESPACE_OBJECT_CLASS_NAME,
@@ -106,23 +106,29 @@ export const KV_PLUGIN: Plugin<
 		options,
 		sharedOptions,
 		tmpPath,
+		defaultPersistRoot,
 		log,
 		unsafeStickyBlobs,
 	}) {
 		const persist = sharedOptions.kvPersist;
 		const namespaces = namespaceEntries(options.kvNamespaces);
 		const services = namespaces.map<Service>(
-			([name, { id, mixedModeConnectionString }]) => ({
+			([name, { id, remoteProxyConnectionString }]) => ({
 				name: `${SERVICE_NAMESPACE_PREFIX}:${id}`,
-				worker: mixedModeConnectionString
-					? mixedModeClientWorker(mixedModeConnectionString, name)
+				worker: remoteProxyConnectionString
+					? remoteProxyClientWorker(remoteProxyConnectionString, name)
 					: objectEntryWorker(KV_NAMESPACE_OBJECT, id),
 			})
 		);
 
 		if (services.length > 0) {
 			const uniqueKey = `miniflare-${KV_NAMESPACE_OBJECT_CLASS_NAME}`;
-			const persistPath = getPersistPath(KV_PLUGIN_NAME, tmpPath, persist);
+			const persistPath = getPersistPath(
+				KV_PLUGIN_NAME,
+				tmpPath,
+				defaultPersistRoot,
+				persist
+			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {
 				name: KV_STORAGE_SERVICE_NAME,
@@ -178,7 +184,7 @@ export const KV_PLUGIN: Plugin<
 	},
 
 	getPersistPath({ kvPersist }, tmpPath) {
-		return getPersistPath(KV_PLUGIN_NAME, tmpPath, kvPersist);
+		return getPersistPath(KV_PLUGIN_NAME, tmpPath, undefined, kvPersist);
 	},
 };
 

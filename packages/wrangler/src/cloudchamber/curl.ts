@@ -1,10 +1,9 @@
 import { randomUUID } from "crypto";
 import { logRaw } from "@cloudflare/cli";
 import { bold, brandColor, cyanBright, yellow } from "@cloudflare/cli/colors";
+import { ApiError, OpenAPI } from "@cloudflare/containers-shared";
+import { request } from "@cloudflare/containers-shared/src/client/core/request";
 import formatLabelledValues from "../utils/render-labelled-values";
-import { OpenAPI } from "./client";
-import { ApiError } from "./client/core/ApiError";
-import { request } from "./client/core/request";
 import type { Config } from "../config";
 import type {
 	CommonYargsOptions,

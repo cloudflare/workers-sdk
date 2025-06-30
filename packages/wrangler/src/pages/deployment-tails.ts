@@ -4,6 +4,7 @@ import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
+import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
@@ -169,13 +170,17 @@ export const pagesDeploymentTailCommand = createCommand({
 		}
 
 		const deployments: Array<Deployment> = await fetchResult(
+			COMPLIANCE_REGION_CONFIG_PUBLIC,
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
 			{},
 			new URLSearchParams({ env: environment })
 		);
 
 		const envDeployments = deployments.filter(
-			(d) => d.environment === environment
+			(d) =>
+				d.environment === environment &&
+				d.latest_stage.name === "deploy" &&
+				d.latest_stage.status === "success"
 		);
 
 		// Deployment is URL

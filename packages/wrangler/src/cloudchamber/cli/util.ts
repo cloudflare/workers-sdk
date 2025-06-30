@@ -1,5 +1,5 @@
 import { bgGreen, bgRed, bgYellow } from "@cloudflare/cli/colors";
-import { type PlacementStatusHealth } from "../client";
+import { type PlacementStatusHealth } from "@cloudflare/containers-shared";
 
 export function capitalize<S extends string>(str: S): Capitalize<S> {
 	return (
@@ -15,7 +15,6 @@ export function statusToColored(status?: PlacementStatusHealth): string {
 	const mappings: Record<PlacementStatusHealth, (_: string) => string> = {
 		placed: bgYellow,
 		running: bgGreen,
-		do_connected: bgGreen,
 		stopped: bgYellow,
 		stopping: bgYellow,
 		failed: bgRed,

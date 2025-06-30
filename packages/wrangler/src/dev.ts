@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { randomUUID } from "node:crypto";
 import events from "node:events";
 import path from "node:path";
 import util from "node:util";
@@ -24,7 +25,7 @@ import { getFlag } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import { getSiteAssetPaths } from "./sites";
-import { loginOrRefreshIfRequired, requireApiToken, requireAuth } from "./user";
+import { requireApiToken, requireAuth } from "./user";
 import {
 	collectKeyValues,
 	collectPlainTextVars,
@@ -45,8 +46,12 @@ import type {
 } from "./config/environment";
 import type { INHERIT_SYMBOL } from "./deployment-bundle/bindings";
 import type {
+	CfD1Database,
 	CfKvNamespace,
 	CfModule,
+	CfQueue,
+	CfR2Bucket,
+	CfService,
 	CfWorkerInit,
 } from "./deployment-bundle/worker";
 import type { WorkerRegistry } from "./dev-registry";
@@ -61,7 +66,7 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			MIXED_MODE: args.experimentalMixedMode ?? false,
+			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
 		}),
 	},
 	metadata: {
@@ -158,6 +163,11 @@ export const dev = createCommand({
 			type: "string",
 			describe:
 				"Host to act as origin in local mode, defaults to dev.host or route",
+		},
+		"enable-containers": {
+			type: "boolean",
+			describe: "Whether to build and enable containers during development",
+			hidden: true,
 		},
 		site: {
 			describe: "Root folder of static assets for Workers Sites",
@@ -307,15 +317,6 @@ export const dev = createCommand({
 			process.exitCode = 1;
 			return;
 		}
-
-		if (args.remote) {
-			const isLoggedIn = await loginOrRefreshIfRequired();
-			if (!isLoggedIn) {
-				throw new UserError(
-					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
-				);
-			}
-		}
 	},
 	async handler(args) {
 		const devInstance = await startDev(args);
@@ -385,6 +386,8 @@ export type StartDevOptions = DevArguments &
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number) => void;
 		enableIpc?: boolean;
+		dockerPath?: string;
+		containerEngine?: string;
 	};
 
 async function updateDevEnvRegistry(
@@ -522,6 +525,7 @@ async function setupDevEnv(
 					vectorize: undefined,
 					hyperdrive: undefined,
 					secrets_store_secrets: undefined,
+					unsafe_hello_world: undefined,
 					services: args.services,
 					analytics_engine_datasets: undefined,
 					dispatch_namespaces: undefined,
@@ -565,6 +569,10 @@ async function setupDevEnv(
 				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
+				enableContainers: args.enableContainers,
+				dockerPath: args.dockerPath,
+				// initialise with a random id
+				containerBuildId: randomUUID().slice(0, 8),
 			},
 			legacy: {
 				site: (configParam) => {
@@ -630,10 +638,6 @@ export async function startDev(args: StartDevOptions) {
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
-			}
-
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
 				await setupDevEnv(primaryDevEnv, args.config[0], authHook, {
@@ -662,6 +666,9 @@ export async function startDev(args: StartDevOptions) {
 					})
 				))
 			);
+			if (isInteractive() && args.showInteractiveDevSession !== false) {
+				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
+			}
 		} else {
 			devEnv = new DevEnv();
 
@@ -712,11 +719,11 @@ export async function startDev(args: StartDevOptions) {
 				});
 			}
 
+			await setupDevEnv(devEnv, args.config, authHook, args);
+
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
-
-			await setupDevEnv(devEnv, args.config, authHook, args);
 		}
 
 		return {
@@ -847,7 +854,8 @@ export function getBindings(
 	configParam: Config,
 	env: string | undefined,
 	local: boolean,
-	args: AdditionalDevProps
+	args: AdditionalDevProps,
+	remoteBindingsEnabled = getFlag("REMOTE_BINDINGS")
 ): CfWorkerInit["bindings"] {
 	/**
 	 * In Pages, KV, DO, D1, R2, AI and service bindings can be specified as
@@ -857,7 +865,7 @@ export function getBindings(
 	 */
 	// merge KV bindings
 	const kvConfig = (configParam.kv_namespaces || []).map<CfKvNamespace>(
-		({ binding, preview_id, id, remote }) => {
+		({ binding, preview_id, id, experimental_remote }) => {
 			// In remote `dev`, we make folks use a separate kv namespace called
 			// `preview_id` instead of `id` so that they don't
 			// break production data. So here we check that a `preview_id`
@@ -874,8 +882,8 @@ export function getBindings(
 			return {
 				binding,
 				id: preview_id ?? id,
-				remote: getFlag("MIXED_MODE") && remote,
-			};
+				experimental_remote: remoteBindingsEnabled && experimental_remote,
+			} satisfies CfKvNamespace;
 		}
 	);
 	const kvArgs = args.kv || [];
@@ -895,9 +903,9 @@ export function getBindings(
 		if (local) {
 			return {
 				...d1Db,
-				remote: getFlag("MIXED_MODE") && d1Db.remote,
+				experimental_remote: remoteBindingsEnabled && d1Db.experimental_remote,
 				database_id,
-			};
+			} satisfies CfD1Database;
 		}
 		// if you have a preview_database_id, we'll use it, but we shouldn't force people to use it.
 		if (!d1Db.preview_database_id && !process.env.NO_D1_WARNING) {
@@ -913,7 +921,13 @@ export function getBindings(
 	// merge R2 bindings
 	const r2Config: EnvironmentNonInheritable["r2_buckets"] =
 		configParam.r2_buckets?.map(
-			({ binding, preview_bucket_name, bucket_name, jurisdiction, remote }) => {
+			({
+				binding,
+				preview_bucket_name,
+				bucket_name,
+				jurisdiction,
+				experimental_remote,
+			}) => {
 				// same idea as kv namespace preview id,
 				// same copy-on-write TODO
 				if (!preview_bucket_name && !local) {
@@ -925,8 +939,8 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
-					remote: getFlag("MIXED_MODE") && remote,
-				};
+					experimental_remote: remoteBindingsEnabled && experimental_remote,
+				} satisfies CfR2Bucket;
 			}
 		) || [];
 	const r2Args = args.r2 || [];
@@ -939,10 +953,16 @@ export function getBindings(
 		servicesConfig,
 		servicesArgs,
 		"binding"
-	).map((service) => ({
-		...service,
-		remote: getFlag("MIXED_MODE") && "remote" in service && !!service.remote,
-	}));
+	).map(
+		(service) =>
+			({
+				...service,
+				experimental_remote:
+					remoteBindingsEnabled &&
+					"experimental_remote" in service &&
+					!!service.experimental_remote,
+			}) satisfies CfService
+	);
 
 	// Hyperdrive bindings
 	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {
@@ -980,15 +1000,10 @@ export function getBindings(
 				binding: queue.binding,
 				queue_name: queue.queue,
 				delivery_delay: queue.delivery_delay,
-				remote: getFlag("MIXED_MODE") && queue.remote,
-			};
+				experimental_remote: remoteBindingsEnabled && queue.experimental_remote,
+			} satisfies CfQueue;
 		}),
 	];
-
-	const workflowsConfig = configParam.workflows.map((workflowConfig) => ({
-		...workflowConfig,
-		remote: getFlag("MIXED_MODE") && workflowConfig.remote,
-	}));
 
 	const bindings: CfWorkerInit["bindings"] = {
 		// top-level fields
@@ -1009,7 +1024,7 @@ export function getBindings(
 		durable_objects: {
 			bindings: mergedDOBindings,
 		},
-		workflows: workflowsConfig,
+		workflows: configParam.workflows,
 		kv_namespaces: mergedKVBindings,
 		queues: queuesBindings,
 		r2_buckets: mergedR2Bindings,
@@ -1034,6 +1049,7 @@ export function getBindings(
 		assets: configParam.assets?.binding
 			? { binding: configParam.assets?.binding }
 			: undefined,
+		unsafe_hello_world: configParam.unsafe_hello_world,
 	};
 
 	return bindings;

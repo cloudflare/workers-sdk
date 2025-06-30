@@ -147,6 +147,11 @@ export type WorkerMetadataBinding =
 			secret_name: string;
 	  }
 	| {
+			type: "unsafe_hello_world";
+			name: string;
+			enable_timer?: boolean;
+	  }
+	| {
 			type: "logfwdr";
 			name: string;
 			destination: string;
@@ -156,7 +161,7 @@ export type WorkerMetadataBinding =
 export type AssetConfigMetadata = {
 	html_handling?: AssetConfig["html_handling"];
 	not_found_handling?: AssetConfig["not_found_handling"];
-	run_worker_first?: boolean;
+	run_worker_first?: boolean | string[];
 	_redirects?: string;
 	_headers?: string;
 };
@@ -228,7 +233,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	const assetConfig: AssetConfigMetadata = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
-		run_worker_first: assets?.routerConfig.invoke_user_worker_ahead_of_assets,
+		run_worker_first: assets?.run_worker_first,
 		_redirects: assets?._redirects,
 		_headers: assets?._headers,
 	};
@@ -409,6 +414,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			});
 		}
 	);
+
+	bindings.unsafe_hello_world?.forEach(({ binding, enable_timer }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "unsafe_hello_world",
+			enable_timer,
+		});
+	});
 
 	bindings.services?.forEach(
 		({ binding, service, environment, entrypoint, props }) => {
@@ -727,7 +740,6 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			},
 		}),
 		...(observability && { observability }),
-		minimal_mode: worker.minimal_mode,
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {

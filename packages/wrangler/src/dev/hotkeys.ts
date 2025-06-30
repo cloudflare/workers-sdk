@@ -1,3 +1,6 @@
+import assert from "assert";
+import { randomUUID } from "crypto";
+import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -23,6 +26,8 @@ export default function registerDevHotKeys(
 			handler: async () => {
 				const { inspectorUrl } = await devEnv.proxy.ready.promise;
 
+				assert(inspectorUrl, "Error: no inspectorUrl available");
+
 				// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
 				await openInspector(
 					parseInt(inspectorUrl.port),
@@ -31,10 +36,32 @@ export default function registerDevHotKeys(
 			},
 		},
 		{
+			keys: ["r"],
+			label: "rebuild container(s)",
+			disabled: () => {
+				return (
+					!devEnv.config.latestConfig?.dev?.enableContainers ||
+					!devEnv.config.latestConfig?.containers?.length
+				);
+			},
+			handler: async () => {
+				const newContainerBuildId = randomUUID().slice(0, 8);
+				// cleanup any existing containers
+				devEnv.runtimes.map(async (runtime) => {
+					if (runtime instanceof LocalRuntimeController) {
+						await runtime.cleanupContainers();
+					}
+				});
+
+				// updating the build ID will trigger a rebuild of the containers
+				await devEnv.config.patch({
+					dev: { containerBuildId: newContainerBuildId },
+				});
+			},
+		},
+		{
 			keys: ["l"],
 			disabled: () => args.forceLocal ?? false,
-			label: () =>
-				`turn ${devEnv.config.latestConfig?.dev?.remote ? "on" : "off"} local mode`,
 			handler: async () => {
 				await devEnv.config.patch({
 					dev: {

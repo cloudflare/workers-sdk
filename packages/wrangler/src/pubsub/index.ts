@@ -1,4 +1,5 @@
 import { fetchResult } from "../cfetch";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
 export const pubSubBetaWarning =
 	"👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/";
@@ -47,9 +48,11 @@ export interface PubSubBrokerUpdate {
  * Fetch a list of all the Namespaces under the given `accountId`.
  */
 export async function listPubSubNamespaces(
+	complianceConfig: ComplianceConfig,
 	accountId: string
 ): Promise<PubSubNamespace[]> {
 	return await fetchResult<PubSubNamespace[]>(
+		complianceConfig,
 		`/accounts/${accountId}/pubsub/namespaces`
 	);
 }
@@ -62,13 +65,18 @@ export async function listPubSubNamespaces(
  * Namespaces are globally unique.
  */
 export async function createPubSubNamespace(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: PubSubNamespace
 ): Promise<void> {
-	return await fetchResult<void>(`/accounts/${accountId}/pubsub/namespaces`, {
-		method: "POST",
-		body: JSON.stringify(namespace),
-	});
+	return await fetchResult<void>(
+		complianceConfig,
+		`/accounts/${accountId}/pubsub/namespaces`,
+		{
+			method: "POST",
+			body: JSON.stringify(namespace),
+		}
+	);
 }
 
 /**
@@ -77,10 +85,12 @@ export async function createPubSubNamespace(
  * Deleting a namespace is destructive and should be done with care.
  */
 export async function deletePubSubNamespace(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: string
 ): Promise<void> {
 	return await fetchResult<void>(
+		complianceConfig,
 		`/accounts/${accountId}/pubsub/namespaces/${namespace}`,
 		{ method: "DELETE" }
 	);
@@ -90,10 +100,12 @@ export async function deletePubSubNamespace(
  * Describe a single Pub/Sub Namespace by its `namespace` name.
  */
 export async function describePubSubNamespace(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: string
 ): Promise<void> {
 	return await fetchResult<void>(
+		complianceConfig,
 		`/accounts/${accountId}/pubsub/namespaces/${namespace}`,
 		{ method: "GET" }
 	);
@@ -106,11 +118,13 @@ export async function describePubSubNamespace(
  * connections to the Broker.
  */
 export async function deletePubSubBroker(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: string,
 	broker: string
 ): Promise<void> {
 	return await fetchResult<void>(
+		complianceConfig,
 		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
 		{ method: "DELETE" }
 	);
@@ -120,11 +134,13 @@ export async function deletePubSubBroker(
  * Describe a single Pub/Sub Broker for the given `broker` name within the associated `namespace`.
  */
 export async function describePubSubBroker(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: string,
 	broker: string
 ): Promise<void> {
 	return await fetchResult<void>(
+		complianceConfig,
 		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
 		{ method: "GET" }
 	);
@@ -134,10 +150,12 @@ export async function describePubSubBroker(
  * Fetch a list of all the Pub/Sub Brokers under the given `namespace`.
  */
 export async function listPubSubBrokers(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: string
 ): Promise<PubSubBroker[]> {
 	return await fetchResult<PubSubBroker[]>(
+		complianceConfig,
 		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers`
 	);
 }
@@ -146,11 +164,13 @@ export async function listPubSubBrokers(
  * Create a Pub/Sub Broker within given `namespace`.
  */
 export async function createPubSubBroker(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: string,
 	broker: PubSubBroker
 ): Promise<void> {
 	return await fetchResult<void>(
+		complianceConfig,
 		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers`,
 		{ method: "POST", body: JSON.stringify(broker) }
 	);
@@ -160,12 +180,14 @@ export async function createPubSubBroker(
  * Update a Pub/Sub Broker configuration.
  */
 export async function updatePubSubBroker(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: string,
 	broker: string,
 	update: PubSubBrokerUpdate
 ): Promise<void> {
 	return await fetchResult<void>(
+		complianceConfig,
 		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
 		{ method: "PATCH", body: JSON.stringify(update) }
 	);
@@ -177,11 +199,13 @@ export async function updatePubSubBroker(
  * These keys can be used for verifying Pub/Sub on-publish hooks over HTTPS.
  */
 export async function getPubSubBrokerPublicKeys(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: string,
 	broker: string
 ): Promise<Record<string, string>> {
 	return await fetchResult<Record<string, string>>(
+		complianceConfig,
 		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/publickeys`
 	);
 }
@@ -192,6 +216,7 @@ export async function getPubSubBrokerPublicKeys(
  * Multiple credentials can be generated at once by providing a `number`.
  */
 export async function issuePubSubBrokerTokens(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: string,
 	broker: string,
@@ -220,7 +245,7 @@ export async function issuePubSubBrokerTokens(
 	// don't know within the scope of this function.
 	url = url + `?${params.toString()}`;
 
-	return await fetchResult<Record<string, string>>(url);
+	return await fetchResult<Record<string, string>>(complianceConfig, url);
 }
 
 /**
@@ -230,6 +255,7 @@ export async function issuePubSubBrokerTokens(
  * Multiple credentials can be revoked at once.
  */
 export async function revokePubSubBrokerTokens(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: string,
 	broker: string,
@@ -243,7 +269,10 @@ export async function revokePubSubBrokerTokens(
 	}
 
 	url = url + `?${params.toString()}`;
-	return await fetchResult<void>(url, { method: "POST", body: "" });
+	return await fetchResult<void>(complianceConfig, url, {
+		method: "POST",
+		body: "",
+	});
 }
 
 /**
@@ -254,6 +283,7 @@ export async function revokePubSubBrokerTokens(
  * Credentials that have expired may be unrevoked, but will no longer be valid.
  */
 export async function unrevokePubSubBrokerTokens(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: string,
 	broker: string,
@@ -266,7 +296,7 @@ export async function unrevokePubSubBrokerTokens(
 	}
 
 	url = url + `?${params.toString()}`;
-	return await fetchResult<void>(url, { method: "DELETE" });
+	return await fetchResult<void>(complianceConfig, url, { method: "DELETE" });
 }
 
 /**
@@ -276,11 +306,13 @@ export async function unrevokePubSubBrokerTokens(
  * This shows all existing revocations against a Broker.
  */
 export async function listRevokedPubSubBrokerTokens(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespace: string,
 	broker: string
 ): Promise<void> {
 	return await fetchResult<void>(
+		complianceConfig,
 		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`
 	);
 }

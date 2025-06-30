@@ -33,7 +33,7 @@ describe("cloudchamber curl", () => {
 		expect(helpStd.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber curl <path>
 
-			send a request to an arbitrary cloudchamber endpoint
+			send a request to an arbitrary Cloudchamber endpoint
 
 			POSITIONALS
 			  path  [string] [required] [default: \\"/\\"]
@@ -64,9 +64,26 @@ describe("cloudchamber curl", () => {
 				// verify we are hitting the expected url
 				expect(request.url).toEqual(baseRequestUrl + "deployments/v2");
 				// and that the request has the expected content
-				expect(await request.text()).toMatchInlineSnapshot(
-					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"400GB\\",\\"network\\":{\\"assign_ipv4\\":\\"predefined\\"}}"`
-				);
+				expect(await request.json()).toEqual({
+					image: "hello:world",
+					location: "sfo06",
+					ssh_public_key_ids: [],
+					environment_variables: [
+						{
+							name: "HELLO",
+							value: "WORLD",
+						},
+						{
+							name: "YOU",
+							value: "CONQUERED",
+						},
+					],
+					vcpu: 3,
+					memory_mib: 400,
+					network: {
+						assign_ipv4: "predefined",
+					},
+				});
 				return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
 			})
 		);
@@ -81,7 +98,7 @@ describe("cloudchamber curl", () => {
 				{ name: "YOU", value: "CONQUERED" },
 			],
 			vcpu: 3,
-			memory: "400GB",
+			memory_mib: 400,
 			network: { assign_ipv4: "predefined" },
 		});
 
@@ -97,6 +114,7 @@ describe("cloudchamber curl", () => {
 			    \\"account_id\\": \\"123\\",
 			    \\"vcpu\\": 4,
 			    \\"memory\\": \\"400MB\\",
+			    \\"memory_mib\\": 400,
 			    \\"version\\": 1,
 			    \\"image\\": \\"hello\\",
 			    \\"location\\": {
@@ -104,6 +122,7 @@ describe("cloudchamber curl", () => {
 			        \\"enabled\\": true
 			    },
 			    \\"network\\": {
+			        \\"mode\\": \\"public\\",
 			        \\"ipv4\\": \\"1.1.1.1\\"
 			    },
 			    \\"placements_ref\\": \\"http://ref\\",
@@ -153,9 +172,7 @@ describe("cloudchamber curl", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"├ Loading account
-			│
-			>> Body
+			">> Body
 			[
 			    {
 			        \\"id\\": \\"1\\",
@@ -164,6 +181,7 @@ describe("cloudchamber curl", () => {
 			        \\"account_id\\": \\"123\\",
 			        \\"vcpu\\": 4,
 			        \\"memory\\": \\"400MB\\",
+			        \\"memory_mib\\": 400,
 			        \\"version\\": 1,
 			        \\"image\\": \\"hello\\",
 			        \\"location\\": {
@@ -171,6 +189,7 @@ describe("cloudchamber curl", () => {
 			            \\"enabled\\": true
 			        },
 			        \\"network\\": {
+			            \\"mode\\": \\"public\\",
 			            \\"ipv4\\": \\"1.1.1.1\\"
 			        },
 			        \\"placements_ref\\": \\"http://ref\\",
@@ -183,6 +202,7 @@ describe("cloudchamber curl", () => {
 			        \\"account_id\\": \\"123\\",
 			        \\"vcpu\\": 4,
 			        \\"memory\\": \\"400MB\\",
+			        \\"memory_mib\\": 400,
 			        \\"version\\": 2,
 			        \\"image\\": \\"hello\\",
 			        \\"location\\": {
@@ -190,6 +210,7 @@ describe("cloudchamber curl", () => {
 			            \\"enabled\\": true
 			        },
 			        \\"network\\": {
+			            \\"mode\\": \\"public\\",
 			            \\"ipv4\\": \\"1.1.1.2\\"
 			        },
 			        \\"current_placement\\": {
@@ -212,6 +233,7 @@ describe("cloudchamber curl", () => {
 			        \\"account_id\\": \\"123\\",
 			        \\"vcpu\\": 4,
 			        \\"memory\\": \\"400MB\\",
+			        \\"memory_mib\\": 400,
 			        \\"version\\": 1,
 			        \\"image\\": \\"hello\\",
 			        \\"location\\": {
@@ -219,6 +241,7 @@ describe("cloudchamber curl", () => {
 			            \\"enabled\\": true
 			        },
 			        \\"network\\": {
+			            \\"mode\\": \\"public\\",
 			            \\"ipv4\\": \\"1.1.1.1\\"
 			        },
 			        \\"placements_ref\\": \\"http://ref\\",
@@ -231,6 +254,7 @@ describe("cloudchamber curl", () => {
 			        \\"account_id\\": \\"123\\",
 			        \\"vcpu\\": 4,
 			        \\"memory\\": \\"400MB\\",
+			        \\"memory_mib\\": 400,
 			        \\"version\\": 2,
 			        \\"image\\": \\"hello\\",
 			        \\"location\\": {
@@ -238,6 +262,7 @@ describe("cloudchamber curl", () => {
 			            \\"enabled\\": true
 			        },
 			        \\"network\\": {
+			            \\"mode\\": \\"public\\",
 			            \\"ipv4\\": \\"1.1.1.2\\"
 			        },
 			        \\"current_placement\\": {
@@ -310,8 +335,7 @@ describe("cloudchamber curl", () => {
 			"cloudchamber curl /deployments/v2 --header something:here"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		const text = std.out.split("\n").splice(2).join("\n");
-		const response = JSON.parse(text);
+		const response = JSON.parse(std.out);
 		expect(response.status).toEqual(500);
 		expect(response.statusText).toEqual("Unhandled Exception");
 	});

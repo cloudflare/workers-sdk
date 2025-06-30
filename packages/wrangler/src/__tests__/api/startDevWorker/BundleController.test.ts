@@ -40,6 +40,7 @@ function configDefaults(
 	const persist = path.join(process.cwd(), ".wrangler/persist");
 	return {
 		name: "test-worker",
+		complianceRegion: undefined,
 		entrypoint: "NOT_REAL",
 		projectRoot: "NOT_REAL",
 		build: unusable<StartDevWorkerOptions["build"]>(),
@@ -434,12 +435,13 @@ describe("BundleController", () => {
 				legacy: {},
 			};
 
+			let evCustomPromise = waitForBundleComplete(controller);
 			await controller.onConfigUpdate({
 				type: "configUpdate",
 				config: configDefaults(configCustom),
 			});
+			let evCustom = await evCustomPromise;
 
-			let evCustom = await waitForBundleComplete(controller);
 			expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 				.toMatchInlineSnapshot(`
 					"// out.ts
@@ -454,7 +456,9 @@ describe("BundleController", () => {
 					};
 					"
 				`);
+
 			// Make sure custom builds can reload after switching to them
+			evCustomPromise = waitForBundleComplete(controller);
 			await seed({
 				"random_dir/index.ts": dedent/* javascript */ `
 						export default {
@@ -465,7 +469,7 @@ describe("BundleController", () => {
 						}
 					`,
 			});
-			evCustom = await waitForBundleComplete(controller);
+			evCustom = await evCustomPromise;
 			expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 				.toMatchInlineSnapshot(`
 					"// out.ts

@@ -1,4 +1,4 @@
-From c0a3154c9483ac4390d8459cb5869b58afa8d503 Mon Sep 17 00:00:00 2001
+From 1729d533ea8866ee71a5e2170253f7cd6f850e0c Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 16:05:12 +0100
 Subject: [PATCH 6/8] All about the network tab!
@@ -10,13 +10,12 @@ Subject: [PATCH 6/8] All about the network tab!
 * Hide unsupported UI (cache disabling & network throttling)
 ---
  front_end/core/sdk/NetworkManager.ts     |  8 ++++++-
- front_end/entrypoints/js_app/BUILD.gn    |  1 +
  front_end/entrypoints/js_app/js_app.ts   |  1 +
  front_end/panels/network/NetworkPanel.ts | 27 ------------------------
- 4 files changed, 9 insertions(+), 28 deletions(-)
+ 3 files changed, 8 insertions(+), 28 deletions(-)
 
 diff --git a/front_end/core/sdk/NetworkManager.ts b/front_end/core/sdk/NetworkManager.ts
-index 4093f80cf8..1eb3199a53 100644
+index 1e50c6329f..756679235b 100644
 --- a/front_end/core/sdk/NetworkManager.ts
 +++ b/front_end/core/sdk/NetworkManager.ts
 @@ -34,6 +34,7 @@
@@ -27,7 +26,7 @@ index 4093f80cf8..1eb3199a53 100644
  import * as TextUtils from '../../models/text_utils/text_utils.js';
  import * as Common from '../common/common.js';
  import type {Serializer} from '../common/Settings.js';
-@@ -794,7 +795,7 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
+@@ -846,7 +847,7 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
      this.updateNetworkRequest(networkRequest);
    }
  
@@ -36,7 +35,7 @@ index 4093f80cf8..1eb3199a53 100644
      let networkRequest: NetworkRequest|null|undefined = this.#requestsById.get(requestId);
      if (!networkRequest) {
        networkRequest = this.maybeAdoptMainResourceRequest(requestId);
-@@ -803,6 +804,11 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
+@@ -855,6 +856,11 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
        return;
      }
      this.getExtraInfoBuilder(requestId).finished();
@@ -48,20 +47,8 @@ index 4093f80cf8..1eb3199a53 100644
      this.finishNetworkRequest(networkRequest, finishTime, encodedDataLength);
      this.#manager.dispatchEventToListeners(Events.LoadingFinished, networkRequest);
    }
-diff --git a/front_end/entrypoints/js_app/BUILD.gn b/front_end/entrypoints/js_app/BUILD.gn
-index c44a7a352b..2ee6e03a03 100644
---- a/front_end/entrypoints/js_app/BUILD.gn
-+++ b/front_end/entrypoints/js_app/BUILD.gn
-@@ -15,6 +15,7 @@ devtools_entrypoint("entrypoint") {
-     "../../generated:protocol",
-     "../../panels/js_timeline:meta",
-     "../../panels/mobile_throttling:meta",
-+    "../../panels/network:meta",
-     "../../ui/legacy/components/utils:bundle",
-     "../main:bundle",
-     "../shell",
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
-index 1724a33bd4..884c6264d2 100644
+index 893ac3533f..937e646ab5 100644
 --- a/front_end/entrypoints/js_app/js_app.ts
 +++ b/front_end/entrypoints/js_app/js_app.ts
 @@ -4,6 +4,7 @@
@@ -70,13 +57,13 @@ index 1724a33bd4..884c6264d2 100644
  import '../../panels/js_timeline/js_timeline-meta.js';
 +import '../../panels/network/network-meta.js';
  import '../../panels/mobile_throttling/mobile_throttling-meta.js';
+ import '../../panels/network/network-meta.js';
  
- import * as Common from '../../core/common/common.js';
 diff --git a/front_end/panels/network/NetworkPanel.ts b/front_end/panels/network/NetworkPanel.ts
-index 7d44f68bf3..f4b7ec0973 100644
+index f70065800e..ac1316662b 100644
 --- a/front_end/panels/network/NetworkPanel.ts
 +++ b/front_end/panels/network/NetworkPanel.ts
-@@ -75,14 +75,6 @@ const UIStrings = {
+@@ -76,14 +76,6 @@ const UIStrings = {
     *@description Text to preserve the log after refreshing
     */
    preserveLog: 'Preserve log',
@@ -91,18 +78,18 @@ index 7d44f68bf3..f4b7ec0973 100644
    /**
     *@description Tooltip text that appears when hovering over the largeicon settings gear in show settings pane setting in network panel of the network panel
     */
-@@ -180,10 +172,6 @@ const UIStrings = {
+@@ -181,10 +173,6 @@ const UIStrings = {
     *@description Text in Network Panel that is displayed when frames are being fetched.
     */
-   fetchingFrames: 'Fetching frames...',
+   fetchingFrames: 'Fetching frames…',
 -  /**
 -   * @description Text of a button in the Network panel's toolbar that open Network Conditions panel in the drawer.
 -   */
 -  moreNetworkConditions: 'More network conditions…',
- };
+ } as const;
  const str_ = i18n.i18n.registerUIStrings('panels/network/NetworkPanel.ts', UIStrings);
  const i18nString = i18n.i18n.getLocalizedString.bind(undefined, str_);
-@@ -444,21 +432,6 @@ export class NetworkPanel extends UI.Panel.Panel implements
+@@ -456,21 +444,6 @@ export class NetworkPanel extends UI.Panel.Panel implements
      this.panelToolbar.appendToolbarItem(new UI.Toolbar.ToolbarSettingCheckbox(
          this.preserveLogSetting, i18nString(UIStrings.doNotClearLogOnPageReload), i18nString(UIStrings.preserveLog)));
  

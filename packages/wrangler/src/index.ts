@@ -19,7 +19,7 @@ import {
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
-import { experimental_readRawConfig, loadDotEnv } from "./config";
+import { experimental_readRawConfig, loadDotEnv, readConfig } from "./config";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
@@ -56,11 +56,17 @@ import {
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "./environment-variables/misc-variables";
 import {
 	CommandLineArgsError,
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
+import {
+	helloWorldGetCommand,
+	helloWorldNamespace,
+	helloWorldSetCommand,
+} from "./hello-world";
 import { hyperdriveCreateCommand } from "./hyperdrive/create";
 import { hyperdriveDeleteCommand } from "./hyperdrive/delete";
 import { hyperdriveGetCommand } from "./hyperdrive/get";
@@ -308,6 +314,7 @@ import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
 import { asJson } from "./yargs-types";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
@@ -420,17 +427,17 @@ export function createCLIParser(argv: string[]) {
 
 			return true;
 		})
+		.option("experimental-remote-bindings", {
+			describe: `Experimental: Enable Remote Bindings`,
+			type: "boolean",
+			hidden: true,
+			alias: ["x-remote-bindings"],
+		})
 		.option("experimental-provision", {
 			describe: `Experimental: Enable automatic resource provisioning`,
 			type: "boolean",
 			hidden: true,
 			alias: ["x-provision"],
-		})
-		.option("experimental-mixed-mode", {
-			describe: `Experimental: Enable Mixed Mode`,
-			type: "boolean",
-			hidden: true,
-			alias: ["x-mixed-mode"],
 		})
 		.epilogue(
 			`Please report any issues to ${chalk.hex("#3B818D")(
@@ -1329,6 +1336,19 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("pipelines");
 
+	registry.define([
+		{ command: "wrangler hello-world", definition: helloWorldNamespace },
+		{
+			command: "wrangler hello-world get",
+			definition: helloWorldGetCommand,
+		},
+		{
+			command: "wrangler hello-world set",
+			definition: helloWorldSetCommand,
+		},
+	]);
+	registry.registerNamespace("hello-world");
+
 	/******************** CMD GROUP ***********************/
 
 	registry.define([
@@ -1501,7 +1521,15 @@ export async function main(argv: string[]): Promise<void> {
 				logger.log(chalk.yellow(message));
 			}
 			const accountTag = (e as APIError)?.accountTag;
-			await whoami(accountTag);
+			let complianceConfig: ComplianceConfig;
+			try {
+				complianceConfig = await readConfig(wrangler.arguments, {
+					hideWarnings: true,
+				});
+			} catch {
+				complianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN;
+			}
+			await whoami(complianceConfig, accountTag);
 		} else if (e instanceof ParseError) {
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",

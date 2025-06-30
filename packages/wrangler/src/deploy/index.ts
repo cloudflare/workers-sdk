@@ -176,7 +176,10 @@ export const deployCommand = createCommand({
 		},
 		"keep-vars": {
 			describe:
-				"Stop Wrangler from deleting vars that are not present in the Wrangler configuration file\nBy default Wrangler will remove all vars and replace them with those found in the Wrangler configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
+				"When not used (or set to false), Wrangler will delete all vars before setting those found in the Wrangler configuration.\n" +
+				"When used (and set to true), the environment variables are not deleted before the deployment.\n" +
+				"If you set variables via the dashboard you probably want to use this flag.\n" +
+				"Note that secrets are never deleted by deployments.",
 			default: false,
 			type: "boolean",
 		},
@@ -217,8 +220,9 @@ export const deployCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			MIXED_MODE: false,
+			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
 		}),
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	validateArgs(args) {
 		if (args.nodeCompat) {
@@ -287,7 +291,12 @@ export const deployCommand = createCommand({
 
 		if (!args.dryRun) {
 			assert(accountId, "Missing account ID");
-			await verifyWorkerMatchesCITag(accountId, name, config.configPath);
+			await verifyWorkerMatchesCITag(
+				config,
+				accountId,
+				name,
+				config.configPath
+			);
 		}
 		const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 			config,

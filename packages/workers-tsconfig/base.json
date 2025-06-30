@@ -13,6 +13,8 @@
 		"noImplicitOverride": true,
 		"module": "Preserve",
 		"lib": ["ES2022"],
-		"noEmit": true
+		"noEmit": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
 	}
 }

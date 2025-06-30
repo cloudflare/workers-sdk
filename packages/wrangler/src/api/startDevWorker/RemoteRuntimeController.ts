@@ -48,6 +48,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				await getWorkerAccountAndContext(props);
 
 			return await createPreviewSession(
+				props.complianceConfig,
 				workerAccount,
 				workerContext,
 				this.#abortController.signal
@@ -92,6 +93,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			}
 			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
 				{
+					complianceConfig: props.complianceConfig,
 					accountId: props.accountId,
 					env: props.env,
 					legacyEnv: props.legacyEnv,
@@ -114,6 +116,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				return;
 			}
 			const init = await createRemoteWorkerInit({
+				complianceConfig: props.complianceConfig,
 				bundle: props.bundle,
 				modules: props.modules,
 				accountId: props.accountId,
@@ -127,7 +130,6 @@ export class RemoteRuntimeController extends RuntimeController {
 				bindings: props.bindings,
 				compatibilityDate: props.compatibilityDate,
 				compatibilityFlags: props.compatibilityFlags,
-				minimal_mode: props.minimal_mode,
 			});
 
 			// If we received a new `bundleComplete` event before we were able to
@@ -136,11 +138,13 @@ export class RemoteRuntimeController extends RuntimeController {
 				return;
 			}
 			const workerPreviewToken = await createWorkerPreview(
+				props.complianceConfig,
 				init,
 				workerAccount,
 				workerContext,
 				this.#session,
-				this.#abortController.signal
+				this.#abortController.signal,
+				props.minimal_mode
 			);
 
 			return workerPreviewToken;
@@ -193,6 +197,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			}
 
 			this.#session ??= await this.#previewSession({
+				complianceConfig: { compliance_region: config.complianceRegion },
 				accountId: auth.accountId,
 				env: config.env, // deprecated service environments -- just pass it through for now
 				legacyEnv: !config.legacy?.enableServiceEnvironments, // wrangler environment -- just pass it through for now
@@ -216,6 +221,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				bundle,
 				modules: bundle.modules,
 				accountId: auth.accountId,
+				complianceConfig: { compliance_region: config.complianceRegion },
 				name: config.name,
 				legacyEnv: !config.legacy?.enableServiceEnvironments,
 				env: config.env,
