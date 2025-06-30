@@ -1,4 +1,4 @@
-import { isExperimental, workerToTestFilter } from "../../helpers/constants";
+import { isExperimental, workerTemplateToTest } from "../../helpers/constants";
 import type { RunnerConfig } from "../../helpers/run-c3";
 
 export type WorkerTestConfig = RunnerConfig & {
@@ -187,12 +187,12 @@ export function getWorkerTests(): WorkerTestConfig[] {
 				: [{ ...testConfig, name: testConfig.name ?? testConfig.template }],
 		)
 		.filter((testConfig) => {
-			if (!workerToTestFilter) {
+			if (!workerTemplateToTest) {
 				return true;
 			}
-			if (workerToTestFilter.includes(":")) {
-				return testConfig.name === workerToTestFilter;
+			if (workerTemplateToTest.includes(":")) {
+				return testConfig.name === workerTemplateToTest;
 			}
-			return testConfig.name.split(":")[0] === workerToTestFilter;
+			return testConfig.name.split(":")[0] === workerTemplateToTest;
 		});
 }

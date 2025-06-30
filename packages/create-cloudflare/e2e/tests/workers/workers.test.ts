@@ -3,7 +3,7 @@ import { join } from "path";
 import { readJSON, readToml } from "helpers/files";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteWorker } from "../../../scripts/common";
-import { TEST_TIMEOUT, workerToTestFilter } from "../../helpers/constants";
+import { TEST_TIMEOUT, workerTemplateToTest } from "../../helpers/constants";
 import { debuglog } from "../../helpers/debuglog";
 import { test } from "../../helpers/index";
 import { recreateLogFolder } from "../../helpers/log-stream";
@@ -26,8 +26,8 @@ describe
 		beforeAll((ctx) => {
 			recreateLogFolder(ctx);
 
-			if (workerToTestFilter) {
-				debuglog("Running worker tests with filter:", workerToTestFilter);
+			if (workerTemplateToTest) {
+				debuglog("Running worker tests with filter:", workerTemplateToTest);
 				workerTests.forEach((testConfig) => {
 					debuglog(` - ${testConfig.name ?? testConfig.template}`);
 				});

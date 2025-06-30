@@ -61,26 +61,26 @@ E2E_TEST_PM=yarn E2E_TEST_PM_VERSION=1.22.22 pnpm test:e2e -F create-cloudflare 
 
 ### Running Workers templates individually
 
-To run the e2e tests against a specific Worker template (or group of Worker template variants), provide the `E2E_WORKER_TEST_FILTER` environment variable.
+To run the e2e tests against a specific Worker template (or group of Worker template variants), provide the `E2E_WORKER_TEMPLATE_TO_TEST` environment variable.
 
 Worker template names and their variants are delimited by colons (`:`).
-If no colon is specified in the filter then all variants will be run for the matching template name.
+If no colon is specified then all variants will be run for the matching template name.
 
 For example to only run the python version of the `hello-world-durable-objects` template:
 
 ```bash
-E2E_WORKER_TEST_FILTER=hello-world-durable-object:python pnpm test:e2e -F create-cloudflare -- workers
+E2E_WORKER_TEMPLATE_TO_TEST=hello-world-durable-object:python pnpm test:e2e -F create-cloudflare -- workers
 ```
 
 To run all the `hello-world-with-assets` variants (`js`, `python`, `ts`):
 
 ```bash
-E2E_WORKER_TEST_FILTER=hello-world-with-assets pnpm test:e2e -F create-cloudflare -- workers
+E2E_WORKER_TEMPLATE_TO_TEST=hello-world-with-assets pnpm test:e2e -F create-cloudflare -- workers
 ```
 
 ### Running Web frameworks templates individually
 
-To run the e2e tests against a specific Web framework (or group of Worker template variants), provide the `E2E_FRAMEWORK_TEST_FILTER` environment variable.
+To run the e2e tests against a specific Web framework (or group of Worker template variants), provide the `E2E_FRAMEWORK_TEMPLATE_TO_TEST` environment variable.
 
 Framework templates and their variants (`pages` or `workers`) are delimited by colons (`:`).
 If no colon is specified in the filter then all variants will be run for the matching template.
@@ -88,11 +88,11 @@ If no colon is specified in the filter then all variants will be run for the mat
 For example to only run the `workers` version of the `react-router` framework:
 
 ```bash
-E2E_FRAMEWORK_TEST_FILTER=react-router:workers pnpm test:e2e -F create-cloudflare -- frameworks
+E2E_FRAMEWORK_TEMPLATE_TO_TEST=react-router:workers pnpm test:e2e -F create-cloudflare -- frameworks
 ```
 
 To run all the `qwik` framework variants (`pages`, `workers`):
 
 ```bash
-E2E_FRAMEWORK_TEST_FILTER=qwik pnpm test:e2e -F create-cloudflare -- frameworks
+E2E_FRAMEWORK_TEMPLATE_TO_TEST=qwik pnpm test:e2e -F create-cloudflare -- frameworks
 ```

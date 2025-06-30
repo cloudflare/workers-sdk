@@ -10,8 +10,8 @@ export const CLOUDFLARE_ACCOUNT_ID =
 	process.env.CLOUDFLARE_ACCOUNT_ID ?? "8d783f274e1f82dc46744c297b015a2f";
 export const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 export const isExperimental = process.env.E2E_EXPERIMENTAL === "true";
-export const workerToTestFilter = process.env.E2E_WORKER_TEST_FILTER;
-export const frameworkToTestFilter = process.env.E2E_FRAMEWORK_TEST_FILTER;
+export const workerTemplateToTest = process.env.E2E_WORKER_TEMPLATE_TO_TEST;
+export const frameworkToTestFilter = process.env.E2E_FRAMEWORK_TEMPLATE_TO_TEST;
 export const testPackageManager = isOneOf(
 	"E2E_TEST_PM",
 	["pnpm", "npm", "yarn", "bun"] as const,
