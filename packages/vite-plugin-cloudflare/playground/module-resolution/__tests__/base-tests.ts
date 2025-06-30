@@ -116,4 +116,11 @@ describe("module resolution", async () => {
 			expect(result).toBe("OK!");
 		});
 	});
+
+	describe("optimizeDeps.exclude", () => {
+		test("supports excluded packages importing from virtual modules", async () => {
+			const result = await getTextResponse("/optimize-deps/exclude");
+			expect(result).toBe("Export from virtual module");
+		});
+	});
 });

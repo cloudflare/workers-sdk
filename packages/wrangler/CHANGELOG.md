@@ -1,5 +1,77 @@
 # wrangler
 
+## 4.22.0
+
+### Minor Changes
+
+- [#7871](https://github.com/cloudflare/workers-sdk/pull/7871) [`f2a8d4a`](https://github.com/cloudflare/workers-sdk/commit/f2a8d4a91e64f991882100639577ed529d28feb4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add support for assets bindings to `getPlatformProxy`
+
+  this change makes sure that that `getPlatformProxy`, when the input configuration
+  file contains an assets field, correctly returns the appropriate asset binding proxy
+
+  example:
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+  	"name": "my-worker",
+  	"assets": {
+  		"directory": "./public/",
+  		"binding": "ASSETS",
+  	},
+  }
+  ```
+
+  ```js
+  import { getPlatformProxy } from "wrangler";
+
+  const { env, dispose } = await getPlatformProxy();
+
+  const text = await (await env.ASSETS.fetch("http://0.0.0.0/file.txt")).text();
+  console.log(text); // logs the content of file.txt
+
+  await dispose();
+  ```
+
+### Patch Changes
+
+- [#9717](https://github.com/cloudflare/workers-sdk/pull/9717) [`d2f2f72`](https://github.com/cloudflare/workers-sdk/commit/d2f2f726a15a973285e161a36740b535cefcaafa) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Containers should default to a "dev" instance type when no instance type is specified in the wrangler config
+
+- [#9620](https://github.com/cloudflare/workers-sdk/pull/9620) [`1b967ea`](https://github.com/cloudflare/workers-sdk/commit/1b967ea0ef6f794b202d4bc74aac3aa0ee07f9a5) Thanks [@gpanders](https://github.com/gpanders)! - Simplify containers images list output format
+
+- [#9684](https://github.com/cloudflare/workers-sdk/pull/9684) [`94a340e`](https://github.com/cloudflare/workers-sdk/commit/94a340e1215b3ac5fe9d56b57e2ddaa7c8263be7) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Select only successfully deployed deployments when tailing.
+
+## 4.21.2
+
+### Patch Changes
+
+- [#9731](https://github.com/cloudflare/workers-sdk/pull/9731) [`75b75f3`](https://github.com/cloudflare/workers-sdk/commit/75b75f3de77aff097f6e6dfeec9a9dd94cfd7c94) Thanks [@gabivlj](https://github.com/gabivlj)! - containers: Check for container scopes before running a container command to give a better error
+
+- [#9641](https://github.com/cloudflare/workers-sdk/pull/9641) [`fdbc9f6`](https://github.com/cloudflare/workers-sdk/commit/fdbc9f604824fb52a382bcd5c286cf73b019e438) Thanks [@IRCody](https://github.com/IRCody)! - Update container builds to use a more robust method for detecting if the currently built image already exists.
+
+- [#9736](https://github.com/cloudflare/workers-sdk/pull/9736) [`55c83a7`](https://github.com/cloudflare/workers-sdk/commit/55c83a7cf9ec101f04ac3e411b5ac687a0615218) Thanks [@gabivlj](https://github.com/gabivlj)! - containers: Do not check scopes if not defined
+
+- [#9667](https://github.com/cloudflare/workers-sdk/pull/9667) [`406fba5`](https://github.com/cloudflare/workers-sdk/commit/406fba5fa22188caa1a7a0fac5579e034d773736) Thanks [@IRCody](https://github.com/IRCody)! - Fail earlier in the deploy process when deploying a container worker if docker is not detected.
+
+## 4.21.1
+
+### Patch Changes
+
+- [#9626](https://github.com/cloudflare/workers-sdk/pull/9626) [`9c938c2`](https://github.com/cloudflare/workers-sdk/commit/9c938c2183e868b6468ad7a2298a74aa01d40f3c) Thanks [@penalosa](https://github.com/penalosa)! - Support `wrangler version upload` for Python Workers
+
+- [#9718](https://github.com/cloudflare/workers-sdk/pull/9718) [`fb83341`](https://github.com/cloudflare/workers-sdk/commit/fb83341bed6ff6571519eb117db19e3e76a83215) Thanks [@mhart](https://github.com/mhart)! - fix error message when docker daemon is not running
+
+- [#9689](https://github.com/cloudflare/workers-sdk/pull/9689) [`b137a6f`](https://github.com/cloudflare/workers-sdk/commit/b137a6f090b952f7e34236fa86b6667ca895f601) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: correctly pass container engine config to miniflare
+
+- [#9722](https://github.com/cloudflare/workers-sdk/pull/9722) [`29e911a`](https://github.com/cloudflare/workers-sdk/commit/29e911abbbd12385aec201cb9589cccd832fb400) Thanks [@emily-shen](https://github.com/emily-shen)! - Update containers config schema.
+
+  Deprecates `containers.configuration` in favour of top level fields. Makes top level `image` required. Deprecates `instances` and `durable_objects`. Makes `name` optional.
+
+- [#9666](https://github.com/cloudflare/workers-sdk/pull/9666) [`f3c5791`](https://github.com/cloudflare/workers-sdk/commit/f3c5791e3abf0b4468ff2a97046fed3e44b2fa4e) Thanks [@IRCody](https://github.com/IRCody)! - Add a reasonable default name for containers that have no defined name.
+
+- Updated dependencies [[`b137a6f`](https://github.com/cloudflare/workers-sdk/commit/b137a6f090b952f7e34236fa86b6667ca895f601)]:
+  - miniflare@4.20250617.4
+
 ## 4.21.0
 
 ### Minor Changes

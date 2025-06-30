@@ -17,7 +17,7 @@ import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { requireApiToken, requireAuth } from "../user";
+import { getScopes, printScopes, requireApiToken, requireAuth } from "../user";
 import { printWranglerBanner } from "../wrangler-banner";
 import { parseByteSize } from "./../parse";
 import { wrap } from "./helpers/wrap";
@@ -200,6 +200,15 @@ export async function fillOpenAPIConfiguration(
 
 	const accountId = await requireAuth(config);
 	const auth = requireApiToken();
+	const scopes = getScopes();
+	if (scopes !== undefined && !scopes.includes(scope)) {
+		logger.error(`You don't have '${scope}' in your list of scopes`);
+		printScopes(scopes ?? []);
+		throw new UserError(
+			`You need '${scope}', try logging in again or creating an appropiate API token`
+		);
+	}
+
 	addAuthorizationHeaderIfUnspecified(headers, auth);
 	addUserAgent(headers);
 

@@ -2,7 +2,7 @@ import {
 	helloCjs,
 	helloWorldExt,
 	worldJs,
-} from "@cloudflare-dev-module-resolution/requires/ext";
+} from "@playground/module-resolution-requires/ext";
 
 export default {
 	"(requires/ext) helloWorld": helloWorldExt,

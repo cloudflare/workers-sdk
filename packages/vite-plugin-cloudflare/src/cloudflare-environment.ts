@@ -165,7 +165,8 @@ export function createCloudflareEnvironmentOptions(
 		optimizeDeps: {
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
 			noDiscovery: false,
-			entries: workerConfig.main,
+			// We need to normalize the path as it is treated as a glob and backslashes are therefore treated as escape characters.
+			entries: vite.normalizePath(workerConfig.main),
 			exclude: [...cloudflareBuiltInModules],
 			esbuildOptions: {
 				platform: "neutral",
