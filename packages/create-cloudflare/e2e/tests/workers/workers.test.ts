@@ -1,4 +1,3 @@
-import "../../helpers/to-exist";
 import { existsSync } from "fs";
 import { join } from "path";
 import { readJSON, readToml } from "helpers/files";

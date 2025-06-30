@@ -7,6 +7,7 @@ export default defineConfig({
 	test: {
 		include: ["e2e/tests/**/*.test.ts"],
 		testTimeout: 1000 * 60 * 10, // 10 min for lengthy installs
+		setupFiles: ["e2e/helpers/to-exist.ts"],
 		globalSetup: ["e2e/helpers/global-setup.ts"],
 		reporters: ["json", "verbose", "hanging-process"],
 		outputFile: {

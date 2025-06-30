@@ -10,7 +10,6 @@ import {
 	keys,
 } from "../../helpers/constants";
 import { test } from "../../helpers/index";
-import "../../helpers/to-exist";
 import { recreateLogFolder } from "../../helpers/log-stream";
 import { runC3 } from "../../helpers/run-c3";
 
@@ -21,8 +20,6 @@ describe("Create Cloudflare CLI", () => {
 		recreateLogFolder(ctx);
 	});
 
-	// Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
-	//       tests are skipped in case we are testing a specific framework
 	describe.skipIf(isExperimental)("E2E: Basic C3 functionality ", () => {
 		test("--version", async ({ logStream }) => {
 			const { output } = await runC3(["--version"], [], logStream);
