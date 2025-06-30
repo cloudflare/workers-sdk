@@ -1,18 +1,28 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
-import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	realpathSync,
+	rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test as originalTest } from "vitest";
-import { customTempProjectPath } from "./constants";
+import { customTempProjectPath, isWindows } from "./constants";
 import { createTestLogStream } from "./log-stream";
 import type { Writable } from "node:stream";
 
 const C3_E2E_PREFIX = "tmp-e2e-c3";
 const testProjectDir = (suite: string, test: string) => {
+	const rootTmpDir = isWindows
+		? path.join(__dirname, "../../../../../temp")
+		: tmpdir();
+	mkdirSync(rootTmpDir, { recursive: true });
 	const tmpDirPath =
 		customTempProjectPath ??
-		realpathSync(mkdtempSync(path.join(tmpdir(), `c3-tests-${suite}`)));
+		realpathSync(mkdtempSync(path.join(rootTmpDir, `c3-tests-${suite}`)));
 
 	const randomSuffix = crypto.randomBytes(4).toString("hex");
 	const baseProjectName = `${C3_E2E_PREFIX}${randomSuffix}`;
