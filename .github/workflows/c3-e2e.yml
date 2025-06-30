@@ -35,7 +35,7 @@ jobs:
             pm: { name: npm, version: "0.0.0" }
           - os: { name: windows-latest, description: Windows }
             pm: { name: yarn, version: "1.0.0" }
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os.name }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
