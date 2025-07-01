@@ -1,0 +1,17 @@
+{
+	"name": "workers-with-assets-static-routing",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-05-20",
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./public",
+		"run_worker_first": [
+			// The `/oauth/callback` path and anything under `/worker` will be served by the Worker first
+			"/worker/*",
+			"/oauth/callback",
+			// The `/missing-asset` and `worker/asset` paths will not be served by the Worker first
+			"!/missing-asset",
+			"!/worker/asset",
+		],
+	},
+}

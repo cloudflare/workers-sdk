@@ -12,7 +12,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250604.0",
+		"@cloudflare/workers-types": "^4.20250617.0",
 		"@microlabs/otel-cf-workers": "1.0.0-rc.45",
 		"@types/node": "catalog:default",
 		"discord-api-types": "0.37.98",

@@ -2,5 +2,4 @@
 	"name": "worker-ts",
 	"main": "src/index.ts",
 	"compatibility_date": "2023-05-04",
-	"services": [{ "binding": "APP", "service": "worker-app" }],
 }
