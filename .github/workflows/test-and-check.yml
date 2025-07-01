@@ -95,7 +95,7 @@ jobs:
             description: Linux
             node_version: 20.19.1
             # ./tools _only_ runs here because they're only intended to run in CI
-            # Browser rendering is diabled here because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
+            # Browser rendering is disabled here because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
             filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./fixtures/browser-rendering"'
           - os: windows-latest
             description: Windows
