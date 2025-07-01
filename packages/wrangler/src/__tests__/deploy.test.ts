@@ -444,7 +444,10 @@ describe("deploy", () => {
 						})
 					);
 				}
-			)
+			),
+			http.get("*/user/tokens/verify", () => {
+				return HttpResponse.json(createFetchResult([]));
+			})
 		);
 
 		await expect(
@@ -463,8 +466,8 @@ describe("deploy", () => {
 		Please ensure it has the correct permissions for this operation.
 
 		Getting User settings...
-		ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
-		👋 You are logged in with an API Token, associated with the email user@example.com.
+		ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN environment variable.
+		👋 You are logged in with an User API Token, associated with the email user@example.com.
 		┌───────────────┬────────────┐
 		│ Account Name  │ Account ID │
 		├───────────────┼────────────┤
