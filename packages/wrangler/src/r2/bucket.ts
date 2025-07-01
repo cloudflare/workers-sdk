@@ -1,5 +1,6 @@
 import dedent from "ts-dedent";
 import { formatConfigSnippet } from "../config";
+import { updateWranglerConfigOrDisplaySnippet } from "../config/auto-update";
 import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -60,10 +61,16 @@ export const r2BucketCreateCommand = createCommand({
 			requiresArg: true,
 			type: "string",
 		},
+		"update-config": {
+			type: "boolean",
+			default: false,
+			description: "Automatically update wrangler.jsonc with the new bucket binding without prompting",
+		},
 	},
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 		const { name, location, storageClass, jurisdiction } = args;
+		const autoUpdate = args.updateConfig;
 
 		if (!isValidR2BucketName(name)) {
 			throw new UserError(
@@ -94,11 +101,19 @@ export const r2BucketCreateCommand = createCommand({
 		logger.log(dedent`
 			✅ Created bucket '${fullBucketName}' with${
 				location ? ` location hint ${location} and` : ``
-			} default storage class of ${storageClass ? storageClass : `Standard`}.
+			} default storage class of ${storageClass ? storageClass : `Standard`}.`);
 
-			Configure your Worker to write objects to this bucket:
-
-			${formatConfigSnippet({ r2_buckets: [{ bucket_name: args.name, binding: getValidBindingName(args.name, "r2") }] }, config.configPath)}`);
+		// Auto-update wrangler config or show snippet
+		await updateWranglerConfigOrDisplaySnippet(
+			{
+				type: "r2_buckets",
+				id: args.name, // For R2, the bucket name is the identifier
+				name: args.name,
+			},
+			config.configPath,
+			autoUpdate,
+			"\nConfigure your Worker to write objects to this bucket:"
+		);
 
 		metrics.sendMetricsEvent("create r2 bucket", {
 			sendMetrics: config.send_metrics,
