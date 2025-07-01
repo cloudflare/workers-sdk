@@ -1,5 +1,19 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.48
+
+### Patch Changes
+
+- [#9533](https://github.com/cloudflare/workers-sdk/pull/9533) [`0a5bb5a`](https://github.com/cloudflare/workers-sdk/commit/0a5bb5a658c2cb6b3fe34002b62f106b97314033) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that the `sourcemap-codec` library has been transformed correctly to be imported in workerd during Vitest runs
+
+  Prior to this the inline snapshot tests were failing because they use the `magic-string` library, which in turn relies upon the `sourcemap-codec` library.
+
+  This resulted in errors that look like:
+
+  ```
+  Error running worker: SyntaxError: The requested module '@jridgewell/sourcemap-codec' does not provide an export named 'encode'
+  ```
+
 ## 0.8.47
 
 ### Patch Changes
