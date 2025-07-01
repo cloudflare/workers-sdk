@@ -1,4 +1,3 @@
-import assert from "assert";
 import { randomUUID } from "crypto";
 import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
