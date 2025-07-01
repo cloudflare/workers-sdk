@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import { createTestContext } from "../../__tests__/helpers";
 import { mockPackageManager } from "./mocks";
-import type { PmName } from "helpers/packageManagers";
 
 vi.mock("fs");
 vi.mock("which-pm-runs");
@@ -43,7 +42,7 @@ describe("Package Helpers", () => {
 
 	describe("installPackages", async () => {
 		type TestCase = {
-			pm: PmName;
+			pm: string;
 			initialArgs: string[];
 			additionalArgs?: string[];
 		};
