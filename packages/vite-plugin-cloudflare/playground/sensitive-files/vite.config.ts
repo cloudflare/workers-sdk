@@ -7,5 +7,11 @@ export default defineConfig({
 			deny: ["custom-sensitive-file"],
 		},
 	},
-	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
+	plugins: [
+		cloudflare({
+			inspectorPort: false,
+			persistState: false,
+			auxiliaryWorkers: [{ configPath: "./worker-b/wrangler.jsonc" }],
+		}),
+	],
 });
