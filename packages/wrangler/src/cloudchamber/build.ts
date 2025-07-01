@@ -20,15 +20,15 @@ import { loadAccount } from "./locations";
 import type { Config } from "../config";
 import type { ContainerApp } from "../config/environment";
 import type {
-	CommonYargsArgvJSON,
-	StrictYargsOptionsToInterfaceJSON,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type {
 	BuildArgs,
 	CompleteAccountCustomer,
 } from "@cloudflare/containers-shared";
 
-export function buildYargs(yargs: CommonYargsArgvJSON) {
+export function buildYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("PATH", {
 			type: "string",
@@ -62,7 +62,7 @@ export function buildYargs(yargs: CommonYargsArgvJSON) {
 		});
 }
 
-export function pushYargs(yargs: CommonYargsArgvJSON) {
+export function pushYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.option("path-to-docker", {
 			type: "string",
@@ -197,7 +197,7 @@ export async function buildAndMaybePush(
 }
 
 export async function buildCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof buildYargs>,
+	args: StrictYargsOptionsToInterface<typeof buildYargs>,
 	config: Config
 ) {
 	// TODO: merge args with Wrangler config if available
@@ -226,7 +226,7 @@ export async function buildCommand(
 }
 
 export async function pushCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof pushYargs>,
+	args: StrictYargsOptionsToInterface<typeof pushYargs>,
 	_: Config
 ) {
 	try {

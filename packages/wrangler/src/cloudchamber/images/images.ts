@@ -13,25 +13,21 @@ import {
 	ImageRegistryNotAllowedError,
 } from "@cloudflare/containers-shared";
 import { UserError } from "../../errors";
+import { isNonInteractiveOrCI } from "../../is-interactive";
 import { pollRegistriesUntilCondition } from "../cli";
-import {
-	checkEverythingIsSet,
-	handleFailure,
-	interactWithUser,
-	promiseSpinner,
-} from "../common";
+import { checkEverythingIsSet, handleFailure, promiseSpinner } from "../common";
 import { wrap } from "../helpers/wrap";
 import type { Config } from "../../config";
 import type { containersScope } from "../../containers";
 import type {
-	CommonYargsArgvJSON,
-	CommonYargsArgvSanitizedJSON,
-	StrictYargsOptionsToInterfaceJSON,
+	CommonYargsArgv,
+	CommonYargsArgvSanitized,
+	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
 import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
-function configureImageRegistryOptionalYargs(yargs: CommonYargsArgvJSON) {
+function configureImageRegistryOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.option("domain", {
 			description:
@@ -45,7 +41,7 @@ function configureImageRegistryOptionalYargs(yargs: CommonYargsArgvJSON) {
 		});
 }
 
-function credentialsImageRegistryYargs(yargs: CommonYargsArgvJSON) {
+function credentialsImageRegistryYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("domain", { type: "string", demandOption: true })
 		.option("expiration-minutes", {
@@ -63,7 +59,7 @@ function credentialsImageRegistryYargs(yargs: CommonYargsArgvJSON) {
 }
 
 export const registriesCommand = (
-	yargs: CommonYargsArgvJSON,
+	yargs: CommonYargsArgv,
 	scope: typeof containersScope | typeof cloudchamberScope
 ) => {
 	return yargs
@@ -75,13 +71,13 @@ export const registriesCommand = (
 				handleFailure(
 					`wrangler cloudchamber registries configure`,
 					async (
-						imageArgs: StrictYargsOptionsToInterfaceJSON<
+						imageArgs: StrictYargsOptionsToInterface<
 							typeof configureImageRegistryOptionalYargs
 						>,
 						config
 					) => {
 						// check we are in CI or if the user wants to just use JSON
-						if (!interactWithUser(args)) {
+						if (isNonInteractiveOrCI()) {
 							const body = checkEverythingIsSet(imageArgs, [
 								"domain",
 								"public",
@@ -128,7 +124,7 @@ export const registriesCommand = (
 				return handleFailure(
 					`wrangler cloudchamber registries credentials`,
 					async (
-						imageArgs: StrictYargsOptionsToInterfaceJSON<
+						imageArgs: StrictYargsOptionsToInterface<
 							typeof credentialsImageRegistryYargs
 						>,
 						_config
@@ -165,7 +161,7 @@ export const registriesCommand = (
 				return handleFailure(
 					`wrangler cloudchamber registries remove`,
 					async (
-						imageArgs: StrictYargsOptionsToInterfaceJSON<
+						imageArgs: StrictYargsOptionsToInterface<
 							typeof removeImageRegistryYargs
 						>,
 						_config
@@ -186,8 +182,8 @@ export const registriesCommand = (
 			(args) =>
 				handleFailure(
 					`wrangler cloudchamber registries list`,
-					async (imageArgs: CommonYargsArgvSanitizedJSON, config) => {
-						if (!interactWithUser(imageArgs)) {
+					async (_: CommonYargsArgvSanitized, config) => {
+						if (isNonInteractiveOrCI()) {
 							const registries =
 								await ImageRegistriesService.listImageRegistries();
 							console.log(JSON.stringify(registries, null, 4));
@@ -200,7 +196,7 @@ export const registriesCommand = (
 		);
 };
 
-function removeImageRegistryYargs(yargs: CommonYargsArgvJSON) {
+function removeImageRegistryYargs(yargs: CommonYargsArgv) {
 	return yargs.positional("domain", {
 		type: "string",
 		demandOption: true,
@@ -243,7 +239,7 @@ async function handleListImageRegistriesCommand(
 }
 
 async function handleConfigureImageRegistryCommand(
-	args: StrictYargsOptionsToInterfaceJSON<
+	args: StrictYargsOptionsToInterface<
 		typeof configureImageRegistryOptionalYargs
 	>,
 	_config: Config

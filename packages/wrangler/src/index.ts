@@ -313,7 +313,6 @@ import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/inst
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
-import { asJson } from "./yargs-types";
 import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
@@ -1147,12 +1146,12 @@ export function createCLIParser(argv: string[]) {
 
 	// cloudchamber
 	wrangler.command("cloudchamber", false, (cloudchamberArgs) => {
-		return cloudchamber(asJson(cloudchamberArgs.command(subHelp)), subHelp);
+		return cloudchamber(cloudchamberArgs.command(subHelp), subHelp);
 	});
 
 	// containers
 	wrangler.command("containers", false, (containersArgs) => {
-		return containers(asJson(containersArgs.command(subHelp)), subHelp);
+		return containers(containersArgs.command(subHelp), subHelp);
 	});
 
 	// [PRIVATE BETA] pubsub

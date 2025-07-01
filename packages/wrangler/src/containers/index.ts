@@ -14,13 +14,13 @@ import {
 	listCommand,
 	listYargs,
 } from "./containers";
-import type { CommonYargsArgvJSON, CommonYargsOptions } from "../yargs-types";
+import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
 
 export const containersScope = "containers:write" as const;
 
 export const containers = (
-	yargs: CommonYargsArgvJSON,
+	yargs: CommonYargsArgv,
 	subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions>
 ) => {
 	return yargs

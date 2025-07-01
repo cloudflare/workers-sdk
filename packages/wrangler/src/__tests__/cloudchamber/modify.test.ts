@@ -80,7 +80,6 @@ describe("cloudchamber modify", () => {
 			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
-			      --json               Return output as clean JSON  [boolean] [default: false]
 			      --var                Container environment variables  [array]
 			      --label              Deployment labels  [array]
 			      --ssh-public-key-id  Public SSH key IDs to include in this container. You can add one to your account with \`wrangler cloudchamber ssh create  [array]
