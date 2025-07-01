@@ -104,7 +104,7 @@ jobs:
           - os: ubuntu-24.04-arm
             description: v22, Linux
             node_version: 22
-            # Browser rendering is diabled here because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
+            # Browser rendering is disabled here because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/interactive-dev-tests" --filter="!./fixtures/browser-rendering"'
           # Skipped until we upgrade to undici v7, because of https://github.com/nodejs/undici/issues/4285
           # - os: ubuntu-24.04-arm
