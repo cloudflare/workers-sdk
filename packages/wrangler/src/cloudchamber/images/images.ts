@@ -1,22 +1,10 @@
 import {
-	endSection,
-	newline,
-	startSection,
-	updateStatus,
-} from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import {
-	ApiError,
+	getCloudflareContainerRegistry,
 	ImageRegistriesService,
-	ImageRegistryAlreadyExistsError,
-	ImageRegistryNotAllowedError,
 } from "@cloudflare/containers-shared";
-import { UserError } from "../../errors";
-import { isNonInteractiveOrCI } from "../../is-interactive";
-import { pollRegistriesUntilCondition } from "../cli";
-import { checkEverythingIsSet, handleFailure, promiseSpinner } from "../common";
-import { wrap } from "../helpers/wrap";
+import { logger } from "../../logger";
+import { getAccountId } from "../../user";
+import { handleFailure, promiseSpinner } from "../common";
 import type { Config } from "../../config";
 import type { containersScope } from "../../containers";
 import type {
@@ -27,278 +15,277 @@ import type {
 import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
-function configureImageRegistryOptionalYargs(yargs: CommonYargsArgv) {
-	return yargs
-		.option("domain", {
-			description:
-				"Domain of your registry. Don't include the proto part of the URL, like 'http://'",
-			type: "string",
-		})
-		.option("public", {
-			description:
-				"If the registry is public and you don't want credentials configured, set this to true",
-			type: "boolean",
-		});
+interface CatalogResponse {
+	repositories: string[];
 }
 
-function credentialsImageRegistryYargs(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("domain", { type: "string", demandOption: true })
-		.option("expiration-minutes", {
-			type: "number",
-			default: 15,
-		})
-		.option("push", {
-			type: "boolean",
-			description: "If you want these credentials to be able to push",
-		})
-		.option("pull", {
-			type: "boolean",
-			description: "If you want these credentials to be able to pull",
-		});
+interface TagsResponse {
+	name: string;
+	tags: string[];
 }
 
-export const registriesCommand = (
+export const imagesCommand = (
 	yargs: CommonYargsArgv,
 	scope: typeof containersScope | typeof cloudchamberScope
 ) => {
 	return yargs
 		.command(
-			"configure",
-			"Configure Cloudchamber to pull from specific registries",
-			(args) => configureImageRegistryOptionalYargs(args),
+			"list",
+			"List images in the Cloudflare managed registry",
+			(args) => listImagesYargs(args),
 			(args) =>
 				handleFailure(
-					`wrangler cloudchamber registries configure`,
-					async (
-						imageArgs: StrictYargsOptionsToInterface<
-							typeof configureImageRegistryOptionalYargs
-						>,
-						config
-					) => {
-						// check we are in CI or if the user wants to just use JSON
-						if (isNonInteractiveOrCI()) {
-							const body = checkEverythingIsSet(imageArgs, [
-								"domain",
-								"public",
-							]);
-							const registry = await ImageRegistriesService.createImageRegistry(
-								{
-									domain: body.domain,
-									is_public: body.public,
-								}
-							);
-							console.log(JSON.stringify(registry, null, 4));
-							return;
-						}
-
-						await handleConfigureImageRegistryCommand(args, config);
+					`wrangler containers images list`,
+					async (_args: CommonYargsArgvSanitized, config) => {
+						await handleListImagesCommand(args, config);
 					},
 					scope
 				)(args)
 		)
 		.command(
-			"credentials [domain]",
-			"get a temporary password for a specific domain",
-			(args) =>
-				args
-					.positional("domain", {
-						type: "string",
-						demandOption: true,
-					})
-					.option("expiration-minutes", {
-						type: "number",
-						default: 15,
-					})
-					.option("push", {
-						type: "boolean",
-						description: "If you want these credentials to be able to push",
-					})
-					.option("pull", {
-						type: "boolean",
-						description: "If you want these credentials to be able to pull",
-					}),
-			(args) => {
-				// we don't want any kind of spinners
-				args.json = true;
-				return handleFailure(
-					`wrangler cloudchamber registries credentials`,
-					async (
-						imageArgs: StrictYargsOptionsToInterface<
-							typeof credentialsImageRegistryYargs
-						>,
-						_config
-					) => {
-						if (!imageArgs.pull && !imageArgs.push) {
-							throw new UserError(
-								"You have to specify either --push or --pull in the command."
-							);
-						}
-
-						const credentials =
-							await ImageRegistriesService.generateImageRegistryCredentials(
-								imageArgs.domain,
-								{
-									expiration_minutes: imageArgs.expirationMinutes,
-									permissions: [
-										...(imageArgs.push ? ["push"] : []),
-										...(imageArgs.pull ? ["pull"] : []),
-									] as ImageRegistryPermissions[],
-								}
-							);
-						console.log(credentials.password);
-					},
-					scope
-				)(args);
-			}
-		)
-		.command(
-			"remove [domain]",
-			"removes the registry at the given domain",
-			(args) => removeImageRegistryYargs(args),
-			(args) => {
-				args.json = true;
-				return handleFailure(
-					`wrangler cloudchamber registries remove`,
-					async (
-						imageArgs: StrictYargsOptionsToInterface<
-							typeof removeImageRegistryYargs
-						>,
-						_config
-					) => {
-						const registry = await ImageRegistriesService.deleteImageRegistry(
-							imageArgs.domain
-						);
-						console.log(JSON.stringify(registry, null, 4));
-					},
-					scope
-				)(args);
-			}
-		)
-		.command(
-			"list",
-			"list registries configured for this account",
-			(args) => args,
+			"delete [image]",
+			"Remove an image from the Cloudflare managed registry",
+			(args) => deleteImageYargs(args),
 			(args) =>
 				handleFailure(
-					`wrangler cloudchamber registries list`,
-					async (_: CommonYargsArgvSanitized, config) => {
-						if (isNonInteractiveOrCI()) {
-							const registries =
-								await ImageRegistriesService.listImageRegistries();
-							console.log(JSON.stringify(registries, null, 4));
-							return;
-						}
-						await handleListImageRegistriesCommand(args, config);
+					`wrangler containers images delete`,
+					async (_args: CommonYargsArgvSanitized, config) => {
+						await handleDeleteImageCommand(args, config);
 					},
 					scope
 				)(args)
 		);
 };
 
-function removeImageRegistryYargs(yargs: CommonYargsArgv) {
-	return yargs.positional("domain", {
+function deleteImageYargs(yargs: CommonYargsArgv) {
+	return yargs.positional("image", {
 		type: "string",
+		description: "image to delete",
 		demandOption: true,
 	});
 }
 
-async function handleListImageRegistriesCommand(
-	_args: unknown,
-	_config: Config
-) {
-	startSection("Registries", "", false);
-	const [registries, err] = await wrap(
-		promiseSpinner(pollRegistriesUntilCondition(() => true))
-	);
-
-	if (err) {
-		throw err;
-	}
-
-	if (registries.length === 0) {
-		endSection(
-			"No registries added to your account!",
-			"You can add one with\n" +
-				brandColor("wrangler cloudchamber registry configure")
-		);
-		return;
-	}
-
-	for (const registry of registries) {
-		newline();
-		updateStatus(
-			`${registry.domain}\npublic_key: ${dim(
-				(registry.public_key ?? "").trim()
-			)}`,
-			false
-		);
-	}
-
-	endSection("");
+function listImagesYargs(yargs: CommonYargsArgv) {
+	return yargs
+		.option("filter", {
+			type: "string",
+			description: "Regex to filter results",
+		})
+		.option("json", {
+			type: "boolean",
+			description: "Format output as JSON",
+			default: false,
+		});
 }
 
-async function handleConfigureImageRegistryCommand(
-	args: StrictYargsOptionsToInterface<
-		typeof configureImageRegistryOptionalYargs
-	>,
-	_config: Config
+async function handleDeleteImageCommand(
+	args: StrictYargsOptionsToInterface<typeof deleteImageYargs>,
+	config: Config
 ) {
-	startSection("Configure a Docker registry in Cloudflare");
-	const domain = (await processArgument({ domain: args.domain }, "domain", {
-		type: "text",
-		question: "What is the domain of your registry?",
-		validate: (text) => {
-			const t = text?.toString();
-			if (t?.includes("://")) {
-				return "a proto like https:// shouldn't be included";
-			}
-		},
-		label: "domain",
-		defaultValue: "",
-		helpText:
-			"example.com, example-with-port:8080. Remember to not include https!",
-	})) as string;
-	const isPublic = (await processArgument({ public: args.public }, "public", {
-		type: "confirm",
-		question: "Is the domain public?",
-		label: "is public",
-		helpText:
-			"if the domain is not owned by you or you want it to be public, mark as yes",
-	})) as boolean;
-	const [registry, err] = await wrap(
-		promiseSpinner(
-			ImageRegistriesService.createImageRegistry({
-				domain: domain,
-				is_public: isPublic,
-			})
-		)
-	);
-	if (err instanceof ApiError) {
-		const { error: errString } = err.body as { error: string };
-		switch (errString) {
-			case ImageRegistryAlreadyExistsError.error.IMAGE_REGISTRY_ALREADY_EXISTS:
-				throw new UserError("The domain already exists!");
-			case ImageRegistryNotAllowedError.error.IMAGE_REGISTRY_NOT_ALLOWED:
-				throw new UserError("This domain is not allowed!");
-			default:
-				throw new UserError(
-					"An unexpected error happened, please try again or send us the error for troubleshooting\n" +
-						errString
-				);
+	try {
+		if (!args.image.includes(":")) {
+			throw new Error(`Must provide a tag to delete`);
+		}
+
+		const digest = await promiseSpinner(
+			getCreds().then(async (creds) => {
+				const accountId = config.account_id || (await getAccountId(config));
+				const url = new URL(`https://${getCloudflareContainerRegistry()}`);
+				const baseUrl = `${url.protocol}//${url.host}`;
+				const [image, tag] = args.image.split(":");
+				const digest_ = await deleteTag(baseUrl, accountId, image, tag, creds);
+
+				// trigger gc
+				const gcUrl = `${baseUrl}/v2/gc/layers`;
+				const gcResponse = await fetch(gcUrl, {
+					method: "PUT",
+					headers: {
+						Authorization: `Basic ${creds}`,
+						"Content-Type": "application/json",
+					},
+				});
+				if (!gcResponse.ok) {
+					throw new Error(
+						`Failed to delete image ${args.image}: ${gcResponse.status} ${gcResponse.statusText}`
+					);
+				}
+
+				return digest_;
+			}),
+			{ message: `Deleting ${args.image}` }
+		);
+
+		logger.log(`Deleted ${args.image} (${digest})`);
+	} catch (error) {
+		logger.log(`Error when removing image: ${error}`);
+	}
+}
+
+async function handleListImagesCommand(
+	args: StrictYargsOptionsToInterface<typeof listImagesYargs>,
+	config: Config
+) {
+	try {
+		const responses = await promiseSpinner(
+			getCreds().then(async (creds) => {
+				const repos = await listRepos(creds);
+				const responses_: TagsResponse[] = [];
+				const accountId = config.account_id || (await getAccountId(config));
+				const accountIdPrefix = new RegExp(`^${accountId}/`);
+				const filter = new RegExp(args.filter ?? "");
+				for (const repo of repos) {
+					const stripped = repo.replace(/^\/+/, "");
+					if (filter.test(stripped)) {
+						// get all tags for repo
+						const tags = await listTags(stripped, creds);
+						const name = stripped.replace(accountIdPrefix, "");
+						responses_.push({ name, tags });
+					}
+				}
+
+				return responses_;
+			}),
+			{ message: "Listing" }
+		);
+
+		await listImages(responses, false, args.json);
+	} catch (error) {
+		logger.log(`Error listing images: ${error}`);
+	}
+}
+
+async function listImages(
+	responses: TagsResponse[],
+	digests: boolean = false,
+	json: boolean = false
+) {
+	if (!digests) {
+		responses = responses.map((resp) => {
+			return {
+				name: resp.name,
+				tags: resp.tags.filter((t) => !t.startsWith("sha256")),
+			};
+		});
+	}
+	// Remove any repos with no tags
+	responses = responses.filter((resp) => {
+		return resp.tags !== undefined && resp.tags.length != 0;
+	});
+	if (json) {
+		logger.log(JSON.stringify(responses, null, 2));
+	} else {
+		const rows = responses.flatMap((r) => r.tags.map((t) => [r.name, t]));
+		const headers = ["REPOSITORY", "TAG"];
+		const widths = new Array(headers.length).fill(0);
+
+		// Find the maximum length of each column (except for the last)
+		for (let i = 0; i < widths.length - 1; i++) {
+			widths[i] = rows
+				.map((r) => r[i].length)
+				.reduce((a, b) => Math.max(a, b), headers[i].length);
+		}
+
+		logger.log(headers.map((h, i) => h.padEnd(widths[i], " ")).join("  "));
+		for (const row of rows) {
+			logger.log(row.map((v, i) => v.padEnd(widths[i], " ")).join("  "));
 		}
 	}
+}
 
-	if (err) {
-		throw new UserError(
-			"There has been an internal error: " + JSON.stringify(err)
+async function listTags(repo: string, creds: string): Promise<string[]> {
+	const url = new URL(`https://${getCloudflareContainerRegistry()}`);
+	const baseUrl = `${url.protocol}//${url.host}`;
+	const tagsUrl = `${baseUrl}/v2/${repo}/tags/list`;
+
+	const tagsResponse = await fetch(tagsUrl, {
+		method: "GET",
+		headers: {
+			Authorization: `Basic ${creds}`,
+		},
+	});
+	const tagsData = (await tagsResponse.json()) as TagsResponse;
+	return tagsData.tags || [];
+}
+
+async function listRepos(creds: string): Promise<string[]> {
+	const url = new URL(`https://${getCloudflareContainerRegistry()}`);
+
+	const catalogUrl = `${url.protocol}//${url.host}/v2/_catalog`;
+
+	const response = await fetch(catalogUrl, {
+		method: "GET",
+		headers: {
+			Authorization: `Basic ${creds}`,
+		},
+	});
+	if (!response.ok) {
+		logger.log(JSON.stringify(response));
+		throw new Error(
+			`Failed to fetch repository catalog: ${response.status} ${response.statusText}`
 		);
 	}
 
-	endSection(
-		`Docker registry configured`,
-		registry?.public_key &&
-			"set the following public key in the registry if necessary:\n" +
-				registry?.public_key
-	);
+	const data = (await response.json()) as CatalogResponse;
+
+	return data.repositories || [];
+}
+
+async function deleteTag(
+	baseUrl: string,
+	accountId: string,
+	image: string,
+	tag: string,
+	creds: string
+): Promise<string> {
+	const manifestAcceptHeader =
+		"application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json";
+	const manifestUrl = `${baseUrl}/v2/${accountId}/${image}/manifests/${tag}`;
+	// grab the digest for this tag
+	const headResponse = await fetch(manifestUrl, {
+		method: "HEAD",
+		headers: {
+			Authorization: `Basic ${creds}`,
+			Accept: manifestAcceptHeader,
+		},
+	});
+	if (!headResponse.ok) {
+		throw new Error(
+			`Failed to retrieve info for ${image}:${tag}: ${headResponse.status} ${headResponse.statusText}`
+		);
+	}
+
+	const digest = headResponse.headers.get("Docker-Content-Digest");
+	if (!digest) {
+		throw new Error(`Digest not found for ${image}:${tag}.`);
+	}
+
+	const deleteUrl = `${baseUrl}/v2/${accountId}/${image}/manifests/${tag}`;
+	const deleteResponse = await fetch(deleteUrl, {
+		method: "DELETE",
+		headers: {
+			Authorization: `Basic ${creds}`,
+			Accept: manifestAcceptHeader,
+		},
+	});
+
+	if (!deleteResponse.ok) {
+		throw new Error(
+			`Failed to delete ${image}:${tag} (digest: ${digest}): ${deleteResponse.status} ${deleteResponse.statusText}`
+		);
+	}
+
+	return digest;
+}
+
+async function getCreds(): Promise<string> {
+	const credentials =
+		await ImageRegistriesService.generateImageRegistryCredentials(
+			getCloudflareContainerRegistry(),
+			{
+				expiration_minutes: 5,
+				permissions: ["pull", "push"] as ImageRegistryPermissions[],
+			}
+		);
+
+	return Buffer.from(`v1:${credentials.password}`).toString("base64");
 }
