@@ -18,6 +18,28 @@ export default {
 					status: 200,
 				});
 			}
+			case "/ae": {
+				await env.WAE.writeDataPoint({ doubles: [2, 3] });
+
+				return new Response("AE binding works", {
+					status: 200,
+				});
+			}
+			case "/rate-limit": {
+				const { success: first } = await env.RATE_LIMITER.limit({
+					key: "shared-key",
+				});
+				const { success: second } = await env.RATE_LIMITER.limit({
+					key: "shared-key",
+				});
+
+				return new Response(
+					`Rate limit binding works: first: ${first}, second: ${second}`,
+					{
+						status: 200,
+					}
+				);
+			}
 			case "/hello-world": {
 				const value = Math.floor(Date.now() * Math.random()).toString(36);
 				await env.HELLO_WORLD.set(value);

@@ -129,6 +129,7 @@ test.skipIf(process.platform === "win32")(
 		`,
 		});
 		let result = await vitestRun();
+		expect(result.stderr).toEqual("");
 		let exitCode = await result.exitCode;
 		expect(result.stdout).toMatch("Snapshots  2 written");
 		expect(exitCode).toBe(0);
