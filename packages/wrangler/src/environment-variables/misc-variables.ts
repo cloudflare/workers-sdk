@@ -206,6 +206,14 @@ export const getCIGeneratePreviewAlias = getEnvironmentVariableFactory({
 });
 
 /**
+ * `WORKERS_CI_BRANCH` is the branch name exposed by Workers CI
+ *
+ */
+export const getWorkersCIBranchName = getEnvironmentVariableFactory({
+	variableName: "WORKERS_CI_BRANCH",
+});
+
+/**
  * `WRANGLER_BUILD_CONDITIONS` specifies the "build conditions" to use when importing packages at build time.
  *
  * See https://nodejs.org/api/packages.html#conditional-exports
