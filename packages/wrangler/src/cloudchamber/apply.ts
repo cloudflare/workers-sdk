@@ -13,12 +13,14 @@ import {
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
+	getCloudflareContainerRegistry,
 	InstanceType,
 	RolloutsService,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { formatConfigSnippet } from "../config";
 import { FatalError, UserError } from "../errors";
+import { getAccountId } from "../user";
 import { cleanForInstanceType, promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
 import type { Config } from "../config";
@@ -415,6 +417,33 @@ function sortObjectRecursive<T = Record<string | number, unknown>>(
 	return sortObjectKeys(objectCopy) as T;
 }
 
+// Resolve an image name to the full unambiguous name.
+//
+// For now, this only converts images stored in the managed registry to contain
+// the user's account ID in the path.
+async function resolveImageName(
+	config: Config,
+	image: string
+): Promise<string> {
+	let url: URL;
+	try {
+		url = new URL(`http://${image}`);
+	} catch (_) {
+		return image;
+	}
+
+	if (url.hostname !== getCloudflareContainerRegistry()) {
+		return image;
+	}
+
+	const accountId = config.account_id || (await getAccountId(config));
+	if (url.pathname.startsWith(`/${accountId}`)) {
+		return image;
+	}
+
+	return `${url.hostname}/${accountId}${url.pathname}`;
+}
+
 export async function apply(
 	args: {
 		skipDefaults: boolean | undefined;
@@ -686,7 +715,17 @@ export async function apply(
 				printLine(el, "  ");
 			});
 
-		const configToPush = { ...appConfig };
+		const configToPush = {
+			...appConfig,
+
+			configuration: {
+				...appConfig.configuration,
+
+				// De-sugar image name. We do it here so that the user
+				// sees the simplified image name in diffs.
+				image: await resolveImageName(config, appConfig.configuration.image),
+			},
+		};
 
 		// add to the actions array to create the app later
 		actions.push({
@@ -716,7 +755,11 @@ export async function apply(
 			return message;
 		}
 
-		return `  ${err.body.error}`;
+		if (err.body.error !== undefined) {
+			return `  ${err.body.error}`;
+		}
+
+		return JSON.stringify(err.body);
 	}
 
 	for (const action of actions) {
@@ -769,7 +812,8 @@ export async function apply(
 							action.application.max_instances !== undefined
 								? undefined
 								: action.application.instances,
-					})
+					}),
+					{ message: `Modifying ${action.application.name}` }
 				);
 			} catch (err) {
 				if (!(err instanceof Error)) {
