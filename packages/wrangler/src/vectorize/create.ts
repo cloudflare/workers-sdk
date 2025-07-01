@@ -1,4 +1,5 @@
-import { configFileName, formatConfigSnippet } from "../config";
+import { configFileName } from "../config";
+import { updateWranglerConfigOrDisplaySnippet } from "../config/auto-update";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -60,6 +61,11 @@ export const vectorizeCreateCommand = createCommand({
 			description:
 				"Create a deprecated Vectorize V1 index. This is not recommended and indexes created with this option need all other Vectorize operations to have this option enabled.",
 		},
+		"update-config": {
+			type: "boolean",
+			default: false,
+			description: "Automatically update wrangler.jsonc with the new vectorize binding without prompting",
+		},
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
@@ -112,21 +118,18 @@ export const vectorizeCreateCommand = createCommand({
 		logger.log(
 			`✅ Successfully created a new Vectorize index: '${indexResult.name}'`
 		);
-		logger.log(
+
+		// Auto-update wrangler config or show snippet
+		await updateWranglerConfigOrDisplaySnippet(
+			{
+				type: "vectorize",
+				id: indexResult.name,
+				name: indexResult.name,
+				binding: bindingName,
+			},
+			config.configPath,
+			args.updateConfig,
 			`📋 To start querying from a Worker, add the following binding configuration to your ${configFileName(config.configPath)} file:\n`
-		);
-		logger.log(
-			formatConfigSnippet(
-				{
-					vectorize: [
-						{
-							binding: bindingName,
-							index_name: indexResult.name,
-						},
-					],
-				},
-				config.configPath
-			)
 		);
 	},
 });

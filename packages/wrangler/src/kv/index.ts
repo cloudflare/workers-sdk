@@ -1,7 +1,8 @@
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
-import { formatConfigSnippet, readConfig } from "../config";
+import { readConfig, formatConfigSnippet } from "../config";
+import { updateWranglerConfigOrDisplaySnippet } from "../config/auto-update";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
@@ -10,7 +11,6 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
-import { getValidBindingName } from "../utils/getValidBindingName";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import {
 	createKVNamespace,
@@ -80,6 +80,11 @@ export const kvNamespaceCreateCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with a preview namespace",
 		},
+		"update-config": {
+			type: "boolean",
+			default: false,
+			description: "Automatically update wrangler.jsonc with the new KV namespace binding without prompting",
+		},
 	},
 	positionalArgs: ["namespace"],
 
@@ -99,25 +104,37 @@ export const kvNamespaceCreateCommand = createCommand({
 		});
 
 		logger.log("✨ Success!");
-		const envString = args.env ? ` under [env.${args.env}]` : "";
-		const previewString = args.preview ? "preview_" : "";
-		logger.log(
-			`Add the following to your configuration file in your kv_namespaces array${envString}:`
-		);
 
-		logger.log(
-			formatConfigSnippet(
+		// Auto-update wrangler config or show snippet
+		const envString = args.env ? ` under [env.${args.env}]` : "";
+		
+		// For preview namespaces, skip auto-update and always show manual snippet
+		if (args.preview) {
+			logger.log(`Add the following to your configuration file in your kv_namespaces array${envString}:`);
+			logger.log(formatConfigSnippet(
 				{
 					kv_namespaces: [
 						{
-							binding: getValidBindingName(args.namespace, "KV"),
-							[`${previewString}id`]: namespaceId,
+							binding: "KV", // Use generic binding name
+							preview_id: namespaceId,
 						},
 					],
 				},
 				config.configPath
-			)
-		);
+			));
+		} else {
+			await updateWranglerConfigOrDisplaySnippet(
+				{
+					type: "kv_namespaces",
+					id: namespaceId,
+					name: args.namespace,
+					additionalConfig: { id: namespaceId },
+				},
+				config.configPath,
+				args.updateConfig,
+				`Add the following to your configuration file in your kv_namespaces array${envString}:`
+			);
+		}
 	},
 });
 
