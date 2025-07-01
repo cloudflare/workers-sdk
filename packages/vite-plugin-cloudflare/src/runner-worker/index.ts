@@ -138,6 +138,7 @@ export function createWorkerEntrypointWrapper(
 
 			return new Proxy(this, {
 				get(target, key, receiver) {
+					// return storage.run("hello", () => {
 					const value = Reflect.get(target, key, receiver);
 
 					if (value !== undefined) {
@@ -159,6 +160,7 @@ export function createWorkerEntrypointWrapper(
 					);
 
 					return getRpcPropertyCallableThenable(key, property);
+					// });
 				},
 			});
 		}

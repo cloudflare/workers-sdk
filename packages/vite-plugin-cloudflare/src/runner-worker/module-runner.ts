@@ -1,8 +1,32 @@
+// @ts-nocheck
+import { AsyncLocalStorage } from "node:async_hooks";
 import { DurableObject } from "cloudflare:workers";
 import { ModuleRunner } from "vite/module-runner";
 import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
+
+export const storage = new AsyncLocalStorage();
+
+class CustomModuleRunner extends ModuleRunner {
+	override cachedModule(url: string, importer?: string) {
+		const concurrentModuleNodePromises = storage.getStore();
+		let cached = concurrentModuleNodePromises.get(url);
+		if (!cached) {
+			const cachedModule = this.evaluatedModules.getModuleByUrl(url);
+			cached = this.getModuleInformation(url, importer, cachedModule).finally(
+				() => {
+					concurrentModuleNodePromises.delete(url);
+				}
+			);
+			concurrentModuleNodePromises.set(url, cached);
+		} else {
+			this.debug?.("[module runner] using cached module info for", url);
+		}
+
+		return cached;
+	}
+}
 
 let moduleRunner: ModuleRunner | undefined;
 let entryPath: string | undefined;
@@ -47,30 +71,13 @@ export class RunnerObject extends DurableObject<WrapperEnv> {
 
 		this.#webSocket.send(data);
 	}
-
-	async invoke(data: string) {
-		const response = await this.env.__VITE_INVOKE_MODULE__.fetch(
-			new Request(UNKNOWN_HOST, {
-				method: "POST",
-				body: data,
-			})
-		);
-
-		if (!response.ok) {
-			throw new Error(await response.text());
-		}
-
-		const result = await response.json();
-
-		return result as { result: any } | { error: any };
-	}
 }
 
 function createModuleRunner(
 	env: WrapperEnv,
 	webSocket: WebSocket
 ): ModuleRunner {
-	return new ModuleRunner(
+	return new CustomModuleRunner(
 		{
 			sourcemapInterceptor: "prepareStackTrace",
 			transport: {
@@ -93,23 +100,20 @@ function createModuleRunner(
 					stub.send(JSON.stringify(data));
 				},
 				async invoke(data) {
-					const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
+					const response = await env.__VITE_INVOKE_MODULE__.fetch(
+						new Request(UNKNOWN_HOST, {
+							method: "POST",
+							body: JSON.stringify(data),
+						})
+					);
 
-					return stub.invoke(JSON.stringify(data));
-					// const response = await env.__VITE_INVOKE_MODULE__.fetch(
-					// 	new Request(UNKNOWN_HOST, {
-					// 		method: "POST",
-					// 		body: JSON.stringify(data),
-					// 	})
-					// );
+					if (!response.ok) {
+						throw new Error(await response.text());
+					}
 
-					// if (!response.ok) {
-					// 	throw new Error(await response.text());
-					// }
+					const result = await response.json();
 
-					// const result = await response.json();
-
-					// return result as { result: any } | { error: any };
+					return result as { result: any } | { error: any };
 				},
 			},
 			hmr: true,
@@ -183,7 +187,9 @@ export async function getWorkerEntryExport(entrypoint: string) {
 		throw new Error("Module runner not initialized");
 	}
 
-	const entryModule = await moduleRunner.import(entryPath);
+	const entryModule = await storage.run(new Map(), () =>
+		moduleRunner.import(entryPath)
+	);
 	const entrypointValue =
 		typeof entryModule === "object" &&
 		entryModule !== null &&

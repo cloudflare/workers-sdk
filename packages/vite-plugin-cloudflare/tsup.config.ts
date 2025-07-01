@@ -29,7 +29,7 @@ export default defineConfig([
 		format: "esm",
 		platform: "neutral",
 		outDir: "dist/runner-worker",
-		external: ["cloudflare:workers"],
+		external: ["cloudflare:workers", "node:async_hooks"],
 		noExternal: ["vite/module-runner"],
 		tsconfig: "tsconfig.worker.json",
 	},
