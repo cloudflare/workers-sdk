@@ -173,11 +173,11 @@ async function getAuthType(
 	complianceConfig: ComplianceConfig,
 	credentials: ApiCredentials
 ): Promise<AuthType> {
-	const usingEnvAuth = !!getAuthFromEnv();
-
 	if ("authKey" in credentials) {
 		return "Global API Key";
 	}
+
+	const usingEnvAuth = !!getAuthFromEnv();
 	if (!usingEnvAuth) {
 		return "OAuth Token";
 	}
