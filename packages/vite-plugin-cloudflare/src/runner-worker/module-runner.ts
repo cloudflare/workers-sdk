@@ -1,8 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import {
-	createWebSocketModuleRunnerTransport,
-	ModuleRunner,
-} from "vite/module-runner";
+import { ModuleRunner } from "vite/module-runner";
 import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
@@ -50,6 +47,23 @@ export class RunnerObject extends DurableObject<WrapperEnv> {
 
 		this.#webSocket.send(data);
 	}
+
+	async invoke(data: string) {
+		const response = await this.env.__VITE_INVOKE_MODULE__.fetch(
+			new Request(UNKNOWN_HOST, {
+				method: "POST",
+				body: data,
+			})
+		);
+
+		if (!response.ok) {
+			throw new Error(await response.text());
+		}
+
+		const result = await response.json();
+
+		return result as { result: any } | { error: any };
+	}
 }
 
 function createModuleRunner(
@@ -79,20 +93,23 @@ function createModuleRunner(
 					stub.send(JSON.stringify(data));
 				},
 				async invoke(data) {
-					const response = await env.__VITE_INVOKE_MODULE__.fetch(
-						new Request(UNKNOWN_HOST, {
-							method: "POST",
-							body: JSON.stringify(data),
-						})
-					);
+					const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
 
-					if (!response.ok) {
-						throw new Error(await response.text());
-					}
+					return stub.invoke(JSON.stringify(data));
+					// const response = await env.__VITE_INVOKE_MODULE__.fetch(
+					// 	new Request(UNKNOWN_HOST, {
+					// 		method: "POST",
+					// 		body: JSON.stringify(data),
+					// 	})
+					// );
 
-					const result = await response.json();
+					// if (!response.ok) {
+					// 	throw new Error(await response.text());
+					// }
 
-					return result as { result: any } | { error: any };
+					// const result = await response.json();
+
+					// return result as { result: any } | { error: any };
 				},
 			},
 			hmr: true,
