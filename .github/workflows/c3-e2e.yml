@@ -14,7 +14,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}${{ matrix.experimental && '-experimental' || '' }}
       cancel-in-progress: true
-    name: ${{ format('C3 ({0}, {1}{2})', matrix.os.description, matrix.pm.name, matrix.experimental && ', experimental' || '') }}
+    name: ${{ format('C3 ({0}, {1}{2})', matrix.pm.name, matrix.os.description, matrix.experimental && ', experimental' || '') }}
     strategy:
       fail-fast: false
       matrix:
