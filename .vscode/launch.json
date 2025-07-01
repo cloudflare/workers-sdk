@@ -23,6 +23,16 @@
 				"${workspaceFolder}/packages/cloudflare-workers-bindings-extension/dist/**/*.js"
 			],
 			"preLaunchTask": "npm: vscode:prepublish - packages/cloudflare-workers-bindings-extension"
+		},
+		{
+			"name": "Attach a debugger to port 9229",
+			"type": "node",
+			"request": "attach",
+			"port": 9229,
+			"cwd": "/",
+			"resolveSourceMapLocations": null,
+			"attachExistingChildren": false,
+			"autoAttachChildProcesses": false
 		}
 	]
 }

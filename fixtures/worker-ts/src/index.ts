@@ -1,3 +1,5 @@
+import * as cookie from "cookie";
+
 /**
  * Welcome to Cloudflare Workers! This is your first worker.
  *
@@ -27,8 +29,16 @@ export default {
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<Response> {
-		const url = new URL(request.url);
-		if (url.pathname === "/error") throw new Error("Hello Error");
-		return new Response("Hello World!");
+		const cookieHeader = request.headers.get("Cookie");
+
+		if (cookieHeader) {
+			const cookies = cookie.parse(cookieHeader);
+
+			return Response.json(cookies);
+		}
+
+		return new Response("No cookies found", {
+			status: 404,
+		});
 	},
 };

@@ -5,6 +5,9 @@
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev"
 	},
+	"dependencies": {
+		"cookie": "^1.0.2"
+	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250617.0",
 		"wrangler": "workspace:*"
