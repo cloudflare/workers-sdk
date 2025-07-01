@@ -14,7 +14,7 @@
 		"@cloudflare/vitest-pool-workers": "^0.7.5",
 		"@types/node": "catalog:default",
 		"typescript": "^5.5.2",
-		"vitest": "~3.0.7",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
