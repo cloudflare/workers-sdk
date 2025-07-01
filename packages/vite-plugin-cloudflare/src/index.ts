@@ -1,40 +1,46 @@
 import assert from "node:assert";
-import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
+import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
-import { Miniflare, Response as MiniflareResponse } from "miniflare";
-import colors from "picocolors";
+import { Miniflare } from "miniflare";
 import * as vite from "vite";
 import {
 	createModuleReference,
 	matchAdditionalModule,
 } from "./additional-modules";
 import { hasAssetsConfigChanged } from "./asset-config";
+import { createBuildApp } from "./build";
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
 } from "./cloudflare-environment";
 import {
 	ASSET_WORKER_NAME,
-	DEFAULT_INSPECTOR_PORT,
+	DEBUG_PATH,
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import {
 	addDebugToVitePrintUrls,
-	debuggingPath,
 	getDebugPathHtml,
+	getInputInspectorPortOption,
+	getResolvedInspectorPort,
 } from "./debugging";
-import { getWorkerConfigs, writeDeployConfig } from "./deploy-config";
+import { writeDeployConfig } from "./deploy-config";
+import {
+	getDotDevDotVarsContent,
+	hasDotDevDotVarsFileChanged,
+} from "./dev-vars";
 import {
 	getDevMiniflareOptions,
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
 import {
+	getGlobalVirtualModule,
 	injectGlobalCode,
+	isGlobalVirtualModule,
 	isNodeAls,
 	isNodeAlsModule,
 	isNodeCompat,
@@ -45,22 +51,22 @@ import {
 	NodeJsCompatWarnings,
 	resolveNodeJSImport,
 } from "./node-js-compat";
-import { resolvePluginConfig } from "./plugin-config";
-import { additionalModuleGlobalRE } from "./shared";
 import {
-	cleanUrl,
-	getFirstAvailablePort,
-	getOutputDirectory,
-	toMiniflareRequest,
-} from "./utils";
+	assertIsNotPreview,
+	assertIsPreview,
+	resolvePluginConfig,
+} from "./plugin-config";
+import { additionalModuleGlobalRE, UNKNOWN_HOST } from "./shared";
+import { cleanUrl, createRequestHandler, getOutputDirectory } from "./utils";
+import { validateWorkerEnvironmentOptions } from "./vite-config";
 import { handleWebSocket } from "./websockets";
-import { validateWorkerEnvironmentsResolvedConfigs } from "./worker-environments-validation";
 import { getWarningForWorkersConfigs } from "./workers-configs";
 import type {
 	PluginConfig,
 	ResolvedPluginConfig,
 	WorkerConfig,
 } from "./plugin-config";
+import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { Unstable_RawConfig } from "wrangler";
 
 export type { PluginConfig } from "./plugin-config";
@@ -82,11 +88,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let resolvedViteConfig: vite.ResolvedConfig;
 
 	const additionalModulePaths = new Set<string>();
-
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
-
-	// This is set when the client environment is built to determine if the entry Worker should include assets
-	let hasClientBuild = false;
 
 	return [
 		{
@@ -94,16 +96,15 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
 			sharedDuringBuild: true,
 			config(userConfig, env) {
-				if (env.isPreview) {
-					// Short-circuit the whole configuration if we are in preview mode
-					return { appType: "custom" };
-				}
-
 				resolvedPluginConfig = resolvePluginConfig(
 					pluginConfig,
 					userConfig,
 					env
 				);
+
+				if (resolvedPluginConfig.type === "preview") {
+					return { appType: "custom" };
+				}
 
 				if (!workersConfigsWarningShown) {
 					workersConfigsWarningShown = true;
@@ -115,8 +116,20 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					}
 				}
 
+				const defaultDeniedFiles = [
+					".env",
+					".env.*",
+					"*.{crt,pem}",
+					"**/.git/**",
+				];
+
 				return {
 					appType: "custom",
+					server: {
+						fs: {
+							deny: [...defaultDeniedFiles, ".dev.vars", ".dev.vars.*"],
+						},
+					},
 					environments:
 						resolvedPluginConfig.type === "workers"
 							? {
@@ -128,7 +141,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 													createCloudflareEnvironmentOptions(
 														workerConfig,
 														userConfig,
-														environmentName
+														{
+															name: environmentName,
+															isEntry:
+																resolvedPluginConfig.type === "workers" &&
+																environmentName ===
+																	resolvedPluginConfig.entryWorkerEnvironmentName,
+														}
 													),
 												];
 											}
@@ -144,42 +163,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					builder: {
 						buildApp:
 							userConfig.builder?.buildApp ??
-							(async (builder) => {
-								const clientEnvironment = builder.environments.client;
-								const defaultHtmlPath = path.resolve(
-									builder.config.root,
-									"index.html"
-								);
-
-								if (
-									clientEnvironment &&
-									(clientEnvironment.config.build.rollupOptions.input ||
-										fs.existsSync(defaultHtmlPath))
-								) {
-									await builder.build(clientEnvironment);
-								}
-
-								if (resolvedPluginConfig.type === "workers") {
-									const workerEnvironments = Object.keys(
-										resolvedPluginConfig.workers
-									).map((environmentName) => {
-										const environment = builder.environments[environmentName];
-
-										assert(
-											environment,
-											`${environmentName} environment not found`
-										);
-
-										return environment;
-									});
-
-									await Promise.all(
-										workerEnvironments.map((environment) =>
-											builder.build(environment)
-										)
-									);
-								}
-							}),
+							createBuildApp(resolvedPluginConfig),
 					},
 				};
 			},
@@ -190,17 +174,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			configResolved(config) {
 				resolvedViteConfig = config;
 
-				// TODO: the `resolvedPluginConfig` type is incorrect, it is `ResolvedPluginConfig`
-				//       but it should be `ResolvedPluginConfig | undefined` (since we don't actually
-				//       set this value for `vite preview`), we should fix this type
-				if (resolvedPluginConfig?.type === "workers") {
-					validateWorkerEnvironmentsResolvedConfigs(
+				if (resolvedPluginConfig.type === "workers") {
+					validateWorkerEnvironmentOptions(
 						resolvedPluginConfig,
 						resolvedViteConfig
 					);
 				}
 			},
 			generateBundle(_, bundle) {
+				assertIsNotPreview(resolvedPluginConfig);
+
 				let config: Unstable_RawConfig | undefined;
 
 				if (resolvedPluginConfig.type === "workers") {
@@ -225,7 +208,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						this.environment.name ===
 						resolvedPluginConfig.entryWorkerEnvironmentName;
 
-					if (isEntryWorker && hasClientBuild) {
+					if (isEntryWorker) {
 						const workerOutputDirectory = this.environment.config.build.outDir;
 						const clientOutputDirectory =
 							resolvedViteConfig.environments.client?.build.outDir;
@@ -298,23 +281,22 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 			writeBundle() {
-				// This relies on the assumption that the client environment is built first
-				// Composable `buildApp` hooks could provide a more robust alternative in future
-				if (this.environment.name === "client") {
-					hasClientBuild = true;
-				}
+				assertIsNotPreview(resolvedPluginConfig);
+
 				// These conditions ensure the deploy config is emitted once per application build as `writeBundle` is called for each environment.
 				// If Vite introduces an additional hook that runs after the application has built then we could use that instead.
 				if (
 					this.environment.name ===
-					(resolvedPluginConfig.type === "assets-only"
-						? "client"
-						: resolvedPluginConfig.entryWorkerEnvironmentName)
+					(resolvedPluginConfig.type === "workers"
+						? resolvedPluginConfig.entryWorkerEnvironmentName
+						: "client")
 				) {
 					writeDeployConfig(resolvedPluginConfig, resolvedViteConfig);
 				}
 			},
 			hotUpdate(options) {
+				assertIsNotPreview(resolvedPluginConfig);
+
 				// Note that we must "resolve" the changed file since the path from Vite will not match Windows backslashes.
 				const changedFilePath = path.resolve(options.file);
 
@@ -333,9 +315,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 			async configureServer(viteDevServer) {
+				assertIsNotPreview(resolvedPluginConfig);
+
 				const inputInspectorPort = await getInputInspectorPortOption(
-					pluginConfig,
-					viteDevServer
+					resolvedPluginConfig,
+					viteDevServer,
+					miniflare
 				);
 
 				const miniflareDevOptions = await getDevMiniflareOptions(
@@ -350,100 +335,151 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					await miniflare.setOptions(miniflareDevOptions);
 				}
 
-				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
+				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
-				// The HTTP server is not available in middleware mode
-				if (viteDevServer.httpServer) {
-					handleWebSocket(viteDevServer.httpServer, async () => {
-						assert(miniflare, `Miniflare not defined`);
-						const routerWorker = await miniflare.getWorker(ROUTER_WORKER_NAME);
+				if (resolvedPluginConfig.type === "workers") {
+					await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
-						return routerWorker.fetch;
-					});
+					const entryWorkerConfig = getWorkerConfig(
+						resolvedPluginConfig.entryWorkerEnvironmentName
+					);
+					assert(entryWorkerConfig, `No entry Worker config`);
+					const entryWorkerName = entryWorkerConfig.name;
+
+					// The HTTP server is not available in middleware mode
+					if (viteDevServer.httpServer) {
+						handleWebSocket(viteDevServer.httpServer, async () => {
+							assert(miniflare, `Miniflare not defined`);
+							const entryWorker = await miniflare.getWorker(entryWorkerName);
+
+							return entryWorker.fetch;
+						});
+					}
+
+					const staticRouting: StaticRouting | undefined =
+						entryWorkerConfig.assets?.run_worker_first === true
+							? { user_worker: ["/*"] }
+							: resolvedPluginConfig.staticRouting;
+
+					if (staticRouting) {
+						const excludeRulesMatcher = generateStaticRoutingRuleMatcher(
+							staticRouting.asset_worker ?? []
+						);
+						const includeRulesMatcher = generateStaticRoutingRuleMatcher(
+							staticRouting.user_worker
+						);
+						const userWorkerHandler = createRequestHandler(async (request) => {
+							assert(miniflare, `Miniflare not defined`);
+							const userWorker = await miniflare.getWorker(entryWorkerName);
+
+							return userWorker.fetch(request, { redirect: "manual" });
+						});
+
+						preMiddleware = async (req, res, next) => {
+							assert(req.url, `req.url not defined`);
+							// Only the URL pathname is used to match rules
+							const request = new Request(new URL(req.url, UNKNOWN_HOST));
+
+							if (req[kRequestType] === "asset") {
+								next();
+							} else if (excludeRulesMatcher({ request })) {
+								req[kRequestType] === "asset";
+								next();
+							} else if (includeRulesMatcher({ request })) {
+								userWorkerHandler(req, res, next);
+							} else {
+								next();
+							}
+						};
+					}
 				}
 
 				return () => {
-					viteDevServer.middlewares.use(async (req, res, next) => {
-						try {
+					if (preMiddleware) {
+						const middlewareStack = viteDevServer.middlewares.stack;
+						const cachedTransformMiddlewareIndex = middlewareStack.findIndex(
+							(middleware) =>
+								"name" in middleware.handle &&
+								middleware.handle.name === "viteCachedTransformMiddleware"
+						);
+						assert(
+							cachedTransformMiddlewareIndex !== -1,
+							"Failed to find viteCachedTransformMiddleware"
+						);
+
+						// Insert our middleware after the host check middleware to prevent DNS rebinding attacks
+						middlewareStack.splice(cachedTransformMiddlewareIndex, 0, {
+							route: "",
+							handle: preMiddleware,
+						});
+					}
+
+					// post middleware
+					viteDevServer.middlewares.use(
+						createRequestHandler(async (request, req) => {
 							assert(miniflare, `Miniflare not defined`);
-							const request = createRequest(req, res);
-							let response: MiniflareResponse;
 
 							if (req[kRequestType] === "asset") {
 								const assetWorker =
 									await miniflare.getWorker(ASSET_WORKER_NAME);
-								response = await assetWorker.fetch(
-									toMiniflareRequest(request),
-									{ redirect: "manual" }
-								);
+
+								return assetWorker.fetch(request, { redirect: "manual" });
 							} else {
 								const routerWorker =
 									await miniflare.getWorker(ROUTER_WORKER_NAME);
-								response = await routerWorker.fetch(
-									toMiniflareRequest(request),
-									{ redirect: "manual" }
-								);
-							}
 
-							// Vite uses HTTP/2 when `server.https` is enabled
-							if (req.httpVersionMajor === 2) {
-								// HTTP/2 disallows use of the `transfer-encoding` header
-								response.headers.delete("transfer-encoding");
+								return routerWorker.fetch(request, {
+									redirect: "manual",
+								});
 							}
-
-							await sendResponse(res, response as any);
-						} catch (error) {
-							next(error);
-						}
-					});
+						})
+					);
 				};
 			},
 			async configurePreviewServer(vitePreviewServer) {
-				const workerConfigs = getWorkerConfigs(
-					vitePreviewServer.config.root,
-					pluginConfig.experimental?.mixedMode ?? false
-				);
+				assertIsPreview(resolvedPluginConfig);
 
 				const inputInspectorPort = await getInputInspectorPortOption(
-					pluginConfig,
+					resolvedPluginConfig,
 					vitePreviewServer
 				);
 
-				const miniflare = new Miniflare(
+				miniflare = new Miniflare(
 					await getPreviewMiniflareOptions(
+						resolvedPluginConfig,
 						vitePreviewServer,
-						workerConfigs,
-						pluginConfig.persistState ?? true,
-						!!pluginConfig.experimental?.mixedMode,
 						inputInspectorPort
 					)
 				);
 
-				handleWebSocket(
-					vitePreviewServer.httpServer,
-					() => miniflare.dispatchFetch
-				);
+				handleWebSocket(vitePreviewServer.httpServer, () => {
+					assert(miniflare, `Miniflare not defined`);
+
+					return miniflare.dispatchFetch;
+				});
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
-				vitePreviewServer.middlewares.use(async (req, res, next) => {
-					try {
-						const request = createRequest(req, res);
-						const response = await miniflare.dispatchFetch(
-							toMiniflareRequest(request),
-							{ redirect: "manual" }
-						);
+				vitePreviewServer.middlewares.use(
+					createRequestHandler((request) => {
+						assert(miniflare, `Miniflare not defined`);
 
-						// Vite uses HTTP/2 when `preview.https` is enabled
-						if (req.httpVersionMajor === 2) {
-							// HTTP/2 disallows use of the `transfer-encoding` header
-							response.headers.delete("transfer-encoding");
-						}
-
-						await sendResponse(res, response as any);
-					} catch (error) {
-						next(error);
-					}
-				});
+						return miniflare.dispatchFetch(request, { redirect: "manual" });
+					})
+				);
+			},
+		},
+		// Plugin to provide a fallback entry file
+		{
+			name: "vite-plugin-cloudflare:fallback-entry",
+			resolveId(source) {
+				if (source === "virtual:__cloudflare_fallback_entry__") {
+					return `\0virtual:__cloudflare_fallback_entry__`;
+				}
+			},
+			load(id) {
+				if (id === "\0virtual:__cloudflare_fallback_entry__") {
+					return ``;
+				}
 			},
 		},
 		// Plugin to support `.wasm?init` extension
@@ -473,7 +509,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			// Otherwise the `vite:wasm-fallback` plugin prevents the `.wasm` extension being used for module imports.
 			enforce: "pre",
 			applyToEnvironment(environment) {
-				// Note that this hook does not get called in preview mode.
 				return getWorkerConfig(environment.name) !== undefined;
 			},
 			async resolveId(source, importer, options) {
@@ -567,10 +602,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		// Plugin that can provide Node.js compatibility support for Vite Environments that are hosted in Cloudflare Workers.
 		{
 			name: "vite-plugin-cloudflare:nodejs-compat",
-			apply(_config, env) {
-				// Skip this whole plugin if we are in preview mode
-				return !env.isPreview;
-			},
 			configEnvironment(name) {
 				// Only configure this environment if it is a Worker using Node.js compatibility.
 				if (isNodeCompat(getWorkerConfig(name))) {
@@ -610,6 +641,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			// rather than allowing the resolve hook here to alias then to polyfills.
 			enforce: "pre",
 			async resolveId(source, importer, options) {
+				if (isGlobalVirtualModule(source)) {
+					return source;
+				}
 				// See if we can map the `source` to a Node.js compat alias.
 				const result = resolveNodeJSImport(source);
 				if (!result) {
@@ -635,6 +669,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				// We are in build mode so return the absolute path to the polyfill.
 				return this.resolve(result.resolved, importer, options);
+			},
+			load(id) {
+				return getGlobalVirtualModule(id);
 			},
 			async transform(code, id) {
 				// Inject the Node.js compat globals into the entry module for Node.js compat environments.
@@ -682,11 +719,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		// Plugin that handles Node.js Async Local Storage (ALS) compatibility support for Vite Environments that are hosted in Cloudflare Workers.
 		{
 			name: "vite-plugin-cloudflare:nodejs-als",
-			apply(_config, env) {
-				// Skip this whole plugin if we are in preview mode
-				return !env.isPreview;
-			},
-			configEnvironment(name, config) {
+			configEnvironment(name) {
 				if (isNodeAls(getWorkerConfig(name))) {
 					return {
 						resolve: {
@@ -706,6 +739,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			//       the preview middleware here can take precedence
 			enforce: "pre",
 			configureServer(viteDevServer) {
+				assertIsNotPreview(resolvedPluginConfig);
+
 				if (
 					resolvedPluginConfig.type === "workers" &&
 					pluginConfig.inspectorPort !== false
@@ -714,58 +749,61 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 
 				const workerNames =
-					resolvedPluginConfig.type === "assets-only"
-						? []
-						: Object.values(resolvedPluginConfig.workers).map(
+					resolvedPluginConfig.type === "workers"
+						? Object.values(resolvedPluginConfig.workers).map(
 								(worker) => worker.name
-							);
+							)
+						: [];
 
-				viteDevServer.middlewares.use(async (req, res, next) => {
-					const resolvedInspectorPort =
-						await getResolvedInspectorPort(pluginConfig);
-					if (req.url === debuggingPath && resolvedInspectorPort) {
+				viteDevServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
+					const resolvedInspectorPort = await getResolvedInspectorPort(
+						resolvedPluginConfig,
+						miniflare
+					);
+
+					if (resolvedInspectorPort) {
 						const html = getDebugPathHtml(workerNames, resolvedInspectorPort);
 						res.setHeader("Content-Type", "text/html");
-						return res.end(html);
+						res.end(html);
+					} else {
+						next();
 					}
-					next();
 				});
 			},
 			async configurePreviewServer(vitePreviewServer) {
-				const workerConfigs = getWorkerConfigs(
-					vitePreviewServer.config.root,
-					pluginConfig.experimental?.mixedMode ?? false
-				);
+				assertIsPreview(resolvedPluginConfig);
 
-				if (workerConfigs.length >= 1 && pluginConfig.inspectorPort !== false) {
+				if (
+					resolvedPluginConfig.workers.length >= 1 &&
+					resolvedPluginConfig.inspectorPort !== false
+				) {
 					addDebugToVitePrintUrls(vitePreviewServer);
 				}
 
-				const workerNames = workerConfigs.map((worker) => {
+				const workerNames = resolvedPluginConfig.workers.map((worker) => {
 					assert(worker.name, "Expected the Worker to have a name");
 					return worker.name;
 				});
 
-				vitePreviewServer.middlewares.use(async (req, res, next) => {
-					const resolvedInspectorPort =
-						await getResolvedInspectorPort(pluginConfig);
+				vitePreviewServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
+					const resolvedInspectorPort = await getResolvedInspectorPort(
+						resolvedPluginConfig,
+						miniflare
+					);
 
-					if (req.url === debuggingPath && resolvedInspectorPort) {
+					if (resolvedInspectorPort) {
 						const html = getDebugPathHtml(workerNames, resolvedInspectorPort);
 						res.setHeader("Content-Type", "text/html");
-						return res.end(html);
+						res.end(html);
+					} else {
+						next();
 					}
-					next();
 				});
 			},
 		},
 		// Plugin to warn if Node.js APIs are being used without nodejs_compat turned on
 		{
 			name: "vite-plugin-cloudflare:nodejs-compat-warnings",
-			apply(_config, env) {
-				// Skip this whole plugin if we are in preview mode
-				return !env.isPreview;
-			},
 			// We must ensure that the `resolveId` hook runs before the built-in ones.
 			// Otherwise we never see the Node.js built-in imports since they get handled by default Vite behavior.
 			enforce: "pre",
@@ -849,120 +887,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	];
 
 	function getWorkerConfig(environmentName: string) {
-		assert(resolvedPluginConfig, "Expected resolvedPluginConfig to be defined");
-		return resolvedPluginConfig.type !== "assets-only"
+		return resolvedPluginConfig.type === "workers"
 			? resolvedPluginConfig.workers[environmentName]
 			: undefined;
 	}
-}
-
-/**
- * Gets the inspector port option that should be passed to miniflare based on the user's plugin config
- *
- * @param pluginConfig the user plugin configs
- * @param viteServer the vite (dev or preview) server
- * @returns the inspector port to require from miniflare or false if debugging is disabled
- */
-async function getInputInspectorPortOption(
-	pluginConfig: PluginConfig,
-	viteServer: vite.ViteDevServer | vite.PreviewServer
-) {
-	if (
-		pluginConfig.inspectorPort === undefined ||
-		pluginConfig.inspectorPort === 0
-	) {
-		const resolvedInspectorPort = await getResolvedInspectorPort(pluginConfig);
-
-		if (resolvedInspectorPort !== null) {
-			// the user is not specifying an inspector port to use and we're already
-			// using one (this is a server restart) so let's just reuse that
-			return resolvedInspectorPort;
-		}
-	}
-
-	const inputInspectorPort =
-		pluginConfig.inspectorPort ??
-		(await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT));
-
-	if (
-		pluginConfig.inspectorPort === undefined &&
-		inputInspectorPort !== DEFAULT_INSPECTOR_PORT
-	) {
-		viteServer.config.logger.warn(
-			colors.dim(
-				`Default inspector port ${DEFAULT_INSPECTOR_PORT} not available, using ${inputInspectorPort} instead\n`
-			)
-		);
-	}
-
-	return inputInspectorPort;
-}
-
-/**
- * Gets the resolved port of the inspector provided by miniflare
- *
- * @param pluginConfig the user's plugin configuration
- * @returns the resolved port of null if the user opted out of debugging
- */
-async function getResolvedInspectorPort(pluginConfig: PluginConfig) {
-	if (miniflare && pluginConfig.inspectorPort !== false) {
-		const miniflareInspectorUrl = await miniflare.getInspectorURL();
-		return Number.parseInt(miniflareInspectorUrl.port);
-	}
-	return null;
-}
-
-/**
- * Gets the content of a the potential `.dev.vars` target file
- *
- * Note: This resolves the .dev.vars file path following the same logic
- *       as `loadDotEnv` in `/packages/wrangler/src/config/index.ts`
- *       the two need to be kept in sync
- *
- * @param configPath the path to the worker's wrangler config file
- * @param cloudflareEnv the target cloudflare environment
- */
-function getDotDevDotVarsContent(
-	configPath: string,
-	cloudflareEnv: string | undefined
-) {
-	const configDir = path.dirname(configPath);
-
-	const defaultDotDevDotVarsPath = `${configDir}/.dev.vars`;
-	const inputDotDevDotVarsPath = `${defaultDotDevDotVarsPath}${cloudflareEnv ? `.${cloudflareEnv}` : ""}`;
-
-	const targetPath = fs.existsSync(inputDotDevDotVarsPath)
-		? inputDotDevDotVarsPath
-		: fs.existsSync(defaultDotDevDotVarsPath)
-			? defaultDotDevDotVarsPath
-			: null;
-
-	if (targetPath) {
-		const dotDevDotVarsContent = fs.readFileSync(targetPath);
-		return dotDevDotVarsContent;
-	}
-
-	return null;
-}
-
-/**
- * Returns true if the `changedFile` matches one of a potential .dev.vars file.
- */
-function hasDotDevDotVarsFileChanged(
-	resolvedPluginConfig: ResolvedPluginConfig,
-	changedFilePath: string
-) {
-	return [...resolvedPluginConfig.configPaths].some((configPath) => {
-		const dotDevDotVars = path.join(path.dirname(configPath), ".dev.vars");
-		if (dotDevDotVars === changedFilePath) {
-			return true;
-		}
-
-		if (resolvedPluginConfig.cloudflareEnv) {
-			const dotDevDotVarsForEnv = `${dotDevDotVars}.${resolvedPluginConfig.cloudflareEnv}`;
-			return dotDevDotVarsForEnv === changedFilePath;
-		}
-
-		return false;
-	});
 }

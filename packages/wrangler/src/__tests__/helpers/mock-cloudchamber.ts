@@ -4,12 +4,12 @@ import {
 	NodeGroup,
 	PlacementStatusHealth,
 	SchedulingPolicy,
-} from "../../cloudchamber/client";
+} from "@cloudflare/containers-shared";
 import type {
 	Application,
 	DeploymentV2,
 	PlacementWithEvents,
-} from "../../cloudchamber/client";
+} from "@cloudflare/containers-shared";
 
 export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 	{
@@ -27,6 +27,7 @@ export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 			enabled: true,
 		},
 		network: {
+			mode: ContainerNetworkMode.PUBLIC,
 			ipv4: "1.1.1.1",
 		},
 		placements_ref: "http://ref",
@@ -47,6 +48,7 @@ export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 			enabled: true,
 		},
 		network: {
+			mode: ContainerNetworkMode.PUBLIC,
 			ipv4: "1.1.1.2",
 		},
 		current_placement: {
@@ -78,6 +80,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 			enabled: true,
 		},
 		network: {
+			mode: ContainerNetworkMode.PUBLIC,
 			ipv4: "1.1.1.1",
 		},
 		placements_ref: "http://ref",
@@ -98,6 +101,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 			enabled: true,
 		},
 		network: {
+			mode: ContainerNetworkMode.PUBLIC,
 			ipv4: "1.1.1.2",
 		},
 		current_placement: {
@@ -126,6 +130,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 			enabled: true,
 		},
 		network: {
+			mode: ContainerNetworkMode.PUBLIC,
 			ipv4: "1.1.1.1",
 		},
 		placements_ref: "http://ref",
@@ -146,6 +151,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 			enabled: true,
 		},
 		network: {
+			mode: ContainerNetworkMode.PUBLIC,
 			ipv4: "1.1.1.2",
 		},
 		current_placement: {

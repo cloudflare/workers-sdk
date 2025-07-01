@@ -42,8 +42,22 @@ test("returns the correct nested 404 page", async () => {
 	expect(content).toBe("About 404");
 });
 
+test("returns HTML files in the public directory and prioritizes them over root level HTML files", async () => {
+	await page.goto(`${viteTestUrl}/public-html`);
+	const content = await page.textContent("h1");
+	expect(content).toBe("Public Directory HTML");
+});
+
+test("does not return HTML files in the public directory if the public directory is included in the path", async () => {
+	await page.goto(`${viteTestUrl}/public/public-html`);
+	const content = await page.textContent("h1");
+	expect(content).toBe("Root 404");
+});
+
 test("worker configs warnings are not present in the terminal", async () => {
-	expect(serverLogs.warns).toEqual([]);
+	expect(serverLogs.warns.join()).not.toContain(
+		"contains the following configuration options which are ignored since they are not applicable when using Vite"
+	);
 });
 
 describe.runIf(isBuild)("_headers", () => {

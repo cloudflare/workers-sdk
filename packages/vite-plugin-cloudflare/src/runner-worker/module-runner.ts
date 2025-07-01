@@ -2,17 +2,15 @@ import {
 	createWebSocketModuleRunnerTransport,
 	ModuleRunner,
 } from "vite/module-runner";
-import { additionalModuleRE, UNKNOWN_HOST } from "../shared";
+import { UNKNOWN_HOST } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
-import type { EvaluatedModuleNode, ResolvedResult } from "vite/module-runner";
 
 let moduleRunner: ModuleRunner;
 
 export async function createModuleRunner(
 	env: WrapperEnv,
-	webSocket: WebSocket,
-	viteRoot: string
+	webSocket: WebSocket
 ) {
 	if (moduleRunner) {
 		throw new Error("Runner already initialized");
@@ -28,7 +26,6 @@ export async function createModuleRunner(
 
 	moduleRunner = new ModuleRunner(
 		{
-			root: viteRoot,
 			sourcemapInterceptor: "prepareStackTrace",
 			transport: {
 				...transport,

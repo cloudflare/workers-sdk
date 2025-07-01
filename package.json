@@ -23,7 +23,8 @@
 		"test": "dotenv -- turbo test",
 		"test:ci": "dotenv -- turbo test:ci",
 		"test:e2e": "dotenv -- turbo test:e2e",
-		"test:e2e:wrangler": "node -r esbuild-register tools/e2e/runIndividualE2EFiles.ts",
+		"test:e2e:c3": "dotenv -- node -r esbuild-register packages/create-cloudflare/scripts/e2e/run-tests.ts",
+		"test:e2e:wrangler": "dotenv -- node -r esbuild-register tools/e2e/runIndividualE2EFiles.ts",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests"
 	},
@@ -32,7 +33,7 @@
 		"@changesets/changelog-github": "^0.5.0",
 		"@changesets/cli": "^2.28.0",
 		"@changesets/parse": "^0.4.0",
-		"@cloudflare/workers-types": "^4.20250604.0",
+		"@cloudflare/workers-types": "^4.20250617.0",
 		"@ianvs/prettier-plugin-sort-imports": "4.2.1",
 		"@manypkg/cli": "^0.23.0",
 		"@types/node": "catalog:default",
@@ -56,7 +57,7 @@
 		"pnpm": "^9.12.0"
 	},
 	"volta": {
-		"node": "18.20.2",
+		"node": "20.19.3",
 		"pnpm": "9.12.0"
 	},
 	"pnpm": {

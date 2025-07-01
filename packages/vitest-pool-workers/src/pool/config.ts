@@ -13,6 +13,10 @@ import { getProjectPath, getRelativeProjectPath } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
+import type {
+	Experimental_RemoteProxySession,
+	Unstable_Binding,
+} from "wrangler";
 import type { ParseParams, ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
@@ -43,6 +47,11 @@ const WorkersPoolOptionsSchema = z.object({
 	 * the same storage.
 	 */
 	isolatedStorage: z.boolean().default(true),
+	/**
+	 * Enables experimental remote bindings to access remote resources configured
+	 * with `experimental_experimental_remote: true` in the wrangler configuration file.
+	 */
+	experimental_remoteBindings: z.boolean().optional(),
 	/**
 	 * Runs all tests in this project serially in the same worker, using the same
 	 * module cache. This can significantly speed up tests if you've got lots of
@@ -171,6 +180,15 @@ function filterTails(
 	});
 }
 
+/** Map that maps worker configPaths to their existing remote proxy session data (if any) */
+const remoteProxySessionsDataMap = new Map<
+	string,
+	{
+		session: Experimental_RemoteProxySession;
+		remoteBindings: Record<string, Unstable_Binding>;
+	} | null
+>();
+
 async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
@@ -235,6 +253,24 @@ async function parseCustomPoolOptions(
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
 
+		const preExistingRemoteProxySessionData = options.wrangler?.configPath
+			? remoteProxySessionsDataMap.get(options.wrangler.configPath)
+			: undefined;
+
+		const remoteProxySessionData = options.experimental_remoteBindings
+			? await wrangler.experimental_maybeStartOrUpdateRemoteProxySession(
+					configPath,
+					preExistingRemoteProxySessionData ?? null
+				)
+			: null;
+
+		if (options.wrangler?.configPath && remoteProxySessionData) {
+			remoteProxySessionsDataMap.set(
+				options.wrangler.configPath,
+				remoteProxySessionData
+			);
+		}
+
 		const { workerOptions, externalWorkers, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(
 				configPath,
@@ -242,6 +278,9 @@ async function parseCustomPoolOptions(
 				{
 					imagesLocalMode: true,
 					overrides: { assets: options.miniflare.assets },
+					remoteBindingsEnabled: options.experimental_remoteBindings,
+					remoteProxyConnectionString:
+						remoteProxySessionData?.session?.remoteProxyConnectionString,
 				}
 			);
 

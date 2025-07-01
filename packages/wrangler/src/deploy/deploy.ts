@@ -3,30 +3,31 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
+import {
+	isDockerfile,
+	verifyDockerInstalled,
+} from "@cloudflare/containers-shared";
 import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { buildContainers, deployContainers } from "../cloudchamber/deploy";
+import { deployContainers, maybeBuildContainer } from "../cloudchamber/deploy";
 import { configFileName, formatConfigSnippet } from "../config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
-import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
-import {
-	findAdditionalModules,
-	writeAdditionalModules,
-} from "../deployment-bundle/find-additional-modules";
 import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
+import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
+import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
@@ -62,7 +63,6 @@ import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
 	Route,
-	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "../config/environment";
@@ -717,6 +717,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							assetConfig: props.assetsOptions.assetConfig,
 							_redirects: props.assetsOptions._redirects,
 							_headers: props.assetsOptions._headers,
+							run_worker_first: props.assetsOptions.run_worker_first,
 						}
 					: undefined,
 			observability: config.observability,
@@ -767,10 +768,32 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			config.containers === undefined;
 
 		let workerBundle: FormData;
+		const dockerPath = getDockerPath();
+
+		// lets fail earlier in the case where docker isn't installed
+		// and we have containers so that we don't get into a
+		// disjointed state where the worker updates but the container
+		// fails.
+		if (config.containers) {
+			// if you have a registry url specified, you don't need docker
+			const hasDockerfiles = config.containers?.some((container) =>
+				isDockerfile(container.image ?? container.configuration?.image)
+			);
+			if (hasDockerfiles) {
+				await verifyDockerInstalled(dockerPath, false);
+			}
+		}
 
 		if (props.dryRun) {
 			if (config.containers) {
-				await buildContainers(config, workerTag ?? "worker-tag");
+				for (const container of config.containers) {
+					await maybeBuildContainer(
+						container,
+						workerTag ?? "worker-tag",
+						props.dryRun,
+						dockerPath
+					);
+				}
 			}
 
 			workerBundle = createWorkerUploadForm(worker);
@@ -1007,19 +1030,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		return { versionId, workerTag };
 	}
 
-	// deploy triggers
-	const targets = await triggersDeploy(props);
-
 	if (config.containers) {
 		assert(versionId && accountId);
 		await deployContainers(config, {
 			versionId,
 			accountId,
 			scriptName,
-			dryRun: props.dryRun,
+			dryRun: props.dryRun ?? false,
 			env: props.env,
 		});
 	}
+
+	// deploy triggers
+	const targets = await triggersDeploy(props);
 
 	logger.log("Current Version ID:", versionId);
 
@@ -1335,23 +1358,4 @@ export async function updateQueueConsumers(
 	}
 
 	return updateConsumers;
-}
-
-export async function noBundleWorker(
-	entry: Entry,
-	rules: Rule[],
-	outDir: string | undefined
-) {
-	const modules = await findAdditionalModules(entry, rules);
-	if (outDir) {
-		await writeAdditionalModules(modules, outDir);
-	}
-
-	const bundleType = getBundleType(entry.format, entry.file);
-	return {
-		modules,
-		dependencies: {} as { [path: string]: { bytesInOutput: number } },
-		resolvedEntryPointPath: entry.file,
-		bundleType,
-	};
 }

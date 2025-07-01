@@ -220,8 +220,9 @@ export const deployCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			MIXED_MODE: false,
+			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
 		}),
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	validateArgs(args) {
 		if (args.nodeCompat) {

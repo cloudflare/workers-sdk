@@ -1,6 +1,6 @@
 {
 	"name": "playground-preview-worker",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"private": true,
 	"scripts": {
 		"build-middleware": "pnpm run build-middleware:common && pnpm run build-middleware:loader",
@@ -19,7 +19,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250604.0",
+		"@cloudflare/workers-types": "^4.20250617.0",
 		"@types/cookie": "^0.6.0",
 		"cookie": "^0.7.2",
 		"itty-router": "^4.0.13",

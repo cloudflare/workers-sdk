@@ -1,9 +1,11 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
-import { blue } from "@cloudflare/cli/colors";
+import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
 import { mergeObjectProperties, transformFile } from "helpers/codemod";
+import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
+import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
@@ -19,8 +21,17 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
+	const packages = ["nitropack"];
+	await installPackages(packages, {
+		dev: true,
+		startText: "Installing nitro module `nitropack`",
+		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+	});
+
 	usesTypescript(ctx);
 	const filePath = `app.config.${usesTypescript(ctx) ? "ts" : "js"}`;
+
+	const compatDate = await getWorkerdCompatibilityDate();
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
 
@@ -32,25 +43,20 @@ const configure = async (ctx: C3Context) => {
 			}
 
 			const b = recast.types.builders;
-
 			mergeObjectProperties(
 				n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
 				[
 					b.objectProperty(
 						b.identifier("server"),
 						b.objectExpression([
+							// preset: "cloudflare_module"
 							b.objectProperty(
 								b.identifier("preset"),
-								b.stringLiteral("cloudflare-pages"),
+								b.stringLiteral("cloudflare_module"),
 							),
 							b.objectProperty(
-								b.identifier("rollupConfig"),
-								b.objectExpression([
-									b.objectProperty(
-										b.identifier("external"),
-										b.arrayExpression([b.stringLiteral("node:async_hooks")]),
-									),
-								]),
+								b.identifier("compatibilityDate"),
+								b.stringLiteral(compatDate),
 							),
 						]),
 					),
@@ -67,20 +73,20 @@ const config: TemplateConfig = {
 	id: "solid",
 	frameworkCli: "create-solid",
 	displayName: "SolidStart",
-	platform: "pages",
+	platform: "workers",
 	copyFiles: {
 		path: "./templates",
 	},
+	path: "templates/solid",
 	generate,
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			preview: `${npm} run build && npx wrangler pages dev`,
-			deploy: `${npm} run build && wrangler pages deploy`,
+			preview: `${npm} run build && npx wrangler dev`,
+			deploy: `${npm} run build && wrangler deploy`,
 			"cf-typegen": `wrangler types`,
 		},
 	}),
-	compatibilityFlags: ["nodejs_compat"],
 	devScript: "dev",
 	deployScript: "deploy",
 	previewScript: "preview",

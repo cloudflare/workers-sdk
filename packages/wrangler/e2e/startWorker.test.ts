@@ -108,12 +108,12 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 		});
 
 		const inspectorUrl = await worker.inspectorUrl;
-		assert(inspectorUrl);
-
+		assert(inspectorUrl, "missing inspectorUrl");
 		const res = await undici.fetch(`http://${inspectorUrl.host}/json`);
 
 		await expect(res.json()).resolves.toBeInstanceOf(Array);
 
+		assert(inspectorUrl, "missing inspectorUrl");
 		const ws = new WebSocket(inspectorUrl.href);
 		const openPromise = events.once(ws, "open");
 
@@ -181,6 +181,7 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 		const inspectorUrl = await worker.inspectorUrl;
 		assert(inspectorUrl);
 
+		assert(inspectorUrl, "missing inspectorUrl");
 		let ws = new WebSocket(inspectorUrl.href, {
 			setHost: false,
 			headers: { Host: "example.com" },
@@ -190,6 +191,7 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 		await expect(openPromise).rejects.toThrow("Unexpected server response");
 
 		// Check validates `Origin` header
+		assert(inspectorUrl, "missing inspectorUrl");
 		ws = new WebSocket(inspectorUrl.href, { origin: "https://example.com" });
 		openPromise = events.once(ws, "open");
 		await expect(openPromise).rejects.toThrow("Unexpected server response");
@@ -239,7 +241,7 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 		});
 
 		const inspectorUrl = await worker.inspectorUrl;
-		assert(inspectorUrl);
+		assert(inspectorUrl, "missing inspectorUrl");
 		const ws = new WebSocket(inspectorUrl.href);
 
 		const consoleApiMessages: DevToolsEvent<"Runtime.consoleAPICalled">[] =
@@ -361,7 +363,7 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 			dev: {
 				remote,
 				server: { port: await getPort() },
-				inspector: { port: await getPort() },
+				inspector: false,
 			},
 		});
 
@@ -377,7 +379,7 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 				...worker.config.dev,
 				remote,
 				server: { port: await getPort() },
-				inspector: { port: await getPort() },
+				inspector: false,
 			},
 		});
 		const newPort = worker.config.dev?.server?.port;

@@ -5,10 +5,13 @@
 	"type": "module",
 	"scripts": {
 		"check:types": "tsc --build",
-		"test:build": "cross-env VITE_TEST_BUILD=1 vitest run -c vitest.config.e2e.ts",
-		"pretest:ci": "pnpm playwright install chromium",
-		"test:ci": "pnpm test:serve && pnpm test:build",
-		"test:serve": "vitest run -c vitest.config.e2e.ts"
+		"playwright:install": "pnpm playwright install chromium",
+		"pretest:ci": "pnpm playwright:install",
+		"test:ci": "pnpm test:ci:serve && pnpm test:ci:build",
+		"test:ci:build": "cross-env VITE_TEST_BUILD=1 vitest run -c vitest.config.e2e.ts",
+		"test:ci:serve": "vitest run -c vitest.config.e2e.ts",
+		"pretest:serve": "pnpm playwright:install",
+		"test:serve": "pnpm test:ci:serve --poolOptions.forks.singleFork=false"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",

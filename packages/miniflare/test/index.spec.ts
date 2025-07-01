@@ -3035,7 +3035,6 @@ test("Miniflare: strips CF-Connecting-IP", async (t) => {
 	const client = new Miniflare({
 		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
 		modules: true,
-		stripCfConnectingIp: true,
 	});
 	t.teardown(() => client.dispose());
 	t.teardown(() => server.dispose());
@@ -3327,4 +3326,63 @@ test("Miniflare: custom Node outbound service", async (t) => {
 		text,
 		`Response from custom Node outbound service. The value of "custom-header" is "foo".`
 	);
+});
+
+test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file creation", async (t) => {
+	const originalEnv = process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
+	const configFilePath = "workerd-config.json";
+
+	// Clean up any existing config file
+	if (existsSync(configFilePath)) {
+		await fs.unlink(configFilePath);
+	}
+
+	t.teardown(async () => {
+		if (originalEnv === undefined) {
+			delete process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
+		} else {
+			process.env.MINIFLARE_WORKERD_CONFIG_DEBUG = originalEnv;
+		}
+		if (existsSync(configFilePath)) {
+			await fs.unlink(configFilePath);
+		}
+	});
+
+	// ensure the config file is not created without the flag
+	delete process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
+	let mf = new Miniflare({
+		modules: true,
+		script: `export default {
+			fetch() {
+				return new Response("Hello World");
+			}
+		}`,
+	});
+	// Trigger workerd config serialization by dispatching a request
+	let response = await mf.dispatchFetch("http://localhost");
+	// seems like miniflare doesn't like it if you don't read the response
+	await response.text();
+	t.false(
+		existsSync(configFilePath),
+		"config file should not be created when MINIFLARE_WORKERD_CONFIG_DEBUG is not set"
+	);
+	await mf.dispose();
+
+	// ensure the config file is created with the flag
+	process.env.MINIFLARE_WORKERD_CONFIG_DEBUG = configFilePath;
+	mf = new Miniflare({
+		modules: true,
+		script: `export default {
+			fetch() {
+				return new Response("Hello World");
+			}
+		}`,
+	});
+	response = await mf.dispatchFetch("http://localhost");
+	await response.text();
+	t.true(
+		existsSync(configFilePath),
+		"workerd-config.json should be created when MINIFLARE_WORKERD_CONFIG_DEBUG=true"
+	);
+	await mf.dispose();
 });

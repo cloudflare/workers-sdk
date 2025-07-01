@@ -38,13 +38,12 @@ import {
 	Response,
 } from "./http";
 import {
-	ContainerOptions,
-	ContainerService,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
 	getDirectSocketName,
 	getGlobalServices,
+	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	KV_PLUGIN_NAME,
 	normaliseDurableObject,
@@ -343,6 +342,7 @@ function getDurableObjectClassNames(
 				enableSql,
 				unsafeUniqueKey,
 				unsafePreventEviction,
+				container,
 			} = normaliseDurableObject(designator);
 			// Get or create `Map` mapping class name to optional unsafe unique key
 			let classNames = serviceClassNames.get(serviceName);
@@ -384,6 +384,7 @@ function getDurableObjectClassNames(
 					enableSql,
 					unsafeUniqueKey,
 					unsafePreventEviction,
+					container,
 				});
 			}
 		}
@@ -429,12 +430,12 @@ function getExternalServiceEntrypoints(
 			for (const [name, service] of Object.entries(
 				workerOpts.core.serviceBindings
 			)) {
-				const { serviceName, entrypoint, mixedModeConnectionString } =
+				const { serviceName, entrypoint, remoteProxyConnectionString } =
 					normaliseServiceDesignator(service);
 
 				if (
 					// Skip if it is a remote service
-					mixedModeConnectionString === undefined &&
+					remoteProxyConnectionString === undefined &&
 					// Skip if the service is bound to another Worker defined in the Miniflare config
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
@@ -463,12 +464,12 @@ function getExternalServiceEntrypoints(
 					scriptName,
 					unsafePreventEviction,
 					enableSql: useSQLite,
-					mixedModeConnectionString,
+					remoteProxyConnectionString,
 				} = normaliseDurableObject(designator);
 
 				if (
 					// Skip if it is a remote durable object
-					mixedModeConnectionString === undefined &&
+					remoteProxyConnectionString === undefined &&
 					// Skip if the durable object is bound to a Worker that exists in the current Miniflare config
 					scriptName &&
 					!allWorkerNames.includes(scriptName)
@@ -498,12 +499,12 @@ function getExternalServiceEntrypoints(
 				const {
 					serviceName = workerOpts.core.name,
 					entrypoint,
-					mixedModeConnectionString,
+					remoteProxyConnectionString,
 				} = normaliseServiceDesignator(workerOpts.core.tails[i]);
 
 				if (
 					// Skip if it is a remote service
-					mixedModeConnectionString === undefined &&
+					remoteProxyConnectionString === undefined &&
 					// Skip if the service is bound to the existing workers
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
@@ -903,7 +904,6 @@ export class Miniflare {
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
-	#containerService?: ContainerService;
 
 	#cfObject?: Record<string, any> = {};
 
@@ -1589,8 +1589,6 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
-		let containerOptions: NonNullable<ContainerOptions> = {};
-
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			const pluginExtensions = await plugin.getExtensions?.({
 				// @ts-expect-error `CoreOptionsSchema` has required options which are
@@ -1620,14 +1618,6 @@ export class Miniflare {
 				// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
 				// The asset plugin needs this so that it can set the binding between the RouterWorker and the UserWorker
 				workerOpts.assets.assets.workerName = workerOpts.core.name;
-			}
-
-			if (workerOpts.containers.containers) {
-				// we don't care which worker this container belongs to, as they are id'd already by the DO classname
-				containerOptions = {
-					...containerOptions,
-					...workerOpts.containers.containers,
-				};
 			}
 
 			// Collect all bindings from this worker
@@ -1884,17 +1874,6 @@ export class Miniflare {
 				allWorkerRoutes.set(INBOUND_DO_PROXY_SERVICE_NAME, [
 					`*/${INBOUND_DO_PROXY_SERVICE_PATH}`,
 				]);
-			}
-		}
-
-		if (
-			Object.keys(containerOptions).length &&
-			!sharedOpts.containers.ignore_containers
-		) {
-			if (this.#containerService === undefined) {
-				this.#containerService = new ContainerService(containerOptions);
-			} else {
-				this.#containerService.updateConfig(containerOptions);
 			}
 		}
 
@@ -2186,7 +2165,7 @@ export class Miniflare {
 							workerOpts.do.durableObjects ?? {}
 						).reduce<WorkerDefinition["durableObjects"]>(
 							(internalObjects, [bindingName, designator]) => {
-								const { className, scriptName, mixedModeConnectionString } =
+								const { className, scriptName, remoteProxyConnectionString } =
 									normaliseDurableObject(designator);
 
 								if (
@@ -2195,7 +2174,7 @@ export class Miniflare {
 									// If the scriptName matches one of the workers defined, it is internal as well
 									allWorkerNames.includes(scriptName) ||
 									// If it is not a remote durable object
-									mixedModeConnectionString === undefined
+									remoteProxyConnectionString === undefined
 								) {
 									internalObjects.push({
 										name: bindingName,
@@ -2613,6 +2592,15 @@ export class Miniflare {
 	): Promise<ReplaceWorkersTypes<R2Bucket>> {
 		return this.#getProxy(R2_PLUGIN_NAME, bindingName, workerName);
 	}
+	getHelloWorldBinding(
+		bindingName: string,
+		workerName?: string
+	): Promise<{
+		get: () => Promise<{ value: string; ms?: number }>;
+		set: (value: string) => Promise<void>;
+	}> {
+		return this.#getProxy(HELLO_WORLD_PLUGIN_NAME, bindingName, workerName);
+	}
 
 	/** @internal */
 	_getInternalDurableObjectNamespace(
@@ -2650,6 +2638,7 @@ export class Miniflare {
 			// Cleanup as much as possible even if `#init()` threw
 			await this.#proxyClient?.dispose();
 			await this.#runtime?.dispose();
+
 			await this.#stopLoopbackServer();
 			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
 			await fs.promises.rm(this.#tmpPath, { force: true, recursive: true });

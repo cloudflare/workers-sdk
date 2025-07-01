@@ -3,15 +3,17 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build --app",
-		"build:custom-output-directories": "vite build --app -c ./vite.config.custom-output-directories.ts",
-		"build:https": "vite build --app -c ./vite.config.https.ts",
+		"build": "vite build",
+		"build:custom-output-directories": "vite build -c ./vite.config.custom-output-directories.ts",
+		"build:https": "vite build -c ./vite.config.https.ts",
+		"build:run-worker-first": "vite build -c ./vite.config.run-worker-first.ts",
+		"build:static-routing": "vite build -c ./vite.config.static-routing.ts",
 		"check:types": "tsc --build",
 		"dev": "vite dev",
 		"dev:https": "vite dev -c ./vite.config.https.ts",
-		"preview": "vite preview",
-		"preview:custom-output-directories": "vite preview -c ./vite.config.custom-output-directories.ts",
-		"preview:https": "vite preview -c ./vite.config.https.ts"
+		"dev:run-worker-first": "vite dev -c ./vite.config.run-worker-first.ts",
+		"dev:static-routing": "vite dev -c ./vite.config.static-routing.ts",
+		"preview": "vite preview"
 	},
 	"dependencies": {
 		"react": "^19.0.0",
@@ -20,7 +22,7 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250604.0",
+		"@cloudflare/workers-types": "^4.20250617.0",
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",
 		"@vitejs/plugin-basic-ssl": "^2.0.0",

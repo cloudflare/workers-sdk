@@ -2,17 +2,20 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	CF_ASSETS_IGNORE_FILENAME,
-	createAssetsIgnoreFunction,
-	getContentType,
 	HEADERS_FILENAME,
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
+	REDIRECTS_FILENAME,
+} from "@cloudflare/workers-shared/utils/constants";
+import {
+	createAssetsIgnoreFunction,
+	getContentType,
 	maybeGetFile,
 	normalizeFilePath,
-	REDIRECTS_FILENAME,
-} from "@cloudflare/workers-shared";
+} from "@cloudflare/workers-shared/utils/helpers";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
@@ -387,7 +390,10 @@ export type AssetsOptions = {
 	assetConfig: AssetConfig;
 	_redirects?: string;
 	_headers?: string;
+	run_worker_first?: boolean | string[];
 };
+
+export class NonExistentAssetsDirError extends UserError {}
 
 export function getAssetsOptions(
 	args: { assets: string | undefined; script?: string },
@@ -425,7 +431,7 @@ export function getAssetsOptions(
 			? '"--assets" command line argument'
 			: '"assets.directory" field in your configuration file';
 
-		throw new UserError(
+		throw new NonExistentAssetsDirError(
 			`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
 				`${directory}`,
 
@@ -437,10 +443,18 @@ export function getAssetsOptions(
 
 	const routerConfig: RouterConfig = {
 		has_user_worker: Boolean(args.script || config.main),
-		invoke_user_worker_ahead_of_assets: config.assets?.run_worker_first,
 	};
 
-	// User Worker ahead of assets, but no assets binding provided
+	if (typeof config.assets?.run_worker_first === "boolean") {
+		routerConfig.invoke_user_worker_ahead_of_assets =
+			config.assets.run_worker_first;
+	} else if (Array.isArray(config.assets?.run_worker_first)) {
+		routerConfig.static_routing = parseStaticRouting(
+			config.assets.run_worker_first
+		);
+	}
+
+	// User Worker always ahead of assets, but no assets binding provided
 	if (
 		routerConfig.invoke_user_worker_ahead_of_assets &&
 		!config?.assets?.binding
@@ -453,13 +467,14 @@ export function getAssetsOptions(
 		);
 	}
 
-	// Using run_worker_first = true but didn't provide a Worker script
+	// Using run_worker_first but didn't provide a Worker script
 	if (
 		!routerConfig.has_user_worker &&
-		routerConfig.invoke_user_worker_ahead_of_assets === true
+		(routerConfig.invoke_user_worker_ahead_of_assets === true ||
+			routerConfig.static_routing)
 	) {
 		throw new UserError(
-			"Cannot set run_worker_first=true without a Worker script.\n" +
+			"Cannot set run_worker_first without a Worker script.\n" +
 				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`)."
 		);
 	}
@@ -483,6 +498,8 @@ export function getAssetsOptions(
 		assetConfig,
 		_redirects,
 		_headers,
+		// raw static routing rules for upload. routerConfig.static_routing contains the rules processed for dev.
+		run_worker_first: config.assets?.run_worker_first,
 	};
 }
 

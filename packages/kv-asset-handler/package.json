@@ -42,7 +42,7 @@
 	},
 	"devDependencies": {
 		"@ava/typescript": "^4.1.0",
-		"@cloudflare/workers-types": "^4.20250604.0",
+		"@cloudflare/workers-types": "^4.20250617.0",
 		"@types/mime": "^3.0.4",
 		"@types/node": "catalog:default",
 		"@types/service-worker-mock": "^2.0.1",

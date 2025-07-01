@@ -176,7 +176,7 @@ export function createWorkerEntrypointWrapper(
 						entryPath = viteDevMetadata.entryPath;
 						const { 0: client, 1: server } = new WebSocketPair();
 						webSocket = client;
-						await createModuleRunner(this.env, server, viteDevMetadata.root);
+						await createModuleRunner(this.env, server);
 					} catch (e) {
 						return new Response(
 							e instanceof Error ? e.message : JSON.stringify(e),
@@ -406,13 +406,7 @@ function getViteDevMetadata(request: Request) {
 		);
 	}
 
-	const { root, entryPath } = parsedViteDevMetadataHeader;
-
-	if (root === undefined) {
-		throw new Error(
-			"Unexpected internal error, vite dev metadata header doesn't contain a root value"
-		);
-	}
+	const { entryPath } = parsedViteDevMetadataHeader;
 
 	if (entryPath === undefined) {
 		throw new Error(
@@ -420,5 +414,5 @@ function getViteDevMetadata(request: Request) {
 		);
 	}
 
-	return { root, entryPath };
+	return { entryPath };
 }

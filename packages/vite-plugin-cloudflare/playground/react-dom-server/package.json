@@ -15,7 +15,7 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250604.0",
+		"@cloudflare/workers-types": "^4.20250617.0",
 		"@types/react": "^19.1.0",
 		"@types/react-dom": "^19.1.1",
 		"typescript": "catalog:default",

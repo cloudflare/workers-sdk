@@ -3,10 +3,10 @@ import LOCAL_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespa
 import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
 import {
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
 } from "../shared";
 
 export const DispatchNamespaceOptionsSchema = z.object({
@@ -14,7 +14,7 @@ export const DispatchNamespaceOptionsSchema = z.object({
 		.record(
 			z.object({
 				namespace: z.string(),
-				mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
+				remoteProxyConnectionString: z.custom<RemoteProxyConnectionString>(),
 			})
 		)
 		.optional(),
@@ -69,12 +69,15 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 
 		return Object.entries(options.dispatchNamespaces).map(([name, config]) => {
 			assert(
-				config.mixedModeConnectionString,
-				"Dispatch Namespace bindings only support Mixed Mode"
+				config.remoteProxyConnectionString,
+				"Dispatch Namespace bindings only support running remotely"
 			);
 			return {
 				name: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:ns:${config.namespace}`,
-				worker: mixedModeClientWorker(config.mixedModeConnectionString, name),
+				worker: remoteProxyClientWorker(
+					config.remoteProxyConnectionString,
+					name
+				),
 			};
 		});
 	},

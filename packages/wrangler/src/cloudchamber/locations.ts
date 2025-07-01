@@ -1,9 +1,12 @@
-import { AccountService } from "./client";
-import type { CompleteAccountCustomer, Location } from "./client";
+import { AccountService } from "@cloudflare/containers-shared";
+import type {
+	CompleteAccountCustomer,
+	Location,
+} from "@cloudflare/containers-shared";
 
 let cachedAccount: CompleteAccountCustomer | undefined;
 
-export async function loadAccount() {
+export async function loadAccount(): Promise<CompleteAccountCustomer> {
 	if (cachedAccount !== undefined) {
 		return cachedAccount;
 	}

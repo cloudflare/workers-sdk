@@ -1,0 +1,36 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "worker",
+	"main": "./src/index.ts",
+	"compatibility_date": "2024-12-30",
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "test-kv-id",
+		},
+	],
+	"unsafe_hello_world": [
+		{
+			"binding": "HELLO_WORLD",
+		},
+	],
+	"analytics_engine_datasets": [
+		{
+			"dataset": "test",
+			"binding": "WAE",
+		},
+	],
+	"unsafe": {
+		"bindings": [
+			{
+				"name": "RATE_LIMITER",
+				"type": "ratelimit",
+				"namespace_id": "1001",
+				"simple": {
+					"limit": 1,
+					"period": 60,
+				},
+			},
+		],
+	},
+}

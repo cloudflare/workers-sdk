@@ -10,7 +10,7 @@ function mockGetVersions() {
 			`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
 			async ({ params }) => {
 				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toEqual("script-name");
+				expect(params.scriptName).toMatch(/script-name(-test)?/);
 
 				return HttpResponse.json(
 					createFetchResult({
@@ -38,7 +38,7 @@ export function mockGetVersion(versionInfo?: VersionDetails) {
 			`*/accounts/:accountId/workers/scripts/:scriptName/versions/ce15c78b-cc43-4f60-b5a9-15ce4f298c2a`,
 			async ({ params }) => {
 				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toEqual("script-name");
+				expect(params.scriptName).toMatch(/script-name(-test)?/);
 
 				return HttpResponse.json(
 					createFetchResult(
@@ -94,7 +94,7 @@ function mockGetVersionContent() {
 					"ce15c78b-cc43-4f60-b5a9-15ce4f298c2a"
 				);
 				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toEqual("script-name");
+				expect(params.scriptName).toMatch(/script-name(-test)?/);
 
 				const formData = new FormData();
 				formData.set(
@@ -120,7 +120,7 @@ function mockGetWorkerSettings() {
 			`*/accounts/:accountId/workers/scripts/:scriptName/script-settings`,
 			async ({ params }) => {
 				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toEqual("script-name");
+				expect(params.scriptName).toMatch(/script-name(-test)?/);
 
 				return HttpResponse.json(
 					createFetchResult({
@@ -142,7 +142,7 @@ export function mockPostVersion(
 			`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toEqual("script-name");
+				expect(params.scriptName).toMatch(/script-name(-test)?/);
 
 				const formData = await request.formData();
 				const metadata = JSON.parse(

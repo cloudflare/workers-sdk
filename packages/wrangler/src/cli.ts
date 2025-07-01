@@ -65,8 +65,11 @@ export {
 export { experimental_patchConfig } from "./config/patch-config";
 
 export {
-	startMixedModeSession as experimental_startMixedModeSession,
+	startRemoteProxySession as experimental_startRemoteProxySession,
+	type StartRemoteProxySessionOptions as experimental_StartRemoteProxySessionOptions,
+	maybeStartOrUpdateRemoteProxySession as experimental_maybeStartOrUpdateRemoteProxySession,
 	pickRemoteBindings as experimental_pickRemoteBindings,
-	type MixedModeSession as Experimental_MixedModeSession,
+	type Binding as Unstable_Binding,
+	type RemoteProxySession as Experimental_RemoteProxySession,
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
 } from "./api";

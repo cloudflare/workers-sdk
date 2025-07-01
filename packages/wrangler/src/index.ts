@@ -62,6 +62,11 @@ import {
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
+import {
+	helloWorldGetCommand,
+	helloWorldNamespace,
+	helloWorldSetCommand,
+} from "./hello-world";
 import { hyperdriveCreateCommand } from "./hyperdrive/create";
 import { hyperdriveDeleteCommand } from "./hyperdrive/delete";
 import { hyperdriveGetCommand } from "./hyperdrive/get";
@@ -422,17 +427,17 @@ export function createCLIParser(argv: string[]) {
 
 			return true;
 		})
+		.option("experimental-remote-bindings", {
+			describe: `Experimental: Enable Remote Bindings`,
+			type: "boolean",
+			hidden: true,
+			alias: ["x-remote-bindings"],
+		})
 		.option("experimental-provision", {
 			describe: `Experimental: Enable automatic resource provisioning`,
 			type: "boolean",
 			hidden: true,
 			alias: ["x-provision"],
-		})
-		.option("experimental-mixed-mode", {
-			describe: `Experimental: Enable Mixed Mode`,
-			type: "boolean",
-			hidden: true,
-			alias: ["x-mixed-mode"],
 		})
 		.epilogue(
 			`Please report any issues to ${chalk.hex("#3B818D")(
@@ -1330,6 +1335,19 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("pipelines");
+
+	registry.define([
+		{ command: "wrangler hello-world", definition: helloWorldNamespace },
+		{
+			command: "wrangler hello-world get",
+			definition: helloWorldGetCommand,
+		},
+		{
+			command: "wrangler hello-world set",
+			definition: helloWorldSetCommand,
+		},
+	]);
+	registry.registerNamespace("hello-world");
 
 	/******************** CMD GROUP ***********************/
 

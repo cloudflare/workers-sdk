@@ -26,6 +26,12 @@
 				"param": "routerConfig",
 			},
 			{
+				"name": "EYEBALL_CONFIG",
+				"type": "param",
+				"param": "eyeballRouterConfig",
+				"optional": true,
+			},
+			{
 				"name": "ASSET_WORKER",
 				"type": "internal_assets",
 				"fetcherApi": "fetcher",

@@ -25,19 +25,11 @@ describe(`@cloudflare/unenv-preset ${platform} ${workerdPath}`, () => {
 		// rather than the one bundled with wrangler.
 		const MINIFLARE_WORKERD_PATH = workerdPath;
 
-		// Use the preset from the local `@cloudflare/unenv-preset` and `unjs/unenv`
-		// rather than the one bundled with wrangler.
-		const WRANGLER_UNENV_RESOLVE_PATHS = [
-			localPresetResolveBaseDir,
-			localUnenvResolveBaseDir,
-		].join(",");
-
 		wrangler = await runWranglerDev(
 			path.join(__dirname, "worker"),
 			["--port=0", "--inspector-port=0"],
 			{
 				MINIFLARE_WORKERD_PATH,
-				WRANGLER_UNENV_RESOLVE_PATHS,
 			}
 		);
 	});

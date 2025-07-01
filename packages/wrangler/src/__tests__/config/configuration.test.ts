@@ -29,6 +29,12 @@ describe("readConfig()", () => {
 			    ],
 			    "type": "PythonModule",
 			  },
+			  Object {
+			    "globs": Array [
+			      "vendor/**/*.so",
+			    ],
+			    "type": "Data",
+			  },
 			]
 		`);
 	});
@@ -77,6 +83,7 @@ describe("normalizeAndValidateConfig()", () => {
 				port: undefined, // the default of 8787 is set at runtime
 				upstream_protocol: "http",
 				host: undefined,
+				enable_containers: true,
 			},
 			containers: undefined,
 			cloudchamber: {},
@@ -103,6 +110,7 @@ describe("normalizeAndValidateConfig()", () => {
 			},
 			r2_buckets: [],
 			secrets_store_secrets: [],
+			unsafe_hello_world: [],
 			services: [],
 			analytics_engine_datasets: [],
 			route: undefined,
@@ -155,6 +163,7 @@ describe("normalizeAndValidateConfig()", () => {
 					port: 9999,
 					local_protocol: "https",
 					upstream_protocol: "http",
+					enable_containers: false,
 				},
 			};
 
@@ -180,6 +189,7 @@ describe("normalizeAndValidateConfig()", () => {
 					port: "FOO",
 					local_protocol: "wss",
 					upstream_protocol: "ws",
+					enable_containers: true,
 				},
 			};
 
@@ -2302,6 +2312,122 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[containers]", () => {
+			it("should error if containers is not an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ containers: "test" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers\\" field should be an array, but got \\"test\\""
+				`);
+			});
+
+			it("should error if containers is an object that is not an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ containers: { something: "here" } } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers\\" field should be an array, but got {\\"something\\":\\"here\\"}"
+				`);
+			});
+
+			it("should error if containers is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ containers: "test" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers\\" field should be an array, but got \\"test\\""
+				`);
+			});
+
+			it("should error if containers is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ containers: 22 } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers\\" field should be an array, but got 22"
+				`);
+			});
+
+			it("should error if no containers name and no worker name are provided", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								image: "something",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers.class_name\\" is a required field.
+					  - Must have either a top level \\"name\\" and \\"containers.class_name\\" field defined, or have field \\"containers.name\\" defined."
+				`);
+			});
+
+			it("should provide a name if no container name is provided and worker name exists", () => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						containers: [
+							{
+								image: "something",
+								class_name: "test-class",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						configuration: {
+							image: "something",
+						},
+						class_name: "test-class",
+						name: "test-worker-name-test-class",
+					},
+				]);
+				config.containers &&
+					expect(config.containers[0].name).toEqual(
+						"test-worker-name-test-class"
+					);
+			});
+		});
+
 		describe("[kv_namespaces]", () => {
 			it("should error if kv_namespaces is an object", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -2401,7 +2527,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						MIXED_MODE: false,
+						REMOTE_BINDINGS: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2557,7 +2683,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						MIXED_MODE: false,
+						REMOTE_BINDINGS: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2895,7 +3021,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						MIXED_MODE: false,
+						REMOTE_BINDINGS: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -3606,6 +3732,96 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}.
 					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"store_id\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}.
 					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"secret_name\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}."
+				`);
+			});
+		});
+
+		describe("[unsafe_hello_world]", () => {
+			it("should error if unsafe_hello_world is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ unsafe_hello_world: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"unsafe_hello_world\\" should be an array but got {}."
+		`);
+			});
+
+			it("should error if unsafe_hello_world is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ unsafe_hello_world: null },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"unsafe_hello_world\\" should be an array but got null."
+		`);
+			});
+
+			it("should accept valid bindings", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						unsafe_hello_world: [
+							{
+								binding: "VALID",
+								enable_timer: true,
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if hello_world.bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						unsafe_hello_world: [
+							// @ts-expect-error Test if empty object is caught
+							{},
+							{
+								binding: "VALID",
+								// @ts-expect-error Test if enable_timer is not a boolean
+								enable_timer: "yes",
+							},
+							{
+								// @ts-expect-error Test if binding is not a string
+								binding: null,
+								invalid: true,
+								enable_timer: false,
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in unsafe_hello_world[2] field: \\"invalid\\""
+				`);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"unsafe_hello_world[0]\\" bindings must have a string \\"binding\\" field but got {}.
+					  - \\"unsafe_hello_world[1]\\" bindings must have a boolean \\"enable_timer\\" field but got {\\"binding\\":\\"VALID\\",\\"enable_timer\\":\\"yes\\"}.
+					  - \\"unsafe_hello_world[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"enable_timer\\":false}."
 				`);
 			});
 		});
@@ -6271,82 +6487,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
-		});
-	});
-
-	describe("mixed mode", () => {
-		it("should ignore remote configs when specified without MIXED_MODE enabled", () => {
-			const rawConfig: RawConfig = {
-				name: "my-worker",
-				kv_namespaces: [
-					{
-						binding: "KV",
-						id: "xxxx-xxxx-xxxx-xxxx",
-						remote: true,
-					},
-				],
-				r2_buckets: [
-					{
-						binding: "R2",
-						bucket_name: "my-r2",
-						remote: 5 as unknown as boolean,
-					},
-				],
-			};
-			const { diagnostics } = run(
-				{
-					RESOURCES_PROVISION: false,
-					MULTIWORKER: false,
-					MIXED_MODE: false,
-				},
-				() =>
-					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
-						env: undefined,
-					})
-			);
-
-			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-				"Processing wrangler configuration:
-				  - Unexpected fields found in kv_namespaces[0] field: \\"remote\\"
-				  - Unexpected fields found in r2_buckets[0] field: \\"remote\\""
-			`);
-		});
-
-		it("should error on non boolean remote values", () => {
-			const rawConfig: RawConfig = {
-				name: "my-worker",
-				kv_namespaces: [
-					{
-						binding: "KV",
-						id: "xxxx-xxxx-xxxx-xxxx",
-						remote: "hello" as unknown as boolean,
-					},
-				],
-				r2_buckets: [
-					{
-						binding: "R2",
-						bucket_name: "my-r2",
-						remote: 5 as unknown as boolean,
-					},
-				],
-			};
-			const { diagnostics } = run(
-				{
-					RESOURCES_PROVISION: false,
-					MULTIWORKER: false,
-					MIXED_MODE: true,
-				},
-				() =>
-					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
-						env: undefined,
-					})
-			);
-
-			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-				"Processing wrangler configuration:
-				  - \\"kv_namespaces[0]\\" should, optionally, have a boolean \\"remote\\" field but got {\\"binding\\":\\"KV\\",\\"id\\":\\"xxxx-xxxx-xxxx-xxxx\\",\\"remote\\":\\"hello\\"}.
-				  - \\"r2_buckets[0]\\" should, optionally, have a boolean \\"remote\\" field but got {\\"binding\\":\\"R2\\",\\"bucket_name\\":\\"my-r2\\",\\"remote\\":5}."
-			`);
 		});
 	});
 });

@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { CoreBindings, CoreHeaders } from "../../workers";
 import {
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 
@@ -21,7 +21,9 @@ const IMAGES_LOCAL_FETCHER = /* javascript */ `
 
 const ImagesSchema = z.object({
 	binding: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>().optional(),
+	remoteProxyConnectionString: z
+		.custom<RemoteProxyConnectionString>()
+		.optional(),
 });
 
 export const ImagesOptionsSchema = z.object({
@@ -70,9 +72,9 @@ export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 		return [
 			{
 				name: `${IMAGES_PLUGIN_NAME}:${options.images.binding}`,
-				worker: options.images.mixedModeConnectionString
-					? mixedModeClientWorker(
-							options.images.mixedModeConnectionString,
+				worker: options.images.remoteProxyConnectionString
+					? remoteProxyClientWorker(
+							options.images.remoteProxyConnectionString,
 							options.images.binding
 						)
 					: {

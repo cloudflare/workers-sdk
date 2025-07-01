@@ -11,12 +11,21 @@ const StaticRoutingSchema = z.object({
 	asset_worker: z.array(z.string()).optional(),
 });
 
+export type StaticRouting = z.infer<typeof StaticRoutingSchema>;
+
 export const RouterConfigSchema = z.object({
 	invoke_user_worker_ahead_of_assets: z.boolean().optional(),
 	static_routing: StaticRoutingSchema.optional(),
 	has_user_worker: z.boolean().optional(),
 	...InternalConfigSchema.shape,
 });
+
+export const EyeballRouterConfigSchema = z.union([
+	z.object({
+		limitedAssetsOnly: z.boolean().optional(),
+	}),
+	z.null(),
+]);
 
 const MetadataStaticRedirectEntry = z.object({
 	status: z.number(),
@@ -77,6 +86,7 @@ export const AssetConfigSchema = z.object({
 	...InternalConfigSchema.shape,
 });
 
+export type EyeballRouterConfig = z.infer<typeof EyeballRouterConfigSchema>;
 export type RouterConfig = z.infer<typeof RouterConfigSchema>;
 export type AssetConfig = z.infer<typeof AssetConfigSchema>;
 

@@ -231,19 +231,6 @@ export const getBuildPlatformFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `WRANGLER_UNENV_RESOLVE_PATHS` lists the paths used to resolve unenv.
- *
- * Note: multiple comma separated paths can be specified.
- *
- * By default wrangler uses the unenv preset version installed from the package.json.
- *
- * Setting root paths allow to use a different version of the preset.
- */
-export const getUnenvResolvePathsFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_UNENV_RESOLVE_PATHS",
-});
-
-/**
  * `WRANGLER_REGISTRY_PATH` specifies the file based dev registry folder
  */
 export const getRegistryPath = getEnvironmentVariableFactory({
@@ -254,13 +241,25 @@ export const getRegistryPath = getEnvironmentVariableFactory({
 });
 
 /**
- * `WRANGLER_CONTAINERS_DOCKER_PATH` specifies the path to a docker binary.
+ * `WRANGLER_DOCKER_BIN` specifies the path to a docker binary.
  *
  * By default it's `docker`.
  */
 export const getDockerPath = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_CONTAINERS_DOCKER_PATH",
+	variableName: "WRANGLER_DOCKER_BIN",
 	defaultValue() {
 		return "docker";
+	},
+});
+
+/**
+ * `WRANGLER_DOCKER_HOST` specifies the Docker socket to connect to.
+ */
+export const getDockerHost = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_DOCKER_HOST",
+	defaultValue() {
+		return process.platform === "win32"
+			? "//./pipe/docker_engine"
+			: "unix:///var/run/docker.sock";
 	},
 });

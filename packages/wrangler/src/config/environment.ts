@@ -34,6 +34,7 @@ export type Route =
 export type CloudchamberConfig = {
 	image?: string;
 	location?: string;
+	instance_type?: "dev" | "basic" | "standard";
 	vcpu?: number;
 	memory?: string;
 	ipv4?: boolean;
@@ -45,56 +46,96 @@ export type CloudchamberConfig = {
 export type ContainerApp = {
 	// TODO: fill out the entire type
 
-	/** Name of the application*/
-	name: string;
+	/**
+	 * Name of the application
+	 * @optional Defaults to `worker_name-class_name` if not specified.
+	 */
+	name?: string;
 
-	/** Number of application instances */
+	/**
+	 * Number of application instances
+	 * @deprecated
+	 * @hidden
+	 */
 	instances?: number;
 
-	/** Number of maximum application instances. Only applicable to Durable Object container applications */
+	/**
+	 * Number of maximum application instances.
+	 * @optional
+	 */
 	max_instances?: number;
 
 	/**
-	 * The path to a Dockerfile, or an image URI.
-	 * Can be defined both here or by setting the `image` key in the `ContainerApp` configuration
+	 * The path to a Dockerfile, or an image URI for the Cloudflare registry.
 	 */
-	image?: string;
+	image: string;
 
 	/**
-	 * Build context of the application. By default it is the directory of `image`.
+	 * Build context of the application.
+	 * @optional - defaults to the directory of `image`.
 	 */
 	image_build_context?: string;
 
 	/**
-	 * Image variables to be passed along the image
+	 * Image variables to be passed along the image at build time.
+	 * @optional
 	 */
 	image_vars?: Record<string, string>;
 
+	/**
+	 * The class name of the Durable Object the container is connected to.
+	 */
 	class_name: string;
 
-	/** The scheduling policy of the application, default is regional */
-	scheduling_policy?: "regional" | "moon";
+	/**
+	 * The scheduling policy of the application
+	 * @optional
+	 * @default "default"
+	 */
+	scheduling_policy?: "regional" | "moon" | "default";
 
-	/* Configuration of the container */
-	configuration: {
-		image: string;
+	/**
+	 * The instance type to be used for the container. This sets preconfigured options for vcpu and memory
+	 * @optional
+	 */
+	instance_type?: "dev" | "basic" | "standard";
+
+	/**
+	 * @deprecated Use top level `containers` fields instead.
+	 * `configuration.image` should be `image`
+	 * `configuration.disk` should be set via `instance_type`
+	 * @hidden
+	 */
+	configuration?: {
+		image?: string;
 		labels?: { name: string; value: string }[];
 		secrets?: { name: string; type: "env"; secret: string }[];
 		disk?: { size: string };
 	};
 
-	/** Scheduling constraints */
+	/**
+	 * Scheduling constraints
+	 * @hidden
+	 */
 	constraints?: {
 		regions?: string[];
 		cities?: string[];
 		tier?: number;
 	};
 
+	/**
+	 * @deprecated use the `class_name` field instead.
+	 * @hidden
+	 */
 	durable_objects?: {
 		namespace_id: string;
 	};
 
-	/** How a rollout should be done, defining the size of it */
+	/**
+	 * How a rollout should be done, defining the size of it
+	 * @optional
+	 * @default 25
+	 * */
 	rollout_step_percentage?: number;
 
 	/**
@@ -102,13 +143,10 @@ export type ContainerApp = {
 	 *  - full_auto: The container application will be rolled out fully automatically.
 	 *  - none: The container application won't have a roll out or update.
 	 *  - manual: The container application will be rollout fully by manually actioning progress steps.
+	 * @optional
+	 * @default "full_auto"
 	 */
 	rollout_kind?: "full_auto" | "none" | "full_manual";
-
-	/**
-	 * Ports to be exposed by the container application. Only applies to dev, on non-linux machines, and if the Dockerfile doesn't already declare exposed ports.
-	 */
-	dev_exposed_ports?: number[];
 };
 
 /**
@@ -358,9 +396,11 @@ interface EnvironmentInheritable {
 	minify: boolean | undefined;
 
 	/**
-	 * Keep function names after javascript transpilations.
+	 * Set the `name` property to the original name for functions and classes renamed during minification.
 	 *
-	 * @default {true}
+	 * See https://esbuild.github.io/api/#keep-names
+	 *
+	 * @default true
 	 * @inheritable
 	 */
 	keep_names: boolean | undefined;
@@ -466,8 +506,8 @@ export type WorkflowBinding = {
 	class_name: string;
 	/** The script where the Workflow is defined (if it's external to this Worker) */
 	script_name?: string;
-	/** Whether the Workflow should be remote or not (only available under `--x-mixed-mode`) */
-	remote?: boolean;
+	/** Whether the Workflow should be remote or not (only available under `--x-remote-bindings`) */
+	experimental_remote?: boolean;
 };
 
 /**
@@ -544,6 +584,9 @@ export interface EnvironmentNonInheritable {
 	/**
 	 * Container related configuration
 	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
 	 * @default []
 	 * @nonInheritable
 	 */
@@ -571,8 +614,8 @@ export interface EnvironmentNonInheritable {
 		id?: string;
 		/** The ID of the KV namespace used during `wrangler dev` */
 		preview_id?: string;
-		/** Whether the KV namespace should be remote or not (only available under `--x-mixed-mode`) */
-		remote?: boolean;
+		/** Whether the KV namespace should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -618,8 +661,8 @@ export interface EnvironmentNonInheritable {
 			/** The number of seconds to wait before delivering a message */
 			delivery_delay?: number;
 
-			/** Whether the Queue producer should be remote or not (only available under `--x-mixed-mode`) */
-			remote?: boolean;
+			/** Whether the Queue producer should be remote or not (only available under `--x-remote-bindings`) */
+			experimental_remote?: boolean;
 		}[];
 
 		/** Consumer configuration */
@@ -673,8 +716,8 @@ export interface EnvironmentNonInheritable {
 		preview_bucket_name?: string;
 		/** The jurisdiction that the bucket exists in. Default if not present. */
 		jurisdiction?: string;
-		/** Whether the R2 bucket should be remote or not (only available under `--x-mixed-mode`) */
-		remote?: boolean;
+		/** Whether the R2 bucket should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -703,8 +746,8 @@ export interface EnvironmentNonInheritable {
 		migrations_dir?: string;
 		/** Internal use only. */
 		database_internal_env?: string;
-		/** Whether the D1 database should be remote or not (only available under `--x-mixed-mode`) */
-		remote?: boolean;
+		/** Whether the D1 database should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -723,8 +766,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The name of the index. */
 		index_name: string;
-		/** Whether the Vectorize index should be remote or not (only available under `--x-mixed-mode`) */
-		remote?: boolean;
+		/** Whether the Vectorize index should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -770,8 +813,8 @@ export interface EnvironmentNonInheritable {
 				entrypoint?: string;
 				/** Optional properties that will be made available to the service via ctx.props. */
 				props?: Record<string, unknown>;
-				/** Whether the service binding should be remote or not (only available under `--x-mixed-mode`) */
-				remote?: boolean;
+				/** Whether the service binding should be remote or not (only available under `--x-remote-bindings`) */
+				experimental_remote?: boolean;
 		  }[]
 		| undefined;
 
@@ -807,8 +850,8 @@ export interface EnvironmentNonInheritable {
 	browser:
 		| {
 				binding: string;
-				/** Whether the Browser binding should be remote or not (only available under `--x-mixed-mode`) */
-				remote?: boolean;
+				/** Whether the Browser binding should be remote or not (only available under `--x-remote-bindings`) */
+				experimental_remote?: boolean;
 		  }
 		| undefined;
 
@@ -827,8 +870,8 @@ export interface EnvironmentNonInheritable {
 		| {
 				binding: string;
 				staging?: boolean;
-				/** Whether the AI binding should be remote or not (only available under `--x-mixed-mode`) */
-				remote?: boolean;
+				/** Whether the AI binding should be remote or not (only available under `--x-remote-bindings`) */
+				experimental_remote?: boolean;
 		  }
 		| undefined;
 
@@ -846,8 +889,8 @@ export interface EnvironmentNonInheritable {
 	images:
 		| {
 				binding: string;
-				/** Whether the Images binding should be remote or not (only available under `--x-mixed-mode`) */
-				remote?: boolean;
+				/** Whether the Images binding should be remote or not (only available under `--x-remote-bindings`) */
+				experimental_remote?: boolean;
 		  }
 		| undefined;
 
@@ -921,6 +964,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The uuid of the uploaded mTLS certificate */
 		certificate_id: string;
+		/** Whether the mtls fetcher should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -952,8 +997,8 @@ export interface EnvironmentNonInheritable {
 		namespace: string;
 		/** Details about the outbound Worker which will handle outbound requests from your namespace */
 		outbound?: DispatchNamespaceOutbound;
-		/** Whether the Dispatch Namespace should be remote or not (only available under `--x-mixed-mode`) */
-		remote?: boolean;
+		/** Whether the Dispatch Namespace should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -991,6 +1036,23 @@ export interface EnvironmentNonInheritable {
 
 		/** Name of the secret */
 		secret_name: string;
+	}[];
+
+	/**
+	 * **DO NOT USE**. Hello World Binding Config to serve as an explanatory example.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	unsafe_hello_world: {
+		/** The binding name used to refer to the bound service. */
+		binding: string;
+
+		/** Whether the timer is enabled */
+		enable_timer?: boolean;
 	}[];
 }
 
@@ -1058,10 +1120,11 @@ export type Assets = {
 	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
 	/**
-	 * If true, route every request to the User Worker, whether or not it matches an asset.
-	 * If false, then respond to requests that match an asset with that asset directly.
-	 * */
-	run_worker_first?: boolean;
+	 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
+	 *
+	 * Can also be `true`, indicating that every request should be routed to the User Worker.
+	 */
+	run_worker_first?: string[] | boolean;
 };
 
 export interface Observability {
@@ -1077,3 +1140,14 @@ export interface Observability {
 		invocation_logs?: boolean;
 	};
 }
+
+export type DockerConfiguration = {
+	/** Socket used by miniflare to communicate with Docker */
+	socketPath: string;
+};
+
+export type ContainerEngine =
+	| {
+			localDocker: DockerConfiguration;
+	  }
+	| string;

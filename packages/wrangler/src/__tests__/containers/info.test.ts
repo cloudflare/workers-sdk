@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+import * as user from "../../user";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -45,6 +46,19 @@ describe("containers info", () => {
 		`);
 	});
 
+	it("should show the correct authentication error", async () => {
+		const spy = vi.spyOn(user, "getScopes");
+		spy.mockReset();
+		spy.mockImplementationOnce(() => []);
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler("containers info asdf")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: You need 'containers:write', try logging in again or creating an appropiate API token]`
+		);
+	});
+
 	it("should show a single container when given an ID (json)", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
@@ -53,7 +67,9 @@ describe("containers info", () => {
 				"*/applications/asdf",
 				async ({ request }) => {
 					expect(await request.text()).toEqual("");
-					return HttpResponse.json(MOCK_APPLICATION_SINGLE);
+					return HttpResponse.json(
+						`{"success": true, "result": ${MOCK_APPLICATION_SINGLE}}`
+					);
 				},
 				{ once: true }
 			)
