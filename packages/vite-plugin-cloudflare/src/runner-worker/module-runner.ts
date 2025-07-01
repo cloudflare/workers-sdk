@@ -187,9 +187,7 @@ export async function getWorkerEntryExport(entrypoint: string) {
 		throw new Error("Module runner not initialized");
 	}
 
-	const entryModule = await storage.run(new Map(), () =>
-		moduleRunner.import(entryPath)
-	);
+	const entryModule = await moduleRunner.import(entryPath);
 	const entrypointValue =
 		typeof entryModule === "object" &&
 		entryModule !== null &&

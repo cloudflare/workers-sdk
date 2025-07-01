@@ -5,7 +5,7 @@ import {
 } from "cloudflare:workers";
 import { INIT_PATH } from "../shared";
 import { stripInternalEnv } from "./env";
-import { getWorkerEntryExport } from "./module-runner";
+import { getWorkerEntryExport, storage } from "./module-runner";
 import type { WrapperEnv } from "./env";
 
 export { RunnerObject } from "./module-runner";
@@ -138,7 +138,6 @@ export function createWorkerEntrypointWrapper(
 
 			return new Proxy(this, {
 				get(target, key, receiver) {
-					// return storage.run("hello", () => {
 					const value = Reflect.get(target, key, receiver);
 
 					if (value !== undefined) {
@@ -160,7 +159,6 @@ export function createWorkerEntrypointWrapper(
 					);
 
 					return getRpcPropertyCallableThenable(key, property);
-					// });
 				},
 			});
 		}
@@ -197,45 +195,47 @@ export function createWorkerEntrypointWrapper(
 				}
 			}
 
-			const entrypointValue = await getWorkerEntryExport(entrypoint);
-			const userEnv = stripInternalEnv(this.env);
+			return storage.run(new Map(), async () => {
+				const entrypointValue = await getWorkerEntryExport(entrypoint);
+				const userEnv = stripInternalEnv(this.env);
 
-			if (typeof entrypointValue === "object" && entrypointValue !== null) {
-				// ExportedHandler
-				const maybeFn = (entrypointValue as Record<string, unknown>)[key];
+				if (typeof entrypointValue === "object" && entrypointValue !== null) {
+					// ExportedHandler
+					const maybeFn = (entrypointValue as Record<string, unknown>)[key];
 
-				if (typeof maybeFn !== "function") {
-					throw new TypeError(
-						`Expected ${entrypoint} export of ${entryPath} to define a \`${key}()\` function.`
+					if (typeof maybeFn !== "function") {
+						throw new TypeError(
+							`Expected ${entrypoint} export of ${entryPath} to define a \`${key}()\` function.`
+						);
+					}
+
+					return maybeFn.call(entrypointValue, arg, userEnv, this.ctx);
+				} else if (typeof entrypointValue === "function") {
+					// WorkerEntrypoint
+					const ctor = entrypointValue as WorkerEntrypointConstructor;
+					const instance = new ctor(this.ctx, userEnv);
+
+					if (!(instance instanceof WorkerEntrypoint)) {
+						throw new TypeError(
+							`Expected ${entrypoint} export of ${entryPath} to be a subclass of \`WorkerEntrypoint\`.`
+						);
+					}
+
+					const maybeFn = instance[key];
+
+					if (typeof maybeFn !== "function") {
+						throw new TypeError(
+							`Expected ${entrypoint} export of ${entryPath} to define a \`${key}()\` method.`
+						);
+					}
+
+					return (maybeFn as (arg: unknown) => unknown).call(instance, arg);
+				} else {
+					return new TypeError(
+						`Expected ${entrypoint} export of ${entryPath} to be an object or a class. Got ${entrypointValue}.`
 					);
 				}
-
-				return maybeFn.call(entrypointValue, arg, userEnv, this.ctx);
-			} else if (typeof entrypointValue === "function") {
-				// WorkerEntrypoint
-				const ctor = entrypointValue as WorkerEntrypointConstructor;
-				const instance = new ctor(this.ctx, userEnv);
-
-				if (!(instance instanceof WorkerEntrypoint)) {
-					throw new TypeError(
-						`Expected ${entrypoint} export of ${entryPath} to be a subclass of \`WorkerEntrypoint\`.`
-					);
-				}
-
-				const maybeFn = instance[key];
-
-				if (typeof maybeFn !== "function") {
-					throw new TypeError(
-						`Expected ${entrypoint} export of ${entryPath} to define a \`${key}()\` method.`
-					);
-				}
-
-				return (maybeFn as (arg: unknown) => unknown).call(instance, arg);
-			} else {
-				return new TypeError(
-					`Expected ${entrypoint} export of ${entryPath} to be an object or a class. Got ${entrypointValue}.`
-				);
-			}
+			});
 		};
 	}
 
