@@ -121,6 +121,11 @@ function getRuntimeArgs(options: RuntimeOptions) {
 	return args;
 }
 
+/**
+ * Copied from https://github.com/microsoft/vscode-js-debug/blob/0b5e0dade997b3c702a98e1f58989afcb30612d6/src/targets/node/bootloader/environment.ts#L129
+ *
+ * This function returns the segment of process.env.VSCODE_INSPECTOR_OPTIONS that corresponds to the current process (rather than a parent process)
+ */
 function getInspectorOptions() {
 	const value = process.env.VSCODE_INSPECTOR_OPTIONS;
 	if (!value) {
@@ -197,6 +202,8 @@ export class Runtime {
 			const info = getInspectorOptions();
 
 			for (const worker of workers ?? []) {
+				// This is copied from https://github.com/microsoft/vscode-js-debug/blob/0b5e0dade997b3c702a98e1f58989afcb30612d6/src/targets/node/bootloader.ts#L284
+				// It spawns a detached "watchdog" process for each corresponding (user) Worker in workerd which will maintain the VSCode debug connection
 				const p = spawn(process.execPath, [watchdogPath], {
 					env: {
 						NODE_INSPECTOR_INFO: JSON.stringify({
