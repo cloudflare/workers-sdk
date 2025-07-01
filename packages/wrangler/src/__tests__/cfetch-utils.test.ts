@@ -75,6 +75,9 @@ describe("throwFetchError", () => {
 						["message one", "message two"]
 					)
 				);
+			}),
+			http.get("*/user/tokens/verify", () => {
+				return HttpResponse.json(createFetchResult([]));
 			})
 		);
 		await expect(runWrangler("whoami")).rejects.toMatchObject({
@@ -135,6 +138,9 @@ describe("throwFetchError", () => {
 						["message one", "message two"]
 					)
 				);
+			}),
+			http.get("*/user/tokens/verify", () => {
+				return HttpResponse.json(createFetchResult([]));
 			})
 		);
 		await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
@@ -182,6 +188,9 @@ describe("throwFetchError", () => {
 						{ code: 10001, message: "error 1" },
 					],
 				});
+			}),
+			http.get("*/user/tokens/verify", () => {
+				return HttpResponse.json(createFetchResult([]));
 			})
 		);
 		await expect(runWrangler("whoami")).rejects.toMatchObject({
