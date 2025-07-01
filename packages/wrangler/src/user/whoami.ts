@@ -141,11 +141,11 @@ export async function getUserInfo(): Promise<UserInfo | undefined> {
  * What method is the current Wrangler session authenticated through?
  */
 async function getAuthType(credentials: ApiCredentials): Promise<AuthType> {
-	const usingEnvAuth = !!getAuthFromEnv();
-
 	if ("authKey" in credentials) {
 		return "Global API Key";
 	}
+
+	const usingEnvAuth = !!getAuthFromEnv();
 	if (!usingEnvAuth) {
 		return "OAuth Token";
 	}
