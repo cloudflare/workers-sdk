@@ -337,8 +337,11 @@ describe("listTmpE2EWorkers()", () => {
 
 		expect(result.map((p) => p.id)).toMatchInlineSnapshot(`
 			[
+			  "wprker-2",
 			  "tmp-e2e-worker-2",
+			  "wprker-4",
 			  "tmp-e2e-worker-4",
+			  "wprker-6",
 			]
 		`);
 	});

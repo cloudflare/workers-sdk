@@ -20,6 +20,11 @@ on:
   pull_request:
     types: [synchronize, opened, reopened, labeled, unlabeled]
 
+permissions:
+  contents: read
+  # pull-request:write permission needed so that the workflow can comment on PRs
+  pull-requests: write
+
 jobs:
   deploy-pages-projects:
     # Only run this on PRs that are for the "cloudflare" org and not "from" `main`

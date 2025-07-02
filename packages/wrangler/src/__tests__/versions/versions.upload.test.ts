@@ -403,4 +403,21 @@ describe("generatePreviewAlias", () => {
 		const result = generatePreviewAlias("testscript");
 		expect(result).toBe("head-feature-work");
 	});
+
+	it("Generates from workers ci branch", () => {
+		vi.stubEnv("WORKERS_CI_BRANCH", "some/debug-branch");
+
+		const result = generatePreviewAlias("testscript");
+		expect(result).toBe("some-debug-branch");
+	});
+
+	it("Does not produce an alias from long workers ci branch name", () => {
+		vi.stubEnv(
+			"WORKERS_CI_BRANCH",
+			"some/really-really-really-really-really-long-branch-name"
+		);
+
+		const result = generatePreviewAlias("testscript");
+		expect(result).toBeUndefined();
+	});
 });

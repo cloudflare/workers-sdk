@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { execFile, spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -468,7 +468,10 @@ describe("deploy", () => {
 						})
 					);
 				}
-			)
+			),
+			http.get("*/user/tokens/verify", () => {
+				return HttpResponse.json(createFetchResult([]));
+			})
 		);
 
 		await expect(
@@ -487,8 +490,8 @@ describe("deploy", () => {
 			Please ensure it has the correct permissions for this operation.
 
 			Getting User settings...
-			👋 You are logged in with an API Token, associated with the email user@example.com.
-			ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
+			👋 You are logged in with an User API Token, associated with the email user@example.com.
+			ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN environment variable.
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤
@@ -8667,7 +8670,62 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support durable object bindings to SQLite classes with containers (docker flow)", async () => {
+			it("should fail early if no docker is detected when deploying a container from a dockerfile", async () => {
+				vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/bad-docker-path");
+
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+				fs.writeFileSync("./Dockerfile", "blah");
+
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+							image: "./Dockerfile",
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await expect(runWrangler("deploy index.js")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.
+					Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with WRANGLER_DOCKER_HOST.]
+				`);
+			});
+
+			it("should support durable object bindings to SQLite classes with containers (dockerfile flow)", async () => {
 				vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 				function mockGetVersion(versionId: string) {
 					msw.use(
@@ -8711,30 +8769,14 @@ addEventListener('fetch', event => {});`
 						},
 					} as unknown as ChildProcess;
 				}
-				vi.mocked(execFile)
-					// docker images first call
-					.mockImplementationOnce((cmd, args, callback) => {
-						expect(cmd).toBe("/usr/bin/docker");
-						expect(args).toEqual([
-							"images",
-							"--digests",
-							"--format",
-							"{{.Digest}}",
-							getCloudflareContainerRegistry() +
-								"/test_account_id/my-container:Galaxy",
-						]);
-						if (callback) {
-							const back = callback as (
-								error: Error | null,
-								stdout: string,
-								stderr: string
-							) => void;
-							back(null, "three\n", "");
-						}
-						return {} as ChildProcess;
-					});
 
 				vi.mocked(spawn)
+					// 0. docker info
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args).toEqual(["info"]);
+						return defaultChildProcess();
+					})
 					// 1. docker build
 					.mockImplementationOnce((cmd, args) => {
 						expect(cmd).toBe("/usr/bin/docker");
@@ -8783,7 +8825,7 @@ addEventListener('fetch', event => {});`
 							"inspect",
 							`${getCloudflareContainerRegistry()}/test_account_id/my-container:Galaxy`,
 							"--format",
-							"{{ .Size }} {{ len .RootFS.Layers }}",
+							"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 						]);
 
 						const stdout = new PassThrough();
@@ -8803,7 +8845,10 @@ addEventListener('fetch', event => {});`
 
 						// Simulate docker output
 						setImmediate(() => {
-							stdout.emit("data", "123456 4\n");
+							stdout.emit(
+								"data",
+								`123456 4 ["${getCloudflareContainerRegistry()}/test_account_id/my-container@sha256:three"]`
+							);
 						});
 
 						return child as unknown as ChildProcess;
@@ -9057,8 +9102,9 @@ addEventListener('fetch', event => {});`
 				expect(output).toContain("export {\n  ExampleDurableObject,");
 			});
 
-			it("should support durable object bindings to SQLite classes with containers", async () => {
+			it("should support durable object bindings to SQLite classes with containers (image uri flow)", async () => {
 				// note no docker commands have been mocked here!
+
 				function mockGetVersion(versionId: string) {
 					msw.use(
 						http.get(
@@ -9172,6 +9218,56 @@ addEventListener('fetch', event => {});`
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should error when no scope for containers", async () => {
+				mockContainersAccount([]);
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							image: "docker.io/hello:world",
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await expect(
+					runWrangler("deploy index.js")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: You need 'containers:write', try logging in again or creating an appropiate API token]`
+				);
 			});
 
 			it("should support durable objects and D1", async () => {

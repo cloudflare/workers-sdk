@@ -1,5 +1,7 @@
 import { resolve } from "node:path";
 import { cloudflare } from "@cloudflare/vite-plugin";
+// @ts-ignore
+import testDepPlugin from "@playground/module-resolution-excludes/plugin";
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -8,5 +10,15 @@ export default defineConfig({
 			"@alias/test": resolve(__dirname, "./src/aliasing.ts"),
 		},
 	},
-	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
+	environments: {
+		worker: {
+			optimizeDeps: {
+				exclude: ["@playground/module-resolution-excludes"],
+			},
+		},
+	},
+	plugins: [
+		cloudflare({ inspectorPort: false, persistState: false }),
+		testDepPlugin(),
+	],
 });

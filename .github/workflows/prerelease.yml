@@ -10,6 +10,9 @@ on:
       - next
       - v3-maintenance
 
+permissions:
+  contents: read
+
 jobs:
   build:
     if: ${{ github.repository_owner == 'cloudflare' }}

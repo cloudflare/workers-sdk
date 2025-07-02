@@ -1,5 +1,13 @@
 # @cloudflare/vite-plugin
 
+## 1.8.0
+
+### Minor Changes
+
+- [#9773](https://github.com/cloudflare/workers-sdk/pull/9773) [`45e97e8`](https://github.com/cloudflare/workers-sdk/commit/45e97e876ae7a9d0ef50e8e51c07cfcb234b4ab6) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Vite 7 is now supported and included as a peer dependency. We continue to also support Vite 6.
+
+- [#9753](https://github.com/cloudflare/workers-sdk/pull/9753) [`67130b3`](https://github.com/cloudflare/workers-sdk/commit/67130b3c5eebb8634641879ff4a2ff9f57581834) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Allow `optimizeDeps.exclude` to be specified for Worker environments. This enables other plugins to exclude dependencies from optimization that require access to virtual modules. Note that excluded dependencies must be ESM.
+
 ## 1.7.5
 
 ### Patch Changes

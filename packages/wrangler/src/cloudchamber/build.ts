@@ -6,7 +6,6 @@ import {
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
 	getCloudflareRegistryWithAccountNamespace,
-	getDockerImageDigest,
 	isDir,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
@@ -79,7 +78,7 @@ export async function buildAndMaybePush(
 	pathToDocker: string,
 	push: boolean,
 	containerConfig?: ContainerApp
-): Promise<string> {
+): Promise<{ image: string; pushed: boolean }> {
 	try {
 		// account is also used to check limits below, so it is better to just pull the entire
 		// account information here
@@ -110,10 +109,11 @@ export async function buildAndMaybePush(
 		// account's disk size limits
 		const inspectOutput = await dockerImageInspect(pathToDocker, {
 			imageTag,
-			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+			formatString:
+				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 		});
 
-		const [sizeStr, layerStr] = inspectOutput.split(" ");
+		const [sizeStr, layerStr, repoDigests] = inspectOutput.split(" ");
 		const size = parseInt(sizeStr, 10);
 		const layers = parseInt(layerStr, 10);
 
@@ -126,18 +126,46 @@ export async function buildAndMaybePush(
 			account: account,
 			containerApp: containerConfig,
 		});
-
+		let pushed = false;
 		if (push) {
 			await dockerLoginManagedRegistry(pathToDocker);
 			try {
+				// We don't try to parse repoDigests until this point
+				// because we don't want to fail on parse errors if we
+				// won't be pushing the image anyways.
+				//
+				// 	A Docker image digest is a unique, cryptographic identifier (SHA-256 hash)
+				//	representing the content of a Docker image. Unlike tags, which can be reused
+				//	or changed, a digest is immutable and ensures that the exact same image is
+				//	pulled every time. This guarantees consistency across different environments
+				//	and deployments.
+				// 	From: https://docs.docker.com/dhi/core-concepts/digests/
+				const parsedDigests = JSON.parse(repoDigests);
+
+				if (!Array.isArray(parsedDigests)) {
+					// If it's not the format we expect, fall back to pushing
+					// since it's annoying but safe.
+					throw new Error(
+						`Expected RepoDigests from docker inspect to be an array but got ${JSON.stringify(parsedDigests)}`
+					);
+				}
+
 				const repositoryOnly = imageTag.split(":")[0];
 				// if this succeeds it means this image already exists remotely
 				// if it fails it means it doesn't exist remotely and should be pushed.
-				const localDigest = await getDockerImageDigest(pathToDocker, imageTag);
-				const digest = repositoryOnly + "@" + localDigest;
+				const digests = parsedDigests.filter(
+					(d): d is string =>
+						typeof d === "string" && d.split("@")[0] === repositoryOnly
+				);
+				if (digests.length !== 1) {
+					throw new Error(
+						`Expected there to only be 1 valid digests for this repository: ${repositoryOnly} but there were ${digests.length}`
+					);
+				}
+
 				await runDockerCmd(
 					pathToDocker,
-					["manifest", "inspect", digest],
+					["manifest", "inspect", digests[0]],
 					"ignore"
 				);
 
@@ -146,14 +174,20 @@ export async function buildAndMaybePush(
 					`Untagging built image: ${imageTag} since there was no change.`
 				);
 				await runDockerCmd(pathToDocker, ["image", "rm", imageTag]);
-				return "";
+				return { image: digests[0], pushed: false };
 			} catch (error) {
 				logger.log(`Image does not exist remotely, pushing: ${imageTag}`);
+				if (error instanceof Error) {
+					logger.debug(
+						`Checking for local image ${imageTag} failed with error: ${error.message}`
+					);
+				}
 
 				await runDockerCmd(pathToDocker, ["push", imageTag]);
+				pushed = true;
 			}
 		}
-		return imageTag;
+		return { image: imageTag, pushed: pushed };
 	} catch (error) {
 		if (error instanceof Error) {
 			throw new UserError(error.message);

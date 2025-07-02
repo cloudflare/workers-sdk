@@ -398,8 +398,7 @@ export async function getDevMiniflareOptions(
 
 							const { externalWorkers } = miniflareWorkerOptions;
 
-							const { ratelimits, ...workerOptions } =
-								miniflareWorkerOptions.workerOptions;
+							const workerOptions = miniflareWorkerOptions.workerOptions;
 
 							return {
 								externalWorkers,
@@ -700,7 +699,7 @@ export async function getPreviewMiniflareOptions(
 
 				const { externalWorkers } = miniflareWorkerOptions;
 
-				const { ratelimits, modulesRules, ...workerOptions } =
+				const { modulesRules, ...workerOptions } =
 					miniflareWorkerOptions.workerOptions;
 
 				logUnknownTails(
