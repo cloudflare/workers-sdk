@@ -5,6 +5,7 @@ import { getCloudflareComplianceRegion } from "../environment-variables/misc-var
 import { logger } from "../logger";
 import { fetchMembershipRoles } from "./membership";
 import { getAPIToken, getAuthFromEnv, getScopes } from ".";
+import type { ApiCredentials } from ".";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
 export async function whoami(
@@ -18,9 +19,12 @@ export async function whoami(
 		return;
 	}
 	printUserEmail(user);
-	if (user.authType === "API Token") {
+	if (
+		user.authType === "User API Token" ||
+		user.authType === "Account API Token"
+	) {
 		logger.log(
-			"ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment."
+			"ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN environment variable."
 		);
 	}
 	printComplianceRegion(complianceConfig);
@@ -42,6 +46,13 @@ function printComplianceRegion(complianceConfig: ComplianceConfig) {
 }
 
 function printUserEmail(user: UserInfo) {
+	if (user.authType === "Account API Token") {
+		// Account API Tokens only have access to a single account
+		const accountName = user.accounts[0].name;
+		return void logger.log(
+			`👋 You are logged in with an ${user.authType}, associated with the account ${chalk.blue(accountName)}.`
+		);
+	}
 	if (!user.email) {
 		return void logger.log(
 			`👋 You are logged in with an ${user.authType}. Unable to retrieve email for this user. Are you missing the \`User->User Details->Read\` permission?`
@@ -66,7 +77,7 @@ function printTokenPermissions(user: UserInfo) {
 		user.tokenPermissions?.map((scope) => scope.split(":")) ?? [];
 	if (user.authType !== "OAuth Token") {
 		return void logger.log(
-			`🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens.`
+			`🔓 To see token permissions visit https://dash.cloudflare.com/${user.authType === "User API Token" ? "profile" : user.accounts[0].id}/api-tokens.`
 		);
 	}
 	logger.log(
@@ -119,7 +130,11 @@ async function printMembershipInfo(
 	}
 }
 
-type AuthType = "Global API Key" | "API Token" | "OAuth Token";
+type AuthType =
+	| "Global API Key"
+	| "User API Token"
+	| "Account API Token"
+	| "OAuth Token";
 export interface UserInfo {
 	apiToken: string;
 	authType: AuthType;
@@ -135,18 +150,13 @@ export async function getUserInfo(
 	if (!apiToken) {
 		return;
 	}
+	const authType = await getAuthType(complianceConfig, apiToken);
 
 	const tokenPermissions = await getTokenPermissions();
 
-	const usingEnvAuth = !!getAuthFromEnv();
-	const usingGlobalAuthKey = "authKey" in apiToken;
 	return {
-		apiToken: usingGlobalAuthKey ? apiToken.authKey : apiToken.apiToken,
-		authType: usingGlobalAuthKey
-			? "Global API Key"
-			: usingEnvAuth
-				? "API Token"
-				: "OAuth Token",
+		apiToken: "authKey" in apiToken ? apiToken.authKey : apiToken.apiToken,
+		authType,
 		email:
 			"authEmail" in apiToken
 				? apiToken.authEmail
@@ -154,6 +164,52 @@ export async function getUserInfo(
 		accounts: await getAccounts(complianceConfig),
 		tokenPermissions,
 	};
+}
+
+/**
+ * What method is the current Wrangler session authenticated through?
+ */
+async function getAuthType(
+	complianceConfig: ComplianceConfig,
+	credentials: ApiCredentials
+): Promise<AuthType> {
+	if ("authKey" in credentials) {
+		return "Global API Key";
+	}
+
+	const usingEnvAuth = !!getAuthFromEnv();
+	if (!usingEnvAuth) {
+		return "OAuth Token";
+	}
+
+	const tokenType = await getTokenType(complianceConfig);
+	if (tokenType === "account") {
+		return "Account API Token";
+	} else {
+		return "User API Token";
+	}
+}
+
+/**
+ * Is the current API token account scoped or user scoped?
+ */
+async function getTokenType(
+	complianceConfig: ComplianceConfig
+): Promise<"user" | "account"> {
+	try {
+		// Try verifying the current token as a user scoped API token
+		await fetchResult<{ id: string }>(complianceConfig, "/user/tokens/verify");
+
+		// If the call succeeds, the token is user scoped
+		return "user";
+	} catch (e) {
+		// This is an "Invalid API Token" error, which indicates that the current token is _not_ user scoped
+		if ((e as { code?: number }).code === 1000) {
+			return "account";
+		}
+		// Some other API error? This isn't expected in normal usage
+		throw e;
+	}
 }
 
 async function getEmail(

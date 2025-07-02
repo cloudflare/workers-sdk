@@ -3,6 +3,9 @@ on:
   merge_group:
   pull_request:
 
+permissions:
+  contents: read
+
 env:
   # TODO: switch back to 20.x onces node@20.x includes a fix for https://github.com/nodejs/node/issues/57869
   NODE_VERSION: 22

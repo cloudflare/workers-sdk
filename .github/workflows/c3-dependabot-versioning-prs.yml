@@ -4,6 +4,11 @@ on:
     paths:
       - "packages/create-cloudflare/src/frameworks/package.json"
 
+permissions:
+  # content:write permission needed to update add changesets to dependabot PRs
+  # (see tools/dependabot/generate-dependabot-pr-changesets.ts)
+  contents: write
+
 jobs:
   generate-changeset:
     runs-on: ubuntu-22.04

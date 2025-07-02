@@ -3,6 +3,9 @@ name: Deploy Workers Shared Production
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   deploy-workers:
     name: Deploy Workers Shared Production

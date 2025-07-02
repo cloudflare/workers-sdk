@@ -1,8 +1,14 @@
 name: "Miniflare - Generate changesets for dependabot PRs"
+
 on:
   pull_request_target:
     paths:
       - "packages/miniflare/package.json"
+
+permissions:
+  # content:write permission needed to update add changesets to dependabot PRs
+  # (see tools/dependabot/generate-dependabot-pr-changesets.ts)
+  contents: write
 
 jobs:
   generate-changeset:
