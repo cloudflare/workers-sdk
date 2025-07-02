@@ -43,7 +43,7 @@ describe("Local Browser", () => {
 		).resolves.toEqual("Please add an ?url=https://example.com/ parameter");
 	});
 
-	it("Run a browser, and chec h1 text content", async () => {
+	it("Run a browser, and check h1 text content", async () => {
 		await expect(
 			fetchText(`http://${ip}:${port}/?url=https://example.com&action=select`)
 		).resolves.toEqual("Example Domain");
