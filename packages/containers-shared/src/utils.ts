@@ -8,27 +8,48 @@ export const runDockerCmd = async (
 	dockerPath: string,
 	args: string[],
 	stdio?: StdioOptions
-) => {
+): Promise<{ abort: () => void; ready: Promise<{ aborted: boolean }> }> => {
+	let aborted = false;
+	let resolve: (args: { aborted: boolean }) => void;
+	let reject: (err: unknown) => void;
+	const ready = new Promise<{ aborted: boolean }>((res, rej) => {
+		resolve = res;
+		reject = rej;
+	});
 	const child = spawn(dockerPath, args, {
 		stdio: stdio ?? "inherit",
+		// We need to set detached to true so that the child process
+		// will control all of its child processed and we can kill
+		// all of them in case we need to abort the build process
+		detached: true,
 	});
 	let errorHandled = false;
-	await new Promise<void>((resolve, reject) => {
-		child.on("close", (code) => {
-			if (code === 0) {
-				resolve();
-			} else if (!errorHandled) {
-				errorHandled = true;
-				reject(new Error(`Docker command exited with code: ${code}`));
-			}
-		});
-		child.on("error", (err) => {
-			if (!errorHandled) {
-				errorHandled = true;
-				reject(new Error(`Docker command failed: ${err.message}`));
-			}
-		});
+
+	child.on("close", (code) => {
+		if (code === 0 || aborted) {
+			resolve({ aborted });
+		} else if (!errorHandled) {
+			errorHandled = true;
+			reject(new Error(`Docker command exited with code: ${code}`));
+		}
 	});
+	child.on("error", (err) => {
+		if (!errorHandled) {
+			errorHandled = true;
+			reject(new Error(`Docker command failed: ${err.message}`));
+		}
+	});
+	return {
+		abort: () => {
+			aborted = true;
+			child.unref();
+			if (child.pid !== undefined) {
+				// kill run on the negative PID kills the whole group controlled by the child process
+				process.kill(-child.pid);
+			}
+		},
+		ready,
+	};
 };
 
 export const runDockerCmdWithOutput = async (
