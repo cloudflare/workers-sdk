@@ -49,7 +49,7 @@ describe("Local Browser", () => {
 		).resolves.toEqual("Example Domain");
 	});
 
-	it("Run a browser, and chec p text content", async () => {
+	it("Run a browser, and check p text content", async () => {
 		await expect(
 			fetchText(`http://${ip}:${port}/?url=https://example.com&action=alter`)
 		).resolves.toEqual("New paragraph text set by Puppeteer!");
