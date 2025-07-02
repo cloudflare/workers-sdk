@@ -9335,6 +9335,7 @@ addEventListener('fetch', event => {});`
 						class_name: "ExampleDurableObject",
 						image: "./Dockerfile",
 					}),
+					"dry-run-account-id", // accountId
 					true // dryRun = true
 				);
 			});

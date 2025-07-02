@@ -16,6 +16,7 @@ export async function maybeBuildContainer(
 	containerConfig: ContainerApp,
 	/** just the tag component. will be prefixed with the container name */
 	imageTag: string,
+	accountId: string,
 	dryRun: boolean,
 	pathToDocker: string
 ): Promise<{ image: string; pushed: boolean }> {
@@ -45,6 +46,7 @@ export async function maybeBuildContainer(
 		pathToDocker,
 		!dryRun,
 		containerConfig,
+		accountId,
 		dryRun
 	);
 	return buildResult;
@@ -117,6 +119,7 @@ export async function deployContainers(
 		const buildResult = await maybeBuildContainer(
 			container,
 			versionId,
+			accountId,
 			dryRun,
 			pathToDocker
 		);

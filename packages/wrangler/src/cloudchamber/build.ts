@@ -15,6 +15,7 @@ import {
 } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { getAccountId } from "../user";
 import { resolveAppDiskSize } from "./common";
 import { loadAccount } from "./locations";
 import type { Config } from "../config";
@@ -78,20 +79,11 @@ export async function buildAndMaybePush(
 	pathToDocker: string,
 	push: boolean,
 	containerConfig?: ContainerApp,
+	accountId?: string,
 	dryRun = false
 ): Promise<{ image: string; pushed: boolean }> {
 	try {
-		let account: CompleteAccountCustomer | undefined;
-		let cloudflareAccountID: string;
-
-		if (!dryRun) {
-			// account is also used to check limits below, so it is better to just pull the entire
-			// account information here
-			account = await loadAccount();
-			cloudflareAccountID = account.external_account_id;
-		} else {
-			cloudflareAccountID = "dry-run-account-id";
-		}
+		const cloudflareAccountID = accountId || "dry-run-account-id";
 
 		const imageTag = getCloudflareRegistryWithAccountNamespace(
 			cloudflareAccountID,
@@ -114,9 +106,8 @@ export async function buildAndMaybePush(
 			dockerfile,
 		});
 
-		if (!dryRun && account) {
-			// ensure the account is not allowed to build anything that exceeds the current
-			// account's disk size limits
+		if (!dryRun) {
+			const account = await loadAccount();
 			const inspectOutput = await dockerImageInspect(pathToDocker, {
 				imageTag,
 				formatString:
@@ -130,7 +121,6 @@ export async function buildAndMaybePush(
 			// 16MiB is the layer size adjustments we use in devmapper
 			const MiB = 1024 * 1024;
 			const requiredSize = Math.ceil(size * 1.1 + layers * 16 * MiB);
-			// TODO: do more config merging and earlier
 			await ensureDiskLimits({
 				requiredSize,
 				account: account,
@@ -224,6 +214,7 @@ export async function buildCommand(
 			`${args.PATH} is not a directory. Please specify a valid directory path.`
 		);
 	}
+	const accountId = config.account_id || (await getAccountId(config));
 	// if containers are not defined, the build should still work.
 	const containers = config.containers ?? [undefined];
 	const pathToDockerfile = join(args.PATH, "Dockerfile");
@@ -239,6 +230,7 @@ export async function buildCommand(
 			getDockerPath() ?? args.pathToDocker,
 			args.push,
 			container,
+			accountId,
 			false
 		);
 	}
