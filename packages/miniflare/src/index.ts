@@ -1990,9 +1990,7 @@ export class Miniflare {
 		const maybeSocketPorts = await this.#runtime.updateConfig(
 			configBuffer,
 			runtimeOpts,
-			this.#workerOpts
-				.filter((w) => w.core.name)
-				.map((w) => w.core.name) as string[]
+			this.#workerOpts.flatMap((w) => w.core.name ?? [])
 		);
 		if (this.#disposeController.signal.aborted) return;
 		if (maybeSocketPorts === undefined) {

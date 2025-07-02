@@ -154,7 +154,7 @@ export class Runtime {
 	async updateConfig(
 		configBuffer: Buffer,
 		options: Abortable & RuntimeOptions,
-		workers: string[] | undefined
+		workerNames: string[]
 	): Promise<SocketPorts | undefined> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
@@ -201,7 +201,7 @@ export class Runtime {
 
 			const info = getInspectorOptions();
 
-			for (const worker of workers ?? []) {
+			for (const name of workerNames) {
 				// This is copied from https://github.com/microsoft/vscode-js-debug/blob/0b5e0dade997b3c702a98e1f58989afcb30612d6/src/targets/node/bootloader.ts#L284
 				// It spawns a detached "watchdog" process for each corresponding (user) Worker in workerd which will maintain the VSCode debug connection
 				const p = spawn(process.execPath, [watchdogPath], {
@@ -209,8 +209,8 @@ export class Runtime {
 						NODE_INSPECTOR_INFO: JSON.stringify({
 							ipcAddress: info.inspectorIpc || "",
 							pid: String(this.#process.pid),
-							scriptName: worker,
-							inspectorURL: `ws://127.0.0.1:${ports?.get(kInspectorSocket)}/core:user:${worker}`,
+							scriptName: name,
+							inspectorURL: `ws://127.0.0.1:${ports?.get(kInspectorSocket)}/core:user:${name}`,
 							waitForDebugger: true,
 							ownId: randomBytes(12).toString("hex"),
 							openerId: info.openerId,
