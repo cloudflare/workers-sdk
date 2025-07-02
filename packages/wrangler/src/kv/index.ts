@@ -1,7 +1,7 @@
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
-import { readConfig, formatConfigSnippet } from "../config";
+import { formatConfigSnippet, readConfig } from "../config";
 import { updateWranglerConfigOrDisplaySnippet } from "../config/auto-update";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
@@ -26,6 +26,7 @@ import {
 	putKVBulkKeyValue,
 	putKVKeyValue,
 	unexpectedKVKeyValueProps,
+	updateKVNamespace,
 	usingLocalNamespace,
 } from "./helpers";
 import type { EventNames } from "../metrics";
@@ -83,7 +84,8 @@ export const kvNamespaceCreateCommand = createCommand({
 		"update-config": {
 			type: "boolean",
 			default: false,
-			description: "Automatically update wrangler.jsonc with the new KV namespace binding without prompting",
+			description:
+				"Automatically update wrangler.jsonc with the new KV namespace binding without prompting",
 		},
 	},
 	positionalArgs: ["namespace"],
@@ -107,21 +109,25 @@ export const kvNamespaceCreateCommand = createCommand({
 
 		// Auto-update wrangler config or show snippet
 		const envString = args.env ? ` under [env.${args.env}]` : "";
-		
+
 		// For preview namespaces, skip auto-update and always show manual snippet
 		if (args.preview) {
-			logger.log(`Add the following to your configuration file in your kv_namespaces array${envString}:`);
-			logger.log(formatConfigSnippet(
-				{
-					kv_namespaces: [
-						{
-							binding: "KV", // Use generic binding name
-							preview_id: namespaceId,
-						},
-					],
-				},
-				config.configPath
-			));
+			logger.log(
+				`Add the following to your configuration file in your kv_namespaces array${envString}:`
+			);
+			logger.log(
+				formatConfigSnippet(
+					{
+						kv_namespaces: [
+							{
+								binding: "KV", // Use generic binding name
+								preview_id: namespaceId,
+							},
+						],
+					},
+					config.configPath
+				)
+			);
 		} else {
 			await updateWranglerConfigOrDisplaySnippet(
 				{
@@ -230,6 +236,93 @@ export const kvNamespaceDeleteCommand = createCommand({
 		// TODO: do it automatically
 
 		// TODO: delete the preview namespace as well?
+	},
+});
+
+export const kvNamespaceRenameCommand = createCommand({
+	metadata: {
+		description: "Rename a KV namespace",
+		status: "stable",
+		owner: "Product: KV",
+	},
+	positionalArgs: ["name"],
+	args: {
+		name: {
+			type: "string",
+			describe: "The current name (title) of the namespace to rename",
+		},
+		"namespace-id": {
+			type: "string",
+			describe: "The id of the namespace to rename",
+		},
+		"new-name": {
+			type: "string",
+			describe: "The new name for the namespace",
+			demandOption: true,
+		},
+	},
+
+	validateArgs(args) {
+		// Check if both name and namespace-id are provided
+		if (args.name && args.namespaceId) {
+			throw new CommandLineArgsError(
+				"Cannot specify both name and --namespace-id. Use either name (as first argument) or --namespace-id flag, not both."
+			);
+		}
+
+		// Require either name or namespace-id
+		if (!args.namespaceId && !args.name) {
+			throw new CommandLineArgsError(
+				"Either name (as first argument) or --namespace-id must be specified"
+			);
+		}
+
+		// Validate new-name length (API limit is 512 characters)
+		if (args.newName && args.newName.length > 512) {
+			throw new CommandLineArgsError(
+				`new-name must be 512 characters or less (current: ${args.newName.length})`
+			);
+		}
+	},
+
+	async handler(args) {
+		const config = readConfig(args);
+		printResourceLocation("remote");
+		const accountId = await requireAuth(config);
+
+		let namespaceId = args.namespaceId;
+
+		// If no namespace ID provided, find it by current name
+		if (!namespaceId && args.name) {
+			const namespaces = await listKVNamespaces(config, accountId);
+			const namespace = namespaces.find((ns) => ns.title === args.name);
+
+			if (!namespace) {
+				throw new UserError(
+					`No namespace found with the name "${args.name}". ` +
+						`Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".`
+				);
+			}
+			namespaceId = namespace.id;
+		}
+
+		if (!namespaceId) {
+			throw new UserError("Unable to determine namespace ID");
+		}
+
+		logger.log(`Renaming KV namespace ${namespaceId} to "${args.newName!}".`);
+		const updatedNamespace = await updateKVNamespace(
+			config,
+			accountId,
+			namespaceId,
+			args.newName!
+		);
+		logger.log(
+			`✨ Successfully renamed namespace to "${updatedNamespace.title}"`
+		);
+		metrics.sendMetricsEvent("rename kv namespace", {
+			sendMetrics: config.send_metrics,
+		});
 	},
 });
 
