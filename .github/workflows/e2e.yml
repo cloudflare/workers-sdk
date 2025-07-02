@@ -31,13 +31,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
-        if: github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Install Dependencies
-        if: github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group'
         uses: ./.github/actions/install-dependencies
         with:
           node-version: ${{ matrix.node }}
@@ -47,13 +45,11 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Bump package versions
-        if: github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group'
         run: node .github/changeset-version.js
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Run Wrangler E2E tests
-        if: github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group'
         run: pnpm run test:e2e:wrangler
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
