@@ -84,7 +84,7 @@ describe("[Workers + Assets] static routing", () => {
 						? ["--no-sandbox", "--disable-setuid-sandbox"]
 						: undefined,
 				});
-			});
+			}, 40_000);
 
 			afterAll(async () => {
 				await browser?.close();

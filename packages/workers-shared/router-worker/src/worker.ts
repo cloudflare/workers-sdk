@@ -113,7 +113,7 @@ export default {
 					});
 
 					let shouldBlockNonImageResponse = false;
-					if (url.pathname === "/_next/image") {
+					if (url.pathname.endsWith("/_next/image")) {
 						// is a next image
 						const queryURLParam = url.searchParams.get("url");
 						if (queryURLParam && !queryURLParam.startsWith("/")) {
