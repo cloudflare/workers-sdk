@@ -25,7 +25,7 @@ cpSync("./src", "./.tmp/src", { recursive: true });
 cpSync("./test", "./.tmp/test", { recursive: true });
 cpSync("./vitest.workers.config.ts", "./.tmp/vitest.workers.config.ts");
 
-const remoteWorkerName = `vitest-pool-workers-remote-worker-test-${
+const remoteWorkerName = `tmp-e2e-vitest-pool-workers-remote-worker-test-${
 	randomUUID().split("-")[0]
 }`;
 
