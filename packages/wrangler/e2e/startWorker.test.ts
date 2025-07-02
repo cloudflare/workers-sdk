@@ -179,6 +179,7 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 		});
 
 		const inspectorUrl = await worker.inspectorUrl;
+		assert(inspectorUrl);
 
 		assert(inspectorUrl, "missing inspectorUrl");
 		let ws = new WebSocket(inspectorUrl.href, {

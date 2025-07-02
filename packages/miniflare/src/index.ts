@@ -966,7 +966,12 @@ export class Miniflare {
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
 
-		if (enableInspectorProxy) {
+		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
+		// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
+		// inspector endpoint.
+		const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
+
+		if (enableInspectorProxy && !inVscodeJsDebugTerminal) {
 			if (this.#sharedOpts.core.inspectorPort === undefined) {
 				throw new MiniflareCoreError(
 					"ERR_MISSING_INSPECTOR_PROXY_PORT",
@@ -1989,7 +1994,8 @@ export class Miniflare {
 		};
 		const maybeSocketPorts = await this.#runtime.updateConfig(
 			configBuffer,
-			runtimeOpts
+			runtimeOpts,
+			this.#workerOpts.flatMap((w) => w.core.name ?? [])
 		);
 		if (this.#disposeController.signal.aborted) return;
 		if (maybeSocketPorts === undefined) {
