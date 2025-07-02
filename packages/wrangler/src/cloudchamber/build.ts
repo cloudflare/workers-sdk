@@ -77,13 +77,26 @@ export async function buildAndMaybePush(
 	args: BuildArgs,
 	pathToDocker: string,
 	push: boolean,
-	containerConfig?: ContainerApp
+	containerConfig?: ContainerApp,
+	dryRun = false
 ): Promise<{ image: string; pushed: boolean }> {
 	try {
-		// account is also used to check limits below, so it is better to just pull the entire
-		// account information here
-		const account = await loadAccount();
-		const cloudflareAccountID = account.external_account_id;
+		// In dry-run mode, we skip account loading and disk limit validation
+		// since we're not actually deploying
+		let account: CompleteAccountCustomer | undefined;
+		let cloudflareAccountID: string;
+
+		if (!dryRun) {
+			// account is also used to check limits below, so it is better to just pull the entire
+			// account information here
+			account = await loadAccount();
+			cloudflareAccountID = account.external_account_id;
+		} else {
+			// In dry-run mode, we use a placeholder account ID for the image tag
+			// The actual account ID won't matter since we're not pushing
+			cloudflareAccountID = "dry-run-account-id";
+		}
+
 		const imageTag = getCloudflareRegistryWithAccountNamespace(
 			cloudflareAccountID,
 			args.tag
@@ -105,27 +118,31 @@ export async function buildAndMaybePush(
 			dockerfile,
 		});
 
-		// ensure the account is not allowed to build anything that exceeds the current
-		// account's disk size limits
-		const inspectOutput = await dockerImageInspect(pathToDocker, {
-			imageTag,
-			formatString:
-				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
-		});
+		// Only check disk limits when not in dry-run mode
+		if (!dryRun && account) {
+			// ensure the account is not allowed to build anything that exceeds the current
+			// account's disk size limits
+			const inspectOutput = await dockerImageInspect(pathToDocker, {
+				imageTag,
+				formatString:
+					"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
+			});
 
-		const [sizeStr, layerStr, repoDigests] = inspectOutput.split(" ");
-		const size = parseInt(sizeStr, 10);
-		const layers = parseInt(layerStr, 10);
+			const [sizeStr, layerStr, repoDigests] = inspectOutput.split(" ");
+			const size = parseInt(sizeStr, 10);
+			const layers = parseInt(layerStr, 10);
 
-		// 16MiB is the layer size adjustments we use in devmapper
-		const MiB = 1024 * 1024;
-		const requiredSize = Math.ceil(size * 1.1 + layers * 16 * MiB);
-		// TODO: do more config merging and earlier
-		await ensureDiskLimits({
-			requiredSize,
-			account: account,
-			containerApp: containerConfig,
-		});
+			// 16MiB is the layer size adjustments we use in devmapper
+			const MiB = 1024 * 1024;
+			const requiredSize = Math.ceil(size * 1.1 + layers * 16 * MiB);
+			// TODO: do more config merging and earlier
+			await ensureDiskLimits({
+				requiredSize,
+				account: account,
+				containerApp: containerConfig,
+			});
+		}
+
 		let pushed = false;
 		if (push) {
 			await dockerLoginManagedRegistry(pathToDocker);
@@ -140,6 +157,12 @@ export async function buildAndMaybePush(
 				//	pulled every time. This guarantees consistency across different environments
 				//	and deployments.
 				// 	From: https://docs.docker.com/dhi/core-concepts/digests/
+				const inspectOutput = await dockerImageInspect(pathToDocker, {
+					imageTag,
+					formatString:
+						"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
+				});
+				const [, , repoDigests] = inspectOutput.split(" ");
 				const parsedDigests = JSON.parse(repoDigests);
 
 				if (!Array.isArray(parsedDigests)) {
@@ -220,7 +243,8 @@ export async function buildCommand(
 			},
 			getDockerPath() ?? args.pathToDocker,
 			args.push,
-			container
+			container,
+			false // not a dry-run for regular build command
 		);
 	}
 }

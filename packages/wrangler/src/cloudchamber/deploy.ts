@@ -44,7 +44,8 @@ export async function maybeBuildContainer(
 		options,
 		pathToDocker,
 		!dryRun,
-		containerConfig
+		containerConfig,
+		dryRun
 	);
 	return buildResult;
 }
