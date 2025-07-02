@@ -52,6 +52,13 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 				{ once: true }
 			),
 			http.get(
+				"*/user/tokens/verify",
+				() => {
+					return HttpResponse.json(createFetchResult([]));
+				},
+				{ once: true }
+			),
+			http.get(
 				"*/accounts",
 				({ request }) => {
 					const headersObject = Object.fromEntries(request.headers.entries());
@@ -70,12 +77,55 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo?.email).toBeUndefined();
 	});
-	it("should say it's using an API token when one is set", async () => {
+	it("should say it's using a user API token when one is set", async () => {
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
+
+		msw.use(
+			http.get(
+				"*/user/tokens/verify",
+				() => {
+					return HttpResponse.json(createFetchResult([]));
+				},
+				{ once: true }
+			)
+		);
 
 		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo).toEqual({
-			authType: "API Token",
+			authType: "User API Token",
+			apiToken: "123456789",
+			email: "user@example.com",
+			accounts: [
+				{ name: "Account One", id: "account-1" },
+				{ name: "Account Two", id: "account-2" },
+				{ name: "Account Three", id: "account-3" },
+			],
+		});
+	});
+
+	it("should say it's using an account API token when one is set", async () => {
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
+
+		msw.use(
+			http.get(
+				"*/user/tokens/verify",
+				() => {
+					return HttpResponse.json(
+						createFetchResult({}, false, [
+							{
+								code: 1000,
+								message: "Invalid API Token",
+							},
+						])
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
+		expect(userInfo).toEqual({
+			authType: "Account API Token",
 			apiToken: "123456789",
 			email: "user@example.com",
 			accounts: [

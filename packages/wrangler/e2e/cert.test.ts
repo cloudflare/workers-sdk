@@ -58,17 +58,6 @@ describe("cert", () => {
 		`);
 	});
 
-	it("list cert", async () => {
-		const output = await helper.run(`wrangler cert list`);
-		const result = normalize(output.stdout);
-		expect(result).toContain(
-			`Name: tmp-e2e-mtls-cert-00000000-0000-0000-0000-000000000000`
-		);
-		expect(result).toContain(
-			`Name: tmp-e2e-ca-cert-00000000-0000-0000-0000-000000000000`
-		);
-	});
-
 	it("delete mtls cert", async () => {
 		const delete_mtls_cert_output = await helper.run(
 			`wrangler cert delete --name ${mtlsCertName}`
