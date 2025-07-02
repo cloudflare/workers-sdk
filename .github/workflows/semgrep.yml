@@ -1,8 +1,13 @@
+name: Semgrep config
+
 on:
   workflow_dispatch: {}
   schedule:
     - cron: "0 0 * * *"
-name: Semgrep config
+
+permissions:
+  contents: read
+
 jobs:
   semgrep:
     name: semgrep/ci
