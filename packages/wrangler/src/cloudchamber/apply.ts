@@ -1,5 +1,4 @@
 import {
-	cancel,
 	endSection,
 	log,
 	logRaw,
@@ -8,7 +7,6 @@ import {
 	success,
 	updateStatus,
 } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
 import { bold, brandColor, dim, green, red } from "@cloudflare/cli/colors";
 import {
 	ApiError,
@@ -21,7 +19,6 @@ import {
 } from "@cloudflare/containers-shared";
 import { formatConfigSnippet } from "../config";
 import { FatalError, UserError } from "../errors";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { cleanForInstanceType, promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
 import type { Config } from "../config";
