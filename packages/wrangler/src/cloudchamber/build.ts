@@ -114,7 +114,7 @@ export async function buildAndMaybePush(
 					"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 			});
 
-			const [sizeStr, layerStr, repoDigests] = inspectOutput.split(" ");
+			const [sizeStr, layerStr, _repoDigests] = inspectOutput.split(" ");
 			const size = parseInt(sizeStr, 10);
 			const layers = parseInt(layerStr, 10);
 
