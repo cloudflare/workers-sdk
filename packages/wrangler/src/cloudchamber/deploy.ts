@@ -123,7 +123,6 @@ export async function deployContainers(
 				skipDefaults: false,
 				env,
 				imageUpdateRequired: buildResult.pushed,
-				skipPrompts: true,
 			},
 			configuration
 		);

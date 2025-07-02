@@ -423,7 +423,6 @@ export async function apply(
 		skipDefaults: boolean | undefined;
 		env?: string;
 		imageUpdateRequired?: boolean;
-		skipPrompts?: boolean;
 	},
 	config: Config
 ) {
@@ -702,21 +701,6 @@ export async function apply(
 	if (actions.length == 0) {
 		endSection("No changes to be made");
 		return;
-	}
-	if (!args.skipPrompts && !isNonInteractiveOrCI()) {
-		const yes = await processArgument<boolean>(
-			{ confirm: undefined },
-			"confirm",
-			{
-				type: "confirm",
-				question: "Do you want to apply these changes?",
-				label: "",
-			}
-		);
-		if (!yes) {
-			cancel("Not applying changes");
-			return;
-		}
 	}
 
 	function formatError(err: ApiError): string {
