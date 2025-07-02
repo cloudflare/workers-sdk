@@ -13,6 +13,7 @@ import { requireAuth } from "../user";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import {
+	BATCH_MAX_ERRORS_WARNINGS,
 	createKVNamespace,
 	deleteKVBulkKeyValue,
 	deleteKVKeyValue,
@@ -816,20 +817,32 @@ export const kvBulkPutCommand = createCommand({
 			);
 		}
 
+		let maxNumberOfErrorsReached = false;
 		const errors: string[] = [];
+		let maxNumberOfWarningsReached = false;
 		const warnings: string[] = [];
 		for (let i = 0; i < content.length; i++) {
 			const keyValue = content[i];
-			if (!isKVKeyValue(keyValue)) {
-				errors.push(`The item at index ${i} is ${JSON.stringify(keyValue)}`);
+			if (!isKVKeyValue(keyValue) && !maxNumberOfErrorsReached) {
+				if (errors.length === BATCH_MAX_ERRORS_WARNINGS) {
+					maxNumberOfErrorsReached = true;
+					errors.push("...");
+				} else {
+					errors.push(`The item at index ${i} is ${JSON.stringify(keyValue)}`);
+				}
 			} else {
 				const props = unexpectedKVKeyValueProps(keyValue);
-				if (props.length > 0) {
-					warnings.push(
-						`The item at index ${i} contains unexpected properties: ${JSON.stringify(
-							props
-						)}.`
-					);
+				if (props.length > 0 && !maxNumberOfWarningsReached) {
+					if (warnings.length === BATCH_MAX_ERRORS_WARNINGS) {
+						maxNumberOfWarningsReached = true;
+						warnings.push("...");
+					} else {
+						warnings.push(
+							`The item at index ${i} contains unexpected properties: ${JSON.stringify(
+								props
+							)}.`
+						);
+					}
 				}
 			}
 		}
