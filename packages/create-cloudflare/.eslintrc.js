@@ -1,6 +1,9 @@
 module.exports = {
 	root: true,
 	extends: ["@cloudflare/eslint-config-worker"],
+	rules: {
+		"no-console": "error",
+	},
 	ignorePatterns: [
 		"dist",
 		"scripts",

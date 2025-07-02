@@ -32,7 +32,7 @@ export const parseJs = (src: string) => {
 	src = src.trim();
 	try {
 		return recast.parse(src, { parser: esprimaParser });
-	} catch (error) {
+	} catch {
 		throw new Error("Error parsing js template.");
 	}
 };
@@ -42,7 +42,7 @@ export const parseTs = (src: string) => {
 	src = src.trim();
 	try {
 		return recast.parse(src, { parser: typescriptParser });
-	} catch (error) {
+	} catch {
 		throw new Error("Error parsing ts template.");
 	}
 };
@@ -59,7 +59,7 @@ export const parseFile = (filePath: string) => {
 		if (fileContents) {
 			return recast.parse(fileContents, { parser }).program as Program;
 		}
-	} catch (error) {
+	} catch {
 		throw new Error(`Error parsing file: ${filePath}`);
 	}
 

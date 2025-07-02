@@ -4,7 +4,7 @@ import { getEvent, mockGlobalScope, mockRequestScope } from "../mocks";
 mockGlobalScope();
 
 // @ts-expect-error we use a require for a mock
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { getAssetFromKV } = require("../index");
 // manually reset manifest global, to test optional behaviour
 Object.assign(globalThis, { __STATIC_CONTENT_MANIFEST: undefined });

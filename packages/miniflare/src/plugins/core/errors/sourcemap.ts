@@ -29,6 +29,7 @@ export function getFreshSourceMapSupport(): typeof import("@cspotcode/source-map
 			return Symbol(key);
 		};
 		delete require.cache[resolvedSupportPath];
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		return require(resolvedSupportPath);
 	} finally {
 		Symbol.for = originalSymbolFor;

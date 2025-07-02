@@ -89,7 +89,6 @@ describe("Compatibility Date Helpers", () => {
 
 		it("should use today's date if workerd's release is in the future", async () => {
 			vi.setSystemTime("2025-01-09T23:59:59.999Z");
-			console.log(new Date().toISOString());
 			mockRegistryFetch("2.20250110.5");
 
 			const date = await getWorkerdCompatibilityDate();

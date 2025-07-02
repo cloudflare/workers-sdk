@@ -279,7 +279,7 @@ export const pagesDeployCommand = createCommand({
 						execSync(`git rev-parse --is-inside-work-tree`, {
 							stdio: "ignore",
 						});
-					} catch (err) {
+					} catch {
 						isGitDir = false;
 					}
 
@@ -289,7 +289,7 @@ export const pagesDeployCommand = createCommand({
 							productionBranch = execSync(`git rev-parse --abbrev-ref HEAD`)
 								.toString()
 								.trim();
-						} catch (err) {}
+						} catch {}
 					}
 
 					productionBranch = await prompt("Enter the production branch name:", {
@@ -334,7 +334,7 @@ export const pagesDeployCommand = createCommand({
 			execSync(`git rev-parse --is-inside-work-tree`, {
 				stdio: "ignore",
 			});
-		} catch (err) {
+		} catch {
 			isGitDir = false;
 		}
 
@@ -361,7 +361,7 @@ export const pagesDeployCommand = createCommand({
 						.toString()
 						.trim();
 				}
-			} catch (err) {}
+			} catch {}
 
 			if (isGitDirty && !commitDirty) {
 				logger.warn(

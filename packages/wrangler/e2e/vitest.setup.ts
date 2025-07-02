@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 import { expect } from "vitest";
 
 interface CustomMatchers {
@@ -27,7 +28,7 @@ expect.extend({
 			try {
 				expect(superset).toMatchObject(subset);
 				return true;
-			} catch (ex) {
+			} catch {
 				return false;
 			}
 		}

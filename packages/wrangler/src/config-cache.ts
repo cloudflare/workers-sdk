@@ -56,7 +56,7 @@ export function getConfigCache<T>(fileName: string): Partial<T> {
 		} else {
 			return {};
 		}
-	} catch (err) {
+	} catch {
 		return {};
 	}
 }

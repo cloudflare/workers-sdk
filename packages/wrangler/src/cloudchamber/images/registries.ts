@@ -42,23 +42,6 @@ function configureImageRegistryOptionalYargs(yargs: CommonYargsArgv) {
 		});
 }
 
-function credentialsImageRegistryYargs(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("domain", { type: "string", demandOption: true })
-		.option("expiration-minutes", {
-			type: "number",
-			default: 15,
-		})
-		.option("push", {
-			type: "boolean",
-			description: "If you want these credentials to be able to push",
-		})
-		.option("pull", {
-			type: "boolean",
-			description: "If you want these credentials to be able to pull",
-		});
-}
-
 export const registriesCommand = (
 	yargs: CommonYargsArgv,
 	scope: typeof containersScope | typeof cloudchamberScope
@@ -124,12 +107,7 @@ export const registriesCommand = (
 				args.json = true;
 				return handleFailure(
 					`wrangler cloudchamber registries credentials`,
-					async (
-						imageArgs: StrictYargsOptionsToInterface<
-							typeof credentialsImageRegistryYargs
-						>,
-						_config
-					) => {
+					async (imageArgs: typeof args, _config) => {
 						if (!imageArgs.pull && !imageArgs.push) {
 							throw new UserError(
 								"You have to specify either --push or --pull in the command."
