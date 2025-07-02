@@ -3,7 +3,7 @@ import { rename } from "node:fs/promises";
 import path, { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
-import { describe, it } from "vitest";
+import { describe, it, vi } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages _worker.js", () => {
@@ -87,9 +87,11 @@ describe("Pages _worker.js", () => {
 				"workerjs-test/XXX_worker.js",
 				"workerjs-test/_worker.js"
 			);
-			await setTimeout(200);
 			// Expect replacing the worker to now trigger a success build.
-			expect(getOutput()).toContain("Compiled Worker successfully");
+			await vi.waitFor(
+				() => expect(getOutput()).toContain("Compiled Worker successfully"),
+				{ interval: 100, timeout: 2_000 }
+			);
 		} finally {
 			await stop();
 			await tryRename(

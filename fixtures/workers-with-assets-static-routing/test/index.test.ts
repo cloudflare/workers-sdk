@@ -1,5 +1,4 @@
 import { resolve } from "node:path";
-import { Browser, chromium } from "playwright-chromium";
 import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
@@ -75,77 +74,92 @@ describe("[Workers + Assets] static routing", () => {
 		});
 
 		describe("browser navigation", () => {
-			let browser: Browser | undefined;
-
-			beforeAll(async () => {
-				browser = await chromium.launch({
-					headless: !process.env.VITE_DEBUG_SERVE,
-					args: process.env.CI
-						? ["--no-sandbox", "--disable-setuid-sandbox"]
-						: undefined,
-				});
-			}, 40_000);
-
-			afterAll(async () => {
-				await browser?.close();
-			});
-
 			it("renders the root with index.html", async ({ expect }) => {
-				if (!browser) {
-					throw new Error("Browser couldn't be initialized");
-				}
-
-				const page = await browser.newPage({
-					baseURL: `http://${ip}:${port}`,
+				const response = await fetch(`http://${ip}:${port}`, {
+					headers: {
+						"X-MF-Sec-Fetch-Mode": "navigate",
+					},
 				});
-				await page.goto("/");
-				expect(await page.getByRole("heading").innerText()).toBe(
-					"Here I am, at /!"
-				);
+				const text = await response.text();
+				expect(text).toMatchInlineSnapshot(`
+					"<!doctype html>
+					<html>
+						<head>
+							<title>I'm an index.html for a SPA</title>
+						</head>
+						<body>
+							<h1>Here I am, at <span id="client-rendered">/</span>!</h1>
+						</body>
+						<script>
+							const path = window.location.pathname;
+							const updateme = document.getElementById("client-rendered");
+							updateme.innerText = path;
+						</script>
+					</html>
+					"
+				`);
 			});
 
 			it("renders another path with index.html", async ({ expect }) => {
-				if (!browser) {
-					throw new Error("Browser couldn't be initialized");
-				}
-
-				const page = await browser.newPage({
-					baseURL: `http://${ip}:${port}`,
+				const response = await fetch(`http://${ip}:${port}/some/page`, {
+					headers: {
+						"X-MF-Sec-Fetch-Mode": "navigate",
+					},
 				});
-				await page.goto("/some/page");
-				expect(await page.getByRole("heading").innerText()).toBe(
-					"Here I am, at /some/page!"
-				);
+				const text = await response.text();
+				expect(text).toMatchInlineSnapshot(`
+					"<!doctype html>
+					<html>
+						<head>
+							<title>I'm an index.html for a SPA</title>
+						</head>
+						<body>
+							<h1>Here I am, at <span id="client-rendered">/</span>!</h1>
+						</body>
+						<script>
+							const path = window.location.pathname;
+							const updateme = document.getElementById("client-rendered");
+							updateme.innerText = path;
+						</script>
+					</html>
+					"
+				`);
 			});
 
 			it("renders an include path with the User worker", async ({ expect }) => {
-				if (!browser) {
-					throw new Error("Browser couldn't be initialized");
-				}
-
-				const page = await browser.newPage({
-					baseURL: `http://${ip}:${port}`,
+				const response = await fetch(`http://${ip}:${port}/api/route`, {
+					headers: {
+						"X-MF-Sec-Fetch-Mode": "navigate",
+					},
 				});
-				const response = await page.goto("/api/route");
-				expect(response?.headers()).toHaveProperty(
-					"content-type",
-					"application/json"
-				);
-				expect(await page.content()).toContain(`{"some":["json","response"]}`);
+				const text = await response.text();
+				expect(text).toMatchInlineSnapshot(`"{"some":["json","response"]}"`);
 			});
 
 			it("renders an exclude path with index.html", async ({ expect }) => {
-				if (!browser) {
-					throw new Error("Browser couldn't be initialized");
-				}
-
-				const page = await browser.newPage({
-					baseURL: `http://${ip}:${port}`,
+				const response = await fetch(`http://${ip}:${port}/api/asset`, {
+					headers: {
+						"X-MF-Sec-Fetch-Mode": "navigate",
+					},
 				});
-				await page.goto("/api/asset");
-				expect(await page.getByRole("heading").innerText()).toBe(
-					"Here I am, at /api/asset!"
-				);
+				const text = await response.text();
+				expect(text).toMatchInlineSnapshot(`
+					"<!doctype html>
+					<html>
+						<head>
+							<title>I'm an index.html for a SPA</title>
+						</head>
+						<body>
+							<h1>Here I am, at <span id="client-rendered">/</span>!</h1>
+						</body>
+						<script>
+							const path = window.location.pathname;
+							const updateme = document.getElementById("client-rendered");
+							updateme.innerText = path;
+						</script>
+					</html>
+					"
+				`);
 			});
 		});
 
