@@ -61,11 +61,13 @@ export default function registerDevHotKeys(
 				});
 				const newContainerBuildId = randomUUID().slice(0, 8);
 				// cleanup any existing containers
-				devEnv.runtimes.map(async (runtime) => {
-					if (runtime instanceof LocalRuntimeController) {
-						await runtime.cleanupContainers();
-					}
-				});
+				await Promise.all(
+					devEnv.runtimes.map(async (runtime) => {
+						if (runtime instanceof LocalRuntimeController) {
+							await runtime.cleanupContainers();
+						}
+					})
+				);
 
 				// updating the build ID will trigger a rebuild of the containers
 				await devEnv.config.patch({

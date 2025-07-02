@@ -267,6 +267,7 @@ export class InspectorProxyController {
 				}
 
 				return new InspectorProxy(
+					this.log,
 					workerName,
 					new WebSocket(`ws://127.0.0.1:${runtimeInspectorPort}/${id}`)
 				);

@@ -15,7 +15,7 @@ async function doUpdateCheck(): Promise<string | undefined> {
 		update = await checkForUpdate(pkg, {
 			distTag: pkg.version.startsWith("0.0.0") ? "beta" : "latest",
 		});
-	} catch (err) {
+	} catch {
 		// ignore error
 	}
 	return update?.latest;

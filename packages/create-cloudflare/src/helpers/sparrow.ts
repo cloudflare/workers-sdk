@@ -18,6 +18,7 @@ export function hasSparrowSourceKey() {
 
 export async function sendEvent(payload: EventPayload, enableLog?: boolean) {
 	if (enableLog) {
+		// eslint-disable-next-line no-console
 		console.log("[telemetry]", JSON.stringify(payload, null, 2));
 	}
 
@@ -33,6 +34,7 @@ export async function sendEvent(payload: EventPayload, enableLog?: boolean) {
 	} catch (error) {
 		// Ignore any network errors
 		if (enableLog) {
+			// eslint-disable-next-line no-console
 			console.log("[telemetry]", error);
 		}
 	}

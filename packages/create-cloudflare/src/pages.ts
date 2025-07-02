@@ -65,7 +65,7 @@ export const createProject = async (ctx: C3Context) => {
 					)}`,
 				}),
 		);
-	} catch (error) {
+	} catch {
 		throw new Error("Failed to create pages project. See output above.");
 	}
 
@@ -92,7 +92,7 @@ export const createProject = async (ctx: C3Context) => {
 				)}`,
 			}),
 		);
-	} catch (error) {
+	} catch {
 		throw new Error(
 			"Pages project isn't ready yet. Please try deploying again later.",
 		);

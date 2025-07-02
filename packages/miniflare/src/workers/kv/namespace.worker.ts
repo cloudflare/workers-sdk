@@ -97,7 +97,7 @@ async function processKeyValue(
 			: type === "json"
 				? JSON.parse(decodedValue)
 				: decodedValue;
-	} catch (err: any) {
+	} catch {
 		throw new HttpError(
 			400,
 			`At least one of the requested keys corresponds to a non-${type} value`

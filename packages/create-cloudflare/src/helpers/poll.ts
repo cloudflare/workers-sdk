@@ -104,7 +104,7 @@ export const isDomainResolvable = async (domain: string) => {
 		const dns = new dns2({ nameServers });
 		const res = await dns.resolve(domain, "A");
 		return res.answers.length > 0;
-	} catch (error) {
+	} catch {
 		return false;
 	}
 };

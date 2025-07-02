@@ -4,16 +4,14 @@ import { UserError } from "../../errors";
 import { isValidIdentifier, normalizeIdentifier } from "./identifiers";
 import type { UrlPath } from "../../paths";
 
-const HTTP_METHODS = [
-	"HEAD",
-	"OPTIONS",
-	"GET",
-	"POST",
-	"PUT",
-	"PATCH",
-	"DELETE",
-] as const;
-export type HTTPMethod = (typeof HTTP_METHODS)[number];
+export type HTTPMethod =
+	| "HEAD"
+	| "OPTIONS"
+	| "GET"
+	| "POST"
+	| "PUT"
+	| "PATCH"
+	| "DELETE";
 
 type RoutesCollection = Array<{
 	routePath: UrlPath;

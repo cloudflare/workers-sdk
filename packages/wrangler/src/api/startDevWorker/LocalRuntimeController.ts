@@ -391,7 +391,7 @@ export class LocalRuntimeController extends RuntimeController {
 		if (this.#containerImageTagsSeen.size > 0) {
 			try {
 				await this.cleanupContainers();
-			} catch (error) {
+			} catch {
 				logger.warn(
 					`Failed to clean up containers. You may have to stop and remove them up manually.`
 				);

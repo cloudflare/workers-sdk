@@ -5,6 +5,6 @@ import { execSync } from "child_process";
 try {
 	const hash = execSync("git rev-parse --short=10 HEAD").toString().trim();
 	console.log(hash);
-} catch (error) {
+} catch {
 	console.log("UNKNOWN");
 }

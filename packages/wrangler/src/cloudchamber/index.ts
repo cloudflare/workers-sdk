@@ -15,7 +15,7 @@ import type { CommandModule } from "yargs";
 function internalCommands(args: CommonYargsArgv) {
 	try {
 		// Add dynamically an internal module that we can attach internal commands
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		const cloudchamberInternalRequireEntry = require("./internal/index");
 		return cloudchamberInternalRequireEntry.internalCommands(args);
 	} catch {

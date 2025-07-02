@@ -102,6 +102,11 @@ export class Logger {
 
 	columns = process.stdout.columns;
 
+	json = (data: unknown) => {
+		// eslint-disable-next-line no-console
+		console.log(JSON.stringify(data, null, 4));
+	};
+
 	debug = (...args: unknown[]) => this.doLog("debug", args);
 	debugWithSanitization = (label: string, ...args: unknown[]) => {
 		if (getSanitizeLogs() === "false") {
@@ -134,6 +139,7 @@ export class Logger {
 		method: M,
 		...args: Parameters<Console[M]>
 	) {
+		// eslint-disable-next-line no-console
 		if (typeof console[method] !== "function") {
 			throw new Error(`console.${method}() is not a function`);
 		}
@@ -143,6 +149,7 @@ export class Logger {
 			LOGGER_LEVELS[consoleMethodToLoggerLevel(method)]
 		) {
 			Logger.#beforeLogHook?.();
+			// eslint-disable-next-line no-console
 			(console[method] as (...args: unknown[]) => unknown).apply(console, args);
 			Logger.#afterLogHook?.();
 		}
@@ -182,6 +189,7 @@ export class Logger {
 		// only send logs to the terminal if their level is at least the configured log-level
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
 			Logger.#beforeLogHook?.();
+			// eslint-disable-next-line no-console
 			console[messageLevel](message);
 			Logger.#afterLogHook?.();
 		}
