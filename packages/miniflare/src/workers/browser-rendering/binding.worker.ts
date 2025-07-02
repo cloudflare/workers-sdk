@@ -65,21 +65,25 @@ export default {
 		}
 	) {
 		const url = new URL(request.url);
-		if (url.pathname === "/v1/acquire") {
-			const resp = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
-				"http://example.com/browser/launch"
-			);
-			const wsEndpoint = await resp.text();
-			const sessionId = crypto.randomUUID();
-			const id = env.BrowserSession.idFromName(sessionId);
-			await env.BrowserSession.get(id).setEndpoint(wsEndpoint);
-			return Response.json({ sessionId });
-		} else if (url.pathname === "/v1/connectDevtools") {
-			const sessionId = url.searchParams.get("browser_session");
-			assert(sessionId !== null);
-			const id = env.BrowserSession.idFromName(sessionId);
-			return env.BrowserSession.get(id).fetch(request);
+		switch(url.pathname) {
+			case "/v1/acquire": {
+				const resp = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
+					"http://example.com/browser/launch"
+				);
+				const wsEndpoint = await resp.text();
+				const sessionId = crypto.randomUUID();
+				const id = env.BrowserSession.idFromName(sessionId);
+				await env.BrowserSession.get(id).setEndpoint(wsEndpoint);
+				return Response.json({ sessionId });
+			}
+			case "/v1/connectDevtools": {
+				const sessionId = url.searchParams.get("browser_session");
+				assert(sessionId !== null);
+				const id = env.BrowserSession.idFromName(sessionId);
+				return env.BrowserSession.get(id).fetch(request);
+			}
+			default: 
+				return new Response("Not implemented", { status: 405 });
 		}
-		return new Response("Not implemented", { status: 405 });
 	},
 };
