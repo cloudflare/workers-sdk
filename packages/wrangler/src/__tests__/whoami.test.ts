@@ -51,6 +51,13 @@ describe("getUserInfo()", () => {
 				{ once: true }
 			),
 			http.get(
+				"*/user/tokens/verify",
+				() => {
+					return HttpResponse.json(createFetchResult([]));
+				},
+				{ once: true }
+			),
+			http.get(
 				"*/accounts",
 				({ request }) => {
 					const headersObject = Object.fromEntries(request.headers.entries());
