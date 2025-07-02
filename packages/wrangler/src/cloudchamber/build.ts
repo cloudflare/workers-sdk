@@ -81,8 +81,6 @@ export async function buildAndMaybePush(
 	dryRun = false
 ): Promise<{ image: string; pushed: boolean }> {
 	try {
-		// In dry-run mode, we skip account loading and disk limit validation
-		// since we're not actually deploying
 		let account: CompleteAccountCustomer | undefined;
 		let cloudflareAccountID: string;
 
@@ -92,8 +90,6 @@ export async function buildAndMaybePush(
 			account = await loadAccount();
 			cloudflareAccountID = account.external_account_id;
 		} else {
-			// In dry-run mode, we use a placeholder account ID for the image tag
-			// The actual account ID won't matter since we're not pushing
 			cloudflareAccountID = "dry-run-account-id";
 		}
 
@@ -118,7 +114,6 @@ export async function buildAndMaybePush(
 			dockerfile,
 		});
 
-		// Only check disk limits when not in dry-run mode
 		if (!dryRun && account) {
 			// ensure the account is not allowed to build anything that exceeds the current
 			// account's disk size limits
@@ -244,7 +239,7 @@ export async function buildCommand(
 			getDockerPath() ?? args.pathToDocker,
 			args.push,
 			container,
-			false // not a dry-run for regular build command
+			false
 		);
 	}
 }
