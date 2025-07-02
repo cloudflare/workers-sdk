@@ -86,10 +86,6 @@ describe("[Workers + Assets] static routing", () => {
 				});
 			}, 40_000);
 
-			afterAll(async () => {
-				await browser?.close();
-			});
-
 			it("renders the root with index.html", async ({ expect }) => {
 				if (!browser) {
 					throw new Error("Browser couldn't be initialized");

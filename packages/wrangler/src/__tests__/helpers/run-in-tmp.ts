@@ -37,7 +37,7 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 			process.env.PWD = originalCwd;
 			try {
 				fs.rmSync(tmpDir, { recursive: true, force: true });
-			} catch (e) {
+			} catch {
 				// Best effort - try once then just move on - they are only temp files after all.
 				// It seems that Windows doesn't let us delete this, with errors like:
 				//

@@ -103,7 +103,7 @@ describe("cloudchamber image", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
-		expect(std.out).toMatchInlineSnapshot(`"jwt"`);
+		expect(std.out).toMatchInlineSnapshot(`"\\"jwt\\""`);
 	});
 
 	it("should remove an image registry (no interactivity)", async () => {

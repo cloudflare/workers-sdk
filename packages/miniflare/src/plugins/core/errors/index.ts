@@ -255,6 +255,7 @@ export async function handlePrettyErrorRequest(
 	}
 
 	// Lazily import `youch` when required
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	const Youch: typeof import("youch").default = require("youch");
 	// `cause` is usually more useful than the error itself, display that instead
 	// TODO(someday): would be nice if we could display both

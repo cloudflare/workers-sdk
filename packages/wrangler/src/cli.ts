@@ -54,7 +54,7 @@ export interface Unstable_ASSETSBindingsOptions {
 const generateASSETSBinding: (
 	opts: Unstable_ASSETSBindingsOptions
 ) => (request: Request) => Promise<Response> =
-	// eslint-disable-next-line @typescript-eslint/no-var-requires
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	require("./miniflare-cli/assets").default;
 export { generateASSETSBinding as unstable_generateASSETSBinding };
 

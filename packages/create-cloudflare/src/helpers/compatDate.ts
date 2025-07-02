@@ -99,7 +99,7 @@ export function getLatestTypesEntrypoint(ctx: C3Context) {
 		}
 
 		return sorted[0];
-	} catch (error) {
+	} catch {
 		return null;
 	}
 }

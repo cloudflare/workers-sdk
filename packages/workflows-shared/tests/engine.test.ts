@@ -118,7 +118,7 @@ describe("Engine", () => {
 							throw new Error("Step errors out");
 						}
 					);
-				} catch (_e) {}
+				} catch {}
 				return "finished";
 			}
 		);
@@ -184,7 +184,7 @@ describe("Engine", () => {
 			await runInDurableObject(engineStub, async (_, state) => {
 				state.abort("kabooom");
 			});
-		} catch (e) {
+		} catch {
 			// supposed to error out
 		}
 

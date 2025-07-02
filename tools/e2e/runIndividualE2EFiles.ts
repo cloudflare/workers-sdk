@@ -65,7 +65,7 @@ for (const file of tasks) {
 				stdio: "inherit",
 				env: { ...process.env, WRANGLER_E2E_TEST_FILE: file },
 			});
-		} catch (e) {
+		} catch {
 			console.error("Still failed, moving on");
 			failed.push(file);
 		}

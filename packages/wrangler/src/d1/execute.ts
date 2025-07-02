@@ -623,7 +623,7 @@ async function checkForSQLiteBinary(filename: string) {
 	try {
 		const fd = await fs.open(filename, "r");
 		await fd.read(buffer, 0, 15);
-	} catch (e) {
+	} catch {
 		throw new UserError(
 			`Unable to read SQL text file "${filename}". Please check the file path and try again.`
 		);

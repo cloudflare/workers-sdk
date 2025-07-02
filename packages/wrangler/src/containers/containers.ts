@@ -12,6 +12,7 @@ import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
 import { wrap } from "../cloudchamber/helpers/wrap";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
+import { logger } from "../logger";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
@@ -99,7 +100,7 @@ export async function infoCommand(
 	}
 	if (isNonInteractiveOrCI()) {
 		const application = ApplicationsService.getApplication(infoArgs.ID);
-		console.log(JSON.stringify(application, null, 4));
+		logger.json(application);
 		return;
 	}
 	const [application, err] = await wrap(
@@ -135,7 +136,7 @@ export async function listCommand(
 ) {
 	if (isNonInteractiveOrCI()) {
 		const applications = await ApplicationsService.listApplications();
-		console.log(JSON.stringify(applications, null, 4));
+		logger.json(applications);
 		return;
 	}
 
