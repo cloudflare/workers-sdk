@@ -1069,6 +1069,179 @@ describe("asset-server handler", () => {
 			);
 		});
 	});
+
+	const findIndexHtmlAssetEntryForPath = async (path: string) => {
+		if (path === "/index.html") {
+			return "asset-key-index.html";
+		}
+		return null;
+	};
+
+	const fetchHtmlAsset = () =>
+		Promise.resolve(
+			Object.assign(
+				new Response(`
+				<!DOCTYPE html>
+				<html>
+					<body>
+						<h1>Hello World</h1>
+					</body>
+				</html>
+			`),
+				{ contentType: "text/html" }
+			)
+		);
+
+	const fetchHtmlAssetWithoutBody = () =>
+		Promise.resolve(
+			Object.assign(
+				new Response(`
+				<!DOCTYPE html>
+				<html>
+					<head>
+						<title>No Body</title>
+					</head>
+				</html>
+			`),
+				{ contentType: "text/html" }
+			)
+		);
+
+	const findStyleCssAssetEntryForPath = async (path: string) =>
+		path === "/style.css" ? "asset-key-style.css" : null;
+
+	const fetchCssAsset = () =>
+		Promise.resolve(
+			Object.assign(
+				new Response(`
+				body {
+					font-family: Arial, sans-serif;
+					color: #333;
+				}
+			`),
+				{ contentType: "text/css" }
+			)
+		);
+
+	test("should emit header when Web Analytics Token is injected", async () => {
+		const { response } = await getTestResponse({
+			request: "https://example.com/",
+			metadata: createMetadataObject({
+				deploymentId: "mock-deployment-id",
+				webAnalyticsToken: "test-analytics-token",
+			}) as Metadata,
+			findAssetEntryForPath: findIndexHtmlAssetEntryForPath,
+			fetchAsset: fetchHtmlAsset,
+			xWebAnalyticsHeader: true,
+		});
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("x-cf-pages-analytics")).toBe("1");
+
+		const responseText = await response.text();
+		expect(responseText).toContain(
+			'data-cf-beacon=\'{"token": "test-analytics-token"}\''
+		);
+	});
+
+	test("should not emit header when Web Analytics Token is not configured", async () => {
+		const { response } = await getTestResponse({
+			request: "https://example.com/",
+			metadata: createMetadataObject({
+				deploymentId: "mock-deployment-id",
+			}) as Metadata,
+			findAssetEntryForPath: findIndexHtmlAssetEntryForPath,
+			fetchAsset: fetchHtmlAsset,
+		});
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("x-cf-pages-analytics")).toBeNull();
+
+		const responseText = await response.text();
+		expect(responseText).not.toContain("data-cf-beacon");
+	});
+
+	test("should emit header for HTML without <body> element but not inject script", async () => {
+		const { response } = await getTestResponse({
+			request: "https://example.com/",
+			metadata: createMetadataObject({
+				deploymentId: "mock-deployment-id",
+				webAnalyticsToken: "test-analytics-token",
+			}) as Metadata,
+			findAssetEntryForPath: findIndexHtmlAssetEntryForPath,
+			fetchAsset: fetchHtmlAssetWithoutBody,
+			xWebAnalyticsHeader: true,
+		});
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("x-cf-pages-analytics")).toBe("1");
+
+		const responseText = await response.text();
+		expect(responseText).not.toContain("data-cf-beacon");
+		expect(responseText).toContain("<title>No Body</title>");
+	});
+
+	test("should not emit header for non-HTML responses", async () => {
+		const { response } = await getTestResponse({
+			request: "https://example.com/style.css",
+			metadata: createMetadataObject({
+				deploymentId: "mock-deployment-id",
+				webAnalyticsToken: "test-analytics-token",
+			}) as Metadata,
+			findAssetEntryForPath: findStyleCssAssetEntryForPath,
+			fetchAsset: fetchCssAsset,
+		});
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("x-cf-pages-analytics")).toBeNull();
+		expect(response.headers.get("content-type")).toBe("text/css");
+
+		const responseText = await response.text();
+		expect(responseText).not.toContain("data-cf-beacon");
+		expect(responseText).toContain("font-family: Arial");
+	});
+
+	test("should not emit header when xWebAnalyticsHeader is false", async () => {
+		const { response } = await getTestResponse({
+			request: "https://example.com/",
+			metadata: createMetadataObject({
+				deploymentId: "mock-deployment-id",
+				webAnalyticsToken: "test-analytics-token",
+			}) as Metadata,
+			findAssetEntryForPath: findIndexHtmlAssetEntryForPath,
+			fetchAsset: fetchHtmlAsset,
+			xWebAnalyticsHeader: false,
+		});
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("x-cf-pages-analytics")).toBeNull();
+
+		const responseText = await response.text();
+		expect(responseText).toContain(
+			'data-cf-beacon=\'{"token": "test-analytics-token"}\''
+		);
+	});
+
+	test("should not emit header when xWebAnalyticsHeader is undefined", async () => {
+		const { response } = await getTestResponse({
+			request: "https://example.com/",
+			metadata: createMetadataObject({
+				deploymentId: "mock-deployment-id",
+				webAnalyticsToken: "test-analytics-token",
+			}) as Metadata,
+			findAssetEntryForPath: findIndexHtmlAssetEntryForPath,
+			fetchAsset: fetchHtmlAsset,
+			xWebAnalyticsHeader: undefined,
+		});
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("x-cf-pages-analytics")).toBeNull();
+
+		const responseText = await response.text();
+		expect(responseText).toContain(
+			'data-cf-beacon=\'{"token": "test-analytics-token"}\''
+		);
+	});
 });
 
 interface HandlerSpies {
@@ -1121,6 +1294,7 @@ async function getTestResponse({
 		request: request instanceof Request ? request : new Request(request),
 		metadata,
 		xServerEnvHeader: "dev",
+		xWebAnalyticsHeader: options.xWebAnalyticsHeader,
 		logError: console.error,
 		findAssetEntryForPath: async (...args) => {
 			spies.findAssetEntryForPath++;

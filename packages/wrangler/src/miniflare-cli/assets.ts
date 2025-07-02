@@ -206,6 +206,7 @@ async function generateAssetsFetch(
 			request: request as unknown as WorkersRequest,
 			metadata: metadata as Metadata,
 			xServerEnvHeader: "dev",
+			xWebAnalyticsHeader: false,
 			logError: console.error,
 			findAssetEntryForPath: async (path) => {
 				const filepath = resolve(join(directory, path));
