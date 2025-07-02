@@ -1,9 +1,9 @@
 import assert from "node:assert";
-import { randomUUID } from "node:crypto";
 import events from "node:events";
 import path from "node:path";
 import util from "node:util";
 import { bold, green } from "@cloudflare/cli/colors";
+import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { isWebContainer } from "@webcontainer/env";
 import dedent from "ts-dedent";
 import { DevEnv } from "./api";
@@ -574,7 +574,7 @@ async function setupDevEnv(
 				enableContainers: args.enableContainers,
 				dockerPath: args.dockerPath,
 				// initialise with a random id
-				containerBuildId: randomUUID().slice(0, 8),
+				containerBuildId: generateContainerBuildId(),
 			},
 			legacy: {
 				site: (configParam) => {

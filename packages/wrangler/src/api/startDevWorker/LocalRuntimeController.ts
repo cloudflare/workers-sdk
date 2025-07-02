@@ -231,20 +231,20 @@ export class LocalRuntimeController extends RuntimeController {
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
-				await prepareContainerImagesForDev(
-					this.#dockerPath,
-					containerOptions,
-					data.config.config,
-					(buildStartEvent) => {
+				await prepareContainerImagesForDev({
+					dockerPath: this.#dockerPath,
+					configPath: data.config.config,
+					containerOptions: containerOptions,
+					onContainerImagePreparationStart: (buildStartEvent) => {
 						this.containerBeingBuilt = {
 							...buildStartEvent,
 							abortRequested: false,
 						};
 					},
-					() => {
+					onContainerImagePreparationEnd: () => {
 						this.containerBeingBuilt = undefined;
-					}
-				);
+					},
+				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;
 				}

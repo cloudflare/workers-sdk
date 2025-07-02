@@ -113,8 +113,8 @@ const getFormData = (options: ApiRequestOptions): FormData | undefined => {
 	if (options.formData) {
 		const formData = new FormData();
 
-		const process = (key: string, value: any) => {
-			if (isString(value) || isBlob(value)) {
+		const process = async (key: string, value: any) => {
+			if (isString(value)) {
 				formData.append(key, value);
 			} else {
 				formData.append(key, JSON.stringify(value));
@@ -233,7 +233,7 @@ const parseResponseSchemaV4 = <T>(
 			result = {};
 		}
 	} else {
-		result = { error: fetchResult.errors?.[0].message };
+		result = { error: fetchResult.errors?.[0]?.message };
 	}
 	return {
 		url,
@@ -263,6 +263,10 @@ export const sendRequest = async (
 	};
 
 	if (config.WITH_CREDENTIALS) {
+		// :(
+		// The vite-plugin is attempting to typecheck everything with worker types, which does not support request.credentials
+		// Also note this is always set to "omit".
+		// @ts-ignore
 		request.credentials = config.CREDENTIALS;
 	}
 
