@@ -1,4 +1,5 @@
 import { execFile, spawn, StdioOptions } from "child_process";
+import { randomUUID } from "crypto";
 import { existsSync, statSync } from "fs";
 import path from "path";
 import { dockerImageInspect } from "./inspect";
@@ -186,4 +187,11 @@ export async function checkExposedPorts(
 				"For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.\n"
 		);
 	}
+}
+
+/**
+ * Generates a random container build id
+ */
+export function generateContainerBuildId() {
+	return randomUUID().slice(0, 8);
 }

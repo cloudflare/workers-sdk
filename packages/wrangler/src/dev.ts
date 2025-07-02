@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import events from "node:events";
 import path from "node:path";
 import util from "node:util";
+import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { isWebContainer } from "@webcontainer/env";
 import { DevEnv } from "./api";
 import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
@@ -572,7 +573,7 @@ async function setupDevEnv(
 				enableContainers: args.enableContainers,
 				dockerPath: args.dockerPath,
 				// initialise with a random id
-				containerBuildId: randomUUID().slice(0, 8),
+				containerBuildId: generateContainerBuildId(),
 			},
 			legacy: {
 				site: (configParam) => {

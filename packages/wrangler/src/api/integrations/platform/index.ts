@@ -10,7 +10,9 @@ import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
+	getImageNameFromDOClassName,
 } from "../../../dev/miniflare";
+import { getDockerHost } from "../../../environment-variables/misc-variables";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
@@ -325,6 +327,7 @@ export function unstable_getMiniflareWorkerOptions(
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
+		containerBuildId?: string;
 	}
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
@@ -337,6 +340,7 @@ export function unstable_getMiniflareWorkerOptions(
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
+		containerBuildId?: string;
 	}
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
@@ -349,6 +353,7 @@ export function unstable_getMiniflareWorkerOptions(
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
+		containerBuildId?: string;
 	}
 ): Unstable_MiniflareWorkerOptions {
 	const config =
@@ -377,8 +382,8 @@ export function unstable_getMiniflareWorkerOptions(
 			migrations: config.migrations,
 			imagesLocalMode: !!options?.imagesLocalMode,
 			tails: config.tail_consumers,
-			containers: undefined,
-			containerBuildId: undefined,
+			containers: config.containers,
+			containerBuildId: options?.containerBuildId,
 		},
 		options?.remoteProxyConnectionString,
 		options?.remoteBindingsEnabled ?? false
@@ -428,6 +433,11 @@ export function unstable_getMiniflareWorkerOptions(
 						className: binding.class_name,
 						scriptName: binding.script_name,
 						useSQLite,
+						container: getImageNameFromDOClassName({
+							doClassName: binding.class_name,
+							containers: config.containers,
+							containerBuildId: options?.containerBuildId,
+						}),
 					} satisfies DurableObjectDefinition,
 				];
 			})
@@ -449,6 +459,7 @@ export function unstable_getMiniflareWorkerOptions(
 		compatibilityDate: config.compatibility_date,
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
+		containerEngine: config.dev.container_engine ?? getDockerHost(),
 
 		...bindingOptions,
 		...sitesOptions,
