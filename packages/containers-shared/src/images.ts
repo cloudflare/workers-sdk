@@ -4,7 +4,7 @@ import {
 	isCloudflareRegistryLink,
 } from "./knobs";
 import { dockerLoginManagedRegistry } from "./login";
-import { ContainerDevOptions } from "./types";
+import { type ContainerDevOptions } from "./types";
 import {
 	checkExposedPorts,
 	isDockerfile,
@@ -49,18 +49,25 @@ export async function pullImage(
  * such as checking if the Docker CLI is installed, and if the container images
  * expose any ports.
  */
-export async function prepareContainerImagesForDev(
-	dockerPath: string,
-	containerOptions: ContainerDevOptions[],
-	configPath: string | undefined,
+export async function prepareContainerImagesForDev(options: {
+	dockerPath: string;
+	configPath?: string;
+	containerOptions: ContainerDevOptions[];
 	onContainerImagePreparationStart: (args: {
 		containerOptions: ContainerDevOptions;
 		abort: () => void;
-	}) => void,
+	}) => void;
 	onContainerImagePreparationEnd: (args: {
 		containerOptions: ContainerDevOptions;
-	}) => void
-) {
+	}) => void;
+}) {
+	const {
+		dockerPath,
+		configPath,
+		containerOptions,
+		onContainerImagePreparationStart,
+		onContainerImagePreparationEnd,
+	} = options;
 	let aborted = false;
 	if (process.platform === "win32") {
 		throw new Error(

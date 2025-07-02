@@ -1041,7 +1041,11 @@ export function buildMiniflareBindingOptions(
 					{
 						className,
 						useSQLite: classNameToUseSQLite.get(className),
-						container: getImageNameFromDOClassName(className, config),
+						container: getImageNameFromDOClassName({
+							doClassName: className,
+							containers: config.containers,
+							containerBuildId: config.containerBuildId,
+						}),
 					},
 				];
 			}),
@@ -1399,19 +1403,22 @@ export async function buildMiniflareOptions(
  * Returns the Container options for the DO class name.
  * @returns The configuration or `undefined` when the DO has no attached container
  */
-function getImageNameFromDOClassName(
-	DOClassName: string,
-	config: MiniflareBindingsConfig
-): DOContainerOptions | undefined {
-	if (!config.containers || !config.containers.length) {
+export function getImageNameFromDOClassName(options: {
+	doClassName: string;
+	containers?: ContainerApp[];
+	containerBuildId?: string;
+}): DOContainerOptions | undefined {
+	if (!options.containers || !options.containers.length) {
 		return undefined;
 	}
 	assert(
-		config.containerBuildId,
+		options.containerBuildId,
 		"Build ID should be set if containers are defined and enabled"
 	);
 
-	const container = config.containers.find((c) => c.class_name === DOClassName);
+	const container = options.containers.find(
+		(c) => c.class_name === options.doClassName
+	);
 
 	if (!container) {
 		return undefined;
@@ -1419,7 +1426,7 @@ function getImageNameFromDOClassName(
 	return {
 		imageName: getDevContainerImageName(
 			container.class_name,
-			config.containerBuildId
+			options.containerBuildId
 		),
 	};
 }

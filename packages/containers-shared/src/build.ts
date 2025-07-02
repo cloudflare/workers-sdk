@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { readFileSync } from "fs";
 import path from "path";
-import { BuildArgs, ContainerDevOptions, Logger } from "./types";
+import type { BuildArgs, ContainerDevOptions, Logger } from "./types";
 
 export async function constructBuildCommand(
 	options: BuildArgs,
