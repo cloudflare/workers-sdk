@@ -22,6 +22,11 @@ export function yargsCurl(args: yargs.Argv<CommonYargsOptions>) {
 		.option("data", {
 			type: "string",
 			describe: "Add a JSON body to the request",
+			alias: "d",
+		})
+		.option("data-deprecated", {
+			type: "string",
+			hidden: true,
 			alias: "D",
 		})
 		.option("method", {
@@ -67,6 +72,7 @@ async function requestFromCmd(
 		method: string;
 		header: (string | number)[] | undefined;
 		data?: string;
+		dataDeprecated?: string;
 		silent?: boolean;
 		verbose?: boolean;
 		useStdin?: boolean;
@@ -92,6 +98,8 @@ async function requestFromCmd(
 			}),
 			{ "coordinator-request-id": requestId }
 		);
+
+		const data = args.data ?? args.dataDeprecated;
 		const res = await request(OpenAPI, {
 			url: args.path,
 			method: args.method as
@@ -102,7 +110,7 @@ async function requestFromCmd(
 				| "OPTIONS"
 				| "HEAD"
 				| "PATCH",
-			body: args.data ? JSON.parse(args.data) : undefined,
+			body: data ? JSON.parse(data) : undefined,
 			mediaType: "application/json",
 			headers: headers,
 		});
