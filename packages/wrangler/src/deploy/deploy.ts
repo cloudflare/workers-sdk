@@ -774,9 +774,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			if (config.containers) {
 				for (const container of config.containers) {
 					await maybeBuildContainer(
+						config,
 						container,
 						workerTag ?? "worker-tag",
-						accountId || "dry-run-account-id",
 						props.dryRun,
 						dockerPath
 					);

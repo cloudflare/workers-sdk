@@ -13,10 +13,10 @@ import { fillOpenAPIConfiguration } from "./common";
 import type { BuildArgs } from "@cloudflare/containers-shared/src/types";
 
 export async function maybeBuildContainer(
+	config: Config,
 	containerConfig: ContainerApp,
 	/** just the tag component. will be prefixed with the container name */
 	imageTag: string,
-	accountId: string,
 	dryRun: boolean,
 	pathToDocker: string
 ): Promise<{ image: string; pushed: boolean }> {
@@ -42,11 +42,11 @@ export async function maybeBuildContainer(
 	const options = getBuildArguments(containerConfig, imageTag);
 	logger.log("Building image", options.tag);
 	const buildResult = await buildAndMaybePush(
+		config,
 		options,
 		pathToDocker,
 		!dryRun,
 		containerConfig,
-		accountId,
 		dryRun
 	);
 	return buildResult;
@@ -117,9 +117,9 @@ export async function deployContainers(
 		};
 
 		const buildResult = await maybeBuildContainer(
+			config,
 			container,
 			versionId,
-			accountId,
 			dryRun,
 			pathToDocker
 		);
