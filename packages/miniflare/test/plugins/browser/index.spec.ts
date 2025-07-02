@@ -4,7 +4,6 @@ import { Miniflare, MiniflareOptions } from "miniflare";
 const BROWSER_WORKER_SCRIPT = () => `
 export default {
 	async fetch(request, env) {
-		console.log(env.MYBROWSER);
 		if (request.url.endsWith("session")) {
 			const newBrowserSession = await env.MYBROWSER.fetch("https://localhost/v1/acquire")
 			return new Response(await newBrowserSession.text())
