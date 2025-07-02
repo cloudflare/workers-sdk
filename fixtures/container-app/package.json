@@ -6,7 +6,9 @@
 		"container:build": "wrangler containers build ./ -t container-fixture",
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
-		"start": "wrangler dev"
+		"dev:registry": "wrangler dev -c ./wrangler.registry.jsonc",
+		"start": "wrangler dev",
+		"start:registry": "wrangler dev -c ./wrangler.registry.jsonc"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

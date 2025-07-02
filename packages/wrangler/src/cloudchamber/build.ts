@@ -105,7 +105,7 @@ export async function buildAndMaybePush(
 		await dockerBuild(pathToDocker, {
 			buildCmd,
 			dockerfile,
-		});
+		}).ready;
 
 		// ensure the account is not allowed to build anything that exceeds the current
 		// account's disk size limits

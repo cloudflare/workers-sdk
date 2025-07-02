@@ -43,32 +43,51 @@ export function dockerBuild(
 		buildCmd: string[];
 		dockerfile: string;
 	}
-): Promise<void> {
+): { abort: () => void; ready: Promise<void> } {
 	let errorHandled = false;
-	return new Promise((resolve, reject) => {
-		const child = spawn(dockerPath, options.buildCmd, {
-			stdio: ["pipe", "inherit", "inherit"],
-		});
-		if (child.stdin !== null) {
-			child.stdin.write(options.dockerfile);
-			child.stdin.end();
-		}
-
-		child.on("exit", (code) => {
-			if (code === 0) {
-				resolve();
-			} else if (!errorHandled) {
-				errorHandled = true;
-				reject(new Error(`Build exited with code: ${code}`));
-			}
-		});
-		child.on("error", (err) => {
-			if (!errorHandled) {
-				errorHandled = true;
-				reject(err);
-			}
-		});
+	let resolve: () => void;
+	let reject: (err: unknown) => void;
+	const ready = new Promise<void>((res, rej) => {
+		resolve = res;
+		reject = rej;
 	});
+
+	const child = spawn(dockerPath, options.buildCmd, {
+		stdio: ["pipe", "inherit", "inherit"],
+		// We need to set detached to true so that the child process
+		// will control all of its child processed and we can kill
+		// all of them in case we need to abort the build process
+		detached: true,
+	});
+	if (child.stdin !== null) {
+		child.stdin.write(options.dockerfile);
+		child.stdin.end();
+	}
+
+	child.on("exit", (code) => {
+		if (code === 0) {
+			resolve();
+		} else if (!errorHandled) {
+			errorHandled = true;
+			reject(new Error(`Build exited with code: ${code}`));
+		}
+	});
+	child.on("error", (err) => {
+		if (!errorHandled) {
+			errorHandled = true;
+			reject(err);
+		}
+	});
+	return {
+		abort: () => {
+			child.unref();
+			if (child.pid !== undefined) {
+				// kill run on the negative PID kills the whole group controlled by the child process
+				process.kill(-child.pid);
+			}
+		},
+		ready,
+	};
 }
 
 export async function buildImage(
@@ -88,5 +107,5 @@ export async function buildImage(
 		configPath
 	);
 
-	await dockerBuild(dockerPath, { buildCmd, dockerfile });
+	return dockerBuild(dockerPath, { buildCmd, dockerfile });
 }
