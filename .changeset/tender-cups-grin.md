@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Remove --json flag from containers and cloudchamber commands (except for "curl" and "images list")
+Remove --json flag from containers and cloudchamber commands (except for "images list")
