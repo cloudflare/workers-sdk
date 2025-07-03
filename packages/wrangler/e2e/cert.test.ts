@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {
 	generateCaCertName,
 	generateLeafCertificate,
@@ -9,7 +10,7 @@ import {
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { normalizeOutput } from "./helpers/normalize";
 
-describe("cert", () => {
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("cert", () => {
 	const normalize = (str: string) =>
 		normalizeOutput(str, {
 			[process.env.CLOUDFLARE_ACCOUNT_ID as string]: "CLOUDFLARE_ACCOUNT_ID",

@@ -21,47 +21,50 @@ const normalize = (str: string) =>
 		[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
 	}).replaceAll(/^Author:.*$/gm, "Author:      person@example.com");
 
-describe("versions deploy", { timeout: TIMEOUT }, () => {
-	let versionId0: string;
-	let versionId1: string;
-	let versionId2: string;
-	let helper: WranglerE2ETestHelper;
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
+	"versions deploy",
+	{ timeout: TIMEOUT },
+	() => {
+		let versionId0: string;
+		let versionId1: string;
+		let versionId2: string;
+		let helper: WranglerE2ETestHelper;
 
-	beforeAll(async () => {
-		helper = new WranglerE2ETestHelper();
-		await helper.seed({
-			"wrangler.toml": dedent`
+		beforeAll(async () => {
+			helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
 					`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 							export default {
 								fetch(request) {
 									return new Response("Hello World!")
 								}
 							}`,
-			"package.json": dedent`
+				"package.json": dedent`
 							{
 								"name": "${workerName}",
 								"version": "0.0.0",
 								"private": true
 							}
 							`,
+			});
+			// TEMP: regular deploy needed for the first time to *create* the worker (will create 1 extra version + deployment in snapshots below)
+			const deploy = await helper.run("wrangler deploy");
+			versionId0 = matchVersionId(deploy.stdout);
 		});
-		// TEMP: regular deploy needed for the first time to *create* the worker (will create 1 extra version + deployment in snapshots below)
-		const deploy = await helper.run("wrangler deploy");
-		versionId0 = matchVersionId(deploy.stdout);
-	});
 
-	it("should upload 1st Worker version", async () => {
-		const upload = await helper.run(
-			`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload"`
-		);
+		it("should upload 1st Worker version", async () => {
+			const upload = await helper.run(
+				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload"`
+			);
 
-		versionId1 = matchVersionId(upload.stdout);
+			versionId1 = matchVersionId(upload.stdout);
 
-		expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
+			expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: (TIMINGS)
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
@@ -71,12 +74,12 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
 		`);
-	});
+		});
 
-	it("should list 1 version", async () => {
-		const list = await helper.run(`wrangler versions list`);
+		it("should list 1 version", async () => {
+			const list = await helper.run(`wrangler versions list`);
 
-		expect(normalize(list.stdout)).toMatchInlineSnapshot(`
+			expect(normalize(list.stdout)).toMatchInlineSnapshot(`
 			"Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
@@ -91,16 +94,16 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Message:     Upload via e2e test"
 		`);
 
-		expect(list.stdout).toMatch(/Message:\s+Upload via e2e test/);
-		expect(list.stdout).toMatch(/Tag:\s+e2e-upload/);
-	});
+			expect(list.stdout).toMatch(/Message:\s+Upload via e2e test/);
+			expect(list.stdout).toMatch(/Tag:\s+e2e-upload/);
+		});
 
-	it("should deploy 1st Worker version", async () => {
-		const deploy = await helper.run(
-			`wrangler versions deploy ${versionId1}@100% --message "Deploy via e2e test" --yes`
-		);
+		it("should deploy 1st Worker version", async () => {
+			const deploy = await helper.run(
+				`wrangler versions deploy ${versionId1}@100% --message "Deploy via e2e test" --yes`
+			);
 
-		expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
+			expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
 			"╭ Deploy Worker Versions by splitting traffic between multiple versions
 			│
 			├ Fetching latest deployment
@@ -134,12 +137,12 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			│
 			╰  SUCCESS  Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 		`);
-	});
+		});
 
-	it("should list 1 deployment", async () => {
-		const list = await helper.run(`wrangler deployments list`);
+		it("should list 1 deployment", async () => {
+			const list = await helper.run(`wrangler deployments list`);
 
-		expect(normalize(list.stdout)).toMatchInlineSnapshot(`
+			expect(normalize(list.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Upload
@@ -158,26 +161,26 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			                 Message:  Upload via e2e test"
 		`);
 
-		expect(list.stdout).toContain(versionId1);
-	});
+			expect(list.stdout).toContain(versionId1);
+		});
 
-	it("should modify & upload 2nd Worker version", async () => {
-		await helper.seed({
-			"src/index.ts": dedent`
+		it("should modify & upload 2nd Worker version", async () => {
+			await helper.seed({
+				"src/index.ts": dedent`
 				export default {
 					fetch(request) {
 						return new Response("Hello World AGAIN!")
 					}
 				}`,
-		});
+			});
 
-		const upload = await helper.run(
-			`wrangler versions upload --message "Upload AGAIN via e2e test" --tag "e2e-upload-AGAIN"`
-		);
+			const upload = await helper.run(
+				`wrangler versions upload --message "Upload AGAIN via e2e test" --tag "e2e-upload-AGAIN"`
+			);
 
-		versionId2 = matchVersionId(upload.stdout);
+			versionId2 = matchVersionId(upload.stdout);
 
-		expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
+			expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: (TIMINGS)
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
@@ -188,9 +191,9 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
 		`);
 
-		const versionsList = await helper.run(`wrangler versions list`);
+			const versionsList = await helper.run(`wrangler versions list`);
 
-		expect(normalize(versionsList.stdout)).toMatchInlineSnapshot(`
+			expect(normalize(versionsList.stdout)).toMatchInlineSnapshot(`
 			"Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
@@ -211,18 +214,20 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Message:     Upload AGAIN via e2e test"
 		`);
 
-		expect(versionsList.stdout).toMatch(/Message:\s+Upload AGAIN via e2e test/);
-		expect(versionsList.stdout).toMatch(/Tag:\s+e2e-upload-AGAIN/);
-	});
+			expect(versionsList.stdout).toMatch(
+				/Message:\s+Upload AGAIN via e2e test/
+			);
+			expect(versionsList.stdout).toMatch(/Tag:\s+e2e-upload-AGAIN/);
+		});
 
-	it("should deploy 2nd Worker version", async () => {
-		const deploy = await helper.run(
-			`wrangler versions deploy ${versionId2}@100% --message "Deploy AGAIN via e2e test" --yes`
-		);
+		it("should deploy 2nd Worker version", async () => {
+			const deploy = await helper.run(
+				`wrangler versions deploy ${versionId2}@100% --message "Deploy AGAIN via e2e test" --yes`
+			);
 
-		const deploymentsList = await helper.run(`wrangler deployments list`);
+			const deploymentsList = await helper.run(`wrangler deployments list`);
 
-		expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
+			expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
 			"╭ Deploy Worker Versions by splitting traffic between multiple versions
 			│
 			├ Fetching latest deployment
@@ -257,8 +262,8 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			╰  SUCCESS  Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 		`);
 
-		// list 2 deployments (+ old deployment)
-		expect(normalize(deploymentsList.stdout)).toMatchInlineSnapshot(`
+			// list 2 deployments (+ old deployment)
+			expect(normalize(deploymentsList.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Upload
@@ -285,21 +290,21 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			                 Message:  Upload AGAIN via e2e test"
 		`);
 
-		expect(countOccurrences(deploymentsList.stdout, versionId0)).toBe(1); // once for regular deploy, only
-		expect(countOccurrences(deploymentsList.stdout, versionId1)).toBe(1); // once for versions deploy, only
-		expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
-	});
+			expect(countOccurrences(deploymentsList.stdout, versionId0)).toBe(1); // once for regular deploy, only
+			expect(countOccurrences(deploymentsList.stdout, versionId1)).toBe(1); // once for versions deploy, only
+			expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
+		});
 
-	it("should rollback to implicit Worker version (1st version)", async () => {
-		const rollback = await helper.run(
-			`wrangler rollback --message "Rollback via e2e test" --yes`
-		);
+		it("should rollback to implicit Worker version (1st version)", async () => {
+			const rollback = await helper.run(
+				`wrangler rollback --message "Rollback via e2e test" --yes`
+			);
 
-		const versionsList = await helper.run(`wrangler versions list`);
+			const versionsList = await helper.run(`wrangler versions list`);
 
-		const deploymentsList = await helper.run(`wrangler deployments list`);
+			const deploymentsList = await helper.run(`wrangler deployments list`);
 
-		expect(normalize(rollback.stdout)).toMatchInlineSnapshot(`
+			expect(normalize(rollback.stdout)).toMatchInlineSnapshot(`
 			"├ Fetching latest deployment
 			│
 			├ Your current deployment has 1 version(s):
@@ -333,12 +338,12 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Current Version ID: 00000000-0000-0000-0000-000000000000"
 		`);
 
-		expect(rollback.stdout).toContain(
-			`Worker Version ${versionId1} has been deployed to 100% of traffic`
-		);
+			expect(rollback.stdout).toContain(
+				`Worker Version ${versionId1} has been deployed to 100% of traffic`
+			);
 
-		// list same versions as before (no new versions created)
-		expect(normalize(versionsList.stdout)).toMatchInlineSnapshot(`
+			// list same versions as before (no new versions created)
+			expect(normalize(versionsList.stdout)).toMatchInlineSnapshot(`
 			"Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
@@ -359,8 +364,8 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Message:     Upload AGAIN via e2e test"
 		`);
 
-		// list deployments with new rollback deployment of 1st version (1 new deployment created)
-		expect(normalize(deploymentsList.stdout)).toMatchInlineSnapshot(`
+			// list deployments with new rollback deployment of 1st version (1 new deployment created)
+			expect(normalize(deploymentsList.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Upload
@@ -395,21 +400,21 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			                 Message:  Upload via e2e test"
 		`);
 
-		expect(countOccurrences(deploymentsList.stdout, versionId0)).toBe(1); // once for regular deploy, only
-		expect(countOccurrences(deploymentsList.stdout, versionId1)).toBe(2); // once for versions deploy, once for rollback
-		expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
-	});
+			expect(countOccurrences(deploymentsList.stdout, versionId0)).toBe(1); // once for regular deploy, only
+			expect(countOccurrences(deploymentsList.stdout, versionId1)).toBe(2); // once for versions deploy, once for rollback
+			expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
+		});
 
-	it("should rollback to specific Worker version (0th version)", async () => {
-		const rollback = await helper.run(
-			`wrangler rollback ${versionId0} --message "Rollback to old version" --yes`
-		);
+		it("should rollback to specific Worker version (0th version)", async () => {
+			const rollback = await helper.run(
+				`wrangler rollback ${versionId0} --message "Rollback to old version" --yes`
+			);
 
-		const versionsList = await helper.run(`wrangler versions list`);
+			const versionsList = await helper.run(`wrangler versions list`);
 
-		const deploymentsList = await helper.run(`wrangler deployments list`);
+			const deploymentsList = await helper.run(`wrangler deployments list`);
 
-		expect(normalize(rollback.stdout)).toMatchInlineSnapshot(`
+			expect(normalize(rollback.stdout)).toMatchInlineSnapshot(`
 			"├ Fetching latest deployment
 			│
 			├ Your current deployment has 1 version(s):
@@ -440,12 +445,12 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Current Version ID: 00000000-0000-0000-0000-000000000000"
 		`);
 
-		expect(rollback.stdout).toContain(
-			`Worker Version ${versionId0} has been deployed to 100% of traffic`
-		);
+			expect(rollback.stdout).toContain(
+				`Worker Version ${versionId0} has been deployed to 100% of traffic`
+			);
 
-		// list same versions as before (no new versions created)
-		expect(normalize(versionsList.stdout)).toMatchInlineSnapshot(`
+			// list same versions as before (no new versions created)
+			expect(normalize(versionsList.stdout)).toMatchInlineSnapshot(`
 			"Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
@@ -466,8 +471,8 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Message:     Upload AGAIN via e2e test"
 		`);
 
-		// list deployments with new rollback deployment of 0th version (1 new deployment created)
-		expect(normalize(deploymentsList.stdout)).toMatchInlineSnapshot(`
+			// list deployments with new rollback deployment of 0th version (1 new deployment created)
+			expect(normalize(deploymentsList.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Upload
@@ -510,14 +515,14 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			                 Message:  -"
 		`);
 
-		expect(countOccurrences(deploymentsList.stdout, versionId0)).toBe(2); // once for regular deploy, once for rollback
-		expect(countOccurrences(deploymentsList.stdout, versionId1)).toBe(2); // once for versions deploy, once for rollback
-		expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
-	});
+			expect(countOccurrences(deploymentsList.stdout, versionId0)).toBe(2); // once for regular deploy, once for rollback
+			expect(countOccurrences(deploymentsList.stdout, versionId1)).toBe(2); // once for versions deploy, once for rollback
+			expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
+		});
 
-	it("fails to upload if using Workers Sites", async () => {
-		await helper.seed({
-			"wrangler.toml": dedent`
+		it("fails to upload if using Workers Sites", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
                 name = "${workerName}"
                 main = "src/index.ts"
                 compatibility_date = "2023-01-01"
@@ -525,54 +530,54 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
                 [site]
                 bucket = "./public"
             `,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
                 export default {
                     fetch(request) {
                         return new Response("Hello World!")
                     }
                 }
             `,
-			"package.json": dedent`
+				"package.json": dedent`
                 {
                     "name": "${workerName}",
                     "version": "0.0.0",
                     "private": true
                 }
             `,
-		});
+			});
 
-		const upload = await helper.run(`wrangler versions upload`);
+			const upload = await helper.run(`wrangler versions upload`);
 
-		expect(normalize(upload.output)).toMatchInlineSnapshot(`
+			expect(normalize(upload.output)).toMatchInlineSnapshot(`
 			"X [ERROR] Workers Sites does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
 			🪵  Logs were written to "<LOG>""
 		`);
-	});
+		});
 
-	it("should upload version of Worker with assets", async () => {
-		await helper.seed({
-			"wrangler.toml": dedent`
+		it("should upload version of Worker with assets", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
 	            name = "${workerName}"
 	            compatibility_date = "2023-01-01"
 
 	            [assets]
 	            directory = "./public"
 	        `,
-			"public/asset.txt": `beep boop`,
-			"package.json": dedent`
+				"public/asset.txt": `beep boop`,
+				"package.json": dedent`
 	            {
 	                "name": "${workerName}",
 	                "version": "0.0.0",
 	                "private": true
 	            }
 	        `,
-		});
+			});
 
-		const upload = await helper.run(
-			`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload-assets"`
-		);
+			const upload = await helper.run(
+				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload-assets"`
+			);
 
-		expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
+			expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
 			"🌀 Building list of assets...
 			✨ Read 1 file from the assets directory /tmpdir
 			🌀 Starting asset upload...
@@ -589,36 +594,37 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
 		`);
-	});
-
-	it("should include version preview url in output file", async () => {
-		const outputFile = path.join(helper.tmpPath, "output.jsonnd");
-		const upload = await helper.run(
-			`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload"`,
-			{
-				env: {
-					...process.env,
-					WRANGLER_OUTPUT_FILE_PATH: outputFile,
-				},
-			}
-		);
-
-		versionId1 = matchVersionId(upload.stdout);
-
-		const output = await readFile(outputFile, "utf8");
-
-		expect(JSON.parse(normalizeOutput(output.split("\n")[1]))).toMatchObject({
-			preview_url: "https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev",
 		});
-	});
 
-	it("should delete Worker", async () => {
-		const { stdout } = await helper.run(`wrangler delete`);
+		it("should include version preview url in output file", async () => {
+			const outputFile = path.join(helper.tmpPath, "output.jsonnd");
+			const upload = await helper.run(
+				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload"`,
+				{
+					env: {
+						...process.env,
+						WRANGLER_OUTPUT_FILE_PATH: outputFile,
+					},
+				}
+			);
 
-		expect(normalize(stdout)).toMatchInlineSnapshot(`
+			versionId1 = matchVersionId(upload.stdout);
+
+			const output = await readFile(outputFile, "utf8");
+
+			expect(JSON.parse(normalizeOutput(output.split("\n")[1]))).toMatchObject({
+				preview_url: "https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev",
+			});
+		});
+
+		it("should delete Worker", async () => {
+			const { stdout } = await helper.run(`wrangler delete`);
+
+			expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"? Are you sure you want to delete tmp-e2e-worker-00000000-0000-0000-0000-000000000000? This action cannot be undone.
 			🤖 Using fallback value in non-interactive context: yes
 			Successfully deleted tmp-e2e-worker-00000000-0000-0000-0000-000000000000"
 		`);
-	});
-});
+		});
+	}
+);

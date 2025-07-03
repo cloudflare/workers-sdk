@@ -5,6 +5,7 @@ import dedent from "ts-dedent";
 import { Agent, fetch } from "undici";
 import { beforeEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
+import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
@@ -13,8 +14,8 @@ const inspectorPort = await getPort();
 
 const RUNTIMES = [
 	{ flags: "", runtime: "local" },
-	{ flags: "--remote", runtime: "remote" },
-] as const;
+	...(CLOUDFLARE_ACCOUNT_ID ? [{ flags: "--remote", runtime: "remote" }] : []),
+];
 
 // WebAssembly module containing single `func add(i32, i32): i32` export.
 // Generated using https://webassembly.github.io/wabt/demo/wat2wasm/.
@@ -621,7 +622,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 
 	// Refer to https://github.com/cloudflare/workers-sdk/pull/8492 for full context on why this test does different things to the others.
 	// In particular, it uses a shared resource across test runs
-	it("exposes Vectorize bindings", async () => {
+	it.skipIf(!CLOUDFLARE_ACCOUNT_ID)("exposes Vectorize bindings", async () => {
 		const name = await helper.vectorize(
 			32,
 			"euclidean",
@@ -829,9 +830,14 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	});
 
 	describe.sequential.each([
-		{ imagesMode: "remote", extraFlags: "" },
-		{ imagesMode: "local", extraFlags: "--experimental-images-local-mode" },
-	] as const)("Images Binding Mode: $imagesMode", async ({ extraFlags }) => {
+		{
+			imagesMode: "local",
+			extraFlags: "--experimental-images-local-mode",
+		},
+		...(CLOUDFLARE_ACCOUNT_ID
+			? [{ imagesMode: "remote", extraFlags: "" }]
+			: []),
+	])("Images Binding Mode: $imagesMode", async ({ extraFlags }) => {
 		it("exposes Images bindings", async () => {
 			await helper.seed({
 				"wrangler.toml": dedent`

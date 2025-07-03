@@ -14,58 +14,61 @@ const normalize = (str: string) =>
 		[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
 	}).replaceAll(/^Author:.*$/gm, "Author:      person@example.com");
 
-describe("deployments", { timeout: TIMEOUT }, () => {
-	// Note that we are sharing the workerName and helper across all these tests,
-	// which means that these tests are not isolated from each other.
-	// Seeded files will leak between tests.
-	const workerName = generateResourceName();
-	const helper = new WranglerE2ETestHelper();
-	let deployedUrl: string;
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
+	"deployments",
+	{ timeout: TIMEOUT },
+	() => {
+		// Note that we are sharing the workerName and helper across all these tests,
+		// which means that these tests are not isolated from each other.
+		// Seeded files will leak between tests.
+		const workerName = generateResourceName();
+		const helper = new WranglerE2ETestHelper();
+		let deployedUrl: string;
 
-	it("deploys a Worker", async () => {
-		await helper.seed({
-			"wrangler.toml": dedent`
+		it("deploys a Worker", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
 						`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 						export default {
 							fetch(request) {
 								return new Response("Hello World!")
 							}
 						}`,
-			"package.json": dedent`
+				"package.json": dedent`
 						{
 							"name": "${workerName}",
 							"version": "0.0.0",
 							"private": true
 						}
 						`,
+			});
+
+			const output = await helper.run(`wrangler deploy`);
+
+			const match = output.stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			deployedUrl = match.groups.url;
+
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(deployedUrl);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot('"Hello World!"');
 		});
 
-		const output = await helper.run(`wrangler deploy`);
+		it("lists 1 deployment", async () => {
+			const output = await helper.run(`wrangler deployments list`);
 
-		const match = output.stdout.match(
-			/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-		);
-		assert(match?.groups);
-		deployedUrl = match.groups.url;
-
-		const { text } = await retry(
-			(s) => s.status !== 200,
-			async () => {
-				const r = await fetch(deployedUrl);
-				return { text: await r.text(), status: r.status };
-			}
-		);
-		expect(text).toMatchInlineSnapshot('"Hello World!"');
-	});
-
-	it("lists 1 deployment", async () => {
-		const output = await helper.run(`wrangler deployments list`);
-
-		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
+			expect(normalize(output.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Upload
@@ -75,38 +78,38 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 			                     Tag:  -
 			                 Message:  -"
 		`);
-	});
+		});
 
-	it("modifies & deploys a Worker", async () => {
-		await helper.seed({
-			"src/index.ts": dedent`
+		it("modifies & deploys a Worker", async () => {
+			await helper.seed({
+				"src/index.ts": dedent`
         export default {
           fetch(request) {
             return new Response("Updated Worker!")
           }
         }`,
+			});
+			const output = await helper.run(`wrangler deploy`);
+
+			const match = output.stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			deployedUrl = match.groups.url;
+
+			const { text } = await retry(
+				(s) => s.status !== 200 || s.text === "Hello World!",
+				async () => {
+					const r = await fetch(deployedUrl);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot('"Updated Worker!"');
 		});
-		const output = await helper.run(`wrangler deploy`);
 
-		const match = output.stdout.match(
-			/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-		);
-		assert(match?.groups);
-		deployedUrl = match.groups.url;
-
-		const { text } = await retry(
-			(s) => s.status !== 200 || s.text === "Hello World!",
-			async () => {
-				const r = await fetch(deployedUrl);
-				return { text: await r.text(), status: r.status };
-			}
-		);
-		expect(text).toMatchInlineSnapshot('"Updated Worker!"');
-	});
-
-	it("lists 2 deployments", async () => {
-		const dep = await helper.run(`wrangler deployments list`);
-		expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
+		it("lists 2 deployments", async () => {
+			const dep = await helper.run(`wrangler deployments list`);
+			expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Upload
@@ -124,13 +127,13 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 			                     Tag:  -
 			                 Message:  -"
 		`);
-	});
+		});
 
-	it("rolls back", async () => {
-		const output = await helper.run(
-			`wrangler rollback --message "A test message"`
-		);
-		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
+		it("rolls back", async () => {
+			const output = await helper.run(
+				`wrangler rollback --message "A test message"`
+			);
+			expect(normalize(output.stdout)).toMatchInlineSnapshot(`
 			"├ Fetching latest deployment
 			│
 			├ Your current deployment has 1 version(s):
@@ -163,11 +166,11 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 			╰  SUCCESS  Worker Version 00000000-0000-0000-0000-000000000000 has been deployed to 100% of traffic.
 			Current Version ID: 00000000-0000-0000-0000-000000000000"
 		`);
-	});
+		});
 
-	it("lists deployments", async () => {
-		const dep = await helper.run(`wrangler deployments list`);
-		expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
+		it("lists deployments", async () => {
+			const dep = await helper.run(`wrangler deployments list`);
+			expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Upload
@@ -193,8 +196,9 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 			                     Tag:  -
 			                 Message:  -"
 		`);
-	});
-});
+		});
+	}
+);
 
 type AssetTestCase = {
 	path: string;
@@ -253,7 +257,7 @@ async function checkAssets(testCases: AssetTestCase[], deployedUrl: string) {
 	}
 }
 
-describe("Workers + Assets deployment", () => {
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 	let helper: WranglerE2ETestHelper;
 	let workerName: string;
 

@@ -6,6 +6,7 @@ import { scheduler, setTimeout } from "node:timers/promises";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { fetchWithETag } from "./helpers/fetch-with-etag";
@@ -23,13 +24,14 @@ import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
  */
 const workerName = generateResourceName();
 
-describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
-	"basic js dev: $cmd",
-	({ cmd }) => {
-		it(`can modify Worker during ${cmd}`, async () => {
-			const helper = new WranglerE2ETestHelper();
-			await helper.seed({
-				"wrangler.toml": dedent`
+describe.each([
+	{ cmd: "wrangler dev" },
+	...(CLOUDFLARE_ACCOUNT_ID ? [{ cmd: "wrangler dev --remote" }] : []),
+])("basic js dev: $cmd", ({ cmd }) => {
+	it(`can modify Worker during ${cmd}`, async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
@@ -38,19 +40,178 @@ describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 							[vars]
 							KEY = "value"
 					`,
-				"src/index.ts": dedent`
+			"src/index.ts": dedent`
 							export default {
 								fetch(request) {
 									return new Response("Hello World!")
 								}
 							}`,
-				"package.json": dedent`
+			"package.json": dedent`
 							{
 								"name": "worker",
 								"version": "0.0.0",
 								"private": true
 							}
 							`,
+		});
+		const worker = helper.runLongLived(cmd);
+
+		const { url } = await worker.waitForReady();
+
+		await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
+
+		await helper.seed({
+			"src/index.ts": dedent`
+						export default {
+							fetch(request, env) {
+								return new Response("Updated Worker! " + env.KEY)
+							}
+						}`,
+		});
+
+		await worker.waitForReload();
+
+		// Regression test for issue where multiple request logs were being logged per request
+		expect([...worker.currentOutput.matchAll(/GET /g)].length).toBe(1);
+
+		await expect(fetchText(url)).resolves.toMatchSnapshot();
+	});
+
+	it(`hotkeys can be disabled with ${cmd}`, async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+							compatibility_flags = ["nodejs_compat"]
+
+							[vars]
+							KEY = "value"
+					`,
+			"src/index.ts": dedent`
+							export default {
+								fetch(request) {
+									return new Response("Hello World!")
+								}
+							}`,
+			"package.json": dedent`
+							{
+								"name": "worker",
+								"version": "0.0.0",
+								"private": true
+							}
+							`,
+		});
+		const worker = helper.runLongLived(
+			`${cmd} --show-interactive-dev-session=false`
+		);
+
+		const { url } = await worker.waitForReady();
+
+		await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
+
+		await expect(worker.currentOutput).not.toContain("[b] open a browser");
+	});
+
+	describe(`--test-scheduled works with ${cmd}`, async () => {
+		it("custom build", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+								name = "${workerName}"
+								main = "src/index.ts"
+								compatibility_date = "2023-01-01"
+								[build]
+								command = "true"
+						`,
+				"src/index.ts": dedent`
+								export default {
+									scheduled(event) {
+										console.log("Event triggered")
+									}
+								}`,
+				"package.json": dedent`
+								{
+									"name": "worker",
+									"version": "0.0.0",
+									"private": true
+								}
+								`,
+			});
+			const worker = helper.runLongLived(`${cmd} --test-scheduled`);
+
+			const { url } = await worker.waitForReady();
+
+			await expect(
+				fetch(`${url}/__scheduled`).then((r) => r.text())
+			).resolves.toMatchSnapshot();
+
+			await worker.readUntil(/Event triggered/);
+		});
+
+		it("no custom build", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+								name = "${workerName}"
+								main = "src/index.ts"
+								compatibility_date = "2023-01-01"
+						`,
+				"src/index.ts": dedent`
+								export default {
+									scheduled(event) {
+										console.log("Event triggered")
+									}
+								}`,
+				"package.json": dedent`
+								{
+									"name": "worker",
+									"version": "0.0.0",
+									"private": true
+								}
+								`,
+			});
+			const worker = helper.runLongLived(`${cmd} --test-scheduled`);
+
+			const { url } = await worker.waitForReady();
+
+			await expect(
+				fetch(`${url}/__scheduled`).then((r) => r.text())
+			).resolves.toMatchSnapshot();
+
+			await worker.readUntil(/Event triggered/);
+		});
+	});
+
+	describe("Workers + Assets", () => {
+		it(`can modify User Worker during ${cmd}`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+								name = "${workerName}"
+								main = "src/index.ts"
+								compatibility_date = "2023-01-01"
+								compatibility_flags = ["nodejs_compat"]
+
+								[assets]
+								directory = "public"
+						`,
+				"src/index.ts": dedent`
+								export default {
+									fetch(request) {
+										return new Response("Hello World!")
+									}
+								}`,
+				"public/readme.md": dedent`
+								Welcome to Workers + Assets readme!`,
+				"package.json": dedent`
+								{
+									"name": "worker",
+									"version": "0.0.0",
+									"private": true
+								}
+								`,
 			});
 			const worker = helper.runLongLived(cmd);
 
@@ -60,183 +221,22 @@ describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 
 			await helper.seed({
 				"src/index.ts": dedent`
-						export default {
-							fetch(request, env) {
-								return new Response("Updated Worker! " + env.KEY)
-							}
-						}`,
-			});
-
-			await worker.waitForReload();
-
-			// Regression test for issue where multiple request logs were being logged per request
-			expect([...worker.currentOutput.matchAll(/GET /g)].length).toBe(1);
-
-			await expect(fetchText(url)).resolves.toMatchSnapshot();
-		});
-
-		it(`hotkeys can be disabled with ${cmd}`, async () => {
-			const helper = new WranglerE2ETestHelper();
-			await helper.seed({
-				"wrangler.toml": dedent`
-							name = "${workerName}"
-							main = "src/index.ts"
-							compatibility_date = "2023-01-01"
-							compatibility_flags = ["nodejs_compat"]
-
-							[vars]
-							KEY = "value"
-					`,
-				"src/index.ts": dedent`
-							export default {
-								fetch(request) {
-									return new Response("Hello World!")
-								}
-							}`,
-				"package.json": dedent`
-							{
-								"name": "worker",
-								"version": "0.0.0",
-								"private": true
-							}
-							`,
-			});
-			const worker = helper.runLongLived(
-				`${cmd} --show-interactive-dev-session=false`
-			);
-
-			const { url } = await worker.waitForReady();
-
-			await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
-
-			await expect(worker.currentOutput).not.toContain("[b] open a browser");
-		});
-
-		describe(`--test-scheduled works with ${cmd}`, async () => {
-			it("custom build", async () => {
-				const helper = new WranglerE2ETestHelper();
-				await helper.seed({
-					"wrangler.toml": dedent`
-								name = "${workerName}"
-								main = "src/index.ts"
-								compatibility_date = "2023-01-01"
-								[build]
-								command = "true"
-						`,
-					"src/index.ts": dedent`
-								export default {
-									scheduled(event) {
-										console.log("Event triggered")
-									}
-								}`,
-					"package.json": dedent`
-								{
-									"name": "worker",
-									"version": "0.0.0",
-									"private": true
-								}
-								`,
-				});
-				const worker = helper.runLongLived(`${cmd} --test-scheduled`);
-
-				const { url } = await worker.waitForReady();
-
-				await expect(
-					fetch(`${url}/__scheduled`).then((r) => r.text())
-				).resolves.toMatchSnapshot();
-
-				await worker.readUntil(/Event triggered/);
-			});
-
-			it("no custom build", async () => {
-				const helper = new WranglerE2ETestHelper();
-				await helper.seed({
-					"wrangler.toml": dedent`
-								name = "${workerName}"
-								main = "src/index.ts"
-								compatibility_date = "2023-01-01"
-						`,
-					"src/index.ts": dedent`
-								export default {
-									scheduled(event) {
-										console.log("Event triggered")
-									}
-								}`,
-					"package.json": dedent`
-								{
-									"name": "worker",
-									"version": "0.0.0",
-									"private": true
-								}
-								`,
-				});
-				const worker = helper.runLongLived(`${cmd} --test-scheduled`);
-
-				const { url } = await worker.waitForReady();
-
-				await expect(
-					fetch(`${url}/__scheduled`).then((r) => r.text())
-				).resolves.toMatchSnapshot();
-
-				await worker.readUntil(/Event triggered/);
-			});
-		});
-
-		describe("Workers + Assets", () => {
-			it(`can modify User Worker during ${cmd}`, async () => {
-				const helper = new WranglerE2ETestHelper();
-				await helper.seed({
-					"wrangler.toml": dedent`
-								name = "${workerName}"
-								main = "src/index.ts"
-								compatibility_date = "2023-01-01"
-								compatibility_flags = ["nodejs_compat"]
-
-								[assets]
-								directory = "public"
-						`,
-					"src/index.ts": dedent`
-								export default {
-									fetch(request) {
-										return new Response("Hello World!")
-									}
-								}`,
-					"public/readme.md": dedent`
-								Welcome to Workers + Assets readme!`,
-					"package.json": dedent`
-								{
-									"name": "worker",
-									"version": "0.0.0",
-									"private": true
-								}
-								`,
-				});
-				const worker = helper.runLongLived(cmd);
-
-				const { url } = await worker.waitForReady();
-
-				await expect(
-					fetch(url).then((r) => r.text())
-				).resolves.toMatchSnapshot();
-
-				await helper.seed({
-					"src/index.ts": dedent`
 							export default {
 								fetch(request, env) {
 									return new Response("Updated Worker!")
 								}
 							}`,
-				});
-
-				await worker.waitForReload();
-
-				await expect(fetchText(url)).resolves.toMatchSnapshot();
 			});
 
-			it(`can modify assets during ${cmd}`, async () => {
-				const helper = new WranglerE2ETestHelper();
-				await helper.seed({
-					"wrangler.toml": dedent`
+			await worker.waitForReload();
+
+			await expect(fetchText(url)).resolves.toMatchSnapshot();
+		});
+
+		it(`can modify assets during ${cmd}`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
 								name = "${workerName}"
 								main = "src/index.ts"
 								compatibility_date = "2023-01-01"
@@ -245,42 +245,39 @@ describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 								[assets]
 								directory = "public"
 						`,
-					"src/index.ts": dedent`
+				"src/index.ts": dedent`
 								export default {
 									fetch(request) {
 										return new Response("Hello World!")
 									}
 								}`,
-					"public/readme.md": dedent`
+				"public/readme.md": dedent`
 								Welcome to Workers + Assets readme!`,
-					"package.json": dedent`
+				"package.json": dedent`
 								{
 									"name": "worker",
 									"version": "0.0.0",
 									"private": true
 								}
 								`,
-				});
-				const worker = helper.runLongLived(cmd);
-
-				const { url } = await worker.waitForReady();
-
-				await expect(
-					fetch(url).then((r) => r.text())
-				).resolves.toMatchSnapshot();
-
-				await helper.seed({
-					"public/readme.md": dedent`
-								Welcome to updated Workers + Assets readme!`,
-				});
-
-				await worker.waitForReload();
-
-				await expect(fetchText(url)).resolves.toMatchSnapshot();
 			});
+			const worker = helper.runLongLived(cmd);
+
+			const { url } = await worker.waitForReady();
+
+			await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
+
+			await helper.seed({
+				"public/readme.md": dedent`
+								Welcome to updated Workers + Assets readme!`,
+			});
+
+			await worker.waitForReload();
+
+			await expect(fetchText(url)).resolves.toMatchSnapshot();
 		});
-	}
-);
+	});
+});
 
 // This fails on Windows because of https://github.com/cloudflare/workerd/issues/1664
 it.runIf(process.platform !== "win32")(
@@ -705,12 +702,14 @@ describe("hyperdrive dev tests", () => {
 		await socketMsgPromise;
 	});
 
-	it("does not require local connection string when running `wrangler dev --remote`", async () => {
-		const helper = new WranglerE2ETestHelper();
-		const { id } = await helper.hyperdrive(false);
+	it.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
+		"does not require local connection string when running `wrangler dev --remote`",
+		async () => {
+			const helper = new WranglerE2ETestHelper();
+			const { id } = await helper.hyperdrive(false);
 
-		await helper.seed({
-			"wrangler.toml": dedent`
+			await helper.seed({
+				"wrangler.toml": dedent`
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-10-25"
@@ -719,7 +718,7 @@ describe("hyperdrive dev tests", () => {
 					binding = "HYPERDRIVE"
 					id = "${id}"
 			`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 					export default {
 						async fetch(request, env) {
 							if (request.url.includes("connect")) {
@@ -728,20 +727,21 @@ describe("hyperdrive dev tests", () => {
 							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
 						}
 					}`,
-			"package.json": dedent`
+				"package.json": dedent`
 					{
 						"name": "worker",
 						"version": "0.0.0",
 						"private": true
 					}
 					`,
-		});
+			});
 
-		const worker = helper.runLongLived("wrangler dev --remote");
+			const worker = helper.runLongLived("wrangler dev --remote");
 
-		const { url } = await worker.waitForReady();
-		await fetch(`${url}/connect`);
-	});
+			const { url } = await worker.waitForReady();
+			await fetch(`${url}/connect`);
+		}
+	);
 
 	afterEach(() => {
 		if (server.listening) {
@@ -950,42 +950,44 @@ describe("analytics engine", () => {
 	);
 });
 
-describe("zone selection", () => {
-	it("defaults to a workers.dev preview", async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed({
-			"wrangler.toml": dedent`
+describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
+	"zone selection",
+	() => {
+		it("defaults to a workers.dev preview", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
 				compatibility_flags = ["nodejs_compat"]`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 				export default {
 					fetch(request) {
 						return new Response(request.url)
 					}
 				}`,
-			"package.json": dedent`
+				"package.json": dedent`
 				{
 					"name": "worker",
 					"version": "0.0.0",
 					"private": true
 				}
 				`,
+			});
+			const worker = helper.runLongLived("wrangler dev --remote");
+
+			const { url } = await worker.waitForReady();
+
+			const text = await fetchText(url);
+
+			expect(text).toContain(`devprod-testing7928.workers.dev`);
 		});
-		const worker = helper.runLongLived("wrangler dev --remote");
 
-		const { url } = await worker.waitForReady();
-
-		const text = await fetchText(url);
-
-		expect(text).toContain(`devprod-testing7928.workers.dev`);
-	});
-
-	it("respects dev.host setting", async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed({
-			"wrangler.toml": dedent`
+		it("respects dev.host setting", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
@@ -993,35 +995,35 @@ describe("zone selection", () => {
 
 				[dev]
 				host = "wrangler-testing.testing.devprod.cloudflare.dev"`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 				export default {
 					fetch(request) {
 						return new Response(request.url)
 					}
 				}`,
-			"package.json": dedent`
+				"package.json": dedent`
 				{
 					"name": "worker",
 					"version": "0.0.0",
 					"private": true
 				}
 				`,
+			});
+			const worker = helper.runLongLived("wrangler dev --remote");
+
+			const { url } = await worker.waitForReady();
+
+			const text = await fetchText(url);
+
+			expect(text).toMatchInlineSnapshot(
+				`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
+			);
 		});
-		const worker = helper.runLongLived("wrangler dev --remote");
 
-		const { url } = await worker.waitForReady();
-
-		const text = await fetchText(url);
-
-		expect(text).toMatchInlineSnapshot(
-			`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
-		);
-	});
-
-	it("infers host from first route", async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed({
-			"wrangler.toml": dedent`
+		it("infers host from first route", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
@@ -1031,35 +1033,35 @@ describe("zone selection", () => {
 				pattern = "wrangler-testing.testing.devprod.cloudflare.dev/*"
 				zone_name = "testing.devprod.cloudflare.dev"
 			`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 				export default {
 					fetch(request) {
 						return new Response(request.url)
 					}
 				}`,
-			"package.json": dedent`
+				"package.json": dedent`
 				{
 					"name": "worker",
 					"version": "0.0.0",
 					"private": true
 				}
 				`,
+			});
+			const worker = helper.runLongLived("wrangler dev --remote");
+
+			const { url } = await worker.waitForReady();
+
+			const text = await fetchText(url);
+
+			expect(text).toMatchInlineSnapshot(
+				`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
+			);
 		});
-		const worker = helper.runLongLived("wrangler dev --remote");
 
-		const { url } = await worker.waitForReady();
-
-		const text = await fetchText(url);
-
-		expect(text).toMatchInlineSnapshot(
-			`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
-		);
-	});
-
-	it("fails with useful error message if host is not routable", async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed({
-			"wrangler.toml": dedent`
+		it("fails with useful error message if host is not routable", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
@@ -1069,27 +1071,28 @@ describe("zone selection", () => {
 				pattern = "not-a-domain.testing.devprod.cloudflare.dev/*"
 				zone_name = "testing.devprod.cloudflare.dev"
 			`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 				export default {
 					fetch(request) {
 						return new Response(request.url)
 					}
 				}`,
-			"package.json": dedent`
+				"package.json": dedent`
 				{
 					"name": "worker",
 					"version": "0.0.0",
 					"private": true
 				}
 				`,
-		});
-		const worker = helper.runLongLived("wrangler dev --remote");
+			});
+			const worker = helper.runLongLived("wrangler dev --remote");
 
-		await worker.readUntil(
-			/Could not access `not-a-domain.testing.devprod.cloudflare.dev`. Make sure the domain is set up to be proxied by Cloudflare/
-		);
-	});
-});
+			await worker.readUntil(
+				/Could not access `not-a-domain.testing.devprod.cloudflare.dev`. Make sure the domain is set up to be proxied by Cloudflare/
+			);
+		});
+	}
+);
 
 describe("custom builds", () => {
 	it("does not hang when custom build does not cause esbuild to run", async () => {

@@ -420,4 +420,25 @@ describe("generatePreviewAlias", () => {
 		const result = generatePreviewAlias("testscript");
 		expect(result).toBeUndefined();
 	});
+
+	it("Strips leading dashes from branch name", () => {
+		vi.stubEnv("WORKERS_CI_BRANCH", "-some-branch-name");
+
+		const result = generatePreviewAlias("testscript");
+		expect(result).toBe("some-branch-name");
+	});
+
+	it("Removes concurrent dashes from branch name", () => {
+		vi.stubEnv("WORKERS_CI_BRANCH", "some----branch-----name");
+
+		const result = generatePreviewAlias("testscript");
+		expect(result).toBe("some-branch-name");
+	});
+
+	it("Does not produce an alias with leading numbers", () => {
+		vi.stubEnv("WORKERS_CI_BRANCH", "0AF0ED");
+
+		const result = generatePreviewAlias("testscript");
+		expect(result).toBeUndefined();
+	});
 });
