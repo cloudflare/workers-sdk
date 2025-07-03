@@ -13,7 +13,7 @@ describe("versions --help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler versions
 
-			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
+			🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker
@@ -44,7 +44,7 @@ describe("versions subhelp", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler versions
 
-			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
+			🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker
