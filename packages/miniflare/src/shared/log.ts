@@ -45,6 +45,37 @@ function dimInternalStackLine(line: string): string {
 	return line;
 }
 
+/**
+ * Format an error into a string, including the error cause if available.
+ *
+ * @example
+ * ```
+ * Error: Something went wrong
+ *    at Object.<anonymous> (/path/to/file.js:10:15)
+ * Caused by: Error: Another error
+ *   at Object.<anonymous> (/path/to/another-file.js:5:10)
+ * ```
+ */
+export function formatError(error: Error): string {
+	let message: string;
+
+	if (error.stack) {
+		message = error.stack
+			.split("\n")
+			// Dim internal stack trace lines to highlight user code
+			.map(dimInternalStackLine)
+			.join("\n");
+	} else {
+		message = error.toString();
+	}
+
+	if (error.cause instanceof Error) {
+		message += `\nCaused by: ${formatError(error.cause)}`;
+	}
+
+	return message;
+}
+
 export interface LogOptions {
 	prefix?: string;
 	suffix?: string;
@@ -90,15 +121,8 @@ export class Log {
 	error(message: Error): void {
 		if (this.level < LogLevel.ERROR) {
 			// Ignore message if it won't get logged
-		} else if (message.stack) {
-			// Dim internal stack trace lines to highlight user code
-			const lines = message.stack.split("\n").map(dimInternalStackLine);
-			this.logWithLevel(LogLevel.ERROR, lines.join("\n"));
 		} else {
-			this.logWithLevel(LogLevel.ERROR, message.toString());
-		}
-		if ((message as any).cause) {
-			this.error(prefixError("Cause", (message as any).cause));
+			this.logWithLevel(LogLevel.ERROR, formatError(message));
 		}
 	}
 

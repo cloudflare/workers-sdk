@@ -277,32 +277,66 @@ async function getSources(inspectorBaseURL: URL, serviceName: string) {
 		.sort();
 }
 
-// TODO(soon): just use `NoOpLog` when `Log#error()` no longer throws
-class SafeLog extends Log {
-	error(message: Error) {
-		this.logWithLevel(LogLevel.ERROR, String(message));
+class CustomLog extends Log {
+	logs: [LogLevel, string][] = [];
+
+	log(message: string): void {
+		this.logs.push([LogLevel.NONE, message]);
+	}
+
+	logWithLevel(level: LogLevel, message: string) {
+		this.logs.push([level, message]);
+	}
+
+	getLogs(level: LogLevel): string[] {
+		return this.logs
+			.filter(([logLevel]) => logLevel === level)
+			.map(([, message]) => message);
 	}
 }
 
 test("responds with pretty error page", async (t) => {
+	const log = new CustomLog();
 	const mf = new Miniflare({
-		log: new SafeLog(LogLevel.NONE),
+		log,
 		modules: true,
 		script: `
+		function doSomething() {
+			try {
+				oops();
+			} catch (e) {
+			 	throw new Error("Unusual oops!", {
+					cause: e,
+				})
+			}
+		}
+
+        function oops() {
+		  throw new Error("Test error");
+		}
+
+		// This emulates the reduceError function in the Wrangler middleware template
+		// See packages/wrangler/templates/middleware/middleware-miniflare3-json-error.ts
 		function reduceError(e) {
 			return {
 				name: e?.name,
 				message: e?.message ?? String(e),
 				stack: e?.stack,
+				cause: e?.cause === undefined ? undefined : reduceError(e.cause),
 			};
 		}
+
 		export default {
 			async fetch() {
-				const error = reduceError(new Error("Unusual oops!"));
-				return Response.json(error, {
-					status: 500,
-					headers: { "MF-Experimental-Error-Stack": "true" },
-				});
+				try {
+					doSomething();
+				} catch (e) {
+					const error = reduceError(e);
+					return Response.json(error, {
+						status: 500,
+						headers: { "MF-Experimental-Error-Stack": "true" },
+					});
+				}
 			}
 		}`,
 	});
@@ -318,10 +352,22 @@ test("responds with pretty error page", async (t) => {
 	t.regex(res.headers.get("Content-Type") ?? "", /^text\/html/);
 	const text = await res.text();
 	// ...including error, request method, URL and headers
-	t.regex(text, /Unusual oops!/);
+	t.regex(text, /Test error/);
 	t.regex(text, /Method.+POST/s);
 	t.regex(text, /URI.+some-unusual-path/s);
 	t.regex(text, /X-Unusual-Key.+some-unusual-value/is);
+
+	// Check error logged
+	const errorLogs = log.getLogs(LogLevel.ERROR);
+	t.deepEqual(errorLogs, [
+		`Error: Unusual oops!
+    at doSomething (script)
+    at Object.fetch (script)
+Caused by: Error: Test error
+    at oops (script)
+    at doSomething (script)
+    at Object.fetch (script)`,
+	]);
 
 	// Check `fetch()` accepting HTML returns pretty-error page
 	res = await fetch(url, { headers: { Accept: "text/html" } });
