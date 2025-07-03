@@ -1,3 +1,4 @@
+import { dirname } from "path";
 import { isDockerfile } from "@cloudflare/containers-shared";
 import { type Config } from "../config";
 import { type ContainerApp } from "../config/environment";
@@ -143,7 +144,7 @@ export function getBuildArguments(
 	return {
 		tag: imageTag,
 		pathToDockerfile: imageRef,
-		buildContext: container.image_build_context ?? ".",
+		buildContext: container.image_build_context ?? dirname(imageRef),
 		args: container.image_vars,
 	};
 }
