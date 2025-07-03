@@ -15,6 +15,8 @@ if (
 
 describe("getPlatformProxy remote-bindings", () => {
 	const remoteWorkerName = `tmp-e2e-worker-test-${randomUUID().split("-")[0]}`;
+	const remoteKvName = `tmp-e2e-remote-kv-test-${randomUUID().split("-")[0]}`;
+	let remoteKvId;
 
 	before(async () => {
 		// Note: ideally we pass the auth data to `getPlatformProxy`, that currently is not
@@ -37,6 +39,24 @@ describe("getPlatformProxy remote-bindings", () => {
 			throw new Error(`Failed to deploy ${remoteWorkerName}`);
 		}
 
+		const kvAddOut = execSync(
+			`pnpm dlx wrangler kv namespace create ${remoteKvName}`,
+			{
+				stdio: "pipe",
+			}
+		);
+
+		const createdKvRegexMatch = `${kvAddOut}`.match(/"id": "(?<id>[^"]*?)"/);
+		remoteKvId = createdKvRegexMatch?.groups["id"];
+
+		if (!remoteKvId) {
+			throw new Error(`Failed to create remote kv ${remoteKvName}`);
+		}
+
+		execSync(
+			`pnpm dlx wrangler kv key put test-key remote-kv-value --namespace-id=${remoteKvId} --remote`
+		);
+
 		rmSync("./.tmp", { recursive: true, force: true });
 
 		mkdirSync("./.tmp");
@@ -51,6 +71,13 @@ describe("getPlatformProxy remote-bindings", () => {
 						{
 							binding: "MY_WORKER",
 							service: remoteWorkerName,
+							experimental_remote: true,
+						},
+					],
+					kv_namespaces: [
+						{
+							binding: "MY_KV",
+							id: remoteKvId,
 							experimental_remote: true,
 						},
 					],
@@ -73,6 +100,27 @@ describe("getPlatformProxy remote-bindings", () => {
 				await (await env.MY_WORKER.fetch("http://example.com")).text(),
 				"Hello from a remote Worker part of the getPlatformProxy remote bindings fixture!"
 			);
+
+			const kvValue = await env.MY_KV.get("test-key");
+			assert.strictEqual(kvValue, "remote-kv-value");
+		} finally {
+			await dispose();
+		}
+	});
+
+	test("getPlatformProxy does not work with remote bindings if the experimental remoteBindings flag is not turned on", async () => {
+		const { env, dispose } = await getPlatformProxy({
+			configPath: "./.tmp/wrangler.json",
+		});
+
+		try {
+			assert.strictEqual(
+				await (await env.MY_WORKER.fetch("http://example.com")).text(),
+				`[wrangler] Couldn\'t find \`wrangler dev\` session for service "${remoteWorkerName}" to proxy to`
+			);
+
+			const kvValue = await env.MY_KV.get("test-key");
+			assert.strictEqual(kvValue, null);
 		} finally {
 			await dispose();
 		}
@@ -80,6 +128,9 @@ describe("getPlatformProxy remote-bindings", () => {
 
 	after(async () => {
 		execSync(`pnpm dlx wrangler delete --name ${remoteWorkerName}`);
+		execSync(
+			`pnpm dlx wrangler kv namespace delete --namespace-id=${remoteKvId}`
+		);
 		rmSync("./.tmp", { recursive: true, force: true });
 	});
 });
