@@ -1,6 +1,6 @@
 import dedent from "ts-dedent";
 import { fetchResult } from "../cfetch";
-import { updateWranglerConfigOrDisplaySnippet } from "../config/auto-update";
+import { handleResourceBindingAndConfigUpdate } from "../config/auto-update";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -65,16 +65,15 @@ export const d1CreateCommand = createCommand({
 
 					`,
 		},
-		"update-config": {
-			type: "boolean",
-			default: false,
-			description: "Automatically update wrangler.jsonc with the new database binding without prompting",
+		"config-binding-name": {
+			type: "string",
+			description: "The binding name to use when updating wrangler.jsonc",
 		},
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
 		const { name, location } = args;
-		const autoUpdate = args.updateConfig;
+
 		const accountId = await requireAuth(config);
 
 		const db = await createD1Database(config, accountId, name, location);
@@ -90,15 +89,15 @@ export const d1CreateCommand = createCommand({
 		);
 		logger.log("Created your new D1 database.\n");
 
-		// Auto-update wrangler config or show snippet
-		await updateWranglerConfigOrDisplaySnippet(
+		// Handle binding name and config update using unified utility
+		await handleResourceBindingAndConfigUpdate(
+			args,
+			{ ...config, configPath: config.configPath },
 			{
 				type: "d1_databases",
 				id: db.uuid,
 				name: db.name,
-			},
-			config.configPath,
-			autoUpdate
+			}
 		);
 	},
 });

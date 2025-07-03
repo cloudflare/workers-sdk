@@ -1,5 +1,4 @@
-import { configFileName } from "../config";
-import { updateWranglerConfigOrDisplaySnippet } from "../config/auto-update";
+import { handleResourceBindingAndConfigUpdate } from "../config/auto-update";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { createConfig } from "./client";
@@ -23,10 +22,9 @@ export const hyperdriveCreateCommand = createCommand({
 			demandOption: true,
 			description: "The name of the Hyperdrive config",
 		},
-		"update-config": {
-			type: "boolean",
-			default: false,
-			description: "Automatically update wrangler.jsonc with the new hyperdrive binding without prompting",
+		"config-binding-name": {
+			type: "string",
+			description: "The binding name to use when updating wrangler.jsonc",
 		},
 		...upsertOptions("postgresql"),
 	},
@@ -45,17 +43,15 @@ export const hyperdriveCreateCommand = createCommand({
 			`✅ Created new Hyperdrive ${capitalizeScheme(database.origin.scheme)} config: ${database.id}`
 		);
 
-		// Auto-update wrangler config or show snippet
-		await updateWranglerConfigOrDisplaySnippet(
+		// Handle binding name and config update using unified utility
+		await handleResourceBindingAndConfigUpdate(
+			args,
+			{ ...config, configPath: config.configPath },
 			{
 				type: "hyperdrive",
 				id: database.id,
 				name: database.name,
-				binding: "HYPERDRIVE",
-			},
-			config.configPath,
-			args.updateConfig,
-			`📋 To start using your config from a Worker, add the following binding configuration to your ${configFileName(config.configPath)} file:\n`
+			}
 		);
 	},
 });

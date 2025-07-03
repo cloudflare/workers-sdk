@@ -1,12 +1,10 @@
 import dedent from "ts-dedent";
-import { formatConfigSnippet } from "../config";
-import { updateWranglerConfigOrDisplaySnippet } from "../config/auto-update";
+import { handleResourceBindingAndConfigUpdate } from "../config/auto-update";
 import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { getValidBindingName } from "../utils/getValidBindingName";
 import formatLabelledValues from "../utils/render-labelled-values";
 import { LOCATION_CHOICES } from "./constants";
 import {
@@ -61,16 +59,15 @@ export const r2BucketCreateCommand = createCommand({
 			requiresArg: true,
 			type: "string",
 		},
-		"update-config": {
-			type: "boolean",
-			default: false,
-			description: "Automatically update wrangler.jsonc with the new bucket binding without prompting",
+		"config-binding-name": {
+			type: "string",
+			description: "The binding name to use when updating wrangler.jsonc",
 		},
 	},
 	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
 		const { name, location, storageClass, jurisdiction } = args;
-		const autoUpdate = args.updateConfig;
+
+		const accountId = await requireAuth(config);
 
 		if (!isValidR2BucketName(name)) {
 			throw new UserError(
@@ -103,16 +100,15 @@ export const r2BucketCreateCommand = createCommand({
 				location ? ` location hint ${location} and` : ``
 			} default storage class of ${storageClass ? storageClass : `Standard`}.`);
 
-		// Auto-update wrangler config or show snippet
-		await updateWranglerConfigOrDisplaySnippet(
+		// Handle binding name and config update using unified utility
+		await handleResourceBindingAndConfigUpdate(
+			args,
+			{ ...config, configPath: config.configPath },
 			{
 				type: "r2_buckets",
 				id: args.name, // For R2, the bucket name is the identifier
 				name: args.name,
-			},
-			config.configPath,
-			autoUpdate,
-			"\nConfigure your Worker to write objects to this bucket:"
+			}
 		);
 
 		metrics.sendMetricsEvent("create r2 bucket", {

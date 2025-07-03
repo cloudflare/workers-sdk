@@ -2,7 +2,7 @@ import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import { readConfig, formatConfigSnippet } from "../config";
-import { updateWranglerConfigOrDisplaySnippet } from "../config/auto-update";
+import { handleResourceBindingAndConfigUpdate } from "../config/auto-update";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
@@ -80,16 +80,16 @@ export const kvNamespaceCreateCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with a preview namespace",
 		},
-		"update-config": {
-			type: "boolean",
-			default: false,
-			description: "Automatically update wrangler.jsonc with the new KV namespace binding without prompting",
+		"config-binding-name": {
+			type: "string",
+			description: "The binding name to use when updating wrangler.jsonc",
 		},
 	},
 	positionalArgs: ["namespace"],
 
 	async handler(args) {
 		const config = readConfig(args);
+
 		const environment = args.env ? `${args.env}-` : "";
 		const preview = args.preview ? "_preview" : "";
 		const title = `${environment}${args.namespace}${preview}`;
@@ -123,16 +123,15 @@ export const kvNamespaceCreateCommand = createCommand({
 				config.configPath
 			));
 		} else {
-			await updateWranglerConfigOrDisplaySnippet(
+			// Handle binding name and config update using unified utility
+			await handleResourceBindingAndConfigUpdate(
+				args,
+				{ ...config, configPath: config.configPath },
 				{
 					type: "kv_namespaces",
 					id: namespaceId,
 					name: args.namespace,
-					additionalConfig: { id: namespaceId },
-				},
-				config.configPath,
-				args.updateConfig,
-				`Add the following to your configuration file in your kv_namespaces array${envString}:`
+				}
 			);
 		}
 	},

@@ -1,5 +1,4 @@
-import { configFileName } from "../config";
-import { updateWranglerConfigOrDisplaySnippet } from "../config/auto-update";
+import { handleResourceBindingAndConfigUpdate } from "../config/auto-update";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -61,10 +60,9 @@ export const vectorizeCreateCommand = createCommand({
 			description:
 				"Create a deprecated Vectorize V1 index. This is not recommended and indexes created with this option need all other Vectorize operations to have this option enabled.",
 		},
-		"update-config": {
-			type: "boolean",
-			default: false,
-			description: "Automatically update wrangler.jsonc with the new vectorize binding without prompting",
+		"config-binding-name": {
+			type: "string",
+			description: "The binding name to use when updating wrangler.jsonc",
 		},
 	},
 	positionalArgs: ["name"],
@@ -103,13 +101,6 @@ export const vectorizeCreateCommand = createCommand({
 		logger.log(`🚧 Creating index: '${args.name}'`);
 		const indexResult = await createIndex(config, index, args.deprecatedV1);
 
-		let bindingName: string;
-		if (args.deprecatedV1) {
-			bindingName = "VECTORIZE_INDEX";
-		} else {
-			bindingName = "VECTORIZE";
-		}
-
 		if (args.json) {
 			logger.log(JSON.stringify(index, null, 2));
 			return;
@@ -119,17 +110,15 @@ export const vectorizeCreateCommand = createCommand({
 			`✅ Successfully created a new Vectorize index: '${indexResult.name}'`
 		);
 
-		// Auto-update wrangler config or show snippet
-		await updateWranglerConfigOrDisplaySnippet(
+		// Handle binding name and config update using unified utility
+		await handleResourceBindingAndConfigUpdate(
+			args,
+			{ ...config, configPath: config.configPath },
 			{
 				type: "vectorize",
 				id: indexResult.name,
 				name: indexResult.name,
-				binding: bindingName,
-			},
-			config.configPath,
-			args.updateConfig,
-			`📋 To start querying from a Worker, add the following binding configuration to your ${configFileName(config.configPath)} file:\n`
+			}
 		);
 	},
 });

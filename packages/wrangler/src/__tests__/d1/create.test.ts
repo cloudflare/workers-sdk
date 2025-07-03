@@ -64,6 +64,8 @@ describe("create", () => {
 			"✅ Successfully created DB 'test' in region OC
 			Created your new D1 database.
 
+			Add the following to your configuration file:
+
 			{
 			  \\"d1_databases\\": [
 			    {

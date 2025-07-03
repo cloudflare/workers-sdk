@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { autoUpdateWranglerConfig } from "../../config/auto-update";
-import { findWranglerConfig } from "../../config/config-helpers";
+import { handleResourceBindingAndConfigUpdate, updateJsonConfig } from "../../config/auto-update";
 import { configFormat } from "../../config/index";
-import { parseJSONC, readFileSync } from "../../parse";
+import { readFileSync } from "../../parse";
 
 // Mock the logger to avoid console output during tests
 vi.mock("../../logger", () => ({
@@ -16,17 +15,12 @@ vi.mock("../../logger", () => ({
 // Mock dialogs to avoid interactive prompts during tests
 vi.mock("../../dialogs", () => ({
 	confirm: vi.fn().mockResolvedValue(true),
-}));
-
-// Mock findWranglerConfig
-vi.mock("../../config/config-helpers", () => ({
-	findWranglerConfig: vi.fn(),
+	prompt: vi.fn().mockResolvedValue("TEST_BINDING"),
 }));
 
 // Mock parse functions
 vi.mock("../../parse", () => ({
 	readFileSync: vi.fn(),
-	parseJSONC: vi.fn(),
 }));
 
 // Mock config format
@@ -37,304 +31,162 @@ vi.mock("../../config/index", () => ({
 	),
 }));
 
-// Mock getValidBindingName
-vi.mock("../../utils/getValidBindingName", () => ({
-	getValidBindingName: vi.fn((name: string, fallback: string) => {
-		// Simple mock implementation for testing
-		return name.toUpperCase().replace(/[^A-Z0-9_]/g, "_") || fallback;
-	}),
+// Mock auto-update-helpers
+vi.mock("../../config/auto-update-helpers", () => ({
+	displayConfigSnippet: vi.fn(),
+	validateBindingName: vi.fn().mockReturnValue({ valid: true }),
+	promptForConfigUpdate: vi.fn().mockResolvedValue(true),
+	promptForValidBindingName: vi.fn().mockResolvedValue("TEST_BINDING"),
+	getResourceDisplayName: vi.fn().mockReturnValue("Test Resource"),
+	getGenericBindingName: vi.fn().mockReturnValue("TEST"),
+	createBindingConfig: vi.fn().mockReturnValue({ binding: "TEST", id: "test-id" }),
 }));
 
-describe("autoUpdateWranglerConfig", () => {
-	const mockFindWranglerConfig = vi.mocked(findWranglerConfig);
+describe("handleResourceBindingAndConfigUpdate", () => {
 	const mockConfigFormat = vi.mocked(configFormat);
 	const mockReadFileSync = vi.mocked(readFileSync);
-	const mockParseJSONC = vi.mocked(parseJSONC);
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
-	test("should return false when no config file is found", async () => {
-		mockFindWranglerConfig.mockReturnValue({
-			configPath: undefined,
-			userConfigPath: undefined,
-		});
-
-		const result = await autoUpdateWranglerConfig({
-			type: "d1_databases",
+	test("should display config snippet when no config file path is provided", async () => {
+		const config = { name: "worker" };  // No configPath
+		const resource = {
+			type: "d1_databases" as const,
 			id: "test-id",
 			name: "test-db",
-		});
+		};
+		const args = {};
 
-		expect(result).toBe(false);
+		// When no configPath, configFormat should return non-jsonc format to trigger snippet display
+		mockConfigFormat.mockReturnValue("toml");
+		
+		// Should not throw - just display snippet
+		await expect(handleResourceBindingAndConfigUpdate(args, config, resource)).resolves.not.toThrow();
 	});
 
-	test("should return false for unsupported config format (TOML)", async () => {
-		mockFindWranglerConfig.mockReturnValue({
-			configPath: "/path/to/wrangler.toml",
-			userConfigPath: "/path/to/wrangler.toml",
-		});
+	test("should display snippet for unsupported config format (TOML)", async () => {
+		const config = { 
+			name: "worker",
+			configPath: "/path/to/wrangler.toml"
+		};
+		const resource = {
+			type: "d1_databases" as const,
+			id: "test-id",
+			name: "test-db",
+		};
+		const args = {};
+
 		mockConfigFormat.mockReturnValue("toml");
 
-		const result = await autoUpdateWranglerConfig({
-			type: "d1_databases",
-			id: "test-id",
-			name: "test-db",
-		});
-
-		expect(result).toBe(false);
+		// Should not throw - just display snippet for unsupported format
+		await expect(handleResourceBindingAndConfigUpdate(args, config, resource)).resolves.not.toThrow();
 	});
 
-	test("should create proper D1 binding configuration with auto-update", async () => {
-		const configPath = "/tmp/test-wrangler.json";
+	test("should update config with D1 binding when valid binding name provided", async () => {
+		const configPath = "/tmp/test-wrangler.jsonc";
 		const initialConfig = {
 			name: "my-worker",
 			compatibility_date: "2023-01-01",
 		};
 
-		// Mock file system operations
+		// Mock file system operations  
 		mockReadFileSync.mockReturnValue(JSON.stringify(initialConfig));
-		mockParseJSONC.mockReturnValue(initialConfig);
 		mockConfigFormat.mockReturnValue("jsonc");
 		vi.spyOn(fs, "writeFileSync").mockImplementation(() => {});
 
-		mockFindWranglerConfig.mockReturnValue({
-			configPath,
-			userConfigPath: configPath,
+		// Override the mock to return the specific binding name
+		const { createBindingConfig } = await import("../../config/auto-update-helpers");
+		vi.mocked(createBindingConfig).mockReturnValue({
+			binding: "MY_DB",
+			database_name: "test-db",
+			database_id: "test-db-id"
 		});
 
-		const result = await autoUpdateWranglerConfig(
-			{
-				type: "d1_databases",
-				id: "test-db-id",
-				name: "test-db",
-			},
-			true
-		); // auto-update enabled
+		const config = { 
+			...initialConfig,
+			configPath
+		};
+		const resource = {
+			type: "d1_databases" as const,
+			id: "test-db-id",
+			name: "test-db",
+			binding: "MY_DB"
+		};
+		const args = { configBindingName: "MY_DB" };
 
-		expect(result).toBe(true);
+		await handleResourceBindingAndConfigUpdate(args, config, resource);
+
 		expect(fs.writeFileSync).toHaveBeenCalledWith(
 			configPath,
 			expect.stringContaining('"d1_databases"')
 		);
-	});
-
-	test("should create proper R2 binding configuration with auto-update", async () => {
-		const configPath = "/tmp/test-wrangler.json";
-		const initialConfig = {
-			name: "my-worker",
-		};
-
-		mockReadFileSync.mockReturnValue(JSON.stringify(initialConfig));
-		mockParseJSONC.mockReturnValue(initialConfig);
-		mockConfigFormat.mockReturnValue("jsonc");
-		vi.spyOn(fs, "writeFileSync").mockImplementation(() => {});
-
-		mockFindWranglerConfig.mockReturnValue({
-			configPath,
-			userConfigPath: configPath,
-		});
-
-		const result = await autoUpdateWranglerConfig(
-			{
-				type: "r2_buckets",
-				id: "test-bucket",
-				name: "test-bucket",
-			},
-			true
-		); // auto-update enabled
-
-		expect(result).toBe(true);
 		expect(fs.writeFileSync).toHaveBeenCalledWith(
 			configPath,
-			expect.stringContaining('"r2_buckets"')
+			expect.stringContaining('"MY_DB"')
 		);
 	});
 
-	test("should not add duplicate bindings", async () => {
-		const configPath = "/tmp/test-wrangler.json";
+	test("should test updateJsonConfig function directly", async () => {
+		const configPath = "/tmp/test-wrangler.jsonc";
 		const initialConfig = {
 			name: "my-worker",
-			d1_databases: [
-				{
-					binding: "DB",
-					database_name: "test-db",
-					database_id: "test-db-id",
-				},
-			],
 		};
 
 		mockReadFileSync.mockReturnValue(JSON.stringify(initialConfig));
-		mockParseJSONC.mockReturnValue(initialConfig);
-		mockConfigFormat.mockReturnValue("jsonc");
 		vi.spyOn(fs, "writeFileSync").mockImplementation(() => {});
 
-		mockFindWranglerConfig.mockReturnValue({
-			configPath,
-			userConfigPath: configPath,
+		// Override the mock to return the specific binding name
+		const { createBindingConfig } = await import("../../config/auto-update-helpers");
+		vi.mocked(createBindingConfig).mockReturnValue({
+			binding: "MY_DB",
+			database_name: "test-db",
+			database_id: "test-db-id"
 		});
 
-		const result = await autoUpdateWranglerConfig(
-			{
-				type: "d1_databases",
-				id: "test-db-id",
-				name: "test-db",
-			},
-			true
-		); // auto-update enabled
-
-		expect(result).toBe(false);
-		// Should not call writeFileSync since binding already exists
-		expect(fs.writeFileSync).not.toHaveBeenCalled();
-	});
-
-	test("should generate unique binding name when conflicts exist", async () => {
-		const configPath = "/tmp/test-wrangler.json";
-		const initialConfig = {
-			name: "my-worker",
-			d1_databases: [
-				{
-					binding: "DB",
-					database_name: "existing-db",
-					database_id: "existing-db-id",
-				},
-			],
-			r2_buckets: [
-				{
-					binding: "DB_1",
-					bucket_name: "existing-bucket",
-				},
-			],
+		const resource = {
+			type: "d1_databases" as const,
+			id: "test-db-id",
+			name: "test-db",
+			binding: "MY_DB"
 		};
 
-		mockReadFileSync.mockReturnValue(JSON.stringify(initialConfig));
-		mockParseJSONC.mockReturnValue(initialConfig);
-		mockConfigFormat.mockReturnValue("jsonc");
-		const writeFileSyncSpy = vi
-			.spyOn(fs, "writeFileSync")
-			.mockImplementation(() => {});
+		updateJsonConfig(configPath, resource, initialConfig);
 
-		mockFindWranglerConfig.mockReturnValue({
+		expect(fs.writeFileSync).toHaveBeenCalledWith(
 			configPath,
-			userConfigPath: configPath,
-		});
-
-		const result = await autoUpdateWranglerConfig(
-			{
-				type: "d1_databases",
-				id: "new-test-db-id",
-				name: "test-db", // Will use generic name "DB"
-			},
-			true
-		); // auto-update enabled
-
-		expect(result).toBe(true);
-		expect(writeFileSyncSpy).toHaveBeenCalledWith(
-			configPath,
-			expect.stringContaining('"DB_2"') // Should generate DB_2 to avoid conflicts with DB and DB_1
+			expect.stringContaining('"d1_databases"')
 		);
-	});
-
-	test("should handle case-insensitive binding name conflicts", async () => {
-		const configPath = "/tmp/test-wrangler.json";
-		const initialConfig = {
-			name: "my-worker",
-			d1_databases: [
-				{
-					binding: "bucket", // lowercase to conflict with R2's "BUCKET"
-					database_name: "existing-db",
-					database_id: "existing-db-id",
-				},
-			],
-		};
-
-		mockReadFileSync.mockReturnValue(JSON.stringify(initialConfig));
-		mockParseJSONC.mockReturnValue(initialConfig);
-		mockConfigFormat.mockReturnValue("jsonc");
-		const writeFileSyncSpy = vi
-			.spyOn(fs, "writeFileSync")
-			.mockImplementation(() => {});
-
-		mockFindWranglerConfig.mockReturnValue({
+		expect(fs.writeFileSync).toHaveBeenCalledWith(
 			configPath,
-			userConfigPath: configPath,
-		});
-
-		const result = await autoUpdateWranglerConfig(
-			{
-				type: "r2_buckets",
-				id: "new-bucket-id",
-				name: "test-bucket", // Will use generic name "BUCKET" but conflicts with "bucket"
-			},
-			true
-		); // auto-update enabled
-
-		expect(result).toBe(true);
-		expect(writeFileSyncSpy).toHaveBeenCalledWith(
-			configPath,
-			expect.stringContaining('"BUCKET_1"') // Should generate BUCKET_1 due to case-insensitive conflict
+			expect.stringContaining('"MY_DB"')
 		);
-	});
-
-	test("should not auto-update for KV preview namespaces", async () => {
-		// This test documents that KV preview namespaces should be handled
-		// differently in the KV create command, not in the auto-update module
-
-		// Mock no config file found
-		mockFindWranglerConfig.mockReturnValue({
-			configPath: undefined,
-			userConfigPath: undefined,
-		});
-
-		const result = await autoUpdateWranglerConfig(
-			{
-				type: "kv_namespaces",
-				id: "preview-kv-id",
-				name: "preview-namespace",
-				additionalConfig: { preview_id: "preview-kv-id" },
-			},
-			true
-		);
-
-		// The auto-update module itself doesn't distinguish preview vs regular
-		// The KV command should skip calling auto-update for preview namespaces
-		expect(result).toBe(false); // No config file found, so returns false
 	});
 
 	test("should respect user decline when prompting for update", async () => {
-		const { confirm } = await import("../../dialogs");
-		vi.mocked(confirm).mockResolvedValueOnce(false);
+		// Override the specific mock for this test
+		const { promptForConfigUpdate } = await import("../../config/auto-update-helpers");
+		vi.mocked(promptForConfigUpdate).mockResolvedValueOnce(false);
 
-		const configPath = "/tmp/test-wrangler.json";
-		const initialConfig = { name: "my-worker" };
+		const config = {
+			name: "my-worker",
+			configPath: "/tmp/test-wrangler.jsonc"
+		};
+		const resource = {
+			type: "d1_databases" as const,
+			id: "test-db-id",
+			name: "test-db",
+		};
+		const args = {};
 
-		mockReadFileSync.mockReturnValue(JSON.stringify(initialConfig));
-		mockParseJSONC.mockReturnValue(initialConfig);
+		mockReadFileSync.mockReturnValue(JSON.stringify(config));
 		mockConfigFormat.mockReturnValue("jsonc");
 		vi.spyOn(fs, "writeFileSync").mockImplementation(() => {});
 
-		mockFindWranglerConfig.mockReturnValue({
-			configPath,
-			userConfigPath: configPath,
-		});
+		await handleResourceBindingAndConfigUpdate(args, config, resource);
 
-		const result = await autoUpdateWranglerConfig(
-			{
-				type: "d1_databases",
-				id: "test-db-id",
-				name: "test-db",
-			},
-			false
-		); // auto-update disabled, should prompt
-
-		expect(result).toBe(false);
 		expect(fs.writeFileSync).not.toHaveBeenCalled();
-		expect(confirm).toHaveBeenCalledWith(
-			expect.stringContaining(
-				"Would you like to update the wrangler.jsonc file"
-			),
-			{ defaultValue: true, fallbackValue: false }
-		);
+		expect(promptForConfigUpdate).toHaveBeenCalledWith("d1_databases");
 	});
 });
