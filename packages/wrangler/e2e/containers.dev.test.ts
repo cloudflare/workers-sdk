@@ -8,6 +8,7 @@ import {
 	it,
 	vi,
 } from "vitest";
+import { getDockerPath } from "../src/environment-variables/misc-variables";
 import { dedent } from "../src/utils/dedent";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
@@ -38,14 +39,14 @@ describe
 				containers: [
 					{
 						image: "./Dockerfile",
-						class_name: "Container",
+						class_name: `E2EContainer`,
 						name: `${workerName}-container`,
 					},
 				],
 				durable_objects: {
 					bindings: [
 						{
-							class_name: "Container",
+							class_name: `E2EContainer`,
 							name: "CONTAINER",
 						},
 					],
@@ -53,7 +54,7 @@ describe
 				migrations: [
 					{
 						tag: "v1",
-						new_classes: ["Container"],
+						new_classes: [`E2EContainer`],
 					},
 				],
 			};
@@ -62,7 +63,7 @@ describe
 				"src/index.ts": dedent`
 					import { DurableObject } from "cloudflare:workers";
 
-					export class Container extends DurableObject<Env> {
+					export class E2EContainer extends DurableObject<Env> {
 						container: globalThis.Container;
 
 						constructor(ctx: DurableObjectState, env: Env) {
@@ -115,7 +116,7 @@ describe
 
 				const server = createServer(function (req, res) {
 					res.writeHead(200, { "Content-Type": "text/plain" });
-					res.write("Hello World!" + " Have an env var! " + process.env.MESSAGE);
+					res.write("Hello World! Have an env var! " + process.env.MESSAGE);
 					res.end();
 				});
 
@@ -136,7 +137,7 @@ describe
 					containers: [
 						{
 							image: `registry.cloudflare.com/${CLOUDFLARE_ACCOUNT_ID}/${workerName}:tmp-e2e`,
-							class_name: "Container",
+							class_name: `E2EContainer`,
 							name: `${workerName}-container`,
 						},
 					],
@@ -144,25 +145,27 @@ describe
 				await helper.seed({
 					"wrangler.json": JSON.stringify(wranglerConfig),
 				});
-				await new Promise((resolve) => setTimeout(resolve, 5000));
+				// wait a bit for the image to be available to pull
+				await new Promise((resolve) => setTimeout(resolve, 5_000));
 			}
-		}, 30000);
+		}, 30_000);
 		beforeEach(async () => {
 			await helper.seed({
 				"wrangler.json": JSON.stringify(wranglerConfig),
 			});
 			// cleanup any running containers
-			const ids = getContainerIds();
+			const ids = getContainerIds("e2econtainer");
 			if (ids.length > 0) {
-				execSync("docker rm -f " + ids.join(" "), {
+				console.log(ids);
+				execSync(`${getDockerPath()} rm -f ${ids.join(" ")}`, {
 					encoding: "utf8",
 				});
 			}
 		});
 		afterAll(async () => {
-			const ids = getContainerIds();
+			const ids = getContainerIds("e2econtainer");
 			if (ids.length > 0) {
-				execSync("docker rm -f " + ids.join(" "), {
+				execSync(`${getDockerPath()} rm -f ${ids.join(" ")}`, {
 					encoding: "utf8",
 				});
 			}
@@ -191,8 +194,8 @@ describe
 			await worker.readUntil(/Container image\(s\) ready/);
 
 			let response = await fetch(`${ready.url}/status`);
-			let status = await response.json();
 			expect(response.status).toBe(200);
+			let status = await response.json();
 			expect(status).toBe(false);
 
 			response = await fetch(`${ready.url}/start`);
@@ -201,7 +204,7 @@ describe
 			expect(text).toBe("Container create request sent...");
 
 			// Wait a bit for container to start
-			await new Promise((resolve) => setTimeout(resolve, 2000));
+			await new Promise((resolve) => setTimeout(resolve, 2_000));
 
 			response = await fetch(`${ready.url}/status`);
 			status = await response.json();
@@ -213,7 +216,7 @@ describe
 			text = await response.text();
 			expect(text).toBe("Hello World! Have an env var! I'm an env var!");
 			// Check that a container is running using `docker ps`
-			const ids = getContainerIds();
+			const ids = getContainerIds("e2econtainer");
 			expect(ids.length).toBe(1);
 		});
 
@@ -311,12 +314,22 @@ describe
 	}
 );
 
-const getContainerIds = () => {
+/** gets any containers that were created by running this fixture */
+const getContainerIds = (class_name: string) => {
 	// note the -a to include stopped containers
-	const ids = execSync("docker ps -a -q");
-	return ids
+
+	const allContainers = execSync(`${getDockerPath()} ps -a --format json`)
 		.toString()
-		.trim()
 		.split("\n")
-		.filter((id) => id.trim() !== "");
+		.filter((line) => line.trim());
+	if (allContainers.length === 0) {
+		return [];
+	}
+	const jsonOutput = allContainers.map((line) => JSON.parse(line));
+
+	return jsonOutput.map((container) => {
+		if (container.Image.includes(`cloudflare-dev/${class_name}`)) {
+			return container.ID;
+		}
+	});
 };
