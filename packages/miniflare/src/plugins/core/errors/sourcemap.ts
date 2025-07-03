@@ -75,6 +75,7 @@ export function getSourceMapper(): SourceMapper {
 		support.install({
 			...sourceMapInstallBaseOptions,
 			retrieveFile(_file: string): string {
+				console.log("retrieveFile", _file);
 				// `retrieveFile` should only be called by the default implementation of
 				// `retrieveSourceMap`, which will only be called if `retrieveSourceMap`
 				// failed. In that case, return an empty string so the default

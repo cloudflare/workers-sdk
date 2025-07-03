@@ -32,7 +32,7 @@ export default {
 		const cookieHeader = request.headers.get("Cookie");
 
 		if (cookieHeader) {
-			const cookies = cookie.parse(cookieHeader);
+			const cookies = cookie.parse(new Date());
 
 			return Response.json(cookies);
 		}
