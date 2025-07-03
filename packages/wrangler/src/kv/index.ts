@@ -289,12 +289,16 @@ export const kvNamespaceRenameCommand = createCommand({
 			throw new UserError("Unable to determine namespace ID");
 		}
 
-		logger.log(`Renaming KV namespace ${namespaceId} to "${args.newName!}".`);
+		if (!args.newName) {
+			throw new UserError("new-name is required");
+		}
+
+		logger.log(`Renaming KV namespace ${namespaceId} to "${args.newName}".`);
 		const updatedNamespace = await updateKVNamespace(
 			config,
 			accountId,
 			namespaceId,
-			args.newName!
+			args.newName
 		);
 		logger.log(
 			`✨ Successfully renamed namespace to "${updatedNamespace.title}"`
