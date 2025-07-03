@@ -51,7 +51,7 @@
 		"sharp": "^0.33.5",
 		"stoppable": "1.1.0",
 		"undici": "catalog:default",
-		"workerd": "1.20250617.0",
+		"workerd": "1.20250618.0",
 		"ws": "catalog:default",
 		"youch": "3.3.4",
 		"zod": "3.22.3"
