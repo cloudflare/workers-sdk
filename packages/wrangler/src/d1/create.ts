@@ -2,6 +2,7 @@ import dedent from "ts-dedent";
 import { fetchResult } from "../cfetch";
 import { formatConfigSnippet } from "../config";
 import { createCommand } from "../core/create-command";
+import { getD1ExtraLocationChoices } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
@@ -53,7 +54,10 @@ export const d1CreateCommand = createCommand({
 		},
 		location: {
 			type: "string",
-			choices: LOCATION_CHOICES,
+			choices: [
+				...LOCATION_CHOICES,
+				...(getD1ExtraLocationChoices()?.split(",") ?? []),
+			],
 			description: dedent`
 					A hint for the primary location of the new DB. Options:
 						weur: Western Europe
