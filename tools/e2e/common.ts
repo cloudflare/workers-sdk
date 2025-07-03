@@ -198,7 +198,8 @@ export const deleteProject = async (project: string) => {
 export const listTmpE2EWorkers = async () => {
 	return (await apiFetchList<Worker>(`/workers/scripts`)).filter(
 		(p) =>
-			p.id.startsWith("tmp-e2e-") &&
+			!p.id.startsWith("preserve-e2e-") &&
+			p.id !== "stratus-e2e-test-worker" &&
 			// Workers are more than an hour old
 			Date.now() - new Date(p.created_on).valueOf() > 1000 * 60 * 60
 	);

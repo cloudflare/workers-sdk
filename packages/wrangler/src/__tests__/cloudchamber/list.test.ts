@@ -43,7 +43,6 @@ describe("cloudchamber list", () => {
 			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
-			      --json      Return output as clean JSON  [boolean] [default: false]
 			      --location  Filter deployments by location  [string]
 			      --image     Filter deployments by image  [string]
 			      --state     Filter deployments by deployment state  [string]

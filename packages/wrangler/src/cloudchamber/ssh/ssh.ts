@@ -14,21 +14,18 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { SshPublicKeysService } from "@cloudflare/containers-shared";
 import { UserError } from "../../errors";
+import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { pollSSHKeysUntilCondition } from "../cli";
-import {
-	checkEverythingIsSet,
-	handleFailure,
-	interactWithUser,
-} from "../common";
+import { checkEverythingIsSet, handleFailure } from "../common";
 import { wrap } from "../helpers/wrap";
 import { validatePublicSSHKeyCLI, validateSSHKey } from "./validate";
 import type { Config } from "../../config";
 import type { containersScope } from "../../containers";
 import type {
-	CommonYargsArgvJSON,
-	CommonYargsArgvSanitizedJSON,
-	StrictYargsOptionsToInterfaceJSON,
+	CommonYargsArgv,
+	CommonYargsArgvSanitized,
+	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
 import type { cloudchamberScope } from "../common";
 import type {
@@ -37,7 +34,7 @@ import type {
 	SSHPublicKeyItem,
 } from "@cloudflare/containers-shared";
 
-function createSSHPublicKeyOptionalYargs(yargs: CommonYargsArgvJSON) {
+function createSSHPublicKeyOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.option("name", {
 			type: "string",
@@ -76,7 +73,7 @@ async function retrieveSSHKey(
 }
 
 export async function sshPrompts(
-	args: CommonYargsArgvSanitizedJSON,
+	args: CommonYargsArgvSanitized,
 	keys: ListSSHPublicKeys | undefined = undefined
 ): Promise<SSHPublicKeyID | undefined> {
 	const [key, prompt] = await shouldPromptForNewSSHKeyAppear(keys);
@@ -109,7 +106,7 @@ export async function sshPrompts(
 }
 
 export const sshCommand = (
-	yargs: CommonYargsArgvJSON,
+	yargs: CommonYargsArgv,
 	scope: typeof cloudchamberScope | typeof containersScope
 ) => {
 	return yargs
@@ -120,9 +117,9 @@ export const sshCommand = (
 			(args) =>
 				handleFailure(
 					`wrangler cloudchamber ssh list`,
-					async (sshArgs: CommonYargsArgvSanitizedJSON, config) => {
+					async (sshArgs: CommonYargsArgvSanitized, config) => {
 						// check we are in CI or if the user wants to just use JSON
-						if (!interactWithUser(sshArgs)) {
+						if (isNonInteractiveOrCI()) {
 							const sshKeys = await SshPublicKeysService.listSshPublicKeys();
 							console.log(JSON.stringify(sshKeys, null, 4));
 							return;
@@ -141,13 +138,13 @@ export const sshCommand = (
 				handleFailure(
 					`wrangler cloudchamber ssh create`,
 					async (
-						sshArgs: StrictYargsOptionsToInterfaceJSON<
+						sshArgs: StrictYargsOptionsToInterface<
 							typeof createSSHPublicKeyOptionalYargs
 						>,
 						_config
 					) => {
 						// check we are in CI or if the user wants to just use JSON
-						if (!interactWithUser(sshArgs)) {
+						if (isNonInteractiveOrCI()) {
 							const body = checkEverythingIsSet(sshArgs, ["publicKey", "name"]);
 							const sshKey = await retrieveSSHKey(body.publicKey, {
 								json: true,
@@ -308,9 +305,7 @@ async function handleListSSHKeysCommand(_args: unknown, _config: Config) {
  *
  */
 async function handleCreateSSHPublicKeyCommand(
-	args: StrictYargsOptionsToInterfaceJSON<
-		typeof createSSHPublicKeyOptionalYargs
-	>
+	args: StrictYargsOptionsToInterface<typeof createSSHPublicKeyOptionalYargs>
 ) {
 	startSection(
 		"Choose an ssh key to add",
@@ -329,9 +324,7 @@ async function handleCreateSSHPublicKeyCommand(
 }
 
 async function promptForSSHKey(
-	args: StrictYargsOptionsToInterfaceJSON<
-		typeof createSSHPublicKeyOptionalYargs
-	>
+	args: StrictYargsOptionsToInterface<typeof createSSHPublicKeyOptionalYargs>
 ): Promise<SSHPublicKeyItem> {
 	const { username } = userInfo();
 	const name = await inputPrompt({

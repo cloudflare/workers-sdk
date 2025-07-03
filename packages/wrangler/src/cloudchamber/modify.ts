@@ -2,6 +2,7 @@ import { cancel, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";
 import { getLocation } from "./cli/locations";
@@ -9,8 +10,6 @@ import {
 	checkInstanceType,
 	collectEnvironmentVariables,
 	collectLabels,
-	interactWithUser,
-	loadAccountSpinner,
 	parseImageName,
 	promptForEnvironmentVariables,
 	promptForInstanceType,
@@ -24,8 +23,8 @@ import { loadAccount } from "./locations";
 import { sshPrompts } from "./ssh/ssh";
 import type { Config } from "../config";
 import type {
-	CommonYargsArgvJSON,
-	StrictYargsOptionsToInterfaceJSON,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type {
 	DeploymentV2,
@@ -33,7 +32,7 @@ import type {
 	SSHPublicKeyID,
 } from "@cloudflare/containers-shared";
 
-export function modifyCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
+export function modifyCommandOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("deploymentId", {
 			type: "string",
@@ -96,14 +95,10 @@ export function modifyCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 }
 
 export async function modifyCommand(
-	modifyArgs: StrictYargsOptionsToInterfaceJSON<
-		typeof modifyCommandOptionalYargs
-	>,
+	modifyArgs: StrictYargsOptionsToInterface<typeof modifyCommandOptionalYargs>,
 	config: Config
 ) {
-	await loadAccountSpinner(modifyArgs);
-
-	if (!interactWithUser(modifyArgs)) {
+	if (isNonInteractiveOrCI()) {
 		if (!modifyArgs.deploymentId) {
 			throw new Error(
 				"there needs to be a deploymentId when you can't interact with the wrangler cli"
@@ -147,7 +142,7 @@ export async function modifyCommand(
 }
 
 async function handleSSH(
-	args: StrictYargsOptionsToInterfaceJSON<typeof modifyCommandOptionalYargs>,
+	args: StrictYargsOptionsToInterface<typeof modifyCommandOptionalYargs>,
 	config: Config,
 	deployment: DeploymentV2
 ): Promise<SSHPublicKeyID[] | undefined> {
@@ -203,7 +198,7 @@ async function handleSSH(
 }
 
 async function handleModifyCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof modifyCommandOptionalYargs>,
+	args: StrictYargsOptionsToInterface<typeof modifyCommandOptionalYargs>,
 	config: Config
 ) {
 	startSection("Modify deployment");

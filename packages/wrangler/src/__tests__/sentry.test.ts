@@ -6,7 +6,7 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw } from "./helpers/msw";
+import { createFetchResult, msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
@@ -55,7 +55,10 @@ describe("sentry", () => {
 						return HttpResponse.error();
 					},
 					{ once: true }
-				)
+				),
+				http.get("*/user/tokens/verify", () => {
+					return HttpResponse.json(createFetchResult([]));
+				})
 			);
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
 				`[TypeError: Failed to fetch]`
@@ -100,7 +103,10 @@ describe("sentry", () => {
 						return HttpResponse.error();
 					},
 					{ once: true }
-				)
+				),
+				http.get("*/user/tokens/verify", () => {
+					return HttpResponse.json(createFetchResult([]));
+				})
 			);
 			mockConfirm({
 				text: "Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
@@ -126,7 +132,10 @@ describe("sentry", () => {
 						return HttpResponse.error();
 					},
 					{ once: true }
-				)
+				),
+				http.get("*/user/tokens/verify", () => {
+					return HttpResponse.json(createFetchResult([]));
+				})
 			);
 			mockConfirm({
 				text: "Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
@@ -218,206 +227,206 @@ describe("sentry", () => {
 
 			// If more data is included in the Sentry request, we'll need to verify it
 			// couldn't contain PII and update this snapshot
-			expect(event).toMatchInlineSnapshot(`
-				Object {
-				  "data": Object {
-				    "breadcrumbs": Array [
-				      Object {
-				        "level": "log",
-				        "message": "wrangler whoami",
-				        "timestamp": 0,
-				      },
-				    ],
-				    "contexts": Object {
-				      "app": Object {
-				        "app_memory": 0,
-				        "app_start_time": "",
-				      },
-				      "cloud_resource": Object {},
-				      "device": Object {},
-				      "os": Object {},
-				      "runtime": Object {
-				        "name": "node",
-				        "version": "",
-				      },
-				      "trace": Object {
-				        "span_id": "",
-				        "trace_id": "",
-				      },
-				    },
-				    "environment": "production",
-				    "event_id": "",
-				    "exception": Object {
-				      "values": Array [
-				        Object {
-				          "mechanism": Object {
-				            "handled": true,
-				            "type": "generic",
-				          },
-				          "stacktrace": Object {
-				            "frames": Array [
-				              Object {
-				                "colno": 0,
-				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/core/register-yargs-command.ts",
-				                "function": "",
-				                "in_app": false,
-				                "lineno": 0,
-				                "module": "register-yargs-command.ts",
-				                "post_context": Array [],
-				                "pre_context": Array [],
-				              },
-				              Object {
-				                "colno": 0,
-				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/user/commands.ts",
-				                "function": "",
-				                "in_app": false,
-				                "lineno": 0,
-				                "module": "commands.ts",
-				                "post_context": Array [],
-				                "pre_context": Array [],
-				              },
-				              Object {
-				                "colno": 0,
-				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/user/whoami.ts",
-				                "function": "",
-				                "in_app": false,
-				                "lineno": 0,
-				                "module": "whoami.ts",
-				                "post_context": Array [],
-				                "pre_context": Array [],
-				              },
-				              Object {
-				                "colno": 0,
-				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/user/whoami.ts",
-				                "function": "",
-				                "in_app": false,
-				                "lineno": 0,
-				                "module": "whoami.ts",
-				                "post_context": Array [],
-				                "pre_context": Array [],
-				              },
-				              Object {
-				                "colno": 0,
-				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/user/whoami.ts",
-				                "function": "",
-				                "in_app": false,
-				                "lineno": 0,
-				                "module": "whoami.ts",
-				                "post_context": Array [],
-				                "pre_context": Array [],
-				              },
-				              Object {
-				                "colno": 0,
-				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/cfetch/index.ts",
-				                "function": "",
-				                "in_app": false,
-				                "lineno": 0,
-				                "module": "index.ts",
-				                "post_context": Array [],
-				                "pre_context": Array [],
-				              },
-				              Object {
-				                "colno": 0,
-				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/cfetch/internal.ts",
-				                "function": "",
-				                "in_app": false,
-				                "lineno": 0,
-				                "module": "internal.ts",
-				                "post_context": Array [],
-				                "pre_context": Array [],
-				              },
-				              Object {
-				                "colno": 0,
-				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/cfetch/internal.ts",
-				                "function": "",
-				                "in_app": false,
-				                "lineno": 0,
-				                "module": "internal.ts",
-				                "post_context": Array [],
-				                "pre_context": Array [],
-				              },
-				              Object {
-				                "colno": 0,
-				                "context_line": "",
-				                "filename": "/project/...",
-				                "function": "",
-				                "in_app": false,
-				                "lineno": 0,
-				                "module": "@mswjs.interceptors.src.interceptors.fetch:index.ts",
-				                "post_context": Array [],
-				                "pre_context": Array [],
-				              },
-				              Object {
-				                "colno": 0,
-				                "context_line": "",
-				                "filename": "/project/...",
-				                "function": "",
-				                "in_app": false,
-				                "lineno": 0,
-				                "module": "@mswjs.interceptors.src.interceptors.fetch:index.ts",
-				                "post_context": Array [],
-				                "pre_context": Array [],
-				              },
-				            ],
-				          },
-				          "type": "TypeError",
-				          "value": "Failed to fetch",
-				        },
-				      ],
-				    },
-				    "modules": Object {},
-				    "platform": "node",
-				    "release": "",
-				    "sdk": Object {
-				      "integrations": Array [
-				        "InboundFilters",
-				        "FunctionToString",
-				        "LinkedErrors",
-				        "Console",
-				        "OnUncaughtException",
-				        "OnUnhandledRejection",
-				        "ContextLines",
-				        "Context",
-				        "Modules",
-				      ],
-				      "name": "sentry.javascript.node",
-				      "packages": Array [
-				        Object {
-				          "name": "npm:@sentry/node",
-				          "version": "7.87.0",
-				        },
-				      ],
-				      "version": "7.87.0",
-				    },
-				    "timestamp": 0,
-				  },
-				  "header": Object {
-				    "event_id": "",
-				    "sdk": Object {
-				      "name": "sentry.javascript.node",
-				      "version": "7.87.0",
-				    },
-				    "sent_at": "",
-				    "trace": Object {
-				      "environment": "production",
-				      "public_key": "9edbb8417b284aa2bbead9b4c318918b",
-				      "release": "",
-				      "trace_id": "",
-				    },
-				  },
-				  "type": Object {
-				    "type": "event",
-				  },
-				}
-			`);
+			expect(event).toStrictEqual({
+				data: {
+					breadcrumbs: [
+						{
+							level: "log",
+							message: "wrangler whoami",
+							timestamp: 0,
+						},
+					],
+					contexts: {
+						app: {
+							app_memory: 0,
+							app_start_time: "",
+						},
+						cloud_resource: {},
+						device: {},
+						os: {},
+						runtime: {
+							name: "node",
+							version: "",
+						},
+						trace: {
+							span_id: "",
+							trace_id: "",
+						},
+					},
+					environment: "production",
+					event_id: "",
+					exception: {
+						values: [
+							{
+								mechanism: {
+									handled: true,
+									type: "generic",
+								},
+								stacktrace: {
+									frames: [
+										{
+											colno: 0,
+											context_line: "",
+											filename: expect.any(String),
+											function: "",
+											in_app: false,
+											lineno: 0,
+											module: expect.any(String),
+											post_context: [],
+											pre_context: [],
+										},
+										{
+											colno: 0,
+											context_line: "",
+											filename: expect.any(String),
+											function: "",
+											in_app: false,
+											lineno: 0,
+											module: expect.any(String),
+											post_context: [],
+											pre_context: [],
+										},
+										{
+											colno: 0,
+											context_line: "",
+											filename: expect.any(String),
+											function: "",
+											in_app: false,
+											lineno: 0,
+											module: expect.any(String),
+											post_context: [],
+											pre_context: [],
+										},
+										{
+											colno: 0,
+											context_line: "",
+											filename: expect.any(String),
+											function: "",
+											in_app: false,
+											lineno: 0,
+											module: expect.any(String),
+											post_context: [],
+											pre_context: [],
+										},
+										{
+											colno: 0,
+											context_line: "",
+											filename: expect.any(String),
+											function: "",
+											in_app: false,
+											lineno: 0,
+											module: expect.any(String),
+											post_context: [],
+											pre_context: [],
+										},
+										{
+											colno: 0,
+											context_line: "",
+											filename: expect.any(String),
+											function: "",
+											in_app: false,
+											lineno: 0,
+											module: expect.any(String),
+											post_context: [],
+											pre_context: [],
+										},
+										{
+											colno: 0,
+											context_line: "",
+											filename: expect.any(String),
+											function: "",
+											in_app: false,
+											lineno: 0,
+											module: expect.any(String),
+											post_context: [],
+											pre_context: [],
+										},
+										{
+											colno: 0,
+											context_line: "",
+											filename: expect.any(String),
+											function: "",
+											in_app: false,
+											lineno: 0,
+											module: expect.any(String),
+											post_context: [],
+											pre_context: [],
+										},
+										{
+											colno: 0,
+											context_line: "",
+											filename: "/project/...",
+											function: "",
+											in_app: false,
+											lineno: 0,
+											module:
+												"@mswjs.interceptors.src.interceptors.fetch:index.ts",
+											post_context: [],
+											pre_context: [],
+										},
+										{
+											colno: 0,
+											context_line: "",
+											filename: "/project/...",
+											function: "",
+											in_app: false,
+											lineno: 0,
+											module:
+												"@mswjs.interceptors.src.interceptors.fetch:index.ts",
+											post_context: [],
+											pre_context: [],
+										},
+									],
+								},
+								type: "TypeError",
+								value: "Failed to fetch",
+							},
+						],
+					},
+					modules: {},
+					platform: "node",
+					release: "",
+					sdk: {
+						integrations: [
+							"InboundFilters",
+							"FunctionToString",
+							"LinkedErrors",
+							"Console",
+							"OnUncaughtException",
+							"OnUnhandledRejection",
+							"ContextLines",
+							"Context",
+							"Modules",
+						],
+						name: "sentry.javascript.node",
+						packages: [
+							{
+								name: "npm:@sentry/node",
+								version: "7.87.0",
+							},
+						],
+						version: "7.87.0",
+					},
+					timestamp: 0,
+				},
+				header: {
+					event_id: "",
+					sdk: {
+						name: "sentry.javascript.node",
+						version: "7.87.0",
+					},
+					sent_at: "",
+					trace: {
+						environment: "production",
+						public_key: "9edbb8417b284aa2bbead9b4c318918b",
+						release: "",
+						trace_id: "",
+					},
+				},
+				type: {
+					type: "event",
+				},
+			});
 		});
 	});
 });

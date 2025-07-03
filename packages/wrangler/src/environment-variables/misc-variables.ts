@@ -206,6 +206,14 @@ export const getCIGeneratePreviewAlias = getEnvironmentVariableFactory({
 });
 
 /**
+ * `WORKERS_CI_BRANCH` is the branch name exposed by Workers CI
+ *
+ */
+export const getWorkersCIBranchName = getEnvironmentVariableFactory({
+	variableName: "WORKERS_CI_BRANCH",
+});
+
+/**
  * `WRANGLER_BUILD_CONDITIONS` specifies the "build conditions" to use when importing packages at build time.
  *
  * See https://nodejs.org/api/packages.html#conditional-exports
@@ -239,6 +247,16 @@ export const getRegistryPath = getEnvironmentVariableFactory({
 		return path.join(getGlobalWranglerConfigPath(), "registry");
 	},
 });
+
+/**
+ * `WRANGLER_D1_EXTRA_LOCATION_CHOICES` is an internal variable to let D1 team target their testing environments.
+ *
+ * External accounts cannot access testing envionments, so should not set this variable.
+ */
+export const getD1ExtraLocationChoices: () => string | undefined =
+	getEnvironmentVariableFactory({
+		variableName: "WRANGLER_D1_EXTRA_LOCATION_CHOICES",
+	});
 
 /**
  * `WRANGLER_DOCKER_BIN` specifies the path to a docker binary.

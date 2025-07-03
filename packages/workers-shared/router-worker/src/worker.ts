@@ -113,7 +113,7 @@ export default {
 					});
 
 					let shouldBlockNonImageResponse = false;
-					if (url.pathname === "/_next/image") {
+					if (url.pathname.endsWith("/_next/image")) {
 						// is a next image
 						const queryURLParam = url.searchParams.get("url");
 						if (queryURLParam && !queryURLParam.startsWith("/")) {
@@ -132,10 +132,12 @@ export default {
 
 					if (shouldBlockNonImageResponse) {
 						const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
-						if (
-							!resp.headers.get("content-type")?.startsWith("image/") &&
-							resp.status !== 304
-						) {
+						const isImage = resp.headers
+							.get("content-type")
+							?.startsWith("image/");
+						const isPlainText =
+							resp.headers.get("content-type") === "text/plain";
+						if (!isImage && !isPlainText && resp.status !== 304) {
 							analytics.setData({ abuseMitigationBlocked: true });
 							return new Response("Blocked", { status: 403 });
 						}

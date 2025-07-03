@@ -21,13 +21,13 @@ import { getScopes, printScopes, requireApiToken, requireAuth } from "../user";
 import { printWranglerBanner } from "../wrangler-banner";
 import { parseByteSize } from "./../parse";
 import { wrap } from "./helpers/wrap";
-import { idToLocationName, loadAccount } from "./locations";
+import { idToLocationName } from "./locations";
 import type { Config } from "../config";
 import type { CloudchamberConfig, ContainerApp } from "../config/environment";
 import type { containersScope } from "../containers";
 import type {
 	CommonYargsOptions,
-	StrictYargsOptionsToInterfaceJSON,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Arg } from "@cloudflare/cli/interactive";
 import type {
@@ -40,8 +40,6 @@ import type {
 } from "@cloudflare/containers-shared";
 
 export const cloudchamberScope = "cloudchamber:write" as const;
-
-export type CommonCloudchamberConfiguration = { json: boolean };
 
 const containerIdRegexp = /[^/]{36}/;
 
@@ -101,7 +99,7 @@ export function parseImageName(value: string): {
  */
 export function handleFailure<
 	YargsObject,
-	CommandArgumentsObject = YargsObject extends StrictYargsOptionsToInterfaceJSON<
+	CommandArgumentsObject = YargsObject extends StrictYargsOptionsToInterface<
 		infer K
 	>
 		? K
@@ -110,45 +108,19 @@ export function handleFailure<
 	command: string,
 	cb: (args: CommandArgumentsObject, config: Config) => Promise<void>,
 	scope: typeof cloudchamberScope | typeof containersScope
-): (
-	args: CommonYargsOptions &
-		CommandArgumentsObject &
-		CommonCloudchamberConfiguration
-) => Promise<void> {
+): (args: CommonYargsOptions & CommandArgumentsObject) => Promise<void> {
 	return async (args) => {
-		try {
-			if (!args.json) {
-				await printWranglerBanner();
-				const commandStatus = command.includes("cloudchamber")
-					? "alpha"
-					: "open-beta";
-				logger.warn(constructStatusMessage(command, commandStatus));
-			}
-			const config = readConfig(args);
-			await fillOpenAPIConfiguration(config, args.json, scope);
-			await cb(args, config);
-		} catch (err) {
-			if (!args.json || !isNonInteractiveOrCI()) {
-				throw err;
-			}
-
-			if (err instanceof ApiError) {
-				logger.log(JSON.stringify(err.body));
-				return;
-			}
-
-			if (err instanceof Error) {
-				logger.log(JSON.stringify({ error: err.message }));
-				return;
-			}
-
-			throw err;
+		if (!isNonInteractiveOrCI()) {
+			await printWranglerBanner();
+			const commandStatus = command.includes("cloudchamber")
+				? "alpha"
+				: "open-beta";
+			logger.warn(constructStatusMessage(command, commandStatus));
 		}
+		const config = readConfig(args);
+		await fillOpenAPIConfiguration(config, scope);
+		await cb(args, config);
 	};
-}
-
-export async function loadAccountSpinner({ json }: { json?: boolean }) {
-	await promiseSpinner(loadAccount(), { message: "Loading account", json });
 }
 
 /**
@@ -170,14 +142,14 @@ async function getAPIUrl(
 export async function promiseSpinner<T>(
 	promise: Promise<T>,
 	{
-		json = false,
-		message = "Loading",
-	}: { json?: boolean; message?: string } = {
-		json: false,
+		message,
+	}: {
+		message: string;
+	} = {
 		message: "Loading",
 	}
 ): Promise<T> {
-	if (json) {
+	if (isNonInteractiveOrCI()) {
 		return promise;
 	}
 	const { start, stop } = spinner();
@@ -192,7 +164,6 @@ export async function promiseSpinner<T>(
 
 export async function fillOpenAPIConfiguration(
 	config: Config,
-	_json: boolean,
 	scope: typeof containersScope | typeof cloudchamberScope
 ) {
 	const headers: Record<string, string> =
@@ -223,10 +194,6 @@ export async function fillOpenAPIConfiguration(
 	}
 
 	OpenAPI.HEADERS = headers;
-}
-
-export function interactWithUser(config: { json?: boolean }): boolean {
-	return !config.json && !isNonInteractiveOrCI();
 }
 
 type NonObject = undefined | null | boolean | string | number;

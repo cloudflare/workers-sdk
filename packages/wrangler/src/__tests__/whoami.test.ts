@@ -52,6 +52,13 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 				{ once: true }
 			),
 			http.get(
+				"*/user/tokens/verify",
+				() => {
+					return HttpResponse.json(createFetchResult([]));
+				},
+				{ once: true }
+			),
+			http.get(
 				"*/accounts",
 				({ request }) => {
 					const headersObject = Object.fromEntries(request.headers.entries());
@@ -70,12 +77,55 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo?.email).toBeUndefined();
 	});
-	it("should say it's using an API token when one is set", async () => {
+	it("should say it's using a user API token when one is set", async () => {
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
+
+		msw.use(
+			http.get(
+				"*/user/tokens/verify",
+				() => {
+					return HttpResponse.json(createFetchResult([]));
+				},
+				{ once: true }
+			)
+		);
 
 		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo).toEqual({
-			authType: "API Token",
+			authType: "User API Token",
+			apiToken: "123456789",
+			email: "user@example.com",
+			accounts: [
+				{ name: "Account One", id: "account-1" },
+				{ name: "Account Two", id: "account-2" },
+				{ name: "Account Three", id: "account-3" },
+			],
+		});
+	});
+
+	it("should say it's using an account API token when one is set", async () => {
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
+
+		msw.use(
+			http.get(
+				"*/user/tokens/verify",
+				() => {
+					return HttpResponse.json(
+						createFetchResult({}, false, [
+							{
+								code: 1000,
+								message: "Invalid API Token",
+							},
+						])
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
+		expect(userInfo).toEqual({
+			authType: "Account API Token",
 			apiToken: "123456789",
 			email: "user@example.com",
 			accounts: [
@@ -196,8 +246,30 @@ describe("whoami", () => {
 			├─┼─┤
 			│ Account Three │ account-3 │
 			└─┴─┘
-			🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.
+			🔓 Token Permissions:
 			Scope (Access)
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
+
+			  - account:read
+			  - user:read
+			  - workers:write
+			  - workers_kv:write
+			  - workers_routes:write
+			  - workers_scripts:write
+			  - workers_tail:read
+			  - d1:write
+			  - pages:write
+			  - zone:read
+			  - ssl_certs:write
+			  - ai:write
+			  - queues:write
+			  - pipelines:write
+			  - secrets_store:write
+			  - containers:write
+			  - cloudchamber:write
+
+
 			🎢 Membership roles in \\"Account Two\\": Contact account super admin to change your permissions.
 			- Test role"
 		`);
@@ -230,8 +302,30 @@ describe("whoami", () => {
 			├─┼─┤
 			│ Account Three │ account-3 │
 			└─┴─┘
-			🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.
+			🔓 Token Permissions:
 			Scope (Access)
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
+
+			  - account:read
+			  - user:read
+			  - workers:write
+			  - workers_kv:write
+			  - workers_routes:write
+			  - workers_scripts:write
+			  - workers_tail:read
+			  - d1:write
+			  - pages:write
+			  - zone:read
+			  - ssl_certs:write
+			  - ai:write
+			  - queues:write
+			  - pipelines:write
+			  - secrets_store:write
+			  - containers:write
+			  - cloudchamber:write
+
+
 			🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"
 		`);
 	});

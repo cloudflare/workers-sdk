@@ -1,9 +1,10 @@
 import dedent from "ts-dedent";
 import { describe, test } from "vitest";
+import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
-describe("pages deploy", () => {
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("pages deploy", () => {
 	const helper = new WranglerE2ETestHelper();
 	const projectName = generateResourceName("pages");
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {
 	generateCaCertName,
 	generateLeafCertificate,
@@ -9,7 +10,7 @@ import {
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { normalizeOutput } from "./helpers/normalize";
 
-describe("cert", () => {
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("cert", () => {
 	const normalize = (str: string) =>
 		normalizeOutput(str, {
 			[process.env.CLOUDFLARE_ACCOUNT_ID as string]: "CLOUDFLARE_ACCOUNT_ID",
@@ -56,17 +57,6 @@ describe("cert", () => {
 			Issuer: CN=Localhost CA,OU=SSL Department,O=Localhost,L=San Francisco,ST=California,C=US
 			Expires on 11/18/2034"
 		`);
-	});
-
-	it("list cert", async () => {
-		const output = await helper.run(`wrangler cert list`);
-		const result = normalize(output.stdout);
-		expect(result).toContain(
-			`Name: tmp-e2e-mtls-cert-00000000-0000-0000-0000-000000000000`
-		);
-		expect(result).toContain(
-			`Name: tmp-e2e-ca-cert-00000000-0000-0000-0000-000000000000`
-		);
 	});
 
 	it("delete mtls cert", async () => {

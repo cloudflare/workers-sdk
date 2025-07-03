@@ -1,5 +1,21 @@
 # @cloudflare/vite-plugin
 
+## 1.9.0
+
+### Minor Changes
+
+-   [#9535](https://github.com/cloudflare/workers-sdk/pull/9535) [`56dc5c4`](https://github.com/cloudflare/workers-sdk/commit/56dc5c4946417df12688dd6b2374835f60c14be6) Thanks [@penalosa](https://github.com/penalosa)! - In 2023 we announced [breakpoint debugging support](https://blog.cloudflare.com/debugging-cloudflare-workers/) for Workers, which meant that you could easily debug your Worker code in Wrangler's built-in devtools (accessible via the `[d]` hotkey) as well as multiple other devtools clients, [including VSCode](https://developers.cloudflare.com/workers/observability/dev-tools/breakpoints/). For most developers, breakpoint debugging via VSCode is the most natural flow, but until now it's required [manually configuring a `launch.json` file](https://developers.cloudflare.com/workers/observability/dev-tools/breakpoints/#setup-vs-code-to-use-breakpoints), running `wrangler dev`, and connecting via VSCode's built-in debugger.
+
+    Now, using VSCode's built-in [JavaScript Debug Terminals](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_javascript-debug-terminal), there are just two steps: open a JS debug terminal and run `vite dev` or `vite preview`. VSCode will automatically connect to your running Worker (even if you're running multiple Workers at once!) and start a debugging session.
+
+- [#9803](https://github.com/cloudflare/workers-sdk/pull/9803) [`df04528`](https://github.com/cloudflare/workers-sdk/commit/df0452892dc85133c557c4daff68508d7fdee77a) Thanks [@penalosa](https://github.com/penalosa)! - Support Workers Analytics Engine & Rate Limiting bindings
+
+### Patch Changes
+
+- Updated dependencies [[`56dc5c4`](https://github.com/cloudflare/workers-sdk/commit/56dc5c4946417df12688dd6b2374835f60c14be6), [`8acaf43`](https://github.com/cloudflare/workers-sdk/commit/8acaf432ac3e6988be49d68060f5abab2b9a6e0d), [`4309bb3`](https://github.com/cloudflare/workers-sdk/commit/4309bb30d2baa5fd410e250602d10247102b9885), [`d11288a`](https://github.com/cloudflare/workers-sdk/commit/d11288aff5a11db92b153b4422d77a863a8869a0)]:
+  - miniflare@4.20250617.5
+  - wrangler@4.23.0
+
 ## 1.8.0
 
 ### Minor Changes

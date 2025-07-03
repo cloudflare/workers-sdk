@@ -22,6 +22,11 @@ export function yargsCurl(args: yargs.Argv<CommonYargsOptions>) {
 		.option("data", {
 			type: "string",
 			describe: "Add a JSON body to the request",
+			alias: "d",
+		})
+		.option("data-deprecated", {
+			type: "string",
+			hidden: true,
 			alias: "D",
 		})
 		.option("method", {
@@ -43,11 +48,6 @@ export function yargsCurl(args: yargs.Argv<CommonYargsOptions>) {
 			describe: "Equivalent of using --data-binary @- in curl",
 			type: "boolean",
 			alias: "stdin",
-		})
-		.option("json", {
-			describe: "Output json. Use for consistent, machine readable output.",
-			type: "boolean",
-			default: false,
 		});
 }
 
@@ -72,16 +72,16 @@ async function requestFromCmd(
 		method: string;
 		header: (string | number)[] | undefined;
 		data?: string;
+		dataDeprecated?: string;
 		silent?: boolean;
 		verbose?: boolean;
 		useStdin?: boolean;
-		json?: boolean;
 	},
 	_config: Config
 ): Promise<void> {
 	const requestId = `wrangler-${randomUUID()}`;
-	if (!args.json && args.verbose) {
-		logRaw(bold(brandColor("Request id: " + requestId)));
+	if (args.verbose && !args.silent) {
+		logRaw(bold(brandColor("Request ID: " + requestId)));
 	}
 
 	if (args.useStdin) {
@@ -98,6 +98,8 @@ async function requestFromCmd(
 			}),
 			{ "coordinator-request-id": requestId }
 		);
+
+		const data = args.data ?? args.dataDeprecated;
 		const res = await request(OpenAPI, {
 			url: args.path,
 			method: args.method as
@@ -108,11 +110,11 @@ async function requestFromCmd(
 				| "OPTIONS"
 				| "HEAD"
 				| "PATCH",
-			body: args.data ? JSON.parse(args.data) : undefined,
+			body: data ? JSON.parse(data) : undefined,
 			mediaType: "application/json",
 			headers: headers,
 		});
-		if (args.json || args.silent) {
+		if (args.silent) {
 			logRaw(
 				JSON.stringify(
 					!args.verbose
@@ -138,15 +140,12 @@ async function requestFromCmd(
 						formatValue: yellow,
 					})
 				);
+
+				logRaw(cyanBright(">> Body"));
 			}
-			logRaw(cyanBright(">> Body"));
+
 			const text = JSON.stringify(res, null, 4);
-			logRaw(
-				text
-					.split("\n")
-					.map((line) => `${brandColor(line)}`)
-					.join("\n")
-			);
+			logRaw(text);
 		}
 		return;
 	} catch (error) {

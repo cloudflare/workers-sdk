@@ -14,7 +14,7 @@ if (
 }
 
 describe("getPlatformProxy remote-bindings", () => {
-	const remoteWorkerName = `get-platform-proxy-remote-worker-test-${randomUUID().split("-")[0]}`;
+	const remoteWorkerName = `tmp-e2e-worker-test-${randomUUID().split("-")[0]}`;
 
 	before(async () => {
 		// Note: ideally we pass the auth data to `getPlatformProxy`, that currently is not

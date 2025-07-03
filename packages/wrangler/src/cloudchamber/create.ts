@@ -13,6 +13,7 @@ import {
 	AssignIPv6,
 	DeploymentsService,
 } from "@cloudflare/containers-shared";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { parseByteSize } from "./../parse";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
@@ -22,8 +23,6 @@ import {
 	checkInstanceType,
 	collectEnvironmentVariables,
 	collectLabels,
-	interactWithUser,
-	loadAccountSpinner,
 	parseImageName,
 	promptForEnvironmentVariables,
 	promptForInstanceType,
@@ -38,8 +37,8 @@ import { getNetworkInput } from "./network/network";
 import { sshPrompts as promptForSSHKeyAndGetAddedSSHKey } from "./ssh/ssh";
 import type { Config } from "../config";
 import type {
-	CommonYargsArgvJSON,
-	StrictYargsOptionsToInterfaceJSON,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Arg } from "@cloudflare/cli/interactive";
 import type {
@@ -51,7 +50,7 @@ import type {
 
 const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";
 
-export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
+export function createCommandOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.option("image", {
 			requiresArg: true,
@@ -123,18 +122,16 @@ export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 }
 
 export async function createCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof createCommandOptionalYargs>,
+	args: StrictYargsOptionsToInterface<typeof createCommandOptionalYargs>,
 	config: Config
 ) {
-	await loadAccountSpinner(args);
-
 	const environmentVariables = collectEnvironmentVariables(
 		[],
 		config,
 		args.var
 	);
 	const labels = collectLabels(args.label);
-	if (!interactWithUser(args)) {
+	if (isNonInteractiveOrCI()) {
 		if (config.cloudchamber.image != undefined && args.image == undefined) {
 			args.image = config.cloudchamber.image;
 		}
@@ -187,7 +184,7 @@ export async function createCommand(
 }
 
 async function askWhichSSHKeysDoTheyWantToAdd(
-	args: StrictYargsOptionsToInterfaceJSON<typeof createCommandOptionalYargs>,
+	args: StrictYargsOptionsToInterface<typeof createCommandOptionalYargs>,
 	key: SSHPublicKeyID | undefined
 ): Promise<SSHPublicKeyID[]> {
 	const keyItems = await pollSSHKeysUntilCondition(() => true);
@@ -266,7 +263,7 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 }
 
 async function handleCreateCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof createCommandOptionalYargs>,
+	args: StrictYargsOptionsToInterface<typeof createCommandOptionalYargs>,
 	config: Config,
 	environmentVariables: EnvironmentVariable[] | undefined,
 	labels: Label[] | undefined

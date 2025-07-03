@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+import { vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -7,6 +8,10 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
+
+// we want to include the banner to make sure it doesn't show up in the output
+// when using --json
+vi.unmock("../wrangler-banner");
 
 describe("cloudchamber image", () => {
 	const std = mockConsoleMethods();
@@ -40,10 +45,7 @@ describe("cloudchamber image", () => {
 			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
-
-			OPTIONS
-			      --json  Return output as clean JSON  [boolean] [default: false]"
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 
@@ -191,10 +193,11 @@ describe("cloudchamber image list", () => {
 			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
-			      --json    Return output as clean JSON  [boolean] [default: false]
-			      --filter  Regex to filter results  [string]"
+			      --filter  Regex to filter results  [string]
+			      --json    Format output as JSON  [boolean] [default: false]"
 		`);
 	});
+
 	it("should list images", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
@@ -239,6 +242,7 @@ describe("cloudchamber image list", () => {
 			three       thirty"
 		`);
 	});
+
 	it("should list images with a filter", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
@@ -279,6 +283,7 @@ describe("cloudchamber image list", () => {
 			two         twenty"
 		`);
 	});
+
 	it("should filter out repos with no non-sha tags", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
@@ -325,6 +330,7 @@ describe("cloudchamber image list", () => {
 			three       thirty"
 		`);
 	});
+
 	it("should list repos with json flag set", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
@@ -385,6 +391,7 @@ describe("cloudchamber image list", () => {
 			]"
 		`);
 	});
+
 	it("should filter out repos with no non-sha tags in json output", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
@@ -447,6 +454,7 @@ describe("cloudchamber image list", () => {
 			]"
 		`);
 	});
+
 	it("should delete images", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
@@ -503,6 +511,7 @@ describe("cloudchamber image list", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`"Deleted tag: one:hundred"`);
 	});
+
 	it("should error when provided a repo without a tag", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});

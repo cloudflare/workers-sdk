@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { beforeEach, describe, expect, it, onTestFinished } from "vitest";
+import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {
 	generateLeafCertificate,
 	generateMtlsCertName,
@@ -406,26 +407,29 @@ const mtlsTest: TestCase<{ certificateId: string; workerName: string }> = {
 	],
 };
 
-describe.each([...testCases, mtlsTest])("Mixed Mode for $name", (testCase) => {
-	let helper: WranglerE2ETestHelper;
-	beforeEach(() => {
-		helper = new WranglerE2ETestHelper();
-	});
-	it("enabled", async () => {
-		await runTestCase(testCase as TestCase<unknown>, helper);
-	});
-	// Ensure the test case _relies_ on Mixed Mode, and fails in regular local dev
-	it.skipIf(testCase.worksWithoutRemoteBindings)(
-		"fails when disabled",
-		// Turn off retries because this test is expected to fail
-		{ retry: 0, fails: true },
-		async () => {
-			await runTestCase(testCase as TestCase<unknown>, helper, {
-				disableRemoteBindings: true,
-			});
-		}
-	);
-});
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID).each([...testCases, mtlsTest])(
+	"Mixed Mode for $name",
+	(testCase) => {
+		let helper: WranglerE2ETestHelper;
+		beforeEach(() => {
+			helper = new WranglerE2ETestHelper();
+		});
+		it("enabled", async () => {
+			await runTestCase(testCase as TestCase<unknown>, helper);
+		});
+		// Ensure the test case _relies_ on Mixed Mode, and fails in regular local dev
+		it.skipIf(testCase.worksWithoutRemoteBindings)(
+			"fails when disabled",
+			// Turn off retries because this test is expected to fail
+			{ retry: 0, fails: true },
+			async () => {
+				await runTestCase(testCase as TestCase<unknown>, helper, {
+					disableRemoteBindings: true,
+				});
+			}
+		);
+	}
+);
 
 async function runTestCase<T>(
 	testCase: TestCase<T>,

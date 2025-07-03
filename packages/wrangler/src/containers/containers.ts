@@ -9,21 +9,20 @@ import { processArgument } from "@cloudflare/cli/args";
 import { dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
-import { loadAccountSpinner } from "../cloudchamber/common";
 import { wrap } from "../cloudchamber/helpers/wrap";
 import { UserError } from "../errors";
-import isInteractive from "../is-interactive";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import type { Config } from "../config";
 import type {
-	CommonYargsArgvJSON,
-	StrictYargsOptionsToInterfaceJSON,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type {
 	Application,
 	ListApplications,
 } from "@cloudflare/containers-shared";
 
-export function deleteYargs(args: CommonYargsArgvJSON) {
+export function deleteYargs(args: CommonYargsArgv) {
 	return args.positional("ID", {
 		describe: "id of the containers to delete",
 		type: "string",
@@ -31,7 +30,7 @@ export function deleteYargs(args: CommonYargsArgvJSON) {
 }
 
 export async function deleteCommand(
-	deleteArgs: StrictYargsOptionsToInterfaceJSON<typeof deleteYargs>,
+	deleteArgs: StrictYargsOptionsToInterface<typeof deleteYargs>,
 	_config: Config
 ) {
 	if (!deleteArgs.ID) {
@@ -40,16 +39,9 @@ export async function deleteCommand(
 		);
 	}
 
-	if (deleteArgs.json) {
-		const container = await ApplicationsService.deleteApplication(
-			deleteArgs.ID
-		);
-		console.log(JSON.stringify(container, null, 4));
-		return;
-	}
-
 	startSection("Delete your container");
-	if (isInteractive()) {
+
+	if (!isNonInteractiveOrCI()) {
 		const yes = await inputPrompt({
 			question:
 				"Are you sure that you want to delete these containers? The associated DO container will lose access to the containers.",
@@ -62,10 +54,13 @@ export async function deleteCommand(
 		}
 	}
 
-	const [, err] = await wrap(
-		ApplicationsService.deleteApplication(deleteArgs.ID)
-	);
-	if (err) {
+	try {
+		await ApplicationsService.deleteApplication(deleteArgs.ID);
+	} catch (err) {
+		if (!(err instanceof Error)) {
+			throw err;
+		}
+
 		if (err instanceof ApiError) {
 			if (err.status === 400 || err.status === 404) {
 				throw new UserError(
@@ -86,7 +81,7 @@ export async function deleteCommand(
 	endSection("Your container has been deleted");
 }
 
-export function infoYargs(args: CommonYargsArgvJSON) {
+export function infoYargs(args: CommonYargsArgv) {
 	return args.positional("ID", {
 		describe: "id of the containers to view",
 		type: "string",
@@ -94,7 +89,7 @@ export function infoYargs(args: CommonYargsArgvJSON) {
 }
 
 export async function infoCommand(
-	infoArgs: StrictYargsOptionsToInterfaceJSON<typeof infoYargs>,
+	infoArgs: StrictYargsOptionsToInterface<typeof infoYargs>,
 	_config: Config
 ) {
 	if (!infoArgs.ID) {
@@ -102,12 +97,11 @@ export async function infoCommand(
 			"You must provide an ID. Use 'wrangler containers list` to view your containers."
 		);
 	}
-	if (infoArgs.json || !isInteractive()) {
+	if (isNonInteractiveOrCI()) {
 		const application = ApplicationsService.getApplication(infoArgs.ID);
 		console.log(JSON.stringify(application, null, 4));
 		return;
 	}
-	await loadAccountSpinner(infoArgs);
 	const [application, err] = await wrap(
 		ApplicationsService.getApplication(infoArgs.ID)
 	);
@@ -131,15 +125,15 @@ export async function infoCommand(
 	});
 }
 
-export function listYargs(args: CommonYargsArgvJSON) {
+export function listYargs(args: CommonYargsArgv) {
 	return args;
 }
 
 export async function listCommand(
-	listArgs: StrictYargsOptionsToInterfaceJSON<typeof listYargs>,
+	listArgs: StrictYargsOptionsToInterface<typeof listYargs>,
 	config: Config
 ) {
-	if (listArgs.json || !isInteractive()) {
+	if (isNonInteractiveOrCI()) {
 		const applications = await ApplicationsService.listApplications();
 		console.log(JSON.stringify(applications, null, 4));
 		return;
@@ -172,7 +166,7 @@ function flatDetails<T extends Record<string, unknown>>(
 }
 
 async function listCommandHandle(
-	_args: StrictYargsOptionsToInterfaceJSON<typeof listYargs>,
+	_args: StrictYargsOptionsToInterface<typeof listYargs>,
 	_config: Config
 ) {
 	const keepListIter = true;

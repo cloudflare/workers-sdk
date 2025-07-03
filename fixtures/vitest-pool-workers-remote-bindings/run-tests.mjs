@@ -25,9 +25,7 @@ cpSync("./src", "./.tmp/src", { recursive: true });
 cpSync("./test", "./.tmp/test", { recursive: true });
 cpSync("./vitest.workers.config.ts", "./.tmp/vitest.workers.config.ts");
 
-const remoteWorkerName = `vitest-pool-workers-remote-worker-test-${
-	randomUUID().split("-")[0]
-}`;
+const remoteWorkerName = `tmp-e2e-worker-test-${randomUUID().split("-")[0]}`;
 
 const wranglerJson = JSON.parse(readFileSync("./wrangler.json", "utf8"));
 wranglerJson.services[0].service = remoteWorkerName;

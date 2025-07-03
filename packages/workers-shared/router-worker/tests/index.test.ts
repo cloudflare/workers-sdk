@@ -247,136 +247,145 @@ describe("unit tests", async () => {
 		expect(await response.text()).toEqual("hello from user worker");
 	});
 
-	it("blocks /_next/image requests with remote URLs when not fetched as image", async () => {
-		const request = new Request(
-			"https://example.com/_next/image?url=https://evil.com/ssrf"
-		);
-		const ctx = createExecutionContext();
+	describe.each(["/some/subpath/", "/"])(
+		"blocking /_next/image requests hosted at %s with remote URLs",
+		(subpath) => {
+			it("blocks /_next/image requests with remote URLs when not fetched as image", async () => {
+				const request = new Request(
+					`https://example.com${subpath}_next/image?url=https://evil.com/ssrf`
+				);
+				const ctx = createExecutionContext();
 
-		const env = {
-			CONFIG: {
-				has_user_worker: true,
-				invoke_user_worker_ahead_of_assets: true,
-			},
-			USER_WORKER: {
-				async fetch(_: Request): Promise<Response> {
-					return new Response("<!DOCTYPE html><html></html>", {
-						headers: { "content-type": "text/html" },
-					});
-				},
-			},
-		} as Env;
+				const env = {
+					CONFIG: {
+						has_user_worker: true,
+						invoke_user_worker_ahead_of_assets: true,
+					},
+					USER_WORKER: {
+						async fetch(_: Request): Promise<Response> {
+							return new Response("<!DOCTYPE html><html></html>", {
+								headers: { "content-type": "text/html" },
+							});
+						},
+					},
+				} as Env;
 
-		const response = await worker.fetch(request, env, ctx);
-		expect(response.status).toBe(403);
-		expect(await response.text()).toBe("Blocked");
-	});
+				const response = await worker.fetch(request, env, ctx);
+				expect(response.status).toBe(403);
+				expect(await response.text()).toBe("Blocked");
+			});
 
-	it("allows /_next/image requests with remote URLs when fetched as image", async () => {
-		const request = new Request(
-			"https://example.com/_next/image?url=https://example.com/image.jpg",
-			{
-				headers: { "sec-fetch-dest": "image" },
-			}
-		);
-		const ctx = createExecutionContext();
-
-		const env = {
-			CONFIG: {
-				has_user_worker: true,
-				invoke_user_worker_ahead_of_assets: true,
-			},
-			USER_WORKER: {
-				async fetch(_: Request): Promise<Response> {
-					return new Response("fake image data", {
+			it.each([
+				{
+					description:
+						"allows /_next/image requests with remote URLs when fetched as image",
+					url: `https://example.com${subpath}_next/image?url=https://example.com/image.jpg`,
+					headers: { "sec-fetch-dest": "image" } as HeadersInit,
+					userWorkerResponse: {
+						body: "fake image data",
 						headers: { "content-type": "image/jpeg" },
-					});
+						status: 200,
+					},
+					expectedStatus: 200,
+					expectedBody: "fake image data",
 				},
-			},
-		} as Env;
-
-		const response = await worker.fetch(request, env, ctx);
-		expect(response.status).toBe(200);
-		expect(await response.text()).toBe("fake image data");
-	});
-
-	it("allows /_next/image with remote URL and image header regardless of response content", async () => {
-		const request = new Request(
-			"https://example.com/_next/image?url=https://example.com/image.jpg",
-			{
-				headers: { "sec-fetch-dest": "image" },
-			}
-		);
-		const ctx = createExecutionContext();
-
-		const env = {
-			CONFIG: {
-				has_user_worker: true,
-				invoke_user_worker_ahead_of_assets: true,
-			},
-			USER_WORKER: {
-				async fetch(_: Request): Promise<Response> {
-					return new Response("<!DOCTYPE html><html></html>", {
-						headers: { "content-type": "text/html" },
-					});
-				},
-			},
-		} as Env;
-
-		const response = await worker.fetch(request, env, ctx);
-		expect(response.status).toBe(200);
-		expect(await response.text()).toBe("<!DOCTYPE html><html></html>");
-	});
-
-	it("allows /_next/image requests with local URLs", async () => {
-		const request = new Request(
-			"https://example.com/_next/image?url=/local/image.jpg"
-		);
-		const ctx = createExecutionContext();
-
-		const env = {
-			CONFIG: {
-				has_user_worker: true,
-				invoke_user_worker_ahead_of_assets: true,
-			},
-			USER_WORKER: {
-				async fetch(_: Request): Promise<Response> {
-					return new Response("local image data", {
+				{
+					description:
+						"allows /_next/image requests with remote URLs that have content type starting with image/...",
+					url: `https://example.com${subpath}_next/image?url=https://example.com/image.jpg`,
+					userWorkerResponse: {
+						body: "fake image data",
 						headers: { "content-type": "image/jpeg" },
-					});
+						status: 200,
+					},
+					expectedStatus: 200,
+					expectedBody: "fake image data",
 				},
-			},
-		} as Env;
-
-		const response = await worker.fetch(request, env, ctx);
-		expect(response.status).toBe(200);
-		expect(await response.text()).toBe("local image data");
-	});
-
-	it("allows /_next/image requests with 304 status", async () => {
-		const request = new Request(
-			"https://example.com/_next/image?url=https://example.com/image.jpg"
-		);
-		const ctx = createExecutionContext();
-
-		const env = {
-			CONFIG: {
-				has_user_worker: true,
-				invoke_user_worker_ahead_of_assets: true,
-			},
-			USER_WORKER: {
-				async fetch(_: Request): Promise<Response> {
-					return new Response(null, {
+				{
+					description:
+						"allows /_next/image requests with remote URLs that have content type text/plain",
+					url: `https://example.com${subpath}_next/image?url=https://example.com/image.jpg`,
+					userWorkerResponse: {
+						body: "fake image data",
+						headers: { "content-type": "text/plain" },
+						status: 200,
+					},
+					expectedStatus: 200,
+					expectedBody: "fake image data",
+				},
+				{
+					description:
+						"allows /_next/image with remote URL and image header regardless of response content",
+					url: `https://example.com${subpath}_next/image?url=https://example.com/image.jpg`,
+					headers: { "sec-fetch-dest": "image" } as HeadersInit,
+					userWorkerResponse: {
+						body: "<!DOCTYPE html><html></html>",
+						headers: { "content-type": "text/html" },
+						status: 200,
+					},
+					expectedStatus: 200,
+					expectedBody: "<!DOCTYPE html><html></html>",
+				},
+				{
+					description: "allows /_next/image requests with local URLs",
+					url: `https://example.com${subpath}_next/image?url=/local/image.jpg`,
+					headers: {} as HeadersInit,
+					userWorkerResponse: {
+						body: "local image data",
+						headers: { "content-type": "image/jpeg" },
+						status: 200,
+					},
+					expectedStatus: 200,
+					expectedBody: "local image data",
+				},
+				{
+					description: "allows /_next/image requests with 304 status",
+					url: `https://example.com${subpath}_next/image?url=https://example.com/image.jpg`,
+					headers: {} as HeadersInit,
+					userWorkerResponse: {
+						body: null,
+						headers: { "content-type": "text/html" },
 						status: 304,
-						headers: { "content-type": "text/html" },
-					});
+					},
+					expectedStatus: 304,
+					expectedBody: null,
 				},
-			},
-		} as Env;
+			])(
+				"$description",
+				async ({
+					url,
+					headers,
+					userWorkerResponse,
+					expectedStatus,
+					expectedBody,
+				}) => {
+					const request = new Request(url, { headers });
+					const ctx = createExecutionContext();
 
-		const response = await worker.fetch(request, env, ctx);
-		expect(response.status).toBe(304);
-	});
+					const env = {
+						CONFIG: {
+							has_user_worker: true,
+							invoke_user_worker_ahead_of_assets: true,
+						},
+						USER_WORKER: {
+							async fetch(_: Request): Promise<Response> {
+								return new Response(userWorkerResponse.body, {
+									status: userWorkerResponse.status,
+									headers: userWorkerResponse.headers,
+								});
+							},
+						},
+					} as Env;
+
+					const response = await worker.fetch(request, env, ctx);
+					expect(response.status).toBe(expectedStatus);
+					if (expectedBody !== null) {
+						expect(await response.text()).toBe(expectedBody);
+					}
+				}
+			);
+		}
+	);
 
 	describe("free tier limiting", () => {
 		it("returns fetch from asset worker for assets", async () => {

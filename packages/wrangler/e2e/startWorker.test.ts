@@ -7,10 +7,14 @@ import dedent from "ts-dedent";
 import undici from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
+import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import type { DevToolsEvent } from "../src/api";
 
-const OPTIONS = [{ remote: false }, { remote: true }] as const;
+const OPTIONS = [
+	{ remote: false },
+	...(CLOUDFLARE_ACCOUNT_ID ? [{ remote: true }] : []),
+];
 
 type Wrangler = Awaited<ReturnType<WranglerE2ETestHelper["importWrangler"]>>;
 
@@ -179,6 +183,7 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 		});
 
 		const inspectorUrl = await worker.inspectorUrl;
+		assert(inspectorUrl);
 
 		assert(inspectorUrl, "missing inspectorUrl");
 		let ws = new WebSocket(inspectorUrl.href, {

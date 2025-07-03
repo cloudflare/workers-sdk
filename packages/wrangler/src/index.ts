@@ -1,5 +1,7 @@
+import assert from "node:assert";
 import os from "node:os";
 import { setTimeout } from "node:timers/promises";
+import { ApiError } from "@cloudflare/containers-shared";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
@@ -313,7 +315,6 @@ import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/inst
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
-import { asJson } from "./yargs-types";
 import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
@@ -1147,12 +1148,12 @@ export function createCLIParser(argv: string[]) {
 
 	// cloudchamber
 	wrangler.command("cloudchamber", false, (cloudchamberArgs) => {
-		return cloudchamber(asJson(cloudchamberArgs.command(subHelp)), subHelp);
+		return cloudchamber(cloudchamberArgs.command(subHelp), subHelp);
 	});
 
 	// containers
 	wrangler.command("containers", false, (containersArgs) => {
-		return containers(asJson(containersArgs.command(subHelp)), subHelp);
+		return containers(containersArgs.command(subHelp), subHelp);
 	});
 
 	// [PRIVATE BETA] pubsub
@@ -1509,10 +1510,22 @@ export async function main(argv: string[]): Promise<void> {
 			// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
 			// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
 			await createCLIParser([...argv, "--help"]).parse();
-		} else if (isAuthenticationError(e)) {
+		} else if (
+			isAuthenticationError(e) ||
+			// Is this a Containers/Cloudchamber-based auth error?
+			// This is different because it uses a custom OpenAPI-based generated client
+			(e instanceof UserError &&
+				e.cause instanceof ApiError &&
+				e.cause.status === 403)
+		) {
 			mayReport = false;
 			errorType = "AuthenticationError";
-			logger.log(formatMessage(e));
+			if (e.cause instanceof ApiError) {
+				logger.error(e.cause);
+			} else {
+				assert(isAuthenticationError(e));
+				logger.log(formatMessage(e));
+			}
 			const envAuth = getAuthFromEnv();
 			if (envAuth !== undefined && "apiToken" in envAuth) {
 				const message =

@@ -5,6 +5,10 @@ on:
       - closed
       - labeled
 
+permissions:
+  # pull-request:write permission needed so that the workflow can comment on PRs
+  pull-requests: write
+
 jobs:
   issue_lava_lamp_holobyte:
     name: Issue Lava Lamp Holobyte
