@@ -381,7 +381,10 @@ describe("wrangler", () => {
 		});
 
 		describe("rename", () => {
-			function mockUpdateRequest(expectedNamespaceId: string, expectedTitle: string) {
+			function mockUpdateRequest(
+				expectedNamespaceId: string,
+				expectedTitle: string
+			) {
 				const requests = { count: 0 };
 				msw.use(
 					http.put(
@@ -419,7 +422,7 @@ describe("wrangler", () => {
 							expect(url.searchParams.get("order")).toEqual("title");
 							expect(url.searchParams.get("direction")).toEqual("asc");
 							expect(url.searchParams.get("page")).toEqual(`${requests.count}`);
-							
+
 							const pageSize = Number(url.searchParams.get("per_page"));
 							const page = Number(url.searchParams.get("page"));
 							return HttpResponse.json(
@@ -437,15 +440,14 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv namespace rename --help")
 				).resolves.toBeUndefined();
-				
+
 				expect(std.out).toMatchInlineSnapshot(`
-					"wrangler kv namespace rename [old-name] <new-name>
+					"wrangler kv namespace rename [name]
 
 					Rename a KV namespace
 
 					POSITIONALS
-					  old-name  The current name (title) of the namespace to rename  [string]
-					  new-name  The new name for the namespace  [string] [required]
+					  name  The current name (title) of the namespace to rename  [string]
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
@@ -455,15 +457,16 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --namespace-id  The id of the namespace to rename  [string]"
+					      --namespace-id  The id of the namespace to rename  [string]
+					      --new-name      The new name for the namespace  [string] [required]"
 				`);
 			});
 
-			it("should error if neither old-name nor namespace-id is provided", async () => {
+			it("should error if neither name nor namespace-id is provided", async () => {
 				await expect(
-					runWrangler("kv namespace rename new-name")
+					runWrangler("kv namespace rename --new-name new-name")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Either --old-name or --namespace-id must be specified]`
+					`[Error: Either name (as first argument) or --namespace-id must be specified]`
 				);
 			});
 
@@ -471,18 +474,21 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv namespace rename")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Not enough non-option arguments: got 0, need at least 1]`
+					`[Error: Missing required argument: new-name]`
 				);
 			});
 
 			it("should rename namespace by ID", async () => {
-				const requests = mockUpdateRequest("some-namespace-id", "new-namespace-name");
+				const requests = mockUpdateRequest(
+					"some-namespace-id",
+					"new-namespace-name"
+				);
 				await runWrangler(
-					"kv namespace rename --namespace-id some-namespace-id new-namespace-name"
+					"kv namespace rename --namespace-id some-namespace-id --new-name new-namespace-name"
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Using remote environment
+					"Resource location: remote
 					Renaming KV namespace some-namespace-id to \\"new-namespace-name\\".
 					✨ Successfully renamed namespace to \\"new-namespace-name\\""
 				`);
@@ -493,16 +499,19 @@ describe("wrangler", () => {
 					{ id: "some-namespace-id", title: "old-namespace-name" },
 					{ id: "other-namespace-id", title: "other-namespace" },
 				]);
-				const updateRequests = mockUpdateRequest("some-namespace-id", "new-namespace-name");
-				
-				await runWrangler(
-					"kv namespace rename old-namespace-name new-namespace-name"
+				const updateRequests = mockUpdateRequest(
+					"some-namespace-id",
+					"new-namespace-name"
 				);
-				
+
+				await runWrangler(
+					"kv namespace rename old-namespace-name --new-name new-namespace-name"
+				);
+
 				expect(listRequests.count).toEqual(1);
 				expect(updateRequests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Using remote environment
+					"Resource location: remote
 					Renaming KV namespace some-namespace-id to \\"new-namespace-name\\".
 					✨ Successfully renamed namespace to \\"new-namespace-name\\""
 				`);
@@ -512,11 +521,37 @@ describe("wrangler", () => {
 				mockListRequestForRename([
 					{ id: "other-namespace-id", title: "other-namespace" },
 				]);
-				
+
 				await expect(
-					runWrangler("kv namespace rename nonexistent-name new-name")
+					runWrangler("kv namespace rename nonexistent-name --new-name new-name")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: No namespace found with the name "nonexistent-name". Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".]`
+				);
+			});
+
+			it("should error if namespace ID does not exist", async () => {
+				// Mock a 404 response for the namespace ID
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId",
+						({ params }) => {
+							expect(params.accountId).toEqual("some-account-id");
+							expect(params.namespaceId).toEqual("nonexistent-id");
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 10009, message: "Unknown namespace." },
+								]),
+								{ status: 404 }
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler("kv namespace rename --namespace-id nonexistent-id --new-name new-name")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/storage/kv/namespaces/nonexistent-id) failed.]`
 				);
 			});
 		});
