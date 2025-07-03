@@ -35,14 +35,73 @@ export function prefixError(prefix: string, e: any): Error {
 	return e;
 }
 
-function dimInternalStackLine(line: string): string {
-	if (
-		line.startsWith("    at") &&
-		(!line.includes(cwd) || line.includes(cwdNodeModules))
-	) {
-		return dim(line);
+// Regex matches V8 stack frame lines with and without function name:
+//   at fnName (location)
+const frameRegex = /^\s*at\s+[^\s]+\s+\((.+?)\)$/;
+/**
+ * Processes a stack trace by applying a custom frame transformer.
+ * The transformer receives each frame line and its location (file:line:column);
+ * if it returns null, that frame is dropped; otherwise its return value replaces the line.
+ */
+export function processStackTrace(
+	stack: string,
+	transformFrame: (line: string, location: string) => string | null
+): string {
+	const lines = stack.split("\n");
+	const result: string[] = [];
+
+	for (const line of lines) {
+		const match = frameRegex.exec(line);
+
+		if (match) {
+			const location = match[1];
+			const transformed = transformFrame(line, location);
+			if (transformed !== null) {
+				result.push(transformed);
+			}
+
+			continue; // if transformed is null, drop the frame
+		}
+
+		// Non-frame lines (e.g., error message) are preserved
+		result.push(line);
 	}
-	return line;
+
+	return result.join("\n");
+}
+
+/**
+ * Format an error into a string, including the error cause if available.
+ *
+ * @example
+ * ```
+ * Error: Something went wrong
+ *    at Object.<anonymous> (/path/to/file.js:10:15)
+ * Caused by: Error: Another error
+ *   at Object.<anonymous> (/path/to/another-file.js:5:10)
+ * ```
+ */
+export function formatError(error: Error): string {
+	let message: string;
+
+	if (error.stack) {
+		message = processStackTrace(error.stack, (line) => {
+			if (!line.includes(cwd) || line.includes(cwdNodeModules)) {
+				// Dim internal stack trace lines to highlight user code
+				return dim(line);
+			}
+
+			return line;
+		});
+	} else {
+		message = error.toString();
+	}
+
+	if (error.cause instanceof Error) {
+		message += `\nCaused by: ${formatError(error.cause)}`;
+	}
+
+	return message;
 }
 
 export interface LogOptions {
@@ -94,15 +153,8 @@ export class Log {
 	error(message: Error): void {
 		if (this.level < LogLevel.ERROR) {
 			// Ignore message if it won't get logged
-		} else if (message.stack) {
-			// Dim internal stack trace lines to highlight user code
-			const lines = message.stack.split("\n").map(dimInternalStackLine);
-			this.logWithLevel(LogLevel.ERROR, lines.join("\n"));
 		} else {
-			this.logWithLevel(LogLevel.ERROR, message.toString());
-		}
-		if ((message as any).cause) {
-			this.error(prefixError("Cause", (message as any).cause));
+			this.logWithLevel(LogLevel.ERROR, formatError(message));
 		}
 	}
 
