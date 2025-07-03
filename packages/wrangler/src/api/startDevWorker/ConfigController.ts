@@ -363,16 +363,6 @@ async function resolveConfig(
 	} satisfies StartDevWorkerOptions;
 
 	if (
-		extractBindingsOfType("browser", resolved.bindings).length &&
-		!resolved.dev.remote &&
-		!getFlag("REMOTE_BINDINGS")
-	) {
-		logger.warn(
-			"Browser Rendering is not supported locally. Please use `wrangler dev --remote` instead."
-		);
-	}
-
-	if (
 		extractBindingsOfType("analytics_engine", resolved.bindings).length &&
 		!resolved.dev.remote &&
 		resolved.build.format === "service-worker"

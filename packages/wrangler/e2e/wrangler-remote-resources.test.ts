@@ -123,6 +123,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			},
 		}),
 		expectedResponseMatch: /sessionId/,
+		worksWithoutRemoteBindings: true,
 	},
 	{
 		name: "Images",
