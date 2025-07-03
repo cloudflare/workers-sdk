@@ -1,5 +1,5 @@
 const assert = require("node:assert");
-const DispatcherBase = require("undici/lib/dispatcher-base");
+const DispatcherBase = require("undici/lib/dispatcher/dispatcher-base");
 const { kDispatch, kClose, kDestroy } = require("undici/lib/core/symbols");
 const { getDispatcher } = require("./dispatcher.cjs");
 
