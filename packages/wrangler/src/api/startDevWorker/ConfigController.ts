@@ -21,7 +21,6 @@ import {
 } from "../../environment-variables/misc-variables";
 import { UserError } from "../../errors";
 import { getFlag } from "../../experimental-flags";
-import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -414,11 +413,7 @@ async function resolveConfig(
 		(c) => !isDockerfile(c.image ?? c.configuration?.image)
 	);
 	if (needsPulling && !resolved.dev.remote) {
-		await fillOpenAPIConfiguration(
-			config,
-			isNonInteractiveOrCI(),
-			containersScope
-		);
+		await fillOpenAPIConfiguration(config, containersScope);
 	}
 
 	// TODO(queues) support remote wrangler dev

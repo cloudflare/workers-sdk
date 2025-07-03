@@ -4,7 +4,6 @@ import { type ContainerApp } from "../config/environment";
 import { containersScope } from "../containers";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { fetchVersion } from "../versions/api";
 import { apply } from "./apply";
@@ -66,11 +65,7 @@ export async function deployContainers(
 	}
 
 	if (!dryRun) {
-		await fillOpenAPIConfiguration(
-			config,
-			isNonInteractiveOrCI(),
-			containersScope
-		);
+		await fillOpenAPIConfiguration(config, containersScope);
 	}
 	const pathToDocker = getDockerPath();
 	for (const container of config.containers) {
@@ -126,7 +121,6 @@ export async function deployContainers(
 		await apply(
 			{
 				skipDefaults: false,
-				json: true,
 				env,
 				imageUpdateRequired: buildResult.pushed,
 			},

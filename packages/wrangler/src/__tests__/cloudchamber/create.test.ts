@@ -112,7 +112,6 @@ describe("cloudchamber create", () => {
 			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
-			      --json           Return output as clean JSON  [boolean] [default: false]
 			      --image          Image to use for your deployment  [string]
 			      --location       Location on Cloudflare's network where your deployment will run  [string]
 			      --var            Container environment variables  [array]
@@ -216,28 +215,6 @@ describe("cloudchamber create", () => {
 			` [Error: Processing wrangler.toml configuration:
   - "cloudchamber" configuration should not set either "memory" or "vcpu" with "instance_type"]`
 		);
-	});
-
-	it("should fail with a nice message when parameters are missing (json)", async () => {
-		setIsTTY(false);
-		setWranglerConfig({});
-		await runWrangler("cloudchamber create --image hello:world --json");
-		expect(std.out).toMatchInlineSnapshot(
-			`"{\\"error\\":\\"location is required but it's not passed as an argument\\"}"`
-		);
-		expect(std.err).toMatchInlineSnapshot(`""`);
-	});
-
-	it("should fail with a nice message when instance type is set with memory (json)", async () => {
-		setIsTTY(false);
-		setWranglerConfig({});
-		await runWrangler(
-			"cloudchamber create --image hello:world --location sfo06 --instance-type dev --memory 400GB --json"
-		);
-		expect(std.out).toMatchInlineSnapshot(
-			`"{\\"error\\":\\"Field /\\"instance_type/\\" is mutually exclusive with /\\"memory/\\" and /\\"vcpu/\\". These fields cannot be set together.\\"}"`
-		);
-		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
 	it("should create deployment (detects no interactivity)", async () => {

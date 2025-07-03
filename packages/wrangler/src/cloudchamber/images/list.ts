@@ -8,9 +8,9 @@ import { handleFailure, promiseSpinner } from "../common";
 import type { Config } from "../../config";
 import type { containersScope } from "../../containers";
 import type {
-	CommonYargsArgvJSON,
-	CommonYargsArgvSanitizedJSON,
-	StrictYargsOptionsToInterfaceJSON,
+	CommonYargsArgv,
+	CommonYargsArgvSanitized,
+	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
 import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
@@ -25,7 +25,7 @@ interface TagsResponse {
 }
 
 export const imagesCommand = (
-	yargs: CommonYargsArgvJSON,
+	yargs: CommonYargsArgv,
 	scope: typeof containersScope | typeof cloudchamberScope
 ) => {
 	return yargs
@@ -36,7 +36,7 @@ export const imagesCommand = (
 			(args) =>
 				handleFailure(
 					`wrangler containers images list`,
-					async (_args: CommonYargsArgvSanitizedJSON, config) => {
+					async (_args: CommonYargsArgvSanitized, config) => {
 						await handleListImagesCommand(args, config);
 					},
 					scope
@@ -49,7 +49,7 @@ export const imagesCommand = (
 			(args) =>
 				handleFailure(
 					`wrangler containers images delete`,
-					async (_args: CommonYargsArgvSanitizedJSON, config) => {
+					async (_args: CommonYargsArgvSanitized, config) => {
 						await handleDeleteImageCommand(args, config);
 					},
 					scope
@@ -57,7 +57,7 @@ export const imagesCommand = (
 		);
 };
 
-function deleteImageYargs(yargs: CommonYargsArgvJSON) {
+function deleteImageYargs(yargs: CommonYargsArgv) {
 	return yargs.positional("image", {
 		type: "string",
 		description: "image to delete",
@@ -65,15 +65,21 @@ function deleteImageYargs(yargs: CommonYargsArgvJSON) {
 	});
 }
 
-function listImagesYargs(yargs: CommonYargsArgvJSON) {
-	return yargs.option("filter", {
-		type: "string",
-		description: "Regex to filter results",
-	});
+function listImagesYargs(yargs: CommonYargsArgv) {
+	return yargs
+		.option("filter", {
+			type: "string",
+			description: "Regex to filter results",
+		})
+		.option("json", {
+			type: "boolean",
+			description: "Format output as JSON",
+			default: false,
+		});
 }
 
 async function handleDeleteImageCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof deleteImageYargs>,
+	args: StrictYargsOptionsToInterface<typeof deleteImageYargs>,
 	_config: Config
 ) {
 	try {
@@ -103,7 +109,7 @@ async function handleDeleteImageCommand(
 				}
 				logger.log(`Deleted tag: ${args.image}`);
 			}),
-			{ message: "Deleting", json: args.json }
+			{ message: "Deleting" }
 		);
 	} catch (error) {
 		logger.log(`Error when removing image: ${error}`);
@@ -111,7 +117,7 @@ async function handleDeleteImageCommand(
 }
 
 async function handleListImagesCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof listImagesYargs>,
+	args: StrictYargsOptionsToInterface<typeof listImagesYargs>,
 	config: Config
 ) {
 	try {
@@ -134,7 +140,7 @@ async function handleListImagesCommand(
 
 				await ListTags(responses, false, args.json);
 			}),
-			{ message: "Listing", json: args.json }
+			{ message: "Listing" }
 		);
 	} catch (error) {
 		logger.log(`Error listing images: ${error}`);

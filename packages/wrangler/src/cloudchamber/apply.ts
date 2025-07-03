@@ -1,5 +1,4 @@
 import {
-	cancel,
 	endSection,
 	log,
 	logRaw,
@@ -8,7 +7,6 @@ import {
 	success,
 	updateStatus,
 } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
 import { bold, brandColor, dim, green, red } from "@cloudflare/cli/colors";
 import {
 	ApiError,
@@ -26,8 +24,8 @@ import { diffLines } from "./helpers/diff";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";
 import type {
-	CommonYargsArgvJSON,
-	StrictYargsOptionsToInterfaceJSON,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type {
 	Application,
@@ -70,7 +68,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function applyCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
+export function applyCommandOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs.option("skip-defaults", {
 		requiresArg: true,
 		type: "boolean",
@@ -420,7 +418,6 @@ function sortObjectRecursive<T = Record<string | number, unknown>>(
 export async function apply(
 	args: {
 		skipDefaults: boolean | undefined;
-		json: boolean;
 		env?: string;
 		imageUpdateRequired?: boolean;
 	},
@@ -460,7 +457,7 @@ export async function apply(
 
 	const applications = await promiseSpinner(
 		ApplicationsService.listApplications(),
-		{ json: args.json, message: "Loading applications" }
+		{ message: "Loading applications" }
 	);
 	applications.forEach((app) =>
 		cleanupObservability(app.configuration.observability)
@@ -702,21 +699,6 @@ export async function apply(
 		endSection("No changes to be made");
 		return;
 	}
-	if (!args.json) {
-		const yes = await processArgument<boolean>(
-			{ confirm: undefined },
-			"confirm",
-			{
-				type: "confirm",
-				question: "Do you want to apply these changes?",
-				label: "",
-			}
-		);
-		if (!yes) {
-			cancel("Not applying changes");
-			return;
-		}
-	}
 
 	function formatError(err: ApiError): string {
 		// TODO: this is bad bad. Please fix like we do in create.ts.
@@ -743,7 +725,7 @@ export async function apply(
 			try {
 				application = await promiseSpinner(
 					ApplicationsService.createApplication(action.application),
-					{ json: args.json, message: `creating ${action.application.name}` }
+					{ message: `Creating ${action.application.name}` }
 				);
 			} catch (err) {
 				if (!(err instanceof Error)) {
@@ -824,7 +806,6 @@ export async function apply(
 							kind: action.rollout_kind,
 						}),
 						{
-							json: args.json,
 							message: `rolling out container version ${action.name}`,
 						}
 					);
@@ -868,14 +849,13 @@ export async function apply(
  * detects.
  */
 export async function applyCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof applyCommandOptionalYargs>,
+	args: StrictYargsOptionsToInterface<typeof applyCommandOptionalYargs>,
 	config: Config
 ) {
 	return apply(
 		{
 			skipDefaults: args.skipDefaults,
 			env: args.env,
-			json: args.json,
 			// For the apply command we want this to default to true
 			// so that the image can be updated if the user modified it.
 			imageUpdateRequired: true,

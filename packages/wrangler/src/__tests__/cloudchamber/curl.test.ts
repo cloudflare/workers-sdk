@@ -46,9 +46,8 @@ describe("cloudchamber curl", () => {
 			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
-			      --json                Output json. Use for consistent, machine readable output.  [boolean] [default: false]
 			  -H, --header              Add headers in the form of --header <name>:<value>  [array]
-			  -D, --data                Add a JSON body to the request  [string]
+			  -d, --data                Add a JSON body to the request  [string]
 			  -X, --method  [string] [default: \\"GET\\"]
 			  -s, --silent              Only output response  [boolean]
 			  -v, --verbose             Show version number  [boolean]
@@ -56,7 +55,7 @@ describe("cloudchamber curl", () => {
 		`);
 	});
 
-	it("should be able to use data flag", async () => {
+	it("can send data with -d/--data", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -103,7 +102,83 @@ describe("cloudchamber curl", () => {
 		});
 
 		await runWrangler(
-			"cloudchamber curl /deployments/v2 --json -X POST -D '" + deployment + "'"
+			"cloudchamber curl /deployments/v2 -X POST -d '" + deployment + "'"
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    \\"id\\": \\"1\\",
+			    \\"type\\": \\"default\\",
+			    \\"created_at\\": \\"123\\",
+			    \\"account_id\\": \\"123\\",
+			    \\"vcpu\\": 4,
+			    \\"memory\\": \\"400MB\\",
+			    \\"memory_mib\\": 400,
+			    \\"version\\": 1,
+			    \\"image\\": \\"hello\\",
+			    \\"location\\": {
+			        \\"name\\": \\"sfo06\\",
+			        \\"enabled\\": true
+			    },
+			    \\"network\\": {
+			        \\"mode\\": \\"public\\",
+			        \\"ipv4\\": \\"1.1.1.1\\"
+			    },
+			    \\"placements_ref\\": \\"http://ref\\",
+			    \\"node_group\\": \\"metal\\"
+			}
+			"
+		`);
+	});
+
+	it("supports deprecated -D flag", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		msw.use(
+			http.post("*/deployments/v2", async ({ request }) => {
+				// verify we are hitting the expected url
+				expect(request.url).toEqual(baseRequestUrl + "deployments/v2");
+				// and that the request has the expected content
+				expect(await request.json()).toEqual({
+					image: "hello:world",
+					location: "sfo06",
+					ssh_public_key_ids: [],
+					environment_variables: [
+						{
+							name: "HELLO",
+							value: "WORLD",
+						},
+						{
+							name: "YOU",
+							value: "CONQUERED",
+						},
+					],
+					vcpu: 3,
+					memory_mib: 400,
+					network: {
+						assign_ipv4: "predefined",
+					},
+				});
+				return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
+			})
+		);
+
+		// We need to stringify this for cross-platform compatibility
+		const deployment = JSON.stringify({
+			image: "hello:world",
+			location: "sfo06",
+			ssh_public_key_ids: [],
+			environment_variables: [
+				{ name: "HELLO", value: "WORLD" },
+				{ name: "YOU", value: "CONQUERED" },
+			],
+			vcpu: 3,
+			memory_mib: 400,
+			network: { assign_ipv4: "predefined" },
+		});
+
+		await runWrangler(
+			"cloudchamber curl /deployments/v2 -X POST -D '" + deployment + "'"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -146,7 +221,7 @@ describe("cloudchamber curl", () => {
 			})
 		);
 		await runWrangler(
-			"cloudchamber curl /test --json --header something:here --header other:thing"
+			"cloudchamber curl /test --header something:here --header other:thing"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -155,7 +230,7 @@ describe("cloudchamber curl", () => {
 		`);
 	});
 
-	it("should give response without --json flag set", async () => {
+	it("works", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -171,116 +246,112 @@ describe("cloudchamber curl", () => {
 			"cloudchamber curl /deployments/v2 --header something:here"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			">> Body
-			[
-			    {
-			        \\"id\\": \\"1\\",
-			        \\"type\\": \\"default\\",
-			        \\"created_at\\": \\"123\\",
-			        \\"account_id\\": \\"123\\",
-			        \\"vcpu\\": 4,
-			        \\"memory\\": \\"400MB\\",
-			        \\"memory_mib\\": 400,
-			        \\"version\\": 1,
-			        \\"image\\": \\"hello\\",
-			        \\"location\\": {
-			            \\"name\\": \\"sfo06\\",
-			            \\"enabled\\": true
-			        },
-			        \\"network\\": {
-			            \\"mode\\": \\"public\\",
-			            \\"ipv4\\": \\"1.1.1.1\\"
-			        },
-			        \\"placements_ref\\": \\"http://ref\\",
-			        \\"node_group\\": \\"metal\\"
-			    },
-			    {
-			        \\"id\\": \\"2\\",
-			        \\"type\\": \\"default\\",
-			        \\"created_at\\": \\"1234\\",
-			        \\"account_id\\": \\"123\\",
-			        \\"vcpu\\": 4,
-			        \\"memory\\": \\"400MB\\",
-			        \\"memory_mib\\": 400,
-			        \\"version\\": 2,
-			        \\"image\\": \\"hello\\",
-			        \\"location\\": {
-			            \\"name\\": \\"sfo06\\",
-			            \\"enabled\\": true
-			        },
-			        \\"network\\": {
-			            \\"mode\\": \\"public\\",
-			            \\"ipv4\\": \\"1.1.1.2\\"
-			        },
-			        \\"current_placement\\": {
-			            \\"deployment_version\\": 2,
-			            \\"status\\": {
-			                \\"health\\": \\"running\\"
-			            },
-			            \\"deployment_id\\": \\"2\\",
-			            \\"terminate\\": false,
-			            \\"created_at\\": \\"123\\",
-			            \\"id\\": \\"1\\"
-			        },
-			        \\"placements_ref\\": \\"http://ref\\",
-			        \\"node_group\\": \\"metal\\"
-			    },
-			    {
-			        \\"id\\": \\"3\\",
-			        \\"type\\": \\"default\\",
-			        \\"created_at\\": \\"123\\",
-			        \\"account_id\\": \\"123\\",
-			        \\"vcpu\\": 4,
-			        \\"memory\\": \\"400MB\\",
-			        \\"memory_mib\\": 400,
-			        \\"version\\": 1,
-			        \\"image\\": \\"hello\\",
-			        \\"location\\": {
-			            \\"name\\": \\"sfo06\\",
-			            \\"enabled\\": true
-			        },
-			        \\"network\\": {
-			            \\"mode\\": \\"public\\",
-			            \\"ipv4\\": \\"1.1.1.1\\"
-			        },
-			        \\"placements_ref\\": \\"http://ref\\",
-			        \\"node_group\\": \\"metal\\"
-			    },
-			    {
-			        \\"id\\": \\"4\\",
-			        \\"type\\": \\"default\\",
-			        \\"created_at\\": \\"1234\\",
-			        \\"account_id\\": \\"123\\",
-			        \\"vcpu\\": 4,
-			        \\"memory\\": \\"400MB\\",
-			        \\"memory_mib\\": 400,
-			        \\"version\\": 2,
-			        \\"image\\": \\"hello\\",
-			        \\"location\\": {
-			            \\"name\\": \\"sfo06\\",
-			            \\"enabled\\": true
-			        },
-			        \\"network\\": {
-			            \\"mode\\": \\"public\\",
-			            \\"ipv4\\": \\"1.1.1.2\\"
-			        },
-			        \\"current_placement\\": {
-			            \\"deployment_version\\": 2,
-			            \\"status\\": {
-			                \\"health\\": \\"running\\"
-			            },
-			            \\"deployment_id\\": \\"2\\",
-			            \\"terminate\\": false,
-			            \\"created_at\\": \\"123\\",
-			            \\"id\\": \\"1\\"
-			        },
-			        \\"placements_ref\\": \\"http://ref\\",
-			        \\"node_group\\": \\"metal\\"
-			    }
-			]
-			"
-		`);
+		expect(JSON.parse(std.out)).toEqual([
+			{
+				id: "1",
+				type: "default",
+				created_at: "123",
+				account_id: "123",
+				vcpu: 4,
+				memory: "400MB",
+				memory_mib: 400,
+				version: 1,
+				image: "hello",
+				location: {
+					name: "sfo06",
+					enabled: true,
+				},
+				network: {
+					mode: "public",
+					ipv4: "1.1.1.1",
+				},
+				placements_ref: "http://ref",
+				node_group: "metal",
+			},
+			{
+				id: "2",
+				type: "default",
+				created_at: "1234",
+				account_id: "123",
+				vcpu: 4,
+				memory: "400MB",
+				memory_mib: 400,
+				version: 2,
+				image: "hello",
+				location: {
+					name: "sfo06",
+					enabled: true,
+				},
+				network: {
+					mode: "public",
+					ipv4: "1.1.1.2",
+				},
+				current_placement: {
+					deployment_version: 2,
+					status: {
+						health: "running",
+					},
+					deployment_id: "2",
+					terminate: false,
+					created_at: "123",
+					id: "1",
+				},
+				placements_ref: "http://ref",
+				node_group: "metal",
+			},
+			{
+				id: "3",
+				type: "default",
+				created_at: "123",
+				account_id: "123",
+				vcpu: 4,
+				memory: "400MB",
+				memory_mib: 400,
+				version: 1,
+				image: "hello",
+				location: {
+					name: "sfo06",
+					enabled: true,
+				},
+				network: {
+					mode: "public",
+					ipv4: "1.1.1.1",
+				},
+				placements_ref: "http://ref",
+				node_group: "metal",
+			},
+			{
+				id: "4",
+				type: "default",
+				created_at: "1234",
+				account_id: "123",
+				vcpu: 4,
+				memory: "400MB",
+				memory_mib: 400,
+				version: 2,
+				image: "hello",
+				location: {
+					name: "sfo06",
+					enabled: true,
+				},
+				network: {
+					mode: "public",
+					ipv4: "1.1.1.2",
+				},
+				current_placement: {
+					deployment_version: 2,
+					status: {
+						health: "running",
+					},
+					deployment_id: "2",
+					terminate: false,
+					created_at: "123",
+					id: "1",
+				},
+				placements_ref: "http://ref",
+				node_group: "metal",
+			},
+		]);
 	});
 
 	it("should give a response with headers and request-id when verbose flag is set", async () => {
@@ -306,7 +377,7 @@ describe("cloudchamber curl", () => {
 		expect(text).toContain("coordinator-request-id");
 	});
 
-	it("should give a response with headers and request-id when verbose flag is set with --json", async () => {
+	it("includes headers and request-id in JSON when used with --silent and --verbose", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -319,7 +390,7 @@ describe("cloudchamber curl", () => {
 		);
 
 		await runWrangler(
-			"cloudchamber curl -v --json /deployments/v2 --header something:here"
+			"cloudchamber curl -v /deployments/v2 --silent --header something:here"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		const response = JSON.parse(std.out);

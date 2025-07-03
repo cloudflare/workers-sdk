@@ -9,10 +9,10 @@ import { imagesCommand } from "./images/list";
 import { listCommand, listDeploymentsYargs } from "./list";
 import { modifyCommand, modifyCommandOptionalYargs } from "./modify";
 import { sshCommand } from "./ssh/ssh";
-import type { CommonYargsArgvJSON, CommonYargsOptions } from "../yargs-types";
+import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
 
-function internalCommands(args: CommonYargsArgvJSON) {
+function internalCommands(args: CommonYargsArgv) {
 	try {
 		// Add dynamically an internal module that we can attach internal commands
 		// eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -24,7 +24,7 @@ function internalCommands(args: CommonYargsArgvJSON) {
 }
 
 export const cloudchamber = (
-	yargs: CommonYargsArgvJSON,
+	yargs: CommonYargsArgv,
 	subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions>
 ) => {
 	yargs = internalCommands(yargs);
