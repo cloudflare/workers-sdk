@@ -14,14 +14,14 @@ import {
 	DeploymentsService,
 	PlacementsService,
 } from "@cloudflare/containers-shared";
-import isInteractive from "../is-interactive";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
 import { capitalize, statusToColored } from "./cli/util";
-import { loadAccountSpinner, promiseSpinner } from "./common";
+import { promiseSpinner } from "./common";
 import type { Config } from "../config";
 import type {
-	CommonYargsArgvJSON,
-	StrictYargsOptionsToInterfaceJSON,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { EventName } from "./enums";
 import type {
@@ -30,7 +30,7 @@ import type {
 	PlacementWithEvents,
 } from "@cloudflare/containers-shared";
 
-export function listDeploymentsYargs(args: CommonYargsArgvJSON) {
+export function listDeploymentsYargs(args: CommonYargsArgv) {
 	return args
 		.option("location", {
 			requiresArg: true,
@@ -71,14 +71,11 @@ export function listDeploymentsYargs(args: CommonYargsArgvJSON) {
 }
 
 export async function listCommand(
-	deploymentArgs: StrictYargsOptionsToInterfaceJSON<
-		typeof listDeploymentsYargs
-	>,
+	deploymentArgs: StrictYargsOptionsToInterface<typeof listDeploymentsYargs>,
 	config: Config
 ) {
-	await loadAccountSpinner(deploymentArgs);
 	const prefix = (deploymentArgs.deploymentIdPrefix ?? "") as string;
-	if (deploymentArgs.json || !isInteractive()) {
+	if (isNonInteractiveOrCI()) {
 		const deployments = (
 			await DeploymentsService.listDeploymentsV2(
 				undefined,
@@ -138,7 +135,7 @@ function eventMessage(event: PlacementEvent, lastEvent: boolean): string {
 
 const listCommandHandle = async (
 	deploymentIdPrefix: string,
-	args: StrictYargsOptionsToInterfaceJSON<typeof listDeploymentsYargs>,
+	args: StrictYargsOptionsToInterface<typeof listDeploymentsYargs>,
 	_config: Config
 ) => {
 	const keepListIter = true;

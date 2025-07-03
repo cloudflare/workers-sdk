@@ -1,4 +1,3 @@
-import assert from "assert";
 import { randomUUID } from "crypto";
 import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
@@ -23,16 +22,20 @@ export default function registerDevHotKeys(
 		{
 			keys: ["d"],
 			label: "open devtools",
+			// Don't display this hotkey if we're in a VSCode debug session
+			disabled: !!process.env.VSCODE_INSPECTOR_OPTIONS,
 			handler: async () => {
 				const { inspectorUrl } = await devEnv.proxy.ready.promise;
 
-				assert(inspectorUrl, "Error: no inspectorUrl available");
-
-				// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
-				await openInspector(
-					parseInt(inspectorUrl.port),
-					devEnv.config.latestConfig?.name
-				);
+				if (!inspectorUrl) {
+					logger.warn("DevTools is not available while in a debug terminal");
+				} else {
+					// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
+					await openInspector(
+						parseInt(inspectorUrl.port),
+						devEnv.config.latestConfig?.name
+					);
+				}
 			},
 		},
 		{

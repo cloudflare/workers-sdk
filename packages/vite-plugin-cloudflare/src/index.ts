@@ -740,6 +740,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			enforce: "pre",
 			configureServer(viteDevServer) {
 				assertIsNotPreview(resolvedPluginConfig);
+				// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
+				// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
+				// inspector endpoint.
+				const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
+				if (inVscodeJsDebugTerminal) {
+					return;
+				}
 
 				if (
 					resolvedPluginConfig.type === "workers" &&
@@ -772,6 +779,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			async configurePreviewServer(vitePreviewServer) {
 				assertIsPreview(resolvedPluginConfig);
+				// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
+				// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
+				// inspector endpoint.
+				const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
+				if (inVscodeJsDebugTerminal) {
+					return;
+				}
 
 				if (
 					resolvedPluginConfig.workers.length >= 1 &&

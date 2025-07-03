@@ -2,16 +2,16 @@ import { cancel, endSection, startSection } from "@cloudflare/cli";
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
 import { UserError } from "../errors";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logDeployment, pickDeployment } from "./cli/deployments";
-import { interactWithUser, loadAccountSpinner } from "./common";
 import { wrap } from "./helpers/wrap";
 import type { Config } from "../config";
 import type {
-	CommonYargsArgvJSON,
-	StrictYargsOptionsToInterfaceJSON,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 
-export function deleteCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
+export function deleteCommandOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs.positional("deploymentId", {
 		type: "string",
 		demandOption: false,
@@ -20,13 +20,10 @@ export function deleteCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 }
 
 export async function deleteCommand(
-	deleteArgs: StrictYargsOptionsToInterfaceJSON<
-		typeof deleteCommandOptionalYargs
-	>,
+	deleteArgs: StrictYargsOptionsToInterface<typeof deleteCommandOptionalYargs>,
 	config: Config
 ) {
-	await loadAccountSpinner(deleteArgs);
-	if (!interactWithUser(deleteArgs)) {
+	if (isNonInteractiveOrCI()) {
 		if (!deleteArgs.deploymentId) {
 			throw new Error(
 				"there needs to be a deploymentId when you can't interact with the wrangler cli"
@@ -44,7 +41,7 @@ export async function deleteCommand(
 }
 
 async function handleDeleteCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof deleteCommandOptionalYargs>,
+	args: StrictYargsOptionsToInterface<typeof deleteCommandOptionalYargs>,
 	_config: Config
 ) {
 	startSection("Delete your deployment");
