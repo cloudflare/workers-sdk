@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import os from "node:os";
 import { setTimeout } from "node:timers/promises";
 import { ApiError } from "@cloudflare/containers-shared";
@@ -1513,7 +1514,7 @@ export async function main(argv: string[]): Promise<void> {
 		} else if (
 			isAuthenticationError(e) ||
 			// Is this a Containers/Cloudchamber-based auth error?
-			// This is different because
+			// This is different because it uses a custom OpenAPI-based generated client
 			(e instanceof UserError &&
 				e.cause instanceof ApiError &&
 				e.cause.status === 403)
@@ -1523,6 +1524,7 @@ export async function main(argv: string[]): Promise<void> {
 			if (e.cause instanceof ApiError) {
 				logger.error(e.cause);
 			} else {
+				assert(isAuthenticationError(e));
 				logger.log(formatMessage(e));
 			}
 			const envAuth = getAuthFromEnv();
