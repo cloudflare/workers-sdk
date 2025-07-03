@@ -1,5 +1,17 @@
 # @cloudflare/vite-plugin
 
+## 1.9.0
+
+### Minor Changes
+
+- [#9803](https://github.com/cloudflare/workers-sdk/pull/9803) [`df04528`](https://github.com/cloudflare/workers-sdk/commit/df0452892dc85133c557c4daff68508d7fdee77a) Thanks [@penalosa](https://github.com/penalosa)! - Support Workers Analytics Engine & Rate Limiting bindings
+
+### Patch Changes
+
+- Updated dependencies [[`56dc5c4`](https://github.com/cloudflare/workers-sdk/commit/56dc5c4946417df12688dd6b2374835f60c14be6), [`8acaf43`](https://github.com/cloudflare/workers-sdk/commit/8acaf432ac3e6988be49d68060f5abab2b9a6e0d), [`4309bb3`](https://github.com/cloudflare/workers-sdk/commit/4309bb30d2baa5fd410e250602d10247102b9885), [`d11288a`](https://github.com/cloudflare/workers-sdk/commit/d11288aff5a11db92b153b4422d77a863a8869a0)]:
+  - miniflare@4.20250617.5
+  - wrangler@4.23.0
+
 ## 1.8.0
 
 ### Minor Changes
