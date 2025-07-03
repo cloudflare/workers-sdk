@@ -7,7 +7,7 @@ export default {
 		let action = searchParams.get("action");
 		if (url) {
 			url = new URL(url).toString(); // normalize
-			switch(action) {
+			switch (action) {
 				case "select": {
 					const browser = await puppeteer.launch(env.MYBROWSER);
 					const page = await browser.newPage();

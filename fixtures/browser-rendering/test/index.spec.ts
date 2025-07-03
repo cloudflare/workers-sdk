@@ -38,9 +38,9 @@ describe("Local Browser", () => {
 	}
 
 	it("Doesn't run a browser, just testing that the worker is running!", async () => {
-		await expect(
-			fetchText(`http://${ip}:${port}/`)
-		).resolves.toEqual("Please add an ?url=https://example.com/ parameter");
+		await expect(fetchText(`http://${ip}:${port}/`)).resolves.toEqual(
+			"Please add an ?url=https://example.com/ parameter"
+		);
 	});
 
 	it("Run a browser, and check h1 text content", async () => {

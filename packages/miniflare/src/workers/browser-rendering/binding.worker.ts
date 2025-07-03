@@ -65,7 +65,7 @@ export default {
 		}
 	) {
 		const url = new URL(request.url);
-		switch(url.pathname) {
+		switch (url.pathname) {
 			case "/v1/acquire": {
 				const resp = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
 					"http://example.com/browser/launch"
@@ -82,7 +82,7 @@ export default {
 				const id = env.BrowserSession.idFromName(sessionId);
 				return env.BrowserSession.get(id).fetch(request);
 			}
-			default: 
+			default:
 				return new Response("Not implemented", { status: 405 });
 		}
 	},
