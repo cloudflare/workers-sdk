@@ -19,7 +19,10 @@ const imageSource = ["pull", "build"];
 // We can only really run these tests on Linux, because we build our images for linux/amd64,
 // and github runners don't really support container virtualization in any sane way
 describe
-	.skipIf(process.platform !== "linux" && process.env.CI === "true")
+	.skipIf(
+		!CLOUDFLARE_ACCOUNT_ID ||
+			(process.platform !== "linux" && process.env.CI === "true")
+	)
 	.each(imageSource)(
 	"containers local dev tests: %s",
 	{ timeout: 90_000 },
