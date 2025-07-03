@@ -12,12 +12,10 @@ import { generateResourceName } from "./helpers/generate-resource-name";
 const port = await getPort();
 const inspectorPort = await getPort();
 
-const RUNTIMES = CLOUDFLARE_ACCOUNT_ID
-	? [
-			{ flags: "", runtime: "local" },
-			{ flags: "--remote", runtime: "remote" },
-		]
-	: [{ flags: "", runtime: "local" }];
+const RUNTIMES = [
+	{ flags: "", runtime: "local" },
+	...(CLOUDFLARE_ACCOUNT_ID ? [{ flags: "--remote", runtime: "remote" }] : []),
+];
 
 // WebAssembly module containing single `func add(i32, i32): i32` export.
 // Generated using https://webassembly.github.io/wabt/demo/wat2wasm/.
@@ -831,22 +829,15 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		await expect(res.text()).resolves.toBe("env.WORKFLOW is available");
 	});
 
-	describe.sequential.each(
-		CLOUDFLARE_ACCOUNT_ID
-			? [
-					{ imagesMode: "remote", extraFlags: "" },
-					{
-						imagesMode: "local",
-						extraFlags: "--experimental-images-local-mode",
-					},
-				]
-			: [
-					{
-						imagesMode: "local",
-						extraFlags: "--experimental-images-local-mode",
-					},
-				]
-	)("Images Binding Mode: $imagesMode", async ({ extraFlags }) => {
+	describe.sequential.each([
+		{
+			imagesMode: "local",
+			extraFlags: "--experimental-images-local-mode",
+		},
+		...(CLOUDFLARE_ACCOUNT_ID
+			? [{ imagesMode: "remote", extraFlags: "" }]
+			: []),
+	])("Images Binding Mode: $imagesMode", async ({ extraFlags }) => {
 		it("exposes Images bindings", async () => {
 			await helper.seed({
 				"wrangler.toml": dedent`

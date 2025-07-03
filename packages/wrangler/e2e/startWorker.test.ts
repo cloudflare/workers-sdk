@@ -11,9 +11,10 @@ import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import type { DevToolsEvent } from "../src/api";
 
-const OPTIONS = CLOUDFLARE_ACCOUNT_ID
-	? [{ remote: false }, { remote: true }]
-	: [{ remote: false }];
+const OPTIONS = [
+	{ remote: false },
+	...(CLOUDFLARE_ACCOUNT_ID ? [{ remote: true }] : []),
+];
 
 type Wrangler = Awaited<ReturnType<WranglerE2ETestHelper["importWrangler"]>>;
 

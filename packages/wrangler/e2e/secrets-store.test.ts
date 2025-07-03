@@ -4,12 +4,10 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
 
-const RUNTIMES = CLOUDFLARE_ACCOUNT_ID
-	? [
-			{ flags: "--remote", runtime: "remote" },
-			{ flags: "", runtime: "local" },
-		]
-	: [{ flags: "", runtime: "local" }];
+const RUNTIMES = [
+	...(CLOUDFLARE_ACCOUNT_ID ? [{ flags: "--remote", runtime: "remote" }] : []),
+	{ flags: "", runtime: "local" },
+];
 
 describe.each(RUNTIMES)(
 	"secrets-store $runtime",

@@ -24,11 +24,10 @@ import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
  */
 const workerName = generateResourceName();
 
-describe.each(
-	CLOUDFLARE_ACCOUNT_ID
-		? [{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }]
-		: [{ cmd: "wrangler dev" }]
-)("basic js dev: $cmd", ({ cmd }) => {
+describe.each([
+	{ cmd: "wrangler dev" },
+	...(CLOUDFLARE_ACCOUNT_ID ? [{ cmd: "wrangler dev --remote" }] : []),
+])("basic js dev: $cmd", ({ cmd }) => {
 	it(`can modify Worker during ${cmd}`, async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
