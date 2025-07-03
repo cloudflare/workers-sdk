@@ -770,24 +770,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		let workerBundle: FormData;
 		const dockerPath = getDockerPath();
 
-		// lets fail earlier in the case where docker isn't installed
-		// and we have containers so that we don't get into a
-		// disjointed state where the worker updates but the container
-		// fails.
-		if (config.containers) {
-			// if you have a registry url specified, you don't need docker
-			const hasDockerfiles = config.containers?.some((container) =>
-				isDockerfile(container.image ?? container.configuration?.image)
-			);
-			if (hasDockerfiles) {
-				await verifyDockerInstalled(dockerPath, false);
-			}
-		}
-
 		if (props.dryRun) {
 			if (config.containers) {
 				for (const container of config.containers) {
 					await maybeBuildContainer(
+						config,
 						container,
 						workerTag ?? "worker-tag",
 						props.dryRun,
@@ -804,6 +791,20 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		} else {
 			assert(accountId, "Missing accountId");
+
+			// lets fail earlier in the case where docker isn't installed
+			// and we have containers so that we don't get into a
+			// disjointed state where the worker updates but the container
+			// fails.
+			if (config.containers) {
+				// if you have a registry url specified, you don't need docker
+				const hasDockerfiles = config.containers?.some((container) =>
+					isDockerfile(container.image ?? container.configuration?.image)
+				);
+				if (hasDockerfiles) {
+					await verifyDockerInstalled(dockerPath, false);
+				}
+			}
 
 			if (getFlag("RESOURCES_PROVISION")) {
 				await provisionBindings(

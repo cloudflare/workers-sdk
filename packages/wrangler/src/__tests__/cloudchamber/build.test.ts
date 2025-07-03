@@ -39,7 +39,7 @@ const dockerfile =
 describe("buildAndMaybePush", () => {
 	runInTempDir();
 	mockApiToken();
-	mockAccountId();
+	mockAccountId({ accountId: "test_account_id" });
 
 	beforeEach(() => {
 		vi.clearAllMocks();

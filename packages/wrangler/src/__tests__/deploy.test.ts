@@ -9270,6 +9270,76 @@ addEventListener('fetch', event => {});`
 				);
 			});
 
+			it("should not fail with URL parsing error when using containers in dry-run mode", async () => {
+				writeWranglerConfig({
+					main: "./index.js",
+					durable_objects: {
+						bindings: [{ name: "DO", class_name: "ExampleDurableObject" }],
+					},
+					containers: [
+						{
+							name: "test-container",
+							class_name: "ExampleDurableObject",
+							image: "./Dockerfile",
+						},
+					],
+				});
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+				fs.writeFileSync(
+					"./Dockerfile",
+					"FROM node:18\nCOPY . .\nCMD ['node', 'index.js']"
+				);
+
+				// Mock buildAndMaybePush to verify it's called with dryRun=true
+				const buildAndMaybePushSpy = vi.spyOn(
+					await import("../cloudchamber/build"),
+					"buildAndMaybePush"
+				);
+				buildAndMaybePushSpy.mockImplementation(async () => ({
+					image: "test-image:latest",
+					pushed: false,
+				}));
+
+				// Mock other dependencies
+				vi.doMock("../cloudchamber/common", () => ({
+					fillOpenAPIConfiguration: vi.fn(),
+				}));
+				vi.doMock("../versions/api", () => ({
+					fetchVersion: vi.fn().mockResolvedValue({
+						resources: {
+							bindings: [
+								{
+									type: "durable_object_namespace",
+									class_name: "ExampleDurableObject",
+									namespace_id: "test-namespace-id",
+								},
+							],
+						},
+					}),
+				}));
+
+				await runWrangler("deploy --dry-run");
+
+				// Verify buildAndMaybePush was called with dryRun=true
+				expect(buildAndMaybePushSpy).toHaveBeenCalledWith(
+					expect.objectContaining({
+						tag: expect.stringContaining("test-container:"),
+					}),
+					expect.any(String), // pathToDocker
+					false, // push = false in dry-run
+					expect.objectContaining({
+						name: "test-container",
+						class_name: "ExampleDurableObject",
+						image: "./Dockerfile",
+					}),
+					"dry-run-account-id", // accountId
+					true // dryRun = true
+				);
+			});
+
 			it("should support durable objects and D1", async () => {
 				writeWranglerConfig({
 					main: "index.js",
