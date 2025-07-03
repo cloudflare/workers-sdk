@@ -132,10 +132,12 @@ export default {
 
 					if (shouldBlockNonImageResponse) {
 						const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
-						if (
-							!resp.headers.get("content-type")?.startsWith("image/") &&
-							resp.status !== 304
-						) {
+						const isImage = resp.headers
+							.get("content-type")
+							?.startsWith("image/");
+						const isPlainText =
+							resp.headers.get("content-type") === "text/plain";
+						if (!isImage && !isPlainText && resp.status !== 304) {
 							analytics.setData({ abuseMitigationBlocked: true });
 							return new Response("Blocked", { status: 403 });
 						}
