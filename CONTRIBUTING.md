@@ -330,42 +330,51 @@ export default mergeConfig(
 
 If you need to test the interaction of Wrangler with a real Cloudflare account, you can add an E2E test within the `packages/wrangler/e2e` folder. This lets you add a test for functionality that requires real credentials (i.e. testing whether a worker deployed from Wrangler can be accessed over the internet).
 
-When you open a PR to the `workers-sdk` repo, you should expect several checks to run in CI. For most PRs (except for those which trigger the **C3 E2E (Quarantine)** Action), every check should pass (although some will be skipped).
+A summary of this repositories actions can be found [in the `.github/workflows` folder](.github/workflows/README.md)
 
-A summary of this repositories actions can be found [here](.github/workflows/README.md)
+## Running E2E tests locally
 
-## Running e2e tests locally
+A large number of Wrangler & Vite's E2E tests don't require any authentication, and can be run with no Cloudflare account credentials. These can be run as follows:
 
-To run the e2e tests locally, you'll need a Cloudflare API Token and run:
+- **Vite:** `pnpm test:e2e -F @cloudflare/vite-plugin`, optionally providing [`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` environment variables.](#creating-an-api-token)
 
-```sh
-WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_TESTING_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN pnpm run test:e2e
-```
+- **Wrangler:** `pnpm test:e2e:wrangler`, optionally providing [`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` environment variables.](#creating-an-api-token)
 
 You may optionally want to append a filename pattern to limit which e2e tests are run. Also you may want to set `--bail=n` to limit the number of fails tests to show the error before the rest of the tests finish running and to limit the noise in that output:
 
 ```sh
-WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_TESTING_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN pnpm run test:e2e [file-pattern] --bail=1
+# Vite
+pnpm test:e2e -F @cloudflare/vite-plugin [file-pattern] --bail=1
+
+# Wrangler
+pnpm test:e2e:wrangler [file-pattern] --bail=1
 ```
 
 ### Creating an API Token
+
+If you want to run the E2E tests that access the Cloudflare API (e.g. for testing Worker deployment and interaction with bindings), you can create an API token for running the tests:
 
 1. Go to ["My Profile" > "User API Tokens"](https://dash.cloudflare.com/profile/api-tokens)
 1. Click "Create Token"
 1. Use the "Edit Cloudflare Workers" template
 1. Set "Account Resources" to "Include" the account you want to use for running the test
-   (Note for the internal wrangler team, here we use the "DevProd Testing" account)
-1. Set "Zone Resources" to "All zones from an account" and the same account as above
+   (for internal and CI use, this needs to be the "DevProd Testing" account)
+1. No "Zone Resources" are required for general use (for internal and CI use, this needs to be set to "All Zones")
 1. Click "Continue to summary"
 1. Verify your token works by running the curl command provided
-1. Set the environment variables in your terminal or in your profile file (e.g. ~/.zshrc, ~/.bashrc, ~/.profile, etc):
+
+Once you've created the token, you can use it when running E2E tests to test against the API:
 
 ```sh
-export CLOUDFLARE_TESTING_ACCOUNT_ID="<Account ID for the token you just created>"
-export CLOUDFLARE_TESTING_API_TOKEN="<Token you just created>"
+# Vite
+CLOUDFLARE_ACCOUNT_ID="<Account ID for the token you just created>" CLOUDFLARE_API_TOKEN="<Token you just created>" pnpm test:e2e -F @cloudflare/vite-plugin [file-pattern] --bail=1
+
+# Wrangler
+CLOUDFLARE_ACCOUNT_ID="<Account ID for the token you just created>" CLOUDFLARE_API_TOKEN="<Token you just created>" pnpm test:e2e:wrangler [file-pattern] --bail=1
 ```
 
-Note: Workers created in the e2e tests that fail might not always be cleaned up (deleted). Internal users with access to the "DevProd Testing" account can rely on an automated job to clean up the Workers based on the format of the name. If you use another account, please be aware you may want to manually delete the Workers yourself.
+> [!NOTE]
+> Workers and other resources created in the E2E tests might not always be cleaned up. Internal users with access to the "DevProd Testing" account can rely on an automated job to clean up the Workers and other resources, but if you use another account, please be aware you may want to manually delete the Workers and other resources yourself.
 
 ## Changesets
 

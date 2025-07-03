@@ -2,11 +2,12 @@ import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
 
-describe("r2", () => {
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 	const bucketName = generateResourceName("r2");
 	const fileContents = crypto.randomBytes(64).toString("hex");
 	const normalize = (str: string) =>

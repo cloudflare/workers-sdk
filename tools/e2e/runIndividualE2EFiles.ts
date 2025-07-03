@@ -1,3 +1,7 @@
+// Turbo's env var linting isn't very sophisticated.
+// This file adds environment variables that are declared in Wrangler's turbo.json
+/* eslint-disable turbo/no-undeclared-env-vars */
+
 /**
  * Turbo only supports caching on the individual task level, but for Wrangler's
  * e2e tests we want to support caching on a more granular basis—at the file level.
@@ -25,8 +29,28 @@ for (const file of e2eTests) {
 
 const failed: string[] = [];
 
-const command = `pnpm test:e2e --log-order=stream --output-logs=new-only --summarize --filter wrangler`;
+// If the user passes arguments to this script, use those to configure Vitest rather than running each test file individually
+const hasCustomVitestArguments = process.argv[2];
 
+const commandSuffix = hasCustomVitestArguments
+	? ` -- --no-file-parallelism ${process.argv.slice(2).join(" ")}`
+	: "";
+const command = `pnpm test:e2e --log-order=stream --output-logs=new-only --summarize --filter wrangler${commandSuffix}`;
+
+// Add the default environment configuration for E2E tests.
+// Most of these rely on Turbo being set up correctly to build Wrangler & C3:
+// https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/turbo.json#L61-L62
+process.env.WRANGLER ??= `node --no-warnings ${process.cwd()}/packages/wrangler/bin/wrangler.js`;
+process.env.WRANGLER_IMPORT ??= `${process.cwd()}/packages/wrangler/wrangler-dist/cli.js`;
+process.env.MINIFLARE_IMPORT ??= `${process.cwd()}/packages/miniflare/dist/src/index.js`;
+
+if (hasCustomVitestArguments) {
+	execSync(command, {
+		stdio: "inherit",
+		env: { ...process.env },
+	});
+	process.exit(0);
+}
 for (const file of tasks) {
 	console.log("::group::Testing: " + file);
 	try {
