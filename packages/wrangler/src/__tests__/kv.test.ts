@@ -523,7 +523,9 @@ describe("wrangler", () => {
 				]);
 
 				await expect(
-					runWrangler("kv namespace rename nonexistent-name --new-name new-name")
+					runWrangler(
+						"kv namespace rename nonexistent-name --new-name new-name"
+					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: No namespace found with the name "nonexistent-name". Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".]`
 				);
@@ -549,7 +551,9 @@ describe("wrangler", () => {
 				);
 
 				await expect(
-					runWrangler("kv namespace rename --namespace-id nonexistent-id --new-name new-name")
+					runWrangler(
+						"kv namespace rename --namespace-id nonexistent-id --new-name new-name"
+					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/storage/kv/namespaces/nonexistent-id) failed.]`
 				);
