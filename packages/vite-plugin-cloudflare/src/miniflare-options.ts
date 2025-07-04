@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
 	getDefaultDevRegistryPath,
 	kCurrentWorker,
+	kUnsafeEphemeralUniqueKey,
 	Log,
 	LogLevel,
 	Response as MiniflareResponse,
@@ -509,6 +510,7 @@ export async function getDevMiniflareOptions(
 			...userWorkers.map((workerOptions) => {
 				const wrappers = [
 					`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from '${RUNNER_PATH}';`,
+					`export { __VITE_RUNNER_OBJECT__ } from '${RUNNER_PATH}';`,
 					`export default createWorkerEntrypointWrapper('default');`,
 				];
 
@@ -561,6 +563,14 @@ export async function getDevMiniflareOptions(
 
 				return {
 					...workerOptions,
+					durableObjects: {
+						...workerOptions.durableObjects,
+						__VITE_RUNNER_OBJECT__: {
+							className: "__VITE_RUNNER_OBJECT__",
+							unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
+							unsafePreventEviction: true,
+						},
+					},
 					modules: [
 						{
 							type: "ESModule",
