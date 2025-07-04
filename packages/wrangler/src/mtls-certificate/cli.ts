@@ -141,7 +141,7 @@ export const mTlsCertificateDeleteCommand = createCommand({
 
 export const mTlsCertificateNamespace = createNamespace({
 	metadata: {
-		description: "🪪  Manage certificates used for mTLS connections",
+		description: "🪪 Manage certificates used for mTLS connections",
 		owner: "Product: SSL",
 		status: "stable",
 	},

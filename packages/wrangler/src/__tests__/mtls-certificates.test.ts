@@ -394,7 +394,7 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 						"wrangler mtls-certificate
 
-						🪪  Manage certificates used for mTLS connections
+						🪪 Manage certificates used for mTLS connections
 
 						COMMANDS
 						  wrangler mtls-certificate upload  Upload an mTLS certificate
