@@ -1731,7 +1731,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 			});
 
 			describe("delete", () => {
-				it.only("follows happy path as expected without specified rules", async () => {
+				it("follows happy path as expected without specified rules", async () => {
 					const bucketName = "my-bucket";
 					const queue = "my-queue";
 					msw.use(
