@@ -1,6 +1,5 @@
 import { Request } from "miniflare";
-import { HttpResponse } from "msw";
-import { Headers } from "undici";
+import { Headers, Response } from "undici";
 import { getAIFetcher } from "../ai/fetcher";
 import * as internal from "../cfetch/internal";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
@@ -20,7 +19,7 @@ describe("ai", () => {
 				vi.spyOn(internal, "performApiFetch").mockImplementation(
 					async (config, resource, init = {}) => {
 						const headers = new Headers(init.headers);
-						return HttpResponse.json({
+						return Response.json({
 							xForwarded: headers.get("X-Forwarded"),
 							method: init.method,
 						});
@@ -47,7 +46,7 @@ describe("ai", () => {
 				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
 				vi.spyOn(internal, "performApiFetch").mockImplementation(
 					async (config, resource) => {
-						return HttpResponse.json({
+						return Response.json({
 							resource: resource,
 						});
 					}

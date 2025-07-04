@@ -13,7 +13,6 @@ import { sync } from "command-exists";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
-import { File } from "undici";
 import { vi } from "vitest";
 import {
 	printBundleSize,
@@ -10849,7 +10848,8 @@ export default{
 				Content-Type: application/wasm
 
 				Hello wasm World!
-				------formdata-undici-0.test--"
+				------formdata-undici-0.test--
+				"
 			`);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -10940,7 +10940,8 @@ export default{
 				Content-Type: application/wasm
 
 				Hello wasm World!
-				------formdata-undici-0.test--"
+				------formdata-undici-0.test--
+				"
 			`);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -11058,7 +11059,8 @@ export default{
 				Content-Type: application/wasm
 
 				Hello wasm World!
-				------formdata-undici-0.test--"
+				------formdata-undici-0.test--
+				"
 			`);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -11149,7 +11151,8 @@ export default{
 				Content-Type: application/wasm
 
 				Hello wasm World!
-				------formdata-undici-0.test--"
+				------formdata-undici-0.test--
+				"
 			`);
 
 			expect(std).toMatchInlineSnapshot(`

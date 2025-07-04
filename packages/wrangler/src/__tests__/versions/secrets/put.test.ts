@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { http, HttpResponse } from "msw";
-import { File, FormData } from "undici";
+import { FormData } from "undici";
 import { describe, expect, test } from "vitest";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
@@ -380,7 +380,7 @@ describe("versions secret put", () => {
 						),
 						"module.wasm"
 					);
-
+					// @ts-expect-error MSW (with types from Undici v6) and Undici v7 are not type-compatible, but this works at runtime
 					return HttpResponse.formData(formData, {
 						headers: { "cf-entrypoint": "index.js" },
 					});
