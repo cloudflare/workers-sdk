@@ -152,9 +152,6 @@ globalThis.fetch = async (input, init) => {
 			return true;
 		},
 		onComplete(_trailers: unknown) {
-			// console.log("trailers", abortSignalAborted);
-			// responseResolve("hello");
-			// return;
 			if (abortSignalAborted) {
 				responseReject(
 					castAsAbortError(new Error("The operation was aborted"))
