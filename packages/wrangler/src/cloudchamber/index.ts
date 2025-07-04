@@ -4,8 +4,8 @@ import { cloudchamberScope, handleFailure } from "./common";
 import { createCommand, createCommandOptionalYargs } from "./create";
 import { curlCommand, yargsCurl } from "./curl";
 import { deleteCommand, deleteCommandOptionalYargs } from "./delete";
-import { registriesCommand } from "./images/images";
-import { imagesCommand } from "./images/list";
+import { imagesCommand } from "./images/images";
+import { registriesCommand } from "./images/registries";
 import { listCommand, listDeploymentsYargs } from "./list";
 import { modifyCommand, modifyCommandOptionalYargs } from "./modify";
 import { sshCommand } from "./ssh/ssh";
@@ -81,7 +81,7 @@ export const cloudchamber = (
 		)
 		.command(
 			"curl <path>",
-			"send a request to an arbitrary Cloudchamber endpoint",
+			"Send a request to an arbitrary Cloudchamber endpoint",
 			(args) => yargsCurl(args),
 			(args) =>
 				handleFailure(
@@ -92,7 +92,7 @@ export const cloudchamber = (
 		)
 		.command(
 			"apply",
-			"apply the changes in the container applications to deploy",
+			"Apply the changes in the container applications to deploy",
 			(args) => applyCommandOptionalYargs(args),
 			(args) =>
 				handleFailure(
@@ -103,7 +103,7 @@ export const cloudchamber = (
 		)
 		.command(
 			"build [PATH]",
-			"build a dockerfile",
+			"Build a container image",
 			(args) => buildYargs(args),
 			(args) =>
 				handleFailure(
@@ -114,7 +114,7 @@ export const cloudchamber = (
 		)
 		.command(
 			"push [TAG]",
-			"push a tagged image to a Cloudflare managed registry, which is automatically integrated with your account",
+			"Push a tagged image to a Cloudflare managed registry",
 			(args) => pushYargs(args),
 			(args) =>
 				handleFailure(
@@ -125,7 +125,7 @@ export const cloudchamber = (
 		)
 		.command(
 			"images",
-			"perform operations on images in your Cloudchamber registry",
+			"Perform operations on images in your Cloudchamber registry",
 			(args) => imagesCommand(args, cloudchamberScope).command(subHelp)
 		);
 };

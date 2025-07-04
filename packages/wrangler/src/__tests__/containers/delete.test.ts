@@ -28,7 +28,7 @@ describe("containers delete", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers delete [ID]
 
-			delete a container
+			Delete a container
 
 			POSITIONALS
 			  ID  id of the containers to delete  [string]
