@@ -39,7 +39,7 @@ export async function fetch(
 			if (key.toLowerCase() === "sec-websocket-protocol") {
 				protocols = value.split(",").map((protocol) => protocol.trim());
 			} else {
-				headers.set(key, value);
+				headers.append(key, value);
 			}
 		}
 
