@@ -110,7 +110,7 @@ async function resolveDevConfig(
 	// Because it's a non-recoverable user error, we want it to exit the Wrangler process early to allow the user to fix it.
 	// Calling it here forces the error to be thrown where it will correctly exit the Wrangler process.
 	if (input.dev?.remote) {
-		const { accountId } = await unwrapHook(auth, config);
+		const { accountId } = await auth();
 		assert(accountId, "Account ID must be provided for remote dev");
 		await getZoneIdForPreview(config, { host, routes, accountId });
 	}

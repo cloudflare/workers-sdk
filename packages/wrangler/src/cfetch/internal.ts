@@ -134,7 +134,7 @@ function truncate(text: string, maxLength: number): string {
 
 function cloneHeaders(
 	headers: HeadersInit | undefined
-): Record<string, string> {
+): Record<string, string | readonly string[]> {
 	return headers instanceof Headers
 		? Object.fromEntries(headers.entries())
 		: Array.isArray(headers)
@@ -152,7 +152,7 @@ export async function requireLoggedIn(
 }
 
 export function addAuthorizationHeaderIfUnspecified(
-	headers: Record<string, string>,
+	headers: Record<string, string | readonly string[]>,
 	auth: ApiCredentials
 ): void {
 	if (!("Authorization" in headers)) {
@@ -165,7 +165,9 @@ export function addAuthorizationHeaderIfUnspecified(
 	}
 }
 
-export function addUserAgent(headers: Record<string, string>): void {
+export function addUserAgent(
+	headers: Record<string, string | readonly string[]>
+): void {
 	headers["User-Agent"] = `wrangler/${wranglerVersion}`;
 }
 
