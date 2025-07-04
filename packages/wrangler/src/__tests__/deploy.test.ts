@@ -9125,6 +9125,8 @@ addEventListener('fetch', event => {});`
 							"..",
 						]);
 
+						expect(process.cwd().endsWith("src")).toBeTruthy();
+
 						let dockerfile = "";
 						const readable = new Writable({
 							write(chunk) {
