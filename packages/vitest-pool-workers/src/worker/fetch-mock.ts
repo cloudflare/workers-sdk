@@ -21,17 +21,19 @@ interface BufferedRequest {
 	request: Request;
 	body: Uint8Array | null;
 }
-const requests = new WeakMap<Dispatcher.DispatchOptions, BufferedRequest>();
-const responses = new WeakMap<Dispatcher.DispatchOptions, Response>();
+const requests = new Map<string, BufferedRequest>();
+const responses = new Map<string, Response>();
 
 const originalFetch = fetch;
 setDispatcher((opts, handler) => {
-	const request = requests.get(opts);
+	const serialisedOptions = JSON.stringify(opts);
+	const request = requests.get(serialisedOptions);
+	requests.delete(serialisedOptions);
 	assert(request !== undefined, "Expected dispatch to come from fetch()");
 	originalFetch
 		.call(globalThis, request.request, { body: request.body })
 		.then((response) => {
-			responses.set(opts, response);
+			responses.set(serialisedOptions, response);
 			assert(handler.onComplete !== undefined, "Expected onComplete() handler");
 			handler.onComplete?.([]);
 		})
@@ -98,7 +100,8 @@ globalThis.fetch = async (input, init) => {
 		body: bodyText,
 		headers: requestHeaders,
 	};
-	requests.set(dispatchOptions, { request, body: bodyArray });
+	const serialisedOptions = JSON.stringify(dispatchOptions);
+	requests.set(serialisedOptions, { request, body: bodyArray });
 
 	// If the response was mocked, record data as we receive it
 	let responseStatusCode: number | undefined;
@@ -116,11 +119,6 @@ globalThis.fetch = async (input, init) => {
 
 	// Dispatch the request through the mock agent
 	const dispatchHandlers: Dispatcher.DispatchHandler = {
-		onConnect(abort) {
-			if (abortSignalAborted) {
-				abort();
-			}
-		},
 		onError(error) {
 			responseReject(error);
 		},
@@ -154,6 +152,9 @@ globalThis.fetch = async (input, init) => {
 			return true;
 		},
 		onComplete(_trailers: unknown) {
+			// console.log("trailers", abortSignalAborted);
+			// responseResolve("hello");
+			// return;
 			if (abortSignalAborted) {
 				responseReject(
 					castAsAbortError(new Error("The operation was aborted"))
@@ -162,7 +163,8 @@ globalThis.fetch = async (input, init) => {
 			}
 
 			// `maybeResponse` will be `undefined` if we mocked the request
-			const maybeResponse = responses.get(dispatchOptions);
+			const maybeResponse = responses.get(serialisedOptions);
+			responses.delete(serialisedOptions);
 			if (maybeResponse === undefined) {
 				const responseBody = Buffer.concat(responseChunks);
 				const response = new Response(responseBody, {
