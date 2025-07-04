@@ -32,7 +32,11 @@ describe.each(RUNTIMES)(
 			return normalizeOutput(str, {
 				[storeName]: "tmp-e2e-secrets-store-store",
 				[secretName]: "tmp-e2e-secrets-store-secret",
-				[process.env.CLOUDFLARE_ACCOUNT_ID as string]: "CLOUDFLARE_ACCOUNT_ID",
+				...(process.env.CLOUDFLARE_ACCOUNT_ID
+					? {
+							[process.env.CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
+						}
+					: {}),
 			});
 		};
 
