@@ -141,13 +141,13 @@ export function getBuildArguments(
 	container: ContainerApp,
 	idForImageTag: string
 ): BuildArgs {
-	const imageRef = container.image ?? container.configuration?.image;
+	const pathToDockerfile = container.image ?? container.configuration?.image;
 	const imageTag = container.name + ":" + idForImageTag.split("-")[0];
 
 	return {
 		tag: imageTag,
-		pathToDockerfile: imageRef,
-		buildContext: container.image_build_context ?? ".",
+		pathToDockerfile,
+		buildContext: container.image_build_context,
 		args: container.image_vars,
 	};
 }

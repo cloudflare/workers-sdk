@@ -8727,48 +8727,8 @@ addEventListener('fetch', event => {});`
 
 			it("should support durable object bindings to SQLite classes with containers (dockerfile flow)", async () => {
 				vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
-				function mockGetVersion(versionId: string) {
-					msw.use(
-						http.get(
-							`*/accounts/:accountId/workers/scripts/:scriptName/versions/${versionId}`,
-							async () => {
-								return HttpResponse.json(
-									createFetchResult({
-										id: versionId,
-										metadata: {},
-										number: 2,
-										resources: {
-											bindings: [
-												{
-													type: "durable_object_namespace",
-													namespace_id: "1",
-													class_name: "ExampleDurableObject",
-												},
-											],
-										},
-									})
-								);
-							},
-							{ once: true }
-						)
-					);
-				}
 
 				mockGetVersion("Galaxy-Class");
-
-				function defaultChildProcess() {
-					return {
-						stderr: Buffer.from([]),
-						stdout: Buffer.from("i promise I am a successful process"),
-						on: function (reason: string, cbPassed: (code: number) => unknown) {
-							if (reason === "close") {
-								cbPassed(0);
-							}
-
-							return this;
-						},
-					} as unknown as ChildProcess;
-				}
 
 				vi.mocked(spawn)
 					// 0. docker info
@@ -8948,46 +8908,6 @@ addEventListener('fetch', event => {});`
 
 				fs.writeFileSync("Dockerfile", "FROM scratch");
 				mockGetApplications([]);
-				function mockCreateApplication(expected?: Partial<Application>) {
-					msw.use(
-						http.post(
-							"*/applications",
-							async ({ request }) => {
-								const json = await request.json();
-								if (expected !== undefined) {
-									expect(json).toMatchObject(expected);
-								}
-
-								return HttpResponse.json({ success: true, result: json });
-							},
-							{ once: true }
-						)
-					);
-				}
-
-				function mockGenerateImageRegistryCredentials() {
-					msw.use(
-						http.post(
-							`*/registries/${getCloudflareContainerRegistry()}/credentials`,
-							async ({ request }) => {
-								const json =
-									(await request.json()) as ImageRegistryCredentialsConfiguration;
-								expect(json.permissions).toEqual(["push", "pull"]);
-
-								return HttpResponse.json({
-									success: true,
-									result: {
-										account_id: "some-account-id",
-										registry_host: getCloudflareContainerRegistry(),
-										username: "v1",
-										password: "mockpassword",
-									} as AccountRegistryToken,
-								});
-							},
-							{ once: true }
-						)
-					);
-				}
 
 				mockGenerateImageRegistryCredentials();
 
@@ -9104,34 +9024,6 @@ addEventListener('fetch', event => {});`
 
 			it("should support durable object bindings to SQLite classes with containers (image uri flow)", async () => {
 				// note no docker commands have been mocked here!
-
-				function mockGetVersion(versionId: string) {
-					msw.use(
-						http.get(
-							`*/accounts/:accountId/workers/scripts/:scriptName/versions/${versionId}`,
-							async () => {
-								return HttpResponse.json(
-									createFetchResult({
-										id: versionId,
-										metadata: {},
-										number: 2,
-										resources: {
-											bindings: [
-												{
-													type: "durable_object_namespace",
-													namespace_id: "1",
-													class_name: "ExampleDurableObject",
-												},
-											],
-										},
-									})
-								);
-							},
-							{ once: true }
-						)
-					);
-				}
-
 				mockGetVersion("Galaxy-Class");
 
 				mockContainersAccount();
@@ -9158,22 +9050,6 @@ addEventListener('fetch', event => {});`
 				});
 
 				mockGetApplications([]);
-				function mockCreateApplication(expected?: Partial<Application>) {
-					msw.use(
-						http.post(
-							"*/applications",
-							async ({ request }) => {
-								const json = await request.json();
-								if (expected !== undefined) {
-									expect(json).toMatchObject(expected);
-								}
-
-								return HttpResponse.json({ success: true, result: json });
-							},
-							{ once: true }
-						)
-					);
-				}
 
 				mockCreateApplication({
 					name: "my-container",
@@ -9212,6 +9088,252 @@ addEventListener('fetch', event => {});`
 					env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
 					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("resolve the docker build context path based on the dockerfile location, if image_build_context is not provided", async () => {
+				vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
+
+				mockGetVersion("Galaxy-Class");
+
+				vi.mocked(spawn)
+					// 0. docker info
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args).toEqual(["info"]);
+						return defaultChildProcess();
+					})
+					// 1. docker build
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args).toEqual([
+							"build",
+							"-t",
+							getCloudflareContainerRegistry() +
+								"/some-account-id/my-container:Galaxy",
+							"--platform",
+							"linux/amd64",
+							"--provenance=false",
+							"-f",
+							"-",
+							// this is the key! the build context should be based on the dockerfile location
+							"..",
+						]);
+
+						expect(process.cwd().endsWith("src")).toBeTruthy();
+
+						let dockerfile = "";
+						const readable = new Writable({
+							write(chunk) {
+								dockerfile += chunk;
+							},
+							final() {},
+						});
+						return {
+							pid: -1,
+							error: undefined,
+							stderr: Buffer.from([]),
+							stdout: Buffer.from("i promise I am a successful docker build"),
+							stdin: readable,
+							status: 0,
+							signal: null,
+							output: [null],
+							on: (reason: string, cbPassed: (code: number) => unknown) => {
+								if (reason === "exit") {
+									expect(dockerfile).toEqual("FROM scratch");
+									cbPassed(0);
+								}
+							},
+						} as unknown as ChildProcess;
+					})
+					// 2. docker image inspect
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args).toEqual([
+							"image",
+							"inspect",
+							`${getCloudflareContainerRegistry()}/some-account-id/my-container:Galaxy`,
+							"--format",
+							"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
+						]);
+
+						const stdout = new PassThrough();
+						const stderr = new PassThrough();
+
+						const child = {
+							stdout,
+							stderr,
+							on(event: string, cb: (code: number) => void) {
+								if (event === "close") {
+									// Simulate async close after output
+									setImmediate(() => cb(0));
+								}
+								return this;
+							},
+						};
+
+						// Simulate docker output
+						setImmediate(() => {
+							stdout.emit(
+								"data",
+								`123456 4 ["${getCloudflareContainerRegistry()}/some-account-id/my-container@sha256:three"]`
+							);
+						});
+
+						return child as unknown as ChildProcess;
+					})
+
+					// 3. docker login
+					.mockImplementationOnce((cmd, _args) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						let password = "";
+						const readable = new Writable({
+							write(chunk) {
+								password += chunk;
+							},
+							final() {},
+						});
+						return {
+							stdout: Buffer.from("i promise I am a successful docker login"),
+							stdin: readable,
+							on: function (
+								reason: string,
+								cbPassed: (code: number) => unknown
+							) {
+								if (reason === "close") {
+									expect(password).toEqual("mockpassword");
+									cbPassed(0);
+								}
+								return this;
+							},
+						} as unknown as ChildProcess;
+					})
+					// 4. docker manifest inspect
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args[0]).toBe("manifest");
+						expect(args[1]).toBe("inspect");
+						expect(args[2]).toEqual("my-container@three");
+						expect(args).toEqual([
+							"manifest",
+							"inspect",
+							`${getCloudflareContainerRegistry()}/some-account-id/my-container@three`,
+						]);
+						const readable = new Writable({
+							write() {},
+							final() {},
+						});
+						return {
+							stdout: Buffer.from(
+								"i promise I am an unsuccessful docker manifest call"
+							),
+							stdin: readable,
+							on: function (
+								reason: string,
+								cbPassed: (code: number) => unknown
+							) {
+								if (reason === "close") {
+									// We always fail this for this test because this is meant to stop
+									// us pushing if it succeeds and we want to go through the push workflow also
+									cbPassed(1);
+								}
+								return this;
+							},
+						} as unknown as ChildProcess;
+					})
+					// 5. docker push
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe("/usr/bin/docker");
+						expect(args).toEqual([
+							"push",
+							`${getCloudflareContainerRegistry()}/some-account-id/my-container:Galaxy`,
+						]);
+						return defaultChildProcess();
+					});
+
+				mockContainersAccount();
+
+				writeWranglerConfig(
+					{
+						main: "./worker/index.js",
+						durable_objects: {
+							bindings: [
+								{
+									name: "EXAMPLE_DO_BINDING",
+									class_name: "ExampleDurableObject",
+								},
+							],
+						},
+						containers: [
+							{
+								name: "my-container",
+								instances: 10,
+								class_name: "ExampleDurableObject",
+								image: "../Dockerfile",
+							},
+						],
+						migrations: [
+							{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+						],
+					},
+					"src/wrangler.json"
+				);
+
+				fs.writeFileSync("Dockerfile", "FROM scratch");
+				fs.mkdirSync("src/worker", { recursive: true });
+				fs.writeFileSync(
+					"src/worker/index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+				mockGetApplications([]);
+
+				mockGenerateImageRegistryCredentials();
+
+				mockCreateApplication({
+					name: "my-container",
+					instances: 10,
+					durable_objects: { namespace_id: "1" },
+					configuration: {
+						image:
+							getCloudflareContainerRegistry() +
+							"/some-account-id/my-container:Galaxy",
+					},
+				});
+
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await runWrangler("deploy --cwd src");
+
+				expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					Binding                                            Resource
+					env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+					Uploaded test-name (TIMINGS)
+					Building image my-container:Galaxy
+					Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
 					Current Version ID: Galaxy-Class"
@@ -14124,4 +14246,86 @@ interface CustomMatchers {
 declare module "vitest" {
 	interface Assertion extends CustomMatchers {}
 	interface AsymmetricMatchersContaining extends CustomMatchers {}
+}
+
+function mockGetVersion(versionId: string) {
+	msw.use(
+		http.get(
+			`*/accounts/:accountId/workers/scripts/:scriptName/versions/${versionId}`,
+			async () => {
+				return HttpResponse.json(
+					createFetchResult({
+						id: versionId,
+						metadata: {},
+						number: 2,
+						resources: {
+							bindings: [
+								{
+									type: "durable_object_namespace",
+									namespace_id: "1",
+									class_name: "ExampleDurableObject",
+								},
+							],
+						},
+					})
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
+function defaultChildProcess() {
+	return {
+		stderr: Buffer.from([]),
+		stdout: Buffer.from("i promise I am a successful process"),
+		on: function (reason: string, cbPassed: (code: number) => unknown) {
+			if (reason === "close") {
+				cbPassed(0);
+			}
+
+			return this;
+		},
+	} as unknown as ChildProcess;
+}
+
+function mockCreateApplication(expected?: Partial<Application>) {
+	msw.use(
+		http.post(
+			"*/applications",
+			async ({ request }) => {
+				const json = await request.json();
+				if (expected !== undefined) {
+					expect(json).toMatchObject(expected);
+				}
+
+				return HttpResponse.json({ success: true, result: json });
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockGenerateImageRegistryCredentials() {
+	msw.use(
+		http.post(
+			`*/registries/${getCloudflareContainerRegistry()}/credentials`,
+			async ({ request }) => {
+				const json =
+					(await request.json()) as ImageRegistryCredentialsConfiguration;
+				expect(json.permissions).toEqual(["push", "pull"]);
+
+				return HttpResponse.json({
+					success: true,
+					result: {
+						account_id: "some-account-id",
+						registry_host: getCloudflareContainerRegistry(),
+						username: "v1",
+						password: "mockpassword",
+					} as AccountRegistryToken,
+				});
+			},
+			{ once: true }
+		)
+	);
 }
