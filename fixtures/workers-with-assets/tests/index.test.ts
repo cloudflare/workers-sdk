@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, it, onTestFinished } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("[Workers + Assets] dynamic site", () => {
@@ -279,7 +279,7 @@ describe("[Workers + Assets] logging", () => {
 		expect(getOutput()).toContain(
 			`[wrangler:info] ✨ Parsed 1 valid header rule.`
 		);
-		await stop();
+		onTestFinished(() => stop());
 	});
 
 	it("should not log _headers and _redirects parsing when log level set to none", async ({
@@ -290,6 +290,6 @@ describe("[Workers + Assets] logging", () => {
 			["--port=0", "--inspector-port=0", "--log-level=none"]
 		);
 		expect(getOutput()).toMatchInlineSnapshot(`""`);
-		await stop();
+		onTestFinished(() => stop());
 	});
 });
