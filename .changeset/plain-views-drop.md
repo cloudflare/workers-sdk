@@ -1,4 +1,5 @@
 ---
+"wrangler": patch
 "miniflare": patch
 ---
 
