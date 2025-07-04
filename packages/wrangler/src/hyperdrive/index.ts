@@ -134,7 +134,8 @@ export const upsertOptions = (
 		},
 		"origin-connection-limit": {
 			type: "number",
-			description: "The (soft) maximum number of connections that Hyperdrive may establish to the origin database",
+			description:
+				"The (soft) maximum number of connections that Hyperdrive may establish to the origin database",
 		},
 	}) as const;
 

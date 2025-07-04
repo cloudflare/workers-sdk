@@ -1313,7 +1313,9 @@ function mockHyperdriveUpdate(): Promise<PatchHyperdriveBody> {
 								origin,
 								caching: reqBody.caching ?? defaultConfig.caching,
 								mtls: reqBody.mtls,
-								origin_connection_limit: reqBody.origin_connection_limit ?? defaultConfig.origin_connection_limit,
+								origin_connection_limit:
+									reqBody.origin_connection_limit ??
+									defaultConfig.origin_connection_limit,
 							},
 							true
 						)
