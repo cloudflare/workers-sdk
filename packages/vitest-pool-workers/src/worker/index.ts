@@ -47,7 +47,7 @@ function getCallerFileName(of: Function) {
 	const originalStackTraceLimit = Error.stackTraceLimit;
 	const originalPrepareStackTrace = Error.prepareStackTrace;
 	try {
-		let fileName: string | null = null;
+		let fileName: string | undefined = undefined;
 		Error.stackTraceLimit = 1;
 		Error.prepareStackTrace = (_error, callSites) => {
 			fileName = callSites[0]?.getFileName();

@@ -12,9 +12,10 @@ import type {
 	TailInfo,
 } from "./createTail";
 import type { Outcome } from "./filters";
+import type WebSocket from "ws";
 
-export async function prettyPrintLogs({ data }: MessageEvent): Promise<void> {
-	const eventMessage: TailEventMessage = JSON.parse(await data.text());
+export function prettyPrintLogs(data: WebSocket.RawData): void {
+	const eventMessage: TailEventMessage = JSON.parse(data.toString());
 
 	if (isScheduledEvent(eventMessage.event)) {
 		const cronPattern = eventMessage.event.cron;
@@ -110,8 +111,8 @@ export async function prettyPrintLogs({ data }: MessageEvent): Promise<void> {
 	}
 }
 
-export async function jsonPrintLogs({ data }: MessageEvent): Promise<void> {
-	logger.log(JSON.stringify(JSON.parse(await data.text()), null, 2));
+export function jsonPrintLogs(data: WebSocket.RawData): void {
+	console.log(JSON.stringify(JSON.parse(data.toString()), null, 2));
 }
 
 function isRequestEvent(

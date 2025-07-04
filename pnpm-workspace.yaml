@@ -16,7 +16,7 @@ packages:
 # Quick Editor update | Every quarter | Update VSCode dependency and patches
 
 catalog:
-  "@types/node": "^20.19.0"
+  "@types/node": "^20.17.32"
   "@vitest/runner": ~3.2.0
   "@vitest/snapshot": ~3.2.0
   "@vitest/ui": ~3.2.0
@@ -33,4 +33,4 @@ catalog:
 catalogs:
   vite-plugin:
     "vite": "7.0.0"
-    "@types/node": "^22.15.31"
+    "@types/node": "^22.10.1"

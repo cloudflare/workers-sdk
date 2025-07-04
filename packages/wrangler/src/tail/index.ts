@@ -2,7 +2,7 @@ import { setTimeout } from "node:timers/promises";
 import onExit from "signal-exit";
 import { configFileName } from "../config";
 import { createCommand } from "../core/create-command";
-import { UserError } from "../errors";
+import { createFatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
@@ -17,6 +17,7 @@ import {
 	translateCLICommandToFilterMessage,
 } from "./createTail";
 import type { TailCLIFilters } from "./createTail";
+import type WebSocket from "ws";
 
 export const tailCommand = createCommand({
 	metadata: {
@@ -163,10 +164,10 @@ export const tailCommand = createCommand({
 			);
 		}
 
-		const printLog: (data: MessageEvent) => void =
+		const printLog: (data: WebSocket.RawData) => void =
 			args.format === "pretty" ? prettyPrintLogs : jsonPrintLogs;
 
-		tail.addEventListener("message", printLog);
+		tail.on("message", printLog);
 
 		while (tail.readyState !== tail.OPEN) {
 			switch (tail.readyState) {
@@ -190,15 +191,61 @@ export const tailCommand = createCommand({
 			logger.log(`Connected to ${scriptDisplayName}, waiting for logs...`);
 		}
 
-		tail.addEventListener("close", exit);
+		const cancelPing = startWebSocketPing();
+		tail.on("close", exit);
 		onExit(exit);
 
 		async function exit() {
-			tail.close();
+			cancelPing();
+			tail.terminate();
 			await deleteTail();
 			metrics.sendMetricsEvent("end log stream", {
 				sendMetrics: config.send_metrics,
 			});
+		}
+
+		/**
+		 * Start pinging the websocket to see if it is still connected.
+		 *
+		 * We need to know if the connection to the tail drops.
+		 * To do this we send a ping message to the backend every few seconds.
+		 * If we don't get a matching pong message back before the next ping is due
+		 * then we have probably lost the connect.
+		 */
+		function startWebSocketPing() {
+			/** The corelation message to send to tail when pinging. */
+			const PING_MESSAGE = Buffer.from("wrangler tail ping");
+			/** How long to wait between pings. */
+			const PING_INTERVAL = 10000;
+
+			let waitingForPong = false;
+
+			const pingInterval = setInterval(() => {
+				if (waitingForPong) {
+					// We didn't get a pong back quickly enough so assume the connection died and exit.
+					// This approach relies on the fact that throwing an error inside a `setInterval()` callback
+					// causes the process to exit.
+					// This is a bit nasty but otherwise we have to make wholesale changes to how the `tail` command
+					// works, since currently all the tests assume that `runWrangler()` will return immediately.
+					console.log(args.format);
+					throw createFatalError(
+						"Tail disconnected, exiting.",
+						args.format === "json",
+						1,
+						{ telemetryMessage: true }
+					);
+				}
+				waitingForPong = true;
+				tail.ping(PING_MESSAGE);
+			}, PING_INTERVAL);
+
+			tail.on("pong", (data) => {
+				if (data.equals(PING_MESSAGE)) {
+					waitingForPong = false;
+				}
+			});
+
+			return () => clearInterval(pingInterval);
 		}
 	},
 });

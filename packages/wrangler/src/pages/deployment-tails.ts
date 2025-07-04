@@ -254,7 +254,7 @@ export const pagesDeploymentTailCommand = createCommand({
 					return;
 				}
 
-				tail.close();
+				tail.terminate();
 				await deleteTail();
 				metrics.sendMetricsEvent("end pages log stream", {
 					sendMetrics: config.send_metrics,
@@ -266,15 +266,15 @@ export const pagesDeploymentTailCommand = createCommand({
 
 		onExit(onCloseTail);
 
-		tail.addEventListener("message", (data) => {
+		tail.on("message", (data) => {
 			if (format === "pretty") {
-				void prettyPrintLogs(data);
+				prettyPrintLogs(data);
 			} else {
-				void jsonPrintLogs(data);
+				jsonPrintLogs(data);
 			}
 		});
 
-		tail.addEventListener("close", onCloseTail);
+		tail.on("close", onCloseTail);
 
 		while (tail.readyState !== tail.OPEN) {
 			switch (tail.readyState) {

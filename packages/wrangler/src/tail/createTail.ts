@@ -1,7 +1,9 @@
-import { WebSocket } from "undici";
+import { HttpsProxyAgent } from "https-proxy-agent";
+import WebSocket from "ws";
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
 import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
+import { proxy } from "../utils/constants";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Outcome, TailFilterMessage } from "./filters";
 import type { Request } from "undici";
@@ -105,15 +107,27 @@ export async function createPagesTail({
 			{ method: "DELETE" }
 		);
 
-	const tail = new WebSocket(tailRecord.url, {
+	const p = proxy ? { agent: new HttpsProxyAgent(proxy) } : {};
+
+	const tail = new WebSocket(tailRecord.url, TRACE_VERSION, {
 		headers: {
 			"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
 			"User-Agent": `wrangler-js/${packageVersion}`,
 		},
+		...p,
 	});
 
-	tail.addEventListener("open", () => {
-		tail.send(JSON.stringify({ debug: debug }));
+	// send filters when we open up
+	tail.on("open", () => {
+		tail.send(
+			JSON.stringify({ debug: debug }),
+			{ binary: false, compress: false, mask: false, fin: true },
+			(err) => {
+				if (err) {
+					throw err;
+				}
+			}
+		);
 	});
 
 	return { tail, deleteTail, expiration: tailRecord.expires_at };
@@ -166,16 +180,28 @@ export async function createTail(
 		await fetchResult(complianceConfig, deleteUrl, { method: "DELETE" });
 	}
 
+	const p = proxy ? { agent: new HttpsProxyAgent(proxy) } : {};
+
 	// connect to the tail
-	const tail = new WebSocket(websocketUrl, {
+	const tail = new WebSocket(websocketUrl, TRACE_VERSION, {
 		headers: {
 			"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
 			"User-Agent": `wrangler-js/${packageVersion}`,
 		},
+		...p,
 	});
 
-	tail.addEventListener("open", function () {
-		tail.send(JSON.stringify({ debug: debug }));
+	// send filters when we open up
+	tail.on("open", function () {
+		tail.send(
+			JSON.stringify({ debug: debug }),
+			{ binary: false, compress: false, mask: false, fin: true },
+			(err) => {
+				if (err) {
+					throw err;
+				}
+			}
+		);
 	});
 
 	return { tail, expiration, deleteTail };
