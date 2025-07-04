@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Correctly set docker build context during deploy when `image_build_context` is not provided
+Set docker build context to the Dockerfile directory when `image_build_context` is not explicitly provided
