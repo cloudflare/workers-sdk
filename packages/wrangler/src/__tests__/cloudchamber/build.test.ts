@@ -119,7 +119,10 @@ describe("buildAndMaybePush", () => {
 	});
 
 	it("should be able to build image and not push if it already exists in remote", async () => {
-		vi.mocked(runDockerCmd).mockResolvedValueOnce();
+		vi.mocked(runDockerCmd).mockResolvedValueOnce({
+			abort: () => {},
+			ready: Promise.resolve({ aborted: false }),
+		});
 		vi.mocked(dockerImageInspect).mockResolvedValue(
 			'53387881 2 ["registry.cloudflare.com/some-account-id/test-app@sha256:three"]'
 		);
