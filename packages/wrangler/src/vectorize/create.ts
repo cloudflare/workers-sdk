@@ -1,4 +1,4 @@
-import { configFileName, formatConfigSnippet } from "../config";
+import { handleResourceBindingAndConfigUpdate } from "../config/auto-update";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -60,6 +60,10 @@ export const vectorizeCreateCommand = createCommand({
 			description:
 				"Create a deprecated Vectorize V1 index. This is not recommended and indexes created with this option need all other Vectorize operations to have this option enabled.",
 		},
+		"config-binding-name": {
+			type: "string",
+			description: "The binding name to use when updating wrangler.jsonc",
+		},
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
@@ -97,13 +101,6 @@ export const vectorizeCreateCommand = createCommand({
 		logger.log(`🚧 Creating index: '${args.name}'`);
 		const indexResult = await createIndex(config, index, args.deprecatedV1);
 
-		let bindingName: string;
-		if (args.deprecatedV1) {
-			bindingName = "VECTORIZE_INDEX";
-		} else {
-			bindingName = "VECTORIZE";
-		}
-
 		if (args.json) {
 			logger.log(JSON.stringify(index, null, 2));
 			return;
@@ -112,21 +109,16 @@ export const vectorizeCreateCommand = createCommand({
 		logger.log(
 			`✅ Successfully created a new Vectorize index: '${indexResult.name}'`
 		);
-		logger.log(
-			`📋 To start querying from a Worker, add the following binding configuration to your ${configFileName(config.configPath)} file:\n`
-		);
-		logger.log(
-			formatConfigSnippet(
-				{
-					vectorize: [
-						{
-							binding: bindingName,
-							index_name: indexResult.name,
-						},
-					],
-				},
-				config.configPath
-			)
+
+		// Handle binding name and config update using unified utility
+		await handleResourceBindingAndConfigUpdate(
+			args,
+			{ ...config, configPath: config.configPath },
+			{
+				type: "vectorize",
+				id: indexResult.name,
+				name: indexResult.name,
+			}
 		);
 	},
 });
