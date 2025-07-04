@@ -3,10 +3,12 @@ import {
 	WorkerEntrypoint,
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
-import { INIT_PATH, VITE_DEV_METADATA_HEADER } from "../shared";
+import { INIT_PATH, WORKER_ENTRY_PATH_HEADER } from "../shared";
 import { stripInternalEnv } from "./env";
-import { createModuleRunner, getWorkerEntryExport } from "./module-runner";
+import { getWorkerEntryExport } from "./module-runner";
 import type { WrapperEnv } from "./env";
+
+export { __VITE_RUNNER_OBJECT__ } from "./module-runner";
 
 interface WorkerEntrypointConstructor<T = unknown> {
 	new (
@@ -47,7 +49,28 @@ const DURABLE_OBJECT_KEYS = [
 
 const WORKFLOW_ENTRYPOINT_KEYS = ["run"] as const;
 
-let entryPath = "";
+let workerEntryPath = "";
+
+function getRpcPropertyCallableThenable(
+	key: string,
+	property: Promise<unknown>
+): Promise<unknown> & ((...args: unknown[]) => Promise<unknown>) {
+	const fn = async function (...args: unknown[]) {
+		const maybeFn = await property;
+
+		if (typeof maybeFn !== "function") {
+			throw new TypeError(`"${key}" is not a function.`);
+		}
+
+		return maybeFn(...args);
+	} as Promise<unknown> & ((...args: unknown[]) => Promise<unknown>);
+
+	fn.then = (onFulfilled, onRejected) => property.then(onFulfilled, onRejected);
+	fn.catch = (onRejected) => property.catch(onRejected);
+	fn.finally = (onFinally) => property.finally(onFinally);
+
+	return fn;
+}
 
 function getRpcProperty(
 	ctor: WorkerEntrypointConstructor | DurableObjectConstructor,
@@ -62,7 +85,7 @@ function getRpcProperty(
 		if (instanceHasKey) {
 			throw new TypeError(
 				[
-					`The RPC receiver's prototype does not implement '${key}', but the receiver instance does.`,
+					`The RPC receiver's prototype does not implement "${key}", but the receiver instance does.`,
 					"Only properties and methods defined on the prototype can be accessed over RPC.",
 					`Ensure properties are declared as \`get ${key}() { ... }\` instead of \`${key} = ...\`,`,
 					`and methods are declared as \`${key}() { ... }\` instead of \`${key} = () => { ... }\`.`,
@@ -70,44 +93,23 @@ function getRpcProperty(
 			);
 		}
 
-		throw new TypeError(`The RPC receiver does not implement '${key}'.`);
+		throw new TypeError(`The RPC receiver does not implement "${key}".`);
 	}
 
 	return Reflect.get(ctor.prototype, key, instance);
 }
 
-function getRpcPropertyCallableThenable(
-	key: string,
-	property: Promise<unknown>
-): Promise<unknown> & ((...args: unknown[]) => Promise<unknown>) {
-	const fn = async function (...args: unknown[]) {
-		const maybeFn = await property;
-
-		if (typeof maybeFn !== "function") {
-			throw new TypeError(`'${key}' is not a function.`);
-		}
-
-		return maybeFn(...args);
-	} as Promise<unknown> & ((...args: unknown[]) => Promise<unknown>);
-
-	fn.then = (onFulfilled, onRejected) => property.then(onFulfilled, onRejected);
-	fn.catch = (onRejected) => property.catch(onRejected);
-	fn.finally = (onFinally) => property.finally(onFinally);
-
-	return fn;
-}
-
 async function getWorkerEntrypointRpcProperty(
 	this: WorkerEntrypoint<WrapperEnv>,
-	entrypoint: string,
+	exportName: string,
 	key: string
 ): Promise<unknown> {
 	const ctor = (await getWorkerEntryExport(
-		entryPath,
-		entrypoint
+		workerEntryPath,
+		exportName
 	)) as WorkerEntrypointConstructor;
 	const userEnv = stripInternalEnv(this.env);
-	const expectedWorkerEntrypointMessage = `Expected ${entrypoint} export of ${entryPath} to be a subclass of \`WorkerEntrypoint\` for RPC.`;
+	const expectedWorkerEntrypointMessage = `Expected "${exportName}" export of "${workerEntryPath}" to be a subclass of \`WorkerEntrypoint\` for RPC.`;
 
 	if (typeof ctor !== "function") {
 		throw new TypeError(expectedWorkerEntrypointMessage);
@@ -129,7 +131,7 @@ async function getWorkerEntrypointRpcProperty(
 }
 
 export function createWorkerEntrypointWrapper(
-	entrypoint: string
+	exportName: string
 ): WorkerEntrypointConstructor<WrapperEnv> {
 	class Wrapper extends WorkerEntrypoint<WrapperEnv> {
 		constructor(ctx: ExecutionContext, env: WrapperEnv) {
@@ -153,7 +155,7 @@ export function createWorkerEntrypointWrapper(
 
 					const property = getWorkerEntrypointRpcProperty.call(
 						receiver,
-						entrypoint,
+						exportName,
 						key
 					);
 
@@ -169,50 +171,49 @@ export function createWorkerEntrypointWrapper(
 				const request = arg as Request;
 				const url = new URL(request.url);
 
-				let webSocket: WebSocket;
 				if (url.pathname === INIT_PATH) {
-					try {
-						const viteDevMetadata = getViteDevMetadata(request);
-						entryPath = viteDevMetadata.entryPath;
-						const { 0: client, 1: server } = new WebSocketPair();
-						webSocket = client;
-						await createModuleRunner(this.env, server);
-					} catch (e) {
-						return new Response(
-							e instanceof Error ? e.message : JSON.stringify(e),
-							{ status: 500 }
+					const workerEntryPathHeader = request.headers.get(
+						WORKER_ENTRY_PATH_HEADER
+					);
+
+					if (!workerEntryPathHeader) {
+						throw new Error(
+							`Unexpected error: "${WORKER_ENTRY_PATH_HEADER}" header not set.`
 						);
 					}
 
-					return new Response(null, {
-						status: 101,
-						webSocket,
-					});
+					workerEntryPath = workerEntryPathHeader;
+					const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
+
+					return stub.fetch(request);
 				}
 			}
 
-			const entrypointValue = await getWorkerEntryExport(entryPath, entrypoint);
+			const exportValue = await getWorkerEntryExport(
+				workerEntryPath,
+				exportName
+			);
 			const userEnv = stripInternalEnv(this.env);
 
-			if (typeof entrypointValue === "object" && entrypointValue !== null) {
+			if (typeof exportValue === "object" && exportValue !== null) {
 				// ExportedHandler
-				const maybeFn = (entrypointValue as Record<string, unknown>)[key];
+				const maybeFn = (exportValue as Record<string, unknown>)[key];
 
 				if (typeof maybeFn !== "function") {
 					throw new TypeError(
-						`Expected ${entrypoint} export of ${entryPath} to define a \`${key}()\` function.`
+						`Expected "${exportName}" export of "${workerEntryPath}" to define a \`${key}()\` function.`
 					);
 				}
 
-				return maybeFn.call(entrypointValue, arg, userEnv, this.ctx);
-			} else if (typeof entrypointValue === "function") {
+				return maybeFn.call(exportValue, arg, userEnv, this.ctx);
+			} else if (typeof exportValue === "function") {
 				// WorkerEntrypoint
-				const ctor = entrypointValue as WorkerEntrypointConstructor;
+				const ctor = exportValue as WorkerEntrypointConstructor;
 				const instance = new ctor(this.ctx, userEnv);
 
 				if (!(instance instanceof WorkerEntrypoint)) {
 					throw new TypeError(
-						`Expected ${entrypoint} export of ${entryPath} to be a subclass of \`WorkerEntrypoint\`.`
+						`Expected "${exportName}" export of "${workerEntryPath}" to be a subclass of \`WorkerEntrypoint\`.`
 					);
 				}
 
@@ -220,14 +221,14 @@ export function createWorkerEntrypointWrapper(
 
 				if (typeof maybeFn !== "function") {
 					throw new TypeError(
-						`Expected ${entrypoint} export of ${entryPath} to define a \`${key}()\` method.`
+						`Expected "${exportName}" export of "${workerEntryPath}" to define a \`${key}()\` method.`
 					);
 				}
 
 				return (maybeFn as (arg: unknown) => unknown).call(instance, arg);
 			} else {
 				return new TypeError(
-					`Expected ${entrypoint} export of ${entryPath} to be an object or a class. Got ${entrypointValue}.`
+					`Expected "${exportName}" export of "${workerEntryPath}" to be an object or a class.`
 				);
 			}
 		};
@@ -251,14 +252,14 @@ interface DurableObjectWrapper extends DurableObject<WrapperEnv> {
 
 async function getDurableObjectRpcProperty(
 	this: DurableObjectWrapper,
-	className: string,
+	exportName: string,
 	key: string
 ): Promise<unknown> {
 	const { ctor, instance } = await this[kEnsureInstance]();
 
 	if (!(instance instanceof DurableObject)) {
 		throw new TypeError(
-			`Expected ${className} export of ${entryPath} to be a subclass of \`DurableObject\` for RPC.`
+			`Expected "${exportName}" export of "${workerEntryPath}" to be a subclass of \`DurableObject\` for RPC.`
 		);
 	}
 
@@ -272,7 +273,7 @@ async function getDurableObjectRpcProperty(
 }
 
 export function createDurableObjectWrapper(
-	className: string
+	exportName: string
 ): DurableObjectConstructor<WrapperEnv> {
 	class Wrapper
 		extends DurableObject<WrapperEnv>
@@ -301,7 +302,7 @@ export function createDurableObjectWrapper(
 
 					const property = getDurableObjectRpcProperty.call(
 						receiver,
-						className,
+						exportName,
 						key
 					);
 
@@ -312,13 +313,13 @@ export function createDurableObjectWrapper(
 
 		async [kEnsureInstance]() {
 			const ctor = (await getWorkerEntryExport(
-				entryPath,
-				className
+				workerEntryPath,
+				exportName
 			)) as DurableObjectConstructor;
 
 			if (typeof ctor !== "function") {
 				throw new TypeError(
-					`${entryPath} does not export a ${className} Durable Object.`
+					`Expected "${exportName}" export of "${workerEntryPath}" to be a subclass of \`DurableObject\`.`
 				);
 			}
 
@@ -343,7 +344,7 @@ export function createDurableObjectWrapper(
 
 			if (typeof maybeFn !== "function") {
 				throw new TypeError(
-					`Expected ${className} export of ${entryPath} to define a \`${key}()\` function.`
+					`Expected "${exportName}" export of "${workerEntryPath}" to define a \`${key}()\` function.`
 				);
 			}
 
@@ -355,22 +356,22 @@ export function createDurableObjectWrapper(
 }
 
 export function createWorkflowEntrypointWrapper(
-	className: string
+	exportName: string
 ): WorkflowEntrypointConstructor<WrapperEnv> {
 	class Wrapper extends WorkflowEntrypoint<WrapperEnv> {}
 
 	for (const key of WORKFLOW_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (...args: unknown[]) {
 			const ctor = (await getWorkerEntryExport(
-				entryPath,
-				className
+				workerEntryPath,
+				exportName
 			)) as WorkflowEntrypointConstructor;
 			const userEnv = stripInternalEnv(this.env);
 			const instance = new ctor(this.ctx, userEnv);
 
 			if (!(instance instanceof WorkflowEntrypoint)) {
 				throw new TypeError(
-					`Expected ${className} export of ${entryPath} to be a subclass of \`WorkflowEntrypoint\`.`
+					`Expected "${exportName}" export of "${workerEntryPath}" to be a subclass of \`WorkflowEntrypoint\`.`
 				);
 			}
 
@@ -378,7 +379,7 @@ export function createWorkflowEntrypointWrapper(
 
 			if (typeof maybeFn !== "function") {
 				throw new TypeError(
-					`Expected ${className} export of ${entryPath} to define a \`${key}()\` function.`
+					`Expected "${exportName}" export of "${workerEntryPath}" to define a \`${key}()\` function.`
 				);
 			}
 
@@ -387,32 +388,4 @@ export function createWorkflowEntrypointWrapper(
 	}
 
 	return Wrapper;
-}
-
-function getViteDevMetadata(request: Request) {
-	const viteDevMetadataHeader = request.headers.get(VITE_DEV_METADATA_HEADER);
-	if (viteDevMetadataHeader === null) {
-		throw new Error(
-			"Unexpected internal error, vite dev metadata header not set"
-		);
-	}
-
-	let parsedViteDevMetadataHeader: Record<string, string>;
-	try {
-		parsedViteDevMetadataHeader = JSON.parse(viteDevMetadataHeader);
-	} catch {
-		throw new Error(
-			`Unexpected internal error, vite dev metadata header JSON parsing failed, value = ${viteDevMetadataHeader}`
-		);
-	}
-
-	const { entryPath } = parsedViteDevMetadataHeader;
-
-	if (entryPath === undefined) {
-		throw new Error(
-			"Unexpected internal error, vite dev metadata header doesn't contain an entryPath value"
-		);
-	}
-
-	return { entryPath };
 }
