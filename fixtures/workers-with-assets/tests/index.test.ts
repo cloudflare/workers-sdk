@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, it, onTestFinished } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("[Workers + Assets] dynamic site", () => {
@@ -264,5 +264,32 @@ describe("[Workers + Assets] dynamic site", () => {
 			"hi from .dotfile.html
 			"
 		`);
+	});
+});
+
+describe("[Workers + Assets] logging", () => {
+	it("should log _headers and _redirects parsing", async ({ expect }) => {
+		const { ip, port, stop, getOutput } = await runWranglerDev(
+			resolve(__dirname, ".."),
+			["--port=0", "--inspector-port=0"]
+		);
+		expect(getOutput()).toContain(
+			`[wrangler:info] ✨ Parsed 2 valid redirect rules.`
+		);
+		expect(getOutput()).toContain(
+			`[wrangler:info] ✨ Parsed 1 valid header rule.`
+		);
+		onTestFinished(() => stop());
+	});
+
+	it("should not log _headers and _redirects parsing when log level set to none", async ({
+		expect,
+	}) => {
+		const { ip, port, stop, getOutput } = await runWranglerDev(
+			resolve(__dirname, ".."),
+			["--port=0", "--inspector-port=0", "--log-level=none"]
+		);
+		expect(getOutput()).toMatchInlineSnapshot(`""`);
+		onTestFinished(() => stop());
 	});
 });
