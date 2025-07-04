@@ -266,3 +266,30 @@ describe("[Workers + Assets] dynamic site", () => {
 		`);
 	});
 });
+
+describe("[Workers + Assets] logging", () => {
+	it("should log _headers and _redirects parsing", async ({ expect }) => {
+		const { ip, port, stop, getOutput } = await runWranglerDev(
+			resolve(__dirname, ".."),
+			["--port=0", "--inspector-port=0"]
+		);
+		expect(getOutput()).toContain(
+			`[wrangler:info] ✨ Parsed 2 valid redirect rules.`
+		);
+		expect(getOutput()).toContain(
+			`[wrangler:info] ✨ Parsed 1 valid header rule.`
+		);
+		await stop();
+	});
+
+	it("should not log _headers and _redirects parsing when log level set to none", async ({
+		expect,
+	}) => {
+		const { ip, port, stop, getOutput } = await runWranglerDev(
+			resolve(__dirname, ".."),
+			["--port=0", "--inspector-port=0", "--log-level=none"]
+		);
+		expect(getOutput()).toMatchInlineSnapshot(`""`);
+		await stop();
+	});
+});
