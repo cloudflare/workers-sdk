@@ -43,7 +43,7 @@ describe("wrangler", () => {
 				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
-				  wrangler versions               🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
+				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler delete [script]        🗑  Delete a Worker from Cloudflare
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
@@ -103,7 +103,7 @@ describe("wrangler", () => {
 				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
-				  wrangler versions               🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
+				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler delete [script]        🗑  Delete a Worker from Cloudflare
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
