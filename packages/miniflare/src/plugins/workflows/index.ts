@@ -5,6 +5,7 @@ import { Service } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
+	getUserBindingServiceName,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
@@ -43,7 +44,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 			([bindingName, workflow]) => ({
 				name: bindingName,
 				service: {
-					name: `${WORKFLOWS_PLUGIN_NAME}:${workflow.name}`,
+					name: getUserBindingServiceName(WORKFLOWS_PLUGIN_NAME, workflow),
 					entrypoint: "WorkflowBinding",
 				},
 			})
@@ -83,7 +84,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 				const uniqueKey = `miniflare-workflows-${workflow.name}`;
 
 				const workflowsBinding: Service = {
-					name: `${WORKFLOWS_PLUGIN_NAME}:${workflow.name}`,
+					name: getUserBindingServiceName(WORKFLOWS_PLUGIN_NAME, workflow),
 					worker: {
 						compatibilityDate: "2024-10-22",
 						modules: [

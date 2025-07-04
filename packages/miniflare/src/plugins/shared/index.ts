@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto, { createHash } from "crypto";
 import { existsSync } from "fs";
 import fs from "fs/promises";
 import path from "path";
@@ -286,6 +286,61 @@ export async function migrateDatabase(
 	} catch (e) {
 		log.warn(`Error migrating ${previousPath} to ${newPath}: ${e}`);
 	}
+}
+
+/**
+ * Service names for remote bindings should be unique depending on the remote proxy connection
+ * string (since in theory different remote bindings can have different remote proxy connections),
+ * however include the whole remote proxy connection string in the service name would make the name
+ * too long more cumbersome to deal with, so this function simply takes a remote proxy connection
+ * string and generates a suffix for the respective service name using a short sha of the connection
+ * string.
+ *
+ * @param remoteProxyConnectionString the remote proxy connection string for the service
+ * @returns suffix to use in the service name
+ */
+function getRemoteServiceNameSuffix(
+	remoteProxyConnectionString: RemoteProxyConnectionString
+) {
+	const remoteSha = createHash("sha256")
+		.update(remoteProxyConnectionString.href)
+		.digest("hex");
+	const remoteShortSha = remoteSha.slice(0, 6);
+	return `remote-${remoteShortSha}`;
+}
+
+/**
+ * Utility to get the name for a service implementing a user binding
+ *
+ * @param scope Scope of the service (this usually is the plugin name)
+ * @param bindingSpecifier Specifier for the binding (it includes an id-like field and an optional remote proxy connection string)
+ * @returns the name for the service
+ */
+export function getUserBindingServiceName(
+	scope: string,
+	bindingSpecifier: (
+		| { binding: string }
+		| { id: string }
+		| { name: string }
+		| { namespace: string }
+	) & { remoteProxyConnectionString?: RemoteProxyConnectionString }
+): string {
+	const identifier =
+		"binding" in bindingSpecifier
+			? bindingSpecifier.binding
+			: "id" in bindingSpecifier
+				? bindingSpecifier.id
+				: "name" in bindingSpecifier
+					? bindingSpecifier.name
+					: bindingSpecifier.namespace;
+	const localServiceName = `${scope}:${identifier}`;
+	if (!bindingSpecifier.remoteProxyConnectionString) {
+		return localServiceName;
+	}
+	const remoteSuffix = getRemoteServiceNameSuffix(
+		bindingSpecifier.remoteProxyConnectionString
+	);
+	return `${localServiceName}:${remoteSuffix}`;
 }
 
 export * from "./constants";
