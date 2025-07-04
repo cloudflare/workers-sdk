@@ -9115,7 +9115,7 @@ addEventListener('fetch', event => {});`
 							"build",
 							"-t",
 							getCloudflareContainerRegistry() +
-								"/test_account_id/my-container:Galaxy",
+								"/some-account-id/my-container:Galaxy",
 							"--platform",
 							"linux/amd64",
 							"--provenance=false",
@@ -9155,7 +9155,7 @@ addEventListener('fetch', event => {});`
 						expect(args).toEqual([
 							"image",
 							"inspect",
-							`${getCloudflareContainerRegistry()}/test_account_id/my-container:Galaxy`,
+							`${getCloudflareContainerRegistry()}/some-account-id/my-container:Galaxy`,
 							"--format",
 							"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 						]);
@@ -9179,7 +9179,7 @@ addEventListener('fetch', event => {});`
 						setImmediate(() => {
 							stdout.emit(
 								"data",
-								`123456 4 ["${getCloudflareContainerRegistry()}/test_account_id/my-container@sha256:three"]`
+								`123456 4 ["${getCloudflareContainerRegistry()}/some-account-id/my-container@sha256:three"]`
 							);
 						});
 
@@ -9220,7 +9220,7 @@ addEventListener('fetch', event => {});`
 						expect(args).toEqual([
 							"manifest",
 							"inspect",
-							`${getCloudflareContainerRegistry()}/test_account_id/my-container@three`,
+							`${getCloudflareContainerRegistry()}/some-account-id/my-container@three`,
 						]);
 						const readable = new Writable({
 							write() {},
@@ -9249,7 +9249,7 @@ addEventListener('fetch', event => {});`
 						expect(cmd).toBe("/usr/bin/docker");
 						expect(args).toEqual([
 							"push",
-							`${getCloudflareContainerRegistry()}/test_account_id/my-container:Galaxy`,
+							`${getCloudflareContainerRegistry()}/some-account-id/my-container:Galaxy`,
 						]);
 						return defaultChildProcess();
 					});
@@ -9299,7 +9299,7 @@ addEventListener('fetch', event => {});`
 					configuration: {
 						image:
 							getCloudflareContainerRegistry() +
-							"/test_account_id/my-container:Galaxy",
+							"/some-account-id/my-container:Galaxy",
 					},
 				});
 
@@ -9331,7 +9331,7 @@ addEventListener('fetch', event => {});`
 
 					Uploaded test-name (TIMINGS)
 					Building image my-container:Galaxy
-					Image does not exist remotely, pushing: registry.cloudflare.com/test_account_id/my-container:Galaxy
+					Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
 					Current Version ID: Galaxy-Class"
@@ -14316,7 +14316,7 @@ function mockGenerateImageRegistryCredentials() {
 				return HttpResponse.json({
 					success: true,
 					result: {
-						account_id: "some_account_id",
+						account_id: "some-account-id",
 						registry_host: getCloudflareContainerRegistry(),
 						username: "v1",
 						password: "mockpassword",
