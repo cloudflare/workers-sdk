@@ -8,6 +8,7 @@ export type HyperdriveConfig = {
 	origin: PublicOrigin;
 	caching?: CachingOptions;
 	mtls?: Mtls;
+	origin_connection_limit?: number;
 };
 
 export type OriginDatabase = {
@@ -75,6 +76,7 @@ export type CreateUpdateHyperdriveBody = {
 	origin: OriginWithSecrets;
 	caching?: CachingOptions;
 	mtls?: Mtls;
+	origin_connection_limit?: number;
 };
 
 export type PatchHyperdriveBody = {
@@ -82,6 +84,7 @@ export type PatchHyperdriveBody = {
 	origin?: OriginWithSecretsPartial;
 	caching?: CachingOptions;
 	mtls?: Mtls;
+	origin_connection_limit?: number;
 };
 
 export type Mtls = {
