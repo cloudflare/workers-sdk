@@ -1,34 +1,66 @@
-import {
-	createWebSocketModuleRunnerTransport,
-	ModuleRunner,
-} from "vite/module-runner";
-import { UNKNOWN_HOST } from "../shared";
+import { DurableObject } from "cloudflare:workers";
+import { ModuleRunner } from "vite/module-runner";
+import { INIT_PATH, UNKNOWN_HOST } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
 
 let moduleRunner: ModuleRunner;
 
-export async function createModuleRunner(
-	env: WrapperEnv,
-	webSocket: WebSocket
-) {
-	if (moduleRunner) {
-		throw new Error("Runner already initialized");
+export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
+	#webSocket?: WebSocket;
+
+	override async fetch(request: Request) {
+		const { pathname } = new URL(request.url);
+
+		if (pathname !== INIT_PATH) {
+			throw new Error(
+				`__VITE_RUNNER_OBJECT__ received invalid pathname: ${pathname}`
+			);
+		}
+
+		if (moduleRunner) {
+			throw new Error(`Module runner already initialized`);
+		}
+
+		const { 0: client, 1: server } = new WebSocketPair();
+		server.accept();
+		this.#webSocket = server;
+		moduleRunner = await createModuleRunner(this.env, this.#webSocket);
+
+		return new Response(null, { status: 101, webSocket: client });
 	}
+	send(data: string) {
+		if (!this.#webSocket) {
+			throw new Error(`Module runner WebSocket not initialized`);
+		}
 
-	const transport = createWebSocketModuleRunnerTransport({
-		createConnection() {
-			webSocket.accept();
+		this.#webSocket.send(data);
+	}
+}
 
-			return webSocket;
-		},
-	});
-
-	moduleRunner = new ModuleRunner(
+async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
+	return new ModuleRunner(
 		{
 			sourcemapInterceptor: "prepareStackTrace",
 			transport: {
-				...transport,
+				connect({ onMessage }) {
+					webSocket.addEventListener("message", async ({ data }) => {
+						onMessage(JSON.parse(data.toString()));
+					});
+
+					onMessage({
+						type: "custom",
+						event: "vite:ws:connect",
+						data: { webSocket },
+					});
+				},
+				disconnect() {
+					webSocket.close();
+				},
+				send(data) {
+					const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
+					stub.send(JSON.stringify(data));
+				},
 				async invoke(data) {
 					const response = await env.__VITE_INVOKE_MODULE__.fetch(
 						new Request(UNKNOWN_HOST, {
@@ -36,11 +68,6 @@ export async function createModuleRunner(
 							body: JSON.stringify(data),
 						})
 					);
-
-					if (!response.ok) {
-						throw new Error(await response.text());
-					}
-
 					const result = await response.json();
 
 					return result as { result: any } | { error: any };
@@ -50,18 +77,14 @@ export async function createModuleRunner(
 		},
 		{
 			async runInlinedModule(context, transformed, module) {
-				const codeDefinition = `'use strict';async (${Object.keys(context).join(
-					","
-				)})=>{{`;
-				const code = `${codeDefinition}${transformed}\n}}`;
+				const code = `"use strict";async (${Object.keys(context).join(",")})=>{${transformed}}`;
+
 				try {
 					const fn = env.__VITE_UNSAFE_EVAL__.eval(code, module.id);
 					await fn(...Object.values(context));
 					Object.freeze(context.__vite_ssr_exports__);
-				} catch (e) {
-					console.error("error running", module.id);
-					console.error(e instanceof Error ? e.stack : e);
-					throw e;
+				} catch (error) {
+					throw new Error(`Error running module "${module.id}"`);
 				}
 			},
 			async runExternalModule(filepath) {
@@ -69,6 +92,7 @@ export async function createModuleRunner(
 					const originalCloudflareWorkersModule = await import(
 						"cloudflare:workers"
 					);
+
 					return Object.seal({
 						...originalCloudflareWorkersModule,
 						env: stripInternalEnv(
@@ -77,24 +101,28 @@ export async function createModuleRunner(
 					});
 				}
 
-				filepath = filepath.replace(/^file:\/\//, "");
 				return import(filepath);
 			},
 		}
 	);
 }
 
-export async function getWorkerEntryExport(path: string, entrypoint: string) {
-	const module = await moduleRunner.import(path);
-	const entrypointValue =
+export async function getWorkerEntryExport(
+	workerEntryPath: string,
+	exportName: string
+) {
+	const module = await moduleRunner.import(workerEntryPath);
+	const exportValue =
 		typeof module === "object" &&
 		module !== null &&
-		entrypoint in module &&
-		module[entrypoint];
+		exportName in module &&
+		module[exportName];
 
-	if (!entrypointValue) {
-		throw new Error(`${path} does not export a ${entrypoint} entrypoint.`);
+	if (!exportValue) {
+		throw new Error(
+			`"${workerEntryPath}" does not define a "${exportName}" export.`
+		);
 	}
 
-	return entrypointValue;
+	return exportValue;
 }

@@ -2,7 +2,7 @@ import assert from "node:assert";
 import * as util from "node:util";
 import * as vite from "vite";
 import { isNodeCompat } from "./node-js-compat";
-import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "./shared";
+import { INIT_PATH, UNKNOWN_HOST, WORKER_ENTRY_PATH_HEADER } from "./shared";
 import { getOutputDirectory } from "./utils";
 import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
@@ -98,24 +98,18 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
 				headers: {
-					[VITE_DEV_METADATA_HEADER]: JSON.stringify({
-						entryPath: workerConfig.main,
-					}),
+					[WORKER_ENTRY_PATH_HEADER]: workerConfig.main,
 					upgrade: "websocket",
 				},
 			}
 		);
-
 		assert(
 			response.ok,
 			`Failed to initialize module runner, error: ${await response.text()}`
 		);
-
 		const webSocket = response.webSocket;
 		assert(webSocket, "Failed to establish WebSocket");
-
 		webSocket.accept();
-
 		this.#webSocketContainer.webSocket = webSocket;
 	}
 }
