@@ -1,6 +1,10 @@
 import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
+import { prepareContainerImagesForDev } from "@cloudflare/containers-shared/src/images";
+import { getDevContainerImageName } from "@cloudflare/containers-shared/src/knobs";
+import { type ContainerDevOptions } from "@cloudflare/containers-shared/src/types";
+import { generateContainerBuildId } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
@@ -89,12 +93,15 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const additionalModulePaths = new Set<string>();
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
+	const containerImageTagsSeen = new Set<string>();
 
 	return [
 		{
 			name: "vite-plugin-cloudflare",
 			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
 			sharedDuringBuild: true,
+			// Vite `config` Hook
+			// see https://vite.dev/guide/api-plugin.html#config
 			config(userConfig, env) {
 				resolvedPluginConfig = resolvePluginConfig(
 					pluginConfig,
@@ -171,6 +178,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// This resets the value when the dev server restarts
 				workersConfigsWarningShown = false;
 			},
+			// Vite `configResolved` Hook
+			// see https://vite.dev/guide/api-plugin.html#configresolved
 			configResolved(config) {
 				resolvedViteConfig = config;
 
@@ -314,6 +323,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return [];
 				}
 			},
+			// Vite `configureServer` Hook
+			// see https://vite.dev/guide/api-plugin.html#configureserver
 			async configureServer(viteDevServer) {
 				assertIsNotPreview(resolvedPluginConfig);
 
@@ -392,6 +403,27 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							}
 						};
 					}
+
+					// console.log("entryWorkerConfig", entryWorkerConfig);
+					if (
+						entryWorkerConfig.containers?.length &&
+						entryWorkerConfig.dev.enable_containers
+					) {
+						// Assemble container options and build if necessary
+						const containerOptions =
+							await getContainerOptions(entryWorkerConfig);
+						// TODO Carmen
+						const dockerPath = "docker";
+
+						// keep track of them so we can clean up later
+						for (const container of containerOptions ?? []) {
+							containerImageTagsSeen.add(container.imageTag);
+						}
+
+						if (containerOptions) {
+							await prepareContainerImagesForDev(dockerPath, containerOptions);
+						}
+					}
 				}
 
 				return () => {
@@ -436,6 +468,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					);
 				};
 			},
+			// Vite `configurePreviewServer` Hook
+			// see https://vite.dev/guide/api-plugin.html#configurepreviewserver
 			async configurePreviewServer(vitePreviewServer) {
 				assertIsPreview(resolvedPluginConfig);
 
@@ -904,5 +938,32 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		return resolvedPluginConfig.type === "workers"
 			? resolvedPluginConfig.workers[environmentName]
 			: undefined;
+	}
+
+	/**
+	 * @returns Container options suitable for building or pulling images,
+	 * with image tag set to well-known dev format, or undefined if
+	 * containers are not enabled or not configured.
+	 */
+	async function getContainerOptions(config: WorkerConfig) {
+		if (!config.containers?.length || config.dev.enable_containers === false) {
+			return undefined;
+		}
+
+		const containers: ContainerDevOptions[] = [];
+		for (const container of config.containers) {
+			containers.push({
+				image: container.image ?? container.configuration?.image,
+				imageTag: getDevContainerImageName(
+					container.class_name,
+					// TODO Carmen
+					generateContainerBuildId()
+				),
+				args: container.image_vars,
+				imageBuildContext: container.image_build_context,
+				class_name: container.class_name,
+			});
+		}
+		return containers;
 	}
 }
