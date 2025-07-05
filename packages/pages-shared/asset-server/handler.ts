@@ -642,6 +642,7 @@ export async function generateHandler<
 				isHTMLContentType(asset.contentType) &&
 				metadata.analytics?.version === ANALYTICS_VERSION
 			) {
+				response.headers.set("x-cf-pages-analytics", "1");
 				return new HTMLRewriter()
 					.on("body", {
 						element(e) {
