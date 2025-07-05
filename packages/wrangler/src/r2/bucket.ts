@@ -190,55 +190,68 @@ export const r2BucketListCommand = createCommand({
 });
 
 export const r2BucketInfoCommand = createCommand({
-	metadata: {
-		description: "Get information about an R2 bucket",
-		status: "stable",
-		owner: "Product: R2",
-	},
-	positionalArgs: ["bucket"],
-	args: {
-		bucket: {
-			describe: "The name of the bucket to delete",
-			type: "string",
-			demandOption: true,
-		},
-		jurisdiction: {
-			describe: "The jurisdiction where the bucket exists",
-			alias: "J",
-			requiresArg: true,
-			type: "string",
-		},
-	},
-	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
+  metadata: {
+    description: "Get information about an R2 bucket",
+    status: "stable",
+    owner: "Product: R2",
+  },
+  positionalArgs: ["bucket"],
+  args: {
+    bucket: {
+      describe: "The name of the bucket to retrieve info for",
+      type: "string",
+      demandOption: true,
+    },
+    jurisdiction: {
+      describe: "The jurisdiction where the bucket exists",
+      alias: "J",
+      requiresArg: true,
+      type: "string",
+    },
+    json: {
+      describe: "Return the bucket information as JSON",
+      type: "boolean",
+      default: false,
+    },
+  },
+  async handler(args, { config }) {
+    const accountId = await requireAuth(config);
 
-		logger.log(`Getting info for '${args.bucket}'...`);
+    if (!args.json) {
+      logger.log(`Getting info for '${args.bucket}'...`);
+    }
 
-		const bucketInfo = await getR2Bucket(
-			config,
-			accountId,
-			args.bucket,
-			args.jurisdiction
-		);
-		const bucketMetrics = await getR2BucketMetrics(
-			config,
-			accountId,
-			args.bucket,
-			args.jurisdiction
-		);
+    const bucketInfo = await getR2Bucket(
+      config,
+      accountId,
+      args.bucket,
+      args.jurisdiction
+    );
 
-		const output = {
-			name: bucketInfo.name,
-			created: bucketInfo.creation_date,
-			location: bucketInfo.location || "(unknown)",
-			default_storage_class: bucketInfo.storage_class || "(unknown)",
-			object_count: bucketMetrics.objectCount.toLocaleString(),
-			bucket_size: bucketMetrics.totalSize,
-		};
+    const bucketMetrics = await getR2BucketMetrics(
+      config,
+      accountId,
+      args.bucket,
+      args.jurisdiction
+    );
 
-		logger.log(formatLabelledValues(output));
-	},
+    const output = {
+      name: bucketInfo.name,
+      created: bucketInfo.creation_date,
+      location: bucketInfo.location || "(unknown)",
+      default_storage_class: bucketInfo.storage_class || "(unknown)",
+      object_count: bucketMetrics.objectCount.toLocaleString(),
+      bucket_size: bucketMetrics.totalSize,
+    };
+
+    if (args.json) {
+      console.log(JSON.stringify(output, null, 2));
+    } else {
+      logger.log(formatLabelledValues(output));
+    }
+  },
 });
+
 
 export const r2BucketDeleteCommand = createCommand({
 	metadata: {
