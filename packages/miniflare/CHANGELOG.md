@@ -1,5 +1,15 @@
 # miniflare
 
+## 4.20250617.6
+
+### Minor Changes
+
+- [#9796](https://github.com/cloudflare/workers-sdk/pull/9796) [`ba69586`](https://github.com/cloudflare/workers-sdk/commit/ba69586d8f8ad5ea68e42e4feb47994f4503c376) Thanks [@simonabadoiu](https://github.com/simonabadoiu)! - Browser Rendering local mode
+
+### Patch Changes
+
+- [#9855](https://github.com/cloudflare/workers-sdk/pull/9855) [`6f344bf`](https://github.com/cloudflare/workers-sdk/commit/6f344bfe3179477a75c61d504bf69ede05d103ab) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - use logger (and log level) from miniflare for asset metadata parsing/loading logs
+
 ## 4.20250617.5
 
 ### Minor Changes
