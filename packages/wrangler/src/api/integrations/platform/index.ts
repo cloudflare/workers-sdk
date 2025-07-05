@@ -177,7 +177,13 @@ async function getMiniflareOptionsFromConfig(args: {
 		remoteBindingsEnabled,
 	} = args;
 
-	const bindings = getBindings(config, options.environment, true, {});
+	const bindings = getBindings(
+		config,
+		options.environment,
+		true,
+		{},
+		remoteBindingsEnabled
+	);
 
 	if (config["durable_objects"]) {
 		const { localBindings } = partitionDurableObjectBindings(config);
@@ -206,7 +212,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			bindings,
 			workerDefinitions,
 			queueConsumers: undefined,
-			services: config.services,
+			services: bindings.services,
 			serviceBindings: {},
 			migrations: config.migrations,
 			imagesLocalMode: false,
