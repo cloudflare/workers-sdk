@@ -13,6 +13,12 @@ const MIN_NODE_VERSION = "20.0.0";
 declare const WRANGLER_PRERELEASE_LABEL: string;
 
 export async function printWranglerBanner(performUpdateCheck = true) {
+	const suppressBanner =
+		process.argv.includes("--json");
+
+	if (suppressBanner) {
+		return; // Don't show anything
+	}
 	let text =
 		typeof WRANGLER_PRERELEASE_LABEL === "undefined"
 			? ` ⛅️ wrangler ${wranglerVersion}`
