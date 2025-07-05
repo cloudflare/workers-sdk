@@ -451,7 +451,7 @@ async function getPagesAssetsFetcher(
 		// `wrangler` TypeScript project with the `global` augmentations. This
 		// relies on the fact that `require` is untyped.
 		//
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		const generateASSETSBinding = require("./miniflare-cli/assets").default;
 		return {
 			ASSETS: {

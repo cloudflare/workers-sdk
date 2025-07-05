@@ -411,7 +411,7 @@ function assetsPlugin(buildOutputDirectory: string | undefined): Plugin {
 				// TODO: Consider hashing the contents rather than using a unique identifier every time?
 				identifiers.set(directory, crypto.randomUUID());
 				if (!buildOutputDirectory) {
-					console.warn(
+					logger.warn(
 						"You're attempting to import static assets as part of your Pages Functions, but have not specified a directory in which to put them. You must use 'wrangler pages dev <directory>' rather than 'wrangler pages dev -- <command>' to import static assets in Functions."
 					);
 				}

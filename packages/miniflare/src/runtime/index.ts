@@ -85,7 +85,9 @@ function pipeOutput(stdout: Readable, stderr: Readable) {
 	// https://github.com/vadimdemedes/ink/blob/5d24ed8ada593a6c36ea5416f452158461e33ba5/readme.md#patchconsole
 	// Writing directly to `process.stdout/stderr` would result in graphical
 	// glitches.
+	// eslint-disable-next-line no-console
 	rl.createInterface(stdout).on("line", (data) => console.log(data));
+	// eslint-disable-next-line no-console
 	rl.createInterface(stderr).on("line", (data) => console.error(red(data)));
 	// stdout.pipe(process.stdout);
 	// stderr.pipe(process.stderr);

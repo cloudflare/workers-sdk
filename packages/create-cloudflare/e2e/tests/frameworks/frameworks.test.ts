@@ -143,6 +143,7 @@ describe
 
 						await verifyTypes(testConfig, frameworkConfig, project.path);
 					} catch (e) {
+						// eslint-disable-next-line no-console
 						console.error("ERROR", e);
 						expect.fail(
 							"Failed due to an exception while running C3. See logs for more details",

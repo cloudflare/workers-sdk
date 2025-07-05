@@ -916,7 +916,7 @@ export function generatePreviewAlias(scriptName: string): string | undefined {
 			branchName = execSync(`git rev-parse --abbrev-ref HEAD`)
 				.toString()
 				.trim();
-		} catch (err) {
+		} catch {
 			return warnAndExit();
 		}
 	}

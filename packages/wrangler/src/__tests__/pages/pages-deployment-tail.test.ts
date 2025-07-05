@@ -440,7 +440,7 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
-			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+			expect(JSON.parse(std.out)).toEqual(deserializeToJson(serializedMessage));
 			await api.closeHelper();
 		});
 
@@ -455,7 +455,7 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
-			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+			expect(JSON.parse(std.out)).toEqual(deserializeToJson(serializedMessage));
 			await api.closeHelper();
 		});
 
@@ -470,7 +470,7 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
-			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+			expect(JSON.parse(std.out)).toEqual(deserializeToJson(serializedMessage));
 			await api.closeHelper();
 		});
 
@@ -485,7 +485,7 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
-			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+			expect(JSON.parse(std.out)).toEqual(deserializeToJson(serializedMessage));
 			await api.closeHelper();
 		});
 
@@ -500,7 +500,7 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
-			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+			expect(JSON.parse(std.out)).toEqual(deserializeToJson(serializedMessage));
 			await api.closeHelper();
 		});
 
@@ -734,7 +734,7 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
-			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+			expect(JSON.parse(std.out)).toEqual(deserializeToJson(serializedMessage));
 			await api.closeHelper();
 		});
 
@@ -849,14 +849,13 @@ function isRequest(event: TailEventMessageType): event is RequestEvent {
 
 /**
  * Similarly, we need to deserialize from a raw buffer instead
- * of just JSON.parsing a raw string. This deserializer also then
- * re-stringifies with some spacing, the same way wrangler tail does.
+ * of just JSON.parsing a raw string.
  *
  * @param message a buffer of data received from the websocket
- * @returns a string ready to be printed to the terminal or compared against
+ * @returns a JSON object ready to be compared against
  */
-function deserializeToJson(message: WebSocket.RawData): string {
-	return JSON.stringify(JSON.parse(message.toString()), null, 2);
+function deserializeToJson(message: WebSocket.RawData) {
+	return JSON.parse(message.toString());
 }
 
 /**

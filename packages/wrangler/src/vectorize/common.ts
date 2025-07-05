@@ -18,7 +18,7 @@ export async function isValidFile(path: string): Promise<boolean> {
 
 		const fileStat = await stat(path);
 		return fileStat.isFile() && fileStat.size > 0;
-	} catch (err) {
+	} catch {
 		return false;
 	}
 }
@@ -45,7 +45,7 @@ export async function* getBatchFromFile(
 		if (batch.length > 0) {
 			yield batch;
 		}
-	} catch (error) {
+	} catch {
 		logger.error(
 			`🚨 Encountered an error while reading batches from the file.`
 		);

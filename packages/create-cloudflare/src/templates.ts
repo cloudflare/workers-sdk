@@ -815,7 +815,7 @@ export const downloadRemoteTemplate = async (
 		await emitter.clone(tmpDir);
 
 		return tmpDir;
-	} catch (error) {
+	} catch {
 		updateStatus(`${brandColor("template")} ${dim("failed")}`);
 		throw new Error(`Failed to clone remote template: ${src}`);
 	}

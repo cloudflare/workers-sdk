@@ -92,36 +92,39 @@ export function logConsoleMessage(
 							break;
 						case "weakmap":
 						case "map":
-							ro.preview.entries === undefined
-								? args.push("{}")
-								: args.push(
-										"{\n" +
-											ro.preview.entries
-												.map(({ key, value }) => {
-													return `  ${key?.description ?? "<unknown>"} => ${
-														value.description
-													}`;
-												})
-												.join(",\n") +
-											(ro.preview.overflow ? "\n  ..." : "") +
-											"\n}"
-									);
-
+							if (ro.preview.entries === undefined) {
+								args.push("{}");
+							} else {
+								args.push(
+									"{\n" +
+										ro.preview.entries
+											.map(({ key, value }) => {
+												return `  ${key?.description ?? "<unknown>"} => ${
+													value.description
+												}`;
+											})
+											.join(",\n") +
+										(ro.preview.overflow ? "\n  ..." : "") +
+										"\n}"
+								);
+							}
 							break;
 						case "weakset":
 						case "set":
-							ro.preview.entries === undefined
-								? args.push("{}")
-								: args.push(
-										"{ " +
-											ro.preview.entries
-												.map(({ value }) => {
-													return `${value.description}`;
-												})
-												.join(", ") +
-											(ro.preview.overflow ? ", ..." : "") +
-											" }"
-									);
+							if (ro.preview.entries === undefined) {
+								args.push("{}");
+							} else {
+								args.push(
+									"{ " +
+										ro.preview.entries
+											.map(({ value }) => {
+												return `${value.description}`;
+											})
+											.join(", ") +
+										(ro.preview.overflow ? ", ..." : "") +
+										" }"
+								);
+							}
 							break;
 						case "regexp":
 							break;

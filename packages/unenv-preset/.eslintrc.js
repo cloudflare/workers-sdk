@@ -1,5 +1,5 @@
 module.exports = {
 	root: true,
-	extends: ["@cloudflare/eslint-config-worker/react"],
+	extends: ["plugin:turbo/recommended", "@cloudflare/eslint-config-worker"],
 	ignorePatterns: ["/dist", "/runtime"],
 };

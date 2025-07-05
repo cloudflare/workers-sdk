@@ -76,7 +76,7 @@ const makeSentry10Transport = (options: BaseTransportOptions) => {
 				};
 			}
 		} catch (err) {
-			console.log(err);
+			logger.error(err);
 
 			return rejectedSyncPromise(err);
 		}

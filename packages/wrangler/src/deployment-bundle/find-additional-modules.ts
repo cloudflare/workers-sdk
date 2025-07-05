@@ -104,7 +104,7 @@ export async function findAdditionalModules(
 				path.resolve(entry.projectRoot, "requirements.txt"),
 				"utf-8"
 			);
-		} catch (e) {
+		} catch {
 			// We don't care if a requirements.txt isn't found
 			logger.debug(
 				"Python entrypoint detected, but no requirements.txt file found."

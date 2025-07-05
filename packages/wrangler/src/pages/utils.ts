@@ -19,7 +19,7 @@ export function isUrl(maybeUrl?: string): maybeUrl is string {
 	try {
 		new URL(maybeUrl);
 		return true;
-	} catch (e) {
+	} catch {
 		return false;
 	}
 }

@@ -316,7 +316,7 @@ export interface R2UploadPartResponse {
 
 export type R2CompleteMultipartUploadResponse = R2PutResponse;
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface R2AbortMultipartUploadResponse {}
 
 export interface R2ListResponse {
@@ -326,5 +326,5 @@ export interface R2ListResponse {
 	delimitedPrefixes: string[];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface R2DeleteResponse {}

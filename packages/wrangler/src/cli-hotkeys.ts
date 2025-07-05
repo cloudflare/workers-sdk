@@ -103,6 +103,7 @@ export default function (
 	function printInstructions() {
 		const bottomFloat = formatInstructions();
 		if (bottomFloat) {
+			// eslint-disable-next-line no-console
 			console.log(bottomFloat);
 		}
 	}

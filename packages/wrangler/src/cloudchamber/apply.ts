@@ -428,7 +428,7 @@ async function resolveImageName(
 	let url: URL;
 	try {
 		url = new URL(`http://${image}`);
-	} catch (_) {
+	} catch {
 		return image;
 	}
 

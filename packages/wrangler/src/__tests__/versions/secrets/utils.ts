@@ -149,7 +149,9 @@ export function mockPostVersion(
 					formData.get("metadata") as string
 				) as WorkerMetadata;
 
-				validate && validate(metadata, formData);
+				if (validate) {
+					validate(metadata, formData);
+				}
 
 				return HttpResponse.json(
 					createFetchResult({

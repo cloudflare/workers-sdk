@@ -81,7 +81,7 @@ export const vectorizeQueryCommand = createCommand({
 			coerce: (jsonStr: string): VectorizeQueryOptions["filter"] => {
 				try {
 					return JSON.parse(jsonStr);
-				} catch (_) {
+				} catch {
 					logger.warn(
 						"🚨 Invalid query filter. Please use the recommended format."
 					);
@@ -230,7 +230,7 @@ export function validateQueryFilter(
 			// Empty result
 			return null;
 		}
-	} catch (error) {
+	} catch {
 		// Error parsing
 		return null;
 	}
