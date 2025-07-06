@@ -509,6 +509,148 @@ test("InspectorProxy: should allow debugging multiple workers", async (t) => {
 	t.is(await res.text(), "worker-a -> worker-b");
 });
 
+test("InspectorProxy: should allow debugging workers created via setOptions", async (t) => {
+	const mf = new Miniflare({
+		inspectorPort: 0,
+		workers: [
+			{
+				name: "worker-b",
+				script: `
+						export default {
+							fetch(request, env, ctx) {
+								debugger;
+								return new Response("worker-b");
+							}
+						}
+					`,
+				modules: true,
+				unsafeInspectorProxy: true,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	await mf.ready;
+
+	mf.setOptions({
+		inspectorPort: 0,
+		workers: [
+			{
+				name: "worker-a",
+				script: `
+						export default {
+							async fetch(request, env, ctx) {
+								debugger;
+								const workerBText = await env['WORKER_B'].fetch(request).then(resp => resp.text());
+								debugger;
+								return new Response(\`worker-a -> \${workerBText}\`);
+							}
+						}
+					`,
+				modules: true,
+				serviceBindings: {
+					WORKER_B: "worker-b",
+				},
+				unsafeInspectorProxy: true,
+			},
+			{
+				name: "worker-b",
+				script: `
+						export default {
+							fetch(request, env, ctx) {
+								debugger;
+								return new Response("worker-b");
+							}
+						}
+					`,
+				modules: true,
+				unsafeInspectorProxy: true,
+			},
+		],
+	});
+
+	const port = await getInspectorPortReady(mf);
+
+	// Connect inspector WebSockets
+	const webSockets = {
+		["worker-a"]: new WebSocket(`ws://localhost:${port}/worker-a`),
+		["worker-b"]: new WebSocket(`ws://localhost:${port}/worker-b`),
+	};
+	const messages = {
+		["worker-a"]: events.on(webSockets["worker-a"], "message"),
+		["worker-b"]: events.on(webSockets["worker-b"], "message"),
+	};
+
+	type Worker = keyof typeof webSockets;
+
+	async function nextMessage(worker: Worker) {
+		const messageEvent = (await messages[worker].next()).value;
+		return JSON.parse(messageEvent[0].toString());
+	}
+
+	await Promise.all([
+		events.once(webSockets["worker-a"], "open"),
+		events.once(webSockets["worker-b"], "open"),
+	]);
+
+	Object.values(webSockets).forEach((ws) =>
+		ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }))
+	);
+
+	const waitForScriptParsed = async (worker: Worker) => {
+		t.like(await nextMessage(worker), {
+			method: "Debugger.scriptParsed",
+		});
+
+		t.like(await nextMessage(worker), { id: 0 });
+	};
+
+	await waitForScriptParsed("worker-a");
+	await waitForScriptParsed("worker-b");
+
+	// Send request and hit `debugger;` statements
+	const resPromise = mf.dispatchFetch("http://localhost");
+	t.like(await nextMessage("worker-a"), { method: "Debugger.paused" });
+
+	const resumeWorker = async (worker: Worker) => {
+		const id = Math.floor(Math.random() * 50_000);
+		webSockets[worker].send(JSON.stringify({ id, method: "Debugger.resume" }));
+		t.like(await nextMessage(worker), { id });
+		t.like(await nextMessage(worker), { method: "Debugger.resumed" });
+	};
+
+	// Resume execution (first worker-a debugger)
+	await resumeWorker("worker-a");
+
+	t.like(await nextMessage("worker-b"), { method: "Debugger.paused" });
+
+	// Resume execution (worker-b debugger)
+	await resumeWorker("worker-b");
+
+	// There are a few network messages send due to the communication from worker-b back
+	// to worker-a, these are not too relevant to test, so we just consume them until we
+	// hit the next worker-a debugger
+	while (true) {
+		const nextMessageWorkerA = await nextMessage("worker-a");
+		const messageMethod = nextMessageWorkerA.method;
+		if (
+			typeof messageMethod === "string" &&
+			messageMethod.startsWith("Network.")
+		) {
+			continue;
+		}
+
+		t.like(nextMessageWorkerA, { method: "Debugger.paused" });
+		break;
+	}
+
+	// Resume execution (second worker-a debugger)
+	await resumeWorker("worker-a");
+
+	const res = await resPromise;
+	t.is(await res.text(), "worker-a -> worker-b");
+});
+
 // The runtime inspector can send messages larger than 1MB limit websocket message permitted by UserWorkers.
 // In the real-world, this is encountered when debugging large source files (source maps)
 // or inspecting a variable that serializes to a large string.
