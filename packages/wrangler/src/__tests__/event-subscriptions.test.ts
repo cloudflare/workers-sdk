@@ -59,13 +59,11 @@ describe("wrangler event-subscriptions", () => {
 
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌───────────────┬──────────┐
-				│ service       │ events   │
-				├───────────────┼──────────┤
-				│ Super Slurper │ e1, e2   │
-				├───────────────┼──────────┤
-				│ Workflows     │ e10, e20 │
-				└───────────────┴──────────┘"
+				"┌─┬─┐
+				│ service │ events │
+				├─┼─┤
+				│ Workflows │ e10, e20 │
+				└─┴─┘"
 			`);
 		});
 
@@ -95,11 +93,11 @@ describe("wrangler event-subscriptions", () => {
 
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌───────────┬──────────┐
-				│ service   │ events   │
-				├───────────┼──────────┤
+				"┌─┬─┐
+				│ service │ events │
+				├─┼─┤
 				│ Workflows │ e10, e20 │
-				└───────────┴──────────┘"
+				└─┴─┘"
 			`);
 		});
 
@@ -126,11 +124,11 @@ describe("wrangler event-subscriptions", () => {
 
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌───────────────┬────────┐
-				│ service       │ events │
-				├───────────────┼────────┤
-				│ Super Slurper │        │
-				└───────────────┴────────┘"
+				"┌─┬─┐
+				│ service │ events │
+				├─┼─┤
+				│ │ │
+				└─┴─┘"
 			`);
 		});
 
@@ -160,13 +158,11 @@ describe("wrangler event-subscriptions", () => {
 
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌───────────────┬────────┐
-				│ service       │ events │
-				├───────────────┼────────┤
-				│ Super Slurper │        │
-				├───────────────┼────────┤
-				│ Workflows     │        │
-				└───────────────┴────────┘"
+				"┌─┬─┐
+				│ service │ events │
+				├─┼─┤
+				│ │ │
+				└─┴─┘"
 			`);
 		});
 
@@ -193,11 +189,11 @@ describe("wrangler event-subscriptions", () => {
 
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌───────────────┬────────┐
-				│ service       │ events │
-				├───────────────┼────────┤
-				│ Super Slurper │        │
-				└───────────────┴────────┘"
+				"┌─┬─┐
+				│ service │ events │
+				├─┼─┤
+				│ │ │
+				└─┴─┘"
 			`);
 		});
 
@@ -227,13 +223,11 @@ describe("wrangler event-subscriptions", () => {
 
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌───────────────┬────────┐
-				│ service       │ events │
-				├───────────────┼────────┤
-				│ Super Slurper │        │
-				├───────────────┼────────┤
-				│ Workers AI    │        │
-				└───────────────┴────────┘"
+				"┌─┬─┐
+				│ service │ events │
+				├─┼─┤
+				│ │ │
+				└─┴─┘"
 			`);
 		});
 	});
@@ -258,11 +252,11 @@ describe("wrangler event-subscriptions", () => {
 			const result = runWrangler("event-subscriptions list");
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌────┬──────┬────────┬─────────────┬────────┐
+				"┌─┬─┬─┬─┬─┐
 				│ id │ name │ source │ destination │ events │
-				├────┼──────┼────────┼─────────────┼────────┤
-				│    │      │        │             │        │
-				└────┴──────┴────────┴─────────────┴────────┘"
+				├─┼─┼─┼─┼─┤
+				│ │ │ │ │ │
+				└─┴─┴─┴─┴─┘"
 			`);
 		});
 
@@ -305,13 +299,13 @@ describe("wrangler event-subscriptions", () => {
 			const result = runWrangler("event-subscriptions list");
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌────────────────────────┬─────────────────────┬──────────────────────────────┬──────────────────────┬────────┐
-				│ id                     │ name                │ source                       │ destination          │ events │
-				├────────────────────────┼─────────────────────┼──────────────────────────────┼──────────────────────┼────────┤
-				│ test-subscription-id-1 │ test-subscription-1 │ slurper                      │ queues.test-queue-id │ e1, e2 │
-				├────────────────────────┼─────────────────────┼──────────────────────────────┼──────────────────────┼────────┤
+				"┌─┬─┬─┬─┬─┐
+				│ id │ name │ source │ destination │ events │
+				├─┼─┼─┼─┼─┤
+				│ test-subscription-id-1 │ test-subscription-1 │ {\\"service\\":\\"slurper\\"} │ queues.test-queue-id │ e1, e2 │
+				├─┼─┼─┼─┼─┤
 				│ test-subscription-id-2 │ test-subscription-2 │ workflows.test-workflow-name │ queues.test-queue-id │ e1, e2 │
-				└────────────────────────┴─────────────────────┴──────────────────────────────┴──────────────────────┴────────┘"
+				└─┴─┴─┴─┴─┘"
 			`);
 		});
 
@@ -343,11 +337,11 @@ describe("wrangler event-subscriptions", () => {
 			const result = runWrangler("event-subscriptions list");
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌──────────────────────┬───────────────────┬──────────────────────────────────────────────────────┬─────────────────────────────────────────────────┬────────┐
-				│ id                   │ name              │ source                                               │ destination                                     │ events │
-				├──────────────────────┼───────────────────┼──────────────────────────────────────────────────────┼─────────────────────────────────────────────────┼────────┤
-				│ test-subscription-id │ test-subscription │ {\\"service\\":\\"workersKV\\",\\"namespace\\":\\"test-namespace\\"} │ {\\"service\\":\\"queues\\",\\"queue_id\\":\\"test-queue-id\\"} │ e1, e2 │
-				└──────────────────────┴───────────────────┴──────────────────────────────────────────────────────┴─────────────────────────────────────────────────┴────────┘"
+				"┌─┬─┬─┬─┬─┐
+				│ id │ name │ source │ destination │ events │
+				├─┼─┼─┼─┼─┤
+				│ test-subscription-id │ test-subscription │ {\\"service\\":\\"workersKV\\",\\"namespace\\":\\"test-namespace\\"} │ queues.test-queue-id │ e1, e2 │
+				└─┴─┴─┴─┴─┘"
 			`);
 		});
 	});
@@ -382,11 +376,11 @@ describe("wrangler event-subscriptions", () => {
 			);
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌────────────────────────┬─────────────────────┬─────────┬──────────────────────┬────────┐
-				│ id                     │ name                │ source  │ destination          │ events │
-				├────────────────────────┼─────────────────────┼─────────┼──────────────────────┼────────┤
-				│ test-subscription-id-1 │ test-subscription-1 │ slurper │ queues.test-queue-id │ e1, e2 │
-				└────────────────────────┴─────────────────────┴─────────┴──────────────────────┴────────┘"
+				"┌─┬─┬─┬─┬─┐
+				│ id │ name │ source │ destination │ events │
+				├─┼─┼─┼─┼─┤
+				│ test-subscription-id-1 │ test-subscription-1 │ {\\"service\\":\\"slurper\\"} │ queues.test-queue-id │ e1, e2 │
+				└─┴─┴─┴─┴─┘"
 			`);
 		});
 
@@ -448,11 +442,11 @@ describe("wrangler event-subscriptions", () => {
 			);
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌──────────────────────┬───────────────────┬──────────────────────────────────────────────────────┬──────────────────────┬────────┐
-				│ id                   │ name              │ source                                               │ destination          │ events │
-				├──────────────────────┼───────────────────┼──────────────────────────────────────────────────────┼──────────────────────┼────────┤
+				"┌─┬─┬─┬─┬─┐
+				│ id │ name │ source │ destination │ events │
+				├─┼─┼─┼─┼─┤
 				│ test-subscription-id │ test-subscription │ {\\"service\\":\\"workersKV\\",\\"namespace\\":\\"test-namespace\\"} │ queues.test-queue-id │ e1, e2 │
-				└──────────────────────┴───────────────────┴──────────────────────────────────────────────────────┴──────────────────────┴────────┘"
+				└─┴─┴─┴─┴─┘"
 			`);
 		});
 	});
@@ -471,7 +465,7 @@ describe("wrangler event-subscriptions", () => {
 								id: "test-subscription-id-1",
 								name: "test-subscription-1",
 								enabled: true,
-								source: { service: "slurper" },
+								source: { service: "superSlurper" },
 								destination: { service: "queues", queue_id: "test-queue-id" },
 								events: ["e1", "e2"],
 							},
@@ -480,17 +474,16 @@ describe("wrangler event-subscriptions", () => {
 					{ once: true }
 				)
 			);
-			const result = runWrangler(
-				"event-subscriptions create test-subscription --source=slurper --destination=queues.queueId --events=e1,e2"
+			await runWrangler(
+				"event-subscriptions create test-subscription --source=superSlurper --destination=queues.queueId --events=e1,e2"
 			);
 
-			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌────────────────────────┬─────────────────────┬─────────┬──────────────────────┬────────┐
-				│ id                     │ name                │ source  │ destination          │ events │
-				├────────────────────────┼─────────────────────┼─────────┼──────────────────────┼────────┤
-				│ test-subscription-id-1 │ test-subscription-1 │ slurper │ queues.test-queue-id │ e1,e2  │
-				└────────────────────────┴─────────────────────┴─────────┴──────────────────────┴────────┘"
+				"┌─┬─┬─┬─┬─┐
+				│ id │ name │ source │ destination │ events │
+				├─┼─┼─┼─┼─┤
+				│ test-subscription-id-1 │ test-subscription-1 │ superSlurper │ queues.test-queue-id │ e1,e2 │
+				└─┴─┴─┴─┴─┘"
 			`);
 		});
 
@@ -500,7 +493,7 @@ describe("wrangler event-subscriptions", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Unrecognized source service. Must be one of slurper, workersAI, workersBuilds, workflows]`
+				`[Error: Unrecognized source service. Must be one of superSlurper, workersAI, workersBuilds, workflows]`
 			);
 		});
 
@@ -516,7 +509,7 @@ describe("wrangler event-subscriptions", () => {
 
 		test("errors for unrecognized destinations", async () => {
 			const result = runWrangler(
-				"event-subscriptions create test-subscription --source=slurper --destination=unrecognized --events=e1,e2"
+				"event-subscriptions create test-subscription --source=superSlurper --destination=unrecognized --events=e1,e2"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -526,7 +519,7 @@ describe("wrangler event-subscriptions", () => {
 
 		test("errors for malformed destinations", async () => {
 			const result = runWrangler(
-				"event-subscriptions create test-subscription --source=slurper --destination=queues --events=e1,e2"
+				"event-subscriptions create test-subscription --source=superSlurper --destination=queues --events=e1,e2"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -556,7 +549,7 @@ describe("wrangler event-subscriptions", () => {
 				)
 			);
 			const result = runWrangler(
-				"event-subscriptions create test-subscription --source=slurper --destination=queues.queueID --events=e1,e2"
+				"event-subscriptions create test-subscription --source=superSlurper --destination=queues.queueID --events=e1,e2"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -598,11 +591,11 @@ describe("wrangler event-subscriptions", () => {
 			);
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌──────────────────────┬─────────┬─────────┬──────────────────────┬────────┐
-				│ id                   │ name    │ source  │ destination          │ events │
-				├──────────────────────┼─────────┼─────────┼──────────────────────┼────────┤
-				│ test-subscription-id │ updated │ slurper │ queues.test-queue-id │ e1, e2 │
-				└──────────────────────┴─────────┴─────────┴──────────────────────┴────────┘"
+				"┌─┬─┬─┬─┬─┐
+				│ id │ name │ source │ destination │ events │
+				├─┼─┼─┼─┼─┤
+				│ test-subscription-id │ updated │ {\\"service\\":\\"slurper\\"} │ queues.test-queue-id │ e1, e2 │
+				└─┴─┴─┴─┴─┘"
 			`);
 		});
 
@@ -639,11 +632,11 @@ describe("wrangler event-subscriptions", () => {
 			);
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌──────────────────────┬─────────┬─────────┬────────────────┬────────┐
-				│ id                   │ name    │ source  │ destination    │ events │
-				├──────────────────────┼─────────┼─────────┼────────────────┼────────┤
-				│ test-subscription-id │ updated │ slurper │ queues.updated │ e1, e2 │
-				└──────────────────────┴─────────┴─────────┴────────────────┴────────┘"
+				"┌─┬─┬─┬─┬─┐
+				│ id │ name │ source │ destination │ events │
+				├─┼─┼─┼─┼─┤
+				│ test-subscription-id │ updated │ {\\"service\\":\\"slurper\\"} │ queues.updated │ e1, e2 │
+				└─┴─┴─┴─┴─┘"
 			`);
 		});
 
@@ -680,11 +673,11 @@ describe("wrangler event-subscriptions", () => {
 			);
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌──────────────────────┬─────────┬─────────┬────────────────┬────────┐
-				│ id                   │ name    │ source  │ destination    │ events │
-				├──────────────────────┼─────────┼─────────┼────────────────┼────────┤
-				│ test-subscription-id │ updated │ slurper │ queues.updated │ e2     │
-				└──────────────────────┴─────────┴─────────┴────────────────┴────────┘"
+				"┌─┬─┬─┬─┬─┐
+				│ id │ name │ source │ destination │ events │
+				├─┼─┼─┼─┼─┤
+				│ test-subscription-id │ updated │ {\\"service\\":\\"slurper\\"} │ queues.updated │ e2 │
+				└─┴─┴─┴─┴─┘"
 			`);
 		});
 

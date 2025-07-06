@@ -41,6 +41,7 @@ export const eventSubscriptionsBrowseCommand = createCommand({
 		const accountId = await requireAuth(ctx.config);
 
 		let events = await ctx.fetchResult<EventSubscriptionEventSpec[]>(
+			ctx.config,
 			`/accounts/${accountId}/event_subscriptions/events`
 		);
 
@@ -87,6 +88,7 @@ export const eventSubscriptionsListCommand = createCommand({
 		const accountId = await requireAuth(ctx.config);
 
 		const res = await ctx.fetchResult<EventSubscription[]>(
+			ctx.config,
 			`/accounts/${accountId}/event_subscriptions/subscriptions?per_page=100`
 		);
 
@@ -143,6 +145,7 @@ export const eventSubscriptionsGetCommand = createCommand({
 		const { id } = args;
 
 		const subscription = await ctx.fetchResult<EventSubscription>(
+			ctx.config,
 			`/accounts/${accountId}/event_subscriptions/subscriptions/${id}`
 		);
 
@@ -229,6 +232,7 @@ export const eventSubscriptionsCreateCommand = createCommand({
 		const destination = { service: "queues", queue_id: destinationQueueId };
 
 		const subscription = await ctx.fetchResult<EventSubscription>(
+			ctx.config,
 			`/accounts/${accountId}/event_subscriptions/subscriptions`,
 			{
 				method: "POST",
@@ -256,7 +260,7 @@ export const eventSubscriptionsCreateCommand = createCommand({
 export const eventSubscriptionsUpdateCommand = createCommand({
 	metadata: {
 		owner: "Product: Queues",
-		status: "open-beta",
+		status: "private-beta",
 		description: "Update an event subscription",
 	},
 
@@ -303,6 +307,7 @@ export const eventSubscriptionsUpdateCommand = createCommand({
 		}
 
 		const subscription = await ctx.fetchResult<EventSubscription>(
+			ctx.config,
 			`/accounts/${accountId}/event_subscriptions/subscriptions/${id}`,
 			{
 				method: "PATCH",
@@ -358,6 +363,7 @@ export const eventSubscriptionsDeleteCommand = createCommand({
 
 		const { id } = args;
 		await ctx.fetchResult<EventSubscription>(
+			ctx.config,
 			`/accounts/${accountId}/event_subscriptions/subscriptions/${id}`,
 			{ method: "DELETE" }
 		);
