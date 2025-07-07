@@ -1432,6 +1432,14 @@ describe("hyperdrive commands", () => {
 			}"
 		`);
 	});
+
+	it("should error when creating hyperdrive with conflicting caching options", async () => {
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb' --caching-disabled --max-age=30"
+			)
+		).rejects.toThrow("Cannot set --max-age or --swr when caching is disabled with --caching-disabled");
+	});
 });
 
 describe("getCacheOptionsFromArgs", () => {
@@ -1486,6 +1494,53 @@ describe("getCacheOptionsFromArgs", () => {
 	});
 
 	it("should return combined caching options when multiple options are provided", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		const result = getCacheOptionsFromArgs({
+			cachingDisabled: false,
+			maxAge: 30,
+			swr: 15,
+		} as any);
+		expect(result).toEqual({
+			disabled: false,
+			max_age: 30,
+			stale_while_revalidate: 15,
+		});
+	});
+
+	it("should throw error when caching is disabled but max-age is provided", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		expect(() => {
+			getCacheOptionsFromArgs({
+				cachingDisabled: true,
+				maxAge: 30,
+				swr: undefined,
+			} as any);
+		}).toThrow("Cannot set --max-age or --swr when caching is disabled with --caching-disabled");
+	});
+
+	it("should throw error when caching is disabled but swr is provided", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		expect(() => {
+			getCacheOptionsFromArgs({
+				cachingDisabled: true,
+				maxAge: undefined,
+				swr: 15,
+			} as any);
+		}).toThrow("Cannot set --max-age or --swr when caching is disabled with --caching-disabled");
+	});
+
+	it("should throw error when caching is disabled but both max-age and swr are provided", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		expect(() => {
+			getCacheOptionsFromArgs({
+				cachingDisabled: true,
+				maxAge: 30,
+				swr: 15,
+			} as any);
+		}).toThrow("Cannot set --max-age or --swr when caching is disabled with --caching-disabled");
+	});
+
+	it("should not throw error when caching is explicitly enabled with max-age and swr", async () => {
 		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
 		const result = getCacheOptionsFromArgs({
 			cachingDisabled: false,

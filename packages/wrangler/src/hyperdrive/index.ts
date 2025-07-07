@@ -305,6 +305,13 @@ export function getCacheOptionsFromArgs(
 		caching.stale_while_revalidate = args.swr;
 	}
 
+	// Validate for conflicting options
+	if (caching.disabled === true && (caching.max_age !== undefined || caching.stale_while_revalidate !== undefined)) {
+		throw new UserError(
+			"Cannot set --max-age or --swr when caching is disabled with --caching-disabled"
+		);
+	}
+
 	if (Object.keys(caching).length === 0) {
 		return undefined;
 	} else {
