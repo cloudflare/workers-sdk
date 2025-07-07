@@ -103,10 +103,10 @@ function isValidKey(
 }
 
 // checks a given InstanceType against account limits
-export async function checkInstanceTypeAgainstLimits(
+export function checkInstanceTypeAgainstLimits(
 	instanceType: InstanceType | string | undefined,
 	account: CompleteAccountCustomer
-): Promise<void> {
+) {
 	if (instanceType === undefined || !isValidKey(instanceType)) {
 		return;
 	}
