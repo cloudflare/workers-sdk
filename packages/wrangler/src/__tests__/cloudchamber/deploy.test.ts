@@ -319,6 +319,94 @@ describe("wrangler deploy with containers", () => {
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
 
+	it("should resolve dockerfile path relative to wrangler config path", async () => {
+		mockGetVersion("Galaxy-Class");
+		vi.mocked(spawn)
+			.mockImplementationOnce(mockDockerInfo())
+			.mockImplementationOnce(
+				mockDockerBuild(
+					"my-container",
+					"Galaxy",
+					// we pipe the dockerfile in, so a successful test should just show that the dockerfile content has been successfully read and matches what was written (FROM alpine)
+					"FROM alpine",
+					// note that the cwd for the test is not the same as the cwd that the wrangler command is running in
+					// fortunately we are using an absolute path
+					process.cwd()
+				)
+			)
+			.mockImplementationOnce(mockDockerImageInspect("my-container", "Galaxy"))
+			.mockImplementationOnce(mockDockerLogin("mockpassword"))
+			.mockImplementationOnce(mockDockerManifestInspect("my-container", true))
+			.mockImplementationOnce(mockDockerPush("my-container", "Galaxy"));
+
+		fs.mkdirSync("nested/src", { recursive: true });
+		fs.writeFileSync("Dockerfile", "FROM alpine");
+		fs.writeFileSync(
+			"nested/src/index.js",
+			`export class ExampleDurableObject {}; export default{};`
+		);
+
+		writeWranglerConfig(
+			{
+				main: "./src/index.js",
+				durable_objects: {
+					bindings: [
+						{
+							name: "EXAMPLE_DO_BINDING",
+							class_name: "ExampleDurableObject",
+						},
+					],
+				},
+				containers: [
+					{
+						name: "my-container",
+						instances: 10,
+						class_name: "ExampleDurableObject",
+						image: "../Dockerfile",
+					},
+				],
+				migrations: [
+					{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+				],
+			},
+			"nested/wrangler.json"
+		);
+
+		mockGetApplications([]);
+		mockGenerateImageRegistryCredentials();
+
+		mockCreateApplication({
+			name: "my-container",
+			instances: 10,
+			durable_objects: { namespace_id: "1" },
+			configuration: {
+				image:
+					getCloudflareContainerRegistry() +
+					"/some-account-id/my-container:Galaxy",
+			},
+		});
+
+		await runWrangler("deploy -c nested/wrangler.json");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your Worker has access to the following bindings:
+			Binding                                            Resource
+			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+			Uploaded test-name (TIMINGS)
+			Building image my-container:Galaxy
+			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+	});
+
 	it("should error when no scope for containers", async () => {
 		mockContainersAccount([]);
 		writeWranglerConfig({
