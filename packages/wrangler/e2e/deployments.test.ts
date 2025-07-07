@@ -1,7 +1,15 @@
 import assert from "node:assert";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -24,6 +32,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		const workerName = generateResourceName();
 		const helper = new WranglerE2ETestHelper();
 		let deployedUrl: string;
+
+		afterAll(async () => {
+			// clean up user Worker after all tests
+			await helper.run(`wrangler delete`);
+		});
 
 		it("deploys a Worker", async () => {
 			await helper.seed({
