@@ -1,3 +1,4 @@
+import { strict as assert } from "node:assert";
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
@@ -285,14 +286,7 @@ export const kvNamespaceRenameCommand = createCommand({
 			namespaceId = namespace.id;
 		}
 
-		if (!namespaceId) {
-			throw new UserError("Unable to determine namespace ID");
-		}
-
-		if (!args.newName) {
-			throw new UserError("new-name is required");
-		}
-
+		assert(namespaceId, "namespaceId should be defined");
 		logger.log(`Renaming KV namespace ${namespaceId} to "${args.newName}".`);
 		const updatedNamespace = await updateKVNamespace(
 			config,
@@ -303,9 +297,6 @@ export const kvNamespaceRenameCommand = createCommand({
 		logger.log(
 			`✨ Successfully renamed namespace to "${updatedNamespace.title}"`
 		);
-		metrics.sendMetricsEvent("rename kv namespace", {
-			sendMetrics: config.send_metrics,
-		});
 	},
 });
 
