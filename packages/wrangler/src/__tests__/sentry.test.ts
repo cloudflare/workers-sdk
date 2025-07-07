@@ -6,7 +6,7 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw } from "./helpers/msw";
+import { createFetchResult, msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
@@ -55,7 +55,10 @@ describe("sentry", () => {
 						return HttpResponse.error();
 					},
 					{ once: true }
-				)
+				),
+				http.get("*/user/tokens/verify", () => {
+					return HttpResponse.json(createFetchResult([]));
+				})
 			);
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
 				`[TypeError: Failed to fetch]`
@@ -100,7 +103,10 @@ describe("sentry", () => {
 						return HttpResponse.error();
 					},
 					{ once: true }
-				)
+				),
+				http.get("*/user/tokens/verify", () => {
+					return HttpResponse.json(createFetchResult([]));
+				})
 			);
 			mockConfirm({
 				text: "Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
@@ -126,7 +132,10 @@ describe("sentry", () => {
 						return HttpResponse.error();
 					},
 					{ once: true }
-				)
+				),
+				http.get("*/user/tokens/verify", () => {
+					return HttpResponse.json(createFetchResult([]));
+				})
 			);
 			mockConfirm({
 				text: "Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
@@ -259,17 +268,6 @@ describe("sentry", () => {
 				              Object {
 				                "colno": 0,
 				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/core/register-yargs-command.ts",
-				                "function": "",
-				                "in_app": false,
-				                "lineno": 0,
-				                "module": "register-yargs-command.ts",
-				                "post_context": Array [],
-				                "pre_context": Array [],
-				              },
-				              Object {
-				                "colno": 0,
-				                "context_line": "",
 				                "filename": "/wrangler/packages/wrangler/src/user/commands.ts",
 				                "function": "",
 				                "in_app": false,
@@ -341,6 +339,17 @@ describe("sentry", () => {
 				                "in_app": false,
 				                "lineno": 0,
 				                "module": "internal.ts",
+				                "post_context": Array [],
+				                "pre_context": Array [],
+				              },
+				              Object {
+				                "colno": 0,
+				                "context_line": "",
+				                "filename": "node:internal/process/task_queues",
+				                "function": "",
+				                "in_app": false,
+				                "lineno": 0,
+				                "module": "task_queues",
 				                "post_context": Array [],
 				                "pre_context": Array [],
 				              },
