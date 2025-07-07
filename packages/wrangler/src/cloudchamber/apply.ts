@@ -545,7 +545,7 @@ export async function apply(
 			application,
 			args.skipDefaults
 		);
-		await checkInstanceTypeAgainstLimits(
+		checkInstanceTypeAgainstLimits(
 			appConfig.configuration.instance_type,
 			account
 		);

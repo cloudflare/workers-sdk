@@ -178,7 +178,7 @@ export async function createCommand(
 			deploymentRequest.memory_mib = memoryMib;
 		} else {
 			const account = await loadAccount();
-			await checkInstanceTypeAgainstLimits(instanceType, account);
+			checkInstanceTypeAgainstLimits(instanceType, account);
 		}
 		const deployment =
 			await DeploymentsService.createDeploymentV2(deploymentRequest);
@@ -364,7 +364,7 @@ async function handleCreateCommand(
 		deploymentRequest.vcpu = vcpu;
 		deploymentRequest.memory_mib = memoryMib;
 	} else {
-		await checkInstanceTypeAgainstLimits(instanceType, account);
+		checkInstanceTypeAgainstLimits(instanceType, account);
 	}
 	const [deployment, err] = await wrap(
 		DeploymentsService.createDeploymentV2(deploymentRequest)

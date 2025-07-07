@@ -134,7 +134,7 @@ export async function modifyCommand(
 			modifyRequest.memory_mib = memoryMib;
 		} else {
 			const account = await loadAccount();
-			await checkInstanceTypeAgainstLimits(instanceType, account);
+			checkInstanceTypeAgainstLimits(instanceType, account);
 		}
 		const deployment = await DeploymentsService.modifyDeploymentV2(
 			modifyArgs.deploymentId,
@@ -299,7 +299,7 @@ async function handleModifyCommand(
 		modifyRequest.vcpu = args.vcpu ?? config.cloudchamber.vcpu;
 		modifyRequest.memory_mib = memoryMib;
 	} else {
-		await checkInstanceTypeAgainstLimits(instanceType, account);
+		checkInstanceTypeAgainstLimits(instanceType, account);
 	}
 	const [newDeployment, err] = await wrap(
 		DeploymentsService.modifyDeploymentV2(deployment.id, modifyRequest)
