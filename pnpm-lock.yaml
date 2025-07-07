@@ -350,7 +350,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/get-platform-proxy-remote-bindings-node-test:
+  fixtures/get-platform-proxy-remote-bindings:
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
@@ -358,6 +358,12 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250617.0
         version: 4.20250617.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vitest:
+        specifier: catalog:default
+        version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -19739,7 +19745,7 @@ snapshots:
 
   estree-walker@3.0.3:
     dependencies:
-      '@types/estree': 1.0.6
+      '@types/estree': 1.0.8
 
   esutils@2.0.3: {}
 
@@ -20676,7 +20682,7 @@ snapshots:
 
   is-reference@1.2.1:
     dependencies:
-      '@types/estree': 1.0.6
+      '@types/estree': 1.0.8
 
   is-regex@1.1.4:
     dependencies:
@@ -23983,7 +23989,7 @@ snapshots:
       debug: 4.4.1(supports-color@9.2.2)
       es-module-lexer: 1.7.0
       pathe: 2.0.3
-      vite: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      vite: 7.0.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
     transitivePeerDependencies:
       - '@types/node'
       - jiti
