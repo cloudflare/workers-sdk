@@ -172,3 +172,14 @@ export function cleanForInstanceType(
 
 	return app as ContainerApp;
 }
+
+// Returns the disk size for an instance type. Used by `ensureDiskLimits`
+export function instanceTypeDiskSizeBytes(
+	app: ContainerApp
+): number | undefined {
+	if (!app.instance_type || !isValidKey(app.instance_type)) {
+		return;
+	}
+
+	return instanceTypes[app.instance_type].disk_mb * 1000 * 1000;
+}
