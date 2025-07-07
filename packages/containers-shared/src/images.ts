@@ -37,7 +37,8 @@ export async function pullImage(
  */
 export async function prepareContainerImagesForDev(
 	dockerPath: string,
-	containerOptions: ContainerDevOptions[]
+	containerOptions: ContainerDevOptions[],
+	configPath: string | undefined
 ) {
 	if (process.platform === "win32") {
 		throw new Error(
@@ -46,8 +47,8 @@ export async function prepareContainerImagesForDev(
 	}
 	await verifyDockerInstalled(dockerPath);
 	for (const options of containerOptions) {
-		if (isDockerfile(options.image)) {
-			await buildImage(dockerPath, options);
+		if (isDockerfile(options.image, configPath)) {
+			await buildImage(dockerPath, options, configPath);
 		} else {
 			if (!isCloudflareRegistryLink(options.image)) {
 				throw new Error(

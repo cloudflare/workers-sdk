@@ -77,6 +77,7 @@ export async function buildAndMaybePush(
 	args: BuildArgs,
 	pathToDocker: string,
 	push: boolean,
+	configPath: string | undefined,
 	containerConfig?: ContainerApp
 ): Promise<{ image: string; pushed: boolean }> {
 	try {
@@ -97,6 +98,7 @@ export async function buildAndMaybePush(
 				platform: args.platform,
 				setNetworkToHost: Boolean(getCIOverrideNetworkModeHost()),
 			},
+			configPath,
 			logger
 		);
 
@@ -220,6 +222,7 @@ export async function buildCommand(
 			},
 			getDockerPath() ?? args.pathToDocker,
 			args.push,
+			config.configPath,
 			container
 		);
 	}

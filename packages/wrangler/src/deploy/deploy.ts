@@ -777,7 +777,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (config.containers) {
 			// if you have a registry url specified, you don't need docker
 			const hasDockerfiles = config.containers?.some((container) =>
-				isDockerfile(container.image ?? container.configuration?.image)
+				isDockerfile(
+					container.image ?? container.configuration?.image,
+					config.configPath
+				)
 			);
 			if (hasDockerfiles) {
 				await verifyDockerInstalled(dockerPath, false);
@@ -791,7 +794,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						container,
 						workerTag ?? "worker-tag",
 						props.dryRun,
-						dockerPath
+						dockerPath,
+						config.configPath
 					);
 				}
 			}

@@ -1,5 +1,6 @@
 import { execFile, spawn, StdioOptions } from "child_process";
 import { existsSync, statSync } from "fs";
+import path from "path";
 import { dockerImageInspect } from "./inspect";
 import { ContainerDevOptions } from "./types";
 
@@ -72,10 +73,14 @@ export function isDir(path: string) {
 }
 
 /** returns true if it is a dockerfile, false if it is a registry link, throws if neither */
-export const isDockerfile = (image: string): boolean => {
-	// TODO: move this into config validation
-	if (existsSync(image)) {
-		if (isDir(image)) {
+export const isDockerfile = (
+	image: string,
+	configPath: string | undefined
+): boolean => {
+	const baseDir = configPath ? path.dirname(configPath) : process.cwd();
+	const maybeDockerfile = path.resolve(baseDir, image);
+	if (existsSync(maybeDockerfile)) {
+		if (isDir(maybeDockerfile)) {
 			throw new Error(
 				`${image} is a directory, you should specify a path to the Dockerfile`
 			);
