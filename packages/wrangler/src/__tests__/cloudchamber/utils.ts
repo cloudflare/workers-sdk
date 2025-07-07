@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import * as user from "../../user";
 import { msw } from "../helpers/msw";
 import type { CloudchamberConfig } from "../../config/environment";
+import type { CompleteAccountCustomer } from "@cloudflare/containers-shared";
 
 export function setWranglerConfig(cloudchamber: CloudchamberConfig) {
 	fs.writeFileSync(
@@ -17,22 +18,20 @@ export function setWranglerConfig(cloudchamber: CloudchamberConfig) {
 	);
 }
 
-export function mockAccount() {
+export function mockAccount(
+	account: CompleteAccountCustomer = {
+		external_account_id: process.env.CLOUDFLARE_ACCOUNT_ID,
+		limits: { disk_mb_per_deployment: 2000 },
+	} as CompleteAccountCustomer
+) {
 	const spy = vi.spyOn(user, "getScopes");
 	spy.mockImplementationOnce(() => ["cloudchamber:write", "containers:write"]);
-
-	const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 
 	msw.use(
 		http.get(
 			"*/me",
 			async () => {
-				return HttpResponse.json({
-					external_account_id: accountId,
-					limits: {
-						disk_mb_per_deployment: 2000,
-					},
-				});
+				return HttpResponse.json(account);
 			},
 			{ once: true }
 		)

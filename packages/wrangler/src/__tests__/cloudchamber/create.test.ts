@@ -10,7 +10,10 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
-import type { SSHPublicKeyItem } from "@cloudflare/containers-shared";
+import type {
+	CompleteAccountCustomer,
+	SSHPublicKeyItem,
+} from "@cloudflare/containers-shared";
 
 const MOCK_DEPLOYMENTS_COMPLEX_RESPONSE = `
 			"{
@@ -89,7 +92,17 @@ describe("cloudchamber create", () => {
 
 	mockAccountId();
 	mockApiToken();
-	beforeEach(mockAccount);
+	beforeEach(() => {
+		mockAccount({
+			external_account_id: "some-account-id",
+			// set limits to allow all instance types
+			limits: {
+				disk_mb_per_deployment: 4000,
+				memory_mib_per_deployment: 4096,
+				vcpu_per_deployment: 1,
+			},
+		} as CompleteAccountCustomer);
+	});
 	runInTempDir();
 	afterEach(() => {
 		patchConsole(() => {});
