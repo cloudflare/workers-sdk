@@ -13,46 +13,51 @@ describe("instance type limit check tests", () => {
 	runInTempDir();
 
 	it("should throw error if instance type disk exceeds account limit", async () => {
-		expect(() => checkInstanceTypeAgainstLimits(InstanceType.BASIC, {
-			limits: {
-				...commonLimits,
-				disk_mb_per_deployment: 2000,
-			},
-		} as CompleteAccountCustomer)
+		expect(() =>
+			checkInstanceTypeAgainstLimits(InstanceType.BASIC, {
+				limits: {
+					...commonLimits,
+					disk_mb_per_deployment: 2000,
+				},
+			} as CompleteAccountCustomer)
 		).toThrow(
 			"Exceeded account limits: Your configured instance type uses 4000 MB of disk. However, that exceeds the account limit of 2000"
 		);
 	});
 
 	it("should throw error if instance type memory exceeds account limit", async () => {
-		expect(() => checkInstanceTypeAgainstLimits(InstanceType.STANDARD, {
-			limits: {
-				...commonLimits,
-				memory_mib_per_deployment: 1024,
-			},
-		} as CompleteAccountCustomer)
+		expect(() =>
+			checkInstanceTypeAgainstLimits(InstanceType.STANDARD, {
+				limits: {
+					...commonLimits,
+					memory_mib_per_deployment: 1024,
+				},
+			} as CompleteAccountCustomer)
 		).toThrow(
 			"Exceeded account limits: Your configured instance type uses 4096 MiB of memory. However, that exceeds the account limit of 1024"
 		);
 	});
 
 	it("should throw error if instance type vcpu exceeds account limit", async () => {
-		expect(() => checkInstanceTypeAgainstLimits(InstanceType.STANDARD, {
-			limits: {
-				...commonLimits,
-				vcpu_per_deployment: 0.25,
-			},
-		} as CompleteAccountCustomer)
+		expect(() =>
+			checkInstanceTypeAgainstLimits(InstanceType.STANDARD, {
+				limits: {
+					...commonLimits,
+					vcpu_per_deployment: 0.25,
+				},
+			} as CompleteAccountCustomer)
 		).toThrow(
 			"Exceeded account limits: Your configured instance type uses 0.5 vCPU. However, that exceeds the account limit of 0.25"
 		);
 	});
 
 	it("should not throw when instance type is within limits", async () => {
-		expect(() => checkInstanceTypeAgainstLimits(InstanceType.STANDARD, {
-			limits: {
-				...commonLimits,
-			}
-		} as CompleteAccountCustomer)).not.toThrow();
+		expect(() =>
+			checkInstanceTypeAgainstLimits(InstanceType.STANDARD, {
+				limits: {
+					...commonLimits,
+				},
+			} as CompleteAccountCustomer)
+		).not.toThrow();
 	});
 });

@@ -293,7 +293,7 @@ describe("buildAndMaybePush", () => {
 			const result = resolveAppDiskSize(accountBase, {
 				...defaultConfiguration,
 				instance_type: "basic",
-				configuration: { image: ""},
+				configuration: { image: "" },
 			});
 			// 'basic' instance type has 4GB disk
 			expect(result).toBeCloseTo(4 * 1000 * 1000 * 1000, -5);
