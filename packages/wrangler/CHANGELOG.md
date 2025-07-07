@@ -1,5 +1,55 @@
 # wrangler
 
+## 4.24.0
+
+### Minor Changes
+
+- [#9796](https://github.com/cloudflare/workers-sdk/pull/9796) [`ba69586`](https://github.com/cloudflare/workers-sdk/commit/ba69586d8f8ad5ea68e42e4feb47994f4503c376) Thanks [@simonabadoiu](https://github.com/simonabadoiu)! - Browser Rendering local mode
+
+- [#9825](https://github.com/cloudflare/workers-sdk/pull/9825) [`49c85c5`](https://github.com/cloudflare/workers-sdk/commit/49c85c5306b3dbfa9342baeab3b7d14d954d4ade) Thanks [@ReppCodes](https://github.com/ReppCodes)! - Add support for origin_connection_limit to Wrangler
+
+  Configure connection limits to Hyperdrive via command line options:
+
+  - `--origin-connection-limit`: The (soft) maximum number of connections that Hyperdrive may establish to the origin database.
+
+- [#9064](https://github.com/cloudflare/workers-sdk/pull/9064) [`a1181bf`](https://github.com/cloudflare/workers-sdk/commit/a1181bf804e3ee4b6c2034fa3e429fd6b71f4c13) Thanks [@sdnts](https://github.com/sdnts)! - Added an `event-subscriptions` subcommand
+
+### Patch Changes
+
+- [#9729](https://github.com/cloudflare/workers-sdk/pull/9729) [`1b3a2b7`](https://github.com/cloudflare/workers-sdk/commit/1b3a2b71b7daedb367ba89af8792e48c43e72c59) Thanks [@404Wolf](https://github.com/404Wolf)! - Set docker build context to the Dockerfile directory when `image_build_context` is not explicitly provided
+
+- [#9845](https://github.com/cloudflare/workers-sdk/pull/9845) [`dbfa4ef`](https://github.com/cloudflare/workers-sdk/commit/dbfa4ef4d48a119dd54c16cc4069ac11478cfe0c) Thanks [@jonboulle](https://github.com/jonboulle)! - remove extraneous double spaces from Wrangler help output
+
+- [#9811](https://github.com/cloudflare/workers-sdk/pull/9811) [`fc29c31`](https://github.com/cloudflare/workers-sdk/commit/fc29c31ae025ea147be059ee6cb7bf198fb9f313) Thanks [@gpanders](https://github.com/gpanders)! - Fix unauthorized errors on "containers images delete".
+
+- [#9813](https://github.com/cloudflare/workers-sdk/pull/9813) [`45497ab`](https://github.com/cloudflare/workers-sdk/commit/45497ab4a4255f70f445e8487b648ad7a55328f3) Thanks [@gpanders](https://github.com/gpanders)! - Support container image names without account ID
+
+- [#9821](https://github.com/cloudflare/workers-sdk/pull/9821) [`a447d67`](https://github.com/cloudflare/workers-sdk/commit/a447d6722a9eedca21d8c888db47954a9d81f906) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Preview Aliases: Force alias generation to meet stricter naming requirements.
+
+  For cases where CI is requesting Wrangler to generate the alias based on the branch name, we want a stricter check around the generated alias name in order to avoid version upload failures. If a valid alias name was not able to be generated, we warn and do not provide an alias (avoiding a version upload failure).
+
+- [#9840](https://github.com/cloudflare/workers-sdk/pull/9840) [`7c55f9e`](https://github.com/cloudflare/workers-sdk/commit/7c55f9e1eac4fb0d53f9180a011172328296be16) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure that the experimental `remoteBindings` flag is properly handled in `getPlatformProxy`
+
+  There are two issues related to how the experimental `remoteBindings` flag is handled in `getPlatformProxy` that are being fixed by this change:
+
+  - the `experimental_remote` configuration flag set on service bindings is incorrectly always taken into account, even if `remoteBindings` is set to `false`
+  - the `experimental_remote` configuration flag of all the other bindings is never taken into account (effectively preventing the bindings to be used in remote mode) since the `remoteBindings` flag is not being properly propagated
+
+- [#9801](https://github.com/cloudflare/workers-sdk/pull/9801) [`0bb619a`](https://github.com/cloudflare/workers-sdk/commit/0bb619a92911415957d8788923302c15364638c9) Thanks [@IRCody](https://github.com/IRCody)! - Containers: Fix issue where setting an image URI instead of dockerfile would incorrectly not update the image
+
+- [#9872](https://github.com/cloudflare/workers-sdk/pull/9872) [`a727db3`](https://github.com/cloudflare/workers-sdk/commit/a727db341a811572623e0a0f361f070a95758776) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: resolve Dockerfile path relative to the Wrangler config path
+
+  This fixes a bug where Wrangler would not be able to find a Dockerfile if a Wrangler config path had been specified with the `--config` flag.
+
+- [#9815](https://github.com/cloudflare/workers-sdk/pull/9815) [`1358034`](https://github.com/cloudflare/workers-sdk/commit/1358034ec2641118dd366a7b1b862dbb623ddf28) Thanks [@gpanders](https://github.com/gpanders)! - Remove --json flag from containers and cloudchamber commands (except for "images list")
+
+- [#9734](https://github.com/cloudflare/workers-sdk/pull/9734) [`1a58bc3`](https://github.com/cloudflare/workers-sdk/commit/1a58bc34d6ffa62fbcb9e8e15ebf61dcfd288659) Thanks [@penalosa](https://github.com/penalosa)! - Make Wrangler warn more loudly if you're missing auth scopes
+
+- [#9748](https://github.com/cloudflare/workers-sdk/pull/9748) [`7e3aa1b`](https://github.com/cloudflare/workers-sdk/commit/7e3aa1b774dfb971c2d22d5c054206b6f7542b39) Thanks [@alsuren](https://github.com/alsuren)! - Internal-only WRANGLER_D1_EXTRA_LOCATION_CHOICES environment variable for enabling D1's testing location hints
+
+- Updated dependencies [[`ba69586`](https://github.com/cloudflare/workers-sdk/commit/ba69586d8f8ad5ea68e42e4feb47994f4503c376), [`1a75f85`](https://github.com/cloudflare/workers-sdk/commit/1a75f85ae9893bd0ee8c8dba77d4d1be104a527c), [`395f36d`](https://github.com/cloudflare/workers-sdk/commit/395f36de127c6ee5fbc0ceadbfb508f7f32f5388), [`6f344bf`](https://github.com/cloudflare/workers-sdk/commit/6f344bfe3179477a75c61d504bf69ede05d103ab)]:
+  - miniflare@4.20250705.0
+
 ## 4.23.0
 
 ### Minor Changes
