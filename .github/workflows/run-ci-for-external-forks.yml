@@ -15,8 +15,8 @@ on:
         required: true
 
 permissions:
-  contents: read
-  # note: no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
+  contents: read # no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
+  pull-requests: write # Required for creating the draft PR on behalf of the user
 
 jobs:
   create-draft-pr:
