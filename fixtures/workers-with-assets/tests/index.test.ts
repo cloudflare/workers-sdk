@@ -273,6 +273,10 @@ describe("[Workers + Assets] logging", () => {
 			resolve(__dirname, ".."),
 			["--port=0", "--inspector-port=0"]
 		);
+
+		// Await a request to ensure the logs have been written
+		await fetch(`http://${ip}:${port}/`);
+
 		expect(getOutput()).toContain(
 			`[wrangler:info] ✨ Parsed 2 valid redirect rules.`
 		);

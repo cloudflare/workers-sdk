@@ -65,6 +65,15 @@ import {
 	UserError,
 } from "./errors";
 import {
+	eventSubscriptionsBrowseCommand,
+	eventSubscriptionsCreateCommand,
+	eventSubscriptionsDeleteCommand,
+	eventSubscriptionsGetCommand,
+	eventSubscriptionsListCommand,
+	eventSubscriptionsNamespace,
+	eventSubscriptionsUpdateCommand,
+} from "./event-subscriptions";
+import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
 	helloWorldSetCommand,
@@ -725,8 +734,39 @@ export function createCLIParser(argv: string[]) {
 			definition: queuesConsumerRemoveCommand,
 		},
 	]);
-
 	registry.registerNamespace("queues");
+
+	registry.define([
+		{
+			command: "wrangler event-subscriptions",
+			definition: eventSubscriptionsNamespace,
+		},
+		{
+			command: "wrangler event-subscriptions browse",
+			definition: eventSubscriptionsBrowseCommand,
+		},
+		{
+			command: "wrangler event-subscriptions list",
+			definition: eventSubscriptionsListCommand,
+		},
+		{
+			command: "wrangler event-subscriptions create",
+			definition: eventSubscriptionsCreateCommand,
+		},
+		{
+			command: "wrangler event-subscriptions update",
+			definition: eventSubscriptionsUpdateCommand,
+		},
+		{
+			command: "wrangler event-subscriptions delete",
+			definition: eventSubscriptionsDeleteCommand,
+		},
+		{
+			command: "wrangler event-subscriptions get",
+			definition: eventSubscriptionsGetCommand,
+		},
+	]);
+	registry.registerNamespace("event-subscriptions");
 
 	// r2
 	registry.define([

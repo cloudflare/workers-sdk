@@ -145,6 +145,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Check for Wrangler build cache
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: pnpm build -F wrangler --dry-run
+        env:
+          TEST_CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          TEST_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          CI_OS: ${{ matrix.description }}
+
       - name: Run tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }} --log-order=stream
