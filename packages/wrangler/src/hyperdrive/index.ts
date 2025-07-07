@@ -288,13 +288,19 @@ export function getCacheOptionsFromArgs(
 		| typeof hyperdriveCreateCommand.args
 		| typeof hyperdriveUpdateCommand.args
 ): CachingOptions | undefined {
-	const caching = {
-		disabled: args.cachingDisabled,
-		max_age: args.maxAge,
-		stale_while_revalidate: args.swr,
-	};
+	const caching: CachingOptions = {};
+	
+	if (args.cachingDisabled !== undefined) {
+		caching.disabled = args.cachingDisabled;
+	}
+	if (args.maxAge !== undefined) {
+		caching.max_age = args.maxAge;
+	}
+	if (args.swr !== undefined) {
+		caching.stale_while_revalidate = args.swr;
+	}
 
-	if (JSON.stringify(caching) === "{}") {
+	if (Object.keys(caching).length === 0) {
 		return undefined;
 	} else {
 		return caching;
