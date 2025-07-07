@@ -106,7 +106,7 @@ describe("cloudchamber apply", () => {
 	mockApiToken();
 	beforeEach(() => {
 		mockAccount({
-			external_account_id: "test_account_id",
+			external_account_id: "some-account-id",
 			// set limits to allow all instance types
 			limits: {
 				disk_mb_per_deployment: 4000,
