@@ -71,8 +71,21 @@ async function emptyDir(dirPath: string) {
 		throw e;
 	}
 	for (const name of names) {
-		await fs.rm(path.join(dirPath, name), { recursive: true, force: true });
+		try {
+			await fs.rm(path.join(dirPath, name), { recursive: true, force: true });
+		} catch (e) {
+			if (isEbusyError(e)) {
+				// Sometimes workerd holds on to file handles in Windows, preventing us from cleaning up these.
+				console.warn(
+					`vitest-pool-worker: Unable to remove temporary directory: ${e}`
+				);
+			}
+		}
 	}
+}
+
+function isEbusyError(e: unknown): boolean {
+	return e instanceof Error && "code" in e && e.code === "EBUSY";
 }
 
 /**
