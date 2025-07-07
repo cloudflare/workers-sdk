@@ -1,12 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
 
-export class Container extends DurableObject<Env> {
+export class FixtureTestContainer extends DurableObject<Env> {
 	container: globalThis.Container;
 	monitor?: Promise<unknown>;
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
-		this.container = ctx.container!;
+		this.container = ctx.container;
 	}
 
 	async fetch(req: Request) {
@@ -25,7 +25,7 @@ export class Container extends DurableObject<Env> {
 			case "/start":
 				this.container.start({
 					entrypoint: ["node", "app.js"],
-					env: { A: "B", C: "D", L: "F" },
+					env: { MESSAGE: "I'm an env var!" },
 					enableInternet: false,
 				});
 				// this doesn't instantly start, so we will need to poll /fetch
@@ -39,9 +39,6 @@ export class Container extends DurableObject<Env> {
 				return new Response(await res.text());
 
 			case "/destroy-with-monitor":
-				// if (!this.container.running) {
-				// 	throw new Error("Container is not running.");
-				// }
 				const monitor = this.container.monitor();
 				await this.container.destroy();
 				await monitor;
