@@ -182,8 +182,8 @@ export async function checkExposedPorts(
 	});
 	if (output === "0" && process.platform !== "linux") {
 		throw new Error(
-			`The container "${options.class_name}" does not expose any ports.\n` +
-				"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort()` in your Dockerfile."
+			`The container "${options.class_name}" does not expose any ports. In your Dockerfile, please expose any ports you intend to connect to.\n` +
+				"For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.\n"
 		);
 	}
 }
