@@ -301,6 +301,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should handle creating a hyperdrive config with origin_connection_limit", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb' --origin-connection-limit=50"
@@ -1439,6 +1445,46 @@ describe("hyperdrive commands", () => {
 				"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb' --caching-disabled --max-age=30"
 			)
 		).rejects.toThrow("Cannot set --max-age or --swr when caching is disabled with --caching-disabled");
+	});
+
+	it("should not prompt for caching in non-interactive environment and use default behavior", async () => {
+		// Simulate non-interactive environment
+		setIsTTY(false);
+
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb'"
+		);
+
+		// Should create without prompting and use default caching behavior (enabled)
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			Object {
+			  "name": "test123",
+			  "origin": Object {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 12345,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
+		`);
 	});
 });
 

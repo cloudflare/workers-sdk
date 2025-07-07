@@ -1,6 +1,7 @@
 import { configFileName, formatConfigSnippet } from "../config";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { createConfig } from "./client";
 import { capitalizeScheme } from "./shared";
@@ -35,17 +36,22 @@ export const hyperdriveCreateCommand = createCommand({
 		// Check if caching options were provided via CLI args
 		let caching = getCacheOptionsFromArgs(args);
 
-		// If no caching options provided, prompt the user
+		// If no caching options provided, prompt the user (or use default in non-interactive environments)
 		if (!caching) {
-			const enableCaching = await confirm(
-				"Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
-				{ defaultValue: true, fallbackValue: true }
-			);
+			if (isNonInteractiveOrCI()) {
+				// In non-interactive environments, use the default behavior (caching enabled)
+				// Leave caching as undefined to use default API behavior
+			} else {
+				const enableCaching = await confirm(
+					"Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+					{ defaultValue: true, fallbackValue: true }
+				);
 
-			if (!enableCaching) {
-				caching = { disabled: true };
+				if (!enableCaching) {
+					caching = { disabled: true };
+				}
+				// If enableCaching is true, leave caching as undefined to use default API behavior
 			}
-			// If enableCaching is true, leave caching as undefined to use default API behavior
 		}
 
 		logger.log(`🚧 Creating '${args.name}'`);
