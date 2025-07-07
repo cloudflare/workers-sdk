@@ -63,6 +63,7 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Bump package versions
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         run: node .github/changeset-version.js
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -89,7 +90,7 @@ jobs:
 
       - name: Upload Logs
         uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() || steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
           name: e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}-${{runner.os}}-${{matrix.pm.name}}
           path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}

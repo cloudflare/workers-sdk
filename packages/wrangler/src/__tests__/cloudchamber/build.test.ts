@@ -62,7 +62,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+				`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 				"--platform",
 				"linux/amd64",
 				"--provenance=false",
@@ -73,13 +73,13 @@ describe("buildAndMaybePush", () => {
 			dockerfile,
 		});
 		expect(dockerImageInspect).toHaveBeenCalledWith("/custom/docker/path", {
-			imageTag: `${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+			imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 			formatString:
 				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 		});
 		expect(runDockerCmd).toHaveBeenCalledWith("/custom/docker/path", [
 			"push",
-			`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 		expect(dockerLoginManagedRegistry).toHaveBeenCalledWith(
 			"/custom/docker/path"
@@ -94,7 +94,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+				`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 				"--platform",
 				"linux/amd64",
 				"--provenance=false",
@@ -107,11 +107,11 @@ describe("buildAndMaybePush", () => {
 		expect(runDockerCmd).toHaveBeenCalledTimes(1);
 		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
 			"push",
-			`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 		expect(dockerImageInspect).toHaveBeenCalledOnce();
 		expect(dockerImageInspect).toHaveBeenCalledWith("docker", {
-			imageTag: `${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+			imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 			formatString:
 				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 		});
@@ -121,7 +121,7 @@ describe("buildAndMaybePush", () => {
 	it("should be able to build image and not push if it already exists in remote", async () => {
 		vi.mocked(runDockerCmd).mockResolvedValueOnce();
 		vi.mocked(dockerImageInspect).mockResolvedValue(
-			'53387881 2 ["registry.cloudflare.com/test_account_id/test-app@sha256:three"]'
+			'53387881 2 ["registry.cloudflare.com/some-account-id/test-app@sha256:three"]'
 		);
 		await runWrangler(
 			"containers build ./container-context -t test-app:tag -p"
@@ -130,7 +130,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+				`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 				"--platform",
 				"linux/amd64",
 				"--provenance=false",
@@ -147,18 +147,18 @@ describe("buildAndMaybePush", () => {
 			[
 				"manifest",
 				"inspect",
-				`${getCloudflareContainerRegistry()}/test_account_id/test-app@sha256:three`,
+				`${getCloudflareContainerRegistry()}/some-account-id/test-app@sha256:three`,
 			],
 			"ignore"
 		);
 		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
 			"image",
 			"rm",
-			`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 		expect(dockerImageInspect).toHaveBeenCalledOnce();
 		expect(dockerImageInspect).toHaveBeenCalledWith("docker", {
-			imageTag: `${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
+			imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 			formatString:
 				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 		});
@@ -172,7 +172,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${getCloudflareContainerRegistry()}/test_account_id/test-app`,
+				`${getCloudflareContainerRegistry()}/some-account-id/test-app`,
 				"--platform",
 				"linux/amd64",
 				"--provenance=false",
@@ -194,7 +194,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${getCloudflareContainerRegistry()}/test_account_id/test-app`,
+				`${getCloudflareContainerRegistry()}/some-account-id/test-app`,
 				"--platform",
 				"linux/amd64",
 				"--provenance=false",

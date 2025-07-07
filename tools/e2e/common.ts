@@ -200,6 +200,7 @@ export const listTmpE2EWorkers = async () => {
 		(p) =>
 			!p.id.startsWith("preserve-e2e-") &&
 			p.id !== "stratus-e2e-test-worker" &&
+			p.id !== "existing-script-test-do-not-delete" &&
 			// Workers are more than an hour old
 			Date.now() - new Date(p.created_on).valueOf() > 1000 * 60 * 60
 	);

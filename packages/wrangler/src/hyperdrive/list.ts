@@ -24,6 +24,8 @@ export const hyperdriveListCommand = createCommand({
 				database: database.origin.database ?? "",
 				caching: formatCachingOptions(database.caching),
 				mtls: JSON.stringify(database.mtls),
+				origin_connection_limit:
+					database.origin_connection_limit?.toString() ?? "",
 			}))
 		);
 	},

@@ -1,4 +1,5 @@
 import {
+	getCloudflareContainerRegistry,
 	SchedulingPolicy,
 	SecretAccessType,
 } from "@cloudflare/containers-shared";
@@ -30,14 +31,20 @@ function mockGetApplications(applications: Application[]) {
 	);
 }
 
-function mockCreateApplication(expected?: Application) {
+function mockCreateApplication(
+	response?: Partial<Application>,
+	expected?: Partial<CreateApplicationRequest>
+) {
 	msw.use(
 		http.post(
 			"*/applications",
 			async ({ request }) => {
-				const body = await request.json();
+				const body = (await request.json()) as CreateApplicationRequest;
+				if (expected !== undefined) {
+					expect(body).toMatchObject(expected);
+				}
 				expect(body).toHaveProperty("instances");
-				return HttpResponse.json(expected);
+				return HttpResponse.json(response);
 			},
 			{ once: true }
 		)
@@ -73,6 +80,12 @@ function mockModifyApplication(
 }
 
 describe("cloudchamber apply", () => {
+	/* eslint no-irregular-whitespace: ["error", { "skipTemplates": true }]
+	   ---
+	   Wrangler emits \u200a instead of "regular" whitespace in some cases. eslint doesn't like
+	   this so we disable the warning when mixed whitespace is used in template strings.
+	 */
+
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockCLIOutput();
 
@@ -102,9 +115,8 @@ describe("cloudchamber apply", () => {
 			],
 		});
 		mockGetApplications([]);
-		mockCreateApplication({ id: "abc" } as Application);
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		mockCreateApplication({ id: "abc" });
+		await runWrangler("cloudchamber apply");
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -132,7 +144,6 @@ describe("cloudchamber apply", () => {
 
 			"
 		`);
-		/* eslint-enable */
 	});
 
 	test("can apply a simple existing application", async () => {
@@ -176,8 +187,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const applicationReqBodyPromise = mockModifyApplication();
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -194,8 +204,6 @@ describe("cloudchamber apply", () => {
 			│ - tier = 3
 			│ + tier = 2
 			│
-			├ Loading
-			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -207,7 +215,6 @@ describe("cloudchamber apply", () => {
 		const app = await applicationReqBodyPromise;
 		expect(app.constraints?.tier).toEqual(2);
 		expect(app.instances).toEqual(4);
-		/* eslint-enable */
 	});
 
 	test("can apply a simple existing application and create other (max_instances)", async () => {
@@ -255,11 +262,10 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const res = mockModifyApplication();
-		mockCreateApplication({ id: "abc" } as Application);
-		await runWrangler("cloudchamber apply --json");
+		mockCreateApplication({ id: "abc" });
+		await runWrangler("cloudchamber apply");
 		const body = await res;
 		expect(body).not.toHaveProperty("instances");
-		/* eslint-disable */
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -287,8 +293,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   tier = 1
 			│
-			├ Loading
-			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -300,7 +304,6 @@ describe("cloudchamber apply", () => {
 			"
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		/* eslint-enable */
 	});
 
 	test("can skip a simple existing application and create other", async () => {
@@ -347,10 +350,9 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		mockCreateApplication({ id: "abc" } as Application);
-		await runWrangler("cloudchamber apply --json");
+		mockCreateApplication({ id: "abc" });
+		await runWrangler("cloudchamber apply");
 
-		/* eslint-disable */
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -386,7 +388,6 @@ describe("cloudchamber apply", () => {
 			"
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		/* eslint-enable */
 	});
 
 	test("can apply a simple existing application and create other", async () => {
@@ -433,10 +434,9 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const res = mockModifyApplication();
-		mockCreateApplication({ id: "abc" } as Application);
-		await runWrangler("cloudchamber apply --json");
+		mockCreateApplication({ id: "abc" });
+		await runWrangler("cloudchamber apply");
 		await res;
-		/* eslint-disable */
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -463,8 +463,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   tier = 1
 			│
-			├ Loading
-			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -476,7 +474,6 @@ describe("cloudchamber apply", () => {
 			"
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		/* eslint-enable */
 	});
 
 	test("can apply a simple existing application (labels)", async () => {
@@ -572,9 +569,8 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const res = mockModifyApplication();
-		await runWrangler("cloudchamber apply --json");
+		await runWrangler("cloudchamber apply");
 		await res;
-		/* eslint-disable */
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -602,8 +598,6 @@ describe("cloudchamber apply", () => {
 			│ - [[containers.configuration.secrets]]
 			│   name = \\"MY_SECRET_2\\"
 			│
-			├ Loading
-			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -612,7 +606,6 @@ describe("cloudchamber apply", () => {
 			"
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		/* eslint-enable */
 	});
 
 	test("can apply an application, and there is no changes (retrocompatibility with regional scheduling policy)", async () => {
@@ -709,8 +702,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -723,7 +715,6 @@ describe("cloudchamber apply", () => {
 			"
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		/* eslint-enable */
 	});
 
 	test("can apply an application, and there is no changes (two applications)", async () => {
@@ -823,8 +814,7 @@ describe("cloudchamber apply", () => {
 			{ ...completeApp, version: 1 },
 			{ ...completeApp, version: 1, name: "my-container-app-2", id: "abc2" },
 		]);
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -839,7 +829,6 @@ describe("cloudchamber apply", () => {
 			"
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		/* eslint-enable */
 	});
 
 	test("can apply an application, and there is no changes", async () => {
@@ -936,8 +925,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -950,7 +938,6 @@ describe("cloudchamber apply", () => {
 			"
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		/* eslint-enable */
 	});
 
 	test("can apply an application, and there is no changes (two applications)", async () => {
@@ -1050,8 +1037,7 @@ describe("cloudchamber apply", () => {
 			{ ...completeApp, version: 1 },
 			{ ...completeApp, version: 1, name: "my-container-app-2", id: "abc2" },
 		]);
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1066,7 +1052,6 @@ describe("cloudchamber apply", () => {
 			"
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		/* eslint-enable */
 	});
 
 	test("can enable observability logs (top-level field)", async () => {
@@ -1108,8 +1093,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const applicationReqBodyPromise = mockModifyApplication();
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1127,8 +1111,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   ...
 			│
-			├ Loading
-			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -1140,7 +1122,6 @@ describe("cloudchamber apply", () => {
 		const app = await applicationReqBodyPromise;
 		expect(app.constraints?.tier).toEqual(1);
 		expect(app.instances).toEqual(1);
-		/* eslint-enable */
 	});
 
 	test("can enable observability logs (logs field)", async () => {
@@ -1182,8 +1163,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const applicationReqBodyPromise = mockModifyApplication();
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1201,8 +1181,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   ...
 			│
-			├ Loading
-			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -1214,7 +1192,6 @@ describe("cloudchamber apply", () => {
 		const app = await applicationReqBodyPromise;
 		expect(app.constraints?.tier).toEqual(1);
 		expect(app.instances).toEqual(1);
-		/* eslint-enable */
 	});
 
 	test("can disable observability logs (top-level field)", async () => {
@@ -1261,8 +1238,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const applicationReqBodyPromise = mockModifyApplication();
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1277,8 +1253,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   ...
 			│
-			├ Loading
-			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -1290,7 +1264,6 @@ describe("cloudchamber apply", () => {
 		const app = await applicationReqBodyPromise;
 		expect(app.constraints?.tier).toEqual(1);
 		expect(app.instances).toEqual(1);
-		/* eslint-enable */
 	});
 
 	test("can disable observability logs (logs field)", async () => {
@@ -1337,8 +1310,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const applicationReqBodyPromise = mockModifyApplication();
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1353,8 +1325,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   ...
 			│
-			├ Loading
-			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -1366,7 +1336,6 @@ describe("cloudchamber apply", () => {
 		const app = await applicationReqBodyPromise;
 		expect(app.constraints?.tier).toEqual(1);
 		expect(app.instances).toEqual(1);
-		/* eslint-enable */
 	});
 
 	test("can disable observability logs (absent field)", async () => {
@@ -1412,8 +1381,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const applicationReqBodyPromise = mockModifyApplication();
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1428,8 +1396,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   ...
 			│
-			├ Loading
-			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -1441,7 +1407,6 @@ describe("cloudchamber apply", () => {
 		const app = await applicationReqBodyPromise;
 		expect(app.constraints?.tier).toEqual(1);
 		expect(app.instances).toEqual(1);
-		/* eslint-enable */
 	});
 
 	test("ignores deprecated observability.logging", async () => {
@@ -1490,8 +1455,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const applicationReqBodyPromise = mockModifyApplication();
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1506,8 +1470,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   ...
 			│
-			├ Loading
-			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -1519,7 +1481,6 @@ describe("cloudchamber apply", () => {
 		const app = await applicationReqBodyPromise;
 		expect(app.constraints?.tier).toEqual(1);
 		expect(app.instances).toEqual(1);
-		/* eslint-enable */
 	});
 
 	test("keeps observability logs enabled", async () => {
@@ -1568,8 +1529,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1582,7 +1542,6 @@ describe("cloudchamber apply", () => {
 			"
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		/* eslint-enable */
 	});
 
 	test("keeps observability logs disabled (undefined in the app)", async () => {
@@ -1622,8 +1581,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1636,7 +1594,6 @@ describe("cloudchamber apply", () => {
 			"
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		/* eslint-enable */
 	});
 
 	test("keeps observability logs disabled (false in the app)", async () => {
@@ -1684,8 +1641,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1698,7 +1654,6 @@ describe("cloudchamber apply", () => {
 			"
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		/* eslint-enable */
 	});
 
 	test("can apply a simple application (instance type)", async () => {
@@ -1719,9 +1674,8 @@ describe("cloudchamber apply", () => {
 			],
 		});
 		mockGetApplications([]);
-		mockCreateApplication({ id: "abc" } as Application);
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		mockCreateApplication({ id: "abc" });
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1749,7 +1703,6 @@ describe("cloudchamber apply", () => {
 			"
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		/* eslint-enable */
 	});
 
 	test("can apply a simple existing application (instance type)", async () => {
@@ -1794,8 +1747,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const applicationReqBodyPromise = mockModifyApplication();
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1818,8 +1770,6 @@ describe("cloudchamber apply", () => {
 			│ - tier = 3
 			│ + tier = 2
 			│
-			├ Loading
-			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -1830,7 +1780,6 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		const app = await applicationReqBodyPromise;
 		expect(app.configuration?.instance_type).toEqual("standard");
-		/* eslint-enable */
 	});
 
 	test("falls back on dev instance type when instance type is absent", async () => {
@@ -1874,8 +1823,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const applicationReqBodyPromise = mockModifyApplication();
-		await runWrangler("cloudchamber apply --json");
-		/* eslint-disable */
+		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1898,8 +1846,6 @@ describe("cloudchamber apply", () => {
 			│ - tier = 3
 			│ + tier = 2
 			│
-			├ Loading
-			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -1910,6 +1856,63 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		const app = await applicationReqBodyPromise;
 		expect(app.configuration?.instance_type).toEqual("dev");
-		/* eslint-enable */
+	});
+
+	test("expands image names from managed registry", async () => {
+		setIsTTY(false);
+		const registry = getCloudflareContainerRegistry();
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					instances: 3,
+					class_name: "DurableObjectClass",
+					image: `${registry}/hello:1.0`,
+					constraints: {
+						tier: 2,
+					},
+				},
+			],
+		});
+
+		mockGetApplications([]);
+		mockCreateApplication(
+			{ id: "abc" },
+			{
+				configuration: {
+					image: `${registry}/some-account-id/hello:1.0`,
+				},
+			}
+		);
+
+		await runWrangler("cloudchamber apply");
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ NEW my-container-app
+			│
+			│   [[containers]]
+			│   name = \\"my-container-app\\"
+			│   instances = 3
+			│   scheduling_policy = \\"default\\"
+			│
+			│   [containers.constraints]
+			│   tier = 2
+			│
+			│   [containers.configuration]
+			│   image = \\"${registry}/hello:1.0\\"
+			│   instance_type = \\"dev\\"
+			│
+			│
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
+			│
+			╰ Applied changes
+
+			"
+		`);
 	});
 });

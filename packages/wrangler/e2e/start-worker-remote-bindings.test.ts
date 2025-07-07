@@ -3,10 +3,11 @@ import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import dedent from "ts-dedent";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
-describe("startWorker - remote bindings", () => {
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 	const remoteWorkerName = generateResourceName();
 	const helper = new WranglerE2ETestHelper();
 

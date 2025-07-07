@@ -64,7 +64,7 @@ export function seed(fixture: string, pm: "pnpm" | "yarn" | "npm") {
 				maxRetries: 10,
 			});
 		}
-	});
+	}, 40_000);
 
 	return projectPath;
 }

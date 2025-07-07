@@ -28,7 +28,7 @@ export async function constructBuildCommand(
 	const dockerfile = readFileSync(options.pathToDockerfile, "utf-8");
 	// pipe in the dockerfile
 	buildCmd.push("-f", "-");
-	buildCmd.push(options.buildContext);
+	buildCmd.push(options.buildContext ?? path.dirname(options.pathToDockerfile));
 	logger?.debug(`Building image with command: ${buildCmd.join(" ")}`);
 	return { buildCmd, dockerfile };
 }
@@ -75,7 +75,7 @@ export async function buildImage(
 	const { buildCmd, dockerfile } = await constructBuildCommand({
 		tag: options.imageTag,
 		pathToDockerfile: options.image,
-		buildContext: options.imageBuildContext ?? path.dirname(options.image),
+		buildContext: options.imageBuildContext,
 		args: options.args,
 		platform: "linux/amd64",
 	});

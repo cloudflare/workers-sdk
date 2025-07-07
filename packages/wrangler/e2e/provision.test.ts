@@ -17,27 +17,30 @@ const normalize = (str: string) => {
 };
 const workerName = generateResourceName();
 
-describe("provisioning", { timeout: TIMEOUT }, () => {
-	let deployedUrl: string;
-	let kvId: string;
-	let kvId2: string;
-	let d1Id: string;
-	const helper = new WranglerE2ETestHelper();
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
+	"provisioning",
+	{ timeout: TIMEOUT },
+	() => {
+		let deployedUrl: string;
+		let kvId: string;
+		let kvId2: string;
+		let d1Id: string;
+		const helper = new WranglerE2ETestHelper();
 
-	it("can run dev without resource ids", async () => {
-		const worker = helper.runLongLived("wrangler dev --x-provision");
+		it("can run dev without resource ids", async () => {
+			const worker = helper.runLongLived("wrangler dev --x-provision");
 
-		const { url } = await worker.waitForReady();
-		await fetch(url);
+			const { url } = await worker.waitForReady();
+			await fetch(url);
 
-		const text = await fetchText(url);
+			const text = await fetchText(url);
 
-		expect(text).toMatchInlineSnapshot(`"Hello World!"`);
-	});
+			expect(text).toMatchInlineSnapshot(`"Hello World!"`);
+		});
 
-	beforeAll(async () => {
-		await helper.seed({
-			"wrangler.toml": dedent`
+		beforeAll(async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
@@ -51,27 +54,27 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 						[[d1_databases]]
 						binding = "D1"
 						`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 						export default {
 							fetch(request) {
 								return new Response("Hello World!")
 							}
 						}`,
-			"package.json": dedent`
+				"package.json": dedent`
 						{
 							"name": "${workerName}",
 							"version": "0.0.0",
 							"private": true
 						}
 						`,
+			});
 		});
-	});
 
-	it("can provision resources and deploy worker", async () => {
-		const worker = helper.runLongLived(`wrangler deploy --x-provision`);
-		await worker.exitCode;
-		const output = await worker.output;
-		expect(normalize(output)).toMatchInlineSnapshot(`
+		it("can provision resources and deploy worker", async () => {
+			const worker = helper.runLongLived(`wrangler deploy --x-provision`);
+			await worker.exitCode;
+			const output = await worker.output;
+			expect(normalize(output)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			The following bindings need to be provisioned:
 			Binding        Resource
@@ -98,37 +101,37 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 			  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
 			Current Version ID: 00000000-0000-0000-0000-000000000000"
 		`);
-		const urlMatch = output.match(
-			/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-		);
-		assert(urlMatch?.groups);
-		deployedUrl = urlMatch.groups.url;
+			const urlMatch = output.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(urlMatch?.groups);
+			deployedUrl = urlMatch.groups.url;
 
-		const kvMatch = output.match(/env.KV \((?<kv>[0-9a-f]{32})/);
-		assert(kvMatch?.groups);
-		kvId = kvMatch.groups.kv;
+			const kvMatch = output.match(/env.KV \((?<kv>[0-9a-f]{32})/);
+			assert(kvMatch?.groups);
+			kvId = kvMatch.groups.kv;
 
-		const d1Match = output.match(
-			/env.D1 \((?<d1>\w{8}-\w{4}-\w{4}-\w{4}-\w{12})/
-		);
-		assert(d1Match?.groups);
-		d1Id = d1Match.groups.d1;
+			const d1Match = output.match(
+				/env.D1 \((?<d1>\w{8}-\w{4}-\w{4}-\w{4}-\w{12})/
+			);
+			assert(d1Match?.groups);
+			d1Id = d1Match.groups.d1;
 
-		const { text } = await retry(
-			(s) => s.status !== 200,
-			async () => {
-				const r = await fetch(deployedUrl);
-				return { text: await r.text(), status: r.status };
-			}
-		);
-		expect(text).toMatchInlineSnapshot('"Hello World!"');
-	});
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(deployedUrl);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot('"Hello World!"');
+		});
 
-	it("can inherit bindings on re-deploy and won't re-provision", async () => {
-		const worker = helper.runLongLived(`wrangler deploy --x-provision`);
-		await worker.exitCode;
-		const output = await worker.output;
-		expect(normalize(output)).toMatchInlineSnapshot(`
+		it("can inherit bindings on re-deploy and won't re-provision", async () => {
+			const worker = helper.runLongLived(`wrangler deploy --x-provision`);
+			await worker.exitCode;
+			const output = await worker.output;
+			expect(normalize(output)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your Worker has access to the following bindings:
 			Binding                 Resource
@@ -141,19 +144,19 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 			Current Version ID: 00000000-0000-0000-0000-000000000000"
 		`);
 
-		const { text } = await retry(
-			(s) => s.status !== 200,
-			async () => {
-				const r = await fetch(deployedUrl);
-				return { text: await r.text(), status: r.status };
-			}
-		);
-		expect(text).toMatchInlineSnapshot('"Hello World!"');
-	});
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(deployedUrl);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot('"Hello World!"');
+		});
 
-	it("can inherit and provision resources on version upload", async () => {
-		await helper.seed({
-			"wrangler.toml": dedent`
+		it("can inherit and provision resources on version upload", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
@@ -164,13 +167,13 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 						[[kv_namespaces]]
 						binding = "KV2"
 						`,
-		});
-		const worker = helper.runLongLived(
-			`wrangler versions upload --x-provision`
-		);
-		await worker.exitCode;
-		const output = await worker.output;
-		expect(normalize(output)).toMatchInlineSnapshot(`
+			});
+			const worker = helper.runLongLived(
+				`wrangler versions upload --x-provision`
+			);
+			await worker.exitCode;
+			const output = await worker.output;
+			expect(normalize(output)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			The following bindings need to be provisioned:
 			Binding         Resource
@@ -191,17 +194,17 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
 		`);
-		const kvMatch = output.match(/env.KV2 \((?<kv>[0-9a-f]{32})/);
-		assert(kvMatch?.groups);
-		kvId2 = kvMatch.groups.kv;
-	});
+			const kvMatch = output.match(/env.KV2 \((?<kv>[0-9a-f]{32})/);
+			assert(kvMatch?.groups);
+			kvId2 = kvMatch.groups.kv;
+		});
 
-	afterAll(async () => {
-		// we need to add d1 back into the config because otherwise wrangler will
-		// call the api for all 5000 or so db's the e2e test account has
-		// :(
-		await helper.seed({
-			"wrangler.toml": dedent`
+		afterAll(async () => {
+			// we need to add d1 back into the config because otherwise wrangler will
+			// call the api for all 5000 or so db's the e2e test account has
+			// :(
+			await helper.seed({
+				"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
@@ -211,28 +214,33 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 						database_name = "${workerName}-d1"
 						database_id = "${d1Id}"
 						`,
-		});
-		let output = await helper.run(`wrangler r2 bucket delete ${workerName}-r2`);
-		expect(output.stdout).toContain(`Deleted bucket`);
-		output = await helper.run(`wrangler d1 delete ${workerName}-d1 -y`);
-		expect(output.stdout).toContain(`Deleted '${workerName}-d1' successfully.`);
-		output = await helper.run(`wrangler delete`);
-		expect(output.stdout).toContain("Successfully deleted");
+			});
+			let output = await helper.run(
+				`wrangler r2 bucket delete ${workerName}-r2`
+			);
+			expect(output.stdout).toContain(`Deleted bucket`);
+			output = await helper.run(`wrangler d1 delete ${workerName}-d1 -y`);
+			expect(output.stdout).toContain(
+				`Deleted '${workerName}-d1' successfully.`
+			);
+			output = await helper.run(`wrangler delete`);
+			expect(output.stdout).toContain("Successfully deleted");
 
-		await vi.waitFor(
-			async () => {
-				const res = await fetch(deployedUrl);
-				await expect(res.status).not.toBe(200);
-			},
-			{ interval: 1_000, timeout: 20_000 }
-		);
+			await vi.waitFor(
+				async () => {
+					const res = await fetch(deployedUrl);
+					await expect(res.status).not.toBe(200);
+				},
+				{ interval: 1_000, timeout: 20_000 }
+			);
 
-		output = await helper.run(
-			`wrangler kv namespace delete --namespace-id ${kvId}`
-		);
-		output = await helper.run(
-			`wrangler kv namespace delete --namespace-id ${kvId2}`
-		);
-		expect(output.stdout).toContain(`Deleted KV namespace`);
-	}, TIMEOUT);
-});
+			output = await helper.run(
+				`wrangler kv namespace delete --namespace-id ${kvId}`
+			);
+			output = await helper.run(
+				`wrangler kv namespace delete --namespace-id ${kvId2}`
+			);
+			expect(output.stdout).toContain(`Deleted KV namespace`);
+		}, TIMEOUT);
+	}
+);

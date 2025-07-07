@@ -1672,7 +1672,7 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("`browser rendering binding", () => {
-		it("should show error when running locally", async () => {
+		it("should not show error when running locally", async () => {
 			writeWranglerConfig({
 				browser: {
 					binding: "MYBROWSER",
@@ -1680,13 +1680,11 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 
-			await runWranglerUntilConfig("dev index.js");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBrowser Rendering is not supported locally. Please use \`wrangler dev --remote\` instead.[0m
-
-				"
-			`);
+			await expect(
+				runWrangler("dev index.js")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				"[Error: Bailing early in tests]"
+			);
 		});
 	});
 

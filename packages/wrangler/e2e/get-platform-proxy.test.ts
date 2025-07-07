@@ -9,7 +9,7 @@ import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER_IMPORT } from "./helpers/wrangler";
 
 describe("getPlatformProxy()", () => {
-	describe("Workers AI", () => {
+	describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers AI", () => {
 		let root: string;
 		beforeEach(async () => {
 			root = makeRoot();

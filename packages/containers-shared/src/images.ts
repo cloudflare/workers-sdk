@@ -1,4 +1,3 @@
-import { execFile } from "child_process";
 import { buildImage } from "./build";
 import { isCloudflareRegistryLink } from "./knobs";
 import { dockerLoginManagedRegistry } from "./login";

@@ -1,5 +1,13 @@
 # @cloudflare/workers-shared
 
+## 0.18.1
+
+### Patch Changes
+
+- [#9824](https://github.com/cloudflare/workers-sdk/pull/9824) [`8104705`](https://github.com/cloudflare/workers-sdk/commit/810470555f49c358b1ebc3f679183d1f8ea89028) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Allow "plain text" images when blocking vulnerable non-image responses
+
+- [#9785](https://github.com/cloudflare/workers-sdk/pull/9785) [`07416ba`](https://github.com/cloudflare/workers-sdk/commit/07416ba644ef019f7cdccc7b3ed67f92abf03438) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Handle next apps hosted at a path other than the root when blocking vulnerable non-image requests
+
 ## 0.18.0
 
 ### Minor Changes

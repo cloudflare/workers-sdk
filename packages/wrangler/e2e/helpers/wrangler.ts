@@ -60,7 +60,19 @@ function getWranglerCommand(command: string) {
 		"Commands must start with `wrangler` (e.g. `wrangler dev`) but got " +
 			command
 	);
-	return `${WRANGLER} ${command.slice("wrangler ".length)}`;
+
+	// If the user hasn't specifically set an inspector port, set it to 0 to reduce port conflicts
+	const inspectorPort =
+		command.includes(`--inspector-port`) || !command.startsWith("wrangler dev")
+			? ""
+			: " --inspector-port 0";
+
+	// If the user hasn't specifically set a Worker port, set it to 0 to reduce port conflicts
+	const workerPort =
+		command.includes(`--port`) || !command.startsWith("wrangler dev")
+			? ""
+			: " --port 0";
+	return `${WRANGLER} ${command.slice("wrangler ".length)}${inspectorPort}${workerPort}`;
 }
 
 function getOptions({

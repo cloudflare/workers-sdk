@@ -7,6 +7,7 @@ import { capitalizeScheme } from "./shared";
 import {
 	getCacheOptionsFromArgs,
 	getMtlsFromArgs,
+	getOriginConnectionLimitFromArgs,
 	getOriginFromArgs,
 	upsertOptions,
 } from ".";
@@ -29,6 +30,7 @@ export const hyperdriveCreateCommand = createCommand({
 	async handler(args, { config }) {
 		const origin = getOriginFromArgs(false, args);
 		const mtls = getMtlsFromArgs(args);
+    const origin_connection_limit = getOriginConnectionLimitFromArgs(args);
 
 		// Check if caching options were provided via CLI args
 		let caching = getCacheOptionsFromArgs(args);
@@ -52,6 +54,7 @@ export const hyperdriveCreateCommand = createCommand({
 			origin,
 			caching,
 			mtls,
+			origin_connection_limit
 		});
 		logger.log(
 			`✅ Created new Hyperdrive ${capitalizeScheme(database.origin.scheme)} config: ${database.id}`

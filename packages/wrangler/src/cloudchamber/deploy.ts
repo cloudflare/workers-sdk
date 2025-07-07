@@ -4,7 +4,6 @@ import { type ContainerApp } from "../config/environment";
 import { containersScope } from "../containers";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { fetchVersion } from "../versions/api";
 import { apply } from "./apply";
@@ -18,7 +17,7 @@ export async function maybeBuildContainer(
 	imageTag: string,
 	dryRun: boolean,
 	pathToDocker: string
-): Promise<{ image: string; pushed: boolean }> {
+): Promise<{ image: string; imageUpdated: boolean }> {
 	try {
 		if (
 			!isDockerfile(
@@ -27,7 +26,10 @@ export async function maybeBuildContainer(
 		) {
 			return {
 				image: containerConfig.image ?? containerConfig.configuration?.image,
-				pushed: false,
+				// We don't know at this point whether the image was updated or not
+				// but we need to make sure downstream checks if it was updated so
+				// we set this to true.
+				imageUpdated: true,
 			};
 		}
 	} catch (err) {
@@ -46,7 +48,8 @@ export async function maybeBuildContainer(
 		!dryRun,
 		containerConfig
 	);
-	return buildResult;
+
+	return { image: buildResult.image, imageUpdated: buildResult.pushed };
 }
 
 export type DeployContainersArgs = {
@@ -66,11 +69,7 @@ export async function deployContainers(
 	}
 
 	if (!dryRun) {
-		await fillOpenAPIConfiguration(
-			config,
-			isNonInteractiveOrCI(),
-			containersScope
-		);
+		await fillOpenAPIConfiguration(config, containersScope);
 	}
 	const pathToDocker = getDockerPath();
 	for (const container of config.containers) {
@@ -126,9 +125,8 @@ export async function deployContainers(
 		await apply(
 			{
 				skipDefaults: false,
-				json: true,
 				env,
-				imageUpdateRequired: buildResult.pushed,
+				imageUpdateRequired: buildResult.imageUpdated,
 			},
 			configuration
 		);
@@ -143,13 +141,13 @@ export function getBuildArguments(
 	container: ContainerApp,
 	idForImageTag: string
 ): BuildArgs {
-	const imageRef = container.image ?? container.configuration?.image;
+	const pathToDockerfile = container.image ?? container.configuration?.image;
 	const imageTag = container.name + ":" + idForImageTag.split("-")[0];
 
 	return {
 		tag: imageTag,
-		pathToDockerfile: imageRef,
-		buildContext: container.image_build_context ?? ".",
+		pathToDockerfile,
+		buildContext: container.image_build_context,
 		args: container.image_vars,
 	};
 }

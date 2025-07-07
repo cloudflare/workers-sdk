@@ -9,8 +9,8 @@ on:
       - ".changeset/**.md"
 
 permissions:
-  contents: read
-  # note: no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
+  contents: write # Required to push the v3 backport branch up
+  pull-requests: write # Required for opening the backport PR and commenting on the original PR
 
 jobs:
   open-pr:
@@ -45,7 +45,7 @@ jobs:
           FILES: ${{ steps.files.outputs.all }}
           PR_NUMBER: ${{ github.event.number }}
           PR_TITLE: ${{ toJson(github.event.pull_request.title) }}
-          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }} # We cannot create a PR with the default GITHUB_TOKEN with the `pull_request` event.
 
       - name: "Comment on PR with error details"
         if: steps.open_pr.outputs.has_wrangler_patch == 'true' && failure()
