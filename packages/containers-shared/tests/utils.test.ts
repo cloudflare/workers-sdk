@@ -14,15 +14,23 @@ describe("isDockerfile", () => {
 	});
 
 	it("should return true if given a valid dockerfile path", async () => {
-		expect(isDockerfile("./container-context/Dockerfile")).toBe(true);
+		expect(isDockerfile("./container-context/Dockerfile", undefined)).toBe(
+			true
+		);
+	});
+
+	it("should find a dockerfile relative to the wrangler config path", async () => {
+		expect(
+			isDockerfile("./Dockerfile", "./container-context/wrangler.json")
+		).toBe(true);
 	});
 
 	it("should return false if given a valid image registry path", async () => {
-		expect(isDockerfile("docker.io/httpd:1")).toBe(false);
+		expect(isDockerfile("docker.io/httpd:1", undefined)).toBe(false);
 	});
 
 	it("should error if given a non existant dockerfile", async () => {
-		expect(() => isDockerfile("./FakeDockerfile"))
+		expect(() => isDockerfile("./FakeDockerfile", undefined))
 			.toThrowErrorMatchingInlineSnapshot(`
 				[Error: The image "./FakeDockerfile" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
 				If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)]
@@ -30,14 +38,14 @@ describe("isDockerfile", () => {
 	});
 
 	it("should error if given a directory instead of a dockerfile", async () => {
-		expect(() => isDockerfile("./container-context"))
+		expect(() => isDockerfile("./container-context", undefined))
 			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: ./container-context is a directory, you should specify a path to the Dockerfile]
 		`);
 	});
 
 	it("should error if image registry reference contains the protocol part", async () => {
-		expect(() => isDockerfile("http://example.com/image:tag"))
+		expect(() => isDockerfile("http://example.com/image:tag", undefined))
 			.toThrowErrorMatchingInlineSnapshot(`
 				[Error: The image "http://example.com/image:tag" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
 				Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)]
@@ -45,7 +53,7 @@ describe("isDockerfile", () => {
 	});
 
 	it("should error if image registry reference does not contain a tag", async () => {
-		expect(() => isDockerfile("docker.io/httpd"))
+		expect(() => isDockerfile("docker.io/httpd", undefined))
 			.toThrowErrorMatchingInlineSnapshot(`
 				[Error: The image "docker.io/httpd" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
 				If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)]

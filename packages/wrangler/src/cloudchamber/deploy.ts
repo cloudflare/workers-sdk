@@ -16,12 +16,14 @@ export async function maybeBuildContainer(
 	/** just the tag component. will be prefixed with the container name */
 	imageTag: string,
 	dryRun: boolean,
-	pathToDocker: string
+	pathToDocker: string,
+	configPath: string | undefined
 ): Promise<{ image: string; imageUpdated: boolean }> {
 	try {
 		if (
 			!isDockerfile(
-				containerConfig.image ?? containerConfig.configuration?.image
+				containerConfig.image ?? containerConfig.configuration?.image,
+				configPath
 			)
 		) {
 			return {
@@ -46,6 +48,7 @@ export async function maybeBuildContainer(
 		options,
 		pathToDocker,
 		!dryRun,
+		configPath,
 		containerConfig
 	);
 
@@ -116,7 +119,8 @@ export async function deployContainers(
 			container,
 			versionId,
 			dryRun,
-			pathToDocker
+			pathToDocker,
+			config.configPath
 		);
 		container.configuration ??= {};
 		container.configuration.image = buildResult.image;
