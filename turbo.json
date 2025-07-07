@@ -7,7 +7,9 @@
 	"globalPassThroughEnv": [
 		"NODE_EXTRA_CA_CERTS",
 		"CI",
-		"VSCODE_INSPECTOR_OPTIONS"
+		"VSCODE_INSPECTOR_OPTIONS",
+		"WRANGLER_LOG_PATH",
+		"TEST_REPORT_PATH"
 	],
 	"tasks": {
 		"dev": {
