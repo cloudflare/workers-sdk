@@ -454,6 +454,7 @@ export async function apply(
 		skipDefaults: boolean | undefined;
 		env?: string;
 		imageUpdateRequired?: boolean;
+		dryRun: boolean;
 	},
 	config: Config
 ) {
@@ -538,17 +539,18 @@ export async function apply(
 			appConfigNoDefaults.configuration.image = application.configuration.image;
 		}
 
-		const account = await loadAccount();
 		const appConfig = containerAppToCreateApplication(
 			appConfigNoDefaults,
 			config.observability,
 			application,
 			args.skipDefaults
 		);
-		checkInstanceTypeAgainstLimits(
-			appConfig.configuration.instance_type,
-			account
-		);
+		if (!args.dryRun) {
+			checkInstanceTypeAgainstLimits(
+				appConfig.configuration.instance_type,
+				await loadAccount()
+			);
+		}
 
 		if (application !== undefined && application !== null) {
 			// we need to sort the objects (by key) because the diff algorithm works with
@@ -913,6 +915,7 @@ export async function applyCommand(
 			// For the apply command we want this to default to true
 			// so that the image can be updated if the user modified it.
 			imageUpdateRequired: true,
+			dryRun: false,
 		},
 		config
 	);

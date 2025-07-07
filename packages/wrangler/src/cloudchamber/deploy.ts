@@ -131,6 +131,7 @@ export async function deployContainers(
 				skipDefaults: false,
 				env,
 				imageUpdateRequired: buildResult.imageUpdated,
+				dryRun,
 			},
 			configuration
 		);
