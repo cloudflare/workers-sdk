@@ -7,6 +7,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { http, HttpResponse } from "msw";
 import { maybeBuildContainer } from "../../cloudchamber/deploy";
+import { clearCachedAccount } from "../../cloudchamber/locations";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockLegacyScriptData } from "../helpers/mock-legacy-script";
@@ -33,7 +34,7 @@ vi.mock("node:child_process");
 describe("maybeBuildContainer", () => {
 	it("Should return imageUpdate: true if using an image URI", async () => {
 		const config = {
-			image: "registry.cloudflare.com/some-account-id/some-image:uri",
+			image: "registry.cloudflare.com/some-image:uri",
 			class_name: "Test",
 		};
 		const result = await maybeBuildContainer(
@@ -121,8 +122,18 @@ describe("wrangler deploy with containers", () => {
 			)
 			.mockImplementationOnce(mockDockerImageInspect("my-container", "Galaxy"))
 			.mockImplementationOnce(mockDockerLogin("mockpassword"))
-			.mockImplementationOnce(mockDockerManifestInspect("my-container", true))
-			.mockImplementationOnce(mockDockerPush("my-container", "Galaxy"));
+			.mockImplementationOnce(
+				mockDockerManifestInspect("some-account-id/my-container", true)
+			)
+			.mockImplementationOnce(
+				mockDockerTag("my-container", "some-account-id/my-container", "Galaxy")
+			)
+			.mockImplementationOnce(
+				mockDockerPush("some-account-id/my-container", "Galaxy")
+			)
+			.mockImplementationOnce(
+				mockDockerImageDelete("some-account-id/my-container", "Galaxy")
+			);
 
 		writeWranglerConfig({
 			durable_objects: {
@@ -247,8 +258,18 @@ describe("wrangler deploy with containers", () => {
 			)
 			.mockImplementationOnce(mockDockerImageInspect("my-container", "Galaxy"))
 			.mockImplementationOnce(mockDockerLogin("mockpassword"))
-			.mockImplementationOnce(mockDockerManifestInspect("my-container", true))
-			.mockImplementationOnce(mockDockerPush("my-container", "Galaxy"));
+			.mockImplementationOnce(
+				mockDockerManifestInspect("some-account-id/my-container", true)
+			)
+			.mockImplementationOnce(
+				mockDockerTag("my-container", "some-account-id/my-container", "Galaxy")
+			)
+			.mockImplementationOnce(
+				mockDockerPush("some-account-id/my-container", "Galaxy")
+			)
+			.mockImplementationOnce(
+				mockDockerImageDelete("some-account-id/my-container", "Galaxy")
+			);
 
 		mockContainersAccount();
 
@@ -336,8 +357,18 @@ describe("wrangler deploy with containers", () => {
 			)
 			.mockImplementationOnce(mockDockerImageInspect("my-container", "Galaxy"))
 			.mockImplementationOnce(mockDockerLogin("mockpassword"))
-			.mockImplementationOnce(mockDockerManifestInspect("my-container", true))
-			.mockImplementationOnce(mockDockerPush("my-container", "Galaxy"));
+			.mockImplementationOnce(
+				mockDockerManifestInspect("some-account-id/my-container", true)
+			)
+			.mockImplementationOnce(
+				mockDockerTag("my-container", "some-account-id/my-container", "Galaxy")
+			)
+			.mockImplementationOnce(
+				mockDockerPush("some-account-id/my-container", "Galaxy")
+			)
+			.mockImplementationOnce(
+				mockDockerImageDelete("some-account-id/my-container", "Galaxy")
+			);
 
 		fs.mkdirSync("nested/src", { recursive: true });
 		fs.writeFileSync("Dockerfile", "FROM alpine");
@@ -434,6 +465,73 @@ describe("wrangler deploy with containers", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: You need 'containers:write', try logging in again or creating an appropiate API token]`
 		);
+	});
+});
+
+// This is a separate describe block because we intentionally do not mock any
+// API tokens, account ID, or authorization. The purpose of these tests is to
+// ensure that --dry-run mode works without requiring any API access.
+describe("wrangler deploy with containers dry run", () => {
+	runInTempDir();
+	const std = mockConsoleMethods();
+
+	beforeEach(() => {
+		clearCachedAccount();
+	});
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it("builds the image without pushing", async () => {
+		vi.mocked(spawn)
+			.mockImplementationOnce(mockDockerInfo())
+			.mockImplementationOnce(
+				mockDockerBuild("my-container", "worker", "FROM scratch", process.cwd())
+			)
+			.mockImplementationOnce(mockDockerImageInspect("my-container", "worker"))
+			.mockImplementationOnce(mockDockerLogin("mockpassword"))
+			.mockImplementationOnce(mockDockerManifestInspect("my-container", true))
+			.mockImplementationOnce(mockDockerPush("my-container", "worker"));
+
+		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
+
+		fs.writeFileSync("Dockerfile", "FROM scratch");
+		fs.writeFileSync(
+			"index.js",
+			`export class ExampleDurableObject {}; export default{};`
+		);
+
+		writeWranglerConfig({
+			durable_objects: {
+				bindings: [
+					{
+						name: "EXAMPLE_DO_BINDING",
+						class_name: "ExampleDurableObject",
+					},
+				],
+			},
+			containers: [
+				{
+					image: "./Dockerfile",
+					name: "my-container",
+					instances: 10,
+					class_name: "ExampleDurableObject",
+				},
+			],
+			migrations: [{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] }],
+		});
+
+		await runWrangler("deploy --dry-run index.js");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Building image my-container:worker
+			Your Worker has access to the following bindings:
+			Binding                                            Resource
+			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+			
+			--dry-run: exiting now."
+		`);
 	});
 });
 
@@ -549,7 +647,7 @@ function mockDockerBuild(
 		expect(args).toEqual([
 			"build",
 			"-t",
-			`${getCloudflareContainerRegistry()}/some-account-id/${containerName}:${tag}`,
+			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
 			"--platform",
 			"linux/amd64",
 			"--provenance=false",
@@ -590,7 +688,7 @@ function mockDockerImageInspect(containerName: string, tag: string) {
 		expect(args).toEqual([
 			"image",
 			"inspect",
-			`${getCloudflareContainerRegistry()}/some-account-id/${containerName}:${tag}`,
+			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
 			"--format",
 			"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 		]);
@@ -612,11 +710,23 @@ function mockDockerImageInspect(containerName: string, tag: string) {
 		setImmediate(() => {
 			stdout.emit(
 				"data",
-				`123456 4 ["${getCloudflareContainerRegistry()}/some-account-id/${containerName}@sha256:three"]`
+				`123456 4 ["${getCloudflareContainerRegistry()}/${containerName}@sha256:three"]`
 			);
 		});
 
 		return child as unknown as ChildProcess;
+	};
+}
+
+function mockDockerImageDelete(containerName: string, tag: string) {
+	return (cmd: string, args: readonly string[]) => {
+		expect(cmd).toBe("/usr/bin/docker");
+		expect(args).toEqual([
+			"image",
+			"rm",
+			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
+		]);
+		return defaultChildProcess();
 	};
 }
 
@@ -653,7 +763,7 @@ function mockDockerManifestInspect(containerName: string, shouldFail = true) {
 		expect(args).toEqual([
 			"manifest",
 			"inspect",
-			`${getCloudflareContainerRegistry()}/some-account-id/${containerName}@three`,
+			`${getCloudflareContainerRegistry()}/${containerName}@three`,
 		]);
 		const readable = new Writable({
 			write() {},
@@ -679,7 +789,19 @@ function mockDockerPush(containerName: string, tag: string) {
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([
 			"push",
-			`${getCloudflareContainerRegistry()}/some-account-id/${containerName}:${tag}`,
+			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
+		]);
+		return defaultChildProcess();
+	};
+}
+
+function mockDockerTag(from: string, to: string, tag: string) {
+	return (cmd: string, args: readonly string[]) => {
+		expect(cmd).toBe("/usr/bin/docker");
+		expect(args).toEqual([
+			"tag",
+			`${getCloudflareContainerRegistry()}/${from}:${tag}`,
+			`${getCloudflareContainerRegistry()}/${to}:${tag}`,
 		]);
 		return defaultChildProcess();
 	};
