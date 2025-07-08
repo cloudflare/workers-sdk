@@ -94,7 +94,8 @@ jobs:
             description: macOS
             node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --summarize'
-          - os: ubuntu-24.04-arm
+          # needs to run on the amd runners to allow containers test to work in CI
+          - os: ubuntu-24.04
             description: Linux
             node_version: 20.19.1
             # ./tools _only_ runs here because they're only intended to run in CI
@@ -104,11 +105,12 @@ jobs:
             description: Windows
             node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
-          - os: ubuntu-24.04-arm
+          # needs to run on the amd runners to allow containers test to work in CI
+          - os: ubuntu-24.04
             description: v22, Linux
             node_version: 22
             # Browser rendering is disabled here because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/interactive-dev-tests" --filter="!./fixtures/browser-rendering"'
+            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/browser-rendering"'
           # Skipped until we upgrade to undici v7, because of https://github.com/nodejs/undici/issues/4285
           # - os: ubuntu-24.04-arm
           #   label: v24, Linux
