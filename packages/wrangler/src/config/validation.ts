@@ -1254,7 +1254,7 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"containers",
-			validateContainerApp(envName, rawEnv.name),
+			validateContainerApp(envName),
 			undefined
 		),
 		send_email: notInheritable(
@@ -2373,11 +2373,8 @@ const validateBindingArray =
 		return isValid;
 	};
 
-function validateContainerApp(
-	envName: string,
-	topLevelName: string | undefined
-): ValidatorFn {
-	return (diagnostics, field, value, config) => {
+function validateContainerApp(topLevelName: string | undefined): ValidatorFn {
+	return (diagnostics, field, value) => {
 		if (!value) {
 			return true;
 		}
@@ -2390,13 +2387,6 @@ function validateContainerApp(
 		}
 
 		for (const containerAppOptional of value) {
-			// validate that either a name is set and is a string
-			if (!isOptionalProperty(value, "name", "string")) {
-				diagnostics.errors.push(
-					`Field "name", when present, should be a string, but got ${JSON.stringify(value)}`
-				);
-			}
-
 			validateRequiredProperty(
 				diagnostics,
 				field,
@@ -2422,14 +2412,40 @@ function validateContainerApp(
 						`Must have either a top level "name" and "containers.class_name" field defined, or have field "containers.name" defined.`
 					);
 				}
-				// if there is worker name defined but no name for this container app default to:
-				// worker_name-class_name[-envName].
-				let name = `${topLevelName}-${containerAppOptional.class_name}`;
-				// config is undefined when we are at the top level instead of in a named env
-				// If we are in a named env, append it to the generated name
-				// so that users can re-use container definitions between different envs without issue.
-				name += config === undefined ? "" : `-${envName}`;
-				containerAppOptional.name = name.toLowerCase().replace(/ /g, "-");
+				// default fallback set in getContainerDeployConfig
+			}
+
+			if ("configuration" in containerAppOptional) {
+				diagnostics.warnings.push(
+					`"containers.configuration" is deprecated, please use "containers.image" instead.`
+				);
+				if (
+					typeof containerAppOptional !== "object" ||
+					Array.isArray(containerAppOptional.configuration)
+				) {
+					diagnostics.errors.push(
+						`"containers.configuration" should be an object`
+					);
+				}
+
+				if (containerAppOptional.configuration.disk?.size) {
+					diagnostics.warnings.push(
+						`"containers.configuration.disk" is deprecated, please use pre-set configurations via "instance_type" instead.`
+					);
+					validateOptionalProperty(
+						diagnostics,
+						field,
+						"configuration.disk.size",
+						containerAppOptional.configuration.disk.size,
+						"string"
+					);
+
+					if (containerAppOptional.instance_type) {
+						diagnostics.errors.push(
+							`Cannot set "containers.configuration.disk.size" and "instance_type" at the same time.`
+						);
+					}
+				}
 			}
 
 			if (
@@ -2441,29 +2457,16 @@ function validateContainerApp(
 				);
 			}
 
-			// Validate that we have an image configuration for this container app.
-			// For legacy reasons we have to check both at containerAppOptional.image and
-			// containerAppOptional.configuration.image.
-			//
-			//
-			// At the moment logic in other places downstream of this rely on containerAppOptional.configuration.image be set
-			// so we set it here regardless of which place it is set by the user.
 			if (
-				"image" in containerAppOptional &&
-				containerAppOptional.image !== undefined
+				containerAppOptional.configuration?.image &&
+				containerAppOptional.image
 			) {
-				if (containerAppOptional.configuration?.image !== undefined) {
-					diagnostics.errors.push(
-						`"containers.image" and "containers.configuration.image" fields can't be defined at the same time.`
-					);
-					return false;
-				}
-				// consolidate the image into the configuration object
-				// TODO: consolidate it into the top level image field instead
-				containerAppOptional.configuration ??= {};
-				containerAppOptional.configuration.image = containerAppOptional.image;
-				delete containerAppOptional["image"];
+				diagnostics.errors.push(
+					`"containers.image" and "containers.configuration.image" fields can't be defined at the same time.`
+				);
 			}
+			// consolidate
+			containerAppOptional.image ??= containerAppOptional.configuration?.image;
 
 			// Validate rollout related configs
 			if (
@@ -2480,36 +2483,82 @@ function validateContainerApp(
 				);
 			}
 
-			if (
-				!isOptionalProperty(containerAppOptional, "rollout_kind", "string") &&
-				"rollout_kind" in containerAppOptional &&
-				!["full_auto", "full_manual", "none"].includes(
-					containerAppOptional.rollout_kind
-				)
-			) {
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"rollout_kind",
+				containerAppOptional.rollout_kind,
+				"string",
+				["full_auto", "full_manual", "none"]
+			);
+
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"instance_type",
+				containerAppOptional.instance_type,
+				"string",
+				["dev", "basic", "standard"]
+			);
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"max_instances",
+				containerAppOptional.max_instances,
+				"number"
+			);
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"image_build_context",
+				containerAppOptional.image_build_context,
+				"string"
+			);
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"image_vars",
+				containerAppOptional.image_vars,
+				"object"
+			);
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"scheduling_policy",
+				containerAppOptional.scheduling_policy,
+				"string",
+				["regional", "moon", "default"]
+			);
+
+			if ("durable_objects" in containerAppOptional) {
 				diagnostics.errors.push(
-					`"containers.rollout_kind" field should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
+					`"containers.durable_objects" is deprecated, please set the durable object class name under "containers.class_name" instead.`
 				);
+			}
+			if ("instances" in containerAppOptional) {
+				diagnostics.errors.push(`"containers.instances" is deprecated.`);
 			}
 
-			// Leaving for legacy reasons
-			// TODO: When cleaning up container.configuration usage in other places clean this up
-			// as well.
-			if (Array.isArray(containerAppOptional.configuration)) {
-				diagnostics.errors.push(
-					`"containers.configuration" is defined as an array, it should be an object`
-				);
-			}
-			if ("instance_type" in containerAppOptional) {
-				validateOptionalProperty(
-					diagnostics,
-					field,
+			validateAdditionalProperties(
+				diagnostics,
+				field,
+				Object.keys(containerAppOptional),
+				[
+					"name",
+					"instances",
+					"max_instances",
+					"image",
+					"image_build_context",
+					"image_vars",
+					"class_name",
+					"scheduling_policy",
 					"instance_type",
-					containerAppOptional.instance_type,
-					"string",
-					["dev", "basic", "standard"]
-				);
-			}
+					"configuration",
+					"constraints",
+					"rollout_step_percentage",
+					"rollout_kind",
+				]
+			);
 		}
 
 		if (diagnostics.errors.length > 0) {
