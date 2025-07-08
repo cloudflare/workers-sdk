@@ -1,6 +1,6 @@
 # @cloudflare/vite-plugin
 
-## 2.0.0
+## 1.9.1
 
 ### Patch Changes
 
