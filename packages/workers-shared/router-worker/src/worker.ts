@@ -130,6 +130,10 @@ export default {
 						}
 					}
 
+					analytics.setData({
+						timeToDispatch: performance.now() - startTimeMs,
+					});
+
 					if (shouldBlockNonImageResponse) {
 						const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
 						const isImage = resp.headers
@@ -160,6 +164,9 @@ export default {
 						dispatchType: DISPATCH_TYPE.ASSETS,
 					});
 
+					analytics.setData({
+						timeToDispatch: performance.now() - startTimeMs,
+					});
 					return env.ASSET_WORKER.fetch(maybeSecondRequest);
 				});
 			};
