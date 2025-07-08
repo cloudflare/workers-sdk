@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vitest-pool-workers",
-	"version": "0.8.49",
+	"version": "0.8.50",
 	"description": "Workers Vitest integration for writing Vitest unit and integration tests that run inside the Workers runtime",
 	"keywords": [
 		"cloudflare",
@@ -65,7 +65,7 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250705.0",
+		"@cloudflare/workers-types": "^4.20250708.0",
 		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
 		"@vitest/runner": "catalog:default",

@@ -1,12 +1,21 @@
 import assert from "node:assert";
-import childProcess from "node:child_process";
+import childProcess, { execSync } from "node:child_process";
 import fs from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import rl from "node:readline";
 import stream from "node:stream";
 import stripAnsi from "strip-ansi";
 import { fetch } from "undici";
-import { afterEach, describe as baseDescribe, expect, it } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	describe as baseDescribe,
+	beforeAll,
+	expect,
+	it,
+	vi,
+} from "vitest";
 import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 import type pty from "@cdktf/node-pty-prebuilt-multiarch";
 
@@ -249,19 +258,6 @@ describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 			expect(wrangler.stdout).not.toContain("to exit");
 			expect(wrangler.stdout).not.toContain("rebuild container");
 		});
-		// docker isn't installed by default on windows/macos runners
-		it.skipIf(process.env.platform !== "linux" && process.env.CI === "true")(
-			"should show rebuild containers hotkey if containers are configured",
-			async () => {
-				const wrangler = await startWranglerDev([
-					"dev",
-					"-c",
-					"wrangler.container.jsonc",
-				]);
-				wrangler.pty.kill();
-				expect(wrangler.stdout).toContain("rebuild container");
-			}
-		);
 	});
 });
 
@@ -292,3 +288,169 @@ it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {
 		expect(duringProcesses.length).toBeGreaterThan(beginProcesses.length);
 	}
 });
+
+// it seems like if we spam the container too often, it freezes up and crashes
+const WAITFOR_OPTIONS = { timeout: 2000, interval: 500 };
+baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
+	"container dev",
+	{ retry: 0, timeout: 90000 },
+	() => {
+		let tmpDir: string;
+		beforeAll(async () => {
+			tmpDir = fs.mkdtempSync(path.join(tmpdir(), "wrangler-container-"));
+			fs.cpSync(
+				path.resolve(__dirname, "../", "container-app"),
+				path.join(tmpDir),
+				{
+					recursive: true,
+				}
+			);
+
+			const ids = getContainerIds();
+			if (ids.length > 0) {
+				execSync("docker rm -f " + ids.join(" "), {
+					encoding: "utf8",
+				});
+			}
+		});
+
+		afterEach(async () => {
+			const ids = getContainerIds();
+			if (ids.length > 0) {
+				execSync("docker rm -f " + ids.join(" "), {
+					encoding: "utf8",
+				});
+			}
+		});
+		afterAll(async () => {
+			try {
+				fs.rmSync(tmpDir, { recursive: true, force: true });
+			} catch (e) {
+				// It seems that Windows doesn't let us delete this, with errors like:
+				//
+				// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
+				// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+				// Serialized Error: {
+				// 	"code": "EBUSY",
+				// 	"errno": -4082,
+				// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
+				// 	"syscall": "rmdir",
+				// }
+				console.error(e);
+			}
+		});
+
+		it("should print rebuild containers hotkey", async () => {
+			const wrangler = await startWranglerDev([
+				"dev",
+				"-c",
+				path.join(tmpDir, "wrangler.jsonc"),
+			]);
+			wrangler.pty.kill();
+			expect(wrangler.stdout).toContain("rebuild container");
+		});
+
+		it("should rebuild a container when the hotkey is pressed", async () => {
+			const wrangler = await startWranglerDev([
+				"dev",
+				"-c",
+				path.join(tmpDir, "wrangler.jsonc"),
+			]);
+			await fetch(wrangler.url + "/start");
+
+			// wait container to be ready
+			await vi.waitFor(async () => {
+				const status = await fetch(wrangler.url + "/status");
+				expect(await status.json()).toBe(true);
+			}, WAITFOR_OPTIONS);
+
+			await vi.waitFor(async () => {
+				const res = await fetch(wrangler.url + "/fetch");
+
+				expect(await res.text()).toBe(
+					"Hello World! Have an env var! I'm an env var!"
+				);
+			}, WAITFOR_OPTIONS);
+
+			fs.writeFileSync(
+				path.join(tmpDir, "container", "simple-node-app.js"),
+				`const { createServer } = require("http");
+
+				const server = createServer(function (req, res) {
+					res.writeHead(200, { "Content-Type": "text/plain" });
+					res.write("Blah! " + process.env.MESSAGE);
+					res.end();
+				});
+
+				server.listen(8080, function () {
+					console.log("Server listening on port 8080");
+				});`,
+				"utf-8"
+			);
+
+			wrangler.pty.write("r");
+
+			// wait for build to finish
+			await vi.waitFor(async () => {
+				const status = await fetch(wrangler.url + "/status");
+				expect(await status.json()).toBe(false);
+			}, WAITFOR_OPTIONS);
+
+			await fetch(wrangler.url + "/start");
+			await vi.waitFor(async () => {
+				const status = await fetch(wrangler.url + "/status");
+				expect(await status.json()).toBe(true);
+			}, WAITFOR_OPTIONS);
+			await vi.waitFor(async () => {
+				const res = await fetch(wrangler.url + "/fetch");
+				expect(await res.text()).toBe("Blah! I'm an env var!");
+			}, WAITFOR_OPTIONS);
+			wrangler.pty.kill();
+		});
+
+		it("should clean up any containers that were started", async () => {
+			const wrangler = await startWranglerDev([
+				"dev",
+				"-c",
+				path.join(tmpDir, "wrangler.jsonc"),
+			]);
+			await fetch(wrangler.url + "/start");
+			// wait container to be ready
+			await vi.waitFor(async () => {
+				const status = await fetch(wrangler.url + "/status");
+				expect(await status.json()).toBe(true);
+			}, WAITFOR_OPTIONS);
+			const ids = getContainerIds();
+			expect(ids.length).toBe(1);
+
+			wrangler.pty.kill("SIGINT");
+			await new Promise<void>((resolve) => {
+				wrangler.pty.onExit(() => resolve());
+			});
+			vi.waitFor(() => {
+				const remainingIds = getContainerIds();
+				expect(remainingIds.length).toBe(0);
+			});
+		});
+	}
+);
+
+/** gets any containers that were created by running this fixture */
+const getContainerIds = () => {
+	// note the -a to include stopped containers
+	const allContainers = execSync(`docker ps -a --format json`)
+		.toString()
+		.split("\n")
+		.filter((line) => line.trim());
+	if (allContainers.length === 0) {
+		return [];
+	}
+	const jsonOutput = allContainers.map((line) => JSON.parse(line));
+
+	const matches = jsonOutput.map((container) => {
+		if (container.Image.includes("cloudflare-dev/fixturetestcontainer")) {
+			return container.ID;
+		}
+	});
+	return matches.filter(Boolean);
+};

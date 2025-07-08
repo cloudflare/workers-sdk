@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.2.3
+
+### Patch Changes
+
+- [#9872](https://github.com/cloudflare/workers-sdk/pull/9872) [`a727db3`](https://github.com/cloudflare/workers-sdk/commit/a727db341a811572623e0a0f361f070a95758776) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: resolve Dockerfile path relative to the Wrangler config path
+
+  This fixes a bug where Wrangler would not be able to find a Dockerfile if a Wrangler config path had been specified with the `--config` flag.
+
 ## 0.2.2
 
 ### Patch Changes

@@ -1,5 +1,26 @@
 # miniflare
 
+## 4.20250705.0
+
+### Minor Changes
+
+- [#9796](https://github.com/cloudflare/workers-sdk/pull/9796) [`ba69586`](https://github.com/cloudflare/workers-sdk/commit/ba69586d8f8ad5ea68e42e4feb47994f4503c376) Thanks [@simonabadoiu](https://github.com/simonabadoiu)! - Browser Rendering local mode
+
+### Patch Changes
+
+- [#9784](https://github.com/cloudflare/workers-sdk/pull/9784) [`1a75f85`](https://github.com/cloudflare/workers-sdk/commit/1a75f85ae9893bd0ee8c8dba77d4d1be104a527c) Thanks [@Mkassabov](https://github.com/Mkassabov)! - fix inspector proxy not proxying workers created via setOptions
+
+- [#9757](https://github.com/cloudflare/workers-sdk/pull/9757) [`395f36d`](https://github.com/cloudflare/workers-sdk/commit/395f36de127c6ee5fbc0ceadbfb508f7f32f5388) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250617.0  | 1.20250705.0  |
+  | @cloudflare/workers-types | ^4.20250617.0 | ^4.20250705.0 |
+
+- [#9855](https://github.com/cloudflare/workers-sdk/pull/9855) [`6f344bf`](https://github.com/cloudflare/workers-sdk/commit/6f344bfe3179477a75c61d504bf69ede05d103ab) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - use logger (and log level) from miniflare for asset metadata parsing/loading logs
+
 ## 4.20250617.5
 
 ### Minor Changes

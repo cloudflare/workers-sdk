@@ -319,8 +319,8 @@ test("responds with pretty error page", async (t) => {
 	const text = await res.text();
 	// ...including error, request method, URL and headers
 	t.regex(text, /Unusual oops!/);
-	t.regex(text, /Method.+POST/s);
-	t.regex(text, /URI.+some-unusual-path/s);
+	t.regex(text, /Method.+POST/is);
+	t.regex(text, /URL.+some-unusual-path/is);
 	t.regex(text, /X-Unusual-Key.+some-unusual-value/is);
 
 	// Check `fetch()` accepting HTML returns pretty-error page
