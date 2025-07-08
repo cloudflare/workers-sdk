@@ -15,7 +15,6 @@ import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import { mockAccount } from "./utils";
 import type {
 	Application,
-	CompleteAccountCustomer,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 } from "@cloudflare/containers-shared";
@@ -94,7 +93,7 @@ describe("cloudchamber apply", () => {
 	mockApiToken();
 	beforeEach(() => {
 		mockAccount({
-			external_account_id: "some-account-id",
+			external_account_id: process.env.CLOUDFLARE_ACCOUNT_ID,
 			// set limits to allow all instance types
 			limits: {
 				disk_mb_per_deployment: 4000,
