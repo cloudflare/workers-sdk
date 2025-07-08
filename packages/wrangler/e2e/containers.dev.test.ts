@@ -263,43 +263,21 @@ describe
 			);
 		});
 
-		describe("make sure ports are exposed if necessary", () => {
-			beforeEach(async () => {
-				await helper.seed({
-					Dockerfile: dedent`
-					FROM alpine:latest
-					CMD ["echo", "hello world"]
-					`,
-				});
-				if (source === "pull") {
-					await helper.run(
-						`wrangler containers build . -t ${workerName}:tmp-e2e -p`
-					);
-				}
+		it("errors if no ports are exposed", async () => {
+			await helper.seed({
+				Dockerfile: dedent`
+							FROM alpine:latest
+							CMD ["echo", "hello world"]
+							`,
 			});
-			// this will never run in CI
-			it.skipIf(process.platform === "linux")(
-				"errors in windows/macos if no ports are exposed",
-				async () => {
-					const worker = helper.runLongLived("wrangler dev");
-					expect(await worker.exitCode).toBe(1);
-					expect(await worker.output).toContain("does not expose any ports");
-				}
-			);
-
-			it.skipIf(process.platform !== "linux")(
-				"doesn't error in linux if no ports are exposed",
-				async () => {
-					const worker = helper.runLongLived("wrangler dev");
-					await worker.readUntil(/Preparing container/);
-					if (source === "pull") {
-						await worker.readUntil(/Status/);
-					} else {
-						await worker.readUntil(/DONE/);
-					}
-					await worker.readUntil(/Container image\(s\) ready/);
-				}
-			);
+			if (source === "pull") {
+				await helper.run(
+					`wrangler containers build . -t ${workerName}:tmp-e2e -p`
+				);
+			}
+			const worker = helper.runLongLived("wrangler dev");
+			expect(await worker.exitCode).toBe(1);
+			expect(await worker.output).toContain("does not expose any ports");
 		});
 
 		it("errors if docker is not installed", async () => {

@@ -1,5 +1,5 @@
-import { mkdirSync, rmSync, writeFileSync } from "fs";
-import { isDockerfile } from "./../src/utils";
+import { mkdirSync, writeFileSync } from "fs";
+import { checkExposedPorts, isDockerfile } from "./../src/utils";
 import { runInTempDir } from "./helpers/run-in-tmp-dir";
 
 describe("isDockerfile", () => {
@@ -57,6 +57,48 @@ describe("isDockerfile", () => {
 			.toThrowErrorMatchingInlineSnapshot(`
 				[Error: The image "docker.io/httpd" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
 				If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)]
+			`);
+	});
+});
+
+let docketImageInspectResult = "0";
+
+vi.mock("../src/inspect", async (importOriginal) => {
+	const mod: object = await importOriginal();
+	return {
+		...mod,
+		dockerImageInspect: () => docketImageInspectResult,
+	};
+});
+
+describe("checkExposedPorts", () => {
+	beforeEach(() => {
+		docketImageInspectResult = "1";
+	});
+
+	it("should not error when some ports are exported", async () => {
+		docketImageInspectResult = "1";
+		await expect(
+			checkExposedPorts("./container-context/Dockerfile", {
+				image: "",
+				imageTag: "",
+				class_name: "MyContainer",
+			})
+		).resolves.toBeUndefined();
+	});
+
+	it("should error, with an appropriate message when no ports are exported", async () => {
+		docketImageInspectResult = "0";
+		expect(
+			checkExposedPorts("./container-context/Dockerfile", {
+				image: "",
+				imageTag: "",
+				class_name: "MyContainer",
+			})
+		).rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The container "MyContainer" does not expose any ports. In your Dockerfile, please expose any ports you intend to connect to.
+				For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.
+				]
 			`);
 	});
 });
