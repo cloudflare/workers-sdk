@@ -270,11 +270,8 @@ describe("buildAndMaybePush", () => {
 	});
 
 	describe("resolveAppDiskSize", () => {
-		const accountBase = {
-			limits: { disk_mb_per_deployment: 2000 },
-		} as CompleteAccountCustomer;
 		it("should return parsed app disk size", () => {
-			const result = resolveAppDiskSize(accountBase, {
+			const result = resolveAppDiskSize({
 				...defaultConfiguration,
 				configuration: { image: "", disk: { size: "500MB" } },
 			});
@@ -282,7 +279,7 @@ describe("buildAndMaybePush", () => {
 		});
 
 		it("should return default size when disk size not set", () => {
-			const result = resolveAppDiskSize(accountBase, {
+			const result = resolveAppDiskSize({
 				...defaultConfiguration,
 				configuration: { image: "" },
 			});
@@ -290,7 +287,7 @@ describe("buildAndMaybePush", () => {
 		});
 
 		it("should return instance type disk size when set", () => {
-			const result = resolveAppDiskSize(accountBase, {
+			const result = resolveAppDiskSize({
 				...defaultConfiguration,
 				instance_type: "basic",
 				configuration: { image: "" },
@@ -300,7 +297,7 @@ describe("buildAndMaybePush", () => {
 		});
 
 		it("should return undefined if app is not passed", () => {
-			expect(resolveAppDiskSize(accountBase, undefined)).toBeUndefined();
+			expect(resolveAppDiskSize(undefined)).toBeUndefined();
 		});
 	});
 });

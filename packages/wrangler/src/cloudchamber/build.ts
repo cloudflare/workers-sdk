@@ -259,7 +259,7 @@ export async function ensureDiskLimits(options: {
 }): Promise<void> {
 	const MB = 1000 * 1000;
 	const MiB = 1024 * 1024;
-	const appDiskSize = resolveAppDiskSize(options.account, options.containerApp);
+	const appDiskSize = resolveAppDiskSize(options.containerApp);
 	const accountDiskSize =
 		(options.account.limits.disk_mb_per_deployment ?? 2000) * MB;
 	// if appDiskSize is defined and configured to be more than the accountDiskSize, error
