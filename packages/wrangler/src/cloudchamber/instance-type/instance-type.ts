@@ -117,22 +117,25 @@ export function checkInstanceTypeAgainstLimits(
 
 	const usage = instanceTypes[instanceType];
 
+	const errors = [];
 	if (usage.vcpu > vcpuLimit) {
-		throw new UserError(
-			`Exceeded account limits: Your configured instance type uses ${usage.vcpu} vCPU. However, that exceeds the account limit of ${vcpuLimit}`
+		errors.push(
+			`Your configured instance type uses ${usage.vcpu} vCPU which exceeds the account limit of ${vcpuLimit}.`
 		);
 	}
-
 	if (usage.memory_mib > memoryLimit) {
-		throw new UserError(
-			`Exceeded account limits: Your configured instance type uses ${usage.memory_mib} MiB of memory. However, that exceeds the account limit of ${memoryLimit}`
+		errors.push(
+			`Your configured instance type uses ${usage.memory_mib} MiB of memory which exceeds the account limit of ${memoryLimit}.`
+		);
+	}
+	if (usage.disk_mb > diskLimit) {
+		errors.push(
+			`Your configured instance type uses ${usage.disk_mb} MB of disk which exceeds the account limit of ${diskLimit}.`
 		);
 	}
 
-	if (usage.disk_mb > diskLimit) {
-		throw new UserError(
-			`Exceeded account limits: Your configured instance type uses ${usage.disk_mb} MB of disk. However, that exceeds the account limit of ${diskLimit}`
-		);
+	if (errors.length > 0) {
+		throw new UserError(`Exceeded account limits: ${errors.join(' ')}`);
 	}
 }
 

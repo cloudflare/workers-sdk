@@ -21,7 +21,7 @@ describe("instance type limit check tests", () => {
 				},
 			} as CompleteAccountCustomer)
 		).toThrow(
-			"Exceeded account limits: Your configured instance type uses 4000 MB of disk. However, that exceeds the account limit of 2000"
+			"Exceeded account limits: Your configured instance type uses 4000 MB of disk which exceeds the account limit of 2000"
 		);
 	});
 
@@ -34,7 +34,7 @@ describe("instance type limit check tests", () => {
 				},
 			} as CompleteAccountCustomer)
 		).toThrow(
-			"Exceeded account limits: Your configured instance type uses 4096 MiB of memory. However, that exceeds the account limit of 1024"
+			"Exceeded account limits: Your configured instance type uses 4096 MiB of memory which exceeds the account limit of 1024"
 		);
 	});
 
@@ -47,7 +47,7 @@ describe("instance type limit check tests", () => {
 				},
 			} as CompleteAccountCustomer)
 		).toThrow(
-			"Exceeded account limits: Your configured instance type uses 0.5 vCPU. However, that exceeds the account limit of 0.25"
+			"Exceeded account limits: Your configured instance type uses 0.5 vCPU which exceeds the account limit of 0.25"
 		);
 	});
 
