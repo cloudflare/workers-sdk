@@ -145,9 +145,9 @@ function inferInstanceType(
 ): InstanceType | undefined {
 	for (const [instanceType, configuration] of Object.entries(instanceTypes)) {
 		if (
-			config?.vcpu === configuration.vcpu &&
-			config?.memory_mib === configuration.memory_mib &&
-			config?.disk?.size_mb === configuration.disk_mb
+			config.vcpu === configuration.vcpu &&
+			config.memory_mib === configuration.memory_mib &&
+			config.disk?.size_mb === configuration.disk_mb
 		) {
 			return instanceType as InstanceType;
 		}
