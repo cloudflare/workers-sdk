@@ -232,7 +232,7 @@ export default class<TEnv extends Env = Env> extends WorkerEntrypoint<TEnv> {
 		pathname: string,
 		_request?: Request
 	): Promise<string | null> {
-		const BINARY_SEARCH_EXPERIMENT_SAMPLE_RATE = 0.5;
+		const BINARY_SEARCH_EXPERIMENT_SAMPLE_RATE = 0.05;
 		const binarySearchVersion =
 			Math.random() < BINARY_SEARCH_EXPERIMENT_SAMPLE_RATE
 				? "current"
@@ -256,11 +256,25 @@ export default class<TEnv extends Env = Env> extends WorkerEntrypoint<TEnv> {
 
 			const startTimeMs = performance.now();
 			try {
-				const assetsManifest =
-					binarySearchVersion === "current"
-						? new AssetsManifest(this.env.ASSETS_MANIFEST)
-						: new AssetsManifest2(this.env.ASSETS_MANIFEST);
-				const eTag = await assetsManifest.get(pathname);
+				let eTag: string | null;
+
+				if (binarySearchVersion === "perfTest") {
+					try {
+						const assetsManifest = new AssetsManifest2(
+							this.env.ASSETS_MANIFEST
+						);
+						eTag = await assetsManifest.get(pathname);
+					} catch {
+						// Fallback to the "current" impl if the new one throws.
+						// We use "current-fallback" to surface errors in the analytics data
+						analytics.setData({ binarySearchVersion: "current-fallback" });
+						const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
+						eTag = await assetsManifest.get(pathname);
+					}
+				} else {
+					const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
+					eTag = await assetsManifest.get(pathname);
+				}
 
 				span.setTags({
 					path: pathname,

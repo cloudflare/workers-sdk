@@ -15,7 +15,7 @@ type Data = {
 
 	// -- Blobs --
 	// blob1 current or perfTest version of binary search
-	binarySearchVersion?: "current" | "perfTest";
+	binarySearchVersion?: "current" | "perfTest" | "current-fallback";
 };
 
 export class ExperimentAnalytics {
