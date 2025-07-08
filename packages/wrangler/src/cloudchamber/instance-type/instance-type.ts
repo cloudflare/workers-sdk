@@ -135,7 +135,7 @@ export function checkInstanceTypeAgainstLimits(
 	}
 
 	if (errors.length > 0) {
-		throw new UserError(`Exceeded account limits: ${errors.join(' ')}`);
+		throw new UserError(`Exceeded account limits: ${errors.join(" ")}`);
 	}
 }
 
