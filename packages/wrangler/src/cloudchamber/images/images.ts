@@ -60,7 +60,7 @@ export const imagesCommand = (
 function deleteImageYargs(yargs: CommonYargsArgv) {
 	return yargs.positional("image", {
 		type: "string",
-		description: "image and tag to delete",
+		description: "Image and tag to delete, of the form IMAGE:TAG",
 		demandOption: true,
 	});
 }
