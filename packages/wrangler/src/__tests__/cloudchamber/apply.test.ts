@@ -101,7 +101,7 @@ describe("cloudchamber apply", () => {
 				memory_mib_per_deployment: 4096,
 				vcpu_per_deployment: 1,
 			},
-		} as CompleteAccountCustomer);
+		});
 	});
 	runInTempDir();
 	afterEach(() => {

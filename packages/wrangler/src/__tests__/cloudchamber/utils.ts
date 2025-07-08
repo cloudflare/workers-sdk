@@ -18,11 +18,15 @@ export function setWranglerConfig(cloudchamber: CloudchamberConfig) {
 	);
 }
 
+type DeepPartial<T> = {
+	[P in keyof T]?: DeepPartial<T[P]>;
+};
+
 export function mockAccount(
-	account: CompleteAccountCustomer = {
+	account: DeepPartial<CompleteAccountCustomer> = {
 		external_account_id: process.env.CLOUDFLARE_ACCOUNT_ID,
 		limits: { disk_mb_per_deployment: 2000 },
-	} as CompleteAccountCustomer
+	}
 ) {
 	const spy = vi.spyOn(user, "getScopes");
 	spy.mockImplementationOnce(() => ["cloudchamber:write", "containers:write"]);
