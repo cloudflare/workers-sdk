@@ -87,21 +87,18 @@ describe("checkExposedPorts", () => {
 		).resolves.toBeUndefined();
 	});
 
-	it.skipIf(process.platform === "linux")(
-		"should error, on non-linux systems, with an appropriate message when no ports are exported",
-		async () => {
-			docketImageInspectResult = "0";
-			expect(
-				checkExposedPorts("./container-context/Dockerfile", {
-					image: "",
-					imageTag: "",
-					class_name: "MyContainer",
-				})
-			).rejects.toThrowErrorMatchingInlineSnapshot(`
+	it("should error, with an appropriate message when no ports are exported", async () => {
+		docketImageInspectResult = "0";
+		expect(
+			checkExposedPorts("./container-context/Dockerfile", {
+				image: "",
+				imageTag: "",
+				class_name: "MyContainer",
+			})
+		).rejects.toThrowErrorMatchingInlineSnapshot(`
 				[Error: The container "MyContainer" does not expose any ports. In your Dockerfile, please expose any ports you intend to connect to.
 				For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.
 				]
 			`);
-		}
-	);
+	});
 });
