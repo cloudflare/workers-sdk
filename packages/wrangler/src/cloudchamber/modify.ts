@@ -21,7 +21,7 @@ import {
 	checkInstanceType,
 	checkInstanceTypeAgainstLimits,
 	promptForInstanceType,
-} from "./instancetype/instancetype";
+} from "./instance-type/instance-type";
 import { loadAccount } from "./locations";
 import { sshPrompts } from "./ssh/ssh";
 import type { Config } from "../config";

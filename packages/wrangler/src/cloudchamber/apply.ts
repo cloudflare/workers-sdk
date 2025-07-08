@@ -26,7 +26,7 @@ import { diffLines } from "./helpers/diff";
 import {
 	checkInstanceTypeAgainstLimits,
 	cleanForInstanceType,
-} from "./instancetype/instancetype";
+} from "./instance-type/instance-type";
 import { loadAccount } from "./locations";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";

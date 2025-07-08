@@ -34,7 +34,7 @@ import {
 	checkInstanceType,
 	checkInstanceTypeAgainstLimits,
 	promptForInstanceType,
-} from "./instancetype/instancetype";
+} from "./instance-type/instance-type";
 import { loadAccount } from "./locations";
 import { getNetworkInput } from "./network/network";
 import { sshPrompts as promptForSSHKeyAndGetAddedSSHKey } from "./ssh/ssh";

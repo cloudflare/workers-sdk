@@ -20,7 +20,7 @@ import { getScopes, printScopes, requireApiToken, requireAuth } from "../user";
 import { printWranglerBanner } from "../wrangler-banner";
 import { parseByteSize } from "./../parse";
 import { wrap } from "./helpers/wrap";
-import { instanceTypeDiskSizeBytes } from "./instancetype/instancetype";
+import { instanceTypeDiskSizeBytes } from "./instance-type/instance-type";
 import { idToLocationName } from "./locations";
 import type { Config } from "../config";
 import type { CloudchamberConfig, ContainerApp } from "../config/environment";

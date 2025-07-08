@@ -1,5 +1,5 @@
 import { InstanceType } from "@cloudflare/containers-shared";
-import { checkInstanceTypeAgainstLimits } from "../../cloudchamber/instancetype/instancetype";
+import { checkInstanceTypeAgainstLimits } from "../../cloudchamber/instance-type/instance-type";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import type { CompleteAccountCustomer } from "@cloudflare/containers-shared";
 
