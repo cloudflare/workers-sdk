@@ -104,7 +104,7 @@ function isValidKey(
 
 // checks a given InstanceType against account limits
 export function checkInstanceTypeAgainstLimits(
-	instanceType: InstanceType | string | undefined,
+	instanceType: InstanceType | undefined,
 	account: CompleteAccountCustomer
 ) {
 	if (instanceType === undefined || !isValidKey(instanceType)) {
