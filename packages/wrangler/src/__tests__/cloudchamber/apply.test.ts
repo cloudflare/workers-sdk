@@ -14,7 +14,6 @@ import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import { mockAccount } from "./utils";
 import type {
-	AccountLimit,
 	Application,
 	CompleteAccountCustomer,
 	CreateApplicationRequest,
