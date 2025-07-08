@@ -325,7 +325,7 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 			headers: { Accept: "text/html" },
 		});
 		await expect(undiciRes.text()).resolves.toEqual(
-			expect.stringContaining(`<h2 class="error-message"> Boom 3! </h2>`) // pretty error page html snippet
+			expect.stringContaining(`<span>Boom 3!</span>`) // pretty error page html snippet
 		);
 
 		// test further changes that fix the code

@@ -120,6 +120,23 @@ function maybeGetFile(
 	// Otherwise, something's gone wrong, so don't do any source mapping.
 }
 
+// Like Object.fromEntries(), but preserves all values per header (string or array)
+function getHeaders(request: Request) {
+	const headers: Record<string, string | string[]> = {};
+
+	for (const [key, value] of request.headers.entries()) {
+		if (headers[key] === undefined) {
+			headers[key] = value;
+		} else if (typeof headers[key] === "string") {
+			headers[key] = [headers[key], value];
+		} else {
+			headers[key].push(value);
+		}
+	}
+
+	return headers;
+}
+
 function getSourceMappedStack(
 	workerSrcOpts: NameSourceOptions[],
 	error: Error
@@ -255,21 +272,40 @@ export async function handlePrettyErrorRequest(
 	}
 
 	// Lazily import `youch` when required
-	const Youch: typeof import("youch").default = require("youch");
+	const { Youch }: typeof import("youch") = require("youch");
 	// `cause` is usually more useful than the error itself, display that instead
 	// TODO(someday): would be nice if we could display both
-	const youch = new Youch(error.cause ?? error, {
-		url: request.cf?.prettyErrorOriginalUrl ?? request.url,
-		method: request.method,
-		headers: Object.fromEntries(request.headers),
-	});
-	youch.addLink(() => {
-		return [
-			'<a href="https://developers.cloudflare.com/workers/" target="_blank" style="text-decoration:none">📚 Workers Docs</a>',
-			'<a href="https://discord.cloudflare.com" target="_blank" style="text-decoration:none">💬 Workers Discord</a>',
+	const youch = new Youch();
+
+	youch.useTransformer((error) => {
+		error.frames = error.frames
+			.filter(
+				(frame) =>
+					!frame.fileName?.includes(".wrangler/tmp") &&
+					!frame.fileName?.includes("wrangler/templates/middleware")
+			)
+			.map((frame) => {
+				// To avoid Youch throwing an error if the frame has no fileName
+				// This happens in tests which hides some parts of the stack trace
+				frame.fileName ??= "";
+
+				return frame;
+			});
+		error.hint = [
+			'<a href="https://developers.cloudflare.com/workers/" target="_blank" style="text-decoration:none;font-style:normal;padding:5px">📚 Workers Docs</a>',
+			'<a href="https://discord.cloudflare.com" target="_blank" style="text-decoration:none;font-style: normal;padding:5px">💬 Workers Discord</a>',
 		].join("");
 	});
-	return new Response(await youch.toHTML(), {
+
+	const html = await youch.toHTML(error, {
+		request: {
+			url: `${request.cf?.prettyErrorOriginalUrl ?? request.url}`,
+			method: request.method,
+			headers: getHeaders(request),
+		},
+	});
+
+	return new Response(html, {
 		status: 500,
 		headers: { "Content-Type": "text/html;charset=utf-8" },
 	});
