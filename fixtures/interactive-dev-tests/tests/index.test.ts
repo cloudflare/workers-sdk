@@ -289,6 +289,8 @@ it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {
 	}
 });
 
+// it seems like if we spam the container too often, it freezes up and crashes
+const WAITFOR_OPTIONS = { timeout: 2000, interval: 500 };
 baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 	"container dev",
 	{ retry: 0, timeout: 90000 },
@@ -297,7 +299,7 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 		beforeAll(async () => {
 			tmpDir = fs.mkdtempSync(path.join(tmpdir(), "wrangler-container-"));
 			fs.cpSync(
-				path.resolve(__dirname, "../..", "container-app"),
+				path.resolve(__dirname, "../", "container-app"),
 				path.join(tmpDir),
 				{
 					recursive: true,
@@ -356,45 +358,53 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			]);
 			await fetch(wrangler.url + "/start");
 
-			await new Promise((resolve) => setTimeout(resolve, 2000));
+			// wait container to be ready
+			await vi.waitFor(async () => {
+				const status = await fetch(wrangler.url + "/status");
+				expect(await status.json()).toBe(true);
+			}, WAITFOR_OPTIONS);
 
-			let status = await fetch(wrangler.url + "/status");
-			expect(await status.json()).toBe(true);
-			let res = await fetch(wrangler.url + "/fetch");
-			expect(await res.text()).toBe(
-				"Hello World! Have an env var! I'm an env var!"
-			);
+			await vi.waitFor(async () => {
+				const res = await fetch(wrangler.url + "/fetch");
+
+				expect(await res.text()).toBe(
+					"Hello World! Have an env var! I'm an env var!"
+				);
+			}, WAITFOR_OPTIONS);
 
 			fs.writeFileSync(
 				path.join(tmpDir, "container", "simple-node-app.js"),
 				`const { createServer } = require("http");
 
-			const server = createServer(function (req, res) {
-				res.writeHead(200, { "Content-Type": "text/plain" });
-				res.write("Blah! " + process.env.MESSAGE);
-				res.end();
-			});
+				const server = createServer(function (req, res) {
+					res.writeHead(200, { "Content-Type": "text/plain" });
+					res.write("Blah! " + process.env.MESSAGE);
+					res.end();
+				});
 
-			server.listen(8080, function () {
-				console.log("Server listening on port 8080");
-			});`,
+				server.listen(8080, function () {
+					console.log("Server listening on port 8080");
+				});`,
 				"utf-8"
 			);
 
 			wrangler.pty.write("r");
 
 			// wait for build to finish
-			await new Promise((resolve) => setTimeout(resolve, 5000));
-
-			status = await fetch(wrangler.url + "/status");
-			expect(await status.json()).toBe(false);
+			await vi.waitFor(async () => {
+				const status = await fetch(wrangler.url + "/status");
+				expect(await status.json()).toBe(false);
+			}, WAITFOR_OPTIONS);
 
 			await fetch(wrangler.url + "/start");
-			await new Promise((resolve) => setTimeout(resolve, 2000));
-			status = await fetch(wrangler.url + "/status");
-			expect(await status.json()).toBe(true);
-			res = await fetch(wrangler.url + "/fetch");
-			expect(await res.text()).toBe("Blah! I'm an env var!");
+			await vi.waitFor(async () => {
+				const status = await fetch(wrangler.url + "/status");
+				expect(await status.json()).toBe(true);
+			}, WAITFOR_OPTIONS);
+			await vi.waitFor(async () => {
+				const res = await fetch(wrangler.url + "/fetch");
+				expect(await res.text()).toBe("Blah! I'm an env var!");
+			}, WAITFOR_OPTIONS);
 			wrangler.pty.kill();
 		});
 
@@ -406,9 +416,10 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			]);
 			await fetch(wrangler.url + "/start");
 			// wait container to be ready
-			await new Promise((resolve) => setTimeout(resolve, 2000));
-			const status = await fetch(wrangler.url + "/status");
-			expect(await status.json()).toBe(true);
+			await vi.waitFor(async () => {
+				const status = await fetch(wrangler.url + "/status");
+				expect(await status.json()).toBe(true);
+			}, WAITFOR_OPTIONS);
 			const ids = getContainerIds();
 			expect(ids.length).toBe(1);
 
@@ -441,5 +452,5 @@ const getContainerIds = () => {
 			return container.ID;
 		}
 	});
-	return matches.filter((id) => id);
+	return matches.filter(Boolean);
 };
