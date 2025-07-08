@@ -12,7 +12,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250705.0",
+		"@cloudflare/workers-types": "^4.20250708.0",
 		"playwright-chromium": "catalog:default",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
