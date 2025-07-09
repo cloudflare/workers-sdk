@@ -403,6 +403,10 @@ function annotate(
 	}
 	assert(isRecord(annotated), "Expected object/array for nested issue");
 	// Recursively annotate
+	assert(
+		head !== "__proto__" && head !== "constructor" && head !== "prototype",
+		`Invalid key "${head}" detected, which could lead to prototype pollution.`
+	);
 	annotated[head] = annotate(
 		groupCounts,
 		annotated[head],
