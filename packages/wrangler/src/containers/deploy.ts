@@ -1,6 +1,5 @@
 /**
- * Note! this is used for cloudchamber apply, but has been duplicated and modified in containers/deploy.ts to deploy containers during wrangler deploy.
- * Also, it probably doesn't actually work for cloudchamber apply, given it reads config.containers rather than config.cloudchamber
+ * Note! much of this is copied and modified from cloudchamber/apply.ts
  */
 import {
 	endSection,
@@ -17,32 +16,39 @@ import {
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
+	getCloudflareContainerRegistry,
 	InstanceType,
-	resolveImageName,
+	isDockerfile,
 	RolloutsService,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { formatConfigSnippet } from "../config";
-import { FatalError, UserError } from "../errors";
-import { getAccountId } from "../user";
-import { cleanForInstanceType, promiseSpinner } from "./common";
+import { buildAndMaybePush } from "../cloudchamber/build";
+import {
+	cleanForInstanceType,
+	fillOpenAPIConfiguration,
+	promiseSpinner,
+} from "../cloudchamber/common";
 import {
 	createLine,
 	diffLines,
 	printLine,
 	sortObjectRecursive,
 	stripUndefined,
-} from "./helpers/diff";
+} from "../cloudchamber/helpers/diff";
+import { formatConfigSnippet } from "../config";
+import { getDockerPath } from "../environment-variables/misc-variables";
+import { FatalError, UserError } from "../errors";
+import { logger } from "../logger";
+import { getAccountId } from "../user";
+import { fetchVersion } from "../versions/api";
+import { containersScope } from ".";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type {
 	Application,
 	ApplicationID,
 	ApplicationName,
+	BuildArgs,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 	ModifyDeploymentV2RequestBody,
@@ -78,15 +84,6 @@ function mergeDeep<T>(target: T, source: Partial<T>): T {
 
 function isObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function applyCommandOptionalYargs(yargs: CommonYargsArgv) {
-	return yargs.option("skip-defaults", {
-		requiresArg: true,
-		type: "boolean",
-		demandOption: false,
-		describe: "Skips recommended defaults added by apply",
-	});
 }
 
 function createApplicationToModifyApplication(
@@ -257,6 +254,7 @@ function containerAppToCreateApplication(
 
 	return app;
 }
+
 // Resolve an image name to the full unambiguous name.
 //
 // For now, this only converts images stored in the managed registry to contain
@@ -555,7 +553,6 @@ export async function apply(
 				printLine(el, "  ");
 			});
 
-		const accountId = config.account_id || (await getAccountId(config));
 		const configToPush = {
 			...appConfig,
 
@@ -564,7 +561,7 @@ export async function apply(
 
 				// De-sugar image name. We do it here so that the user
 				// sees the simplified image name in diffs.
-				image: await resolveImageName(accountId, appConfig.configuration.image),
+				image: await resolveImageName(config, appConfig.configuration.image),
 			},
 		};
 
@@ -729,22 +726,149 @@ export async function apply(
 	endSection("Applied changes");
 }
 
-/**
- * applyCommand is able to take the wrangler.toml file and render the changes that it
- * detects.
- */
-export async function applyCommand(
-	args: StrictYargsOptionsToInterface<typeof applyCommandOptionalYargs>,
-	config: Config
-) {
-	return apply(
-		{
-			skipDefaults: args.skipDefaults,
-			env: args.env,
-			// For the apply command we want this to default to true
-			// so that the image can be updated if the user modified it.
-			imageUpdateRequired: true,
-		},
-		config
+export async function maybeBuildContainer(
+	containerConfig: ContainerApp,
+	/** just the tag component. will be prefixed with the container name */
+	imageTag: string,
+	dryRun: boolean,
+	pathToDocker: string,
+	configPath: string | undefined
+): Promise<{ image: string; imageUpdated: boolean }> {
+	try {
+		if (
+			!isDockerfile(
+				containerConfig.image ?? containerConfig.configuration?.image,
+				configPath
+			)
+		) {
+			return {
+				image: containerConfig.image ?? containerConfig.configuration?.image,
+				// We don't know at this point whether the image was updated or not
+				// but we need to make sure downstream checks if it was updated so
+				// we set this to true.
+				imageUpdated: true,
+			};
+		}
+	} catch (err) {
+		if (err instanceof Error) {
+			throw new UserError(err.message);
+		}
+
+		throw err;
+	}
+
+	const options = getBuildArguments(containerConfig, imageTag);
+	logger.log("Building image", options.tag);
+	const buildResult = await buildAndMaybePush(
+		options,
+		pathToDocker,
+		!dryRun,
+		configPath,
+		containerConfig
 	);
+
+	return { image: buildResult.image, imageUpdated: buildResult.pushed };
 }
+
+export type DeployContainersArgs = {
+	versionId: string;
+	accountId: string;
+	scriptName: string;
+	dryRun: boolean;
+	env?: string;
+};
+
+export async function deployContainers(
+	config: Config,
+	{ versionId, accountId, scriptName, dryRun, env }: DeployContainersArgs
+) {
+	if (config.containers === undefined) {
+		return;
+	}
+
+	if (!dryRun) {
+		await fillOpenAPIConfiguration(config, containersScope);
+	}
+	const pathToDocker = getDockerPath();
+	for (const container of config.containers) {
+		const version = await fetchVersion(
+			config,
+			accountId,
+			scriptName,
+			versionId
+		);
+		const targetDurableObject = version.resources.bindings.find(
+			(durableObject) =>
+				durableObject.type === "durable_object_namespace" &&
+				durableObject.class_name === container.class_name &&
+				durableObject.script_name === undefined &&
+				durableObject.namespace_id !== undefined
+		);
+
+		if (!targetDurableObject) {
+			throw new UserError(
+				"Could not deploy container application as durable object was not found in list of bindings"
+			);
+		}
+
+		if (
+			targetDurableObject.type !== "durable_object_namespace" ||
+			targetDurableObject.namespace_id === undefined
+		) {
+			throw new Error("unreachable");
+		}
+
+		const configuration = {
+			...config,
+			containers: [
+				{
+					...container,
+					durable_objects: {
+						namespace_id: targetDurableObject.namespace_id,
+					},
+				},
+			],
+		};
+
+		const buildResult = await maybeBuildContainer(
+			container,
+			versionId,
+			dryRun,
+			pathToDocker,
+			config.configPath
+		);
+		container.configuration ??= {};
+		container.configuration.image = buildResult.image;
+		container.image = buildResult.image;
+
+		await apply(
+			{
+				skipDefaults: false,
+				env,
+				imageUpdateRequired: buildResult.imageUpdated,
+			},
+			configuration
+		);
+	}
+}
+
+// TODO: container app config should be normalized by now in config validation
+// getBuildArguments takes the image from `container.image` or `container.configuration.image`
+// if the first is not defined. It accepts either a URI or path to a Dockerfile.
+// It will return options that are usable with the build() method from containers.
+export function getBuildArguments(
+	container: ContainerApp,
+	idForImageTag: string
+): BuildArgs {
+	const pathToDockerfile = container.image ?? container.configuration?.image;
+	const imageTag = container.name + ":" + idForImageTag.split("-")[0];
+
+	return {
+		tag: imageTag,
+		pathToDockerfile,
+		buildContext: container.image_build_context,
+		args: container.image_vars,
+	};
+}
+
+// wrangler config -> config for building or pushing -> api deploy config
