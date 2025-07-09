@@ -431,9 +431,9 @@ export function printBindings(
 			type: friendlyBindingNames.browser,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally:
-					!(getFlag("REMOTE_BINDINGS") && browser.experimental_remote)
-
+				isSimulatedLocally: !(
+					getFlag("REMOTE_BINDINGS") && browser.experimental_remote
+				),
 			}),
 		});
 	}
