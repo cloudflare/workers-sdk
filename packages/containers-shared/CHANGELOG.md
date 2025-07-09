@@ -1,5 +1,15 @@
 # @cloudflare/containers-shared
 
+## 0.2.4
+
+### Patch Changes
+
+- [#9888](https://github.com/cloudflare/workers-sdk/pull/9888) [`d2fe58b`](https://github.com/cloudflare/workers-sdk/commit/d2fe58b33a3172e204ff3a477c4a0d33ab8f2c76) Thanks [@IRCody](https://github.com/IRCody)! - Remove undici dependency from @cloudflare/containers-shared
+
+- [#9879](https://github.com/cloudflare/workers-sdk/pull/9879) [`e10c3e2`](https://github.com/cloudflare/workers-sdk/commit/e10c3e2a6b3049d23b58cbc63eef1756233cf9c3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: enable Dockerfile exposed port validation on linux as well
+
+- [#9879](https://github.com/cloudflare/workers-sdk/pull/9879) [`e10c3e2`](https://github.com/cloudflare/workers-sdk/commit/e10c3e2a6b3049d23b58cbc63eef1756233cf9c3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update error message presented when no port is exported by the image
+
 ## 0.2.3
 
 ### Patch Changes
