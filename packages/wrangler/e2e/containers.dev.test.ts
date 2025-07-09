@@ -254,6 +254,24 @@ for (const source of imageSource) {
 				);
 			});
 
+			it("will display the ready-on message after the container(s) have been built/pulled", async () => {
+				const worker = helper.runLongLived("wrangler dev");
+				const readyRegexp = /Ready on (http:\/\/[a-z0-9.]+:[0-9]+)/;
+				await worker.readUntil(readyRegexp);
+
+				await worker.stop();
+
+				const fullOutput = await worker.output;
+				const indexOfContainersReadyMessage = fullOutput.indexOf(
+					"Container image(s) ready"
+				);
+
+				const indexOfReadyOnMessage = fullOutput.indexOf("Ready on");
+				expect(indexOfReadyOnMessage).toBeGreaterThan(
+					indexOfContainersReadyMessage
+				);
+			});
+
 			it("won't start the container service if --enable-containers is set to false via CLI", async () => {
 				const worker = helper.runLongLived(
 					"wrangler dev --enable-containers=false"
