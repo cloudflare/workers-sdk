@@ -109,13 +109,13 @@ export class Logger {
 
 	debug = (...args: unknown[]) => this.doLog("debug", args);
 	debugWithSanitization = (label: string, ...args: unknown[]) => {
-		if (getSanitizeLogs() === "false") {
-			this.doLog("debug", [label, ...args]);
-		} else {
+		if (getSanitizeLogs()) {
 			this.doLog("debug", [
 				label,
 				"omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data",
 			]);
+		} else {
+			this.doLog("debug", [label, ...args]);
 		}
 	};
 	info = (...args: unknown[]) => this.doLog("info", args);
