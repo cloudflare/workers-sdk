@@ -432,9 +432,8 @@ export function printBindings(
 			value: undefined,
 			mode: getMode({
 				isSimulatedLocally:
-					getFlag("REMOTE_BINDINGS") && browser.experimental_remote
-						? false
-						: undefined,
+					!(getFlag("REMOTE_BINDINGS") && browser.experimental_remote)
+
 			}),
 		});
 	}
