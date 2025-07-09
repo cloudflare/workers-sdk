@@ -114,6 +114,7 @@ type FullHandlerContext<AssetEntry, ContentNegotiation, Asset> = {
 	metadata: Metadata;
 	xServerEnvHeader?: string;
 	xDeploymentIdHeader?: boolean;
+	xWebAnalyticsHeader?: boolean;
 	logError: (err: Error) => void;
 	setMetrics?: (metrics: HandlerMetrics) => void;
 	findAssetEntryForPath: FindAssetEntryForPath<AssetEntry>;
@@ -162,6 +163,7 @@ export async function generateHandler<
 	metadata,
 	xServerEnvHeader,
 	xDeploymentIdHeader,
+	xWebAnalyticsHeader,
 	logError,
 	setMetrics,
 	findAssetEntryForPath,
@@ -642,6 +644,9 @@ export async function generateHandler<
 				isHTMLContentType(asset.contentType) &&
 				metadata.analytics?.version === ANALYTICS_VERSION
 			) {
+				if (xWebAnalyticsHeader) {
+					response.headers.set("x-cf-pages-analytics", "1");
+				}
 				return new HTMLRewriter()
 					.on("body", {
 						element(e) {
