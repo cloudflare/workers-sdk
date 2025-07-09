@@ -1,5 +1,44 @@
 # wrangler
 
+## 3.114.11
+
+### Patch Changes
+
+- [#9685](https://github.com/cloudflare/workers-sdk/pull/9685) [`cbea64b`](https://github.com/cloudflare/workers-sdk/commit/cbea64b37f58301485e632b99749db445e223522) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Select only successfully deployed deployments when tailing.
+
+- [#9776](https://github.com/cloudflare/workers-sdk/pull/9776) [`6e09672`](https://github.com/cloudflare/workers-sdk/commit/6e09672d26f29ebed1b359775b5adafa34a162b5) Thanks [@vicb](https://github.com/vicb)! - Cap the number of errors and warnings for bulk KV put to avoid consuming too much memory
+
+- [#9694](https://github.com/cloudflare/workers-sdk/pull/9694) [`dacfc35`](https://github.com/cloudflare/workers-sdk/commit/dacfc3521da735e8d0d748e5b42ccb826660676c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add support for assets bindings to `getPlatformProxy`
+
+  this change makes sure that that `getPlatformProxy`, when the input configuration
+  file contains an assets field, correctly returns the appropriate asset binding proxy
+
+  example:
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+  	"name": "my-worker",
+  	"assets": {
+  		"directory": "./public/",
+  		"binding": "ASSETS",
+  	},
+  }
+  ```
+
+  ```js
+  import { getPlatformProxy } from "wrangler";
+
+  const { env, dispose } = await getPlatformProxy();
+
+  const text = await (await env.ASSETS.fetch("http://0.0.0.0/file.txt")).text();
+  console.log(text); // logs the content of file.txt
+
+  await dispose();
+  ```
+
+- [#9807](https://github.com/cloudflare/workers-sdk/pull/9807) [`4dd026b`](https://github.com/cloudflare/workers-sdk/commit/4dd026b65a25b61ea8c43e94016946e26a14cbe7) Thanks [@penalosa](https://github.com/penalosa)! - Better messaging for account owned tokens in `wrangler whoami`
+
 ## 3.114.10
 
 ### Patch Changes
