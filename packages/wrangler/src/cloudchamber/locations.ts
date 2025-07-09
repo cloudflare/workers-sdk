@@ -6,6 +6,10 @@ import type {
 
 let cachedAccount: CompleteAccountCustomer | undefined;
 
+export function clearCachedAccount() {
+	cachedAccount = undefined;
+}
+
 export async function loadAccount(): Promise<CompleteAccountCustomer> {
 	if (cachedAccount !== undefined) {
 		return cachedAccount;

@@ -1,7 +1,6 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import { fetch, FormData, Headers, RequestInit, Response } from "undici";
 import { ApiError } from "./ApiError";
 import { CancelablePromise } from "./CancelablePromise";
 import { type OpenAPIConfig } from "./OpenAPI";
@@ -261,7 +260,6 @@ export const sendRequest = async (
 		body: body ?? formData,
 		method: options.method,
 		signal: controller.signal,
-		dispatcher: config.AGENT ?? undefined,
 	};
 
 	if (config.WITH_CREDENTIALS) {

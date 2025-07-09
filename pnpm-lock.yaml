@@ -1452,9 +1452,6 @@ importers:
       typescript:
         specifier: catalog:default
         version: 5.8.2
-      undici:
-        specifier: catalog:default
-        version: 5.28.5
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)

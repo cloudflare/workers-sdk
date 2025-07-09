@@ -13,8 +13,8 @@ import {
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
-	getCloudflareContainerRegistry,
 	InstanceType,
+	resolveImageName,
 	RolloutsService,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
@@ -417,33 +417,6 @@ function sortObjectRecursive<T = Record<string | number, unknown>>(
 	return sortObjectKeys(objectCopy) as T;
 }
 
-// Resolve an image name to the full unambiguous name.
-//
-// For now, this only converts images stored in the managed registry to contain
-// the user's account ID in the path.
-async function resolveImageName(
-	config: Config,
-	image: string
-): Promise<string> {
-	let url: URL;
-	try {
-		url = new URL(`http://${image}`);
-	} catch (_) {
-		return image;
-	}
-
-	if (url.hostname !== getCloudflareContainerRegistry()) {
-		return image;
-	}
-
-	const accountId = config.account_id || (await getAccountId(config));
-	if (url.pathname.startsWith(`/${accountId}`)) {
-		return image;
-	}
-
-	return `${url.hostname}/${accountId}${url.pathname}`;
-}
-
 export async function apply(
 	args: {
 		skipDefaults: boolean | undefined;
@@ -715,6 +688,7 @@ export async function apply(
 				printLine(el, "  ");
 			});
 
+		const accountId = config.account_id || (await getAccountId(config));
 		const configToPush = {
 			...appConfig,
 
@@ -723,7 +697,7 @@ export async function apply(
 
 				// De-sugar image name. We do it here so that the user
 				// sees the simplified image name in diffs.
-				image: await resolveImageName(config, appConfig.configuration.image),
+				image: await resolveImageName(accountId, appConfig.configuration.image),
 			},
 		};
 
