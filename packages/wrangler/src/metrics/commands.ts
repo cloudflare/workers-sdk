@@ -61,10 +61,7 @@ export const telemetryStatusCommand = createCommand({
 		const savedConfig = readMetricsConfig();
 		const sendMetricsEnv = getWranglerSendMetricsFromEnv();
 		if (config.send_metrics !== undefined || sendMetricsEnv !== undefined) {
-			const resolvedPermission =
-				sendMetricsEnv !== undefined
-					? sendMetricsEnv === "true"
-					: config.send_metrics;
+			const resolvedPermission = sendMetricsEnv ?? config.send_metrics;
 			logger.log(
 				`Status: ${resolvedPermission ? chalk.green("Enabled") : chalk.red("Disabled")} (set by ${sendMetricsEnv !== undefined ? "environment variable" : "wrangler.toml"})\n`
 			);
