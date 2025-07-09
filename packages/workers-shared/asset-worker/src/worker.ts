@@ -4,7 +4,6 @@ import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
-import { AssetsManifest as AssetsManifest2 } from "./assets-manifest.2";
 import { normalizeConfiguration } from "./configuration";
 import { ExperimentAnalytics } from "./experiment-analytics";
 import { canFetch, handleRequest } from "./handler";
@@ -232,12 +231,6 @@ export default class<TEnv extends Env = Env> extends WorkerEntrypoint<TEnv> {
 		pathname: string,
 		_request?: Request
 	): Promise<string | null> {
-		const BINARY_SEARCH_EXPERIMENT_SAMPLE_RATE = 0.5;
-		const binarySearchVersion =
-			Math.random() < BINARY_SEARCH_EXPERIMENT_SAMPLE_RATE
-				? "current"
-				: "perfTest";
-
 		const analytics = new ExperimentAnalytics(this.env.EXPERIMENT_ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
 		const jaeger = this.env.JAEGER ?? mockJaegerBinding();
@@ -250,31 +243,13 @@ export default class<TEnv extends Env = Env> extends WorkerEntrypoint<TEnv> {
 				analytics.setData({
 					accountId: this.env.CONFIG.account_id,
 					experimentName: "manifest-read-timing",
-					binarySearchVersion,
 				});
 			}
 
 			const startTimeMs = performance.now();
 			try {
-				let eTag: string | null;
-
-				if (binarySearchVersion === "perfTest") {
-					try {
-						const assetsManifest = new AssetsManifest2(
-							this.env.ASSETS_MANIFEST
-						);
-						eTag = await assetsManifest.get(pathname);
-					} catch {
-						// Fallback to the "current" impl if the new one throws.
-						// We use "current-fallback" to surface errors in the analytics data
-						analytics.setData({ binarySearchVersion: "current-fallback" });
-						const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
-						eTag = await assetsManifest.get(pathname);
-					}
-				} else {
-					const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
-					eTag = await assetsManifest.get(pathname);
-				}
+				const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
+				const eTag = await assetsManifest.get(pathname);
 
 				span.setTags({
 					path: pathname,
