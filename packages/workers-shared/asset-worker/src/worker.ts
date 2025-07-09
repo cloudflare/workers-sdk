@@ -232,7 +232,7 @@ export default class<TEnv extends Env = Env> extends WorkerEntrypoint<TEnv> {
 		pathname: string,
 		_request?: Request
 	): Promise<string | null> {
-		const BINARY_SEARCH_EXPERIMENT_SAMPLE_RATE = 0.05;
+		const BINARY_SEARCH_EXPERIMENT_SAMPLE_RATE = 0.5;
 		const binarySearchVersion =
 			Math.random() < BINARY_SEARCH_EXPERIMENT_SAMPLE_RATE
 				? "current"
