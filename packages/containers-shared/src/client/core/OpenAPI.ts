@@ -1,6 +1,5 @@
 /* istanbul ignore file */
 /* tslint:disable */
-import { Agent } from "undici";
 import type { ApiRequestOptions } from "./ApiRequestOptions";
 
 type Resolver<T> = (options: ApiRequestOptions) => Promise<T>;
@@ -16,7 +15,6 @@ export type OpenAPIConfig = {
 	PASSWORD?: string | Resolver<string>;
 	HEADERS?: Headers | Resolver<Headers>;
 	ENCODE_PATH?: (path: string) => string;
-	AGENT?: Agent;
 };
 
 export const OpenAPI: OpenAPIConfig = {
