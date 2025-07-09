@@ -3,7 +3,7 @@ import { rename } from "node:fs/promises";
 import path, { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
-import { describe, it } from "vitest";
+import { describe, it, vi } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages _worker.js", () => {
@@ -72,6 +72,15 @@ describe("Pages _worker.js", () => {
 				"--port=0",
 				"--inspector-port=0",
 			]);
+		vi.waitFor(
+			() => {
+				expect(getOutput()).toContain("Ready on");
+			},
+			{
+				timeout: 5_000,
+			}
+		);
+		await setTimeout(200);
 		try {
 			clearOutput();
 			await tryRename(
@@ -109,6 +118,15 @@ describe("Pages _worker.js", () => {
 				"--port=0",
 				"--inspector-port=0",
 			]);
+		vi.waitFor(
+			() => {
+				expect(getOutput()).toContain("Ready on");
+			},
+			{
+				timeout: 5_000,
+			}
+		);
+		await setTimeout(200);
 		try {
 			clearOutput();
 			await tryRename(

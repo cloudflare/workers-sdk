@@ -177,9 +177,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			Your Worker has access to the following bindings:
 			Binding        Resource      Mode
 			env.AI         AI            remote
-			[wrangler:info] Ready on http://<HOST>:<PORT>
 			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`experimental_remote: true\` for the binding definition in your configuration file.
 			⎔ Starting local server...
+			[wrangler:info] Ready on http://<HOST>:<PORT>
 			[wrangler:info] GET / 200 OK (TIMINGS)`;
 
 			const output2 = dedent`
@@ -187,8 +187,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			Binding        Resource      Mode
 			env.AI         AI            remote
 			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`experimental_remote: true\` for the binding definition in your configuration file.
-			[wrangler:info] Ready on http://<HOST>:<PORT>
 			⎔ Starting local server...
+			[wrangler:info] Ready on http://<HOST>:<PORT>
 			[wrangler:info] GET / 200 OK (TIMINGS)`;
 
 			const normalizedOutput = normalizeOutput(worker.currentOutput);
