@@ -29,12 +29,6 @@ describe("readConfig()", () => {
 			    ],
 			    "type": "PythonModule",
 			  },
-			  Object {
-			    "globs": Array [
-			      "vendor/**/*.so",
-			    ],
-			    "type": "Data",
-			  },
 			]
 		`);
 	});
