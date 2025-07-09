@@ -7,8 +7,13 @@ import { bold, green } from "@cloudflare/cli/colors";
 import { isWebContainer } from "@webcontainer/env";
 import dedent from "ts-dedent";
 import { DevEnv } from "./api";
+import { BundlerController } from "./api/startDevWorker/BundlerController";
+import { ConfigController } from "./api/startDevWorker/ConfigController";
+import { LocalRuntimeController } from "./api/startDevWorker/LocalRuntimeController";
 import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
+import { ProxyController } from "./api/startDevWorker/ProxyController";
+import { RemoteRuntimeController } from "./api/startDevWorker/RemoteRuntimeController";
 import {
 	convertCfWorkerInitBindingsToBindings,
 	extractBindingsOfType,
@@ -40,6 +45,7 @@ import type {
 	StartDevWorkerInput,
 	Trigger,
 } from "./api";
+import type { RuntimeController } from "./api/startDevWorker/BaseController";
 import type { Config, Environment } from "./config";
 import type {
 	EnvironmentNonInheritable,
@@ -684,7 +690,16 @@ export async function startDev(args: StartDevOptions) {
 				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
 			}
 		} else {
-			devEnv = new DevEnv();
+			devEnv = new DevEnv({
+				config: new ConfigController(),
+				bundler: new BundlerController(),
+				runtimes: [
+					...(args.remote
+						? [new RemoteRuntimeController()]
+						: [new LocalRuntimeController()]),
+				] as RuntimeController[],
+				proxy: new ProxyController(),
+			});
 
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
 			void devEnv.proxy.ready.promise.then(({ url }) => {

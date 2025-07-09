@@ -77,6 +77,8 @@ export class DevEnv extends EventEmitter {
 			});
 		});
 
+		this.resolveProxyLocalServerReady().catch(() => {});
+
 		runtimes.forEach((runtime) => {
 			runtime.on("reloadStart", (event) => {
 				proxy.onReloadStart(event);
@@ -91,6 +93,29 @@ export class DevEnv extends EventEmitter {
 				runtime.onPreviewTokenExpired(event);
 			});
 		});
+	}
+
+	/**
+	 * Awaits for all the local runtime controllers to be ready, and when they are
+	 * it resolves a promise on the proxy controller to let it know that the
+	 * local server is now ready to handle requests
+	 */
+	private async resolveProxyLocalServerReady(): Promise<void> {
+		await Promise.all(
+			this.runtimes
+				.filter(
+					(runtime) =>
+						runtime instanceof RemoteRuntimeController ||
+						runtime instanceof LocalRuntimeController
+				)
+				.map((runtime) => {
+					return new Promise<void>((resolve) => {
+						runtime.once("reloadComplete", () => resolve());
+					});
+				})
+		);
+
+		this.proxy.localServerReady.resolve();
 	}
 
 	// *********************
