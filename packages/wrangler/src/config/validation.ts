@@ -2469,19 +2469,6 @@ function validateContainerApp(
 					`"containers.rollout_step_percentage" field should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
 				);
 			}
-
-			if (
-				!isOptionalProperty(containerAppOptional, "rollout_kind", "string") &&
-				"rollout_kind" in containerAppOptional &&
-				!["full_auto", "full_manual", "none"].includes(
-					containerAppOptional.rollout_kind
-				)
-			) {
-				diagnostics.errors.push(
-					`"containers.rollout_kind" field should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
-				);
-			}
-
 			// Leaving for legacy reasons
 			// TODO: When cleaning up container.configuration usage in other places clean this up
 			// as well.
@@ -2490,16 +2477,71 @@ function validateContainerApp(
 					`"containers.configuration" is defined as an array, it should be an object`
 				);
 			}
-			if ("instance_type" in containerAppOptional) {
-				validateOptionalProperty(
-					diagnostics,
-					field,
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"rollout_kind",
+				containerAppOptional.rollout_kind,
+				"string",
+				["full_auto", "full_manual", "none"]
+			);
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"instance_type",
+				containerAppOptional.instance_type,
+				"string",
+				["dev", "basic", "standard"]
+			);
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"max_instances",
+				containerAppOptional.max_instances,
+				"number"
+			);
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"image_build_context",
+				containerAppOptional.image_build_context,
+				"string"
+			);
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"image_vars",
+				containerAppOptional.image_vars,
+				"object"
+			);
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"scheduling_policy",
+				containerAppOptional.scheduling_policy,
+				"string",
+				["regional", "moon", "default"]
+			);
+			validateAdditionalProperties(
+				diagnostics,
+				field,
+				Object.keys(containerAppOptional),
+				[
+					"name",
+					"instances",
+					"max_instances",
+					"image",
+					"image_build_context",
+					"image_vars",
+					"class_name",
+					"scheduling_policy",
 					"instance_type",
-					containerAppOptional.instance_type,
-					"string",
-					["dev", "basic", "standard"]
-				);
-			}
+					"configuration",
+					"constraints",
+					"rollout_step_percentage",
+					"rollout_kind",
+				]
+			);
 		}
 
 		if (diagnostics.errors.length > 0) {
