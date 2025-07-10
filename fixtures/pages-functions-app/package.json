@@ -15,7 +15,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250709.0",
+		"@cloudflare/workers-types": "^4.20250710.0",
 		"@fixture/pages-plugin": "workspace:*",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
