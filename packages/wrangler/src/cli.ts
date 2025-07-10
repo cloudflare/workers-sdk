@@ -73,5 +73,3 @@ export {
 	type RemoteProxySession as Experimental_RemoteProxySession,
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
 } from "./api";
-
-export { getDockerPath as unstable_getDockerPath } from "./environment-variables/misc-variables";

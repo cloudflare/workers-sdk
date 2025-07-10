@@ -13,7 +13,6 @@ import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
 import * as vite from "vite";
-import { unstable_getDockerPath } from "wrangler";
 import {
 	createModuleReference,
 	matchAdditionalModule,
@@ -423,12 +422,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						entryWorkerConfig.containers?.length &&
 						entryWorkerConfig.dev.enable_containers
 					) {
+						assert(
+							containerBuildId,
+							"Build ID should be set if containers are enabled and defined"
+						);
 						// Assemble container options and build if necessary
 						const containerOptions = await getContainerOptions(
 							entryWorkerConfig,
-							containerBuildId as string
+							containerBuildId
 						);
-						const dockerPath = unstable_getDockerPath();
+						const dockerPath = getDockerPath();
 
 						// keep track of them so we can clean up later
 						for (const container of containerOptions ?? []) {
@@ -518,7 +521,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			async closeBundle() {
 				if (containerImageTagsSeen.size > 0) {
-					const dockerPath = unstable_getDockerPath();
+					const dockerPath = getDockerPath();
 					await cleanupContainers(dockerPath, containerImageTagsSeen);
 					containerImageTagsSeen.clear();
 				}
@@ -990,4 +993,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		}
 		return containers;
 	}
+}
+
+function getDockerPath(): string {
+	const defaultDockerPath = "docker";
+	const dockerPathEnvVar = "WRANGLER_DOCKER_BIN";
+
+	return process.env[dockerPathEnvVar] || defaultDockerPath;
 }
