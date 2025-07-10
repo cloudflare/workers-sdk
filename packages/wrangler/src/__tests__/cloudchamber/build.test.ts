@@ -304,6 +304,16 @@ describe("buildAndMaybePush", () => {
 			expect(result).toBeCloseTo(2 * 1000 * 1000 * 1000, -5);
 		});
 
+		it("should return instance type disk size when set", () => {
+			const result = resolveAppDiskSize({
+				...defaultConfiguration,
+				instance_type: "basic",
+				configuration: { image: "" },
+			});
+			// 'basic' instance type has 4GB disk
+			expect(result).toBeCloseTo(4 * 1000 * 1000 * 1000, -5);
+		});
+
 		it("should return undefined if app is not passed", () => {
 			expect(resolveAppDiskSize(undefined)).toBeUndefined();
 		});
