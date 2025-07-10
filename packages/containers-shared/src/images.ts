@@ -114,10 +114,7 @@ export async function prepareContainerImagesForDev(
  * For now, this only converts images stored in the managed registry to contain
  * the user's account ID in the path.
  */
-export async function resolveImageName(
-	accountId: string,
-	image: string
-): Promise<string> {
+export function resolveImageName(accountId: string, image: string): string {
 	let url: URL;
 	try {
 		url = new URL(`http://${image}`);

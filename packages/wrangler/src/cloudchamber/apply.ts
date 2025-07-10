@@ -93,10 +93,14 @@ function createApplicationToModifyApplication(
 }
 
 function applicationToCreateApplication(
+	accountId: string,
 	application: Application
 ): CreateApplicationRequest {
 	const app: CreateApplicationRequest = {
-		configuration: application.configuration,
+		configuration: {
+			...application.configuration,
+			image: resolveImageName(accountId, application.configuration.image),
+		},
 		constraints: application.constraints,
 		max_instances: application.max_instances,
 		name: application.name,
@@ -194,6 +198,7 @@ function containerAppToInstanceType(
 }
 
 function containerAppToCreateApplication(
+	accountId: string,
 	containerApp: ContainerApp,
 	observability: Observability | undefined,
 	existingApp: Application | undefined,
@@ -216,10 +221,15 @@ function containerAppToCreateApplication(
 			telemetryMessage: true,
 		});
 	}
+
 	const app: CreateApplicationRequest = {
 		...containerApp,
 		name: containerApp.name,
-		configuration,
+		configuration: {
+			...configuration,
+			// De-sugar image name
+			image: resolveImageName(accountId, configuration.image),
+		},
 		instances: containerApp.instances ?? 0,
 		scheduling_policy:
 			(containerApp.scheduling_policy as SchedulingPolicy) ??
@@ -506,7 +516,9 @@ export async function apply(
 			appConfigNoDefaults.configuration.image = application.configuration.image;
 		}
 
+		const accountId = config.account_id || (await getAccountId(config));
 		const appConfig = containerAppToCreateApplication(
+			accountId,
 			appConfigNoDefaults,
 			config.observability,
 			application,
@@ -517,7 +529,7 @@ export async function apply(
 			// we need to sort the objects (by key) because the diff algorithm works with
 			// lines
 			const prevApp = sortObjectRecursive<CreateApplicationRequest>(
-				stripUndefined(applicationToCreateApplication(application))
+				stripUndefined(applicationToCreateApplication(accountId, application))
 			);
 
 			// fill up fields that their defaults were changed over-time,
@@ -688,18 +700,7 @@ export async function apply(
 				printLine(el, "  ");
 			});
 
-		const accountId = config.account_id || (await getAccountId(config));
-		const configToPush = {
-			...appConfig,
-
-			configuration: {
-				...appConfig.configuration,
-
-				// De-sugar image name. We do it here so that the user
-				// sees the simplified image name in diffs.
-				image: await resolveImageName(accountId, appConfig.configuration.image),
-			},
-		};
+		const configToPush = { ...appConfig };
 
 		// add to the actions array to create the app later
 		actions.push({
