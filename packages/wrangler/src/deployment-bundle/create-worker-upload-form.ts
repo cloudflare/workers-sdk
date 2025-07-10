@@ -247,6 +247,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 					jwt: assets.jwt,
 					config: assetConfig,
 				},
+				...(annotations && { annotations }),
 				...(compatibility_date && { compatibility_date }),
 				...(compatibility_flags && { compatibility_flags }),
 			})
