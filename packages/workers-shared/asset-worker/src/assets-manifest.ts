@@ -3,6 +3,7 @@ import {
 	CONTENT_HASH_SIZE,
 	ENTRY_SIZE,
 	HEADER_SIZE,
+	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
 } from "../../utils/constants";
 
@@ -82,7 +83,7 @@ export const binarySearch = (
 };
 
 /**
- * Compares a search value with an entry in the manifest
+ * Compares a search value with a path hash in the manifest
  *
  * @param searchValue a `Uint8Array` of size `PATH_HASH_SIZE`
  * @param manifest the manifest bytes
@@ -93,13 +94,13 @@ function comparePathHashWithEntry(
 	manifest: Uint8Array,
 	entryIndex: number
 ) {
-	let entryOffset = HEADER_SIZE + entryIndex * ENTRY_SIZE;
-	for (let offset = 0; offset < PATH_HASH_SIZE; offset++, entryOffset++) {
+	let pathHashOffset = HEADER_SIZE + entryIndex * ENTRY_SIZE + PATH_HASH_OFFSET;
+	for (let offset = 0; offset < PATH_HASH_SIZE; offset++, pathHashOffset++) {
 		// We know that both values could not be undefined
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		const s = searchValue[offset]!;
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const e = manifest[entryOffset]!;
+		const e = manifest[pathHashOffset]!;
 		if (s < e) {
 			return -1;
 		}
