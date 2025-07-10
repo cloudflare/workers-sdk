@@ -252,6 +252,23 @@ describe("versions upload", () => {
 		`);
 	});
 
+	it("should include annotations in the upload request even if there are only assets", async () => {
+		mockGetScript();
+		mockUploadVersion(true, 1, {
+			"workers/message": "test message",
+			"workers/tag": "test",
+		});
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+		mockSubDomainRequest();
+		writeWranglerConfig({
+			name: "test-name",
+			main: "./index.js",
+		});
+		writeWorkerSource();
+
+		await runWrangler("versions upload --tag 'test' --message 'test message'");
+	});
+
 	describe("multi-env warning", () => {
 		it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
 			mockGetScript();
