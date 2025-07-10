@@ -1,5 +1,29 @@
 # miniflare
 
+## 4.20250709.0
+
+### Patch Changes
+
+- [#9881](https://github.com/cloudflare/workers-sdk/pull/9881) [`bb09e50`](https://github.com/cloudflare/workers-sdk/commit/bb09e50d8e7f823172f3e492ca111157a105adb1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250705.0  | 1.20250708.0  |
+  | @cloudflare/workers-types | ^4.20250705.0 | ^4.20250708.0 |
+
+- [#9894](https://github.com/cloudflare/workers-sdk/pull/9894) [`25dbe54`](https://github.com/cloudflare/workers-sdk/commit/25dbe5480dd1d14ee25b38fc5e0105f938b1ee5b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250708.0  | 1.20250709.0  |
+  | @cloudflare/workers-types | ^4.20250708.0 | ^4.20250709.0 |
+
+- [#9876](https://github.com/cloudflare/workers-sdk/pull/9876) [`3bdec6b`](https://github.com/cloudflare/workers-sdk/commit/3bdec6b768a0b68560ad6d24274007de3a7fbc26) Thanks [@edmundhung](https://github.com/edmundhung)! - chore: update youch version
+
 ## 4.20250705.0
 
 ### Minor Changes
