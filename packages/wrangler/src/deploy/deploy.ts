@@ -1041,7 +1041,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			accountId,
 			scriptName,
 			dryRun: props.dryRun ?? false,
-			env: props.env,
 		});
 	}
 

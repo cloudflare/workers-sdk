@@ -1,11 +1,10 @@
 /**
- * Important! You are probably looking for containers/deploy.ts!
- * This is used for cloudchamber apply, but has been duplicated and modified in containers/deploy.ts to deploy containers during wrangler deploy.
+ * Note! Much of this is copied and modified from cloudchamber/apply.ts
+ * However this code is only used for containers interactions, not cloudchamber ones!
  */
 import {
 	endSection,
 	log,
-	logRaw,
 	shapes,
 	startSection,
 	success,
@@ -22,23 +21,19 @@ import {
 	RolloutsService,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { formatConfigSnippet } from "../config";
-import { FatalError, UserError } from "../errors";
-import { getAccountId } from "../user";
-import { cleanForInstanceType, promiseSpinner } from "./common";
+import { cleanForInstanceType, promiseSpinner } from "../cloudchamber/common";
 import {
 	createLine,
 	diffLines,
 	printLine,
 	sortObjectRecursive,
 	stripUndefined,
-} from "./helpers/diff";
+} from "../cloudchamber/helpers/diff";
+import { formatConfigSnippet } from "../config";
+import { FatalError, UserError } from "../errors";
+import { getAccountId } from "../user";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type {
 	Application,
 	ApplicationID,
@@ -49,7 +44,6 @@ import type {
 	Observability as ObservabilityConfiguration,
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
-import type { JsonMap } from "@iarna/toml";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
 	if (typeof target !== "object" || target === null) {
@@ -78,15 +72,6 @@ function mergeDeep<T>(target: T, source: Partial<T>): T {
 
 function isObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function applyCommandOptionalYargs(yargs: CommonYargsArgv) {
-	return yargs.option("skip-defaults", {
-		requiresArg: true,
-		type: "boolean",
-		demandOption: false,
-		describe: "Skips recommended defaults added by apply",
-	});
 }
 
 function createApplicationToModifyApplication(
@@ -271,42 +256,17 @@ function containerAppToCreateApplication(
 export async function apply(
 	args: {
 		skipDefaults: boolean | undefined;
-		env?: string;
 		imageUpdateRequired?: boolean;
 	},
 	config: Config
 ) {
+	if (!config.containers || config.containers.length === 0) {
+		return;
+	}
 	startSection(
 		"Deploy a container application",
 		"deploy changes to your application"
 	);
-
-	config.containers ??= [];
-
-	if (config.containers.length === 0) {
-		endSection(
-			"You don't have any container applications defined in your wrangler.toml",
-			"You can set the following configuration in your wrangler.toml"
-		);
-		const configuration = {
-			image: "docker.io/cloudflare/hello-world:1.0",
-			instances: 2,
-			name: config.name ?? "my-containers-application",
-			instance_type: "dev",
-		};
-		const endConfig: JsonMap =
-			args.env !== undefined
-				? {
-						env: { [args.env]: { containers: [configuration] } },
-					}
-				: { containers: [configuration] };
-		formatConfigSnippet(endConfig, config.configPath)
-			.split("\n")
-			.forEach((el) => {
-				printLine(el, "  ", logRaw);
-			});
-		return;
-	}
 
 	const applications = await promiseSpinner(
 		ApplicationsService.listApplications(),
@@ -702,24 +662,4 @@ export async function apply(
 	}
 
 	endSection("Applied changes");
-}
-
-/**
- * applyCommand is able to take the wrangler.toml file and render the changes that it
- * detects.
- */
-export async function applyCommand(
-	args: StrictYargsOptionsToInterface<typeof applyCommandOptionalYargs>,
-	config: Config
-) {
-	return apply(
-		{
-			skipDefaults: args.skipDefaults,
-			env: args.env,
-			// For the apply command we want this to default to true
-			// so that the image can be updated if the user modified it.
-			imageUpdateRequired: true,
-		},
-		config
-	);
 }
