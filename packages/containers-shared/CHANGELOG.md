@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.2.5
+
+### Patch Changes
+
+- [#9833](https://github.com/cloudflare/workers-sdk/pull/9833) [`3743896`](https://github.com/cloudflare/workers-sdk/commit/3743896120baa530c1b6d4cb7eeda27847b2db44) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - extend `prepareContainerImagesForDev` to allow aborting a container's build process
+
+- [#9923](https://github.com/cloudflare/workers-sdk/pull/9923) [`c01c4ee`](https://github.com/cloudflare/workers-sdk/commit/c01c4ee6affd0acf2f678d9c562f4a7d6db82465) Thanks [@gpanders](https://github.com/gpanders)! - Fix image name resolution when modifying a container application
+
 ## 0.2.4
 
 ### Patch Changes
