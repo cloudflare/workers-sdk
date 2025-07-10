@@ -69,7 +69,7 @@ export function dockerBuild(
 			resolve();
 		} else if (!errorHandled) {
 			errorHandled = true;
-			reject(new Error(`Build exited with code: ${code}`));
+			reject(new Error(`Docker build exited with code: ${code}`));
 		}
 	});
 	child.on("error", (err) => {
