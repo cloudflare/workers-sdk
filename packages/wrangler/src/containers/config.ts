@@ -1,6 +1,7 @@
 import path, { dirname } from "node:path";
 import { isDockerfile } from "@cloudflare/containers-shared";
 import { UserError } from "../errors";
+import { parseByteSize } from "../parse";
 import type { Config } from "../config";
 
 // This normalises config into an intermediate shape for building or pulling.
@@ -8,14 +9,25 @@ import type { Config } from "../config";
 // we want to revert to the default rather than inheriting from the prev deployment
 
 type InstanceTypeOrDisk =
-	| { disk_size: string }
-	| { instance_type: "dev" | "basic" | "standard" };
+	| {
+			/** if undefined in config, defaults to instance_type */
+			disk_size: number;
+	  }
+	| {
+			/** if undefined in config, defaults to "dev" */
+			instance_type: "dev" | "basic" | "standard";
+	  };
 type SharedContainerConfig = {
+	/** if undefined in config, defaults to worker_name[-envName]-class_name. */
 	name: string;
 	class_name: string;
+	/** if undefined in config, defaults to 0 */
 	max_instances: number;
+	/** if undefined in config, defaults to "default" */
 	scheduling_policy: "regional" | "moon" | "default";
+	/** if undefined in config, defaults to 25 */
 	rollout_step_percentage: number;
+	/** if undefined in config, defaults to "full_auto" */
 	rollout_kind: "full_auto" | "none" | "full_manual";
 	constraints?: {
 		regions?: string[];
@@ -26,9 +38,9 @@ type SharedContainerConfig = {
 export type ContainerNormalisedConfig = SharedContainerConfig &
 	(
 		| {
-				// absolute path, resolved relative to the wrangler config file
+				/**  absolute path, resolved relative to the wrangler config file */
 				dockerfile: string;
-				// absolute path, resolved relative to the wrangler config file
+				/** absolute path, resolved relative to the wrangler config file. defaults to the directory of the dockerfile */
 				image_build_context: string;
 				image_vars?: Record<string, string>;
 		  }
@@ -55,7 +67,7 @@ export const getNormalizedContainerOptions = async (
 		const targetDurableObject = config.durable_objects.bindings.find(
 			(durableObject) =>
 				durableObject.class_name === container.class_name &&
-				// the durable object must be defined in the same script the container is defined in
+				// the durable object must be defined in the same script as the container
 				durableObject.script_name === undefined
 		);
 
@@ -67,7 +79,7 @@ export const getNormalizedContainerOptions = async (
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name,
 			class_name: container.class_name,
-			max_instances: container.max_instances ?? 1,
+			max_instances: container.max_instances ?? 0, // :(
 			scheduling_policy: container.scheduling_policy ?? "default",
 			constraints: container.constraints,
 			rollout_step_percentage: container.rollout_step_percentage ?? 25,
@@ -76,13 +88,16 @@ export const getNormalizedContainerOptions = async (
 
 		let instanceTypeOrDisk: InstanceTypeOrDisk;
 
-		if (container.instance_type) {
+		if (container.configuration?.disk?.size) {
 			instanceTypeOrDisk = {
-				instance_type: container.instance_type ?? "dev",
+				// have i got the right units here?
+				disk_size: Math.round(
+					parseByteSize(container.configuration?.disk?.size ?? "2GB")
+				),
 			};
 		} else {
 			instanceTypeOrDisk = {
-				disk_size: container.configuration?.disk?.size ?? "2GB",
+				instance_type: container.instance_type ?? "dev",
 			};
 		}
 

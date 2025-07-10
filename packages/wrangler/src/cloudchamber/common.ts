@@ -696,18 +696,13 @@ function inferInstanceType(
 	}
 }
 
-// removes any disk, memory, or vcpu that have been set in an objects configuration. Used for rendering
-// diffs.
-export function cleanForInstanceType(
-	app: CreateApplicationRequest
-): ContainerApp {
-	if (!("configuration" in app)) {
-		return app as ContainerApp;
-	}
-
-	const instance_type = inferInstanceType(app.configuration);
-	if (instance_type !== undefined) {
-		app.configuration.instance_type = instance_type;
+/**
+ * removes any disk, memory, or vcpu that have been set in an objects configuration. Used for rendering diffs.
+ */
+export function cleanForInstanceType(app: CreateApplicationRequest) {
+	const inferred_instance_type = inferInstanceType(app.configuration);
+	if (inferred_instance_type) {
+		app.configuration.instance_type = inferred_instance_type;
 	}
 
 	delete app.configuration.disk;
@@ -715,5 +710,5 @@ export function cleanForInstanceType(
 	delete app.configuration.memory_mib;
 	delete app.configuration.vcpu;
 
-	return app as ContainerApp;
+	return app;
 }

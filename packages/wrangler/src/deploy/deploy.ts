@@ -11,8 +11,9 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { deployContainers, maybeBuildContainer } from "../cloudchamber/deploy";
 import { configFileName, formatConfigSnippet } from "../config";
+import { getNormalizedContainerOptions } from "../containers/config";
+import { deployContainers, maybeBuildContainer } from "../containers/deploy";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -788,15 +789,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 
 		if (props.dryRun) {
-			if (config.containers) {
-				for (const container of config.containers) {
-					await maybeBuildContainer(
-						container,
-						workerTag ?? "worker-tag",
-						props.dryRun,
+			if (config.containers?.length) {
+				const normalizedContainerConfig =
+					await getNormalizedContainerOptions(config);
+				for (const container of normalizedContainerConfig) {
+					await maybeBuildContainer({
+						containerConfig: container,
+						imageTag: workerTag ?? "worker-tag",
+						dryRun: props.dryRun,
 						dockerPath,
-						config.configPath
-					);
+						configPath: config.configPath,
+					});
 				}
 			}
 
@@ -1040,7 +1043,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			versionId,
 			accountId,
 			scriptName,
-			dryRun: props.dryRun ?? false,
 			env: props.env,
 		});
 	}

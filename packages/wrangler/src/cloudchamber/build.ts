@@ -18,10 +18,8 @@ import {
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getAccountId } from "../user";
-import { resolveAppDiskSize } from "./common";
 import { loadAccount } from "./locations";
 import type { Config } from "../config";
-import type { ContainerApp } from "../config/environment";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -78,10 +76,9 @@ export function pushYargs(yargs: CommonYargsArgv) {
 
 export async function buildAndMaybePush(
 	args: BuildArgs,
-	pathToDocker: string,
+	dockerPath: string,
 	push: boolean,
-	configPath: string | undefined,
-	containerConfig?: ContainerApp
+	configDiskSize: number | undefined
 ): Promise<{ image: string; pushed: boolean }> {
 	try {
 		const imageTag = `${getCloudflareContainerRegistry()}/${args.tag}`;
@@ -94,16 +91,17 @@ export async function buildAndMaybePush(
 				platform: args.platform,
 				setNetworkToHost: Boolean(getCIOverrideNetworkModeHost()),
 			},
-			configPath,
 			logger
 		);
 
-		await dockerBuild(pathToDocker, {
+		await dockerBuild(dockerPath, {
 			buildCmd,
 			dockerfile,
 		});
 
-		const inspectOutput = await dockerImageInspect(pathToDocker, {
+		// ensure the account is not allowed to build anything that exceeds the current
+		// account's disk size limits
+		const inspectOutput = await dockerImageInspect(dockerPath, {
 			imageTag,
 			formatString:
 				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
@@ -124,10 +122,10 @@ export async function buildAndMaybePush(
 			await ensureDiskLimits({
 				requiredSize,
 				account,
-				containerApp: containerConfig,
+				configDiskSize,
 			});
 
-			await dockerLoginManagedRegistry(pathToDocker);
+			await dockerLoginManagedRegistry(dockerPath);
 			try {
 				// We don't try to parse repoDigests until this point
 				// because we don't want to fail on parse errors if we
@@ -173,7 +171,7 @@ export async function buildAndMaybePush(
 				const remoteDigest = `${resolvedImage}@${hash}`;
 
 				await runDockerCmd(
-					pathToDocker,
+					dockerPath,
 					["manifest", "inspect", remoteDigest],
 					"ignore"
 				);
@@ -182,7 +180,7 @@ export async function buildAndMaybePush(
 				logger.debug(
 					`Untagging built image: ${args.tag} since there was no change.`
 				);
-				await runDockerCmd(pathToDocker, ["image", "rm", imageTag]);
+				await runDockerCmd(dockerPath, ["image", "rm", imageTag]);
 				return { image: remoteDigest, pushed: false };
 			} catch (error) {
 				if (error instanceof Error) {
@@ -200,9 +198,9 @@ export async function buildAndMaybePush(
 				logger.log(
 					`Image does not exist remotely, pushing: ${namespacedImageTag}`
 				);
-				await runDockerCmd(pathToDocker, ["tag", imageTag, namespacedImageTag]);
-				await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
-				await runDockerCmd(pathToDocker, ["image", "rm", namespacedImageTag]);
+				await runDockerCmd(dockerPath, ["tag", imageTag, namespacedImageTag]);
+				await runDockerCmd(dockerPath, ["push", namespacedImageTag]);
+				await runDockerCmd(dockerPath, ["image", "rm", namespacedImageTag]);
 				pushed = true;
 			}
 		}
@@ -216,8 +214,7 @@ export async function buildAndMaybePush(
 }
 
 export async function buildCommand(
-	args: StrictYargsOptionsToInterface<typeof buildYargs>,
-	config: Config
+	args: StrictYargsOptionsToInterface<typeof buildYargs>
 ) {
 	// TODO: merge args with Wrangler config if available
 	if (existsSync(args.PATH) && !isDir(args.PATH)) {
@@ -225,24 +222,23 @@ export async function buildCommand(
 			`${args.PATH} is not a directory. Please specify a valid directory path.`
 		);
 	}
-	// if containers are not defined, the build should still work.
-	const containers = config.containers ?? [undefined];
+
 	const pathToDockerfile = join(args.PATH, "Dockerfile");
-	for (const container of containers) {
-		await buildAndMaybePush(
-			{
-				tag: args.tag,
-				pathToDockerfile,
-				buildContext: args.PATH,
-				platform: args.platform,
-				// no option to add env vars at build time...?
-			},
-			getDockerPath() ?? args.pathToDocker,
-			args.push,
-			config.configPath,
-			container
-		);
-	}
+
+	await buildAndMaybePush(
+		{
+			tag: args.tag,
+			pathToDockerfile,
+			buildContext: args.PATH,
+			platform: args.platform,
+			// no option to add env vars at build time...?
+		},
+		getDockerPath() ?? args.pathToDocker,
+		args.push,
+		// this means we wont be able to read the disk size from the config, but that option is deprecated anyway at least for containers.
+		// and this never actually worked for cloudchamber as this command was previously reading it from config.containers not config.cloudchamber
+		undefined
+	);
 }
 
 export async function pushCommand(
@@ -269,26 +265,26 @@ export async function pushCommand(
 	}
 }
 
+// only used for containers at the moment! not cloudchamber
 export async function ensureDiskLimits(options: {
 	requiredSize: number;
 	account: CompleteAccountCustomer;
-	containerApp: ContainerApp | undefined;
+	configDiskSize: number | undefined;
 }): Promise<void> {
 	const MB = 1000 * 1000;
 	const MiB = 1024 * 1024;
-	const appDiskSize = resolveAppDiskSize(options.containerApp);
 	const accountDiskSize =
 		(options.account.limits.disk_mb_per_deployment ?? 2000) * MB;
 	// if appDiskSize is defined and configured to be more than the accountDiskSize, error
-	if (appDiskSize && appDiskSize > accountDiskSize) {
+	if (options.configDiskSize && options.configDiskSize > accountDiskSize) {
 		throw new UserError(
-			`Exceeded account limits: Your container is configured to use a disk size of ${appDiskSize / MB} MB. However, that exceeds the account limit of ${accountDiskSize / MB}`
+			`Exceeded account limits: Your container is configured to use a disk size of ${options.configDiskSize / MB} MB. However, that exceeds the account limit of ${options.configDiskSize / MB}`
 		);
 	}
-	const maxAllowedImageSizeBytes = appDiskSize ?? accountDiskSize;
+	const maxAllowedImageSizeBytes = options.configDiskSize ?? accountDiskSize;
 
 	logger.debug(
-		`Disk size limits when building the container: appDiskSize:${appDiskSize}, accountDiskSize:${accountDiskSize}, maxAllowedImageSizeBytes=${maxAllowedImageSizeBytes}(${maxAllowedImageSizeBytes / MB} MB), requiredSized=${options.requiredSize}(${Math.ceil(options.requiredSize / MiB)}MiB)`
+		`Disk size limits when building the container: appDiskSize:${options.configDiskSize}, accountDiskSize:${accountDiskSize}, maxAllowedImageSizeBytes=${maxAllowedImageSizeBytes}(${maxAllowedImageSizeBytes / MB} MB), requiredSized=${options.requiredSize}(${Math.ceil(options.requiredSize / MiB)}MiB)`
 	);
 	if (maxAllowedImageSizeBytes < options.requiredSize) {
 		throw new UserError(

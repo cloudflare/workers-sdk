@@ -9,9 +9,10 @@ export interface Logger {
 export type BuildArgs = {
 	/** image tag in the format `name:tag`, where tag is optional */
 	tag: string;
+	/** absolute path to dockerfile resolved relative to wrangler config path */
 	pathToDockerfile: string;
-	/** image_build_context or args.PATH. if not provided, defaults to the dockerfile directory */
-	buildContext?: string;
+	/** image_build_context or args.PATH. if not provided, defaults to the dockerfile directory. absolute path */
+	buildContext: string;
 	/** any env vars that should be passed in at build time */
 	args?: Record<string, string>;
 	/** platform to build for. defaults to linux/amd64 */

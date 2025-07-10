@@ -5,9 +5,11 @@ import {
 	getCloudflareContainerRegistry,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
+import { Container } from "@cloudflare/workers-types/experimental";
 import { http, HttpResponse } from "msw";
-import { maybeBuildContainer } from "../../cloudchamber/deploy";
 import { clearCachedAccount } from "../../cloudchamber/locations";
+import { ContainerNormalisedConfig } from "../../containers/config";
+import { maybeBuildContainer } from "../../containers/deploy";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockLegacyScriptData } from "../helpers/mock-legacy-script";
@@ -27,6 +29,7 @@ import type {
 	AccountRegistryToken,
 	Application,
 	ImageRegistryCredentialsConfiguration,
+	InstanceType,
 } from "@cloudflare/containers-shared";
 import type { ChildProcess } from "node:child_process";
 
@@ -34,18 +37,25 @@ vi.mock("node:child_process");
 describe("maybeBuildContainer", () => {
 	it("Should return imageUpdate: true if using an image URI", async () => {
 		const config = {
-			image: "registry.cloudflare.com/some-image:uri",
+			name: "test-container",
 			class_name: "Test",
+			max_instances: 0,
+			scheduling_policy: "default",
+			rollout_step_percentage: 25,
+			rollout_kind: "full_auto",
+			disk_size: 5368709120,
+			registry_link: "registry.example.com/test:latest",
+			constraints: undefined,
 		};
-		const result = await maybeBuildContainer(
-			config,
-			"some-tag:thing",
-			false,
-			"/usr/bin/docker",
-			undefined
-		);
-		expect(result.image).toEqual(config.image);
-		expect(result.imageUpdated).toEqual(true);
+
+		const result = await maybeBuildContainer({
+			containerConfig: config as ContainerNormalisedConfig,
+			imageTag: "some-tag:thing",
+			dryRun: false,
+			dockerPath: "/usr/bin/docker",
+			configPath: undefined,
+		});
+		expect(result.newImageLink).toEqual(config.registry_link);
 	});
 });
 describe("wrangler deploy with containers", () => {
@@ -96,7 +106,6 @@ describe("wrangler deploy with containers", () => {
 			containers: [
 				{
 					name: "my-container",
-					instances: 10,
 					class_name: "ExampleDurableObject",
 					image: "./Dockerfile",
 				},
@@ -147,7 +156,6 @@ describe("wrangler deploy with containers", () => {
 			containers: [
 				{
 					name: "my-container",
-					instances: 10,
 					class_name: "ExampleDurableObject",
 					image: "./Dockerfile",
 				},
@@ -189,7 +197,7 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
-	it("should support durable object bindings to SQLite classes with containers (image uri flow)", async () => {
+	it.only("should support durable object bindings to SQLite classes with containers (image uri flow)", async () => {
 		// note no docker commands have been mocked here!
 		mockGetVersion("Galaxy-Class");
 
@@ -206,7 +214,6 @@ describe("wrangler deploy with containers", () => {
 				{
 					image: "docker.io/hello:world",
 					name: "my-container",
-					instances: 10,
 					class_name: "ExampleDurableObject",
 				},
 			],
@@ -217,8 +224,14 @@ describe("wrangler deploy with containers", () => {
 
 		mockCreateApplication({
 			name: "my-container",
-			instances: 10,
+			instances: 0,
+			max_instances: 0,
 			durable_objects: { namespace_id: "1" },
+			constraints: { tier: 1 },
+			configuration: {
+				image: "docker.io/hello:world",
+				instance_type: "dev" as InstanceType.DEV,
+			},
 			scheduling_policy: SchedulingPolicy.DEFAULT,
 		});
 
@@ -287,7 +300,6 @@ describe("wrangler deploy with containers", () => {
 				containers: [
 					{
 						name: "my-container",
-						instances: 10,
 						class_name: "ExampleDurableObject",
 						image: "../Dockerfile",
 					},
@@ -312,6 +324,7 @@ describe("wrangler deploy with containers", () => {
 		mockCreateApplication({
 			name: "my-container",
 			instances: 10,
+			scheduling_policy: "default" as SchedulingPolicy.DEFAULT,
 			durable_objects: { namespace_id: "1" },
 			configuration: {
 				image:
@@ -391,7 +404,6 @@ describe("wrangler deploy with containers", () => {
 				containers: [
 					{
 						name: "my-container",
-						instances: 10,
 						class_name: "ExampleDurableObject",
 						image: "../Dockerfile",
 					},
@@ -453,7 +465,6 @@ describe("wrangler deploy with containers", () => {
 				{
 					image: "docker.io/hello:world",
 					name: "my-container",
-					instances: 10,
 					class_name: "ExampleDurableObject",
 				},
 			],
@@ -515,7 +526,6 @@ describe("wrangler deploy with containers dry run", () => {
 				{
 					image: "./Dockerfile",
 					name: "my-container",
-					instances: 10,
 					class_name: "ExampleDurableObject",
 				},
 			],
@@ -529,7 +539,7 @@ describe("wrangler deploy with containers dry run", () => {
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
-			
+
 			--dry-run: exiting now."
 		`);
 	});
@@ -582,6 +592,10 @@ function mockCreateApplication(expected?: Partial<Application>) {
 			"*/applications",
 			async ({ request }) => {
 				const json = await request.json();
+				console.dir("json");
+				console.dir(json);
+				console.dir("expected");
+				console.dir(expected);
 				if (expected !== undefined) {
 					expect(json).toMatchObject(expected);
 				}

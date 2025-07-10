@@ -1,10 +1,11 @@
 /**
  * Note! much of this is copied and modified from cloudchamber/apply.ts
  */
+
+import assert from "assert";
 import {
 	endSection,
 	log,
-	logRaw,
 	shapes,
 	startSection,
 	success,
@@ -16,11 +17,8 @@ import {
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
-	getCloudflareContainerRegistry,
-	InstanceType,
-	isDockerfile,
+	resolveImageName,
 	RolloutsService,
-	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { buildAndMaybePush } from "../cloudchamber/build";
 import {
@@ -35,27 +33,28 @@ import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../cloudchamber/helpers/diff";
-import { formatConfigSnippet } from "../config";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { getAccountId } from "../user";
 import { fetchVersion } from "../versions/api";
+import { getNormalizedContainerOptions } from "./config";
 import { containersScope } from ".";
+import type { Result } from "../cloudchamber/helpers/diff";
 import type { Config } from "../config";
-import type { ContainerApp, Observability } from "../config/environment";
+import type { Observability } from "../config/environment";
+import type { ContainerNormalisedConfig } from "./config";
 import type {
 	Application,
 	ApplicationID,
 	ApplicationName,
-	BuildArgs,
 	CreateApplicationRequest,
+	InstanceType,
 	ModifyApplicationRequestBody,
 	ModifyDeploymentV2RequestBody,
 	Observability as ObservabilityConfiguration,
-	UserDeploymentConfiguration,
+	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import type { JsonMap } from "@iarna/toml";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
 	if (typeof target !== "object" || target === null) {
@@ -99,11 +98,18 @@ function createApplicationToModifyApplication(
 	};
 }
 
+/**
+ * Converts an existing application from API.listApplications to CreateApplicationRequest. Mostly this just discards unnecessary fields
+ */
 function applicationToCreateApplication(
+	accountId: string,
 	application: Application
 ): CreateApplicationRequest {
 	const app: CreateApplicationRequest = {
-		configuration: application.configuration,
+		configuration: {
+			...application.configuration,
+			image: resolveImageName(accountId, application.configuration.image),
+		},
 		constraints: application.constraints,
 		max_instances: application.max_instances,
 		name: application.name,
@@ -180,57 +186,26 @@ function observabilityToConfiguration(
 	}
 }
 
-function containerAppToInstanceType(
-	containerApp: ContainerApp
-): InstanceType | undefined {
-	if (containerApp.instance_type !== undefined) {
-		return containerApp.instance_type as InstanceType;
-	}
-
-	// if no other configuration is set, we fall back to the default "dev" instance type
-	const configuration =
-		containerApp.configuration as UserDeploymentConfiguration;
-	if (
-		configuration.disk === undefined &&
-		configuration.vcpu === undefined &&
-		configuration.memory === undefined &&
-		configuration.memory_mib === undefined
-	) {
-		return InstanceType.DEV;
-	}
-}
-
-function containerAppToCreateApplication(
-	containerApp: ContainerApp,
+/**
+ *
+ * Turns the normalised container config from wrangler config into
+ * a CreateApplicationRequest that can be sent to the API.
+ * If we want to modify instead, the ModifyRequestBody is a subset of this
+ *
+ */
+function containerConfigToCreateRequest(
+	containerApp: ContainerNormalisedConfig,
 	observability: Observability | undefined,
-	existingApp: Application | undefined,
+	durable_object_namespace_id: string,
+	imageRef: string,
 	skipDefaults = false
 ): CreateApplicationRequest {
-	const observabilityConfiguration = observabilityToConfiguration(
-		observability,
-		existingApp?.configuration.observability
-	);
-	const instanceType = containerAppToInstanceType(containerApp);
-	const configuration: UserDeploymentConfiguration = {
-		...(containerApp.configuration as UserDeploymentConfiguration),
-		observability: observabilityConfiguration,
-		instance_type: instanceType,
-	};
-
-	// this should have been set to a default value of worker-name-class-name if unspecified by the user
-	if (containerApp.name === undefined) {
-		throw new FatalError("Container application name failed to be set", 1, {
-			telemetryMessage: true,
-		});
-	}
 	const app: CreateApplicationRequest = {
-		...containerApp,
 		name: containerApp.name,
-		configuration,
-		instances: containerApp.instances ?? 0,
-		scheduling_policy:
-			(containerApp.scheduling_policy as SchedulingPolicy) ??
-			SchedulingPolicy.DEFAULT,
+		scheduling_policy: containerApp.scheduling_policy as SchedulingPolicy,
+		// setting this in config is deprecated?
+		instances: 0,
+		max_instances: containerApp.max_instances,
 		constraints: {
 			...(containerApp.constraints ??
 				(!skipDefaults ? { tier: 1 } : undefined)),
@@ -241,53 +216,37 @@ function containerAppToCreateApplication(
 				region.toUpperCase()
 			),
 		},
+		configuration: {
+			image: imageRef,
+			...("instance_type" in containerApp
+				? { instance_type: containerApp.instance_type as InstanceType }
+				: { disk: { size_mb: containerApp.disk_size } }),
+			// cannot have an existing app if this is a create req
+			observability: observabilityToConfiguration(observability, undefined),
+		},
+		durable_objects: {
+			namespace_id: durable_object_namespace_id,
+		},
 	};
-
-	// delete the fields that should not be sent to API
-	delete (app as Record<string, unknown>)["class_name"];
-	delete (app as Record<string, unknown>)["image"];
-	delete (app as Record<string, unknown>)["image_build_context"];
-	delete (app as Record<string, unknown>)["image_vars"];
-	delete (app as Record<string, unknown>)["rollout_step_percentage"];
-	delete (app as Record<string, unknown>)["rollout_kind"];
-	delete (app as Record<string, unknown>)["instance_type"];
-
 	return app;
 }
 
-// Resolve an image name to the full unambiguous name.
-//
-// For now, this only converts images stored in the managed registry to contain
-// the user's account ID in the path.
-async function resolveImageName(
-	config: Config,
-	image: string
-): Promise<string> {
-	let url: URL;
-	try {
-		url = new URL(`http://${image}`);
-	} catch (_) {
-		return image;
-	}
-
-	if (url.hostname !== getCloudflareContainerRegistry()) {
-		return image;
-	}
-
-	const accountId = config.account_id || (await getAccountId(config));
-	if (url.pathname.startsWith(`/${accountId}`)) {
-		return image;
-	}
-
-	return `${url.hostname}/${accountId}${url.pathname}`;
-}
-
+/**
+ * creates or modifies a container application
+ */
 export async function apply(
 	args: {
 		skipDefaults: boolean | undefined;
 		env?: string;
-		imageUpdateRequired?: boolean;
+		/**
+		 * If the image was built and pushed, or is a registry link, we have to update the image ref and this will be defined
+		 * If it is undefined, the image has not change, and we do not need to update the image ref
+		 */
+		newImageLink: string | undefined;
+		durable_object_namespace_id: string;
 	},
+	containerConfig: ContainerNormalisedConfig,
+	// need some random top level fields
 	config: Config
 ) {
 	startSection(
@@ -295,48 +254,336 @@ export async function apply(
 		"deploy changes to your application"
 	);
 
-	config.containers ??= [];
-
-	if (config.containers.length === 0) {
-		endSection(
-			"You don't have any container applications defined in your wrangler.toml",
-			"You can set the following configuration in your wrangler.toml"
-		);
-		const configuration = {
-			image: "docker.io/cloudflare/hello-world:1.0",
-			instances: 2,
-			name: config.name ?? "my-containers-application",
-			instance_type: "dev",
-		};
-		const endConfig: JsonMap =
-			args.env !== undefined
-				? {
-						env: { [args.env]: { containers: [configuration] } },
-					}
-				: { containers: [configuration] };
-		formatConfigSnippet(endConfig, config.configPath)
-			.split("\n")
-			.forEach((el) => {
-				printLine(el, "  ", logRaw);
-			});
-		return;
-	}
-
-	const applications = await promiseSpinner(
+	const existingApplications = await promiseSpinner(
 		ApplicationsService.listApplications(),
 		{ message: "Loading applications" }
 	);
-	applications.forEach((app) =>
+	existingApplications.forEach((app) =>
 		cleanupObservability(app.configuration.observability)
 	);
-	const applicationByNames: Record<ApplicationName, Application> = {};
+
+	log(dim("Container application changes\n"));
+
 	// TODO: this is not correct right now as there can be multiple applications
 	// with the same name.
-	for (const application of applications) {
-		applicationByNames[application.name] = application;
+	/** Previous deployment of this app, if this exists  */
+	const prevApp = existingApplications.find(
+		(app) => app.name === containerConfig.name
+	);
+	const accountId = config.account_id || (await getAccountId(config));
+	const imageRef = args.newImageLink ?? prevApp?.configuration.image;
+	//
+	assert(imageRef, "No changes detected but no previous image found");
+	const appConfig = containerConfigToCreateRequest(
+		containerConfig,
+		config.observability,
+		args.durable_object_namespace_id,
+		resolveImageName(accountId, imageRef),
+		args.skipDefaults
+	);
+
+	// **************
+	// *** MODIFY ***
+	// **************
+
+	if (prevApp !== undefined && prevApp !== null) {
+		// we need to sort the objects (by key) because the diff algorithm works with lines
+		const normalisedPrevApp = sortObjectRecursive<CreateApplicationRequest>(
+			stripUndefined(applicationToCreateApplication(accountId, prevApp))
+		);
+
+		if (!normalisedPrevApp.durable_objects?.namespace_id) {
+			throw new FatalError(
+				"The previous deploy of this container application was not associated with a durable object"
+			);
+		}
+		if (
+			normalisedPrevApp.durable_objects.namespace_id !==
+			args.durable_object_namespace_id
+		) {
+			throw new UserError(
+				`Application "${normalisedPrevApp.name}" is assigned to durable object ${normalisedPrevApp.durable_objects.namespace_id}, but a new DO namespace is being assigned to the application,
+					you should delete the container application and deploy again`
+			);
+		}
+
+		// i am not entirely sure this does anything?
+		const prevContainer = appConfig.configuration.instance_type
+			? cleanForInstanceType(normalisedPrevApp)
+			: normalisedPrevApp;
+		const nowContainer = mergeDeep(
+			prevContainer,
+			sortObjectRecursive<CreateApplicationRequest>(appConfig)
+		);
+
+		const prev = JSON.stringify({ containers: [normalisedPrevApp] });
+		const now = JSON.stringify({ containers: [nowContainer] });
+
+		const results = diffLines(prev, now);
+		const changes = results.find((l) => l.added || l.removed) !== undefined;
+
+		if (!changes) {
+			updateStatus(`no changes ${brandColor(prevApp.name)}`);
+		} else {
+			updateStatus(`${brandColor.underline("EDIT")} ${prevApp.name}`, false);
+			renderDiff(results);
+
+			if (containerConfig.rollout_kind !== "none") {
+				await doAction({
+					action: "modify",
+					application: createApplicationToModifyApplication(appConfig),
+					id: prevApp.id,
+					name: prevApp.name,
+					rollout_step_percentage:
+						prevApp.durable_objects !== undefined
+							? containerConfig.rollout_step_percentage
+							: containerConfig.rollout_step_percentage,
+					rollout_kind:
+						containerConfig.rollout_kind == "full_manual"
+							? CreateApplicationRolloutRequest.kind.FULL_MANUAL
+							: CreateApplicationRolloutRequest.kind.FULL_AUTO,
+				});
+			} else {
+				log("Skipping application rollout");
+			}
+		}
+	} else {
+		// **************
+		// *** CREATE ***
+		// **************
+
+		// print the header of the app
+		updateStatus(bold.underline(green.underline("NEW")) + ` ${appConfig.name}`);
+
+		const configStr = JSON.stringify({ containers: [appConfig] }, null, 2);
+
+		// go line by line and pretty print it
+		configStr
+			.split("\n")
+			.map((line) => line.trim())
+			.forEach((el) => {
+				printLine(el, "  ");
+			});
+
+		// add to the actions array to create the app later
+		await doAction({
+			action: "create",
+			application: appConfig,
+		});
 	}
 
-	const actions: (
+	printLine("");
+	endSection("Applied changes");
+}
+
+export async function maybeBuildContainer(args: {
+	containerConfig: ContainerNormalisedConfig;
+	/** just the tag component. will be prefixed with the container name */
+	imageTag: string;
+	dryRun: boolean;
+	dockerPath: string;
+	configPath: string | undefined;
+}): Promise<{ newImageLink: string | undefined }> {
+	if ("registry_link" in args.containerConfig) {
+		return {
+			// We don't know at this point whether the image has changed
+			// but we need to make sure API checks so
+			// we always set this to the registry link.
+			newImageLink: args.containerConfig.registry_link,
+		};
+	}
+
+	const imageFullName =
+		args.containerConfig.name + ":" + args.imageTag.split("-")[0];
+	logger.log("Building image", imageFullName);
+
+	const buildResult = await buildAndMaybePush(
+		{
+			tag: imageFullName,
+			pathToDockerfile: args.containerConfig.dockerfile,
+			buildContext: args.containerConfig.image_build_context,
+			args: args.containerConfig.image_vars,
+		},
+		args.dockerPath,
+		!args.dryRun,
+		"disk_size" in args.containerConfig
+			? args.containerConfig.disk_size
+			: undefined
+	);
+
+	if (buildResult.pushed) {
+		return { newImageLink: buildResult.image };
+	}
+	// if the image has not changed, it will not have been pushed
+	// so we don't need to update anything when we apply the container config
+	return { newImageLink: undefined };
+}
+
+export type DeployContainersArgs = {
+	versionId: string;
+	accountId: string;
+	scriptName: string;
+	env?: string;
+};
+
+export async function deployContainers(
+	config: Config,
+	{ versionId, accountId, scriptName, env }: DeployContainersArgs
+) {
+	if (config.containers === undefined || config.containers.length === 0) {
+		return;
+	}
+
+	await fillOpenAPIConfiguration(config, containersScope);
+
+	const dockerPath = getDockerPath();
+	const normalizedContainerConfig = await getNormalizedContainerOptions(config);
+
+	// this is used to find the DOs that are associated with this script
+	const version = await fetchVersion(config, accountId, scriptName, versionId);
+
+	for (const container of normalizedContainerConfig) {
+		const buildResult = await maybeBuildContainer({
+			containerConfig: container,
+			imageTag: versionId,
+			dryRun: false,
+			dockerPath,
+			configPath: config.configPath,
+		});
+
+		const targetDurableObject = version.resources.bindings.find(
+			(durableObject) =>
+				durableObject.type === "durable_object_namespace" &&
+				durableObject.class_name === container.class_name &&
+				// DO cannot be defined in a different script to the container
+				durableObject.script_name === undefined &&
+				durableObject.namespace_id !== undefined
+		);
+
+		if (!targetDurableObject) {
+			throw new FatalError(
+				"Could not deploy container application as corresponding durable object could not be found"
+			);
+		}
+
+		assert(
+			targetDurableObject.type === "durable_object_namespace" &&
+				targetDurableObject.namespace_id !== undefined
+		);
+
+		await apply(
+			{
+				skipDefaults: false,
+				env,
+				newImageLink: buildResult.newImageLink,
+				durable_object_namespace_id: targetDurableObject.namespace_id,
+			},
+			container,
+			config
+		);
+	}
+}
+
+// wrangler config -> config for building or pushing -> api deploy config
+
+function formatError(err: ApiError): string {
+	// TODO: this is bad bad. Please fix like we do in create.ts.
+	// On Cloudchamber API side, we have to improve as well the object validation errors,
+	// so we can detect them here better and pinpoint to the user what's going on.
+	if (
+		err.body.error === DeploymentMutationError.VALIDATE_INPUT &&
+		err.body.details !== undefined
+	) {
+		let message = "";
+		for (const key in err.body.details) {
+			message += `  ${brandColor(key)} ${err.body.details[key]}\n`;
+		}
+
+		return message;
+	}
+
+	if (err.body.error !== undefined) {
+		return `  ${err.body.error}`;
+	}
+
+	return JSON.stringify(err.body);
+}
+
+const renderDiff = (results: Result[]) => {
+	let printedLines: string[] = [];
+	let printedDiff = false;
+	// prints the lines we accumulated to bring context to the edited line
+	const printContext = () => {
+		let index = 0;
+		for (let i = printedLines.length - 1; i >= 0; i--) {
+			if (printedLines[i].trim().startsWith("[")) {
+				log("");
+				index = i;
+				break;
+			}
+		}
+
+		for (let i = index; i < printedLines.length; i++) {
+			log(printedLines[i]);
+			if (printedLines.length - i > 2) {
+				i = printedLines.length - 2;
+				printLine(dim("..."), "  ");
+			}
+		}
+
+		printedLines = [];
+	};
+
+	// go line by line and print diff results
+	for (const lines of results) {
+		const trimmedLines = (lines.value ?? "")
+			.split("\n")
+			.map((e) => e.trim())
+			.filter((e) => e !== "");
+
+		for (const l of trimmedLines) {
+			if (lines.added) {
+				printContext();
+				if (l.startsWith("[")) {
+					printLine("");
+				}
+
+				printedDiff = true;
+				printLine(l, green("+ "));
+			} else if (lines.removed) {
+				printContext();
+				if (l.startsWith("[")) {
+					printLine("");
+				}
+
+				printedDiff = true;
+				printLine(l, red("- "));
+			} else {
+				// if we had printed a diff before this line, print a little bit more
+				// so the user has a bit more context on where the edit happens
+				if (printedDiff) {
+					let printDots = false;
+					if (l.startsWith("[")) {
+						printLine("");
+						printDots = true;
+					}
+
+					printedDiff = false;
+					printLine(l, "  ");
+					if (printDots) {
+						printLine(dim("..."), "  ");
+					}
+					continue;
+				}
+
+				printedLines.push(createLine(l, "  "));
+			}
+		}
+	}
+};
+
+const doAction = async (
+	action:
 		| { action: "create"; application: CreateApplicationRequest }
 		| {
 				action: "modify";
@@ -346,312 +593,93 @@ export async function apply(
 				rollout_step_percentage?: number;
 				rollout_kind: CreateApplicationRolloutRequest.kind;
 		  }
-	)[] = [];
-
-	// TODO: JSON formatting is a bit bad due to the trimming.
-	// Try to do a conditional on `configFormat`
-
-	log(dim("Container application changes\n"));
-
-	for (const appConfigNoDefaults of config.containers) {
-		const application =
-			applicationByNames[
-				appConfigNoDefaults.name ??
-					// we should never actually reach this point, but just in case
-					`${config.name}-${appConfigNoDefaults.class_name}`
-			];
-
-		// while configuration.image is deprecated to the user, we still resolve to this for now.
-		if (!appConfigNoDefaults.configuration?.image && application) {
-			appConfigNoDefaults.configuration ??= {};
-		}
-
-		if (!args.imageUpdateRequired && application) {
-			appConfigNoDefaults.configuration ??= {};
-			appConfigNoDefaults.configuration.image = application.configuration.image;
-		}
-
-		const appConfig = containerAppToCreateApplication(
-			appConfigNoDefaults,
-			config.observability,
-			application,
-			args.skipDefaults
-		);
-
-		if (application !== undefined && application !== null) {
-			// we need to sort the objects (by key) because the diff algorithm works with
-			// lines
-			const prevApp = sortObjectRecursive<CreateApplicationRequest>(
-				stripUndefined(applicationToCreateApplication(application))
+) => {
+	if (action.action === "create") {
+		let application: Application;
+		try {
+			application = await promiseSpinner(
+				ApplicationsService.createApplication(action.application),
+				{ message: `Creating ${action.application.name}` }
 			);
-
-			// fill up fields that their defaults were changed over-time,
-			// maintaining retrocompatibility with the existing app
-			if (appConfigNoDefaults.scheduling_policy === undefined) {
-				appConfig.scheduling_policy = prevApp.scheduling_policy;
+		} catch (err) {
+			if (!(err instanceof Error)) {
+				throw err;
 			}
 
-			if (
-				prevApp.durable_objects !== undefined &&
-				appConfigNoDefaults.durable_objects !== undefined &&
-				prevApp.durable_objects.namespace_id !==
-					appConfigNoDefaults.durable_objects.namespace_id
-			) {
+			if (!(err instanceof ApiError)) {
 				throw new UserError(
-					`Application "${prevApp.name}" is assigned to durable object ${prevApp.durable_objects.namespace_id}, but a new DO namespace is being assigned to the application,
-					you should delete the container application and deploy again`
+					`Unexpected error creating application: ${err.message}`
 				);
 			}
 
-			const prevContainer =
-				appConfig.configuration.instance_type !== undefined
-					? cleanForInstanceType(prevApp)
-					: (prevApp as ContainerApp);
-			const nowContainer = mergeDeep(
-				prevContainer as CreateApplicationRequest,
-				sortObjectRecursive<CreateApplicationRequest>(appConfig)
-			) as ContainerApp;
-
-			const prev = formatConfigSnippet(
-				{ containers: [prevContainer] },
-				config.configPath
-			);
-
-			const now = formatConfigSnippet(
-				{ containers: [nowContainer] },
-				config.configPath
-			);
-			const results = diffLines(prev, now);
-			const changes = results.find((l) => l.added || l.removed) !== undefined;
-			if (!changes) {
-				updateStatus(`no changes ${brandColor(application.name)}`);
-				continue;
+			if (err.status === 400) {
+				throw new UserError(
+					`Error creating application due to a misconfiguration\n${formatError(err)}`
+				);
 			}
 
-			updateStatus(
-				`${brandColor.underline("EDIT")} ${application.name}`,
-				false
+			throw new UserError(
+				`Error creating application due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
 			);
-
-			let printedLines: string[] = [];
-			let printedDiff = false;
-			// prints the lines we accumulated to bring context to the edited line
-			const printContext = () => {
-				let index = 0;
-				for (let i = printedLines.length - 1; i >= 0; i--) {
-					if (printedLines[i].trim().startsWith("[")) {
-						log("");
-						index = i;
-						break;
-					}
-				}
-
-				for (let i = index; i < printedLines.length; i++) {
-					log(printedLines[i]);
-					if (printedLines.length - i > 2) {
-						i = printedLines.length - 2;
-						printLine(dim("..."), "  ");
-					}
-				}
-
-				printedLines = [];
-			};
-
-			// go line by line and print diff results
-			for (const lines of results) {
-				const trimmedLines = (lines.value ?? "")
-					.split("\n")
-					.map((e) => e.trim())
-					.filter((e) => e !== "");
-
-				for (const l of trimmedLines) {
-					if (lines.added) {
-						printContext();
-						if (l.startsWith("[")) {
-							printLine("");
-						}
-
-						printedDiff = true;
-						printLine(l, green("+ "));
-					} else if (lines.removed) {
-						printContext();
-						if (l.startsWith("[")) {
-							printLine("");
-						}
-
-						printedDiff = true;
-						printLine(l, red("- "));
-					} else {
-						// if we had printed a diff before this line, print a little bit more
-						// so the user has a bit more context on where the edit happens
-						if (printedDiff) {
-							let printDots = false;
-							if (l.startsWith("[")) {
-								printLine("");
-								printDots = true;
-							}
-
-							printedDiff = false;
-							printLine(l, "  ");
-							if (printDots) {
-								printLine(dim("..."), "  ");
-							}
-							continue;
-						}
-
-						printedLines.push(createLine(l, "  "));
-					}
-				}
-			}
-
-			if (appConfigNoDefaults.rollout_kind !== "none") {
-				actions.push({
-					action: "modify",
-					application: createApplicationToModifyApplication(appConfig),
-					id: application.id,
-					name: application.name,
-					rollout_step_percentage:
-						application.durable_objects !== undefined
-							? appConfigNoDefaults.rollout_step_percentage ?? 25
-							: appConfigNoDefaults.rollout_step_percentage,
-					rollout_kind:
-						appConfigNoDefaults.rollout_kind == "full_manual"
-							? CreateApplicationRolloutRequest.kind.FULL_MANUAL
-							: CreateApplicationRolloutRequest.kind.FULL_AUTO,
-				});
-			} else {
-				log("Skipping application rollout");
-			}
-
-			printLine("");
-			continue;
 		}
 
-		// print the header of the app
-		updateStatus(bold.underline(green.underline("NEW")) + ` ${appConfig.name}`);
-
-		const s = formatConfigSnippet(
+		success(
+			`Created application ${brandColor(action.application.name)} (Application ID: ${application.id})`,
 			{
-				containers: [
-					{
-						...appConfig,
-						instances:
-							appConfig.max_instances !== undefined
-								? // trick until we allow setting instances to undefined in the API
-									undefined
-								: appConfig.instances,
-					} as ContainerApp,
-				],
-			},
-			config.configPath
+				shape: shapes.bar,
+			}
 		);
-
-		// go line by line and pretty print it
-		s.split("\n")
-			.map((line) => line.trim())
-			.forEach((el) => {
-				printLine(el, "  ");
-			});
-
-		const configToPush = {
-			...appConfig,
-
-			configuration: {
-				...appConfig.configuration,
-
-				// De-sugar image name. We do it here so that the user
-				// sees the simplified image name in diffs.
-				image: await resolveImageName(config, appConfig.configuration.image),
-			},
-		};
-
-		// add to the actions array to create the app later
-		actions.push({
-			action: "create",
-			application: configToPush,
-		});
 	}
 
-	if (actions.length == 0) {
-		endSection("No changes to be made");
-		return;
-	}
-
-	function formatError(err: ApiError): string {
-		// TODO: this is bad bad. Please fix like we do in create.ts.
-		// On Cloudchamber API side, we have to improve as well the object validation errors,
-		// so we can detect them here better and pinpoint to the user what's going on.
-		if (
-			err.body.error === DeploymentMutationError.VALIDATE_INPUT &&
-			err.body.details !== undefined
-		) {
-			let message = "";
-			for (const key in err.body.details) {
-				message += `  ${brandColor(key)} ${err.body.details[key]}\n`;
-			}
-
-			return message;
-		}
-
-		if (err.body.error !== undefined) {
-			return `  ${err.body.error}`;
-		}
-
-		return JSON.stringify(err.body);
-	}
-
-	for (const action of actions) {
-		if (action.action === "create") {
-			let application: Application;
-			try {
-				application = await promiseSpinner(
-					ApplicationsService.createApplication(action.application),
-					{ message: `Creating ${action.application.name}` }
-				);
-			} catch (err) {
-				if (!(err instanceof Error)) {
-					throw err;
-				}
-
-				if (!(err instanceof ApiError)) {
-					throw new UserError(
-						`Unexpected error creating application: ${err.message}`
-					);
-				}
-
-				if (err.status === 400) {
-					throw new UserError(
-						`Error creating application due to a misconfiguration\n${formatError(err)}`
-					);
-				}
-
-				throw new UserError(
-					`Error creating application due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
-				);
-			}
-
-			success(
-				`Created application ${brandColor(action.application.name)} (Application ID: ${application.id})`,
-				{
-					shape: shapes.bar,
-				}
+	if (action.action === "modify") {
+		try {
+			await promiseSpinner(
+				ApplicationsService.modifyApplication(action.id, {
+					...action.application,
+					instances:
+						action.application.max_instances !== undefined
+							? undefined
+							: action.application.instances,
+				}),
+				{ message: `Modifying ${action.application.name}` }
 			);
+		} catch (err) {
+			if (!(err instanceof Error)) {
+				throw err;
+			}
 
-			printLine("");
-			continue;
+			if (!(err instanceof ApiError)) {
+				throw new UserError(
+					`Unexpected error modifying application ${action.name}: ${err.message}`
+				);
+			}
+
+			if (err.status === 400) {
+				throw new UserError(
+					`Error modifying application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
+				);
+			}
+
+			throw new UserError(
+				`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
+			);
 		}
 
-		if (action.action === "modify") {
+		if (action.rollout_step_percentage !== undefined) {
 			try {
 				await promiseSpinner(
-					ApplicationsService.modifyApplication(action.id, {
-						...action.application,
-						instances:
-							action.application.max_instances !== undefined
-								? undefined
-								: action.application.instances,
+					RolloutsService.createApplicationRollout(action.id, {
+						description: "Progressive update",
+						strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
+						target_configuration:
+							(action.application
+								.configuration as ModifyDeploymentV2RequestBody) ?? {},
+						step_percentage: action.rollout_step_percentage,
+						kind: action.rollout_kind,
 					}),
-					{ message: `Modifying ${action.application.name}` }
+					{
+						message: `rolling out container version ${action.name}`,
+					}
 				);
 			} catch (err) {
 				if (!(err instanceof Error)) {
@@ -660,215 +688,25 @@ export async function apply(
 
 				if (!(err instanceof ApiError)) {
 					throw new UserError(
-						`Unexpected error modifying application ${action.name}: ${err.message}`
+						`Unexpected error rolling out application ${action.name}:\n${err.message}`
 					);
 				}
 
 				if (err.status === 400) {
 					throw new UserError(
-						`Error modifying application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
+						`Error rolling out application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
 					);
 				}
 
 				throw new UserError(
-					`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
+					`Error rolling out application ${action.name} due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`
 				);
 			}
-
-			if (action.rollout_step_percentage !== undefined) {
-				try {
-					await promiseSpinner(
-						RolloutsService.createApplicationRollout(action.id, {
-							description: "Progressive update",
-							strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
-							target_configuration:
-								(action.application
-									.configuration as ModifyDeploymentV2RequestBody) ?? {},
-							step_percentage: action.rollout_step_percentage,
-							kind: action.rollout_kind,
-						}),
-						{
-							message: `rolling out container version ${action.name}`,
-						}
-					);
-				} catch (err) {
-					if (!(err instanceof Error)) {
-						throw err;
-					}
-
-					if (!(err instanceof ApiError)) {
-						throw new UserError(
-							`Unexpected error rolling out application ${action.name}:\n${err.message}`
-						);
-					}
-
-					if (err.status === 400) {
-						throw new UserError(
-							`Error rolling out application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
-						);
-					}
-
-					throw new UserError(
-						`Error rolling out application ${action.name} due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`
-					);
-				}
-			}
-
-			success(`Modified application ${brandColor(action.name)}`, {
-				shape: shapes.bar,
-			});
-
-			printLine("");
-			continue;
 		}
+
+		success(`Modified application ${brandColor(action.name)}`, {
+			shape: shapes.bar,
+		});
 	}
-
-	endSection("Applied changes");
-}
-
-export async function maybeBuildContainer(
-	containerConfig: ContainerApp,
-	/** just the tag component. will be prefixed with the container name */
-	imageTag: string,
-	dryRun: boolean,
-	pathToDocker: string,
-	configPath: string | undefined
-): Promise<{ image: string; imageUpdated: boolean }> {
-	try {
-		if (
-			!isDockerfile(
-				containerConfig.image ?? containerConfig.configuration?.image,
-				configPath
-			)
-		) {
-			return {
-				image: containerConfig.image ?? containerConfig.configuration?.image,
-				// We don't know at this point whether the image was updated or not
-				// but we need to make sure downstream checks if it was updated so
-				// we set this to true.
-				imageUpdated: true,
-			};
-		}
-	} catch (err) {
-		if (err instanceof Error) {
-			throw new UserError(err.message);
-		}
-
-		throw err;
-	}
-
-	const options = getBuildArguments(containerConfig, imageTag);
-	logger.log("Building image", options.tag);
-	const buildResult = await buildAndMaybePush(
-		options,
-		pathToDocker,
-		!dryRun,
-		configPath,
-		containerConfig
-	);
-
-	return { image: buildResult.image, imageUpdated: buildResult.pushed };
-}
-
-export type DeployContainersArgs = {
-	versionId: string;
-	accountId: string;
-	scriptName: string;
-	dryRun: boolean;
-	env?: string;
+	printLine("");
 };
-
-export async function deployContainers(
-	config: Config,
-	{ versionId, accountId, scriptName, dryRun, env }: DeployContainersArgs
-) {
-	if (config.containers === undefined) {
-		return;
-	}
-
-	if (!dryRun) {
-		await fillOpenAPIConfiguration(config, containersScope);
-	}
-	const pathToDocker = getDockerPath();
-	for (const container of config.containers) {
-		const version = await fetchVersion(
-			config,
-			accountId,
-			scriptName,
-			versionId
-		);
-		const targetDurableObject = version.resources.bindings.find(
-			(durableObject) =>
-				durableObject.type === "durable_object_namespace" &&
-				durableObject.class_name === container.class_name &&
-				durableObject.script_name === undefined &&
-				durableObject.namespace_id !== undefined
-		);
-
-		if (!targetDurableObject) {
-			throw new UserError(
-				"Could not deploy container application as durable object was not found in list of bindings"
-			);
-		}
-
-		if (
-			targetDurableObject.type !== "durable_object_namespace" ||
-			targetDurableObject.namespace_id === undefined
-		) {
-			throw new Error("unreachable");
-		}
-
-		const configuration = {
-			...config,
-			containers: [
-				{
-					...container,
-					durable_objects: {
-						namespace_id: targetDurableObject.namespace_id,
-					},
-				},
-			],
-		};
-
-		const buildResult = await maybeBuildContainer(
-			container,
-			versionId,
-			dryRun,
-			pathToDocker,
-			config.configPath
-		);
-		container.configuration ??= {};
-		container.configuration.image = buildResult.image;
-		container.image = buildResult.image;
-
-		await apply(
-			{
-				skipDefaults: false,
-				env,
-				imageUpdateRequired: buildResult.imageUpdated,
-			},
-			configuration
-		);
-	}
-}
-
-// TODO: container app config should be normalized by now in config validation
-// getBuildArguments takes the image from `container.image` or `container.configuration.image`
-// if the first is not defined. It accepts either a URI or path to a Dockerfile.
-// It will return options that are usable with the build() method from containers.
-export function getBuildArguments(
-	container: ContainerApp,
-	idForImageTag: string
-): BuildArgs {
-	const pathToDockerfile = container.image ?? container.configuration?.image;
-	const imageTag = container.name + ":" + idForImageTag.split("-")[0];
-
-	return {
-		tag: imageTag,
-		pathToDockerfile,
-		buildContext: container.image_build_context,
-		args: container.image_vars,
-	};
-}
-
-// wrangler config -> config for building or pushing -> api deploy config

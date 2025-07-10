@@ -249,13 +249,7 @@ describe("buildAndMaybePush", () => {
 				ensureDiskLimits({
 					requiredSize: 333 * MiB, // 333MiB
 					account: accountBase,
-					containerApp: {
-						...defaultConfiguration,
-						configuration: {
-							image: "",
-							disk: { size: "3GB" }, // This exceeds the account limit of 2GB
-						},
-					},
+					configDiskSize: 3000 * MiB, // This exceeds the account limit of 2GB
 				})
 			).rejects.toThrow("Exceeded account limits");
 		});
@@ -265,7 +259,7 @@ describe("buildAndMaybePush", () => {
 				ensureDiskLimits({
 					requiredSize: 3000 * MiB, // 3GiB
 					account: accountBase,
-					containerApp: undefined,
+					configDiskSize: undefined,
 				})
 			).rejects.toThrow("Image too large");
 		});
@@ -274,7 +268,7 @@ describe("buildAndMaybePush", () => {
 			const result = await ensureDiskLimits({
 				requiredSize: 256 * MiB, // 256MiB
 				account: accountBase,
-				containerApp: undefined,
+				configDiskSize: undefined,
 			});
 
 			expect(result).toEqual(undefined);

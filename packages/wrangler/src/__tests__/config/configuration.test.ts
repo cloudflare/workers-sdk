@@ -2389,8 +2389,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers.class_name\\" is a required field.
-					  - Must have either a top level \\"name\\" and \\"containers.class_name\\" field defined, or have field \\"containers.name\\" defined."
+					  - \\"containers.class_name\\" is a required field."
 				`);
 			});
 
