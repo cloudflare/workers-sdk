@@ -101,7 +101,7 @@ export async function buildAndMaybePush(
 		await dockerBuild(pathToDocker, {
 			buildCmd,
 			dockerfile,
-		});
+		}).ready;
 
 		const inspectOutput = await dockerImageInspect(pathToDocker, {
 			imageTag,

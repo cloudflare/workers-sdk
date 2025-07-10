@@ -175,7 +175,7 @@ describe
 			if (source === "pull") {
 				// TODO: we won't need to prefix the account id once 9811 lands
 				await helper.run(
-					`wrangler containers images delete ${CLOUDFLARE_ACCOUNT_ID}/${workerName}:tmp-e2e`
+					`wrangler containers images delete ${workerName}:tmp-e2e`
 				);
 			}
 		});
@@ -308,9 +308,10 @@ const getContainerIds = (class_name: string) => {
 	}
 	const jsonOutput = allContainers.map((line) => JSON.parse(line));
 
-	return jsonOutput.map((container) => {
+	const ids = jsonOutput.map((container) => {
 		if (container.Image.includes(`cloudflare-dev/${class_name}`)) {
 			return container.ID;
 		}
 	});
+	return ids.filter(Boolean);
 };

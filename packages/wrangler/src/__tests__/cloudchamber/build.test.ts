@@ -28,7 +28,7 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	return Object.assign({}, actual, {
 		dockerLoginManagedRegistry: vi.fn(),
 		runDockerCmd: vi.fn(),
-		dockerBuild: vi.fn(),
+		dockerBuild: vi.fn(() => ({ abort: () => {}, ready: Promise.resolve() })),
 		dockerImageInspect: vi.fn(),
 	});
 });
@@ -131,7 +131,10 @@ describe("buildAndMaybePush", () => {
 	});
 
 	it("should be able to build image and not push if it already exists in remote", async () => {
-		vi.mocked(runDockerCmd).mockResolvedValueOnce();
+		vi.mocked(runDockerCmd).mockResolvedValueOnce({
+			abort: () => {},
+			ready: Promise.resolve({ aborted: false }),
+		});
 		vi.mocked(dockerImageInspect).mockResolvedValue(
 			'53387881 2 ["registry.cloudflare.com/test-app@sha256:three"]'
 		);
@@ -222,7 +225,10 @@ describe("buildAndMaybePush", () => {
 
 	it("should throw UserError when docker build fails", async () => {
 		const errorMessage = "Docker build failed";
-		vi.mocked(dockerBuild).mockRejectedValue(new Error(errorMessage));
+		vi.mocked(dockerBuild).mockReturnValue({
+			abort: () => {},
+			ready: Promise.reject(new Error(errorMessage)),
+		});
 		await expect(
 			runWrangler("containers build ./container-context -t test-app:tag")
 		).rejects.toThrow(new UserError(errorMessage));
