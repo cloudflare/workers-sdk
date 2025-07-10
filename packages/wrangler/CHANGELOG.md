@@ -1,5 +1,11 @@
 # wrangler
 
+## 4.24.2
+
+### Patch Changes
+
+- [#9917](https://github.com/cloudflare/workers-sdk/pull/9917) [`80cc834`](https://github.com/cloudflare/workers-sdk/commit/80cc83403e2adb6e989455ba28743f282c5509c8) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: assets only versions upload should include tag and message
+
 ## 4.24.1
 
 ### Patch Changes
