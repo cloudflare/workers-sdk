@@ -62,7 +62,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${getCloudflareContainerRegistry()}/test-app:tag`,
+				`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 				"--platform",
 				"linux/amd64",
 				"--provenance=false",
@@ -73,7 +73,7 @@ describe("buildAndMaybePush", () => {
 			dockerfile,
 		});
 		expect(dockerImageInspect).toHaveBeenCalledWith("/custom/docker/path", {
-			imageTag: `${getCloudflareContainerRegistry()}/test-app:tag`,
+			imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 			formatString:
 				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 		});
@@ -94,7 +94,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${getCloudflareContainerRegistry()}/test-app:tag`,
+				`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 				"--platform",
 				"linux/amd64",
 				"--provenance=false",
@@ -104,26 +104,14 @@ describe("buildAndMaybePush", () => {
 			],
 			dockerfile,
 		});
-
-		// 3 calls: docker tag + docker push + docker rm
-		expect(runDockerCmd).toHaveBeenCalledTimes(3);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
-			"tag",
-			`${getCloudflareContainerRegistry()}/test-app:tag`,
-			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
-		]);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
+		expect(runDockerCmd).toHaveBeenCalledTimes(1);
+		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
 			"push",
-			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
-		]);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(3, "docker", [
-			"image",
-			"rm",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 		expect(dockerImageInspect).toHaveBeenCalledOnce();
 		expect(dockerImageInspect).toHaveBeenCalledWith("docker", {
-			imageTag: `${getCloudflareContainerRegistry()}/test-app:tag`,
+			imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 			formatString:
 				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 		});
@@ -136,7 +124,7 @@ describe("buildAndMaybePush", () => {
 			ready: Promise.resolve({ aborted: false }),
 		});
 		vi.mocked(dockerImageInspect).mockResolvedValue(
-			'53387881 2 ["registry.cloudflare.com/test-app@sha256:three"]'
+			'53387881 2 ["registry.cloudflare.com/some-account-id/test-app@sha256:three"]'
 		);
 		await runWrangler(
 			"containers build ./container-context -t test-app:tag -p"
@@ -145,7 +133,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${getCloudflareContainerRegistry()}/test-app:tag`,
+				`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 				"--platform",
 				"linux/amd64",
 				"--provenance=false",
@@ -169,11 +157,11 @@ describe("buildAndMaybePush", () => {
 		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
 			"image",
 			"rm",
-			`${getCloudflareContainerRegistry()}/test-app:tag`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 		expect(dockerImageInspect).toHaveBeenCalledOnce();
 		expect(dockerImageInspect).toHaveBeenCalledWith("docker", {
-			imageTag: `${getCloudflareContainerRegistry()}/test-app:tag`,
+			imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 			formatString:
 				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
 		});
@@ -187,7 +175,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${getCloudflareContainerRegistry()}/test-app`,
+				`${getCloudflareContainerRegistry()}/some-account-id/test-app`,
 				"--platform",
 				"linux/amd64",
 				"--provenance=false",
@@ -209,7 +197,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${getCloudflareContainerRegistry()}/test-app`,
+				`${getCloudflareContainerRegistry()}/some-account-id/test-app`,
 				"--platform",
 				"linux/amd64",
 				"--provenance=false",
@@ -288,8 +276,11 @@ describe("buildAndMaybePush", () => {
 	});
 
 	describe("resolveAppDiskSize", () => {
+		const accountBase = {
+			limits: { disk_mb_per_deployment: 2000 },
+		} as CompleteAccountCustomer;
 		it("should return parsed app disk size", () => {
-			const result = resolveAppDiskSize({
+			const result = resolveAppDiskSize(accountBase, {
 				...defaultConfiguration,
 				configuration: { image: "", disk: { size: "500MB" } },
 			});
@@ -297,7 +288,7 @@ describe("buildAndMaybePush", () => {
 		});
 
 		it("should return default size when disk size not set", () => {
-			const result = resolveAppDiskSize({
+			const result = resolveAppDiskSize(accountBase, {
 				...defaultConfiguration,
 				configuration: { image: "" },
 			});
@@ -305,7 +296,7 @@ describe("buildAndMaybePush", () => {
 		});
 
 		it("should return undefined if app is not passed", () => {
-			expect(resolveAppDiskSize(undefined)).toBeUndefined();
+			expect(resolveAppDiskSize(accountBase, undefined)).toBeUndefined();
 		});
 	});
 });

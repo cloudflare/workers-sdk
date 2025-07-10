@@ -5,10 +5,8 @@ import {
 	dockerBuild,
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
-	getCloudflareContainerRegistry,
 	getCloudflareRegistryWithAccountNamespace,
 	isDir,
-	resolveImageName,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
 import {
@@ -17,7 +15,6 @@ import {
 } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import { getAccountId } from "../user";
 import { resolveAppDiskSize } from "./common";
 import { loadAccount } from "./locations";
 import type { Config } from "../config";
@@ -84,7 +81,14 @@ export async function buildAndMaybePush(
 	containerConfig?: ContainerApp
 ): Promise<{ image: string; pushed: boolean }> {
 	try {
-		const imageTag = `${getCloudflareContainerRegistry()}/${args.tag}`;
+		// account is also used to check limits below, so it is better to just pull the entire
+		// account information here
+		const account = await loadAccount();
+		const cloudflareAccountID = account.external_account_id;
+		const imageTag = getCloudflareRegistryWithAccountNamespace(
+			cloudflareAccountID,
+			args.tag
+		);
 		const { buildCmd, dockerfile } = await constructBuildCommand(
 			{
 				tag: imageTag,
@@ -103,6 +107,8 @@ export async function buildAndMaybePush(
 			dockerfile,
 		}).ready;
 
+		// ensure the account is not allowed to build anything that exceeds the current
+		// account's disk size limits
 		const inspectOutput = await dockerImageInspect(pathToDocker, {
 			imageTag,
 			formatString:
@@ -110,35 +116,32 @@ export async function buildAndMaybePush(
 		});
 
 		const [sizeStr, layerStr, repoDigests] = inspectOutput.split(" ");
+		const size = parseInt(sizeStr, 10);
+		const layers = parseInt(layerStr, 10);
 
+		// 16MiB is the layer size adjustments we use in devmapper
+		const MiB = 1024 * 1024;
+		const requiredSize = Math.ceil(size * 1.1 + layers * 16 * MiB);
+		// TODO: do more config merging and earlier
+		await ensureDiskLimits({
+			requiredSize,
+			account: account,
+			containerApp: containerConfig,
+		});
 		let pushed = false;
 		if (push) {
-			const account = await loadAccount();
-
-			const size = parseInt(sizeStr, 10);
-			const layers = parseInt(layerStr, 10);
-
-			// 16MiB is the layer size adjustments we use in devmapper
-			const MiB = 1024 * 1024;
-			const requiredSize = Math.ceil(size * 1.1 + layers * 16 * MiB);
-			await ensureDiskLimits({
-				requiredSize,
-				account,
-				containerApp: containerConfig,
-			});
-
 			await dockerLoginManagedRegistry(pathToDocker);
 			try {
 				// We don't try to parse repoDigests until this point
 				// because we don't want to fail on parse errors if we
 				// won't be pushing the image anyways.
 				//
-				// A Docker image digest is a unique, cryptographic identifier (SHA-256 hash)
-				// representing the content of a Docker image. Unlike tags, which can be reused
-				// or changed, a digest is immutable and ensures that the exact same image is
-				// pulled every time. This guarantees consistency across different environments
-				// and deployments.
-				// From: https://docs.docker.com/dhi/core-concepts/digests/
+				// 	A Docker image digest is a unique, cryptographic identifier (SHA-256 hash)
+				//	representing the content of a Docker image. Unlike tags, which can be reused
+				//	or changed, a digest is immutable and ensures that the exact same image is
+				//	pulled every time. This guarantees consistency across different environments
+				//	and deployments.
+				// 	From: https://docs.docker.com/dhi/core-concepts/digests/
 				const parsedDigests = JSON.parse(repoDigests);
 
 				if (!Array.isArray(parsedDigests)) {
@@ -152,57 +155,37 @@ export async function buildAndMaybePush(
 				const repositoryOnly = imageTag.split(":")[0];
 				// if this succeeds it means this image already exists remotely
 				// if it fails it means it doesn't exist remotely and should be pushed.
-				const [digest, ...rest] = parsedDigests.filter(
+				const digests = parsedDigests.filter(
 					(d): d is string =>
 						typeof d === "string" && d.split("@")[0] === repositoryOnly
 				);
-				if (rest.length > 0) {
+				if (digests.length !== 1) {
 					throw new Error(
-						`Expected there to only be 1 valid digests for this repository: ${repositoryOnly} but there were ${rest.length + 1}`
+						`Expected there to only be 1 valid digests for this repository: ${repositoryOnly} but there were ${digests.length}`
 					);
 				}
 
-				// Resolve the image name to include the user's
-				// account ID before checking if it exists in
-				// the managed registry.
-				const [image, hash] = digest.split("@");
-				const resolvedImage = await resolveImageName(
-					account.external_account_id,
-					image
-				);
-				const remoteDigest = `${resolvedImage}@${hash}`;
-
 				await runDockerCmd(
 					pathToDocker,
-					["manifest", "inspect", remoteDigest],
+					["manifest", "inspect", digests[0]],
 					"ignore"
 				);
 
 				logger.log("Image already exists remotely, skipping push");
 				logger.debug(
-					`Untagging built image: ${args.tag} since there was no change.`
+					`Untagging built image: ${imageTag} since there was no change.`
 				);
 				await runDockerCmd(pathToDocker, ["image", "rm", imageTag]);
-				return { image: remoteDigest, pushed: false };
+				return { image: digests[0], pushed: false };
 			} catch (error) {
+				logger.log(`Image does not exist remotely, pushing: ${imageTag}`);
 				if (error instanceof Error) {
 					logger.debug(
-						`Checking for local image ${args.tag} failed with error: ${error.message}`
+						`Checking for local image ${imageTag} failed with error: ${error.message}`
 					);
 				}
 
-				// Re-tag the image to include the account ID
-				const namespacedImageTag = getCloudflareRegistryWithAccountNamespace(
-					account.external_account_id,
-					args.tag
-				);
-
-				logger.log(
-					`Image does not exist remotely, pushing: ${namespacedImageTag}`
-				);
-				await runDockerCmd(pathToDocker, ["tag", imageTag, namespacedImageTag]);
-				await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
-				await runDockerCmd(pathToDocker, ["image", "rm", namespacedImageTag]);
+				await runDockerCmd(pathToDocker, ["push", imageTag]);
 				pushed = true;
 			}
 		}
@@ -247,13 +230,13 @@ export async function buildCommand(
 
 export async function pushCommand(
 	args: StrictYargsOptionsToInterface<typeof pushYargs>,
-	config: Config
+	_: Config
 ) {
 	try {
 		await dockerLoginManagedRegistry(args.pathToDocker);
-		const accountId = config.account_id || (await getAccountId(config));
+		const account = await loadAccount();
 		const newTag = getCloudflareRegistryWithAccountNamespace(
-			accountId,
+			account.external_account_id,
 			args.TAG
 		);
 		const dockerPath = args.pathToDocker ?? getDockerPath();
@@ -276,7 +259,7 @@ export async function ensureDiskLimits(options: {
 }): Promise<void> {
 	const MB = 1000 * 1000;
 	const MiB = 1024 * 1024;
-	const appDiskSize = resolveAppDiskSize(options.containerApp);
+	const appDiskSize = resolveAppDiskSize(options.account, options.containerApp);
 	const accountDiskSize =
 		(options.account.limits.disk_mb_per_deployment ?? 2000) * MB;
 	// if appDiskSize is defined and configured to be more than the accountDiskSize, error

@@ -17,7 +17,7 @@ export async function maybeBuildContainer(
 	imageTag: string,
 	dryRun: boolean,
 	pathToDocker: string,
-	configPath?: string
+	configPath: string | undefined
 ): Promise<{ image: string; imageUpdated: boolean }> {
 	try {
 		if (

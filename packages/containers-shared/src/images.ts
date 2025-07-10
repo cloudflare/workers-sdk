@@ -1,8 +1,5 @@
 import { buildImage } from "./build";
-import {
-	getCloudflareContainerRegistry,
-	isCloudflareRegistryLink,
-} from "./knobs";
+import { isCloudflareRegistryLink } from "./knobs";
 import { dockerLoginManagedRegistry } from "./login";
 import { ContainerDevOptions } from "./types";
 import {
@@ -106,32 +103,4 @@ export async function prepareContainerImagesForDev(
 			await checkExposedPorts(dockerPath, options);
 		}
 	}
-}
-
-/**
- * Resolve an image name to the full unambiguous name.
- *
- * For now, this only converts images stored in the managed registry to contain
- * the user's account ID in the path.
- */
-export async function resolveImageName(
-	accountId: string,
-	image: string
-): Promise<string> {
-	let url: URL;
-	try {
-		url = new URL(`http://${image}`);
-	} catch (_) {
-		return image;
-	}
-
-	if (url.hostname !== getCloudflareContainerRegistry()) {
-		return image;
-	}
-
-	if (url.pathname.startsWith(`/${accountId}`)) {
-		return image;
-	}
-
-	return `${url.hostname}/${accountId}${url.pathname}`;
 }
