@@ -41,7 +41,7 @@ export async function pullImage(
 export async function prepareContainerImagesForDev(
 	dockerPath: string,
 	containerOptions: ContainerDevOptions[],
-	configPath: string | undefined
+	configPath?: string
 ) {
 	if (process.platform === "win32") {
 		throw new Error(

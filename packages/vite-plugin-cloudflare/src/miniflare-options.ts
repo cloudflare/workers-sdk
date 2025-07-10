@@ -176,7 +176,7 @@ const ASSET_WORKER_PATH = "./asset-workers/asset-worker.js";
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 const RUNNER_PATH = "./runner-worker/index.js";
 
-function getEntryWorkerConfig(
+export function getEntryWorkerConfig(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig
 ): WorkerConfig | undefined {
 	if (resolvedPluginConfig.type === "assets-only") {
@@ -232,11 +232,18 @@ const remoteProxySessionsDataMap = new Map<
 	} | null
 >();
 
-export async function getDevMiniflareOptions(
-	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
-	viteDevServer: vite.ViteDevServer,
-	inspectorPort: number | false
-): Promise<MiniflareOptions> {
+export async function getDevMiniflareOptions(config: {
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig;
+	viteDevServer: vite.ViteDevServer;
+	inspectorPort: number | false;
+	containerBuildId?: string;
+}): Promise<MiniflareOptions> {
+	const {
+		resolvedPluginConfig,
+		viteDevServer,
+		inspectorPort,
+		containerBuildId,
+	} = config;
 	const resolvedViteConfig = viteDevServer.config;
 	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
 
@@ -393,6 +400,7 @@ export async function getDevMiniflareOptions(
 											?.remoteProxyConnectionString,
 									remoteBindingsEnabled:
 										resolvedPluginConfig.experimental.remoteBindings,
+									containerBuildId,
 								}
 							);
 
