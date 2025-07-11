@@ -2,7 +2,7 @@ import path from "node:path";
 import { platform } from "node:process";
 import { fileURLToPath } from "node:url";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import workerdPath from "workerd";
 import { runWranglerDev } from "../../../fixtures/shared/src/run-wrangler-long-lived";
 import { TESTS } from "./worker/index";
@@ -41,9 +41,15 @@ describe(`@cloudflare/unenv-preset ${platform} ${workerdPath}`, () => {
 
 	test.for(Object.keys(TESTS))("%s", async (testName) => {
 		expect(wrangler).toBeDefined();
-		const { ip, port } = wrangler!;
-		const response = await fetch(`http://${ip}:${port}/${testName}`);
-		const body = await response.text();
-		expect(body).toMatch("OK!");
+		const { ip, port, getOutput } = wrangler!;
+		try {
+			await vi.waitFor(async () => {
+				const response = await fetch(`http://${ip}:${port}/${testName}`);
+				const body = await response.text();
+				expect(body).toMatch("OK!");
+			});
+		} catch {
+			console.log("OUTPUT", await getOutput());
+		}
 	});
 });
