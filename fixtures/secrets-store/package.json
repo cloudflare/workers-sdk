@@ -6,7 +6,7 @@
 		"start": "wrangler dev"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20250710.0",
+		"@cloudflare/workers-types": "^4.20250711.0",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
