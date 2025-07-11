@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 // Types adapted from https://github.com/microsoft/TypeScript/blob/main/lib/lib.webworker.d.ts
 //
 // Copyright (c) Microsoft Corporation. All rights reserved.

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import assert from "assert";
 import crypto from "crypto";
 import { ReadableStream, TransformStream } from "stream/web";
@@ -207,7 +207,7 @@ class ProxyClientBridge {
 		type WithCustomInspect<T> = T & {
 			[util.inspect.custom]?: unknown;
 		};
-		let proxyTarget: WithCustomInspect<{} | Function>;
+		let proxyTarget: WithCustomInspect<object | Function>;
 		if (target[kIsFunction]) {
 			// the proxy target needs to be a function so that the consumer of the proxy
 			// can simply call it (if we didn't do this consumers would get a

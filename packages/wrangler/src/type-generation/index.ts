@@ -743,7 +743,7 @@ function readTsconfigTypes(tsconfigPath: string): string[] {
 			fs.readFileSync(tsconfigPath, "utf-8")
 		) as TSConfig;
 		return tsconfig.compilerOptions?.types || [];
-	} catch (e) {
+	} catch {
 		return [];
 	}
 }

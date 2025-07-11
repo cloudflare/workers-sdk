@@ -87,7 +87,7 @@ export class UserSession {
 				name,
 				worker
 			);
-		} catch (e) {
+		} catch {
 			// Try to recover _once_ from failure. This captures expired tokens, but means that genuine failures won't cause
 			// a request loop and will return an error to the user
 			await this.refreshTokens();

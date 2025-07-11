@@ -525,7 +525,7 @@ export const pagesDevCommand = createCommand({
 			const debouncedRunBuild = debounce(async () => {
 				try {
 					await runBuild();
-				} catch (e) {
+				} catch {
 					/*
 					 * don't break developer flow in watch mode by throwing an error
 					 * here. Many times errors will be just the result of unfinished
@@ -556,7 +556,7 @@ export const pagesDevCommand = createCommand({
 
 					debouncedRunBuild();
 				});
-			} catch (e: unknown) {
+			} catch {
 				/*
 				 * fail early if we encounter errors while attempting to build the
 				 * Worker. These flag underlying issues in the _worker.js code, and

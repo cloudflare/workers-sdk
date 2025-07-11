@@ -1,6 +1,6 @@
 module.exports = {
 	root: true,
-	extends: ["@cloudflare/eslint-config-worker/react"],
+	extends: ["plugin:turbo/recommended", "@cloudflare/eslint-config-worker"],
 	ignorePatterns: [
 		"vendor",
 		"*-dist",
@@ -21,6 +21,7 @@ module.exports = {
 				project: true,
 			},
 			rules: {
+				"no-console": "error",
 				"no-restricted-globals": [
 					"error",
 					{

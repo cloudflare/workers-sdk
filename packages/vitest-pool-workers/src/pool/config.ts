@@ -389,7 +389,7 @@ export async function parseProjectOptions(
 			formatted = formatZodError(e, {
 				test: { poolOptions: { workers: workersPoolOptions } },
 			});
-		} catch (error) {
+		} catch {
 			throw e;
 		}
 		const relativePath = getRelativeProjectPath(project);

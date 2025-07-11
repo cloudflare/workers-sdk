@@ -38,7 +38,7 @@ export async function domainUsesAccess(domain: string): Promise<boolean> {
 
 		usesAccessCache.set(domain, usesAccess);
 		return usesAccess;
-	} catch (e) {
+	} catch {
 		usesAccessCache.set(domain, false);
 		return false;
 	}

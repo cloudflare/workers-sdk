@@ -167,7 +167,7 @@ export async function updateTsConfig(
 		);
 		const updated = jsonc.applyEdits(tsconfig, edits);
 		writeFile(tsconfigPath, updated);
-	} catch (error) {
+	} catch {
 		warn("Failed to update `tsconfig.json`.");
 	}
 }

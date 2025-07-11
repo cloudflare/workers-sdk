@@ -283,7 +283,7 @@ export function createModuleCollector(props: {
 									if (resolved.path) {
 										filePath = resolved.path;
 									}
-								} catch (ex) {
+								} catch {
 									// We tried, now it'll just fall-through to the previous behaviour
 									// and ENOENT if the absolute file path doesn't exist.
 								}
@@ -294,7 +294,7 @@ export function createModuleCollector(props: {
 										basedir: args.resolveDir,
 									});
 									filePath = resolved;
-								} catch (e) {
+								} catch {
 									// We tried, now it'll just fall-through to the previous behaviour
 									// and ENOENT if the absolute file path doesn't exist.
 								}

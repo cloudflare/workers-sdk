@@ -288,7 +288,7 @@ export async function generateHandler<
 
 		try {
 			pathname = globalThis.decodeURIComponent(pathname);
-		} catch (err) {}
+		} catch {}
 
 		if (pathname.endsWith("/")) {
 			if ((assetEntry = await findAssetEntryForPath(`${pathname}index.html`))) {
@@ -453,7 +453,7 @@ export async function generateHandler<
 									earlyHintsCacheKey,
 									new Response(null, { headers: earlyHintsHeaders })
 								);
-							} catch (err) {
+							} catch {
 								// Nbd if we fail here in the deferred 'waitUntil' work. We're probably trying to parse a malformed page or something.
 								// Totally fine to skip over any errors.
 								// If we need to debug something, you can uncomment the following:
@@ -549,7 +549,7 @@ export async function generateHandler<
 		let content: ContentNegotiation;
 		try {
 			content = negotiateContent(request, servingAssetEntry);
-		} catch (err) {
+		} catch {
 			return new NotAcceptableResponse();
 		}
 
@@ -741,7 +741,7 @@ export async function generateHandler<
 				let content: ContentNegotiation;
 				try {
 					content = negotiateContent(request, assetEntry);
-				} catch (err) {
+				} catch {
 					return new NotAcceptableResponse();
 				}
 

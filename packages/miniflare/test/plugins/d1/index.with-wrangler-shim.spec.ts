@@ -93,4 +93,6 @@ setupTest(
 	"worker.dist.mjs",
 	async (mf) => new TestD1Database(mf)
 );
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 require("./suite");

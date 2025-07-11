@@ -731,7 +731,7 @@ describe("vectorize query filter", () => {
 			try {
 				// This mimics the coerce behavior in the query options.
 				jsObj = JSON.parse(js);
-			} catch (_) {
+			} catch {
 				parseFailureCases.add(i);
 				continue;
 			}
