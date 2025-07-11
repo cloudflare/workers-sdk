@@ -16,10 +16,6 @@ exports[`basic js dev: 'wrangler dev --remote' > can modify Worker during wrangl
 
 exports[`basic js dev: 'wrangler dev --remote' > can modify Worker during wrangler dev --remote 2`] = `"Updated Worker! value"`;
 
-exports[`basic js dev: 'wrangler dev --remote' > can modify worker during wrangler dev --remote 1`] = `"Hello World!"`;
-
-exports[`basic js dev: 'wrangler dev --remote' > can modify worker during wrangler dev --remote 2`] = `"Updated Worker! value"`;
-
 exports[`basic js dev: 'wrangler dev --remote' > hotkeys can be disabled with wrangler dev --remote 1`] = `"Hello World!"`;
 
 exports[`basic js dev: 'wrangler dev' > --test-scheduled works with wrangler dev > custom build 1`] = `"Ran scheduled event"`;
@@ -37,9 +33,5 @@ exports[`basic js dev: 'wrangler dev' > Workers + Assets > can modify assets dur
 exports[`basic js dev: 'wrangler dev' > can modify Worker during wrangler dev 1`] = `"Hello World!"`;
 
 exports[`basic js dev: 'wrangler dev' > can modify Worker during wrangler dev 2`] = `"Updated Worker! value"`;
-
-exports[`basic js dev: 'wrangler dev' > can modify worker during wrangler dev 1`] = `"Hello World!"`;
-
-exports[`basic js dev: 'wrangler dev' > can modify worker during wrangler dev 2`] = `"Updated Worker! value"`;
 
 exports[`basic js dev: 'wrangler dev' > hotkeys can be disabled with wrangler dev 1`] = `"Hello World!"`;

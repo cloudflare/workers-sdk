@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import os from "node:os";
+import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { ApiError } from "@cloudflare/containers-shared";
 import chalk from "chalk";
@@ -21,7 +22,8 @@ import {
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
-import { experimental_readRawConfig, loadDotEnv, readConfig } from "./config";
+import { experimental_readRawConfig, readConfig } from "./config";
+import { loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
@@ -399,6 +401,11 @@ export function createCLIParser(argv: string[]) {
 			type: "string",
 			requiresArg: true,
 		})
+		.option("env-file", {
+			describe: "Path to the .env file to load",
+			type: "string",
+			requiresArg: true,
+		})
 		.check(demandSingleValue("env"))
 		.option("experimental-json-config", {
 			alias: "j",
@@ -419,12 +426,12 @@ export function createCLIParser(argv: string[]) {
 		})
 		.check((args) => {
 			// Grab locally specified env params from `.env` file
-			const loaded = loadDotEnv(".env", args.env);
-			for (const [key, value] of Object.entries(loaded?.parsed ?? {})) {
-				if (!(key in process.env)) {
-					process.env[key] = value;
-				}
-			}
+			process.env =
+				loadDotEnv(resolve(args["env-file"] ?? ".env"), {
+					env: args.env,
+					includeProcessEnv: true,
+					silent: true,
+				}) ?? process.env;
 
 			// Write a session entry to the output file (if there is one).
 			writeOutput({
@@ -462,7 +469,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "help", "version"],
+		["config", "cwd", "env", "env-file", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 	wrangler.help("help", "Show help").alias("h", "help");

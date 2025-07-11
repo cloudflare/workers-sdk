@@ -35,7 +35,8 @@ type VariableNames =
 	| "WRANGLER_REGISTRY_PATH"
 	| "WRANGLER_D1_EXTRA_LOCATION_CHOICES"
 	| "WRANGLER_DOCKER_BIN"
-	| "WRANGLER_DOCKER_HOST";
+	| "WRANGLER_DOCKER_HOST"
+	| "CLOUDFLARE_INCLUDE_PROCESS_ENV";
 
 type DeprecatedNames =
 	| "CF_ACCOUNT_ID"
@@ -45,6 +46,27 @@ type DeprecatedNames =
 	| "CF_API_BASE_URL";
 
 type ElementType<A> = A extends readonly (infer T)[] ? T : never;
+
+export function getBooleanEnvironmentVariableFactory(options: {
+	variableName: VariableNames;
+}): () => boolean | undefined;
+export function getBooleanEnvironmentVariableFactory(options: {
+	variableName: VariableNames;
+	defaultValue: boolean | (() => boolean);
+}): () => boolean;
+export function getBooleanEnvironmentVariableFactory(options: {
+	variableName: VariableNames;
+	defaultValue?: boolean | (() => boolean);
+}): () => boolean | undefined {
+	return () => {
+		if (options.variableName in process.env) {
+			return process.env[options.variableName]?.toLowerCase() === "true";
+		}
+		return typeof options.defaultValue === "function"
+			? options.defaultValue()
+			: options.defaultValue;
+	};
+}
 
 /**
  * Create a function used to access an environment variable. It may return undefined if the variable is not set.

@@ -175,6 +175,7 @@ async function resolveBindings(
 	const bindings = getBindings(
 		config,
 		input.env,
+		input.envFile,
 		!input.dev?.remote,
 		{
 			kv: extractBindingsOfType("kv_namespace", input.bindings),

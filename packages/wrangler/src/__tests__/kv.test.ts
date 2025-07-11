@@ -48,11 +48,12 @@ describe("wrangler", () => {
 			  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
 
 			GLOBAL FLAGS
-			  -c, --config   Path to Wrangler configuration file  [string]
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to the .env file to load  [string]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -70,11 +71,12 @@ describe("wrangler", () => {
 			  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
 
 			GLOBAL FLAGS
-			  -c, --config   Path to Wrangler configuration file  [string]
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to the .env file to load  [string]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -99,11 +101,12 @@ describe("wrangler", () => {
 			  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
 
 			GLOBAL FLAGS
-			  -c, --config   Path to Wrangler configuration file  [string]
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to the .env file to load  [string]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -144,11 +147,12 @@ describe("wrangler", () => {
 					  namespace  The name of the new namespace  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to the .env file to load  [string]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --preview  Interact with a preview namespace  [boolean]"
@@ -176,11 +180,12 @@ describe("wrangler", () => {
 					  namespace  The name of the new namespace  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to the .env file to load  [string]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --preview  Interact with a preview namespace  [boolean]"
@@ -661,11 +666,12 @@ describe("wrangler", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to the .env file to load  [string]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding name to the namespace to write to  [string]
@@ -704,11 +710,12 @@ describe("wrangler", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to the .env file to load  [string]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding name to the namespace to write to  [string]
@@ -749,11 +756,12 @@ describe("wrangler", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to the .env file to load  [string]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding name to the namespace to write to  [string]
@@ -792,11 +800,12 @@ describe("wrangler", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to the .env file to load  [string]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding name to the namespace to write to  [string]
@@ -835,11 +844,12 @@ describe("wrangler", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to the .env file to load  [string]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding name to the namespace to write to  [string]
@@ -880,11 +890,12 @@ describe("wrangler", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to the .env file to load  [string]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding name to the namespace to write to  [string]
@@ -1271,11 +1282,12 @@ describe("wrangler", () => {
 					  key  The key value to get.  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to the .env file to load  [string]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding name to the namespace to get from  [string]
@@ -1309,11 +1321,12 @@ describe("wrangler", () => {
 					  key  The key value to get.  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to the .env file to load  [string]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding name to the namespace to get from  [string]
@@ -1348,11 +1361,12 @@ describe("wrangler", () => {
 					  key  The key value to get.  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to the .env file to load  [string]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding name to the namespace to get from  [string]
