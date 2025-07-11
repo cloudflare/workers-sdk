@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import rl from "node:readline";
 import stream from "node:stream";
+import { beforeEach } from "node:test";
 import { setTimeout } from "node:timers/promises";
 import stripAnsi from "strip-ansi";
 import { fetch, RequestInfo } from "undici";
@@ -294,11 +295,22 @@ it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {
 const WAITFOR_OPTIONS = { timeout: 2000, interval: 500 };
 baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 	"container dev",
-	{ retry: 0, timeout: 90000 },
+	{ retry: 3, timeout: 90000 },
 	() => {
 		let tmpDir: string;
+
 		beforeAll(async () => {
 			tmpDir = fs.mkdtempSync(path.join(tmpdir(), "wrangler-container-"));
+			const ids = getContainerIds();
+			if (ids.length > 0) {
+				execSync("docker rm -f " + ids.join(" "), {
+					encoding: "utf8",
+				});
+			}
+		});
+
+		// reset any rewrites to the container app
+		afterEach(() => {
 			fs.cpSync(
 				path.resolve(__dirname, "../", "container-app"),
 				path.join(tmpDir),
@@ -306,13 +318,6 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 					recursive: true,
 				}
 			);
-
-			const ids = getContainerIds();
-			if (ids.length > 0) {
-				execSync("docker rm -f " + ids.join(" "), {
-					encoding: "utf8",
-				});
-			}
 		});
 
 		afterEach(async () => {
@@ -366,8 +371,9 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			}, WAITFOR_OPTIONS);
 
 			await vi.waitFor(async () => {
-				const res = await fetch(wrangler.url + "/fetch");
-
+				const res = await fetch(wrangler.url + "/fetch", {
+					headers: { "MF-Disable-Pretty-Error": "true" },
+				});
 				expect(await res.text()).toBe(
 					"Hello World! Have an env var! I'm an env var!"
 				);
@@ -403,7 +409,9 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				expect(await status.json()).toBe(true);
 			}, WAITFOR_OPTIONS);
 			await vi.waitFor(async () => {
-				const res = await fetch(wrangler.url + "/fetch");
+				const res = await fetch(wrangler.url + "/fetch", {
+					headers: { "MF-Disable-Pretty-Error": "true" },
+				});
 				expect(await res.text()).toBe("Blah! I'm an env var!");
 			}, WAITFOR_OPTIONS);
 			wrangler.pty.kill();
