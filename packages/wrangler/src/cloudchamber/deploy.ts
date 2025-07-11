@@ -2,11 +2,11 @@ import { isDockerfile } from "@cloudflare/containers-shared";
 import { type Config } from "../config";
 import { type ContainerApp } from "../config/environment";
 import { containersScope } from "../containers";
+import { apply } from "../containers/deploy";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { fetchVersion } from "../versions/api";
-import { apply } from "./apply";
 import { buildAndMaybePush } from "./build";
 import { fillOpenAPIConfiguration } from "./common";
 import type { BuildArgs } from "@cloudflare/containers-shared/src/types";
@@ -65,7 +65,7 @@ export type DeployContainersArgs = {
 
 export async function deployContainers(
 	config: Config,
-	{ versionId, accountId, scriptName, dryRun, env }: DeployContainersArgs
+	{ versionId, accountId, scriptName, dryRun }: DeployContainersArgs
 ) {
 	if (config.containers === undefined) {
 		return;
@@ -129,7 +129,6 @@ export async function deployContainers(
 		await apply(
 			{
 				skipDefaults: false,
-				env,
 				imageUpdateRequired: buildResult.imageUpdated,
 			},
 			configuration
