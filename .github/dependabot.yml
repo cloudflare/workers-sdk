@@ -15,8 +15,6 @@ updates:
     # makes it so that also the PR title gets such prefix
     commit-message:
       prefix: "[C3] "
-    reviewers:
-      - "@cloudflare/c3"
     labels:
       - "c3"
       - "dependencies"
@@ -36,8 +34,6 @@ updates:
       interval: "daily"
       time: "06:00" # the workerd release starts at 00:30 UTC each day
     versioning-strategy: increase
-    reviewers:
-      - "@cloudflare/wrangler"
     labels:
       - "miniflare"
       - "dependencies"
