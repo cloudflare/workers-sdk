@@ -2459,6 +2459,36 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Expected \\"containers.scheduling_policy\\" field to be one of [\\"regional\\",\\"moon\\",\\"default\\"] but got \\"invalid\\"."
 				`);
 			});
+
+			it("should warn for deprecated container fields", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								instances: 10,
+								configuration: {
+									image: "config-image"
+								},
+								durable_objects: {
+									namespace_id: "test-namespace"
+								}
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", \\"configuration.disk\\" should be set via \\"instance_type\\".
+					  - \\"containers.instances\\" is deprecated. Use \\"containers.max_instances\\" instead.
+					  - \\"containers.durable_objects\\" is deprecated. Use the \\"class_name\\" field instead."
+				`);
+			});
 		});
 
 		describe("[kv_namespaces]", () => {

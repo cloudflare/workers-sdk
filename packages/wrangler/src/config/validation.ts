@@ -2421,13 +2421,17 @@ function validateContainerApp(
 				name += config === undefined ? "" : `-${envName}`;
 				containerAppOptional.name = name.toLowerCase().replace(/ /g, "-");
 			}
-
 			if (
 				!containerAppOptional.configuration?.image &&
 				!containerAppOptional.image
 			) {
 				diagnostics.errors.push(
 					`"containers.image" field must be defined for each container app. This should be the path to your Dockerfile or a image URI pointing to the Cloudflare registry.`
+				);
+			}
+			if ("configuration" in containerAppOptional) {
+				diagnostics.warnings.push(
+					`"containers.configuration" is deprecated. Use top level "containers" fields instead. "configuration.image" should be "image", "configuration.disk" should be set via "instance_type".`
 				);
 			}
 
@@ -2522,6 +2526,19 @@ function validateContainerApp(
 				"string",
 				["regional", "moon", "default"]
 			);
+
+			// Add deprecation warnings for legacy fields
+			if ("instances" in containerAppOptional) {
+				diagnostics.warnings.push(
+					`"containers.instances" is deprecated. Use "containers.max_instances" instead.`
+				);
+			}
+			if ("durable_objects" in containerAppOptional) {
+				diagnostics.warnings.push(
+					`"containers.durable_objects" is deprecated. Use the "class_name" field instead.`
+				);
+			}
+
 			validateAdditionalProperties(
 				diagnostics,
 				field,
@@ -2540,6 +2557,7 @@ function validateContainerApp(
 					"constraints",
 					"rollout_step_percentage",
 					"rollout_kind",
+					"durable_objects",
 				]
 			);
 		}
