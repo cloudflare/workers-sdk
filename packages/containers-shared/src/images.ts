@@ -118,7 +118,7 @@ export function resolveImageName(accountId: string, image: string): string {
 	let url: URL;
 	try {
 		url = new URL(`http://${image}`);
-	} catch (_) {
+	} catch {
 		return image;
 	}
 
