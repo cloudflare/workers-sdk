@@ -10,6 +10,7 @@ import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
+	getUserBindingServiceName,
 	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
@@ -59,9 +60,15 @@ export const R2_PLUGIN: Plugin<
 	sharedOptions: R2SharedOptionsSchema,
 	getBindings(options) {
 		const buckets = namespaceEntries(options.r2Buckets);
-		return buckets.map<Worker_Binding>(([name, { id }]) => ({
+		return buckets.map<Worker_Binding>(([name, bucket]) => ({
 			name,
-			r2Bucket: { name: `${R2_BUCKET_SERVICE_PREFIX}:${id}` },
+			r2Bucket: {
+				name: getUserBindingServiceName(
+					R2_BUCKET_SERVICE_PREFIX,
+					bucket.id,
+					bucket.remoteProxyConnectionString
+				),
+			},
 		}));
 	},
 	getNodeBindings(options) {
@@ -82,7 +89,11 @@ export const R2_PLUGIN: Plugin<
 		const buckets = namespaceEntries(options.r2Buckets);
 		const services = buckets.map<Service>(
 			([name, { id, remoteProxyConnectionString }]) => ({
-				name: `${R2_BUCKET_SERVICE_PREFIX}:${id}`,
+				name: getUserBindingServiceName(
+					R2_BUCKET_SERVICE_PREFIX,
+					id,
+					remoteProxyConnectionString
+				),
 				worker: remoteProxyConnectionString
 					? remoteProxyClientWorker(remoteProxyConnectionString, name)
 					: objectEntryWorker(R2_BUCKET_OBJECT, id),

@@ -3,6 +3,7 @@ import LOCAL_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespa
 import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
 import {
+	getUserBindingServiceName,
 	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -42,7 +43,11 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 						{
 							name: "fetcher",
 							service: {
-								name: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:ns:${config.namespace}`,
+								name: getUserBindingServiceName(
+									DISPATCH_NAMESPACE_PLUGIN_NAME,
+									config.namespace,
+									config.remoteProxyConnectionString
+								),
 							},
 						},
 					],
@@ -73,7 +78,11 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 				"Dispatch Namespace bindings only support running remotely"
 			);
 			return {
-				name: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:ns:${config.namespace}`,
+				name: getUserBindingServiceName(
+					DISPATCH_NAMESPACE_PLUGIN_NAME,
+					config.namespace,
+					config.remoteProxyConnectionString
+				),
 				worker: remoteProxyClientWorker(
 					config.remoteProxyConnectionString,
 					name

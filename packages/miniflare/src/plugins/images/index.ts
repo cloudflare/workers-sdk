@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CoreBindings, CoreHeaders } from "../../workers";
 import {
+	getUserBindingServiceName,
 	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -48,7 +49,11 @@ export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 						{
 							name: "fetcher",
 							service: {
-								name: `${IMAGES_PLUGIN_NAME}:${options.images.binding}`,
+								name: getUserBindingServiceName(
+									IMAGES_PLUGIN_NAME,
+									options.images.binding,
+									options.images.remoteProxyConnectionString
+								),
 							},
 						},
 					],
@@ -71,7 +76,11 @@ export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 
 		return [
 			{
-				name: `${IMAGES_PLUGIN_NAME}:${options.images.binding}`,
+				name: getUserBindingServiceName(
+					IMAGES_PLUGIN_NAME,
+					options.images.binding,
+					options.images.remoteProxyConnectionString
+				),
 				worker: options.images.remoteProxyConnectionString
 					? remoteProxyClientWorker(
 							options.images.remoteProxyConnectionString,

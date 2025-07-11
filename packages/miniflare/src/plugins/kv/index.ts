@@ -11,6 +11,7 @@ import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
+	getUserBindingServiceName,
 	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
@@ -77,9 +78,15 @@ export const KV_PLUGIN: Plugin<
 	sharedOptions: KVSharedOptionsSchema,
 	async getBindings(options) {
 		const namespaces = namespaceEntries(options.kvNamespaces);
-		const bindings = namespaces.map<Worker_Binding>(([name, { id }]) => ({
+		const bindings = namespaces.map<Worker_Binding>(([name, namespace]) => ({
 			name,
-			kvNamespace: { name: `${SERVICE_NAMESPACE_PREFIX}:${id}` },
+			kvNamespace: {
+				name: getUserBindingServiceName(
+					SERVICE_NAMESPACE_PREFIX,
+					namespace.id,
+					namespace.remoteProxyConnectionString
+				),
+			},
 		}));
 
 		if (isWorkersSitesEnabled(options)) {
@@ -114,7 +121,11 @@ export const KV_PLUGIN: Plugin<
 		const namespaces = namespaceEntries(options.kvNamespaces);
 		const services = namespaces.map<Service>(
 			([name, { id, remoteProxyConnectionString }]) => ({
-				name: `${SERVICE_NAMESPACE_PREFIX}:${id}`,
+				name: getUserBindingServiceName(
+					SERVICE_NAMESPACE_PREFIX,
+					id,
+					remoteProxyConnectionString
+				),
 				worker: remoteProxyConnectionString
 					? remoteProxyClientWorker(remoteProxyConnectionString, name)
 					: objectEntryWorker(KV_NAMESPACE_OBJECT, id),

@@ -8,6 +8,7 @@ import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
+	getUserBindingServiceName,
 	objectEntryWorker,
 	PersistenceSchema,
 	Plugin,
@@ -49,7 +50,10 @@ export const SECRET_STORE_PLUGIN: Plugin<
 			return {
 				name,
 				service: {
-					name: `${SECRET_STORE_PLUGIN_NAME}:${config.store_id}:${config.secret_name}`,
+					name: getUserBindingServiceName(
+						SECRET_STORE_PLUGIN_NAME,
+						`${config.store_id}:${config.secret_name}`
+					),
 					entrypoint: "SecretsStoreSecret",
 				},
 			};
@@ -140,7 +144,10 @@ export const SECRET_STORE_PLUGIN: Plugin<
 				),
 			} satisfies Service;
 			const secretStoreSecretService = {
-				name: `${SECRET_STORE_PLUGIN_NAME}:${config.store_id}:${config.secret_name}`,
+				name: getUserBindingServiceName(
+					SECRET_STORE_PLUGIN_NAME,
+					`${config.store_id}:${config.secret_name}`
+				),
 				worker: {
 					compatibilityDate: "2025-01-01",
 					modules: [

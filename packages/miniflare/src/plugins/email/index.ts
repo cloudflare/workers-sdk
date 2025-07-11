@@ -2,7 +2,11 @@ import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
 import { Service, Worker_Binding } from "../../runtime";
-import { Plugin, WORKER_BINDING_SERVICE_LOOPBACK } from "../shared";
+import {
+	getUserBindingServiceName,
+	Plugin,
+	WORKER_BINDING_SERVICE_LOOPBACK,
+} from "../shared";
 
 // Define the mutually exclusive schema
 const EmailBindingOptionsSchema = z
@@ -53,7 +57,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			name,
 			service: {
 				entrypoint: "SendEmailBinding",
-				name: `${SERVICE_SEND_EMAIL_WORKER_PREFIX}:${name}`,
+				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
 			},
 		}));
 	},
@@ -65,7 +69,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 
 		for (const { name, ...config } of args.options.email?.send_email ?? []) {
 			services.push({
-				name: `${SERVICE_SEND_EMAIL_WORKER_PREFIX}:${name}`,
+				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
 				worker: {
 					compatibilityDate: "2025-03-17",
 					modules: [
