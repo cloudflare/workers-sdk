@@ -38,7 +38,8 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 				service: {
 					name: getUserBindingServiceName(
 						BROWSER_RENDERING_PLUGIN_NAME,
-						options.browserRendering
+						options.browserRendering.binding,
+						options.browserRendering.remoteProxyConnectionString
 					),
 				},
 			},
@@ -61,7 +62,8 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 			{
 				name: getUserBindingServiceName(
 					BROWSER_RENDERING_PLUGIN_NAME,
-					options.browserRendering
+					options.browserRendering.binding,
+					options.browserRendering.remoteProxyConnectionString
 				),
 				worker: options.browserRendering.remoteProxyConnectionString
 					? remoteProxyClientWorker(

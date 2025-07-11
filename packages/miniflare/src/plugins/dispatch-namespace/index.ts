@@ -45,7 +45,8 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 							service: {
 								name: getUserBindingServiceName(
 									DISPATCH_NAMESPACE_PLUGIN_NAME,
-									config
+									config.namespace,
+									config.remoteProxyConnectionString
 								),
 							},
 						},
@@ -77,7 +78,11 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 				"Dispatch Namespace bindings only support running remotely"
 			);
 			return {
-				name: getUserBindingServiceName(DISPATCH_NAMESPACE_PLUGIN_NAME, config),
+				name: getUserBindingServiceName(
+					DISPATCH_NAMESPACE_PLUGIN_NAME,
+					config.namespace,
+					config.remoteProxyConnectionString
+				),
 				worker: remoteProxyClientWorker(
 					config.remoteProxyConnectionString,
 					name

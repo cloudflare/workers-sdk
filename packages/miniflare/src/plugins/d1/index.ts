@@ -70,10 +70,8 @@ export const D1_PLUGIN: Plugin<
 
 				const serviceName = getUserBindingServiceName(
 					D1_DATABASE_SERVICE_PREFIX,
-					{
-						id,
-						remoteProxyConnectionString,
-					}
+					id,
+					remoteProxyConnectionString
 				);
 
 				const binding = name.startsWith("__D1_BETA__")
@@ -120,10 +118,11 @@ export const D1_PLUGIN: Plugin<
 		const databases = namespaceEntries(options.d1Databases);
 		const services = databases.map<Service>(
 			([name, { id, remoteProxyConnectionString }]) => ({
-				name: getUserBindingServiceName(D1_DATABASE_SERVICE_PREFIX, {
+				name: getUserBindingServiceName(
+					D1_DATABASE_SERVICE_PREFIX,
 					id,
-					remoteProxyConnectionString,
-				}),
+					remoteProxyConnectionString
+				),
 				worker: remoteProxyConnectionString
 					? remoteProxyClientWorker(remoteProxyConnectionString, name)
 					: objectEntryWorker(D1_DATABASE_OBJECT, id),

@@ -313,33 +313,20 @@ function getRemoteServiceNameSuffix(
  * Utility to get the name for a service implementing a user binding
  *
  * @param scope Scope of the service (this usually is the plugin name)
- * @param bindingSpecifier Specifier for the binding (it includes an id-like field and an optional remote proxy connection string)
+ * @param identifier Identifier to use for the service
+ * @param remoteProxyConnectionString Optional remote proxy connection string (in case the service connects to a remote resource)
  * @returns the name for the service
  */
 export function getUserBindingServiceName(
 	scope: string,
-	bindingSpecifier: (
-		| { binding: string }
-		| { id: string }
-		| { name: string }
-		| { namespace: string }
-	) & { remoteProxyConnectionString?: RemoteProxyConnectionString }
+	identifier: string,
+	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): string {
-	const identifier =
-		"binding" in bindingSpecifier
-			? bindingSpecifier.binding
-			: "id" in bindingSpecifier
-				? bindingSpecifier.id
-				: "name" in bindingSpecifier
-					? bindingSpecifier.name
-					: bindingSpecifier.namespace;
 	const localServiceName = `${scope}:${identifier}`;
-	if (!bindingSpecifier.remoteProxyConnectionString) {
+	if (!remoteProxyConnectionString) {
 		return localServiceName;
 	}
-	const remoteSuffix = getRemoteServiceNameSuffix(
-		bindingSpecifier.remoteProxyConnectionString
-	);
+	const remoteSuffix = getRemoteServiceNameSuffix(remoteProxyConnectionString);
 	return `${localServiceName}:${remoteSuffix}`;
 }
 

@@ -81,7 +81,11 @@ export const KV_PLUGIN: Plugin<
 		const bindings = namespaces.map<Worker_Binding>(([name, namespace]) => ({
 			name,
 			kvNamespace: {
-				name: getUserBindingServiceName(SERVICE_NAMESPACE_PREFIX, namespace),
+				name: getUserBindingServiceName(
+					SERVICE_NAMESPACE_PREFIX,
+					namespace.id,
+					namespace.remoteProxyConnectionString
+				),
 			},
 		}));
 
@@ -117,10 +121,11 @@ export const KV_PLUGIN: Plugin<
 		const namespaces = namespaceEntries(options.kvNamespaces);
 		const services = namespaces.map<Service>(
 			([name, { id, remoteProxyConnectionString }]) => ({
-				name: getUserBindingServiceName(SERVICE_NAMESPACE_PREFIX, {
+				name: getUserBindingServiceName(
+					SERVICE_NAMESPACE_PREFIX,
 					id,
-					remoteProxyConnectionString,
-				}),
+					remoteProxyConnectionString
+				),
 				worker: remoteProxyConnectionString
 					? remoteProxyClientWorker(remoteProxyConnectionString, name)
 					: objectEntryWorker(KV_NAMESPACE_OBJECT, id),

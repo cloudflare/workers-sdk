@@ -63,7 +63,11 @@ export const R2_PLUGIN: Plugin<
 		return buckets.map<Worker_Binding>(([name, bucket]) => ({
 			name,
 			r2Bucket: {
-				name: getUserBindingServiceName(R2_BUCKET_SERVICE_PREFIX, bucket),
+				name: getUserBindingServiceName(
+					R2_BUCKET_SERVICE_PREFIX,
+					bucket.id,
+					bucket.remoteProxyConnectionString
+				),
 			},
 		}));
 	},
@@ -85,10 +89,11 @@ export const R2_PLUGIN: Plugin<
 		const buckets = namespaceEntries(options.r2Buckets);
 		const services = buckets.map<Service>(
 			([name, { id, remoteProxyConnectionString }]) => ({
-				name: getUserBindingServiceName(R2_BUCKET_SERVICE_PREFIX, {
+				name: getUserBindingServiceName(
+					R2_BUCKET_SERVICE_PREFIX,
 					id,
-					remoteProxyConnectionString,
-				}),
+					remoteProxyConnectionString
+				),
 				worker: remoteProxyConnectionString
 					? remoteProxyClientWorker(remoteProxyConnectionString, name)
 					: objectEntryWorker(R2_BUCKET_OBJECT, id),

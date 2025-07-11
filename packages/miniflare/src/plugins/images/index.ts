@@ -51,7 +51,8 @@ export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 							service: {
 								name: getUserBindingServiceName(
 									IMAGES_PLUGIN_NAME,
-									options.images
+									options.images.binding,
+									options.images.remoteProxyConnectionString
 								),
 							},
 						},
@@ -75,7 +76,11 @@ export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 
 		return [
 			{
-				name: getUserBindingServiceName(IMAGES_PLUGIN_NAME, options.images),
+				name: getUserBindingServiceName(
+					IMAGES_PLUGIN_NAME,
+					options.images.binding,
+					options.images.remoteProxyConnectionString
+				),
 				worker: options.images.remoteProxyConnectionString
 					? remoteProxyClientWorker(
 							options.images.remoteProxyConnectionString,

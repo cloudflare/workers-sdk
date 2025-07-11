@@ -41,10 +41,11 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 							{
 								name: "fetcher",
 								service: {
-									name: getUserBindingServiceName(VECTORIZE_PLUGIN_NAME, {
+									name: getUserBindingServiceName(
+										VECTORIZE_PLUGIN_NAME,
 										name,
-										remoteProxyConnectionString,
-									}),
+										remoteProxyConnectionString
+									),
 								},
 							},
 							{
@@ -89,10 +90,11 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 				);
 
 				return {
-					name: getUserBindingServiceName(VECTORIZE_PLUGIN_NAME, {
+					name: getUserBindingServiceName(
+						VECTORIZE_PLUGIN_NAME,
 						name,
-						remoteProxyConnectionString,
-					}),
+						remoteProxyConnectionString
+					),
 					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
 				};
 			}

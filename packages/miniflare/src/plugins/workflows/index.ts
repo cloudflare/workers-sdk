@@ -44,7 +44,11 @@ export const WORKFLOWS_PLUGIN: Plugin<
 			([bindingName, workflow]) => ({
 				name: bindingName,
 				service: {
-					name: getUserBindingServiceName(WORKFLOWS_PLUGIN_NAME, workflow),
+					name: getUserBindingServiceName(
+						WORKFLOWS_PLUGIN_NAME,
+						workflow.name,
+						workflow.remoteProxyConnectionString
+					),
 					entrypoint: "WorkflowBinding",
 				},
 			})
@@ -84,7 +88,11 @@ export const WORKFLOWS_PLUGIN: Plugin<
 				const uniqueKey = `miniflare-workflows-${workflow.name}`;
 
 				const workflowsBinding: Service = {
-					name: getUserBindingServiceName(WORKFLOWS_PLUGIN_NAME, workflow),
+					name: getUserBindingServiceName(
+						WORKFLOWS_PLUGIN_NAME,
+						workflow.name,
+						workflow.remoteProxyConnectionString
+					),
 					worker: {
 						compatibilityDate: "2024-10-22",
 						modules: [

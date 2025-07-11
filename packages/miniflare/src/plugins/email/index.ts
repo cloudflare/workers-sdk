@@ -57,9 +57,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			name,
 			service: {
 				entrypoint: "SendEmailBinding",
-				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, {
-					name,
-				}),
+				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
 			},
 		}));
 	},
@@ -71,9 +69,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 
 		for (const { name, ...config } of args.options.email?.send_email ?? []) {
 			services.push({
-				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, {
-					name,
-				}),
+				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
 				worker: {
 					compatibilityDate: "2025-03-17",
 					modules: [

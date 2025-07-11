@@ -37,10 +37,11 @@ export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
 					name,
 
 					service: {
-						name: getUserBindingServiceName(MTLS_PLUGIN_NAME, {
-							id: certificate_id,
-							remoteProxyConnectionString,
-						}),
+						name: getUserBindingServiceName(
+							MTLS_PLUGIN_NAME,
+							certificate_id,
+							remoteProxyConnectionString
+						),
 					},
 				};
 			}
@@ -70,10 +71,11 @@ export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
 				);
 
 				return {
-					name: getUserBindingServiceName(MTLS_PLUGIN_NAME, {
-						id: certificate_id,
-						remoteProxyConnectionString,
-					}),
+					name: getUserBindingServiceName(
+						MTLS_PLUGIN_NAME,
+						certificate_id,
+						remoteProxyConnectionString
+					),
 					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
 				};
 			}

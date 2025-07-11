@@ -40,7 +40,11 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 						{
 							name: "fetcher",
 							service: {
-								name: getUserBindingServiceName(AI_PLUGIN_NAME, options.ai),
+								name: getUserBindingServiceName(
+									AI_PLUGIN_NAME,
+									options.ai.binding,
+									options.ai.remoteProxyConnectionString
+								),
 							},
 						},
 					],
@@ -63,7 +67,11 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 
 		return [
 			{
-				name: getUserBindingServiceName(AI_PLUGIN_NAME, options.ai),
+				name: getUserBindingServiceName(
+					AI_PLUGIN_NAME,
+					options.ai.binding,
+					options.ai.remoteProxyConnectionString
+				),
 				worker: remoteProxyClientWorker(
 					options.ai.remoteProxyConnectionString,
 					options.ai.binding
