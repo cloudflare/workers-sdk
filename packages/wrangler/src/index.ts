@@ -100,6 +100,7 @@ import {
 	kvNamespaceDeleteCommand,
 	kvNamespaceListCommand,
 	kvNamespaceNamespace,
+	kvNamespaceRenameCommand,
 } from "./kv";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { getMetricsDispatcher } from "./metrics";
@@ -666,6 +667,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler kv namespace delete",
 			definition: kvNamespaceDeleteCommand,
+		},
+		{
+			command: "wrangler kv namespace rename",
+			definition: kvNamespaceRenameCommand,
 		},
 		{ command: "wrangler kv key put", definition: kvKeyPutCommand },
 		{ command: "wrangler kv key list", definition: kvKeyListCommand },
