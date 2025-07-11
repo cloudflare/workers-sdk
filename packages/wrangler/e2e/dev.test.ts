@@ -515,8 +515,8 @@ describe.each([{ cmd: "wrangler dev" }])(
 					from js import Response
 					def on_fetch(request):
 						return Response.new(f"py hello world {mul(2,3)}")`,
-				"vendor/mod1.py": "print(42)",
-				"vendor/mod2.py": "def hello(): return 42",
+				"python_modules/mod1.py": "print(42)",
+				"python_modules/mod2.py": "def hello(): return 42",
 				"package.json": dedent`
 					{
 						"name": "worker",

@@ -333,16 +333,6 @@ function applyPythonConfig(
 		if (!config.rules.some((rule) => rule.type === "PythonModule")) {
 			config.rules.push({ type: "PythonModule", globs: ["**/*.py"] });
 		}
-		// When vendoring packages they may include certain files that will not be automatically uploaded,
-		// this would require specifying rules in the wrangler configuration of each worker. Instead of
-		// requiring that, we include the config implicitly here.
-		if (
-			!config.rules.some(
-				(rule) => rule.type === "Data" && rule.globs.includes("vendor/**/*.so")
-			)
-		) {
-			config.rules.push({ type: "Data", globs: ["vendor/**/*.so"] });
-		}
 		if (!config.compatibility_flags.includes("python_workers")) {
 			throw new UserError(
 				"The `python_workers` compatibility flag is required to use Python."
