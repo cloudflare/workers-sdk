@@ -1,3 +1,5 @@
+import assert from "node:assert";
+import { spawnSync } from "node:child_process";
 import { fetch } from "undici";
 import type { RequestInit, Response } from "undici";
 
@@ -288,3 +290,70 @@ export const listCertificates = async () => {
 export const deleteCertificate = async (id: string) => {
 	await apiFetch(`/mtls_certificates/${id}`, "DELETE");
 };
+
+// Note: the container images functions below don't directly use the REST API since
+//       they interact with the cloudflare images registry which has it's own
+//       non-trivial auth mechanism, so instead of duplicating a bunch of logic
+//       here we instead directly call wrangler
+//
+// TODO: Consider if it would make sense for all the functions here to use wrangler
+//       directly, what is the advantage of hitting the REST API directly?
+
+export const listE2eContainerImages = () => {
+	const output = runWranglerCommand("wrangler containers images list", {
+		// This operation can take literally minutes to run...
+		timeout: 3 * 60_000,
+	}).stdout;
+
+	return output
+		.split("\n")
+		.map((line) => {
+			const match = line.match(
+				/^(?<imageName>tmp-e2e-worker[a-z0-9-]+)\s+tmp-e2e$/
+			);
+			if (!match?.groups) {
+				return null;
+			}
+
+			return { name: match.groups.imageName, tag: "tmp-e2e" };
+		})
+		.filter(Boolean) as { name: string; tag: string }[];
+};
+
+export const deleteContainerImage = (image: { name: string; tag: string }) => {
+	const run = runWranglerCommand(
+		`wrangler containers images delete ${image.name}:${image.tag}`
+	);
+
+	return run.status === 0;
+};
+
+function runWranglerCommand(
+	wranglerCommand: string,
+	{ timeout = 10_000 } = {}
+) {
+	// Enforce a `wrangler` prefix to make commands clearer to read
+	assert(
+		wranglerCommand.startsWith("wrangler "),
+		"Commands must start with `wrangler` (e.g. `wrangler dev`) but got " +
+			wranglerCommand
+	);
+
+	const { status, stdout, stderr, output } = spawnSync(
+		"pnpm",
+		[wranglerCommand],
+		{
+			shell: true,
+			stdio: "pipe",
+			encoding: "utf8",
+			timeout,
+		}
+	);
+
+	return {
+		status,
+		stdout,
+		stderr,
+		output: output.filter((line) => line !== null).join("\n"),
+	};
+}
