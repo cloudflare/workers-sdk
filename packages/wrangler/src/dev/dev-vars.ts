@@ -28,13 +28,13 @@ import type { Config } from "../config";
  *
  */
 export function getVarsForDev(
-	config: Pick<Config, "userConfigPath" | "vars">,
+	configPath: string | undefined,
+	envPath: string | undefined,
+	vars: Config["vars"],
 	env: string | undefined,
 	silent = false
 ): Config["vars"] {
-	const configDir = path.resolve(
-		config.userConfigPath ? path.dirname(config.userConfigPath) : "."
-	);
+	const configDir = path.resolve(configPath ? path.dirname(configPath) : ".");
 
 	// First, try to load from .dev.vars
 	const devVarsPath = path.resolve(configDir, ".dev.vars");
@@ -45,18 +45,22 @@ export function getVarsForDev(
 			logger.log(`Using vars defined in ${devVarsRelativePath}`);
 		}
 		return {
-			...config.vars,
+			...vars,
 			...loaded.parsed,
 		};
 	} else {
-		// If no .dev.vars files loading from .env files
-		const dotEnvVars = loadDotEnv(path.resolve(configDir, ".env"), {
-			env,
-			includeProcessEnv: getCloudflareIncludeProcessEnvFromEnv(),
-			silent,
-		});
+		// If no .dev.vars files load vars from .env files using `envPath` if defined
+		// otherwise look for `.env` in the configuration directory.
+		const dotEnvVars = loadDotEnv(
+			path.resolve(envPath ?? path.join(configDir, ".env")),
+			{
+				env,
+				includeProcessEnv: getCloudflareIncludeProcessEnvFromEnv(),
+				silent,
+			}
+		);
 		return {
-			...config.vars,
+			...vars,
 			...dotEnvVars,
 		};
 	}

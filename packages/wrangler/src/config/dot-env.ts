@@ -4,7 +4,7 @@ import dotenvExpand from "dotenv-expand";
 import { logger } from "../logger";
 
 export function loadDotEnv(
-	basePath: string,
+	baseEnvPath: string,
 	{
 		env,
 		includeProcessEnv,
@@ -15,9 +15,9 @@ export function loadDotEnv(
 	// Values in files to the right override the values in files to the left.
 	const envPaths = [];
 	if (env !== undefined) {
-		envPaths.push(`${basePath}.${env}.local`, `${basePath}.${env}`);
+		envPaths.push(`${baseEnvPath}.${env}.local`, `${baseEnvPath}.${env}`);
 	}
-	envPaths.push(basePath + ".local", basePath);
+	envPaths.push(baseEnvPath + ".local", baseEnvPath);
 
 	// The `parsedEnv` object will be mutated to contain the merged values.
 	const parsedEnv = {};

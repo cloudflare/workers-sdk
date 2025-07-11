@@ -305,10 +305,12 @@ export async function generateEnvTypes(
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const stringKeys: string[] = [];
 	const secrets = getVarsForDev(
+		config.userConfigPath,
+		args.envFile,
 		// We do not want `getVarsForDev()` to merge in the standard vars into the dev vars
 		// because we want to be able to work with secrets differently to vars.
 		// So we pass in a fake vars object here.
-		{ ...config, vars: {} },
+		{},
 		args.env,
 		true
 	) as Record<string, string>;
