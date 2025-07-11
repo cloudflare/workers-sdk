@@ -2469,11 +2469,11 @@ describe("normalizeAndValidateConfig()", () => {
 								class_name: "test-class",
 								instances: 10,
 								configuration: {
-									image: "config-image"
+									image: "config-image",
 								},
 								durable_objects: {
-									namespace_id: "test-namespace"
-								}
+									namespace_id: "test-namespace",
+								},
 							},
 						],
 					} as unknown as RawConfig,
