@@ -3,7 +3,7 @@ export default {
 		contentType:
 			"multipart/form-data; boundary=----formdata-88e2b909-318c-42df-af0d-9077f33c7988",
 		worker:
-			'------formdata-88e2b909-318c-42df-af0d-9077f33c7988\r\nContent-Disposition: form-data; name="metadata"\r\n\r\n{"main_module":"index.py","compatibility_date":"$REPLACE_COMPAT_DATE","compatibility_flags":["python_workers"]}\r\n------formdata-88e2b909-318c-42df-af0d-9077f33c7988\r\nContent-Disposition: form-data; name="index.py"; filename="index.py"\r\nContent-Type: text/x-python\r\n\r\nfrom js import Response\nimport numpy as np\n\ndef on_fetch(request):\n    print("Hi there!")\n    arr = np.array([1, 2, 3])\n    return Response.new(str(arr))\n\r\n------formdata-88e2b909-318c-42df-af0d-9077f33c7988\r\nContent-Disposition: form-data; name="requirements.txt"; filename="requirements.txt"\r\nContent-Type: text/plain\r\n\r\nnumpy\r\n------formdata-88e2b909-318c-42df-af0d-9077f33c7988--',
+			'------formdata-88e2b909-318c-42df-af0d-9077f33c7988\r\nContent-Disposition: form-data; name="metadata"\r\n\r\n{"main_module":"index.py","compatibility_date":"$REPLACE_COMPAT_DATE","compatibility_flags":["python_workers"]}\r\n------formdata-88e2b909-318c-42df-af0d-9077f33c7988\r\nContent-Disposition: form-data; name="index.py"; filename="index.py"\r\nContent-Type: text/x-python\r\n\r\nfrom js import Response\nimport numpy as np\n\ndef on_fetch(request):\n    print("Hi there!")\n    arr = np.array([1, 2, 3])\n    return Response.new(str(arr))\n\r\n------formdata-88e2b909-318c-42df-af0d-9077f33c7988\r\nContent-Disposition: form-data; name="cf-requirements.txt"; filename="cf-requirements.txt"\r\nContent-Type: text/plain\r\n\r\nnumpy\r\n------formdata-88e2b909-318c-42df-af0d-9077f33c7988--',
 	},
 	"/": {
 		contentType:

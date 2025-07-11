@@ -37,11 +37,11 @@ const pythonWorker = async () => {
 	);
 
 	worker.set(
-		"requirements.txt",
-		new Blob([await readFile("./welcome/requirements.txt", "utf8")], {
+		"cf-requirements.txt",
+		new Blob([await readFile("./welcome/cf-requirements.txt", "utf8")], {
 			type: "text/plain",
 		}),
-		"requirements.txt"
+		"cf-requirements.txt"
 	);
 	return worker;
 };

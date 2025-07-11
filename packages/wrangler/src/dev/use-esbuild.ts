@@ -184,10 +184,10 @@ export function runBuild(
 		// trigger "builds" when any change
 		if (noBundle) {
 			const watching = [path.resolve(entry.moduleRoot)];
-			// Check whether we need to watch a Python requirements.txt file.
+			// Check whether we need to watch a Python cf-requirements.txt file.
 			const watchPythonRequirements =
 				getBundleType(entry.format, entry.file) === "python"
-					? path.resolve(entry.projectRoot, "requirements.txt")
+					? path.resolve(entry.projectRoot, "cf-requirements.txt")
 					: undefined;
 
 			if (watchPythonRequirements) {

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
@@ -93,7 +94,7 @@ export async function findAdditionalModules(
 			name: m.name,
 		}));
 
-	// Try to find a requirements.txt file
+	// Try to find a cf-requirements.txt file
 	const isPythonEntrypoint =
 		getBundleType(entry.format, entry.file) === "python";
 
@@ -101,13 +102,20 @@ export async function findAdditionalModules(
 		let pythonRequirements = "";
 		try {
 			pythonRequirements = await readFile(
-				path.resolve(entry.projectRoot, "requirements.txt"),
+				path.resolve(entry.projectRoot, "cf-requirements.txt"),
 				"utf-8"
 			);
 		} catch (e) {
-			// We don't care if a requirements.txt isn't found
+			// We don't care if a cf-requirements.txt isn't found
 			logger.debug(
-				"Python entrypoint detected, but no requirements.txt file found."
+				"Python entrypoint detected, but no cf-requirements.txt file found."
+			);
+		}
+
+		// If a `requirements.txt` file is found, show a warning instructing user to use `cf-requirements.txt` instead.
+		if (existsSync(path.resolve(entry.projectRoot, "requirements.txt"))) {
+			logger.warn(
+				"Found a `requirements.txt` file. Python requirements should now be in a `cf-requirements.txt` file."
 			);
 		}
 
@@ -117,7 +125,7 @@ export async function findAdditionalModules(
 			}
 			if (!isValidPythonPackageName(requirement)) {
 				throw new UserError(
-					`Invalid Python package name "${requirement}" found in requirements.txt. Note that requirements.txt should contain package names only, not version specifiers.`
+					`Invalid Python package name "${requirement}" found in cf-requirements.txt. Note that cf-requirements.txt should contain package names only, not version specifiers.`
 				);
 			}
 
