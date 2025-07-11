@@ -1,6 +1,8 @@
 // Code from package jsdiff (https://github.com/kpdecker/jsdiff/tree/master)
 // It's been simplified so it can basically do line diffing only
 // and we can avoid the 600kb sized package.
+import { log } from "@cloudflare/cli";
+import { bold, brandColor, red } from "@cloudflare/cli/colors";
 
 class Diff {
 	diff(oldString: string[], newString: string[], callback: Callback) {
@@ -312,4 +314,177 @@ export function diffLines(oldStr: string, newStr: string): Result[] {
 	});
 
 	return res;
+}
+
+// **************************************************
+// Below lie other helpers related to printing diffs
+// **************************************************
+
+function isNumber(c: string | number) {
+	if (typeof c === "number") {
+		return true;
+	}
+	const code = c.charCodeAt(0);
+	const zero = "0".charCodeAt(0);
+	const nine = "9".charCodeAt(0);
+	return code >= zero && code <= nine;
+}
+
+/**
+ * createLine takes a string and goes through each character, rendering possibly syntax highlighting.
+ * Useful to render TOML files.
+ */
+export function createLine(el: string, startWith = ""): string {
+	let line = startWith;
+	let lastAdded = 0;
+	const addToLine = (i: number, color = (s: string) => s) => {
+		line += color(el.slice(lastAdded, i));
+		lastAdded = i;
+	};
+
+	const state = {
+		render: "left" as "quotes" | "number" | "left" | "right" | "section",
+	};
+	for (let i = 0; i < el.length; i++) {
+		const current = el[i];
+		const peek = i + 1 < el.length ? el[i + 1] : null;
+		const prev = i === 0 ? null : el[i - 1];
+
+		switch (state.render) {
+			case "left":
+				if (current === "=") {
+					state.render = "right";
+				}
+
+				break;
+			case "right":
+				if (current === '"') {
+					addToLine(i);
+					state.render = "quotes";
+					break;
+				}
+
+				if (isNumber(current)) {
+					addToLine(i);
+					state.render = "number";
+					break;
+				}
+
+				if (current === "[" && peek === "[") {
+					state.render = "section";
+				}
+
+				break;
+			case "quotes":
+				if (current === '"') {
+					addToLine(i + 1, brandColor);
+					state.render = "right";
+				}
+
+				break;
+			case "number":
+				if (!isNumber(el)) {
+					addToLine(i, red);
+					state.render = "right";
+				}
+
+				break;
+			case "section":
+				if (current === "]" && prev === "]") {
+					addToLine(i + 1);
+					state.render = "right";
+				}
+		}
+	}
+
+	switch (state.render) {
+		case "left":
+			addToLine(el.length);
+			break;
+		case "right":
+			addToLine(el.length);
+			break;
+		case "quotes":
+			addToLine(el.length, brandColor);
+			break;
+		case "number":
+			addToLine(el.length, red);
+			break;
+		case "section":
+			// might be unreachable
+			addToLine(el.length, bold);
+			break;
+	}
+
+	return line;
+}
+
+/**
+ * printLine takes a line and prints it by using createLine and use printFunc
+ */
+export function printLine(el: string, startWith = "", printFunc = log) {
+	printFunc(createLine(el, startWith));
+}
+
+/**
+ * Removes from the object every undefined property
+ */
+export function stripUndefined<T = Record<string, unknown>>(r: T): T {
+	for (const k in r) {
+		if (r[k] === undefined) {
+			delete r[k];
+		}
+	}
+
+	return r;
+}
+
+/**
+ * Take an object and sort its keys in alphabetical order.
+ */
+function sortObjectKeys(unordered: Record<string | number, unknown>) {
+	if (Array.isArray(unordered)) {
+		return unordered;
+	}
+
+	return Object.keys(unordered)
+		.sort()
+		.reduce(
+			(obj, key) => {
+				obj[key] = unordered[key];
+				return obj;
+			},
+			{} as Record<string, unknown>
+		);
+}
+
+/**
+ * Take an object and sort its keys in alphabetical order recursively.
+ * Useful to normalize objects so they can be compared when rendered.
+ * It will copy the object and not mutate it.
+ */
+export function sortObjectRecursive<T = Record<string | number, unknown>>(
+	object: Record<string | number, unknown> | Record<string | number, unknown>[]
+): T {
+	if (typeof object !== "object") {
+		return object;
+	}
+
+	if (Array.isArray(object)) {
+		return object.map((obj) => sortObjectRecursive(obj)) as T;
+	}
+
+	const objectCopy: Record<string | number, unknown> = { ...object };
+	for (const [key, value] of Object.entries(object)) {
+		if (typeof value === "object") {
+			if (value === null) {
+				continue;
+			}
+			objectCopy[key] = sortObjectRecursive(
+				value as Record<string, unknown>
+			) as unknown;
+		}
+	}
+
+	return sortObjectKeys(objectCopy) as T;
 }

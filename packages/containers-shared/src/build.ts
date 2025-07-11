@@ -5,8 +5,6 @@ import { BuildArgs, ContainerDevOptions, Logger } from "./types";
 
 export async function constructBuildCommand(
 	options: BuildArgs,
-	/** wrangler config path. used to resolve relative dockerfile path */
-	configPath: string | undefined,
 	logger?: Logger
 ) {
 	const platform = options.platform ?? "linux/amd64";
@@ -27,12 +25,11 @@ export async function constructBuildCommand(
 	if (options.setNetworkToHost) {
 		buildCmd.push("--network", "host");
 	}
-	const baseDir = configPath ? path.dirname(configPath) : process.cwd();
-	const absDockerfilePath = path.resolve(baseDir, options.pathToDockerfile);
-	const dockerfile = readFileSync(absDockerfilePath, "utf-8");
+
+	const dockerfile = readFileSync(options.pathToDockerfile, "utf-8");
 	// pipe in the dockerfile
 	buildCmd.push("-f", "-");
-	buildCmd.push(options.buildContext ?? path.dirname(absDockerfilePath));
+	buildCmd.push(options.buildContext);
 	logger?.debug(`Building image with command: ${buildCmd.join(" ")}`);
 	return { buildCmd, dockerfile };
 }
