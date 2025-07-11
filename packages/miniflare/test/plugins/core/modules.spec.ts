@@ -195,7 +195,7 @@ test("Miniflare: cannot automatically collect modules without script path", asyn
 			instanceOf: MiniflareCoreError,
 			code: "ERR_MODULE_STRING_SCRIPT",
 			message:
-				'Unable to resolve "script:0" dependency: imports are unsupported in string `script` without defined `scriptPath`',
+				'Unable to resolve "script-0" dependency: imports are unsupported in string `script` without defined `scriptPath`',
 		}
 	);
 });

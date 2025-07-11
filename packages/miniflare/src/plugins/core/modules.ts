@@ -30,9 +30,9 @@ const builtinModulesWithPrefix = builtinModules.concat(
 
 // Module identifier used if script came from `script` option
 export function buildStringScriptPath(workerIndex: number) {
-	return `script:${workerIndex}`;
+	return `script-${workerIndex}`;
 }
-const stringScriptRegexp = /^script:(\d+)$/;
+const stringScriptRegexp = /^script-(\d+)$/;
 export function maybeGetStringScriptPathIndex(
 	scriptPath: string
 ): number | undefined {
