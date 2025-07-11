@@ -756,5 +756,61 @@ describe("DevEnv", () => {
 				}
 			`);
 		});
+
+		it("vars from .env pointed at by `envFile` override vars from Wrangler config file and .env files local to the config file", async (t) => {
+			t.onTestFinished(() => worker?.dispose());
+			await helper.seed({
+				"src/index.ts": dedent`
+					export default {
+						fetch(request, env) {
+							return Response.json(env);
+						}
+					}
+				`,
+				"wrangler.jsonc": JSON.stringify({
+					vars: {
+						WRANGLER_ENV_VAR_0: "default-0",
+						WRANGLER_ENV_VAR_1: "default-1",
+						WRANGLER_ENV_VAR_2: "default-2",
+						WRANGLER_ENV_VAR_3: "default-3",
+					},
+				}),
+				".env": dedent`
+					WRANGLER_ENV_VAR_1=env-1
+					WRANGLER_ENV_VAR_2=env-2
+				`,
+				".env.local": dedent`
+					WRANGLER_ENV_VAR_2=local-2
+					WRANGLER_ENV_VAR_3=local-3
+				`,
+				"other/.env": dedent`
+					WRANGLER_ENV_VAR_3=other-3
+					WRANGLER_ENV_VAR_4=other-4
+				`,
+				"other/.env.local": dedent`
+					WRANGLER_ENV_VAR_4=other-local-4
+					WRANGLER_ENV_VAR_5=other-local-5
+				`,
+			});
+
+			const worker = await startWorker({
+				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
+				name: "test-worker",
+				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+				envFiles: ["other/.env", "other/.env.local"],
+			});
+
+			const res = await worker.fetch("http://dummy/test/path/1");
+			expect(await res.json()).toMatchInlineSnapshot(`
+				{
+				  "WRANGLER_ENV_VAR_0": "default-0",
+				  "WRANGLER_ENV_VAR_1": "default-1",
+				  "WRANGLER_ENV_VAR_2": "default-2",
+				  "WRANGLER_ENV_VAR_3": "other-3",
+				  "WRANGLER_ENV_VAR_4": "other-local-4",
+				  "WRANGLER_ENV_VAR_5": "other-local-5",
+				}
+			`);
+		});
 	});
 });

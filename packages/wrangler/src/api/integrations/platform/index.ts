@@ -57,6 +57,17 @@ export type GetPlatformProxyOptions = {
 	 */
 	configPath?: string;
 	/**
+	 * Paths to `.env` file to load environment variables from.
+	 *
+	 * If not specified, the default behavior:
+	 *  - look for a `.env` file in the same directory as the Wrangler configuration file, or in the current working
+	 *    directory if no Wrangler configuration file is specified.
+	 *  - also look for a `.env.local` file in the same directory as the `.env` file.
+	 *  - if the `environment` option is specified, also look for `.env.<environment>` and `.env.<environment>.local`
+	 *    files in the same directory as the `.env` file.
+	 */
+	envFiles?: string[];
+	/**
 	 * Indicates if and where to persist the bindings data, if not present or `true` it defaults to the same location
 	 * used by wrangler: `.wrangler/state/v3` (so that the same data can be easily used by the caller and wrangler).
 	 * If `false` is specified no data is persisted on the filesystem.
@@ -183,6 +194,7 @@ async function getMiniflareOptionsFromConfig(args: {
 	const bindings = getBindings(
 		config,
 		options.environment,
+		options.envFiles,
 		true,
 		{},
 		remoteBindingsEnabled
@@ -350,6 +362,7 @@ export function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
 	env?: string,
 	options?: {
+		envFiles?: string[];
 		imagesLocalMode?: boolean;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 		remoteBindingsEnabled?: boolean;
@@ -375,7 +388,7 @@ export function unstable_getMiniflareWorkerOptions(
 	const containerDOClassNames = new Set(
 		config.containers?.map((c) => c.class_name)
 	);
-	const bindings = getBindings(config, env, true, {}, true);
+	const bindings = getBindings(config, env, options?.envFiles, true, {}, true);
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		{
 			name: config.name,

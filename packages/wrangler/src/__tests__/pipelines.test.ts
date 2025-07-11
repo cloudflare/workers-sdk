@@ -284,11 +284,12 @@ describe("pipelines", () => {
 			  wrangler pipelines delete <pipeline>  Delete a pipeline [open-beta]
 
 			GLOBAL FLAGS
-			  -c, --config   Path to Wrangler configuration file  [string]
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - earlier ones are overridden by later ones  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -327,11 +328,12 @@ describe("pipelines", () => {
 				  pipeline  The name of the new pipeline  [string] [required]
 
 				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - earlier ones are overridden by later ones  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 

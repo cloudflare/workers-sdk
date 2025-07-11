@@ -2541,4 +2541,46 @@ describe(".env support in local dev", () => {
 			'"WRANGLER_ENV_VAR_1": "env-1"'
 		);
 	});
+
+	it("should load environment variables from the .env files pointed to by `--env-file`", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seedFiles);
+		await helper.seed({
+			".env": dedent`
+				WRANGLER_ENV_VAR_1=env-1
+				WRANGLER_ENV_VAR_2=env-2
+			`,
+		});
+		await helper.seed({
+			".env.local": dedent`
+				WRANGLER_ENV_VAR_2=local-2
+				WRANGLER_ENV_VAR_3=local-3
+			`,
+		});
+		await helper.seed({
+			"other/.env": dedent`
+				WRANGLER_ENV_VAR_1=other-env-1
+				WRANGLER_ENV_VAR_2=other-env-2
+			`,
+		});
+		await helper.seed({
+			"other/.env.local": dedent`
+				WRANGLER_ENV_VAR_2=other-local-2
+				WRANGLER_ENV_VAR_3=other-local-3
+			`,
+		});
+
+		const worker = helper.runLongLived(
+			"wrangler dev --env-file=other/.env --env-file=other/.env.local"
+		);
+		const { url } = await worker.waitForReady();
+		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
+			"{
+			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_1": "other-env-1",
+			  "WRANGLER_ENV_VAR_2": "other-local-2",
+			  "WRANGLER_ENV_VAR_3": "other-local-3",
+			}"
+		`);
+	});
 });

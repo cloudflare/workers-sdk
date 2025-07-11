@@ -1060,6 +1060,66 @@ describe.sequential("wrangler dev", () => {
 					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=default-local"
 				`);
 			});
+
+			it("should prefer to load environment variables from a custom path `.env` if `--env-file` is set", async () => {
+				fs.mkdirSync("other", { recursive: true });
+				fs.writeFileSync(
+					"other/.env",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=other-2
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=other-3
+					`
+				);
+
+				// This file will not be loaded because `--env-file` is set for it.
+				fs.writeFileSync(
+					"other/.env.local",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=other-local-1
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=other-local-3
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=other-local
+					`
+				);
+
+				await runWranglerUntilConfig("dev --env-file other/.env");
+				expect(extractCustomBuildLogs(std.out)).toMatchInlineSnapshot(`
+					"
+					Running: node ./build.js
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=other-2
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=other-3"
+				`);
+			});
+
+			it("should prefer to load environment variables from a custom path `.env` if multiple `--env-file` is set", async () => {
+				fs.mkdirSync("other", { recursive: true });
+				fs.writeFileSync(
+					"other/.env",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=other-2
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=other-3
+					`
+				);
+				fs.writeFileSync(
+					"other/.env.local",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=other-local-1
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=other-local-3
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=other-local
+					`
+				);
+
+				await runWranglerUntilConfig(
+					"dev --env-file other/.env --env-file other/.env.local"
+				);
+				expect(extractCustomBuildLogs(std.out)).toMatchInlineSnapshot(`
+					"
+					Running: node ./build.js
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=other-local-1
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=other-2
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=other-local-3
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=other-local"
+				`);
+			});
 		});
 	});
 
@@ -1651,6 +1711,67 @@ describe.sequential("wrangler dev", () => {
 			expect(extractBindings(std.out)).contains(
 				'env.CLOUDFLARE_INCLUDE_PROCESS_ENV ("(hidden)")'
 			);
+		});
+
+		it("should get local dev `vars` from appropriate `.env.<environment>` files when --env-file is set", async () => {
+			fs.mkdirSync("other", { recursive: true });
+			fs.writeFileSync(
+				"other/.env",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_2=custom-2
+						__DOT_ENV_LOCAL_DEV_VAR_3=custom-3
+					`
+			);
+			fs.writeFileSync(
+				"other/.env.local",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_1=custom-local-1
+						__DOT_ENV_LOCAL_DEV_VAR_3=custom-local-3
+						__DOT_ENV_LOCAL_DEV_VAR_LOCAL=custom-local
+					`
+			);
+
+			await runWranglerUntilConfig("dev --env-file=other/.env");
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(
+				`"Using vars defined in other/.env"`
+			);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")      Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")      Environment Variable      local"
+			`);
+		});
+
+		it("should get local dev `vars` from appropriate `.env.<environment>` files when multiple --env-file options are set", async () => {
+			fs.mkdirSync("other", { recursive: true });
+			fs.writeFileSync(
+				"other/.env",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_2=custom-2
+						__DOT_ENV_LOCAL_DEV_VAR_3=custom-3
+					`
+			);
+			fs.writeFileSync(
+				"other/.env.local",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_1=custom-local-1
+						__DOT_ENV_LOCAL_DEV_VAR_3=custom-local-3
+						__DOT_ENV_LOCAL_DEV_VAR_LOCAL=custom-local
+					`
+			);
+
+			await runWranglerUntilConfig(
+				"dev --env-file=other/.env --env-file=other/.env.local"
+			);
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+				"Using vars defined in other/.env
+				Using vars defined in other/.env.local"
+			`);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\\"(hidden)\\")      Environment Variable      local"
+			`);
 		});
 	});
 

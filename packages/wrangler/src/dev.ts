@@ -485,6 +485,7 @@ async function setupDevEnv(
 				pattern: r,
 			})),
 			env: args.env,
+			envFiles: args.envFile,
 			build: {
 				bundle: args.bundle !== undefined ? args.bundle : undefined,
 				define: collectKeyValues(args.define),
@@ -867,6 +868,7 @@ function getResolvedSiteAssetPaths(
 export function getBindings(
 	configParam: Config,
 	env: string | undefined,
+	envFiles: string[] | undefined,
 	local: boolean,
 	args: AdditionalDevProps,
 	remoteBindingsEnabled = getFlag("REMOTE_BINDINGS")
@@ -1040,7 +1042,12 @@ export function getBindings(
 		// non-inheritable fields
 		vars: {
 			// Use a copy of combinedVars since we're modifying it later
-			...getVarsForDev(configParam, env),
+			...getVarsForDev(
+				configParam.userConfigPath,
+				envFiles,
+				configParam.vars,
+				env
+			),
 			...args.vars,
 		},
 		durable_objects: {

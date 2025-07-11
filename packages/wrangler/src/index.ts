@@ -402,6 +402,13 @@ export function createCLIParser(argv: string[]) {
 			type: "string",
 			requiresArg: true,
 		})
+		.option("env-file", {
+			describe:
+				"Path to an .env file to load - can be specified multiple times - earlier ones are overridden by later ones",
+			type: "string",
+			array: true,
+			requiresArg: true,
+		})
 		.check(demandSingleValue("env"))
 		.option("experimental-json-config", {
 			alias: "j",
@@ -421,12 +428,15 @@ export function createCLIParser(argv: string[]) {
 			return true;
 		})
 		.check((args) => {
-			// Grab locally specified env params from `.env` file
+			// Set process environment params from `.env` files if available.
 			process.env =
-				loadDotEnv(getDefaultEnvPaths(resolve(".env"), args.env), {
-					includeProcessEnv: true,
-					silent: true,
-				}) ?? process.env;
+				loadDotEnv(
+					args["env-file"] ?? getDefaultEnvPaths(resolve(".env"), args.env),
+					{
+						includeProcessEnv: true,
+						silent: true,
+					}
+				) ?? process.env;
 
 			// Write a session entry to the output file (if there is one).
 			writeOutput({
@@ -464,7 +474,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "help", "version"],
+		["config", "cwd", "env", "env-file", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 	wrangler.help("help", "Show help").alias("h", "help");
