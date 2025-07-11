@@ -1,7 +1,8 @@
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
-import { formatConfigSnippet, readConfig } from "../config";
+import { readConfig, formatConfigSnippet } from "../config";
+import { handleResourceBindingAndConfigUpdate } from "../config/auto-update";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
@@ -10,7 +11,6 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
-import { getValidBindingName } from "../utils/getValidBindingName";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import {
 	BATCH_MAX_ERRORS_WARNINGS,
@@ -81,11 +81,16 @@ export const kvNamespaceCreateCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with a preview namespace",
 		},
+		"config-binding-name": {
+			type: "string",
+			description: "The binding name to use when updating wrangler.jsonc",
+		},
 	},
 	positionalArgs: ["namespace"],
 
 	async handler(args) {
 		const config = readConfig(args);
+
 		const environment = args.env ? `${args.env}-` : "";
 		const preview = args.preview ? "_preview" : "";
 		const title = `${environment}${args.namespace}${preview}`;
@@ -100,25 +105,36 @@ export const kvNamespaceCreateCommand = createCommand({
 		});
 
 		logger.log("✨ Success!");
-		const envString = args.env ? ` under [env.${args.env}]` : "";
-		const previewString = args.preview ? "preview_" : "";
-		logger.log(
-			`Add the following to your configuration file in your kv_namespaces array${envString}:`
-		);
 
-		logger.log(
-			formatConfigSnippet(
+		// Auto-update wrangler config or show snippet
+		const envString = args.env ? ` under [env.${args.env}]` : "";
+		
+		// For preview namespaces, skip auto-update and always show manual snippet
+		if (args.preview) {
+			logger.log(`Add the following to your configuration file in your kv_namespaces array${envString}:`);
+			logger.log(formatConfigSnippet(
 				{
 					kv_namespaces: [
 						{
-							binding: getValidBindingName(args.namespace, "KV"),
-							[`${previewString}id`]: namespaceId,
+							binding: "KV", // Use generic binding name
+							preview_id: namespaceId,
 						},
 					],
 				},
 				config.configPath
-			)
-		);
+			));
+		} else {
+			// Handle binding name and config update using unified utility
+			await handleResourceBindingAndConfigUpdate(
+				args,
+				{ ...config, configPath: config.configPath },
+				{
+					type: "kv_namespaces",
+					id: namespaceId,
+					name: args.namespace,
+				}
+			);
+		}
 	},
 });
 
