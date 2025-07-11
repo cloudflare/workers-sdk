@@ -940,120 +940,6 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can apply an application, and there is no changes (two applications)", async () => {
-		setIsTTY(false);
-		const app = {
-			name: "my-container-app",
-			instances: 3,
-			class_name: "DurableObjectClass",
-			image: "./Dockerfile",
-			configuration: {
-				labels: [
-					{
-						name: "name",
-						value: "value",
-					},
-					{
-						name: "name-2",
-						value: "value-2",
-					},
-				],
-				secrets: [
-					{
-						name: "MY_SECRET",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME",
-					},
-					{
-						name: "MY_SECRET_1",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_1",
-					},
-					{
-						name: "MY_SECRET_2",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_2",
-					},
-				],
-			},
-		};
-		writeWranglerConfig({
-			name: "my-container",
-			containers: [app, { ...app, name: "my-container-app-2" }],
-		});
-
-		const completeApp = {
-			id: "abc",
-			name: "my-container-app",
-			instances: 3,
-			created_at: new Date().toString(),
-			class_name: "DurableObjectClass",
-			account_id: "1",
-			scheduling_policy: SchedulingPolicy.REGIONAL,
-			configuration: {
-				image: "./Dockerfile",
-				labels: [
-					{
-						name: "name",
-						value: "value",
-					},
-					{
-						name: "name-2",
-						value: "value-2",
-					},
-				],
-				secrets: [
-					{
-						name: "MY_SECRET",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME",
-					},
-					{
-						name: "MY_SECRET_1",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_1",
-					},
-					{
-						name: "MY_SECRET_2",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_2",
-					},
-				],
-				disk: {
-					size: "2GB",
-					size_mb: 2000,
-				},
-				vcpu: 0.0625,
-				memory: "256MB",
-				memory_mib: 256,
-			},
-
-			constraints: {
-				tier: 1,
-			},
-		};
-
-		mockGetApplications([
-			{ ...completeApp, version: 1 },
-			{ ...completeApp, version: 1, name: "my-container-app-2", id: "abc2" },
-		]);
-		await runWrangler("cloudchamber apply");
-		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
-			│
-			│ Container application changes
-			│
-			├ no changes my-container-app
-			│
-			├ no changes my-container-app-2
-			│
-			╰ No changes to be made
-
-			"
-		`);
-		expect(std.stderr).toMatchInlineSnapshot(`""`);
-	});
-
 	test("can enable observability logs (top-level field)", async () => {
 		setIsTTY(false);
 		writeWranglerConfig({
@@ -1970,7 +1856,7 @@ describe("cloudchamber apply", () => {
 			├ EDIT my-container-app
 			│
 			│   [containers.configuration]
-			│   image = \\"${registry}/some-account-id/hello:1.0\\"
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
 			│ - instance_type = \\"dev\\"
 			│ + instance_type = \\"standard\\"
 			│

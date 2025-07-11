@@ -340,6 +340,17 @@ export async function apply(
 	log(dim("Container application changes\n"));
 
 	for (const appConfigNoDefaults of config.containers) {
+		if ("configuration" in appConfigNoDefaults === false) {
+			appConfigNoDefaults.configuration = {
+				image: appConfigNoDefaults.image,
+			};
+		} else if (
+			!appConfigNoDefaults.configuration?.image &&
+			appConfigNoDefaults.configuration !== undefined
+		) {
+			appConfigNoDefaults.configuration["image"] = appConfigNoDefaults.image;
+		}
+
 		const application =
 			applicationByNames[
 				appConfigNoDefaults.name ??
@@ -353,6 +364,14 @@ export async function apply(
 		}
 
 		if (!args.imageUpdateRequired && application) {
+			appConfigNoDefaults.configuration ??= {};
+			appConfigNoDefaults.configuration.image = application.configuration.image;
+		} else if (
+			args.imageUpdateRequired &&
+			application &&
+			!appConfigNoDefaults.configuration?.image
+		) {
+			// If image update is required but no new image is provided, use the existing one
 			appConfigNoDefaults.configuration ??= {};
 			appConfigNoDefaults.configuration.image = application.configuration.image;
 		}
@@ -399,6 +418,15 @@ export async function apply(
 				prevContainer as CreateApplicationRequest,
 				sortObjectRecursive<CreateApplicationRequest>(appConfig)
 			) as ContainerApp;
+
+			// Check if objects are deeply equal before doing expensive diff
+			const prevStr = JSON.stringify(sortObjectRecursive(prevContainer));
+			const nowStr = JSON.stringify(sortObjectRecursive(nowContainer));
+
+			if (prevStr === nowStr) {
+				updateStatus(`no changes ${brandColor(application.name)}`);
+				continue;
+			}
 
 			const prev = formatConfigSnippet(
 				{ containers: [prevContainer] },

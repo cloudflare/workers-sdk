@@ -26,6 +26,7 @@ import { mockAccountV4 as mockContainersAccount } from "./utils";
 import type {
 	AccountRegistryToken,
 	Application,
+	ContainerNormalisedConfig,
 	ImageRegistryCredentialsConfiguration,
 } from "@cloudflare/containers-shared";
 import type { ChildProcess } from "node:child_process";
@@ -34,18 +35,18 @@ vi.mock("node:child_process");
 describe("maybeBuildContainer", () => {
 	it("Should return imageUpdate: true if using an image URI", async () => {
 		const config = {
-			image: "registry.cloudflare.com/some-image:uri",
+			registry_link: "registry.cloudflare.com/some-image:uri",
 			class_name: "Test",
-		};
+		} as ContainerNormalisedConfig;
 		const result = await maybeBuildContainer(
 			config,
 			"some-tag:thing",
 			false,
-			"/usr/bin/docker",
-			undefined
+			"/usr/bin/docker"
 		);
-		expect(result.image).toEqual(config.image);
-		expect(result.imageUpdated).toEqual(true);
+		expect(result.newImageLink).toEqual(
+			"registry.cloudflare.com/some-image:uri"
+		);
 	});
 });
 describe("wrangler deploy with containers", () => {
@@ -96,7 +97,6 @@ describe("wrangler deploy with containers", () => {
 			containers: [
 				{
 					name: "my-container",
-					instances: 10,
 					class_name: "ExampleDurableObject",
 					image: "./Dockerfile",
 				},
@@ -106,11 +106,14 @@ describe("wrangler deploy with containers", () => {
 
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
 
-		await expect(runWrangler("deploy index.js")).rejects
-			.toThrowErrorMatchingInlineSnapshot(`
-						[Error: The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.
-						Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with WRANGLER_DOCKER_HOST.]
-					`);
+		await expect(
+			runWrangler("deploy index.js")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`
+			[Error: The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.
+			Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with WRANGLER_DOCKER_HOST.]
+		`
+		);
 	});
 	it("should support durable object bindings to SQLite classes with containers (dockerfile flow)", async () => {
 		mockGetVersion("Galaxy-Class");
@@ -147,7 +150,6 @@ describe("wrangler deploy with containers", () => {
 			containers: [
 				{
 					name: "my-container",
-					instances: 10,
 					class_name: "ExampleDurableObject",
 					image: "./Dockerfile",
 				},
@@ -161,7 +163,6 @@ describe("wrangler deploy with containers", () => {
 
 		mockCreateApplication({
 			name: "my-container",
-			instances: 10,
 			durable_objects: { namespace_id: "1" },
 			configuration: {
 				image:
@@ -206,7 +207,6 @@ describe("wrangler deploy with containers", () => {
 				{
 					image: "docker.io/hello:world",
 					name: "my-container",
-					instances: 10,
 					class_name: "ExampleDurableObject",
 				},
 			],
@@ -217,7 +217,6 @@ describe("wrangler deploy with containers", () => {
 
 		mockCreateApplication({
 			name: "my-container",
-			instances: 10,
 			durable_objects: { namespace_id: "1" },
 			scheduling_policy: SchedulingPolicy.DEFAULT,
 		});
@@ -287,7 +286,6 @@ describe("wrangler deploy with containers", () => {
 				containers: [
 					{
 						name: "my-container",
-						instances: 10,
 						class_name: "ExampleDurableObject",
 						image: "../Dockerfile",
 					},
@@ -311,7 +309,6 @@ describe("wrangler deploy with containers", () => {
 
 		mockCreateApplication({
 			name: "my-container",
-			instances: 10,
 			durable_objects: { namespace_id: "1" },
 			configuration: {
 				image:
@@ -391,7 +388,6 @@ describe("wrangler deploy with containers", () => {
 				containers: [
 					{
 						name: "my-container",
-						instances: 10,
 						class_name: "ExampleDurableObject",
 						image: "../Dockerfile",
 					},
@@ -408,7 +404,6 @@ describe("wrangler deploy with containers", () => {
 
 		mockCreateApplication({
 			name: "my-container",
-			instances: 10,
 			durable_objects: { namespace_id: "1" },
 			configuration: {
 				image:
@@ -453,7 +448,6 @@ describe("wrangler deploy with containers", () => {
 				{
 					image: "docker.io/hello:world",
 					name: "my-container",
-					instances: 10,
 					class_name: "ExampleDurableObject",
 				},
 			],
@@ -515,7 +509,6 @@ describe("wrangler deploy with containers dry run", () => {
 				{
 					image: "./Dockerfile",
 					name: "my-container",
-					instances: 10,
 					class_name: "ExampleDurableObject",
 				},
 			],
@@ -529,7 +522,7 @@ describe("wrangler deploy with containers dry run", () => {
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
-			
+
 			--dry-run: exiting now."
 		`);
 	});

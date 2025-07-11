@@ -2441,28 +2441,38 @@ function validateContainerApp(
 				);
 			}
 
-			// Validate that we have an image configuration for this container app.
-			// For legacy reasons we have to check both at containerAppOptional.image and
-			// containerAppOptional.configuration.image.
-			//
-			//
-			// At the moment logic in other places downstream of this rely on containerAppOptional.configuration.image be set
-			// so we set it here regardless of which place it is set by the user.
-			if (
-				"image" in containerAppOptional &&
-				containerAppOptional.image !== undefined
-			) {
-				if (containerAppOptional.configuration?.image !== undefined) {
+			if ("configuration" in containerAppOptional) {
+				diagnostics.warnings.push(
+					`"containers.configuration" is deprecated, please use "containers.image" instead.`
+				);
+				if (
+					typeof containerAppOptional !== "object" ||
+					Array.isArray(containerAppOptional.configuration)
+				) {
 					diagnostics.errors.push(
-						`"containers.image" and "containers.configuration.image" fields can't be defined at the same time.`
+						`"containers.configuration" should be an object`
 					);
-					return false;
 				}
-				// consolidate the image into the configuration object
-				// TODO: consolidate it into the top level image field instead
-				containerAppOptional.configuration ??= {};
-				containerAppOptional.configuration.image = containerAppOptional.image;
-				delete containerAppOptional["image"];
+
+				if (containerAppOptional.configuration.disk?.size) {
+					diagnostics.warnings.push(
+						`"containers.configuration.disk" is deprecated, please use pre-set configurations via "instance_type" instead.`
+					);
+					validateOptionalProperty(
+						diagnostics,
+						field,
+						"configuration.disk.size",
+						containerAppOptional.configuration.disk.size,
+						"string"
+					);
+
+					if (containerAppOptional.instance_type) {
+						diagnostics.errors.push(
+							`Cannot set "containers.configuration.disk.size" and "instance_type" at the same time.`
+						);
+					}
+				}
+				containerAppOptional.image = containerAppOptional.configuration.image;
 			}
 
 			// Validate rollout related configs
@@ -2492,14 +2502,6 @@ function validateContainerApp(
 				);
 			}
 
-			// Leaving for legacy reasons
-			// TODO: When cleaning up container.configuration usage in other places clean this up
-			// as well.
-			if (Array.isArray(containerAppOptional.configuration)) {
-				diagnostics.errors.push(
-					`"containers.configuration" is defined as an array, it should be an object`
-				);
-			}
 			if ("instance_type" in containerAppOptional) {
 				validateOptionalProperty(
 					diagnostics,

@@ -2,7 +2,7 @@
 // It's been simplified so it can basically do line diffing only
 // and we can avoid the 600kb sized package.
 import { log } from "@cloudflare/cli";
-import { bold, brandColor, red } from "@cloudflare/cli/colors";
+import { bold, brandColor, dim, green, red } from "@cloudflare/cli/colors";
 
 class Diff {
 	diff(oldString: string[], newString: string[], callback: Callback) {
@@ -488,3 +488,76 @@ export function sortObjectRecursive<T = Record<string | number, unknown>>(
 
 	return sortObjectKeys(objectCopy) as T;
 }
+
+export const renderDiff = (results: Result[]) => {
+	let printedLines: string[] = [];
+	let printedDiff = false;
+	// prints the lines we accumulated to bring context to the edited line
+	const printContext = () => {
+		let index = 0;
+		for (let i = printedLines.length - 1; i >= 0; i--) {
+			if (printedLines[i].trim().startsWith("[")) {
+				log("");
+				index = i;
+				break;
+			}
+		}
+
+		for (let i = index; i < printedLines.length; i++) {
+			log(printedLines[i]);
+			if (printedLines.length - i > 2) {
+				i = printedLines.length - 2;
+				printLine(dim("..."), "  ");
+			}
+		}
+
+		printedLines = [];
+	};
+
+	// go line by line and print diff results
+	for (const lines of results) {
+		const trimmedLines = (lines.value ?? "")
+			.split("\n")
+			.map((e) => e.trim())
+			.filter((e) => e !== "");
+
+		for (const l of trimmedLines) {
+			if (lines.added) {
+				printContext();
+				if (l.startsWith("[")) {
+					printLine("");
+				}
+
+				printedDiff = true;
+				printLine(l, green("+ "));
+			} else if (lines.removed) {
+				printContext();
+				if (l.startsWith("[")) {
+					printLine("");
+				}
+
+				printedDiff = true;
+				printLine(l, red("- "));
+			} else {
+				// if we had printed a diff before this line, print a little bit more
+				// so the user has a bit more context on where the edit happens
+				if (printedDiff) {
+					let printDots = false;
+					if (l.startsWith("[")) {
+						printLine("");
+						printDots = true;
+					}
+
+					printedDiff = false;
+					printLine(l, "  ");
+					if (printDots) {
+						printLine(dim("..."), "  ");
+					}
+					continue;
+				}
+
+				printedLines.push(createLine(l, "  "));
+			}
+		}
+	}
+};
