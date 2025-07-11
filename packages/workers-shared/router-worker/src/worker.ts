@@ -136,12 +136,18 @@ export default {
 
 					if (shouldBlockNonImageResponse) {
 						const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
-						const isImage = resp.headers
-							.get("content-type")
-							?.startsWith("image/");
-						const isPlainText =
-							resp.headers.get("content-type") === "text/plain";
-						if (!isImage && !isPlainText && resp.status !== 304) {
+
+						const contentType = resp.headers.get("content-type") || "";
+
+						// Allow:
+						// - images
+						// - text/plain - used by Next errors
+						const isImageOrPlainText =
+							contentType.startsWith("image/") ||
+							// Matches "text/plain", "text/plain;charset=UTF-8"
+							contentType.split(";")[0] === "text/plain";
+
+						if (!isImageOrPlainText && resp.status !== 304) {
 							analytics.setData({ abuseMitigationBlocked: true });
 							return new Response("Blocked", { status: 403 });
 						}

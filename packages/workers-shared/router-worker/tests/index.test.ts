@@ -315,6 +315,18 @@ describe("unit tests", async () => {
 				},
 				{
 					description:
+						"allows /_next/image requests with remote URLs that have content type text/plain with charset",
+					url: `https://example.com${subpath}_next/image?url=https://example.com/image.jpg`,
+					userWorkerResponse: {
+						body: "fake image data",
+						headers: { "content-type": "text/plain;charset=UTF-8" },
+						status: 200,
+					},
+					expectedStatus: 200,
+					expectedBody: "fake image data",
+				},
+				{
+					description:
 						"allows /_next/image with remote URL and image header regardless of response content",
 					url: `https://example.com${subpath}_next/image?url=https://example.com/image.jpg`,
 					headers: { "sec-fetch-dest": "image" } as HeadersInit,
