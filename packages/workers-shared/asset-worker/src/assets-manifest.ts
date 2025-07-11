@@ -121,30 +121,3 @@ function comparePathHashWithEntry(
 const Uint8ToHexString = (array: Uint8Array) => {
 	return [...array].map((b) => b.toString(16).padStart(2, "0")).join("");
 };
-
-/**
- * Compare two Uint8Array values
- * @param a First array
- * @param b Second array
- * @returns -1 if a < b, 1 if a > b, 0 if equal
- */
-export const compare = (a: Uint8Array, b: Uint8Array) => {
-	if (a.byteLength < b.byteLength) {
-		return -1;
-	}
-	if (a.byteLength > b.byteLength) {
-		return 1;
-	}
-
-	for (const [i, v] of a.entries()) {
-		const bVal = b[i] as number;
-		if (v < bVal) {
-			return -1;
-		}
-		if (v > bVal) {
-			return 1;
-		}
-	}
-
-	return 0;
-};

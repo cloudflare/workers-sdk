@@ -6,7 +6,7 @@ import {
 	PATH_HASH_SIZE,
 } from "../../utils/constants";
 import AssetManifestFixture from "../fixtures/AssetManifest.bin";
-import { binarySearch, compare, hashPath } from "../src/assets-manifest";
+import { binarySearch, hashPath } from "../src/assets-manifest";
 
 const encoder = new TextEncoder();
 
@@ -214,3 +214,30 @@ describe("search methods", async () => {
 		});
 	});
 });
+
+/**
+ * Compare two Uint8Array values
+ * @param a First array
+ * @param b Second array
+ * @returns -1 if a < b, 1 if a > b, 0 if equal
+ */
+function compare(a: Uint8Array, b: Uint8Array) {
+	if (a.byteLength < b.byteLength) {
+		return -1;
+	}
+	if (a.byteLength > b.byteLength) {
+		return 1;
+	}
+
+	for (const [i, v] of a.entries()) {
+		const bVal = b[i] as number;
+		if (v < bVal) {
+			return -1;
+		}
+		if (v > bVal) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
