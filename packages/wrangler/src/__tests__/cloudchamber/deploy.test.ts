@@ -96,7 +96,7 @@ describe("wrangler deploy with containers", () => {
 			containers: [
 				{
 					name: "my-container",
-					instances: 10,
+					max_instances: 10,
 					class_name: "ExampleDurableObject",
 					image: "./Dockerfile",
 				},
@@ -147,7 +147,7 @@ describe("wrangler deploy with containers", () => {
 			containers: [
 				{
 					name: "my-container",
-					instances: 10,
+					max_instances: 10,
 					class_name: "ExampleDurableObject",
 					image: "./Dockerfile",
 				},
@@ -161,7 +161,7 @@ describe("wrangler deploy with containers", () => {
 
 		mockCreateApplication({
 			name: "my-container",
-			instances: 10,
+			max_instances: 10,
 			durable_objects: { namespace_id: "1" },
 			configuration: {
 				image:
@@ -206,7 +206,7 @@ describe("wrangler deploy with containers", () => {
 				{
 					image: "docker.io/hello:world",
 					name: "my-container",
-					instances: 10,
+					max_instances: 10,
 					class_name: "ExampleDurableObject",
 				},
 			],
@@ -217,7 +217,7 @@ describe("wrangler deploy with containers", () => {
 
 		mockCreateApplication({
 			name: "my-container",
-			instances: 10,
+			max_instances: 10,
 			durable_objects: { namespace_id: "1" },
 			scheduling_policy: SchedulingPolicy.DEFAULT,
 		});
@@ -287,7 +287,7 @@ describe("wrangler deploy with containers", () => {
 				containers: [
 					{
 						name: "my-container",
-						instances: 10,
+						max_instances: 10,
 						class_name: "ExampleDurableObject",
 						image: "../Dockerfile",
 					},
@@ -311,7 +311,7 @@ describe("wrangler deploy with containers", () => {
 
 		mockCreateApplication({
 			name: "my-container",
-			instances: 10,
+			max_instances: 10,
 			durable_objects: { namespace_id: "1" },
 			configuration: {
 				image:
@@ -391,7 +391,7 @@ describe("wrangler deploy with containers", () => {
 				containers: [
 					{
 						name: "my-container",
-						instances: 10,
+						max_instances: 10,
 						class_name: "ExampleDurableObject",
 						image: "../Dockerfile",
 					},
@@ -408,7 +408,7 @@ describe("wrangler deploy with containers", () => {
 
 		mockCreateApplication({
 			name: "my-container",
-			instances: 10,
+			max_instances: 10,
 			durable_objects: { namespace_id: "1" },
 			configuration: {
 				image:
@@ -453,7 +453,7 @@ describe("wrangler deploy with containers", () => {
 				{
 					image: "docker.io/hello:world",
 					name: "my-container",
-					instances: 10,
+					max_instances: 10,
 					class_name: "ExampleDurableObject",
 				},
 			],
@@ -515,7 +515,7 @@ describe("wrangler deploy with containers dry run", () => {
 				{
 					image: "./Dockerfile",
 					name: "my-container",
-					instances: 10,
+					max_instances: 10,
 					class_name: "ExampleDurableObject",
 				},
 			],
