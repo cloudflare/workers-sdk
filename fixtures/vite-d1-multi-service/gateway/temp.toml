@@ -1,0 +1,8 @@
+name = "temp-d1-init"
+main = "src/index.ts"
+compatibility_date = "2025-06-16"
+
+[[d1_databases]]
+binding = "shared_db"
+database_name = "shared_db"
+database_id = "local-shared-db"

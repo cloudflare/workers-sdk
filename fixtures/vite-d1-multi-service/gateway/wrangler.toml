@@ -1,0 +1,11 @@
+name = "checkpoint-gateway"
+main = "src/index.ts"
+compatibility_date = "2025-06-16"
+
+[[services]]
+binding = "IDENTITY_SERVICE"
+service = "identity"
+
+[[services]]
+binding = "PASSPORT_SERVICE"
+service = "passport"
