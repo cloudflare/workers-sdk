@@ -542,10 +542,9 @@ describe("cloudchamber image list", () => {
 				});
 			})
 		);
-		await runWrangler("cloudchamber images delete one");
-		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(
-			`"Error when removing image: Error: Must provide a tag to delete"`
-		);
+		await expect(runWrangler("cloudchamber images delete one")).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Invalid image format. Expected IMAGE:TAG]
+			`);
 	});
 });

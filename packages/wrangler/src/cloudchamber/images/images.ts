@@ -30,26 +30,26 @@ export const imagesCommand = (
 ) => {
 	return yargs
 		.command(
-			"list",
+			["list", "ls"],
 			"List images in the Cloudflare managed registry",
 			(args) => listImagesYargs(args),
 			(args) =>
 				handleFailure(
 					`wrangler containers images list`,
-					async (_args: CommonYargsArgvSanitized, config) => {
+					async (_args: CommonYargsArgvSanitized, config: Config) => {
 						await handleListImagesCommand(args, config);
 					},
 					scope
 				)(args)
 		)
 		.command(
-			"delete [image]",
+			["delete <image>", "rm <image>"],
 			"Remove an image from the Cloudflare managed registry",
 			(args) => deleteImageYargs(args),
 			(args) =>
 				handleFailure(
 					`wrangler containers images delete`,
-					async (_args: CommonYargsArgvSanitized, config) => {
+					async (_args: CommonYargsArgvSanitized, config: Config) => {
 						await handleDeleteImageCommand(args, config);
 					},
 					scope
@@ -60,7 +60,7 @@ export const imagesCommand = (
 function deleteImageYargs(yargs: CommonYargsArgv) {
 	return yargs.positional("image", {
 		type: "string",
-		description: "image to delete",
+		description: "Image and tag to delete, of the form IMAGE:TAG",
 		demandOption: true,
 	});
 }
@@ -82,76 +82,68 @@ async function handleDeleteImageCommand(
 	args: StrictYargsOptionsToInterface<typeof deleteImageYargs>,
 	config: Config
 ) {
-	try {
-		if (!args.image.includes(":")) {
-			throw new Error(`Must provide a tag to delete`);
-		}
-
-		const digest = await promiseSpinner(
-			getCreds().then(async (creds) => {
-				const accountId = config.account_id || (await getAccountId(config));
-				const url = new URL(`https://${getCloudflareContainerRegistry()}`);
-				const baseUrl = `${url.protocol}//${url.host}`;
-				const [image, tag] = args.image.split(":");
-				const digest_ = await deleteTag(baseUrl, accountId, image, tag, creds);
-
-				// trigger gc
-				const gcUrl = `${baseUrl}/v2/gc/layers`;
-				const gcResponse = await fetch(gcUrl, {
-					method: "PUT",
-					headers: {
-						Authorization: `Basic ${creds}`,
-						"Content-Type": "application/json",
-					},
-				});
-				if (!gcResponse.ok) {
-					throw new Error(
-						`Failed to delete image ${args.image}: ${gcResponse.status} ${gcResponse.statusText}`
-					);
-				}
-
-				return digest_;
-			}),
-			{ message: `Deleting ${args.image}` }
-		);
-
-		logger.log(`Deleted ${args.image} (${digest})`);
-	} catch (error) {
-		logger.log(`Error when removing image: ${error}`);
+	if (!args.image.includes(":")) {
+		throw new Error("Invalid image format. Expected IMAGE:TAG");
 	}
+
+	const digest = await promiseSpinner(
+		getCreds().then(async (creds) => {
+			const accountId = config.account_id || (await getAccountId(config));
+			const url = new URL(`https://${getCloudflareContainerRegistry()}`);
+			const baseUrl = `${url.protocol}//${url.host}`;
+			const [image, tag] = args.image.split(":");
+			const digest_ = await deleteTag(baseUrl, accountId, image, tag, creds);
+
+			// trigger gc
+			const gcUrl = `${baseUrl}/v2/gc/layers`;
+			const gcResponse = await fetch(gcUrl, {
+				method: "PUT",
+				headers: {
+					Authorization: `Basic ${creds}`,
+					"Content-Type": "application/json",
+				},
+			});
+			if (!gcResponse.ok) {
+				throw new Error(
+					`Failed to delete image ${args.image}: ${gcResponse.status} ${gcResponse.statusText}`
+				);
+			}
+
+			return digest_;
+		}),
+		{ message: `Deleting ${args.image}` }
+	);
+
+	logger.log(`Deleted ${args.image} (${digest})`);
 }
 
 async function handleListImagesCommand(
 	args: StrictYargsOptionsToInterface<typeof listImagesYargs>,
 	config: Config
 ) {
-	try {
-		const responses = await promiseSpinner(
-			getCreds().then(async (creds) => {
-				const repos = await listRepos(creds);
-				const responses_: TagsResponse[] = [];
-				const accountId = config.account_id || (await getAccountId(config));
-				const accountIdPrefix = new RegExp(`^${accountId}/`);
-				const filter = new RegExp(args.filter ?? "");
-				for (const repo of repos) {
-					const stripped = repo.replace(/^\/+/, "");
-					if (filter.test(stripped)) {
-						// get all tags for repo
-						const tags = await listTags(stripped, creds);
-						const name = stripped.replace(accountIdPrefix, "");
-						responses_.push({ name, tags });
-					}
+	const responses = await promiseSpinner(
+		getCreds().then(async (creds) => {
+			const repos = await listRepos(creds);
+			const responses_: TagsResponse[] = [];
+			const accountId = config.account_id || (await getAccountId(config));
+			const accountIdPrefix = new RegExp(`^${accountId}/`);
+			const filter = new RegExp(args.filter ?? "");
+			for (const repo of repos) {
+				const stripped = repo.replace(/^\/+/, "");
+				if (filter.test(stripped)) {
+					// get all tags for repo
+					const tags = await listTags(stripped, creds);
+					const name = stripped.replace(accountIdPrefix, "");
+					responses_.push({ name, tags });
 				}
+			}
 
-				return responses_;
-			}),
-			{ message: "Listing" }
-		);
+			return responses_;
+		}),
+		{ message: "Listing" }
+	);
 
-		await listImages(responses, false, args.json);
-	} catch (error) {
-		logger.log(`Error listing images: ${error}`);
-	}
+	await listImages(responses, false, args.json);
 }
 
 async function listImages(
