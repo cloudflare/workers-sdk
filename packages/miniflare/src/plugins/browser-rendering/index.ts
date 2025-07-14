@@ -2,6 +2,7 @@ import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
 import {
+	getUserBindingServiceName,
 	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -35,7 +36,11 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 			{
 				name: options.browserRendering.binding,
 				service: {
-					name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
+					name: getUserBindingServiceName(
+						BROWSER_RENDERING_PLUGIN_NAME,
+						options.browserRendering.binding,
+						options.browserRendering.remoteProxyConnectionString
+					),
 				},
 			},
 		];
@@ -55,7 +60,11 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 
 		return [
 			{
-				name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
+				name: getUserBindingServiceName(
+					BROWSER_RENDERING_PLUGIN_NAME,
+					options.browserRendering.binding,
+					options.browserRendering.remoteProxyConnectionString
+				),
 				worker: options.browserRendering.remoteProxyConnectionString
 					? remoteProxyClientWorker(
 							options.browserRendering.remoteProxyConnectionString,
