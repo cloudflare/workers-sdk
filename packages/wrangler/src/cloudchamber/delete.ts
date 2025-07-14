@@ -34,7 +34,6 @@ export async function deleteCommand(
 		const deployment = await DeploymentsService.deleteDeploymentV2(
 			deleteArgs.deploymentId
 		);
-		// eslint-disable-next-line no-console
 		logger.json(deployment);
 		return;
 	}
