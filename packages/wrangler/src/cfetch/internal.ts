@@ -1,5 +1,6 @@
 import assert from "node:assert";
-import { fetch, File, FormData, Headers, Response } from "undici";
+import Cloudflare from "cloudflare";
+import { fetch, File, FormData, Headers, Request, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -9,7 +10,77 @@ import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
-import type { HeadersInit, RequestInit } from "undici";
+import type { HeadersInit, RequestInfo, RequestInit } from "undici";
+
+/**
+ * This function constructs an instance of the `Cloudflare` SDK client,
+ * with a custom fetcher that uses `fetchInternal`.
+ */
+export function createCloudflareClient(complianceConfig: ComplianceConfig) {
+	return new Cloudflare({
+		// @ts-expect-error Something is messed up in the `cloudflare` fetch typings...
+		fetch: async (url: RequestInfo, init?: RequestInit): Promise<Response> => {
+			const request = new Request(url, { ...init, duplex: "half" });
+
+			await requireLoggedIn(complianceConfig);
+			const apiToken = requireApiToken();
+
+			const headers = cloneHeaders(request.headers);
+
+			addAuthorizationHeaderIfUnspecified(headers, apiToken);
+			addUserAgent(headers);
+
+			logger.debug(`-- START CF API REQUEST: ${request.method} ${request.url}`);
+			const logRequestHeaders = cloneHeaders(headers);
+			delete logRequestHeaders["Authorization"];
+			logger.debugWithSanitization(
+				"HEADERS:",
+				JSON.stringify(logRequestHeaders, null, 2)
+			);
+
+			logger.debugWithSanitization(
+				"INIT:",
+				JSON.stringify({ ...init }, null, 2)
+			);
+			if (request.body instanceof FormData) {
+				logger.debugWithSanitization(
+					"BODY:",
+					await new Response(request.body).text(),
+					null,
+					2
+				);
+			}
+			logger.debug("-- END CF API REQUEST");
+			const response = await fetch(request, {
+				headers,
+			});
+			const jsonText = await response.clone().text();
+			logger.debug(
+				"-- START CF API RESPONSE:",
+				response.statusText,
+				response.status
+			);
+			const logResponseHeaders = cloneHeaders(response.headers);
+			delete logResponseHeaders["Authorization"];
+			logger.debugWithSanitization(
+				"HEADERS:",
+				JSON.stringify(logResponseHeaders, null, 2)
+			);
+			logger.debugWithSanitization("RESPONSE:", jsonText);
+			logger.debug("-- END CF API RESPONSE");
+			return response;
+		},
+		// We inject authentication using Wrangler's existing auth setup and a custom fetcher (see above for the custom fetch)
+		// However, `cloudflare` doesn't like not being given an API token, so we provide a dummy one
+		// Otherwise, errors like "Could not resolve authentication method." are thrown.
+		apiToken: "dummy",
+		baseURL: getCloudflareApiBaseUrl(complianceConfig),
+	});
+}
+
+export function apiErrorCode(error: unknown, code: number): boolean {
+	return error instanceof Cloudflare.APIError && error.errors[0].code === code;
+}
 
 /*
  * performApiFetch does everything required to make a CF API request,
@@ -157,10 +228,10 @@ export function addAuthorizationHeaderIfUnspecified(
 ): void {
 	if (!("Authorization" in headers)) {
 		if ("apiToken" in auth) {
-			headers["Authorization"] = `Bearer ${auth.apiToken}`;
+			headers["authorization"] = `Bearer ${auth.apiToken}`;
 		} else {
-			headers["X-Auth-Key"] = auth.authKey;
-			headers["X-Auth-Email"] = auth.authEmail;
+			headers["x-auth-key"] = auth.authKey;
+			headers["x-auth-email"] = auth.authEmail;
 		}
 	}
 }
@@ -168,7 +239,7 @@ export function addAuthorizationHeaderIfUnspecified(
 export function addUserAgent(
 	headers: Record<string, string | readonly string[]>
 ): void {
-	headers["User-Agent"] = `wrangler/${wranglerVersion}`;
+	headers["user-agent"] = `wrangler/${wranglerVersion}`;
 }
 
 /**
