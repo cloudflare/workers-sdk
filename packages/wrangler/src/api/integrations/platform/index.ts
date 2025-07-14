@@ -29,6 +29,7 @@ import type {
 	WorkerOptions,
 } from "miniflare";
 
+export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
 export type {
 	Config as Unstable_Config,
