@@ -639,7 +639,7 @@ export async function startDev(args: StartDevOptions) {
 			logger.log(
 				bold(
 					dedent`
-						Support for remote bindings in ${green("`wrangler dev`")} is now available in public beta as a replacement for ${green("`wrangler dev --remote`")}. Try it out now by running ${green("`wrangler dev --x-remote-bindings`")} with the `experimental_remote` option enabled on your resources and let us know how it goes!
+						Support for remote bindings in ${green("`wrangler dev`")} is now available in public beta as a replacement for ${green("`wrangler dev --remote`")}. Try it out now by running ${green("`wrangler dev --x-remote-bindings`")} with the ${green("`experimental_remote`")} option enabled on your resources and let us know how it goes!
 						This gives you access to remote resources in development while retaining all the usual benefits of local dev: fast iteration speed, breakpoint debugging, and more.
 
 						Refer to https://developers.cloudflare.com/workers/development-testing/#remote-bindings for more information.`
