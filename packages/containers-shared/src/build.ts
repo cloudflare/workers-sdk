@@ -1,12 +1,9 @@
 import { spawn } from "child_process";
 import { readFileSync } from "fs";
-import path from "path";
-import { BuildArgs, ContainerDevOptions, Logger } from "./types";
+import { BuildArgs, DockerfileConfig, Logger } from "./types";
 
 export async function constructBuildCommand(
 	options: BuildArgs,
-	/** wrangler config path. used to resolve relative dockerfile path */
-	configPath: string | undefined,
 	logger?: Logger
 ) {
 	const platform = options.platform ?? "linux/amd64";
@@ -27,12 +24,11 @@ export async function constructBuildCommand(
 	if (options.setNetworkToHost) {
 		buildCmd.push("--network", "host");
 	}
-	const baseDir = configPath ? path.dirname(configPath) : process.cwd();
-	const absDockerfilePath = path.resolve(baseDir, options.pathToDockerfile);
-	const dockerfile = readFileSync(absDockerfilePath, "utf-8");
+
+	const dockerfile = readFileSync(options.pathToDockerfile, "utf-8");
 	// pipe in the dockerfile
 	buildCmd.push("-f", "-");
-	buildCmd.push(options.buildContext ?? path.dirname(absDockerfilePath));
+	buildCmd.push(options.buildContext);
 	logger?.debug(`Building image with command: ${buildCmd.join(" ")}`);
 	return { buildCmd, dockerfile };
 }
@@ -92,20 +88,16 @@ export function dockerBuild(
 
 export async function buildImage(
 	dockerPath: string,
-	options: ContainerDevOptions,
-	configPath: string | undefined
+	options: DockerfileConfig,
+	imageTag: string
 ) {
-	// just let the tag default to latest
-	const { buildCmd, dockerfile } = await constructBuildCommand(
-		{
-			tag: options.imageTag,
-			pathToDockerfile: options.image,
-			buildContext: options.imageBuildContext,
-			args: options.args,
-			platform: "linux/amd64",
-		},
-		configPath
-	);
+	const { buildCmd, dockerfile } = await constructBuildCommand({
+		tag: imageTag,
+		pathToDockerfile: options.dockerfile,
+		buildContext: options.image_build_context,
+		args: options.image_vars,
+		platform: "linux/amd64",
+	});
 
 	return dockerBuild(dockerPath, { buildCmd, dockerfile });
 }

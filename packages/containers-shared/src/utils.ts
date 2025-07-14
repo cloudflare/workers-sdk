@@ -2,7 +2,7 @@ import { execFile, spawn, StdioOptions } from "child_process";
 import { existsSync, statSync } from "fs";
 import path from "path";
 import { dockerImageInspect } from "./inspect";
-import { ContainerDevOptions } from "./types";
+import { ContainerNormalisedConfig } from "./types";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = (
@@ -201,10 +201,11 @@ const getContainerIdsFromImage = async (
  */
 export async function checkExposedPorts(
 	dockerPath: string,
-	options: ContainerDevOptions
+	options: ContainerNormalisedConfig,
+	imageTag: string
 ) {
 	const output = await dockerImageInspect(dockerPath, {
-		imageTag: options.imageTag,
+		imageTag: imageTag,
 		formatString: "{{ len .Config.ExposedPorts }}",
 	});
 	if (output === "0") {
