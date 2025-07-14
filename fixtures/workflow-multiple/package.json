@@ -7,7 +7,7 @@
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20250711.0",
+		"@cloudflare/workers-types": "^4.20250712.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

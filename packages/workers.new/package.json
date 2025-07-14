@@ -11,7 +11,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250711.0",
+		"@cloudflare/workers-types": "^4.20250712.0",
 		"@types/node": "catalog:default",
 		"miniflare": "workspace:*",
 		"typescript": "catalog:default",
