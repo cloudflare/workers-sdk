@@ -17,7 +17,7 @@ export type BuildArgs = {
 	tag: string;
 	pathToDockerfile: string;
 	/** image_build_context or args.PATH. if not provided, defaults to the dockerfile directory */
-	buildContext?: string;
+	buildContext: string;
 	/** any env vars that should be passed in at build time */
 	args?: Record<string, string>;
 	/** platform to build for. defaults to linux/amd64 */
@@ -49,19 +49,6 @@ export type InstanceTypeOrLimits =
 			/** if undefined in config, defaults to "dev" */
 			instance_type: InstanceType;
 	  };
-
-/** build/pull agnostic container options */
-export type ContainerDevOptions = {
-	/** may be dockerfile or registry link */
-	image: string;
-	/** formatted as cloudflare-dev/workername-DOclassname:build-id */
-	imageTag: string;
-	/** container's DO class name */
-	class_name: string;
-	imageBuildContext?: string;
-	/** build time args */
-	args?: Record<string, string>;
-};
 
 /**
  * Shared container config that is used regardless of whether the image is from a dockerfile or a registry link.

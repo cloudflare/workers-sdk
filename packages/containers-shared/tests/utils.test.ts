@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from "fs";
+import { ContainerNormalisedConfig } from "../src/types";
 import { checkExposedPorts, isDockerfile } from "./../src/utils";
 import { runInTempDir } from "./helpers/run-in-tmp-dir";
 
@@ -71,6 +72,10 @@ vi.mock("../src/inspect", async (importOriginal) => {
 	};
 });
 
+const containerConfig = {
+	dockerfile: "",
+	class_name: "MyContainer",
+} as ContainerNormalisedConfig;
 describe("checkExposedPorts", () => {
 	beforeEach(() => {
 		docketImageInspectResult = "1";
@@ -79,23 +84,14 @@ describe("checkExposedPorts", () => {
 	it("should not error when some ports are exported", async () => {
 		docketImageInspectResult = "1";
 		await expect(
-			checkExposedPorts("./container-context/Dockerfile", {
-				image: "",
-				imageTag: "",
-				class_name: "MyContainer",
-			})
+			checkExposedPorts("docker", containerConfig, "image:tag")
 		).resolves.toBeUndefined();
 	});
 
 	it("should error, with an appropriate message when no ports are exported", async () => {
 		docketImageInspectResult = "0";
-		expect(
-			checkExposedPorts("./container-context/Dockerfile", {
-				image: "",
-				imageTag: "",
-				class_name: "MyContainer",
-			})
-		).rejects.toThrowErrorMatchingInlineSnapshot(`
+		expect(checkExposedPorts("docker", containerConfig, "image:tag")).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
 				[Error: The container "MyContainer" does not expose any ports. In your Dockerfile, please expose any ports you intend to connect to.
 				For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.
 				]
