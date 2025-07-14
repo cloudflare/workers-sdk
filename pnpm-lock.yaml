@@ -2351,6 +2351,27 @@ importers:
         specifier: workspace:*
         version: link:../../../wrangler
 
+  packages/vite-plugin-cloudflare/playground/dot-env:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250711.0
+        version: 4.20250712.0
+      typescript:
+        specifier: catalog:default
+        version: 5.8.2
+      vite:
+        specifier: catalog:vite-plugin
+        version: 7.0.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
   packages/vite-plugin-cloudflare/playground/durable-objects:
     devDependencies:
       '@cloudflare/vite-plugin':
@@ -18638,7 +18659,7 @@ snapshots:
   dotenv-cli@7.3.0:
     dependencies:
       cross-spawn: 7.0.6
-      dotenv: 16.3.1
+      dotenv: 16.6.1
       dotenv-expand: 10.0.0
       minimist: 1.2.6
 
