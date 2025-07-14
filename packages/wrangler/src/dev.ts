@@ -2,7 +2,9 @@ import assert from "node:assert";
 import events from "node:events";
 import path from "node:path";
 import util from "node:util";
+import { bold, green } from "@cloudflare/cli/colors";
 import { isWebContainer } from "@webcontainer/env";
+import dedent from "ts-dedent";
 import { DevEnv } from "./api";
 import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
@@ -712,6 +714,18 @@ export async function startDev(args: StartDevOptions) {
 				apiToken: requireApiToken(),
 			};
 		};
+
+		if (args.remote) {
+			logger.log(
+				bold(
+					dedent`
+						Support for remote bindings in ${green("`wrangler dev`")} is now available in public beta as a replacement for ${green("`wrangler dev --remote`")}. Try it out now with ${green("`wrangler dev --x-remote-bindings`")} and let us know how it goes!
+						This gives you access to remote data in development while retaining all the usual benefits of local dev: fast iteration speed, breakpoint debugging, and more.
+
+						Refer to https://developers.cloudflare.com/workers/development-testing/#remote-bindings for more information.`
+				)
+			);
+		}
 
 		if (Array.isArray(args.config)) {
 			const runtime = new MultiworkerRuntimeController(args.config.length);
