@@ -103,7 +103,15 @@ export type ContainerApp = {
 	 * @optional
 	 * @default "dev"
 	 */
-	instance_type?: "dev" | "basic" | "standard";
+	instance_type?:
+		| "dev"
+		| "basic"
+		| "standard"
+		| {
+				vcpu?: number;
+				memory_mib?: number;
+				disk_mb?: number;
+		  };
 
 	/**
 	 * @deprecated Use top level `containers` fields instead.
