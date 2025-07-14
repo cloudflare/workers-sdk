@@ -1237,6 +1237,15 @@ test("completeMultipartUpload", async (t) => {
 		message:
 			"completeMultipartUpload: One or more of the specified parts could not be found. (10025)",
 	};
+	// Check completing with multiple parts of same part number
+	const uploady = await r2.createMultipartUpload("key");
+	const part1a = await uploady.uploadPart(1, "1".repeat(PART_SIZE));
+	const part1b = await uploady.uploadPart(1, "2".repeat(PART_SIZE));
+	const part1c = await uploady.uploadPart(1, "3".repeat(PART_SIZE));
+	await t.throwsAsync(
+		uploady.complete([part1a, part1b, part1c]),
+		internalErrorExpectations("completeMultipartUpload")
+	);
 	// Check completing with out-of-order parts
 	const upload5a = await r2.createMultipartUpload("key");
 	part1 = await upload5a.uploadPart(1, "1".repeat(PART_SIZE));
