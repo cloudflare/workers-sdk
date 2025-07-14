@@ -80,7 +80,6 @@ export async function buildAndMaybePush(
 	args: BuildArgs,
 	pathToDocker: string,
 	push: boolean,
-	configPath: string | undefined,
 	containerConfig?: ContainerApp
 ): Promise<{ image: string; pushed: boolean }> {
 	try {
@@ -94,7 +93,6 @@ export async function buildAndMaybePush(
 				platform: args.platform,
 				setNetworkToHost: Boolean(getCIOverrideNetworkModeHost()),
 			},
-			configPath,
 			logger
 		);
 
@@ -166,7 +164,7 @@ export async function buildAndMaybePush(
 				// account ID before checking if it exists in
 				// the managed registry.
 				const [image, hash] = digest.split("@");
-				const resolvedImage = await resolveImageName(
+				const resolvedImage = resolveImageName(
 					account.external_account_id,
 					image
 				);
@@ -239,7 +237,6 @@ export async function buildCommand(
 			},
 			getDockerPath() ?? args.pathToDocker,
 			args.push,
-			config.configPath,
 			container
 		);
 	}

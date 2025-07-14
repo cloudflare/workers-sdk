@@ -3,16 +3,14 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
-import {
-	isDockerfile,
-	verifyDockerInstalled,
-} from "@cloudflare/containers-shared";
+import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { deployContainers, maybeBuildContainer } from "../cloudchamber/deploy";
 import { configFileName, formatConfigSnippet } from "../config";
+import { getNormalizedContainerOptions } from "../containers/config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -434,6 +432,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			noBundle: props.noBundle ?? config.no_bundle,
 		}
 	);
+	const normalisedContainerConfig = await getNormalizedContainerOptions(config);
 
 	// Warn if user tries minify with no-bundle
 	if (props.noBundle && minify) {
@@ -774,13 +773,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// and we have containers so that we don't get into a
 		// disjointed state where the worker updates but the container
 		// fails.
-		if (config.containers) {
+		if (normalisedContainerConfig.length) {
 			// if you have a registry url specified, you don't need docker
-			const hasDockerfiles = config.containers.some((container) =>
-				isDockerfile(
-					container.image ?? container.configuration?.image,
-					config.configPath
-				)
+			const hasDockerfiles = normalisedContainerConfig.some(
+				(container) => "dockerfile" in container
 			);
 			if (hasDockerfiles) {
 				await verifyDockerInstalled(dockerPath, false);
@@ -788,14 +784,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 
 		if (props.dryRun) {
-			if (config.containers) {
-				for (const container of config.containers) {
+			if (normalisedContainerConfig.length) {
+				for (const container of normalisedContainerConfig) {
 					await maybeBuildContainer(
 						container,
 						workerTag ?? "worker-tag",
 						props.dryRun,
-						dockerPath,
-						config.configPath
+						dockerPath
 					);
 				}
 			}
@@ -1034,9 +1029,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		return { versionId, workerTag };
 	}
 
-	if (config.containers) {
+	if (normalisedContainerConfig.length) {
 		assert(versionId && accountId);
-		await deployContainers(config, {
+		await deployContainers(config, normalisedContainerConfig, {
 			versionId,
 			accountId,
 			scriptName,

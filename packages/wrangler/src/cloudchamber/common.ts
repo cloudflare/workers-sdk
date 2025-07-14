@@ -668,7 +668,7 @@ export function checkInstanceType(
 }
 
 // infers the instance type from a given configuration
-function inferInstanceType(
+export function inferInstanceType(
 	configuration: UserDeploymentConfiguration
 ): InstanceType | undefined {
 	if (
