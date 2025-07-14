@@ -91,9 +91,11 @@ function deleteContainerImages() {
 
 	for (const image of containerImagesToDelete) {
 		console.log("Deleting Container image: " + image.name + ":" + image.tag);
-		deleteContainerImage(image)
-			? console.log(`Successfully deleted project ${image.name}:${image.tag}`)
-			: console.log(`Successfully deleted project ${image.name}:${image.tag}`);
+		if (deleteContainerImage(image)) {
+			console.log(`Successfully deleted project ${image.name}:${image.tag}`);
+		} else {
+			console.log(`Failed to delete project ${image.name}:${image.tag}`);
+		}
 	}
 
 	if (containerImagesToDelete.length === 0) {
