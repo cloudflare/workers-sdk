@@ -3659,6 +3659,9 @@ importers:
       undici:
         specifier: catalog:default
         version: 5.28.5
+      wrangler:
+        specifier: workspace:*
+        version: link:../packages/wrangler
 
 packages:
 
