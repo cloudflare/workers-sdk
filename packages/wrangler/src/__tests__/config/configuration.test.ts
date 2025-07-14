@@ -2489,6 +2489,40 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"containers.durable_objects\\" is deprecated. Use the \\"class_name\\" field instead."
 				`);
 			});
+
+			it("should error for invalid containers.configuration fields", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								configuration: {
+									image: "config-image",
+									secrets: [],
+									labels: [],
+									disk: { size: "2GB" },
+									memory: "256MB",
+									vcpu: 0.5,
+									memory_mib: 256,
+									invalid_field: "should not be here",
+									another_invalid: 123,
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				console.dir(diagnostics.warnings);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", \\"configuration.disk\\" should be set via \\"instance_type\\".
+					  - Unexpected fields found in containers.configuration field: \\"invalid_field\\",\\"another_invalid\\""
+				`);
+			});
 		});
 
 		describe("[kv_namespaces]", () => {

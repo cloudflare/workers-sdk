@@ -2560,6 +2560,14 @@ function validateContainerApp(
 					"durable_objects",
 				]
 			);
+			if ("configuration" in containerAppOptional) {
+				validateAdditionalProperties(
+					diagnostics,
+					`${field}.configuration`,
+					Object.keys(containerAppOptional.configuration),
+					["image", "secrets", "labels", "disk", "memory", "vcpu", "memory_mib"]
+				);
+			}
 		}
 
 		if (diagnostics.errors.length > 0) {
