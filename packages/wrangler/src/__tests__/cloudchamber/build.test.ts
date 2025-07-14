@@ -7,8 +7,6 @@ import {
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
 import { ensureDiskLimits } from "../../cloudchamber/build";
-import { resolveAppDiskSize } from "../../cloudchamber/common";
-import { type ContainerApp } from "../../config/environment";
 import { UserError } from "../../errors";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -17,12 +15,7 @@ import { mockAccountV4 as mockAccount } from "./utils";
 import type { CompleteAccountCustomer } from "@cloudflare/containers-shared";
 
 const MiB = 1024 * 1024;
-const defaultConfiguration: ContainerApp = {
-	name: "abc",
-	class_name: "",
-	instances: 0,
-	image: "",
-};
+
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	const actual = await importOriginal();
 	return Object.assign({}, actual, {
@@ -255,13 +248,7 @@ describe("buildAndMaybePush", () => {
 				ensureDiskLimits({
 					requiredSize: 333 * MiB, // 333MiB
 					account: accountBase,
-					containerApp: {
-						...defaultConfiguration,
-						configuration: {
-							image: "",
-							disk: { size: "3GB" }, // This exceeds the account limit of 2GB
-						},
-					},
+					configDiskSize: 3000 * MiB, // This exceeds the account limit of 2GB
 				})
 			).rejects.toThrow("Exceeded account limits");
 		});
@@ -271,7 +258,7 @@ describe("buildAndMaybePush", () => {
 				ensureDiskLimits({
 					requiredSize: 3000 * MiB, // 3GiB
 					account: accountBase,
-					containerApp: undefined,
+					configDiskSize: undefined,
 				})
 			).rejects.toThrow("Image too large");
 		});
@@ -280,32 +267,10 @@ describe("buildAndMaybePush", () => {
 			const result = await ensureDiskLimits({
 				requiredSize: 256 * MiB, // 256MiB
 				account: accountBase,
-				containerApp: undefined,
+				configDiskSize: undefined,
 			});
 
 			expect(result).toEqual(undefined);
-		});
-	});
-
-	describe("resolveAppDiskSize", () => {
-		it("should return parsed app disk size", () => {
-			const result = resolveAppDiskSize({
-				...defaultConfiguration,
-				configuration: { image: "", disk: { size: "500MB" } },
-			});
-			expect(result).toBeCloseTo(500 * 1000 * 1000, -5);
-		});
-
-		it("should return default size when disk size not set", () => {
-			const result = resolveAppDiskSize({
-				...defaultConfiguration,
-				configuration: { image: "" },
-			});
-			expect(result).toBeCloseTo(2 * 1000 * 1000 * 1000, -5);
-		});
-
-		it("should return undefined if app is not passed", () => {
-			expect(resolveAppDiskSize(undefined)).toBeUndefined();
 		});
 	});
 });
