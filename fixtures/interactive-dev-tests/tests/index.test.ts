@@ -7,7 +7,7 @@ import rl from "node:readline";
 import stream from "node:stream";
 import { setTimeout } from "node:timers/promises";
 import stripAnsi from "strip-ansi";
-import { fetch } from "undici";
+import { fetch, RequestInfo } from "undici";
 import {
 	afterAll,
 	afterEach,
@@ -557,6 +557,170 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			}, waitForOptions);
 
 			wrangler.pty.kill();
+		});
+	}
+);
+
+baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
+	"multi-containers dev",
+	{ retry: 0, timeout: 50000 },
+	() => {
+		let tmpDir: string;
+		beforeAll(async () => {
+			tmpDir = fs.mkdtempSync(
+				path.join(tmpdir(), "wrangler-multi-containers-")
+			);
+			fs.cpSync(
+				path.resolve(__dirname, "../", "multi-containers-app"),
+				path.join(tmpDir),
+				{
+					recursive: true,
+				}
+			);
+
+			const ids = getContainerIds();
+			if (ids.length > 0) {
+				execSync("docker rm -f " + ids.join(" "), {
+					encoding: "utf8",
+				});
+			}
+		});
+
+		afterEach(async () => {
+			const ids = getContainerIds();
+			if (ids.length > 0) {
+				execSync("docker rm -f " + ids.join(" "), {
+					encoding: "utf8",
+				});
+			}
+		});
+		afterAll(async () => {
+			try {
+				fs.rmSync(tmpDir, { recursive: true, force: true });
+			} catch (e) {
+				// It seems that Windows doesn't let us delete this, with errors like:
+				//
+				// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
+				// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+				// Serialized Error: {
+				// 	"code": "EBUSY",
+				// 	"errno": -4082,
+				// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
+				// 	"syscall": "rmdir",
+				// }
+				console.error(e);
+			}
+		});
+
+		async function fetchWithTimeout(input: RequestInfo) {
+			const controller = new AbortController();
+			const { signal } = controller;
+			setTimeout(3_000).then(() => {
+				controller.abort();
+			});
+			return await fetch(input, { signal });
+		}
+
+		it("should print build logs for all the containers", async () => {
+			const wrangler = await startWranglerDev([
+				"dev",
+				"-c",
+				path.join(tmpDir, "wrangler.jsonc"),
+			]);
+			await vi.waitFor(
+				() => {
+					expect(wrangler.stdout).toContain('"name": "simple-node-app-a"');
+					expect(wrangler.stdout).toContain('"name": "simple-node-app-b"');
+				},
+				{ timeout: 10_000 }
+			);
+			wrangler.pty.kill();
+		});
+
+		it("should rebuild all the containers when the hotkey is pressed", async () => {
+			const wrangler = await startWranglerDev([
+				"dev",
+				"-c",
+				path.join(tmpDir, "wrangler.jsonc"),
+			]);
+
+			await vi.waitFor(
+				async () => {
+					const text = await (await fetchWithTimeout(wrangler.url)).text();
+					expect(text).toBe(
+						'Response from A: "Hello from Container A" Response from B: "Hello from Container B"'
+					);
+				},
+				{ timeout: 30_000, interval: 1000 }
+			);
+
+			const tmpDockerfileAPath = path.join(tmpDir, "DockerfileA");
+			const dockerFileAContent = fs.readFileSync(tmpDockerfileAPath, "utf8");
+			fs.writeFileSync(
+				tmpDockerfileAPath,
+				dockerFileAContent.replace(
+					'"Hello from Container A"',
+					'"Hello World from Container A"'
+				),
+				"utf-8"
+			);
+
+			const tmpDockerfileBPath = path.join(tmpDir, "DockerfileB");
+			const dockerFileBContent = fs.readFileSync(tmpDockerfileBPath, "utf8");
+			fs.writeFileSync(
+				tmpDockerfileBPath,
+				dockerFileBContent.replace(
+					'"Hello from Container B"',
+					'"Hello from the B Container"'
+				),
+				"utf-8"
+			);
+
+			wrangler.pty.write("r");
+
+			await vi.waitFor(
+				async () => {
+					const text = await (await fetchWithTimeout(wrangler.url)).text();
+					expect(text).toBe(
+						'Response from A: "Hello World from Container A" Response from B: "Hello from the B Container"'
+					);
+				},
+				{ timeout: 30_000, interval: 1000 }
+			);
+
+			fs.writeFileSync(tmpDockerfileAPath, dockerFileAContent, "utf-8");
+			fs.writeFileSync(tmpDockerfileBPath, dockerFileBContent, "utf-8");
+
+			wrangler.pty.kill();
+		});
+
+		it("should clean up any containers that were started", async () => {
+			const wrangler = await startWranglerDev([
+				"dev",
+				"-c",
+				path.join(tmpDir, "wrangler.jsonc"),
+			]);
+			// wait container to be ready
+			await vi.waitFor(
+				async () => {
+					const text = await (await fetchWithTimeout(wrangler.url)).text();
+					expect(text).toBe(
+						'Response from A: "Hello from Container A" Response from B: "Hello from Container B"'
+					);
+				},
+				{ timeout: 30_000, interval: 1000 }
+			);
+			const ids = getContainerIds();
+			expect(ids.length).toBe(2);
+
+			wrangler.pty.kill("SIGINT");
+			await new Promise<void>((resolve) => {
+				wrangler.pty.onExit(() => resolve());
+			});
+			vi.waitFor(() => {
+				const remainingIds = getContainerIds();
+				expect(remainingIds.length).toBe(0);
+			});
 		});
 	}
 );
