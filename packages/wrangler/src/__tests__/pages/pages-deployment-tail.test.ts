@@ -440,7 +440,9 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
-			expect(JSON.parse(std.out)).toEqual(deserializeToJson(serializedMessage));
+			expect(JSON.parse(std.out)).toEqual(
+				deserializeJsonMessage(serializedMessage)
+			);
 			await api.closeHelper();
 		});
 
@@ -455,7 +457,9 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
-			expect(JSON.parse(std.out)).toEqual(deserializeToJson(serializedMessage));
+			expect(JSON.parse(std.out)).toEqual(
+				deserializeJsonMessage(serializedMessage)
+			);
 			await api.closeHelper();
 		});
 
@@ -470,7 +474,9 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
-			expect(JSON.parse(std.out)).toEqual(deserializeToJson(serializedMessage));
+			expect(JSON.parse(std.out)).toEqual(
+				deserializeJsonMessage(serializedMessage)
+			);
 			await api.closeHelper();
 		});
 
@@ -485,7 +491,9 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
-			expect(JSON.parse(std.out)).toEqual(deserializeToJson(serializedMessage));
+			expect(JSON.parse(std.out)).toEqual(
+				deserializeJsonMessage(serializedMessage)
+			);
 			await api.closeHelper();
 		});
 
@@ -500,7 +508,9 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
-			expect(JSON.parse(std.out)).toEqual(deserializeToJson(serializedMessage));
+			expect(JSON.parse(std.out)).toEqual(
+				deserializeJsonMessage(serializedMessage)
+			);
 			await api.closeHelper();
 		});
 
@@ -734,7 +744,9 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
-			expect(JSON.parse(std.out)).toEqual(deserializeToJson(serializedMessage));
+			expect(JSON.parse(std.out)).toEqual(
+				deserializeJsonMessage(serializedMessage)
+			);
 			await api.closeHelper();
 		});
 
@@ -854,7 +866,7 @@ function isRequest(event: TailEventMessageType): event is RequestEvent {
  * @param message a buffer of data received from the websocket
  * @returns a JSON object ready to be compared against
  */
-function deserializeToJson(message: WebSocket.RawData) {
+function deserializeJsonMessage(message: WebSocket.RawData) {
 	return JSON.parse(message.toString());
 }
 
