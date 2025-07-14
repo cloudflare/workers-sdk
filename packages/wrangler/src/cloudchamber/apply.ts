@@ -188,22 +188,34 @@ function observabilityToConfiguration(
 
 function containerAppToInstanceType(
 	containerApp: ContainerApp
-): InstanceType | undefined {
+): Partial<UserDeploymentConfiguration> {
+	let configuration = (containerApp.configuration ??
+		{}) as Partial<UserDeploymentConfiguration>;
+
 	if (containerApp.instance_type !== undefined) {
-		return containerApp.instance_type as InstanceType;
+		if (typeof containerApp.instance_type === "string") {
+			return { instance_type: containerApp.instance_type as InstanceType };
+		}
+
+		configuration = {
+			vcpu: containerApp.instance_type.vcpu,
+			memory_mib: containerApp.instance_type.memory_mib,
+			disk: {
+				size_mb: containerApp.instance_type.disk_mb,
+			},
+		};
 	}
 
 	// if no other configuration is set, we fall back to the default "dev" instance type
-	const configuration =
-		containerApp.configuration as UserDeploymentConfiguration;
 	if (
-		configuration.disk === undefined &&
+		configuration.disk?.size_mb === undefined &&
 		configuration.vcpu === undefined &&
-		configuration.memory === undefined &&
 		configuration.memory_mib === undefined
 	) {
-		return InstanceType.DEV;
+		return { instance_type: InstanceType.DEV };
 	}
+
+	return configuration;
 }
 
 function containerAppToCreateApplication(
@@ -220,8 +232,8 @@ function containerAppToCreateApplication(
 	const instanceType = containerAppToInstanceType(containerApp);
 	const configuration: UserDeploymentConfiguration = {
 		...(containerApp.configuration as UserDeploymentConfiguration),
+		...instanceType,
 		observability: observabilityConfiguration,
-		instance_type: instanceType,
 	};
 
 	// this should have been set to a default value of worker-name-class-name if unspecified by the user
