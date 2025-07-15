@@ -10,6 +10,8 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250712.0",
+		"@types/jest-image-snapshot": "^6.4.0",
+		"jest-image-snapshot": "^6.4.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

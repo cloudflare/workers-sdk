@@ -15,6 +15,9 @@
 			"test": true,
 		},
 	},
+	"images": {
+		"binding": "IMAGES",
+	},
 	"kv_namespaces": [
 		{
 			"binding": "MY_KV",
