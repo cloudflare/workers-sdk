@@ -201,7 +201,7 @@ function containerConfigToAPIConfig(
 			...("instance_type" in containerApp
 				? { instance_type: containerApp.instance_type }
 				: {
-						disk: { size_mb: containerApp.disk_size },
+						disk: { size_mb: containerApp.disk_mb },
 						memory_mib: containerApp.memory_mib,
 						vcpu: containerApp.vcpu,
 					}),
@@ -518,7 +518,7 @@ const doAction = async (
 };
 
 /**
- * clean up so we get a nicer diff
+ * clean up fields so we get a nicer diff
  */
 export function cleanPrevious(
 	prev: CreateApplicationRequest,

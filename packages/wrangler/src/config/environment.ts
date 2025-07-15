@@ -114,20 +114,9 @@ export type ContainerApp = {
 		image?: string;
 		labels?: { name: string; value: string }[];
 		secrets?: { name: string; type: "env"; secret: string }[];
-		disk?:
-			| {
-					/**
-					 * @deprecated Use `size_mb` instead.
-					 */
-					size: string;
-			  }
-			| { size_mb: number };
+		disk?: { size_mb: number };
 		vcpu?: number;
 		memory_mib?: number;
-		/**
-		 * @deprecated Use `size_mb` instead.
-		 */
-		memory?: string;
 	};
 
 	/**

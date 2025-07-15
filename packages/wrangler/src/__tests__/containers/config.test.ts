@@ -187,7 +187,7 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
-	it("should handle (deprecated) disk size configuration", async () => {
+	it("should handle custom limit configuration", async () => {
 		mockIsDockerfile.mockReturnValue(false);
 
 		const config: Config = {
@@ -201,7 +201,9 @@ describe("getNormalizedContainerOptions", () => {
 					class_name: "TestContainer",
 					image: "registry.example.com/test:latest",
 					configuration: {
-						disk: { size: "5GiB" },
+						disk: { size_mb: 5000 },
+						memory_mib: 1024,
+						vcpu: 2,
 					},
 				},
 			],
@@ -224,7 +226,9 @@ describe("getNormalizedContainerOptions", () => {
 			scheduling_policy: "default",
 			rollout_step_percentage: 25,
 			rollout_kind: "full_auto",
-			disk_size: 5368709120,
+			disk_mb: 5000,
+			memory_mib: 1024,
+			vcpu: 2,
 			registry_link: "registry.example.com/test:latest",
 			constraints: undefined,
 		});
