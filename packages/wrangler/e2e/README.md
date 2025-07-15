@@ -1,22 +1,39 @@
 # E2E tests
 
-This folder contains e2e tests for Wrangler. The tests run in CI against a specific Cloudflare account.
+This folder contains e2e tests for Wrangler.
 
-You can also run these tests locally, but you'll need access to the `8d783f274e1f82dc46744c297b015a2f` (DevProd Testing) Cloudflare account. Once you have access, generate an API token for the account with the same scopes Wrangler requests.
+## Run the tests
 
-You can then run the e2e test suite with the following commands (run them in root of the repo):
+Run each of the test files as a separately cached turbo task.
 
 ```zsh
-CLOUDFLARE_ACCOUNT_ID=8d783f274e1f82dc46744c297b015a2f CLOUDFLARE_API_TOKEN=<cloudflare-testing-api-token> WRANGLER="node --no-warnings $PWD/packages/wrangler/bin/wrangler.js" WRANGLER_IMPORT="$PWD/packages/wrangler/wrangler-dist/cli.js" pnpm test:e2e -F wrangler
+pnpm test:e2e:wrangler
 ```
 
-> Make sure you have run `pnpm i` since any changes to package dependencies - common when switching git branches or pulling updates from GitHub.
-> Also, remember to replace `<cloudflare-testing-api-token>` with the actual API token you generated.
+## Configuration
 
-If you want to run a subset of tests (e.g. just one) while retaining the turborepo cache for the builds of the dependencies, you can provide the list of test files via the `WRANGLER_E2E_TEST_FILE` environment variable. For example (eliding the other env vars for clarity):
+You can configure how these e2e tests are run, in terms of the backend Cloudflare account, Wrangler and Miniflare distributable binaries and libraries, and which test file to run.
+
+### Cloudflare Credentials
+
+Cloudflare credentials are provided to the tests by setting `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`.
+
+- If you don't provide these then only the local e2e tests are executed.
+- If you don't provide the "DevProd Testing" Cloudflare account (as `CLOUDFLARE_ACCOUNT_ID=8d783f274e1f82dc46744c297b015a2f`), tests that require that specific account are not executed.
+
+To fully run the tests you should generate an API token for the "DevProd Testing" account:
 
 ```zsh
-CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... WRANGLER=... WRANGLER_IMPORT=... WRANGLER_E2E_TEST_FILE=c3-integration.test pnpm test:e2e -F wrangler
+CLOUDFLARE_ACCOUNT_ID=8d783f274e1f82dc46744c297b015a2f CLOUDFLARE_API_TOKEN=<cloudflare-testing-api-token> pnpm test:e2e:wrangler
+```
+
+### Focusing on a single e2e test file
+
+If you want to run a subset of tests (e.g. just one) while retaining the turborepo cache for the builds of the dependencies, you can provide the list of test files via the `WRANGLER_E2E_TEST_FILE` environment variable.
+For example to run the C3 integration test file only:
+
+```zsh
+WRANGLER_E2E_TEST_FILE=c3-integration.test pnpm test:e2e:wrangler
 ```
 
 ## How tests are written
