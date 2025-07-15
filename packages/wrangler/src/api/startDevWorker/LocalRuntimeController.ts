@@ -380,6 +380,7 @@ export class LocalRuntimeController extends RuntimeController {
 	};
 
 	#teardown = async (): Promise<void> => {
+		this.emitTeardownEvent();
 		logger.debug("LocalRuntimeController teardown beginning...");
 
 		if (this.#mf) {
@@ -420,6 +421,9 @@ export class LocalRuntimeController extends RuntimeController {
 	}
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
 		this.emit("reloadComplete", data);
+	}
+	emitTeardownEvent() {
+		this.emit("teardown");
 	}
 }
 

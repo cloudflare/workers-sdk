@@ -75,6 +75,7 @@ export abstract class Controller<
 type RuntimeControllerEventMap = ControllerEventMap & {
 	reloadStart: [ReloadStartEvent];
 	reloadComplete: [ReloadCompleteEvent];
+	teardown: [];
 };
 export abstract class RuntimeController extends Controller<RuntimeControllerEventMap> {
 	// ******************

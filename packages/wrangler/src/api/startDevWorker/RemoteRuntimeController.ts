@@ -333,6 +333,8 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async teardown() {
+		this.emitTeardownEvent();
+
 		if (this.#session) {
 			logger.log(chalk.dim("⎔ Shutting down remote preview..."));
 		}
@@ -351,5 +353,8 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
 		this.emit("reloadComplete", data);
+	}
+	emitTeardownEvent() {
+		this.emit("teardown");
 	}
 }

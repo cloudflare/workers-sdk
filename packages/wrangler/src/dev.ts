@@ -45,7 +45,6 @@ import type {
 	StartDevWorkerInput,
 	Trigger,
 } from "./api";
-import type { RuntimeController } from "./api/startDevWorker/BaseController";
 import type { Config, Environment } from "./config";
 import type {
 	EnvironmentNonInheritable,
@@ -693,11 +692,7 @@ export async function startDev(args: StartDevOptions) {
 			devEnv = new DevEnv({
 				config: new ConfigController(),
 				bundler: new BundlerController(),
-				runtimes: [
-					...(args.remote
-						? [new RemoteRuntimeController()]
-						: [new LocalRuntimeController()]),
-				] as RuntimeController[],
+				runtimes: [new RemoteRuntimeController(), new LocalRuntimeController()],
 				proxy: new ProxyController(),
 			});
 
