@@ -29,6 +29,7 @@ import { cleanForInstanceType, promiseSpinner } from "./common";
 import {
 	diffLines,
 	printLine,
+	renderDiff,
 	sortObjectRecursive,
 	stripUndefined,
 } from "./helpers/diff";
@@ -271,7 +272,6 @@ export async function apply(
 	args: {
 		skipDefaults: boolean | undefined;
 		env?: string;
-		imageUpdateRequired?: boolean;
 	},
 	config: Config
 ) {
@@ -345,16 +345,6 @@ export async function apply(
 					// we should never actually reach this point, but just in case
 					`${config.name}-${appConfigNoDefaults.class_name}`
 			];
-
-		// while configuration.image is deprecated to the user, we still resolve to this for now.
-		if (!appConfigNoDefaults.configuration?.image && application) {
-			appConfigNoDefaults.configuration ??= {};
-		}
-
-		if (!args.imageUpdateRequired && application) {
-			appConfigNoDefaults.configuration ??= {};
-			appConfigNoDefaults.configuration.image = application.configuration.image;
-		}
 
 		const accountId = config.account_id || (await getAccountId(config));
 		const appConfig = containerAppToCreateApplication(
@@ -646,9 +636,6 @@ export async function applyCommand(
 		{
 			skipDefaults: args.skipDefaults,
 			env: args.env,
-			// For the apply command we want this to default to true
-			// so that the image can be updated if the user modified it.
-			imageUpdateRequired: true,
 		},
 		config
 	);

@@ -80,12 +80,6 @@ function mockModifyApplication(
 }
 
 describe("cloudchamber apply", () => {
-	/* eslint no-irregular-whitespace: ["error", { "skipTemplates": true }]
-	   ---
-	   Wrangler emits \u200a instead of "regular" whitespace in some cases. eslint doesn't like
-	   this so we disable the warning when mixed whitespace is used in template strings.
-	 */
-
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockCLIOutput();
 
@@ -123,7 +117,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ NEW my-container-app
+			├ NEW my-container-app
 			│
 			│   [[containers]]
 			│   name = \\"my-container-app\\"
@@ -138,7 +132,7 @@ describe("cloudchamber apply", () => {
 			│   instance_type = \\"dev\\"
 			│
 			│
-			│  SUCCESS  Created application my-container-app (Application ID: abc)
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -193,7 +187,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│ - instances = 3
@@ -205,7 +199,7 @@ describe("cloudchamber apply", () => {
 			│ + tier = 2
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -271,7 +265,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│   instances = 0
@@ -279,7 +273,7 @@ describe("cloudchamber apply", () => {
 			│ + max_instances = 3
 			│   name = \\"my-container-app\\"
 			│
-			├ NEW my-container-app-2
+			├ NEW my-container-app-2
 			│
 			│   [[containers]]
 			│   name = \\"my-container-app-2\\"
@@ -294,10 +288,10 @@ describe("cloudchamber apply", () => {
 			│   tier = 1
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			│
-			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -358,7 +352,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│ - instances = 3
@@ -366,7 +360,7 @@ describe("cloudchamber apply", () => {
 			│   name = \\"my-container-app\\"
 			│ Skipping application rollout
 			│
-			├ NEW my-container-app-2
+			├ NEW my-container-app-2
 			│
 			│   [[containers]]
 			│   name = \\"my-container-app-2\\"
@@ -381,7 +375,7 @@ describe("cloudchamber apply", () => {
 			│   tier = 1
 			│
 			│
-			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -442,14 +436,14 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
 			│
-			├ NEW my-container-app-2
+			├ NEW my-container-app-2
 			│
 			│   [[containers]]
 			│   name = \\"my-container-app-2\\"
@@ -464,10 +458,10 @@ describe("cloudchamber apply", () => {
 			│   tier = 1
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			│
-			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -576,7 +570,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│ - instances = 3
@@ -599,7 +593,7 @@ describe("cloudchamber apply", () => {
 			│   name = \\"MY_SECRET_2\\"
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -708,7 +702,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ no changes my-container-app
+			├ no changes my-container-app
 			│
 			╰ No changes to be made
 
@@ -820,9 +814,9 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ no changes my-container-app
+			├ no changes my-container-app
 			│
-			├ no changes my-container-app-2
+			├ no changes my-container-app-2
 			│
 			╰ No changes to be made
 
@@ -931,121 +925,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ no changes my-container-app
-			│
-			╰ No changes to be made
-
-			"
-		`);
-		expect(std.stderr).toMatchInlineSnapshot(`""`);
-	});
-
-	test("can apply an application, and there is no changes (two applications)", async () => {
-		setIsTTY(false);
-		const app = {
-			name: "my-container-app",
-			instances: 3,
-			class_name: "DurableObjectClass",
-			image: "./Dockerfile",
-			configuration: {
-				labels: [
-					{
-						name: "name",
-						value: "value",
-					},
-					{
-						name: "name-2",
-						value: "value-2",
-					},
-				],
-				secrets: [
-					{
-						name: "MY_SECRET",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME",
-					},
-					{
-						name: "MY_SECRET_1",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_1",
-					},
-					{
-						name: "MY_SECRET_2",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_2",
-					},
-				],
-			},
-		};
-		writeWranglerConfig({
-			name: "my-container",
-			containers: [app, { ...app, name: "my-container-app-2" }],
-		});
-
-		const completeApp = {
-			id: "abc",
-			name: "my-container-app",
-			instances: 3,
-			created_at: new Date().toString(),
-			class_name: "DurableObjectClass",
-			account_id: "1",
-			scheduling_policy: SchedulingPolicy.REGIONAL,
-			configuration: {
-				image: "./Dockerfile",
-				labels: [
-					{
-						name: "name",
-						value: "value",
-					},
-					{
-						name: "name-2",
-						value: "value-2",
-					},
-				],
-				secrets: [
-					{
-						name: "MY_SECRET",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME",
-					},
-					{
-						name: "MY_SECRET_1",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_1",
-					},
-					{
-						name: "MY_SECRET_2",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_2",
-					},
-				],
-				disk: {
-					size: "2GB",
-					size_mb: 2000,
-				},
-				vcpu: 0.0625,
-				memory: "256MB",
-				memory_mib: 256,
-			},
-
-			constraints: {
-				tier: 1,
-			},
-		};
-
-		mockGetApplications([
-			{ ...completeApp, version: 1 },
-			{ ...completeApp, version: 1, name: "my-container-app-2", id: "abc2" },
-		]);
-		await runWrangler("cloudchamber apply");
-		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
-			│
-			│ Container application changes
-			│
-			├ no changes my-container-app
-			│
-			├ no changes my-container-app-2
+			├ no changes my-container-app
 			│
 			╰ No changes to be made
 
@@ -1099,7 +979,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [containers.configuration]
 			│   ...
@@ -1112,7 +992,7 @@ describe("cloudchamber apply", () => {
 			│   ...
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1169,7 +1049,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [containers.configuration]
 			│   ...
@@ -1182,7 +1062,7 @@ describe("cloudchamber apply", () => {
 			│   ...
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1244,7 +1124,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
@@ -1254,7 +1134,7 @@ describe("cloudchamber apply", () => {
 			│   ...
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1316,7 +1196,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
@@ -1326,7 +1206,7 @@ describe("cloudchamber apply", () => {
 			│   ...
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1387,7 +1267,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
@@ -1397,7 +1277,7 @@ describe("cloudchamber apply", () => {
 			│   ...
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1461,7 +1341,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
@@ -1471,7 +1351,7 @@ describe("cloudchamber apply", () => {
 			│   ...
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1535,7 +1415,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ no changes my-container-app
+			├ no changes my-container-app
 			│
 			╰ No changes to be made
 
@@ -1587,7 +1467,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ no changes my-container-app
+			├ no changes my-container-app
 			│
 			╰ No changes to be made
 
@@ -1647,7 +1527,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ no changes my-container-app
+			├ no changes my-container-app
 			│
 			╰ No changes to be made
 
@@ -1681,7 +1561,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ NEW my-container-app
+			├ NEW my-container-app
 			│
 			│   [[containers]]
 			│   name = \\"my-container-app\\"
@@ -1696,7 +1576,7 @@ describe("cloudchamber apply", () => {
 			│   instance_type = \\"dev\\"
 			│
 			│
-			│  SUCCESS  Created application my-container-app (Application ID: abc)
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -1753,7 +1633,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│ - instances = 3
@@ -1771,7 +1651,7 @@ describe("cloudchamber apply", () => {
 			│ + tier = 2
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1829,7 +1709,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│ - instances = 3
@@ -1847,7 +1727,7 @@ describe("cloudchamber apply", () => {
 			│ + tier = 2
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1893,7 +1773,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ NEW my-container-app
+			├ NEW my-container-app
 			│
 			│   [[containers]]
 			│   name = \\"my-container-app\\"
@@ -1904,11 +1784,11 @@ describe("cloudchamber apply", () => {
 			│   tier = 2
 			│
 			│   [containers.configuration]
-			│   image = \\"${registry}/some-account-id/hello:1.0\\"
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
 			│   instance_type = \\"dev\\"
 			│
 			│
-			│  SUCCESS  Created application my-container-app (Application ID: abc)
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -1967,10 +1847,10 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [containers.configuration]
-			│   image = \\"${registry}/some-account-id/hello:1.0\\"
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
 			│ - instance_type = \\"dev\\"
 			│ + instance_type = \\"standard\\"
 			│
@@ -1980,7 +1860,7 @@ describe("cloudchamber apply", () => {
 			│ + tier = 2
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
