@@ -343,6 +343,12 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250712.0
         version: 4.20250712.0
+      '@types/jest-image-snapshot':
+        specifier: ^6.4.0
+        version: 6.4.0
+      jest-image-snapshot:
+        specifier: ^6.4.0
+        version: 6.4.0
       typescript:
         specifier: catalog:default
         version: 5.8.2
