@@ -48,11 +48,14 @@ writeFileSync(
 	"utf8"
 );
 
-const deployOut = execSync("pnpm dlx wrangler deploy -c remote-wrangler.json", {
-	stdio: "pipe",
-	cwd: "./.tmp",
-	env,
-});
+const deployOut = execSync(
+	"pnpm wrangler deploy -c .tmp/remote-wrangler.json",
+	{
+		stdio: "pipe",
+		cwd: "./.tmp",
+		env,
+	}
+);
 if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(`${deployOut}`)) {
 	throw new Error(`Failed to deploy ${remoteWorkerName}`);
 }
@@ -62,7 +65,7 @@ try {
 		env,
 	});
 } finally {
-	execSync(`pnpm dlx wrangler delete --name ${remoteWorkerName}`, { env });
+	execSync(`pnpm wrangler delete --name ${remoteWorkerName}`, { env });
 	rmSync("./.tmp", { recursive: true, force: true });
 }
 

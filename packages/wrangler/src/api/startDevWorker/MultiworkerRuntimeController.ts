@@ -117,6 +117,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				const remoteProxySession = await maybeStartOrUpdateRemoteProxySession(
 					{
 						name: configBundle.name,
+						complianceRegion: configBundle.complianceRegion,
 						bindings:
 							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
 							{},

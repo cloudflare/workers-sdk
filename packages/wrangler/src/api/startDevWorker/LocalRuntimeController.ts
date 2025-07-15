@@ -210,6 +210,7 @@ export class LocalRuntimeController extends RuntimeController {
 					await maybeStartOrUpdateRemoteProxySession(
 						{
 							name: configBundle.name,
+							complianceRegion: configBundle.complianceRegion,
 							bindings:
 								convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
 								{},
