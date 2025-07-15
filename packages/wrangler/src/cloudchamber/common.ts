@@ -193,7 +193,7 @@ export async function fillOpenAPIConfiguration(
 	}
 
 	OpenAPI.HEADERS = {
-		...(OpenAPI.HEADERS !== undefined ? OpenAPI.HEADERS : {}),
+		...(OpenAPI.HEADERS ?? {}),
 		...Object.fromEntries(headers.entries()),
 	};
 }

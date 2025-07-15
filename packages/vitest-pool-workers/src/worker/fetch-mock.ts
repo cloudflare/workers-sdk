@@ -21,14 +21,22 @@ interface BufferedRequest {
 	request: Request;
 	body: Uint8Array | null;
 }
-const requests = new Map<string, BufferedRequest>();
-const responses = new Map<string, Response>();
+
+class SingleAccessMap<K, V> extends Map<K, V> {
+	override get(key: K): V | undefined {
+		const value = super.get(key);
+		super.delete(key);
+		return value;
+	}
+}
+
+const requests = new SingleAccessMap<string, BufferedRequest>();
+const responses = new SingleAccessMap<string, Response>();
 
 const originalFetch = fetch;
 setDispatcher((opts, handler) => {
 	const serialisedOptions = JSON.stringify(opts);
 	const request = requests.get(serialisedOptions);
-	requests.delete(serialisedOptions);
 	assert(request !== undefined, "Expected dispatch to come from fetch()");
 	originalFetch
 		.call(globalThis, request.request, { body: request.body })
@@ -151,7 +159,7 @@ globalThis.fetch = async (input, init) => {
 			responseChunks.push(chunk);
 			return true;
 		},
-		onComplete(_trailers: unknown) {
+		onComplete() {
 			if (abortSignalAborted) {
 				responseReject(
 					castAsAbortError(new Error("The operation was aborted"))
@@ -161,7 +169,6 @@ globalThis.fetch = async (input, init) => {
 
 			// `maybeResponse` will be `undefined` if we mocked the request
 			const maybeResponse = responses.get(serialisedOptions);
-			responses.delete(serialisedOptions);
 			if (maybeResponse === undefined) {
 				const responseBody = Buffer.concat(responseChunks);
 				const response = new Response(responseBody, {
@@ -183,7 +190,7 @@ globalThis.fetch = async (input, init) => {
 				responseResolve(maybeResponse);
 			}
 		},
-		onBodySent(_chunk: unknown) {}, // (ignored)
+		onBodySent() {}, // (ignored)
 	};
 
 	fetchMock.dispatch(dispatchOptions, dispatchHandlers);

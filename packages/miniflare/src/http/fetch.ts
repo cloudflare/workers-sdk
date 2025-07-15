@@ -92,17 +92,6 @@ export type DispatchFetch = (
 ) => Promise<Response>;
 
 export type AnyHeaders = http.IncomingHttpHeaders | string[];
-function addHeader(
-	/* mut */ headers: undici.Headers,
-	key: string,
-	value: string
-) {
-	headers.set(key, value);
-}
-
-function isArray(headers: UndiciHeaders): headers is string[] {
-	return Array.isArray(headers);
-}
 
 function isIterable(
 	headers: UndiciHeaders
@@ -115,7 +104,7 @@ function convertUndiciHeadersToStandard(
 	headers: NonNullable<UndiciHeaders>
 ): undici.Headers {
 	// Array format: https://github.com/nodejs/undici/blob/main/docs/docs/api/Dispatcher.md?plain=1#L1157
-	if (isArray(headers)) {
+	if (Array.isArray(headers)) {
 		let name: string | undefined = undefined;
 		let value: string | undefined = undefined;
 		const standardHeaders = new undici.Headers();
@@ -209,11 +198,11 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 	) {
 		// Reconstruct URL using runtime origin specified with `dispatchFetch()`
 		const originalURL = this.userRuntimeOrigin + path;
-		addHeader(headers, CoreHeaders.ORIGINAL_URL, originalURL);
-		addHeader(headers, CoreHeaders.DISABLE_PRETTY_ERROR, "true");
+		headers.set(CoreHeaders.ORIGINAL_URL, originalURL);
+		headers.set(CoreHeaders.DISABLE_PRETTY_ERROR, "true");
 		if (this.cfBlobJson !== undefined) {
 			// Only add this header if a `cf` override was set
-			addHeader(headers, CoreHeaders.CF_BLOB, this.cfBlobJson);
+			headers.set(CoreHeaders.CF_BLOB, this.cfBlobJson);
 		}
 	}
 
