@@ -684,8 +684,10 @@ export function inferInstanceType(
 	}
 }
 
-// removes any disk, memory, or vcpu that have been set in an objects configuration. Used for rendering
-// diffs.
+/**
+ * THIS IS ONLY USED FOR CLOUDCHAMBER APPLY
+ * removes any disk, memory, or vcpu that have been set in an objects configuration. Used for rendering diffs.
+ */
 export function cleanForInstanceType(
 	app: CreateApplicationRequest
 ): ContainerApp {
