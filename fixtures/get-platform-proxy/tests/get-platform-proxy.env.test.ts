@@ -227,7 +227,7 @@ describe("getPlatformProxy - env", () => {
 			// @ts-expect-error The stream types aren't matching up properly?
 			const response = await env.IMAGES.input(streams[1])
 				.transform({ rotate: 90 })
-				.transform({ width: 128 })
+				.transform({ width: 128, height: 100 })
 				.transform({ blur: 20 })
 				.output({ format: "image/png" });
 
