@@ -212,7 +212,7 @@ describe("getPlatformProxy - env", () => {
 			const { IMAGES } = env;
 			const streams = (
 				await fetch("https://playground.devprod.cloudflare.dev/flares.png")
-			).body?.tee()!;
+			).body!.tee();
 
 			// @ts-expect-error The stream types aren't matching up properly?
 			expect(await IMAGES.info(streams[0])).toMatchInlineSnapshot(`
