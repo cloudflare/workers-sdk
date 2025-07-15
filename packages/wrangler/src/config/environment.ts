@@ -92,25 +92,42 @@ export type ContainerApp = {
 	 * @optional
 	 * @default "default"
 	 */
-	scheduling_policy?: "regional" | "moon" | "default";
+	scheduling_policy?: "default" | "moon" | "regional";
 
 	/**
-	 * The instance type to be used for the container. This sets preconfigured options for vcpu and memory
+	 * The instance type to be used for the container.
+	 * dev = 1/16 vCPU, 256 MiB memory, and 2 GB disk
+	 * basic = 1/4 vCPU, 1 GiB memory, and 4 GB disk
+	 * standard = 1/2 vCPU, 4 GiB memory, and 4 GB disk
 	 * @optional
+	 * @default "dev"
 	 */
 	instance_type?: "dev" | "basic" | "standard";
 
 	/**
 	 * @deprecated Use top level `containers` fields instead.
 	 * `configuration.image` should be `image`
-	 * `configuration.disk` should be set via `instance_type`
+	 * limits should be set via `instance_type`
 	 * @hidden
 	 */
 	configuration?: {
 		image?: string;
 		labels?: { name: string; value: string }[];
 		secrets?: { name: string; type: "env"; secret: string }[];
-		disk?: { size: string };
+		disk?:
+			| {
+					/**
+					 * @deprecated Use `size_mb` instead.
+					 */
+					size: string;
+			  }
+			| { size_mb: number };
+		vcpu?: number;
+		memory_mib?: number;
+		/**
+		 * @deprecated Use `size_mb` instead.
+		 */
+		memory?: string;
 	};
 
 	/**
