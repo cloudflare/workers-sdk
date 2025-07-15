@@ -196,14 +196,15 @@ for (const source of imageSource) {
 			it(`will be able to interact with the container`, async () => {
 				const worker = helper.runLongLived("wrangler dev");
 				const ready = await worker.waitForReady();
-				await worker.readUntil(/Container image\(s\) ready/);
 
-				let response = await fetch(`${ready.url}/status`);
-				expect(response.status).toBe(200);
-				let status = await response.json();
-				expect(status).toBe(false);
+				await vi.waitFor(async () => {
+					const response = await fetch(`${ready.url}/status`);
+					expect(response.status).toBe(200);
+					const status = await response.json();
+					expect(status).toBe(false);
+				});
 
-				response = await fetch(`${ready.url}/start`);
+				let response = await fetch(`${ready.url}/start`);
 				let text = await response.text();
 				expect(response.status).toBe(200);
 				expect(text).toBe("Container create request sent...");
@@ -212,7 +213,7 @@ for (const source of imageSource) {
 				await new Promise((resolve) => setTimeout(resolve, 2_000));
 
 				response = await fetch(`${ready.url}/status`);
-				status = await response.json();
+				const status = await response.json();
 				expect(response.status).toBe(200);
 				expect(status).toBe(true);
 
