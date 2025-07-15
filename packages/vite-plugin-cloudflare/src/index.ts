@@ -75,6 +75,7 @@ import type {
 	ResolvedPluginConfig,
 	WorkerConfig,
 } from "./plugin-config";
+import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { Unstable_RawConfig } from "wrangler";
 
@@ -264,45 +265,6 @@ if (import.meta.hot) {
 								path.resolve(resolvedViteConfig.root, clientOutputDirectory)
 							),
 						};
-
-						if (workerConfig.containers?.length) {
-							workerConfig.containers = workerConfig.containers.map(
-								(container) => {
-									const baseDir = workerConfig.configPath
-										? path.dirname(workerConfig.configPath)
-										: resolvedViteConfig.root;
-									// Wrangler's config validation resolves to container.configuration.image, even though it is deprecated
-									const image =
-										container.configuration?.image ?? container.image;
-									if (isDockerfile(image, workerConfig.configPath)) {
-										const output = {
-											...container,
-											image: path.resolve(baseDir, image),
-											...(container.image_build_context
-												? {
-														image_build_context: path.resolve(
-															baseDir,
-															container.image_build_context
-														),
-													}
-												: {}),
-										};
-										// however, wrangler deploy will re-resolve the config, so we should
-										// deduplicate the container.configuration.image field in favour of
-										// the non-deprecated one when we write out the deploy config
-										delete output.configuration?.image;
-										// if we don't do this, we get a warning that container.configuration is deprecated
-										if (
-											output.configuration &&
-											Object.keys(output.configuration).length === 0
-										) {
-											delete output.configuration;
-										}
-										return output;
-									} else return container;
-								}
-							);
-						}
 					} else {
 						workerConfig.assets = undefined;
 					}
@@ -488,7 +450,7 @@ if (import.meta.hot) {
 							"Build ID should be set if containers are enabled and defined"
 						);
 						// Assemble container options and build if necessary
-						const containerOptions = await getContainerOptions(
+						const containerOptions = getContainerOptions(
 							entryWorkerConfig,
 							containerBuildId
 						);
@@ -497,12 +459,11 @@ if (import.meta.hot) {
 						if (containerOptions) {
 							// keep track of them so we can clean up later
 							for (const container of containerOptions) {
-								containerImageTagsSeen.add(container.imageTag);
+								containerImageTagsSeen.add(container.image_tag);
 							}
 
 							await prepareContainerImagesForDev({
 								dockerPath,
-								configPath: entryWorkerConfig.configPath,
 								containerOptions,
 								onContainerImagePreparationStart: () => {},
 								onContainerImagePreparationEnd: () => {},
@@ -1082,25 +1043,36 @@ if (import.meta.hot) {
 	 * with image tag set to well-known dev format, or undefined if
 	 * containers are not enabled or not configured.
 	 */
-	async function getContainerOptions(
+	function getContainerOptions(
 		config: WorkerConfig,
 		containerBuildId: string
-	) {
+	): ContainerDevOptions[] | undefined {
 		if (!config.containers?.length || config.dev.enable_containers === false) {
 			return undefined;
 		}
-
 		return config.containers.map((container) => {
-			return {
-				image: container.image ?? container.configuration?.image,
-				imageTag: getDevContainerImageName(
-					container.class_name,
-					containerBuildId
-				),
-				args: container.image_vars,
-				imageBuildContext: container.image_build_context,
-				class_name: container.class_name,
-			};
+			if (isDockerfile(container.image, config.configPath)) {
+				return {
+					dockerfile: container.image,
+					image_build_context:
+						container.image_build_context ?? path.dirname(container.image),
+					image_vars: container.image_vars,
+					class_name: container.class_name,
+					image_tag: getDevContainerImageName(
+						container.class_name,
+						containerBuildId
+					),
+				};
+			} else {
+				return {
+					image_uri: container.image,
+					class_name: container.class_name,
+					image_tag: getDevContainerImageName(
+						container.class_name,
+						containerBuildId
+					),
+				};
+			}
 		});
 	}
 }

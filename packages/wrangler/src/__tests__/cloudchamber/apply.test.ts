@@ -80,12 +80,6 @@ function mockModifyApplication(
 }
 
 describe("cloudchamber apply", () => {
-	/* eslint no-irregular-whitespace: ["error", { "skipTemplates": true }]
-	   ---
-	   Wrangler emits \u200a instead of "regular" whitespace in some cases. eslint doesn't like
-	   this so we disable the warning when mixed whitespace is used in template strings.
-	 */
-
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockCLIOutput();
 
@@ -107,7 +101,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					instances: 3,
 					class_name: "DurableObjectClass",
-					image: "./Dockerfile",
+					image: "docker.io/something:hello",
 					constraints: {
 						tier: 2,
 					},
@@ -123,7 +117,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ NEW my-container-app
+			├ NEW my-container-app
 			│
 			│   [[containers]]
 			│   name = \\"my-container-app\\"
@@ -134,11 +128,11 @@ describe("cloudchamber apply", () => {
 			│     tier = 2
 			│
 			│     [containers.configuration]
-			│     image = \\"./Dockerfile\\"
+			│     image = \\"docker.io/something:hello\\"
 			│     instance_type = \\"dev\\"
 			│
 			│
-			│  SUCCESS  Created application my-container-app (Application ID: abc)
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -155,7 +149,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 4,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					constraints: {
 						tier: 2,
 					},
@@ -172,7 +166,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					disk: {
 						size: "2GB",
 						size_mb: 2000,
@@ -193,7 +187,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│ - instances = 3
@@ -210,7 +204,7 @@ describe("cloudchamber apply", () => {
 			│ +   tier = 2
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -231,13 +225,13 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					max_instances: 3,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 				},
 				{
 					name: "my-container-app-2",
 					max_instances: 3,
 					class_name: "DurableObjectClass2",
-					image: "other-app/Dockerfile",
+					image: "docker.io/other-app:boop",
 				},
 			],
 		});
@@ -252,7 +246,7 @@ describe("cloudchamber apply", () => {
 				version: 1,
 				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					disk: {
 						size: "2GB",
 						size_mb: 2000,
@@ -276,7 +270,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│   instances = 0
@@ -285,7 +279,7 @@ describe("cloudchamber apply", () => {
 			│   name = \\"my-container-app\\"
 			│   scheduling_policy = \\"default\\"
 			│
-			├ NEW my-container-app-2
+			├ NEW my-container-app-2
 			│
 			│   [[containers]]
 			│   name = \\"my-container-app-2\\"
@@ -293,16 +287,16 @@ describe("cloudchamber apply", () => {
 			│   scheduling_policy = \\"default\\"
 			│
 			│     [containers.configuration]
-			│     image = \\"other-app/Dockerfile\\"
+			│     image = \\"docker.io/other-app:boop\\"
 			│     instance_type = \\"dev\\"
 			│
 			│     [containers.constraints]
 			│     tier = 1
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
-			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -320,14 +314,14 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					instances: 4,
 					class_name: "DurableObjectClass",
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					rollout_kind: "none",
 				},
 				{
 					name: "my-container-app-2",
 					instances: 1,
 					class_name: "DurableObjectClass2",
-					image: "other-app/Dockerfile",
+					image: "docker.io/other-app:boop",
 				},
 			],
 		});
@@ -341,7 +335,7 @@ describe("cloudchamber apply", () => {
 				version: 1,
 				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					disk: {
 						size: "2GB",
 						size_mb: 2000,
@@ -363,7 +357,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│ - instances = 3
@@ -373,7 +367,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Skipping application rollout
 			│
-			├ NEW my-container-app-2
+			├ NEW my-container-app-2
 			│
 			│   [[containers]]
 			│   name = \\"my-container-app-2\\"
@@ -381,14 +375,14 @@ describe("cloudchamber apply", () => {
 			│   scheduling_policy = \\"default\\"
 			│
 			│     [containers.configuration]
-			│     image = \\"other-app/Dockerfile\\"
+			│     image = \\"docker.io/other-app:boop\\"
 			│     instance_type = \\"dev\\"
 			│
 			│     [containers.constraints]
 			│     tier = 1
 			│
 			│
-			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -406,13 +400,13 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					instances: 4,
 					class_name: "DurableObjectClass",
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 				},
 				{
 					name: "my-container-app-2",
 					instances: 1,
 					class_name: "DurableObjectClass2",
-					image: "other-app/Dockerfile",
+					image: "docker.io/other-app:boop",
 				},
 			],
 		});
@@ -426,7 +420,7 @@ describe("cloudchamber apply", () => {
 				version: 1,
 				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					disk: {
 						size: "2GB",
 						size_mb: 2000,
@@ -449,7 +443,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│ - instances = 3
@@ -457,7 +451,7 @@ describe("cloudchamber apply", () => {
 			│   name = \\"my-container-app\\"
 			│   scheduling_policy = \\"default\\"
 			│
-			├ NEW my-container-app-2
+			├ NEW my-container-app-2
 			│
 			│   [[containers]]
 			│   name = \\"my-container-app-2\\"
@@ -465,16 +459,16 @@ describe("cloudchamber apply", () => {
 			│   scheduling_policy = \\"default\\"
 			│
 			│     [containers.configuration]
-			│     image = \\"other-app/Dockerfile\\"
+			│     image = \\"docker.io/other-app:boop\\"
 			│     instance_type = \\"dev\\"
 			│
 			│     [containers.constraints]
 			│     tier = 1
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
-			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -492,7 +486,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					instances: 4,
 					class_name: "DurableObjectClass",
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					configuration: {
 						labels: [
 							{
@@ -534,7 +528,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					labels: [
 						{
 							name: "name",
@@ -583,7 +577,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│ - instances = 3
@@ -620,7 +614,7 @@ describe("cloudchamber apply", () => {
 			│       type = \\"env\\"
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -638,7 +632,7 @@ describe("cloudchamber apply", () => {
 					class_name: "DurableObjectClass",
 					name: "my-container-app",
 					instances: 3,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					configuration: {
 						labels: [
 							{
@@ -681,7 +675,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					labels: [
 						{
 							name: "name",
@@ -729,7 +723,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ no changes my-container-app
+			├ no changes my-container-app
 			│
 			╰ No changes to be made
 
@@ -744,7 +738,7 @@ describe("cloudchamber apply", () => {
 			name: "my-container-app",
 			instances: 3,
 			class_name: "DurableObjectClass",
-			image: "./Dockerfile",
+			image: "docker.io/beep:boop",
 			configuration: {
 				labels: [
 					{
@@ -789,7 +783,7 @@ describe("cloudchamber apply", () => {
 			account_id: "1",
 			scheduling_policy: SchedulingPolicy.DEFAULT,
 			configuration: {
-				image: "./Dockerfile",
+				image: "docker.io/beep:boop",
 				labels: [
 					{
 						name: "name",
@@ -841,9 +835,9 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ no changes my-container-app
+			├ no changes my-container-app
 			│
-			├ no changes my-container-app-2
+			├ no changes my-container-app-2
 			│
 			╰ No changes to be made
 
@@ -861,7 +855,7 @@ describe("cloudchamber apply", () => {
 					class_name: "DurableObjectClass",
 					name: "my-container-app",
 					instances: 3,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					configuration: {
 						labels: [
 							{
@@ -904,7 +898,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					labels: [
 						{
 							name: "name",
@@ -952,121 +946,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ no changes my-container-app
-			│
-			╰ No changes to be made
-
-			"
-		`);
-		expect(std.stderr).toMatchInlineSnapshot(`""`);
-	});
-
-	test("can apply an application, and there is no changes (two applications)", async () => {
-		setIsTTY(false);
-		const app = {
-			name: "my-container-app",
-			instances: 3,
-			class_name: "DurableObjectClass",
-			image: "./Dockerfile",
-			configuration: {
-				labels: [
-					{
-						name: "name",
-						value: "value",
-					},
-					{
-						name: "name-2",
-						value: "value-2",
-					},
-				],
-				secrets: [
-					{
-						name: "MY_SECRET",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME",
-					},
-					{
-						name: "MY_SECRET_1",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_1",
-					},
-					{
-						name: "MY_SECRET_2",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_2",
-					},
-				],
-			},
-		};
-		writeWranglerConfig({
-			name: "my-container",
-			containers: [app, { ...app, name: "my-container-app-2" }],
-		});
-
-		const completeApp = {
-			id: "abc",
-			name: "my-container-app",
-			instances: 3,
-			created_at: new Date().toString(),
-			class_name: "DurableObjectClass",
-			account_id: "1",
-			scheduling_policy: SchedulingPolicy.REGIONAL,
-			configuration: {
-				image: "./Dockerfile",
-				labels: [
-					{
-						name: "name",
-						value: "value",
-					},
-					{
-						name: "name-2",
-						value: "value-2",
-					},
-				],
-				secrets: [
-					{
-						name: "MY_SECRET",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME",
-					},
-					{
-						name: "MY_SECRET_1",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_1",
-					},
-					{
-						name: "MY_SECRET_2",
-						type: SecretAccessType.ENV,
-						secret: "SECRET_NAME_2",
-					},
-				],
-				disk: {
-					size: "2GB",
-					size_mb: 2000,
-				},
-				vcpu: 0.0625,
-				memory: "256MB",
-				memory_mib: 256,
-			},
-
-			constraints: {
-				tier: 1,
-			},
-		};
-
-		mockGetApplications([
-			{ ...completeApp, version: 1 },
-			{ ...completeApp, version: 1, name: "my-container-app-2", id: "abc2" },
-		]);
-		await runWrangler("cloudchamber apply");
-		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
-			│
-			│ Container application changes
-			│
-			├ no changes my-container-app
-			│
-			├ no changes my-container-app-2
+			├ no changes my-container-app
 			│
 			╰ No changes to be made
 
@@ -1085,7 +965,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 				},
 			],
 		});
@@ -1099,7 +979,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					disk: {
 						size: "2GB",
 						size_mb: 2000,
@@ -1120,9 +1000,9 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
-			│     image = \\"./Dockerfile\\"
+			│     image = \\"docker.io/beep:boop\\"
 			│     instance_type = \\"dev\\"
 			│
 			│ + [containers.configuration.observability.logs]
@@ -1133,7 +1013,7 @@ describe("cloudchamber apply", () => {
 			│     tier = 1
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1155,7 +1035,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 				},
 			],
 		});
@@ -1169,7 +1049,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					disk: {
 						size: "2GB",
 						size_mb: 2000,
@@ -1190,9 +1070,9 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
-			│     image = \\"./Dockerfile\\"
+			│     image = \\"docker.io/beep:boop\\"
 			│     instance_type = \\"dev\\"
 			│
 			│ + [containers.configuration.observability.logs]
@@ -1203,7 +1083,7 @@ describe("cloudchamber apply", () => {
 			│     tier = 1
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1225,7 +1105,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 				},
 			],
 		});
@@ -1239,7 +1119,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					observability: {
 						logs: {
 							enabled: true,
@@ -1265,7 +1145,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│     instance_type = \\"dev\\"
 			│
@@ -1277,7 +1157,7 @@ describe("cloudchamber apply", () => {
 			│     tier = 1
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1299,7 +1179,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 				},
 			],
 		});
@@ -1313,7 +1193,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					observability: {
 						logs: {
 							enabled: true,
@@ -1339,7 +1219,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│     instance_type = \\"dev\\"
 			│
@@ -1351,7 +1231,7 @@ describe("cloudchamber apply", () => {
 			│     tier = 1
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1372,7 +1252,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 				},
 			],
 		});
@@ -1386,7 +1266,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					observability: {
 						logs: {
 							enabled: true,
@@ -1412,7 +1292,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│     instance_type = \\"dev\\"
 			│
@@ -1424,7 +1304,7 @@ describe("cloudchamber apply", () => {
 			│     tier = 1
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1445,7 +1325,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 				},
 			],
 		});
@@ -1459,7 +1339,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					observability: {
 						logs: {
 							enabled: true,
@@ -1488,7 +1368,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│     instance_type = \\"dev\\"
 			│
@@ -1500,7 +1380,7 @@ describe("cloudchamber apply", () => {
 			│     tier = 1
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1522,7 +1402,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 				},
 			],
 		});
@@ -1536,7 +1416,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					observability: {
 						logs: {
 							enabled: true,
@@ -1564,7 +1444,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ no changes my-container-app
+			├ no changes my-container-app
 			│
 			╰ No changes to be made
 
@@ -1582,7 +1462,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 				},
 			],
 		});
@@ -1596,7 +1476,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					disk: {
 						size: "2GB",
 						size_mb: 2000,
@@ -1616,7 +1496,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ no changes my-container-app
+			├ no changes my-container-app
 			│
 			╰ No changes to be made
 
@@ -1634,7 +1514,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					class_name: "DurableObjectClass",
 					instances: 1,
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 				},
 			],
 		});
@@ -1648,7 +1528,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					observability: {
 						logs: {
 							enabled: false,
@@ -1676,7 +1556,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ no changes my-container-app
+			├ no changes my-container-app
 			│
 			╰ No changes to be made
 
@@ -1695,7 +1575,7 @@ describe("cloudchamber apply", () => {
 					instances: 3,
 					class_name: "DurableObjectClass",
 					instance_type: "dev",
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					constraints: {
 						tier: 2,
 					},
@@ -1710,7 +1590,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ NEW my-container-app
+			├ NEW my-container-app
 			│
 			│   [[containers]]
 			│   name = \\"my-container-app\\"
@@ -1721,11 +1601,11 @@ describe("cloudchamber apply", () => {
 			│     tier = 2
 			│
 			│     [containers.configuration]
-			│     image = \\"./Dockerfile\\"
+			│     image = \\"docker.io/beep:boop\\"
 			│     instance_type = \\"dev\\"
 			│
 			│
-			│  SUCCESS  Created application my-container-app (Application ID: abc)
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -1744,7 +1624,7 @@ describe("cloudchamber apply", () => {
 					instances: 4,
 					class_name: "DurableObjectClass",
 					instance_type: "standard",
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					constraints: {
 						tier: 2,
 					},
@@ -1761,7 +1641,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					disk: {
 						size: "2GB",
 						size_mb: 2000,
@@ -1782,7 +1662,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│ - instances = 3
@@ -1791,7 +1671,7 @@ describe("cloudchamber apply", () => {
 			│   scheduling_policy = \\"regional\\"
 			│
 			│     [containers.configuration]
-			│     image = \\"./Dockerfile\\"
+			│     image = \\"docker.io/beep:boop\\"
 			│ -   instance_type = \\"dev\\"
 			│ +   instance_type = \\"standard\\"
 			│
@@ -1800,7 +1680,7 @@ describe("cloudchamber apply", () => {
 			│ +   tier = 2
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1820,7 +1700,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					instances: 4,
 					class_name: "DurableObjectClass",
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					constraints: {
 						tier: 2,
 					},
@@ -1837,7 +1717,7 @@ describe("cloudchamber apply", () => {
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
-					image: "./Dockerfile",
+					image: "docker.io/beep:boop",
 					disk: {
 						size: "4GB",
 						size_mb: 4000,
@@ -1858,7 +1738,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│   [[containers]]
 			│ - instances = 3
@@ -1867,7 +1747,7 @@ describe("cloudchamber apply", () => {
 			│   scheduling_policy = \\"regional\\"
 			│
 			│     [containers.configuration]
-			│     image = \\"./Dockerfile\\"
+			│     image = \\"docker.io/beep:boop\\"
 			│ -   instance_type = \\"basic\\"
 			│ +   instance_type = \\"dev\\"
 			│
@@ -1876,7 +1756,7 @@ describe("cloudchamber apply", () => {
 			│ +   tier = 2
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 
@@ -1922,7 +1802,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ NEW my-container-app
+			├ NEW my-container-app
 			│
 			│   [[containers]]
 			│   name = \\"my-container-app\\"
@@ -1937,7 +1817,7 @@ describe("cloudchamber apply", () => {
 			│     instance_type = \\"dev\\"
 			│
 			│
-			│  SUCCESS  Created application my-container-app (Application ID: abc)
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -1996,7 +1876,7 @@ describe("cloudchamber apply", () => {
 			│
 			│ Container application changes
 			│
-			├ EDIT my-container-app
+			├ EDIT my-container-app
 			│
 			│     [containers.configuration]
 			│     image = \\"${registry}/some-account-id/hello:1.0\\"
@@ -2008,7 +1888,7 @@ describe("cloudchamber apply", () => {
 			│ +   tier = 2
 			│
 			│
-			│  SUCCESS  Modified application my-container-app
+			│  SUCCESS  Modified application my-container-app
 			│
 			╰ Applied changes
 

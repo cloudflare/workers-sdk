@@ -219,7 +219,9 @@ async function getMiniflareOptionsFromConfig(args: {
 			migrations: config.migrations,
 			imagesLocalMode: true,
 			tails: [],
-			containers: undefined,
+			containerDOClassNames: new Set(
+				config.containers?.map((c) => c.class_name)
+			),
 			containerBuildId: undefined,
 		},
 		remoteProxyConnectionString,
@@ -369,6 +371,9 @@ export function unstable_getMiniflareWorkerOptions(
 			fallthrough: rule.fallthrough,
 		}));
 
+	const containerDOClassNames = new Set(
+		config.containers?.map((c) => c.class_name)
+	);
 	const bindings = getBindings(config, env, true, {}, true);
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		{
@@ -382,7 +387,7 @@ export function unstable_getMiniflareWorkerOptions(
 			migrations: config.migrations,
 			imagesLocalMode: !!options?.imagesLocalMode,
 			tails: config.tail_consumers,
-			containers: config.containers,
+			containerDOClassNames,
 			containerBuildId: options?.containerBuildId,
 		},
 		options?.remoteProxyConnectionString,
@@ -435,7 +440,7 @@ export function unstable_getMiniflareWorkerOptions(
 						useSQLite,
 						container: getImageNameFromDOClassName({
 							doClassName: binding.class_name,
-							containers: config.containers,
+							containerDOClassNames,
 							containerBuildId: options?.containerBuildId,
 						}),
 					} satisfies DurableObjectDefinition,

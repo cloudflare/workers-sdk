@@ -29,7 +29,7 @@ import { getClassNamesWhichUseSQLite } from "./class-names-sqlite";
 import type { ServiceFetch } from "../api";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
-import type { ContainerApp, ContainerEngine } from "../config/environment";
+import type { ContainerEngine } from "../config/environment";
 import type {
 	CfD1Database,
 	CfDispatchNamespace,
@@ -207,7 +207,7 @@ export interface ConfigBundle {
 	bindVectorizeToProd: boolean;
 	imagesLocalMode: boolean;
 	testScheduled: boolean;
-	containers: ContainerApp[] | undefined;
+	containerDOClassNames: Set<string> | undefined;
 	containerBuildId: string | undefined;
 	containerEngine: ContainerEngine | undefined;
 }
@@ -526,7 +526,7 @@ type MiniflareBindingsConfig = Pick<
 	| "imagesLocalMode"
 	| "tails"
 	| "complianceRegion"
-	| "containers"
+	| "containerDOClassNames"
 	| "containerBuildId"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
@@ -1047,7 +1047,7 @@ export function buildMiniflareBindingOptions(
 						useSQLite: classNameToUseSQLite.get(className),
 						container: getImageNameFromDOClassName({
 							doClassName: className,
-							containers: config.containers,
+							containerDOClassNames: config.containerDOClassNames,
 							containerBuildId: config.containerBuildId,
 						}),
 					},
@@ -1409,10 +1409,10 @@ export async function buildMiniflareOptions(
  */
 export function getImageNameFromDOClassName(options: {
 	doClassName: string;
-	containers?: ContainerApp[];
+	containerDOClassNames?: Set<string>;
 	containerBuildId?: string;
 }): DOContainerOptions | undefined {
-	if (!options.containers || !options.containers.length) {
+	if (!options.containerDOClassNames || !options.containerDOClassNames.size) {
 		return undefined;
 	}
 	assert(
@@ -1420,17 +1420,12 @@ export function getImageNameFromDOClassName(options: {
 		"Build ID should be set if containers are defined and enabled"
 	);
 
-	const container = options.containers.find(
-		(c) => c.class_name === options.doClassName
-	);
-
-	if (!container) {
-		return undefined;
+	if (options.containerDOClassNames.has(options.doClassName)) {
+		return {
+			imageName: getDevContainerImageName(
+				options.doClassName,
+				options.containerBuildId
+			),
+		};
 	}
-	return {
-		imageName: getDevContainerImageName(
-			container.class_name,
-			options.containerBuildId
-		),
-	};
 }

@@ -2372,7 +2372,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						containers: [
 							{
-								image: "something",
+								image: "docker.io/something:hello",
 							},
 						],
 					} as unknown as RawConfig,
@@ -2394,7 +2394,7 @@ describe("normalizeAndValidateConfig()", () => {
 						name: "test-worker-name",
 						containers: [
 							{
-								image: "something",
+								image: "docker.io/something:hello",
 								class_name: "test-class",
 							},
 						],
@@ -2408,11 +2408,10 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(config.containers).toEqual([
 					{
-						configuration: {
-							image: "something",
-						},
 						class_name: "test-class",
 						name: "test-worker-name-test-class",
+						image: "docker.io/something:hello",
+						image_build_context: undefined,
 					},
 				]);
 				if (config.containers) {
@@ -2451,10 +2450,12 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
+					  - Expected \\"containers.image_build_context\\" to be of type string but got 123.
+					  - The image \\"something\\" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
+					    If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)
 					  - Expected \\"containers.rollout_kind\\" field to be one of [\\"full_auto\\",\\"full_manual\\",\\"none\\"] but got \\"invalid\\".
 					  - Expected \\"containers.instance_type\\" field to be one of [\\"dev\\",\\"basic\\",\\"standard\\"] but got \\"invalid\\".
 					  - Expected \\"containers.max_instances\\" to be of type number but got \\"invalid\\".
-					  - Expected \\"containers.image_build_context\\" to be of type string but got 123.
 					  - Expected \\"containers.image_vars\\" to be of type object but got \\"invalid\\".
 					  - Expected \\"containers.scheduling_policy\\" field to be one of [\\"regional\\",\\"moon\\",\\"default\\"] but got \\"invalid\\"."
 				`);
@@ -2516,7 +2517,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				console.dir(diagnostics.warnings);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", \\"configuration.disk\\" should be set via \\"instance_type\\".
