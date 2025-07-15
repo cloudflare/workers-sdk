@@ -602,10 +602,8 @@ test("dumpSql exports and imports complete database structure and content correc
 		d1Databases: { test: "test" },
 	});
 
-	t.teardown(() => {
-		originalMF.dispose();
-		mirrorMF.dispose();
-	});
+	t.teardown(() => originalMF.dispose());
+	t.teardown(() => mirrorMF.dispose());
 
 	const originalDb = await originalMF.getD1Database("test");
 	const mirrorDb = await mirrorMF.getD1Database("test");
@@ -639,7 +637,7 @@ async function fillDummyData(db: D1Database) {
 
 	const schemas = [
 		// Create basic table with text primary key
-		`CREATE TABLE "classrooms"(id TEXT PRIMARY KEY, capacity INTEGER)`,
+		`CREATE TABLE "classrooms"(id TEXT PRIMARY KEY, capacity INTEGER, test_blob BLOB)`,
 
 		// Create table with foreign key constraint
 		`CREATE TABLE "students" (id INTEGER PRIMARY KEY, name TEXT NOT NULL, classroom TEXT NOT NULL, FOREIGN KEY (classroom) REFERENCES "classrooms" (id) ON DELETE CASCADE)`,
@@ -659,6 +657,7 @@ async function fillDummyData(db: D1Database) {
 		...Array.from({ length: 10 }, (_, i) => ({
 			id: `classroom_${i + 1}`,
 			capacity: (i + 1) * 10,
+			test_blob: utf8Encode(`Blob data for classroom ${i + 1}`),
 		})),
 
 		// Edge case: type mismatch (string where number expected)
