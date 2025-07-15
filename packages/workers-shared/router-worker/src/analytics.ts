@@ -37,6 +37,8 @@ type Data = {
 	abuseMitigationBlocked?: boolean;
 	// double8 - User worker invocation denied due to free tier limiting
 	userWorkerFreeTierLimiting?: boolean;
+	// double9 - The time it takes for the request to be handed off the Asset Worker or user Worker in milliseconds
+	timeToDispatch?: number;
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -96,6 +98,7 @@ export class Analytics {
 				this.data.staticRoutingDecision ?? STATIC_ROUTING_DECISION.NOT_PROVIDED, // double6
 				this.data.abuseMitigationBlocked ? 1 : 0, // double7
 				this.data.userWorkerFreeTierLimiting ? 1 : 0, // double8
+				this.data.timeToDispatch ?? -1, // double9
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes

@@ -619,7 +619,6 @@ export function resolveMemory(
 // app.configuration is not set
 // ordering: app.configuration.disk.size -> account.limits.disk_mb_per_deployment -> default fallback to 2GB in bytes
 export function resolveAppDiskSize(
-	account: CompleteAccountCustomer,
 	app: ContainerApp | undefined
 ): number | undefined {
 	if (app === undefined) {

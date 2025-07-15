@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { clearOutputFilePath, writeOutput } from "../output";

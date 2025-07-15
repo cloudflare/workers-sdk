@@ -1,0 +1,21 @@
+{
+	"$schema": "http://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"test:ci": {
+			"env": [
+				"VITEST",
+				"NODE_DEBUG",
+				"MINIFLARE_WORKERD_PATH",
+				"WRANGLER",
+				"WRANGLER_IMPORT",
+				"MINIFLARE_IMPORT",
+				"CLOUDFLARE_ACCOUNT_ID",
+				"CLOUDFLARE_API_TOKEN",
+				"TEST_CLOUDFLARE_ACCOUNT_ID",
+				"TEST_CLOUDFLARE_API_TOKEN",
+				"WRANGLER_E2E_TEST_FILE"
+			]
+		}
+	}
+}

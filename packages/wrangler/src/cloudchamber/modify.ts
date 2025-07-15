@@ -3,6 +3,7 @@ import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
 import { isNonInteractiveOrCI } from "../is-interactive";
+import { logger } from "../logger";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";
 import { getLocation } from "./cli/locations";
@@ -134,7 +135,7 @@ export async function modifyCommand(
 			modifyArgs.deploymentId,
 			modifyRequest
 		);
-		console.log(JSON.stringify(deployment, null, 4));
+		logger.json(deployment);
 		return;
 	}
 

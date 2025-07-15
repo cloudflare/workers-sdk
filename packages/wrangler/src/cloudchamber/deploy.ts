@@ -2,11 +2,11 @@ import { isDockerfile } from "@cloudflare/containers-shared";
 import { type Config } from "../config";
 import { type ContainerApp } from "../config/environment";
 import { containersScope } from "../containers";
+import { apply } from "../containers/deploy";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { fetchVersion } from "../versions/api";
-import { apply } from "./apply";
 import { buildAndMaybePush } from "./build";
 import { fillOpenAPIConfiguration } from "./common";
 import type { BuildArgs } from "@cloudflare/containers-shared/src/types";
@@ -16,17 +16,22 @@ export async function maybeBuildContainer(
 	/** just the tag component. will be prefixed with the container name */
 	imageTag: string,
 	dryRun: boolean,
-	pathToDocker: string
-): Promise<{ image: string; pushed: boolean }> {
+	pathToDocker: string,
+	configPath?: string
+): Promise<{ image: string; imageUpdated: boolean }> {
 	try {
 		if (
 			!isDockerfile(
-				containerConfig.image ?? containerConfig.configuration?.image
+				containerConfig.image ?? containerConfig.configuration?.image,
+				configPath
 			)
 		) {
 			return {
 				image: containerConfig.image ?? containerConfig.configuration?.image,
-				pushed: false,
+				// We don't know at this point whether the image was updated or not
+				// but we need to make sure downstream checks if it was updated so
+				// we set this to true.
+				imageUpdated: true,
 			};
 		}
 	} catch (err) {
@@ -43,9 +48,11 @@ export async function maybeBuildContainer(
 		options,
 		pathToDocker,
 		!dryRun,
+		configPath,
 		containerConfig
 	);
-	return buildResult;
+
+	return { image: buildResult.image, imageUpdated: buildResult.pushed };
 }
 
 export type DeployContainersArgs = {
@@ -58,7 +65,7 @@ export type DeployContainersArgs = {
 
 export async function deployContainers(
 	config: Config,
-	{ versionId, accountId, scriptName, dryRun, env }: DeployContainersArgs
+	{ versionId, accountId, scriptName, dryRun }: DeployContainersArgs
 ) {
 	if (config.containers === undefined) {
 		return;
@@ -112,7 +119,8 @@ export async function deployContainers(
 			container,
 			versionId,
 			dryRun,
-			pathToDocker
+			pathToDocker,
+			config.configPath
 		);
 		container.configuration ??= {};
 		container.configuration.image = buildResult.image;
@@ -121,8 +129,7 @@ export async function deployContainers(
 		await apply(
 			{
 				skipDefaults: false,
-				env,
-				imageUpdateRequired: buildResult.pushed,
+				imageUpdateRequired: buildResult.imageUpdated,
 			},
 			configuration
 		);
@@ -137,13 +144,13 @@ export function getBuildArguments(
 	container: ContainerApp,
 	idForImageTag: string
 ): BuildArgs {
-	const imageRef = container.image ?? container.configuration?.image;
+	const pathToDockerfile = container.image ?? container.configuration?.image;
 	const imageTag = container.name + ":" + idForImageTag.split("-")[0];
 
 	return {
 		tag: imageTag,
-		pathToDockerfile: imageRef,
-		buildContext: container.image_build_context ?? ".",
+		pathToDockerfile,
+		buildContext: container.image_build_context,
 		args: container.image_vars,
 	};
 }

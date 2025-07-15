@@ -29,12 +29,6 @@ describe("readConfig()", () => {
 			    ],
 			    "type": "PythonModule",
 			  },
-			  Object {
-			    "globs": Array [
-			      "vendor/**/*.so",
-			    ],
-			    "type": "Data",
-			  },
 			]
 		`);
 	});
@@ -2421,10 +2415,11 @@ describe("normalizeAndValidateConfig()", () => {
 						name: "test-worker-name-test-class",
 					},
 				]);
-				config.containers &&
+				if (config.containers) {
 					expect(config.containers[0].name).toEqual(
 						"test-worker-name-test-class"
 					);
+				}
 			});
 		});
 

@@ -1,3 +1,7 @@
+/**
+ * Important! You are probably looking for containers/deploy.ts!
+ * This is used for cloudchamber apply, but has been duplicated and modified in containers/deploy.ts to deploy containers during wrangler deploy.
+ */
 import {
 	endSection,
 	log,
@@ -14,13 +18,21 @@ import {
 	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
 	InstanceType,
+	resolveImageName,
 	RolloutsService,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { formatConfigSnippet } from "../config";
 import { FatalError, UserError } from "../errors";
+import { getAccountId } from "../user";
 import { cleanForInstanceType, promiseSpinner } from "./common";
-import { diffLines } from "./helpers/diff";
+import {
+	createLine,
+	diffLines,
+	printLine,
+	sortObjectRecursive,
+	stripUndefined,
+} from "./helpers/diff";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";
 import type {
@@ -91,10 +103,14 @@ function createApplicationToModifyApplication(
 }
 
 function applicationToCreateApplication(
+	accountId: string,
 	application: Application
 ): CreateApplicationRequest {
 	const app: CreateApplicationRequest = {
-		configuration: application.configuration,
+		configuration: {
+			...application.configuration,
+			image: resolveImageName(accountId, application.configuration.image),
+		},
 		constraints: application.constraints,
 		max_instances: application.max_instances,
 		name: application.name,
@@ -192,6 +208,7 @@ function containerAppToInstanceType(
 }
 
 function containerAppToCreateApplication(
+	accountId: string,
 	containerApp: ContainerApp,
 	observability: Observability | undefined,
 	existingApp: Application | undefined,
@@ -214,10 +231,15 @@ function containerAppToCreateApplication(
 			telemetryMessage: true,
 		});
 	}
+
 	const app: CreateApplicationRequest = {
 		...containerApp,
 		name: containerApp.name,
-		configuration,
+		configuration: {
+			...configuration,
+			// De-sugar image name
+			image: resolveImageName(accountId, configuration.image),
+		},
 		instances: containerApp.instances ?? 0,
 		scheduling_policy:
 			(containerApp.scheduling_policy as SchedulingPolicy) ??
@@ -244,175 +266,6 @@ function containerAppToCreateApplication(
 	delete (app as Record<string, unknown>)["instance_type"];
 
 	return app;
-}
-
-function isNumber(c: string | number) {
-	if (typeof c === "number") {
-		return true;
-	}
-	const code = c.charCodeAt(0);
-	const zero = "0".charCodeAt(0);
-	const nine = "9".charCodeAt(0);
-	return code >= zero && code <= nine;
-}
-
-/**
- * createLine takes a string and goes through each character, rendering possibly syntax highlighting.
- * Useful to render TOML files.
- */
-function createLine(el: string, startWith = ""): string {
-	let line = startWith;
-	let lastAdded = 0;
-	const addToLine = (i: number, color = (s: string) => s) => {
-		line += color(el.slice(lastAdded, i));
-		lastAdded = i;
-	};
-
-	const state = {
-		render: "left" as "quotes" | "number" | "left" | "right" | "section",
-	};
-	for (let i = 0; i < el.length; i++) {
-		const current = el[i];
-		const peek = i + 1 < el.length ? el[i + 1] : null;
-		const prev = i === 0 ? null : el[i - 1];
-
-		switch (state.render) {
-			case "left":
-				if (current === "=") {
-					state.render = "right";
-				}
-
-				break;
-			case "right":
-				if (current === '"') {
-					addToLine(i);
-					state.render = "quotes";
-					break;
-				}
-
-				if (isNumber(current)) {
-					addToLine(i);
-					state.render = "number";
-					break;
-				}
-
-				if (current === "[" && peek === "[") {
-					state.render = "section";
-				}
-
-				break;
-			case "quotes":
-				if (current === '"') {
-					addToLine(i + 1, brandColor);
-					state.render = "right";
-				}
-
-				break;
-			case "number":
-				if (!isNumber(el)) {
-					addToLine(i, red);
-					state.render = "right";
-				}
-
-				break;
-			case "section":
-				if (current === "]" && prev === "]") {
-					addToLine(i + 1);
-					state.render = "right";
-				}
-		}
-	}
-
-	switch (state.render) {
-		case "left":
-			addToLine(el.length);
-			break;
-		case "right":
-			addToLine(el.length);
-			break;
-		case "quotes":
-			addToLine(el.length, brandColor);
-			break;
-		case "number":
-			addToLine(el.length, red);
-			break;
-		case "section":
-			// might be unreachable
-			addToLine(el.length, bold);
-			break;
-	}
-
-	return line;
-}
-
-/**
- * printLine takes a line and prints it by using createLine and use printFunc
- */
-function printLine(el: string, startWith = "", printFunc = log) {
-	printFunc(createLine(el, startWith));
-}
-
-/**
- * Removes from the object every undefined property
- */
-function stripUndefined<T = Record<string, unknown>>(r: T): T {
-	for (const k in r) {
-		if (r[k] === undefined) {
-			delete r[k];
-		}
-	}
-
-	return r;
-}
-
-/**
- * Take an object and sort its keys in alphabetical order.
- */
-function sortObjectKeys(unordered: Record<string | number, unknown>) {
-	if (Array.isArray(unordered)) {
-		return unordered;
-	}
-
-	return Object.keys(unordered)
-		.sort()
-		.reduce(
-			(obj, key) => {
-				obj[key] = unordered[key];
-				return obj;
-			},
-			{} as Record<string, unknown>
-		);
-}
-
-/**
- * Take an object and sort its keys in alphabetical order recursively.
- * Useful to normalize objects so they can be compared when rendered.
- * It will copy the object and not mutate it.
- */
-function sortObjectRecursive<T = Record<string | number, unknown>>(
-	object: Record<string | number, unknown> | Record<string | number, unknown>[]
-): T {
-	if (typeof object !== "object") {
-		return object;
-	}
-
-	if (Array.isArray(object)) {
-		return object.map((obj) => sortObjectRecursive(obj)) as T;
-	}
-
-	const objectCopy: Record<string | number, unknown> = { ...object };
-	for (const [key, value] of Object.entries(object)) {
-		if (typeof value === "object") {
-			if (value === null) {
-				continue;
-			}
-			objectCopy[key] = sortObjectRecursive(
-				value as Record<string, unknown>
-			) as unknown;
-		}
-	}
-
-	return sortObjectKeys(objectCopy) as T;
 }
 
 export async function apply(
@@ -504,7 +357,9 @@ export async function apply(
 			appConfigNoDefaults.configuration.image = application.configuration.image;
 		}
 
+		const accountId = config.account_id || (await getAccountId(config));
 		const appConfig = containerAppToCreateApplication(
+			accountId,
 			appConfigNoDefaults,
 			config.observability,
 			application,
@@ -515,7 +370,7 @@ export async function apply(
 			// we need to sort the objects (by key) because the diff algorithm works with
 			// lines
 			const prevApp = sortObjectRecursive<CreateApplicationRequest>(
-				stripUndefined(applicationToCreateApplication(application))
+				stripUndefined(applicationToCreateApplication(accountId, application))
 			);
 
 			// fill up fields that their defaults were changed over-time,
@@ -716,7 +571,11 @@ export async function apply(
 			return message;
 		}
 
-		return `  ${err.body.error}`;
+		if (err.body.error !== undefined) {
+			return `  ${err.body.error}`;
+		}
+
+		return JSON.stringify(err.body);
 	}
 
 	for (const action of actions) {
@@ -769,7 +628,8 @@ export async function apply(
 							action.application.max_instances !== undefined
 								? undefined
 								: action.application.instances,
-					})
+					}),
+					{ message: `Modifying ${action.application.name}` }
 				);
 			} catch (err) {
 				if (!(err instanceof Error)) {

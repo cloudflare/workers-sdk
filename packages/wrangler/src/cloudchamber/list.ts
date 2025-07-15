@@ -15,6 +15,7 @@ import {
 	PlacementsService,
 } from "@cloudflare/containers-shared";
 import { isNonInteractiveOrCI } from "../is-interactive";
+import { logger } from "../logger";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
 import { capitalize, statusToColored } from "./cli/util";
 import { promiseSpinner } from "./common";
@@ -90,20 +91,14 @@ export async function listCommand(
 			const placements = await PlacementsService.listPlacements(
 				deployments[0].id
 			);
-			console.log(
-				JSON.stringify(
-					{
-						...deployments[0],
-						placements,
-					},
-					null,
-					4
-				)
-			);
+			logger.json({
+				...deployments[0],
+				placements,
+			});
 			return;
 		}
 
-		console.log(JSON.stringify(deployments, null, 4));
+		logger.json(deployments);
 		return;
 	}
 

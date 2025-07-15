@@ -7,10 +7,14 @@ import dedent from "ts-dedent";
 import undici from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
+import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import type { DevToolsEvent } from "../src/api";
 
-const OPTIONS = [{ remote: false }, { remote: true }] as const;
+const OPTIONS = [
+	{ remote: false },
+	...(CLOUDFLARE_ACCOUNT_ID ? [{ remote: true }] : []),
+];
 
 type Wrangler = Awaited<ReturnType<WranglerE2ETestHelper["importWrangler"]>>;
 
@@ -321,7 +325,7 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 			headers: { Accept: "text/html" },
 		});
 		await expect(undiciRes.text()).resolves.toEqual(
-			expect.stringContaining(`<h2 class="error-message"> Boom 3! </h2>`) // pretty error page html snippet
+			expect.stringContaining(`<span>Boom 3!</span>`) // pretty error page html snippet
 		);
 
 		// test further changes that fix the code

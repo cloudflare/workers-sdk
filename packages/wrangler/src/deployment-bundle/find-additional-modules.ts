@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
@@ -56,11 +57,13 @@ function filterPythonVendorModules(
 	if (!isPythonEntrypoint) {
 		return modules;
 	}
-	return modules.filter((m) => !m.name.startsWith("vendor/"));
+	return modules.filter((m) => !m.name.startsWith("python_modules" + path.sep));
 }
 
 function getPythonVendorModulesSize(modules: CfModule[]): number {
-	const vendorModules = modules.filter((m) => m.name.startsWith("vendor/"));
+	const vendorModules = modules.filter((m) =>
+		m.name.startsWith("python_modules" + path.sep)
+	);
 	return vendorModules.reduce((total, m) => total + m.content.length, 0);
 }
 
@@ -93,7 +96,7 @@ export async function findAdditionalModules(
 			name: m.name,
 		}));
 
-	// Try to find a requirements.txt file
+	// Try to find a cf-requirements.txt file
 	const isPythonEntrypoint =
 		getBundleType(entry.format, entry.file) === "python";
 
@@ -101,13 +104,20 @@ export async function findAdditionalModules(
 		let pythonRequirements = "";
 		try {
 			pythonRequirements = await readFile(
-				path.resolve(entry.projectRoot, "requirements.txt"),
+				path.resolve(entry.projectRoot, "cf-requirements.txt"),
 				"utf-8"
 			);
-		} catch (e) {
-			// We don't care if a requirements.txt isn't found
+		} catch {
+			// We don't care if a cf-requirements.txt isn't found
 			logger.debug(
-				"Python entrypoint detected, but no requirements.txt file found."
+				"Python entrypoint detected, but no cf-requirements.txt file found."
+			);
+		}
+
+		// If a `requirements.txt` file is found, show a warning instructing user to use `cf-requirements.txt` instead.
+		if (existsSync(path.resolve(entry.projectRoot, "requirements.txt"))) {
+			logger.warn(
+				"Found a `requirements.txt` file. Python requirements should now be in a `cf-requirements.txt` file."
 			);
 		}
 
@@ -117,7 +127,7 @@ export async function findAdditionalModules(
 			}
 			if (!isValidPythonPackageName(requirement)) {
 				throw new UserError(
-					`Invalid Python package name "${requirement}" found in requirements.txt. Note that requirements.txt should contain package names only, not version specifiers.`
+					`Invalid Python package name "${requirement}" found in cf-requirements.txt. Note that cf-requirements.txt should contain package names only, not version specifiers.`
 				);
 			}
 
@@ -127,6 +137,58 @@ export async function findAdditionalModules(
 				content: "",
 				filePath: undefined,
 			});
+		}
+
+		// Look for a `python_modules` directory in the root of the project and add all the .py and .so files in it
+		const pythonModulesDir = path.resolve(entry.projectRoot, "python_modules");
+		const pythonModulesDirInModuleRoot = path.resolve(
+			entry.moduleRoot,
+			"python_modules"
+		);
+
+		// Check for conflict between a `python_modules` directory in the module root and the project root.
+		const pythonModulesExistsInModuleRoot = existsSync(
+			pythonModulesDirInModuleRoot
+		);
+		if (
+			pythonModulesExistsInModuleRoot &&
+			entry.projectRoot !== entry.moduleRoot
+		) {
+			throw new UserError(
+				"The 'python_modules' directory cannot exist in your module root. Delete it to continue."
+			);
+		}
+
+		const pythonModulesExists = existsSync(pythonModulesDir);
+		if (pythonModulesExists) {
+			const pythonModulesFiles = getFiles(
+				entry.file,
+				pythonModulesDir,
+				pythonModulesDir,
+				entry.projectRoot
+			);
+			const vendoredRules: Rule[] = [
+				{ type: "Data", globs: ["**/*.so", "**/*.py"] },
+			];
+			const vendoredModules = (
+				await matchFiles(
+					pythonModulesFiles,
+					pythonModulesDir,
+					parseRules(vendoredRules)
+				)
+			).map((m) => {
+				const prefixedPath = path.join("python_modules", m.name);
+				return {
+					...m,
+					name: prefixedPath,
+				};
+			});
+
+			modules.push(...vendoredModules);
+		} else {
+			logger.debug(
+				"Python entrypoint detected, but no python_modules directory found."
+			);
 		}
 	}
 

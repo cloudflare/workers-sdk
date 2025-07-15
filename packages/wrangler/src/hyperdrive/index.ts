@@ -132,6 +132,11 @@ export const upsertOptions = (
 			choices: ["require", "verify-ca", "verify-full"],
 			description: "Sets CA sslmode for connecting to database.",
 		},
+		"origin-connection-limit": {
+			type: "number",
+			description:
+				"The (soft) maximum number of connections that Hyperdrive may establish to the origin database",
+		},
 	}) as const;
 
 export function getOriginFromArgs<
@@ -329,4 +334,12 @@ export function getMtlsFromArgs(
 		}
 		return mtls;
 	}
+}
+
+export function getOriginConnectionLimitFromArgs(
+	args:
+		| typeof hyperdriveCreateCommand.args
+		| typeof hyperdriveUpdateCommand.args
+): number | undefined {
+	return args.originConnectionLimit;
 }

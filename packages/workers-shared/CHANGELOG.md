@@ -1,5 +1,21 @@
 # @cloudflare/workers-shared
 
+## 0.18.3
+
+### Patch Changes
+
+- [#9908](https://github.com/cloudflare/workers-sdk/pull/9908) [`ab75fd8`](https://github.com/cloudflare/workers-sdk/commit/ab75fd8303084fba48ee5131e4ccf19510aed831) Thanks [@GregBrimble](https://github.com/GregBrimble)! - perf: graduate asset-server binary search experiment to 100%
+
+  The improved iterative binary search implementation has been graduated from a 50% experiment to the default implementation. This provides better performance for asset manifest lookups by replacing the recursive binary search with an iterative approach.
+
+## 0.18.2
+
+### Patch Changes
+
+- [#9892](https://github.com/cloudflare/workers-sdk/pull/9892) [`78e259a`](https://github.com/cloudflare/workers-sdk/commit/78e259ac75795887c1bac7ebcb6f4cc636dc39e9) Thanks [@GregBrimble](https://github.com/GregBrimble)! - perf: increase binary search experiment sample rate to 50%
+
+- [#9884](https://github.com/cloudflare/workers-sdk/pull/9884) [`a60e9da`](https://github.com/cloudflare/workers-sdk/commit/a60e9daf63d0d4918c134a45512e861d399c96c3) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Adds metrics for time-to-dispatch to Router Worker
+
 ## 0.18.1
 
 ### Patch Changes

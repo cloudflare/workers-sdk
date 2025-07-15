@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { z } from "zod";
 import {
+	getUserBindingServiceName,
 	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -36,7 +37,11 @@ export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
 					name,
 
 					service: {
-						name: `${MTLS_PLUGIN_NAME}:${certificate_id}`,
+						name: getUserBindingServiceName(
+							MTLS_PLUGIN_NAME,
+							certificate_id,
+							remoteProxyConnectionString
+						),
 					},
 				};
 			}
@@ -66,7 +71,11 @@ export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
 				);
 
 				return {
-					name: `${MTLS_PLUGIN_NAME}:${certificate_id}`,
+					name: getUserBindingServiceName(
+						MTLS_PLUGIN_NAME,
+						certificate_id,
+						remoteProxyConnectionString
+					),
 					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
 				};
 			}

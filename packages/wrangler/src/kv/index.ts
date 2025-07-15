@@ -348,7 +348,7 @@ export const kvKeyPutCommand = createCommand({
 			coerce: (jsonStr: string): KeyValue["metadata"] => {
 				try {
 					return JSON.parse(jsonStr);
-				} catch (_) {}
+				} catch {}
 			},
 		},
 		path: {
@@ -865,7 +865,7 @@ export const kvBulkPutCommand = createCommand({
 			coerce: (jsonStr: string): KeyValue["metadata"] => {
 				try {
 					return JSON.parse(jsonStr);
-				} catch (_) {}
+				} catch {}
 			},
 		},
 		local: {

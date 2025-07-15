@@ -14,6 +14,8 @@ type Data = {
 	manifestReadTime?: number;
 
 	// -- Blobs --
+	// blob1 current or perfTest version of binary search
+	binarySearchVersion?: "current" | "perfTest" | "current-fallback";
 };
 
 export class ExperimentAnalytics {
@@ -44,7 +46,9 @@ export class ExperimentAnalytics {
 			doubles: [
 				this.data.manifestReadTime ?? -1, // double1
 			],
-			blobs: [],
+			blobs: [
+				this.data.binarySearchVersion, // blob1
+			],
 		});
 	}
 }

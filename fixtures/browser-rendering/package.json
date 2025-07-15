@@ -1,0 +1,23 @@
+{
+	"name": "@fixture/browser-rendering",
+	"private": true,
+	"scripts": {
+		"cf-typegen": "wrangler types",
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"test": "vitest",
+		"test:ci": "vitest run"
+	},
+	"devDependencies": {
+		"@cloudflare/puppeteer": "^1.0.2",
+		"@cloudflare/vitest-pool-workers": "workspace:*",
+		"@types/node": "catalog:default",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

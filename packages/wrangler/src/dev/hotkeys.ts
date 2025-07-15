@@ -3,6 +3,7 @@ import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeContro
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
+import { debounce } from "../utils/debounce";
 import { openInspector } from "./inspect";
 import type { DevEnv } from "../api";
 
@@ -47,20 +48,35 @@ export default function registerDevHotKeys(
 					!devEnv.config.latestConfig?.containers?.length
 				);
 			},
-			handler: async () => {
-				const newContainerBuildId = randomUUID().slice(0, 8);
-				// cleanup any existing containers
-				devEnv.runtimes.map(async (runtime) => {
+			handler: debounce(async () => {
+				devEnv.runtimes.forEach((runtime) => {
 					if (runtime instanceof LocalRuntimeController) {
-						await runtime.cleanupContainers();
+						if (runtime.containerBeingBuilt) {
+							// Let's abort the image built so that we
+							// can restart the build process
+							runtime.containerBeingBuilt.abort();
+							runtime.containerBeingBuilt.abortRequested = true;
+						}
 					}
 				});
+				const newContainerBuildId = randomUUID().slice(0, 8);
+				// cleanup any existing containers
+				await Promise.all(
+					devEnv.runtimes.map(async (runtime) => {
+						if (runtime instanceof LocalRuntimeController) {
+							await runtime.cleanupContainers();
+						}
+					})
+				);
 
 				// updating the build ID will trigger a rebuild of the containers
 				await devEnv.config.patch({
-					dev: { containerBuildId: newContainerBuildId },
+					dev: {
+						...devEnv.config.latestConfig?.dev,
+						containerBuildId: newContainerBuildId,
+					},
 				});
-			},
+			}, 250),
 		},
 		{
 			keys: ["l"],
@@ -78,13 +94,33 @@ export default function registerDevHotKeys(
 			keys: ["c"],
 			label: "clear console",
 			handler: async () => {
-				logger.console("clear");
+				const someContainerIsBeingBuilt = devEnv.runtimes.some(
+					(runtime) =>
+						runtime instanceof LocalRuntimeController &&
+						runtime.containerBeingBuilt
+				);
+				if (!someContainerIsBeingBuilt) {
+					// Containers builds have their own complex logs (with progress updates)
+					// that get in the way of the logger clearing, so not to break things
+					// we don't clear the console when a container is being built
+					logger.console("clear");
+				}
 			},
 		},
 		{
 			keys: ["x", "q", "ctrl+c"],
 			label: "to exit",
 			handler: async () => {
+				devEnv.runtimes.forEach((runtime) => {
+					if (runtime instanceof LocalRuntimeController) {
+						if (runtime.containerBeingBuilt) {
+							// Let's abort the image built so that we
+							// can then exit the dev process
+							runtime.containerBeingBuilt.abort();
+							runtime.containerBeingBuilt.abortRequested = true;
+						}
+					}
+				});
 				await devEnv.teardown();
 			},
 		},

@@ -922,6 +922,7 @@ export function buildMiniflareBindingOptions(
 				kvNamespaceEntry(kv, remoteProxyConnectionString)
 			) ?? []
 		),
+
 		r2Buckets: Object.fromEntries(
 			bindings.r2_buckets?.map((r2) =>
 				r2BucketEntry(r2, remoteProxyConnectionString)
@@ -980,15 +981,17 @@ export function buildMiniflareBindingOptions(
 								: undefined,
 					}
 				: undefined,
-		browserRendering:
-			remoteBindingsEnabled &&
-			remoteProxyConnectionString &&
-			bindings.browser?.experimental_remote
-				? {
-						binding: bindings.browser.binding,
-						remoteProxyConnectionString,
-					}
-				: undefined,
+		browserRendering: bindings.browser?.binding
+			? {
+					binding: bindings.browser.binding,
+					remoteProxyConnectionString:
+						remoteBindingsEnabled &&
+						remoteProxyConnectionString &&
+						bindings.browser?.experimental_remote
+							? remoteProxyConnectionString
+							: undefined,
+				}
+			: undefined,
 
 		vectorize:
 			remoteBindingsEnabled && remoteProxyConnectionString

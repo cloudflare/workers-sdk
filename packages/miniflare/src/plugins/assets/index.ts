@@ -6,6 +6,7 @@ import {
 	ENTRY_SIZE,
 	getContentType,
 	HEADER_SIZE,
+	Logger,
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
 	normalizeFilePath,
@@ -38,7 +39,6 @@ import SCRIPT_ROUTER from "worker:assets/router";
 import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
 import { z } from "zod";
 import { Service } from "../../runtime";
-import { Log } from "../../shared";
 import { SharedBindings } from "../../workers";
 import { getUserServiceName } from "../core";
 import { Plugin, ProxyNodeBinding } from "../shared";
@@ -77,7 +77,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 	},
 
-	async getServices({ options }) {
+	async getServices({ options, log }) {
 		if (!options.assets) {
 			return [];
 		}
@@ -102,14 +102,13 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		const redirectsContents = maybeGetFile(redirectsFile);
 		const headersContents = maybeGetFile(headersFile);
 
-		const logger = new Log();
 		const assetParserLogger = {
-			debug: (message: string) => logger.debug(message),
-			log: (message: string) => logger.info(message),
-			info: (message: string) => logger.info(message),
-			warn: (message: string) => logger.warn(message),
-			error: (error: Error) => logger.error(error),
-		};
+			debug: (message) => log.debug(message),
+			log: (message) => log.info(message),
+			info: (message) => log.info(message),
+			warn: (message) => log.warn(message),
+			error: (error) => log.error(error),
+		} satisfies Logger;
 
 		let parsedRedirects: AssetConfig["redirects"] | undefined;
 		if (redirectsContents !== undefined) {

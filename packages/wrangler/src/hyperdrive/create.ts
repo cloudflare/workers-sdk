@@ -6,6 +6,7 @@ import { capitalizeScheme } from "./shared";
 import {
 	getCacheOptionsFromArgs,
 	getMtlsFromArgs,
+	getOriginConnectionLimitFromArgs,
 	getOriginFromArgs,
 	upsertOptions,
 } from ".";
@@ -34,6 +35,7 @@ export const hyperdriveCreateCommand = createCommand({
 			origin,
 			caching: getCacheOptionsFromArgs(args),
 			mtls: getMtlsFromArgs(args),
+			origin_connection_limit: getOriginConnectionLimitFromArgs(args),
 		});
 		logger.log(
 			`✅ Created new Hyperdrive ${capitalizeScheme(database.origin.scheme)} config: ${database.id}`

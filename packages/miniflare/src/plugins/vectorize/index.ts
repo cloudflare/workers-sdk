@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { z } from "zod";
 import {
+	getUserBindingServiceName,
 	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -39,7 +40,13 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 						innerBindings: [
 							{
 								name: "fetcher",
-								service: { name: `${VECTORIZE_PLUGIN_NAME}:${name}` },
+								service: {
+									name: getUserBindingServiceName(
+										VECTORIZE_PLUGIN_NAME,
+										name,
+										remoteProxyConnectionString
+									),
+								},
 							},
 							{
 								name: "indexId",
@@ -83,7 +90,11 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 				);
 
 				return {
-					name: `${VECTORIZE_PLUGIN_NAME}:${name}`,
+					name: getUserBindingServiceName(
+						VECTORIZE_PLUGIN_NAME,
+						name,
+						remoteProxyConnectionString
+					),
 					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
 				};
 			}

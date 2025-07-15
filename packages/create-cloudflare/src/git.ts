@@ -197,7 +197,7 @@ export async function isInsideGitRepo(cwd: string) {
 		});
 
 		return output.includes("not a git repository") === false;
-	} catch (err) {
+	} catch {
 		return false;
 	}
 }
@@ -245,7 +245,7 @@ export async function getProductionBranch(cwd: string) {
 		);
 
 		return productionBranch.trim();
-	} catch (err) {}
+	} catch {}
 
 	return "main";
 }

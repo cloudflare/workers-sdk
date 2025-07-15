@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { z } from "zod";
 import {
+	getUserBindingServiceName,
 	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -38,7 +39,13 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 					innerBindings: [
 						{
 							name: "fetcher",
-							service: { name: `${AI_PLUGIN_NAME}:${options.ai.binding}` },
+							service: {
+								name: getUserBindingServiceName(
+									AI_PLUGIN_NAME,
+									options.ai.binding,
+									options.ai.remoteProxyConnectionString
+								),
+							},
 						},
 					],
 				},
@@ -60,7 +67,11 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 
 		return [
 			{
-				name: `${AI_PLUGIN_NAME}:${options.ai.binding}`,
+				name: getUserBindingServiceName(
+					AI_PLUGIN_NAME,
+					options.ai.binding,
+					options.ai.remoteProxyConnectionString
+				),
 				worker: remoteProxyClientWorker(
 					options.ai.remoteProxyConnectionString,
 					options.ai.binding

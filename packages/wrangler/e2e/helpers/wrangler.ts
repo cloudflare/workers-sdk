@@ -1,16 +1,21 @@
 import assert from "node:assert";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { LongLivedCommand, runCommand } from "./command";
 import type { CommandOptions } from "./command";
 
 // Replace all backslashes with forward slashes to ensure that their use
 // in scripts doesn't break.
-export const WRANGLER = process.env.WRANGLER?.replaceAll("\\", "/") ?? "";
+export const WRANGLER =
+	process.env.WRANGLER?.replaceAll("\\", "/") ??
+	`node ${resolve("packages/wrangler/bin/wrangler.js")}`;
 export const WRANGLER_IMPORT = pathToFileURL(
-	process.env.WRANGLER_IMPORT?.replaceAll("\\", "/") ?? ""
+	process.env.WRANGLER_IMPORT?.replaceAll("\\", "/") ??
+		resolve("packages/wrangler/wrangler-dist/cli.js")
 );
 export const MINIFLARE_IMPORT = pathToFileURL(
-	process.env.MINIFLARE_IMPORT?.replaceAll("\\", "/") ?? ""
+	process.env.MINIFLARE_IMPORT?.replaceAll("\\", "/") ??
+		resolve("packages/miniflare/dist/src/index.js")
 );
 
 export type WranglerCommandOptions = CommandOptions & { debug?: boolean };
@@ -60,7 +65,19 @@ function getWranglerCommand(command: string) {
 		"Commands must start with `wrangler` (e.g. `wrangler dev`) but got " +
 			command
 	);
-	return `${WRANGLER} ${command.slice("wrangler ".length)}`;
+
+	// If the user hasn't specifically set an inspector port, set it to 0 to reduce port conflicts
+	const inspectorPort =
+		command.includes(`--inspector-port`) || !command.startsWith("wrangler dev")
+			? ""
+			: " --inspector-port 0";
+
+	// If the user hasn't specifically set a Worker port, set it to 0 to reduce port conflicts
+	const workerPort =
+		command.includes(`--port`) || !command.startsWith("wrangler dev")
+			? ""
+			: " --port 0";
+	return `${WRANGLER} ${command.slice("wrangler ".length)}${inspectorPort}${workerPort}`;
 }
 
 function getOptions({

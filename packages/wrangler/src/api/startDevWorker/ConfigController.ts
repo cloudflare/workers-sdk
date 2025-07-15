@@ -110,7 +110,7 @@ async function resolveDevConfig(
 	// Because it's a non-recoverable user error, we want it to exit the Wrangler process early to allow the user to fix it.
 	// Calling it here forces the error to be thrown where it will correctly exit the Wrangler process.
 	if (input.dev?.remote) {
-		const { accountId } = await unwrapHook(auth, config);
+		const { accountId } = await auth();
 		assert(accountId, "Account ID must be provided for remote dev");
 		await getZoneIdForPreview(config, { host, routes, accountId });
 	}
@@ -363,16 +363,6 @@ async function resolveConfig(
 	} satisfies StartDevWorkerOptions;
 
 	if (
-		extractBindingsOfType("browser", resolved.bindings).length &&
-		!resolved.dev.remote &&
-		!getFlag("REMOTE_BINDINGS")
-	) {
-		logger.warn(
-			"Browser Rendering is not supported locally. Please use `wrangler dev --remote` instead."
-		);
-	}
-
-	if (
 		extractBindingsOfType("analytics_engine", resolved.bindings).length &&
 		!resolved.dev.remote &&
 		resolved.build.format === "service-worker"
@@ -410,7 +400,7 @@ async function resolveConfig(
 	// container API client is properly set so that we can get the correct permissions
 	// from the cloudchamber API to pull from the repository.
 	const needsPulling = resolved.containers?.some(
-		(c) => !isDockerfile(c.image ?? c.configuration?.image)
+		(c) => !isDockerfile(c.image ?? c.configuration?.image, config.configPath)
 	);
 	if (needsPulling && !resolved.dev.remote) {
 		await fillOpenAPIConfiguration(config, containersScope);

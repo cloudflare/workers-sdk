@@ -63,7 +63,7 @@ async function retrieveSSHKey(
 		const file = (await readFile(sshKeyPath)).toString();
 		validatePublicSSHKeyCLI(file, { json });
 		return file;
-	} catch (err) {
+	} catch {
 		if (!json) {
 			logger.debug("couldn't read the file, assuming input is an ssh key");
 		}
@@ -121,7 +121,7 @@ export const sshCommand = (
 						// check we are in CI or if the user wants to just use JSON
 						if (isNonInteractiveOrCI()) {
 							const sshKeys = await SshPublicKeysService.listSshPublicKeys();
-							console.log(JSON.stringify(sshKeys, null, 4));
+							logger.json(sshKeys);
 							return;
 						}
 
@@ -155,7 +155,7 @@ export const sshCommand = (
 									public_key: sshKey.trim(),
 								}
 							);
-							console.log(JSON.stringify(addedSSHKey, null, 4));
+							logger.json(addedSSHKey);
 							return;
 						}
 
@@ -180,7 +180,7 @@ async function tryToRetrieveAllDefaultSSHKeyPaths(): Promise<string[]> {
 				}
 			}
 		}
-	} catch (err) {
+	} catch {
 		// well, we tried with good defaults.
 		return [];
 	}
@@ -261,7 +261,7 @@ async function shouldPromptForNewSSHKeyAppear(
 		// we found a valid ssh key that doesn't exist in the API,
 		// and the user doesn't have any of their ssh keys added
 		return [undefined, foundValidSSHKeyThatDontExist];
-	} catch (err) {
+	} catch {
 		// ignore error and return false
 		return [undefined, false];
 	}

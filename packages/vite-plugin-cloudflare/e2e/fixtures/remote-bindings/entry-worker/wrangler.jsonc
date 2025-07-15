@@ -11,7 +11,7 @@
 		},
 		{
 			"binding": "REMOTE_WORKER",
-			"service": "tmp-e2e-vite-plugin-mixed-mode-remote-worker",
+			"service": "<<REMOTE_WORKER_PLACEHOLDER>>",
 			"experimental_remote": true,
 		},
 	],

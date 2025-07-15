@@ -42,7 +42,7 @@ describe("[Workers + Assets] static routing", () => {
 			);
 		});
 
-		it("should serve an asset when a negative run_worker_first rule matches", async ({
+		it("should serve a 404 when a negative run_worker_first rule matches", async ({
 			expect,
 		}) => {
 			let response = await fetch(`http://${ip}:${port}/missing-asset`);
@@ -85,10 +85,6 @@ describe("[Workers + Assets] static routing", () => {
 						: undefined,
 				});
 			}, 40_000);
-
-			afterAll(async () => {
-				await browser?.close();
-			});
 
 			it("renders the root with index.html", async ({ expect }) => {
 				if (!browser) {

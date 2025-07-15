@@ -638,6 +638,10 @@ parameter in module format Workers.
 - `workflows?: WorkflowOptions[]`
   Configuration for one or more Workflows in your project.
 
+#### Browser Rendering
+
+- `browserRendering: BrowserRenderingOptions`
+
 #### Analytics Engine, Sending Email, Vectorize and Workers for Platforms
 
 _Not yet supported_
@@ -645,7 +649,7 @@ _Not yet supported_
 If you need support for these locally, consider using the `wrappedBindings`
 option to mock them out.
 
-#### Browser Rendering and Workers AI
+#### Workers AI
 
 _Not yet supported_
 
@@ -782,7 +786,7 @@ Options shared between all Workers/"nanoservices".
 
 Where to persist data stored in Workflows. See docs for `Persistence`.
 
-#### Analytics Engine, Browser Rendering, Sending Email, Vectorize, Workers AI and Workers for Platforms
+#### Analytics Engine, Sending Email, Vectorize, Workers AI and Workers for Platforms
 
 _Not yet supported_
 

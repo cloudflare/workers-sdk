@@ -4,18 +4,17 @@
 	"compatibility_date": "2025-04-03",
 	"containers": [
 		{
-			"configuration": {
-				"image": "registry.cloudflare.com/8d783f274e1f82dc46744c297b015a2f/ci-container-dont-delete:latest",
-			},
-			"class_name": "Container",
-			"name": "http2",
+			// This is the same container as built by the dockerfile except it is pulled from the registry
+			"image": "registry.cloudflare.com/8d783f274e1f82dc46744c297b015a2f/ci-container-dont-delete:latest",
+			"class_name": "FixtureTestContainer",
+			"name": "container",
 			"max_instances": 2,
 		},
 	],
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "Container",
+				"class_name": "FixtureTestContainer",
 				"name": "CONTAINER",
 			},
 		],
@@ -23,7 +22,7 @@
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_sqlite_classes": ["Container"],
+			"new_sqlite_classes": ["FixtureTestContainer"],
 		},
 	],
 }

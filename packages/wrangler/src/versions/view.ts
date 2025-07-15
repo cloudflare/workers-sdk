@@ -79,10 +79,10 @@ export const versionsViewCommand = createCommand({
 				Message: version.annotations?.["workers/message"] || BLANK_INPUT,
 			})
 		);
-		logRaw("------------------------------------------------------------");
-		const scriptInfo: ScriptInfoLog = {
-			Handlers: version.resources.script.handlers.join(", "),
-		};
+		const scriptInfo: ScriptInfoLog = {};
+		if (version.resources.script.handlers) {
+			scriptInfo.Handlers = version.resources.script.handlers.join(", ");
+		}
 		if (version.resources.script_runtime.compatibility_date) {
 			scriptInfo["Compatibility Date"] =
 				version.resources.script_runtime.compatibility_date;
@@ -91,7 +91,10 @@ export const versionsViewCommand = createCommand({
 			scriptInfo["Compatibility Flags"] =
 				version.resources.script_runtime.compatibility_flags.join(", ");
 		}
-		logRaw(formatLabelledValues(scriptInfo));
+		if (Object.keys(scriptInfo).length > 0) {
+			logRaw("------------------------------------------------------------");
+			logRaw(formatLabelledValues(scriptInfo));
+		}
 
 		const secrets = version.resources.bindings.filter(
 			(binding) => binding.type === "secret_text"
@@ -142,7 +145,7 @@ export const versionsViewCommand = createCommand({
 });
 
 type ScriptInfoLog = {
-	Handlers: string;
+	Handlers?: string;
 	"Compatibility Date"?: string;
 	"Compatibility Flags"?: string;
 };

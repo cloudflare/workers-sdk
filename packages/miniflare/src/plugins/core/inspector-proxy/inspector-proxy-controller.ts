@@ -237,8 +237,10 @@ export class InspectorProxyController {
 
 	async updateConnection(
 		inspectorPortOption: number,
-		runtimeInspectorPort: number
+		runtimeInspectorPort: number,
+		workerNamesToProxy: Set<string>
 	) {
+		this.workerNamesToProxy = workerNamesToProxy;
 		if (this.inspectorPortOption !== inspectorPortOption) {
 			this.inspectorPortOption = inspectorPortOption;
 			this.#inspectorPort = this.#getInspectorPortToUse();
@@ -265,6 +267,7 @@ export class InspectorProxyController {
 				}
 
 				return new InspectorProxy(
+					this.log,
 					workerName,
 					new WebSocket(`ws://127.0.0.1:${runtimeInspectorPort}/${id}`)
 				);

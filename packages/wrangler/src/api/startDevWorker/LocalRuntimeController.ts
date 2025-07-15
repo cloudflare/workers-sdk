@@ -180,6 +180,14 @@ export class LocalRuntimeController extends RuntimeController {
 	// Used for the rebuild hotkey
 	#currentContainerBuildId: string | undefined;
 
+	// Used to store the information and abort handle for the
+	// current container that is being built
+	containerBeingBuilt?: {
+		containerOptions: ContainerDevOptions;
+		abort: () => void;
+		abortRequested: boolean;
+	};
+
 	onBundleStart(_: BundleStartEvent) {
 		// Ignored in local runtime
 	}
@@ -222,7 +230,23 @@ export class LocalRuntimeController extends RuntimeController {
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
-				await prepareContainerImagesForDev(this.#dockerPath, containerOptions);
+				await prepareContainerImagesForDev(
+					this.#dockerPath,
+					containerOptions,
+					data.config.config,
+					(buildStartEvent) => {
+						this.containerBeingBuilt = {
+							...buildStartEvent,
+							abortRequested: false,
+						};
+					},
+					() => {
+						this.containerBeingBuilt = undefined;
+					}
+				);
+				if (this.containerBeingBuilt) {
+					this.containerBeingBuilt.abortRequested = false;
+				}
 				this.#currentContainerBuildId = data.config.dev.containerBuildId;
 				// Miniflare will have logged 'Ready on...' before the containers are built, but that is actually the proxy server :/
 				// The actual user worker's miniflare instance is blocked until the containers are built
@@ -308,6 +332,16 @@ export class LocalRuntimeController extends RuntimeController {
 				},
 			});
 		} catch (error) {
+			if (
+				this.containerBeingBuilt?.abortRequested &&
+				error instanceof Error &&
+				error.message === "Build exited with code: 1"
+			) {
+				// The user caused the container image build to be aborted, so it's expected
+				// to get a build error here, this can be safely ignored because after this
+				// the dev process either terminates or reloads the container
+				return;
+			}
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Error reloading local server",
@@ -357,7 +391,7 @@ export class LocalRuntimeController extends RuntimeController {
 		if (this.#containerImageTagsSeen.size > 0) {
 			try {
 				await this.cleanupContainers();
-			} catch (error) {
+			} catch {
 				logger.warn(
 					`Failed to clean up containers. You may have to stop and remove them up manually.`
 				);
