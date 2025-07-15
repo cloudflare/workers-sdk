@@ -2413,6 +2413,8 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 						class_name: "test-class",
 						name: "test-worker-name-test-class",
+						// this has been set twice to accomodate both cloudchamber and containers
+						image: "something",
 					},
 				]);
 				if (config.containers) {
