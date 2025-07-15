@@ -561,3 +561,30 @@ export const renderDiff = (results: Result[]) => {
 		}
 	}
 };
+
+/**
+ * Filter out trailing comma differences that are just formatting changes.
+ * This prevents showing spurious diffs when JSON properties get trailing commas
+ * added/removed due to new properties being inserted.
+ */
+export function filterTrailingCommaChanges(results: Result[]): Result[] {
+	// First, identify pairs of removed/added lines that are just comma changes
+	const commaChangePairs = new Set<Result>();
+	
+	results.forEach((result) => {
+		if (result.removed && result.value) {
+			// Look for a corresponding added line that's the same but with comma
+			const potentialMatch = results.find((r) => 
+				r.added && r.value === result.value + ','
+			);
+			if (potentialMatch) {
+				// This is a trailing comma change, mark both for filtering
+				commaChangePairs.add(result);
+				commaChangePairs.add(potentialMatch);
+			}
+		}
+	});
+	
+	// Filter out the identified comma change pairs
+	return results.filter((result) => !commaChangePairs.has(result));
+}
