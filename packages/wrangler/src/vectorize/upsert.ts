@@ -1,6 +1,6 @@
 import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
-import { File, FormData } from "undici";
+import { FormData } from "undici";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";

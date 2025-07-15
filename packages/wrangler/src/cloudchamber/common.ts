@@ -166,8 +166,7 @@ export async function fillOpenAPIConfiguration(
 	config: Config,
 	scope: typeof containersScope | typeof cloudchamberScope
 ) {
-	const headers: Record<string, string> =
-		OpenAPI.HEADERS !== undefined ? { ...OpenAPI.HEADERS } : {};
+	const headers = new Headers();
 
 	const accountId = await requireAuth(config);
 	const auth = requireApiToken();
@@ -193,7 +192,10 @@ export async function fillOpenAPIConfiguration(
 		OpenAPI.BASE = base;
 	}
 
-	OpenAPI.HEADERS = headers;
+	OpenAPI.HEADERS = {
+		...(OpenAPI.HEADERS ?? {}),
+		...Object.fromEntries(headers.entries()),
+	};
 }
 
 type NonObject = undefined | null | boolean | string | number;

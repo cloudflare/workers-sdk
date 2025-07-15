@@ -3,6 +3,7 @@ import { execSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
+import { Response } from "undici";
 import {
 	getAssetsOptions,
 	syncAssets,
