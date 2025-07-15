@@ -1,8 +1,10 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { DeferredPromise } from "miniflare:shared";
+import NodeWebSocket from "ws";
 import { z } from "zod";
-import { Request, Response } from "../../../http";
+import { fetch, Request, Response } from "../../../http";
 import { Log, processStackTrace } from "../../../shared";
 import { maybeParseURL } from "../../shared";
 import {
@@ -11,7 +13,7 @@ import {
 	SourceOptions,
 } from "../modules";
 import { getSourceMapper } from "./sourcemap";
-import type { UrlAndMap } from "@cspotcode/source-map-support";
+import type { RawSourceMap, UrlAndMap } from "@cspotcode/source-map-support";
 
 // Subset of core worker options that define Worker source code.
 // These are the possible cases, and corresponding reported source files in
@@ -139,7 +141,11 @@ function getHeaders(request: Request) {
 
 function getSourceMappedStack(
 	workerSrcOpts: NameSourceOptions[],
-	error: Error
+	error: Error,
+	onSourceMap?: (
+		sourcemap: RawSourceMap,
+		sourceMapPath: string
+	) => RawSourceMap | void
 ) {
 	// This function needs to match the signature of the `retrieveSourceMap`
 	// option from the "source-map-support" package.
@@ -159,6 +165,22 @@ function getSourceMappedStack(
 		const sourceMapPath = path.resolve(root, sourceMapMatch[1]);
 		const sourceMapFile = maybeGetDiskFile(sourceMapPath);
 		if (sourceMapFile === undefined) return null;
+
+		if (onSourceMap) {
+			try {
+				const sourcemap = JSON.parse(sourceMapFile.contents);
+				const result = onSourceMap(sourcemap, sourceMapFile.path);
+
+				if (result !== undefined) {
+					return {
+						map: JSON.stringify(result),
+						url: sourceMapFile.path,
+					};
+				}
+			} catch {
+				return null;
+			}
+		}
 
 		return { map: sourceMapFile.contents, url: sourceMapFile.path };
 	}
@@ -201,14 +223,18 @@ const ALLOWED_ERROR_SUBCLASS_CONSTRUCTORS: StandardErrorConstructor[] = [
 ];
 export function reviveError(
 	workerSrcOpts: NameSourceOptions[],
-	jsonError: JsonError
+	jsonError: JsonError,
+	onSourceMap?: (
+		sourcemap: RawSourceMap,
+		sourceMapPath: string
+	) => RawSourceMap | void
 ): Error {
 	// At a high level, this function takes a JSON-serialisable representation of
 	// an `Error`, and converts it to an `Error`. `Error`s may have `cause`s, so
 	// we need to do this recursively.
 	let cause: Error | undefined;
 	if (jsonError.cause !== undefined) {
-		cause = reviveError(workerSrcOpts, jsonError.cause);
+		cause = reviveError(workerSrcOpts, jsonError.cause, onSourceMap);
 	}
 
 	// If this is one of the built-in error types, construct an instance of that.
@@ -236,7 +262,7 @@ export function reviveError(
 
 	// Try to apply source-mapping to the stack trace
 	error.stack = processStackTrace(
-		getSourceMappedStack(workerSrcOpts, error),
+		getSourceMappedStack(workerSrcOpts, error, onSourceMap),
 		(line, location) =>
 			!location.includes(".wrangler/tmp") &&
 			!location.includes("wrangler/templates/middleware")
@@ -247,19 +273,95 @@ export function reviveError(
 	return error;
 }
 
+export async function getScriptSource(inspectorURL: URL, moduleName: string) {
+	// Look for workers available in the inspector URL
+	const httpURL = `http://${inspectorURL.hostname}:${inspectorURL.port}/json`;
+	const response = await fetch(httpURL);
+	const workers = response.ok ? await response.json() : null;
+	// Find the first available worker
+	const worker = Array.isArray(workers) ? workers[0] : null;
+
+	if (!worker || !worker.webSocketDebuggerUrl) {
+		return;
+	}
+
+	// Connect to the specific worker's WebSocket
+	const promise = new DeferredPromise<string | undefined>();
+	const ws = new NodeWebSocket(worker.webSocketDebuggerUrl);
+
+	// We will use this id to match the request and response
+	const scriptSourceMessageId = Math.floor(Math.random() * 10000);
+
+	let scriptSource: string | undefined;
+
+	ws.on("message", async (raw) => {
+		const message = JSON.parse(raw.toString("utf8"));
+
+		if (
+			message.method === "Debugger.scriptParsed" &&
+			message.params.url === moduleName
+		) {
+			// Use the scriptId from the scriptParsed event to get the script source
+			ws.send(
+				JSON.stringify({
+					id: scriptSourceMessageId,
+					method: "Debugger.getScriptSource",
+					params: { scriptId: message.params.scriptId },
+				})
+			);
+		} else if (message.id === scriptSourceMessageId) {
+			// Keep the script source from the response
+			scriptSource = message.result.scriptSource;
+			// Close the WebSocket connection
+			ws.close();
+		}
+	});
+	ws.on("error", () => {
+		// Suppress errors  to avoid triggering another error when we are populating the pretty error screen
+		// This will be resolved with `undefined` when the WebSocket closes
+	});
+	ws.on("open", () => {
+		// Enable the Debugger to receive scriptParsed events
+		ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
+	});
+	ws.on("close", () => {
+		promise.resolve(scriptSource);
+	});
+
+	return promise;
+}
+
 export async function handlePrettyErrorRequest(
 	log: Log,
 	workerSrcOpts: NameSourceOptions[],
-	request: Request
+	request: Request,
+	inspectorURL: URL | null
 ): Promise<Response> {
 	// Parse and validate the error we've been given from user code
 	const caught = JsonErrorSchema.parse(await request.json());
 
-	// Convert the error into a regular `Error` object and try to source-map it.
-	// We need to give `name`, `message` and `stack` to Youch, but StackTracy,
-	// Youch's dependency for parsing `stack`s, will only extract `stack` from
-	// an object if it's an `instanceof Error`.
-	const error = reviveError(workerSrcOpts, caught);
+	// We might populate the source in Youch with the sources content from the sourcemap
+	// in case the source file does not exist on disk
+	const sourcesContentMap = new Map<string, string>();
+	const error = reviveError(
+		workerSrcOpts,
+		caught,
+		(sourceMap, sourceMapPath) => {
+			for (let i = 0; i < sourceMap.sources.length; i++) {
+				const source = sourceMap.sources[i];
+				const sourceContent = sourceMap.sourcesContent?.[i];
+
+				if (sourceContent) {
+					const fullSourcePath = path.resolve(
+						path.dirname(sourceMapPath),
+						sourceMap.sourceRoot ?? "",
+						source
+					);
+					sourcesContentMap.set(fullSourcePath, sourceContent);
+				}
+			}
+		}
+	);
 
 	// Log source-mapped error to console if logging enabled
 	log.error(error);
@@ -281,10 +383,53 @@ export async function handlePrettyErrorRequest(
 	// Lazily import `youch` when required
 	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	const { Youch }: typeof import("youch") = require("youch");
-	// `cause` is usually more useful than the error itself, display that instead
-	// TODO(someday): would be nice if we could display both
 	const youch = new Youch();
 
+	youch.defineSourceLoader(async (stackFrame) => {
+		if (!stackFrame.fileName) {
+			return;
+		}
+
+		if (stackFrame.fileName.startsWith("cloudflare:")) {
+			stackFrame.type = "native";
+
+			if (inspectorURL) {
+				const source = await getScriptSource(inspectorURL, stackFrame.fileName);
+
+				if (source) {
+					return { contents: source };
+				}
+			}
+
+			return;
+		}
+
+		// Check if it is an inline script, which are reported as "script-<workerIndex>"
+		const workerIndex = maybeGetStringScriptPathIndex(stackFrame.fileName);
+		if (workerIndex !== undefined) {
+			const srcOpts = workerSrcOpts[workerIndex];
+			if ("script" in srcOpts && srcOpts.script !== undefined) {
+				return { contents: srcOpts.script };
+			}
+		}
+
+		// Check if the source map has the source content for this file so we don't need to read it from disk
+		const sorucesContent = sourcesContentMap.get(stackFrame.fileName);
+		if (sorucesContent) {
+			return { contents: sorucesContent };
+		}
+
+		try {
+			const contents = fs.readFileSync(stackFrame.fileName, {
+				encoding: "utf8",
+			});
+
+			return { contents };
+		} catch {
+			// If we can't read the file, just return undefined
+			return;
+		}
+	});
 	youch.useTransformer((error) => {
 		error.hint = [
 			'<a href="https://developers.cloudflare.com/workers/" target="_blank" style="text-decoration:none;font-style:normal;padding:5px">📚 Workers Docs</a>',
