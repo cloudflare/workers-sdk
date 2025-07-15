@@ -271,7 +271,7 @@ class CallSite implements NodeJS.CallSite {
 	getTypeName(): string | null {
 		return this.opts.typeName;
 	}
-	// eslint-disable-next-line @typescript-eslint/ban-types
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 	getFunction(): Function | undefined {
 		return undefined;
 	}

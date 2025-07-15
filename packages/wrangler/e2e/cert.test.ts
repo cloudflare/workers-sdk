@@ -12,9 +12,14 @@ import { normalizeOutput } from "./helpers/normalize";
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("cert", () => {
 	const normalize = (str: string) =>
-		normalizeOutput(str, {
-			[process.env.CLOUDFLARE_ACCOUNT_ID as string]: "CLOUDFLARE_ACCOUNT_ID",
-		});
+		normalizeOutput(
+			str,
+			process.env.CLOUDFLARE_ACCOUNT_ID
+				? {
+						[process.env.CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
+					}
+				: {}
+		);
 	const helper = new WranglerE2ETestHelper();
 	// Generate root and leaf certificates
 	const { certificate: rootCert, privateKey: rootKey } =

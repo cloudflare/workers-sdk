@@ -109,7 +109,7 @@ export async function fetchInternal<ResponseType>(
 
 	try {
 		return parseJSON(jsonText) as ResponseType;
-	} catch (err) {
+	} catch {
 		throw new APIError({
 			text: "Received a malformed response from the API",
 			notes: [

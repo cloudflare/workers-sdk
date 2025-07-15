@@ -53,7 +53,7 @@ export function validatePublicSSHKeyCLI(
 		if (!json) {
 			throw new UserError(reason);
 		} else {
-			logger.log(JSON.stringify({ error: reason }, null, 4));
+			logger.json({ error: reason });
 			exit(1);
 		}
 	};

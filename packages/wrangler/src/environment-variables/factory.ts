@@ -98,6 +98,7 @@ export function getEnvironmentVariableFactory<
 			if (!hasWarned) {
 				hasWarned = true;
 				// Ideally we'd use `logger.warn` here, but that creates a circular dependency that Vitest is unable to resolve
+				// eslint-disable-next-line no-console
 				console.warn(
 					`Using "${deprecatedName}" environment variable. This is deprecated. Please use "${variableName}", instead.`
 				);

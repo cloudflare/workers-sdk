@@ -70,7 +70,7 @@ export interface StartDevWorkerInput {
 	 * This is the `main` property of a Wrangler configuration file.
 	 */
 	entrypoint?: string;
-	/** The configuration of the worker. */
+	/** The configuration path of the worker. */
 	config?: string;
 
 	/** The compatibility date for the workerd runtime. */

@@ -43,7 +43,7 @@ describe("wrangler", () => {
 				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
-				  wrangler versions               🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
+				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler delete [script]        🗑  Delete a Worker from Cloudflare
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
@@ -51,14 +51,14 @@ describe("wrangler", () => {
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 
 				  wrangler kv                     🗂️  Manage Workers KV Namespaces
-				  wrangler queues                 🇶  Manage Workers Queues
+				  wrangler queues                 📬 Manage Workers Queues
 				  wrangler r2                     📦 Manage R2 buckets & objects
 				  wrangler d1                     🗄  Manage Workers D1 databases
 				  wrangler vectorize              🧮 Manage Vectorize indexes
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open-beta]
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
-				  wrangler mtls-certificate       🪪  Manage certificates used for mTLS connections
+				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
@@ -103,7 +103,7 @@ describe("wrangler", () => {
 				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
-				  wrangler versions               🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
+				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler delete [script]        🗑  Delete a Worker from Cloudflare
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
@@ -111,14 +111,14 @@ describe("wrangler", () => {
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 
 				  wrangler kv                     🗂️  Manage Workers KV Namespaces
-				  wrangler queues                 🇶  Manage Workers Queues
+				  wrangler queues                 📬 Manage Workers Queues
 				  wrangler r2                     📦 Manage R2 buckets & objects
 				  wrangler d1                     🗄  Manage Workers D1 databases
 				  wrangler vectorize              🧮 Manage Vectorize indexes
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open-beta]
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
-				  wrangler mtls-certificate       🪪  Manage certificates used for mTLS connections
+				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models

@@ -2,11 +2,11 @@ import { isDockerfile } from "@cloudflare/containers-shared";
 import { type Config } from "../config";
 import { type ContainerApp } from "../config/environment";
 import { containersScope } from "../containers";
+import { apply } from "../containers/deploy";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { fetchVersion } from "../versions/api";
-import { apply } from "./apply";
 import { buildAndMaybePush } from "./build";
 import { fillOpenAPIConfiguration } from "./common";
 import type { BuildArgs } from "@cloudflare/containers-shared/src/types";
@@ -16,12 +16,14 @@ export async function maybeBuildContainer(
 	/** just the tag component. will be prefixed with the container name */
 	imageTag: string,
 	dryRun: boolean,
-	pathToDocker: string
+	pathToDocker: string,
+	configPath?: string
 ): Promise<{ image: string; imageUpdated: boolean }> {
 	try {
 		if (
 			!isDockerfile(
-				containerConfig.image ?? containerConfig.configuration?.image
+				containerConfig.image ?? containerConfig.configuration?.image,
+				configPath
 			)
 		) {
 			return {
@@ -46,6 +48,7 @@ export async function maybeBuildContainer(
 		options,
 		pathToDocker,
 		!dryRun,
+		configPath,
 		containerConfig
 	);
 
@@ -62,7 +65,7 @@ export type DeployContainersArgs = {
 
 export async function deployContainers(
 	config: Config,
-	{ versionId, accountId, scriptName, dryRun, env }: DeployContainersArgs
+	{ versionId, accountId, scriptName, dryRun }: DeployContainersArgs
 ) {
 	if (config.containers === undefined) {
 		return;
@@ -116,7 +119,8 @@ export async function deployContainers(
 			container,
 			versionId,
 			dryRun,
-			pathToDocker
+			pathToDocker,
+			config.configPath
 		);
 		container.configuration ??= {};
 		container.configuration.image = buildResult.image;
@@ -125,7 +129,6 @@ export async function deployContainers(
 		await apply(
 			{
 				skipDefaults: false,
-				env,
 				imageUpdateRequired: buildResult.imageUpdated,
 			},
 			configuration
@@ -141,13 +144,13 @@ export function getBuildArguments(
 	container: ContainerApp,
 	idForImageTag: string
 ): BuildArgs {
-	const imageRef = container.image ?? container.configuration?.image;
+	const pathToDockerfile = container.image ?? container.configuration?.image;
 	const imageTag = container.name + ":" + idForImageTag.split("-")[0];
 
 	return {
 		tag: imageTag,
-		pathToDockerfile: imageRef,
-		buildContext: container.image_build_context ?? ".",
+		pathToDockerfile,
+		buildContext: container.image_build_context,
 		args: container.image_vars,
 	};
 }

@@ -37,7 +37,11 @@ const strictPeerDeps = {
 };
 
 /** Seed a test project from a fixture. */
-export function seed(fixture: string, pm: "pnpm" | "yarn" | "npm") {
+export function seed(
+	fixture: string,
+	pm: "pnpm" | "yarn" | "npm",
+	replacements: Record<string, string> = {}
+) {
 	const root = inject("root");
 	const projectPath = path.resolve(root, fixture, pm);
 
@@ -48,6 +52,8 @@ export function seed(fixture: string, pm: "pnpm" | "yarn" | "npm") {
 		});
 		debuglog("Fixture copied to " + projectPath);
 		await updateVitePluginVersion(projectPath);
+		debuglog("Fixing up replacements in seeded files");
+		await fixupReplacements(projectPath, replacements);
 		debuglog("Updated vite-plugin version in package.json");
 		runCommand(`${pm} install ${strictPeerDeps[pm]}`, projectPath, {
 			attempts: 2,
@@ -181,7 +187,7 @@ async function updateVitePluginVersion(projectPath: string) {
 export function runCommand(
 	command: string,
 	cwd: string,
-	{ attempts = 1 } = {}
+	{ attempts = 1, canFail = false } = {}
 ) {
 	while (attempts > 0) {
 		debuglog("Running command:", command);
@@ -196,6 +202,8 @@ export function runCommand(
 			attempts--;
 			if (attempts > 0) {
 				debuglog(`Retrying failed command (${e})`);
+			} else if (canFail) {
+				debuglog(`Command failed but canFail is true, not throwing: ${e}`);
 			} else {
 				throw e;
 			}
@@ -230,4 +238,25 @@ export async function waitForReady(proc: Process) {
 		{ interval: 100, timeout: 20_000 }
 	);
 	return match[1];
+}
+
+async function fixupReplacements(
+	projectPath: string,
+	replacements: Record<string, string>
+) {
+	const files = await fs.readdir(projectPath, { withFileTypes: true });
+	for (const file of files) {
+		if (file.isDirectory()) {
+			await fixupReplacements(path.join(projectPath, file.name), replacements);
+		} else if (file.isFile()) {
+			let content = await fs.readFile(
+				path.join(projectPath, file.name),
+				"utf8"
+			);
+			for (const [key, value] of Object.entries(replacements)) {
+				content = content.replaceAll(key, value);
+			}
+			await fs.writeFile(path.join(projectPath, file.name), content, "utf8");
+		}
+	}
 }

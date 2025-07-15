@@ -1,21 +1,19 @@
 {
 	"name": "container-app",
-	"main": "src/container.mjs",
+	"main": "src/index.ts",
 	"compatibility_date": "2025-04-03",
 	"containers": [
 		{
-			"configuration": {
-				"image": "./Dockerfile",
-			},
-			"class_name": "Container",
-			"name": "http2",
+			"image": "./Dockerfile",
+			"class_name": "FixtureTestContainer",
+			"name": "container",
 			"max_instances": 2,
 		},
 	],
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "Container",
+				"class_name": "FixtureTestContainer",
 				"name": "CONTAINER",
 			},
 		],
@@ -23,7 +21,7 @@
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_sqlite_classes": ["Container"],
+			"new_sqlite_classes": ["FixtureTestContainer"],
 		},
 	],
 }

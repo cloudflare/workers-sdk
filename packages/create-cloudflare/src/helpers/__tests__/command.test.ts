@@ -33,12 +33,16 @@ describe("Command Helpers", () => {
 				}),
 				stdout: {
 					on(_event: "data", cb: (data: string) => void) {
-						spawnStdout !== undefined && cb(spawnStdout);
+						if (spawnStdout !== undefined) {
+							cb(spawnStdout);
+						}
 					},
 				},
 				stderr: {
 					on(_event: "data", cb: (data: string) => void) {
-						spawnStderr !== undefined && cb(spawnStderr);
+						if (spawnStderr !== undefined) {
+							cb(spawnStderr);
+						}
 					},
 				},
 			} as unknown as ChildProcess;

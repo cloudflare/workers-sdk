@@ -7,6 +7,7 @@ import { watch } from "chokidar";
 import { getType } from "mime";
 import { fetch, Request, Response } from "miniflare";
 import { Dispatcher, getGlobalDispatcher } from "undici";
+import { logger } from "../logger";
 import { hashFile } from "../pages/hash";
 import type { Logger } from "../logger";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
@@ -206,7 +207,8 @@ async function generateAssetsFetch(
 			request: request as unknown as WorkersRequest,
 			metadata: metadata as Metadata,
 			xServerEnvHeader: "dev",
-			logError: console.error,
+			xWebAnalyticsHeader: false,
+			logError: logger.error,
 			findAssetEntryForPath: async (path) => {
 				const filepath = resolve(join(directory, path));
 				if (!filepath.startsWith(directory)) {

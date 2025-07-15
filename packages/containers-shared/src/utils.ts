@@ -1,34 +1,62 @@
 import { execFile, spawn, StdioOptions } from "child_process";
 import { existsSync, statSync } from "fs";
+import path from "path";
 import { dockerImageInspect } from "./inspect";
 import { ContainerDevOptions } from "./types";
 
 /** helper for simple docker command call that don't require any io handling */
-export const runDockerCmd = async (
+export const runDockerCmd = (
 	dockerPath: string,
 	args: string[],
 	stdio?: StdioOptions
-) => {
+): {
+	abort: () => void;
+	ready: Promise<{ aborted: boolean }>;
+	// Note: we make the return type a thenable just for convenience so that callers can directly await it
+	then: (resolve: () => void, reject: () => void) => void;
+} => {
+	let aborted = false;
+	let resolve: (args: { aborted: boolean }) => void;
+	let reject: (err: unknown) => void;
+	const ready = new Promise<{ aborted: boolean }>((res, rej) => {
+		resolve = res;
+		reject = rej;
+	});
 	const child = spawn(dockerPath, args, {
 		stdio: stdio ?? "inherit",
+		// We need to set detached to true so that the child process
+		// will control all of its child processed and we can kill
+		// all of them in case we need to abort the build process
+		detached: true,
 	});
 	let errorHandled = false;
-	await new Promise<void>((resolve, reject) => {
-		child.on("close", (code) => {
-			if (code === 0) {
-				resolve();
-			} else if (!errorHandled) {
-				errorHandled = true;
-				reject(new Error(`Docker command exited with code: ${code}`));
-			}
-		});
-		child.on("error", (err) => {
-			if (!errorHandled) {
-				errorHandled = true;
-				reject(new Error(`Docker command failed: ${err.message}`));
-			}
-		});
+
+	child.on("close", (code) => {
+		if (code === 0 || aborted) {
+			resolve({ aborted });
+		} else if (!errorHandled) {
+			errorHandled = true;
+			reject(new Error(`Docker command exited with code: ${code}`));
+		}
 	});
+	child.on("error", (err) => {
+		if (!errorHandled) {
+			errorHandled = true;
+			reject(new Error(`Docker command failed: ${err.message}`));
+		}
+	});
+	return {
+		abort: () => {
+			aborted = true;
+			child.unref();
+			if (child.pid !== undefined) {
+				// kill run on the negative PID kills the whole group controlled by the child process
+				process.kill(-child.pid);
+			}
+		},
+		ready,
+		then: async (resolve, reject) => ready.then(resolve).catch(reject),
+	};
 };
 
 export const runDockerCmdWithOutput = async (
@@ -72,10 +100,14 @@ export function isDir(path: string) {
 }
 
 /** returns true if it is a dockerfile, false if it is a registry link, throws if neither */
-export const isDockerfile = (image: string): boolean => {
-	// TODO: move this into config validation
-	if (existsSync(image)) {
-		if (isDir(image)) {
+export const isDockerfile = (
+	image: string,
+	configPath: string | undefined
+): boolean => {
+	const baseDir = configPath ? path.dirname(configPath) : process.cwd();
+	const maybeDockerfile = path.resolve(baseDir, image);
+	if (existsSync(maybeDockerfile)) {
+		if (isDir(maybeDockerfile)) {
 			throw new Error(
 				`${image} is a directory, you should specify a path to the Dockerfile`
 			);
@@ -161,7 +193,7 @@ const getContainerIdsFromImage = async (
 
 /**
  * While all ports are exposed in prod, a limitation of local dev with docker is that
- * non-linux users will have to manually expose ports in their Dockerfile.
+ * users will have to manually expose ports in their Dockerfile.
  * We want to fail early and clearly if a user tries to develop with a container
  * that has no ports exposed and is definitely not accessible.
  *
@@ -175,10 +207,10 @@ export async function checkExposedPorts(
 		imageTag: options.imageTag,
 		formatString: "{{ len .Config.ExposedPorts }}",
 	});
-	if (output === "0" && process.platform !== "linux") {
+	if (output === "0") {
 		throw new Error(
-			`The container "${options.class_name}" does not expose any ports.\n` +
-				"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort()` in your Dockerfile."
+			`The container "${options.class_name}" does not expose any ports. In your Dockerfile, please expose any ports you intend to connect to.\n` +
+				"For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.\n"
 		);
 	}
 }

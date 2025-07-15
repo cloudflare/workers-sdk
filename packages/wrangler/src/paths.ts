@@ -113,7 +113,7 @@ export function getWranglerTmpDir(
 		if (cleanup) {
 			try {
 				return fs.rmSync(tmpDir, { recursive: true, force: true });
-			} catch (e) {
+			} catch {
 				// This sometimes fails on Windows with EBUSY
 			}
 		}

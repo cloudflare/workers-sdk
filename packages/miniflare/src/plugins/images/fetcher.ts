@@ -89,7 +89,7 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 			}
 
 			return runTransform(transformer, transforms, outputFormat);
-		} catch (e) {
+		} catch {
 			return badTransformsResponse;
 		}
 	}

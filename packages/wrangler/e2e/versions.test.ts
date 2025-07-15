@@ -596,6 +596,62 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		`);
 		});
 
+		it("should upload version of Worker with assets only", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					compatibility_date = "2023-01-01"
+
+					[assets]
+					directory = "./public"
+				`,
+				"public/asset.txt": `beep boop beep boop`,
+				"package.json": dedent`
+					{
+						"name": "${workerName}",
+						"version": "0.0.0",
+						"private": true
+					}
+				`,
+			});
+
+			const upload = await helper.run(
+				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload-assets"`
+			);
+
+			expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
+				"🌀 Building list of assets...
+				✨ Read 1 file from the assets directory /tmpdir
+				🌀 Starting asset upload...
+				🌀 Found 1 new or modified static asset to upload. Proceeding with upload...
+				+ /asset.txt
+				Uploaded 1 of 1 assets
+				✨ Success! Uploaded 1 file (TIMINGS)
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: (TIMINGS)
+				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+				Worker Version ID: 00000000-0000-0000-0000-000000000000
+				Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
+				To deploy this version to production traffic use the command wrangler versions deploy
+				Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
+				Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
+			`);
+
+			const versionsView = await helper.run(
+				`wrangler versions view ${matchVersionId(upload.stdout)}`
+			);
+			expect(normalize(versionsView.stdout)).toMatchInlineSnapshot(`
+				"Version ID:  00000000-0000-0000-0000-000000000000
+				Created:     TIMESTAMP
+				Author:      person@example.com
+				Source:      Unknown (version_upload)
+				Tag:         e2e-upload-assets
+				Message:     Upload via e2e test
+				------------------------------------------------------------
+				Compatibility Date:  2023-01-01"
+			`);
+		});
+
 		it("should include version preview url in output file", async () => {
 			const outputFile = path.join(helper.tmpPath, "output.jsonnd");
 			const upload = await helper.run(

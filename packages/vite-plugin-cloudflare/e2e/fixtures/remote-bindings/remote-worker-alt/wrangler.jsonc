@@ -1,0 +1,5 @@
+{
+	"compatibility_date": "2025-04-03",
+	"name": "<<REMOTE_WORKER_PLACEHOLDER_ALT>>",
+	"main": "./index.js",
+}

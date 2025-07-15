@@ -78,6 +78,7 @@ export async function runC3ForFrameworkTest(
 
 	const match = output.replaceAll("\n", "").match(deployedUrlRe);
 	if (!match || !match[1]) {
+		// eslint-disable-next-line no-console
 		console.error(output);
 		expect(false, "Couldn't find deployment url in C3 output").toBe(true);
 		return "";

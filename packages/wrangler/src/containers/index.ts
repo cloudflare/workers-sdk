@@ -5,7 +5,7 @@ import {
 	pushYargs,
 } from "../cloudchamber/build";
 import { handleFailure } from "../cloudchamber/common";
-import { imagesCommand } from "../cloudchamber/images/list";
+import { imagesCommand } from "../cloudchamber/images/images";
 import {
 	deleteCommand,
 	deleteYargs,
@@ -26,7 +26,7 @@ export const containers = (
 	return yargs
 		.command(
 			"build [PATH]",
-			"build a dockerfile",
+			"Build a container image",
 			(args) => buildYargs(args),
 			(args) =>
 				handleFailure(
@@ -37,7 +37,7 @@ export const containers = (
 		)
 		.command(
 			"push [TAG]",
-			"push a tagged image to a Cloudflare managed registry, which is automatically integrated with your account",
+			"Push a tagged image to a Cloudflare managed registry",
 			(args) => pushYargs(args),
 			(args) =>
 				handleFailure(
@@ -48,12 +48,12 @@ export const containers = (
 		)
 		.command(
 			"images",
-			"perform operations on images in your Cloudflare managed registry",
+			"Perform operations on images in your Cloudflare managed registry",
 			(args) => imagesCommand(args, containersScope).command(subHelp)
 		)
 		.command(
 			"info [ID]",
-			"get information about a specific container",
+			"Get information about a specific container",
 			(args) => infoYargs(args),
 			(args) =>
 				handleFailure(
@@ -64,7 +64,7 @@ export const containers = (
 		)
 		.command(
 			"list",
-			"list containers",
+			"List containers",
 			(args) => listYargs(args),
 			(args) =>
 				handleFailure(
@@ -75,7 +75,7 @@ export const containers = (
 		)
 		.command(
 			"delete [ID]",
-			"delete a container",
+			"Delete a container",
 			(args) => deleteYargs(args),
 			(args) =>
 				handleFailure(

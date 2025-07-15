@@ -3,6 +3,7 @@ import { inputPrompt } from "@cloudflare/cli/interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
+import { logger } from "../logger";
 import { logDeployment, pickDeployment } from "./cli/deployments";
 import { wrap } from "./helpers/wrap";
 import type { Config } from "../config";
@@ -33,7 +34,7 @@ export async function deleteCommand(
 		const deployment = await DeploymentsService.deleteDeploymentV2(
 			deleteArgs.deploymentId
 		);
-		console.log(JSON.stringify(deployment), null, 4);
+		logger.json(deployment);
 		return;
 	}
 

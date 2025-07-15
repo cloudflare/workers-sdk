@@ -27,12 +27,13 @@ export const queuesInfoCommand = createCommand({
 		logger.log(`Created On: ${queue.created_on}`);
 		logger.log(`Last Modified: ${queue.modified_on}`);
 		logger.log(`Number of Producers: ${queue.producers_total_count}`);
-		queue.producers_total_count > 0 &&
+		if (queue.producers_total_count > 0) {
 			logger.log(
 				`Producers:${queue.producers.map((p: Producer) => (p.type === "r2_bucket" ? ` ${p.type}:${p.bucket_name}` : ` ${p.type}:${p.script}`)).toString()}`
 			);
+		}
 		logger.log(`Number of Consumers: ${queue.consumers_total_count}`);
-		queue.consumers_total_count > 0 &&
+		if (queue.consumers_total_count > 0) {
 			logger.log(
 				`Consumers: ${queue.consumers
 					.map((c: Consumer) => {
@@ -51,5 +52,6 @@ curl "https://api.cloudflare.com/client/v4/accounts/${accountId || "<add your ac
 					})
 					.toString()}`
 			);
+		}
 	},
 });

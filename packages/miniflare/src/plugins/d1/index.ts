@@ -11,6 +11,7 @@ import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
+	getUserBindingServiceName,
 	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
@@ -67,10 +68,18 @@ export const D1_PLUGIN: Plugin<
 					"Alpha D1 Databases cannot run remotely"
 				);
 
+				const serviceName = getUserBindingServiceName(
+					D1_DATABASE_SERVICE_PREFIX,
+					id,
+					remoteProxyConnectionString
+				);
+
 				const binding = name.startsWith("__D1_BETA__")
 					? // Used before Wrangler 3.3
 						{
-							service: { name: `${D1_DATABASE_SERVICE_PREFIX}:${id}` },
+							service: {
+								name: serviceName,
+							},
 						}
 					: // Used after Wrangler 3.3
 						{
@@ -79,7 +88,9 @@ export const D1_PLUGIN: Plugin<
 								innerBindings: [
 									{
 										name: "fetcher",
-										service: { name: `${D1_DATABASE_SERVICE_PREFIX}:${id}` },
+										service: {
+											name: serviceName,
+										},
 									},
 								],
 							},
@@ -107,7 +118,11 @@ export const D1_PLUGIN: Plugin<
 		const databases = namespaceEntries(options.d1Databases);
 		const services = databases.map<Service>(
 			([name, { id, remoteProxyConnectionString }]) => ({
-				name: `${D1_DATABASE_SERVICE_PREFIX}:${id}`,
+				name: getUserBindingServiceName(
+					D1_DATABASE_SERVICE_PREFIX,
+					id,
+					remoteProxyConnectionString
+				),
 				worker: remoteProxyConnectionString
 					? remoteProxyClientWorker(remoteProxyConnectionString, name)
 					: objectEntryWorker(D1_DATABASE_OBJECT, id),

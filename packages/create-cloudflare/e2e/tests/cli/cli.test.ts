@@ -427,27 +427,28 @@ describe("Create Cloudflare CLI", () => {
 			},
 		);
 
-		test.skipIf(
-			isWindows || pm === "yarn" || CLOUDFLARE_API_TOKEN === undefined,
-		)("--existing-script", async ({ logStream, project }) => {
-			const { output } = await runC3(
-				[
-					project.path,
-					"--existing-script=existing-script-test-do-not-delete",
-					"--git=false",
-					"--no-deploy",
-				],
-				[],
-				logStream,
-			);
-			expect(output).toContain("Pre-existing Worker (from Dashboard)");
-			expect(output).toContain("Application created successfully!");
-			expect(fs.existsSync(join(project.path, "wrangler.jsonc"))).toBe(false);
-			expect(fs.existsSync(join(project.path, "wrangler.json"))).toBe(false);
-			expect(
-				fs.readFileSync(join(project.path, "wrangler.toml"), "utf8"),
-			).toContain('FOO = "bar"');
-		});
+		test.skipIf(isWindows || pm === "yarn" || !CLOUDFLARE_API_TOKEN)(
+			"--existing-script",
+			async ({ logStream, project }) => {
+				const { output } = await runC3(
+					[
+						project.path,
+						"--existing-script=existing-script-test-do-not-delete",
+						"--git=false",
+						"--no-deploy",
+					],
+					[],
+					logStream,
+				);
+				expect(output).toContain("Pre-existing Worker (from Dashboard)");
+				expect(output).toContain("Application created successfully!");
+				expect(fs.existsSync(join(project.path, "wrangler.jsonc"))).toBe(false);
+				expect(fs.existsSync(join(project.path, "wrangler.json"))).toBe(false);
+				expect(
+					fs.readFileSync(join(project.path, "wrangler.toml"), "utf8"),
+				).toContain('FOO = "bar"');
+			},
+		);
 	});
 
 	describe("help text", () => {

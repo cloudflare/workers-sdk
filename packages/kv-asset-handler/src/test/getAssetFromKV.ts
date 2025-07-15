@@ -12,7 +12,7 @@ import type { KVError } from "../types";
 mockGlobalScope();
 
 // @ts-expect-error we use a require for a mock
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { getAssetFromKV, mapRequestToAsset } = require("../index");
 test("getAssetFromKV return correct val from KV and default caching", async (t) => {
 	mockRequestScope();

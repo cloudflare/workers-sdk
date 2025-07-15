@@ -1,7 +1,7 @@
 import { resolve } from "path";
 import { setTimeout } from "timers/promises";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, it, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("'wrangler dev' correctly renders pages", () => {
@@ -27,11 +27,16 @@ describe("'wrangler dev' correctly renders pages", () => {
 	});
 
 	it("renders ", async ({ expect }) => {
-		// Note that the local protocol defaults to http
-		const response = await fetch(`http://${ip}:${port}/`);
-		const text = await response.text();
-		expect(response.status).toBe(200);
-		expect(text).toContain(`https://prod.example.org/`);
+		await vi.waitFor(
+			async () => {
+				// Note that the local protocol defaults to http
+				const response = await fetch(`http://${ip}:${port}/`);
+				const text = await response.text();
+				expect(response.status).toBe(200);
+				expect(text).toContain(`https://prod.example.org/`);
+			},
+			{ interval: 1000, timeout: 5000 }
+		);
 
 		// Wait up to 5s for all request logs to be flushed
 		for (let i = 0; i < 10; i++) {
