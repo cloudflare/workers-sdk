@@ -660,123 +660,420 @@ describe("wrangler deploy with containers", () => {
 		);
 	});
 
-	it("should be able to enable observability logs", async () => {
-		mockGetVersion("Galaxy-Class");
-		writeWranglerConfig({
-			...DEFAULT_DURABLE_OBJECTS,
-			observability: { enabled: true },
-			containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
-		});
-
-		mockGetApplications([
-			{
-				id: "abc",
-				name: "my-container",
-				instances: 0,
-				max_instances: 10,
-				created_at: new Date().toString(),
-				version: 1,
-				account_id: "1",
-				scheduling_policy: SchedulingPolicy.DEFAULT,
-				configuration: {
-					image: "docker.io/hello:world",
-					disk: {
-						size: "2GB",
-						size_mb: 2000,
-					},
-					vcpu: 0.0625,
-					memory: "256MB",
-					memory_mib: 256,
-				},
-				constraints: {
-					tier: 1,
-				},
-				durable_objects: {
-					namespace_id: "1",
-				},
-			},
-		]);
-
-		mockModifyApplication({
-			configuration: {
-				image: "docker.io/hello:world",
-				observability: { logs: { enabled: true } },
-			},
-		});
-
-		mockCreateApplicationRollout({
-			description: "Progressive update",
-			strategy: "rolling",
-			kind: "full_auto",
-		});
-
-		await runWrangler("deploy index.js");
-
-		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                                            Resource
-			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
-
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
-		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.warn).toMatchInlineSnapshot(`""`);
-	});
-
-	it("should be able to deploy with instance_type configuration", async () => {
-		mockGetVersion("Galaxy-Class");
-		writeWranglerConfig({
-			...DEFAULT_DURABLE_OBJECTS,
-			containers: [
-				{
-					name: "my-container",
-					max_instances: 10,
-					class_name: "ExampleDurableObject",
-					image: "docker.io/hello:world",
-					instance_type: "standard" as const,
-					constraints: {
-						tier: 2,
-					},
-				},
-			],
-		});
-
-		mockGetApplications([]);
-
-		mockCreateApplication({
+	describe("observability config resolution", () => {
+		const sharedGetApplicationResult = {
+			id: "abc",
 			name: "my-container",
+			instances: 0,
 			max_instances: 10,
+			created_at: new Date().toString(),
+			version: 1,
+			account_id: "1",
 			scheduling_policy: SchedulingPolicy.DEFAULT,
 			configuration: {
 				image: "docker.io/hello:world",
-				instance_type: "standard" as InstanceType.STANDARD,
+				disk: {
+					size: "2GB",
+					size_mb: 2000,
+				},
+				vcpu: 0.0625,
+				memory: "256MB",
+				memory_mib: 256,
 			},
 			constraints: {
-				tier: 2,
+				tier: 1,
 			},
+			durable_objects: {
+				namespace_id: "1",
+			},
+		};
+		it("should be able to enable observability logs (top level)", async () => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				observability: { enabled: true },
+				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			});
+
+			mockGetApplications([sharedGetApplicationResult]);
+
+			mockModifyApplication({
+				configuration: {
+					image: "docker.io/hello:world",
+					observability: { logs: { enabled: true } },
+				},
+			});
+			mockCreateApplicationRollout();
+
+			await runWrangler("deploy index.js");
+
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ EDIT my-container
+				│   {
+				│   ...
+				│   \\"image\\": \\"docker.io/hello:world\\",
+				│ - \\"instance_type\\": \\"dev\\"
+				│ + \\"instance_type\\": \\"dev\\",
+				│ + \\"observability\\": {
+				│ + \\"logs\\": {
+				│ + \\"enabled\\": true
+				│ + }
+				│ + }
+				│   },
+				│
+				│  SUCCESS  Modified application my-container
+				│
+				╰ Applied changes
+
+				"
+			`);
 		});
 
-		await runWrangler("deploy index.js");
+		it("should be able to enable observability logs (logs field)", async () => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				observability: { logs: { enabled: true } },
+				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			});
 
-		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                                            Resource
-			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+			mockGetApplications([sharedGetApplicationResult]);
 
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
-		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.warn).toMatchInlineSnapshot(`""`);
+			mockModifyApplication({
+				configuration: {
+					image: "docker.io/hello:world",
+					observability: { logs: { enabled: true } },
+				},
+			});
+
+			mockCreateApplicationRollout();
+
+			await runWrangler("deploy index.js");
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ EDIT my-container
+				│   {
+				│   ...
+				│   \\"image\\": \\"docker.io/hello:world\\",
+				│ - \\"instance_type\\": \\"dev\\"
+				│ + \\"instance_type\\": \\"dev\\",
+				│ + \\"observability\\": {
+				│ + \\"logs\\": {
+				│ + \\"enabled\\": true
+				│ + }
+				│ + }
+				│   },
+				│
+				│  SUCCESS  Modified application my-container
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+
+		it("should be able to disable observability logs (top level)", async () => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				observability: { enabled: false },
+				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					configuration: {
+						...sharedGetApplicationResult.configuration,
+						observability: {
+							logs: {
+								enabled: true,
+							},
+						},
+					},
+				},
+			]);
+
+			mockModifyApplication({
+				configuration: {
+					image: "docker.io/hello:world",
+					observability: { logs: { enabled: false } },
+				},
+			});
+
+			mockCreateApplicationRollout();
+
+			await runWrangler("deploy index.js");
+
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ EDIT my-container
+				│   {
+				│   ...
+				│   \\"logs\\": {
+				│ - \\"enabled\\": true
+				│ + \\"enabled\\": false
+				│   }
+				│
+				│  SUCCESS  Modified application my-container
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+
+		it("should be able to disable observability logs (logs field)", async () => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				observability: { logs: { enabled: false } },
+				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					configuration: {
+						...sharedGetApplicationResult.configuration,
+						observability: {
+							logs: {
+								enabled: true,
+							},
+						},
+					},
+				},
+			]);
+
+			mockModifyApplication({
+				configuration: {
+					image: "docker.io/hello:world",
+					observability: { logs: { enabled: false } },
+				},
+			});
+
+			mockCreateApplicationRollout();
+
+			await runWrangler("deploy index.js");
+
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ EDIT my-container
+				│   {
+				│   ...
+				│   \\"logs\\": {
+				│ - \\"enabled\\": true
+				│ + \\"enabled\\": false
+				│   }
+				│
+				│  SUCCESS  Modified application my-container
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+		it("should be able to disable observability logs (absent field)", async () => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					configuration: {
+						...sharedGetApplicationResult.configuration,
+						observability: {
+							logs: {
+								enabled: true,
+							},
+						},
+					},
+				},
+			]);
+
+			mockModifyApplication({
+				configuration: {
+					image: "docker.io/hello:world",
+					observability: { logs: { enabled: false } },
+				},
+			});
+
+			mockCreateApplicationRollout();
+			await runWrangler("deploy index.js");
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ EDIT my-container
+				│   {
+				│   ...
+				│   \\"logs\\": {
+				│ - \\"enabled\\": true
+				│ + \\"enabled\\": false
+				│   }
+				│
+				│  SUCCESS  Modified application my-container
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+		it("should ignore deprecated observability.logging field from the api", async () => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					configuration: {
+						...sharedGetApplicationResult.configuration,
+						observability: {
+							logging: {
+								enabled: false,
+							},
+							logs: {
+								enabled: true,
+							},
+						},
+					},
+				},
+			]);
+
+			mockModifyApplication({
+				configuration: {
+					image: "docker.io/hello:world",
+					observability: { logs: { enabled: false } },
+				},
+			});
+
+			mockCreateApplicationRollout();
+
+			await runWrangler("deploy index.js");
+
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ EDIT my-container
+				│   {
+				│   ...
+				│   \\"logs\\": {
+				│ - \\"enabled\\": true
+				│ + \\"enabled\\": false
+				│   }
+				│
+				│  SUCCESS  Modified application my-container
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+		it("should keep observability logs enabled", async () => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				observability: { enabled: true },
+				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					configuration: {
+						...sharedGetApplicationResult.configuration,
+						observability: {
+							logs: {
+								enabled: true,
+							},
+						},
+					},
+				},
+			]);
+
+			mockModifyApplication({
+				configuration: {
+					image: "docker.io/hello:world",
+					observability: { logs: { enabled: true } },
+				},
+			});
+
+			mockCreateApplicationRollout();
+
+			await runWrangler("deploy index.js");
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ no changes my-container
+				│
+				╰ No changes to be made
+
+				"
+			`);
+		});
+
+		it("should keep obserability logs disabled if api returns false and undefined in config", async () => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					configuration: {
+						...sharedGetApplicationResult.configuration,
+						observability: {
+							logs: {
+								enabled: false,
+							},
+							logging: {
+								enabled: false,
+							},
+						},
+					},
+				},
+			]);
+
+			await runWrangler("deploy index.js");
+
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ no changes my-container
+				│
+				╰ No changes to be made
+
+				"
+			`);
+		});
 	});
 
 	it("should expand image names from managed registry", async () => {
@@ -790,7 +1087,7 @@ describe("wrangler deploy with containers", () => {
 					max_instances: 10,
 					class_name: "ExampleDurableObject",
 					image: `${registry}/hello:1.0`,
-					instance_type: "standard" as const,
+					instance_type: "standard",
 					constraints: {
 						tier: 2,
 					},
@@ -805,25 +1102,43 @@ describe("wrangler deploy with containers", () => {
 			max_instances: 10,
 			configuration: {
 				image: `${registry}/some-account-id/hello:1.0`,
+				instance_type: "standard" as InstanceType.STANDARD,
 			},
 		});
 
 		await runWrangler("deploy index.js");
 
-		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                                            Resource
-			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ NEW my-container
+			│
+			│   {
+			│   \\"containers\\": [
+			│   {
+			│   \\"name\\": \\"my-container\\",
+			│   \\"scheduling_policy\\": \\"default\\",
+			│   \\"configuration\\": {
+			│   \\"image\\": \\"registry.cloudflare.com/some-account-id/hello:1.0\\",
+			│   \\"instance_type\\": \\"standard\\"
+			│   },
+			│   \\"instances\\": 0,
+			│   \\"max_instances\\": 10,
+			│   \\"constraints\\": {
+			│   \\"tier\\": 2
+			│   }
+			│   }
+			│   ]
+			│   }
+			│
+			│  SUCCESS  Created application my-container (Application ID: undefined)
+			│
+			╰ Applied changes
 
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
+			"
 		`);
-		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
 });
 
