@@ -2447,8 +2447,7 @@ function validateContainerApp(
 					containerAppOptional.instance_type &&
 					(containerAppOptional.configuration.disk !== undefined ||
 						containerAppOptional.configuration.vcpu !== undefined ||
-						containerAppOptional.configuration.memory_mib !== undefined ||
-						containerAppOptional.configuration.memory !== undefined)
+						containerAppOptional.configuration.memory_mib !== undefined)
 				) {
 					diagnostics.errors.push(
 						`Cannot set custom limits via "containers.configuration" and use preset "instance_type" limits at the same time.`

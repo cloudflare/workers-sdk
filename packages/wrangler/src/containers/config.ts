@@ -6,7 +6,6 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { UserError } from "../errors";
-import { parseByteSize } from "../parse";
 import type { Config } from "../config";
 import type {
 	ContainerNormalisedConfig,
@@ -59,28 +58,12 @@ export const getNormalizedContainerOptions = async (
 		if (
 			container.configuration?.disk !== undefined ||
 			container.configuration?.vcpu !== undefined ||
-			container.configuration?.memory_mib !== undefined ||
-			// this is doubly deprecated, do we need to support this?
-			container.configuration?.memory !== undefined
+			container.configuration?.memory_mib !== undefined
 		) {
-			let normalisedDiskSize: number | undefined;
-			if (container.configuration?.disk !== undefined) {
-				normalisedDiskSize =
-					"size" in container.configuration.disk
-						? // 	// have i got the right units here?
-							Math.round(
-								parseByteSize(container.configuration.disk.size ?? "2GB")
-							)
-						: container.configuration.disk.size_mb;
-			}
-
 			instanceTypeOrDisk = {
-				disk_size: normalisedDiskSize,
+				disk_mb: container.configuration.disk?.size_mb,
 				vcpu: container.configuration?.vcpu,
-				memory_mib:
-					container.configuration.memory !== undefined
-						? Math.round(parseByteSize(container.configuration?.memory))
-						: container.configuration?.memory_mib,
+				memory_mib: container.configuration?.memory_mib,
 			};
 		} else {
 			instanceTypeOrDisk = {
