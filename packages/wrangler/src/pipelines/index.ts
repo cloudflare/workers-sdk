@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises";
-import { HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
+import { AwsClient } from "aws4fetch";
 import prettyBytes from "pretty-bytes";
 import { createNamespace } from "../core/create-command";
 import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
@@ -24,13 +24,17 @@ let __testSkipDelaysFlag = false;
  * @param r2
  * @param bucketName
  */
-async function verifyBucketAccess(r2: S3Client, bucketName: string) {
+async function verifyBucketAccess(
+	r2: AwsClient,
+	endpoint: string,
+	bucketName: string
+) {
 	const MAX_ATTEMPTS = 10;
 	const DELAY_MS = 1000;
 
 	const checkCredentials = async () => {
 		logger.debug(`Checking if credentials are active`);
-		await r2.send(new HeadBucketCommand({ Bucket: bucketName }));
+		await r2.fetch(`${endpoint}/${bucketName}`);
 	};
 
 	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -39,7 +43,7 @@ async function verifyBucketAccess(r2: S3Client, bucketName: string) {
 			await checkCredentials();
 			return;
 		} catch (error) {
-			logger.debug("HeadBucket request failed", error);
+			logger.debug("R2 request failed", error);
 			if (attempt === MAX_ATTEMPTS) {
 				throw error;
 			}
@@ -80,18 +84,14 @@ export async function authorizeR2Bucket(
 
 	const endpoint = getAccountR2Endpoint(accountId);
 	logger.debug(`Using R2 Endpoint ${endpoint}`);
-	const r2 = new S3Client({
-		region: "auto",
-		credentials: {
-			accessKeyId: serviceToken.accessKeyId,
-			secretAccessKey: serviceToken.secretAccessKey,
-		},
-		endpoint,
+	const r2 = new AwsClient({
+		accessKeyId: serviceToken.accessKeyId,
+		secretAccessKey: serviceToken.secretAccessKey,
 	});
 
 	// Wait for token to settle/propagate, retry up to 10 times, with 2s waits in-between errors
 	logger.log(`🌀 Checking access to R2 bucket "${bucketName}"`);
-	await verifyBucketAccess(r2, bucketName);
+	await verifyBucketAccess(r2, endpoint, bucketName);
 
 	return serviceToken;
 }

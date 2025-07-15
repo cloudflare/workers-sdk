@@ -76,7 +76,6 @@
 		"workerd": "1.20250712.0"
 	},
 	"devDependencies": {
-		"@aws-sdk/client-s3": "^3.721.0",
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/eslint-config-worker": "workspace:*",
@@ -107,6 +106,7 @@
 		"@types/yargs": "^17.0.22",
 		"@vitest/ui": "catalog:default",
 		"@webcontainer/env": "^1.1.0",
+		"aws4fetch": "^1.0.20",
 		"chalk": "^5.2.0",
 		"chokidar": "^4.0.1",
 		"cli-table3": "^0.6.3",
