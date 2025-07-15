@@ -19,7 +19,7 @@ if (auth) {
 		let remoteKvId: string;
 		beforeAll(async () => {
 			const deployOut = execSync(
-				`pnpm dlx wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-06-19`,
+				`pnpm wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-06-19`,
 				execOptions
 			);
 
@@ -28,7 +28,7 @@ if (auth) {
 			}
 
 			const kvAddOut = execSync(
-				`pnpm dlx wrangler kv namespace create ${remoteKvName}`,
+				`pnpm wrangler kv namespace create ${remoteKvName}`,
 				execOptions
 			);
 
@@ -38,7 +38,7 @@ if (auth) {
 			remoteKvId = maybeRemoteKvId;
 
 			execSync(
-				`pnpm dlx wrangler kv key put test-key remote-kv-value --namespace-id=${remoteKvId} --remote`,
+				`pnpm wrangler kv key put test-key remote-kv-value --namespace-id=${remoteKvId} --remote`,
 				execOptions
 			);
 
@@ -75,12 +75,9 @@ if (auth) {
 		}, 25_000);
 
 		afterAll(() => {
+			execSync(`pnpm wrangler delete --name ${remoteWorkerName}`, execOptions);
 			execSync(
-				`pnpm dlx wrangler delete --name ${remoteWorkerName}`,
-				execOptions
-			);
-			execSync(
-				`pnpm dlx wrangler kv namespace delete --namespace-id=${remoteKvId}`,
+				`pnpm wrangler kv namespace delete --namespace-id=${remoteKvId}`,
 				execOptions
 			);
 			rmSync("./.tmp", { recursive: true, force: true });

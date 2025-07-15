@@ -48,7 +48,7 @@ writeFileSync(
 	"utf8"
 );
 
-const deployOut = execSync("pnpm dlx wrangler deploy -c remote-wrangler.json", {
+const deployOut = execSync("pnpm wrangler deploy -c remote-wrangler.json", {
 	stdio: "pipe",
 	cwd: "./.tmp",
 	env,
@@ -62,7 +62,7 @@ try {
 		env,
 	});
 } finally {
-	execSync(`pnpm dlx wrangler delete --name ${remoteWorkerName}`, { env });
+	execSync(`pnpm wrangler delete --name ${remoteWorkerName}`, { env });
 	rmSync("./.tmp", { recursive: true, force: true });
 }
 
