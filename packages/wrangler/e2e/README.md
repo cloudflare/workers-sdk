@@ -12,7 +12,7 @@ This is the most effective way to run the Wrangler e2e tests. If any of the test
 pnpm test:e2e:wrangler
 ```
 
-You can also run the turbo task directly if you want more fine grain control although this is not as resilient to flakes and is less effective at caching:
+You can also run the turbo task directly if you want more fine grained control although this is not as resilient to flakes and is less effective at caching:
 
 ```zsh
 pnpm test:e2e -F wrangler -- <extra-vitest-params>
