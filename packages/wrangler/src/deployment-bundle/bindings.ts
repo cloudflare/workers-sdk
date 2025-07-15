@@ -388,7 +388,7 @@ async function collectPendingResources(
 
 	try {
 		settings = await getSettings(complianceConfig, accountId, scriptName);
-	} catch (error) {
+	} catch {
 		logger.debug("No settings found");
 	}
 
@@ -396,7 +396,7 @@ async function collectPendingResources(
 
 	try {
 		settings = await getSettings(complianceConfig, accountId, scriptName);
-	} catch (error) {
+	} catch {
 		logger.debug("No settings found");
 	}
 	for (const resourceType of Object.keys(

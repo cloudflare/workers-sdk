@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import WebSocket from "ws";
+import { Log } from "../../../shared";
 import { isDevToolsEvent } from "./devtools";
 import type {
 	DevToolsCommandRequests,
@@ -14,13 +15,15 @@ import type {
  * Each `InspectorProxy` has one and only one worker inspector server associated to it.
  */
 export class InspectorProxy {
+	#log: Log;
 	#workerName: string;
 	#runtimeWs: WebSocket;
 
 	#devtoolsWs?: WebSocket;
 	#devtoolsHaveFileSystemAccess = false;
 
-	constructor(workerName: string, runtimeWs: WebSocket) {
+	constructor(log: Log, workerName: string, runtimeWs: WebSocket) {
+		this.#log = log;
 		this.#workerName = workerName;
 		this.#runtimeWs = runtimeWs;
 		this.#runtimeWs.once("open", () => this.#handleRuntimeWebSocketOpen());
@@ -52,7 +55,7 @@ export class InspectorProxy {
 
 		assert(this.#devtoolsWs?.readyState === WebSocket.OPEN);
 
-		this.#devtoolsWs.on("error", console.error);
+		this.#devtoolsWs.on("error", (message) => this.#log.error(message));
 
 		this.#devtoolsWs.once("close", () => {
 			if (this.#runtimeWs?.OPEN) {

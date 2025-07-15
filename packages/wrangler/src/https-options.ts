@@ -105,7 +105,7 @@ function generateCertificate() {
 	// To reduce startup time, only load this dynamically when needed.
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	const generate: typeof import("selfsigned").generate =
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		require("selfsigned").generate;
 
 	const certAttrs: Attributes = [{ name: "commonName", value: "localhost" }];

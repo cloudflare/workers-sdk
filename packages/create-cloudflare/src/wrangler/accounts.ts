@@ -115,7 +115,7 @@ export const isLoggedIn = async () => {
 			silent: true,
 		});
 		return /You are logged in/.test(output);
-	} catch (error) {
+	} catch {
 		return false;
 	}
 };

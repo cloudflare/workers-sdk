@@ -20,7 +20,7 @@ export const DeployPlaygroundWorkerResponse = eg.union([
 	}),
 ]);
 
-const PreviewAPIErrorCodec = eg.array(
+export const PreviewAPIErrorCodec = eg.array(
 	eg.object({
 		message: eg.string,
 		code: eg.number,
@@ -99,7 +99,7 @@ export function serialiseWorker(service: PartialWorker): FormData {
 				}
 			}
 			// We don't care if a cf-requirements.txt isn't found
-		} catch (e) {
+		} catch {
 			console.debug(
 				"Python entrypoint detected, but no cf-requirements.txt file found."
 			);

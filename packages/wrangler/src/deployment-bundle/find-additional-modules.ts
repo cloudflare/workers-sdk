@@ -107,7 +107,7 @@ export async function findAdditionalModules(
 				path.resolve(entry.projectRoot, "cf-requirements.txt"),
 				"utf-8"
 			);
-		} catch (e) {
+		} catch {
 			// We don't care if a cf-requirements.txt isn't found
 			logger.debug(
 				"Python entrypoint detected, but no cf-requirements.txt file found."

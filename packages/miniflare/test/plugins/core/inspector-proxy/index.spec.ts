@@ -661,14 +661,14 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 test("InspectorProxy: can proxy messages > 1MB", async (t) => {
 	const LARGE_STRING = "This is a large string => " + "z".repeat(2 ** 20);
 
-	const originalConsoleLog = console.log;
-	console.log = () => {};
-	t.teardown(() => {
-		console.log = originalConsoleLog;
-	});
-
 	const mf = new Miniflare({
 		inspectorPort: 0,
+		// Avoid the default handling of stdio since that will console log the very large string in the test output.
+		handleRuntimeStdio(stdout, stderr) {
+			// We need to add these handlers otherwise the streams will not be consumed and the process will hang.
+			stdout.on("data", () => {});
+			stderr.on("data", () => {});
+		},
 		workers: [
 			{
 				script: `

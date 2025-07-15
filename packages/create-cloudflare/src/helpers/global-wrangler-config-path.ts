@@ -7,7 +7,7 @@ import xdgAppPaths from "xdg-app-paths";
 function isDirectory(configPath: string) {
 	try {
 		return fs.statSync(configPath).isDirectory();
-	} catch (error) {
+	} catch {
 		// ignore error
 		return false;
 	}

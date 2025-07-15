@@ -126,6 +126,7 @@ export class Log {
 
 	protected log(message: string): void {
 		Log.#beforeLogHook?.();
+		// eslint-disable-next-line no-console
 		console.log(message);
 		Log.#afterLogHook?.();
 	}
