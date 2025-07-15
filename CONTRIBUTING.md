@@ -334,21 +334,23 @@ A summary of this repositories actions can be found [in the `.github/workflows` 
 
 ## Running E2E tests locally
 
-A large number of Wrangler & Vite's E2E tests don't require any authentication, and can be run with no Cloudflare account credentials. These can be run as follows:
+A large number of Wrangler, C3 & Vite's E2E tests don't require any authentication, and can be run with no Cloudflare account credentials. These can be run as follows, optionally providing [`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` environment variables.](#creating-an-api-token):
 
-- **Vite:** `pnpm test:e2e -F @cloudflare/vite-plugin`, optionally providing [`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` environment variables.](#creating-an-api-token)
+- **Vite:** `pnpm test:e2e -F @cloudflare/vite-plugin`
 
-- **Wrangler:** `pnpm test:e2e:wrangler`, optionally providing [`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` environment variables.](#creating-an-api-token)
+  You may optionally want to append a filename pattern to limit which e2e tests are run. Also you may want to set `--bail=n` to limit the number of fails tests to show the error before the rest of the tests finish running and to limit the noise in that output:
 
-You may optionally want to append a filename pattern to limit which e2e tests are run. Also you may want to set `--bail=n` to limit the number of fails tests to show the error before the rest of the tests finish running and to limit the noise in that output:
+  ```sh
+  pnpm test:e2e -F @cloudflare/vite-plugin [file-pattern] --bail=1
+  ```
 
-```sh
-# Vite
-pnpm test:e2e -F @cloudflare/vite-plugin [file-pattern] --bail=1
+- **C3:** `pnpm test:e2e -F create-cloudflare`
 
-# Wrangler
-pnpm test:e2e:wrangler [file-pattern] --bail=1
-```
+  See [C3 E2E tests README](packages/create-cloudflare/e2e/README.md) for more information.
+
+- **Wrangler:** `pnpm test:e2e -F wrangler` or `pnpm test:e2e:wrangler`
+
+  See [Wrangler E2E tests README](packages/wrangler/e2e/README.md) for more information.
 
 ### Creating an API Token
 
@@ -367,10 +369,13 @@ Once you've created the token, you can use it when running E2E tests to test aga
 
 ```sh
 # Vite
-CLOUDFLARE_ACCOUNT_ID="<Account ID for the token you just created>" CLOUDFLARE_API_TOKEN="<Token you just created>" pnpm test:e2e -F @cloudflare/vite-plugin [file-pattern] --bail=1
+CLOUDFLARE_ACCOUNT_ID="<Account ID for the token you just created>" CLOUDFLARE_API_TOKEN="<Token you just created>" pnpm test:e2e -F @cloudflare/vite-plugin
+
+# C3
+CLOUDFLARE_ACCOUNT_ID="<Account ID for the token you just created>" CLOUDFLARE_API_TOKEN="<Token you just created>" pnpm test:e2e -F @create-cloudflare
 
 # Wrangler
-CLOUDFLARE_ACCOUNT_ID="<Account ID for the token you just created>" CLOUDFLARE_API_TOKEN="<Token you just created>" pnpm test:e2e:wrangler [file-pattern] --bail=1
+CLOUDFLARE_ACCOUNT_ID="<Account ID for the token you just created>" CLOUDFLARE_API_TOKEN="<Token you just created>" pnpm test:e2e:wrangler
 ```
 
 > [!NOTE]

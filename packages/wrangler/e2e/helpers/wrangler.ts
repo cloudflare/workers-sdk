@@ -8,14 +8,14 @@ import type { CommandOptions } from "./command";
 // in scripts doesn't break.
 export const WRANGLER =
 	process.env.WRANGLER?.replaceAll("\\", "/") ??
-	`node ${resolve("packages/wrangler/bin/wrangler.js")}`;
+	`node --no-warnings ${resolve(__dirname, "../../bin/wrangler.js")}`;
 export const WRANGLER_IMPORT = pathToFileURL(
 	process.env.WRANGLER_IMPORT?.replaceAll("\\", "/") ??
-		resolve("packages/wrangler/wrangler-dist/cli.js")
+		resolve(__dirname, "../../wrangler-dist/cli.js")
 );
 export const MINIFLARE_IMPORT = pathToFileURL(
 	process.env.MINIFLARE_IMPORT?.replaceAll("\\", "/") ??
-		resolve("packages/miniflare/dist/src/index.js")
+		resolve(__dirname, "../../../miniflare/dist/src/index.js")
 );
 
 export type WranglerCommandOptions = CommandOptions & { debug?: boolean };
