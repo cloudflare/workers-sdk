@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import { fetchResult } from "../cfetch";
+import { createCloudflareClient } from "../cfetch/internal";
 import { experimental_readRawConfig, readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";
 import { FatalError, UserError } from "../errors";
@@ -190,6 +191,7 @@ function createHandler(def: CommandDefinition, commandName: string) {
 				}
 
 				return def.handler(args, {
+					sdk: createCloudflareClient(config),
 					config,
 					errors: { UserError, FatalError },
 					logger,
