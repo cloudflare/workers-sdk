@@ -23,6 +23,7 @@ import {
 import { inferInstanceType, promiseSpinner } from "../cloudchamber/common";
 import {
 	diffLines,
+	filterTrailingCommaChanges,
 	printLine,
 	renderDiff,
 	sortObjectRecursive,
@@ -312,7 +313,8 @@ export async function apply(
 		const prev = JSON.stringify({ containers: [normalisedPrevApp] }, null, 2);
 		const now = JSON.stringify({ containers: [nowContainer] }, null, 2);
 
-		const results = diffLines(prev, now);
+		const rawResults = diffLines(prev, now);
+		const results = filterTrailingCommaChanges(rawResults);
 		const changes = results.find((l) => l.added || l.removed) !== undefined;
 
 		if (!changes) {

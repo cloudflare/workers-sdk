@@ -716,8 +716,6 @@ describe("wrangler deploy with containers", () => {
 				│   {
 				│   ...
 				│   \\"image\\": \\"docker.io/hello:world\\",
-				│ - \\"instance_type\\": \\"dev\\"
-				│ + \\"instance_type\\": \\"dev\\",
 				│ + \\"observability\\": {
 				│ + \\"logs\\": {
 				│ + \\"enabled\\": true
@@ -762,8 +760,6 @@ describe("wrangler deploy with containers", () => {
 				│   {
 				│   ...
 				│   \\"image\\": \\"docker.io/hello:world\\",
-				│ - \\"instance_type\\": \\"dev\\"
-				│ + \\"instance_type\\": \\"dev\\",
 				│ + \\"observability\\": {
 				│ + \\"logs\\": {
 				│ + \\"enabled\\": true
