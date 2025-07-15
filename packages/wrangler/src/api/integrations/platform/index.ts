@@ -168,7 +168,7 @@ async function getMiniflareOptionsFromConfig(
 		services: rawConfig.services,
 		serviceBindings: {},
 		migrations: rawConfig.migrations,
-		imagesLocalMode: false,
+		imagesLocalMode: true,
 	});
 
 	const persistOptions = getMiniflarePersistOptions(options.persist);
