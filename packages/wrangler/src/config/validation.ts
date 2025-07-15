@@ -2504,6 +2504,14 @@ function validateContainerApp(
 				containerAppOptional.max_instances,
 				"number"
 			);
+			if (
+				containerAppOptional.max_instances !== undefined &&
+				containerAppOptional.max_instances < 0
+			) {
+				diagnostics.errors.push(
+					`"containers.max_instances" field should be a positive number, but got ${containerAppOptional.max_instances}`
+				);
+			}
 			validateOptionalProperty(
 				diagnostics,
 				field,
@@ -2565,7 +2573,7 @@ function validateContainerApp(
 					diagnostics,
 					`${field}.configuration`,
 					Object.keys(containerAppOptional.configuration),
-					["image", "secrets", "labels", "disk", "memory", "vcpu", "memory_mib"]
+					["image", "secrets", "labels", "disk", "vcpu", "memory_mib"]
 				);
 			}
 		}
