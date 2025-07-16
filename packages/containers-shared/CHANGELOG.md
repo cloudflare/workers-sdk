@@ -1,5 +1,11 @@
 # @cloudflare/containers-shared
 
+## 0.2.6
+
+### Patch Changes
+
+- [#9925](https://github.com/cloudflare/workers-sdk/pull/9925) [`b46386c`](https://github.com/cloudflare/workers-sdk/commit/b46386c0b245ef1d64e6e7dcff4e421002a3158c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - clarify the docker build error message
+
 ## 0.2.5
 
 ### Patch Changes

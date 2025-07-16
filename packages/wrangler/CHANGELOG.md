@@ -1,5 +1,28 @@
 # wrangler
 
+## 4.24.4
+
+### Patch Changes
+
+- [#9905](https://github.com/cloudflare/workers-sdk/pull/9905) [`4ba9f25`](https://github.com/cloudflare/workers-sdk/commit/4ba9f251d7793fb934a16a96a04d8bb3ac0893b1) Thanks [@dom96](https://github.com/dom96)! - Support for Python packages in python_modules dir
+
+- [#9886](https://github.com/cloudflare/workers-sdk/pull/9886) [`17b1e5a`](https://github.com/cloudflare/workers-sdk/commit/17b1e5af8fe54cf9ad942278d860cd88eb2a2ebd) Thanks [@dom96](https://github.com/dom96)! - Python packages are now read from cf-requirements.txt instead of requirements.txt by default
+
+- [#9899](https://github.com/cloudflare/workers-sdk/pull/9899) [`d6a1b9b`](https://github.com/cloudflare/workers-sdk/commit/d6a1b9b21a4fb37804b5408b6f3f80e50a774a7f) Thanks [@simonabadoiu](https://github.com/simonabadoiu)! - Print local mode when running a browser binding in local mode
+
+- [#9951](https://github.com/cloudflare/workers-sdk/pull/9951) [`e2672c5`](https://github.com/cloudflare/workers-sdk/commit/e2672c5fdb706dff2b0846c09fa8091146d41ef9) Thanks [@penalosa](https://github.com/penalosa)! - Recommend remote bindings when `wrangler dev --remote` is used
+
+- [#9875](https://github.com/cloudflare/workers-sdk/pull/9875) [`a5d7b35`](https://github.com/cloudflare/workers-sdk/commit/a5d7b35c821500732638b8bdb54f4e72d187e665) Thanks [@gpanders](https://github.com/gpanders)! - Show expected format in error message for "containers images delete"
+
+- [#9954](https://github.com/cloudflare/workers-sdk/pull/9954) [`bf4c9ab`](https://github.com/cloudflare/workers-sdk/commit/bf4c9abda7ec70f8633884987db36be2cf1b7e1e) Thanks [@penalosa](https://github.com/penalosa)! - Support Images binding in `getPlatformProxy()`
+
+- [#9847](https://github.com/cloudflare/workers-sdk/pull/9847) [`14ce577`](https://github.com/cloudflare/workers-sdk/commit/14ce5775c775b32bc1166d4e7a1546a00c049ab0) Thanks [@penalosa](https://github.com/penalosa)! - Upgrade Undici
+
+- [#9974](https://github.com/cloudflare/workers-sdk/pull/9974) [`f73da0d`](https://github.com/cloudflare/workers-sdk/commit/f73da0de07b584c3f741f08a1f7e29ee2be9f223) Thanks [@penalosa](https://github.com/penalosa)! - Pass worker name & compliance region through correctly when starting a remote bindings session
+
+- Updated dependencies [[`ac08e68`](https://github.com/cloudflare/workers-sdk/commit/ac08e6886a10c7cff4cf02002dffe961f5f157b9), [`3bb69fa`](https://github.com/cloudflare/workers-sdk/commit/3bb69fae168a7254c0eb396ea90cc274d0d9ce92), [`274a826`](https://github.com/cloudflare/workers-sdk/commit/274a826b3349211e8722baab2d73cdaab3b3aa5d), [`77d1cb2`](https://github.com/cloudflare/workers-sdk/commit/77d1cb23761e258720956c0d5d72fb778cf80d42), [`5b0fc9e`](https://github.com/cloudflare/workers-sdk/commit/5b0fc9e96b97e935fa8e60ba442a9d706753ebd4), [`bf4c9ab`](https://github.com/cloudflare/workers-sdk/commit/bf4c9abda7ec70f8633884987db36be2cf1b7e1e), [`14ce577`](https://github.com/cloudflare/workers-sdk/commit/14ce5775c775b32bc1166d4e7a1546a00c049ab0)]:
+  - miniflare@4.20250712.0
+
 ## 4.24.3
 
 ### Patch Changes

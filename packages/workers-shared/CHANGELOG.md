@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.18.4
+
+### Patch Changes
+
+- [#9935](https://github.com/cloudflare/workers-sdk/pull/9935) [`2765b88`](https://github.com/cloudflare/workers-sdk/commit/2765b88bbd2d6c84afbc17953f731fddd6ffab2d) Thanks [@vicb](https://github.com/vicb)! - allow plain text with charset
+
 ## 0.18.3
 
 ### Patch Changes
