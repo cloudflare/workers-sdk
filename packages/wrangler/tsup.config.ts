@@ -80,6 +80,7 @@ export default defineConfig((options) => [
 		outDir: "wrangler-dist",
 		tsconfig: "tsconfig.json",
 		metafile: true,
+		minify: true,
 		external: EXTERNAL_DEPENDENCIES,
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		inject: [path.join(__dirname, "import_meta_url.js")],
