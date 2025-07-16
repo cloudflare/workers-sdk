@@ -2426,13 +2426,13 @@ function validateContainerApp(
 				!containerAppOptional.image
 			) {
 				diagnostics.errors.push(
-					`"containers.image" field must be defined for each container app. This should be the path to your Dockerfile or a image URI pointing to the Cloudflare registry.`
+					`"containers.image" field must be defined for each container app. This should be the path to your Dockerfile or an image URI pointing to the Cloudflare registry.`
 				);
 			}
 
 			if ("configuration" in containerAppOptional) {
 				diagnostics.warnings.push(
-					`"containers.configuration" is deprecated. Use top level "containers" fields instead. "configuration.image" should be "image", "configuration.disk" should be set via "instance_type".`
+					`"containers.configuration" is deprecated. Use top level "containers" fields instead. "configuration.image" should be "image", limits should be set via "instance_type".`
 				);
 				if (
 					typeof containerAppOptional !== "object" ||
@@ -2484,14 +2484,6 @@ function validateContainerApp(
 				containerAppOptional.rollout_kind,
 				"string",
 				["full_auto", "full_manual", "none"]
-			);
-			validateOptionalProperty(
-				diagnostics,
-				field,
-				"instance_type",
-				containerAppOptional.instance_type,
-				"string",
-				["dev", "basic", "standard"]
 			);
 			validateOptionalProperty(
 				diagnostics,
@@ -2570,6 +2562,56 @@ function validateContainerApp(
 					`${field}.configuration`,
 					Object.keys(containerAppOptional.configuration),
 					["image", "secrets", "labels", "disk", "vcpu", "memory_mib"]
+				);
+			}
+
+			// Instance Type validation: When present, the instance type should be either (1) a string
+			// representing a predefined instance type or (2) an object that optionally defines vcpu,
+			// memory, and disk.
+			//
+			// If an instance type is not set, a 'dev' instance type will be used. If a custom instance
+			// type doesn't set a value, that value will default to the corresponding value in a 'dev'
+			// instance type
+			if (typeof containerAppOptional.instance_type === "string") {
+				// validate named instance type
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"instance_type",
+					containerAppOptional.instance_type,
+					"string",
+					["dev", "basic", "standard"]
+				);
+			} else if (
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"instance_type",
+					containerAppOptional.instance_type,
+					"object"
+				) &&
+				containerAppOptional.instance_type
+			) {
+				// validate custom instance type
+				const instanceTypeProperties = ["vcpu", "memory_mib", "disk_mb"];
+				instanceTypeProperties.forEach((key) => {
+					if (
+						!isOptionalProperty(
+							containerAppOptional.instance_type,
+							key,
+							"number"
+						)
+					) {
+						diagnostics.errors.push(
+							`"containers.instance_type.${key}", when present, should be a number.`
+						);
+					}
+				});
+				validateAdditionalProperties(
+					diagnostics,
+					`${field}.instance_type`,
+					Object.keys(containerAppOptional.instance_type),
+					instanceTypeProperties
 				);
 			}
 		}
