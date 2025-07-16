@@ -199,22 +199,41 @@ describe("whoami", () => {
 		);
 		await runWrangler(`whoami --account "account-2"`);
 		expect(std.out).toMatchInlineSnapshot(`
-				"Getting User settings...
-				👋 You are logged in with an OAuth Token, associated with the email user@example.com.
-				┌───────────────┬────────────┐
-				│ Account Name  │ Account ID │
-				├───────────────┼────────────┤
-				│ Account One   │ account-1  │
-				├───────────────┼────────────┤
-				│ Account Two   │ account-2  │
-				├───────────────┼────────────┤
-				│ Account Three │ account-3  │
-				└───────────────┴────────────┘
-				🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.
-				Scope (Access)
-				🎢 Membership roles in \\"Account Two\\": Contact account super admin to change your permissions.
-				- Test role"
-			`);
+			"Getting User settings...
+			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			┌───────────────┬────────────┐
+			│ Account Name  │ Account ID │
+			├───────────────┼────────────┤
+			│ Account One   │ account-1  │
+			├───────────────┼────────────┤
+			│ Account Two   │ account-2  │
+			├───────────────┼────────────┤
+			│ Account Three │ account-3  │
+			└───────────────┴────────────┘
+			🔓 Token Permissions:
+			Scope (Access)
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
+
+			  - account:read
+			  - user:read
+			  - workers:write
+			  - workers_kv:write
+			  - workers_routes:write
+			  - workers_scripts:write
+			  - workers_tail:read
+			  - d1:write
+			  - pages:write
+			  - zone:read
+			  - ssl_certs:write
+			  - ai:write
+			  - queues:write
+			  - pipelines:write
+
+
+			🎢 Membership roles in \\"Account Two\\": Contact account super admin to change your permissions.
+			- Test role"
+		`);
 	});
 
 	it("should display membership error on authentication error 10000", async () => {
@@ -233,20 +252,39 @@ describe("whoami", () => {
 		);
 		await runWrangler(`whoami --account "account-2"`);
 		expect(std.out).toMatchInlineSnapshot(`
-				"Getting User settings...
-				👋 You are logged in with an OAuth Token, associated with the email user@example.com.
-				┌───────────────┬────────────┐
-				│ Account Name  │ Account ID │
-				├───────────────┼────────────┤
-				│ Account One   │ account-1  │
-				├───────────────┼────────────┤
-				│ Account Two   │ account-2  │
-				├───────────────┼────────────┤
-				│ Account Three │ account-3  │
-				└───────────────┴────────────┘
-				🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.
-				Scope (Access)
-				🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"
-			`);
+			"Getting User settings...
+			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			┌───────────────┬────────────┐
+			│ Account Name  │ Account ID │
+			├───────────────┼────────────┤
+			│ Account One   │ account-1  │
+			├───────────────┼────────────┤
+			│ Account Two   │ account-2  │
+			├───────────────┼────────────┤
+			│ Account Three │ account-3  │
+			└───────────────┴────────────┘
+			🔓 Token Permissions:
+			Scope (Access)
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
+
+			  - account:read
+			  - user:read
+			  - workers:write
+			  - workers_kv:write
+			  - workers_routes:write
+			  - workers_scripts:write
+			  - workers_tail:read
+			  - d1:write
+			  - pages:write
+			  - zone:read
+			  - ssl_certs:write
+			  - ai:write
+			  - queues:write
+			  - pipelines:write
+
+
+			🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"
+		`);
 	});
 });
