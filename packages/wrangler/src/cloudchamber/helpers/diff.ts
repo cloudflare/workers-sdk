@@ -1,18 +1,67 @@
-// Code from package jsdiff (https://github.com/kpdecker/jsdiff/tree/master)
+// Modified code from package jsdiff (https://github.com/kpdecker/jsdiff/tree/master)
 // It's been simplified so it can basically do line diffing only
 // and we can avoid the 600kb sized package.
-import { log } from "@cloudflare/cli";
-import { bold, brandColor, red } from "@cloudflare/cli/colors";
+//
+// Original license below:
+//
+// BSD 3-Clause License
+//
+// Copyright (c) 2009-2015, Kevin Decker <kpdecker@gmail.com>
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-class Diff {
-	diff(oldString: string[], newString: string[], callback: Callback) {
-		function done(value: Result[]) {
-			callback(value);
-			return true;
-		}
+import { log, newline } from "@cloudflare/cli";
+import { green, red } from "@cloudflare/cli/colors";
 
-		const newLen = newString.length,
-			oldLen = oldString.length;
+type Result = {
+	count: number;
+	added: boolean;
+	removed: boolean;
+	value?: string;
+	previousComponent?: Result;
+};
+
+type BestPath = {
+	oldPos: number;
+	lastComponent?: Result;
+};
+
+export class Diff {
+	#results: Result[] = [];
+
+	get changes(): number {
+		return this.#results.filter((r) => r.added || r.removed).length;
+	}
+
+	constructor(a: string, b: string) {
+		const oldString = tokenize(a);
+		const newString = tokenize(b);
+		const newLen = newString.length;
+		const oldLen = oldString.length;
 		let editLength = 1;
 		const bestPath: (BestPath | undefined)[] = [
 			{ oldPos: -1, lastComponent: undefined },
@@ -23,18 +72,17 @@ class Diff {
 		}
 
 		// Seed editLength = 0, i.e. the content starts with the same values
-		let newPos = this.extractCommon(bestPath[0], newString, oldString, 0);
+		let newPos = this.#extractCommon(bestPath[0], newString, oldString, 0);
 		if (bestPath[0].oldPos + 1 >= oldLen && newPos + 1 >= newLen) {
 			// Identity per the equality and tokenizer
-			return done(
-				buildValues(
-					this,
-					bestPath[0].lastComponent,
-					newString,
-					oldString,
-					false
-				)
+			this.#results = this.#buildValues(
+				bestPath[0].lastComponent,
+				newString,
+				oldString,
+				false
 			);
+
+			return;
 		}
 
 		// Once we hit the right edge of the edit graph on some diagonal k, we can
@@ -54,19 +102,20 @@ class Diff {
 		// where the new text simply appends d characters on the end of the
 		// original text of length n, the true Myers algorithm will take O(n+d^2)
 		// time while this optimization needs only O(n+d) time.
-		let minDiagonalToConsider = -Infinity,
-			maxDiagonalToConsider = Infinity;
+		let minDiagonalToConsider = -Infinity;
+		let maxDiagonalToConsider = Infinity;
 
 		// Main method. checks all permutations of a given edit length for acceptance.
-		const execEditLength = () => {
+		let done = false;
+		while (!done) {
 			for (
 				let diagonalPath = Math.max(minDiagonalToConsider, -editLength);
 				diagonalPath <= Math.min(maxDiagonalToConsider, editLength);
 				diagonalPath += 2
 			) {
 				let basePath: BestPath;
-				const removePath = bestPath[diagonalPath - 1],
-					addPath = bestPath[diagonalPath + 1];
+				const removePath = bestPath[diagonalPath - 1];
+				const addPath = bestPath[diagonalPath + 1];
 				if (removePath) {
 					// No one else is going to attempt to use this value, clear it
 					bestPath[diagonalPath - 1] = undefined;
@@ -94,14 +143,14 @@ class Diff {
 					(!canRemove ||
 						(canAdd && (removePath?.oldPos ?? 0) < (addPath?.oldPos ?? 0)))
 				) {
-					basePath = this.addToPath(addPath, true, false, 0);
+					basePath = this.#addToPath(addPath, true, false, 0);
 				} else if (removePath) {
-					basePath = this.addToPath(removePath, false, true, 1);
+					basePath = this.#addToPath(removePath, false, true, 1);
 				} else {
 					throw new Error("unreachable");
 				}
 
-				newPos = this.extractCommon(
+				newPos = this.#extractCommon(
 					basePath,
 					newString,
 					oldString,
@@ -110,39 +159,103 @@ class Diff {
 
 				if (basePath.oldPos + 1 >= oldLen && newPos + 1 >= newLen) {
 					// If we have hit the end of both strings, then we are done
-					return done(
-						buildValues(
-							this,
-							basePath.lastComponent,
-							newString,
-							oldString,
-							false
-						)
+					this.#results = this.#buildValues(
+						basePath.lastComponent,
+						newString,
+						oldString,
+						false
 					);
-				} else {
-					bestPath[diagonalPath] = basePath;
-					if (basePath.oldPos + 1 >= oldLen) {
-						maxDiagonalToConsider = Math.min(
-							maxDiagonalToConsider,
-							diagonalPath - 1
-						);
-					}
-					if (newPos + 1 >= newLen) {
-						minDiagonalToConsider = Math.max(
-							minDiagonalToConsider,
-							diagonalPath + 1
-						);
-					}
+
+					done = true;
+
+					break;
+				}
+
+				bestPath[diagonalPath] = basePath;
+				if (basePath.oldPos + 1 >= oldLen) {
+					maxDiagonalToConsider = Math.min(
+						maxDiagonalToConsider,
+						diagonalPath - 1
+					);
+				}
+				if (newPos + 1 >= newLen) {
+					minDiagonalToConsider = Math.max(
+						minDiagonalToConsider,
+						diagonalPath + 1
+					);
 				}
 			}
 
 			editLength++;
-		};
-
-		while (!execEditLength()) {}
+		}
 	}
 
-	addToPath(
+	print(
+		options: {
+			// Number of lines of context to print before and after each diff segment
+			contextLines: number;
+		} = {
+			contextLines: 3,
+		}
+	) {
+		let state: "init" | "diff" = "init";
+		const context: string[] = [];
+
+		for (const result of this.#results) {
+			if (result.value === undefined) {
+				continue;
+			}
+
+			if (result.added || result.removed) {
+				if (state === "diff") {
+					// Print the context after the last diff, if any
+					context.splice(0, options.contextLines).forEach((c) => log(`  ${c}`));
+
+					// Indicate gaps between context chunks
+					if (context.length > options.contextLines) {
+						log("  ...");
+						newline();
+					}
+				}
+
+				// Remove everything except the most recent context chunk
+				context.splice(0, context.length - options.contextLines);
+
+				// If we haven't printed anything yet then omit leading empty lines
+				if (state === "init") {
+					while (context.length > 0 && context[0].trim() === "") {
+						context.shift();
+					}
+				}
+
+				context.forEach((c) => log(`  ${c}`));
+				context.length = 0;
+
+				for (const l of result.value.split("\n")) {
+					log(`${result.added ? green("+") : red("-")} ${l}`);
+				}
+
+				state = "diff";
+			} else {
+				// Remove trailing and leading newlines from the context
+				// chunk since we add newlines ourselves when we print
+				const lines = result.value.replace(/^\n|\n$/g, "").split("\n");
+				context.push(...lines);
+			}
+		}
+
+		if (state === "diff") {
+			// Trim trailing whitespace from the final context chunk
+			context.splice(options.contextLines);
+			while (context.length > 0 && context[context.length - 1].trim() === "") {
+				context.pop();
+			}
+
+			context.forEach((c) => log(`  ${c}`));
+		}
+	}
+
+	#addToPath(
 		path: BestPath,
 		added: boolean,
 		removed: boolean,
@@ -172,7 +285,7 @@ class Diff {
 		};
 	}
 
-	extractCommon(
+	#extractCommon(
 		basePath: BestPath,
 		newString: string[],
 		oldString: string[],
@@ -206,92 +319,66 @@ class Diff {
 		return newPos;
 	}
 
-	equals(left: string, right: string) {
-		return left === right;
-	}
+	#buildValues(
+		lastComponent: Result | undefined,
+		newString: string[],
+		oldString: string[],
+		useLongestToken: boolean
+	): Result[] {
+		// First we convert our linked list of components in reverse order to an
+		// array in the right order:
+		const components = [];
+		let nextComponent;
+		while (lastComponent) {
+			components.push(lastComponent);
+			nextComponent = lastComponent.previousComponent;
+			delete lastComponent.previousComponent;
+			lastComponent = nextComponent;
+		}
+		components.reverse();
 
-	join(chars: string[]) {
-		return chars.join("");
-	}
-}
+		const componentLen = components.length;
+		let componentPos = 0,
+			newPos = 0,
+			oldPos = 0;
 
-function buildValues(
-	diff: Diff,
-	lastComponent: Result | undefined,
-	newString: string[],
-	oldString: string[],
-	useLongestToken: boolean
-): Result[] {
-	// First we convert our linked list of components in reverse order to an
-	// array in the right order:
-	const components = [];
-	let nextComponent;
-	while (lastComponent) {
-		components.push(lastComponent);
-		nextComponent = lastComponent.previousComponent;
-		delete lastComponent.previousComponent;
-		lastComponent = nextComponent;
-	}
-	components.reverse();
+		for (; componentPos < componentLen; componentPos++) {
+			const component = components[componentPos];
+			if (!component.removed) {
+				if (!component.added && useLongestToken) {
+					let value = newString.slice(newPos, newPos + component.count);
+					value = value.map((el, i) => {
+						const oldValue = oldString[oldPos + i];
+						return oldValue.length > el.length ? oldValue : el;
+					});
 
-	const componentLen = components.length;
-	let componentPos = 0,
-		newPos = 0,
-		oldPos = 0;
+					component.value = value.join("");
+				} else {
+					component.value = newString
+						.slice(newPos, newPos + component.count)
+						.join("");
+				}
+				newPos += component.count;
 
-	for (; componentPos < componentLen; componentPos++) {
-		const component = components[componentPos];
-		if (!component.removed) {
-			if (!component.added && useLongestToken) {
-				let value = newString.slice(newPos, newPos + component.count);
-				value = value.map((el, i) => {
-					const oldValue = oldString[oldPos + i];
-					return oldValue.length > el.length ? oldValue : el;
-				});
-
-				component.value = diff.join(value);
+				// Common case
+				if (!component.added) {
+					oldPos += component.count;
+				}
 			} else {
-				component.value = diff.join(
-					newString.slice(newPos, newPos + component.count)
-				);
-			}
-			newPos += component.count;
-
-			// Common case
-			if (!component.added) {
+				component.value = oldString
+					.slice(oldPos, oldPos + component.count)
+					.join("");
 				oldPos += component.count;
 			}
-		} else {
-			component.value = diff.join(
-				oldString.slice(oldPos, oldPos + component.count)
-			);
-			oldPos += component.count;
 		}
-	}
 
-	return components;
+		return components;
+	}
 }
 
-export const lineDiff = new Diff();
-
-export type Result = {
-	count: number;
-	added: boolean;
-	removed: boolean;
-	value?: string;
-	previousComponent?: Result;
-};
-
-type BestPath = {
-	oldPos: number;
-	lastComponent?: Result;
-};
-
-type Callback = (result: Result[]) => void;
-
 function tokenize(value: string) {
-	const retLines = [],
-		linesAndNewlines = value.split(/(\n|\r\n)/);
+	const retLines = [];
+	const linesAndNewlines = value.split(/(\n|\r\n)/);
 
 	// Ignore the final empty token that occurs if the string ends with a new line
 	if (!linesAndNewlines[linesAndNewlines.length - 1]) {
@@ -305,186 +392,4 @@ function tokenize(value: string) {
 	}
 
 	return retLines.filter((s) => s !== "");
-}
-
-export function diffLines(oldStr: string, newStr: string): Result[] {
-	let res: Result[] = [];
-	lineDiff.diff(tokenize(oldStr), tokenize(newStr), (r) => {
-		res = r;
-	});
-
-	return res;
-}
-
-// **************************************************
-// Below lie other helpers related to printing diffs
-// **************************************************
-
-function isNumber(c: string | number) {
-	if (typeof c === "number") {
-		return true;
-	}
-	const code = c.charCodeAt(0);
-	const zero = "0".charCodeAt(0);
-	const nine = "9".charCodeAt(0);
-	return code >= zero && code <= nine;
-}
-
-/**
- * createLine takes a string and goes through each character, rendering possibly syntax highlighting.
- * Useful to render TOML files.
- */
-export function createLine(el: string, startWith = ""): string {
-	let line = startWith;
-	let lastAdded = 0;
-	const addToLine = (i: number, color = (s: string) => s) => {
-		line += color(el.slice(lastAdded, i));
-		lastAdded = i;
-	};
-
-	const state = {
-		render: "left" as "quotes" | "number" | "left" | "right" | "section",
-	};
-	for (let i = 0; i < el.length; i++) {
-		const current = el[i];
-		const peek = i + 1 < el.length ? el[i + 1] : null;
-		const prev = i === 0 ? null : el[i - 1];
-
-		switch (state.render) {
-			case "left":
-				if (current === "=") {
-					state.render = "right";
-				}
-
-				break;
-			case "right":
-				if (current === '"') {
-					addToLine(i);
-					state.render = "quotes";
-					break;
-				}
-
-				if (isNumber(current)) {
-					addToLine(i);
-					state.render = "number";
-					break;
-				}
-
-				if (current === "[" && peek === "[") {
-					state.render = "section";
-				}
-
-				break;
-			case "quotes":
-				if (current === '"') {
-					addToLine(i + 1, brandColor);
-					state.render = "right";
-				}
-
-				break;
-			case "number":
-				if (!isNumber(el)) {
-					addToLine(i, red);
-					state.render = "right";
-				}
-
-				break;
-			case "section":
-				if (current === "]" && prev === "]") {
-					addToLine(i + 1);
-					state.render = "right";
-				}
-		}
-	}
-
-	switch (state.render) {
-		case "left":
-			addToLine(el.length);
-			break;
-		case "right":
-			addToLine(el.length);
-			break;
-		case "quotes":
-			addToLine(el.length, brandColor);
-			break;
-		case "number":
-			addToLine(el.length, red);
-			break;
-		case "section":
-			// might be unreachable
-			addToLine(el.length, bold);
-			break;
-	}
-
-	return line;
-}
-
-/**
- * printLine takes a line and prints it by using createLine and use printFunc
- */
-export function printLine(el: string, startWith = "", printFunc = log) {
-	printFunc(createLine(el, startWith));
-}
-
-/**
- * Removes from the object every undefined property
- */
-export function stripUndefined<T = Record<string, unknown>>(r: T): T {
-	for (const k in r) {
-		if (r[k] === undefined) {
-			delete r[k];
-		}
-	}
-
-	return r;
-}
-
-/**
- * Take an object and sort its keys in alphabetical order.
- */
-function sortObjectKeys(unordered: Record<string | number, unknown>) {
-	if (Array.isArray(unordered)) {
-		return unordered;
-	}
-
-	return Object.keys(unordered)
-		.sort()
-		.reduce(
-			(obj, key) => {
-				obj[key] = unordered[key];
-				return obj;
-			},
-			{} as Record<string, unknown>
-		);
-}
-
-/**
- * Take an object and sort its keys in alphabetical order recursively.
- * Useful to normalize objects so they can be compared when rendered.
- * It will copy the object and not mutate it.
- */
-export function sortObjectRecursive<T = Record<string | number, unknown>>(
-	object: Record<string | number, unknown> | Record<string | number, unknown>[]
-): T {
-	if (typeof object !== "object") {
-		return object;
-	}
-
-	if (Array.isArray(object)) {
-		return object.map((obj) => sortObjectRecursive(obj)) as T;
-	}
-
-	const objectCopy: Record<string | number, unknown> = { ...object };
-	for (const [key, value] of Object.entries(object)) {
-		if (typeof value === "object") {
-			if (value === null) {
-				continue;
-			}
-			objectCopy[key] = sortObjectRecursive(
-				value as Record<string, unknown>
-			) as unknown;
-		}
-	}
-
-	return sortObjectKeys(objectCopy) as T;
 }

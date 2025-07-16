@@ -6,12 +6,13 @@ import {
 	endSection,
 	log,
 	logRaw,
+	newline,
 	shapes,
 	startSection,
 	success,
 	updateStatus,
 } from "@cloudflare/cli";
-import { bold, brandColor, dim, green, red } from "@cloudflare/cli/colors";
+import { bold, brandColor, dim, green } from "@cloudflare/cli/colors";
 import {
 	ApiError,
 	ApplicationsService,
@@ -25,14 +26,12 @@ import {
 import { formatConfigSnippet } from "../config";
 import { FatalError, UserError } from "../errors";
 import { getAccountId } from "../user";
-import { cleanForInstanceType, promiseSpinner } from "./common";
 import {
-	createLine,
-	diffLines,
-	printLine,
 	sortObjectRecursive,
 	stripUndefined,
-} from "./helpers/diff";
+} from "../utils/sortObjectRecursive";
+import { cleanForInstanceType, promiseSpinner } from "./common";
+import { Diff } from "./helpers/diff";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";
 import type {
@@ -302,9 +301,7 @@ export async function apply(
 				: { containers: [configuration] };
 		formatConfigSnippet(endConfig, config.configPath)
 			.split("\n")
-			.forEach((el) => {
-				printLine(el, "  ", logRaw);
-			});
+			.forEach((el) => logRaw(`    ${el}`));
 		return;
 	}
 
@@ -333,9 +330,6 @@ export async function apply(
 				rollout_kind: CreateApplicationRolloutRequest.kind;
 		  }
 	)[] = [];
-
-	// TODO: JSON formatting is a bit bad due to the trimming.
-	// Try to do a conditional on `configFormat`
 
 	log(dim("Container application changes\n"));
 
@@ -409,9 +403,9 @@ export async function apply(
 				{ containers: [nowContainer] },
 				config.configPath
 			);
-			const results = diffLines(prev, now);
-			const changes = results.find((l) => l.added || l.removed) !== undefined;
-			if (!changes) {
+
+			const diff = new Diff(prev, now);
+			if (diff.changes === 0) {
 				updateStatus(`no changes ${brandColor(application.name)}`);
 				continue;
 			}
@@ -421,76 +415,11 @@ export async function apply(
 				false
 			);
 
-			let printedLines: string[] = [];
-			let printedDiff = false;
-			// prints the lines we accumulated to bring context to the edited line
-			const printContext = () => {
-				let index = 0;
-				for (let i = printedLines.length - 1; i >= 0; i--) {
-					if (printedLines[i].trim().startsWith("[")) {
-						log("");
-						index = i;
-						break;
-					}
-				}
+			newline();
 
-				for (let i = index; i < printedLines.length; i++) {
-					log(printedLines[i]);
-					if (printedLines.length - i > 2) {
-						i = printedLines.length - 2;
-						printLine(dim("..."), "  ");
-					}
-				}
+			diff.print();
 
-				printedLines = [];
-			};
-
-			// go line by line and print diff results
-			for (const lines of results) {
-				const trimmedLines = (lines.value ?? "")
-					.split("\n")
-					.map((e) => e.trim())
-					.filter((e) => e !== "");
-
-				for (const l of trimmedLines) {
-					if (lines.added) {
-						printContext();
-						if (l.startsWith("[")) {
-							printLine("");
-						}
-
-						printedDiff = true;
-						printLine(l, green("+ "));
-					} else if (lines.removed) {
-						printContext();
-						if (l.startsWith("[")) {
-							printLine("");
-						}
-
-						printedDiff = true;
-						printLine(l, red("- "));
-					} else {
-						// if we had printed a diff before this line, print a little bit more
-						// so the user has a bit more context on where the edit happens
-						if (printedDiff) {
-							let printDots = false;
-							if (l.startsWith("[")) {
-								printLine("");
-								printDots = true;
-							}
-
-							printedDiff = false;
-							printLine(l, "  ");
-							if (printDots) {
-								printLine(dim("..."), "  ");
-							}
-							continue;
-						}
-
-						printedLines.push(createLine(l, "  "));
-					}
-				}
-			}
+			newline();
 
 			if (appConfigNoDefaults.rollout_kind !== "none") {
 				actions.push({
@@ -509,9 +438,9 @@ export async function apply(
 				});
 			} else {
 				log("Skipping application rollout");
+				newline();
 			}
 
-			printLine("");
 			continue;
 		}
 
@@ -534,12 +463,11 @@ export async function apply(
 			config.configPath
 		);
 
-		// go line by line and pretty print it
-		s.split("\n")
-			.map((line) => line.trim())
-			.forEach((el) => {
-				printLine(el, "  ");
-			});
+		s.trimEnd()
+			.split("\n")
+			.forEach((el) => log(`  ${el}`));
+
+		newline();
 
 		const configToPush = { ...appConfig };
 
@@ -615,7 +543,6 @@ export async function apply(
 				}
 			);
 
-			printLine("");
 			continue;
 		}
 
@@ -696,10 +623,11 @@ export async function apply(
 				shape: shapes.bar,
 			});
 
-			printLine("");
 			continue;
 		}
 	}
+
+	newline();
 
 	endSection("Applied changes");
 }
