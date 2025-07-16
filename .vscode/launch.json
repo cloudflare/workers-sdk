@@ -11,18 +11,6 @@
 			"internalConsoleOptions": "neverOpen",
 			"skipFiles": ["<node_internals>/**"],
 			"cwd": "${workspaceFolder}/tools"
-		},
-		{
-			"name": "Run Bindings Extension",
-			"type": "extensionHost",
-			"request": "launch",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}/packages/cloudflare-workers-bindings-extension"
-			],
-			"outFiles": [
-				"${workspaceFolder}/packages/cloudflare-workers-bindings-extension/dist/**/*.js"
-			],
-			"preLaunchTask": "npm: vscode:prepublish - packages/cloudflare-workers-bindings-extension"
 		}
 	]
 }
