@@ -67,7 +67,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
-		"@cloudflare/unenv-preset": "2.3.3",
+		"@cloudflare/unenv-preset": "workspace:*",
 		"blake3-wasm": "2.1.5",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
