@@ -2,6 +2,12 @@
 	"name": "get-bindings-proxy-fixture",
 	"main": "src/index.ts",
 	"compatibility_date": "2023-11-21",
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS",
+		"html_handling": "auto-trailing-slash",
+		"not_found_handling": "none",
+	},
 	"vars": {
 		"MY_VAR": "my-var-value",
 		"MY_VAR_A": "my-var-a",

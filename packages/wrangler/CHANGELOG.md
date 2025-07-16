@@ -1,5 +1,56 @@
 # wrangler
 
+## 3.114.11
+
+### Patch Changes
+
+- [#9685](https://github.com/cloudflare/workers-sdk/pull/9685) [`cbea64b`](https://github.com/cloudflare/workers-sdk/commit/cbea64b37f58301485e632b99749db445e223522) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Select only successfully deployed deployments when tailing.
+
+- [#9776](https://github.com/cloudflare/workers-sdk/pull/9776) [`6e09672`](https://github.com/cloudflare/workers-sdk/commit/6e09672d26f29ebed1b359775b5adafa34a162b5) Thanks [@vicb](https://github.com/vicb)! - Cap the number of errors and warnings for bulk KV put to avoid consuming too much memory
+
+- [#9694](https://github.com/cloudflare/workers-sdk/pull/9694) [`dacfc35`](https://github.com/cloudflare/workers-sdk/commit/dacfc3521da735e8d0d748e5b42ccb826660676c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add support for assets bindings to `getPlatformProxy`
+
+  this change makes sure that that `getPlatformProxy`, when the input configuration
+  file contains an assets field, correctly returns the appropriate asset binding proxy
+
+  example:
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+  	"name": "my-worker",
+  	"assets": {
+  		"directory": "./public/",
+  		"binding": "ASSETS",
+  	},
+  }
+  ```
+
+  ```js
+  import { getPlatformProxy } from "wrangler";
+
+  const { env, dispose } = await getPlatformProxy();
+
+  const text = await (await env.ASSETS.fetch("http://0.0.0.0/file.txt")).text();
+  console.log(text); // logs the content of file.txt
+
+  await dispose();
+  ```
+
+- [#9807](https://github.com/cloudflare/workers-sdk/pull/9807) [`4dd026b`](https://github.com/cloudflare/workers-sdk/commit/4dd026b65a25b61ea8c43e94016946e26a14cbe7) Thanks [@penalosa](https://github.com/penalosa)! - Better messaging for account owned tokens in `wrangler whoami`
+
+## 3.114.10
+
+### Patch Changes
+
+- [#9713](https://github.com/cloudflare/workers-sdk/pull/9713) [`3ff9592`](https://github.com/cloudflare/workers-sdk/commit/3ff95926947ff0a76cf94027ee5c03704e4fede8) Thanks [@penalosa](https://github.com/penalosa)! - Support `wrangler version upload` for Python Workers
+
+- [#9453](https://github.com/cloudflare/workers-sdk/pull/9453) [`0e2949c`](https://github.com/cloudflare/workers-sdk/commit/0e2949c52865163908969fbc98a1f4e7b7575f89) Thanks [@emily-shen](https://github.com/emily-shen)! - Point to the right location for docs on telemetry
+
+- [#9594](https://github.com/cloudflare/workers-sdk/pull/9594) [`0f2f75d`](https://github.com/cloudflare/workers-sdk/commit/0f2f75d6ecf521777321e44d6a1e6e074594ecc4) Thanks [@vicb](https://github.com/vicb)! - drop unused `WRANGLER_UNENV_RESOLVE_PATHS` env var
+
+- [#9631](https://github.com/cloudflare/workers-sdk/pull/9631) [`e101451`](https://github.com/cloudflare/workers-sdk/commit/e101451a29ec341530d2f619baa055034ededc83) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Remove "Cloudchamber" from user facing error messages
+
 ## 3.114.9
 
 ### Patch Changes

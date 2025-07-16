@@ -260,7 +260,7 @@ async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 			message = JSON.stringify(err);
 		}
 
-		crash("loading Cloudchamber account failed:" + message);
+		crash("Loading account failed: " + message);
 	}
 }
 

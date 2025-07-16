@@ -51,6 +51,13 @@ describe("getUserInfo()", () => {
 				{ once: true }
 			),
 			http.get(
+				"*/user/tokens/verify",
+				() => {
+					return HttpResponse.json(createFetchResult([]));
+				},
+				{ once: true }
+			),
+			http.get(
 				"*/accounts",
 				({ request }) => {
 					const headersObject = Object.fromEntries(request.headers.entries());
@@ -71,10 +78,18 @@ describe("getUserInfo()", () => {
 	});
 	it("should say it's using an API token when one is set", async () => {
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
-
+		msw.use(
+			http.get(
+				"*/user/tokens/verify",
+				() => {
+					return HttpResponse.json(createFetchResult([]));
+				},
+				{ once: true }
+			)
+		);
 		const userInfo = await getUserInfo();
 		expect(userInfo).toEqual({
-			authType: "API Token",
+			authType: "User API Token",
 			apiToken: "123456789",
 			email: "user@example.com",
 			accounts: [
@@ -147,14 +162,14 @@ describe("getUserInfo()", () => {
 		await getUserInfo();
 
 		expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token.[0m
 
-			  This is no longer supported in the current version of Wrangler.
-			  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
-			  environment variable.
+				  This is no longer supported in the current version of Wrangler.
+				  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
+				  environment variable.
 
-			"
-		`);
+				"
+			`);
 	});
 });
 
@@ -195,8 +210,27 @@ describe("whoami", () => {
 			├───────────────┼────────────┤
 			│ Account Three │ account-3  │
 			└───────────────┴────────────┘
-			🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.
+			🔓 Token Permissions:
 			Scope (Access)
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
+
+			  - account:read
+			  - user:read
+			  - workers:write
+			  - workers_kv:write
+			  - workers_routes:write
+			  - workers_scripts:write
+			  - workers_tail:read
+			  - d1:write
+			  - pages:write
+			  - zone:read
+			  - ssl_certs:write
+			  - ai:write
+			  - queues:write
+			  - pipelines:write
+
+
 			🎢 Membership roles in \\"Account Two\\": Contact account super admin to change your permissions.
 			- Test role"
 		`);
@@ -229,8 +263,27 @@ describe("whoami", () => {
 			├───────────────┼────────────┤
 			│ Account Three │ account-3  │
 			└───────────────┴────────────┘
-			🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.
+			🔓 Token Permissions:
 			Scope (Access)
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
+
+			  - account:read
+			  - user:read
+			  - workers:write
+			  - workers_kv:write
+			  - workers_routes:write
+			  - workers_scripts:write
+			  - workers_tail:read
+			  - d1:write
+			  - pages:write
+			  - zone:read
+			  - ssl_certs:write
+			  - ai:write
+			  - queues:write
+			  - pipelines:write
+
+
 			🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"
 		`);
 	});
