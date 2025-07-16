@@ -42,8 +42,8 @@ export const getC3CommandFromEnv = getEnvironmentVariableFactory({
  */
 export const getWranglerSendMetricsFromEnv =
 	getBooleanEnvironmentVariableFactory({
-	variableName: "WRANGLER_SEND_METRICS",
-});
+		variableName: "WRANGLER_SEND_METRICS",
+	});
 
 /**
  * Set `WRANGLER_API_ENVIRONMENT` environment variable to "staging" to tell Wrangler to hit the staging APIs rather than production.
