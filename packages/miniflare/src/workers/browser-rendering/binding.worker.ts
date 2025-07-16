@@ -3,16 +3,28 @@ import { DurableObject } from "cloudflare:workers";
 import { CoreBindings } from "../core/constants";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 
-export class BrowserSession extends DurableObject {
-	endpoint: string | undefined;
+interface Env {
+	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	BrowserSession: DurableObjectNamespace<BrowserSession>;
+}
+
+export class BrowserSession extends DurableObject<Env> {
+	endpoint?: string;
+	ws?: WebSocket;
+	server?: WebSocket;
+
 	async fetch(_request: Request) {
+		assert(!this.ws && !this.server, "WebSocket already initialized");
+
 		const webSocketPair = new WebSocketPair();
 		const [client, server] = Object.values(webSocketPair);
 
 		server.accept();
 		assert(this.endpoint !== undefined);
 
-		const response = await fetch(this.endpoint, {
+		const wsEndpoint = this.endpoint.replace("ws://", "http://");
+
+		const response = await fetch(wsEndpoint, {
 			headers: {
 				Upgrade: "websocket",
 			},
@@ -36,15 +48,23 @@ export class BrowserSession extends DurableObject {
 		});
 
 		server.addEventListener("message", (m) => {
-			if (m.data === "ping") return;
+			if (m.data === "ping") {
+				this.#checkStatus().catch((err) => {
+					console.error("Error checking browser status:", err);
+				});
+				return;
+			}
 			// HACK: TODO: Figure out what the chunking mechanism is in @cloudflare/puppeteer and unchunk the messages here, rather than just naively slicing off the header. This Worker should probably have the increase_websocket_message_size compat flag added
 			ws.send(new TextDecoder().decode((m.data as ArrayBuffer).slice(4)));
 		});
-		// server.addEventListener("close", () => console.log("client closed"));
-		// ws.addEventListener("close", () => console.log("ws closed"));
-
-		// server.addEventListener("error", () => console.log("client error"));
-		// ws.addEventListener("error", () => console.log("ws error"));
+		server.addEventListener("close", ({ code, reason }) => {
+			ws.close(code, reason);
+		});
+		ws.addEventListener("close", ({ code, reason }) => {
+			server.close(code, reason);
+		});
+		this.ws = ws;
+		this.server = server;
 
 		return new Response(null, {
 			status: 101,
@@ -52,18 +72,32 @@ export class BrowserSession extends DurableObject {
 		});
 	}
 	async setEndpoint(endpoint: string) {
-		this.endpoint = endpoint.replace("ws://", "http://");
+		this.endpoint = endpoint;
+	}
+
+	async #checkStatus() {
+		if (this.endpoint) {
+			const url = new URL("http://example.com/browser/status");
+			url.searchParams.set("wsEndpoint", this.endpoint);
+			const resp = await this.env[CoreBindings.SERVICE_LOOPBACK].fetch(url);
+			const { stopped } = resp.ok
+				? ((await resp.json()) as { stopped: boolean })
+				: {};
+
+			if (stopped) {
+				// Browser process has exited, we should close the WebSocket
+				// TODO should we send a error code?
+				this.ws?.close();
+				this.server?.close();
+				this.ctx.storage.deleteAll();
+				return;
+			}
+		}
 	}
 }
 
 export default {
-	async fetch(
-		request: Request,
-		env: {
-			[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
-			BrowserSession: DurableObjectNamespace<BrowserSession>;
-		}
-	) {
+	async fetch(request: Request, env: Env) {
 		const url = new URL(request.url);
 		switch (url.pathname) {
 			case "/v1/acquire": {
