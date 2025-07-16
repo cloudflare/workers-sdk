@@ -418,11 +418,12 @@ async function resolveConfig(
 
 	if (resolved.dev.remote) {
 		// We're in remote mode (`--remote`)
-		const containerClassNames = new Set(
-			resolved.containers?.map((c) => c.class_name)
-		);
 
-		if (containerClassNames.size > 0 && resolved.dev.enableContainers) {
+		if (
+			resolved.dev.enableContainers &&
+			resolved.containers &&
+			resolved.containers.length > 0
+		) {
 			logger.warn(
 				"Containers are only supported in local mode, to suppress this warning set `dev.enable_containers` to `false` or pass `--enable-containers=false` to the `wrangler dev` command"
 			);
@@ -433,16 +434,8 @@ async function resolveConfig(
 			resolved.migrations
 		);
 		if (
-			Array.from(classNamesWhichUseSQLite.entries()).some(
-				([className, usesSQLite]) => {
-					if (containerClassNames.has(className)) {
-						// We want to ignore class names of containers since
-						// we have a separate warning dedicated for those
-						return false;
-					}
-					return usesSQLite;
-				}
-			)
+			resolved.dev.remote &&
+			Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
 		) {
 			logger.warn("SQLite in Durable Objects is only supported in local mode.");
 		}
