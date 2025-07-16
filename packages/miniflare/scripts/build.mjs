@@ -174,6 +174,7 @@ async function buildPackage() {
 		sourcemap: true,
 		metafile: true,
 		minify: true,
+		keepNames: true,
 		sourcesContent: false,
 		tsconfig: path.join(pkgRoot, "tsconfig.json"),
 		// Mark root package's dependencies as external, include root devDependencies
