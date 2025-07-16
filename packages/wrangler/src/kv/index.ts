@@ -1,3 +1,4 @@
+import { strict as assert } from "node:assert";
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
@@ -27,6 +28,7 @@ import {
 	putKVBulkKeyValue,
 	putKVKeyValue,
 	unexpectedKVKeyValueProps,
+	updateKVNamespace,
 	usingLocalNamespace,
 } from "./helpers";
 import type { EventNames } from "../metrics";
@@ -214,6 +216,87 @@ export const kvNamespaceDeleteCommand = createCommand({
 		// TODO: do it automatically
 
 		// TODO: delete the preview namespace as well?
+	},
+});
+
+export const kvNamespaceRenameCommand = createCommand({
+	metadata: {
+		description: "Rename a KV namespace",
+		status: "stable",
+		owner: "Product: KV",
+	},
+	positionalArgs: ["old-name"],
+	args: {
+		"old-name": {
+			type: "string",
+			describe: "The current name (title) of the namespace to rename",
+		},
+		"namespace-id": {
+			type: "string",
+			describe: "The id of the namespace to rename",
+		},
+		"new-name": {
+			type: "string",
+			describe: "The new name for the namespace",
+			demandOption: true,
+		},
+	},
+
+	validateArgs(args) {
+		// Check if both name and namespace-id are provided
+		if (args.oldName && args.namespaceId) {
+			throw new CommandLineArgsError(
+				"Cannot specify both old-name and --namespace-id. Use either old-name (as first argument) or --namespace-id flag, not both."
+			);
+		}
+
+		// Require either old-name or namespace-id
+		if (!args.namespaceId && !args.oldName) {
+			throw new CommandLineArgsError(
+				"Either old-name (as first argument) or --namespace-id must be specified"
+			);
+		}
+
+		// Validate new-name length (API limit is 512 characters)
+		if (args.newName && args.newName.length > 512) {
+			throw new CommandLineArgsError(
+				`new-name must be 512 characters or less (current: ${args.newName.length})`
+			);
+		}
+	},
+
+	async handler(args) {
+		const config = readConfig(args);
+		printResourceLocation("remote");
+		const accountId = await requireAuth(config);
+
+		let namespaceId = args.namespaceId;
+
+		// If no namespace ID provided, find it by current name
+		if (!namespaceId && args.oldName) {
+			const namespaces = await listKVNamespaces(config, accountId);
+			const namespace = namespaces.find((ns) => ns.title === args.oldName);
+
+			if (!namespace) {
+				throw new UserError(
+					`No namespace found with the name "${args.oldName}". ` +
+						`Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".`
+				);
+			}
+			namespaceId = namespace.id;
+		}
+
+		assert(namespaceId, "namespaceId should be defined");
+		logger.log(`Renaming KV namespace ${namespaceId} to "${args.newName}".`);
+		const updatedNamespace = await updateKVNamespace(
+			config,
+			accountId,
+			namespaceId,
+			args.newName
+		);
+		logger.log(
+			`✨ Successfully renamed namespace to "${updatedNamespace.title}"`
+		);
 	},
 });
 
