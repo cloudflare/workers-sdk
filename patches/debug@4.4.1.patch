@@ -1,0 +1,40 @@
+diff --git a/package.json b/package.json
+index afc2f8b615b2229c7b3b818c5f4b6f90dcc99f9a..b764f5440a8327722de974c36215a6c852f03b62 100644
+--- a/package.json
++++ b/package.json
+@@ -53,6 +53,12 @@
+   },
+   "main": "./src/index.js",
+   "browser": "./src/browser.js",
++  "exports": {
++    "node": "./src/index.js",
++    "browser": "./src/browser.js",
++    "workerd": "./src/workerd.js",
++    "default": "./src/index.js"
++  },
+   "engines": {
+     "node": ">=6.0"
+   },
+diff --git a/src/workerd.js b/src/workerd.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..04a93fd422c7086a93dad1ce86abe2020fb46e44
+--- /dev/null
++++ b/src/workerd.js
+@@ -0,0 +1,17 @@
++import { env } from "cloudflare:workers";
++import humanize from "ms";
++import setup from "./common";
++
++const createDebug = setup({
++	log: console.debug.bind(console),
++	load: () => env.DEBUG,
++	save: () => {},
++	colors: [],
++	useColors: () => false,
++	destroy: () => {},
++	formatArgs(args) {
++		args[0] = this.namespace + " " + args[0] + " +" + humanize(this.diff);
++    }
++});
++
++export default createDebug;

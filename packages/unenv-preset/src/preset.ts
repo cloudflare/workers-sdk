@@ -79,6 +79,9 @@ export const cloudflare: Preset = {
 				[`node:${m}`, `@cloudflare/unenv-preset/node/${m}`],
 			])
 		),
+
+		// To override the npm shim from unenv
+		debug: "@cloudflare/unenv-preset/npm/debug",
 	},
 	inject: {
 		// Setting symbols implemented by workerd to `false` so that `inject`s defined in base presets are not used.
