@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import module from "node:module";
 import getPort from "get-port";
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
 import dedent from "ts-dedent";
 import { vi } from "vitest";
 import { ConfigController } from "../api/startDevWorker/ConfigController";
@@ -11,7 +10,6 @@ import { getWorkerAccountAndContext } from "../dev/remote";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import { CI } from "../is-ci";
-import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -132,7 +130,6 @@ describe.sequential("wrangler dev", () => {
 			...mswSuccessOauthHandlers,
 			...mswSuccessUserHandlers
 		);
-		logger.clearHistory();
 	});
 
 	runInTempDir();
@@ -140,11 +137,7 @@ describe.sequential("wrangler dev", () => {
 	mockApiToken();
 	const std = mockConsoleMethods();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
-		spy.mockClear();
-		setSpy.mockClear();
-		logger.resetLoggerLevel();
 	});
 
 	async function runWranglerUntilConfig(
@@ -155,6 +148,11 @@ describe.sequential("wrangler dev", () => {
 			await runWrangler(cmd, env);
 		} catch (e) {
 			console.error(e);
+		}
+		if (spy.mock.calls.length === 0) {
+			throw new Error(
+				"Config was never reached:\n" + JSON.stringify(std, null, 2)
+			);
 		}
 		return { ...spy.mock.calls[0][0], input: setSpy.mock.calls[0][0] };
 	}
@@ -948,6 +946,10 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		describe(".env", () => {
+			const processEnv = process.env;
+			beforeEach(() => (process.env = { ...processEnv }));
+			afterEach(() => (process.env = processEnv));
+
 			beforeEach(() => {
 				fs.writeFileSync(".env", "CUSTOM_BUILD_VAR=default");
 				fs.writeFileSync(".env.custom", "CUSTOM_BUILD_VAR=custom");
