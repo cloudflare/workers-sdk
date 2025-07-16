@@ -1,5 +1,15 @@
 # wrangler
 
+## 4.25.0
+
+### Minor Changes
+
+- [#9835](https://github.com/cloudflare/workers-sdk/pull/9835) [`9f0c175`](https://github.com/cloudflare/workers-sdk/commit/9f0c175ab668217f78debab4dfdb3e677040b9b0) Thanks [@thomasgauvin](https://github.com/thomasgauvin)! - Added rename namespace command to Workers KV
+
+### Patch Changes
+
+- [#9934](https://github.com/cloudflare/workers-sdk/pull/9934) [`6cc24c0`](https://github.com/cloudflare/workers-sdk/commit/6cc24c08148e7b9d6747ab66dc826df850fb0a7c) Thanks [@emily-shen](https://github.com/emily-shen)! - Add more thorough validation to containers configuration
+
 ## 4.24.4
 
 ### Patch Changes
