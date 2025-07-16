@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.9.4",
+	"version": "1.9.5",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -69,7 +69,7 @@
 	},
 	"peerDependencies": {
 		"vite": "^6.1.0 || ^7.0.0",
-		"wrangler": "workspace:*"
+		"wrangler": "workspace:^"
 	},
 	"publishConfig": {
 		"access": "public"

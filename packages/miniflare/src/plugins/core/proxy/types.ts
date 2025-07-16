@@ -1,7 +1,7 @@
 import { Blob } from "buffer";
 import { arrayBuffer } from "stream/consumers";
 import { ReadableStream } from "stream/web";
-import { File, Headers } from "undici";
+import { Headers } from "undici";
 import { Request, RequestInit, Response } from "../../../http";
 import { PlatformImpl } from "../../../workers";
 import type {

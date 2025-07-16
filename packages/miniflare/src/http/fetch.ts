@@ -1,6 +1,8 @@
+import assert from "assert";
 import http from "http";
 import { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import * as undici from "undici";
+import { UndiciHeaders } from "undici/types/dispatcher";
 import NodeWebSocket from "ws";
 import { CoreHeaders, DeferredPromise } from "../workers";
 import { Request, RequestInfo, RequestInit } from "./request";
@@ -8,15 +10,6 @@ import { Response } from "./response";
 import { coupleWebSocket, WebSocketPair } from "./websocket";
 
 const ignored = ["transfer-encoding", "connection", "keep-alive", "expect"];
-function headersFromIncomingRequest(req: http.IncomingMessage): undici.Headers {
-	const entries = Object.entries(req.headers).filter(
-		(pair): pair is [string, string | string[]] => {
-			const [name, value] = pair;
-			return !ignored.includes(name) && value !== undefined;
-		}
-	);
-	return new undici.Headers(Object.fromEntries(entries));
-}
 
 export async function fetch(
 	input: RequestInfo,
@@ -40,13 +33,13 @@ export async function fetch(
 
 		// Normalise request headers to a format ws understands, extracting the
 		// Sec-WebSocket-Protocol header as ws treats this differently
-		const headers: Record<string, string> = {};
+		const headers = new undici.Headers();
 		let protocols: string[] | undefined;
 		for (const [key, value] of request.headers.entries()) {
 			if (key.toLowerCase() === "sec-websocket-protocol") {
 				protocols = value.split(",").map((protocol) => protocol.trim());
 			} else {
-				headers[key] = value;
+				headers.append(key, value);
 			}
 		}
 
@@ -59,13 +52,13 @@ export async function fetch(
 		// Establish web socket connection
 		const ws = new NodeWebSocket(url, protocols, {
 			followRedirects: request.redirect === "follow",
-			headers,
+			headers: Object.fromEntries(headers.entries()),
 			...rejectUnauthorized,
 		});
 
 		const responsePromise = new DeferredPromise<Response>();
 		ws.once("upgrade", (req) => {
-			const headers = headersFromIncomingRequest(req);
+			const headers = convertUndiciHeadersToStandard(req.headers);
 			// Couple web socket with pair and resolve
 			const [worker, client] = Object.values(new WebSocketPair());
 			const couplePromise = coupleWebSocket(ws, client);
@@ -77,7 +70,7 @@ export async function fetch(
 			responsePromise.resolve(couplePromise.then(() => response));
 		});
 		ws.once("unexpected-response", (_, req) => {
-			const headers = headersFromIncomingRequest(req);
+			const headers = convertUndiciHeadersToStandard(req.headers);
 			const response = new Response(req, {
 				status: req.statusCode,
 				headers,
@@ -99,9 +92,74 @@ export type DispatchFetch = (
 ) => Promise<Response>;
 
 export type AnyHeaders = http.IncomingHttpHeaders | string[];
-function addHeader(/* mut */ headers: AnyHeaders, key: string, value: string) {
-	if (Array.isArray(headers)) headers.push(key, value);
-	else headers[key] = value;
+
+function isIterable(
+	headers: UndiciHeaders
+): headers is Iterable<[string, string | string[] | undefined]> {
+	return Symbol.iterator in Object(headers);
+}
+
+// See https://github.com/nodejs/undici/blob/main/docs/docs/api/Dispatcher.md?plain=1#L1151 for documentation
+function convertUndiciHeadersToStandard(
+	headers: NonNullable<UndiciHeaders>
+): undici.Headers {
+	// Array format: https://github.com/nodejs/undici/blob/main/docs/docs/api/Dispatcher.md?plain=1#L1157
+	if (Array.isArray(headers)) {
+		let name: string | undefined = undefined;
+		let value: string | undefined = undefined;
+		const standardHeaders = new undici.Headers();
+		for (const element of headers) {
+			if (name === undefined && value === undefined) {
+				name = element;
+			} else if (name !== undefined && value === undefined) {
+				value = element;
+			} else if (name !== undefined && value !== undefined) {
+				if (!ignored.includes(name)) {
+					standardHeaders.set(name, value);
+				}
+				name = undefined;
+				value = undefined;
+			}
+		}
+		// The string[] format for UndiciHeaders must have an even number of entries
+		// https://github.com/nodejs/undici/blob/main/docs/docs/api/Dispatcher.md?plain=1#L1157
+		assert(name === undefined && value === undefined);
+		return standardHeaders;
+	} else if (isIterable(headers)) {
+		const standardHeaders = new undici.Headers();
+		for (const [name, value] of headers) {
+			if (!ignored.includes(name)) {
+				if (!value) {
+					continue;
+				}
+				if (typeof value === "string") {
+					standardHeaders.append(name, value);
+				} else {
+					for (const v of value) {
+						standardHeaders.append(name, v);
+					}
+				}
+			}
+		}
+		return standardHeaders;
+	} else {
+		const standardHeaders = new undici.Headers();
+		for (const [name, value] of Object.entries(headers)) {
+			if (!ignored.includes(name)) {
+				if (!value) {
+					continue;
+				}
+				if (typeof value === "string") {
+					standardHeaders.append(name, value);
+				} else {
+					for (const v of value) {
+						standardHeaders.append(name, v);
+					}
+				}
+			}
+		}
+		return standardHeaders;
+	}
 }
 
 /**
@@ -135,22 +193,22 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 	}
 
 	addHeaders(
-		/* mut */ headers: AnyHeaders,
+		/* mut */ headers: undici.Headers,
 		path: string // Including query parameters
 	) {
 		// Reconstruct URL using runtime origin specified with `dispatchFetch()`
 		const originalURL = this.userRuntimeOrigin + path;
-		addHeader(headers, CoreHeaders.ORIGINAL_URL, originalURL);
-		addHeader(headers, CoreHeaders.DISABLE_PRETTY_ERROR, "true");
+		headers.set(CoreHeaders.ORIGINAL_URL, originalURL);
+		headers.set(CoreHeaders.DISABLE_PRETTY_ERROR, "true");
 		if (this.cfBlobJson !== undefined) {
 			// Only add this header if a `cf` override was set
-			addHeader(headers, CoreHeaders.CF_BLOB, this.cfBlobJson);
+			headers.set(CoreHeaders.CF_BLOB, this.cfBlobJson);
 		}
 	}
 
 	dispatch(
 		/* mut */ options: undici.Dispatcher.DispatchOptions,
-		handler: undici.Dispatcher.DispatchHandlers
+		handler: undici.Dispatcher.DispatchHandler
 	): boolean {
 		let origin = String(options.origin);
 		// The first request in a redirect chain will always match the user origin
@@ -170,9 +228,11 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 				path = url.pathname + url.search;
 			}
 
-			// ...and add special Miniflare headers for runtime requests
-			options.headers ??= {};
-			this.addHeaders(options.headers, path);
+			const headers = convertUndiciHeadersToStandard(options.headers ?? {});
+
+			this.addHeaders(headers, path);
+
+			options.headers = headers;
 
 			// Dispatch with runtime dispatcher to avoid certificate errors if using
 			// self-signed certificate

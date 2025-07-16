@@ -5,7 +5,7 @@ import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
-import { File, FormData } from "undici";
+import { FormData } from "undici";
 import { vi } from "vitest";
 import { downloadWorker } from "../init";
 import { writeMetricsConfig } from "../metrics/metrics-config";
@@ -706,6 +706,7 @@ describe("init", () => {
 							});
 						}
 
+						// @ts-expect-error MSW (with types from Undici v6) and Undici v7 are not type-compatible, but this works at runtime
 						return HttpResponse.formData(worker.content, {
 							headers: {
 								"cf-entrypoint": worker.main,

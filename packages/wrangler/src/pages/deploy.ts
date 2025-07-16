@@ -31,7 +31,6 @@ import type {
 	Project,
 	UnifiedDeploymentLogMessages,
 } from "@cloudflare/types";
-import type { File } from "undici";
 
 export const pagesDeploymentCreateCommand = createAlias({
 	aliasOf: "wrangler pages deploy",

@@ -87,3 +87,10 @@ export function isR2ObjectWriteHttpMetadata(targetName: string, key: string) {
 		key === "writeHttpMetadata"
 	);
 }
+
+/**
+ * See #createMediaProxy() comment for why this is special
+ */
+export function isImagesInput(targetName: string, key: string) {
+	return targetName === "ImagesBindingImpl" && key === "input";
+}

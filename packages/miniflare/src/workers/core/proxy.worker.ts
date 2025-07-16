@@ -6,6 +6,7 @@ import {
 	CoreBindings,
 	CoreHeaders,
 	isFetcherFetch,
+	isImagesInput,
 	isR2ObjectWriteHttpMetadata,
 	ProxyAddresses,
 	ProxyOps,
@@ -305,7 +306,15 @@ export class ProxyServer implements DurableObject {
 			}
 			assert(Array.isArray(args));
 			try {
-				if (["RpcProperty", "RpcStub"].includes(func.constructor.name)) {
+				// See #createMediaProxy() for why this is special
+				if (isImagesInput(targetName, keyHeader)) {
+					let transform = func.apply(target, [args[0]]);
+					for (const operation of args[1]) {
+						transform = transform[operation.type](...operation.arguments);
+					}
+					// We intentionally don't await this `output()` call so that it's treated as a regular promise
+					result = transform.output(args[2]);
+				} else if (["RpcProperty", "RpcStub"].includes(func.constructor.name)) {
 					// let's resolve RpcPromise instances right away (to support serialization)
 					result = await func(...args);
 				} else {

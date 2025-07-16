@@ -2421,6 +2421,108 @@ describe("normalizeAndValidateConfig()", () => {
 					);
 				}
 			});
+
+			it("should error for invalid container app fields", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								image: "something",
+								class_name: "test-class",
+								rollout_kind: "invalid",
+								instance_type: "invalid",
+								max_instances: "invalid",
+								image_build_context: 123,
+								image_vars: "invalid",
+								scheduling_policy: "invalid",
+								unknown_field: "value",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in containers field: \\"unknown_field\\""
+				`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \\"containers.rollout_kind\\" field to be one of [\\"full_auto\\",\\"full_manual\\",\\"none\\"] but got \\"invalid\\".
+					  - Expected \\"containers.instance_type\\" field to be one of [\\"dev\\",\\"basic\\",\\"standard\\"] but got \\"invalid\\".
+					  - Expected \\"containers.max_instances\\" to be of type number but got \\"invalid\\".
+					  - Expected \\"containers.image_build_context\\" to be of type string but got 123.
+					  - Expected \\"containers.image_vars\\" to be of type object but got \\"invalid\\".
+					  - Expected \\"containers.scheduling_policy\\" field to be one of [\\"regional\\",\\"moon\\",\\"default\\"] but got \\"invalid\\"."
+				`);
+			});
+
+			it("should warn for deprecated container fields", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								instances: 10,
+								configuration: {
+									image: "config-image",
+								},
+								durable_objects: {
+									namespace_id: "test-namespace",
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", \\"configuration.disk\\" should be set via \\"instance_type\\".
+					  - \\"containers.instances\\" is deprecated. Use \\"containers.max_instances\\" instead.
+					  - \\"containers.durable_objects\\" is deprecated. Use the \\"class_name\\" field instead."
+				`);
+			});
+
+			it("should error for invalid containers.configuration fields", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								configuration: {
+									image: "config-image",
+									secrets: [],
+									labels: [],
+									disk: { size: "2GB" },
+									memory: "256MB",
+									vcpu: 0.5,
+									memory_mib: 256,
+									invalid_field: "should not be here",
+									another_invalid: 123,
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				console.dir(diagnostics.warnings);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", \\"configuration.disk\\" should be set via \\"instance_type\\".
+					  - Unexpected fields found in containers.configuration field: \\"memory\\",\\"invalid_field\\",\\"another_invalid\\""
+				`);
+			});
 		});
 
 		describe("[kv_namespaces]", () => {

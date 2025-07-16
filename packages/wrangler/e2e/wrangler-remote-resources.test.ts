@@ -13,6 +13,11 @@ import {
 	vi,
 } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
+import {
+	generateLeafCertificate,
+	generateMtlsCertName,
+	generateRootCertificate,
+} from "./helpers/cert";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -22,8 +27,8 @@ import type { WranglerLongLivedCommand } from "./helpers/wrangler";
 type TestCase<T = void> = {
 	name: string;
 	scriptPath: string;
-	setup?: (helper: WranglerE2ETestHelper) => Promise<T> | T;
-	generateWranglerConfig: (setupResult: T) => RawConfig;
+	setup?: (helper: WranglerE2ETestHelper, workerName: string) => Promise<T> | T;
+	generateWranglerConfig: (setupResult: T) => Omit<RawConfig, "name">;
 	expectedResponseMatch: string | RegExp;
 	// Flag for resources that can work without remote bindings opt-in
 	worksWithoutRemoteBindings?: boolean;
@@ -73,7 +78,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 			return { worker: targetWorkerName };
 		},
 		generateWranglerConfig: ({ worker: targetWorkerName }) => ({
-			name: "mixed-mode-service-binding-test",
 			main: "service-binding.js",
 			compatibility_date: "2025-01-01",
 			services: [
@@ -99,7 +103,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 		name: "AI",
 		scriptPath: "ai.js",
 		generateWranglerConfig: () => ({
-			name: "mixed-mode-ai-test",
 			main: "ai.js",
 			compatibility_date: "2025-01-01",
 			ai: {
@@ -115,7 +118,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 		name: "Browser",
 		scriptPath: "browser.js",
 		generateWranglerConfig: () => ({
-			name: "mixed-mode-browser-test",
 			main: "browser.js",
 			compatibility_date: "2025-01-01",
 			browser: {
@@ -130,7 +132,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 		name: "Images",
 		scriptPath: "images.js",
 		generateWranglerConfig: () => ({
-			name: "mixed-mode-images-test",
 			main: "images.js",
 			compatibility_date: "2025-01-01",
 			images: {
@@ -154,7 +155,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 			return { name };
 		},
 		generateWranglerConfig: ({ name }) => ({
-			name: "mixed-mode-vectorize-test",
 			main: "vectorize.js",
 			compatibility_date: "2025-01-01",
 			vectorize: [
@@ -190,7 +190,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 			return { namespace };
 		},
 		generateWranglerConfig: ({ namespace }) => ({
-			name: "mixed-mode-dispatch-namespace-test",
 			main: "dispatch-namespace.js",
 			compatibility_date: "2025-01-01",
 			dispatch_namespaces: [
@@ -214,7 +213,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 			return { id: ns };
 		},
 		generateWranglerConfig: ({ id: namespaceId }) => ({
-			name: "mixed-mode-kv-test",
 			main: "kv.js",
 			compatibility_date: "2025-01-01",
 			kv_namespaces: [
@@ -244,7 +242,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 			return { name };
 		},
 		generateWranglerConfig: ({ name: bucketName }) => ({
-			name: "mixed-mode-r2-test",
 			main: "r2.js",
 			compatibility_date: "2025-01-01",
 			r2_buckets: [
@@ -274,7 +271,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 			return { id, name };
 		},
 		generateWranglerConfig: ({ id, name }) => ({
-			name: "mixed-mode-d1-test",
 			main: "d1.js",
 			compatibility_date: "2025-01-01",
 			d1_databases: [
@@ -288,14 +284,86 @@ const testCases: TestCase<Record<string, string>>[] = [
 		}),
 		expectedResponseMatch: "existing-value",
 	},
+	{
+		name: "mTLS",
+		scriptPath: "mtls.js",
+		setup: async (helper, workerName) => {
+			// Generate root and leaf certificates
+			const { certificate: rootCert, privateKey: rootKey } =
+				generateRootCertificate();
+			const { certificate: leafCert, privateKey: leafKey } =
+				generateLeafCertificate(rootCert, rootKey);
+
+			// Generate filenames for concurrent e2e test environment
+			const mtlsCertName = generateMtlsCertName();
+			// const caCertName = generateCaCertName();
+
+			// locally generated certs/key
+			await helper.seed({ "mtls_client_cert_file.pem": leafCert });
+			await helper.seed({ "mtls_client_private_key_file.pem": leafKey });
+
+			const output = await helper.run(
+				`wrangler cert upload mtls-certificate --name ${mtlsCertName} --cert mtls_client_cert_file.pem --key mtls_client_private_key_file.pem`
+			);
+
+			const match = output.stdout.match(/ID:\s+(?<certId>.*)$/m);
+			const certificateId = match?.groups?.certId;
+			assert(certificateId);
+
+			await helper.seed({
+				"worker.js": dedent/* javascript */ `
+								export default {
+									fetch(request) { return new Response("Hello"); }
+								}
+							`,
+			});
+
+			const wranglerConfig: RawConfig = {
+				name: workerName,
+				mtls_certificates: [
+					{
+						certificate_id: certificateId,
+						binding: "MTLS",
+					},
+				],
+			};
+			await helper.seed({
+				"pre-deployment-wrangler.json": JSON.stringify(wranglerConfig, null, 2),
+			});
+
+			await helper.run(
+				`wrangler deploy worker.js --name ${workerName} -c pre-deployment-wrangler.json --compatibility-date 2025-01-01`
+			);
+			onTestFinished(async () => {
+				await helper.run(`wrangler delete --name ${workerName}`);
+			});
+
+			return { certificateId };
+		},
+		generateWranglerConfig: ({ certificateId }) => ({
+			main: "mtls.js",
+			compatibility_date: "2025-01-01",
+			mtls_certificates: [
+				{
+					binding: "MTLS",
+					certificate_id: certificateId,
+					experimental_remote: true,
+				},
+			],
+		}),
+		// Note: in this test we are making sure that TLS negotiation does work by checking that we get an SSL certificate error
+		expectedResponseMatch: /The SSL certificate error/,
+	},
 ];
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Wrangler Mixed Mode E2E Tests", () => {
 	describe.each(testCases)("$name", (testCase) => {
 		let helper: WranglerE2ETestHelper;
+		let workerName: string;
 
 		beforeEach(() => {
 			helper = new WranglerE2ETestHelper();
+			workerName = generateResourceName();
 		});
 
 		it("works with remote bindings enabled", async () => {
@@ -303,7 +371,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Wrangler Mixed Mode E2E Tests", () => {
 				path.resolve(__dirname, "./seed-files/remote-binding-workers")
 			);
 
-			await writeWranglerConfig(testCase, helper);
+			await writeWranglerConfig(testCase, helper, workerName);
 
 			const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
 
@@ -322,7 +390,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Wrangler Mixed Mode E2E Tests", () => {
 					path.resolve(__dirname, "./seed-files/remote-binding-workers")
 				);
 
-				await writeWranglerConfig(testCase, helper);
+				await writeWranglerConfig(testCase, helper, workerName);
 
 				const worker = helper.runLongLived("wrangler dev");
 
@@ -339,11 +407,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Wrangler Mixed Mode E2E Tests", () => {
 		() => {
 			let worker: WranglerLongLivedCommand;
 			let helper: WranglerE2ETestHelper;
+			let workerName: string;
 
 			let url: string;
 
 			beforeAll(async () => {
 				helper = new WranglerE2ETestHelper();
+				workerName = generateResourceName();
 				await helper.seed(
 					path.resolve(__dirname, "./seed-files/remote-binding-workers")
 				);
@@ -374,7 +444,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Wrangler Mixed Mode E2E Tests", () => {
 			});
 
 			it.each(testCases)("$name with worker reload", async (testCase) => {
-				await writeWranglerConfig(testCase, helper);
+				await writeWranglerConfig(testCase, helper, workerName);
 
 				await worker.waitForReload();
 
@@ -449,12 +519,17 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 async function writeWranglerConfig(
 	testCase: TestCase<Record<string, string>>,
-	helper: WranglerE2ETestHelper
+	helper: WranglerE2ETestHelper,
+	workerName: string
 ) {
-	const setupResult = (await testCase.setup?.(helper)) ?? {};
+	const setupResult = (await testCase.setup?.(helper, workerName)) ?? {};
 
 	const wranglerConfig = testCase.generateWranglerConfig(setupResult);
 	await helper.seed({
-		"wrangler.json": JSON.stringify(wranglerConfig, null, 2),
+		"wrangler.json": JSON.stringify(
+			{ name: workerName, ...wranglerConfig },
+			null,
+			2
+		),
 	});
 }

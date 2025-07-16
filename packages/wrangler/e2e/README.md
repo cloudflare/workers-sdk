@@ -4,15 +4,37 @@ This folder contains e2e tests for Wrangler.
 
 ## Run the tests
 
-Run each of the test files as a separately cached turbo task.
+Run each of the e2e test files as a separately cached turbo task. This is what we run in the CI.
+
+This is the most effective way to run the Wrangler e2e tests. If any of the tests flake, the ones that passed will be cached and will be skipped on re-runs.
 
 ```zsh
 pnpm test:e2e:wrangler
 ```
 
+You can also run the turbo task directly if you want more fine grained control although this is not as resilient to flakes and is less effective at caching:
+
+```zsh
+pnpm test:e2e -F wrangler -- <extra-vitest-params>
+```
+
 ## Configuration
 
-You can configure how these e2e tests are run, in terms of the backend Cloudflare account, Wrangler and Miniflare distributable binaries and libraries, and which test file to run.
+You can configure how these e2e tests are run:
+
+- Vitest configuration
+- Cloudflare credentials
+- The e2e test file to run
+
+### Vitest configuration
+
+Any params after a `--` will be passed to the Vitest runner, so you can use this to configure the test run.
+
+For example to update the snapshots for all Wrangler e2e tests and bail after only 1 error, you can run:
+
+```zsh
+pnpm test:e2e:wrangler -- -u --bail=1
+```
 
 ### Cloudflare Credentials
 

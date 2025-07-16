@@ -11,12 +11,14 @@ if (!process.env.WRANGLER_IMPORT) {
 
 if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
 	console.warn(
-		"No CLOUDFLARE_ACCOUNT_ID variable provided, skipping API tests"
+		"No `CLOUDFLARE_ACCOUNT_ID` variable provided, skipping API tests"
 	);
 }
 
 if (!process.env.CLOUDFLARE_API_TOKEN) {
-	console.warn("No CLOUDFLARE_API_TOKEN variable provided, skipping API tests");
+	console.warn(
+		"No `CLOUDFLARE_API_TOKEN` variable provided, skipping API tests"
+	);
 }
 
 // Exporting noop vitest setup function allows it to be loaded as a setup file.
