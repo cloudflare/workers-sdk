@@ -225,9 +225,9 @@ export const kvNamespaceRenameCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
-	positionalArgs: ["name"],
+	positionalArgs: ["old-name"],
 	args: {
-		name: {
+		"old-name": {
 			type: "string",
 			describe: "The current name (title) of the namespace to rename",
 		},
