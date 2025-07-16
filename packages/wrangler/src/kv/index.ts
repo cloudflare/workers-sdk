@@ -244,16 +244,16 @@ export const kvNamespaceRenameCommand = createCommand({
 
 	validateArgs(args) {
 		// Check if both name and namespace-id are provided
-		if (args.name && args.namespaceId) {
+		if (args.oldName && args.namespaceId) {
 			throw new CommandLineArgsError(
-				"Cannot specify both name and --namespace-id. Use either name (as first argument) or --namespace-id flag, not both."
+				"Cannot specify both old-name and --namespace-id. Use either old-name (as first argument) or --namespace-id flag, not both."
 			);
 		}
 
-		// Require either name or namespace-id
-		if (!args.namespaceId && !args.name) {
+		// Require either old-name or namespace-id
+		if (!args.namespaceId && !args.oldName) {
 			throw new CommandLineArgsError(
-				"Either name (as first argument) or --namespace-id must be specified"
+				"Either old-name (as first argument) or --namespace-id must be specified"
 			);
 		}
 
@@ -273,13 +273,13 @@ export const kvNamespaceRenameCommand = createCommand({
 		let namespaceId = args.namespaceId;
 
 		// If no namespace ID provided, find it by current name
-		if (!namespaceId && args.name) {
+		if (!namespaceId && args.oldName) {
 			const namespaces = await listKVNamespaces(config, accountId);
-			const namespace = namespaces.find((ns) => ns.title === args.name);
+			const namespace = namespaces.find((ns) => ns.title === args.oldName);
 
 			if (!namespace) {
 				throw new UserError(
-					`No namespace found with the name "${args.name}". ` +
+					`No namespace found with the name "${args.oldName}". ` +
 						`Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".`
 				);
 			}

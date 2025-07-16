@@ -442,12 +442,12 @@ describe("wrangler", () => {
 				).resolves.toBeUndefined();
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"wrangler kv namespace rename [name]
+					"wrangler kv namespace rename [old-name]
 
 					Rename a KV namespace
 
 					POSITIONALS
-					  name  The current name (title) of the namespace to rename  [string]
+					  old-name  The current name (title) of the namespace to rename  [string]
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
@@ -466,7 +466,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv namespace rename --new-name new-name")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Either name (as first argument) or --namespace-id must be specified]`
+					`[Error: Either old-name (as first argument) or --namespace-id must be specified]`
 				);
 			});
 
