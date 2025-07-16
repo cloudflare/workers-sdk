@@ -901,8 +901,8 @@ export class Miniflare {
 	#log: Log;
 
 	#browsers: Set<{
-		wsEndpoint: () => string;
-		process: () => ChildProcess;
+		wsEndpoint: string;
+		process: ChildProcess;
 	}> = new Set();
 
 	readonly #runtime?: Runtime;
@@ -1305,9 +1305,27 @@ export class Miniflare {
 
 				// @ts-expect-error Puppeteer is dynamically installed, and so doesn't have types available
 				const browser = await puppeteer.launch({ headless: "old" });
-				this.#browsers.add(browser);
-
-				response = new Response(browser.wsEndpoint());
+				const wsEndpoint = browser.wsEndpoint();
+				this.#browsers.add({
+					wsEndpoint,
+					process: browser.process(),
+				});
+				response = new Response(wsEndpoint);
+			} else if (url.pathname === "/browser/status") {
+				const wsEndpoint = url.searchParams.get("wsEndpoint");
+				const { process } =
+					[...this.#browsers].find(
+						(browser) => browser.wsEndpoint === wsEndpoint
+					) ?? {};
+				if (process) {
+					const status = {
+						wsEndpoint,
+						stopped: process.exitCode !== null,
+					};
+					response = new Response(JSON.stringify(status), {
+						headers: { "Content-Type": "application/json" },
+					});
+				}
 			} else if (url.pathname === "/core/store-temp-file") {
 				const prefix = url.searchParams.get("prefix");
 				const folder = prefix ? `files/${prefix}` : "files";
@@ -1960,7 +1978,7 @@ export class Miniflare {
 	async #assembleAndUpdateConfig() {
 		for (const browser of this.#browsers) {
 			// .close() isn't enough
-			await browser.process().kill("SIGKILL");
+			browser.process.kill("SIGKILL");
 		}
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
@@ -2664,7 +2682,7 @@ export class Miniflare {
 		} finally {
 			for (const browser of this.#browsers) {
 				// .close() isn't enough
-				await browser.process().kill("SIGKILL");
+				browser.process.kill("SIGKILL");
 			}
 
 			// Remove exit hook, we're cleaning up what they would've cleaned up now
