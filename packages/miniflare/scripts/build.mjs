@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import esbuild from "esbuild";
@@ -171,6 +172,9 @@ async function buildPackage() {
 		target: "esnext",
 		bundle: true,
 		sourcemap: true,
+		metafile: true,
+		minify: true,
+		keepNames: true,
 		sourcesContent: false,
 		tsconfig: path.join(pkgRoot, "tsconfig.json"),
 		// Mark root package's dependencies as external, include root devDependencies
@@ -196,7 +200,9 @@ async function buildPackage() {
 		const ctx = await esbuild.context(buildOptions);
 		await ctx.watch();
 	} else {
-		await esbuild.build(buildOptions);
+		const b = await esbuild.build(buildOptions);
+
+		writeFileSync("dist/metafile.json", JSON.stringify(b.metafile));
 	}
 }
 

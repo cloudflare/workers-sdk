@@ -35,6 +35,9 @@ export const EXTERNAL_DEPENDENCIES = [
 
 	// workerd contains a native binary, so must be external. Wrangler depends on a pinned version.
 	"workerd",
+
+	// Both Wrangler & Miniflare depend on (a pinned version of) Undici, so externalising it reduces the aggregate size by ~1MB
+	"undici",
 ];
 
 const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
