@@ -21,7 +21,6 @@ export type EventNames =
 	| "create kv namespace"
 	| "list kv namespaces"
 	| "delete kv namespace"
-	| "rename kv namespace"
 	| "write kv key-value"
 	| "write kv key-value (local)"
 	| "list kv keys"
