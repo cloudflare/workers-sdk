@@ -30,6 +30,20 @@ describe("wrangler check startup", () => {
 			readFile("worker-startup.cpuprofile", "utf8")
 		).resolves.toContain("callFrame");
 	});
+	test("generates profile for basic worker w/ sourcemaps", async () => {
+		writeWranglerConfig({ main: "index.js", upload_source_maps: true });
+		writeWorkerSource();
+
+		await runWrangler("check startup");
+
+		expect(std.out).toContain(
+			`CPU Profile written to worker-startup.cpuprofile`
+		);
+
+		await expect(
+			readFile("worker-startup.cpuprofile", "utf8")
+		).resolves.toContain("callFrame");
+	});
 	test("--outfile works", async () => {
 		writeWranglerConfig({ main: "index.js" });
 		writeWorkerSource();
