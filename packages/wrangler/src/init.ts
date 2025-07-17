@@ -99,7 +99,10 @@ export const init = createCommand({
 			} catch (err) {
 				if ((err as { code?: number }).code === 10090) {
 					throw new UserError(
-						"wrangler couldn't find a Worker with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account."
+						"wrangler couldn't find a Worker with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account.",
+						{
+							telemetryMessage: true,
+						}
 					);
 				}
 				throw err;
