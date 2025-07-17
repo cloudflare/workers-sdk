@@ -777,12 +777,18 @@ export function warnOrError(
 ) {
 	if (remote === true && supports === "local") {
 		throw new UserError(
-			`${friendlyBindingNames[type]} bindings do not support accessing remote resources.`
+			`${friendlyBindingNames[type]} bindings do not support accessing remote resources.`,
+			{
+				telemetryMessage: true,
+			}
 		);
 	}
 	if (remote === false && supports === "remote") {
 		throw new UserError(
-			`${friendlyBindingNames[type]} bindings do not support local development. You may be able to set \`experimental_remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+			`${friendlyBindingNames[type]} bindings do not support local development. You may be able to set \`experimental_remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
+			{
+				telemetryMessage: true,
+			}
 		);
 	}
 	if (remote === undefined && supports === "remote") {

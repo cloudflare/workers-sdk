@@ -475,7 +475,8 @@ export function getAssetsOptions(
 	) {
 		throw new UserError(
 			"Cannot set run_worker_first without a Worker script.\n" +
-				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`)."
+				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`).",
+			{ telemetryMessage: true }
 		);
 	}
 
@@ -533,7 +534,8 @@ export function validateAssetsArgsAndConfig(
 	) {
 		throw new UserError(
 			"Cannot use assets and Workers Sites in the same Worker.\n" +
-				"Please remove either the `site` or `assets` field from your configuration file."
+				"Please remove either the `site` or `assets` field from your configuration file.",
+			{ telemetryMessage: true }
 		);
 	}
 

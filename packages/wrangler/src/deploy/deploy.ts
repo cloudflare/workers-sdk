@@ -405,12 +405,15 @@ export default async function deploy(props: Props): Promise<{
 			""
 		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
 
-		throw new UserError(`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
+		throw new UserError(
+			`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
     ${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath, false)}
     \`\`\`
     Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
-See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
+See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
+			{ telemetryMessage: "missing compatibiltiy date when deploying" }
+		);
 	}
 
 	const routes =
@@ -495,25 +498,29 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		format === "service-worker"
 	) {
 		throw new UserError(
-			"You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
+			"You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/",
+			{ telemetryMessage: true }
 		);
 	}
 
 	if (config.wasm_modules && format === "modules") {
 		throw new UserError(
-			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"
+			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code",
+			{ telemetryMessage: true }
 		);
 	}
 
 	if (config.text_blobs && format === "modules") {
 		throw new UserError(
-			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
+			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			{ telemetryMessage: "[text_blobs] with an ES module worker" }
 		);
 	}
 
 	if (config.data_blobs && format === "modules") {
 		throw new UserError(
-			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
+			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			{ telemetryMessage: "[data_blobs] with an ES module worker" }
 		);
 	}
 
@@ -969,7 +976,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						"binding DB of type d1 must have a valid `id` specified [code: 10021]"
 					) {
 						throw new UserError(
-							"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development"
+							"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development",
+							{ telemetryMessage: true }
 						);
 					}
 
@@ -1133,7 +1141,8 @@ async function publishRoutesFallback(
 	if (notProd) {
 		throw new UserError(
 			"Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.\n" +
-				"Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth"
+				"Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth",
+			{ telemetryMessage: true }
 		);
 	}
 	logger.warn(
@@ -1213,7 +1222,8 @@ async function publishRoutesFallback(
 				continue;
 			} else {
 				throw new UserError(
-					`The route with pattern "${routePattern}" is already associated with another worker called "${knownScript}".`
+					`The route with pattern "${routePattern}" is already associated with another worker called "${knownScript}".`,
+					{ telemetryMessage: "route already associated with another worker" }
 				);
 			}
 		}
@@ -1318,7 +1328,8 @@ export async function updateQueueConsumers(
 			if (scriptName === undefined) {
 				// TODO: how can we reliably get the current script name?
 				throw new UserError(
-					"Script name is required to update queue consumers"
+					"Script name is required to update queue consumers",
+					{ telemetryMessage: true }
 				);
 			}
 
