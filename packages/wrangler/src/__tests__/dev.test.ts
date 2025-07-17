@@ -37,6 +37,13 @@ vi.mock("../api/startDevWorker/ConfigController", (importOriginal) =>
 
 vi.mock("../dev/hotkeys");
 
+vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
+	return {
+		...(await importOriginal()),
+		isDockerfile: () => true,
+	};
+});
+
 // Don't memoize in tests. If we did, it would memoize across test runs, which causes problems
 vi.mock("../utils/memoizeGetPort", () => {
 	return {
@@ -1779,6 +1786,59 @@ describe.sequential("wrangler dev", () => {
 
 				"
 			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+	});
+
+	describe("containers", () => {
+		it("should warn when run in remote mode with (enabled) containers", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+				containers: [
+					{
+						class_name: "ContainerClass",
+						image: "./Dockerfile",
+					},
+				],
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await expect(
+				runWrangler("dev --remote")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				"[Error: Bailing early in tests]"
+			);
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mContainers are only supported in local mode, to suppress this warning set \`dev.enable_containers\` to \`false\` or pass \`--enable-containers=false\` to the \`wrangler dev\` command[0m
+
+				"
+			`);
+		});
+
+		it("should not warn when run in remote mode with disabled containers", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+				containers: [
+					{
+						class_name: "ContainerClass",
+						image: "./Dockerfile",
+					},
+				],
+				dev: {
+					enable_containers: false,
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await expect(
+				runWrangler("dev --remote")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				"[Error: Bailing early in tests]"
+			);
+
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 	});
