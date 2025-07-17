@@ -520,7 +520,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	if (config.data_blobs && format === "modules") {
 		throw new UserError(
 			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
-			{ telemetryMessage: "[text_blobs] with an ES module worker" }
+			{ telemetryMessage: "[data_blobs] with an ES module worker" }
 		);
 	}
 
@@ -977,7 +977,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					) {
 						throw new UserError(
 							"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development",
-							{ telemetryMessage: "[text_blobs] with an ES module worker" }
+							{ telemetryMessage: true }
 						);
 					}
 
@@ -1142,7 +1142,7 @@ async function publishRoutesFallback(
 		throw new UserError(
 			"Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.\n" +
 				"Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth",
-			{ telemetryMessage: "[text_blobs] with an ES module worker" }
+			{ telemetryMessage: true }
 		);
 	}
 	logger.warn(
