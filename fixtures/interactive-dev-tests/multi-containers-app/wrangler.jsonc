@@ -1,0 +1,41 @@
+{
+	"name": "multi-containers-app",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-04-03",
+	"containers": [
+		{
+			"image": "./DockerfileA",
+			"class_name": "FixtureTestContainerA",
+			"name": "containerA",
+			"max_instances": 2,
+		},
+		{
+			"image": "./DockerfileB",
+			"class_name": "FixtureTestContainerB",
+			"name": "containerB",
+			"max_instances": 2,
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "FixtureTestContainerA",
+				"name": "CONTAINER_A",
+			},
+			{
+				"class_name": "FixtureTestContainerB",
+				"name": "CONTAINER_B",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["FixtureTestContainerA"],
+		},
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["FixtureTestContainerB"],
+		},
+	],
+}

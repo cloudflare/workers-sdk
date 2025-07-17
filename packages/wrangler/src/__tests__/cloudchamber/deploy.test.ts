@@ -6,6 +6,7 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { http, HttpResponse } from "msw";
+import { createDeferred } from "../../api/startDevWorker/utils";
 import { maybeBuildContainer } from "../../cloudchamber/deploy";
 import { clearCachedAccount } from "../../cloudchamber/locations";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -53,6 +54,7 @@ describe("wrangler deploy with containers", () => {
 	const std = mockConsoleMethods();
 	mockAccountId();
 	mockApiToken();
+
 	beforeEach(() => {
 		msw.use(...mswSuccessDeploymentScriptMetadata);
 		msw.use(...mswListNewDeploymentsLatestFull);
@@ -79,9 +81,11 @@ describe("wrangler deploy with containers", () => {
 			expectedContainers: [{ class_name: "ExampleDurableObject" }],
 		});
 	});
+
 	afterEach(() => {
 		vi.unstubAllEnvs();
 	});
+
 	it("should fail early if no docker is detected when deploying a container from a dockerfile", async () => {
 		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/bad-docker-path");
 		writeWranglerConfig({
@@ -112,6 +116,7 @@ describe("wrangler deploy with containers", () => {
 						Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with WRANGLER_DOCKER_HOST.]
 					`);
 	});
+
 	it("should support durable object bindings to SQLite classes with containers (dockerfile flow)", async () => {
 		mockGetVersion("Galaxy-Class");
 
@@ -189,6 +194,7 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
+
 	it("should support durable object bindings to SQLite classes with containers (image uri flow)", async () => {
 		// note no docker commands have been mocked here!
 		mockGetVersion("Galaxy-Class");
@@ -336,6 +342,195 @@ describe("wrangler deploy with containers", () => {
 								  https://test-name.test-sub-domain.workers.dev
 								Current Version ID: Galaxy-Class"
 							`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should support deploying a worker with multiple containers", async () => {
+		mockGetVersion(
+			"Galaxy-Class",
+			[
+				{
+					type: "durable_object_namespace",
+					class_name: "ExampleDurableObjectA",
+					namespace_id: "a",
+				},
+				{
+					type: "durable_object_namespace",
+					class_name: "ExampleDurableObjectB",
+					namespace_id: "b",
+				},
+			],
+			false
+		);
+		vi.mocked(spawn)
+			.mockImplementationOnce(mockDockerInfo())
+			.mockImplementationOnce(
+				mockDockerBuild(
+					"my-container-a",
+					"Galaxy",
+					// we pipe the dockerfile in, so a successful test should just show that the dockerfile content has been successfully read and matches what was written (FROM alpine)
+					"FROM alpine",
+					// note that the cwd for the test is not the same as the cwd that the wrangler command is running in
+					// fortunately we are using an absolute path
+					process.cwd()
+				)
+			)
+			.mockImplementationOnce(
+				mockDockerImageInspect("my-container-a", "Galaxy")
+			)
+			.mockImplementationOnce(mockDockerLogin("mockpassword"))
+			.mockImplementationOnce(
+				mockDockerManifestInspect("some-account-id/my-container-a", true)
+			)
+			.mockImplementationOnce(
+				mockDockerTag(
+					"my-container-a",
+					"some-account-id/my-container-a",
+					"Galaxy"
+				)
+			)
+			.mockImplementationOnce(
+				mockDockerPush("some-account-id/my-container-a", "Galaxy")
+			)
+			.mockImplementationOnce(
+				mockDockerImageDelete("some-account-id/my-container-a", "Galaxy")
+			)
+			.mockImplementationOnce(
+				mockDockerBuild(
+					"my-container-b",
+					"Galaxy",
+					// we pipe the dockerfile in, so a successful test should just show that the dockerfile content has been successfully read and matches what was written (FROM alpine)
+					"FROM alpine",
+					// note that the cwd for the test is not the same as the cwd that the wrangler command is running in
+					// fortunately we are using an absolute path
+					process.cwd()
+				)
+			)
+			.mockImplementationOnce(
+				mockDockerImageInspect("my-container-b", "Galaxy")
+			)
+			.mockImplementationOnce(mockDockerLogin("mockpassword"))
+			.mockImplementationOnce(
+				mockDockerManifestInspect("some-account-id/my-container-b", true)
+			)
+			.mockImplementationOnce(
+				mockDockerTag(
+					"my-container-b",
+					"some-account-id/my-container-b",
+					"Galaxy"
+				)
+			)
+			.mockImplementationOnce(
+				mockDockerPush("some-account-id/my-container-b", "Galaxy")
+			)
+			.mockImplementationOnce(
+				mockDockerImageDelete("some-account-id/my-container-b", "Galaxy")
+			);
+		fs.mkdirSync("src");
+		fs.writeFileSync("DockerfileA", "FROM alpine");
+		fs.writeFileSync("DockerfileB", "FROM alpine");
+		fs.writeFileSync(
+			"src/index.js",
+			`
+			export class ExampleDurableObjectA {};
+			export class ExampleDurableObjectB {};
+			export default{};
+			`
+		);
+		writeWranglerConfig(
+			{
+				main: "./src/index.js",
+				durable_objects: {
+					bindings: [
+						{
+							name: "EXAMPLE_DO_BINDING_A",
+							class_name: "ExampleDurableObjectA",
+						},
+						{
+							name: "EXAMPLE_DO_BINDING_B",
+							class_name: "ExampleDurableObjectB",
+						},
+					],
+				},
+				containers: [
+					{
+						name: "my-container-a",
+						max_instances: 10,
+						class_name: "ExampleDurableObjectA",
+						image: "./DockerfileA",
+					},
+					{
+						name: "my-container-b",
+						max_instances: 10,
+						class_name: "ExampleDurableObjectB",
+						image: "./DockerfileB",
+					},
+				],
+				migrations: [
+					{ tag: "v1", new_sqlite_classes: ["ExampleDurableObjectA"] },
+					{ tag: "v1", new_sqlite_classes: ["ExampleDurableObjectB"] },
+				],
+			},
+			"wrangler.json"
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					class_name: "ExampleDurableObjectA",
+					name: "EXAMPLE_DO_BINDING_A",
+					type: "durable_object_namespace",
+				},
+				{
+					class_name: "ExampleDurableObjectB",
+					name: "EXAMPLE_DO_BINDING_B",
+					type: "durable_object_namespace",
+				},
+			],
+			useOldUploadApi: true,
+			expectedContainers: [
+				{ class_name: "ExampleDurableObjectA" },
+				{ class_name: "ExampleDurableObjectB" },
+			],
+		});
+		mockGetApplications([], false);
+		mockGenerateImageRegistryCredentials(false);
+		const applicationACreatedJson = createDeferred<Record<string, unknown>>();
+		const applicationBCreatedJson = createDeferred<Record<string, unknown>>();
+		mockCreateApplication((requestJson) => {
+			if (requestJson.name === "my-container-a") {
+				return applicationACreatedJson.resolve(requestJson);
+			}
+			if (requestJson.name === "my-container-b") {
+				return applicationBCreatedJson.resolve(requestJson);
+			}
+			throw new Error("Unexpected request made");
+		}, false);
+		await runWrangler("deploy");
+		vi.mocked(spawn).mockReset();
+		const applicationA = await applicationACreatedJson.promise;
+		expect(applicationA.name).toEqual("my-container-a");
+		expect(applicationA.durable_objects).toEqual({ namespace_id: "a" });
+		const applicationB = await applicationBCreatedJson.promise;
+		expect(applicationB.name).toEqual("my-container-b");
+		expect(applicationB.durable_objects).toEqual({ namespace_id: "b" });
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your Worker has access to the following bindings:
+			Binding                                               Resource
+			env.EXAMPLE_DO_BINDING_A (ExampleDurableObjectA)      Durable Object
+			env.EXAMPLE_DO_BINDING_B (ExampleDurableObjectB)      Durable Object
+
+			Uploaded test-name (TIMINGS)
+			Building image my-container-a:Galaxy
+			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container-a:Galaxy
+			Building image my-container-b:Galaxy
+			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container-b:Galaxy
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
@@ -529,13 +724,13 @@ describe("wrangler deploy with containers dry run", () => {
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
-			
+
 			--dry-run: exiting now."
 		`);
 	});
 });
 
-function mockGetVersion(versionId: string) {
+function mockGetVersion(versionId: string, bindings?: unknown[], once = true) {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/workers/scripts/:scriptName/versions/${versionId}`,
@@ -546,7 +741,7 @@ function mockGetVersion(versionId: string) {
 						metadata: {},
 						number: 2,
 						resources: {
-							bindings: [
+							bindings: bindings ?? [
 								{
 									type: "durable_object_namespace",
 									namespace_id: "1",
@@ -557,7 +752,7 @@ function mockGetVersion(versionId: string) {
 					})
 				);
 			},
-			{ once: true }
+			{ once }
 		)
 	);
 }
@@ -576,24 +771,35 @@ function defaultChildProcess() {
 	} as unknown as ChildProcess;
 }
 
-function mockCreateApplication(expected?: Partial<Application>) {
+function mockCreateApplication(
+	expectedOrCallback?:
+		| Partial<Application>
+		| ((requestJson: Record<string, unknown>) => void),
+	once = true
+) {
 	msw.use(
 		http.post(
 			"*/applications",
 			async ({ request }) => {
 				const json = await request.json();
-				if (expected !== undefined) {
-					expect(json).toMatchObject(expected);
+				if (expectedOrCallback !== undefined) {
+					if (typeof expectedOrCallback === "function") {
+						const callback = expectedOrCallback;
+						callback(json as Record<string, unknown>);
+					} else {
+						const expected = expectedOrCallback;
+						expect(json).toMatchObject(expected);
+					}
 				}
 
 				return HttpResponse.json({ success: true, result: json });
 			},
-			{ once: true }
+			{ once }
 		)
 	);
 }
 
-function mockGenerateImageRegistryCredentials() {
+function mockGenerateImageRegistryCredentials(once = true) {
 	msw.use(
 		http.post(
 			`*/registries/${getCloudflareContainerRegistry()}/credentials`,
@@ -612,18 +818,18 @@ function mockGenerateImageRegistryCredentials() {
 					} as AccountRegistryToken,
 				});
 			},
-			{ once: true }
+			{ once }
 		)
 	);
 }
-function mockGetApplications(applications: Application[]) {
+function mockGetApplications(applications: Application[], once = true) {
 	msw.use(
 		http.get(
 			"*/applications",
 			async () => {
 				return HttpResponse.json({ success: true, result: applications });
 			},
-			{ once: true }
+			{ once }
 		)
 	);
 }
