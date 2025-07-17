@@ -112,7 +112,7 @@ export default {
 						dispatchType: DISPATCH_TYPE.WORKER,
 					});
 
-					let shouldBlockNonImageResponse = false;
+					let shouldCheckContentType = false;
 					if (url.pathname.endsWith("/_next/image")) {
 						// is a next image
 						const queryURLParam = url.searchParams.get("url");
@@ -123,7 +123,7 @@ export default {
 								maybeSecondRequest.headers.get("sec-fetch-dest") !== "image"
 							) {
 								// that was not loaded via a browser's <img> tag
-								shouldBlockNonImageResponse = true;
+								shouldCheckContentType = true;
 								analytics.setData({ abuseMitigationURLHost: queryURLParam });
 							}
 							// otherwise, we're good
@@ -134,24 +134,14 @@ export default {
 						timeToDispatch: performance.now() - startTimeMs,
 					});
 
-					if (shouldBlockNonImageResponse) {
-						const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
+					if (shouldCheckContentType) {
+						const response = await env.USER_WORKER.fetch(maybeSecondRequest);
 
-						const contentType = resp.headers.get("content-type") || "";
-
-						// Allow:
-						// - images
-						// - text/plain - used by Next errors
-						const isImageOrPlainText =
-							contentType.startsWith("image/") ||
-							// Matches "text/plain", "text/plain;charset=UTF-8"
-							contentType.split(";")[0] === "text/plain";
-
-						if (!isImageOrPlainText && resp.status !== 304) {
+						if (response.status !== 304 && shouldBlockContentType(response)) {
 							analytics.setData({ abuseMitigationBlocked: true });
 							return new Response("Blocked", { status: 403 });
 						}
-						return resp;
+						return response;
 					}
 					return env.USER_WORKER.fetch(maybeSecondRequest);
 				});
@@ -255,3 +245,34 @@ export default {
 		}
 	},
 };
+
+/**
+ * Check if the Content Type is allowed for the the `_next/image` endpoint.
+ *
+ * - Content Type with multiple values should be blocked
+ * - Only Image and Plain Text types are not blocked
+ *
+ * @param contentType The value of the Content Type header (`null` if no set)
+ * @returns Whether the Content Type should be blocked
+ */
+function shouldBlockContentType(response: Response): boolean {
+	const contentType = response.headers.get("content-type");
+
+	if (contentType === null) {
+		return true;
+	}
+
+	// Block responses with multiple Content Types.
+	// https://httpwg.org/specs/rfc9110.html#field.content-type
+	if (contentType.includes(",")) {
+		return true;
+	}
+
+	// Allow only
+	// - images (`image/...`)
+	// - plain text (`text/plain`, `text/plain;charset=UTF-8`)
+	return !(
+		contentType.startsWith("image/") ||
+		contentType.split(";")[0] === "text/plain"
+	);
+}
