@@ -146,6 +146,9 @@ describe("wrangler deploy with containers", () => {
 			│   \\"max_instances\\": 10,
 			│   \\"constraints\\": {
 			│   \\"tier\\": 1
+			│   },
+			│   \\"durable_objects\\": {
+			│   \\"namespace_id\\": \\"1\\"
 			│   }
 			│   }
 			│   ]
@@ -210,6 +213,9 @@ describe("wrangler deploy with containers", () => {
 			│   \\"max_instances\\": 10,
 			│   \\"constraints\\": {
 			│   \\"tier\\": 1
+			│   },
+			│   \\"durable_objects\\": {
+			│   \\"namespace_id\\": \\"1\\"
 			│   }
 			│   }
 			│   ]
@@ -579,6 +585,9 @@ describe("wrangler deploy with containers", () => {
 			│   \\"max_instances\\": 3,
 			│   \\"constraints\\": {
 			│   \\"tier\\": 1
+			│   },
+			│   \\"durable_objects\\": {
+			│   \\"namespace_id\\": \\"2\\"
 			│   }
 			│   }
 			│   ]
@@ -1124,6 +1133,9 @@ describe("wrangler deploy with containers", () => {
 			│   \\"max_instances\\": 10,
 			│   \\"constraints\\": {
 			│   \\"tier\\": 2
+			│   },
+			│   \\"durable_objects\\": {
+			│   \\"namespace_id\\": \\"1\\"
 			│   }
 			│   }
 			│   ]

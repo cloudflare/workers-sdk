@@ -226,7 +226,7 @@ describe("getNormalizedContainerOptions", () => {
 			scheduling_policy: "default",
 			rollout_step_percentage: 25,
 			rollout_kind: "full_auto",
-			disk_mb: 5000,
+			disk_bytes: 5_000_000_000, // 5000 MB in bytes
 			memory_mib: 1024,
 			vcpu: 2,
 			registry_link: "registry.example.com/test:latest",

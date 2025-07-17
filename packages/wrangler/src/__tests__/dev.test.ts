@@ -1791,27 +1791,45 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("containers", () => {
-		it("should warn when run in remote mode with (enabled) containers", async () => {
-			writeWranglerConfig({
-				main: "index.js",
-				compatibility_date: "2024-01-01",
-				containers: [
+		const containerConfig = {
+			main: "index.js",
+			compatibility_date: "2024-01-01",
+			containers: [
+				{
+					class_name: "ContainerClass",
+					image: "./Dockerfile",
+				},
+			],
+			durable_objects: {
+				bindings: [
 					{
+						name: "ContainerClass",
 						class_name: "ContainerClass",
-						image: "./Dockerfile",
 					},
 				],
-			});
+			},
+			migrations: [
+				{
+					tag: "v1",
+					new_sqlite_classes: ["ContainerClass"],
+				},
+			],
+		};
+		it("should warn when run in remote mode with (enabled) containers", async () => {
+			writeWranglerConfig(containerConfig);
 			fs.writeFileSync("index.js", `export default {};`);
 
 			await expect(
 				runWrangler("dev --remote")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				"[Error: Bailing early in tests]"
+				`[Error: Bailing early in tests]`
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mContainers are only supported in local mode, to suppress this warning set \`dev.enable_containers\` to \`false\` or pass \`--enable-containers=false\` to the \`wrangler dev\` command[0m
+
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSQLite in Durable Objects is only supported in local mode.[0m
 
 				"
 			`);
@@ -1819,14 +1837,7 @@ describe.sequential("wrangler dev", () => {
 
 		it("should not warn when run in remote mode with disabled containers", async () => {
 			writeWranglerConfig({
-				main: "index.js",
-				compatibility_date: "2024-01-01",
-				containers: [
-					{
-						class_name: "ContainerClass",
-						image: "./Dockerfile",
-					},
-				],
+				...containerConfig,
 				dev: {
 					enable_containers: false,
 				},
@@ -1836,10 +1847,14 @@ describe.sequential("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --remote")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				"[Error: Bailing early in tests]"
+				`[Error: Bailing early in tests]`
 			);
 
-			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSQLite in Durable Objects is only supported in local mode.[0m
+
+				"
+			`);
 		});
 	});
 });

@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 import { readFileSync } from "fs";
-import { BuildArgs, DockerfileConfig, Logger } from "./types";
+import type { BuildArgs, DockerfileConfig, Logger } from "./types";
 
 export async function constructBuildCommand(
 	options: BuildArgs,

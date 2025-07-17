@@ -5,12 +5,12 @@ import {
 	isCloudflareRegistryLink,
 } from "./knobs";
 import { dockerLoginManagedRegistry } from "./login";
-import { ContainerNormalisedConfig, RegistryLinkConfig } from "./types";
 import {
 	checkExposedPorts,
 	runDockerCmd,
 	verifyDockerInstalled,
 } from "./utils";
+import type { ContainerNormalisedConfig, RegistryLinkConfig } from "./types";
 
 export async function pullImage(
 	dockerPath: string,

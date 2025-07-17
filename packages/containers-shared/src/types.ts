@@ -1,8 +1,4 @@
-import {
-	CreateApplicationRolloutRequest,
-	InstanceType,
-	SchedulingPolicy,
-} from "./client";
+import type { InstanceType, SchedulingPolicy } from "./client";
 
 export interface Logger {
 	debug: (message: string) => void;

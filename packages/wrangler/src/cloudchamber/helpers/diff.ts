@@ -570,12 +570,12 @@ export const renderDiff = (results: Result[]) => {
 export function filterTrailingCommaChanges(results: Result[]): Result[] {
 	// First, identify pairs of removed/added lines that are just comma changes
 	const commaChangePairs = new Set<Result>();
-	
+
 	results.forEach((result) => {
 		if (result.removed && result.value) {
 			// Look for a corresponding added line that's the same but with comma
-			const potentialMatch = results.find((r) => 
-				r.added && r.value === result.value + ','
+			const potentialMatch = results.find(
+				(r) => r.added && r.value === result.value + ","
 			);
 			if (potentialMatch) {
 				// This is a trailing comma change, mark both for filtering
@@ -584,7 +584,7 @@ export function filterTrailingCommaChanges(results: Result[]): Result[] {
 			}
 		}
 	});
-	
+
 	// Filter out the identified comma change pairs
 	return results.filter((result) => !commaChangePairs.has(result));
 }

@@ -38,14 +38,15 @@ export const getNormalizedContainerOptions = async (
 
 		if (!targetDurableObject) {
 			throw new UserError(
-				`The container class_name ${container.class_name} does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.`
+				`The container class_name ${container.class_name} does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.`,
+				{ telemetryMessage: "no DO defined that matches container class_name" }
 			);
 		}
 
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
 			class_name: container.class_name,
-			max_instances: container.max_instances ?? 0, // :(
+			max_instances: container.max_instances ?? 0,
 			scheduling_policy: (container.scheduling_policy ??
 				SchedulingPolicy.DEFAULT) as SchedulingPolicy,
 			constraints: container.constraints,
