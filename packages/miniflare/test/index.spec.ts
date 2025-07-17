@@ -2980,7 +2980,7 @@ test.only("Miniflare: logs are treated as standard stdout/stderr chunks be defau
 	t.is(collected.stderr, "__WARN__\n__ERROR__\n");
 });
 
-test.only("Miniflare: logs are structured and all sent to stdout when structuredWorkerdLogs is true", async (t) => {
+test("Miniflare: logs are structured and all sent to stdout when structuredWorkerdLogs is true", async (t) => {
 	const collected = {
 		stdout: "",
 		stderr: "",

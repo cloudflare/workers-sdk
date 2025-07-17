@@ -6,29 +6,29 @@ import {
 	AIFetcher,
 	EXTERNAL_AI_WORKER_NAME,
 	EXTERNAL_AI_WORKER_SCRIPT,
-} from "../ai/fetcher";
-import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
-import { withSourceURLs } from "../deployment-bundle/source-url";
-import { createFatalError, UserError } from "../errors";
-import { getFlag } from "../experimental-flags";
+} from "../../ai/fetcher";
+import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
+import { withSourceURLs } from "../../deployment-bundle/source-url";
+import { createFatalError, UserError } from "../../errors";
+import { getFlag } from "../../experimental-flags";
 import {
 	EXTERNAL_IMAGES_WORKER_NAME,
 	EXTERNAL_IMAGES_WORKER_SCRIPT,
 	imagesLocalFetcher,
 	imagesRemoteFetcher,
-} from "../images/fetcher";
-import { logger } from "../logger";
-import { getSourceMappedString } from "../sourcemap";
-import { updateCheck } from "../update-check";
+} from "../../images/fetcher";
+import { logger } from "../../logger";
+import { updateCheck } from "../../update-check";
 import {
 	EXTERNAL_VECTORIZE_WORKER_NAME,
 	EXTERNAL_VECTORIZE_WORKER_SCRIPT,
 	MakeVectorizeFetcher,
-} from "../vectorize/fetcher";
-import { getClassNamesWhichUseSQLite } from "./class-names-sqlite";
-import type { ServiceFetch } from "../api";
-import type { AssetsOptions } from "../assets";
-import type { Config } from "../config";
+} from "../../vectorize/fetcher";
+import { getClassNamesWhichUseSQLite } from "../class-names-sqlite";
+import { handleRuntimeStdioWithStructuredLogs } from "./stdio";
+import type { ServiceFetch } from "../../api";
+import type { AssetsOptions } from "../../assets";
+import type { Config } from "../../config";
 import type {
 	CfD1Database,
 	CfDurableObject,
@@ -41,14 +41,13 @@ import type {
 	CfUnsafeBinding,
 	CfWorkerInit,
 	CfWorkflow,
-} from "../deployment-bundle/worker";
-import type { WorkerRegistry } from "../dev-registry";
-import type { LoggerLevel } from "../logger";
-import type { LegacyAssetPaths } from "../sites";
-import type { EsbuildBundle } from "./use-esbuild";
+} from "../../deployment-bundle/worker";
+import type { WorkerRegistry } from "../../dev-registry";
+import type { LoggerLevel } from "../../logger";
+import type { LegacyAssetPaths } from "../../sites";
+import type { EsbuildBundle } from "../use-esbuild";
 import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
 import type { UUID } from "node:crypto";
-import type { Readable } from "node:stream";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions
@@ -810,137 +809,6 @@ export function buildSitesOptions({
 	}
 }
 
-export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
-	// ASSUMPTION: each chunk is a whole message from workerd
-	// This may not hold across OSes/architectures, but it seems to work on macOS M-line
-	// I'm going with this simple approach to avoid complicating this too early
-	// We can iterate on this heuristic in the future if it causes issues
-	const classifiers = {
-		// Is this chunk a big chonky barf from workerd that we want to hijack to cleanup/ignore?
-		isBarf(chunk: string) {
-			const containsLlvmSymbolizerWarning = chunk.includes(
-				"Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set"
-			);
-			const containsRecursiveIsolateLockWarning = chunk.includes(
-				"took recursive isolate lock"
-			);
-			// Matches stack traces from workerd
-			//  - on unix: groups of 9 hex digits separated by spaces
-			//  - on windows: groups of 12 hex digits, or a single digit 0, separated by spaces
-			const containsHexStack = /stack:( (0|[a-f\d]{4,})){3,}/.test(chunk);
-
-			return (
-				containsLlvmSymbolizerWarning ||
-				containsRecursiveIsolateLockWarning ||
-				containsHexStack
-			);
-		},
-		// Is this chunk an Address In Use error?
-		isAddressInUse(chunk: string) {
-			return chunk.includes("Address already in use; toString() = ");
-		},
-		isWarning(chunk: string) {
-			return /\.c\+\+:\d+: warning:/.test(chunk);
-		},
-		isCodeMovedWarning(chunk: string) {
-			return /CODE_MOVED for unknown code block/.test(chunk);
-		},
-		isAccessViolation(chunk: string) {
-			return chunk.includes("access violation;");
-		},
-	};
-
-	stdout.on("data", (chunk: Buffer | string) => {
-		chunk = chunk.toString().trim();
-
-		if (classifiers.isBarf(chunk)) {
-			// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
-
-			// CLEANABLE:
-			// there are no known cases to cleanup yet
-			// but, as they are identified, we will do that here
-
-			// IGNORABLE:
-			// anything else not handled above is considered ignorable
-			// so send it to the debug logs which are discarded unless
-			// the user explicitly sets a logLevel indicating they care
-			logger.debug(chunk);
-		}
-
-		// known case: warnings are not info, log them as such
-		else if (classifiers.isWarning(chunk)) {
-			logger.warn(chunk);
-		}
-
-		// anything not explicitly handled above should be logged as info (via stdout)
-		else {
-			logger.info(getSourceMappedString(chunk));
-		}
-	});
-
-	stderr.on("data", (chunk: Buffer | string) => {
-		chunk = chunk.toString().trim();
-
-		if (classifiers.isBarf(chunk)) {
-			// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
-
-			// CLEANABLE:
-			// known case to cleanup: Address in use errors
-			if (classifiers.isAddressInUse(chunk)) {
-				const address = chunk.match(
-					/Address already in use; toString\(\) = (.+)\n/
-				)?.[1];
-
-				logger.error(
-					`Address already in use (${address}). Please check that you are not already running a server on this address or specify a different port with --port.`
-				);
-
-				// Log the original error to the debug logs.
-				logger.debug(chunk);
-			}
-			// In the past we have seen Access Violation errors on Windows, which may be caused by an outdated
-			// version of the Windows OS or the Microsoft Visual C++ Redistributable.
-			// See https://github.com/cloudflare/workers-sdk/issues/6170#issuecomment-2245209918
-			else if (classifiers.isAccessViolation(chunk)) {
-				let error = "There was an access violation in the runtime.";
-				if (process.platform === "win32") {
-					error +=
-						"\nOn Windows, this may be caused by an outdated Microsoft Visual C++ Redistributable library.\n" +
-						"Check that you have the latest version installed.\n" +
-						"See https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist.";
-				}
-				logger.error(error);
-
-				// Log the original error to the debug logs.
-				logger.debug(chunk);
-			}
-
-			// IGNORABLE:
-			// anything else not handled above is considered ignorable
-			// so send it to the debug logs which are discarded unless
-			// the user explicitly sets a logLevel indicating they care
-			else {
-				logger.debug(chunk);
-			}
-		}
-
-		// known case: warnings are not errors, log them as such
-		else if (classifiers.isWarning(chunk)) {
-			logger.warn(chunk);
-		}
-
-		// known case: "error: CODE_MOVED for unknown code block?", warning for workerd devs, not application devs
-		else if (classifiers.isCodeMovedWarning(chunk)) {
-			// ignore entirely, don't even send it to the debug log file
-		}
-
-		// anything not explicitly handled above should be logged as an error (via stderr)
-		else {
-			logger.error(getSourceMappedString(chunk));
-		}
-	});
-}
-
 let didWarnMiniflareCronSupport = false;
 let didWarnMiniflareVectorizeSupport = false;
 let didWarnAiAccountUsage = false;
@@ -1032,7 +900,8 @@ export async function buildMiniflareOptions(
 
 		log,
 		verbose: logger.loggerLevel === "debug",
-		handleRuntimeStdio,
+		handleRuntimeStdio: handleRuntimeStdioWithStructuredLogs,
+		structuredWorkerdLogs: true,
 
 		...persistOptions,
 		workers: [
