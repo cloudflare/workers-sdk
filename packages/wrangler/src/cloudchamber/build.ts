@@ -225,7 +225,7 @@ export async function buildCommand(
 			`${args.PATH} is not a directory. Please specify a valid directory path.`
 		);
 	}
-	if (args.platform !== "linux/amd64" && args.platform !== "amd64") {
+	if (args.platform !== "linux/amd64") {
 		throw new UserError(
 			`Unsupported platform: Platform "${args.platform}" is currently unsupported. Please use "linux/amd64" instead.`
 		);

@@ -225,7 +225,7 @@ describe("buildAndMaybePush", () => {
 
 	it("should be able to build image with platform specified", async () => {
 		await runWrangler(
-			"containers build ./container-context -t test-app:tag -p --platform amd64"
+			"containers build ./container-context -t test-app:tag -p --platform linux/amd64"
 		);
 		expect(dockerBuild).toHaveBeenCalledWith("docker", {
 			buildCmd: [
@@ -233,7 +233,7 @@ describe("buildAndMaybePush", () => {
 				"-t",
 				`${getCloudflareContainerRegistry()}/test-app:tag`,
 				"--platform",
-				"amd64",
+				"linux/amd64",
 				"--provenance=false",
 				"-f",
 				"-",
