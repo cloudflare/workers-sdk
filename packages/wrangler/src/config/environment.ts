@@ -52,6 +52,7 @@ export type ContainerApp = {
 	 */
 	name?: string;
 
+	// not used when deploying container with wrangler deploy
 	/**
 	 * Number of application instances
 	 * @deprecated
@@ -112,7 +113,9 @@ export type ContainerApp = {
 	 */
 	configuration?: {
 		image?: string;
+		// not used when deploying container with wrangler deploy
 		labels?: { name: string; value: string }[];
+		// not used when deploying container with wrangler deploy
 		secrets?: { name: string; type: "env"; secret: string }[];
 		disk?: { size_mb: number };
 		vcpu?: number;
@@ -129,6 +132,7 @@ export type ContainerApp = {
 		tier?: number;
 	};
 
+	// not used when deploying container with wrangler deploy
 	/**
 	 * @deprecated use the `class_name` field instead.
 	 * @hidden

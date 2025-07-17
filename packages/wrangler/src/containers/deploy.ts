@@ -77,7 +77,8 @@ function createApplicationToModifyApplication(
 ): ModifyApplicationRequestBody {
 	return {
 		configuration: req.configuration,
-		instances: req.max_instances !== undefined ? 0 : req.instances,
+		// deprecated in favour of max_instances
+		instances: 0,
 		max_instances: req.max_instances,
 		constraints: req.constraints,
 		affinities: req.affinities,
@@ -105,8 +106,8 @@ function applicationToCreateApplication(
 		name: application.name,
 		scheduling_policy: application.scheduling_policy,
 		affinities: application.affinities,
-		instances:
-			application.max_instances !== undefined ? 0 : application.instances,
+		// deprecated in favour of max_instances
+		instances: 0,
 		jobs: application.jobs ? true : undefined,
 		durable_objects: application.durable_objects,
 	};
@@ -211,8 +212,7 @@ function containerConfigToAPIConfig(
 				prevApp?.configuration.observability
 			),
 		},
-		// TODO: do i need to carry over instances too? same re: durable_objects
-		// instances: containerApp.instances ?? 0,
+		// deprecated in favour of max_instances
 		instances: 0,
 		max_instances: containerApp.max_instances,
 		constraints: {
@@ -303,6 +303,7 @@ export async function apply(
 			stripUndefined(applicationToCreateApplication(accountId, prevApp))
 		);
 
+		/** only used for diffing */
 		const prevContainer = cleanPrevious(normalisedPrevApp, containerConfig);
 
 		const nowContainer = mergeDeep(
@@ -310,7 +311,7 @@ export async function apply(
 			sortObjectRecursive<CreateApplicationRequest>(appConfig)
 		);
 
-		const prev = JSON.stringify({ containers: [normalisedPrevApp] }, null, 2);
+		const prev = JSON.stringify({ containers: [prevContainer] }, null, 2);
 		const now = JSON.stringify({ containers: [nowContainer] }, null, 2);
 
 		const rawResults = diffLines(prev, now);
@@ -445,13 +446,7 @@ const doAction = async (
 	if (action.action === "modify") {
 		try {
 			await promiseSpinner(
-				ApplicationsService.modifyApplication(action.id, {
-					...action.application,
-					instances:
-						action.application.max_instances !== undefined
-							? undefined
-							: action.application.instances,
-				}),
+				ApplicationsService.modifyApplication(action.id, action.application),
 				{ message: `Modifying ${action.application.name}` }
 			);
 		} catch (err) {
@@ -520,7 +515,7 @@ const doAction = async (
 };
 
 /**
- * clean up fields so we get a nicer diff
+ * clean up application object received from API so that we get a nicer diff when comparing it to the current config.
  */
 export function cleanPrevious(
 	prev: CreateApplicationRequest,
