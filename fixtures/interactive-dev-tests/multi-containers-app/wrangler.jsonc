@@ -31,11 +31,11 @@
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["FixtureTestContainerA"],
+			"new_sqlite_classes": ["FixtureTestContainerA"],
 		},
 		{
 			"tag": "v1",
-			"new_classes": ["FixtureTestContainerB"],
+			"new_sqlite_classes": ["FixtureTestContainerB"],
 		},
 	],
 }
