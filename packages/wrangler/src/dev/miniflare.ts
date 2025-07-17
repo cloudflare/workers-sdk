@@ -839,9 +839,6 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 		isAddressInUse(chunk: string) {
 			return chunk.includes("Address already in use; toString() = ");
 		},
-		isWarning(chunk: string) {
-			return /\.c\+\+:\d+: warning:/.test(chunk);
-		},
 		isCodeMovedWarning(chunk: string) {
 			return /CODE_MOVED for unknown code block/.test(chunk);
 		},
@@ -851,93 +848,98 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 	};
 
 	stdout.on("data", (chunk: Buffer | string) => {
-		chunk = chunk.toString().trim();
+		const regex = /{"timestamp":\d+,"level":"[^"]*?","message":"[^"]*?"}/g;
+		const rawJsonLogs: string[] = chunk.toString().match(regex) ?? [];
 
-		if (classifiers.isBarf(chunk)) {
-			// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
+		rawJsonLogs.forEach((jsonLog) => {
+			const parsedJsonLog: {
+				timestamp: number;
+				level: string;
+				message: string;
+			} = JSON.parse(jsonLog);
+			const { level, message } = parsedJsonLog;
 
-			// CLEANABLE:
-			// there are no known cases to cleanup yet
-			// but, as they are identified, we will do that here
+			// TODO: the following code analyzes the message without considering its log level,
+			//       ideally, in order to avoid false positives, we should, run this logic scoped
+			//       to the relevant log levels (as we do for `isCodeMovedWarning`)
+			if (classifiers.isBarf(message)) {
+				// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
 
-			// IGNORABLE:
-			// anything else not handled above is considered ignorable
-			// so send it to the debug logs which are discarded unless
-			// the user explicitly sets a logLevel indicating they care
-			logger.debug(chunk);
-		}
+				// CLEANABLE:
+				// known case to cleanup: Address in use errors
+				if (classifiers.isAddressInUse(message)) {
+					const address = message.match(
+						/Address already in use; toString\(\) = (.+)\n/
+					)?.[1];
 
-		// known case: warnings are not info, log them as such
-		else if (classifiers.isWarning(chunk)) {
-			logger.warn(chunk);
-		}
+					logger.error(
+						`Address already in use (${address}). Please check that you are not already running a server on this address or specify a different port with --port.`
+					);
 
-		// anything not explicitly handled above should be logged as info (via stdout)
-		else {
-			logger.info(getSourceMappedString(chunk));
-		}
+					// Also log the original error to the debug logs.
+					return logger.debug(chunk);
+				}
+
+				// In the past we have seen Access Violation errors on Windows, which may be caused by an outdated
+				// version of the Windows OS or the Microsoft Visual C++ Redistributable.
+				// See https://github.com/cloudflare/workers-sdk/issues/6170#issuecomment-2245209918
+				if (classifiers.isAccessViolation(message)) {
+					let error = "There was an access violation in the runtime.";
+					if (process.platform === "win32") {
+						error +=
+							"\nOn Windows, this may be caused by an outdated Microsoft Visual C++ Redistributable library.\n" +
+							"Check that you have the latest version installed.\n" +
+							"See https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist.";
+					}
+					logger.error(error);
+
+					// Also log the original error to the debug logs.
+					return logger.debug(chunk);
+				}
+
+				// IGNORABLE:
+				// anything else not handled above is considered ignorable
+				// so send it to the debug logs which are discarded unless
+				// the user explicitly sets a logLevel indicating they care
+				return logger.debug(chunk);
+			}
+
+			if (
+				(level === "info" || level === "error") &&
+				classifiers.isCodeMovedWarning(message)
+			) {
+				// known case: "error: CODE_MOVED for unknown code block?", warning for workerd devs, not application devs
+				// ignore entirely, don't even send it to the debug log file
+				// workerd references:
+				// 	- https://github.com/cloudflare/workerd/blob/d170f4d9b/src/workerd/jsg/setup.c%2B%2B#L566
+				//  - https://github.com/cloudflare/workerd/blob/d170f4d9b/src/workerd/jsg/setup.c%2B%2B#L572
+				return;
+			}
+
+			if (level === "warn") {
+				return logger.warn(message);
+			}
+
+			if (level === "info") {
+				return logger.info(message);
+			}
+
+			if (level === "debug") {
+				return logger.debug(message);
+			}
+
+			if (level === "error") {
+				return logger.error(getSourceMappedString(message));
+			}
+
+			return logger.log(getSourceMappedString(message));
+		});
 	});
 
 	stderr.on("data", (chunk: Buffer | string) => {
-		chunk = chunk.toString().trim();
-
-		if (classifiers.isBarf(chunk)) {
-			// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
-
-			// CLEANABLE:
-			// known case to cleanup: Address in use errors
-			if (classifiers.isAddressInUse(chunk)) {
-				const address = chunk.match(
-					/Address already in use; toString\(\) = (.+)\n/
-				)?.[1];
-
-				logger.error(
-					`Address already in use (${address}). Please check that you are not already running a server on this address or specify a different port with --port.`
-				);
-
-				// Log the original error to the debug logs.
-				logger.debug(chunk);
-			}
-			// In the past we have seen Access Violation errors on Windows, which may be caused by an outdated
-			// version of the Windows OS or the Microsoft Visual C++ Redistributable.
-			// See https://github.com/cloudflare/workers-sdk/issues/6170#issuecomment-2245209918
-			else if (classifiers.isAccessViolation(chunk)) {
-				let error = "There was an access violation in the runtime.";
-				if (process.platform === "win32") {
-					error +=
-						"\nOn Windows, this may be caused by an outdated Microsoft Visual C++ Redistributable library.\n" +
-						"Check that you have the latest version installed.\n" +
-						"See https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist.";
-				}
-				logger.error(error);
-
-				// Log the original error to the debug logs.
-				logger.debug(chunk);
-			}
-
-			// IGNORABLE:
-			// anything else not handled above is considered ignorable
-			// so send it to the debug logs which are discarded unless
-			// the user explicitly sets a logLevel indicating they care
-			else {
-				logger.debug(chunk);
-			}
-		}
-
-		// known case: warnings are not errors, log them as such
-		else if (classifiers.isWarning(chunk)) {
-			logger.warn(chunk);
-		}
-
-		// known case: "error: CODE_MOVED for unknown code block?", warning for workerd devs, not application devs
-		else if (classifiers.isCodeMovedWarning(chunk)) {
-			// ignore entirely, don't even send it to the debug log file
-		}
-
-		// anything not explicitly handled above should be logged as an error (via stderr)
-		else {
-			logger.error(getSourceMappedString(chunk));
-		}
+		// TODO: Some errors still get reported through stderr, investigate
+		//       why that is and whether or not this can be corrected in workerd
+		logger.error(getSourceMappedString(chunk.toString()));
 	});
 }
 
@@ -1033,6 +1035,7 @@ export async function buildMiniflareOptions(
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,
+		structuredWorkerdLogs: true,
 
 		...persistOptions,
 		workers: [
