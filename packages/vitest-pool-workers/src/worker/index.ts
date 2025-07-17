@@ -42,12 +42,12 @@ Object.setPrototypeOf(process, events.EventEmitter.prototype); // Required by `v
 
 globalThis.__console = console;
 
-// eslint-disable-next-line @typescript-eslint/ban-types
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 function getCallerFileName(of: Function) {
 	const originalStackTraceLimit = Error.stackTraceLimit;
 	const originalPrepareStackTrace = Error.prepareStackTrace;
 	try {
-		let fileName: string | undefined;
+		let fileName: string | undefined = undefined;
 		Error.stackTraceLimit = 1;
 		Error.prepareStackTrace = (_error, callSites) => {
 			fileName = callSites[0]?.getFileName();

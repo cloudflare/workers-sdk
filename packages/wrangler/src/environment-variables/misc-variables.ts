@@ -2,7 +2,10 @@ import path from "node:path";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
-import { getEnvironmentVariableFactory } from "./factory";
+import {
+	getBooleanEnvironmentVariableFactory,
+	getEnvironmentVariableFactory,
+} from "./factory";
 import type { Config } from "../config";
 
 /**
@@ -37,9 +40,10 @@ export const getC3CommandFromEnv = getEnvironmentVariableFactory({
 /**
  * `WRANGLER_SEND_METRICS` can override whether we attempt to send metrics information to Sparrow.
  */
-export const getWranglerSendMetricsFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_SEND_METRICS",
-});
+export const getWranglerSendMetricsFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "WRANGLER_SEND_METRICS",
+	});
 
 /**
  * Set `WRANGLER_API_ENVIRONMENT` environment variable to "staging" to tell Wrangler to hit the staging APIs rather than production.
@@ -139,10 +143,10 @@ function getStagingSubdomain(): string {
  *
  * By default we do, since debug logs could be added to GitHub issues and shouldn't include sensitive information.
  */
-export const getSanitizeLogs = getEnvironmentVariableFactory({
+export const getSanitizeLogs = getBooleanEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_SANITIZE",
 	defaultValue() {
-		return "true";
+		return true;
 	},
 });
 

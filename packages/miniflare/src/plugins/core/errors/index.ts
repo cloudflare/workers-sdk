@@ -3,7 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { z } from "zod";
 import { Request, Response } from "../../../http";
-import { Log } from "../../../shared";
+import { Log, processStackTrace } from "../../../shared";
 import { maybeParseURL } from "../../shared";
 import {
 	contentsToString,
@@ -235,7 +235,14 @@ export function reviveError(
 	error.stack = jsonError.stack;
 
 	// Try to apply source-mapping to the stack trace
-	error.stack = getSourceMappedStack(workerSrcOpts, error);
+	error.stack = processStackTrace(
+		getSourceMappedStack(workerSrcOpts, error),
+		(line, location) =>
+			!location.includes(".wrangler/tmp") &&
+			!location.includes("wrangler/templates/middleware")
+				? line
+				: null
+	);
 
 	return error;
 }
@@ -272,25 +279,13 @@ export async function handlePrettyErrorRequest(
 	}
 
 	// Lazily import `youch` when required
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	const { Youch }: typeof import("youch") = require("youch");
 	// `cause` is usually more useful than the error itself, display that instead
 	// TODO(someday): would be nice if we could display both
 	const youch = new Youch();
 
 	youch.useTransformer((error) => {
-		error.frames = error.frames
-			.filter(
-				(frame) =>
-					!frame.fileName?.includes(".wrangler/tmp") &&
-					!frame.fileName?.includes("wrangler/templates/middleware")
-			)
-			.map((frame) => {
-				// To avoid Youch throwing an error if the frame has no fileName
-				// This happens in tests which hides some parts of the stack trace
-				frame.fileName ??= "";
-
-				return frame;
-			});
 		error.hint = [
 			'<a href="https://developers.cloudflare.com/workers/" target="_blank" style="text-decoration:none;font-style:normal;padding:5px">📚 Workers Docs</a>',
 			'<a href="https://discord.cloudflare.com" target="_blank" style="text-decoration:none;font-style: normal;padding:5px">💬 Workers Discord</a>',

@@ -47,6 +47,49 @@ type DeprecatedNames =
 type ElementType<A> = A extends readonly (infer T)[] ? T : never;
 
 /**
+ * Create a function used to access a boolean environment variable. It may return undefined if the variable is not set.
+ *
+ * This is not memoized to allow us to change the value at runtime, such as in testing.
+ *
+ * The environment variable must be either "true" or "false" (after lowercasing), otherwise it will throw an error.
+ */
+export function getBooleanEnvironmentVariableFactory(options: {
+	variableName: VariableNames;
+}): () => boolean | undefined;
+export function getBooleanEnvironmentVariableFactory(options: {
+	variableName: VariableNames;
+	defaultValue: boolean | (() => boolean);
+}): () => boolean;
+export function getBooleanEnvironmentVariableFactory(options: {
+	variableName: VariableNames;
+	defaultValue?: boolean | (() => boolean);
+}): () => boolean | undefined {
+	return () => {
+		if (
+			!(options.variableName in process.env) ||
+			process.env[options.variableName] === undefined
+		) {
+			return typeof options.defaultValue === "function"
+				? options.defaultValue()
+				: options.defaultValue;
+		}
+
+		switch (process.env[options.variableName]?.toLowerCase()) {
+			case "true":
+				return true;
+			case "false":
+				return false;
+			default:
+				throw new UserError(
+					`Expected ${options.variableName} to be "true" or "false", but got ${JSON.stringify(
+						process.env[options.variableName]
+					)}`
+				);
+		}
+	};
+}
+
+/**
  * Create a function used to access an environment variable. It may return undefined if the variable is not set.
  *
  * This is not memoized to allow us to change the value at runtime, such as in testing.
@@ -98,6 +141,7 @@ export function getEnvironmentVariableFactory<
 			if (!hasWarned) {
 				hasWarned = true;
 				// Ideally we'd use `logger.warn` here, but that creates a circular dependency that Vitest is unable to resolve
+				// eslint-disable-next-line no-console
 				console.warn(
 					`Using "${deprecatedName}" environment variable. This is deprecated. Please use "${variableName}", instead.`
 				);

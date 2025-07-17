@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import assert from "assert";
 import crypto from "crypto";
 import { ReadableStream, TransformStream } from "stream/web";
@@ -25,7 +25,15 @@ import {
 } from "../../../workers";
 import { DECODER, SynchronousFetcher, SynchronousResponse } from "./fetch-sync";
 import { NODE_PLATFORM_IMPL } from "./types";
-import type { ServiceWorkerGlobalScope } from "@cloudflare/workers-types/experimental";
+import type {
+	ImageDrawOptions,
+	ImageOutputOptions,
+	ImagesBinding,
+	ImageTransform,
+	ImageTransformationResult,
+	ImageTransformer,
+	ServiceWorkerGlobalScope,
+} from "@cloudflare/workers-types/experimental";
 
 const kAddress = Symbol("kAddress");
 const kName = Symbol("kName");
@@ -207,7 +215,7 @@ class ProxyClientBridge {
 		type WithCustomInspect<T> = T & {
 			[util.inspect.custom]?: unknown;
 		};
-		let proxyTarget: WithCustomInspect<{} | Function>;
+		let proxyTarget: WithCustomInspect<object | Function>;
 		if (target[kIsFunction]) {
 			// the proxy target needs to be a function so that the consumer of the proxy
 			// can simply call it (if we didn't do this consumers would get a
@@ -282,11 +290,68 @@ class ProxyStubHandler<T extends object>
 				});
 				return this.#parseAsyncResponse(resPromise);
 			} else {
+				// See #createMediaProxy() for why this is special
+				if (name === "ImagesBindingImpl") {
+					return this.#createMediaProxy(target);
+				}
 				// Otherwise, return a `Proxy` for this target
 				return this.bridge.getProxy(target);
 			}
 		},
 	};
+	/**
+	 * Images bindings are some of the most complex bindings from an API perspective, other than RPC. In particular, they expose a _synchronous_ API that accepts ReadableStream arguments.
+	 * Multiple synchronous APIs are chained together in a builder pattern (e.g. `await env.IMAGES.input(stream).transform(...).output(...)`) before the final `.output()` call is awaited.
+	 * This breaks our assumptions around functions that accept ReadableStream arguments always being async, and so doesn't work without some special casing.
+	 *
+	 * Ref: https://developers.cloudflare.com/images/transform-images/bindings/
+	 */
+	#createMediaProxy(target: NativeTarget) {
+		type Operation = {
+			type: "transform" | "draw";
+			arguments: unknown[];
+		};
+		const transformer = (
+			target: {
+				input: (
+					stream: ReadableStream,
+					operations: Operation[],
+					options: ImageOutputOptions
+				) => ImageTransformationResult;
+			},
+			stream: ReadableStream,
+			operations: Operation[]
+		): ImageTransformer => {
+			return {
+				transform: (transform: ImageTransform): ImageTransformer => {
+					return transformer(target, stream, [
+						...operations,
+						{ type: "transform", arguments: [transform] },
+					]);
+				},
+				draw: (image: ImageTransformer, options?: ImageDrawOptions) => {
+					return transformer(target, stream, [
+						...operations,
+						{ type: "draw", arguments: [image, options] },
+					]);
+				},
+				output: async (options: ImageOutputOptions) => {
+					// This signature doesn't exist on the production binding, but will be intercepted in the proxy server
+					return await target.input(stream, operations, options);
+				},
+			};
+		};
+		const binding = {
+			info: (stream: ReadableStream<Uint8Array>) => {
+				// @ts-expect-error The stream types are mismatched
+				return (this.bridge.getProxy(target) as ImagesBinding)["info"](stream);
+			},
+			input: (stream: ReadableStream<Uint8Array>) => {
+				return transformer(this.bridge.getProxy(target), stream, []);
+			},
+		};
+		return binding;
+	}
 
 	constructor(
 		readonly bridge: ProxyClientBridge,
@@ -552,7 +617,7 @@ class ProxyStubHandler<T extends object>
 		this.#assertSafe();
 
 		const targetName = this.target[kName];
-		// See `isFetcherFetch()` comment for why this special
+		// See `isFetcherFetch()` comment for why this is special
 		if (isFetcherFetch(targetName, key)) return this.#fetcherFetchCall(args);
 
 		const stringified = stringifyWithStreams(

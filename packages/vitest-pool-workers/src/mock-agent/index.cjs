@@ -16,7 +16,7 @@ function resetMockAgent(agent) {
 
 	// Remove all pending interceptors
 	for (const mockClient of agent[kClients].values()) {
-		mockClient.deref()?.[kDispatches].splice(0);
+		mockClient.dispatcher?.[kDispatches].splice(0);
 	}
 	agent.assertNoPendingInterceptors();
 }

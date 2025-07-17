@@ -416,15 +416,29 @@ async function resolveConfig(
 		logger.warn("Queues are not yet supported in wrangler dev remote mode.");
 	}
 
-	// TODO(do) support remote wrangler dev
-	const classNamesWhichUseSQLite = getClassNamesWhichUseSQLite(
-		resolved.migrations
-	);
-	if (
-		resolved.dev.remote &&
-		Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
-	) {
-		logger.warn("SQLite in Durable Objects is only supported in local mode.");
+	if (resolved.dev.remote) {
+		// We're in remote mode (`--remote`)
+
+		if (
+			resolved.dev.enableContainers &&
+			resolved.containers &&
+			resolved.containers.length > 0
+		) {
+			logger.warn(
+				"Containers are only supported in local mode, to suppress this warning set `dev.enable_containers` to `false` or pass `--enable-containers=false` to the `wrangler dev` command"
+			);
+		}
+
+		// TODO(do) support remote wrangler dev
+		const classNamesWhichUseSQLite = getClassNamesWhichUseSQLite(
+			resolved.migrations
+		);
+		if (
+			resolved.dev.remote &&
+			Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
+		) {
+			logger.warn("SQLite in Durable Objects is only supported in local mode.");
+		}
 	}
 
 	// prompt user to update their types if we detect that it is out of date

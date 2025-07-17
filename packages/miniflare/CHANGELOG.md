@@ -1,5 +1,72 @@
 # miniflare
 
+## 4.20250712.0
+
+### Minor Changes
+
+- [#9843](https://github.com/cloudflare/workers-sdk/pull/9843) [`5b0fc9e`](https://github.com/cloudflare/workers-sdk/commit/5b0fc9e96b97e935fa8e60ba442a9d706753ebd4) Thanks [@edmundhung](https://github.com/edmundhung)! - Improved error logging to include error causes in stack traces with internal stack frames removed.
+
+### Patch Changes
+
+- [#9854](https://github.com/cloudflare/workers-sdk/pull/9854) [`ac08e68`](https://github.com/cloudflare/workers-sdk/commit/ac08e6886a10c7cff4cf02002dffe961f5f157b9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix incorrect bindings remote deduplication logic
+
+  when bindings are registered deduplication logic is applied to make sure that the same binding is not unnecessarily registered multiple times, the changes here fix the fact that such deduplication logic doesn't currently take into account whether bindings are used or not in remote mode (which is problematic when the same binding is used both in remote and local mode)
+
+- [#9912](https://github.com/cloudflare/workers-sdk/pull/9912) [`3bb69fa`](https://github.com/cloudflare/workers-sdk/commit/3bb69fae168a7254c0eb396ea90cc274d0d9ce92) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250709.0  | 1.20250710.0  |
+  | @cloudflare/workers-types | ^4.20250709.0 | ^4.20250710.0 |
+
+- [#9930](https://github.com/cloudflare/workers-sdk/pull/9930) [`274a826`](https://github.com/cloudflare/workers-sdk/commit/274a826b3349211e8722baab2d73cdaab3b3aa5d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250710.0  | 1.20250711.0  |
+  | @cloudflare/workers-types | ^4.20250710.0 | ^4.20250711.0 |
+
+- [#9950](https://github.com/cloudflare/workers-sdk/pull/9950) [`77d1cb2`](https://github.com/cloudflare/workers-sdk/commit/77d1cb23761e258720956c0d5d72fb778cf80d42) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250711.0  | 1.20250712.0  |
+  | @cloudflare/workers-types | ^4.20250711.0 | ^4.20250712.0 |
+
+- [#9954](https://github.com/cloudflare/workers-sdk/pull/9954) [`bf4c9ab`](https://github.com/cloudflare/workers-sdk/commit/bf4c9abda7ec70f8633884987db36be2cf1b7e1e) Thanks [@penalosa](https://github.com/penalosa)! - Support Images binding in `getPlatformProxy()`
+
+- [#9847](https://github.com/cloudflare/workers-sdk/pull/9847) [`14ce577`](https://github.com/cloudflare/workers-sdk/commit/14ce5775c775b32bc1166d4e7a1546a00c049ab0) Thanks [@penalosa](https://github.com/penalosa)! - Upgrade Undici
+
+## 4.20250709.0
+
+### Patch Changes
+
+- [#9881](https://github.com/cloudflare/workers-sdk/pull/9881) [`bb09e50`](https://github.com/cloudflare/workers-sdk/commit/bb09e50d8e7f823172f3e492ca111157a105adb1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250705.0  | 1.20250708.0  |
+  | @cloudflare/workers-types | ^4.20250705.0 | ^4.20250708.0 |
+
+- [#9894](https://github.com/cloudflare/workers-sdk/pull/9894) [`25dbe54`](https://github.com/cloudflare/workers-sdk/commit/25dbe5480dd1d14ee25b38fc5e0105f938b1ee5b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250708.0  | 1.20250709.0  |
+  | @cloudflare/workers-types | ^4.20250708.0 | ^4.20250709.0 |
+
+- [#9876](https://github.com/cloudflare/workers-sdk/pull/9876) [`3bdec6b`](https://github.com/cloudflare/workers-sdk/commit/3bdec6b768a0b68560ad6d24274007de3a7fbc26) Thanks [@edmundhung](https://github.com/edmundhung)! - chore: update youch version
+
 ## 4.20250705.0
 
 ### Minor Changes

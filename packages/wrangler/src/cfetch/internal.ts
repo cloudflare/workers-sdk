@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { fetch, File, FormData, Headers, Response } from "undici";
+import { fetch, FormData, Headers, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -30,16 +30,17 @@ export async function performApiFetch(
 	);
 	await requireLoggedIn(complianceConfig);
 	const apiToken = requireApiToken();
-	const headers = cloneHeaders(init.headers);
+	const headers = cloneHeaders(new Headers(init.headers));
 	addAuthorizationHeaderIfUnspecified(headers, apiToken);
 	addUserAgent(headers);
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	logger.debug(
-		`-- START CF API REQUEST: ${method} ${getCloudflareApiBaseUrl(complianceConfig)}${resource}${queryString}`
+		`-- START CF API REQUEST: ${method} ${getCloudflareApiBaseUrl(complianceConfig)}${resource}`
 	);
+	logger.debugWithSanitization("QUERY STRING:", queryString);
 	const logHeaders = cloneHeaders(headers);
-	delete logHeaders["Authorization"];
+	logHeaders.delete("Authorization");
 	logger.debugWithSanitization("HEADERS:", JSON.stringify(logHeaders, null, 2));
 
 	logger.debugWithSanitization("INIT:", JSON.stringify({ ...init }, null, 2));
@@ -94,7 +95,7 @@ export async function fetchInternal<ResponseType>(
 		response.status
 	);
 	const logHeaders = cloneHeaders(response.headers);
-	delete logHeaders["Authorization"];
+	logHeaders.delete("Authorization");
 	logger.debugWithSanitization("HEADERS:", JSON.stringify(logHeaders, null, 2));
 	logger.debugWithSanitization("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");
@@ -108,7 +109,7 @@ export async function fetchInternal<ResponseType>(
 
 	try {
 		return parseJSON(jsonText) as ResponseType;
-	} catch (err) {
+	} catch {
 		throw new APIError({
 			text: "Received a malformed response from the API",
 			notes: [
@@ -132,14 +133,8 @@ function truncate(text: string, maxLength: number): string {
 	return `${text.substring(0, maxLength)}... (length = ${length})`;
 }
 
-function cloneHeaders(
-	headers: HeadersInit | undefined
-): Record<string, string | readonly string[]> {
-	return headers instanceof Headers
-		? Object.fromEntries(headers.entries())
-		: Array.isArray(headers)
-			? Object.fromEntries(headers)
-			: { ...headers };
+function cloneHeaders(headers: HeadersInit | undefined): Headers {
+	return new Headers(headers);
 }
 
 export async function requireLoggedIn(
@@ -152,23 +147,21 @@ export async function requireLoggedIn(
 }
 
 export function addAuthorizationHeaderIfUnspecified(
-	headers: Record<string, string | readonly string[]>,
+	headers: Headers,
 	auth: ApiCredentials
 ): void {
-	if (!("Authorization" in headers)) {
+	if (!headers.has("Authorization")) {
 		if ("apiToken" in auth) {
-			headers["Authorization"] = `Bearer ${auth.apiToken}`;
+			headers.set("Authorization", `Bearer ${auth.apiToken}`);
 		} else {
-			headers["X-Auth-Key"] = auth.authKey;
-			headers["X-Auth-Email"] = auth.authEmail;
+			headers.set("X-Auth-Key", auth.authKey);
+			headers.set("X-Auth-Email", auth.authEmail);
 		}
 	}
 }
 
-export function addUserAgent(
-	headers: Record<string, string | readonly string[]>
-): void {
-	headers["User-Agent"] = `wrangler/${wranglerVersion}`;
+export function addUserAgent(headers: Headers): void {
+	headers.set("User-Agent", `wrangler/${wranglerVersion}`);
 }
 
 /**
@@ -189,7 +182,7 @@ export async function fetchKVGetValue(
 ): Promise<ArrayBuffer> {
 	await requireLoggedIn(complianceConfig);
 	const auth = requireApiToken();
-	const headers: Record<string, string> = {};
+	const headers = new Headers();
 	addAuthorizationHeaderIfUnspecified(headers, auth);
 	const resource = `${getCloudflareApiBaseUrl(complianceConfig)}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
 	const response = await fetch(resource, {

@@ -87,6 +87,7 @@ jobs:
           E2E_TEST_PM: ${{ matrix.pm.name }}
           E2E_TEST_PM_VERSION: ${{ matrix.pm.version }}
           CI_OS: ${{ runner.os }}
+          GITHUB_TOKEN: ${{ github.token }} # Needed for begit to clone the repo in the e2e tests for solid-start
 
       - name: Upload Logs
         uses: actions/upload-artifact@v4

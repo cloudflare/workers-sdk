@@ -112,7 +112,7 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 }
 
 export function jsonPrintLogs(data: WebSocket.RawData): void {
-	console.log(JSON.stringify(JSON.parse(data.toString()), null, 2));
+	logger.json(JSON.parse(data.toString()));
 }
 
 function isRequestEvent(

@@ -221,6 +221,7 @@ describe("wrangler", () => {
 				  wrangler kv namespace create <namespace>  Create a new namespace
 				  wrangler kv namespace list                Output a list of all KV namespaces associated with your account id
 				  wrangler kv namespace delete              Delete a given namespace.
+				  wrangler kv namespace rename [old-name]   Rename a KV namespace
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]

@@ -5,6 +5,7 @@ module.exports = {
 	rules: {
 		"no-undef-init": "off",
 		"prettier/prettier": "off",
+		"no-console": "error",
 	},
 	overrides: [
 		{
@@ -16,13 +17,17 @@ module.exports = {
 				"@typescript-eslint/no-empty-function": "off",
 				"@typescript-eslint/no-explicit-any": "off",
 				"@typescript-eslint/no-non-null-assertion": "error",
-				"@typescript-eslint/no-var-requires": "off",
+				"@typescript-eslint/no-require-imports": "off",
 				"@typescript-eslint/no-unused-vars": [
 					"warn",
 					{ argsIgnorePattern: "^_" },
 				],
 				"es/no-dynamic-import": "error",
 			},
+		},
+		{
+			files: ["src/workers/**/*.ts", "scripts/**"],
+			rules: { "no-console": "off" },
 		},
 	],
 };

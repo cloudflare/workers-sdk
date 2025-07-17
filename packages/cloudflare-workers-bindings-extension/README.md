@@ -1,1 +1,0 @@
-# Cloudflare Workers Extension

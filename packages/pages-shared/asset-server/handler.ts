@@ -114,6 +114,7 @@ type FullHandlerContext<AssetEntry, ContentNegotiation, Asset> = {
 	metadata: Metadata;
 	xServerEnvHeader?: string;
 	xDeploymentIdHeader?: boolean;
+	xWebAnalyticsHeader?: boolean;
 	logError: (err: Error) => void;
 	setMetrics?: (metrics: HandlerMetrics) => void;
 	findAssetEntryForPath: FindAssetEntryForPath<AssetEntry>;
@@ -162,6 +163,7 @@ export async function generateHandler<
 	metadata,
 	xServerEnvHeader,
 	xDeploymentIdHeader,
+	xWebAnalyticsHeader,
 	logError,
 	setMetrics,
 	findAssetEntryForPath,
@@ -286,7 +288,7 @@ export async function generateHandler<
 
 		try {
 			pathname = globalThis.decodeURIComponent(pathname);
-		} catch (err) {}
+		} catch {}
 
 		if (pathname.endsWith("/")) {
 			if ((assetEntry = await findAssetEntryForPath(`${pathname}index.html`))) {
@@ -451,7 +453,7 @@ export async function generateHandler<
 									earlyHintsCacheKey,
 									new Response(null, { headers: earlyHintsHeaders })
 								);
-							} catch (err) {
+							} catch {
 								// Nbd if we fail here in the deferred 'waitUntil' work. We're probably trying to parse a malformed page or something.
 								// Totally fine to skip over any errors.
 								// If we need to debug something, you can uncomment the following:
@@ -547,7 +549,7 @@ export async function generateHandler<
 		let content: ContentNegotiation;
 		try {
 			content = negotiateContent(request, servingAssetEntry);
-		} catch (err) {
+		} catch {
 			return new NotAcceptableResponse();
 		}
 
@@ -642,6 +644,9 @@ export async function generateHandler<
 				isHTMLContentType(asset.contentType) &&
 				metadata.analytics?.version === ANALYTICS_VERSION
 			) {
+				if (xWebAnalyticsHeader) {
+					response.headers.set("x-cf-pages-analytics", "1");
+				}
 				return new HTMLRewriter()
 					.on("body", {
 						element(e) {
@@ -736,7 +741,7 @@ export async function generateHandler<
 				let content: ContentNegotiation;
 				try {
 					content = negotiateContent(request, assetEntry);
-				} catch (err) {
+				} catch {
 					return new NotAcceptableResponse();
 				}
 

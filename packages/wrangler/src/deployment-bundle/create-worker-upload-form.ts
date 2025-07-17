@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { File, FormData } from "undici";
+import { FormData } from "undici";
 import { UserError } from "../errors";
 import { INHERIT_SYMBOL } from "./bindings";
 import { handleUnsafeCapnp } from "./capnp";
@@ -247,6 +247,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 					jwt: assets.jwt,
 					config: assetConfig,
 				},
+				...(annotations && { annotations }),
 				...(compatibility_date && { compatibility_date }),
 				...(compatibility_flags && { compatibility_flags }),
 			})

@@ -1,5 +1,25 @@
 # create-cloudflare
 
+## 2.50.4
+
+### Patch Changes
+
+- [#9941](https://github.com/cloudflare/workers-sdk/pull/9941) [`e1c183a`](https://github.com/cloudflare/workers-sdk/commit/e1c183aaf238394255f33f82ef7e8a997d0ea91d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 7.0.0 | 7.0.3 |
+
+- [#9942](https://github.com/cloudflare/workers-sdk/pull/9942) [`56cf197`](https://github.com/cloudflare/workers-sdk/commit/56cf197228fc4612bb38c9f447cadb0736b5653b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.8.15 | 0.8.18 |
+
 ## 2.50.3
 
 ### Patch Changes

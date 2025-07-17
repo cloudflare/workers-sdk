@@ -1,5 +1,29 @@
 # @cloudflare/containers-shared
 
+## 0.2.6
+
+### Patch Changes
+
+- [#9925](https://github.com/cloudflare/workers-sdk/pull/9925) [`b46386c`](https://github.com/cloudflare/workers-sdk/commit/b46386c0b245ef1d64e6e7dcff4e421002a3158c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - clarify the docker build error message
+
+## 0.2.5
+
+### Patch Changes
+
+- [#9833](https://github.com/cloudflare/workers-sdk/pull/9833) [`3743896`](https://github.com/cloudflare/workers-sdk/commit/3743896120baa530c1b6d4cb7eeda27847b2db44) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - extend `prepareContainerImagesForDev` to allow aborting a container's build process
+
+- [#9923](https://github.com/cloudflare/workers-sdk/pull/9923) [`c01c4ee`](https://github.com/cloudflare/workers-sdk/commit/c01c4ee6affd0acf2f678d9c562f4a7d6db82465) Thanks [@gpanders](https://github.com/gpanders)! - Fix image name resolution when modifying a container application
+
+## 0.2.4
+
+### Patch Changes
+
+- [#9888](https://github.com/cloudflare/workers-sdk/pull/9888) [`d2fe58b`](https://github.com/cloudflare/workers-sdk/commit/d2fe58b33a3172e204ff3a477c4a0d33ab8f2c76) Thanks [@IRCody](https://github.com/IRCody)! - Remove undici dependency from @cloudflare/containers-shared
+
+- [#9879](https://github.com/cloudflare/workers-sdk/pull/9879) [`e10c3e2`](https://github.com/cloudflare/workers-sdk/commit/e10c3e2a6b3049d23b58cbc63eef1756233cf9c3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: enable Dockerfile exposed port validation on linux as well
+
+- [#9879](https://github.com/cloudflare/workers-sdk/pull/9879) [`e10c3e2`](https://github.com/cloudflare/workers-sdk/commit/e10c3e2a6b3049d23b58cbc63eef1756233cf9c3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update error message presented when no port is exported by the image
+
 ## 0.2.3
 
 ### Patch Changes

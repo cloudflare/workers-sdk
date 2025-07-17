@@ -1858,7 +1858,7 @@ describe("cloudchamber apply", () => {
 		expect(app.configuration?.instance_type).toEqual("dev");
 	});
 
-	test("expands image names from managed registry", async () => {
+	test("expands image names from managed registry when creating an application", async () => {
 		setIsTTY(false);
 		const registry = getCloudflareContainerRegistry();
 		writeWranglerConfig({
@@ -1904,7 +1904,7 @@ describe("cloudchamber apply", () => {
 			│   tier = 2
 			│
 			│   [containers.configuration]
-			│   image = \\"${registry}/hello:1.0\\"
+			│   image = \\"${registry}/some-account-id/hello:1.0\\"
 			│   instance_type = \\"dev\\"
 			│
 			│
@@ -1914,5 +1914,80 @@ describe("cloudchamber apply", () => {
 
 			"
 		`);
+	});
+
+	test("expands image names from managed registry when modifying an application", async () => {
+		setIsTTY(false);
+		const registry = getCloudflareContainerRegistry();
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					instances: 3,
+					class_name: "DurableObjectClass",
+					image: `${registry}/hello:1.0`,
+					instance_type: "standard",
+					constraints: {
+						tier: 2,
+					},
+				},
+			],
+		});
+
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 3,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: `${registry}/some-account-id/hello:1.0`,
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tier: 3,
+				},
+			},
+		]);
+
+		const applicationReqBodyPromise = mockModifyApplication();
+		await runWrangler("cloudchamber apply");
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [containers.configuration]
+			│   image = \\"${registry}/some-account-id/hello:1.0\\"
+			│ - instance_type = \\"dev\\"
+			│ + instance_type = \\"standard\\"
+			│
+			│   [containers.constraints]
+			│   ...
+			│ - tier = 3
+			│ + tier = 2
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.configuration?.instance_type).toEqual("standard");
 	});
 });

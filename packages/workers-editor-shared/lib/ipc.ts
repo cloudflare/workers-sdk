@@ -37,6 +37,7 @@ interface SetEntryPoint {
 }
 
 // Sent on load to request sources for inflating a stack trace
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface RequestSources {}
 
 export type WorkerLoadedMessage = EditorMessage<"WorkerLoaded", WorkerLoaded>;

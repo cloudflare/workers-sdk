@@ -17,6 +17,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
+import { debounce } from "../utils/debounce";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
@@ -27,7 +28,7 @@ import {
 	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
-import { CLEANUP, CLEANUP_CALLBACKS, debounce, getPagesTmpDir } from "./utils";
+import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
 import type { Config } from "../config";
 import type {
 	DurableObjectBindings,
@@ -524,7 +525,7 @@ export const pagesDevCommand = createCommand({
 			const debouncedRunBuild = debounce(async () => {
 				try {
 					await runBuild();
-				} catch (e) {
+				} catch {
 					/*
 					 * don't break developer flow in watch mode by throwing an error
 					 * here. Many times errors will be just the result of unfinished
@@ -555,7 +556,7 @@ export const pagesDevCommand = createCommand({
 
 					debouncedRunBuild();
 				});
-			} catch (e: unknown) {
+			} catch {
 				/*
 				 * fail early if we encounter errors while attempting to build the
 				 * Worker. These flag underlying issues in the _worker.js code, and

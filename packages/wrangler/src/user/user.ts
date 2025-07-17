@@ -721,7 +721,7 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 		try {
 			tokenExchangeResErr = await response.text();
 			tokenExchangeResErr = JSON.parse(tokenExchangeResErr);
-		} catch (e) {
+		} catch {
 			// If it can't parse to JSON ignore the error
 		}
 
@@ -1148,7 +1148,7 @@ async function refreshToken(): Promise<boolean> {
 			scopes,
 		});
 		return true;
-	} catch (err) {
+	} catch {
 		return false;
 	}
 }

@@ -36,7 +36,7 @@ export type ApiVersion = {
 		bindings: WorkerMetadataBinding[];
 		script: {
 			etag: string;
-			handlers: string[];
+			handlers: string[] | null;
 			placement_mode?: "smart";
 			last_deployed_from: string;
 		};

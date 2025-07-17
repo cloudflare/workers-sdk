@@ -46,7 +46,9 @@ export function useRefreshableIframe(
 	}, [onLoad]);
 
 	function listen() {
-		!firstLoad && setFirstLoad(true);
+		if (!firstLoad) {
+			setFirstLoad(true);
+		}
 		requestAnimationFrame(() => {
 			setIndex(index === 0 ? 1 : 0);
 			setIsLoadingContent(false);

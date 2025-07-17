@@ -118,6 +118,32 @@ export async function listKVNamespaceKeys(
 	);
 }
 
+/**
+ * Update a KV namespace title under the given `accountId` with the given `namespaceId`.
+ *
+ * @returns the updated namespace information.
+ */
+export async function updateKVNamespace(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	namespaceId: string,
+	title: string
+): Promise<KVNamespaceInfo> {
+	return await fetchResult<KVNamespaceInfo>(
+		complianceConfig,
+		`/accounts/${accountId}/storage/kv/namespaces/${namespaceId}`,
+		{
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				title,
+			}),
+		}
+	);
+}
+
 export async function deleteKVNamespace(
 	complianceConfig: ComplianceConfig,
 	accountId: string,

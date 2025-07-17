@@ -12,13 +12,13 @@
 		"create-hono": "0.19.2",
 		"create-next-app": "15.3.5",
 		"create-qwik": "1.14.1",
-		"create-vite": "7.0.0",
+		"create-vite": "7.0.3",
 		"create-remix": "2.16.8",
 		"create-react-router": "7.6.3",
 		"create-solid": "0.6.5",
 		"create-vue": "3.17.0",
 		"gatsby": "5.14.5",
-		"sv": "0.8.15",
+		"sv": "0.8.18",
 		"nuxi": "3.25.1"
 	}
 }

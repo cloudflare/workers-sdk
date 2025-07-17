@@ -227,7 +227,6 @@ export const tailCommand = createCommand({
 					// causes the process to exit.
 					// This is a bit nasty but otherwise we have to make wholesale changes to how the `tail` command
 					// works, since currently all the tests assume that `runWrangler()` will return immediately.
-					console.log(args.format);
 					throw createFatalError(
 						"Tail disconnected, exiting.",
 						args.format === "json",

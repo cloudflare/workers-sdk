@@ -379,6 +379,186 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 			});
 		});
+
+		describe("rename", () => {
+			function mockUpdateRequest(
+				expectedNamespaceId: string,
+				expectedTitle: string
+			) {
+				const requests = { count: 0 };
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId",
+						async ({ request, params }) => {
+							requests.count++;
+							expect(params.accountId).toEqual("some-account-id");
+							expect(params.namespaceId).toEqual(expectedNamespaceId);
+							const body = (await request.json()) as Record<string, string>;
+							expect(body.title).toEqual(expectedTitle);
+							return HttpResponse.json(
+								createFetchResult({
+									id: expectedNamespaceId,
+									title: expectedTitle,
+								}),
+								{ status: 200 }
+							);
+						},
+						{ once: true }
+					)
+				);
+				return requests;
+			}
+
+			function mockListRequestForRename(namespaces: KVNamespaceInfo[]) {
+				const requests = { count: 0 };
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/storage/kv/namespaces",
+						async ({ request, params }) => {
+							const url = new URL(request.url);
+							requests.count++;
+							expect(params.accountId).toEqual("some-account-id");
+							expect(url.searchParams.get("per_page")).toEqual("100");
+							expect(url.searchParams.get("order")).toEqual("title");
+							expect(url.searchParams.get("direction")).toEqual("asc");
+							expect(url.searchParams.get("page")).toEqual(`${requests.count}`);
+
+							const pageSize = Number(url.searchParams.get("per_page"));
+							const page = Number(url.searchParams.get("page"));
+							return HttpResponse.json(
+								createFetchResult(
+									namespaces.slice((page - 1) * pageSize, page * pageSize)
+								)
+							);
+						}
+					)
+				);
+				return requests;
+			}
+
+			it("should display help for rename command", async () => {
+				await expect(
+					runWrangler("kv namespace rename --help")
+				).resolves.toBeUndefined();
+
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler kv namespace rename [old-name]
+
+					Rename a KV namespace
+
+					POSITIONALS
+					  old-name  The current name (title) of the namespace to rename  [string]
+
+					GLOBAL FLAGS
+					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
+
+					OPTIONS
+					      --namespace-id  The id of the namespace to rename  [string]
+					      --new-name      The new name for the namespace  [string] [required]"
+				`);
+			});
+
+			it("should error if neither name nor namespace-id is provided", async () => {
+				await expect(
+					runWrangler("kv namespace rename --new-name new-name")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Either old-name (as first argument) or --namespace-id must be specified]`
+				);
+			});
+
+			it("should error if new-name is not provided", async () => {
+				await expect(
+					runWrangler("kv namespace rename")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Missing required argument: new-name]`
+				);
+			});
+
+			it("should rename namespace by ID", async () => {
+				const requests = mockUpdateRequest(
+					"some-namespace-id",
+					"new-namespace-name"
+				);
+				await runWrangler(
+					"kv namespace rename --namespace-id some-namespace-id --new-name new-namespace-name"
+				);
+				expect(requests.count).toEqual(1);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					Renaming KV namespace some-namespace-id to \\"new-namespace-name\\".
+					✨ Successfully renamed namespace to \\"new-namespace-name\\""
+				`);
+			});
+
+			it("should rename namespace by old name", async () => {
+				const listRequests = mockListRequestForRename([
+					{ id: "some-namespace-id", title: "old-namespace-name" },
+					{ id: "other-namespace-id", title: "other-namespace" },
+				]);
+				const updateRequests = mockUpdateRequest(
+					"some-namespace-id",
+					"new-namespace-name"
+				);
+
+				await runWrangler(
+					"kv namespace rename old-namespace-name --new-name new-namespace-name"
+				);
+
+				expect(listRequests.count).toEqual(1);
+				expect(updateRequests.count).toEqual(1);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					Renaming KV namespace some-namespace-id to \\"new-namespace-name\\".
+					✨ Successfully renamed namespace to \\"new-namespace-name\\""
+				`);
+			});
+
+			it("should error if namespace with old name is not found", async () => {
+				mockListRequestForRename([
+					{ id: "other-namespace-id", title: "other-namespace" },
+				]);
+
+				await expect(
+					runWrangler(
+						"kv namespace rename nonexistent-name --new-name new-name"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: No namespace found with the name "nonexistent-name". Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".]`
+				);
+			});
+
+			it("should error if namespace ID does not exist", async () => {
+				// Mock a 404 response for the namespace ID
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId",
+						({ params }) => {
+							expect(params.accountId).toEqual("some-account-id");
+							expect(params.namespaceId).toEqual("nonexistent-id");
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 10009, message: "Unknown namespace." },
+								]),
+								{ status: 404 }
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler(
+						"kv namespace rename --namespace-id nonexistent-id --new-name new-name"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/storage/kv/namespaces/nonexistent-id) failed.]`
+				);
+			});
+		});
 	});
 
 	describe("kv key", () => {

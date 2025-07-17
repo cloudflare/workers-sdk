@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import getPort from "get-port";
 import { readConfig } from "../../config";
+import { getCloudflareComplianceRegion } from "../../environment-variables/misc-variables";
 import { getBasePath } from "../../paths";
 import {
 	convertConfigBindingsToStartWorkerBindings,
@@ -116,6 +117,8 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		| string
 		| {
 				name?: string;
+				/** If running in a non-public compliance region, set this here. */
+				complianceRegion?: Config["compliance_region"];
 				bindings: NonNullable<StartDevWorkerInput["bindings"]>;
 		  },
 	preExistingRemoteProxySessionData?: {
@@ -134,6 +137,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 
 		configPathOrWorkerConfig = {
 			name: config.name,
+			complianceRegion: getCloudflareComplianceRegion(config),
 			bindings: convertConfigBindingsToStartWorkerBindings(config) ?? {},
 		};
 	}
@@ -152,7 +156,10 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	if (!remoteBindingsAreSameAsBefore) {
 		if (!remoteProxySession) {
 			if (Object.keys(remoteBindings).length > 0) {
-				remoteProxySession = await startRemoteProxySession(remoteBindings);
+				remoteProxySession = await startRemoteProxySession(remoteBindings, {
+					workerName: configPathOrWorkerConfig.name,
+					complianceRegion: configPathOrWorkerConfig.complianceRegion,
+				});
 			}
 		} else {
 			// Note: we always call updateBindings even when there are zero remote bindings, in these

@@ -1,16 +1,21 @@
 import assert from "node:assert";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { LongLivedCommand, runCommand } from "./command";
 import type { CommandOptions } from "./command";
 
 // Replace all backslashes with forward slashes to ensure that their use
 // in scripts doesn't break.
-export const WRANGLER = process.env.WRANGLER?.replaceAll("\\", "/") ?? "";
+export const WRANGLER =
+	process.env.WRANGLER?.replaceAll("\\", "/") ??
+	`node --no-warnings ${resolve(__dirname, "../../bin/wrangler.js")}`;
 export const WRANGLER_IMPORT = pathToFileURL(
-	process.env.WRANGLER_IMPORT?.replaceAll("\\", "/") ?? ""
+	process.env.WRANGLER_IMPORT?.replaceAll("\\", "/") ??
+		resolve(__dirname, "../../wrangler-dist/cli.js")
 );
 export const MINIFLARE_IMPORT = pathToFileURL(
-	process.env.MINIFLARE_IMPORT?.replaceAll("\\", "/") ?? ""
+	process.env.MINIFLARE_IMPORT?.replaceAll("\\", "/") ??
+		resolve(__dirname, "../../../miniflare/dist/src/index.js")
 );
 
 export type WranglerCommandOptions = CommandOptions & { debug?: boolean };
@@ -23,13 +28,6 @@ export async function runWrangler(
 		env = { ...env, WRANGLER_LOG: "debug" };
 	}
 	return runCommand(getWranglerCommand(wranglerCommand), { cwd, env, timeout });
-}
-
-export function runWranglerLongLived(
-	wranglerCommand: string,
-	options: WranglerCommandOptions = {}
-) {
-	return new WranglerLongLivedCommand(wranglerCommand, options);
 }
 
 export class WranglerLongLivedCommand extends LongLivedCommand {

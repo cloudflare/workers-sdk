@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import rl from "node:readline";
 import stream from "node:stream";
+import { setTimeout } from "node:timers/promises";
 import stripAnsi from "strip-ansi";
 import { fetch } from "undici";
 import {
@@ -431,6 +432,131 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				const remainingIds = getContainerIds();
 				expect(remainingIds.length).toBe(0);
 			});
+		});
+	}
+);
+
+baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
+	"container dev where image build takes a long time",
+	{ retry: 0, timeout: 90000 },
+	() => {
+		let tmpDir: string;
+		beforeAll(async () => {
+			tmpDir = fs.mkdtempSync(path.join(tmpdir(), "wrangler-container-sleep-"));
+			fs.cpSync(
+				path.resolve(__dirname, "../", "container-app"),
+				path.join(tmpDir),
+				{
+					recursive: true,
+				}
+			);
+			const tmpDockerFilePath = path.join(tmpDir, "Dockerfile");
+			fs.rmSync(tmpDockerFilePath);
+			fs.renameSync(
+				path.join(tmpDir, "DockerfileWithLongSleep"),
+				tmpDockerFilePath
+			);
+
+			const ids = getContainerIds();
+			if (ids.length > 0) {
+				execSync("docker rm -f " + ids.join(" "), {
+					encoding: "utf8",
+				});
+			}
+		});
+
+		afterEach(async () => {
+			const ids = getContainerIds();
+			if (ids.length > 0) {
+				execSync("docker rm -f " + ids.join(" "), {
+					encoding: "utf8",
+				});
+			}
+		});
+
+		afterAll(async () => {
+			try {
+				fs.rmSync(tmpDir, { recursive: true, force: true });
+			} catch (e) {
+				// It seems that Windows doesn't let us delete this, with errors like:
+				//
+				// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
+				// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+				// Serialized Error: {
+				// 	"code": "EBUSY",
+				// 	"errno": -4082,
+				// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
+				// 	"syscall": "rmdir",
+				// }
+				console.error(e);
+			}
+		});
+
+		it("should allow quitting while the image is building", async () => {
+			const wrangler = await startWranglerDev([
+				"dev",
+				"-c",
+				path.join(tmpDir, "wrangler.jsonc"),
+			]);
+
+			const waitForOptions = {
+				timeout: 10_000,
+				interval: WAITFOR_OPTIONS.interval,
+			};
+
+			// wait for long sleep instruction to start
+			await vi.waitFor(async () => {
+				expect(wrangler.stdout).toContain("RUN sleep 50000");
+			}, waitForOptions);
+
+			wrangler.pty.write("q");
+
+			await vi.waitFor(async () => {
+				expect(wrangler.stdout).toMatch(/CANCELED \[.*?\] RUN sleep 50000/);
+			}, waitForOptions);
+		});
+
+		it("should rebuilding while the image is building", async () => {
+			const wrangler = await startWranglerDev([
+				"dev",
+				"-c",
+				path.join(tmpDir, "wrangler.jsonc"),
+			]);
+
+			const waitForOptions = {
+				timeout: 15_000,
+				interval: 1_500,
+			};
+
+			// wait for long sleep instruction to start
+			await vi.waitFor(async () => {
+				expect(wrangler.stdout).toContain("RUN sleep 50000");
+			}, waitForOptions);
+
+			let logOccurrencesBefore =
+				wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
+					?.length ?? 0;
+
+			wrangler.pty.write("r");
+
+			await vi.waitFor(async () => {
+				const logOccurrences =
+					wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
+						?.length ?? 0;
+				expect(logOccurrences).toBeGreaterThan(1);
+				logOccurrencesBefore = logOccurrences;
+			}, waitForOptions);
+
+			await vi.waitFor(async () => {
+				await setTimeout(700);
+				wrangler.pty.write("r");
+				const logOccurrences =
+					wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
+						?.length ?? 0;
+				expect(logOccurrences).toBeGreaterThan(logOccurrencesBefore);
+			}, waitForOptions);
+
+			wrangler.pty.kill();
 		});
 	}
 );

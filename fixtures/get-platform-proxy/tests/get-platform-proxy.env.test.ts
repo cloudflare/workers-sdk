@@ -1,5 +1,6 @@
 import path from "path";
 import { D1Database, R2Bucket } from "@cloudflare/workers-types";
+import { toMatchImageSnapshot } from "jest-image-snapshot";
 import {
 	afterEach,
 	beforeEach,
@@ -13,6 +14,7 @@ import { getPlatformProxy } from "./shared";
 import type {
 	Fetcher,
 	Hyperdrive,
+	ImagesBinding,
 	KVNamespace,
 } from "@cloudflare/workers-types";
 import type { Unstable_DevWorker } from "wrangler";
@@ -28,6 +30,7 @@ type Env = {
 	MY_D1: D1Database;
 	MY_HYPERDRIVE: Hyperdrive;
 	ASSETS: Fetcher;
+	IMAGES: ImagesBinding;
 };
 
 const wranglerConfigFilePath = path.join(__dirname, "..", "wrangler.jsonc");
@@ -194,6 +197,43 @@ describe("getPlatformProxy - env", () => {
 				{ name: "userB" },
 				{ name: "userC" },
 			]);
+		} finally {
+			await dispose();
+		}
+	});
+
+	it("correctly obtains functioning Image bindings", async () => {
+		expect.extend({ toMatchImageSnapshot });
+
+		const { env, dispose } = await getPlatformProxy<Env>({
+			configPath: wranglerConfigFilePath,
+		});
+		try {
+			const { IMAGES } = env;
+			const streams = (
+				await fetch("https://playground.devprod.cloudflare.dev/flares.png")
+			).body!.tee();
+
+			// @ts-expect-error The stream types aren't matching up properly?
+			expect(await IMAGES.info(streams[0])).toMatchInlineSnapshot(`
+				{
+				  "fileSize": 96549,
+				  "format": "image/png",
+				  "height": 1145,
+				  "width": 2048,
+				}
+			`);
+
+			// @ts-expect-error The stream types aren't matching up properly?
+			const response = await env.IMAGES.input(streams[1])
+				.transform({ rotate: 90 })
+				.transform({ width: 128, height: 100 })
+				.transform({ blur: 20 })
+				.output({ format: "image/png" });
+
+			expect(
+				Buffer.from(await response.response().arrayBuffer())
+			).toMatchImageSnapshot();
 		} finally {
 			await dispose();
 		}

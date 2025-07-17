@@ -588,15 +588,13 @@ export async function disableR2Catalog(
 	);
 }
 
-const R2EventableOperations = [
-	"PutObject",
-	"DeleteObject",
-	"CompleteMultipartUpload",
-	"AbortMultipartUpload",
-	"CopyObject",
-	"LifecycleDeletion",
-] as const;
-export type R2EventableOperation = (typeof R2EventableOperations)[number];
+export type R2EventableOperation =
+	| "PutObject"
+	| "DeleteObject"
+	| "CompleteMultipartUpload"
+	| "AbortMultipartUpload"
+	| "CopyObject"
+	| "LifecycleDeletion";
 
 export const actionsForEventCategories: Record<
 	"object-create" | "object-delete",

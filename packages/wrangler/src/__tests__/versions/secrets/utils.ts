@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { File, FormData } from "undici";
+import { FormData } from "undici";
 import { createFetchResult, msw } from "../../helpers/msw";
 import type { WorkerMetadata } from "../../../deployment-bundle/create-worker-upload-form";
 import type { VersionDetails, WorkerVersion } from "../../../versions/secrets";
@@ -105,6 +105,7 @@ function mockGetVersionContent() {
 					"index.js"
 				);
 
+				// @ts-expect-error MSW (with types from Undici v6) and Undici v7 are not type-compatible, but this works at runtime
 				return HttpResponse.formData(formData, {
 					headers: { "cf-entrypoint": "index.js" },
 				});
@@ -149,7 +150,9 @@ export function mockPostVersion(
 					formData.get("metadata") as string
 				) as WorkerMetadata;
 
-				validate && validate(metadata, formData);
+				if (validate) {
+					validate(metadata, formData);
+				}
 
 				return HttpResponse.json(
 					createFetchResult({

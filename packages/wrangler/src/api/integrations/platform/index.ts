@@ -215,7 +215,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			services: bindings.services,
 			serviceBindings: {},
 			migrations: config.migrations,
-			imagesLocalMode: false,
+			imagesLocalMode: true,
 			tails: [],
 			containers: undefined,
 			containerBuildId: undefined,

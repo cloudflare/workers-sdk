@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
@@ -8,7 +9,6 @@ import { sync } from "command-exists";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
-import { File } from "undici";
 import { vi } from "vitest";
 import {
 	printBundleSize,
@@ -10161,7 +10161,8 @@ export default{
 				Content-Type: application/wasm
 
 				Hello wasm World!
-				------formdata-undici-0.test--"
+				------formdata-undici-0.test--
+				"
 			`);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -10252,7 +10253,8 @@ export default{
 				Content-Type: application/wasm
 
 				Hello wasm World!
-				------formdata-undici-0.test--"
+				------formdata-undici-0.test--
+				"
 			`);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -10370,7 +10372,8 @@ export default{
 				Content-Type: application/wasm
 
 				Hello wasm World!
-				------formdata-undici-0.test--"
+				------formdata-undici-0.test--
+				"
 			`);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -10461,7 +10464,8 @@ export default{
 				Content-Type: application/wasm
 
 				Hello wasm World!
-				------formdata-undici-0.test--"
+				------formdata-undici-0.test--
+				"
 			`);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -12007,29 +12011,30 @@ export default{
 
 		it("should print vendor modules correctly in table", async () => {
 			writeWranglerConfig({
-				main: "index.py",
+				main: "src/index.py",
 				compatibility_flags: ["python_workers"],
 			});
 
 			// Create main Python file
 			const mainPython =
 				"from js import Response;\ndef fetch(request):\n return Response.new('hello')";
-			await fs.promises.writeFile("index.py", mainPython);
+			await fs.promises.mkdir("src", { recursive: true });
+			await fs.promises.writeFile("src/index.py", mainPython);
 
 			// Create vendor directory and files
-			await fs.promises.mkdir("vendor", { recursive: true });
+			await fs.promises.mkdir("python_modules", { recursive: true });
 			await fs.promises.writeFile(
-				"vendor/module1.so",
+				"python_modules/module1.so",
 				"binary content for module 1"
 			);
 			await fs.promises.writeFile(
-				"vendor/module2.py",
+				"python_modules/module2.py",
 				"# Python vendor module 2\nprint('hello')"
 			);
 
 			// Create a regular Python module
 			await fs.promises.writeFile(
-				"helper.py",
+				"src/helper.py",
 				"# Helper module\ndef helper(): pass"
 			);
 

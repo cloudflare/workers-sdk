@@ -53,7 +53,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 
 		try {
 			await handle.status();
-		} catch (e) {
+		} catch {
 			throw new Error("instance.not_found");
 		}
 
