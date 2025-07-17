@@ -275,7 +275,7 @@ export async function pushCommand(
 	}
 }
 
-export async function checkImagePlatform(
+async function checkImagePlatform(
 	pathToDocker: string,
 	imageTag: string,
 	expectedPlatform: string = "linux/amd64"
