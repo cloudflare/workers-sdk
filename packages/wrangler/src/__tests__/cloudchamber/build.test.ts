@@ -246,28 +246,32 @@ describe("buildAndMaybePush", () => {
 		it("should throw error if app configured disk exceeds account limit", async () => {
 			await expect(() =>
 				ensureDiskLimits({
-					requiredSize: 333 * MiB, // 333MiB
+					requiredSizeInBytes: 333 * MiB, // 333MiB
 					account: accountBase,
-					configDiskSize: 3000 * MiB, // This exceeds the account limit of 2GB
+					configDiskInBytes: 3000 * MiB, // ie 3GB - this exceeds the account limit of 2GB
 				})
-			).rejects.toThrow("Exceeded account limits");
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Exceeded account limits: Your container is configured to use a disk size of 3146 MB. However, that exceeds the account limit of 2000MB]`
+			);
 		});
 
 		it("should throw error if image size exceeds allowed size", async () => {
 			await expect(() =>
 				ensureDiskLimits({
-					requiredSize: 3000 * MiB, // 3GiB
+					requiredSizeInBytes: 3000 * MiB, // 3GiB
 					account: accountBase,
-					configDiskSize: undefined,
+					configDiskInBytes: undefined,
 				})
-			).rejects.toThrow("Image too large");
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Image too large: needs 3146 MB, but your app is limited to images with size 2000 MB. Your account needs more disk size per instance to run this container. The default disk size is 2GB.]`
+			);
 		});
 
 		it("should not throw when disk size is within limits", async () => {
 			const result = await ensureDiskLimits({
-				requiredSize: 256 * MiB, // 256MiB
+				requiredSizeInBytes: 256 * MiB, // 256MiB
 				account: accountBase,
-				configDiskSize: undefined,
+				configDiskInBytes: undefined,
 			});
 
 			expect(result).toEqual(undefined);

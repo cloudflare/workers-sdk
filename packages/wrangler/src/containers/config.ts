@@ -61,10 +61,12 @@ export const getNormalizedContainerOptions = async (
 			container.configuration?.vcpu !== undefined ||
 			container.configuration?.memory_mib !== undefined
 		) {
+			const MB = 1000 * 1000;
+			// if an individual limit is not set, default to the dev values
 			instanceTypeOrDisk = {
-				disk_mb: container.configuration.disk?.size_mb,
-				vcpu: container.configuration?.vcpu,
-				memory_mib: container.configuration?.memory_mib,
+				disk_bytes: (container.configuration.disk?.size_mb ?? 2000) * MB, // defaults to 2GB in bytes
+				vcpu: container.configuration?.vcpu ?? 0.0625,
+				memory_mib: container.configuration?.memory_mib ?? 256,
 			};
 		} else {
 			instanceTypeOrDisk = {

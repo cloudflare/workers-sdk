@@ -2435,7 +2435,7 @@ function validateContainerApp(
 					`"containers.configuration" is deprecated. Use top level "containers" fields instead. "configuration.image" should be "image", "configuration.disk" should be set via "instance_type".`
 				);
 				if (
-					typeof containerAppOptional !== "object" ||
+					typeof containerAppOptional.configuration !== "object" ||
 					Array.isArray(containerAppOptional.configuration)
 				) {
 					diagnostics.errors.push(

@@ -78,7 +78,7 @@ export async function buildAndMaybePush(
 	args: BuildArgs,
 	pathToDocker: string,
 	push: boolean,
-	configDiskSize: number | undefined
+	configDiskInBytes: number | undefined
 ): Promise<{ image: string; pushed: boolean }> {
 	try {
 		const imageTag = `${getCloudflareContainerRegistry()}/${args.tag}`;
@@ -116,11 +116,11 @@ export async function buildAndMaybePush(
 
 			// 16MiB is the layer size adjustments we use in devmapper
 			const MiB = 1024 * 1024;
-			const requiredSize = Math.ceil(size * 1.1 + layers * 16 * MiB);
+			const requiredSizeInBytes = Math.ceil(size * 1.1 + layers * 16 * MiB);
 			await ensureDiskLimits({
-				requiredSize,
+				requiredSizeInBytes,
 				account,
-				configDiskSize,
+				configDiskInBytes,
 			});
 
 			await dockerLoginManagedRegistry(pathToDocker);
@@ -168,6 +168,7 @@ export async function buildAndMaybePush(
 				);
 				const remoteDigest = `${resolvedImage}@${hash}`;
 
+				// if errors, means it doesn't exist remotely
 				await runDockerCmd(
 					pathToDocker,
 					["manifest", "inspect", remoteDigest],
@@ -264,28 +265,30 @@ export async function pushCommand(
 }
 
 export async function ensureDiskLimits(options: {
-	requiredSize: number;
+	requiredSizeInBytes: number;
 	account: CompleteAccountCustomer;
-	configDiskSize: number | undefined;
+	configDiskInBytes: number | undefined;
 }): Promise<void> {
 	const MB = 1000 * 1000;
-	const MiB = 1024 * 1024;
 	const accountDiskSize =
 		(options.account.limits.disk_mb_per_deployment ?? 2000) * MB;
 	// if appDiskSize is defined and configured to be more than the accountDiskSize, error
-	if (options.configDiskSize && options.configDiskSize > accountDiskSize) {
+	if (
+		options.configDiskInBytes &&
+		options.configDiskInBytes > accountDiskSize
+	) {
 		throw new UserError(
-			`Exceeded account limits: Your container is configured to use a disk size of ${options.configDiskSize / MB} MB. However, that exceeds the account limit of ${accountDiskSize / MB}`
+			`Exceeded account limits: Your container is configured to use a disk size of ${Math.ceil(options.configDiskInBytes / MB)} MB. However, that exceeds the account limit of ${accountDiskSize / MB}MB`
 		);
 	}
-	const maxAllowedImageSizeBytes = options.configDiskSize ?? accountDiskSize;
+	const maxAllowedImageSizeBytes = options.configDiskInBytes ?? accountDiskSize;
 
 	logger.debug(
-		`Disk size limits when building the container: appDiskSize:${options.configDiskSize}, accountDiskSize:${accountDiskSize}, maxAllowedImageSizeBytes=${maxAllowedImageSizeBytes}(${maxAllowedImageSizeBytes / MB} MB), requiredSized=${options.requiredSize}(${Math.ceil(options.requiredSize / MiB)}MiB)`
+		`Disk size limits when building the container: appDiskSize: ${options.configDiskInBytes ? Math.ceil(options.configDiskInBytes / MB) : "n/a"}, accountDiskSize:${accountDiskSize}, maxAllowedImageSizeBytes=${maxAllowedImageSizeBytes}(${maxAllowedImageSizeBytes / MB} MB), requiredSize=${options.requiredSizeInBytes}(${Math.ceil(options.requiredSizeInBytes / MB)}MB)`
 	);
-	if (maxAllowedImageSizeBytes < options.requiredSize) {
+	if (maxAllowedImageSizeBytes < options.requiredSizeInBytes) {
 		throw new UserError(
-			`Image too large: needs ${Math.ceil(options.requiredSize / MB)} MB, but your app is limited to images with size ${maxAllowedImageSizeBytes / MB} MB. Your account needs more disk size per instance to run this container. The default disk size is 2GB.`
+			`Image too large: needs ${Math.ceil(options.requiredSizeInBytes / MB)} MB, but your app is limited to images with size ${maxAllowedImageSizeBytes / MB} MB. Your account needs more disk size per instance to run this container. The default disk size is 2GB.`
 		);
 	}
 }

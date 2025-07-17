@@ -202,7 +202,7 @@ function containerConfigToAPIConfig(
 			...("instance_type" in containerApp
 				? { instance_type: containerApp.instance_type }
 				: {
-						disk: { size_mb: containerApp.disk_mb },
+						disk: { size_mb: containerApp.disk_bytes },
 						memory_mib: containerApp.memory_mib,
 						vcpu: containerApp.vcpu,
 					}),

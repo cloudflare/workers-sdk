@@ -37,7 +37,8 @@ export type RegistryLinkConfig = SharedContainerConfig & {
 export type InstanceTypeOrLimits =
 	| {
 			/** if undefined in config, defaults to instance_type */
-			disk_mb?: number;
+			/** disk size is defined in config in mb but normalised here to bytes */
+			disk_bytes?: number;
 			vcpu?: number;
 			memory_mib?: number;
 	  }
