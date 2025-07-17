@@ -250,7 +250,7 @@ export const CoreSharedOptionsSchema = z.object({
 
 	// Whether to get structured logs from workerd or not (default to `false`)
 	// This option is useful in combination with a custom handleRuntimeStdio.
-	structuredWorkerdLogs: z.boolean().optional(),
+	structuredWorkerdLogs: z.boolean().default(false),
 });
 
 export const CORE_PLUGIN_NAME = "core";
