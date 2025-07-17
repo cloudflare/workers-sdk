@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { expect, test, vi } from "vitest";
 import {
 	getTextResponse,
+	isBuild,
 	rootDir,
 	serverLogs,
 	viteTestUrl,
@@ -28,12 +29,15 @@ test("does not cause unhandled rejection", async () => {
 	expect(serverLogs.errors.join()).not.toContain("__unhandled rejection__");
 });
 
-test("updates using HMR code in Worker entry file", async () => {
-	const workerEntryPath = path.join(rootDir, "src", "index.ts");
-	const originalContent = fs.readFileSync(workerEntryPath, "utf-8");
-	fs.writeFileSync(workerEntryPath, originalContent);
+test.runIf(!isBuild)(
+	"updates using HMR code in Worker entry file",
+	async () => {
+		const workerEntryPath = path.join(rootDir, "src", "index.ts");
+		const originalContent = fs.readFileSync(workerEntryPath, "utf-8");
+		fs.writeFileSync(workerEntryPath, originalContent);
 
-	await vi.waitFor(() => {
-		expect(serverLogs.info.join()).toContain("[vite] hot updated");
-	});
-});
+		await vi.waitFor(() => {
+			expect(serverLogs.info.join()).toContain("[vite] hot updated");
+		});
+	}
+);
