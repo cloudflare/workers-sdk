@@ -270,7 +270,7 @@ function shouldBlockContentType(response: Response): boolean {
 
 	// Allow only
 	// - images (`image/...`)
-	// - plain text (`text/plain`, `text/plain;charset=UTF-8`)
+	// - plain text (`text/plain`, `text/plain;charset=UTF-8`), used by Next errors
 	return !(
 		contentType.startsWith("image/") ||
 		contentType.split(";")[0] === "text/plain"
