@@ -456,13 +456,13 @@ describe("wrangler deploy with containers", () => {
 				containers: [
 					{
 						name: "my-container-a",
-						instances: 10,
+						max_instances: 10,
 						class_name: "ExampleDurableObjectA",
 						image: "./DockerfileA",
 					},
 					{
 						name: "my-container-b",
-						instances: 10,
+						max_instances: 10,
 						class_name: "ExampleDurableObjectB",
 						image: "./DockerfileB",
 					},
