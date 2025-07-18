@@ -160,6 +160,8 @@ export function createCloudflareEnvironmentOptions(
 			ssr: true,
 			rollupOptions: {
 				input: workerConfig.main,
+				// rolldown-only option
+				...("rolldownVersion" in vite ? ({ platform: "neutral" } as any) : {}),
 			},
 		},
 		optimizeDeps: {
