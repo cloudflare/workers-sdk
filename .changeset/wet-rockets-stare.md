@@ -1,7 +1,7 @@
 ---
-"@cloudflare/vite-plugin": minor
-"@cloudflare/containers-shared": minor
-"wrangler": minor
+"@cloudflare/vite-plugin": patch
+"@cloudflare/containers-shared": patch
+"wrangler": patch
 ---
 
 feat(vite-plugin): Add containers support in `vite dev`
