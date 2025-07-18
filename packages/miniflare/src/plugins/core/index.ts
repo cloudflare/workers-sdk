@@ -245,6 +245,10 @@ export const CoreSharedOptionsSchema = z.object({
 	// Path to the root directory for persisting data
 	// Used as the default for all plugins with the plugin name as the subdirectory name
 	defaultPersistRoot: z.string().optional(),
+
+	// Whether to get structured logs from workerd or not (default to `false`)
+	// This option is useful in combination with a custom handleRuntimeStdio.
+	structuredWorkerdLogs: z.boolean().optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";
