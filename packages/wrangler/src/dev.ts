@@ -7,13 +7,8 @@ import { bold, green } from "@cloudflare/cli/colors";
 import { isWebContainer } from "@webcontainer/env";
 import dedent from "ts-dedent";
 import { DevEnv } from "./api";
-import { BundlerController } from "./api/startDevWorker/BundlerController";
-import { ConfigController } from "./api/startDevWorker/ConfigController";
-import { LocalRuntimeController } from "./api/startDevWorker/LocalRuntimeController";
 import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
-import { ProxyController } from "./api/startDevWorker/ProxyController";
-import { RemoteRuntimeController } from "./api/startDevWorker/RemoteRuntimeController";
 import {
 	convertCfWorkerInitBindingsToBindings,
 	extractBindingsOfType,
