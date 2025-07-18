@@ -129,7 +129,6 @@ export class ProxyWorker implements DurableObject {
 				request.url
 			);
 			headers.set("MF-Original-URL", innerUrl.href);
-			headers.set("MF-Disable-Pretty-Error", "true"); // disables the UserWorker miniflare instance from rendering the pretty error -- instead the ProxyWorker miniflare instance will intercept the json error response and render the pretty error page
 
 			// Preserve client `Accept-Encoding`, rather than using Worker's default
 			// of `Accept-Encoding: br, gzip`

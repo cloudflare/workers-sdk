@@ -86,7 +86,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			https: this.latestConfig.dev?.server?.secure,
 			httpsCert: cert?.cert,
 			httpsKey: cert?.key,
-
+			stripDisablePrettyError: false,
 			workers: [
 				{
 					name: "ProxyWorker",
