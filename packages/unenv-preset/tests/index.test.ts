@@ -1,21 +1,10 @@
 import path from "node:path";
 import { platform } from "node:process";
-import { fileURLToPath } from "node:url";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import workerdPath from "workerd";
 import { runWranglerDev } from "../../../fixtures/shared/src/run-wrangler-long-lived";
 import { TESTS } from "./worker/index";
-
-// Root of the current package
-const pkgDir = path.resolve(fileURLToPath(import.meta.url), "../..");
-// Base path for resolving `@cloudflare/unenv-preset` files
-const localPresetResolveBaseDir = path.join(pkgDir, "package.json");
-// Base path for resolving `unjs/unenv` files
-const localUnenvResolveBaseDir = path.join(
-	pkgDir,
-	"node_modules/unenv/package.json"
-);
 
 describe(`@cloudflare/unenv-preset ${platform} ${workerdPath}`, () => {
 	let wrangler: Awaited<ReturnType<typeof runWranglerDev>> | undefined;

@@ -82,8 +82,6 @@ export default {
 				});
 			}
 
-			const maybeSecondRequest = request.clone();
-
 			const routeToUserWorker = async ({
 				asset,
 			}: {
@@ -96,7 +94,7 @@ export default {
 				}
 				if (eyeballConfig.limitedAssetsOnly) {
 					analytics.setData({ userWorkerFreeTierLimiting: true });
-					return new Response(renderLimitedResponse(maybeSecondRequest), {
+					return new Response(renderLimitedResponse(request), {
 						status: 429,
 						headers: {
 							"Content-Type": "text/html",
@@ -112,18 +110,18 @@ export default {
 						dispatchType: DISPATCH_TYPE.WORKER,
 					});
 
-					let shouldBlockNonImageResponse = false;
+					let shouldCheckContentType = false;
 					if (url.pathname.endsWith("/_next/image")) {
 						// is a next image
 						const queryURLParam = url.searchParams.get("url");
 						if (queryURLParam && !queryURLParam.startsWith("/")) {
 							// that's a remote resource
 							if (
-								maybeSecondRequest.method !== "GET" ||
-								maybeSecondRequest.headers.get("sec-fetch-dest") !== "image"
+								request.method !== "GET" ||
+								request.headers.get("sec-fetch-dest") !== "image"
 							) {
 								// that was not loaded via a browser's <img> tag
-								shouldBlockNonImageResponse = true;
+								shouldCheckContentType = true;
 								analytics.setData({ abuseMitigationURLHost: queryURLParam });
 							}
 							// otherwise, we're good
@@ -134,26 +132,16 @@ export default {
 						timeToDispatch: performance.now() - startTimeMs,
 					});
 
-					if (shouldBlockNonImageResponse) {
-						const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
+					if (shouldCheckContentType) {
+						const response = await env.USER_WORKER.fetch(request);
 
-						const contentType = resp.headers.get("content-type") || "";
-
-						// Allow:
-						// - images
-						// - text/plain - used by Next errors
-						const isImageOrPlainText =
-							contentType.startsWith("image/") ||
-							// Matches "text/plain", "text/plain;charset=UTF-8"
-							contentType.split(";")[0] === "text/plain";
-
-						if (!isImageOrPlainText && resp.status !== 304) {
+						if (response.status !== 304 && shouldBlockContentType(response)) {
 							analytics.setData({ abuseMitigationBlocked: true });
 							return new Response("Blocked", { status: 403 });
 						}
-						return resp;
+						return response;
 					}
-					return env.USER_WORKER.fetch(maybeSecondRequest);
+					return env.USER_WORKER.fetch(request);
 				});
 			};
 
@@ -173,7 +161,7 @@ export default {
 					analytics.setData({
 						timeToDispatch: performance.now() - startTimeMs,
 					});
-					return env.ASSET_WORKER.fetch(maybeSecondRequest);
+					return env.ASSET_WORKER.fetch(request);
 				});
 			};
 
@@ -228,7 +216,13 @@ export default {
 			}
 
 			// If we have a user-Worker, but no assets, dispatch to Worker script
-			const assetsExist = await env.ASSET_WORKER.unstable_canFetch(request);
+			// Do not pass the original request as it would consume the body
+			const assetsExist = await env.ASSET_WORKER.unstable_canFetch(
+				new Request(request.url, {
+					headers: request.headers,
+					method: request.method,
+				})
+			);
 			if (config.has_user_worker && !assetsExist) {
 				return await routeToUserWorker({ asset: "none" });
 			}
@@ -255,3 +249,34 @@ export default {
 		}
 	},
 };
+
+/**
+ * Check if the Content Type is allowed for the the `_next/image` endpoint.
+ *
+ * - Content Type with multiple values should be blocked
+ * - Only Image and Plain Text types are not blocked
+ *
+ * @param contentType The value of the Content Type header (`null` if no set)
+ * @returns Whether the Content Type should be blocked
+ */
+function shouldBlockContentType(response: Response): boolean {
+	const contentType = response.headers.get("content-type");
+
+	if (contentType === null) {
+		return true;
+	}
+
+	// Block responses with multiple Content Types.
+	// https://httpwg.org/specs/rfc9110.html#field.content-type
+	if (contentType.includes(",")) {
+		return true;
+	}
+
+	// Allow only
+	// - images (`image/...`)
+	// - plain text (`text/plain`, `text/plain;charset=UTF-8`), used by Next errors
+	return !(
+		contentType.startsWith("image/") ||
+		contentType.split(";")[0] === "text/plain"
+	);
+}
