@@ -11,7 +11,6 @@ export function getNodeJSCompatPlugins({
 	mode,
 }: {
 	mode: NodeJSCompatMode;
-	unenvResolvePaths?: string[];
 }): Plugin[] {
 	switch (mode) {
 		case "als":
