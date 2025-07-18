@@ -19,13 +19,14 @@ export function* dumpSql(
 	// Taken from SQLite shell.c.in https://github.com/sqlite/sqlite/blob/105c20648e1b05839fd0638686b95f2e3998abcb/src/shell.c.in#L8463-L8469
 	// @ts-ignore (SqlStorageStatement needs to be callable)
 	const tables_cursor = db.prepare(`
-    SELECT name, type, sql 
-      FROM sqlite_schema AS o 
-    WHERE (true) AND type=='table' 
-      AND sql NOT NULL 
+    SELECT name, type, sql
+      FROM sqlite_schema AS o
+    WHERE (true) AND type=='table'
+      AND sql NOT NULL
     ORDER BY tbl_name='sqlite_sequence', rowid;
   `)();
-	const tables: any[] = Array.from(tables_cursor);
+	const tables: { name: string; type: string; sql: string }[] =
+		Array.from(tables_cursor);
 
 	for (const { name: table, sql } of tables) {
 		if (filterTables.size > 0 && !filterTables.has(table)) continue;
@@ -54,10 +55,18 @@ export function* dumpSql(
 		}
 
 		if (noData) continue;
-		const columns_cursor = db.exec(`PRAGMA table_info="${table}"`);
-		const columns = Array.from(columns_cursor);
-		const select = `SELECT ${columns.map((c) => c.name).join(", ")}
-                            FROM "${table}";`;
+		const columns_cursor = db.exec(`PRAGMA table_info=${escapeId(table)}`);
+
+		const columns = Array.from(columns_cursor) as {
+			cid: string;
+			name: string;
+			type: string;
+			notnull: number;
+			dflt_val: string | null;
+			pk: number;
+		}[];
+
+		const select = `SELECT ${columns.map((c) => escapeId(c.name)).join(", ")} FROM ${escapeId(table)};`;
 		const rows_cursor = db.exec(select);
 		for (const dataRow of rows_cursor.raw()) {
 			const formattedCells = dataRow.map((cell: unknown, i: number) => {
@@ -65,9 +74,9 @@ export function* dumpSql(
 				const cellType = typeof cell;
 				if (cell === null) {
 					return "NULL";
-				} else if (colType === "INTEGER" || cellType === "number") {
+				} else if (cellType === "number") {
 					return cell;
-				} else if (colType === "TEXT" || cellType === "string") {
+				} else if (cellType === "string") {
 					return outputQuotedEscapedString(cell);
 				} else if (cell instanceof ArrayBuffer) {
 					return `X'${Array.prototype.map
@@ -79,7 +88,7 @@ export function* dumpSql(
 				}
 			});
 
-			yield `INSERT INTO ${sqliteQuote(table)} VALUES(${formattedCells.join(",")});`;
+			yield `INSERT INTO ${escapeId(table)} VALUES(${formattedCells.join(",")});`;
 		}
 	}
 
@@ -136,6 +145,15 @@ export function sqliteQuote(token: string) {
 		SQLITE_KEYWORDS.has(token.toUpperCase())
 		? `"${token}"`
 		: token;
+}
+
+/**
+ * Escape an identifier for use in SQL statements.
+ * @param id - The identifier to escape.
+ * @returns
+ */
+function escapeId(id: string) {
+	return `"${id.replace(/"/g, '""')}"`;
 }
 
 // List taken from `aKeywordTable` inhttps://github.com/sqlite/sqlite/blob/378bf82e2bc09734b8c5869f9b148efe37d29527/tool/mkkeywordhash.c#L172
