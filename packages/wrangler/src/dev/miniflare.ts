@@ -833,7 +833,11 @@ export function buildMiniflareBindingOptions(
 
 	if (bindings.mtls_certificates && remoteBindingsEnabled) {
 		for (const mtls of bindings.mtls_certificates) {
-			warnOrError("ai", mtls.experimental_remote, "always-remote");
+			warnOrError(
+				"mtls_certificates",
+				mtls.experimental_remote,
+				"always-remote"
+			);
 		}
 	}
 
