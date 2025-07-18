@@ -1005,7 +1005,10 @@ export function getBindings(
 				// same copy-on-write TODO
 				if (!preview_bucket_name && !local) {
 					throw new UserError(
-						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your ${configFileName(configParam.configPath)} file`
+						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your ${configFileName(configParam.configPath)} file`,
+						{
+							telemetryMessage: "no preview r2 bucket configured in remote dev",
+						}
 					);
 				}
 				return {
@@ -1040,7 +1043,8 @@ export function getBindings(
 			hyperdrive.localConnectionString === undefined
 		) {
 			throw new UserError(
-				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
+				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`,
+				{ telemetryMessage: "no local hyperdrive connection string" }
 			);
 		}
 
