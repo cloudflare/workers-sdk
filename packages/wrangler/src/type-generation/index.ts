@@ -412,10 +412,8 @@ export async function generateEnvTypes(
 
 			if (importPath && exportExists) {
 				typeName = `DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`;
-			} else if (durableObject.script_name) {
-				typeName = `DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`;
 			} else {
-				typeName = `DurableObjectNamespace /* ${durableObject.class_name} */`;
+				typeName = `DurableObjectNamespace<${durableObject.class_name}>`;
 			}
 
 			envTypeStructure.push([constructTypeKey(durableObject.name), typeName]);
