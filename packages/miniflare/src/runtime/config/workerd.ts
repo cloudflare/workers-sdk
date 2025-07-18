@@ -113,6 +113,7 @@ export type Worker_Binding = {
 	| { analyticsEngine?: ServiceDesignator }
 	| { hyperdrive?: Worker_Binding_Hyperdrive }
 	| { unsafeEval?: Void }
+	| { workerLoader?: Worker_Binding_WorkerLoader }
 );
 
 export interface Worker_Binding_Parameter {
@@ -169,6 +170,10 @@ export interface Worker_Binding_Hyperdrive {
 	user?: string;
 	password?: string;
 	scheme?: string;
+}
+
+export interface Worker_Binding_WorkerLoader {
+	id?: string;
 }
 
 export interface Worker_Binding_MemoryCache {
