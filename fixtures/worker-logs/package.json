@@ -1,0 +1,22 @@
+{
+	"name": "@fixture/worker-logs",
+	"private": true,
+	"scripts": {
+		"check:type": "tsc",
+		"dev": "pnpm dev.module",
+		"dev.module": "wrangler dev -c wrangler.module.jsonc",
+		"dev.service": "wrangler dev -c wrangler.service.jsonc",
+		"start": "pnpm dev.module",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:^",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
