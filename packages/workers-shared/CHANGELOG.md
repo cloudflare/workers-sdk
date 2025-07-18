@@ -1,5 +1,13 @@
 # @cloudflare/workers-shared
 
+## 0.18.5
+
+### Patch Changes
+
+- [#10007](https://github.com/cloudflare/workers-sdk/pull/10007) [`d82c8e8`](https://github.com/cloudflare/workers-sdk/commit/d82c8e807d4f22cafe9ae3e9db5477ebe35c819b) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Bugfix: Removes unnecessary cloning of the request. This is no longer needed. We were also seeing failures in runtime for large files due to this.
+
+- [#10008](https://github.com/cloudflare/workers-sdk/pull/10008) [`ca00d74`](https://github.com/cloudflare/workers-sdk/commit/ca00d741fbf4729785fbc5ec28110c873ee231dd) Thanks [@vicb](https://github.com/vicb)! - block responses with multiple Content Type values
+
 ## 0.18.4
 
 ### Patch Changes

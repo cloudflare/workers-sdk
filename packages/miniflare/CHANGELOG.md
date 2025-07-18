@@ -1,5 +1,14 @@
 # miniflare
 
+## 4.20250712.1
+
+### Patch Changes
+
+- [#9866](https://github.com/cloudflare/workers-sdk/pull/9866) [`7e5585d`](https://github.com/cloudflare/workers-sdk/commit/7e5585dbf844fda0e1688797ce31c7e634f3f4ba) Thanks [@invisal](https://github.com/invisal)! - Fix D1 SQL dump generation: escape identifiers and handle SQLite's dynamic typing
+
+  Escape column and table names to prevent SQL syntax errors.
+  Escape values based on their runtime type to support SQLite's flexible typing.
+
 ## 4.20250712.0
 
 ### Minor Changes
