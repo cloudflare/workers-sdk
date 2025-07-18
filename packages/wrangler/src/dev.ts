@@ -689,12 +689,7 @@ export async function startDev(args: StartDevOptions) {
 				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
 			}
 		} else {
-			devEnv = new DevEnv({
-				config: new ConfigController(),
-				bundler: new BundlerController(),
-				runtimes: [new RemoteRuntimeController(), new LocalRuntimeController()],
-				proxy: new ProxyController(),
-			});
+			devEnv = new DevEnv();
 
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
 			void devEnv.proxy.ready.promise.then(({ url }) => {

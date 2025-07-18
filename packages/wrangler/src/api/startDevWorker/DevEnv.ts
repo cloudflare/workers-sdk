@@ -102,22 +102,16 @@ export class DevEnv extends EventEmitter {
 	 */
 	private async resolveAllRuntimeControllersReady(): Promise<void> {
 		await Promise.all(
-			this.runtimes
-				.filter(
-					(runtime) =>
-						runtime instanceof RemoteRuntimeController ||
-						runtime instanceof LocalRuntimeController
-				)
-				.map((runtime) => {
-					return new Promise<void>((resolve) => {
-						// A runtime controller is ready when it either emits the
-						// reloadComplete event (meaning that the runtime is in use and
-						// ready) or when it emits the teardown event (meaning that the
-						// runtime is not currently in use)
-						runtime.once("reloadComplete", () => resolve());
-						runtime.once("teardown", () => resolve());
-					});
-				})
+			this.runtimes.map((runtime) => {
+				return new Promise<void>((resolve) => {
+					// A runtime controller is ready when it either emits the
+					// reloadComplete event (meaning that the runtime is in use and
+					// ready) or when it emits the teardown event (meaning that the
+					// runtime is not currently in use)
+					runtime.once("reloadComplete", () => resolve());
+					runtime.once("teardown", () => resolve());
+				});
+			})
 		);
 
 		this.proxy.localServerReady.resolve();
