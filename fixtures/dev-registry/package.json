@@ -6,6 +6,7 @@
 		"check:types": "tsc --build",
 		"test": "vitest",
 		"test:ci": "vitest run",
+		"types": "wrangler types -c ./wrangler.module-worker.jsonc -c ./wrangler.worker-entrypoint-a.jsonc",
 		"vite": "vite dev",
 		"wrangler": "wrangler dev"
 	},
