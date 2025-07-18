@@ -62,6 +62,8 @@ export function buildYargs(yargs: CommonYargsArgv) {
 			describe:
 				"Platform to build for. Defaults to the architecture support by Workers (linux/amd64)",
 			demandOption: false,
+			hidden: true,
+			deprecated: true,
 		});
 }
 
