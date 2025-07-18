@@ -145,12 +145,12 @@ describe("containers apply", () => {
 			│   max_instances = 2
 			│   scheduling_policy = \\"default\\"
 			│
-			│   [containers.configuration]
-			│   image = \\"docker.io/hello:hi\\"
-			│   instance_type = \\"dev\\"
+			│     [containers.configuration]
+			│     image = \\"docker.io/hello:hi\\"
+			│     instance_type = \\"dev\\"
 			│
-			│   [containers.constraints]
-			│   tier = 1
+			│     [containers.constraints]
+			│     tier = 1
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -206,10 +206,15 @@ describe("containers apply", () => {
 			│ - max_instances = 3
 			│ + max_instances = 2
 			│   name = \\"my-container-app\\"
+			│   scheduling_policy = \\"default\\"
 			│
-			│   [containers.constraints]
-			│ - tier = 3
-			│ + tier = 1
+			│   ...
+			│
+			│     instance_type = \\"dev\\"
+			│
+			│     [containers.constraints]
+			│ -   tier = 3
+			│ +   tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -289,6 +294,7 @@ describe("containers apply", () => {
 			│ - max_instances = 4
 			│ + max_instances = 3
 			│   name = \\"my-container-app\\"
+			│   scheduling_policy = \\"default\\"
 			│
 			├ NEW my-container-app-2
 			│
@@ -297,16 +303,15 @@ describe("containers apply", () => {
 			│   max_instances = 3
 			│   scheduling_policy = \\"default\\"
 			│
-			│   [containers.configuration]
-			│   image = \\"docker.io/hello:hi\\"
-			│   instance_type = \\"dev\\"
+			│     [containers.configuration]
+			│     image = \\"docker.io/hello:hi\\"
+			│     instance_type = \\"dev\\"
 			│
-			│   [containers.constraints]
-			│   tier = 1
+			│     [containers.constraints]
+			│     tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
-			│
 			│
 			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│
@@ -379,6 +384,8 @@ describe("containers apply", () => {
 			│ - instances = 3
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
+			│   scheduling_policy = \\"default\\"
+			│
 			│ Skipping application rollout
 			│
 			├ NEW my-container-app-2
@@ -388,12 +395,12 @@ describe("containers apply", () => {
 			│   instances = 1
 			│   scheduling_policy = \\"default\\"
 			│
-			│   [containers.configuration]
-			│   image = \\"docker.io/other:app\\"
-			│   instance_type = \\"dev\\"
+			│     [containers.configuration]
+			│     image = \\"docker.io/other:app\\"
+			│     instance_type = \\"dev\\"
 			│
-			│   [containers.constraints]
-			│   tier = 1
+			│     [containers.constraints]
+			│     tier = 1
 			│
 			│
 			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
@@ -415,7 +422,7 @@ describe("containers apply", () => {
 					name: "my-container-app",
 					instances: 4,
 					class_name: "DurableObjectClass",
-					configuration: { age: "docker.io/hello:hi" },
+					configuration: { image: "docker.io/hello:hi" },
 				},
 				{
 					name: "my-container-app-2",
@@ -467,14 +474,7 @@ describe("containers apply", () => {
 			│ - instances = 3
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
-			│
-			│   [containers.configuration]
-			│   ...
-			│   instance_type = \\"dev\\"
-			│ + age = \\"docker.io/hello:hi\\"
-			│
-			│   [containers.constraints]
-			│   ...
+			│   scheduling_policy = \\"default\\"
 			│
 			├ NEW my-container-app-2
 			│
@@ -483,16 +483,15 @@ describe("containers apply", () => {
 			│   instances = 1
 			│   scheduling_policy = \\"default\\"
 			│
-			│   [containers.configuration]
-			│   image = \\"docker.io/other:app\\"
-			│   instance_type = \\"dev\\"
+			│     [containers.configuration]
+			│     image = \\"docker.io/other:app\\"
+			│     instance_type = \\"dev\\"
 			│
-			│   [containers.constraints]
-			│   tier = 1
+			│     [containers.constraints]
+			│     tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
-			│
 			│
 			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│
@@ -1016,15 +1015,15 @@ describe("containers apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   [containers.configuration]
-			│   ...
-			│   instance_type = \\"dev\\"
+			│     image = \\"docker.io/hello:hi\\"
+			│     instance_type = \\"dev\\"
 			│
 			│ + [containers.configuration.observability.logs]
 			│ + enabled = true
-			│
-			│   [containers.constraints]
-			│   ...
+			│ +
+			│ +
+			│     [containers.constraints]
+			│     tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1090,15 +1089,15 @@ describe("containers apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   [containers.configuration]
-			│   ...
-			│   instance_type = \\"dev\\"
+			│     image = \\"docker.io/hello:hi\\"
+			│     instance_type = \\"dev\\"
 			│
 			│ + [containers.configuration.observability.logs]
 			│ + enabled = true
-			│
-			│   [containers.constraints]
-			│   ...
+			│ +
+			│ +
+			│     [containers.constraints]
+			│     tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1169,12 +1168,14 @@ describe("containers apply", () => {
 			│
 			├ EDIT my-container-app
 			│
+			│     instance_type = \\"dev\\"
+			│
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
 			│
-			│   [containers.constraints]
-			│   ...
+			│     [containers.constraints]
+			│     tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1245,12 +1246,14 @@ describe("containers apply", () => {
 			│
 			├ EDIT my-container-app
 			│
+			│     instance_type = \\"dev\\"
+			│
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
 			│
-			│   [containers.constraints]
-			│   ...
+			│     [containers.constraints]
+			│     tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1320,12 +1323,14 @@ describe("containers apply", () => {
 			│
 			├ EDIT my-container-app
 			│
+			│     instance_type = \\"dev\\"
+			│
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
 			│
-			│   [containers.constraints]
-			│   ...
+			│     [containers.constraints]
+			│     tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1398,12 +1403,14 @@ describe("containers apply", () => {
 			│
 			├ EDIT my-container-app
 			│
+			│     instance_type = \\"dev\\"
+			│
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
 			│
-			│   [containers.constraints]
-			│   ...
+			│     [containers.constraints]
+			│     tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1639,11 +1646,11 @@ describe("containers apply", () => {
 			│   instances = 3
 			│   scheduling_policy = \\"default\\"
 			│
-			│   [containers.constraints]
-			│   tier = 2
+			│     [containers.constraints]
+			│     tier = 2
 			│
-			│   [containers.configuration]
-			│   instance_type = \\"dev\\"
+			│     [containers.configuration]
+			│     instance_type = \\"dev\\"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -1713,16 +1720,16 @@ describe("containers apply", () => {
 			│ - instances = 3
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
+			│   scheduling_policy = \\"regional\\"
 			│
-			│   [containers.configuration]
-			│   image = \\"docker.io/hello:hi\\"
-			│ - instance_type = \\"dev\\"
-			│ + instance_type = \\"standard\\"
+			│     [containers.configuration]
+			│     image = \\"docker.io/hello:hi\\"
+			│ -   instance_type = \\"dev\\"
+			│ +   instance_type = \\"standard\\"
 			│
-			│   [containers.constraints]
-			│   ...
-			│ - tier = 3
-			│ + tier = 2
+			│     [containers.constraints]
+			│ -   tier = 3
+			│ +   tier = 2
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1793,16 +1800,16 @@ describe("containers apply", () => {
 			│ - instances = 3
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
+			│   scheduling_policy = \\"regional\\"
 			│
-			│   [containers.configuration]
-			│   image = \\"docker.io/hello:hi\\"
-			│ - instance_type = \\"basic\\"
-			│ + instance_type = \\"dev\\"
+			│     [containers.configuration]
+			│     image = \\"docker.io/hello:hi\\"
+			│ -   instance_type = \\"basic\\"
+			│ +   instance_type = \\"dev\\"
 			│
-			│   [containers.constraints]
-			│   ...
-			│ - tier = 3
-			│ + tier = 2
+			│     [containers.constraints]
+			│ -   tier = 3
+			│ +   tier = 2
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1862,12 +1869,12 @@ describe("containers apply", () => {
 			│   instances = 3
 			│   scheduling_policy = \\"default\\"
 			│
-			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
-			│   instance_type = \\"dev\\"
+			│     [containers.configuration]
+			│     image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
+			│     instance_type = \\"dev\\"
 			│
-			│   [containers.constraints]
-			│   tier = 2
+			│     [containers.constraints]
+			│     tier = 2
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -1935,15 +1942,14 @@ describe("containers apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   [containers.configuration]
-			│   image = \\"${registry}/some-account-id/hello:1.0\\"
-			│ - instance_type = \\"dev\\"
-			│ + instance_type = \\"standard\\"
+			│     [containers.configuration]
+			│     image = \\"${registry}/some-account-id/hello:1.0\\"
+			│ -   instance_type = \\"dev\\"
+			│ +   instance_type = \\"standard\\"
 			│
-			│   [containers.constraints]
-			│   ...
-			│ - tier = 3
-			│ + tier = 2
+			│     [containers.constraints]
+			│ -   tier = 3
+			│ +   tier = 2
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1955,5 +1961,114 @@ describe("containers apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		const app = await applicationReqBodyPromise;
 		expect(app.configuration?.instance_type).toEqual("standard");
+	});
+
+	it("formats JSONC diffs properly", async () => {
+		setIsTTY(false);
+		const wranglerConfig = {
+			configPath: "wrangler.jsonc",
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					class_name: "ContainerA",
+					max_instances: 10,
+					image: "https://registry.cloudflare.com/hello-world:1.0",
+					instance_type: "standard",
+				},
+				{
+					name: "my-container-app-2",
+					class_name: "ContainerB",
+					instances: 4,
+					image: "./Dockerfile",
+					constraints: {
+						tier: 2,
+					},
+				},
+			],
+		} as Config;
+
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app-2",
+				instances: 3,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				configuration: {
+					image: "./Dockerfile",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tier: 3,
+				},
+			},
+		]);
+		mockCreateApplication({ id: "abc" });
+
+		const applicationReqBodyPromise = mockModifyApplication();
+		await apply(
+			{ skipDefaults: false, imageUpdateRequired: false },
+			wranglerConfig
+		);
+
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ NEW my-container-app
+			│
+			│   {
+			│     \\"containers\\": [
+			│       {
+			│         \\"name\\": \\"my-container-app\\",
+			│         \\"max_instances\\": 10,
+			│         \\"configuration\\": {
+			│           \\"instance_type\\": \\"standard\\"
+			│         },
+			│         \\"scheduling_policy\\": \\"default\\",
+			│         \\"constraints\\": {
+			│           \\"tier\\": 1
+			│         }
+			│       }
+			│     ]
+			│   }
+			│
+			├ EDIT my-container-app-2
+			│
+			│           \\"instance_type\\": \\"dev\\"
+			│         },
+			│         \\"constraints\\": {
+			│ -         \\"tier\\": 3
+			│ +         \\"tier\\": 2
+			│         },
+			│ -       \\"instances\\": 3,
+			│ +       \\"instances\\": 4,
+			│         \\"name\\": \\"my-container-app-2\\",
+			│         \\"scheduling_policy\\": \\"default\\"
+			│       }
+			│
+			│
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
+			│
+			│  SUCCESS  Modified application my-container-app-2
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.constraints?.tier).toEqual(2);
+		expect(app.instances).toEqual(4);
 	});
 });
