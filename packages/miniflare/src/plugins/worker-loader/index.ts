@@ -1,0 +1,36 @@
+import { z } from "zod";
+import { Worker_Binding } from "../../runtime";
+import { Plugin } from "../shared";
+
+export const WorkerLoaderConfigSchema = z.object({
+	id: z.string().optional(),
+});
+export const WorkerLoaderOptionsSchema = z.object({
+	workerLoaders: z.record(WorkerLoaderConfigSchema).optional(),
+});
+
+export const WORKER_LOADER_PLUGIN_NAME = "worker-loader";
+
+export const WORKER_LOADER_PLUGIN: Plugin<typeof WorkerLoaderOptionsSchema> = {
+	options: WorkerLoaderOptionsSchema,
+	getBindings(options: z.infer<typeof WorkerLoaderOptionsSchema>) {
+		if (!options.workerLoaders) {
+			return [];
+		}
+		const bindings = Object.entries(options.workerLoaders).map<Worker_Binding>(
+			([name, config]) => ({
+				name,
+				workerLoader: {
+					id: config.id,
+				},
+			})
+		);
+		return bindings;
+	},
+	getNodeBindings(options: z.infer<typeof WorkerLoaderOptionsSchema>) {
+		return {};
+	},
+	async getServices() {
+		return [];
+	},
+};

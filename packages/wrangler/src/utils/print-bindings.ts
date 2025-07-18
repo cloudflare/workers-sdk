@@ -505,7 +505,7 @@ export function printBindings(
 				name: type,
 				type: friendlyBindingNames.unsafe,
 				value: name,
-				mode: getMode({ isSimulatedLocally: false }),
+				mode: getMode({ isSimulatedLocally: undefined }),
 			}))
 		);
 	}
