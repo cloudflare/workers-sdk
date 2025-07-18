@@ -256,6 +256,8 @@ describe("unit tests", async () => {
 				);
 				const ctx = createExecutionContext();
 
+				let contentType: string;
+
 				const env = {
 					CONFIG: {
 						has_user_worker: true,
@@ -264,15 +266,24 @@ describe("unit tests", async () => {
 					USER_WORKER: {
 						async fetch(_: Request): Promise<Response> {
 							return new Response("<!DOCTYPE html><html></html>", {
-								headers: { "content-type": "text/html" },
+								headers: { "content-type": contentType },
 							});
 						},
 					},
 				} as Env;
 
-				const response = await worker.fetch(request, env, ctx);
-				expect(response.status).toBe(403);
-				expect(await response.text()).toBe("Blocked");
+				for (contentType of [
+					// html should be blocked
+					"text/html",
+					// multiple values should be blocked
+					"image/jpg,text/plain",
+					"image/jpg,text/html",
+					"text/plain,text/html",
+				]) {
+					const response = await worker.fetch(request, env, ctx);
+					expect(response.status).toBe(403);
+					expect(await response.text()).toBe("Blocked");
+				}
 			});
 
 			it.each([
