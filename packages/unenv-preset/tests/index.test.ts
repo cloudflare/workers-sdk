@@ -37,8 +37,10 @@ describe(`@cloudflare/unenv-preset ${platform} ${workerdPath}`, () => {
 				const body = await response.text();
 				expect(body).toMatch("OK!");
 			});
-		} catch {
+		} catch (e) {
+			// Log the output before re-throwing the error
 			console.log("OUTPUT", await getOutput());
+			throw e;
 		}
 	});
 });
