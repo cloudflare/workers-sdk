@@ -2339,7 +2339,7 @@ describe(".env support in local dev", () => {
 		`);
 	});
 
-	it("should not load load environment variables from .env files if there is a .dev.vars file", async () => {
+	it("should not load local dev variables from .env files if there is a .dev.vars file", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seedFiles);
 		await helper.seed({
@@ -2362,6 +2362,30 @@ describe(".env support in local dev", () => {
 			  "WRANGLER_ENV_VAR_0": "default-0",
 			  "WRANGLER_ENV_VAR_1": "dev-vars-1",
 			  "WRANGLER_ENV_VAR_2": "dev-vars-2",
+			  "WRANGLER_ENV_VAR_3": "default-3"
+			}"
+		`);
+	});
+
+	it("should not load dev variables from .env files if CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV is set to false", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seedFiles);
+		await helper.seed({
+			".env": dedent`
+				WRANGLER_ENV_VAR_1=env-1
+				WRANGLER_ENV_VAR_2=env-2
+			`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev", {
+			env: { CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false" },
+		});
+		const { url } = await worker.waitForReady();
+		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
+			"{
+			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_1": "default-1",
+			  "WRANGLER_ENV_VAR_2": "default-2",
 			  "WRANGLER_ENV_VAR_3": "default-3"
 			}"
 		`);
