@@ -2579,7 +2579,7 @@ describe(".env support in local dev", () => {
 			  "WRANGLER_ENV_VAR_0": "default-0",
 			  "WRANGLER_ENV_VAR_1": "other-env-1",
 			  "WRANGLER_ENV_VAR_2": "other-local-2",
-			  "WRANGLER_ENV_VAR_3": "other-local-3",
+			  "WRANGLER_ENV_VAR_3": "other-local-3"
 			}"
 		`);
 	});
