@@ -93,19 +93,17 @@ describe("nodejs compat", () => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/process-env`);
 		await expect(response.json()).resolves.toMatchObject({
-				DB_HOSTNAME: "hh-pgsql-public.ebi.ac.uk",
-				DEV_VAR_FROM_DOT_ENV: "dev-var-from-dot-env",
-			})
-		);
+			DB_HOSTNAME: "hh-pgsql-public.ebi.ac.uk",
+			DEV_VAR_FROM_DOT_ENV: "dev-var-from-dot-env",
+		});
 	});
 
 	test("env contains vars", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/env`);
 		await expect(response.json()).resolves.toMatchObject({
-				DB_HOSTNAME: "hh-pgsql-public.ebi.ac.uk",
-				DEV_VAR_FROM_DOT_ENV: "dev-var-from-dot-env",
-			})
-		);
+			DB_HOSTNAME: "hh-pgsql-public.ebi.ac.uk",
+			DEV_VAR_FROM_DOT_ENV: "dev-var-from-dot-env",
+		});
 	});
 });
