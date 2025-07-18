@@ -13,9 +13,7 @@ test.runIf(!isBuild)(
 			},
 		};
 		const originalResponse = await getJsonResponse();
-		expect(originalResponse).toEqual(
-			expect.objectContaining(originalResponseContent)
-		);
+		expect(originalResponse).toMatchObject(originalResponseContent);
 
 		mockFileChange(path.join(__dirname, "../.env"), (content) =>
 			content.replace(/my \.env/g, "my .env UPDATED")
