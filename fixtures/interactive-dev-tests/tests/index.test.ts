@@ -366,7 +366,12 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			}, WAITFOR_OPTIONS);
 
 			await vi.waitFor(async () => {
-				const res = await fetch(wrangler.url + "/fetch");
+				const res = await fetch(wrangler.url + "/fetch", {
+					// Sometimes this fetch can hang if the container is not ready
+					// The default timeout is longer than the timeout on the `waitFor()` which results in the test failing.
+					// So abort this request sooner to allow it to retry.
+					signal: AbortSignal.timeout(500),
+				});
 
 				expect(await res.text()).toBe(
 					"Hello World! Have an env var! I'm an env var!"
