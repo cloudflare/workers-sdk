@@ -404,7 +404,7 @@ export function createCLIParser(argv: string[]) {
 		})
 		.option("env-file", {
 			describe:
-				"Path to an .env file to load - can be specified multiple times - earlier ones are overridden by later ones",
+				"Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files",
 			type: "string",
 			array: true,
 			requiresArg: true,
@@ -432,11 +432,10 @@ export function createCLIParser(argv: string[]) {
 			const resolvedEnvFilePaths = (
 				args["env-file"] ?? getDefaultEnvFiles(args.env)
 			).map((p) => resolve(p));
-			process.env =
-				loadDotEnv(resolvedEnvFilePaths, {
-					includeProcessEnv: true,
-					silent: true,
-				}) ?? process.env;
+			process.env = loadDotEnv(resolvedEnvFilePaths, {
+				includeProcessEnv: true,
+				silent: true,
+			});
 
 			// Write a session entry to the output file (if there is one).
 			writeOutput({
