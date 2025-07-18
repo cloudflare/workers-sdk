@@ -45,7 +45,7 @@ describe("cloudchamber image", () => {
 			  -c, --config    Path to Wrangler configuration file  [string]
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - earlier ones are overridden by later ones  [array]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
 			  -v, --version   Show version number  [boolean]"
 		`);
@@ -192,7 +192,7 @@ describe("cloudchamber image list", () => {
 			  -c, --config    Path to Wrangler configuration file  [string]
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - earlier ones are overridden by later ones  [array]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
 			  -v, --version   Show version number  [boolean]
 
