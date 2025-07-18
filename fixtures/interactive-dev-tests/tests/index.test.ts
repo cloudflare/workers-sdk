@@ -408,7 +408,9 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				expect(await status.json()).toBe(true);
 			}, WAITFOR_OPTIONS);
 			await vi.waitFor(async () => {
-				const res = await fetch(wrangler.url + "/fetch");
+				const res = await fetch(wrangler.url + "/fetch", {
+					signal: AbortSignal.timeout(500),
+				});
 				expect(await res.text()).toBe("Blah! I'm an env var!");
 			}, WAITFOR_OPTIONS);
 			wrangler.pty.kill();
@@ -617,15 +619,6 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			}
 		});
 
-		async function fetchWithTimeout(input: RequestInfo) {
-			const controller = new AbortController();
-			const { signal } = controller;
-			setTimeout(3_000).then(() => {
-				controller.abort();
-			});
-			return await fetch(input, { signal });
-		}
-
 		it("should print build logs for all the containers", async () => {
 			const wrangler = await startWranglerDev([
 				"dev",
@@ -651,7 +644,9 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 
 			await vi.waitFor(
 				async () => {
-					const text = await (await fetchWithTimeout(wrangler.url)).text();
+					const text = await (
+						await fetch(wrangler.url, { signal: AbortSignal.timeout(3_000) })
+					).text();
 					expect(text).toBe(
 						'Response from A: "Hello from Container A" Response from B: "Hello from Container B"'
 					);
@@ -685,7 +680,9 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 
 			await vi.waitFor(
 				async () => {
-					const text = await (await fetchWithTimeout(wrangler.url)).text();
+					const text = await (
+						await fetch(wrangler.url, { signal: AbortSignal.timeout(3_000) })
+					).text();
 					expect(text).toBe(
 						'Response from A: "Hello World from Container A" Response from B: "Hello from the B Container"'
 					);
@@ -708,7 +705,9 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			// wait container to be ready
 			await vi.waitFor(
 				async () => {
-					const text = await (await fetchWithTimeout(wrangler.url)).text();
+					const text = await (
+						await fetch(wrangler.url, { signal: AbortSignal.timeout(3_000) })
+					).text();
 					expect(text).toBe(
 						'Response from A: "Hello from Container A" Response from B: "Hello from Container B"'
 					);
