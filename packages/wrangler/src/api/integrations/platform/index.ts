@@ -58,14 +58,18 @@ export type GetPlatformProxyOptions = {
 	 */
 	configPath?: string;
 	/**
-	 * Paths to `.env` file to load environment variables from.
+	 * Paths to `.env` files to load environment variables from.
 	 *
-	 * If not specified, the default behavior:
-	 *  - look for a `.env` file in the same directory as the Wrangler configuration file, or in the current working
-	 *    directory if no Wrangler configuration file is specified.
-	 *  - also look for a `.env.local` file in the same directory as the `.env` file.
+	 * If defined only the files in the array will be considered for loading local dev variables.
+	 * If left `undefined`, the default behavior is:
+	 *  - compute the project directory as that containing the Wrangler configuration file,
+	 *    or the current working directory if no Wrangler configuration file is specified.
+	 *  - look for `.env` and `.env.local` files in the project directory.
 	 *  - if the `environment` option is specified, also look for `.env.<environment>` and `.env.<environment>.local`
-	 *    files in the same directory as the `.env` file.
+	 *    files in the project directory
+	 *  - resulting in an `envFiles` array like: `[".env", ".env.local", ".env.<environment>", ".env.<environment>.local"]`.
+	 *
+	 * The values from files earlier in the `envFiles` array (e.g. `envFiles[x]`) will be overridden by values from files later in the array (e.g. `envFiles[x+1)`).
 	 */
 	envFiles?: string[];
 	/**
