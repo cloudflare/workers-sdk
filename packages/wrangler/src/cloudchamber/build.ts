@@ -229,7 +229,7 @@ export async function buildCommand(
 	}
 	if (args.platform !== "linux/amd64") {
 		throw new UserError(
-			`Unsupported platform: Platform "${args.platform}" is currently unsupported. Please use "linux/amd64" instead.`
+			`Unsupported platform: Platform "${args.platform}" is unsupported. Please use "linux/amd64" instead.`
 		);
 	}
 	// if containers are not defined, the build should still work.
