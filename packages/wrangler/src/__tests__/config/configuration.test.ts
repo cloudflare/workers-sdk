@@ -2413,6 +2413,8 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 						class_name: "test-class",
 						name: "test-worker-name-test-class",
+						// this has been set twice to accomodate both cloudchamber and containers
+						image: "something",
 					},
 				]);
 				if (config.containers) {
@@ -2516,7 +2518,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				console.dir(diagnostics.warnings);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", \\"configuration.disk\\" should be set via \\"instance_type\\".

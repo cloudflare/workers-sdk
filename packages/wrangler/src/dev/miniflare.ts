@@ -29,7 +29,7 @@ import { getClassNamesWhichUseSQLite } from "./class-names-sqlite";
 import type { ServiceFetch } from "../api";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
-import type { ContainerApp, ContainerEngine } from "../config/environment";
+import type { ContainerEngine } from "../config/environment";
 import type {
 	CfD1Database,
 	CfDispatchNamespace,
@@ -48,6 +48,7 @@ import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
+import type { ContainerNormalisedConfig } from "@cloudflare/containers-shared";
 import type {
 	DOContainerOptions,
 	MiniflareOptions,
@@ -207,7 +208,7 @@ export interface ConfigBundle {
 	bindVectorizeToProd: boolean;
 	imagesLocalMode: boolean;
 	testScheduled: boolean;
-	containers: ContainerApp[] | undefined;
+	containers: ContainerNormalisedConfig[] | undefined;
 	containerBuildId: string | undefined;
 	containerEngine: ContainerEngine | undefined;
 }

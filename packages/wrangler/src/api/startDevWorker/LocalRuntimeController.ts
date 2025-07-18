@@ -27,7 +27,7 @@ import type {
 	ReloadStartEvent,
 } from "./events";
 import type { Binding, File, StartDevWorkerOptions } from "./types";
-import type { ContainerDevOptions } from "@cloudflare/containers-shared";
+import type { ContainerNormalisedConfig } from "@cloudflare/containers-shared";
 
 async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
@@ -183,7 +183,7 @@ export class LocalRuntimeController extends RuntimeController {
 	// Used to store the information and abort handle for the
 	// current container that is being built
 	containerBeingBuilt?: {
-		containerOptions: ContainerDevOptions;
+		containerOptions: ContainerNormalisedConfig;
 		abort: () => void;
 		abortRequested: boolean;
 	};
@@ -220,21 +220,30 @@ export class LocalRuntimeController extends RuntimeController {
 			}
 
 			// Assemble container options and build if necessary
-			const containerOptions = await getContainerOptions(data.config);
-			this.#dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
-			// keep track of them so we can clean up later
-			for (const container of containerOptions ?? []) {
-				this.#containerImageTagsSeen.add(container.imageTag);
-			}
+
 			if (
-				containerOptions &&
+				data.config.containers?.length &&
+				data.config.dev.enableContainers &&
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
+				this.#dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
+				assert(
+					data.config.dev.containerBuildId,
+					"Build ID should be set if containers are enabled and defined"
+				);
+				for (const container of data.config.containers) {
+					this.#containerImageTagsSeen.add(
+						getDevContainerImageName(
+							container.class_name,
+							data.config.dev.containerBuildId
+						)
+					);
+				}
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
 				await prepareContainerImagesForDev(
 					this.#dockerPath,
-					containerOptions,
-					data.config.config,
+					data.config.containers,
+					data.config.dev.containerBuildId,
 					(buildStartEvent) => {
 						this.containerBeingBuilt = {
 							...buildStartEvent,
@@ -421,36 +430,4 @@ export class LocalRuntimeController extends RuntimeController {
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
 		this.emit("reloadComplete", data);
 	}
-}
-
-/**
- * @returns Container options suitable for building or pulling images,
- * with image tag set to well-known dev format.
- * Undefined if containers are not enabled or not configured.
- */
-export async function getContainerOptions(
-	config: BundleCompleteEvent["config"]
-) {
-	if (!config.containers?.length || config.dev.enableContainers === false) {
-		return undefined;
-	}
-	// should be defined if containers are enabled
-	assert(
-		config.dev.containerBuildId,
-		"Build ID should be set if containers are enabled and defined"
-	);
-	const containers: ContainerDevOptions[] = [];
-	for (const container of config.containers) {
-		containers.push({
-			image: container.image ?? container.configuration?.image,
-			imageTag: getDevContainerImageName(
-				container.class_name,
-				config.dev.containerBuildId
-			),
-			args: container.image_vars,
-			imageBuildContext: container.image_build_context,
-			class_name: container.class_name,
-		});
-	}
-	return containers;
 }

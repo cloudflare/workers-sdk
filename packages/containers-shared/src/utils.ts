@@ -1,8 +1,9 @@
-import { execFile, spawn, StdioOptions } from "child_process";
+import { execFile, spawn } from "child_process";
 import { existsSync, statSync } from "fs";
 import path from "path";
 import { dockerImageInspect } from "./inspect";
-import { ContainerDevOptions } from "./types";
+import type { ContainerNormalisedConfig } from "./types";
+import type { StdioOptions } from "child_process";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = (
@@ -55,7 +56,7 @@ export const runDockerCmd = (
 			}
 		},
 		ready,
-		then: async (resolve, reject) => ready.then(resolve).catch(reject),
+		then: async (onResolve, onReject) => ready.then(onResolve).catch(onReject),
 	};
 };
 
@@ -94,8 +95,8 @@ export const verifyDockerInstalled = async (
 	}
 };
 
-export function isDir(path: string) {
-	const stats = statSync(path);
+export function isDir(inputPath: string) {
+	const stats = statSync(inputPath);
 	return stats.isDirectory();
 }
 
@@ -127,7 +128,7 @@ export const isDockerfile = (
 	}
 	const imageParts = image.split("/");
 
-	if (!imageParts[imageParts.length - 1].includes(":")) {
+	if (!imageParts[imageParts.length - 1]?.includes(":")) {
 		throw new Error(
 			errorPrefix +
 				`If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)`
@@ -171,7 +172,7 @@ export const cleanupContainers = async (
 			["inherit", "pipe", "pipe"]
 		);
 		return true;
-	} catch (error) {
+	} catch {
 		return false;
 	}
 };
@@ -201,10 +202,11 @@ const getContainerIdsFromImage = async (
  */
 export async function checkExposedPorts(
 	dockerPath: string,
-	options: ContainerDevOptions
+	options: ContainerNormalisedConfig,
+	imageTag: string
 ) {
 	const output = await dockerImageInspect(dockerPath, {
-		imageTag: options.imageTag,
+		imageTag: imageTag,
 		formatString: "{{ len .Config.ExposedPorts }}",
 	});
 	if (output === "0") {
