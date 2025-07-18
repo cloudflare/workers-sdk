@@ -23,7 +23,7 @@ import {
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
 import { experimental_readRawConfig, readConfig } from "./config";
-import { getDefaultEnvPaths, loadDotEnv } from "./config/dot-env";
+import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
@@ -429,14 +429,14 @@ export function createCLIParser(argv: string[]) {
 		})
 		.check((args) => {
 			// Set process environment params from `.env` files if available.
+			const resolvedEnvFilePaths = (
+				args["env-file"] ?? getDefaultEnvFiles(args.env)
+			).map((p) => resolve(p));
 			process.env =
-				loadDotEnv(
-					args["env-file"] ?? getDefaultEnvPaths(resolve(".env"), args.env),
-					{
-						includeProcessEnv: true,
-						silent: true,
-					}
-				) ?? process.env;
+				loadDotEnv(resolvedEnvFilePaths, {
+					includeProcessEnv: true,
+					silent: true,
+				}) ?? process.env;
 
 			// Write a session entry to the output file (if there is one).
 			writeOutput({
