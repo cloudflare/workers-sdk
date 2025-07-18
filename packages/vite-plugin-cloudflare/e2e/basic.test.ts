@@ -34,13 +34,11 @@ describe("basic e2e tests", () => {
 					});
 					const proc = await runLongLived(pm, command, projectPath);
 					const url = await waitForReady(proc);
-					expect(await fetchJson(url + "/env/")).toEqual(
-						expect.objectContaining({
+					expect(await fetchJson(url + "/env/")).toMatchObject({
 							SECRET_A: "dev-1",
 							SECRET_B: "dev-2",
 							VAR_1: "var-1",
-						})
-					);
+					});
 				});
 
 				test("can merge vars from wrangler configuration, .env, and .env.local", async ({
@@ -58,13 +56,10 @@ describe("basic e2e tests", () => {
 					});
 					const proc = await runLongLived(pm, command, projectPath);
 					const url = await waitForReady(proc);
-					expect(await fetchJson(url + "/env/")).toEqual(
-						expect.objectContaining({
+						expect(await fetchJson(url + "/env/")).toMatchObject({
 							SECRET_A: "local-dev-1",
 							SECRET_B: "dev-2",
 							VAR_1: "var-1",
-						})
-					);
 				});
 			});
 
@@ -95,14 +90,12 @@ describe("basic e2e tests", () => {
 					CLOUDFLARE_ENV: "staging",
 				});
 				const url = await waitForReady(proc);
-				expect(await fetchJson(url + "/env/")).toEqual(
-					expect.objectContaining({
+				expect(await fetchJson(url + "/env/")).toMatchObject({
 						SECRET_A: "local-dev-1",
 						SECRET_B: "staging-2",
 						SECRET_C: "local-staging-3",
 						VAR_1: "var-1",
-					})
-				);
+						});
 			});
 
 			test("can read vars from process.env if CLOUDFLARE_INCLUDE_PROCESS_ENV is set", async ({
@@ -112,11 +105,11 @@ describe("basic e2e tests", () => {
 					CLOUDFLARE_INCLUDE_PROCESS_ENV: "true",
 				});
 				const url = await waitForReady(proc);
-				expect(await fetchJson(url + "/env/")).toEqual(
-					expect.objectContaining({
+						expect(await fetchJson(url + "/env/")).toMatchObject({
 						CLOUDFLARE_INCLUDE_PROCESS_ENV: "true", // this proves we read the process.env
-					})
-				);
+						});
+					});
+				});
 			});
 
 			// This test checks that wrapped bindings which rely on additional workers with an authed connection to the CF API work
