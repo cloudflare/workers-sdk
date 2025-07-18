@@ -1301,7 +1301,10 @@ export class Miniflare {
 				);
 
 				// @ts-expect-error Puppeteer is dynamically installed, and so doesn't have types available
-				const browser = await puppeteer.launch({ headless: "old" });
+				const browser = await puppeteer.launch({
+					headless: "old",
+					args: process.env.CI ? ["--no-sandbox"] : [],
+				});
 				const wsEndpoint = browser.wsEndpoint();
 				this.#browserProcesses.set(wsEndpoint, browser.process());
 				response = new Response(wsEndpoint);
