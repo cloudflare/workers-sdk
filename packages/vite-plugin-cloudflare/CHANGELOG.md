@@ -1,5 +1,15 @@
 # @cloudflare/vite-plugin
 
+## 1.9.7
+
+### Patch Changes
+
+- [#9891](https://github.com/cloudflare/workers-sdk/pull/9891) [`dd416e9`](https://github.com/cloudflare/workers-sdk/commit/dd416e93afbc52d869fd154899d260bfc04fc493) Thanks [@hi-ogawa](https://github.com/hi-ogawa)! - set `build.rollupOptions.platform: "neutral"` on rolldown-vite to prevent Rolldown's `node:module` based `require` polyfill from breaking the build.
+
+- Updated dependencies [[`c02b067`](https://github.com/cloudflare/workers-sdk/commit/c02b067fc0a21d92b5c22bd744f2daf263906e50), [`7e5585d`](https://github.com/cloudflare/workers-sdk/commit/7e5585dbf844fda0e1688797ce31c7e634f3f4ba), [`b0217f9`](https://github.com/cloudflare/workers-sdk/commit/b0217f965cf97a71bf7391628bdb15dc69663dcb), [`e87198a`](https://github.com/cloudflare/workers-sdk/commit/e87198a6f43a52ff3b1509e99023932e62de97fe), [`ad02ad3`](https://github.com/cloudflare/workers-sdk/commit/ad02ad3dfc151ed6ec016222dd42b9e99fe32ca0)]:
+  - wrangler@4.25.1
+  - miniflare@4.20250712.1
+
 ## 1.9.6
 
 ### Patch Changes
