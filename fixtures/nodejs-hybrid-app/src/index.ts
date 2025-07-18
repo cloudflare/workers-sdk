@@ -284,9 +284,9 @@ async function testHttp() {
 
 async function testDebug() {
 	// Test different namespaces
-	const logA = debug("example");
-	const logB = debug("example:subnamespace");
-	const logC = debug("test");
+	const logA = debug("test");
+	const logB = debug("example");
+	const logC = logB.extend("foo");
 
 	logA("Message 1");
 	logB("Message 2");

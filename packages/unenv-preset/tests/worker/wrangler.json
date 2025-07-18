@@ -2,5 +2,8 @@
 	"name": "cloudflare-unenv-preset-test",
 	"main": "./index.ts",
 	"compatibility_date": "2024-12-16",
-	"compatibility_flags": ["nodejs_compat"]
+	"compatibility_flags": ["nodejs_compat"],
+	"vars": {
+		"DEBUG": "example"
+	}
 }

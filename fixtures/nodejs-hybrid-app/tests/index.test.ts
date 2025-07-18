@@ -95,11 +95,11 @@ describe("nodejs compat", () => {
 		await expect(response.text()).resolves.toBe("OK");
 		await vi.waitFor(() => {
 			const output = getOutput();
-			expect(output).toMatch(/example Message 1/);
+			expect(output).toMatch(/test Message 1/);
 			expect(output).not.toMatch(/example Message 2/);
-			expect(output).not.toMatch(/example Message 3/);
-			expect(output).toMatch(/example Message 4/);
-			expect(output).not.toMatch(/example Message 5/);
+			expect(output).toMatch(/example:foo Message 3/);
+			expect(output).toMatch(/test Message 4/);
+			expect(output).not.toMatch(/test Message 5/);
 		});
 	});
 });
