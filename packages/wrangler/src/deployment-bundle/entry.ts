@@ -70,7 +70,8 @@ export async function getEntry(
 		if (config.pages_build_output_dir && command === "dev") {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
-					"For Pages, please run `wrangler pages dev` instead."
+					"For Pages, please run `wrangler pages dev` instead.",
+				{ telemetryMessage: true }
 			);
 		}
 
@@ -143,7 +144,8 @@ export async function getEntry(
 		const migrateUrl =
 			"https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/";
 		throw new UserError(
-			`${errorMessage}\n${addScriptName}\n${addScriptNameExamples}\n${migrateText}\n${migrateUrl}`
+			`${errorMessage}\n${addScriptName}\n${addScriptNameExamples}\n${migrateText}\n${migrateUrl}`,
+			{ telemetryMessage: "tried to use DO with service worker" }
 		);
 	}
 
