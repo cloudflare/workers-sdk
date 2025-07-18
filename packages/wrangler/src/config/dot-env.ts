@@ -38,7 +38,7 @@ export function getDefaultEnvFiles(env: string | undefined): string[] {
 export function loadDotEnv(
 	envPaths: string[],
 	{ includeProcessEnv, silent }: { includeProcessEnv: boolean; silent: boolean }
-): dotenv.DotenvParseOutput | undefined {
+): dotenv.DotenvParseOutput {
 	// The `parsedEnv` object will be mutated to contain the merged values.
 	const parsedEnv = {};
 	for (const envPath of envPaths) {
