@@ -62,6 +62,8 @@ export function buildYargs(yargs: CommonYargsArgv) {
 			describe:
 				"Platform to build for. Defaults to the architecture support by Workers (linux/amd64)",
 			demandOption: false,
+			hidden: true,
+			deprecated: true,
 		});
 }
 
@@ -225,6 +227,11 @@ export async function buildCommand(
 			`${args.PATH} is not a directory. Please specify a valid directory path.`
 		);
 	}
+	if (args.platform !== "linux/amd64") {
+		throw new UserError(
+			`Unsupported platform: Platform "${args.platform}" is unsupported. Please use "linux/amd64" instead.`
+		);
+	}
 	// if containers are not defined, the build should still work.
 	const containers = config.containers ?? [undefined];
 	const pathToDockerfile = join(args.PATH, "Dockerfile");
@@ -257,6 +264,7 @@ export async function pushCommand(
 			args.TAG
 		);
 		const dockerPath = args.pathToDocker ?? getDockerPath();
+		await checkImagePlatform(dockerPath, args.TAG);
 		await runDockerCmd(dockerPath, ["tag", args.TAG, newTag]);
 		await runDockerCmd(dockerPath, ["push", newTag]);
 		logger.log(`Pushed image: ${newTag}`);
@@ -266,6 +274,23 @@ export async function pushCommand(
 		}
 
 		throw new UserError("An unknown error occurred");
+	}
+}
+
+async function checkImagePlatform(
+	pathToDocker: string,
+	imageTag: string,
+	expectedPlatform: string = "linux/amd64"
+) {
+	const platform = await dockerImageInspect(pathToDocker, {
+		imageTag,
+		formatString: "{{ .Os }}/{{ .Architecture }}",
+	});
+
+	if (platform !== expectedPlatform) {
+		throw new Error(
+			`Unsupported platform: Image platform (${platform}) does not match the expected platform (${expectedPlatform})`
+		);
 	}
 }
 

@@ -223,6 +223,34 @@ describe("buildAndMaybePush", () => {
 		});
 	});
 
+	it("should be able to build image with platform specified", async () => {
+		await runWrangler(
+			"containers build ./container-context -t test-app:tag -p --platform linux/amd64"
+		);
+		expect(dockerBuild).toHaveBeenCalledWith("docker", {
+			buildCmd: [
+				"build",
+				"-t",
+				`${getCloudflareContainerRegistry()}/test-app:tag`,
+				"--platform",
+				"linux/amd64",
+				"--provenance=false",
+				"-f",
+				"-",
+				"./container-context",
+			],
+			dockerfile,
+		});
+	});
+
+	it("should fail with an invalid platform", async () => {
+		await expect(
+			runWrangler(
+				"containers build ./container-context -t test-app:tag -p --platform linux/arm64"
+			)
+		).rejects.toThrow("Unsupported platform");
+	});
+
 	it("should throw UserError when docker build fails", async () => {
 		const errorMessage = "Docker build failed";
 		vi.mocked(dockerBuild).mockReturnValue({
