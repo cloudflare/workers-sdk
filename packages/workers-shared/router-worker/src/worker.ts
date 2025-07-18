@@ -82,8 +82,6 @@ export default {
 				});
 			}
 
-			const maybeSecondRequest = request.clone();
-
 			const routeToUserWorker = async ({
 				asset,
 			}: {
@@ -96,7 +94,7 @@ export default {
 				}
 				if (eyeballConfig.limitedAssetsOnly) {
 					analytics.setData({ userWorkerFreeTierLimiting: true });
-					return new Response(renderLimitedResponse(maybeSecondRequest), {
+					return new Response(renderLimitedResponse(request), {
 						status: 429,
 						headers: {
 							"Content-Type": "text/html",
@@ -119,8 +117,8 @@ export default {
 						if (queryURLParam && !queryURLParam.startsWith("/")) {
 							// that's a remote resource
 							if (
-								maybeSecondRequest.method !== "GET" ||
-								maybeSecondRequest.headers.get("sec-fetch-dest") !== "image"
+								request.method !== "GET" ||
+								request.headers.get("sec-fetch-dest") !== "image"
 							) {
 								// that was not loaded via a browser's <img> tag
 								shouldCheckContentType = true;
@@ -135,7 +133,7 @@ export default {
 					});
 
 					if (shouldCheckContentType) {
-						const response = await env.USER_WORKER.fetch(maybeSecondRequest);
+						const response = await env.USER_WORKER.fetch(request);
 
 						if (response.status !== 304 && shouldBlockContentType(response)) {
 							analytics.setData({ abuseMitigationBlocked: true });
@@ -143,7 +141,7 @@ export default {
 						}
 						return response;
 					}
-					return env.USER_WORKER.fetch(maybeSecondRequest);
+					return env.USER_WORKER.fetch(request);
 				});
 			};
 
@@ -163,7 +161,7 @@ export default {
 					analytics.setData({
 						timeToDispatch: performance.now() - startTimeMs,
 					});
-					return env.ASSET_WORKER.fetch(maybeSecondRequest);
+					return env.ASSET_WORKER.fetch(request);
 				});
 			};
 
@@ -218,7 +216,13 @@ export default {
 			}
 
 			// If we have a user-Worker, but no assets, dispatch to Worker script
-			const assetsExist = await env.ASSET_WORKER.unstable_canFetch(request);
+			// Do not pass the original request as it would consume the body
+			const assetsExist = await env.ASSET_WORKER.unstable_canFetch(
+				new Request(request.url, {
+					headers: request.headers,
+					method: request.method,
+				})
+			);
 			if (config.has_user_worker && !assetsExist) {
 				return await routeToUserWorker({ asset: "none" });
 			}
