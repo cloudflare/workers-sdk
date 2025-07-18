@@ -39,6 +39,7 @@ type VariableNames =
 	// but including here so that all environment variables are documented here:
 	| "WRANGLER_DOCKER_HOST"
 	| "DOCKER_HOST"
+	| "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV"
 	| "CLOUDFLARE_INCLUDE_PROCESS_ENV";
 
 type DeprecatedNames =

@@ -2,7 +2,10 @@ import * as path from "node:path";
 import { maybeGetFile } from "@cloudflare/workers-shared";
 import dotenv from "dotenv";
 import { getDefaultEnvPaths, loadDotEnv } from "../config/dot-env";
-import { getCloudflareIncludeProcessEnvFromEnv } from "../environment-variables/misc-variables";
+import {
+	getCloudflareIncludeProcessEnvFromEnv,
+	getCloudflareLoadDevVarsFromDotEnv,
+} from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import type { Config } from "../config";
 
@@ -47,7 +50,7 @@ export function getVarsForDev(
 			...vars,
 			...loaded.parsed,
 		};
-	} else {
+	} else if (getCloudflareLoadDevVarsFromDotEnv()) {
 		// If no .dev.vars files load vars from those in `envFilePaths` if defined or default .env files in the configuration directory.
 		const resolvedEnvFilePaths = (
 			envFilePaths ?? getDefaultEnvPaths(".env", env)
@@ -60,6 +63,8 @@ export function getVarsForDev(
 			...vars,
 			...dotEnvVars,
 		};
+	} else {
+		return vars;
 	}
 }
 
