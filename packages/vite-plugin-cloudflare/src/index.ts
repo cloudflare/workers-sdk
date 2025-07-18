@@ -40,7 +40,10 @@ import {
 	getResolvedInspectorPort,
 } from "./debugging";
 import { writeDeployConfig } from "./deploy-config";
-import { getLocalDevVars, hasLocalDevVarsFileChanged } from "./dev-vars";
+import {
+	getLocalDevVarsForPreview,
+	hasLocalDevVarsFileChanged,
+} from "./dev-vars";
 import {
 	getDevMiniflareOptions,
 	getEntryWorkerConfig,
@@ -271,7 +274,7 @@ if (import.meta.hot) {
 					config = workerConfig;
 
 					if (workerConfig.configPath) {
-						const localDevVars = getLocalDevVars(
+						const localDevVars = getLocalDevVarsForPreview(
 							workerConfig.configPath,
 							resolvedPluginConfig.cloudflareEnv
 						);

@@ -10,13 +10,13 @@ import type {
  *
  * Calls `unstable_getVarsForDev` with the current Cloudflare environment to get local dev variables from the `.dev.vars` and `.env` files.
  */
-export function getLocalDevVars(
+export function getLocalDevVarsForPreview(
 	configPath: string | undefined,
 	cloudflareEnv: string | undefined
 ): string | undefined {
 	const dotDevDotVars = unstable_getVarsForDev(
 		configPath,
-		undefined, // We don't currently support setting a custom path to the `.env` files.
+		undefined, // We don't currently support setting a list of custom `.env` files.
 		{}, // Don't pass actual vars since these will be loaded from the wrangler.json.
 		cloudflareEnv
 	);
