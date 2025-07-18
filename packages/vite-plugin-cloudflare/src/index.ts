@@ -30,8 +30,8 @@ import {
 } from "./debugging";
 import { writeDeployConfig } from "./deploy-config";
 import {
-	getDotDevDotVarsContent,
-	hasDotDevDotVarsFileChanged,
+	getLocalDevVarsForPreview,
+	hasLocalDevVarsFileChanged,
 } from "./dev-vars";
 import {
 	getDevMiniflareOptions,
@@ -232,17 +232,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					config = workerConfig;
 
 					if (workerConfig.configPath) {
-						const dotDevDotVarsContent = getDotDevDotVarsContent(
+						const localDevVars = getLocalDevVarsForPreview(
 							workerConfig.configPath,
 							resolvedPluginConfig.cloudflareEnv
 						);
-						// Save a .dev.vars file to the worker's build output directory
-						// when it exists so that it will be then detected by `vite preview`
-						if (dotDevDotVarsContent) {
+						// Save a .dev.vars file to the worker's build output directory if there are local dev vars, so that it will be then detected by `vite preview`.
+						if (localDevVars) {
 							this.emitFile({
 								type: "asset",
 								fileName: ".dev.vars",
-								source: dotDevDotVarsContent,
+								source: localDevVars,
 							});
 						}
 					}
@@ -302,7 +301,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				if (
 					resolvedPluginConfig.configPaths.has(changedFilePath) ||
-					hasDotDevDotVarsFileChanged(resolvedPluginConfig, changedFilePath) ||
+					hasLocalDevVarsFileChanged(resolvedPluginConfig, changedFilePath) ||
 					hasAssetsConfigChanged(
 						resolvedPluginConfig,
 						resolvedViteConfig,

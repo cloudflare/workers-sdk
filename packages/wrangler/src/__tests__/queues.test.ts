@@ -40,11 +40,12 @@ describe("wrangler", () => {
 				  wrangler queues purge <name>            Purge messages from a Queue
 
 				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 
@@ -114,11 +115,12 @@ describe("wrangler", () => {
 					List Queues
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --page  Page number for pagination  [number]"
@@ -262,11 +264,12 @@ describe("wrangler", () => {
 					  name  The name of the queue  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 42300  [number] [default: 0]
@@ -482,11 +485,12 @@ describe("wrangler", () => {
 					  name  The name of the queue  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 42300  [number]
@@ -636,11 +640,12 @@ describe("wrangler", () => {
 					  name  The name of the queue  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]"
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
 				`);
 			});
 
@@ -705,11 +710,12 @@ describe("wrangler", () => {
 					  wrangler queues consumer worker                             Configure Queue Worker Consumers
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]"
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
 				`);
 			});
 
@@ -753,11 +759,12 @@ describe("wrangler", () => {
 						  script-name  Name of the consumer script  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						      --batch-size         Maximum number of messages per batch  [number]
@@ -1075,11 +1082,12 @@ describe("wrangler", () => {
 						  script-name  Name of the consumer script  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]"
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]"
 					`);
 				});
 
@@ -1463,11 +1471,12 @@ describe("wrangler", () => {
 					  wrangler queues consumer http remove <queue-name>  Remove a Queue HTTP Pull Consumer
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]"
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
 				`);
 			});
 
@@ -1510,11 +1519,12 @@ describe("wrangler", () => {
 						  queue-name  Name of the queue for the consumer  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						      --batch-size               Maximum number of messages per batch  [number]
@@ -1641,11 +1651,12 @@ describe("wrangler", () => {
 						  queue-name  Name of the queue for the consumer  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]"
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]"
 					`);
 				});
 
@@ -1729,11 +1740,12 @@ describe("wrangler", () => {
 					  name  The name of the queue  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]"
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
 				`);
 			});
 			it("should return queue info with worker producers when the queue has workers configured as producers", async () => {
@@ -1892,11 +1904,12 @@ describe("wrangler", () => {
 				  name  The name of the queue  [string] [required]
 
 				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 
@@ -2002,11 +2015,12 @@ describe("wrangler", () => {
 				  name  The name of the queue  [string] [required]
 
 				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 
@@ -2104,11 +2118,12 @@ describe("wrangler", () => {
 				  name  The name of the queue  [string] [required]
 
 				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]
 
 				OPTIONS
 				      --force  Skip the confirmation dialog and forcefully purge the Queue  [boolean]"
