@@ -28,7 +28,24 @@ export default {
 		ctx: ExecutionContext
 	): Promise<Response> {
 		const url = new URL(request.url);
-		if (url.pathname === "/error") throw new Error("Hello Error");
-		return new Response("Hello World!");
+
+		let worker = env.LOADER.get(url.pathname, () => {
+			return {
+				compatibilityDate: "2025-06-01",
+
+				mainModule: "foo.js",
+
+				modules: {
+					"foo.js":
+						"export default {\n" +
+						`  fetch(req, env, ctx) { return new Response('Hello with a dynamic worker loaded for ${url.pathname}'); }\n` +
+						"}\n",
+				},
+			};
+		});
+
+		// Now you can get its entrypoint.
+		let defaultEntrypoint = worker.getEntrypoint();
+		return await defaultEntrypoint.fetch(request);
 	},
 };
