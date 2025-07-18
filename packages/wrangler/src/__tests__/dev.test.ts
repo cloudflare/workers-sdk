@@ -89,8 +89,7 @@ async function expectedHostAndZone(
 		configPath: config.config,
 	});
 
-	expect(ctx).toEqual(
-		expect.objectContaining({
+	expect(ctx).toMatchObject({
 			workerContext: {
 				host,
 				zone,
@@ -112,8 +111,7 @@ async function expectedHostAndZone(
 						}
 					}),
 			},
-		})
-	);
+	});
 
 	return config;
 }
