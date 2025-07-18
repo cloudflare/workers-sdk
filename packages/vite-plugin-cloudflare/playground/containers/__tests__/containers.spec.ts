@@ -1,11 +1,11 @@
 import { expect, test } from "vitest";
-import { getTextResponse } from "../../__test-utils__";
+import { getTextResponse, isBuild } from "../../__test-utils__";
 
-// skip until containers support is implemented in `vite preview`
-test.skip("starts container", async () => {
-	let response = await getTextResponse("/start");
-	expect(response).toBe("Container create request sent...");
+// skip build test until containers support is implemented in `vite preview`
+test.skipIf(isBuild)("starts container", async () => {
+	const startResponse = await getTextResponse("/start");
+	expect(startResponse).toBe("Container create request sent...");
 
-	response = await getTextResponse("/status");
-	expect(response).toBe("true");
+	const statusResponse = await getTextResponse("/status");
+	expect(statusResponse).toBe("true");
 });

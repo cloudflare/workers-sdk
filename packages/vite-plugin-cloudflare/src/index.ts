@@ -3,7 +3,6 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared/src/images";
 import { getDevContainerImageName } from "@cloudflare/containers-shared/src/knobs";
-import { type ContainerDevOptions } from "@cloudflare/containers-shared/src/types";
 import {
 	generateContainerBuildId,
 	getContainerIdsByImageTags,
@@ -99,7 +98,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	const additionalModulePaths = new Set<string>();
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
 	const containerImageTagsSeen = new Set<string>();
-	let runningContainersIds: Array<string>;
+	let runningContainerIds: Array<string>;
 
 	return [
 		{
@@ -366,10 +365,10 @@ if (import.meta.hot) {
 
 				let containerBuildId: string | undefined;
 				const workerConfig = getEntryWorkerConfig(resolvedPluginConfig);
-				if (
+				const hasDevContainers =
 					workerConfig?.containers?.length &&
-					workerConfig.dev.enable_containers
-				) {
+					workerConfig.dev.enable_containers;
+				if (hasDevContainers) {
 					containerBuildId = generateContainerBuildId();
 				}
 
@@ -444,10 +443,7 @@ if (import.meta.hot) {
 						};
 					}
 
-					if (
-						entryWorkerConfig.containers?.length &&
-						entryWorkerConfig.dev.enable_containers
-					) {
+					if (hasDevContainers) {
 						assert(
 							containerBuildId,
 							"Build ID should be set if containers are enabled and defined"
@@ -459,12 +455,12 @@ if (import.meta.hot) {
 						);
 						const dockerPath = getDockerPath();
 
-						// keep track of them so we can clean up later
-						for (const container of containerOptions ?? []) {
-							containerImageTagsSeen.add(container.imageTag);
-						}
-
 						if (containerOptions) {
+							// keep track of them so we can clean up later
+							for (const container of containerOptions) {
+								containerImageTagsSeen.add(container.imageTag);
+							}
+
 							await prepareContainerImagesForDev({
 								dockerPath,
 								configPath: entryWorkerConfig.configPath,
@@ -477,7 +473,7 @@ if (import.meta.hot) {
 						// poll Docker every two seconds and update the list of ids of all
 						// running containers
 						const dockerPollIntervalId = setInterval(async () => {
-							runningContainersIds = await getContainerIdsByImageTags(
+							runningContainerIds = await getContainerIdsByImageTags(
 								dockerPath,
 								containerImageTagsSeen
 							);
@@ -503,14 +499,14 @@ if (import.meta.hot) {
 						 * `dockerPollIntervalId` is for.
 						 *
 						 * It is possible, though very unlikely, that in some rare cases,
-						 * we might be left with some orphaned conatiners, due to the fact
+						 * we might be left with some orphaned containers, due to the fact
 						 * that at the point of exiting the dev process, our internal list
 						 * of container ids is out of date. We accept this caveat for now.
 						 *
 						 */
 						process.on("exit", () => {
 							clearInterval(dockerPollIntervalId);
-							removeContainersByIds(dockerPath, runningContainersIds);
+							removeContainersByIds(dockerPath, runningContainerIds);
 						});
 					}
 				}
@@ -592,14 +588,14 @@ if (import.meta.hot) {
 			},
 			async buildEnd() {
 				const dockerPath = getDockerPath();
-				runningContainersIds = await getContainerIdsByImageTags(
+				runningContainerIds = await getContainerIdsByImageTags(
 					dockerPath,
 					containerImageTagsSeen
 				);
 
-				await removeContainersByIds(dockerPath, runningContainersIds);
+				await removeContainersByIds(dockerPath, runningContainerIds);
 				containerImageTagsSeen.clear();
-				runningContainersIds = [];
+				runningContainerIds = [];
 			},
 		},
 		// Plugin to provide a fallback entry file
@@ -1053,9 +1049,8 @@ if (import.meta.hot) {
 			return undefined;
 		}
 
-		const containers: ContainerDevOptions[] = [];
-		for (const container of config.containers) {
-			containers.push({
+		return config.containers.map((container) => {
+			return {
 				image: container.image ?? container.configuration?.image,
 				imageTag: getDevContainerImageName(
 					container.class_name,
@@ -1064,8 +1059,7 @@ if (import.meta.hot) {
 				args: container.image_vars,
 				imageBuildContext: container.image_build_context,
 				class_name: container.class_name,
-			});
-		}
-		return containers;
+			};
+		});
 	}
 }
