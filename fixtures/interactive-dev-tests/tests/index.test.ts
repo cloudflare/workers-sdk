@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import rl from "node:readline";
 import stream from "node:stream";
-import { beforeEach } from "node:test";
 import { setTimeout } from "node:timers/promises";
 import stripAnsi from "strip-ansi";
 import { fetch, RequestInfo } from "undici";
@@ -291,7 +290,19 @@ it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {
 	}
 });
 
-// it seems like if we spam the container too often, it freezes up and crashes
+// it seems like if we hit to container when the port is ready but the app inside is not listening, the fetch will hang
+async function fetchWithTimeout(input: RequestInfo) {
+	const controller = new AbortController();
+	const { signal } = controller;
+	setTimeout(3_000).then(() => {
+		controller.abort();
+	});
+	return await fetch(input, {
+		signal,
+		headers: { "MF-Disable-Pretty-Error": "true" },
+	});
+}
+
 const WAITFOR_OPTIONS = { timeout: 2000, interval: 500 };
 baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 	"container dev",
@@ -371,9 +382,7 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			}, WAITFOR_OPTIONS);
 
 			await vi.waitFor(async () => {
-				const res = await fetch(wrangler.url + "/fetch", {
-					headers: { "MF-Disable-Pretty-Error": "true" },
-				});
+				const res = await fetchWithTimeout(wrangler.url + "/fetch");
 				expect(await res.text()).toBe(
 					"Hello World! Have an env var! I'm an env var!"
 				);
@@ -409,9 +418,7 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				expect(await status.json()).toBe(true);
 			}, WAITFOR_OPTIONS);
 			await vi.waitFor(async () => {
-				const res = await fetch(wrangler.url + "/fetch", {
-					headers: { "MF-Disable-Pretty-Error": "true" },
-				});
+				const res = await fetchWithTimeout(wrangler.url + "/fetch");
 				expect(await res.text()).toBe("Blah! I'm an env var!");
 			}, WAITFOR_OPTIONS);
 			wrangler.pty.kill();
@@ -619,15 +626,6 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				console.error(e);
 			}
 		});
-
-		async function fetchWithTimeout(input: RequestInfo) {
-			const controller = new AbortController();
-			const { signal } = controller;
-			setTimeout(3_000).then(() => {
-				controller.abort();
-			});
-			return await fetch(input, { signal });
-		}
 
 		it("should print build logs for all the containers", async () => {
 			const wrangler = await startWranglerDev([
