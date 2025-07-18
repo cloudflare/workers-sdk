@@ -17,6 +17,7 @@ export async function maybeBuildContainer(
 	imageTag: string,
 	dryRun: boolean,
 	pathToDocker: string,
+	/** The original (non-redirected) user config path */
 	configPath?: string
 ): Promise<{ image: string; imageUpdated: boolean }> {
 	try {
@@ -120,7 +121,7 @@ export async function deployContainers(
 			versionId,
 			dryRun,
 			pathToDocker,
-			config.configPath
+			config.userConfigPath
 		);
 		container.configuration ??= {};
 		container.configuration.image = buildResult.image;

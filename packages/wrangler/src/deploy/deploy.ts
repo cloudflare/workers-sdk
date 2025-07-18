@@ -786,7 +786,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			const hasDockerfiles = config.containers.some((container) =>
 				isDockerfile(
 					container.image ?? container.configuration?.image,
-					config.configPath
+					// this is the original (non-redirected) config path
+					config.userConfigPath
 				)
 			);
 			if (hasDockerfiles) {
@@ -802,7 +803,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						workerTag ?? "worker-tag",
 						props.dryRun,
 						dockerPath,
-						config.configPath
+						config.userConfigPath
 					);
 				}
 			}

@@ -400,7 +400,8 @@ async function resolveConfig(
 	// container API client is properly set so that we can get the correct permissions
 	// from the cloudchamber API to pull from the repository.
 	const needsPulling = resolved.containers?.some(
-		(c) => !isDockerfile(c.image ?? c.configuration?.image, config.configPath)
+		(c) =>
+			!isDockerfile(c.image ?? c.configuration?.image, config.userConfigPath)
 	);
 	if (needsPulling && !resolved.dev.remote) {
 		await fillOpenAPIConfiguration(config, containersScope);

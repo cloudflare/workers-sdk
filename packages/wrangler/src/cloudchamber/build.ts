@@ -246,7 +246,7 @@ export async function buildCommand(
 			},
 			getDockerPath() ?? args.pathToDocker,
 			args.push,
-			config.configPath,
+			config.userConfigPath,
 			container
 		);
 	}
