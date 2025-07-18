@@ -4,21 +4,21 @@ import dotenvExpand from "dotenv-expand";
 import { logger } from "../logger";
 
 /**
- * Generates the default set of paths for .env file loading.
+ * Generates the default array of `envFiles` for .env file loading.
  *
- * The default order is `.env`, `.env.local`, `.env.<env>`, and `.env.<env>.local` in that order.
+ * The default order is [`.env`, `.env.local`, `.env.<env>`, `.env.<env>.local`].
+ *
+ * @param env - The specific environment name (e.g., "staging") or `undefined` if no specific environment is set.
+ * @returns An array of strings representing the relative paths to the default .env files.
  */
-export function getDefaultEnvPaths(
-	basePath: string,
-	env: string | undefined
-): string[] {
+export function getDefaultEnvFiles(env: string | undefined): string[] {
 	// Generate the default paths for .env files based on the provided base path and environment.
-	const envPaths = [basePath, basePath + ".local"];
+	const envFiles = [".env", ".env.local"];
 	if (env !== undefined) {
-		envPaths.push(`${basePath}.${env}`);
-		envPaths.push(`${basePath}.${env}.local`);
+		envFiles.push(`.env.${env}`);
+		envFiles.push(`.env.${env}.local`);
 	}
-	return envPaths;
+	return envFiles;
 }
 
 /**
@@ -29,6 +29,11 @@ export function getDefaultEnvPaths(
  *
  * Further, once merged values are expanded, meaning that if a value references another variable
  * (e.g., `FOO=${BAR}`), it will be replaced with the value of `BAR` if it exists.
+ *
+ * @param envPaths - An array of absolute paths to .env files to load.
+ * @param options.includeProcessEnv - If true, will include the current process environment variables in the merged result.
+ * @param options.silent - If true, will not log any messages about the loaded .env files.
+ * @returns An object containing the merged and expanded environment variables.
  */
 export function loadDotEnv(
 	envPaths: string[],

@@ -85,8 +85,10 @@ export interface StartDevWorkerInput {
 	env?: string;
 
 	/**
-	 * The paths to the .env files to load for this worker, relative to the worker's directory.
-	 * If not specified, defaults to the standard `.env` files, in the wrangler config directory or current working directory if no wrangler config is present.
+	 * An array of paths to the .env files to load for this worker, relative to the project directory.
+	 *
+	 * If not specified, defaults to the standard `.env` files as given by `getDefaultEnvFiles()`.
+	 * The project directory is where the Wrangler configuration file is located or the current working directory otherwise.
 	 */
 	envFiles?: string[];
 
