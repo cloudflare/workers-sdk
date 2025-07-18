@@ -14,19 +14,21 @@ export async function seed(
 	files: Record<string, string | Uint8Array>
 ) {
 	// TODO(someday): allow copying/symlinking file/directory paths in seed? like "path`${__dirname}/../fixture`"?
-	for (const [name, contents] of Object.entries(files)) {
-		const filePath = path.resolve(root, name);
-		await mkdir(path.dirname(filePath), { recursive: true });
-		await writeFile(filePath, contents);
-	}
+	await Promise.all(
+		Object.entries(files).map(async ([name, contents]) => {
+			const filePath = path.resolve(root, name);
+			await mkdir(path.dirname(filePath), { recursive: true });
+			await writeFile(filePath, contents);
+		})
+	);
 }
 
 // Removes the given files from the `root` directory on the file system.
 export async function removeFiles(root: string, files: string[]) {
-	for (const name of files) {
-		const filePath = path.resolve(root, name);
-		if (filePath) {
-			await rm(filePath);
-		}
-	}
+	await Promise.all(
+		files.map(async (name) => {
+			const filePath = path.resolve(root, name);
+			await rm(filePath, { force: true });
+		})
+	);
 }
