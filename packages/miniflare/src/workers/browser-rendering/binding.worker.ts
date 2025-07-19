@@ -8,13 +8,25 @@ interface Env {
 	BrowserSession: DurableObjectNamespace<BrowserSession>;
 }
 
+function isClosed(ws: WebSocket | undefined): boolean {
+	return !ws || ws.readyState === WebSocket.CLOSED;
+}
+
 export class BrowserSession extends DurableObject<Env> {
 	endpoint?: string;
 	ws?: WebSocket;
 	server?: WebSocket;
 
 	async fetch(_request: Request) {
-		assert(!this.ws && !this.server, "WebSocket already initialized");
+		// sometimes the websocket doesn't get the close event, so we need to close them explicitly if needed
+		if (isClosed(this.ws) || isClosed(this.server)) {
+			this.ws?.close();
+			this.server?.close();
+			this.ws = undefined;
+			this.server = undefined;
+		} else {
+			assert.fail("WebSocket already initialized");
+		}
 
 		const webSocketPair = new WebSocketPair();
 		const [client, server] = Object.values(webSocketPair);
@@ -59,9 +71,11 @@ export class BrowserSession extends DurableObject<Env> {
 		});
 		server.addEventListener("close", ({ code, reason }) => {
 			ws.close(code, reason);
+			this.ws = undefined;
 		});
 		ws.addEventListener("close", ({ code, reason }) => {
 			server.close(code, reason);
+			this.server = undefined;
 		});
 		this.ws = ws;
 		this.server = server;
@@ -89,6 +103,8 @@ export class BrowserSession extends DurableObject<Env> {
 				// TODO should we send a error code?
 				this.ws?.close();
 				this.server?.close();
+				this.ws = undefined;
+				this.server = undefined;
 				this.ctx.storage.deleteAll();
 				return;
 			}
