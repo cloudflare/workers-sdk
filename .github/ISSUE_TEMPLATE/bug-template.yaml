@@ -8,10 +8,10 @@ body:
     attributes:
       value: |
         Thank you for taking the time to file a bug report! Please fill out this form as completely as possible.
-  - type: input
+  - type: textarea
     attributes:
       label: What versions & operating system are you using?
-      description: "Make sure you've checked that you meet our system requirements as listed here: https://developers.cloudflare.com/workers/wrangler/install-and-update/."
+      description: "Make sure you've checked that you meet our system requirements as listed here: https://developers.cloudflare.com/workers/wrangler/install-and-update/. Please provide the output of running `npx envinfo --system --npmPackages '{wrangler,create-cloudflare,miniflare,@cloudflare/*}' --binaries`"
       placeholder: e.g. Wrangler v4.6, Node v20, Windows 11 etc...
     validations:
       required: true
