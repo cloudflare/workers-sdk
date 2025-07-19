@@ -900,10 +900,7 @@ export class Miniflare {
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
 
-	#browsers: Set<{
-		wsEndpoint: () => string;
-		process: () => ChildProcess;
-	}> = new Set();
+	#browserProcesses: Map<string, ChildProcess> = new Map();
 
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
@@ -1304,10 +1301,25 @@ export class Miniflare {
 				);
 
 				// @ts-expect-error Puppeteer is dynamically installed, and so doesn't have types available
-				const browser = await puppeteer.launch({ headless: "old" });
-				this.#browsers.add(browser);
+				const browser = await puppeteer.launch({
+					headless: "old",
+					args: process.env.CI ? ["--no-sandbox"] : [],
+				});
+				const wsEndpoint = browser.wsEndpoint();
+				this.#browserProcesses.set(wsEndpoint, browser.process());
+				response = new Response(wsEndpoint);
+			} else if (url.pathname === "/browser/status") {
+				const wsEndpoint = url.searchParams.get("wsEndpoint");
+				assert(wsEndpoint !== null);
+				const process = this.#browserProcesses.get(wsEndpoint);
+				assert(process);
 
-				response = new Response(browser.wsEndpoint());
+				const status = {
+					stopped: process.exitCode !== null,
+				};
+				response = new Response(JSON.stringify(status), {
+					headers: { "Content-Type": "application/json" },
+				});
 			} else if (url.pathname === "/core/store-temp-file") {
 				const prefix = url.searchParams.get("prefix");
 				const folder = prefix ? `files/${prefix}` : "files";
@@ -1958,9 +1970,9 @@ export class Miniflare {
 	}
 
 	async #assembleAndUpdateConfig() {
-		for (const browser of this.#browsers) {
+		for (const process of this.#browserProcesses.values()) {
 			// .close() isn't enough
-			await browser.process().kill("SIGKILL");
+			process.kill("SIGKILL");
 		}
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
@@ -2662,9 +2674,9 @@ export class Miniflare {
 		try {
 			await this.#waitForReady(/* disposing */ true);
 		} finally {
-			for (const browser of this.#browsers) {
+			for (const process of this.#browserProcesses.values()) {
 				// .close() isn't enough
-				await browser.process().kill("SIGKILL");
+				process.kill("SIGKILL");
 			}
 
 			// Remove exit hook, we're cleaning up what they would've cleaned up now
