@@ -189,14 +189,14 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
 			expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
-			"Your Worker has access to the following bindings:
-			Binding        Resource      Mode
-			env.AI         AI            remote
-			[wrangler:info] Ready on http://<HOST>:<PORT>
-			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`experimental_remote: true\` for the binding definition in your configuration file.
-			⎔ Starting local server...
-			[wrangler:info] GET / 200 OK (TIMINGS)"
-		`);
+				"Your Worker has access to the following bindings:
+				Binding        Resource      Mode
+				env.AI         AI            remote
+				▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`experimental_remote: true\` for the binding definition in your configuration file.
+				⎔ Starting local server...
+				[wrangler:info] Ready on http://<HOST>:<PORT>
+				[wrangler:info] GET / 200 OK (TIMINGS)"
+			`);
 		});
 
 		describe("shows helpful error logs", () => {

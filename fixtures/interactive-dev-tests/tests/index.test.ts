@@ -500,11 +500,10 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 		});
 
 		it("should allow quitting while the image is building", async () => {
-			const wrangler = await startWranglerDev([
-				"dev",
-				"-c",
-				path.join(tmpDir, "wrangler.jsonc"),
-			]);
+			const wrangler = await startWranglerDev(
+				["dev", "-c", path.join(tmpDir, "wrangler.jsonc")],
+				true
+			);
 
 			const waitForOptions = {
 				timeout: 10_000,
@@ -524,11 +523,10 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 		});
 
 		it("should rebuilding while the image is building", async () => {
-			const wrangler = await startWranglerDev([
-				"dev",
-				"-c",
-				path.join(tmpDir, "wrangler.jsonc"),
-			]);
+			const wrangler = await startWranglerDev(
+				["dev", "-c", path.join(tmpDir, "wrangler.jsonc")],
+				true
+			);
 
 			const waitForOptions = {
 				timeout: 15_000,

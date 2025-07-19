@@ -77,6 +77,8 @@ export class DevEnv extends EventEmitter {
 			});
 		});
 
+		this.resolveAllRuntimeControllersReady().catch(() => {});
+
 		runtimes.forEach((runtime) => {
 			runtime.on("reloadStart", (event) => {
 				proxy.onReloadStart(event);
@@ -91,6 +93,28 @@ export class DevEnv extends EventEmitter {
 				runtime.onPreviewTokenExpired(event);
 			});
 		});
+	}
+
+	/**
+	 * Awaits for all the local runtime controllers to be ready, and when they are
+	 * it resolves a promise on the proxy controller to let it know that the
+	 * local server is now ready to handle requests
+	 */
+	private async resolveAllRuntimeControllersReady(): Promise<void> {
+		await Promise.all(
+			this.runtimes.map((runtime) => {
+				return new Promise<void>((resolve) => {
+					// A runtime controller is ready when it either emits the
+					// reloadComplete event (meaning that the runtime is in use and
+					// ready) or when it emits the teardown event (meaning that the
+					// runtime is not currently in use)
+					runtime.once("reloadComplete", () => resolve());
+					runtime.once("teardown", () => resolve());
+				});
+			})
+		);
+
+		this.proxy.localServerReady.resolve();
 	}
 
 	// *********************
