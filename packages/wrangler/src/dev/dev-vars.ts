@@ -89,11 +89,10 @@ function tryLoadDotDevDotVars(basePath: string): DotDevDotVars | undefined {
 		const parsed = dotenv.parse(contents);
 		return { path: basePath, parsed };
 	} catch (e) {
-		logger.debug(
+		throw new Error(
 			`Failed to load local dev variables file "${path.relative(".", basePath)}":`,
-			e
+			{ cause: e }
 		);
-		return { path: basePath, parsed: {} };
 	}
 }
 
