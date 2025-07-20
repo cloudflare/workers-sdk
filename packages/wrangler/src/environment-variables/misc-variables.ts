@@ -145,9 +145,7 @@ function getStagingSubdomain(): string {
  */
 export const getSanitizeLogs = getBooleanEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_SANITIZE",
-	defaultValue() {
-		return true;
-	},
+	defaultValue: true,
 });
 
 /**
@@ -292,7 +290,7 @@ export const getDockerHost = getEnvironmentVariableFactory({
 export const getCloudflareLoadDevVarsFromDotEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV",
-		defaultValue: () => true,
+		defaultValue: true,
 	});
 
 /**
@@ -301,5 +299,5 @@ export const getCloudflareLoadDevVarsFromDotEnv =
 export const getCloudflareIncludeProcessEnvFromEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "CLOUDFLARE_INCLUDE_PROCESS_ENV",
-		defaultValue: () => false,
+		defaultValue: false,
 	});
