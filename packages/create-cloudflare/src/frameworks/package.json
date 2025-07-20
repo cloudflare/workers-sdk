@@ -10,7 +10,7 @@
 		"@angular/create": "19.2.12",
 		"create-docusaurus": "3.8.1",
 		"create-hono": "0.19.2",
-		"create-next-app": "15.3.5",
+		"create-next-app": "15.4.2",
 		"create-qwik": "1.14.1",
 		"create-vite": "7.0.3",
 		"create-remix": "2.16.8",
