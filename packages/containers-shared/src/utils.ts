@@ -148,6 +148,11 @@ export const isDockerfile = (
 
 /**
  * Kills and removes any containers which come from the given image tag
+ *
+ * Please note that this function has an almost identical counterpart
+ * in the `vite-plugin-cloudflare` package (see `removeContainersByIds`).
+ * If you make any changes to this fn, please make sure you persist those
+ * changes in `removeContainersByIds` if necessary.
  */
 export const cleanupContainers = async (
 	dockerPath: string,

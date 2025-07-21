@@ -364,10 +364,11 @@ if (import.meta.hot) {
 				);
 
 				let containerBuildId: string | undefined;
-				const workerConfig = getEntryWorkerConfig(resolvedPluginConfig);
+				const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
 				const hasDevContainers =
-					workerConfig?.containers?.length &&
-					workerConfig.dev.enable_containers;
+					entryWorkerConfig?.containers?.length &&
+					entryWorkerConfig.dev.enable_containers;
+
 				if (hasDevContainers) {
 					containerBuildId = generateContainerBuildId();
 				}
@@ -388,12 +389,10 @@ if (import.meta.hot) {
 				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
 				if (resolvedPluginConfig.type === "workers") {
+					assert(entryWorkerConfig, `No entry Worker config`);
+
 					await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
-					const entryWorkerConfig = getWorkerConfig(
-						resolvedPluginConfig.entryWorkerEnvironmentName
-					);
-					assert(entryWorkerConfig, `No entry Worker config`);
 					const entryWorkerName = entryWorkerConfig.name;
 
 					// The HTTP server is not available in middleware mode
@@ -587,15 +586,17 @@ if (import.meta.hot) {
 				);
 			},
 			async buildEnd() {
-				const dockerPath = getDockerPath();
-				runningContainerIds = await getContainerIdsByImageTags(
-					dockerPath,
-					containerImageTagsSeen
-				);
+				if (resolvedViteConfig.command === "serve") {
+					const dockerPath = getDockerPath();
+					runningContainerIds = await getContainerIdsByImageTags(
+						dockerPath,
+						containerImageTagsSeen
+					);
 
-				await removeContainersByIds(dockerPath, runningContainerIds);
-				containerImageTagsSeen.clear();
-				runningContainerIds = [];
+					await removeContainersByIds(dockerPath, runningContainerIds);
+					containerImageTagsSeen.clear();
+					runningContainerIds = [];
+				}
 			},
 		},
 		// Plugin to provide a fallback entry file

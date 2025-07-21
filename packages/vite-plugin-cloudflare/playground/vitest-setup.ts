@@ -28,6 +28,9 @@ export const workspaceRoot = path.resolve(__dirname, "../");
 export const isBuild = !!process.env.VITE_TEST_BUILD;
 export const isWindows = process.platform === "win32";
 
+export const isCINonLinux =
+	process.platform !== "linux" && process.env.CI === "true";
+
 let server: ViteDevServer | http.Server;
 
 /**
