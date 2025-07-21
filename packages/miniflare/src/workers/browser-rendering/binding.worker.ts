@@ -18,6 +18,11 @@ export class BrowserSession extends DurableObject<Env> {
 	server?: WebSocket;
 
 	async fetch(_request: Request) {
+		assert(
+			this.endpoint !== undefined,
+			"endpoint must be set before connecting"
+		);
+
 		// sometimes the websocket doesn't get the close event, so we need to close them explicitly if needed
 		if (isClosed(this.ws) || isClosed(this.server)) {
 			this.ws?.close();
@@ -32,7 +37,6 @@ export class BrowserSession extends DurableObject<Env> {
 		const [client, server] = Object.values(webSocketPair);
 
 		server.accept();
-		assert(this.endpoint !== undefined);
 
 		const wsEndpoint = this.endpoint.replace("ws://", "http://");
 
@@ -42,7 +46,7 @@ export class BrowserSession extends DurableObject<Env> {
 			},
 		});
 
-		assert(response.webSocket !== null);
+		assert(response.webSocket !== null, "Expected a WebSocket response");
 		const ws = response.webSocket;
 
 		ws.accept();
@@ -60,6 +64,8 @@ export class BrowserSession extends DurableObject<Env> {
 		});
 
 		server.addEventListener("message", (m) => {
+			// both @cloudflare/puppeteer and @cloudflare/playwright send ping messges each second,
+			// so we use them to check the status of the browser
 			if (m.data === "ping") {
 				this.#checkStatus().catch((err) => {
 					console.error("Error checking browser status:", err);
@@ -128,7 +134,7 @@ export default {
 			}
 			case "/v1/connectDevtools": {
 				const sessionId = url.searchParams.get("browser_session");
-				assert(sessionId !== null);
+				assert(sessionId !== null, "browser_session must be set");
 				const id = env.BrowserSession.idFromName(sessionId);
 				return env.BrowserSession.get(id).fetch(request);
 			}

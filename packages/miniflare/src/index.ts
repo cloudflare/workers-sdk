@@ -900,6 +900,7 @@ export class Miniflare {
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
 
+	// key is the browser wsEndpoint, value is the browser process
 	#browserProcesses: Map<string, ChildProcess> = new Map();
 
 	readonly #runtime?: Runtime;
@@ -1310,12 +1311,10 @@ export class Miniflare {
 				response = new Response(wsEndpoint);
 			} else if (url.pathname === "/browser/status") {
 				const wsEndpoint = url.searchParams.get("wsEndpoint");
-				assert(wsEndpoint !== null);
+				assert(wsEndpoint !== null, "Missing wsEndpoint query parameter");
 				const process = this.#browserProcesses.get(wsEndpoint);
-				assert(process);
-
 				const status = {
-					stopped: process.exitCode !== null,
+					stopped: !process || process.exitCode !== null,
 				};
 				response = new Response(JSON.stringify(status), {
 					headers: { "Content-Type": "application/json" },
@@ -1970,9 +1969,10 @@ export class Miniflare {
 	}
 
 	async #assembleAndUpdateConfig() {
-		for (const process of this.#browserProcesses.values()) {
+		for (const [wsEndpoint, process] of this.#browserProcesses.entries()) {
 			// .close() isn't enough
 			process.kill("SIGKILL");
+			this.#browserProcesses.delete(wsEndpoint);
 		}
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
@@ -2674,9 +2674,10 @@ export class Miniflare {
 		try {
 			await this.#waitForReady(/* disposing */ true);
 		} finally {
-			for (const process of this.#browserProcesses.values()) {
+			for (const [wsEndpoint, process] of this.#browserProcesses.entries()) {
 				// .close() isn't enough
 				process.kill("SIGKILL");
+				this.#browserProcesses.delete(wsEndpoint);
 			}
 
 			// Remove exit hook, we're cleaning up what they would've cleaned up now
