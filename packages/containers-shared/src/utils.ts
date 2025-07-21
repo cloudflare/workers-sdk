@@ -1,8 +1,10 @@
-import { execFile, spawn, StdioOptions } from "child_process";
+import { execFile, spawn } from "child_process";
+import { randomUUID } from "crypto";
 import { existsSync, statSync } from "fs";
 import path from "path";
 import { dockerImageInspect } from "./inspect";
-import { ContainerDevOptions } from "./types";
+import { type ContainerDevOptions } from "./types";
+import type { StdioOptions } from "child_process";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = (
@@ -127,7 +129,7 @@ export const isDockerfile = (
 	}
 	const imageParts = image.split("/");
 
-	if (!imageParts[imageParts.length - 1].includes(":")) {
+	if (!imageParts[imageParts.length - 1]?.includes(":")) {
 		throw new Error(
 			errorPrefix +
 				`If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)`
@@ -146,6 +148,11 @@ export const isDockerfile = (
 
 /**
  * Kills and removes any containers which come from the given image tag
+ *
+ * Please note that this function has an almost identical counterpart
+ * in the `vite-plugin-cloudflare` package (see `removeContainersByIds`).
+ * If you make any changes to this fn, please make sure you persist those
+ * changes in `removeContainersByIds` if necessary.
  */
 export const cleanupContainers = async (
 	dockerPath: string,
@@ -153,12 +160,10 @@ export const cleanupContainers = async (
 ) => {
 	try {
 		// Find all containers (stopped and running) for each built image
-		const containerIds: string[] = [];
-		for (const imageTag of imageTags) {
-			containerIds.push(
-				...(await getContainerIdsFromImage(dockerPath, imageTag))
-			);
-		}
+		const containerIds = await getContainerIdsByImageTags(
+			dockerPath,
+			imageTags
+		);
 
 		if (containerIds.length === 0) {
 			return true;
@@ -176,7 +181,31 @@ export const cleanupContainers = async (
 	}
 };
 
-const getContainerIdsFromImage = async (
+/**
+ * See https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
+ *
+ * @param dockerPath The path to the Docker executable
+ * @param imageTags A set of ancestor image tags
+ * @returns The ids of all containers that share the given image tags as ancestors.
+ */
+export async function getContainerIdsByImageTags(
+	dockerPath: string,
+	imageTags: Set<string>
+): Promise<Array<string>> {
+	const ids = new Set<string>();
+
+	for (const imageTag of imageTags) {
+		const containerIdsFromImage = await getContainerIdsFromImage(
+			dockerPath,
+			imageTag
+		);
+		containerIdsFromImage.forEach((id) => ids.add(id));
+	}
+
+	return Array.from(ids);
+}
+
+export const getContainerIdsFromImage = async (
 	dockerPath: string,
 	ancestorImage: string
 ) => {
@@ -213,4 +242,11 @@ export async function checkExposedPorts(
 				"For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.\n"
 		);
 	}
+}
+
+/**
+ * Generates a random container build id
+ */
+export function generateContainerBuildId() {
+	return randomUUID().slice(0, 8);
 }

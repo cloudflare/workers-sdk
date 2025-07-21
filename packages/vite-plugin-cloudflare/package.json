@@ -54,6 +54,7 @@
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
+		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",

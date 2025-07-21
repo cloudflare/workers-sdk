@@ -1,6 +1,12 @@
 import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
+import { prepareContainerImagesForDev } from "@cloudflare/containers-shared/src/images";
+import { getDevContainerImageName } from "@cloudflare/containers-shared/src/knobs";
+import {
+	generateContainerBuildId,
+	getContainerIdsByImageTags,
+} from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
@@ -22,6 +28,7 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "./constants";
+import { getDockerPath, removeContainersByIds } from "./containers";
 import {
 	addDebugToVitePrintUrls,
 	getDebugPathHtml,
@@ -35,6 +42,7 @@ import {
 } from "./dev-vars";
 import {
 	getDevMiniflareOptions,
+	getEntryWorkerConfig,
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
 import {
@@ -89,12 +97,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const additionalModulePaths = new Set<string>();
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
+	const containerImageTagsSeen = new Set<string>();
+	let runningContainerIds: Array<string>;
 
 	return [
 		{
 			name: "vite-plugin-cloudflare",
 			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
 			sharedDuringBuild: true,
+			// Vite `config` Hook
+			// see https://vite.dev/guide/api-plugin.html#config
 			config(userConfig, env) {
 				resolvedPluginConfig = resolvePluginConfig(
 					pluginConfig,
@@ -167,6 +179,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					},
 				};
 			},
+			buildStart() {
+				// This resets the value when the dev server restarts
+				workersConfigsWarningShown = false;
+			},
+			// Vite `configResolved` Hook
+			// see https://vite.dev/guide/api-plugin.html#configresolved
 			configResolved(config) {
 				resolvedViteConfig = config;
 
@@ -176,10 +194,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						resolvedViteConfig
 					);
 				}
-			},
-			buildStart() {
-				// This resets the value when the dev server restarts
-				workersConfigsWarningShown = false;
 			},
 			async transform(code, id) {
 				const workerConfig = getWorkerConfig(this.environment.name);
@@ -338,6 +352,8 @@ if (import.meta.hot) {
 					return [];
 				}
 			},
+			// Vite `configureServer` Hook
+			// see https://vite.dev/guide/api-plugin.html#configureserver
 			async configureServer(viteDevServer) {
 				assertIsNotPreview(resolvedPluginConfig);
 
@@ -347,11 +363,22 @@ if (import.meta.hot) {
 					miniflare
 				);
 
-				const miniflareDevOptions = await getDevMiniflareOptions(
+				let containerBuildId: string | undefined;
+				const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
+				const hasDevContainers =
+					entryWorkerConfig?.containers?.length &&
+					entryWorkerConfig.dev.enable_containers;
+
+				if (hasDevContainers) {
+					containerBuildId = generateContainerBuildId();
+				}
+
+				const miniflareDevOptions = await getDevMiniflareOptions({
 					resolvedPluginConfig,
 					viteDevServer,
-					inputInspectorPort
-				);
+					inspectorPort: inputInspectorPort,
+					containerBuildId,
+				});
 
 				if (!miniflare) {
 					miniflare = new Miniflare(miniflareDevOptions);
@@ -362,12 +389,10 @@ if (import.meta.hot) {
 				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
 				if (resolvedPluginConfig.type === "workers") {
+					assert(entryWorkerConfig, `No entry Worker config`);
+
 					await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
-					const entryWorkerConfig = getWorkerConfig(
-						resolvedPluginConfig.entryWorkerEnvironmentName
-					);
-					assert(entryWorkerConfig, `No entry Worker config`);
 					const entryWorkerName = entryWorkerConfig.name;
 
 					// The HTTP server is not available in middleware mode
@@ -416,6 +441,73 @@ if (import.meta.hot) {
 							}
 						};
 					}
+
+					if (hasDevContainers) {
+						assert(
+							containerBuildId,
+							"Build ID should be set if containers are enabled and defined"
+						);
+						// Assemble container options and build if necessary
+						const containerOptions = await getContainerOptions(
+							entryWorkerConfig,
+							containerBuildId
+						);
+						const dockerPath = getDockerPath();
+
+						if (containerOptions) {
+							// keep track of them so we can clean up later
+							for (const container of containerOptions) {
+								containerImageTagsSeen.add(container.imageTag);
+							}
+
+							await prepareContainerImagesForDev({
+								dockerPath,
+								configPath: entryWorkerConfig.configPath,
+								containerOptions,
+								onContainerImagePreparationStart: () => {},
+								onContainerImagePreparationEnd: () => {},
+							});
+						}
+
+						// poll Docker every two seconds and update the list of ids of all
+						// running containers
+						const dockerPollIntervalId = setInterval(async () => {
+							runningContainerIds = await getContainerIdsByImageTags(
+								dockerPath,
+								containerImageTagsSeen
+							);
+						}, 2000);
+
+						/*
+						 * Upon exiting the dev process we should ensure we perform any
+						 * containers-specific cleanup work. Vite recommends using the
+						 * `buildEnd` and `closeBundle` hooks, which are called when the
+						 * server is closed. Unfortunately none of these hooks work if the
+						 * process exits forcefully, via `ctrl+C`, and Vite provides no
+						 * other alternatives. For this reason we decided to hook into both
+						 * `buildEnd` and the `exit` event, and ensure we always cleanup
+						 * (please note that handling the `beforeExit` event, which does
+						 * support async ops, is not an option, since Vite calls
+						 * `process.exit()` imperatively, and therefore causes `beforeExit`
+						 * not to be emitted).
+						 *
+						 * Furthermore, since the `exit` event handler cannot perform async
+						 * ops as per spec (https://nodejs.org/api/process.html#event-exit),
+						 * we also need a mechanism to ensure that list of containers to be
+						 * cleaned up on exit is up to date. This is what the interval with id
+						 * `dockerPollIntervalId` is for.
+						 *
+						 * It is possible, though very unlikely, that in some rare cases,
+						 * we might be left with some orphaned containers, due to the fact
+						 * that at the point of exiting the dev process, our internal list
+						 * of container ids is out of date. We accept this caveat for now.
+						 *
+						 */
+						process.on("exit", () => {
+							clearInterval(dockerPollIntervalId);
+							removeContainersByIds(dockerPath, runningContainerIds);
+						});
+					}
 				}
 
 				return () => {
@@ -460,6 +552,8 @@ if (import.meta.hot) {
 					);
 				};
 			},
+			// Vite `configurePreviewServer` Hook
+			// see https://vite.dev/guide/api-plugin.html#configurepreviewserver
 			async configurePreviewServer(vitePreviewServer) {
 				assertIsPreview(resolvedPluginConfig);
 
@@ -490,6 +584,19 @@ if (import.meta.hot) {
 						return miniflare.dispatchFetch(request, { redirect: "manual" });
 					})
 				);
+			},
+			async buildEnd() {
+				if (resolvedViteConfig.command === "serve") {
+					const dockerPath = getDockerPath();
+					runningContainerIds = await getContainerIdsByImageTags(
+						dockerPath,
+						containerImageTagsSeen
+					);
+
+					await removeContainersByIds(dockerPath, runningContainerIds);
+					containerImageTagsSeen.clear();
+					runningContainerIds = [];
+				}
 			},
 		},
 		// Plugin to provide a fallback entry file
@@ -928,5 +1035,32 @@ if (import.meta.hot) {
 		return resolvedPluginConfig.type === "workers"
 			? resolvedPluginConfig.workers[environmentName]
 			: undefined;
+	}
+
+	/**
+	 * @returns Container options suitable for building or pulling images,
+	 * with image tag set to well-known dev format, or undefined if
+	 * containers are not enabled or not configured.
+	 */
+	async function getContainerOptions(
+		config: WorkerConfig,
+		containerBuildId: string
+	) {
+		if (!config.containers?.length || config.dev.enable_containers === false) {
+			return undefined;
+		}
+
+		return config.containers.map((container) => {
+			return {
+				image: container.image ?? container.configuration?.image,
+				imageTag: getDevContainerImageName(
+					container.class_name,
+					containerBuildId
+				),
+				args: container.image_vars,
+				imageBuildContext: container.image_build_context,
+				class_name: container.class_name,
+			};
+		});
 	}
 }
