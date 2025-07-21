@@ -390,7 +390,11 @@ export async function handlePrettyErrorRequest(
 			return;
 		}
 
-		if (stackFrame.fileName.startsWith("cloudflare:")) {
+		if (
+			stackFrame.type === "native" ||
+			stackFrame.fileName.startsWith("cloudflare:") ||
+			stackFrame.fileName.startsWith("node:")
+		) {
 			stackFrame.type = "native";
 
 			if (inspectorURL) {
@@ -404,6 +408,11 @@ export async function handlePrettyErrorRequest(
 			return;
 		}
 
+		if (!fs.existsSync(stackFrame.fileName)) {
+			// Mark the file type as undefined to skip the link to the source file
+			stackFrame.fileType = undefined;
+		}
+
 		// Check if it is an inline script, which are reported as "script-<workerIndex>"
 		const workerIndex = maybeGetStringScriptPathIndex(stackFrame.fileName);
 		if (workerIndex !== undefined) {
@@ -414,9 +423,9 @@ export async function handlePrettyErrorRequest(
 		}
 
 		// Check if the source map has the source content for this file so we don't need to read it from disk
-		const sorucesContent = sourcesContentMap.get(stackFrame.fileName);
-		if (sorucesContent) {
-			return { contents: sorucesContent };
+		const sourcesContent = sourcesContentMap.get(stackFrame.fileName);
+		if (sourcesContent) {
+			return { contents: sourcesContent };
 		}
 
 		try {
