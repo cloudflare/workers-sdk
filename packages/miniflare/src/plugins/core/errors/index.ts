@@ -1,10 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { DeferredPromise } from "miniflare:shared";
-import NodeWebSocket from "ws";
 import { z } from "zod";
-import { fetch, Request, Response } from "../../../http";
+import { Request, Response } from "../../../http";
 import { Log, processStackTrace } from "../../../shared";
 import { maybeParseURL } from "../../shared";
 import {
@@ -273,69 +271,10 @@ export function reviveError(
 	return error;
 }
 
-export async function getScriptSource(inspectorURL: URL, moduleName: string) {
-	// Look for workers available in the inspector URL
-	const httpURL = `http://${inspectorURL.hostname}:${inspectorURL.port}/json`;
-	const response = await fetch(httpURL);
-	const workers = response.ok ? await response.json() : null;
-	// Find the first available worker
-	const worker = Array.isArray(workers) ? workers[0] : null;
-
-	if (!worker || !worker.webSocketDebuggerUrl) {
-		return;
-	}
-
-	// Connect to the specific worker's WebSocket
-	const promise = new DeferredPromise<string | undefined>();
-	const ws = new NodeWebSocket(worker.webSocketDebuggerUrl);
-
-	// We will use this id to match the request and response
-	const scriptSourceMessageId = Math.floor(Math.random() * 10000);
-
-	let scriptSource: string | undefined;
-
-	ws.on("message", async (raw) => {
-		const message = JSON.parse(raw.toString("utf8"));
-
-		if (
-			message.method === "Debugger.scriptParsed" &&
-			message.params.url === moduleName
-		) {
-			// Use the scriptId from the scriptParsed event to get the script source
-			ws.send(
-				JSON.stringify({
-					id: scriptSourceMessageId,
-					method: "Debugger.getScriptSource",
-					params: { scriptId: message.params.scriptId },
-				})
-			);
-		} else if (message.id === scriptSourceMessageId) {
-			// Keep the script source from the response
-			scriptSource = message.result.scriptSource;
-			// Close the WebSocket connection
-			ws.close();
-		}
-	});
-	ws.on("error", () => {
-		// Suppress errors  to avoid triggering another error when we are populating the pretty error screen
-		// This will be resolved with `undefined` when the WebSocket closes
-	});
-	ws.on("open", () => {
-		// Enable the Debugger to receive scriptParsed events
-		ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
-	});
-	ws.on("close", () => {
-		promise.resolve(scriptSource);
-	});
-
-	return promise;
-}
-
 export async function handlePrettyErrorRequest(
 	log: Log,
 	workerSrcOpts: NameSourceOptions[],
-	request: Request,
-	inspectorURL: URL | null
+	request: Request
 ): Promise<Response> {
 	// Parse and validate the error we've been given from user code
 	const caught = JsonErrorSchema.parse(await request.json());
@@ -396,15 +335,6 @@ export async function handlePrettyErrorRequest(
 			stackFrame.fileName.startsWith("node:")
 		) {
 			stackFrame.type = "native";
-
-			if (inspectorURL) {
-				const source = await getScriptSource(inspectorURL, stackFrame.fileName);
-
-				if (source) {
-					return { contents: source };
-				}
-			}
-
 			return;
 		}
 

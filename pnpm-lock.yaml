@@ -78,7 +78,7 @@ patchedDependencies:
     hash: qxsfpdzvzbhq2ecirbu5xq4vlq
     path: patches/toucan-js@4.0.0.patch
   youch@4.1.0-beta.10:
-    hash: agxewlqjrif4ucs4pt2ggsm7tq
+    hash: flgmw54jmjdxqmelxigtxg6kum
     path: patches/youch@4.1.0-beta.10.patch
 
 importers:
@@ -1785,7 +1785,7 @@ importers:
         version: 8.18.0
       youch:
         specifier: 4.1.0-beta.10
-        version: 4.1.0-beta.10(patch_hash=agxewlqjrif4ucs4pt2ggsm7tq)
+        version: 4.1.0-beta.10(patch_hash=flgmw54jmjdxqmelxigtxg6kum)
       zod:
         specifier: 3.22.3
         version: 3.22.3
@@ -24451,7 +24451,7 @@ snapshots:
       mustache: 4.2.0
       stacktracey: 2.1.8
 
-  youch@4.1.0-beta.10(patch_hash=agxewlqjrif4ucs4pt2ggsm7tq):
+  youch@4.1.0-beta.10(patch_hash=flgmw54jmjdxqmelxigtxg6kum):
     dependencies:
       '@poppinss/colors': 4.1.5
       '@poppinss/dumper': 0.6.4

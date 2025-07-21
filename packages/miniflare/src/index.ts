@@ -1278,22 +1278,10 @@ export class Miniflare {
 					this
 				);
 			} else if (url.pathname === "/core/error") {
-				let inspectorURL: URL | null;
-
-				try {
-					inspectorURL =
-						this.#sharedOpts.core.inspectorPort !== undefined
-							? await this.getInspectorURL()
-							: null;
-				} catch {
-					inspectorURL = null;
-				}
-
 				response = await handlePrettyErrorRequest(
 					this.#log,
 					this.#workerSrcOpts,
-					request,
-					inspectorURL
+					request
 				);
 			} else if (url.pathname === "/core/log") {
 				// Safety of `!`: `parseInt(null)` is `NaN`

@@ -304,7 +304,6 @@ test("responds with pretty error page", async (t) => {
 	const mf = new Miniflare({
 		log,
 		modules: true,
-		inspectorPort: 0,
 		script: `
 		import { connect } from "cloudflare:sockets";
 

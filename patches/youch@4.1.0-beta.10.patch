@@ -1,22 +1,5 @@
-diff --git a/build/chunk-4XB2BYKC.js b/build/chunk-4XB2BYKC.js
-index 6e6e490115bc4b107b53834ceac3d7d19cdbe3fe..3cf42b9b786ae8c55f4e994b9d35513c7e89e968 100644
---- a/build/chunk-4XB2BYKC.js
-+++ b/build/chunk-4XB2BYKC.js
-@@ -34,10 +34,10 @@ var ErrorStackSource = class extends BaseComponent {
-    */
-   async toHTML(props) {
-     const frame = props.frame;
--    if (frame.type === "native" || !frame.source || !frame.fileName) {
-+    if (!frame.source || !frame.fileName) {
-       return "";
-     }
--    const language = LANGS_MAP[extname(frame.fileName)] ?? "plain";
-+    const language = LANGS_MAP[extname(frame.fileName)] ?? (frame.type === "native" ? "js" : "plain");
-     const highlightMarginTop = `${frame.source.findIndex((chunk) => {
-       return chunk.lineNumber === frame.lineNumber;
-     }) * 24}px`;
 diff --git a/build/chunk-JAN2TFI2.js b/build/chunk-JAN2TFI2.js
-index a6321161988abe906e7745bf9d540670dee5b289..dc4b86257b4be4e3939ab6ad807375c649e0bfc3 100644
+index a6321161988abe906e7745bf9d540670dee5b289..28c79363b321cd99809c44fdfeebcf86b05cada6 100644
 --- a/build/chunk-JAN2TFI2.js
 +++ b/build/chunk-JAN2TFI2.js
 @@ -50,7 +50,7 @@ var ErrorStack = class extends BaseComponent {
@@ -28,52 +11,3 @@ index a6321161988abe906e7745bf9d540670dee5b289..dc4b86257b4be4e3939ab6ad807375c6
        return {
          text: this.#getRelativeFileName(frame.fileName)
        };
-@@ -72,7 +72,7 @@ var ErrorStack = class extends BaseComponent {
-         ${htmlEscape(frame.functionName)}
-       </code></span>` : "";
-     const loc = `<span>at line <code>${frame.lineNumber}:${frame.columnNumber}</code></span>`;
--    if (frame.type !== "native" && frame.source) {
-+    if (frame.source) {
-       return `<button class="stack-frame-location">
-         ${fileName} ${functionName} ${loc}
-       </button>`;
-@@ -87,7 +87,7 @@ var ErrorStack = class extends BaseComponent {
-   async #renderStackFrame(frame, index, expandAtIndex, props) {
-     const label = frame.type === "app" ? '<span class="frame-label">In App</span>' : "";
-     const expandedClass = expandAtIndex === index ? " expanded" : "";
--    const toggleButton = frame.type !== "native" && frame.source ? `<button class="stack-frame-toggle-indicator">${CHEVIRON}</button>` : "";
-+    const toggleButton = frame.source ? `<button class="stack-frame-toggle-indicator">${CHEVIRON}</button>` : "";
-     return `<li class="stack-frame stack-frame-${frame.type}${expandedClass}">
-       <div class="stack-frame-contents">
-         ${this.#renderFrameLocation(frame, props.ide)}
-@@ -115,7 +115,8 @@ var ErrorStack = class extends BaseComponent {
-     }
-     if (frame.type === "native") {
-       const functionName2 = frame.functionName ? `at ${colors.italic(frame.functionName)} ` : "";
--      return colors.dim(` \u2043 ${functionName2}(${colors.italic(loc)})`);
-+      const codeSnippet = await props.sourceCodeRenderer(props.error, frame);
-+      return colors.dim(` \u2043 ${functionName2}(${colors.italic(loc)})`) + codeSnippet;
-     }
-     const functionName = frame.functionName ? `at ${frame.functionName} ` : "";
-     return ` \u2043 ${functionName}${colors.yellow(`(${loc})`)}`;
-diff --git a/build/public/error_stack/style.css b/build/public/error_stack/style.css
-index 8b062afbdb5e82cb9ca05ae0bde1ccc78bf03079..278dc7d0f8c8c63794496121d18fb64d0d394fbd 100644
---- a/build/public/error_stack/style.css
-+++ b/build/public/error_stack/style.css
-@@ -47,10 +47,14 @@ html.dark {
- }
- .stack-frame.stack-frame-native {
-   display: none;
-+}
-+
-+.stack-frame.stack-frame-native .stack-frame-contents {
-   font-style: italic;
- }
--.stack-frame.stack-frame-native a,
--.stack-frame.stack-frame-native code {
-+
-+.stack-frame.stack-frame-native .stack-frame-contents a,
-+.stack-frame.stack-frame-native .stack-frame-contents code {
-   color: var(--muted-fg);
- }
- 
