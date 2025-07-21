@@ -19,7 +19,7 @@ export default defineBuildConfig({
 			input: "src/runtime/",
 			outDir: "dist/runtime",
 			format: "esm",
-			pattern: ["**", "!runtime/npm/debug.*"],
+			pattern: ["**", "!npm/debug.ts"],
 		},
 	],
 });
