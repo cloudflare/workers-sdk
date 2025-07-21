@@ -167,10 +167,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					},
 				};
 			},
-			buildStart() {
-				// This resets the value when the dev server restarts
-				workersConfigsWarningShown = false;
-			},
 			configResolved(config) {
 				resolvedViteConfig = config;
 
@@ -179,6 +175,34 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						resolvedPluginConfig,
 						resolvedViteConfig
 					);
+				}
+			},
+			buildStart() {
+				// This resets the value when the dev server restarts
+				workersConfigsWarningShown = false;
+			},
+			async transform(code, id) {
+				const workerConfig = getWorkerConfig(this.environment.name);
+
+				if (!workerConfig) {
+					return;
+				}
+
+				const resolvedWorkerEntry = await this.resolve(workerConfig.main);
+
+				if (id === resolvedWorkerEntry?.id) {
+					const modified = new MagicString(code);
+					const hmrCode = `
+if (import.meta.hot) {
+  import.meta.hot.accept();
+}
+						`;
+					modified.append(hmrCode);
+
+					return {
+						code: modified.toString(),
+						map: modified.generateMap({ hires: "boundary", source: id }),
+					};
 				}
 			},
 			generateBundle(_, bundle) {
