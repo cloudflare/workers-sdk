@@ -190,6 +190,9 @@ importers:
 
   fixtures/browser-rendering:
     devDependencies:
+      '@cloudflare/playwright':
+        specifier: ^0.0.10
+        version: 0.0.10
       '@cloudflare/puppeteer':
         specifier: ^1.0.2
         version: 1.0.3
@@ -4196,6 +4199,9 @@ packages:
   '@cloudflare/kv-asset-handler@0.4.0':
     resolution: {integrity: sha512-+tv3z+SPp+gqTIcImN9o0hqE9xyfQjI1XD9pL6NuKjua9B1y7mNYv0S9cP+QEbA4ppVgGZEmKOvHX5G5Ei1CVA==}
     engines: {node: '>=18.0.0'}
+
+  '@cloudflare/playwright@0.0.10':
+    resolution: {integrity: sha512-phlOzpO5FLgXFbx20C2GyQonffpe+qdL/MSMOf7ryc3+WjEsRrr6zqVLVJJq9ZW4CEypee1e/wcUQ473srC2dA==}
 
   '@cloudflare/puppeteer@1.0.3':
     resolution: {integrity: sha512-55LDVaxSv9hl99QkoLftJWvemKqfxK2+frKx2ylErV50pswGU7ILpEG0VzpN5pPqKqPXl/ajsIxuaJyp+A4kDw==}
@@ -14290,6 +14296,8 @@ snapshots:
   '@cloudflare/kv-asset-handler@0.4.0':
     dependencies:
       mime: 3.0.0
+
+  '@cloudflare/playwright@0.0.10': {}
 
   '@cloudflare/puppeteer@1.0.3':
     dependencies:
