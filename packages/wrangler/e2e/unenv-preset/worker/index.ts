@@ -190,6 +190,7 @@ export async function testDebug() {
 	const logs: string[] = [];
 
 	// Append all logs to the array instead of logging to console
+	// @ts-expect-error implicit any
 	debug.default.log = (...args) =>
 		logs.push(args.map((arg) => arg.toString()).join(" "));
 

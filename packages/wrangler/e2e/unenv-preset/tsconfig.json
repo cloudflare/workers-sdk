@@ -1,0 +1,10 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"types": ["node"],
+		"module": "nodenext",
+		"moduleResolution": "nodenext"
+	},
+	"include": ["**/*.ts"],
+	"exclude": []
+}

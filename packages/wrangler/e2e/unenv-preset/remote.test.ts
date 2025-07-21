@@ -27,13 +27,14 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				"name": "${generateResourceName()}",
 				"main": "${workerScript}",
 				"compatibility_date": "${getYMDDate()}",
-				"compatibility_flags": ["nodejs_compat"]
+				"compatibility_flags": ["nodejs_compat"],
+				"vars": {
+					"DEBUG": "example"
+				}
 			}`,
 			});
 
-			const { stdout } = await helper.run(
-				`wrangler deploy -c ${helper.tmpPath}/wrangler.jsonc`
-			);
+			const { stdout } = await helper.run(`wrangler deploy`);
 
 			const match = stdout.match(
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/

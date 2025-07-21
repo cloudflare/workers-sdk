@@ -22,7 +22,10 @@ describe(`@cloudflare/unenv-preset local tests`, () => {
 				"name": "${generateResourceName()}",
 				"main": "${workerScript}",
 				"compatibility_date": "${getYMDDate()}",
-				"compatibility_flags": ["nodejs_compat"]
+				"compatibility_flags": ["nodejs_compat"],
+				"vars": {
+					"DEBUG": "example"
+				}
 			}`,
 		});
 
