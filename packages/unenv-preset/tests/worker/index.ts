@@ -12,6 +12,7 @@ export const TESTS = {
 	testTimers,
 	testNet,
 	testTls,
+	testDebug,
 };
 
 export default {
@@ -174,4 +175,21 @@ export async function testTls() {
 	const tls = await import("node:tls");
 	assert.strictEqual(typeof tls, "object");
 	assert.strictEqual(typeof tls.convertALPNProtocols, "function");
+}
+
+export async function testDebug() {
+	const debug = await import("@cloudflare/unenv-preset/npm/debug");
+	const logs: string[] = [];
+
+	// Append all logs to the array instead of logging to console
+	debug.default.log = (...args) =>
+		logs.push(args.map((arg) => arg.toString()).join(" "));
+
+	const exampleLog = debug.default("example");
+	const testLog = exampleLog.extend("test");
+
+	exampleLog("This is an example log");
+	testLog("This is a test log");
+
+	assert.deepEqual(logs, ["example This is an example log +0ms"]);
 }
