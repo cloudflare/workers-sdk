@@ -7,7 +7,6 @@ module.exports = {
 		"pages/functions/template-worker.ts",
 		"templates",
 		"emitted-types",
-		"e2e/remote-binding/workers/*",
 		"kv-asset-handler.js",
 	],
 	overrides: [
