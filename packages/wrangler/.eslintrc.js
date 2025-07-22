@@ -8,7 +8,6 @@ module.exports = {
 		"templates",
 		"emitted-types",
 		"e2e/seed-files/**/*",
-		"e2e/unenv-preset/**/*",
 		"kv-asset-handler.js",
 	],
 	overrides: [

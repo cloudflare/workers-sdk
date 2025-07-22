@@ -8,6 +8,7 @@
 	},
 	"include": ["**/*.ts", "**/*.tsx", "**/*.js"],
 	"exclude": [
+		"e2e/seed-files",
 		"emitted-types",
 		"node_modules",
 		"*-dist",
@@ -15,7 +16,6 @@
 		"templates",
 		"**/__tests__",
 		"**/*.test.ts",
-		"kv-asset-handler.js",
-		"e2e/unenv-preset"
+		"kv-asset-handler.js"
 	]
 }

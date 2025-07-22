@@ -1,0 +1,6 @@
+{
+	"name": "unenv-preset-e2e-test-worker",
+	"version": "0.0.0",
+	"private": true,
+	"dependencies": {}
+}

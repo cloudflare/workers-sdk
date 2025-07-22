@@ -1,11 +1,3 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const thisPath = path.dirname(fileURLToPath(import.meta.url));
-
-/** Path to the worker script */
-export const workerScript = path.join(thisPath, "/worker/index.ts");
-
 /**
  * @returns The current date formatted as YYYY-MM-DD
  */

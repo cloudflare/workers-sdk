@@ -1,7 +1,8 @@
 import assert from "node:assert";
+import debug from "@cloudflare/unenv-preset/npm/debug";
 
-// List all the test functions.
-// The test can be executing by fetching the `/${testName}` url.
+// These tests can be executed by fetching the `/${testName}` url.
+// Keep this in sync with the test list in `packages/wrangler/e2e/unenv-preset.test.ts`.
 export const TESTS = {
 	testCryptoGetRandomValues,
 	testImplementsBuffer,
@@ -186,11 +187,9 @@ export async function testTls() {
 }
 
 export async function testDebug() {
-	const debug = await import("@cloudflare/unenv-preset/npm/debug");
 	const logs: string[] = [];
 
 	// Append all logs to the array instead of logging to console
-	// @ts-expect-error implicit any
 	debug.default.log = (...args) =>
 		logs.push(args.map((arg) => arg.toString()).join(" "));
 
