@@ -358,7 +358,7 @@ export const versionsUploadCommand = createCommand({
 				legacyEnv: isLegacyEnv(config),
 				env: args.env,
 				compatibilityDate: args.latest
-					? new Date().toISOString().substring(0, 10)
+					? formatCompatibilityDate(new Date())
 					: args.compatibilityDate,
 				compatibilityFlags: args.compatibilityFlags,
 				vars: cliVars,

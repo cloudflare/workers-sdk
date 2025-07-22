@@ -12,6 +12,7 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
+import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import type { RawEnvironment } from "../config";
 import type { PagesConfigCache } from "./types";
@@ -71,8 +72,7 @@ async function toEnvironment(
 ): Promise<RawEnvironment> {
 	const configObj = {} as RawEnvironment;
 	configObj.compatibility_date =
-		deploymentConfig.compatibility_date ??
-		new Date().toISOString().substring(0, 10);
+		deploymentConfig.compatibility_date ?? formatCompatibilityDate(new Date());
 
 	// Find the latest supported compatibility date and use that
 	if (deploymentConfig.always_use_latest_compatibility_date) {
