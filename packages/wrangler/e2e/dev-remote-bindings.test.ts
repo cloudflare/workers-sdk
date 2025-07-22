@@ -22,35 +22,21 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await helper.seed(
 				resolve(__dirname, "./seed-files/remote-binding-workers")
 			);
-
-			await helper.seed({
-				"remote-worker.js": dedent/* javascript */ `
-					export default {
-						fetch() {
-							return new Response('Hello from a remote worker (wrangler dev mixed-mode)');
-						}
-					};
-			`,
-			});
-			await helper.run(
+			const deploy = helper.run(
 				`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
 			);
-			await helper.seed({
-				"alt-remote-worker.js": dedent/* javascript */ `
-				export default {
-					fetch() {
-						return new Response('Hello from an alternative remote worker (wrangler dev mixed-mode)');
-					}
-				};`,
-			});
-			await helper.run(
+			const deployAlt = helper.run(
 				`wrangler deploy alt-remote-worker.js --name ${alternativeRemoteWorkerName} --compatibility-date 2025-01-01`
 			);
+			await Promise.all([deploy, deployAlt]);
 		}, 35_000);
 
 		afterAll(async () => {
-			await helper.run(`wrangler delete --name ${remoteWorkerName}`);
-			await helper.run(`wrangler delete --name ${alternativeRemoteWorkerName}`);
+			const del = helper.run(`wrangler delete --name ${remoteWorkerName}`);
+			const delAlt = helper.run(
+				`wrangler delete --name ${alternativeRemoteWorkerName}`
+			);
+			await Promise.all([del, delAlt]);
 		});
 
 		it("handles both remote and local service bindings at the same time", async () => {
@@ -77,7 +63,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
 			"LOCAL<WORKER>: Hello from a local worker!
-			REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)
+			REMOTE<WORKER>: Hello from a remote worker
 			"
 		`);
 		});
@@ -104,7 +90,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const { url } = await worker.waitForReady();
 
 			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-				`"REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)"`
+				`"REMOTE<WORKER>: Hello from a remote worker"`
 			);
 
 			const indexContent = await readFile(
@@ -123,7 +109,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await setTimeout(500);
 
 			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-				`"The remote worker responded with: Hello from a remote worker (wrangler dev mixed-mode)"`
+				`"The remote worker responded with: Hello from a remote worker"`
 			);
 
 			await writeFile(
@@ -135,7 +121,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await setTimeout(500);
 
 			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-				`"REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)"`
+				`"REMOTE<WORKER>: Hello from a remote worker"`
 			);
 		});
 
@@ -188,15 +174,30 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			);
 
 			// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
-			expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
-			"Your Worker has access to the following bindings:
+			// Logs order are not deterministic, so we match against to possible outputs.
+			const output1 = dedent`
+			Your Worker has access to the following bindings:
 			Binding        Resource      Mode
 			env.AI         AI            remote
 			[wrangler:info] Ready on http://<HOST>:<PORT>
 			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`experimental_remote: true\` for the binding definition in your configuration file.
 			⎔ Starting local server...
-			[wrangler:info] GET / 200 OK (TIMINGS)"
-		`);
+			[wrangler:info] GET / 200 OK (TIMINGS)`;
+
+			const output2 = dedent`
+			Your Worker has access to the following bindings:
+			Binding        Resource      Mode
+			env.AI         AI            remote
+			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`experimental_remote: true\` for the binding definition in your configuration file.
+			[wrangler:info] Ready on http://<HOST>:<PORT>
+			⎔ Starting local server...
+			[wrangler:info] GET / 200 OK (TIMINGS)`;
+
+			const normalizedOutput = normalizeOutput(worker.currentOutput);
+
+			expect(
+				normalizedOutput === output1 || normalizedOutput === output2
+			).toEqual(true);
 		});
 
 		describe("shows helpful error logs", () => {
@@ -311,8 +312,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				const { url } = await worker.waitForReady();
 
 				await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
-				"LOCAL<WORKER>: [local-test-worker]REMOTE<WORKER>: Hello from an alternative remote worker (wrangler dev mixed-mode)
-				REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)
+				"LOCAL<WORKER>: [local-test-worker]REMOTE<WORKER>: Hello from an alternative remote worker
+				REMOTE<WORKER>: Hello from a remote worker
 				"
 			`);
 			});
