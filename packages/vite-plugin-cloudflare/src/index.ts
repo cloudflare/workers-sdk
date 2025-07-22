@@ -278,11 +278,26 @@ if (import.meta.hot) {
 										const output = {
 											...container,
 											image: path.resolve(baseDir, image),
+											...(container.image_build_context
+												? {
+														image_build_context: path.resolve(
+															baseDir,
+															container.image_build_context
+														),
+													}
+												: {}),
 										};
 										// however, wrangler deploy will re-resolve the config, so we should
 										// deduplicate the container.configuration.image field in favour of
 										// the non-deprecated one when we write out the deploy config
-										delete container.configuration?.image;
+										delete output.configuration?.image;
+										// if we don't do this, we get a warning that container.configuration is deprecated
+										if (
+											output.configuration &&
+											Object.keys(output.configuration).length === 0
+										) {
+											delete output.configuration;
+										}
 										return output;
 									} else return container;
 								}
