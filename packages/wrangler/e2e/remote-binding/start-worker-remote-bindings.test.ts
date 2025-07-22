@@ -2,18 +2,16 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
-import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
-import { generateResourceName } from "./helpers/generate-resource-name";
+import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
+import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
+import { generateResourceName } from "../helpers/generate-resource-name";
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 	const remoteWorkerName = generateResourceName();
 	const helper = new WranglerE2ETestHelper();
 
 	beforeAll(async () => {
-		await helper.seed(
-			resolve(__dirname, "./seed-files/remote-binding-workers")
-		);
+		await helper.seed(resolve(__dirname, "./workers"));
 		await helper.run(
 			`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
 		);
@@ -23,9 +21,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 		await helper.run(`wrangler delete --name ${remoteWorkerName}`);
 	});
 
-	describe.each([true, false])(
-		`with experimentalRemoteBindings %s`,
-		(experimentalRemoteBindings) => {
+	describe.each([
+		{ experimentalRemoteBindings: true },
+		{ experimentalRemoteBindings: false },
+	])(
+		`with experimentalRemoteBindings = $experimentalRemoteBindings`,
+		({ experimentalRemoteBindings }) => {
 			const testOpts: NonNullable<Parameters<typeof it>[1]> = {
 				fails: !experimentalRemoteBindings,
 				retry: !experimentalRemoteBindings ? 0 : undefined,

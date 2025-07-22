@@ -2,16 +2,16 @@ import assert from "node:assert";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { beforeEach, describe, expect, it, onTestFinished } from "vitest";
-import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
+import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	generateLeafCertificate,
 	generateMtlsCertName,
 	generateRootCertificate,
-} from "./helpers/cert";
-import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
-import { generateResourceName } from "./helpers/generate-resource-name";
-import type { startRemoteProxySession } from "../src/api";
-import type { RawConfig } from "../src/config";
+} from "../helpers/cert";
+import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
+import { generateResourceName } from "../helpers/generate-resource-name";
+import type { startRemoteProxySession } from "../../src/api";
+import type { RawConfig } from "../../src/config";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 import type { ExpectStatic } from "vitest";
 
@@ -439,9 +439,7 @@ async function runTestCase<T>(
 	const { experimental_startRemoteProxySession } =
 		await helper.importWrangler();
 	const { Miniflare } = await helper.importMiniflare();
-	await helper.seed(
-		path.resolve(__dirname, "./seed-files/remote-binding-workers")
-	);
+	await helper.seed(path.resolve(__dirname, "./workers"));
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const setupResult = (await testCase.setup?.(helper))!;
 
