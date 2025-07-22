@@ -807,9 +807,10 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			const dockerFileAContent = fs.readFileSync(tmpDockerfileAPath, "utf8");
 			fs.writeFileSync(
 				tmpDockerfileAPath,
-				dockerFileAContent
-					.replace('"Hello from Container A"', '"Hello World from Container A"')
-					.replace("RUN sleep 2", "RUN sleep 2.1"),
+				dockerFileAContent.replace(
+					'"Hello from Container A"',
+					'"Hello World from Container A"'
+				),
 				"utf-8"
 			);
 
