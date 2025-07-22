@@ -369,6 +369,15 @@ export async function getDevMiniflareOptions(config: {
 							async fetch(request) {
 								return this.env.FETCHER.fetch(request);
 							}
+
+							tail(event) {
+								// Temporary workaround: the tail event is not serializable,
+								// so we are serializing it to JSON and parsing it back to make it transferable.
+								// This loses non-serializable data, but allows us to forward basic info
+								// to the target worker until native support is available.
+							    return this.env.RPC_WORKER.tail(JSON.parse(JSON.stringify(event)));
+							}
+
 							constructor(ctx, env) {
 								super(ctx, env);
 								return new Proxy(this, {
