@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from "fs";
+import path from "path";
 import {
 	dockerBuild,
 	dockerImageInspect,
@@ -68,7 +69,7 @@ describe("buildAndMaybePush", () => {
 				"--provenance=false",
 				"-f",
 				"-",
-				"./container-context",
+				path.resolve(process.cwd(), "./container-context"),
 			],
 			dockerfile,
 		});
@@ -100,7 +101,8 @@ describe("buildAndMaybePush", () => {
 				"--provenance=false",
 				"-f",
 				"-",
-				"./container-context",
+				// turn this into a relative path so that this works across different OSes
+				path.resolve(process.cwd(), "./container-context"),
 			],
 			dockerfile,
 		});
@@ -151,7 +153,7 @@ describe("buildAndMaybePush", () => {
 				"--provenance=false",
 				"-f",
 				"-",
-				"./container-context",
+				path.resolve(process.cwd(), "./container-context"),
 			],
 			dockerfile,
 		});
@@ -193,7 +195,7 @@ describe("buildAndMaybePush", () => {
 				"--provenance=false",
 				"-f",
 				"-",
-				"./container-context",
+				path.resolve(process.cwd(), "./container-context"),
 			],
 			dockerfile,
 		});
@@ -217,7 +219,7 @@ describe("buildAndMaybePush", () => {
 				"host",
 				"-f",
 				"-",
-				"./container-context",
+				path.resolve(process.cwd(), "./container-context"),
 			],
 			dockerfile,
 		});
@@ -237,7 +239,7 @@ describe("buildAndMaybePush", () => {
 				"--provenance=false",
 				"-f",
 				"-",
-				"./container-context",
+				path.resolve(process.cwd(), "./container-context"),
 			],
 			dockerfile,
 		});

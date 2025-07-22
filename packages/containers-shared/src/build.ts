@@ -30,9 +30,13 @@ export async function constructBuildCommand(
 	const baseDir = configPath ? path.dirname(configPath) : process.cwd();
 	const absDockerfilePath = path.resolve(baseDir, options.pathToDockerfile);
 	const dockerfile = readFileSync(absDockerfilePath, "utf-8");
+
+	const absBuildContext = options.buildContext
+		? path.resolve(baseDir, options.buildContext)
+		: path.dirname(absDockerfilePath);
 	// pipe in the dockerfile
 	buildCmd.push("-f", "-");
-	buildCmd.push(options.buildContext ?? path.dirname(absDockerfilePath));
+	buildCmd.push(absBuildContext);
 	logger?.debug(`Building image with command: ${buildCmd.join(" ")}`);
 	return { buildCmd, dockerfile };
 }

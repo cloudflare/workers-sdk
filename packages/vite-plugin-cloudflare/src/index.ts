@@ -6,6 +6,7 @@ import { getDevContainerImageName } from "@cloudflare/containers-shared/src/knob
 import {
 	generateContainerBuildId,
 	getContainerIdsByImageTags,
+	isDockerfile,
 } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import replace from "@rollup/plugin-replace";
@@ -263,6 +264,45 @@ if (import.meta.hot) {
 								path.resolve(resolvedViteConfig.root, clientOutputDirectory)
 							),
 						};
+
+						if (workerConfig.containers?.length) {
+							workerConfig.containers = workerConfig.containers.map(
+								(container) => {
+									const baseDir = workerConfig.configPath
+										? path.dirname(workerConfig.configPath)
+										: resolvedViteConfig.root;
+									// Wrangler's config validation resolves to container.configuration.image, even though it is deprecated
+									const image =
+										container.configuration?.image ?? container.image;
+									if (isDockerfile(image, workerConfig.configPath)) {
+										const output = {
+											...container,
+											image: path.resolve(baseDir, image),
+											...(container.image_build_context
+												? {
+														image_build_context: path.resolve(
+															baseDir,
+															container.image_build_context
+														),
+													}
+												: {}),
+										};
+										// however, wrangler deploy will re-resolve the config, so we should
+										// deduplicate the container.configuration.image field in favour of
+										// the non-deprecated one when we write out the deploy config
+										delete output.configuration?.image;
+										// if we don't do this, we get a warning that container.configuration is deprecated
+										if (
+											output.configuration &&
+											Object.keys(output.configuration).length === 0
+										) {
+											delete output.configuration;
+										}
+										return output;
+									} else return container;
+								}
+							);
+						}
 					} else {
 						workerConfig.assets = undefined;
 					}
