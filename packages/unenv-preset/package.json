@@ -40,19 +40,14 @@
 	"scripts": {
 		"build": "unbuild",
 		"check:lint": "eslint",
-		"check:type": "tsc --noEmit",
-		"test:ci": "vitest run",
-		"test:watch": "vitest"
+		"check:type": "tsc --noEmit"
 	},
 	"devDependencies": {
 		"@types/debug": "4.1.12",
 		"@types/node-unenv": "npm:@types/node@^22.14.0",
 		"debug": "4.4.1",
 		"typescript": "catalog:default",
-		"unbuild": "^3.2.0",
-		"undici": "catalog:default",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
+		"unbuild": "^3.2.0"
 	},
 	"peerDependencies": {
 		"unenv": "2.0.0-rc.17",
