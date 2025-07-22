@@ -1,1 +1,1 @@
-export { cloudflare } from "./preset";
+export { getCloudflarePreset } from "./preset";

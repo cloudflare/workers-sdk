@@ -48,7 +48,4 @@ fixtures/pages-redirected-config/build/*
 fixtures/redirected-config-worker/build/*
 fixtures/redirected-config-worker-with-environments/build/*
 
-# Import attributes generate an error
-packages/unenv-preset/src/preset.ts
-
 packages/vite-plugin-cloudflare/playground/**/*.d.ts

@@ -456,7 +456,12 @@ export default async function versionsUpload(props: Props): Promise<{
 		}
 	}
 
-	if (!(props.compatibilityDate || config.compatibility_date)) {
+	const compatibilityDate =
+		props.compatibilityDate || config.compatibility_date;
+	const compatibilityFlags =
+		props.compatibilityFlags ?? config.compatibility_flags;
+
+	if (!compatibilityDate) {
 		const compatibilityDateStr = formatCompatibilityDate(new Date());
 
 		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
@@ -473,15 +478,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const minify = props.minify ?? config.minify;
 
 	const nodejsCompatMode = validateNodeCompatMode(
-		props.compatibilityDate ?? config.compatibility_date,
-		props.compatibilityFlags ?? config.compatibility_flags,
+		compatibilityDate,
+		compatibilityFlags,
 		{
 			noBundle: props.noBundle ?? config.no_bundle,
 		}
 	);
-
-	const compatibilityFlags =
-		props.compatibilityFlags ?? config.compatibility_flags;
 
 	// Warn if user tries minify or node-compat with no-bundle
 	if (props.noBundle && minify) {
@@ -590,6 +592,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						keepNames: config.keep_names ?? true,
 						sourcemap: uploadSourceMaps,
 						nodejsCompatMode,
+						compatibilityDate,
+						compatibilityFlags,
 						define: { ...config.define, ...props.defines },
 						alias: { ...config.alias, ...props.alias },
 						checkFetch: false,
@@ -599,8 +603,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						local: false,
 						projectRoot: props.projectRoot,
 						defineNavigatorUserAgent: isNavigatorDefined(
-							props.compatibilityDate ?? config.compatibility_date,
-							props.compatibilityFlags ?? config.compatibility_flags
+							compatibilityDate,
+							compatibilityFlags
 						),
 						plugins: [logBuildOutput(nodejsCompatMode)],
 
@@ -683,7 +687,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
-			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
+			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars: false, // the wrangler.toml should be the source-of-truth for vars
 			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
