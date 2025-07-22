@@ -49,6 +49,7 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
+import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
@@ -399,11 +400,7 @@ export default async function deploy(props: Props): Promise<{
 	}
 
 	if (!(props.compatibilityDate || config.compatibility_date)) {
-		const compatibilityDateStr = `${new Date().getFullYear()}-${(
-			new Date().getMonth() +
-			1 +
-			""
-		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
+		const compatibilityDateStr = formatCompatibilityDate(new Date());
 
 		throw new UserError(
 			`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
