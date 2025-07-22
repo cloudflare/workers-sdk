@@ -22,7 +22,7 @@
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["FixtureTestContainer"],
+			"new_sqlite_classes": ["FixtureTestContainer"],
 		},
 	],
 }
