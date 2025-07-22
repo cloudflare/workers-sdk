@@ -37,21 +37,31 @@ describe("Local Browser", () => {
 		return text;
 	}
 
-	it("Doesn't run a browser, just testing that the worker is running!", async () => {
-		await expect(fetchText(`http://${ip}:${port}/`)).resolves.toEqual(
-			"Please add an ?url=https://example.com/ parameter"
-		);
-	});
+	for (const lib of ["puppeteer", "playwright"]) {
+		describe(`using @cloudflare/${lib}`, () => {
+			it("Doesn't run a browser, just testing that the worker is running!", async () => {
+				await expect(
+					fetchText(`http://${ip}:${port}/?lib=${lib}`)
+				).resolves.toEqual("Please add an ?url=https://example.com/ parameter");
+			});
 
-	it("Run a browser, and check h1 text content", async () => {
-		await expect(
-			fetchText(`http://${ip}:${port}/?url=https://example.com&action=select`)
-		).resolves.toEqual("Example Domain");
-	});
+			it("Run a browser, and check h1 text content", async () => {
+				await expect(
+					fetchText(
+						`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=select`
+					)
+				).resolves.toEqual("Example Domain");
+			});
 
-	it("Run a browser, and check p text content", async () => {
-		await expect(
-			fetchText(`http://${ip}:${port}/?url=https://example.com&action=alter`)
-		).resolves.toEqual("New paragraph text set by Puppeteer!");
-	});
+			it("Run a browser, and check p text content", async () => {
+				await expect(
+					fetchText(
+						`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=alter`
+					)
+				).resolves.toEqual(
+					`New paragraph text set by ${lib === "playwright" ? "Playwright" : "Puppeteer"}!`
+				);
+			});
+		});
+	}
 });

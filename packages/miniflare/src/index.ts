@@ -900,10 +900,8 @@ export class Miniflare {
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
 
-	#browsers: Set<{
-		wsEndpoint: () => string;
-		process: () => ChildProcess;
-	}> = new Set();
+	// key is the browser wsEndpoint, value is the browser process
+	#browserProcesses: Map<string, ChildProcess> = new Map();
 
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
@@ -1304,10 +1302,24 @@ export class Miniflare {
 				);
 
 				// @ts-expect-error Puppeteer is dynamically installed, and so doesn't have types available
-				const browser = await puppeteer.launch({ headless: "old" });
-				this.#browsers.add(browser);
-
-				response = new Response(browser.wsEndpoint());
+				const browser = await puppeteer.launch({
+					headless: "old",
+					// workaround for CI environments, to avoid sandboxing issues
+					args: process.env.CI ? ["--no-sandbox"] : [],
+				});
+				const wsEndpoint = browser.wsEndpoint();
+				this.#browserProcesses.set(wsEndpoint, browser.process());
+				response = new Response(wsEndpoint);
+			} else if (url.pathname === "/browser/status") {
+				const wsEndpoint = url.searchParams.get("wsEndpoint");
+				assert(wsEndpoint !== null, "Missing wsEndpoint query parameter");
+				const process = this.#browserProcesses.get(wsEndpoint);
+				const status = {
+					stopped: !process || process.exitCode !== null,
+				};
+				response = new Response(JSON.stringify(status), {
+					headers: { "Content-Type": "application/json" },
+				});
 			} else if (url.pathname === "/core/store-temp-file") {
 				const prefix = url.searchParams.get("prefix");
 				const folder = prefix ? `files/${prefix}` : "files";
@@ -1958,9 +1970,10 @@ export class Miniflare {
 	}
 
 	async #assembleAndUpdateConfig() {
-		for (const browser of this.#browsers) {
+		for (const [wsEndpoint, process] of this.#browserProcesses.entries()) {
 			// .close() isn't enough
-			await browser.process().kill("SIGKILL");
+			process.kill("SIGKILL");
+			this.#browserProcesses.delete(wsEndpoint);
 		}
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
@@ -2662,9 +2675,10 @@ export class Miniflare {
 		try {
 			await this.#waitForReady(/* disposing */ true);
 		} finally {
-			for (const browser of this.#browsers) {
+			for (const [wsEndpoint, process] of this.#browserProcesses.entries()) {
 				// .close() isn't enough
-				await browser.process().kill("SIGKILL");
+				process.kill("SIGKILL");
+				this.#browserProcesses.delete(wsEndpoint);
 			}
 
 			// Remove exit hook, we're cleaning up what they would've cleaned up now
