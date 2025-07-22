@@ -4,4 +4,4 @@
 "wrangler": patch
 ---
 
-Move the unenv tests from the preset to wrangler e2e
+wrangler and vite-plugin now depend upon the latest version of unenv-preset

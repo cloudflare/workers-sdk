@@ -21,4 +21,4 @@ See the unenv [README](https://github.com/unjs/unenv/blob/main/README.md) for mo
 
 ## Tests
 
-This packages is tested via wrangler e2e tests.
+This package is tested via wrangler e2e tests.
