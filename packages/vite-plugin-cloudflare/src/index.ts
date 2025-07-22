@@ -99,7 +99,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const additionalModulePaths = new Set<string>();
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
-	const containerImageTagsSeen = new Set<string>();
+	let containerImageTagsSeen: Set<string>;
 	let runningContainerIds: Array<string>;
 
 	return [
@@ -445,30 +445,15 @@ if (import.meta.hot) {
 					}
 
 					if (hasDevContainers) {
-						assert(
-							containerBuildId,
-							"Build ID should be set if containers are enabled and defined"
-						);
-						// Assemble container options and build if necessary
-						const containerOptions = getContainerOptions(
-							entryWorkerConfig,
-							containerBuildId
-						);
 						const dockerPath = getDockerPath();
 
-						if (containerOptions) {
-							// keep track of them so we can clean up later
-							for (const container of containerOptions) {
-								containerImageTagsSeen.add(container.image_tag);
-							}
-
-							await prepareContainerImagesForDev({
-								dockerPath,
-								containerOptions,
-								onContainerImagePreparationStart: () => {},
-								onContainerImagePreparationEnd: () => {},
-							});
-						}
+						containerImageTagsSeen = await prepareContainerImages({
+							containersConfig: entryWorkerConfig.containers,
+							containerBuildId,
+							isContainersEnabled: entryWorkerConfig.dev.enable_containers,
+							dockerPath,
+							configPath: entryWorkerConfig.configPath,
+						});
 
 						// poll Docker every two seconds and update the list of ids of all
 						// running containers
@@ -563,13 +548,49 @@ if (import.meta.hot) {
 					vitePreviewServer
 				);
 
+				// first Worker in the Array is always the entry Worker
+				const entryWorkerConfig = resolvedPluginConfig.workers[0];
+				const hasDevContainers =
+					entryWorkerConfig?.containers?.length &&
+					entryWorkerConfig.dev.enable_containers;
+				let containerBuildId: string | undefined;
+
+				if (hasDevContainers) {
+					containerBuildId = generateContainerBuildId();
+				}
+
 				miniflare = new Miniflare(
-					await getPreviewMiniflareOptions(
+					await getPreviewMiniflareOptions({
 						resolvedPluginConfig,
 						vitePreviewServer,
-						inputInspectorPort
-					)
+						inspectorPort: inputInspectorPort,
+						containerBuildId,
+					})
 				);
+
+				if (hasDevContainers) {
+					const dockerPath = getDockerPath();
+
+					containerImageTagsSeen = await prepareContainerImages({
+						containersConfig: entryWorkerConfig.containers,
+						containerBuildId,
+						isContainersEnabled: entryWorkerConfig.dev.enable_containers,
+						dockerPath,
+						configPath: entryWorkerConfig.configPath,
+					});
+
+					const dockerPollIntervalId = setInterval(async () => {
+						runningContainerIds = await getContainerIdsByImageTags(
+							dockerPath,
+							containerImageTagsSeen
+						);
+					}, 2000);
+
+					process.on("exit", () => {
+						clearInterval(dockerPollIntervalId);
+						removeContainersByIds(dockerPath, runningContainerIds);
+					});
+				}
 
 				handleWebSocket(vitePreviewServer.httpServer, () => {
 					assert(miniflare, `Miniflare not defined`);
@@ -1038,20 +1059,71 @@ if (import.meta.hot) {
 			: undefined;
 	}
 
+	async function prepareContainerImages(options: {
+		containersConfig: WorkerConfig["containers"];
+		containerBuildId?: string;
+		isContainersEnabled: boolean;
+		dockerPath: string;
+		configPath?: string;
+	}) {
+		assert(
+			options.containerBuildId,
+			"Build ID should be set if containers are enabled and defined"
+		);
+
+		const {
+			containersConfig,
+			isContainersEnabled,
+			dockerPath,
+			containerBuildId,
+			configPath,
+		} = options;
+		const uniqueImageTags = new Set<string>();
+
+		// Assemble container options and build if necessary
+		const containerOptions = await getContainerOptions({
+			containersConfig,
+			containerBuildId,
+			isContainersEnabled,
+		});
+
+		if (containerOptions) {
+			// keep track of them so we can clean up later
+			for (const container of containerOptions) {
+				uniqueImageTags.add(container.imageTag);
+			}
+
+			await prepareContainerImagesForDev({
+				dockerPath,
+				configPath,
+				containerOptions,
+				onContainerImagePreparationStart: () => {},
+				onContainerImagePreparationEnd: () => {},
+			});
+		}
+
+		return uniqueImageTags;
+	}
+
 	/**
 	 * @returns Container options suitable for building or pulling images,
 	 * with image tag set to well-known dev format, or undefined if
 	 * containers are not enabled or not configured.
 	 */
-	function getContainerOptions(
-		config: WorkerConfig,
-		containerBuildId: string
-	): ContainerDevOptions[] | undefined {
-		if (!config.containers?.length || config.dev.enable_containers === false) {
+	function getContainerOptions(options: {
+		containersConfig: WorkerConfig["containers"];
+		isContainersEnabled: boolean;
+		containerBuildId: string;
+		configPath: string;
+	}): ContainerDevOptions[] | undefined {
+		const { containersConfig, isContainersEnabled, containerBuildId, configPath } = options;
+
+		if (!containersConfig?.length || isContainersEnabled === false) {
 			return undefined;
 		}
-		return config.containers.map((container) => {
-			if (isDockerfile(container.image, config.configPath)) {
+
+		return containersConfig.map((container) => {
+			if (isDockerfile(container.image, configPath)) {
 				return {
 					dockerfile: container.image,
 					image_build_context:
