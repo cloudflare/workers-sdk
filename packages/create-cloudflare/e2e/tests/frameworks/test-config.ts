@@ -567,6 +567,21 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			},
 			nodeCompat: false,
 		},
+		{
+			name: "waku",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Waku",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Waku",
+			},
+			nodeCompat: false,
+		},
 	];
 }
 

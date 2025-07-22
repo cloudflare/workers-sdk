@@ -43,6 +43,7 @@ import scheduledTemplate from "templates/scheduled/c3";
 import solidTemplate from "templates/solid/c3";
 import svelteTemplate from "templates/svelte/c3";
 import vueTemplate from "templates/vue/c3";
+import wakuTemplate from "templates/waku/c3";
 import { isInsideGitRepo } from "./git";
 import { validateProjectDirectory, validateTemplateUrl } from "./validators";
 import type { Option } from "@cloudflare/cli/interactive";
@@ -204,6 +205,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			solid: solidTemplate,
 			svelte: svelteTemplate,
 			vue: vueTemplate,
+			waku: wakuTemplate,
 		};
 	}
 }
