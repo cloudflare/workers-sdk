@@ -5,7 +5,7 @@
 	"containers": [
 		{
 			"image": "./Dockerfile",
-			"class_name": "FixtureTestContainer",
+			"class_name": "FixtureTestContainerB",
 			"name": "container",
 			"max_instances": 2,
 		},
@@ -13,15 +13,15 @@
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "FixtureTestContainer",
-				"name": "CONTAINER",
+				"class_name": "FixtureTestContainerB",
+				"name": "CONTAINER_B",
 			},
 		],
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["FixtureTestContainer"],
+			"new_classes": ["FixtureTestContainerB"],
 		},
 	],
 }

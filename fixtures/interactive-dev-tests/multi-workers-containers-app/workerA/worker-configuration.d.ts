@@ -1,6 +1,6 @@
 declare namespace Cloudflare {
 	interface Env {
-		CONTAINER: DurableObjectNamespace<import(".").FixtureTestContainer>;
+		CONTAINER_A: DurableObjectNamespace<import(".").FixtureTestContainerA>;
 		WORKER_B: Fetcher;
 	}
 }

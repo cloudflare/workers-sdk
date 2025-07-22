@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 
-export class FixtureTestContainer extends DurableObject<Env> {
+export class FixtureTestContainerB extends DurableObject<Env> {
 	container: globalThis.Container;
 
 	constructor(ctx: DurableObjectState, env: Env) {
@@ -28,8 +28,8 @@ export class FixtureTestContainer extends DurableObject<Env> {
 
 export default {
 	async fetch(request, env): Promise<Response> {
-		const id = env.CONTAINER.idFromName("container");
-		const stub = env.CONTAINER.get(id);
+		const id = env.CONTAINER_B.idFromName("container");
+		const stub = env.CONTAINER_B.get(id);
 		return stub.fetch(request);
 	},
 } satisfies ExportedHandler<Env>;
