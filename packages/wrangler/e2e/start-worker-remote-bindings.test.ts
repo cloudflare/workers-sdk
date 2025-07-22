@@ -1,7 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import dedent from "ts-dedent";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
@@ -15,15 +14,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 		await helper.seed(
 			resolve(__dirname, "./seed-files/remote-binding-workers")
 		);
-		await helper.seed({
-			"remote-worker.js": dedent/* javascript */ `
-					export default {
-						fetch() {
-							return new Response('Hello from a remote worker (startWorker mixed-mode)');
-						}
-					};
-			`,
-		});
 		await helper.run(
 			`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
 		);
@@ -69,9 +59,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 
 				await expect(
 					(await worker.fetch("http://example.com")).text()
-				).resolves.toContain(
-					"REMOTE<WORKER>: Hello from a remote worker (startWorker mixed-mode)"
-				);
+				).resolves.toContain("REMOTE<WORKER>: Hello from a remote worker");
 
 				await worker.dispose();
 			});
@@ -105,9 +93,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 
 				await expect(
 					(await worker.fetch("http://example.com")).text()
-				).resolves.toContain(
-					"REMOTE<WORKER>: Hello from a remote worker (startWorker mixed-mode)"
-				);
+				).resolves.toContain("REMOTE<WORKER>: Hello from a remote worker");
 
 				const indexContent = await readFile(
 					`${helper.tmpPath}/simple-service-binding.js`,
@@ -127,7 +113,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 				await expect(
 					(await worker.fetch("http://example.com")).text()
 				).resolves.toContain(
-					"The remote worker responded with: Hello from a remote worker (startWorker mixed-mode)"
+					"The remote worker responded with: Hello from a remote worker"
 				);
 
 				await writeFile(
@@ -140,9 +126,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 
 				await expect(
 					(await worker.fetch("http://example.com")).text()
-				).resolves.toContain(
-					"REMOTE<WORKER>: Hello from a remote worker (startWorker mixed-mode)"
-				);
+				).resolves.toContain("REMOTE<WORKER>: Hello from a remote worker");
 
 				await worker.dispose();
 			});
