@@ -347,7 +347,7 @@ function updateWorkflowsScriptNames(
 	testWorkerName: string
 ): void {
 	const workflows = runnerWorker.workflows;
-	if (!workflows || !wranglerWorkerName) {
+	if (!workflows || wranglerWorkerName === undefined) {
 		return;
 	}
 	for (const workflow of Object.values(workflows)) {
@@ -680,7 +680,7 @@ function buildProjectMiniflareOptions(
 
 		// Set Workflows scriptName to the runner worker name if it matches the Wrangler worker name
 		const wranglerWorkerName = getWranglerWorkerName(
-			"project.options.wrangler?.configPath"
+			project.options.wrangler?.configPath
 		);
 		updateWorkflowsScriptNames(
 			runnerWorker,
