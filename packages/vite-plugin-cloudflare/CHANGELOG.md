@@ -1,5 +1,34 @@
 # @cloudflare/vite-plugin
 
+## 1.10.0
+
+### Minor Changes
+
+- [#10001](https://github.com/cloudflare/workers-sdk/pull/10001) [`5796ca9`](https://github.com/cloudflare/workers-sdk/commit/5796ca979b09ce89d0f819a312f3ca21a5c7347e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - We now automatically inject the following HMR code into your Worker entry file:
+
+  ```ts
+  if (import.meta.hot) {
+  	import.meta.hot.accept();
+  }
+  ```
+
+  This prevents file changes from invalidating the full module graph and improves HMR performance in development.
+
+### Patch Changes
+
+- [#10038](https://github.com/cloudflare/workers-sdk/pull/10038) [`a355327`](https://github.com/cloudflare/workers-sdk/commit/a3553276f8cd4eb520dc872a56c20b6e329493c7) Thanks [@emily-shen](https://github.com/emily-shen)! - Resolve `containers.image` (if it is a path to a Dockerfile) to an absolute path in the deploy config.
+
+- [#9891](https://github.com/cloudflare/workers-sdk/pull/9891) [`dd416e9`](https://github.com/cloudflare/workers-sdk/commit/dd416e93afbc52d869fd154899d260bfc04fc493) Thanks [@hi-ogawa](https://github.com/hi-ogawa)! - set `build.rollupOptions.platform: "neutral"` on rolldown-vite to prevent Rolldown's `node:module` based `require` polyfill from breaking the build.
+
+- [#9819](https://github.com/cloudflare/workers-sdk/pull/9819) [`0c4008c`](https://github.com/cloudflare/workers-sdk/commit/0c4008ce183c82ebff8eac2469ff9a8256cffa5f) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat(vite-plugin): Add containers support in `vite dev`
+
+  Adds support for Cloudflare Containers in `vite dev`. Please note that at the time of this PR a container image can only specify the path to a `Dockerfile`. Support for registry links will be added in a later version, as will containers support in `vite preview`.
+
+- Updated dependencies [[`189fe23`](https://github.com/cloudflare/workers-sdk/commit/189fe23830373e75c881481939665384c18246dc), [`c02b067`](https://github.com/cloudflare/workers-sdk/commit/c02b067fc0a21d92b5c22bd744f2daf263906e50), [`7e5585d`](https://github.com/cloudflare/workers-sdk/commit/7e5585dbf844fda0e1688797ce31c7e634f3f4ba), [`b0217f9`](https://github.com/cloudflare/workers-sdk/commit/b0217f965cf97a71bf7391628bdb15dc69663dcb), [`e87198a`](https://github.com/cloudflare/workers-sdk/commit/e87198a6f43a52ff3b1509e99023932e62de97fe), [`ad02ad3`](https://github.com/cloudflare/workers-sdk/commit/ad02ad3dfc151ed6ec016222dd42b9e99fe32ca0), [`0c4008c`](https://github.com/cloudflare/workers-sdk/commit/0c4008ce183c82ebff8eac2469ff9a8256cffa5f)]:
+  - @cloudflare/unenv-preset@2.4.0
+  - wrangler@4.25.1
+  - miniflare@4.20250712.1
+
 ## 1.9.6
 
 ### Patch Changes
