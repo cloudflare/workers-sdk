@@ -12,17 +12,17 @@ import {
 	test,
 	vi,
 } from "vitest";
-import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
+import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	generateLeafCertificate,
 	generateMtlsCertName,
 	generateRootCertificate,
-} from "./helpers/cert";
-import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
-import { fetchText } from "./helpers/fetch-text";
-import { generateResourceName } from "./helpers/generate-resource-name";
-import type { RawConfig } from "../src/config";
-import type { WranglerLongLivedCommand } from "./helpers/wrangler";
+} from "../helpers/cert";
+import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
+import { fetchText } from "../helpers/fetch-text";
+import { generateResourceName } from "../helpers/generate-resource-name";
+import type { RawConfig } from "../../src/config";
+import type { WranglerLongLivedCommand } from "../helpers/wrangler";
 
 type TestCase<T = void> = {
 	name: string;
@@ -367,9 +367,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Wrangler Mixed Mode E2E Tests", () => {
 		});
 
 		it("works with remote bindings enabled", async () => {
-			await helper.seed(
-				path.resolve(__dirname, "./seed-files/remote-binding-workers")
-			);
+			await helper.seed(path.resolve(__dirname, "./workers"));
 
 			await writeWranglerConfig(testCase, helper, workerName);
 
@@ -386,9 +384,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Wrangler Mixed Mode E2E Tests", () => {
 			// Turn off retries because this test is expected to fail
 			{ retry: 0, fails: true },
 			async () => {
-				await helper.seed(
-					path.resolve(__dirname, "./seed-files/remote-binding-workers")
-				);
+				await helper.seed(path.resolve(__dirname, "./workers"));
 
 				await writeWranglerConfig(testCase, helper, workerName);
 
@@ -414,9 +410,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Wrangler Mixed Mode E2E Tests", () => {
 			beforeAll(async () => {
 				helper = new WranglerE2ETestHelper();
 				workerName = generateResourceName();
-				await helper.seed(
-					path.resolve(__dirname, "./seed-files/remote-binding-workers")
-				);
+				await helper.seed(path.resolve(__dirname, "./workers"));
 
 				await helper.seed({
 					"wrangler.json": JSON.stringify(
@@ -465,9 +459,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	() => {
 		test("the same KV (with the same id) can be used in the same dev session both in local and remote mode", async () => {
 			const helper = new WranglerE2ETestHelper();
-			await helper.seed(
-				path.resolve(__dirname, "./seed-files/remote-binding-workers")
-			);
+			await helper.seed(path.resolve(__dirname, "./workers"));
 
 			const kvId = await helper.kv(false);
 			await helper.run(

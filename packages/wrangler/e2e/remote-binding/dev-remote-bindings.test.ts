@@ -4,12 +4,12 @@ import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
-import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
-import { fetchText } from "./helpers/fetch-text";
-import { generateResourceName } from "./helpers/generate-resource-name";
-import { normalizeOutput } from "./helpers/normalize";
-import { makeRoot, seed } from "./helpers/setup";
+import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
+import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
+import { fetchText } from "../helpers/fetch-text";
+import { generateResourceName } from "../helpers/generate-resource-name";
+import { normalizeOutput } from "../helpers/normalize";
+import { makeRoot, seed } from "../helpers/setup";
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"wrangler dev - remote bindings",
@@ -19,9 +19,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		const helper = new WranglerE2ETestHelper();
 
 		beforeAll(async () => {
-			await helper.seed(
-				resolve(__dirname, "./seed-files/remote-binding-workers")
-			);
+			await helper.seed(resolve(__dirname, "./workers"));
 			const deploy = helper.run(
 				`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
 			);
