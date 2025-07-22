@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.4.0
+
+### Minor Changes
+
+- [#10014](https://github.com/cloudflare/workers-sdk/pull/10014) [`189fe23`](https://github.com/cloudflare/workers-sdk/commit/189fe23830373e75c881481939665384c18246dc) Thanks [@edmundhung](https://github.com/edmundhung)! - Shim `debug` npm package with patched version for cloudflare env support
+
 ## 2.3.3
 
 ### Patch Changes

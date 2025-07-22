@@ -1,5 +1,27 @@
 # wrangler
 
+## 4.25.1
+
+### Patch Changes
+
+- [#10000](https://github.com/cloudflare/workers-sdk/pull/10000) [`c02b067`](https://github.com/cloudflare/workers-sdk/commit/c02b067fc0a21d92b5c22bd744f2daf263906e50) Thanks [@emily-shen](https://github.com/emily-shen)! - Include more (sanitised) user errors in telemetry.
+
+  We manually vet and sanitised error messages before including them in our telemetry collection - this PR just includes a couple more.
+
+- [#9996](https://github.com/cloudflare/workers-sdk/pull/9996) [`b0217f9`](https://github.com/cloudflare/workers-sdk/commit/b0217f965cf97a71bf7391628bdb15dc69663dcb) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Disallow users from pushing images with unsupported platforms to the container image registry
+
+- [#10009](https://github.com/cloudflare/workers-sdk/pull/10009) [`e87198a`](https://github.com/cloudflare/workers-sdk/commit/e87198a6f43a52ff3b1509e99023932e62de97fe) Thanks [@gpanders](https://github.com/gpanders)! - Fix containers diff output when using JSONC config files
+
+- [#9976](https://github.com/cloudflare/workers-sdk/pull/9976) [`ad02ad3`](https://github.com/cloudflare/workers-sdk/commit/ad02ad3dfc151ed6ec016222dd42b9e99fe32ca0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add warning for when users run `wrangler dev --remote` with (enabled) containers
+
+- [#9819](https://github.com/cloudflare/workers-sdk/pull/9819) [`0c4008c`](https://github.com/cloudflare/workers-sdk/commit/0c4008ce183c82ebff8eac2469ff9a8256cffa5f) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat(vite-plugin): Add containers support in `vite dev`
+
+  Adds support for Cloudflare Containers in `vite dev`. Please note that at the time of this PR a container image can only specify the path to a `Dockerfile`. Support for registry links will be added in a later version, as will containers support in `vite preview`.
+
+- Updated dependencies [[`189fe23`](https://github.com/cloudflare/workers-sdk/commit/189fe23830373e75c881481939665384c18246dc), [`7e5585d`](https://github.com/cloudflare/workers-sdk/commit/7e5585dbf844fda0e1688797ce31c7e634f3f4ba)]:
+  - @cloudflare/unenv-preset@2.4.0
+  - miniflare@4.20250712.1
+
 ## 4.25.0
 
 ### Minor Changes
