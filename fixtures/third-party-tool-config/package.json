@@ -1,0 +1,23 @@
+{
+	"name": "@fixture/third-party-tool-config",
+	"private": true,
+	"scripts": {
+		"test:ci": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc --noEmit -p tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250712.0",
+		"@types/jest-image-snapshot": "^6.4.0",
+		"jest-image-snapshot": "^6.4.0",
+		"tsup": "^8.5.0",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

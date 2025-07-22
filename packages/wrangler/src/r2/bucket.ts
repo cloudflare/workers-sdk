@@ -1,5 +1,6 @@
 import dedent from "ts-dedent";
 import { formatConfigSnippet } from "../config";
+import { bucketFormatMessage, isValidR2BucketName } from "../config/validation";
 import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -9,12 +10,10 @@ import { getValidBindingName } from "../utils/getValidBindingName";
 import formatLabelledValues from "../utils/render-labelled-values";
 import { LOCATION_CHOICES } from "./constants";
 import {
-	bucketFormatMessage,
 	createR2Bucket,
 	deleteR2Bucket,
 	getR2Bucket,
 	getR2BucketMetrics,
-	isValidR2BucketName,
 	listR2Buckets,
 	tablefromR2BucketsListResponse,
 	updateR2BucketStorageClass,

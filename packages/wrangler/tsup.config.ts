@@ -1,5 +1,6 @@
 import path from "node:path";
 import * as esbuild from "esbuild";
+import { dedent } from "ts-dedent";
 import { defineConfig } from "tsup";
 import { EXTERNAL_DEPENDENCIES } from "./scripts/deps";
 import type { Options } from "tsup";
@@ -107,5 +108,31 @@ export default defineConfig((options) => [
 				: {}),
 		},
 		esbuildPlugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
+	},
+	{
+		clean: true,
+		keepNames: true,
+		entry: ["src/api/config/index.ts"],
+		// noExternal: [/.*/],
+		external: ["esbuild"],
+		platform: "node",
+		format: "esm",
+		dts: true,
+		outDir: "wrangler-dist/config",
+		tsconfig: "tsconfig.json",
+		metafile: true,
+		sourcemap: process.env.SOURCEMAPS !== "false",
+		banner: {
+			js: dedent`
+				import __wranglerNodeModule from 'node:module';
+				import __wranglerNodePath from "node:path";
+				import __wranglerNodeUrl from "node:url";
+
+				const require = __wranglerNodeModule.createRequire(import.meta.url);
+				const __filename = __wranglerNodeUrl.fileURLToPath(import.meta.url);
+				const __dirname = __wranglerNodePath.dirname(__filename);
+
+			`,
+		},
 	},
 ]);

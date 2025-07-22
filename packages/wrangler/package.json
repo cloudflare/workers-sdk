@@ -35,6 +35,20 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
+	"exports": {
+		".": {
+			"types": "./wrangler-dist/cli.d.ts",
+			"require": "./wrangler-dist/cli.js",
+			"import": "./wrangler-dist/cli.js"
+		},
+		"./package.json": {
+			"default": "./package.json"
+		},
+		"./config": {
+			"types": "./wrangler-dist/config/index.d.mts",
+			"import": "./wrangler-dist/config/index.mjs"
+		}
+	},
 	"main": "wrangler-dist/cli.js",
 	"types": "wrangler-dist/cli.d.ts",
 	"bin": {

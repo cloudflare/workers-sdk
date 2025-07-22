@@ -4,6 +4,7 @@ import { Miniflare } from "miniflare";
 import prettyBytes from "pretty-bytes";
 import { fetchGraphqlResult, fetchResult } from "../cfetch";
 import { fetchR2Objects } from "../cfetch/internal";
+import { bucketFormatMessage, isValidR2BucketName } from "../config/validation";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
 import { UserError } from "../errors";
@@ -1427,22 +1428,6 @@ export async function deleteCORSPolicy(
 		}
 	);
 }
-
-/**
- * R2 bucket names must:
- * - contain lower case letters, numbers, and `-`
- * - start and end with with a lower case letter or number
- * - be between 6 and 63 characters long
- *
- * See https://developers.cloudflare.com/r2/buckets/create-buckets/#bucket-level-operations
- */
-export function isValidR2BucketName(name: string | undefined): name is string {
-	return (
-		typeof name === "string" && /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(name)
-	);
-}
-
-export const bucketFormatMessage = `Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.`;
 
 const CHUNK_SIZE = 1024;
 export async function createFileReadableStream(filePath: string) {

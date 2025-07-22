@@ -1,12 +1,71 @@
+import assert from "node:assert";
 import { appendFile } from "node:fs/promises";
 import path from "node:path";
-import { Mutex } from "miniflare";
 import onExit from "signal-exit";
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { logger } from "../logger";
 import { ensureDirectoryExists } from "./filesystem";
 import type { LoggerLevel } from "../logger";
+import type { Awaitable } from "miniflare";
+
+// Note: this is a copy of the same class from Miniflare as we don't want this file to directly depend
+//       on Miniflare (since this would prevent effective treesheking)
+// TODO: we should have this Mutex class defined in a shared place that both Miniflare
+//       and Wrangle can safely import from
+export class Mutex {
+	private locked = false;
+	private resolveQueue: (() => void)[] = [];
+	private drainQueue: (() => void)[] = [];
+
+	private lock(): Awaitable<void> {
+		if (!this.locked) {
+			this.locked = true;
+			return;
+		}
+		return new Promise((resolve) => this.resolveQueue.push(resolve));
+	}
+
+	private unlock(): void {
+		assert(this.locked);
+		if (this.resolveQueue.length > 0) {
+			this.resolveQueue.shift()?.();
+		} else {
+			this.locked = false;
+			let resolve: (() => void) | undefined;
+			while ((resolve = this.drainQueue.shift()) !== undefined) {
+				resolve();
+			}
+		}
+	}
+
+	get hasWaiting(): boolean {
+		return this.resolveQueue.length > 0;
+	}
+
+	async runWith<T>(closure: () => Awaitable<T>): Promise<T> {
+		const acquireAwaitable = this.lock();
+		if (acquireAwaitable instanceof Promise) {
+			await acquireAwaitable;
+		}
+		try {
+			const awaitable = closure();
+			if (awaitable instanceof Promise) {
+				return await awaitable;
+			}
+			return awaitable;
+		} finally {
+			this.unlock();
+		}
+	}
+
+	async drained(): Promise<void> {
+		if (this.resolveQueue.length === 0 && !this.locked) {
+			return;
+		}
+		return new Promise((resolve) => this.drainQueue.push(resolve));
+	}
+}
 
 const getDebugFileDir = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_PATH",

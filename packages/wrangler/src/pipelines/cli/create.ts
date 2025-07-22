@@ -1,8 +1,11 @@
 import { formatConfigSnippet } from "../../config";
+import {
+	bucketFormatMessage,
+	isValidR2BucketName,
+} from "../../config/validation";
 import { createCommand } from "../../core/create-command";
 import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";
-import { bucketFormatMessage, isValidR2BucketName } from "../../r2/helpers";
 import { requireAuth } from "../../user";
 import { getValidBindingName } from "../../utils/getValidBindingName";
 import { createPipeline } from "../client";
