@@ -44,10 +44,10 @@ export default function registerDevHotKeys(
 			keys: ["r"],
 			label: "rebuild container(s)",
 			disabled: () => {
-				return (
-					// TODO: update this
-					!primaryDevEnv.config.latestConfig?.dev?.enableContainers ||
-					!primaryDevEnv.config.latestConfig?.containers?.length
+				return devEnvs.every(
+					(devEnv) =>
+						!devEnv.config.latestConfig?.dev?.enableContainers ||
+						!devEnv.config.latestConfig?.containers?.length
 				);
 			},
 			handler: debounce(async () => {
