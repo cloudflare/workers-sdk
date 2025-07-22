@@ -31,3 +31,5 @@ the changes here make sure that the logs are instead logged to their correct lev
 
 ▲ [WARNING] this is a warning
 ```
+
+(running `wrangler dev` with the `--log-level=debug` flag will also cause the debug log to be included as well)
