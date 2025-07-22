@@ -104,6 +104,7 @@ export function isDir(path: string) {
 /** returns true if it is a dockerfile, false if it is a registry link, throws if neither */
 export const isDockerfile = (
 	image: string,
+	/** The original (non-redirected) user config path */
 	configPath: string | undefined
 ): boolean => {
 	const baseDir = configPath ? path.dirname(configPath) : process.cwd();
