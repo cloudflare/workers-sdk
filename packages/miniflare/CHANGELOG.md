@@ -1,5 +1,13 @@
 # miniflare
 
+## 4.20250712.2
+
+### Minor Changes
+
+- [#9971](https://github.com/cloudflare/workers-sdk/pull/9971) [`19794bf`](https://github.com/cloudflare/workers-sdk/commit/19794bfb57a3ab17433eefbe1820d21d98bc32a4) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: add stripDisablePrettyError option to control whether the header is stripped
+
+- [#10041](https://github.com/cloudflare/workers-sdk/pull/10041) [`059a39e`](https://github.com/cloudflare/workers-sdk/commit/059a39e4f1e9f9b55ed8a5a8598e35af9bd0357f) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Add @cloudflare/plywright support for Browser Rendering local mode
+
 ## 4.20250712.1
 
 ### Patch Changes
