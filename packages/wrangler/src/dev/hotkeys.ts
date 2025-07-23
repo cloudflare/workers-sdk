@@ -8,15 +8,16 @@ import { openInspector } from "./inspect";
 import type { DevEnv } from "../api";
 
 export default function registerDevHotKeys(
-	devEnv: DevEnv,
+	devEnvs: DevEnv[],
 	args: { forceLocal?: boolean }
 ) {
+	const primaryDevEnv = devEnvs[0];
 	const unregisterHotKeys = registerHotKeys([
 		{
 			keys: ["b"],
 			label: "open a browser",
 			handler: async () => {
-				const { url } = await devEnv.proxy.ready.promise;
+				const { url } = await primaryDevEnv.proxy.ready.promise;
 				await openInBrowser(url.href);
 			},
 		},
@@ -26,7 +27,7 @@ export default function registerDevHotKeys(
 			// Don't display this hotkey if we're in a VSCode debug session
 			disabled: !!process.env.VSCODE_INSPECTOR_OPTIONS,
 			handler: async () => {
-				const { inspectorUrl } = await devEnv.proxy.ready.promise;
+				const { inspectorUrl } = await primaryDevEnv.proxy.ready.promise;
 
 				if (!inspectorUrl) {
 					logger.warn("DevTools is not available while in a debug terminal");
@@ -34,7 +35,7 @@ export default function registerDevHotKeys(
 					// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
 					await openInspector(
 						parseInt(inspectorUrl.port),
-						devEnv.config.latestConfig?.name
+						primaryDevEnv.config.latestConfig?.name
 					);
 				}
 			},
@@ -43,49 +44,53 @@ export default function registerDevHotKeys(
 			keys: ["r"],
 			label: "rebuild container(s)",
 			disabled: () => {
-				return (
-					!devEnv.config.latestConfig?.dev?.enableContainers ||
-					!devEnv.config.latestConfig?.containers?.length
+				return devEnvs.every(
+					(devEnv) =>
+						!devEnv.config.latestConfig?.dev?.enableContainers ||
+						!devEnv.config.latestConfig?.containers?.length
 				);
 			},
 			handler: debounce(async () => {
-				devEnv.runtimes.forEach((runtime) => {
-					if (runtime instanceof LocalRuntimeController) {
-						if (runtime.containerBeingBuilt) {
-							// Let's abort the image built so that we
-							// can restart the build process
-							runtime.containerBeingBuilt.abort();
-							runtime.containerBeingBuilt.abortRequested = true;
-						}
-					}
-				});
-				const newContainerBuildId = randomUUID().slice(0, 8);
-				// cleanup any existing containers
-				await Promise.all(
-					devEnv.runtimes.map(async (runtime) => {
+				for (const devEnv of devEnvs) {
+					devEnv.runtimes.forEach((runtime) => {
 						if (runtime instanceof LocalRuntimeController) {
-							await runtime.cleanupContainers();
+							if (runtime.containerBeingBuilt) {
+								// Let's abort the image built so that we
+								// can restart the build process
+								runtime.containerBeingBuilt.abort();
+								runtime.containerBeingBuilt.abortRequested = true;
+							}
 						}
-					})
-				);
+					});
+					// cleanup any existing containers
+					await Promise.all(
+						devEnv.runtimes.map(async (runtime) => {
+							if (runtime instanceof LocalRuntimeController) {
+								await runtime.cleanupContainers();
+							}
+						})
+					);
 
-				// updating the build ID will trigger a rebuild of the containers
-				await devEnv.config.patch({
-					dev: {
-						...devEnv.config.latestConfig?.dev,
-						containerBuildId: newContainerBuildId,
-					},
-				});
+					const newContainerBuildId = randomUUID().slice(0, 8);
+
+					// updating the build ID will trigger a rebuild of the containers
+					await devEnv.config.patch({
+						dev: {
+							...devEnv.config.latestConfig?.dev,
+							containerBuildId: newContainerBuildId,
+						},
+					});
+				}
 			}, 250),
 		},
 		{
 			keys: ["l"],
 			disabled: () => args.forceLocal ?? false,
 			handler: async () => {
-				await devEnv.config.patch({
+				await primaryDevEnv.config.patch({
 					dev: {
-						...devEnv.config.latestConfig?.dev,
-						remote: !devEnv.config.latestConfig?.dev?.remote,
+						...primaryDevEnv.config.latestConfig?.dev,
+						remote: !primaryDevEnv.config.latestConfig?.dev?.remote,
 					},
 				});
 			},
@@ -94,7 +99,7 @@ export default function registerDevHotKeys(
 			keys: ["c"],
 			label: "clear console",
 			handler: async () => {
-				const someContainerIsBeingBuilt = devEnv.runtimes.some(
+				const someContainerIsBeingBuilt = primaryDevEnv.runtimes.some(
 					(runtime) =>
 						runtime instanceof LocalRuntimeController &&
 						runtime.containerBeingBuilt
@@ -111,7 +116,7 @@ export default function registerDevHotKeys(
 			keys: ["x", "q", "ctrl+c"],
 			label: "to exit",
 			handler: async () => {
-				devEnv.runtimes.forEach((runtime) => {
+				primaryDevEnv.runtimes.forEach((runtime) => {
 					if (runtime instanceof LocalRuntimeController) {
 						if (runtime.containerBeingBuilt) {
 							// Let's abort the image built so that we
@@ -121,7 +126,7 @@ export default function registerDevHotKeys(
 						}
 					}
 				});
-				await devEnv.teardown();
+				await primaryDevEnv.teardown();
 			},
 		},
 	]);

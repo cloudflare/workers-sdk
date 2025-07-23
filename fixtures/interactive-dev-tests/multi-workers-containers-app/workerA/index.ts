@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 
-class FixtureTestContainerBase extends DurableObject<Env> {
+export class FixtureTestContainerA extends DurableObject<Env> {
 	container: globalThis.Container;
 
 	constructor(ctx: DurableObjectState, env: Env) {
@@ -26,24 +26,13 @@ class FixtureTestContainerBase extends DurableObject<Env> {
 	}
 }
 
-export class FixtureTestContainerA extends FixtureTestContainerBase {}
-export class FixtureTestContainerB extends FixtureTestContainerBase {}
-
 export default {
 	async fetch(request, env): Promise<Response> {
-		const getContainerText = async (
-			container: "CONTAINER_A" | "CONTAINER_B"
-		) => {
-			const id = env[container].idFromName("container");
-			const stub = env[container].get(id);
-			return await (await stub.fetch(request)).text();
-		};
-		const containerAText = await getContainerText("CONTAINER_A");
-		const containerBText = await getContainerText("CONTAINER_B");
-		return new Response(
-			`Response from A: "${containerAText}"` +
-				" " +
-				`Response from B: "${containerBText}"`
-		);
+		const id = env.CONTAINER_A.idFromName("container");
+		const stub = env.CONTAINER_A.get(id);
+		return Response.json({
+			containerAText: await (await stub.fetch(request)).text(),
+			containerBText: await (await env.WORKER_B.fetch(request)).text(),
+		});
 	},
 } satisfies ExportedHandler<Env>;

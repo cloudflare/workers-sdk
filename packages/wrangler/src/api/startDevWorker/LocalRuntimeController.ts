@@ -173,9 +173,9 @@ export class LocalRuntimeController extends RuntimeController {
 
 	// Set of container images that have been seen in the current dev session.
 	// This is used to clean up containers at the end of the dev session.
-	#containerImageTagsSeen: Set<string> = new Set();
+	containerImageTagsSeen: Set<string> = new Set();
 	// Stored here, so it can be used in `cleanupContainers()`
-	#dockerPath: string | undefined;
+	dockerPath: string | undefined;
 	// If this doesn't match what is in config, trigger a rebuild.
 	// Used for the rebuild hotkey
 	#currentContainerBuildId: string | undefined;
@@ -221,10 +221,10 @@ export class LocalRuntimeController extends RuntimeController {
 
 			// Assemble container options and build if necessary
 			const containerOptions = await getContainerOptions(data.config);
-			this.#dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
+			this.dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
 			// keep track of them so we can clean up later
 			for (const container of containerOptions ?? []) {
-				this.#containerImageTagsSeen.add(container.imageTag);
+				this.containerImageTagsSeen.add(container.imageTag);
 			}
 			if (
 				containerOptions &&
@@ -232,7 +232,7 @@ export class LocalRuntimeController extends RuntimeController {
 			) {
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
 				await prepareContainerImagesForDev({
-					dockerPath: this.#dockerPath,
+					dockerPath: this.dockerPath,
 					configPath: data.config.config,
 					containerOptions: containerOptions,
 					onContainerImagePreparationStart: (buildStartEvent) => {
@@ -373,10 +373,10 @@ export class LocalRuntimeController extends RuntimeController {
 
 	cleanupContainers = async () => {
 		assert(
-			this.#dockerPath,
+			this.dockerPath,
 			"Docker path should have been set if containers are enabled"
 		);
-		await cleanupContainers(this.#dockerPath, this.#containerImageTagsSeen);
+		await cleanupContainers(this.dockerPath, this.containerImageTagsSeen);
 	};
 
 	#teardown = async (): Promise<void> => {
@@ -389,7 +389,7 @@ export class LocalRuntimeController extends RuntimeController {
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
-		if (this.#containerImageTagsSeen.size > 0) {
+		if (this.containerImageTagsSeen.size > 0) {
 			try {
 				await this.cleanupContainers();
 			} catch {

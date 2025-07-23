@@ -624,7 +624,7 @@ export async function startDev(args: StartDevOptions) {
 				if (hotkeysDisplayed) {
 					assert(devEnv !== undefined);
 					unregisterHotKeys = registerDevHotKeys(
-						Array.isArray(devEnv) ? devEnv[0] : devEnv,
+						Array.isArray(devEnv) ? devEnv : [devEnv],
 						args
 					);
 				}
@@ -681,7 +681,7 @@ export async function startDev(args: StartDevOptions) {
 				))
 			);
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
+				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
 		} else {
 			devEnv = new DevEnv();
@@ -736,7 +736,7 @@ export async function startDev(args: StartDevOptions) {
 			await setupDevEnv(devEnv, args.config, authHook, args);
 
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(devEnv, args);
+				unregisterHotKeys = registerDevHotKeys([devEnv], args);
 			}
 		}
 

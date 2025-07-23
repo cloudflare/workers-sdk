@@ -1,12 +1,15 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
+import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
+import { getDockerPath } from "../../environment-variables/misc-variables";
 import { logger } from "../../logger";
 import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
+	getContainerOptions,
 	LocalRuntimeController,
 } from "./LocalRuntimeController";
 import { convertCfWorkerInitBindingsToBindings } from "./utils";
@@ -73,6 +76,10 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 		} | null
 	>();
 
+	// If this doesn't match what is in config, trigger a rebuild.
+	// Used for the rebuild hotkey
+	#currentContainerBuildId: string | undefined;
+
 	#canStartMiniflare() {
 		return (
 			[...this.#options.values()].some((o) => o.primary) &&
@@ -128,6 +135,41 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 					data.config.name,
 					remoteProxySession ?? null
 				);
+			}
+
+			// Assemble container options and build if necessary
+			const containerOptions = await getContainerOptions(data.config);
+			this.dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
+			// keep track of them so we can clean up later
+			for (const container of containerOptions ?? []) {
+				this.containerImageTagsSeen.add(container.imageTag);
+			}
+			if (
+				containerOptions &&
+				this.#currentContainerBuildId !== data.config.dev.containerBuildId
+			) {
+				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
+				await prepareContainerImagesForDev({
+					dockerPath: this.dockerPath,
+					configPath: data.config.config,
+					containerOptions,
+					onContainerImagePreparationStart: (buildStartEvent) => {
+						this.containerBeingBuilt = {
+							...buildStartEvent,
+							abortRequested: false,
+						};
+					},
+					onContainerImagePreparationEnd: () => {
+						this.containerBeingBuilt = undefined;
+					},
+				});
+				if (this.containerBeingBuilt) {
+					this.containerBeingBuilt.abortRequested = false;
+				}
+				this.#currentContainerBuildId = data.config.dev.containerBuildId;
+				// Miniflare will have logged 'Ready on...' before the containers are built, but that is actually the proxy server :/
+				// The actual user worker's miniflare instance is blocked until the containers are built
+				logger.log(chalk.dim("⎔ Container image(s) ready"));
 			}
 
 			const { options } = await MF.buildMiniflareOptions(
@@ -248,6 +290,16 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 		await this.#mf?.dispose();
 		this.#mf = undefined;
+
+		if (this.containerImageTagsSeen.size > 0) {
+			try {
+				await this.cleanupContainers();
+			} catch {
+				logger.warn(
+					`Failed to clean up containers. You may have to stop and remove them up manually.`
+				);
+			}
+		}
 
 		if (this.#remoteProxySessionsData.size > 0) {
 			logger.log(chalk.dim("⎔ Shutting down remote connections..."));
