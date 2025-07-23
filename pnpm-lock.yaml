@@ -3395,18 +3395,39 @@ importers:
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
+      '@iarna/toml':
+        specifier: ^3.0.0
+        version: 3.0.0
       blake3-wasm:
         specifier: 2.1.5
         version: 2.1.5
+      chalk:
+        specifier: ^5.2.0
+        version: 5.3.0
+      cli-table3:
+        specifier: ^0.6.3
+        version: 0.6.3
+      dotenv:
+        specifier: ^16.3.1
+        version: 16.3.1
       esbuild:
         specifier: catalog:default
         version: 0.25.4
+      find-up:
+        specifier: ^6.3.0
+        version: 6.3.0
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
       path-to-regexp:
         specifier: 6.3.0
         version: 6.3.0
+      strip-ansi:
+        specifier: ^7.1.0
+        version: 7.1.0
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
       unenv:
         specifier: 2.0.0-rc.17
         version: 2.0.0-rc.17
@@ -3448,9 +3469,6 @@ importers:
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
-      '@iarna/toml':
-        specifier: ^3.0.0
-        version: 3.0.0
       '@sentry/node':
         specifier: ^7.86.0
         version: 7.87.0(supports-color@9.2.2)
@@ -3511,15 +3529,9 @@ importers:
       '@webcontainer/env':
         specifier: ^1.1.0
         version: 1.1.0
-      chalk:
-        specifier: ^5.2.0
-        version: 5.3.0
       chokidar:
         specifier: ^4.0.1
         version: 4.0.1
-      cli-table3:
-        specifier: ^0.6.3
-        version: 0.6.3
       cmd-shim:
         specifier: ^4.1.0
         version: 4.1.0
@@ -3535,15 +3547,9 @@ importers:
       devtools-protocol:
         specifier: ^0.0.1182435
         version: 0.0.1182435
-      dotenv:
-        specifier: ^16.3.1
-        version: 16.3.1
       execa:
         specifier: ^6.1.0
         version: 6.1.0
-      find-up:
-        specifier: ^6.3.0
-        version: 6.3.0
       get-port:
         specifier: ^7.0.0
         version: 7.0.0
@@ -3616,18 +3622,12 @@ importers:
       source-map:
         specifier: ^0.6.1
         version: 0.6.1
-      strip-ansi:
-        specifier: ^7.1.0
-        version: 7.1.0
       supports-color:
         specifier: ^9.2.2
         version: 9.2.2
       timeago.js:
         specifier: ^4.0.2
         version: 4.0.2
-      ts-dedent:
-        specifier: ^2.2.0
-        version: 2.2.0
       ts-json-schema-generator:
         specifier: ^1.5.0
         version: 1.5.0

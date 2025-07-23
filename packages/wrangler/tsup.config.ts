@@ -113,8 +113,6 @@ export default defineConfig((options) => [
 		clean: true,
 		keepNames: true,
 		entry: ["src/api/config/index.ts"],
-		// noExternal: [/.*/],
-		external: ["esbuild"],
 		platform: "node",
 		format: "esm",
 		dts: true,
