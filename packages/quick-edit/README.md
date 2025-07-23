@@ -11,7 +11,7 @@ Currently it's not possible to run VSCode's dev server to develop patches. This 
 1. You must switch your NodeJS version to NodeJS 22 (using a tool like nvm). VSCode's build process requires this. For instance, if you use `nvm`, running `nvm use` would be enough to switch to the correct NodeJS version.
 2. Run `pnpm install`
 3. Run `pnpm run setup`, which will install dependencies, clone VSCode (currently v1.102.1), apply the patches specified in `./patches`, and symlink the top level packages within `workers-sdk`.
-4. Run `pnpm run custom:build`.
+4. Run `pnpm run custom:build`. It's `custom:build` rather than `build` because it's _really slow_, and shouldn't be regularly run by people building other packages in the repo.
 
 You should then be able to test out the local VSCode for Web instance by running `pnpm wrangler dev` at http://localhost:8787
 
