@@ -1,13 +1,13 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
-function readDtsFile(reference) {
+function readDtsFile(reference: string) {
 	return readFileSync(
 		`../../vendor/vscode/extensions/node_modules/typescript/lib/lib.${reference}.d.ts`,
 		"utf8"
 	);
 }
 
-function writeDtsFile(reference, content) {
+function writeDtsFile(reference: string, content: string) {
 	return writeFileSync(
 		`../../vendor/vscode/extensions/node_modules/typescript/lib/lib.${reference}.d.ts`,
 		content
@@ -16,7 +16,7 @@ function writeDtsFile(reference, content) {
 
 const importRegex = /\/\/\/ <reference lib="(.+?)" \/>/g;
 
-function replaceReferences(dts) {
+function replaceReferences(dts: string) {
 	return dts.replaceAll(importRegex, (_, ref) => {
 		const innerDts = readDtsFile(ref);
 		console.log("Including", ref, `(${innerDts.split("\n").length} lines)`);
@@ -24,7 +24,7 @@ function replaceReferences(dts) {
 	});
 }
 
-function inlineDts(dts) {
+function inlineDts(dts: string) {
 	if (!importRegex.test(dts)) {
 		return dts;
 	}

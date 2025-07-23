@@ -12,5 +12,6 @@
 		"noImplicitOverride": true,
 		"strict": true,
 		"skipLibCheck": true
-	}
+	},
+	"exclude": ["web", "editor-files"]
 }
