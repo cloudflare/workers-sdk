@@ -64,8 +64,7 @@ jobs:
 
       - name: Build and Deploy Quick Edit preview
         if: contains(github.event.*.labels.*.name, 'preview:quick-edit')
-        # Quick Edit requires yarn and VS Code build deps, so needs fairly specific logic
-        run: pnpm --filter quick-edit run deploy
+        run: pnpm --filter quick-edit run preview
         env:
           DEBIAN_FRONTEND: noninteractive
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
