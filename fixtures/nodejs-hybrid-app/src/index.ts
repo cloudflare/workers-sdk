@@ -4,6 +4,7 @@ import nodeCrypto, { getRandomValues, webcrypto } from "crypto";
 import assert from "node:assert/strict";
 import { Stream } from "node:stream";
 import { Context } from "vm";
+import debug from "debug";
 import { Client } from "pg";
 import { s } from "./dep.cjs";
 
@@ -38,6 +39,8 @@ export default {
 				return await testSqlite();
 			case "/test-http":
 				return await testHttp();
+			case "/test-debug":
+				return await testDebug();
 		}
 
 		return new Response(
@@ -51,6 +54,7 @@ export default {
 <a href="test-crypto">node:crypto</a>
 <a href="test-sqlite">node:sqlite</a>
 <a href="test-http">node:http</a>
+<a href="test-debug">debug</a>
 `,
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
@@ -274,6 +278,25 @@ async function testHttp() {
 
 	const agent = new http.Agent();
 	assert.strictEqual(typeof agent.options, "object");
+
+	return new Response("OK");
+}
+
+async function testDebug() {
+	// Test different namespaces
+	const logA = debug("test");
+	const logB = debug("example");
+	const logC = logB.extend("foo");
+
+	logA("Message 1");
+	logB("Message 2");
+	logC("Message 3");
+
+	if (logA.enabled) {
+		logA("Message 4");
+	} else {
+		logA("Message 5");
+	}
 
 	return new Response("OK");
 }
