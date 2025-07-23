@@ -6,8 +6,7 @@ import type { Config } from "../config";
 /**
  * Returns the compatibility date to use in development.
  *
- * When no compatibility date is configured, used the workerd date.
- * That's the latest valid compatibility date.
+ * When no compatibility date is configured, uses the installed Workers runtime's latest supported date.
  *
  * @param config wrangler configuration
  * @param compatibilityDate configured compatibility date
