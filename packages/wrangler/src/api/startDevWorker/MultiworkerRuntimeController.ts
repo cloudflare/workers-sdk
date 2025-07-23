@@ -9,7 +9,7 @@ import { logger } from "../../logger";
 import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
-	getContainerOptions,
+	getContainerDevOptions,
 	LocalRuntimeController,
 } from "./LocalRuntimeController";
 import { convertCfWorkerInitBindingsToBindings } from "./utils";
@@ -137,21 +137,27 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				);
 			}
 
-			// Assemble container options and build if necessary
-			const containerOptions = await getContainerOptions(data.config);
-			this.dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
-			// keep track of them so we can clean up later
-			for (const container of containerOptions ?? []) {
-				this.containerImageTagsSeen.add(container.imageTag);
-			}
 			if (
-				containerOptions &&
+				data.config.containers?.length &&
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
+				// Assemble container options and build if necessary
+				assert(
+					data.config.dev.containerBuildId,
+					"Build ID should be set if containers are enabled and defined"
+				);
+				const containerOptions = await getContainerDevOptions(
+					data.config.containers,
+					data.config.dev.containerBuildId
+				);
+				this.dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
+				// keep track of them so we can clean up later
+				for (const container of containerOptions ?? []) {
+					this.containerImageTagsSeen.add(container.image_tag);
+				}
 				await prepareContainerImagesForDev({
 					dockerPath: this.dockerPath,
-					configPath: data.config.config,
 					containerOptions,
 					onContainerImagePreparationStart: (buildStartEvent) => {
 						this.containerBeingBuilt = {

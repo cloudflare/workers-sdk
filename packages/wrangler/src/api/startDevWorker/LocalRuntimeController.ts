@@ -228,18 +228,18 @@ export class LocalRuntimeController extends RuntimeController {
 				data.config.dev.enableContainers &&
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
-				this.#dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
+				this.dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
 				assert(
 					data.config.dev.containerBuildId,
 					"Build ID should be set if containers are enabled and defined"
 				);
-				const containerDevOptions = await getContainerOptions(
+				const containerDevOptions = await getContainerDevOptions(
 					data.config.containers,
 					data.config.dev.containerBuildId
 				);
 
 				for (const container of containerDevOptions) {
-					this.#containerImageTagsSeen.add(container.image_tag);
+					this.containerImageTagsSeen.add(container.image_tag);
 				}
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
 				await prepareContainerImagesForDev({
@@ -438,7 +438,7 @@ export class LocalRuntimeController extends RuntimeController {
  * with image tag set to well-known dev format.
  * Undefined if containers are not enabled or not configured.
  */
-export async function getContainerOptions(
+export async function getContainerDevOptions(
 	containersConfig: NonNullable<BundleCompleteEvent["config"]["containers"]>,
 	containerBuildId: string
 ) {
