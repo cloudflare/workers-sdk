@@ -15,7 +15,6 @@ import type {
 	SharedContainerConfig,
 } from "@cloudflare/containers-shared";
 
-// TODO: allow merging in args from commands with config. e.g. for `wrangler containers build`
 /**
  * This normalises config into an intermediate shape for building or pulling.
  * We set defaults here too, because we can assume that if the value is undefined,
@@ -70,7 +69,7 @@ export const getNormalizedContainerOptions = async (
 			rollout_step_percentage: container.rollout_step_percentage ?? 25,
 			rollout_kind: container.rollout_kind ?? "full_auto",
 			observability: {
-				logsEnabled:
+				logs_enabled:
 					config.observability?.logs?.enabled ??
 					config.observability?.enabled === true,
 			},

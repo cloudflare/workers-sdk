@@ -1,5 +1,5 @@
-import { mkdirSync, writeFileSync } from "fs";
-import path from "path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { vi } from "vitest";
 import { getNormalizedContainerOptions } from "../../containers/config";
@@ -149,7 +149,7 @@ describe("getNormalizedContainerOptions", () => {
 			image_vars: undefined,
 			constraints: { tier: 1 },
 			observability: {
-				logsEnabled: false,
+				logs_enabled: false,
 			},
 		});
 	});
@@ -190,7 +190,7 @@ describe("getNormalizedContainerOptions", () => {
 			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
 			constraints: { tier: 1 },
 			observability: {
-				logsEnabled: false,
+				logs_enabled: false,
 			},
 		});
 	});
@@ -224,7 +224,7 @@ describe("getNormalizedContainerOptions", () => {
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config);
-
+		expect(result).toHaveLength(1);
 		expect(result[0]).toMatchObject({
 			name: "test-container",
 			class_name: "TestContainer",
@@ -265,7 +265,7 @@ describe("getNormalizedContainerOptions", () => {
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config);
-
+		expect(result).toHaveLength(1);
 		expect(result[0]).toMatchObject({
 			name: "test-container",
 			class_name: "TestContainer",
@@ -316,7 +316,7 @@ describe("getNormalizedContainerOptions", () => {
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config);
-
+		expect(result).toHaveLength(1);
 		expect(result[0]).toEqual({
 			name: "custom-name",
 			class_name: "TestContainer",
@@ -332,7 +332,7 @@ describe("getNormalizedContainerOptions", () => {
 				cities: ["nyc", "sf"],
 			},
 			observability: {
-				logsEnabled: true,
+				logs_enabled: true,
 			},
 		});
 	});
@@ -363,7 +363,7 @@ describe("getNormalizedContainerOptions", () => {
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config);
-
+		expect(result).toHaveLength(1);
 		expect(result[0]).toMatchObject({
 			name: "test-container",
 			class_name: "TestContainer",
@@ -377,7 +377,7 @@ describe("getNormalizedContainerOptions", () => {
 			image_vars: undefined,
 			constraints: { tier: 1 },
 			observability: {
-				logsEnabled: false,
+				logs_enabled: false,
 			},
 		});
 	});
@@ -446,7 +446,7 @@ describe("getNormalizedContainerOptions", () => {
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config);
-
+		expect(result).toHaveLength(1);
 		// Check that it has dockerfile properties (not image_uri)
 		expect(result[0]).toHaveProperty("dockerfile");
 		expect(result[0]).toHaveProperty("image_build_context");

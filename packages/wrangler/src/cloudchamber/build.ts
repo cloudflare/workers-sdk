@@ -244,7 +244,7 @@ export async function buildCommand(
 		},
 		getDockerPath() ?? args.pathToDocker,
 		args.push,
-		// this means we wont be able to read the disk size from the config, but that option is deprecated anyway at least for containers.
+		// this means we won't be able to read the disk size from the config, but that option is deprecated anyway at least for containers.
 		// and this never actually worked for cloudchamber as this command was previously reading it from config.containers not config.cloudchamber
 		undefined
 	);

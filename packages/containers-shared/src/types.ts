@@ -69,7 +69,7 @@ export type SharedContainerConfig = {
 		cities?: string[];
 		tier: number;
 	};
-	observability: { logsEnabled: boolean };
+	observability: { logs_enabled: boolean };
 } & InstanceTypeOrLimits;
 
 /** build/pull agnostic container options */

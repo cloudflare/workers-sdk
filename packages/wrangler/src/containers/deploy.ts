@@ -97,8 +97,13 @@ function cleanupObservability(
 	}
 }
 
+/**
+ * Resolves current configuration based on previous deployment.
+ */
 function observabilityToConfiguration(
+	/** Taken from current wrangler config */
 	observabilityFromConfig: boolean,
+	/** From previous deployment */
 	existingObservabilityConfig: ObservabilityConfiguration | undefined
 ): ObservabilityConfiguration | undefined {
 	// Let's use logs for the sake of simplicity of explanation.
@@ -134,12 +139,10 @@ function observabilityToConfiguration(
 
 	if (observabilityFromConfig) {
 		return { logs: { enabled: true } };
+	} else if (logsAlreadyEnabled === undefined) {
+		return undefined;
 	} else {
-		if (logsAlreadyEnabled === undefined) {
-			return undefined;
-		} else {
-			return { logs: { enabled: false } };
-		}
+		return { logs: { enabled: false } };
 	}
 }
 
@@ -172,7 +175,7 @@ function containerConfigToCreateRequest(
 						vcpu: containerApp.vcpu,
 					}),
 			observability: observabilityToConfiguration(
-				containerApp.observability.logsEnabled,
+				containerApp.observability.logs_enabled,
 				prevApp?.configuration.observability
 			),
 		},
@@ -191,7 +194,7 @@ export async function apply(
 		imageUpdateRequired?: boolean;
 		/**
 		 * If the image was built and pushed, or is a registry link, we have to update the image ref and this will be defined
-		 * If it is undefined, the image has not change, and we do not need to update the image ref
+		 * If it is undefined, the image has not changed, and we do not need to update the image ref
 		 */
 		newImageLink: string | undefined;
 		durable_object_namespace_id: string;
@@ -261,7 +264,9 @@ export async function apply(
 
 		// we need to sort the objects (by key) because the diff algorithm works with lines
 		const normalisedPrevApp = sortObjectRecursive<ModifyApplicationRequestBody>(
-			stripUndefined(cleanPrevious(prevApp, containerConfig, accountId))
+			stripUndefined(
+				cleanApplicationFromAPI(prevApp, containerConfig, accountId)
+			)
 		);
 
 		const modifyReq = createApplicationToModifyApplication(appConfig);
@@ -487,7 +492,7 @@ const doAction = async (
 /**
  * clean up application object received from API so that we get a nicer diff when comparing it to the current config.
  */
-export function cleanPrevious(
+export function cleanApplicationFromAPI(
 	prev: Application,
 	currentConfig: ContainerNormalizedConfig,
 	accountId: string
