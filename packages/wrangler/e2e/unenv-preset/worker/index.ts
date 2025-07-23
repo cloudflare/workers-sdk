@@ -2,7 +2,7 @@ import assert from "node:assert";
 
 // List all the test functions.
 // The test can be executing by fetching the `/${testName}` url.
-export const TESTS = {
+export const TESTS: Record<string, () => void> = {
 	testCryptoGetRandomValues,
 	testImplementsBuffer,
 	testNodeCompatModules,
@@ -19,6 +19,10 @@ export default {
 	async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);
 		const testName = url.pathname.slice(1);
+		if (testName === "ping") {
+			// Used by the deploy test to know when the worker is online
+			return new Response("pong");
+		}
 		const test = TESTS[testName];
 		if (!test) {
 			return new Response(
@@ -157,7 +161,9 @@ async function testTimers() {
 	const timers = await import("node:timers");
 	const timeout = timers.setTimeout(() => null, 1000);
 	// active is deprecated and no more in the type
-	(timers as any).active(timeout);
+	(timers as unknown as { active: (t: NodeJS.Timeout) => void }).active(
+		timeout
+	);
 	timers.clearTimeout(timeout);
 
 	const timersPromises = await import("node:timers/promises");
@@ -174,15 +180,17 @@ export async function testNet() {
 export async function testTls() {
 	const tls = await import("node:tls");
 	assert.strictEqual(typeof tls, "object");
+	// @ts-expect-error Node types are wrong
 	assert.strictEqual(typeof tls.convertALPNProtocols, "function");
 }
 
 export async function testDebug() {
+	// @ts-expect-error "@cloudflare/unenv-preset/npm/debug" is an unenv alias, it does not exist as a module.
 	const debug = await import("@cloudflare/unenv-preset/npm/debug");
 	const logs: string[] = [];
 
 	// Append all logs to the array instead of logging to console
-	debug.default.log = (...args) =>
+	debug.default.log = (...args: string[]) =>
 		logs.push(args.map((arg) => arg.toString()).join(" "));
 
 	const exampleLog = debug.default("example");

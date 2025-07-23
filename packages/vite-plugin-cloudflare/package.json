@@ -42,7 +42,7 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"@cloudflare/unenv-preset": "2.3.3",
+		"@cloudflare/unenv-preset": "workspace:*",
 		"@mjackson/node-fetch-server": "^0.6.1",
 		"@rollup/plugin-replace": "^6.0.1",
 		"get-port": "^7.1.0",

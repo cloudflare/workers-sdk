@@ -2049,21 +2049,12 @@ importers:
       unbuild:
         specifier: ^3.2.0
         version: 3.3.1(typescript@5.8.3)(vue-tsc@2.0.29(typescript@5.8.3))
-      undici:
-        specifier: catalog:default
-        version: 7.11.0
-      vitest:
-        specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)
-      wrangler:
-        specifier: workspace:*
-        version: link:../wrangler
 
   packages/vite-plugin-cloudflare:
     dependencies:
       '@cloudflare/unenv-preset':
-        specifier: 2.3.3
-        version: 2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250712.0)
+        specifier: workspace:*
+        version: link:../unenv-preset
       '@mjackson/node-fetch-server':
         specifier: ^0.6.1
         version: 0.6.1
@@ -3372,8 +3363,8 @@ importers:
         specifier: workspace:*
         version: link:../kv-asset-handler
       '@cloudflare/unenv-preset':
-        specifier: 2.3.3
-        version: 2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250712.0)
+        specifier: workspace:*
+        version: link:../unenv-preset
       blake3-wasm:
         specifier: 2.1.5
         version: 2.1.5
@@ -4252,15 +4243,6 @@ packages:
     peerDependencies:
       unenv: 2.0.0-rc.15
       workerd: ^1.20250320.0
-    peerDependenciesMeta:
-      workerd:
-        optional: true
-
-  '@cloudflare/unenv-preset@2.3.3':
-    resolution: {integrity: sha512-/M3MEcj3V2WHIRSW1eAQBPRJ6JnGQHc6JKMAPLkDb7pLs3m6X9ES/+K3ceGqxI6TKeF32AWAi7ls0AYzVxCP0A==}
-    peerDependencies:
-      unenv: 2.0.0-rc.17
-      workerd: ^1.20250508.0
     peerDependenciesMeta:
       workerd:
         optional: true
@@ -14374,12 +14356,6 @@ snapshots:
       unenv: 2.0.0-rc.15
     optionalDependencies:
       workerd: 1.20250417.0
-
-  '@cloudflare/unenv-preset@2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250712.0)':
-    dependencies:
-      unenv: 2.0.0-rc.17
-    optionalDependencies:
-      workerd: 1.20250712.0
 
   '@cloudflare/util-en-garde@8.0.10':
     dependencies:
