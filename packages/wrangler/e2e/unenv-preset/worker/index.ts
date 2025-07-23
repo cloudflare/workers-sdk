@@ -2,7 +2,7 @@ import assert from "node:assert";
 
 // List all the test functions.
 // The test can be executing by fetching the `/${testName}` url.
-export const TESTS = {
+export const TESTS: Record<string, () => void> = {
 	testCryptoGetRandomValues,
 	testImplementsBuffer,
 	testNodeCompatModules,
@@ -185,11 +185,12 @@ export async function testTls() {
 }
 
 export async function testDebug() {
+	// @ts-expect-error "@cloudflare/unenv-preset/npm/debug" is an unenv alias, it does not exist as a module.
 	const debug = await import("@cloudflare/unenv-preset/npm/debug");
 	const logs: string[] = [];
 
 	// Append all logs to the array instead of logging to console
-	debug.default.log = (...args) =>
+	debug.default.log = (...args: string[]) =>
 		logs.push(args.map((arg) => arg.toString()).join(" "));
 
 	const exampleLog = debug.default("example");
