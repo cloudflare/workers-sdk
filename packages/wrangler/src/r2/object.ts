@@ -75,6 +75,9 @@ export const r2ObjectGetCommand = createCommand({
 		},
 	},
 	behaviour: {
+		printBanner({ pipe }) {
+			return !pipe;
+		},
 		printResourceLocation(args) {
 			return !args?.pipe;
 		},
