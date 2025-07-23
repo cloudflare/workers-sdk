@@ -4,14 +4,14 @@
  */
 
 import assert from "node:assert";
-import dedent from "ts-dedent";
+import path from "node:path";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+import { formatCompatibilityDate } from "../../src/utils/compatibility-date";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import { retry } from "../helpers/retry";
-import { getYMDDate, workerScript } from "./helper";
 import { TESTS } from "./worker/index";
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
@@ -23,15 +23,15 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		beforeAll(async () => {
 			helper = new WranglerE2ETestHelper();
 			await helper.seed({
-				"wrangler.jsonc": dedent`{
-				"name": "${generateResourceName()}",
-				"main": "${workerScript}",
-				"compatibility_date": "${getYMDDate()}",
-				"compatibility_flags": ["nodejs_compat"],
-				"vars": {
-					"DEBUG": "example"
-				}
-			}`,
+				"wrangler.jsonc": JSON.stringify({
+					name: generateResourceName(),
+					main: path.join(__dirname, "/worker/index.ts"),
+					compatibility_date: formatCompatibilityDate(new Date()),
+					compatibility_flags: ["nodejs_compat"],
+					vars: {
+						DEBUG: "example",
+					},
+				}),
 			});
 
 			const { stdout } = await helper.run(`wrangler deploy`);
