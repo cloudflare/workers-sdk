@@ -35,7 +35,7 @@ export class WranglerLongLivedCommand extends LongLivedCommand {
 		super(getWranglerCommand(wranglerCommand), getOptions(options));
 	}
 
-	async waitForReady(readTimeout = 5_000): Promise<{ url: string }> {
+	async waitForReady(readTimeout = 15_000): Promise<{ url: string }> {
 		const match = await this.readUntil(
 			/Ready on (?<url>https?:\/\/.*)/,
 			readTimeout
