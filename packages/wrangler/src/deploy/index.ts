@@ -13,6 +13,7 @@ import { writeOutput } from "../output";
 import { getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
@@ -307,7 +308,7 @@ export const deployCommand = createCommand({
 			entry,
 			env: args.env,
 			compatibilityDate: args.latest
-				? new Date().toISOString().substring(0, 10)
+				? formatCompatibilityDate(new Date())
 				: args.compatibilityDate,
 			compatibilityFlags: args.compatibilityFlags,
 			vars: cliVars,

@@ -17,6 +17,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
+import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { debounce } from "../utils/debounce";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
@@ -1140,7 +1141,7 @@ function resolvePagesDevServerSettings(
 	// resolve compatibility date
 	let compatibilityDate = args.compatibilityDate || config.compatibility_date;
 	if (!compatibilityDate) {
-		const currentDate = new Date().toISOString().substring(0, 10);
+		const currentDate = formatCompatibilityDate(new Date());
 		logger.warn(
 			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
 				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${currentDate}", or\n` +

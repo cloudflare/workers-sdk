@@ -5353,6 +5353,14 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("workers_dev setting", () => {
+		beforeEach(() => {
+			vi.useFakeTimers();
+		});
+
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
 		it("should deploy to a workers.dev domain if workers_dev is undefined", async () => {
 			writeWranglerConfig();
 			writeWorkerSource();
@@ -5788,26 +5796,20 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should error if a compatibility_date is missing and suggest the correct month", async () => {
-			vi.spyOn(Date.prototype, "getMonth").mockImplementation(() => 11);
-			vi.spyOn(Date.prototype, "getFullYear").mockImplementation(() => 2020);
-			vi.spyOn(Date.prototype, "getDate").mockImplementation(() => 1);
+		it("should error if a compatibility_date is missing and suggest the correct date", async () => {
+			vi.setSystemTime(new Date(2020, 11, 1));
 
 			writeWorkerSource();
-			let err: undefined | Error;
-			try {
-				await runWrangler("deploy ./index.js --name my-worker");
-			} catch (e) {
-				err = e as Error;
-			}
 
-			expect(err?.message).toMatchInlineSnapshot(`
-				"A compatibility_date is required when publishing. Add the following to your Wrangler configuration file:
+			await expect(
+				async () => await runWrangler("deploy ./index.js --name my-worker")
+			).rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: A compatibility_date is required when publishing. Add the following to your Wrangler configuration file:
 				    \`\`\`
-				    {\\"compatibility_date\\":\\"2020-12-01\\"}
+				    {"compatibility_date":"2020-12-01"}
 				    \`\`\`
 				    Or you could pass it in your terminal as \`--compatibility-date 2020-12-01\`
-				See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+				See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.]
 			`);
 		});
 

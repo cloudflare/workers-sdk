@@ -50,6 +50,7 @@ import {
 } from "../sourcemap";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
@@ -357,7 +358,7 @@ export const versionsUploadCommand = createCommand({
 				legacyEnv: isLegacyEnv(config),
 				env: args.env,
 				compatibilityDate: args.latest
-					? new Date().toISOString().substring(0, 10)
+					? formatCompatibilityDate(new Date())
 					: args.compatibilityDate,
 				compatibilityFlags: args.compatibilityFlags,
 				vars: cliVars,
@@ -456,11 +457,7 @@ export default async function versionsUpload(props: Props): Promise<{
 	}
 
 	if (!(props.compatibilityDate || config.compatibility_date)) {
-		const compatibilityDateStr = `${new Date().getFullYear()}-${(
-			new Date().getMonth() +
-			1 +
-			""
-		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
+		const compatibilityDateStr = formatCompatibilityDate(new Date());
 
 		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`

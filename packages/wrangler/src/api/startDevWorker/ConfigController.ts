@@ -28,11 +28,11 @@ import {
 	requireApiToken,
 	requireAuth,
 } from "../../user";
+import { getDevCompatibilityDate } from "../../utils/compatibility-date";
 import {
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
 } from "../../utils/constants";
-import { getDevCompatibilityDate } from "../../utils/getDevCompatibilityDate";
 import { getRules } from "../../utils/getRules";
 import { getScriptName } from "../../utils/getScriptName";
 import { isLegacyEnv } from "../../utils/isLegacyEnv";
