@@ -2009,6 +2009,9 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      esbuild:
+        specifier: catalog:default
+        version: 0.25.4
       tsx:
         specifier: ^3.12.8
         version: 3.12.10

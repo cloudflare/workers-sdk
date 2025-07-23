@@ -1,62 +1,55 @@
-From ad0eca736dfef06d2055336a2885f655432ef7df Mon Sep 17 00:00:00 2001
-From: Workers DevProd <workers-devprod@cloudflare.com>
-Date: Sat, 17 Feb 2024 07:31:36 +0000
-Subject: [PATCH 8/9] Enable project-wide intellisense for web
-
----
- .../typescript-language-features/package.json |   2 +-
- .../src/languageProvider.ts                   |   4 -
- .../src/tsServer/serverProcess.browser.ts     |  66 ++-
- .../src/typescriptServiceClient.ts            |   4 +-
- .../web/src/cfs-simple.ts                     | 426 ++++++++++++++++++
- .../web/src/fileWatcherManager.ts             |  23 +-
- .../web/src/pathMapper.ts                     |   3 +-
- .../web/src/serverHost.ts                     | 124 ++---
- .../web/src/webServer.ts                      |  12 +-
- .../web/src/workerSession.ts                  |  32 +-
- 10 files changed, 571 insertions(+), 125 deletions(-)
- create mode 100644 extensions/typescript-language-features/web/src/cfs-simple.ts
-
-diff --git a/extensions/typescript-language-features/package.json b/extensions/typescript-language-features/package.json
-index 880c8dc..61b2888 100644
---- a/extensions/typescript-language-features/package.json
-+++ b/extensions/typescript-language-features/package.json
-@@ -983,7 +983,7 @@
-             "%typescript.preferences.importModuleSpecifierEnding.index%",
-             "%typescript.preferences.importModuleSpecifierEnding.js%"
-           ],
--          "default": "auto",
-+          "default": "js",
-           "description": "%typescript.preferences.importModuleSpecifierEnding%",
-           "scope": "language-overridable"
-         },
+# VSCode for Web doesn't support proper typechecking across multiple files without `SharedArrayBuffer` support.
+# Unfortunately we can't guarantee `SharedArrayBuffer` support in the context this editor is used in, and so
+# this diff patches the Typescript extension to maintain an in-memory buffer of the filesystem, performing typechecking
+# on that. In theory this updates on a slight lag from changes in the editor, but in practice this delay is too small to
+# be noticeable. Notably, we include a simplified version of the "CFS" filesystem provider from `packages/quick-edit-extension`
 diff --git a/extensions/typescript-language-features/src/languageProvider.ts b/extensions/typescript-language-features/src/languageProvider.ts
-index 6157c3b..a1f02c1 100644
+index f2d52f2..b1a9e81 100644
 --- a/extensions/typescript-language-features/src/languageProvider.ts
 +++ b/extensions/typescript-language-features/src/languageProvider.ts
-@@ -17,7 +17,6 @@ import { ClientCapability } from './typescriptService';
+@@ -9,7 +9,6 @@ import { CommandManager } from './commands/commandManager';
+ import { DocumentSelector } from './configuration/documentSelector';
+ import * as fileSchemes from './configuration/fileSchemes';
+ import { LanguageDescription } from './configuration/languageDescription';
+-import { Schemes } from './configuration/schemes';
+ import { DiagnosticKind } from './languageFeatures/diagnostics';
+ import FileConfigurationManager from './languageFeatures/fileConfigurationManager';
+ import { TelemetryReporter } from './logging/telemetry';
+@@ -18,7 +17,6 @@ import { ClientCapability } from './typescriptService';
  import TypeScriptServiceClient from './typescriptServiceClient';
  import TypingsStatus from './ui/typingsStatus';
  import { Disposable } from './utils/dispose';
--import { isWeb } from './utils/platform';
+-import { isWeb, isWebAndHasSharedArrayBuffers, supportsReadableByteStreams } from './utils/platform';
  
  
  const validateSetting = 'validate.enable';
-@@ -141,9 +140,6 @@ export default class LanguageProvider extends Disposable {
+@@ -146,21 +144,6 @@ export default class LanguageProvider extends Disposable {
  			return;
  		}
  
--		if (diagnosticsKind === DiagnosticKind.Semantic && isWeb() && this.client.configuration.webProjectWideIntellisenseSuppressSemanticErrors) {
+-		if (diagnosticsKind === DiagnosticKind.Semantic && isWeb()) {
+-			if (
+-				!isWebAndHasSharedArrayBuffers()
+-				|| !supportsReadableByteStreams() // No ata. Will result in lots of false positives
+-				|| this.client.configuration.webProjectWideIntellisenseSuppressSemanticErrors
+-				|| !this.client.configuration.webProjectWideIntellisenseEnabled
+-			) {
+-				return;
+-			}
+-		}
+-
+-		// Disable semantic errors in notebooks until we have better notebook support
+-		if (diagnosticsKind === DiagnosticKind.Semantic && file.scheme === Schemes.notebookCell) {
 -			return;
 -		}
  
  		const config = vscode.workspace.getConfiguration(this.id, file);
  		const reportUnnecessary = config.get<boolean>('showUnused', true);
 diff --git a/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts b/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts
-index bb57c26..9f8c71b 100644
+index 5adf186..25a6def 100644
 --- a/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts
 +++ b/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts
-@@ -114,11 +114,34 @@ class WorkerServerProcess implements TsServerProcess {
+@@ -115,11 +115,34 @@ class WorkerServerProcess implements TsServerProcess {
  				}
  				case 'watchDirectory':
  				case 'watchFile': {
@@ -96,7 +89,7 @@ index bb57c26..9f8c71b 100644
  					break;
  				}
  				default:
-@@ -143,9 +166,36 @@ class WorkerServerProcess implements TsServerProcess {
+@@ -144,9 +167,36 @@ class WorkerServerProcess implements TsServerProcess {
  			}
  		};
  
@@ -137,19 +130,19 @@ index bb57c26..9f8c71b 100644
  
  		const connection = new ServiceConnection<Requests>(syncChannel.port2);
 diff --git a/extensions/typescript-language-features/src/typescriptServiceClient.ts b/extensions/typescript-language-features/src/typescriptServiceClient.ts
-index a389142..e216be7 100644
+index 4201d6d..d9559da 100644
 --- a/extensions/typescript-language-features/src/typescriptServiceClient.ts
 +++ b/extensions/typescript-language-features/src/typescriptServiceClient.ts
-@@ -24,7 +24,7 @@ import { ServiceConfigurationProvider, SyntaxServerConfiguration, TsServerLogLev
- import { Disposable } from './utils/dispose';
- import * as fileSchemes from './configuration/fileSchemes';
- import { Logger } from './logging/logger';
+@@ -32,7 +32,7 @@ import { ITypeScriptVersionProvider, TypeScriptVersion } from './tsServer/versio
+ import { ClientCapabilities, ClientCapability, ExecConfig, ITypeScriptServiceClient, ServerResponse, TypeScriptRequests } from './typescriptService';
+ import { Disposable, DisposableStore, disposeAll } from './utils/dispose';
+ import { hash } from './utils/hash';
 -import { isWeb, isWebAndHasSharedArrayBuffers } from './utils/platform';
 +import { isWeb } from './utils/platform';
- import { PluginManager, TypeScriptServerPlugin } from './tsServer/plugins';
- import { TelemetryProperties, TelemetryReporter, VSCodeTelemetryReporter } from './logging/telemetry';
- import Tracer from './logging/tracer';
-@@ -269,7 +269,7 @@ export default class TypeScriptServiceClient extends Disposable implements IType
+ 
+ 
+ export interface TsDiagnostics {
+@@ -284,7 +284,7 @@ export default class TypeScriptServiceClient extends Disposable implements IType
  	readonly onDidChangeCapabilities = this._onDidChangeCapabilities.event;
  
  	private isProjectWideIntellisenseOnWebEnabled(): boolean {
@@ -591,7 +584,7 @@ index 0000000..043a369
 +	}
 +}
 diff --git a/extensions/typescript-language-features/web/src/fileWatcherManager.ts b/extensions/typescript-language-features/web/src/fileWatcherManager.ts
-index 8c8d740..1cd6557 100644
+index 6ae4472..4358d4b 100644
 --- a/extensions/typescript-language-features/web/src/fileWatcherManager.ts
 +++ b/extensions/typescript-language-features/web/src/fileWatcherManager.ts
 @@ -7,6 +7,7 @@ import type * as ts from 'typescript/lib/tsserverlibrary';
@@ -632,7 +625,7 @@ index 8c8d740..1cd6557 100644
  
  	watchFile(path: string, callback: ts.FileWatcherCallback, pollingInterval?: number, options?: ts.WatchOptions): ts.FileWatcher {
 diff --git a/extensions/typescript-language-features/web/src/pathMapper.ts b/extensions/typescript-language-features/web/src/pathMapper.ts
-index e925489..bbcd6ef 100644
+index e925489..4bb32d3 100644
 --- a/extensions/typescript-language-features/web/src/pathMapper.ts
 +++ b/extensions/typescript-language-features/web/src/pathMapper.ts
 @@ -76,7 +76,8 @@ export function fromResource(extensionUri: URI, uri: URI) {
@@ -640,16 +633,16 @@ index e925489..bbcd6ef 100644
  		return uri.path;
  	}
 -	return `/${uri.scheme}/${uri.authority}${uri.path}`;
-+	// Use `ts-nul-authority` when the authority is an empty string. All CFS file have an empty authority
++	// Use `ts-nul-authority` when the authority is an empty string. All CFS files have an empty authority
 +	return `/${uri.scheme}/${uri.authority === '' ? 'ts-nul-authority' : uri.authority}${uri.path}`;
  }
  
  export function looksLikeLibDtsPath(filepath: string) {
 diff --git a/extensions/typescript-language-features/web/src/serverHost.ts b/extensions/typescript-language-features/web/src/serverHost.ts
-index f2f9ca9..8069d8c 100644
+index d746501..c44f8e5 100644
 --- a/extensions/typescript-language-features/web/src/serverHost.ts
 +++ b/extensions/typescript-language-features/web/src/serverHost.ts
-@@ -3,29 +3,36 @@
+@@ -3,30 +3,37 @@
   *  Licensed under the MIT License. See License.txt in the project root for license information.
   *--------------------------------------------------------------------------------------------*/
  
@@ -663,7 +656,8 @@ index f2f9ca9..8069d8c 100644
  import { PathMapper, looksLikeNodeModules, mapUri } from './pathMapper';
 -import { findArgument, hasArgument } from './util/args';
 +import { findArgument } from './util/args';
-+
+ import { URI } from 'vscode-uri';
+ 
 +// Keep an in-memory representation of the current Worker script.
 +// This is in-memory within this (Web) Worker to avoid a dependency on SharedArrayBuffer
 +// The contents are updated on a slight lag from VSCode filesystem events
@@ -673,7 +667,7 @@ index f2f9ca9..8069d8c 100644
 +// BEGIN misc internals
 +
 +// End misc internals
- 
++
  type ServerHostWithImport = ts.server.ServerHost & { importPlugin(root: string, moduleName: string): Promise<ts.server.ModuleImportResult> };
  
  function createServerHost(
@@ -694,7 +688,7 @@ index f2f9ca9..8069d8c 100644
  
  	// Internals
  	const combinePaths: (path: string, ...paths: (string | undefined)[]) => string = (ts as any).combinePaths;
-@@ -98,7 +105,7 @@ function createServerHost(
+@@ -99,7 +106,7 @@ function createServerHost(
  		newLine: '\n',
  		useCaseSensitiveFileNames: true,
  		write: s => {
@@ -703,7 +697,7 @@ index f2f9ca9..8069d8c 100644
  		},
  		writeOutputIsTTY() {
  			return true;
-@@ -106,7 +113,9 @@ function createServerHost(
+@@ -107,7 +114,9 @@ function createServerHost(
  		readFile(path) {
  			logger.logVerbose('fs.readFile', { path });
  
@@ -714,7 +708,7 @@ index f2f9ca9..8069d8c 100644
  				const webPath = getWebPath(path);
  				if (webPath) {
  					const request = new XMLHttpRequest();
-@@ -118,28 +127,12 @@ function createServerHost(
+@@ -119,28 +128,12 @@ function createServerHost(
  				}
  			}
  
@@ -746,7 +740,7 @@ index f2f9ca9..8069d8c 100644
  		},
  		getFileSize(path) {
  			logger.logVerbose('fs.getFileSize', { path });
-@@ -153,12 +146,6 @@ function createServerHost(
+@@ -154,12 +147,6 @@ function createServerHost(
  			try {
  				ret = fs.stat(uri).size;
  			} catch (_error) {
@@ -759,7 +753,7 @@ index f2f9ca9..8069d8c 100644
  			}
  			return ret;
  		},
-@@ -173,19 +160,11 @@ function createServerHost(
+@@ -174,19 +161,11 @@ function createServerHost(
  				data = byteOrderMarkIndicator + data;
  			}
  
@@ -783,7 +777,7 @@ index f2f9ca9..8069d8c 100644
  			} catch (error) {
  				console.error('fs.writeFile', { path, error });
  			}
-@@ -196,7 +175,9 @@ function createServerHost(
+@@ -197,7 +176,9 @@ function createServerHost(
  		fileExists(path: string): boolean {
  			logger.logVerbose('fs.fileExists', { path });
  
@@ -794,7 +788,7 @@ index f2f9ca9..8069d8c 100644
  				const webPath = getWebPath(path);
  				if (!webPath) {
  					return false;
-@@ -208,24 +189,12 @@ function createServerHost(
+@@ -209,24 +190,12 @@ function createServerHost(
  				return request.status === 200;
  			}
  
@@ -822,7 +816,7 @@ index f2f9ca9..8069d8c 100644
  		},
  		directoryExists(path: string): boolean {
  			logger.logVerbose('fs.directoryExists', { path });
-@@ -245,12 +214,7 @@ function createServerHost(
+@@ -246,12 +215,7 @@ function createServerHost(
  			try {
  				stat = fs.stat(uri);
  			} catch (_error) {
@@ -836,7 +830,7 @@ index f2f9ca9..8069d8c 100644
  			}
  			if (stat) {
  				if (path.startsWith('/https') && !path.endsWith('.d.ts')) {
-@@ -303,12 +267,7 @@ function createServerHost(
+@@ -304,12 +268,7 @@ function createServerHost(
  			try {
  				s = fs.stat(uri);
  			} catch (_e) {
@@ -850,7 +844,7 @@ index f2f9ca9..8069d8c 100644
  			}
  			return s && new Date(s.mtime);
  		},
-@@ -406,23 +365,12 @@ function createServerHost(
+@@ -423,23 +382,12 @@ function createServerHost(
  export async function createSys(
  	ts: typeof import('typescript/lib/tsserverlibrary'),
  	args: readonly string[],
@@ -917,7 +911,7 @@ index 3d2d5f9..72522b8 100644
  			const args = e.data.args;
  			const extensionUri = URI.from(e.data.extensionUri);
 diff --git a/extensions/typescript-language-features/web/src/workerSession.ts b/extensions/typescript-language-features/web/src/workerSession.ts
-index 6ae517c..47802cd 100644
+index 6ae517c..9091986 100644
 --- a/extensions/typescript-language-features/web/src/workerSession.ts
 +++ b/extensions/typescript-language-features/web/src/workerSession.ts
 @@ -2,10 +2,8 @@
@@ -973,11 +967,3 @@ index 6ae517c..47802cd 100644
  
  			this.listener = (message: any) => {
  				// TEMP fix since Cancellation.retrieveCheck is not correct
-@@ -124,3 +121,4 @@ export function startWorkerSession(
- 
- 	worker.listen();
- }
-+
--- 
-2.39.3 (Apple Git-145)
-

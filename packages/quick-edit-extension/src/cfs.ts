@@ -194,16 +194,20 @@ declare module "*.bin" {
 					}
 				}
 			}
-			await this.writeFile(Uri.parse(`${this.rootFolder}/${path}`), contents, {
-				create: true,
-				overwrite: true,
-				suppressChannelUpdate: true,
-				readOnly: files.readOnly,
-			});
+			await this.writeFile(
+				Uri.parse(`cfs:/${this.rootFolder}/${path}`),
+				contents,
+				{
+					create: true,
+					overwrite: true,
+					suppressChannelUpdate: true,
+					readOnly: files.readOnly,
+				}
+			);
 		}
 		if (this.readRoot !== null) {
 			await this.readRoot(
-				await this.readDirectory(Uri.parse(`${this.rootFolder}/`))
+				await this.readDirectory(Uri.parse(`cfs:/${this.rootFolder}/`))
 			);
 		}
 	}
