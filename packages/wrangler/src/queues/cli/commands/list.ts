@@ -4,7 +4,7 @@ import { listQueues } from "../../client";
 
 export const queuesListCommand = createCommand({
 	metadata: {
-		description: "List Queues",
+		description: "List queues",
 		status: "stable",
 		owner: "Product: Queues",
 	},

@@ -6,7 +6,7 @@ import type { Consumer, Producer, QueueResponse } from "../../client";
 
 export const queuesInfoCommand = createCommand({
 	metadata: {
-		description: "Get Queue information",
+		description: "Get queue information",
 		owner: "Product: Queues",
 		status: "stable",
 	},

@@ -7,7 +7,7 @@ import type { PostQueueBody } from "../../client";
 
 export const queuesPauseCommand = createCommand({
 	metadata: {
-		description: "Pause message delivery for a Queue",
+		description: "Pause message delivery for a queue",
 		owner: "Product: Queues",
 		status: "stable",
 	},
@@ -26,7 +26,7 @@ export const queuesPauseCommand = createCommand({
 
 export const queuesResumeCommand = createCommand({
 	metadata: {
-		description: "Resume message delivery for a Queue",
+		description: "Resume message delivery for a queue",
 		owner: "Product: Queues",
 		status: "stable",
 	},
