@@ -16,7 +16,7 @@ import type { PostQueueBody } from "../../client";
 
 export const queuesCreateCommand = createCommand({
 	metadata: {
-		description: "Create a Queue",
+		description: "Create a queue",
 		owner: "Product: Queues",
 		status: "stable",
 	},

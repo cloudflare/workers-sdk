@@ -1,13 +1,17 @@
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockPrompt } from "./helpers/mock-dialogs";
+import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
+import type {
+	CreateEventSubscriptionRequest,
+	EventSubscription,
+} from "../queues/subscription-types";
 
 describe("wrangler", () => {
 	mockAccountId();
@@ -29,15 +33,16 @@ describe("wrangler", () => {
 				📬 Manage Workers Queues
 
 				COMMANDS
-				  wrangler queues list                    List Queues
-				  wrangler queues create <name>           Create a Queue
-				  wrangler queues update <name>           Update a Queue
-				  wrangler queues delete <name>           Delete a Queue
-				  wrangler queues info <name>             Get Queue information
-				  wrangler queues consumer                Configure Queue consumers
-				  wrangler queues pause-delivery <name>   Pause message delivery for a Queue
-				  wrangler queues resume-delivery <name>  Resume message delivery for a Queue
-				  wrangler queues purge <name>            Purge messages from a Queue
+				  wrangler queues list                    List queues
+				  wrangler queues create <name>           Create a queue
+				  wrangler queues update <name>           Update a queue
+				  wrangler queues delete <name>           Delete a queue
+				  wrangler queues info <name>             Get queue information
+				  wrangler queues consumer                Configure queue consumers
+				  wrangler queues pause-delivery <name>   Pause message delivery for a queue
+				  wrangler queues resume-delivery <name>  Resume message delivery for a queue
+				  wrangler queues purge <name>            Purge messages from a queue
+				  wrangler queues subscription            Manage event subscriptions for a queue
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -47,37 +52,6 @@ describe("wrangler", () => {
 				  -v, --version  Show version number  [boolean]"
 			`);
 		});
-
-		function mockGetQueueByNameRequest(
-			queueName: string,
-			queue: QueueResponse | null
-		) {
-			const requests = { count: 0 };
-			msw.use(
-				http.get(
-					"*/accounts/:accountId/queues?*",
-					async ({ request }) => {
-						const url = new URL(request.url);
-
-						requests.count += 1;
-						if (queue) {
-							const nameParam = url.searchParams.getAll("name");
-							expect(nameParam.length).toBeGreaterThan(0);
-							expect(nameParam[0]).toEqual(queueName);
-						}
-						expect(await request.text()).toEqual("");
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: queue ? [queue] : [],
-						});
-					},
-					{ once: true }
-				)
-			);
-			return requests;
-		}
 
 		describe("list", () => {
 			function mockListRequest(queues: QueueResponse[], page: number) {
@@ -111,7 +85,7 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"wrangler queues list
 
-					List Queues
+					List queues
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
@@ -256,7 +230,7 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"wrangler queues create <name>
 
-					Create a Queue
+					Create a queue
 
 					POSITIONALS
 					  name  The name of the queue  [string] [required]
@@ -476,7 +450,7 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"wrangler queues update <name>
 
-					Update a Queue
+					Update a queue
 
 					POSITIONALS
 					  name  The name of the queue  [string] [required]
@@ -630,7 +604,7 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"wrangler queues delete <name>
 
-					Delete a Queue
+					Delete a queue
 
 					POSITIONALS
 					  name  The name of the queue  [string] [required]
@@ -696,7 +670,7 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"wrangler queues consumer
 
-					Configure Queue consumers
+					Configure queue consumers
 
 					COMMANDS
 					  wrangler queues consumer add <queue-name> <script-name>     Add a Queue Worker Consumer
@@ -1723,7 +1697,7 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"wrangler queues info <name>
 
-					Get Queue information
+					Get queue information
 
 					POSITIONALS
 					  name  The name of the queue  [string] [required]
@@ -1886,7 +1860,7 @@ describe("wrangler", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler queues pause-delivery <name>
 
-				Pause message delivery for a Queue
+				Pause message delivery for a queue
 
 				POSITIONALS
 				  name  The name of the queue  [string] [required]
@@ -1996,7 +1970,7 @@ describe("wrangler", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler queues resume-delivery <name>
 
-				Resume message delivery for a Queue
+				Resume message delivery for a queue
 
 				POSITIONALS
 				  name  The name of the queue  [string] [required]
@@ -2098,7 +2072,7 @@ describe("wrangler", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler queues purge <name>
 
-				Purge messages from a Queue
+				Purge messages from a queue
 
 				POSITIONALS
 				  name  The name of the queue  [string] [required]
@@ -2203,4 +2177,762 @@ describe("wrangler", () => {
 			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
 		});
 	});
+	describe("subscription", () => {
+		const expectedQueueId = "queueId";
+		const expectedQueueName = "testQueue";
+
+		function mockCreateSubscriptionRequest(
+			expectedRequest: Partial<CreateEventSubscriptionRequest>
+		) {
+			const requests = { count: 0 };
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/event_subscriptions/subscriptions",
+					async ({ request }) => {
+						requests.count += 1;
+						const body =
+							(await request.json()) as CreateEventSubscriptionRequest;
+						expect(body.name).toEqual(expectedRequest.name);
+						expect(body.enabled).toEqual(expectedRequest.enabled);
+						expect(body.source).toEqual(expectedRequest.source);
+						expect(body.events).toEqual(expectedRequest.events);
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "sub-123",
+								created_at: "2024-01-01T00:00:00Z",
+								modified_at: "2024-01-01T00:00:00Z",
+								name: body.name,
+								enabled: body.enabled,
+								source: body.source,
+								destination: {
+									type: "queues.queue",
+									queue_id: expectedQueueId,
+								},
+								events: body.events,
+							} as EventSubscription,
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		describe("create", () => {
+			it("should show the correct help text", async () => {
+				await runWrangler("queues subscription create --help");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues subscription create <queue>
+
+					Create a new event subscription for a queue
+
+					POSITIONALS
+					  queue  The name of the queue to create the subscription for  [string] [required]
+
+					GLOBAL FLAGS
+					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
+
+					OPTIONS
+					      --source         The event source type  [string] [required] [choices: \\"kv\\", \\"r2\\", \\"superSlurper\\", \\"vectorize\\", \\"workersAi.model\\", \\"workersBuilds.worker\\", \\"workflows.workflow\\"]
+					      --events         Comma-separated list of event types to subscribe to  [string] [required]
+					      --name           Name for the subscription (auto-generated if not provided)  [string]
+					      --enabled        Whether the subscription should be active  [boolean] [default: true]
+					      --model-name     Workers AI model name (required for workersAi.model source)  [string]
+					      --worker-name    Worker name (required for workersBuilds.worker source)  [string]
+					      --workflow-name  Workflow name (required for workflows.workflow source)  [string]"
+				`);
+			});
+
+			it("should create a subscription for workersBuilds.worker source", async () => {
+				const queueNameResolveRequest = mockGetQueueByNameRequest(
+					expectedQueueName,
+					{
+						queue_id: expectedQueueId,
+						queue_name: expectedQueueName,
+						created_on: "",
+						producers: [],
+						consumers: [],
+						producers_total_count: 0,
+						consumers_total_count: 0,
+						modified_on: "",
+					}
+				);
+
+				const expectedRequest: Partial<CreateEventSubscriptionRequest> = {
+					name: "testQueue workersBuilds.worker subscription",
+					enabled: true,
+					source: {
+						type: "workersBuilds.worker",
+						worker_name: "my-worker",
+					},
+					events: ["build.completed", "build.failed"],
+				};
+
+				const createRequest = mockCreateSubscriptionRequest(expectedRequest);
+
+				await runWrangler(
+					"queues subscription create testQueue --source workersBuilds.worker --events build.completed,build.failed --worker-name my-worker"
+				);
+
+				expect(queueNameResolveRequest.count).toEqual(1);
+				expect(createRequest.count).toEqual(1);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Creating event subscription for queue 'testQueue'...
+					✨ Successfully created event subscription 'testQueue workersBuilds.worker subscription' (sub-123)."
+				`);
+			});
+
+			it("should create subscription with custom name and disabled state", async () => {
+				const queueNameResolveRequest = mockGetQueueByNameRequest(
+					expectedQueueName,
+					{
+						queue_id: expectedQueueId,
+						queue_name: expectedQueueName,
+						created_on: "",
+						producers: [],
+						consumers: [],
+						producers_total_count: 0,
+						consumers_total_count: 0,
+						modified_on: "",
+					}
+				);
+
+				const expectedRequest: Partial<CreateEventSubscriptionRequest> = {
+					name: "Custom Subscription",
+					enabled: false,
+					source: {
+						type: "workersBuilds.worker",
+						worker_name: "my-worker",
+					},
+					events: ["build.completed"],
+				};
+
+				const createRequest = mockCreateSubscriptionRequest(expectedRequest);
+
+				await runWrangler(
+					"queues subscription create testQueue --source workersBuilds.worker --events build.completed --worker-name my-worker --name 'Custom Subscription' --enabled false"
+				);
+
+				expect(queueNameResolveRequest.count).toEqual(1);
+				expect(createRequest.count).toEqual(1);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Creating event subscription for queue 'testQueue'...
+					✨ Successfully created event subscription 'Custom Subscription' (sub-123)."
+				`);
+			});
+
+			it("should show error when worker-name is missing for workersBuilds.worker source", async () => {
+				await expect(
+					runWrangler(
+						"queues subscription create testQueue --source workersBuilds.worker --events build.completed"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: --worker-name is required when using source 'workersBuilds.worker']`
+				);
+			});
+
+			it("should show error for invalid source type", async () => {
+				await expect(
+					runWrangler(
+						"queues subscription create testQueue --source invalid --events test"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Invalid values:
+					  Argument: source, Given: "invalid", Choices: "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
+				`);
+			});
+
+			it("should show error when no events are provided", async () => {
+				await expect(
+					runWrangler(
+						"queues subscription create testQueue --source workersBuilds.worker --events '' --worker-name my-worker"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: At least one event must be specified]`
+				);
+			});
+
+			it("should show error when queue does not exist", async () => {
+				const queueNameResolveRequest = mockGetQueueByNameRequest(
+					"nonexistent",
+					null
+				);
+
+				await expect(
+					runWrangler(
+						"queues subscription create nonexistent --source workersBuilds.worker --events build.completed --worker-name my-worker"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Queue "nonexistent" does not exist. To create it, run: wrangler queues create nonexistent]`
+				);
+
+				expect(queueNameResolveRequest.count).toEqual(1);
+			});
+		});
+
+		function mockListSubscriptionsRequest(
+			queueId: string,
+			subscriptions: EventSubscription[]
+		) {
+			const requests = { count: 0 };
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/event_subscriptions/subscriptions?*",
+					async ({ request }) => {
+						requests.count += 1;
+						const url = new URL(request.url);
+						expect(url.searchParams.get("queue_id")).toEqual(queueId);
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: subscriptions,
+							result_info: {
+								count: subscriptions.length,
+								total_count: subscriptions.length,
+								page: 1,
+								per_page: 20,
+								total_pages: 1,
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		const mockSubscription1: EventSubscription = {
+			id: "sub-123",
+			created_at: "2024-01-01T00:00:00Z",
+			modified_at: "2024-01-01T00:00:00Z",
+			name: "Test Subscription 1",
+			enabled: true,
+			source: {
+				type: "workersBuilds.worker",
+				worker_name: "my-worker",
+			},
+			destination: {
+				type: "queues.queue",
+				queue_id: expectedQueueId,
+			},
+			events: ["build.completed", "build.failed"],
+		};
+
+		const mockSubscription2: EventSubscription = {
+			id: "sub-456",
+			created_at: "2024-01-02T00:00:00Z",
+			modified_at: "2024-01-02T00:00:00Z",
+			name: "Test Subscription 2",
+			enabled: false,
+			source: {
+				type: "kv",
+			},
+			destination: {
+				type: "queues.queue",
+				queue_id: expectedQueueId,
+			},
+			events: ["namespace.created"],
+		};
+
+		describe("list", () => {
+			it("should show the correct help text", async () => {
+				await runWrangler("queues subscription list --help");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues subscription list <queue>
+
+					List event subscriptions for a queue
+
+					POSITIONALS
+					  queue  The name of the queue to list subscriptions for  [string] [required]
+
+					GLOBAL FLAGS
+					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
+
+					OPTIONS
+					      --page      Page number for pagination  [number] [default: 1]
+					      --per-page  Number of subscriptions per page  [number] [default: 20]
+					      --json      Output in JSON format  [boolean] [default: false]"
+				`);
+			});
+
+			it("should show message when no subscriptions exist", async () => {
+				const queueNameResolveRequest = mockGetQueueByNameRequest(
+					expectedQueueName,
+					{
+						queue_id: expectedQueueId,
+						queue_name: expectedQueueName,
+						created_on: "",
+						producers: [],
+						consumers: [],
+						producers_total_count: 0,
+						consumers_total_count: 0,
+						modified_on: "",
+					}
+				);
+
+				const listRequest = mockListSubscriptionsRequest(expectedQueueId, []);
+
+				await runWrangler("queues subscription list testQueue");
+
+				expect(queueNameResolveRequest.count).toEqual(1);
+				expect(listRequest.count).toEqual(1);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"No event subscriptions found for queue 'testQueue'."
+				`);
+			});
+
+			it("should list subscriptions for a queue", async () => {
+				const queueNameResolveRequest = mockGetQueueByNameRequest(
+					expectedQueueName,
+					{
+						queue_id: expectedQueueId,
+						queue_name: expectedQueueName,
+						created_on: "",
+						producers: [],
+						consumers: [],
+						producers_total_count: 0,
+						consumers_total_count: 0,
+						modified_on: "",
+					}
+				);
+
+				const listRequest = mockListSubscriptionsRequest(expectedQueueId, [
+					mockSubscription1,
+					mockSubscription2,
+				]);
+
+				await runWrangler("queues subscription list testQueue");
+
+				expect(queueNameResolveRequest.count).toEqual(1);
+				expect(listRequest.count).toEqual(1);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Event subscriptions for queue 'testQueue':
+					┌─┬─┬─┬─┬─┬─┐
+					│ ID │ Name │ Source │ Events │ Resource │ Enabled │
+					├─┼─┼─┼─┼─┼─┤
+					│ sub-123 │ Test Subscription 1 │ workersBuilds.worker │ build.completed, build.failed │ my-worker │ Yes │
+					├─┼─┼─┼─┼─┼─┤
+					│ sub-456 │ Test Subscription 2 │ kv │ namespace.created │ │ No │
+					└─┴─┴─┴─┴─┴─┘"
+				`);
+			});
+
+			it("should show error when queue does not exist", async () => {
+				const queueNameResolveRequest = mockGetQueueByNameRequest(
+					"nonexistent",
+					null
+				);
+
+				await expect(
+					runWrangler("queues subscription list nonexistent")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Queue "nonexistent" does not exist. To create it, run: wrangler queues create nonexistent]`
+				);
+
+				expect(queueNameResolveRequest.count).toEqual(1);
+			});
+		});
+
+		function mockGetSubscriptionRequest(
+			subscriptionId: string,
+			subscription: EventSubscription | null
+		) {
+			const requests = { count: 0 };
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/event_subscriptions/subscriptions/:subscriptionId",
+					async ({ params }) => {
+						requests.count += 1;
+						expect(params.subscriptionId).toEqual(subscriptionId);
+
+						if (!subscription) {
+							return HttpResponse.json(
+								{
+									success: false,
+									errors: [{ code: 404, message: "Subscription not found" }],
+								},
+								{ status: 404 }
+							);
+						}
+
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: subscription,
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		describe("get", () => {
+			it("should show the correct help text", async () => {
+				await runWrangler("queues subscription get --help");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues subscription get <queue>
+
+					Get details about a specific event subscription
+
+					POSITIONALS
+					  queue  The name of the queue  [string] [required]
+
+					GLOBAL FLAGS
+					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
+
+					OPTIONS
+					      --id    The ID of the subscription to retrieve  [string] [required]
+					      --json  Output in JSON format  [boolean] [default: false]"
+				`);
+			});
+
+			it("should get a subscription by ID", async () => {
+				mockGetQueueByNameRequest("testQueue", {
+					queue_id: expectedQueueId,
+					queue_name: "testQueue",
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					consumers: [],
+					producers_total_count: 0,
+					consumers_total_count: 0,
+				});
+				const getRequest = mockGetSubscriptionRequest(
+					"sub-123",
+					mockSubscription1
+				);
+
+				await runWrangler("queues subscription get testQueue --id sub-123");
+
+				expect(getRequest.count).toEqual(1);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"ID:           sub-123
+					Name:         Test Subscription 1
+					Source:       workersBuilds.worker
+					Resource:     my-worker
+					Queue ID:     queueId
+					Events:       build.completed, build.failed
+					Enabled:      Yes
+					Created At:   1/1/2024, 12:00:00 AM
+					Modified At:  1/1/2024, 12:00:00 AM"
+				`);
+			});
+
+			it("should show error when subscription does not exist", async () => {
+				const getRequest = mockGetSubscriptionRequest("nonexistent-id", null);
+
+				await expect(
+					runWrangler("queues subscription get testQueue --id nonexistent-id")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/event_subscriptions/subscriptions/nonexistent-id) failed.]`
+				);
+
+				expect(getRequest.count).toEqual(1);
+			});
+		});
+
+		function mockDeleteSubscriptionRequest(subscriptionId: string) {
+			const requests = { count: 0 };
+			msw.use(
+				http.delete(
+					"*/accounts/:accountId/event_subscriptions/subscriptions/:subscriptionId",
+					async ({ params }) => {
+						requests.count += 1;
+						expect(params.subscriptionId).toEqual(subscriptionId);
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {},
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		describe("delete", () => {
+			const { setIsTTY } = useMockIsTTY();
+			it("should show the correct help text", async () => {
+				await runWrangler("queues subscription delete --help");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues subscription delete <queue>
+
+					Delete an event subscription from a queue
+
+					POSITIONALS
+					  queue  The name of the queue  [string] [required]
+
+					GLOBAL FLAGS
+					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
+
+					OPTIONS
+					      --id     The ID of the subscription to delete  [string] [required]
+					  -y, --force  Skip confirmation  [boolean] [default: false]"
+				`);
+			});
+
+			it("should delete a subscription after confirmation", async () => {
+				mockGetQueueByNameRequest("testQueue", {
+					queue_id: expectedQueueId,
+					queue_name: "testQueue",
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					consumers: [],
+					producers_total_count: 0,
+					consumers_total_count: 0,
+				});
+				const getRequest = mockGetSubscriptionRequest(
+					"sub-123",
+					mockSubscription1
+				);
+				const deleteRequest = mockDeleteSubscriptionRequest("sub-123");
+
+				setIsTTY(true);
+				mockConfirm({
+					text: "Are you sure you want to delete the event subscription 'Test Subscription 1' (sub-123)?",
+					result: true,
+				});
+
+				await runWrangler("queues subscription delete testQueue --id sub-123");
+
+				expect(getRequest.count).toEqual(1);
+				expect(deleteRequest.count).toEqual(1);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"✨ Successfully deleted event subscription 'Test Subscription 1' (sub-123)."
+				`);
+			});
+
+			it("should delete subscription without confirmation when --force is used", async () => {
+				mockGetQueueByNameRequest("testQueue", {
+					queue_id: expectedQueueId,
+					queue_name: "testQueue",
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					consumers: [],
+					producers_total_count: 0,
+					consumers_total_count: 0,
+				});
+				const getRequest = mockGetSubscriptionRequest(
+					"sub-123",
+					mockSubscription1
+				);
+				const deleteRequest = mockDeleteSubscriptionRequest("sub-123");
+
+				await runWrangler(
+					"queues subscription delete testQueue --id sub-123 --force"
+				);
+
+				expect(getRequest.count).toEqual(1);
+				expect(deleteRequest.count).toEqual(1);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"✨ Successfully deleted event subscription 'Test Subscription 1' (sub-123)."
+				`);
+			});
+
+			it("should show error when subscription does not exist", async () => {
+				const getRequest = mockGetSubscriptionRequest("nonexistent-id", null);
+				const deleteRequest = mockDeleteSubscriptionRequest("nonexistent-id");
+
+				await expect(
+					runWrangler(
+						"queues subscription delete testQueue --id nonexistent-id"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/event_subscriptions/subscriptions/nonexistent-id) failed.]`
+				);
+
+				expect(getRequest.count).toEqual(1);
+				expect(deleteRequest.count).toEqual(0); // Should not call delete if get fails
+			});
+		});
+
+		describe("update", () => {
+			function mockUpdateSubscriptionRequest(
+				subscriptionId: string,
+				expectedBody: object
+			) {
+				const requests = { count: 0 };
+				msw.use(
+					http.patch(
+						"*/accounts/:accountId/event_subscriptions/subscriptions/:subscriptionId",
+						async ({ request, params }) => {
+							requests.count += 1;
+							expect(params.subscriptionId).toEqual(subscriptionId);
+							expect(params.accountId).toEqual("some-account-id");
+							expect(await request.json()).toEqual(expectedBody);
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: subscriptionId,
+									name: "updated-subscription",
+									source: {
+										type: "workersBuilds.worker",
+										worker_name: "my-worker",
+									},
+									destination: {
+										queue_id: "queue-id-1",
+									},
+									events: ["build.completed", "build.failed"],
+									enabled: false,
+									modified_at: "2023-01-01T00:00:00.000Z",
+								},
+							});
+						}
+					)
+				);
+				return requests;
+			}
+
+			it("should update subscription with multiple fields", async () => {
+				const subscriptionId = "subscription-123";
+				mockGetQueueByNameRequest("test-queue", {
+					queue_id: "queue-id-1",
+					queue_name: "test-queue",
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					consumers: [],
+					producers_total_count: 0,
+					consumers_total_count: 0,
+				});
+				const requests = mockUpdateSubscriptionRequest(subscriptionId, {
+					name: "new-name",
+					events: ["build.completed", "build.failed"],
+					enabled: false,
+				});
+				mockGetSubscriptionRequest(subscriptionId, {
+					id: subscriptionId,
+					name: "old-subscription",
+					source: {
+						type: "workersBuilds.worker",
+						worker_name: "my-worker",
+					},
+					destination: {
+						queue_id: "queue-id-1",
+					},
+					events: ["build.completed"],
+					enabled: true,
+					created_at: "2023-01-01T00:00:00.000Z",
+					modified_at: "2023-01-01T00:00:00.000Z",
+				});
+
+				await runWrangler(
+					`queues subscription update test-queue --id ${subscriptionId} --name new-name --events "build.completed,build.failed" --enabled false`
+				);
+
+				expect(requests.count).toBe(1);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Updating event subscription...
+					✨ Successfully updated event subscription 'updated-subscription' (subscription-123)."
+				`);
+			});
+
+			it("should error when no fields provided", async () => {
+				const subscriptionId = "subscription-123";
+				mockGetQueueByNameRequest("test-queue", {
+					queue_id: "queue-id-1",
+					queue_name: "test-queue",
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					consumers: [],
+					producers_total_count: 0,
+					consumers_total_count: 0,
+				});
+				mockGetSubscriptionRequest(subscriptionId, {
+					id: subscriptionId,
+					name: "old-subscription",
+					source: {
+						type: "workersBuilds.worker",
+						worker_name: "my-worker",
+					},
+					destination: {
+						queue_id: "queue-id-1",
+					},
+					events: ["build.completed"],
+					enabled: true,
+					created_at: "2023-01-01T00:00:00.000Z",
+					modified_at: "2023-01-01T00:00:00.000Z",
+				});
+
+				await expect(
+					runWrangler(
+						`queues subscription update test-queue --id ${subscriptionId}`
+					)
+				).rejects.toThrowError(
+					"At least one field must be specified to update (--name, --events, or --enabled)"
+				);
+			});
+		});
+	});
 });
+
+function mockGetQueueByNameRequest(
+	queueName: string,
+	queue: QueueResponse | null
+) {
+	const requests = { count: 0 };
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/queues?*",
+			async ({ request }) => {
+				const url = new URL(request.url);
+
+				requests.count += 1;
+				if (queue) {
+					const nameParam = url.searchParams.getAll("name");
+					expect(nameParam.length).toBeGreaterThan(0);
+					expect(nameParam[0]).toEqual(queueName);
+				}
+				expect(await request.text()).toEqual("");
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: queue ? [queue] : [],
+				});
+			},
+			{ once: true }
+		)
+	);
+	return requests;
+}
