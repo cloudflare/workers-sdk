@@ -29,6 +29,7 @@ type Env = {
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
 	[CoreBindings.TRIGGER_HANDLERS]: boolean;
 	[CoreBindings.LOG_REQUESTS]: boolean;
+	[CoreBindings.STRIP_DISABLE_PRETTY_ERROR]: boolean;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -124,7 +125,9 @@ function getUserRequest(
 
 	request.headers.delete(CoreHeaders.PROXY_SHARED_SECRET);
 	request.headers.delete(CoreHeaders.ORIGINAL_URL);
-	request.headers.delete(CoreHeaders.DISABLE_PRETTY_ERROR);
+	if (env[CoreBindings.STRIP_DISABLE_PRETTY_ERROR]) {
+		request.headers.delete(CoreHeaders.DISABLE_PRETTY_ERROR);
+	}
 	return request;
 }
 

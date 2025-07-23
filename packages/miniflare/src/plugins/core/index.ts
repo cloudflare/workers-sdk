@@ -245,6 +245,8 @@ export const CoreSharedOptionsSchema = z.object({
 	// Path to the root directory for persisting data
 	// Used as the default for all plugins with the plugin name as the subdirectory name
 	defaultPersistRoot: z.string().optional(),
+	// Strip the MF-DISABLE_PRETTY_ERROR header from user request
+	stripDisablePrettyError: z.boolean().default(true),
 });
 
 export const CORE_PLUGIN_NAME = "core";
@@ -916,6 +918,10 @@ export function getGlobalServices({
 		{
 			name: CoreBindings.DATA_PROXY_SECRET,
 			data: PROXY_SECRET,
+		},
+		{
+			name: CoreBindings.STRIP_DISABLE_PRETTY_ERROR,
+			json: JSON.stringify(sharedOptions.stripDisablePrettyError),
 		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,

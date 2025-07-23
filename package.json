@@ -84,7 +84,8 @@
 			"toucan-js@3.3.1": "patches/toucan-js@3.3.1.patch",
 			"toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch",
 			"postal-mime": "patches/postal-mime.patch",
-			"@changesets/assemble-release-plan": "patches/@changesets__assemble-release-plan.patch"
+			"@changesets/assemble-release-plan": "patches/@changesets__assemble-release-plan.patch",
+			"youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch"
 		}
 	}
 }
