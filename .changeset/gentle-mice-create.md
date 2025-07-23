@@ -1,6 +1,6 @@
 ---
 "@cloudflare/vite-plugin": patch
-"@cloudflare/unenv-preset": patch
+"@cloudflare/unenv-preset": minor
 "wrangler": patch
 ---
 
