@@ -2729,6 +2729,7 @@ addEventListener('fetch', event => {});`
 				// Mock the date to ensure consistent compatibility_date
 				vi.setSystemTime(new Date("2024-01-01T00:00:00Z"));
 
+				// so that we can test that the name prompt defaults to the directory name
 				fs.mkdirSync("my-site");
 				process.chdir("my-site");
 				const assets = [
@@ -2747,6 +2748,7 @@ addEventListener('fetch', event => {});`
 			});
 			afterEach(() => {
 				setIsTTY(false);
+				vi.useRealTimers();
 			});
 
 			it("should handle `wrangler deploy <directory>`", async () => {
@@ -2777,7 +2779,7 @@ addEventListener('fetch', event => {});`
 						},
 					},
 				});
-				expect(fs.readFileSync("wrangler.json", "utf-8"))
+				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
 					.toMatchInlineSnapshot(`
 					"{
 					  \\"name\\": \\"test-name\\",
@@ -2801,8 +2803,10 @@ addEventListener('fetch', event => {});`
 					    \\"directory\\": \\"./assets\\"
 					  }
 					}
-					 to <cwd>/wrangler.json.
-					Please run wrangler deploy instead of wrangler deploy ./assets next time. Wrangler will automatically use the configuration saved to wrangler.json.
+					 to <cwd>/wrangler.jsonc.
+					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+
+					Proceeding with deployment...
 
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -2812,6 +2816,7 @@ addEventListener('fetch', event => {});`
 					Current Version ID: Galaxy-Class"
 				`);
 			});
+
 			it("should handle `wrangler deploy --assets` without name or compat date", async () => {
 				// if the user has used --assets flag and args.script is not set, we just need to prompt for the name and add compat date
 				mockPrompt({
@@ -2837,7 +2842,7 @@ addEventListener('fetch', event => {});`
 						},
 					},
 				});
-				expect(fs.readFileSync("wrangler.json", "utf-8"))
+				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
 					.toMatchInlineSnapshot(`
 					"{
 					  \\"name\\": \\"test-name\\",
@@ -2860,8 +2865,112 @@ addEventListener('fetch', event => {});`
 					    \\"directory\\": \\"./assets\\"
 					  }
 					}
-					 to <cwd>/wrangler.json.
-					Please run wrangler deploy instead of wrangler deploy ./assets next time. Wrangler will automatically use the configuration saved to wrangler.json.
+					 to <cwd>/wrangler.jsonc.
+					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+
+					Proceeding with deployment...
+
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+
+			it("should suggest 'my-project' if the default name from the cwd is invalid", async () => {
+				process.chdir("../");
+				fs.renameSync("my-site", "[blah]");
+				process.chdir("[blah]");
+				// if the user has used --assets flag and args.script is not set, we just need to prompt for the name and add compat date
+				mockPrompt({
+					text: "What do you want to name your project?",
+					// not [blah] because it is an invalid worker name
+					options: { defaultValue: "my-project" },
+					result: "test-name",
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					result: true,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy --assets ./assets");
+				expect(bodies.length).toBe(1);
+				expect(bodies[0]).toEqual({
+					manifest: {
+						"/index.html": {
+							hash: "8308ce789f3d08668ce87176838d59d0",
+							size: 17,
+						},
+					},
+				});
+				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
+					.toMatchInlineSnapshot(`
+					"{
+					  \\"name\\": \\"test-name\\",
+					  \\"compatibility_date\\": \\"2024-01-01\\",
+					  \\"assets\\": {
+					    \\"directory\\": \\"./assets\\"
+					  }
+					}"
+				`);
+			});
+
+			it("should bail if the user denies that they are trying to deploy a directory", async () => {
+				mockConfirm({
+					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
+					result: false,
+				});
+
+				await expect(runWrangler("deploy ./assets")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The entry-point file at "assets" was not found.
+					The provided entry-point path, "assets", points to a directory, rather than a file.
+
+					 If you want to deploy a directory of static assets, you can do so by using the \`--assets\` flag. For example:
+
+					wrangler deploy --assets=./assets
+					]
+				`);
+			});
+
+			it("does not write out a wrangler config file if the user says no", async () => {
+				mockPrompt({
+					text: "What do you want to name your project?",
+					options: { defaultValue: "my-site" },
+					result: "test-name",
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					result: false,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy --assets ./assets");
+				expect(bodies.length).toBe(1);
+				expect(bodies[0]).toEqual({
+					manifest: {
+						"/index.html": {
+							hash: "8308ce789f3d08668ce87176838d59d0",
+							size: 17,
+						},
+					},
+				});
+				expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+
+					No compatibility date found Defaulting to today: 2024-01-01
+
+					You should run wrangler deploy --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.
+
+					Proceeding with deployment...
 
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
