@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { existsSync, statSync } from "fs";
 import path from "path";
 import { dockerImageInspect } from "./inspect";
-import { type ContainerDevOptions } from "./types";
+import type { ContainerDevOptions } from "./types";
 import type { StdioOptions } from "child_process";
 
 /** helper for simple docker command call that don't require any io handling */
@@ -57,7 +57,7 @@ export const runDockerCmd = (
 			}
 		},
 		ready,
-		then: async (resolve, reject) => ready.then(resolve).catch(reject),
+		then: async (onResolve, onReject) => ready.then(onResolve).catch(onReject),
 	};
 };
 
@@ -96,8 +96,8 @@ export const verifyDockerInstalled = async (
 	}
 };
 
-export function isDir(path: string) {
-	const stats = statSync(path);
+export function isDir(inputPath: string) {
+	const stats = statSync(inputPath);
 	return stats.isDirectory();
 }
 
@@ -176,7 +176,7 @@ export const cleanupContainers = async (
 			["inherit", "pipe", "pipe"]
 		);
 		return true;
-	} catch (error) {
+	} catch {
 		return false;
 	}
 };
@@ -233,7 +233,7 @@ export async function checkExposedPorts(
 	options: ContainerDevOptions
 ) {
 	const output = await dockerImageInspect(dockerPath, {
-		imageTag: options.imageTag,
+		imageTag: options.image_tag,
 		formatString: "{{ len .Config.ExposedPorts }}",
 	});
 	if (output === "0") {

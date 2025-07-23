@@ -1,11 +1,11 @@
 import assert from "node:assert";
 import path from "node:path";
-import { isDockerfile } from "@cloudflare/containers-shared";
 import { watch } from "chokidar";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig } from "../../config";
 import { containersScope } from "../../containers";
+import { getNormalizedContainerOptions } from "../../containers/config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
 	getBindings,
@@ -347,7 +347,7 @@ async function resolveConfig(
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
 			exports: entry.exports,
 		},
-		containers: config.containers,
+		containers: await getNormalizedContainerOptions(config),
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
@@ -399,8 +399,8 @@ async function resolveConfig(
 	// for pulling containers, we need to make sure the OpenAPI config for the
 	// container API client is properly set so that we can get the correct permissions
 	// from the cloudchamber API to pull from the repository.
-	const needsPulling = resolved.containers?.some(
-		(c) => !isDockerfile(c.image ?? c.configuration?.image, config.configPath)
+	const needsPulling = resolved.containers.some(
+		(c) => "image_uri" in c && c.image_uri
 	);
 	if (needsPulling && !resolved.dev.remote) {
 		await fillOpenAPIConfiguration(config, containersScope);

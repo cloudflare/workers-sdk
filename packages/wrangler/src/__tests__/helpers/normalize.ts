@@ -14,7 +14,9 @@ export function normalizeString(input: string): string {
 				replaceByte(
 					stripTrailingWhitespace(
 						normalizeSlashes(
-							normalizeCwd(normalizeTempDirs(stripTimings(input)))
+							normalizeCwd(
+								normalizeTempDirs(stripTimings(replaceThinSpaces(input)))
+							)
 						)
 					)
 				)
@@ -94,4 +96,11 @@ function replaceByte(stdout: string): string {
  */
 function normalizeTempDirs(stdout: string): string {
 	return stdout.replaceAll(/\/\/.+\/tmp.+/g, "//tmpdir");
+}
+
+/**
+ * Replace thin space characters (U+200A) with regular spaces to normalize output
+ */
+function replaceThinSpaces(str: string): string {
+	return str.replaceAll(/\u200a/g, " ");
 }
