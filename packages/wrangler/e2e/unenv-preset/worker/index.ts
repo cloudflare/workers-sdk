@@ -20,7 +20,6 @@ export default {
 		const url = new URL(request.url);
 		const testName = url.pathname.slice(1);
 		if (testName === "ping") {
-			// Used by the deploy test to know when the worker is online
 			return new Response("pong");
 		}
 		const test = TESTS[testName];
