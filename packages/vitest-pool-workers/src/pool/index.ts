@@ -343,8 +343,7 @@ function getWranglerWorkerName(
 
 function updateWorkflowsScriptNames(
 	runnerWorker: WorkerOptions,
-	wranglerWorkerName: string | undefined,
-	testWorkerName: string
+	wranglerWorkerName: string | undefined
 ): void {
 	const workflows = runnerWorker.workflows;
 	if (!workflows || wranglerWorkerName === undefined) {
@@ -352,7 +351,7 @@ function updateWorkflowsScriptNames(
 	}
 	for (const workflow of Object.values(workflows)) {
 		if (workflow.scriptName === wranglerWorkerName) {
-			workflow.scriptName = testWorkerName;
+			delete workflow.scriptName;
 		}
 	}
 }
@@ -682,11 +681,7 @@ function buildProjectMiniflareOptions(
 		const wranglerWorkerName = getWranglerWorkerName(
 			project.options.wrangler?.configPath
 		);
-		updateWorkflowsScriptNames(
-			runnerWorker,
-			wranglerWorkerName,
-			runnerWorker.name
-		);
+		updateWorkflowsScriptNames(runnerWorker, wranglerWorkerName);
 
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
@@ -711,11 +706,7 @@ function buildProjectMiniflareOptions(
 			const wranglerWorkerName = getWranglerWorkerName(
 				project.options.wrangler?.configPath
 			);
-			updateWorkflowsScriptNames(
-				testWorker,
-				wranglerWorkerName,
-				testWorker.name
-			);
+			updateWorkflowsScriptNames(testWorker, wranglerWorkerName);
 
 			testWorkers.push(testWorker);
 		}
