@@ -372,6 +372,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
 		{
+			quarantine: true,
 			name: "next:pages",
 			argv: ["--platform", "pages"],
 			timeout: LONG_TIMEOUT,

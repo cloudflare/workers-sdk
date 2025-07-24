@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.4.1
+
+### Patch Changes
+
+- [#10031](https://github.com/cloudflare/workers-sdk/pull/10031) [`823cba8`](https://github.com/cloudflare/workers-sdk/commit/823cba8e51fa6840f50dd949bcfa967ff6fefc37) Thanks [@vicb](https://github.com/vicb)! - wrangler and vite-plugin now depend upon the latest version of unenv-preset
+
 ## 2.4.0
 
 ### Minor Changes
