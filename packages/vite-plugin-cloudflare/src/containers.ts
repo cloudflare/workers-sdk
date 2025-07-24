@@ -1,9 +1,12 @@
 import assert from "node:assert";
+import path from "node:path";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared/src/images";
 import { getDevContainerImageName } from "@cloudflare/containers-shared/src/knobs";
-import { isDockerfile, runDockerCmd } from "@cloudflare/containers-shared/src/utils";
+import {
+	isDockerfile,
+	runDockerCmd,
+} from "@cloudflare/containers-shared/src/utils";
 import type { WorkerConfig } from "./plugin-config";
-import path from "node:path";
 
 /**
  * Returns the path to the Docker executable as defined by the
@@ -62,7 +65,12 @@ async function getContainerOptions(options: {
 	containerBuildId: string;
 	configPath?: string;
 }) {
-	const { containersConfig, isContainersEnabled, containerBuildId, configPath } = options;
+	const {
+		containersConfig,
+		isContainersEnabled,
+		containerBuildId,
+		configPath,
+	} = options;
 
 	if (!containersConfig?.length || isContainersEnabled === false) {
 		return undefined;
@@ -131,13 +139,13 @@ export async function prepareContainerImages(options: {
 		containersConfig,
 		containerBuildId,
 		isContainersEnabled,
-		configPath
+		configPath,
 	});
 
 	if (containerOptions) {
 		// keep track of them so we can clean up later
 		for (const container of containerOptions) {
-			uniqueImageTags.add(container.imageTag);
+			uniqueImageTags.add(container.image_tag);
 		}
 
 		await prepareContainerImagesForDev({

@@ -4,7 +4,6 @@ import * as path from "node:path";
 import {
 	generateContainerBuildId,
 	getContainerIdsByImageTags,
-	isDockerfile,
 } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import replace from "@rollup/plugin-replace";
@@ -77,7 +76,6 @@ import type {
 	ResolvedPluginConfig,
 	WorkerConfig,
 } from "./plugin-config";
-import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { Unstable_RawConfig } from "wrangler";
 
