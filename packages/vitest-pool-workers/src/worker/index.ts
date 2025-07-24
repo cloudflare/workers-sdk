@@ -43,11 +43,11 @@ Object.setPrototypeOf(process, events.EventEmitter.prototype); // Required by `v
 globalThis.__console = console;
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-function getCallerFileName(of: Function) {
+function getCallerFileName(of: Function): string | null {
 	const originalStackTraceLimit = Error.stackTraceLimit;
 	const originalPrepareStackTrace = Error.prepareStackTrace;
 	try {
-		let fileName: string | undefined = undefined;
+		let fileName: string | null = null;
 		Error.stackTraceLimit = 1;
 		Error.prepareStackTrace = (_error, callSites) => {
 			fileName = callSites[0]?.getFileName();
