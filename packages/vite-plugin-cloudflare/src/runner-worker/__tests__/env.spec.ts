@@ -14,12 +14,12 @@ const internalEnv = {
 };
 
 describe("stripInternalEnv", () => {
-	test("strips internal fields", () => {
+	test("strips internal properties", () => {
 		const result = stripInternalEnv(internalEnv);
 		expect(result).toEqual({});
 	});
 
-	test("strips internal fields when extra fields are included", () => {
+	test("strips internal properties when extra properties are included", () => {
 		const env = {
 			...internalEnv,
 			test: "this is a test",
