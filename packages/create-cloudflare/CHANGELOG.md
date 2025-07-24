@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.50.5
+
+### Patch Changes
+
+- [#10027](https://github.com/cloudflare/workers-sdk/pull/10027) [`26186a5`](https://github.com/cloudflare/workers-sdk/commit/26186a58ca5da7b7c6eaa3579a2cc62de583f9b0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.6.3 | 7.7.0 |
+
 ## 2.50.4
 
 ### Patch Changes
