@@ -1,4 +1,4 @@
-import { createHeaders } from "@mjackson/node-fetch-server";
+import { createHeaders } from "@remix-run/node-fetch-server";
 import { coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
