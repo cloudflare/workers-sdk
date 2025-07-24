@@ -284,10 +284,63 @@ export interface CfPipeline {
 	pipeline: string;
 }
 
-export interface CfUnsafeBinding {
+/**
+ * CfUnsafeServiceBinding describes the contract for "unsafe" service bindings that
+ * are not publically accessible or described in public documentation.
+ */
+export interface CfUnsafeServiceBinding {
+	/**
+	 * name is the name of the binding provided to the Worker
+	 */
 	name: string;
-	type: string;
+	/**
+	 * The type of binding being provided to the Worker. This must be "service" to use
+	 * local development features available exclusively to unsafe service bindings.
+	 */
+	type: "service";
+	/**
+	 * The name of the service that is bound to this Worker.
+	 */
+	service: string;
+	/**
+	 * dev is an optional field specifying options to emulate this service binding
+	 * locally via Miniflare and Wrangler
+	 */
+	dev?: {
+		/**
+		 * Package is the bare specifier of the package that exposes plugins to integrate into Miniflare via a `registerMiniflarePlugins` function.
+		 * @example "@cloudflare/my-external-miniflare-plugin"
+		 */
+		package: string;
+		/**
+		 * Plugin is the name of the plugin exposed by the package.
+		 * @example "MY_UNSAFE_PLUGIN"
+		 */
+		plugin: string;
+		/**
+		 * Plugin options to pass to the plugin.
+		 */
+		pluginOptions?: Record<string, unknown>;
+	};
+
+	props?: CfService['props'];
+	entrypoint?: CfService['entrypoint'];
+	
+	[additionalOption: string]: any;
 }
+
+/**
+ * CfUnsafeBinding describes "unsafe" bindings that are not publically accessible or described in
+ * public documentation.
+ */
+export type CfUnsafeBinding<BindingType extends string = string> =
+	| {
+		name: string;
+		type: BindingType extends "service" ? never : BindingType;
+		service?: never;
+		dev?: never;
+	}
+	| CfUnsafeServiceBinding;
 
 type CfUnsafeMetadata = Record<string, unknown>;
 
