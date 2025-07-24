@@ -4,6 +4,7 @@ import * as path from "node:path";
 import {
 	generateContainerBuildId,
 	getContainerIdsByImageTags,
+	resolveDockerHost,
 } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import replace from "@rollup/plugin-replace";
@@ -370,9 +371,12 @@ if (import.meta.hot) {
 				const hasDevContainers =
 					entryWorkerConfig?.containers?.length &&
 					entryWorkerConfig.dev.enable_containers;
+				const dockerPath = getDockerPath();
 
 				if (hasDevContainers) {
 					containerBuildId = generateContainerBuildId();
+					entryWorkerConfig.dev.container_engine =
+						resolveDockerHost(dockerPath);
 				}
 
 				const miniflareDevOptions = await getDevMiniflareOptions({
@@ -445,8 +449,6 @@ if (import.meta.hot) {
 					}
 
 					if (hasDevContainers) {
-						const dockerPath = getDockerPath();
-
 						containerImageTagsSeen = await prepareContainerImages({
 							containersConfig: entryWorkerConfig.containers,
 							containerBuildId,
