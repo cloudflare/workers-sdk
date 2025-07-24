@@ -1,5 +1,41 @@
 # wrangler
 
+## 4.26.0
+
+### Minor Changes
+
+- [#10016](https://github.com/cloudflare/workers-sdk/pull/10016) [`c5b291d`](https://github.com/cloudflare/workers-sdk/commit/c5b291d3b7a334253aef0593759a59deb0ae4a89) Thanks [@emily-shen](https://github.com/emily-shen)! - Interactively handle `wrangler deploy`s that are probably assets-only, where there is no config file and flags are incorrect or missing.
+
+  For example:
+
+  `npx wrangler deploy ./public` will now ask if you meant to deploy a folder of assets only, ask for a name, set the compat date and then ask whether to write your choices out to `wrangler.json` for subsequent deployments.
+
+  `npx wrangler deploy --assets=./public` will now ask for a name, set the compat date and then ask whether to write your choices out to `wrangler.json` for subsequent deployments.
+
+  In non-interactive contexts, Wrangler will error as it currently does.
+
+- [#9971](https://github.com/cloudflare/workers-sdk/pull/9971) [`19794bf`](https://github.com/cloudflare/workers-sdk/commit/19794bfb57a3ab17433eefbe1820d21d98bc32a4) Thanks [@edmundhung](https://github.com/edmundhung)! - Improved script source display on the pretty error screen
+
+### Patch Changes
+
+- [#9800](https://github.com/cloudflare/workers-sdk/pull/9800) [`3d4f946`](https://github.com/cloudflare/workers-sdk/commit/3d4f94648bdc9edc6260c0f090d2ae665d45a495) Thanks [@helloimalastair](https://github.com/helloimalastair)! - remove banner from r2 getobject in pipe mode
+
+- [#9910](https://github.com/cloudflare/workers-sdk/pull/9910) [`7245101`](https://github.com/cloudflare/workers-sdk/commit/7245101d5aa815d2c258a301f86dbab77f543b60) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - make sure that the ready-on message is printed after the appropriate runtime controller is ready
+
+  fix the fact that when starting a local (or remote) dev session the log saying `Ready on http://localhost:xxxx` could be displayed before the runtime is actually ready to handle requests (this is quite noticeable when locally running dev sessions with containers, where the ready message currently gets displayed before the container images building/pulling process)
+
+- [#10031](https://github.com/cloudflare/workers-sdk/pull/10031) [`823cba8`](https://github.com/cloudflare/workers-sdk/commit/823cba8e51fa6840f50dd949bcfa967ff6fefc37) Thanks [@vicb](https://github.com/vicb)! - wrangler and vite-plugin now depend upon the latest version of unenv-preset
+
+- [#10032](https://github.com/cloudflare/workers-sdk/pull/10032) [`154acf7`](https://github.com/cloudflare/workers-sdk/commit/154acf72c653134ace47174c18e77c9d51effa89) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add support for containers in wrangler multiworker dev
+
+  currently when running `wrangler dev` with different workers (meaning that the `-c|--config` flag is used multiple times) containers are not being included, meaning that trying to interact with them at runtime would not work and cause errors instead. The changes here address the above making wrangler correctly detect and wire up the containers.
+
+- [#9988](https://github.com/cloudflare/workers-sdk/pull/9988) [`7fb0bfd`](https://github.com/cloudflare/workers-sdk/commit/7fb0bfdc8438d1a1e0a967ab178952da9787c012) Thanks [@penalosa](https://github.com/penalosa)! - Correctly label `mtls` remote bindings warning
+
+- Updated dependencies [[`823cba8`](https://github.com/cloudflare/workers-sdk/commit/823cba8e51fa6840f50dd949bcfa967ff6fefc37), [`19794bf`](https://github.com/cloudflare/workers-sdk/commit/19794bfb57a3ab17433eefbe1820d21d98bc32a4), [`059a39e`](https://github.com/cloudflare/workers-sdk/commit/059a39e4f1e9f9b55ed8a5a8598e35af9bd0357f)]:
+  - @cloudflare/unenv-preset@2.4.1
+  - miniflare@4.20250712.2
+
 ## 4.25.1
 
 ### Patch Changes

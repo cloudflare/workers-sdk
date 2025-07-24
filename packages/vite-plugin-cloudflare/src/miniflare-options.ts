@@ -660,11 +660,18 @@ function getPreviewModules(
 	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
 }
 
-export async function getPreviewMiniflareOptions(
-	resolvedPluginConfig: PreviewResolvedConfig,
-	vitePreviewServer: vite.PreviewServer,
-	inspectorPort: number | false
-): Promise<MiniflareOptions> {
+export async function getPreviewMiniflareOptions(config: {
+	resolvedPluginConfig: PreviewResolvedConfig;
+	vitePreviewServer: vite.PreviewServer;
+	inspectorPort: number | false;
+	containerBuildId?: string;
+}): Promise<MiniflareOptions> {
+	const {
+		resolvedPluginConfig,
+		vitePreviewServer,
+		inspectorPort,
+		containerBuildId,
+	} = config;
 	const resolvedViteConfig = vitePreviewServer.config;
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
@@ -702,6 +709,7 @@ export async function getPreviewMiniflareOptions(
 							remoteProxySessionData?.session?.remoteProxyConnectionString,
 						remoteBindingsEnabled:
 							resolvedPluginConfig.experimental.remoteBindings,
+						containerBuildId,
 					}
 				);
 
