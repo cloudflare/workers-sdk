@@ -22,6 +22,6 @@ export async function getResponse(path = "/") {
 	const url = `${viteTestUrl}${path}`;
 
 	const response = page.waitForResponse(url);
-	await vi.waitFor(() => page.goto(url));
+	await vi.waitFor(() => page.goto(url), { timeout: 5000 });
 	return response;
 }
