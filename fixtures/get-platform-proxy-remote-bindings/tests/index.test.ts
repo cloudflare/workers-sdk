@@ -119,7 +119,7 @@ if (auth) {
 				await env.MY_WORKER.fetch("http://example.com")
 			).text();
 			expect(workerText).toEqual(
-				`[wrangler] Couldn\'t find \`wrangler dev\` session for service "${remoteWorkerName}" to proxy to`
+				`Couldn't find a local dev session for the "default" entrypoint of service "${remoteWorkerName}" to proxy to`
 			);
 
 			const kvValue = await env.MY_KV.get("test-key");
