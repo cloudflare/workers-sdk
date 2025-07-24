@@ -9,7 +9,7 @@ test.runIf(!isBuild)(
 		const workerConfigPath = path.join(__dirname, "../wrangler.json");
 		const originalWorkerConfig = fs.readFileSync(workerConfigPath, "utf-8");
 
-		onTestFinished(async () => {
+		onTestFinished(() => {
 			fs.writeFileSync(workerConfigPath, originalWorkerConfig);
 		});
 
@@ -39,7 +39,7 @@ test.runIf(!isBuild)(
 		const workerConfigPath = path.join(__dirname, "../wrangler.json");
 		const originalWorkerConfig = fs.readFileSync(workerConfigPath, "utf-8");
 
-		onTestFinished(async () => {
+		onTestFinished(() => {
 			fs.writeFileSync(workerConfigPath, originalWorkerConfig);
 		});
 

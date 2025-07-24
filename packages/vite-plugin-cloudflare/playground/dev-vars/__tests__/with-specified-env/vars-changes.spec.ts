@@ -15,7 +15,7 @@ test.runIf(!isBuild)(
 			"utf-8"
 		);
 
-		onTestFinished(async () => {
+		onTestFinished(() => {
 			fs.writeFileSync(dotDevDotVarsFilePath, originalDotDevDotVars);
 		});
 
