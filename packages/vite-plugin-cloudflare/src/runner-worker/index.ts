@@ -10,26 +10,40 @@ import type { WrapperEnv } from "./env";
 
 export { __VITE_RUNNER_OBJECT__ } from "./module-runner";
 
+/**
+ * Constructor interface for `WorkerEntrypoint` class.
+ * @template T - The `env` type
+ */
 interface WorkerEntrypointConstructor<T = unknown> {
 	new (
 		...args: ConstructorParameters<typeof WorkerEntrypoint<T>>
 	): WorkerEntrypoint<T>;
 }
 
+/**
+ * Constructor interface for `DurableObject` class.
+ * @template T - The `env` type
+ */
 interface DurableObjectConstructor<T = unknown> {
 	new (
 		...args: ConstructorParameters<typeof DurableObject<T>>
 	): DurableObject<T>;
 }
 
+/**
+ * Constructor interface for `WorkflowEntrypoint` class.
+ * @template T - The `env` type
+ */
 interface WorkflowEntrypointConstructor<T = unknown> {
 	new (
 		...args: ConstructorParameters<typeof WorkflowEntrypoint<T>>
 	): WorkflowEntrypoint<T>;
 }
 
-const IGNORED_KEYS = ["self", "tailStream"];
+/** Keys that should be ignored during RPC property access */
+const IGNORED_KEYS = ["self", "tailStream"] as const;
 
+/** Available methods for `WorkerEntrypoint` class */
 const WORKER_ENTRYPOINT_KEYS = [
 	"fetch",
 	"queue",
@@ -39,6 +53,7 @@ const WORKER_ENTRYPOINT_KEYS = [
 	"scheduled",
 ] as const;
 
+/** Available methods for `DurableObject` class */
 const DURABLE_OBJECT_KEYS = [
 	"alarm",
 	"fetch",
@@ -47,10 +62,19 @@ const DURABLE_OBJECT_KEYS = [
 	"webSocketMessage",
 ] as const;
 
+/** Available methods for `WorkflowEntrypoint` classes */
 const WORKFLOW_ENTRYPOINT_KEYS = ["run"] as const;
 
+/** The Worker entry path */
 let workerEntryPath = "";
 
+/**
+ * Creates a callable thenable that can be both awaited and invoked as a function.
+ * This enables RPC properties to be used both as promises and callable functions.
+ * @param key - The property key name used for error messages
+ * @param property - The promise that resolves to the property value
+ * @returns A callable thenable that implements both Promise and function interfaces
+ */
 function getRpcPropertyCallableThenable(
 	key: string,
 	property: Promise<unknown>
@@ -72,6 +96,14 @@ function getRpcPropertyCallableThenable(
 	return fn;
 }
 
+/**
+ * Retrieves an RPC property from a constructor prototype, ensuring it exists on the prototype rather than the instance to maintain RPC compatibility.
+ * @param ctor - The constructor function (`WorkerEntrypoint` or `DurableObject`)
+ * @param instance - The instance to bind methods to
+ * @param key - The property key to retrieve
+ * @returns The property value from the prototype
+ * @throws TypeError if the property doesn't exist on the prototype
+ */
 function getRpcProperty(
 	ctor: WorkerEntrypointConstructor | DurableObjectConstructor,
 	instance: WorkerEntrypoint | DurableObject,
@@ -99,6 +131,13 @@ function getRpcProperty(
 	return Reflect.get(ctor.prototype, key, instance);
 }
 
+/**
+ * Retrieves an RPC property from a `WorkerEntrypoint` export, creating an instance and returning the bound method or property value.
+ * @param exportName - The name of the `WorkerEntrypoint` export
+ * @param key - The property key to access on the `WorkerEntrypoint` instance
+ * @returns The property value, with methods bound to the instance
+ * @throws TypeError if the export is not a `WorkerEntrypoint` subclass
+ */
 async function getWorkerEntrypointRpcProperty(
 	this: WorkerEntrypoint<WrapperEnv>,
 	exportName: string,
@@ -130,6 +169,12 @@ async function getWorkerEntrypointRpcProperty(
 	return value;
 }
 
+/**
+ * Creates a proxy wrapper for `WorkerEntrypoint` classes that enables RPC functionality.
+ * The wrapper intercepts property access and delegates to the user code, handling both direct method calls and RPC property access.
+ * @param exportName - The name of the `WorkerEntrypoint` export to wrap
+ * @returns A `WorkerEntrypoint` constructor that acts as a proxy to the user code
+ */
 export function createWorkerEntrypointWrapper(
 	exportName: string
 ): WorkerEntrypointConstructor<WrapperEnv> {
@@ -147,7 +192,9 @@ export function createWorkerEntrypointWrapper(
 
 					if (
 						typeof key === "symbol" ||
-						IGNORED_KEYS.includes(key) ||
+						(IGNORED_KEYS as readonly string[]).includes(key) ||
+						// The class methods are accessed to determine the type of the export.
+						// We should therefore avoid proxying `DurableObject` methods on the `WorkerEntrypoint` class.
 						(DURABLE_OBJECT_KEYS as readonly string[]).includes(key)
 					) {
 						return;
@@ -171,6 +218,7 @@ export function createWorkerEntrypointWrapper(
 				const request = arg as Request;
 				const url = new URL(request.url);
 
+				// Initialize the module runner
 				if (url.pathname === INIT_PATH) {
 					const workerEntryPathHeader = request.headers.get(
 						WORKER_ENTRY_PATH_HEADER
@@ -182,9 +230,11 @@ export function createWorkerEntrypointWrapper(
 						);
 					}
 
+					// Set the Worker entry path
 					workerEntryPath = workerEntryPathHeader;
 					const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
 
+					// Forward the request to the Durable Object to initialize the module runner and return the WebSocket
 					return stub.fetch(request);
 				}
 			}
@@ -196,7 +246,7 @@ export function createWorkerEntrypointWrapper(
 			const userEnv = stripInternalEnv(this.env);
 
 			if (typeof exportValue === "object" && exportValue !== null) {
-				// ExportedHandler
+				// The export is an `ExportedHandler`
 				const maybeFn = (exportValue as Record<string, unknown>)[key];
 
 				if (typeof maybeFn !== "function") {
@@ -207,7 +257,7 @@ export function createWorkerEntrypointWrapper(
 
 				return maybeFn.call(exportValue, arg, userEnv, this.ctx);
 			} else if (typeof exportValue === "function") {
-				// WorkerEntrypoint
+				// The export is a `WorkerEntrypoint`
 				const ctor = exportValue as WorkerEntrypointConstructor;
 				const instance = new ctor(this.ctx, userEnv);
 
@@ -237,19 +287,34 @@ export function createWorkerEntrypointWrapper(
 	return Wrapper;
 }
 
+/** Symbol key for storing the `DurableObject` instance */
 const kInstance = Symbol("kInstance");
+/** Symbol key for the instance initialization method */
 const kEnsureInstance = Symbol("kEnsureInstance");
 
+/**
+ * Container for a `DurableObject` constructor and its instance.
+ */
 interface DurableObjectInstance {
 	ctor: DurableObjectConstructor;
 	instance: DurableObject;
 }
 
+/**
+ * Extended `DurableObject` interface that includes instance management methods.
+ */
 interface DurableObjectWrapper extends DurableObject<WrapperEnv> {
 	[kInstance]?: DurableObjectInstance;
 	[kEnsureInstance](): Promise<DurableObjectInstance>;
 }
 
+/**
+ * Retrieves an RPC property from a `DurableObject` export, ensuring an instance is properly initialized and returning the bound method or property value.
+ * @param exportName - The name of the `DurableObject` export
+ * @param key - The property key to access on the `DurableObject` instance
+ * @returns The property value, with methods bound to the instance
+ * @throws TypeError if the export is not a `DurableObject` subclass
+ */
 async function getDurableObjectRpcProperty(
 	this: DurableObjectWrapper,
 	exportName: string,
@@ -272,6 +337,12 @@ async function getDurableObjectRpcProperty(
 	return value;
 }
 
+/**
+ * Creates a proxy wrapper for `DurableObject` classes that enables RPC functionality.
+ * The wrapper manages instance lifecycle and delegates method calls to the user code, handling both direct method calls and RPC property access.
+ * @param exportName - The name of the `DurableObject` export to wrap
+ * @returns A `DurableObject` constructor that acts as a proxy to the user code
+ */
 export function createDurableObjectWrapper(
 	exportName: string
 ): DurableObjectConstructor<WrapperEnv> {
@@ -294,7 +365,9 @@ export function createDurableObjectWrapper(
 
 					if (
 						typeof key === "symbol" ||
-						IGNORED_KEYS.includes(key) ||
+						(IGNORED_KEYS as readonly string[]).includes(key) ||
+						// The class methods are accessed to determine the type of the export.
+						// We should therefore avoid proxying `WorkerEntrypoint` methods on the `DurableObject` class.
 						(WORKER_ENTRYPOINT_KEYS as readonly string[]).includes(key)
 					) {
 						return;
@@ -323,6 +396,7 @@ export function createDurableObjectWrapper(
 				);
 			}
 
+			// We reuse the same instance unless the constructor changes
 			if (!this[kInstance] || this[kInstance].ctor !== ctor) {
 				const userEnv = stripInternalEnv(this.env);
 				const instance = new ctor(this.ctx, userEnv);
@@ -355,6 +429,12 @@ export function createDurableObjectWrapper(
 	return Wrapper;
 }
 
+/**
+ * Creates a proxy wrapper for `WorkflowEntrypoint` classes.
+ * The wrapper delegates method calls to the user code.
+ * @param exportName - The name of the `WorkflowEntrypoint` export to wrap
+ * @returns A `WorkflowEntrypoint` constructor that acts as a proxy to the user code
+ */
 export function createWorkflowEntrypointWrapper(
 	exportName: string
 ): WorkflowEntrypointConstructor<WrapperEnv> {
