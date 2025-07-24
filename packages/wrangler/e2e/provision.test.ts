@@ -117,14 +117,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			assert(d1Match?.groups);
 			d1Id = d1Match.groups.d1;
 
-			const { text } = await retry(
-				(s) => s.status !== 200,
-				async () => {
-					const r = await fetch(deployedUrl);
-					return { text: await r.text(), status: r.status };
-				}
+			const response = await retry(
+				(resp) => !resp.ok,
+				async () => await fetch(deployedUrl)
 			);
-			expect(text).toMatchInlineSnapshot('"Hello World!"');
+			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
 
 		it("can inherit bindings on re-deploy and won't re-provision", async () => {
@@ -144,14 +141,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			Current Version ID: 00000000-0000-0000-0000-000000000000"
 		`);
 
-			const { text } = await retry(
-				(s) => s.status !== 200,
-				async () => {
-					const r = await fetch(deployedUrl);
-					return { text: await r.text(), status: r.status };
-				}
+			const response = await retry(
+				(resp) => !resp.ok,
+				async () => await fetch(deployedUrl)
 			);
-			expect(text).toMatchInlineSnapshot('"Hello World!"');
+			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
 
 		it("can inherit and provision resources on version upload", async () => {
