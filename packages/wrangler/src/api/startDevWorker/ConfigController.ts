@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { watch } from "chokidar";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
@@ -15,10 +16,7 @@ import {
 } from "../../dev";
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
-import {
-	getDockerHost,
-	getDockerPath,
-} from "../../environment-variables/misc-variables";
+import { getDockerPath } from "../../environment-variables/misc-variables";
 import { UserError } from "../../errors";
 import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
@@ -119,6 +117,9 @@ async function resolveDevConfig(
 
 	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
 
+	const useContainers =
+		config.dev.enable_containers && config.containers?.length;
+
 	return {
 		auth,
 		remote: input.dev?.remote,
@@ -160,10 +161,11 @@ async function resolveDevConfig(
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
-		containerEngine:
-			input.dev?.containerEngine ??
-			config.dev.container_engine ??
-			getDockerHost(),
+		containerEngine: useContainers
+			? input.dev?.containerEngine ??
+				config.dev.container_engine ??
+				resolveDockerHost(input.dev?.dockerPath ?? getDockerPath())
+			: undefined,
 		containerBuildId: input.dev?.containerBuildId,
 	} satisfies StartDevWorkerOptions["dev"];
 }

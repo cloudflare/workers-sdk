@@ -34,7 +34,7 @@ import type { Mock, MockInstance } from "vitest";
 vi.mock("../api/startDevWorker/ConfigController", (importOriginal) =>
 	importOriginal()
 );
-
+vi.mock("node:child_process");
 vi.mock("../dev/hotkeys");
 
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
@@ -1245,16 +1245,44 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("container engine", () => {
-		it("should default to docker socket", async () => {
+		const minimalContainerConfig = {
+			durable_objects: {
+				bindings: [
+					{
+						name: "EXAMPLE_DO_BINDING",
+						class_name: "ExampleDurableObject",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] }],
+			containers: [
+				{
+					name: "my-container",
+					max_instances: 10,
+					class_name: "ExampleDurableObject",
+					image: "docker.io/hello:world",
+				},
+			],
+		};
+		let mockExecFileSync: ReturnType<typeof vi.fn>;
+		const mockedDockerContextLsOutput = `{"Current":true,"Description":"Current DOCKER_HOST based configuration","DockerEndpoint":"unix:///current/run/docker.sock","Error":"","Name":"default"}
+{"Current":false,"Description":"Docker Desktop","DockerEndpoint":"unix:///other/run/docker.sock","Error":"","Name":"desktop-linux"}`;
+
+		beforeEach(async () => {
+			const childProcess = await import("node:child_process");
+			mockExecFileSync = vi.mocked(childProcess.execFileSync);
+
+			mockExecFileSync.mockReturnValue(mockedDockerContextLsOutput);
+		});
+		it("should default to socket of current docker context", async () => {
 			writeWranglerConfig({
 				main: "index.js",
+				...minimalContainerConfig,
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev");
 			expect(config.dev.containerEngine).toEqual(
-				process.platform === "win32"
-					? "//./pipe/docker_engine"
-					: "unix:///var/run/docker.sock"
+				"unix:///current/run/docker.sock"
 			);
 		});
 
@@ -1265,6 +1293,7 @@ describe.sequential("wrangler dev", () => {
 					port: 8888,
 					container_engine: "test.sock",
 				},
+				...minimalContainerConfig,
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 
@@ -1277,6 +1306,7 @@ describe.sequential("wrangler dev", () => {
 				dev: {
 					port: 8888,
 				},
+				...minimalContainerConfig,
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			vi.stubEnv("WRANGLER_DOCKER_HOST", "blah.sock");
