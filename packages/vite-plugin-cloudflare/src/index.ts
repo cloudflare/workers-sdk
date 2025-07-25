@@ -83,7 +83,7 @@ export type { PluginConfig } from "./plugin-config";
 
 // this flag is used to show the workers configs warning only once
 let workersConfigsWarningShown = false;
-
+let restartServerPromise = Promise.resolve();
 let miniflare: Miniflare | undefined;
 
 /**
@@ -357,7 +357,9 @@ if (import.meta.hot) {
 						)
 					) {
 						// It's OK for this to be called multiple times as Vite prevents concurrent execution
-						viteDevServer.restart();
+						restartServerPromise = restartServerPromise.then(() =>
+							viteDevServer.restart()
+						);
 					}
 				});
 
