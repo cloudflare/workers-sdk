@@ -464,13 +464,13 @@ export async function generateEnvTypes(
 				: undefined;
 
 			const exportExists = serviceEntry?.exports?.some(
-				(e) => e === service.entrypoint
+				(e) => e === (service.entrypoint ?? "default")
 			);
 
 			let typeName: string;
 
 			if (importPath && exportExists) {
-				typeName = `Service<import("${importPath}").${service.entrypoint ?? "default"}>`;
+				typeName = `Service<MaybeWorkerEntrypoint<typeof import("${importPath}").${service.entrypoint ?? "default"}>>`;
 			} else if (service.entrypoint) {
 				typeName = `Service /* entrypoint ${service.entrypoint} from ${service.service} */`;
 			} else {
@@ -709,6 +709,8 @@ function generateTypeStrings(
 	let baseContent = "";
 	let processEnv = "";
 
+	const MaybeWorkerEntrypointType = `\ttype MaybeWorkerEntrypoint<T> = T extends new (...args: any[]) => infer EntrypointClass\n\t\t? EntrypointClass extends Rpc.WorkerEntrypointBranded ? EntrypointClass : undefined\n\t\t: undefined;`;
+
 	if (formatType === "modules") {
 		if (
 			isProcessEnvPopulated(compatibilityDate, compatibilityFlags) &&
@@ -717,7 +719,7 @@ function generateTypeStrings(
 			// StringifyValues ensures that json vars are correctly types as strings, not objects on process.env
 			processEnv = `\ntype StringifyValues<EnvType extends Record<string, unknown>> = {\n\t[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;\n};\ndeclare namespace NodeJS {\n\tinterface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, ${stringKeys.map((k) => `"${k}"`).join(" | ")}>> {}\n}`;
 		}
-		baseContent = `declare namespace Cloudflare {\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+		baseContent = `declare namespace Cloudflare {\n${MaybeWorkerEntrypointType}\n\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
 	} else {
 		baseContent = `export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
 	}
