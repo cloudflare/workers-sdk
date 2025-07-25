@@ -1188,6 +1188,9 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 		isAddressInUse(chunk: string) {
 			return chunk.includes("Address already in use; toString() = ");
 		},
+		isWarning(chunk: string) {
+			return /\.c\+\+:\d+: warning:/.test(chunk);
+		},
 		isCodeMovedWarning(chunk: string) {
 			return /CODE_MOVED for unknown code block/.test(chunk);
 		},
@@ -1309,10 +1312,75 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 		});
 	});
 
+	// TODO: Even after the introduction of structured logs some errors can make it
+	//       into stderr (likely only startup errors), so to play it safe we handle
+	//       the stderr stream in the exact same way we did before structured logs
+	//       were introduced. So some of the code below can be unnecessary, although
+	//       not harmful if we want we can try to clean up some of it at some point
+	//       in the future (and possibly the workerd could also fix this on their
+	//       side and never send anything to the stderr).
+	//       For more context see:
+	//         https://github.com/cloudflare/workers-sdk/pull/10004#discussion_r2222806461
 	stderr.on("data", (chunk: Buffer | string) => {
-		// TODO: Some errors still get reported through stderr, investigate
-		//       why that is and whether or not this can be corrected in workerd
-		logger.error(getSourceMappedString(chunk.toString()));
+		chunk = chunk.toString().trim();
+
+		if (classifiers.isBarf(chunk)) {
+			// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
+
+			// CLEANABLE:
+			// known case to cleanup: Address in use errors
+			if (classifiers.isAddressInUse(chunk)) {
+				const address = chunk.match(
+					/Address already in use; toString\(\) = (.+)\n/
+				)?.[1];
+
+				logger.error(
+					`Address already in use (${address}). Please check that you are not already running a server on this address or specify a different port with --port.`
+				);
+
+				// Log the original error to the debug logs.
+				logger.debug(chunk);
+			}
+			// In the past we have seen Access Violation errors on Windows, which may be caused by an outdated
+			// version of the Windows OS or the Microsoft Visual C++ Redistributable.
+			// See https://github.com/cloudflare/workers-sdk/issues/6170#issuecomment-2245209918
+			else if (classifiers.isAccessViolation(chunk)) {
+				let error = "There was an access violation in the runtime.";
+				if (process.platform === "win32") {
+					error +=
+						"\nOn Windows, this may be caused by an outdated Microsoft Visual C++ Redistributable library.\n" +
+						"Check that you have the latest version installed.\n" +
+						"See https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist.";
+				}
+				logger.error(error);
+
+				// Log the original error to the debug logs.
+				logger.debug(chunk);
+			}
+
+			// IGNORABLE:
+			// anything else not handled above is considered ignorable
+			// so send it to the debug logs which are discarded unless
+			// the user explicitly sets a logLevel indicating they care
+			else {
+				logger.debug(chunk);
+			}
+		}
+
+		// known case: warnings are not errors, log them as such
+		else if (classifiers.isWarning(chunk)) {
+			logger.warn(chunk);
+		}
+
+		// known case: "error: CODE_MOVED for unknown code block?", warning for workerd devs, not application devs
+		else if (classifiers.isCodeMovedWarning(chunk)) {
+			// ignore entirely, don't even send it to the debug log file
+		}
+
+		// anything not explicitly handled above should be logged as an error (via stderr)
+		else {
+			logger.error(getSourceMappedString(chunk));
+		}
 	});
 }
 
