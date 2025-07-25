@@ -1,6 +1,4 @@
 import { writeFileSync } from "node:fs";
-import { mockAccount } from "../cloudchamber/utils";
-import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -14,7 +12,7 @@ describe("pipe test", () => {
 		.mockImplementation(() => true);
 	runInTempDir();
 
-	it.only("should display banner", async () => {
+	it("should display banner", async () => {
 		writeFileSync("wormhole.txt", "passageway");
 		await runWrangler(
 			`r2 object put bucket-object-test/wormhole.txt --file ./wormhole.txt --local`
