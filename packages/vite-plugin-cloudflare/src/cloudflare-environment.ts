@@ -125,7 +125,7 @@ export const cloudflareBuiltInModules = [
 	"cloudflare:workflows",
 ];
 
-const defaultConditions = ["workerd", "module", "browser"];
+const defaultConditions = ["workerd", "worker", "module", "browser"];
 const target = "es2022";
 
 export function createCloudflareEnvironmentOptions(
