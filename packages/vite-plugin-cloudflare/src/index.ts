@@ -334,26 +334,6 @@ if (import.meta.hot) {
 					writeDeployConfig(resolvedPluginConfig, resolvedViteConfig);
 				}
 			},
-			hotUpdate(options) {
-				assertIsNotPreview(resolvedPluginConfig);
-
-				// Note that we must "resolve" the changed file since the path from Vite will not match Windows backslashes.
-				const changedFilePath = path.resolve(options.file);
-
-				if (
-					resolvedPluginConfig.configPaths.has(changedFilePath) ||
-					hasDotDevDotVarsFileChanged(resolvedPluginConfig, changedFilePath) ||
-					hasAssetsConfigChanged(
-						resolvedPluginConfig,
-						resolvedViteConfig,
-						changedFilePath
-					)
-				) {
-					// It's OK for this to be called multiple times as Vite prevents concurrent execution
-					options.server.restart();
-					return [];
-				}
-			},
 			// Vite `configureServer` Hook
 			// see https://vite.dev/guide/api-plugin.html#configureserver
 			async configureServer(viteDevServer) {
@@ -364,6 +344,26 @@ if (import.meta.hot) {
 					viteDevServer,
 					miniflare
 				);
+
+				viteDevServer.watcher.addListener("change", (changedFilePath) => {
+					assertIsNotPreview(resolvedPluginConfig);
+
+					if (
+						resolvedPluginConfig.configPaths.has(changedFilePath) ||
+						hasDotDevDotVarsFileChanged(
+							resolvedPluginConfig,
+							changedFilePath
+						) ||
+						hasAssetsConfigChanged(
+							resolvedPluginConfig,
+							resolvedViteConfig,
+							changedFilePath
+						)
+					) {
+						// It's OK for this to be called multiple times as Vite prevents concurrent execution
+						viteDevServer.restart();
+					}
+				});
 
 				let containerBuildId: string | undefined;
 				const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
