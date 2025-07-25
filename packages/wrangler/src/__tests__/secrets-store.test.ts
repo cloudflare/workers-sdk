@@ -25,20 +25,21 @@ describe("secrets-store help", () => {
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-		  "wrangler secrets-store
+			"wrangler secrets-store
 
-🔐 Manage the Secrets Store [alpha]
+			🔐 Manage the Secrets Store [alpha]
 
-COMMANDS
-  wrangler secrets-store store   🔐 Manage Stores within the Secrets Store [alpha]
-  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [alpha]
+			COMMANDS
+			  wrangler secrets-store store   🔐 Manage Stores within the Secrets Store [alpha]
+			  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [alpha]
 
-GLOBAL FLAGS
-  -c, --config   Path to Wrangler configuration file  [string]
-      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-  -h, --help     Show help  [boolean]
-  -v, --version  Show version number  [boolean]"
+			GLOBAL FLAGS
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -53,21 +54,22 @@ GLOBAL FLAGS
 		"
 	`);
 		expect(std.out).toMatchInlineSnapshot(`
-		  "
-wrangler secrets-store
+			"
+			wrangler secrets-store
 
-🔐 Manage the Secrets Store [alpha]
+			🔐 Manage the Secrets Store [alpha]
 
-COMMANDS
-  wrangler secrets-store store   🔐 Manage Stores within the Secrets Store [alpha]
-  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [alpha]
+			COMMANDS
+			  wrangler secrets-store store   🔐 Manage Stores within the Secrets Store [alpha]
+			  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [alpha]
 
-GLOBAL FLAGS
-  -c, --config   Path to Wrangler configuration file  [string]
-      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-  -h, --help     Show help  [boolean]
-  -v, --version  Show version number  [boolean]"
+			GLOBAL FLAGS
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 });

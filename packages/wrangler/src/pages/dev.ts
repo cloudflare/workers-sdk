@@ -923,6 +923,7 @@ export const pagesDevCommand = createCommand({
 					minify: undefined,
 					legacyEnv: undefined,
 					env: undefined,
+					envFile: undefined,
 					ip,
 					port,
 					inspectorPort,

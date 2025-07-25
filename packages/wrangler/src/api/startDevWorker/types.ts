@@ -84,6 +84,14 @@ export interface StartDevWorkerInput {
 
 	env?: string;
 
+	/**
+	 * An array of paths to the .env files to load for this worker, relative to the project directory.
+	 *
+	 * If not specified, defaults to the standard `.env` files as given by `getDefaultEnvFiles()`.
+	 * The project directory is where the Wrangler configuration file is located or the current working directory otherwise.
+	 */
+	envFiles?: string[];
+
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
 	migrations?: DurableObjectMigration[];
