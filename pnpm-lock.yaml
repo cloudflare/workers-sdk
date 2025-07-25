@@ -2367,7 +2367,7 @@ importers:
         version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
-        version: 7.0.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+        version: 7.0.0(@types/node@20.19.9)(jiti@2.4.2)(lightningcss@1.29.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
