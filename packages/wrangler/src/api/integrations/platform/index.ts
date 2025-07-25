@@ -1,3 +1,4 @@
+import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
@@ -12,7 +13,7 @@ import {
 	buildSitesOptions,
 	getImageNameFromDOClassName,
 } from "../../../dev/miniflare";
-import { getDockerHost } from "../../../environment-variables/misc-variables";
+import { getDockerPath } from "../../../environment-variables/misc-variables";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
@@ -460,11 +461,15 @@ export function unstable_getMiniflareWorkerOptions(
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};
 
+	const useContainers =
+		config.dev?.enable_containers && config.containers?.length;
 	const workerOptions: SourcelessWorkerOptions = {
 		compatibilityDate: config.compatibility_date,
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
-		containerEngine: config.dev.container_engine ?? getDockerHost(),
+		containerEngine: useContainers
+			? config.dev.container_engine ?? resolveDockerHost(getDockerPath())
+			: undefined,
 
 		...bindingOptions,
 		...sitesOptions,

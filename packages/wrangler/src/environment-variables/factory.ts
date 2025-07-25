@@ -35,7 +35,10 @@ type VariableNames =
 	| "WRANGLER_REGISTRY_PATH"
 	| "WRANGLER_D1_EXTRA_LOCATION_CHOICES"
 	| "WRANGLER_DOCKER_BIN"
-	| "WRANGLER_DOCKER_HOST";
+	// We don't get the following using the environment variable factory,
+	// but including here so that all environment variables are documented here:
+	| "WRANGLER_DOCKER_HOST"
+	| "DOCKER_HOST";
 
 type DeprecatedNames =
 	| "CF_ACCOUNT_ID"

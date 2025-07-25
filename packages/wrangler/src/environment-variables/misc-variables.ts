@@ -273,15 +273,3 @@ export const getDockerPath = getEnvironmentVariableFactory({
 		return "docker";
 	},
 });
-
-/**
- * `WRANGLER_DOCKER_HOST` specifies the Docker socket to connect to.
- */
-export const getDockerHost = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_DOCKER_HOST",
-	defaultValue() {
-		return process.platform === "win32"
-			? "//./pipe/docker_engine"
-			: "unix:///var/run/docker.sock";
-	},
-});

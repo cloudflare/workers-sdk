@@ -1,4 +1,4 @@
-import { execFile, spawn } from "child_process";
+import { execFileSync, spawn } from "child_process";
 import { randomUUID } from "crypto";
 import { existsSync, statSync } from "fs";
 import path from "path";
@@ -61,22 +61,15 @@ export const runDockerCmd = (
 	};
 };
 
-export const runDockerCmdWithOutput = async (
-	dockerPath: string,
-	args: string[]
-): Promise<string> => {
-	return new Promise((resolve, reject) => {
-		execFile(dockerPath, args, (error, stdout) => {
-			if (error) {
-				return reject(
-					new Error(
-						`Failed running docker command: ${error.message}. Command: ${dockerPath} ${args.join(" ")}`
-					)
-				);
-			}
-			return resolve(stdout.trim());
-		});
-	});
+export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
+	try {
+		const stdout = execFileSync(dockerPath, args, { encoding: "utf8" });
+		return stdout.trim();
+	} catch (error) {
+		throw new Error(
+			`Failed running docker command: ${(error as Error).message}. Command: ${dockerPath} ${args.join(" ")}`
+		);
+	}
 };
 
 /** throws when docker is not installed */
@@ -209,7 +202,7 @@ export const getContainerIdsFromImage = async (
 	dockerPath: string,
 	ancestorImage: string
 ) => {
-	const output = await runDockerCmdWithOutput(dockerPath, [
+	const output = runDockerCmdWithOutput(dockerPath, [
 		"ps",
 		"-a",
 		"--filter",
@@ -250,3 +243,85 @@ export async function checkExposedPorts(
 export function generateContainerBuildId() {
 	return randomUUID().slice(0, 8);
 }
+
+/**
+ * Output of docker context ls --format json
+ */
+type DockerContext = {
+	Current: boolean;
+	Description: string;
+	DockerEndpoint: string;
+	Error: string;
+	Name: string;
+};
+
+/**
+ * Run `docker context ls` to get the socket from the currently active Docker context
+ * @returns The socket path or null if we are not able to determine it
+ */
+export function getDockerSocketFromContext(dockerPath: string): string | null {
+	try {
+		const output = runDockerCmdWithOutput(dockerPath, [
+			"context",
+			"ls",
+			"--format",
+			"json",
+		]);
+
+		// Parse each line as a separate JSON object
+		const lines = output.trim().split("\n");
+		const contexts: DockerContext[] = lines.map((line) => JSON.parse(line));
+
+		// Find the current context
+		const currentContext = contexts.find((context) => context.Current === true);
+
+		if (currentContext && currentContext.DockerEndpoint) {
+			return currentContext.DockerEndpoint;
+		}
+	} catch {
+		// Fall back to null if docker context inspection fails so that we can use platform defaults
+	}
+	return null;
+}
+/**
+ * Resolve Docker host as follows:
+ * 1. Check WRANGLER_DOCKER_HOST environment variable
+ * 2. Check DOCKER_HOST environment variable
+ * 3. Try to get socket from active Docker context
+ * 4. Fall back to platform-specific defaults
+ */
+export function resolveDockerHost(dockerPath: string): string {
+	if (process.env.WRANGLER_DOCKER_HOST) {
+		return process.env.WRANGLER_DOCKER_HOST;
+	}
+
+	if (process.env.DOCKER_HOST) {
+		return process.env.DOCKER_HOST;
+	}
+
+	// 3. Try to get socket from by running `docker context ls`
+
+	const contextSocket = getDockerSocketFromContext(dockerPath);
+	if (contextSocket) {
+		return contextSocket;
+	}
+
+	// 4. Fall back to platform-specific defaults
+	// (note windows doesn't work yet due to a runtime limitation)
+	return process.platform === "win32"
+		? "//./pipe/docker_engine"
+		: "unix:///var/run/docker.sock";
+}
+
+/**
+ *
+ * Get docker host from environment variables or platform defaults.
+ * Does not use the docker context ls command, so we
+ */
+export const getDockerHostFromEnv = (): string => {
+	const fromEnv = process.env.WRANGLER_DOCKER_HOST ?? process.env.DOCKER_HOST;
+
+	return fromEnv ?? process.platform === "win32"
+		? "//./pipe/docker_engine"
+		: "unix:///var/run/docker.sock";
+};
