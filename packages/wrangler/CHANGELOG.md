@@ -1,5 +1,22 @@
 # wrangler
 
+## 3.114.12
+
+### Patch Changes
+
+- [#10019](https://github.com/cloudflare/workers-sdk/pull/10019) [`cce7f6f`](https://github.com/cloudflare/workers-sdk/commit/cce7f6f6c966d43894d57e8adfe05779605b1f65) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: update workerd dependency to latest
+
+- [#10050](https://github.com/cloudflare/workers-sdk/pull/10050) [`ef003a2`](https://github.com/cloudflare/workers-sdk/commit/ef003a2b5dc057575651418e3805521d69251065) Thanks [@emily-shen](https://github.com/emily-shen)! - remove banner from r2 getobject in pipe mode
+
+- [#10003](https://github.com/cloudflare/workers-sdk/pull/10003) [`6940d39`](https://github.com/cloudflare/workers-sdk/commit/6940d39464669e8635e6da710a0449e1204d71be) Thanks [@emily-shen](https://github.com/emily-shen)! - Include more (sanitised) user errors in telemetry.
+
+  We manually vet and sanitised error messages before including them in our telemetry collection - this PR just includes a couple more.
+
+- [#9973](https://github.com/cloudflare/workers-sdk/pull/9973) [`58c09cf`](https://github.com/cloudflare/workers-sdk/commit/58c09cf06e96ebc78d0f5de1b3483285f6a5558c) Thanks [@penalosa](https://github.com/penalosa)! - Make Wrangler warn more loudly if you're missing auth scopes
+
+- Updated dependencies [[`cce7f6f`](https://github.com/cloudflare/workers-sdk/commit/cce7f6f6c966d43894d57e8adfe05779605b1f65), [`028f689`](https://github.com/cloudflare/workers-sdk/commit/028f6896dca78901f5b5a36a938667241d501244)]:
+  - miniflare@3.20250718.0
+
 ## 3.114.11
 
 ### Patch Changes
