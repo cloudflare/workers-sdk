@@ -720,6 +720,8 @@ export class Miniflare {
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
 
+	#structuredWorkerdLogs: boolean;
+
 	#cfObject?: Record<string, any> = {};
 
 	// Path to temporary directory for use as scratch space/"in-memory" Durable
@@ -759,6 +761,8 @@ export class Miniflare {
 		}
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
+		this.#structuredWorkerdLogs =
+			this.#sharedOpts.core.structuredWorkerdLogs ?? false;
 
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
 		this.#webSocketServer = new WebSocketServer({
@@ -1375,7 +1379,13 @@ export class Miniflare {
 					"Ensure wrapped bindings don't have bindings to themselves."
 			);
 		}
-		return { services: servicesArray, sockets, extensions };
+
+		return {
+			services: servicesArray,
+			sockets,
+			extensions,
+			structuredLogging: this.#structuredWorkerdLogs,
+		};
 	}
 
 	async #assembleAndUpdateConfig() {
@@ -1626,6 +1636,9 @@ export class Miniflare {
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
+		this.#structuredWorkerdLogs =
+			this.#sharedOpts.core.structuredWorkerdLogs ??
+			this.#structuredWorkerdLogs;
 
 		// Send to runtime and wait for updates to process
 		await this.#assembleAndUpdateConfig();
