@@ -239,8 +239,22 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
+<<<<<<< HEAD
         specifier: ^4.20250408.0
         version: 4.20250408.0
+||||||| parent of 123b2c7c5 (Support Images binding in getPlatformProxy())
+        specifier: ^4.20250712.0
+        version: 4.20250712.0
+=======
+        specifier: ^4.20250712.0
+        version: 4.20250712.0
+      '@types/jest-image-snapshot':
+        specifier: ^6.4.0
+        version: 6.4.0
+      jest-image-snapshot:
+        specifier: ^6.4.0
+        version: 6.4.0
+>>>>>>> 123b2c7c5 (Support Images binding in getPlatformProxy())
       typescript:
         specifier: catalog:default
         version: 5.7.3

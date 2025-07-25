@@ -169,7 +169,7 @@ async function getMiniflareOptionsFromConfig(
 		services: rawConfig.services,
 		serviceBindings: {},
 		migrations: rawConfig.migrations,
-		imagesLocalMode: false,
+		imagesLocalMode: true,
 	});
 
 	let processedAssetOptions: AssetsOptions | undefined;
