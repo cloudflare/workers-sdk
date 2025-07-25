@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import util from "node:util";
 import * as vite from "vite";
 import { isNodeCompat } from "./node-js-compat";
 import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "./shared";
@@ -17,6 +18,7 @@ interface WebSocketContainer {
 }
 
 const webSocketUndefinedError = "The WebSocket is undefined";
+const debuglog = util.debuglog("@cloudflare:vite-plugin");
 
 function createHotChannel(
 	webSocketContainer: WebSocketContainer
@@ -196,11 +198,13 @@ export function createCloudflareEnvironmentOptions(
 export function initRunners(
 	resolvedPluginConfig: WorkersResolvedConfig,
 	viteDevServer: vite.ViteDevServer,
-	miniflare: Miniflare
+	miniflare: Miniflare,
+	configId: string
 ): Promise<void[]> | undefined {
 	return Promise.all(
 		Object.entries(resolvedPluginConfig.workers).map(
 			async ([environmentName, workerConfig]) => {
+				debuglog(configId, "Initializing worker:", workerConfig.name);
 				const worker = await miniflare.getWorker(workerConfig.name);
 
 				return (

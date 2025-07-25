@@ -1,4 +1,7 @@
+import util from "node:util";
 import { defineConfig } from "vitest/config";
+
+const debuglog = util.debuglog("@cloudflare:vite-plugin");
 
 export default defineConfig({
 	test: {
@@ -10,7 +13,7 @@ export default defineConfig({
 		setupFiles: ["./vitest-setup.ts"],
 		globalSetup: ["./vitest-global-setup.ts"],
 		reporters: "dot",
-		onConsoleLog: () => false,
+		onConsoleLog: () => debuglog.enabled,
 		testTimeout: 10000,
 	},
 	publicDir: false,
