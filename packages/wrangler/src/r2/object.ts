@@ -68,6 +68,11 @@ export const r2ObjectGetCommand = createCommand({
 			type: "string",
 		},
 	},
+	behaviour: {
+		printBanner({ pipe }) {
+			return !pipe;
+		},
+	},
 	positionalArgs: ["objectPath"],
 	async handler(objectGetYargs, { config }) {
 		const { objectPath, pipe, jurisdiction } = objectGetYargs;
