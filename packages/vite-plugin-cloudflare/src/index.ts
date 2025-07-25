@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
+	cleanupContainers,
 	generateContainerBuildId,
 	getContainerIdsByImageTags,
 } from "@cloudflare/containers-shared/src/utils";
@@ -495,6 +496,34 @@ if (import.meta.hot) {
 							clearInterval(dockerPollIntervalId);
 							removeContainersByIds(dockerPath, runningContainerIds);
 						});
+
+						viteDevServer.bindCLIShortcuts({
+							print: true,
+							customShortcuts: [
+								{
+									key: "b",
+									description: "rebuild container(s)",
+									action: async () => {
+										if (containerImageTagsSeen?.size) {
+											await cleanupContainers(
+												dockerPath,
+												containerImageTagsSeen
+											);
+
+											containerBuildId = generateContainerBuildId();
+											containerImageTagsSeen = await prepareContainerImages({
+												containersConfig: entryWorkerConfig.containers,
+												containerBuildId,
+												isContainersEnabled:
+													entryWorkerConfig.dev.enable_containers,
+												dockerPath,
+												configPath: entryWorkerConfig.configPath,
+											});
+										}
+									},
+								},
+							],
+						});
 					}
 				}
 
@@ -593,6 +622,31 @@ if (import.meta.hot) {
 					process.on("exit", () => {
 						clearInterval(dockerPollIntervalId);
 						removeContainersByIds(dockerPath, runningContainerIds);
+					});
+
+					vitePreviewServer.bindCLIShortcuts({
+						print: true,
+						customShortcuts: [
+							{
+								key: "b",
+								description: "rebuild container(s)",
+								action: async () => {
+									if (containerImageTagsSeen?.size) {
+										await cleanupContainers(dockerPath, containerImageTagsSeen);
+
+										containerBuildId = generateContainerBuildId();
+										containerImageTagsSeen = await prepareContainerImages({
+											containersConfig: entryWorkerConfig.containers,
+											containerBuildId,
+											isContainersEnabled:
+												entryWorkerConfig.dev.enable_containers,
+											dockerPath,
+											configPath: entryWorkerConfig.configPath,
+										});
+									}
+								},
+							},
+						],
 					});
 				}
 
