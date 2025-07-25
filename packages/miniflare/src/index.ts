@@ -1534,7 +1534,14 @@ export class Miniflare {
 
 		return new Promise((resolve) => {
 			const server = stoppable(
-				http.createServer(this.#handleLoopback),
+				http.createServer(
+					{
+						// There might be no HOST header when proxying a fetch request made over service binding
+						//  e.g. env.MY_WORKER.fetch("https://example.com")
+						requireHostHeader: false,
+					},
+					this.#handleLoopback
+				),
 				/* grace */ 0
 			);
 			server.on("connect", this.#handleLoopbackConnect);
