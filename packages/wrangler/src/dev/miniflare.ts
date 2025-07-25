@@ -592,7 +592,9 @@ export function buildMiniflareBindingOptions(
 			continue;
 		}
 
-		const target = config.workerDefinitions?.[service.service];
+		const target = config.workerDefinitions?.[service.environment == null
+			? service.service
+			: `${service.service}-${service.environment}`];
 
 		if (target?.host === undefined || target.port === undefined) {
 			// If the target isn't in the registry, always return an error response
