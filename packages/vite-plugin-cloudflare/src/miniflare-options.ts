@@ -20,6 +20,7 @@ import {
 } from "wrangler";
 import { getAssetsConfig } from "./asset-config";
 import {
+	ASSET_PROXY_WORKER_NAME,
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
 	kRequestType,
@@ -354,6 +355,52 @@ export async function getDevMiniflareOptions(config: {
 				},
 			},
 		},
+		{
+			name: ASSET_PROXY_WORKER_NAME,
+			compatibilityDate: ASSET_WORKERS_COMPATIBILITY_DATE,
+			modulesRoot: miniflareModulesRoot,
+			modules: [
+				{
+					type: "ESModule",
+					path: path.join(miniflareModulesRoot, "asset-proxy-worker.js"),
+					contents: /*javascript*/ `
+						import { WorkerEntrypoint } from 'cloudflare:workers';
+						export default class RPCProxyWorker extends WorkerEntrypoint {
+							async fetch(request) {
+								return this.env.FETCHER.fetch(request);
+							}
+
+							tail(event) {
+								// Temporary workaround: the tail event is not serializable,
+								// so we are serializing it to JSON and parsing it back to make it transferable.
+								// This loses non-serializable data, but allows us to forward basic info
+								// to the target worker until native support is available.
+							    return this.env.RPC_WORKER.tail(JSON.parse(JSON.stringify(event)));
+							}
+
+							constructor(ctx, env) {
+								super(ctx, env);
+								return new Proxy(this, {
+									get(target, prop) {
+										if (Reflect.has(target, prop)) {
+											return Reflect.get(target, prop);
+										}
+
+										return Reflect.get(target.env.RPC_WORKER, prop);
+									},
+								});
+							}
+						}
+					`,
+				},
+			],
+			serviceBindings: {
+				...(entryWorkerConfig ? { RPC_WORKER: entryWorkerConfig.name } : {}),
+				FETCHER: {
+					node: (req, res) => viteDevServer.middlewares(req, res),
+				},
+			},
+		},
 	];
 
 	const workersFromConfig =
@@ -417,8 +464,15 @@ export async function getDevMiniflareOptions(config: {
 									unsafeDirectSockets:
 										environmentName ===
 										resolvedPluginConfig.entryWorkerEnvironmentName
-											? // Expose the default entrypoint of the entry worker on the dev registry
-												[{ entrypoint: undefined, proxy: true }]
+											? [
+													{
+														// This exposes the default entrypoint of the asset proxy worker
+														// on the dev registry with the name of the entry worker
+														serviceName: ASSET_PROXY_WORKER_NAME,
+														entrypoint: undefined,
+														proxy: true,
+													},
+												]
 											: [],
 									modulesRoot: miniflareModulesRoot,
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
