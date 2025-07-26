@@ -13,36 +13,65 @@ export const TESTS: Record<string, () => void> = {
 	testNet,
 	testTls,
 	testDebug,
+	testHttp,
+	testHttps,
 };
 
 export default {
 	async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);
-		const testName = url.pathname.slice(1);
-		if (testName === "ping") {
-			return new Response("pong");
+		switch (url.pathname) {
+			case "/ping":
+				// `/ping` check that the server is online
+				return new Response("pong");
+
+			case "/flag": {
+				// `/flag?name=<flag_name>)` returns value of the runtime flag
+				const flagName = url.searchParams.get("name");
+
+				return Response.json(
+					flagName
+						? getRuntimeFlagValue(flagName) ?? "undefined"
+						: "The request is missing the `name` query parameter"
+				);
+			}
+
+			default: {
+				// `/<test name>` executes the test or returns an html list of tests when not found
+				const testName = url.pathname.slice(1);
+				const test = TESTS[testName];
+				if (!test) {
+					return generateTestListResponse(testName);
+				}
+
+				try {
+					await test();
+					return new Response("passed");
+				} catch (e) {
+					return new Response(`failed\n${e}`);
+				}
+			}
 		}
-		const test = TESTS[testName];
-		if (!test) {
-			return new Response(
-				`<h1>${testName ? `${testName} not found!` : `Pick a test to run`} </h1>
+	},
+};
+
+function getRuntimeFlagValue(name: string): boolean | undefined {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const { compatibilityFlags } = (globalThis as any).Cloudflare;
+	return compatibilityFlags[name];
+}
+
+function generateTestListResponse(testName: string): Response {
+	return new Response(
+		`<h1>${testName ? `${testName} not found!` : `Pick a test to run`} </h1>
         <ul>
         ${Object.keys(TESTS)
 					.map((name) => `<li><a href="/${name}">${name}</a></li>`)
 					.join("")}
         </ul>`,
-				{ headers: { "Content-Type": "text/html; charset=utf-8" } }
-			);
-		}
-		try {
-			await test();
-		} catch (e) {
-			return new Response(String(e));
-		}
-
-		return new Response("OK!");
-	},
-};
+		{ headers: { "Content-Type": "text/html; charset=utf-8" } }
+	);
+}
 
 async function testCryptoGetRandomValues() {
 	const crypto = await import("node:crypto");
@@ -199,4 +228,37 @@ export async function testDebug() {
 	testLog("This is a test log");
 
 	assert.deepEqual(logs, ["example This is an example log +0ms"]);
+}
+
+export async function testHttp() {
+	const http = await import("http");
+
+	const useNativeHttp = getRuntimeFlagValue("enable_nodejs_http_modules");
+
+	if (useNativeHttp) {
+		// Test the workerd implementation only
+		assert.doesNotThrow(() => http.validateHeaderName("x-header"));
+		assert.doesNotThrow(() => http.validateHeaderValue("x-header", "value"));
+	} else {
+		// Test the unenv polyfill only
+		assert.throws(() => http.validateHeaderName("x-header"), /not implemented/);
+		assert.throws(
+			() => http.validateHeaderValue("x-header", "value"),
+			/not implemented/
+		);
+	}
+
+	assert.ok(http.METHODS.includes("GET"));
+	assert.strictEqual(typeof http.get, "function");
+	assert.strictEqual(typeof http.request, "function");
+	assert.deepEqual(http.STATUS_CODES[404], "Not Found");
+}
+
+export async function testHttps() {
+	const https = await import("https");
+
+	assert.strictEqual(typeof https.Agent, "function");
+	assert.strictEqual(typeof https.get, "function");
+	assert.strictEqual(typeof https.globalAgent, "object");
+	assert.strictEqual(typeof https.request, "function");
 }

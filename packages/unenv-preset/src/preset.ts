@@ -60,9 +60,7 @@ const hybridNodeCompatModules = [
  * @returns The cloudflare preset
  */
 export function getCloudflarePreset({
-	// eslint-disable-next-line unused-imports/no-unused-vars
 	compatibilityDate = "2024-09-03",
-	// eslint-disable-next-line unused-imports/no-unused-vars
 	compatibilityFlags = [],
 }: {
 	compatibilityDate?: string;
@@ -96,6 +94,9 @@ export function getCloudflarePreset({
 				])
 			),
 
+			// Use either the unenv or native implementation
+			...getHttpAliases({ compatibilityDate, compatibilityFlags }),
+
 			// To override the npm shim from unenv
 			debug: "@cloudflare/unenv-preset/npm/debug",
 		},
@@ -111,4 +112,60 @@ export function getCloudflarePreset({
 		polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
 		external: nodeCompatModules.flatMap((p) => [p, `node:${p}`]),
 	};
+}
+
+/**
+ * Returns the aliases for node http modules (unenv or workerd)
+ *
+ * The native implementation:
+ * - is enabled after 2025-08-15
+ * - can be enabled with the "enable_nodejs_http_modules" flag
+ * - cab be disabled with the "disable_nodejs_http_modules" flag
+ */
+function getHttpAliases({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): Record<string, string> {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_http_modules"
+	);
+	const enabledByFlags = compatibilityFlags.includes(
+		"enable_nodejs_http_modules"
+	);
+	const enabledByDate = compatibilityDate >= "2025-08-15";
+
+	const enabled = (enabledByFlags || enabledByDate) && !disabledByFlag;
+
+	if (!enabled) {
+		// use the unenv polyfill
+		return {};
+	}
+
+	const aliases: Record<string, string> = {};
+
+	const nativeModules = [
+		"_http_common",
+		"_http_outgoing",
+		"_http_client",
+		"_http_incoming",
+		"_http_agent",
+	];
+
+	for (const nativeModule of nativeModules) {
+		aliases[nativeModule] = nativeModule;
+		aliases[`node:${nativeModule}`] = `node:${nativeModule}`;
+	}
+
+	const hybridModules = ["http", "https"];
+
+	for (const hybridModule of hybridModules) {
+		aliases[hybridModule] = `@cloudflare/unenv-preset/node/${hybridModule}`;
+		aliases[`node:${hybridModule}`] =
+			`@cloudflare/unenv-preset/node/${hybridModule}`;
+	}
+
+	return aliases;
 }
