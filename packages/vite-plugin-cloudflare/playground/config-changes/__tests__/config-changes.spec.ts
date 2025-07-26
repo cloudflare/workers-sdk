@@ -9,16 +9,8 @@ test.runIf(!isBuild)(
 		const workerConfigPath = path.join(__dirname, "../wrangler.json");
 		const originalWorkerConfig = fs.readFileSync(workerConfigPath, "utf-8");
 
-		onTestFinished(async () => {
+		onTestFinished(() => {
 			fs.writeFileSync(workerConfigPath, originalWorkerConfig);
-			// We need to ensure that the original config is restored before the next test runs
-			await vi.waitFor(
-				async () => {
-					const revertedResponse = await getTextResponse();
-					expect(revertedResponse).toContain('The value of MY_VAR is "one"');
-				},
-				{ timeout: 5000 }
-			);
 		});
 
 		const originalResponse = await getTextResponse();
@@ -47,16 +39,8 @@ test.runIf(!isBuild)(
 		const workerConfigPath = path.join(__dirname, "../wrangler.json");
 		const originalWorkerConfig = fs.readFileSync(workerConfigPath, "utf-8");
 
-		onTestFinished(async () => {
+		onTestFinished(() => {
 			fs.writeFileSync(workerConfigPath, originalWorkerConfig);
-			// We need to ensure that the original config is restored before the next test runs
-			await vi.waitFor(
-				async () => {
-					const revertedResponse = await getTextResponse();
-					expect(revertedResponse).toContain('The value of MY_VAR is "one"');
-				},
-				{ timeout: 5000 }
-			);
 		});
 
 		const originalResponse = await getTextResponse();

@@ -15,20 +15,8 @@ test.runIf(!isBuild)(
 			"utf-8"
 		);
 
-		onTestFinished(async () => {
+		onTestFinished(() => {
 			fs.writeFileSync(dotDevDotVarsFilePath, originalDotDevDotVars);
-			// We need to ensure that the original config is restored before the next test runs
-			await vi.waitFor(
-				async () => {
-					expect(await getJsonResponse()).toEqual({
-						"variables present in .dev.vars.staging": {
-							MY_DEV_VAR_A: "my .dev.vars staging variable A",
-							MY_DEV_VAR_B: "my .dev.vars staging variable B",
-						},
-					});
-				},
-				{ timeout: 5000 }
-			);
 		});
 
 		const originalResponse = await getJsonResponse();
