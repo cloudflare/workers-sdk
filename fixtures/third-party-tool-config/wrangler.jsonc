@@ -1,0 +1,13 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"name": "my-worker",
+	"main": "src/index.js",
+	"compatibility_date": "2025-07-08",
+	"vars": {
+		"MY_VAR_A": "A",
+		"MY_VAR_B": "B",
+	},
+}
