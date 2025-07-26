@@ -1199,34 +1199,128 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 		},
 	};
 
+	let stdoutPreviousRest = "";
+
 	stdout.on("data", (chunk: Buffer | string) => {
-		chunk = chunk.toString().trim();
+		const fullChunk = `${stdoutPreviousRest}${chunk}`;
 
-		if (classifiers.isBarf(chunk)) {
-			// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
+		let currentLogsStr = "";
 
-			// CLEANABLE:
-			// there are no known cases to cleanup yet
-			// but, as they are identified, we will do that here
+		// Structured logs are divided by newlines so let's get the
+		// last one, we know that anything in between will include
+		// one or more structured logs
+		const lastNewlineIdx = fullChunk.lastIndexOf("\n");
 
-			// IGNORABLE:
-			// anything else not handled above is considered ignorable
-			// so send it to the debug logs which are discarded unless
-			// the user explicitly sets a logLevel indicating they care
-			logger.debug(chunk);
+		if (lastNewlineIdx > 0) {
+			// If we've found a newline we will take the structured logs
+			// up to that point, the rest (which is the beginning of a
+			// new structured log) will be saved for later
+			currentLogsStr = fullChunk.slice(0, lastNewlineIdx);
+			stdoutPreviousRest = fullChunk.slice(lastNewlineIdx + 1);
+		} else {
+			// If we didn't find a newline we're dealing with a structured
+			// log that has been split, so let's save the whole thing for
+			// later (so that we can process the log once we've seen it
+			// in full)
+			stdoutPreviousRest = fullChunk;
 		}
 
-		// known case: warnings are not info, log them as such
-		else if (classifiers.isWarning(chunk)) {
-			logger.warn(chunk);
-		}
+		const structuredLogs = currentLogsStr
+			.split("\n")
+			.filter(Boolean)
+			.map((log) => JSON.parse(log)) as {
+			timestamp: number;
+			level: string;
+			message: string;
+		}[];
 
-		// anything not explicitly handled above should be logged as info (via stdout)
-		else {
-			logger.info(getSourceMappedString(chunk));
-		}
+		structuredLogs.forEach(({ level, message }) => {
+			// TODO: the following code analyzes the message without considering its log level,
+			//       ideally, in order to avoid false positives, we should run this logic scoped
+			//       to the relevant log levels (as we do for `isCodeMovedWarning`)
+			if (classifiers.isBarf(message)) {
+				// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
+
+				// CLEANABLE:
+				// known case to cleanup: Address in use errors
+				if (classifiers.isAddressInUse(message)) {
+					const address = message.match(
+						/Address already in use; toString\(\) = (.+)\n/
+					)?.[1];
+
+					logger.error(
+						`Address already in use (${address}). Please check that you are not already running a server on this address or specify a different port with --port.`
+					);
+
+					// Also log the original error to the debug logs.
+					return logger.debug(chunk);
+				}
+
+				// In the past we have seen Access Violation errors on Windows, which may be caused by an outdated
+				// version of the Windows OS or the Microsoft Visual C++ Redistributable.
+				// See https://github.com/cloudflare/workers-sdk/issues/6170#issuecomment-2245209918
+				if (classifiers.isAccessViolation(message)) {
+					let error = "There was an access violation in the runtime.";
+					if (process.platform === "win32") {
+						error +=
+							"\nOn Windows, this may be caused by an outdated Microsoft Visual C++ Redistributable library.\n" +
+							"Check that you have the latest version installed.\n" +
+							"See https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist.";
+					}
+					logger.error(error);
+
+					// Also log the original error to the debug logs.
+					return logger.debug(chunk);
+				}
+
+				// IGNORABLE:
+				// anything else not handled above is considered ignorable
+				// so send it to the debug logs which are discarded unless
+				// the user explicitly sets a logLevel indicating they care
+				return logger.debug(chunk);
+			}
+
+			if (
+				(level === "info" || level === "error") &&
+				classifiers.isCodeMovedWarning(message)
+			) {
+				// known case: "error: CODE_MOVED for unknown code block?", warning for workerd devs, not application devs
+				// ignore entirely, don't even send it to the debug log file
+				// workerd references:
+				// 	- https://github.com/cloudflare/workerd/blob/d170f4d9b/src/workerd/jsg/setup.c%2B%2B#L566
+				//  - https://github.com/cloudflare/workerd/blob/d170f4d9b/src/workerd/jsg/setup.c%2B%2B#L572
+				return;
+			}
+
+			if (level === "warn") {
+				return logger.warn(message);
+			}
+
+			if (level === "info") {
+				return logger.info(message);
+			}
+
+			if (level === "debug") {
+				return logger.debug(message);
+			}
+
+			if (level === "error") {
+				return logger.error(getSourceMappedString(message));
+			}
+
+			return logger.log(getSourceMappedString(message));
+		});
 	});
 
+	// TODO: Even after the introduction of structured logs some errors can make it
+	//       into stderr (likely only startup errors), so to play it safe we handle
+	//       the stderr stream in the exact same way we did before structured logs
+	//       were introduced. So some of the code below can be unnecessary, although
+	//       not harmful if we want we can try to clean up some of it at some point
+	//       in the future (and possibly the workerd could also fix this on their
+	//       side and never send anything to the stderr).
+	//       For more context see:
+	//         https://github.com/cloudflare/workers-sdk/pull/10004#discussion_r2222806461
 	stderr.on("data", (chunk: Buffer | string) => {
 		chunk = chunk.toString().trim();
 
@@ -1377,6 +1471,7 @@ export async function buildMiniflareOptions(
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,
+		structuredWorkerdLogs: true,
 		defaultPersistRoot,
 		workers: [
 			{
