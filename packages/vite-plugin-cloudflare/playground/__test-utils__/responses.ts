@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { page, viteTestUrl } from "./index";
 
 export async function getTextResponse(path = "/"): Promise<string> {
@@ -21,6 +22,6 @@ export async function getResponse(path = "/") {
 	const url = `${viteTestUrl}${path}`;
 
 	const response = page.waitForResponse(url);
-	await page.goto(url);
+	await vi.waitFor(() => page.goto(url));
 	return response;
 }

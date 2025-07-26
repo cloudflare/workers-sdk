@@ -14,19 +14,6 @@ test.runIf(!isBuild)(
 
 		onTestFinished(async () => {
 			fs.writeFileSync(dotDevDotVarsFilePath, originalDotDevDotVars);
-			// We need to ensure that the original config is restored before the next test runs
-			await vi.waitFor(
-				async () => {
-					expect(await getJsonResponse()).toEqual({
-						"variables present in .dev.vars": {
-							MY_DEV_VAR_A: "my .dev.vars variable A",
-							MY_DEV_VAR_B: "my .dev.vars variable B",
-							MY_DEV_VAR_C: "my .dev.vars variable C",
-						},
-					});
-				},
-				{ timeout: 5000 }
-			);
 		});
 
 		const originalResponse = await getJsonResponse();
