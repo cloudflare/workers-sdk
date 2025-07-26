@@ -101,10 +101,10 @@ export function getCloudflarePreset({
 		},
 		inject: {
 			// Setting symbols implemented by workerd to `false` so that `inject`s defined in base presets are not used.
-			Buffer: false as const,
-			global: false as const,
-			clearImmediate: false as const,
-			setImmediate: false as const,
+			Buffer: false,
+			global: false,
+			clearImmediate: false,
+			setImmediate: false,
 			console: "@cloudflare/unenv-preset/node/console",
 			process: "@cloudflare/unenv-preset/node/process",
 		},
