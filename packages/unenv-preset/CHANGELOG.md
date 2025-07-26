@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.5.0
+
+### Minor Changes
+
+- [#10048](https://github.com/cloudflare/workers-sdk/pull/10048) [`dbdbb8c`](https://github.com/cloudflare/workers-sdk/commit/dbdbb8c41ea5612f9e79bde5cfd0192c70025ee7) Thanks [@vicb](https://github.com/vicb)! - pass the compatibility date and flags to the unenv preset
+
 ## 2.4.1
 
 ### Patch Changes
