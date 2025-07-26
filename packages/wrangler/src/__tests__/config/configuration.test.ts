@@ -2454,10 +2454,10 @@ describe("normalizeAndValidateConfig()", () => {
 					  - The image \\"something\\" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
 					    If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)
 					  - Expected \\"containers.rollout_kind\\" field to be one of [\\"full_auto\\",\\"full_manual\\",\\"none\\"] but got \\"invalid\\".
-					  - Expected \\"containers.instance_type\\" field to be one of [\\"dev\\",\\"basic\\",\\"standard\\"] but got \\"invalid\\".
 					  - Expected \\"containers.max_instances\\" to be of type number but got \\"invalid\\".
 					  - Expected \\"containers.image_vars\\" to be of type object but got \\"invalid\\".
-					  - Expected \\"containers.scheduling_policy\\" field to be one of [\\"regional\\",\\"moon\\",\\"default\\"] but got \\"invalid\\"."
+					  - Expected \\"containers.scheduling_policy\\" field to be one of [\\"regional\\",\\"moon\\",\\"default\\"] but got \\"invalid\\".
+					  - Expected \\"containers.instance_type\\" field to be one of [\\"dev\\",\\"basic\\",\\"standard\\"] but got \\"invalid\\"."
 				`);
 			});
 
@@ -2485,7 +2485,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", \\"configuration.disk\\" should be set via \\"instance_type\\".
+					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", limits should be set via \\"instance_type\\".
 					  - \\"containers.instances\\" is deprecated. Use \\"containers.max_instances\\" instead.
 					  - \\"containers.durable_objects\\" is deprecated. Use the \\"class_name\\" field instead."
 				`);
@@ -2519,7 +2519,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", \\"configuration.disk\\" should be set via \\"instance_type\\".
+					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", limits should be set via \\"instance_type\\".
 					  - Unexpected fields found in containers.configuration field: \\"memory\\",\\"invalid_field\\",\\"another_invalid\\""
 				`);
 			});
