@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it, test } from "vitest";
+import { afterAll, beforeAll, describe, it, test, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("nodejs compat", () => {
@@ -87,5 +87,19 @@ describe("nodejs compat", () => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/test-http`);
 		await expect(response.text()).resolves.toBe("OK");
+	});
+
+	test("debug", async ({ expect }) => {
+		const { ip, port, getOutput } = wrangler;
+		const response = await fetch(`http://${ip}:${port}/test-debug`);
+		await expect(response.text()).resolves.toBe("OK");
+		await vi.waitFor(() => {
+			const output = getOutput();
+			expect(output).toMatch(/test Message 1/);
+			expect(output).not.toMatch(/example Message 2/);
+			expect(output).toMatch(/example:foo Message 3/);
+			expect(output).toMatch(/test Message 4/);
+			expect(output).not.toMatch(/test Message 5/);
+		});
 	});
 });
