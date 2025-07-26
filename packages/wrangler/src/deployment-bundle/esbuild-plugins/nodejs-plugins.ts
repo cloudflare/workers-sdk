@@ -9,8 +9,12 @@ import type { NodeJSCompatMode } from "miniflare";
  */
 export function getNodeJSCompatPlugins({
 	mode,
+	compatibilityDate,
+	compatibilityFlags,
 }: {
 	mode: NodeJSCompatMode;
+	compatibilityDate?: string;
+	compatibilityFlags?: string[];
 }): Plugin[] {
 	switch (mode) {
 		case "als":
@@ -18,7 +22,7 @@ export function getNodeJSCompatPlugins({
 		case "v1":
 			return [nodejsCompatPlugin(mode)];
 		case "v2":
-			return [nodejsHybridPlugin()];
+			return [nodejsHybridPlugin({ compatibilityDate, compatibilityFlags })];
 		case null:
 			return [nodejsCompatPlugin(mode)];
 	}

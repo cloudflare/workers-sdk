@@ -1,4 +1,4 @@
-import { version } from "../package.json" with { type: "json" };
+import { version } from "../package.json";
 import type { Preset } from "unenv";
 
 // Built-in APIs provided by workerd.
@@ -52,46 +52,63 @@ const hybridNodeCompatModules = [
 	"util",
 ];
 
-export const cloudflare: Preset = {
-	meta: {
-		name: "unenv:cloudflare",
-		version,
-		url: __filename,
-	},
-	alias: {
-		// `nodeCompatModules` are implemented in workerd.
-		// Create aliases to override polyfills defined in based environments.
-		...Object.fromEntries(
-			nodeCompatModules.flatMap((p) => [
-				[p, p],
-				[`node:${p}`, `node:${p}`],
-			])
-		),
+/**
+ * Creates the Cloudflare preset for the given compatibility date and compatibility flags
+ *
+ * @param compatibilityDate workerd compatibility date
+ * @param compatibilityFlags workerd compatibility flags
+ * @returns The cloudflare preset
+ */
+export function getCloudflarePreset({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate = "2024-09-03",
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityFlags = [],
+}: {
+	compatibilityDate?: string;
+	compatibilityFlags?: string[];
+}): Preset {
+	return {
+		meta: {
+			name: "unenv:cloudflare",
+			version,
+			url: __filename,
+		},
+		alias: {
+			// `nodeCompatModules` are implemented in workerd.
+			// Create aliases to override polyfills defined in based environments.
+			...Object.fromEntries(
+				nodeCompatModules.flatMap((p) => [
+					[p, p],
+					[`node:${p}`, `node:${p}`],
+				])
+			),
 
-		// The `node:sys` module is just a deprecated alias for `node:util` which we implemented using a hybrid polyfill
-		sys: "@cloudflare/unenv-preset/node/util",
-		"node:sys": "@cloudflare/unenv-preset/node/util",
+			// The `node:sys` module is just a deprecated alias for `node:util` which we implemented using a hybrid polyfill
+			sys: "@cloudflare/unenv-preset/node/util",
+			"node:sys": "@cloudflare/unenv-preset/node/util",
 
-		// `hybridNodeCompatModules` are implemented by the cloudflare preset.
-		...Object.fromEntries(
-			hybridNodeCompatModules.flatMap((m) => [
-				[m, `@cloudflare/unenv-preset/node/${m}`],
-				[`node:${m}`, `@cloudflare/unenv-preset/node/${m}`],
-			])
-		),
+			// `hybridNodeCompatModules` are implemented by the cloudflare preset.
+			...Object.fromEntries(
+				hybridNodeCompatModules.flatMap((m) => [
+					[m, `@cloudflare/unenv-preset/node/${m}`],
+					[`node:${m}`, `@cloudflare/unenv-preset/node/${m}`],
+				])
+			),
 
-		// To override the npm shim from unenv
-		debug: "@cloudflare/unenv-preset/npm/debug",
-	},
-	inject: {
-		// Setting symbols implemented by workerd to `false` so that `inject`s defined in base presets are not used.
-		Buffer: false,
-		global: false,
-		clearImmediate: false,
-		setImmediate: false,
-		console: "@cloudflare/unenv-preset/node/console",
-		process: "@cloudflare/unenv-preset/node/process",
-	},
-	polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
-	external: nodeCompatModules.flatMap((p) => [p, `node:${p}`]),
-};
+			// To override the npm shim from unenv
+			debug: "@cloudflare/unenv-preset/npm/debug",
+		},
+		inject: {
+			// Setting symbols implemented by workerd to `false` so that `inject`s defined in base presets are not used.
+			Buffer: false,
+			global: false,
+			clearImmediate: false,
+			setImmediate: false,
+			console: "@cloudflare/unenv-preset/node/console",
+			process: "@cloudflare/unenv-preset/node/process",
+		},
+		polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
+		external: nodeCompatModules.flatMap((p) => [p, `node:${p}`]),
+	};
+}
