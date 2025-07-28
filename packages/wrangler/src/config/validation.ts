@@ -4,7 +4,6 @@ import { isDockerfile } from "@cloudflare/containers-shared";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
-import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
 import { friendlyBindingNames } from "../utils/print-bindings";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -46,6 +45,22 @@ import type {
 	TailConsumer,
 } from "./environment";
 import type { TypeofType, ValidatorFn } from "./validation-helpers";
+
+/**
+ * R2 bucket names must:
+ * - contain lower case letters, numbers, and `-`
+ * - start and end with with a lower case letter or number
+ * - be between 6 and 63 characters long
+ *
+ * See https://developers.cloudflare.com/r2/buckets/create-buckets/#bucket-level-operations
+ */
+export function isValidR2BucketName(name: string | undefined): name is string {
+	return (
+		typeof name === "string" && /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(name)
+	);
+}
+
+export const bucketFormatMessage = `Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.`;
 
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
