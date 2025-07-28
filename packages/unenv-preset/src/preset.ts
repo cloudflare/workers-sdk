@@ -146,6 +146,7 @@ function getHttpAliases({
 
 	const aliases: Record<string, string> = {};
 
+	// Override the unenv base aliases to use the native modules
 	const nativeModules = [
 		"_http_common",
 		"_http_outgoing",
@@ -159,6 +160,7 @@ function getHttpAliases({
 		aliases[`node:${nativeModule}`] = `node:${nativeModule}`;
 	}
 
+	// Override the unenv base aliases to use the hybrid polyfills
 	const hybridModules = ["http", "https"];
 
 	for (const hybridModule of hybridModules) {
