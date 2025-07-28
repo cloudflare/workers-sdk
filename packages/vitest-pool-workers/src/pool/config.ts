@@ -253,6 +253,12 @@ async function parseCustomPoolOptions(
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
 
+		// Read the config to check for containers
+		const config = wrangler.unstable_readConfig({ config: configPath, env: options.wrangler.environment });
+		
+		// Generate container build ID if containers are present
+		const containerBuildId = config.containers?.length ? crypto.randomUUID().slice(0, 8) : undefined;
+
 		const preExistingRemoteProxySessionData = options.wrangler?.configPath
 			? remoteProxySessionsDataMap.get(options.wrangler.configPath)
 			: undefined;
@@ -281,6 +287,7 @@ async function parseCustomPoolOptions(
 					remoteBindingsEnabled: options.experimental_remoteBindings,
 					remoteProxyConnectionString:
 						remoteProxySessionData?.session?.remoteProxyConnectionString,
+					containerBuildId,
 				}
 			);
 
