@@ -17,6 +17,7 @@ import type {
 	InlineConfig,
 	Logger,
 	PluginOption,
+	PreviewServer,
 	ResolvedConfig,
 	UserConfig,
 	ViteDevServer,
@@ -31,7 +32,7 @@ export const isWindows = process.platform === "win32";
 export const isCINonLinux =
 	process.platform !== "linux" && process.env.CI === "true";
 
-let server: ViteDevServer | http.Server;
+let server: ViteDevServer | http.Server | PreviewServer;
 
 /**
  * Vite Dev Server when testing serve
@@ -160,7 +161,7 @@ beforeAll(async (s) => {
 					viteTestUrl = mod.viteTestUrl ?? viteTestUrl;
 				}
 			} else {
-				await startDefaultServe();
+				server = await startDefaultServe();
 			}
 		}
 	} catch (e) {
@@ -252,7 +253,7 @@ export async function loadConfig(configEnv: ConfigEnv) {
 }
 
 export async function startDefaultServe(): Promise<
-	ViteDevServer | http.Server
+	ViteDevServer | http.Server | PreviewServer
 > {
 	setupConsoleWarnCollector(serverLogs.warns);
 
@@ -302,6 +303,7 @@ export async function startDefaultServe(): Promise<
 		if (previewServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
 		}
+		server = previewServer;
 		await page.goto(viteTestUrl);
 	}
 	return server;
