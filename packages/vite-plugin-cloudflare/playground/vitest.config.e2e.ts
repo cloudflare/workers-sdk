@@ -9,6 +9,7 @@ export default defineConfig({
 		// Otherwise we occasionally get flakes where two tests are overwriting
 		// the same output files.
 		poolOptions: { forks: { singleFork: true } },
+		fileParallelism: false,
 		include: ["./**/__tests__/**/*.spec.[tj]s"],
 		setupFiles: ["./vitest-setup.ts"],
 		globalSetup: ["./vitest-global-setup.ts"],
