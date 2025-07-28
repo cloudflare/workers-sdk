@@ -96,18 +96,12 @@ export function checkInstanceType(
 	}
 }
 
-function isValidKey(
-	instanceType: string
-): instanceType is keyof typeof instanceTypes {
-	return instanceType in instanceTypes;
-}
-
 // checks a given InstanceType against account limits
 export function checkInstanceTypeAgainstLimits(
 	instanceType: InstanceType | undefined,
 	account: CompleteAccountCustomer
 ) {
-	if (instanceType === undefined || !isValidKey(instanceType)) {
+	if (instanceType === undefined) {
 		return;
 	}
 
@@ -176,15 +170,4 @@ export function cleanForInstanceType(
 	delete app.configuration.vcpu;
 
 	return app as ContainerApp;
-}
-
-// Returns the disk size for an instance type. Used by `ensureDiskLimits`
-export function instanceTypeDiskSizeBytes(
-	app: ContainerApp
-): number | undefined {
-	if (!app.instance_type || !isValidKey(app.instance_type)) {
-		return;
-	}
-
-	return instanceTypes[app.instance_type].disk_mb * 1000 * 1000;
 }

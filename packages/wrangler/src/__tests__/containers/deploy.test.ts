@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import { PassThrough, Writable } from "node:stream";
 import {
 	getCloudflareContainerRegistry,
+	InstanceType,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { http, HttpResponse } from "msw";
@@ -29,7 +30,6 @@ import type {
 	ContainerNormalizedConfig,
 	CreateApplicationRequest,
 	ImageRegistryCredentialsConfiguration,
-	InstanceType,
 } from "@cloudflare/containers-shared";
 import type { ChildProcess } from "node:child_process";
 
@@ -1286,7 +1286,7 @@ describe("wrangler deploy with containers", () => {
 					max_instances: 10,
 					class_name: "ExampleDurableObject",
 					image: `${registry}/hello:1.0`,
-					instance_type: "standard",
+					instance_type: "dev",
 					constraints: {
 						tier: 2,
 					},
@@ -1301,7 +1301,7 @@ describe("wrangler deploy with containers", () => {
 			max_instances: 10,
 			configuration: {
 				image: `${registry}/some-account-id/hello:1.0`,
-				instance_type: "standard" as InstanceType.STANDARD,
+				instance_type: InstanceType.DEV,
 			},
 		});
 
@@ -1322,7 +1322,7 @@ describe("wrangler deploy with containers", () => {
 			│
 			│     [containers.configuration]
 			│     image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
-			│     instance_type = \\"standard\\"
+			│     instance_type = \\"dev\\"
 			│
 			│     [containers.constraints]
 			│     tier = 2
