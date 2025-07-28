@@ -75,24 +75,35 @@ export const getNormalizedContainerOptions = async (
 			},
 		};
 
-		let instanceTypeOrDisk: InstanceTypeOrLimits;
-
+		let instanceTypeOrLimits: InstanceTypeOrLimits;
+		const MB = 1000 * 1000;
 		if (
 			container.configuration?.disk !== undefined ||
 			container.configuration?.vcpu !== undefined ||
 			container.configuration?.memory_mib !== undefined
 		) {
-			const MB = 1000 * 1000;
+			// deprecated path to set a custom instance type
 			// if an individual limit is not set, default to the dev instance type values
-			instanceTypeOrDisk = {
-				disk_bytes: (container.configuration.disk?.size_mb ?? 2000) * MB, // defaults to 2GB in bytes
+			instanceTypeOrLimits = {
+				disk_bytes: (container.configuration?.disk?.size_mb ?? 2000) * MB, // defaults to 2GB in bytes
 				vcpu: container.configuration?.vcpu ?? 0.0625,
 				memory_mib: container.configuration?.memory_mib ?? 256,
 			};
-		} else {
-			instanceTypeOrDisk = {
+		} else if (
+			typeof container.instance_type === "string" ||
+			container.instance_type === undefined
+		) {
+			instanceTypeOrLimits = {
 				instance_type: (container.instance_type ??
 					InstanceType.DEV) as InstanceType,
+			};
+		} else {
+			// set a custom instance type
+			// any limits that are not set will default to a dev instance type
+			instanceTypeOrLimits = {
+				disk_bytes: (container.instance_type.disk_mb ?? 2000) * MB,
+				vcpu: container.instance_type.vcpu ?? 0.0625,
+				memory_mib: container.instance_type.memory_mib ?? 256,
 			};
 		}
 
@@ -111,7 +122,7 @@ export const getNormalizedContainerOptions = async (
 			);
 			normalizedContainers.push({
 				...shared,
-				...instanceTypeOrDisk,
+				...instanceTypeOrLimits,
 				dockerfile: container.image,
 				image_build_context: imageBuildContext,
 				image_vars: container.image_vars,
@@ -120,7 +131,7 @@ export const getNormalizedContainerOptions = async (
 			const accountId = await getAccountId(config);
 			normalizedContainers.push({
 				...shared,
-				...instanceTypeOrDisk,
+				...instanceTypeOrLimits,
 				image_uri: resolveImageName(accountId, container.image), // if it is not a dockerfile, it must be an image uri or have thrown an error
 			});
 		}
