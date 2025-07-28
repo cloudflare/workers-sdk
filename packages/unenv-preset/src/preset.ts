@@ -120,7 +120,7 @@ export function getCloudflarePreset({
  * The native implementation:
  * - is enabled after 2025-08-15
  * - can be enabled with the "enable_nodejs_http_modules" flag
- * - cab be disabled with the "disable_nodejs_http_modules" flag
+ * - can be disabled with the "disable_nodejs_http_modules" flag
  */
 function getHttpAliases({
 	compatibilityDate,
