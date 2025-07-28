@@ -11,7 +11,7 @@
 		"create-docusaurus": "3.8.1",
 		"create-hono": "0.19.2",
 		"create-next-app": "15.3.5",
-		"create-qwik": "1.14.1",
+		"create-qwik": "1.15.0",
 		"create-vite": "7.0.3",
 		"create-remix": "2.16.8",
 		"create-react-router": "7.7.0",
