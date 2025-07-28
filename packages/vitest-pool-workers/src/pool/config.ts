@@ -9,6 +9,7 @@ import {
 	PLUGINS,
 } from "miniflare";
 import { z } from "zod";
+import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { getProjectPath, getRelativeProjectPath } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
@@ -253,6 +254,12 @@ async function parseCustomPoolOptions(
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
 
+		// Read the config to check for containers
+		const config = wrangler.readConfig({ config: configPath, env: options.wrangler.environment });
+		
+		// Generate container build ID if containers are present
+		const containerBuildId = config.containers?.length ? generateContainerBuildId() : undefined;
+
 		const preExistingRemoteProxySessionData = options.wrangler?.configPath
 			? remoteProxySessionsDataMap.get(options.wrangler.configPath)
 			: undefined;
@@ -281,6 +288,7 @@ async function parseCustomPoolOptions(
 					remoteBindingsEnabled: options.experimental_remoteBindings,
 					remoteProxyConnectionString:
 						remoteProxySessionData?.session?.remoteProxyConnectionString,
+					containerBuildId,
 				}
 			);
 
