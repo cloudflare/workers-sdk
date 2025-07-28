@@ -356,7 +356,7 @@ if (import.meta.hot) {
 					miniflare
 				);
 
-				viteDevServer.watcher.addListener("change", (changedFilePath) => {
+				viteDevServer.watcher.addListener("change", async (changedFilePath) => {
 					assertIsNotPreview(resolvedPluginConfig);
 
 					if (
@@ -374,7 +374,8 @@ if (import.meta.hot) {
 								changedFilePath
 						);
 						restartAbortController.abort();
-						viteDevServer.restart();
+						await viteDevServer.watcher.close();
+						await viteDevServer.restart();
 					}
 				});
 
