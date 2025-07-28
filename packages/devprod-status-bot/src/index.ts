@@ -1,4 +1,15 @@
-import type { IssuesOpenedEvent, WebhookEvent } from "@octokit/webhooks-types";
+/**
+ * devprod-status-bot - Cloudflare Workers Dev Productivity Status Bot
+ *
+ * This worker handles GitHub webhooks and sends notifications to Google Chat.
+ * It supports both PR review notifications and issue notifications.
+ */
+
+import type {
+	IssuesEvent,
+	IssuesOpenedEvent,
+	WebhookEvent,
+} from "@octokit/webhooks-types";
 
 async function getBotMessage(ai: Ai, prompt: string) {
 	const chat = {
@@ -307,6 +318,132 @@ async function sendUpcomingMeetingMessage(webhookUrl: string, ai: Ai) {
 	);
 }
 
+async function getChannelsForLabels(
+	env: Env,
+	labels: string[]
+): Promise<string[]> {
+	// Fetch chat channels for the given labels from the KV namespace in parallel
+	const channels = await Promise.all(
+		labels.map((label) =>
+			env.LABEL_TO_CHAT_CHANNEL_MAPPING.get(label).catch(() => null)
+		)
+	);
+	// Filter out null values and remove duplicates
+	return Array.from(new Set(channels.filter((channel) => channel !== null)));
+}
+
+function createIssueMessage(issue: IssuesEvent): { cardsV2: object[] } {
+	const { issue: issueData, action, repository, sender } = issue;
+	const repositoryName = repository?.full_name || "cloudflare/workers-sdk";
+	const labelNames = issueData.labels?.map((l) => l.name).join(", ") || "None";
+
+	return {
+		cardsV2: [
+			{
+				cardId: "issue-notification",
+				card: {
+					header: {
+						title: `🐛 GitHub Issue ${action}`,
+						subtitle: repositoryName,
+						imageUrl: issueData.user.avatar_url,
+						imageType: "CIRCLE",
+						imageAltText: "User Avatar",
+					},
+					sections: [
+						{
+							collapsible: false,
+							widgets: [
+								{
+									columns: {
+										columnItems: [
+											{
+												horizontalSizeStyle: "FILL_AVAILABLE_SPACE",
+												horizontalAlignment: "START",
+												verticalAlignment: "CENTER",
+												widgets: [
+													{
+														textParagraph: {
+															text: `<b>#${issueData.number}:</b> ${issueData.title}`,
+														},
+													},
+												],
+											},
+											{
+												horizontalSizeStyle: "FILL_MINIMUM_SPACE",
+												horizontalAlignment: "END",
+												verticalAlignment: "CENTER",
+												widgets: [
+													{
+														buttonList: {
+															buttons: [
+																{
+																	text: "View Issue",
+																	onClick: {
+																		openLink: {
+																			url: issueData.html_url,
+																		},
+																	},
+																},
+															],
+														},
+													},
+												],
+											},
+										],
+									},
+								},
+								{
+									textParagraph: {
+										text: `👤 <b>Author:</b> ${issueData.user.login}\n⚡ <b>Action:</b> ${action}\n🔥 <b>Triggered by:</b> ${sender.login}\n📊 <b>State:</b> ${issueData.state}\n🏷️ <b>Labels:</b> ${labelNames}\n📅 <b>Created:</b> ${new Date(issueData.created_at).toLocaleString()}\n🔄 <b>Updated:</b> ${new Date(issueData.updated_at).toLocaleString()}`,
+									},
+								},
+							],
+						},
+						{
+							collapsible: true,
+							uncollapsibleWidgetsCount: 0,
+							widgets: [
+								{
+									textParagraph: {
+										text: `<b>📝 Description:</b>\n\`\`\`\n${issueData.body || "No description provided."}\n\`\`\``,
+									},
+								},
+							],
+						},
+					],
+				},
+			},
+		],
+	};
+}
+
+async function sendIssueNotifications(
+	issue: IssuesEvent,
+	channels: string[]
+): Promise<void> {
+	const message = createIssueMessage(issue);
+
+	// Use existing sendMessage function for each channel
+	await Promise.allSettled(
+		channels.map(async (channel) =>
+			sendMessage(
+				channel,
+				message,
+				"-issue-notifications" + issue.issue.number
+			).catch((error) =>
+				console.error(
+					`Failed to send issue notification to channel ${channel}:`,
+					error
+				)
+			)
+		)
+	);
+}
+
+function isIssuesEvent(message: WebhookEvent): message is IssuesEvent {
+	return "issue" in message && message.issue !== undefined;
+}
+
 async function handleReleaseFailure(request: Request, env: Env) {
 	if (request.headers.get("X-Auth-Header") !== env.PRESHARED_SECRET) {
 		return new Response("Not allowed", { status: 401 });
@@ -412,6 +549,14 @@ export default {
 				if (isSecurityIssue) {
 					await sendSecurityAlert(env.ALERTS_WEBHOOK, body);
 				}
+			}
+
+			if (isIssuesEvent(body)) {
+				const channels = await getChannelsForLabels(
+					env,
+					body.issue.labels?.map((l) => l.name) ?? []
+				);
+				await sendIssueNotifications(body, channels);
 			}
 		}
 
