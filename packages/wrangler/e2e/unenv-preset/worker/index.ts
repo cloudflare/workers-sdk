@@ -213,15 +213,15 @@ export async function testTls() {
 }
 
 export async function testDebug() {
-	// @ts-expect-error "@cloudflare/unenv-preset/npm/debug" is an unenv alias, it does not exist as a module.
-	const debug = await import("@cloudflare/unenv-preset/npm/debug");
+	// @ts-expect-error "debug" is an unenv alias, not installed locally
+	const debug = (await import("debug")).default;
 	const logs: string[] = [];
 
 	// Append all logs to the array instead of logging to console
-	debug.default.log = (...args: string[]) =>
+	debug.log = (...args: string[]) =>
 		logs.push(args.map((arg) => arg.toString()).join(" "));
 
-	const exampleLog = debug.default("example");
+	const exampleLog = debug("example");
 	const testLog = exampleLog.extend("test");
 
 	exampleLog("This is an example log");
