@@ -23,7 +23,11 @@ import {
 } from "@cloudflare/containers-shared";
 import { promiseSpinner } from "../cloudchamber/common";
 import { Diff } from "../cloudchamber/helpers/diff";
-import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
+import {
+	checkInstanceTypeAgainstLimits,
+	inferInstanceType,
+} from "../cloudchamber/instance-type/instance-type";
+import { loadAccount } from "../cloudchamber/locations";
 import { formatConfigSnippet } from "../config";
 import { FatalError, UserError } from "../errors";
 import { getAccountId } from "../user";
@@ -242,6 +246,10 @@ export async function apply(
 		imageRef,
 		args.durable_object_namespace_id,
 		prevApp
+	);
+	checkInstanceTypeAgainstLimits(
+		appConfig.configuration.instance_type,
+		await loadAccount()
 	);
 
 	if (prevApp !== undefined && prevApp !== null) {
