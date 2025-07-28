@@ -464,13 +464,13 @@ export async function generateEnvTypes(
 				: undefined;
 
 			const exportExists = serviceEntry?.exports?.some(
-				(e) => e === service.entrypoint
+				(e) => e === (service.entrypoint ?? "default")
 			);
 
 			let typeName: string;
 
 			if (importPath && exportExists) {
-				typeName = `Service<import("${importPath}").${service.entrypoint ?? "default"}>`;
+				typeName = `Service<typeof import("${importPath}").${service.entrypoint ?? "default"}>`;
 			} else if (service.entrypoint) {
 				typeName = `Service /* entrypoint ${service.entrypoint} from ${service.service} */`;
 			} else {
