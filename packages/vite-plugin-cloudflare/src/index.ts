@@ -413,8 +413,13 @@ if (import.meta.hot) {
 					debuglog(configId, "Creating new Miniflare instance");
 					miniflare = new Miniflare(miniflareDevOptions);
 				} else {
+					debuglog(configId, "Waiting for Miniflare to be ready before update");
+					await miniflare.ready;
 					debuglog(configId, "Updating the Miniflare instance");
 					await miniflare.setOptions(miniflareDevOptions);
+					debuglog(configId, "Waiting for Miniflare to be ready after update");
+					await miniflare.ready;
+					debuglog(configId, "Miniflare is ready");
 				}
 
 				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
