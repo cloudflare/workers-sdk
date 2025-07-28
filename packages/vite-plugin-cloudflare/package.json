@@ -49,7 +49,7 @@
 		"miniflare": "workspace:*",
 		"picocolors": "^1.1.1",
 		"tinyglobby": "^0.2.12",
-		"unenv": "2.0.0-rc.17",
+		"unenv": "2.0.0-rc.19",
 		"wrangler": "workspace:*",
 		"ws": "catalog:default"
 	},

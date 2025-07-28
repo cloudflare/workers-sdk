@@ -2074,8 +2074,8 @@ importers:
         specifier: ^0.2.12
         version: 0.2.12
       unenv:
-        specifier: 2.0.0-rc.17
-        version: 2.0.0-rc.17
+        specifier: 2.0.0-rc.19
+        version: 2.0.0-rc.19
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -3378,8 +3378,8 @@ importers:
         specifier: 6.3.0
         version: 6.3.0
       unenv:
-        specifier: 2.0.0-rc.17
-        version: 2.0.0-rc.17
+        specifier: 2.0.0-rc.19
+        version: 2.0.0-rc.19
       workerd:
         specifier: 1.20250726.0
         version: 1.20250726.0
@@ -8954,9 +8954,6 @@ packages:
     resolution: {integrity: sha512-DT9ck5YIRU+8GYzzU5kT3eHGA5iL+1Zd0EutOmTE9Dtk+Tvuzd23VBU+ec7HPNSTxXYO55gPV/hq4pSBJDjFpA==}
     engines: {node: '>= 18'}
 
-  exsolve@1.0.4:
-    resolution: {integrity: sha512-xsZH6PXaER4XoV+NiT7JHp1bJodJVT+cxeSH1G0f0tlT0lJqYuHUP3bUx2HtfTDvOagMINYp8rsqusxud3RXhw==}
-
   exsolve@1.0.7:
     resolution: {integrity: sha512-VO5fQUzZtI6C+vx4w/4BWJpg3s/5l+6pRQEHzFRM8WFi4XffSP1Z+4qi7GbjWbvRQEbdIco5mIMq+zX4rPuLrw==}
 
@@ -12529,9 +12526,6 @@ packages:
 
   unenv@2.0.0-rc.15:
     resolution: {integrity: sha512-J/rEIZU8w6FOfLNz/hNKsnY+fFHWnu9MH4yRbSZF3xbbGHovcetXPs7sD+9p8L6CeNC//I9bhRYAOsBt2u7/OA==}
-
-  unenv@2.0.0-rc.17:
-    resolution: {integrity: sha512-B06u0wXkEd+o5gOCMl/ZHl5cfpYbDZKAT+HWTL+Hws6jWu7dCiqBBXXXzMFcFVJb8D4ytAnYmxJA83uwOQRSsg==}
 
   unenv@2.0.0-rc.19:
     resolution: {integrity: sha512-t/OMHBNAkknVCI7bVB9OWjUUAwhVv9vsPIAGnNUxnu3FxPQN11rjh0sksLMzc3g7IlTgvHmOTl4JM7JHpcv5wA==}
@@ -19315,8 +19309,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  exsolve@1.0.4: {}
-
   exsolve@1.0.7: {}
 
   ext-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep: {}
@@ -23002,7 +22994,7 @@ snapshots:
   unenv@2.0.0-rc.14:
     dependencies:
       defu: 6.1.4
-      exsolve: 1.0.4
+      exsolve: 1.0.7
       ohash: 2.0.11
       pathe: 2.0.3
       ufo: 1.6.1
@@ -23010,15 +23002,7 @@ snapshots:
   unenv@2.0.0-rc.15:
     dependencies:
       defu: 6.1.4
-      exsolve: 1.0.4
-      ohash: 2.0.11
-      pathe: 2.0.3
-      ufo: 1.6.1
-
-  unenv@2.0.0-rc.17:
-    dependencies:
-      defu: 6.1.4
-      exsolve: 1.0.4
+      exsolve: 1.0.7
       ohash: 2.0.11
       pathe: 2.0.3
       ufo: 1.6.1
