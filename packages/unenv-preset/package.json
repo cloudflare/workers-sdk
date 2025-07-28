@@ -50,7 +50,7 @@
 		"unbuild": "^3.2.0"
 	},
 	"peerDependencies": {
-		"unenv": "2.0.0-rc.17",
+		"unenv": "2.0.0-rc.19",
 		"workerd": "^1.20250722.0"
 	},
 	"peerDependenciesMeta": {
