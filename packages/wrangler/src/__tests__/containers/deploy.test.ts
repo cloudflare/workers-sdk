@@ -83,7 +83,7 @@ describe("wrangler deploy with containers", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`
 			[Error: The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.
-			Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with WRANGLER_DOCKER_HOST.]
+			Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with DOCKER_HOST.]
 		`
 		);
 	});
