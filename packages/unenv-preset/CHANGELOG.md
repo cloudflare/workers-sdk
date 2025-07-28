@@ -1,5 +1,17 @@
 # @cloudflare/unenv-preset
 
+## 2.5.0
+
+### Minor Changes
+
+- [#10048](https://github.com/cloudflare/workers-sdk/pull/10048) [`dbdbb8c`](https://github.com/cloudflare/workers-sdk/commit/dbdbb8c41ea5612f9e79bde5cfd0192c70025ee7) Thanks [@vicb](https://github.com/vicb)! - pass the compatibility date and flags to the unenv preset
+
+- [#10078](https://github.com/cloudflare/workers-sdk/pull/10078) [`5991a9c`](https://github.com/cloudflare/workers-sdk/commit/5991a9cb009fa3c24d848467397ceabe23e7c90a) Thanks [@vicb](https://github.com/vicb)! - add support for the native http modules
+
+### Patch Changes
+
+- [#10096](https://github.com/cloudflare/workers-sdk/pull/10096) [`687655f`](https://github.com/cloudflare/workers-sdk/commit/687655f8d399140e7b8d61c1fc04140e7455344a) Thanks [@vicb](https://github.com/vicb)! - bump unenv to 2.0.0-rc.19
+
 ## 2.4.1
 
 ### Patch Changes
