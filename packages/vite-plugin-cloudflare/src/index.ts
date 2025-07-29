@@ -356,7 +356,7 @@ if (import.meta.hot) {
 					miniflare
 				);
 
-				viteDevServer.watcher.addListener("change", async (changedFilePath) => {
+				viteDevServer.watcher.once("change", async (changedFilePath) => {
 					assertIsNotPreview(resolvedPluginConfig);
 
 					if (
@@ -368,14 +368,21 @@ if (import.meta.hot) {
 							changedFilePath
 						)
 					) {
-						debuglog(
-							configId,
-							"Config changed, restarting dev server and aborting previous setup: " +
-								changedFilePath
-						);
-						restartAbortController.abort();
-						await viteDevServer.watcher.close();
-						await viteDevServer.restart();
+						debuglog(configId, "Config changed: " + changedFilePath);
+						if (!restartAbortController.signal.aborted) {
+							debuglog(
+								configId,
+								"Restarting dev server and aborting previous setup"
+							);
+							restartAbortController.abort();
+							await viteDevServer.watcher.close();
+							await viteDevServer.restart();
+						} else {
+							debuglog(
+								configId,
+								"Config changed but already aborted previous setup, ignoring."
+							);
+						}
 					}
 				});
 
