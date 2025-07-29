@@ -16,6 +16,7 @@ import { castErrorCause } from "./events";
 import {
 	convertBindingsToCfWorkerInitBindings,
 	convertCfWorkerInitBindingsToBindings,
+	unwrapHook,
 } from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type { RemoteProxySession } from "../remoteBindings";
@@ -211,6 +212,8 @@ export class LocalRuntimeController extends RuntimeController {
 					"../remoteBindings"
 				);
 
+				const auth = await unwrapHook(data.config.dev.auth);
+
 				this.#remoteProxySessionData =
 					await maybeStartOrUpdateRemoteProxySession(
 						{
@@ -220,7 +223,8 @@ export class LocalRuntimeController extends RuntimeController {
 								convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
 								{},
 						},
-						this.#remoteProxySessionData ?? null
+						this.#remoteProxySessionData ?? null,
+						auth
 					);
 			}
 
