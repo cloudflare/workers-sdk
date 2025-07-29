@@ -1364,19 +1364,19 @@ const CORSRuleSchema = z.object({
 	maxAgeSeconds: z.number().int().min(0).optional(),
 });
 
-const CORSConfigSchema = z.object({
-	rules: z
-		.array(CORSRuleSchema)
-		.min(
-			1,
-			"The CORS configuration must contain at least one rule in the 'rules' array."
-		),
-}).refine(
-	(data) => "rules" in data,
-	{
-		message: "The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy",
-	}
-);
+const CORSConfigSchema = z
+	.object({
+		rules: z
+			.array(CORSRuleSchema)
+			.min(
+				1,
+				"The CORS configuration must contain at least one rule in the 'rules' array."
+			),
+	})
+	.refine((data) => "rules" in data, {
+		message:
+			"The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy",
+	});
 
 export function validateCORSRules(
 	corsConfig: unknown,
