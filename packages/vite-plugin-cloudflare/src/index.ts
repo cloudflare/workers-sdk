@@ -107,6 +107,15 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let containerImageTagsSeen: Set<string> | undefined;
 	let runningContainerIds: Array<string>;
 
+	// This is needed so that we can tell the difference between the Vite http server closing and restarting.
+	let previousServer: unknown;
+	let restartingServer = false;
+	function updateRestartingServerFlag(viteDevServer: unknown) {
+		restartingServer =
+			previousServer !== undefined && viteDevServer !== previousServer;
+		previousServer = viteDevServer;
+	}
+
 	return [
 		{
 			name: "vite-plugin-cloudflare",
@@ -341,6 +350,7 @@ if (import.meta.hot) {
 			// Vite `configureServer` Hook
 			// see https://vite.dev/guide/api-plugin.html#configureserver
 			async configureServer(viteDevServer) {
+				updateRestartingServerFlag(viteDevServer);
 				assertIsNotPreview(resolvedPluginConfig);
 
 				// It is possible to get into a situation where the dev server is restarted by a config file change
@@ -612,6 +622,7 @@ if (import.meta.hot) {
 			// Vite `configurePreviewServer` Hook
 			// see https://vite.dev/guide/api-plugin.html#configurepreviewserver
 			async configurePreviewServer(vitePreviewServer) {
+				updateRestartingServerFlag(vitePreviewServer);
 				assertIsPreview(resolvedPluginConfig);
 
 				const inputInspectorPort = await getInputInspectorPortOption(
@@ -705,6 +716,21 @@ if (import.meta.hot) {
 					containerImageTagsSeen.clear();
 					runningContainerIds = [];
 				}
+
+				if (!restartingServer) {
+					debuglog("Disposing Miniflare instance");
+					await miniflare?.dispose().catch((error) => {
+						console.error("Error disposing Miniflare instance:", error);
+					});
+					miniflare = undefined;
+				} else {
+					debuglog(
+						"Vite is restarting so do not dispose of Miniflare instance"
+					);
+				}
+				// Reset the flag so that if a `buildEnd` hook is called again before the next
+				// configureServer hook then we do dispose of miniflare correctly.
+				restartingServer = false;
 			},
 		},
 		// Plugin to provide a fallback entry file
