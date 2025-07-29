@@ -426,6 +426,8 @@ if (import.meta.hot) {
 					return;
 				}
 
+				debuglog(configId, new Error("").stack);
+
 				if (!miniflare) {
 					debuglog(configId, "Creating new Miniflare instance");
 					miniflare = new Miniflare(miniflareDevOptions);
