@@ -1341,7 +1341,7 @@ export interface CORSRule {
 	maxAgeSeconds?: number;
 }
 
-const AwsS3CorsSchema = z
+const AwsS3CORSSchema = z
 	.object({
 		AllowedOrigins: z.array(z.string()).optional(),
 		AllowedMethods: z.array(z.string()).optional(),
@@ -1371,7 +1371,12 @@ const CORSConfigSchema = z.object({
 			1,
 			"The CORS configuration must contain at least one rule in the 'rules' array."
 		),
-});
+}).refine(
+	(data) => "rules" in data,
+	{
+		message: "The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy",
+	}
+);
 
 export function validateCORSRules(
 	corsConfig: unknown,
@@ -1383,7 +1388,7 @@ export function validateCORSRules(
 		);
 	}
 
-	const awsS3Result = AwsS3CorsSchema.safeParse(corsConfig);
+	const awsS3Result = AwsS3CORSSchema.safeParse(corsConfig);
 	if (awsS3Result.success) {
 		const config = awsS3Result.data;
 		const convertedExample = {
@@ -1431,12 +1436,6 @@ For more details, see: https://developers.cloudflare.com/api/operations/r2-put-b
 
 	const result = CORSConfigSchema.safeParse(corsConfig);
 	if (!result.success) {
-		if (!("rules" in (corsConfig as Record<string, unknown>))) {
-			throw new UserError(
-				`The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
-			);
-		}
-
 		const errorMessages = result.error.issues.map((err) => {
 			const path = err.path.length > 0 ? ` at path: ${err.path.join(".")}` : "";
 			return `CORS rule validation error: ${err.message}${path}`;

@@ -2758,7 +2758,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						await expect(
 							runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
 						).rejects.toThrowError(
-							/Invalid input: expected array, received string.*rules\.0\.allowed\.origins/
+							/Expected array, received string.*rules\.0\.allowed\.origins/
 						);
 					});
 
@@ -2791,7 +2791,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						await expect(
 							runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
 						).rejects.toThrowError(
-							/Too small: expected number to be >=0.*rules\.0\.maxAgeSeconds/
+							/Number must be greater than or equal to 0.*rules\.0\.maxAgeSeconds/
 						);
 					});
 
@@ -2812,7 +2812,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						await expect(
 							runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
 						).rejects.toThrowError(
-							/Invalid input: expected string, received number.*rules\.0\.exposeHeaders\.1/
+							/Expected string, received number.*rules\.0\.exposeHeaders\.1/
 						);
 					});
 				});
