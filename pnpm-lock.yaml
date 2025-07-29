@@ -549,9 +549,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250726.0
         version: 4.20250726.0
+      '@types/debug':
+        specifier: ^4.1.12
+        version: 4.1.12
       '@types/pg':
         specifier: ^8.11.2
         version: 8.11.6
+      debug:
+        specifier: ^4.4.1
+        version: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
       pg:
         specifier: 8.11.3
         version: 8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte)
@@ -2280,7 +2286,7 @@ importers:
         version: 4.20250726.0
       typescript:
         specifier: catalog:default
-        version: 5.8.2
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.4.2)(lightningcss@1.29.2)
