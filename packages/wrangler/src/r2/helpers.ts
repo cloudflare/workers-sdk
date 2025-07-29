@@ -1346,8 +1346,7 @@ export function validateCORSRules(
 ): CORSRule[] {
 	if (!corsConfig || typeof corsConfig !== "object") {
 		throw new UserError(
-			`The CORS configuration file must contain a valid JSON object. ` +
-				`Please check the file format at: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
+			`The CORS configuration file must contain a valid JSON object. Please check the file format at: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
 		);
 	}
 
@@ -1392,19 +1391,21 @@ export function validateCORSRules(
 		};
 
 		throw new UserError(
-			`The CORS configuration appears to be in AWS S3 format, but Cloudflare R2 expects a different format.\n\n` +
-				`Your current format uses: AllowedOrigins, AllowedMethods, AllowedHeaders, ExposeHeaders, MaxAgeSeconds\n\n` +
-				`Please convert it to the Cloudflare R2 format:\n\n` +
-				JSON.stringify(convertedExample, null, 2) +
-				"\n\n" +
-				`For more details, see: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
+			`The CORS configuration appears to be in AWS S3 format, but Cloudflare R2 expects a different format.
+
+Your current format uses: AllowedOrigins, AllowedMethods, AllowedHeaders, ExposeHeaders, MaxAgeSeconds
+
+Please convert it to the Cloudflare R2 format:
+
+${JSON.stringify(convertedExample, null, 2)}
+
+For more details, see: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
 		);
 	}
 
 	if (!("rules" in config) || !Array.isArray(config.rules)) {
 		throw new UserError(
-			`The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: ` +
-				`https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
+			`The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
 		);
 	}
 
