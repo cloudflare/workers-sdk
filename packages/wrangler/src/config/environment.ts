@@ -79,6 +79,7 @@ export type ContainerApp = {
 
 	/**
 	 * Image variables to be passed along the image at build time.
+	 * For runtime env vars, refer to https://developers.cloudflare.com/containers/examples/env-vars-and-secrets/
 	 * @optional
 	 */
 	image_vars?: Record<string, string>;
