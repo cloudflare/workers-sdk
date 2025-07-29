@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { http, HttpResponse } from "msw";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { actionsForEventCategories } from "../r2/helpers";
@@ -2720,6 +2719,8 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				});
 
 				describe("cors validation", () => {
+					runInTempDir();
+
 					it("should detect and provide helpful error for AWS S3 format", async () => {
 						const bucketName = "my-bucket";
 						const awsS3Format = {
@@ -2730,12 +2731,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							MaxAgeSeconds: 3600,
 						};
 
-						const filePath = join(__dirname, "cors-aws-format.json");
+						const filePath = "cors-aws-format.json";
 						writeFileSync(filePath, JSON.stringify(awsS3Format));
 
-					await expect(
-						runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
-					).rejects.toThrowError(/in AWS S3 format.*Cloudflare R2 expects/);
+						await expect(
+							runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
+						).rejects.toThrowError(/in AWS S3 format.*Cloudflare R2 expects/);
 					});
 
 					it("should validate rule structure and provide specific error messages", async () => {
@@ -2751,7 +2752,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							],
 						};
 
-						const filePath = join(__dirname, "cors-invalid.json");
+						const filePath = "cors-invalid.json";
 						writeFileSync(filePath, JSON.stringify(invalidFormat));
 
 						await expect(
@@ -2763,7 +2764,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						const bucketName = "my-bucket";
 						const emptyRules = { rules: [] };
 
-						const filePath = join(__dirname, "cors-empty.json");
+						const filePath = "cors-empty.json";
 						writeFileSync(filePath, JSON.stringify(emptyRules));
 
 						await expect(
@@ -2782,7 +2783,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							],
 						};
 
-						const filePath = join(__dirname, "cors-invalid-maxage.json");
+						const filePath = "cors-invalid-maxage.json";
 						writeFileSync(filePath, JSON.stringify(invalidMaxAge));
 
 						await expect(
@@ -2801,7 +2802,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							],
 						};
 
-						const filePath = join(__dirname, "cors-invalid-expose.json");
+						const filePath = "cors-invalid-expose.json";
 						writeFileSync(filePath, JSON.stringify(invalidExposeHeaders));
 
 						await expect(
