@@ -2733,9 +2733,9 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						const filePath = join(__dirname, "cors-aws-format.json");
 						writeFileSync(filePath, JSON.stringify(awsS3Format));
 
-						await expect(
-							runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
-						).rejects.toThrowError(/AWS S3 format.*Cloudflare R2 format/);
+					await expect(
+						runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
+					).rejects.toThrowError(/in AWS S3 format.*Cloudflare R2 expects/);
 					});
 
 					it("should validate rule structure and provide specific error messages", async () => {
