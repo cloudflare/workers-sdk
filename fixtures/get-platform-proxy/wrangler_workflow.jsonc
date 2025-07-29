@@ -11,7 +11,7 @@
 		{
 			"binding": "MY_WORKFLOW",
 			"name": "my-workflow",
-			"class_name": "MyWorkflow"
-		}
-	]
+			"class_name": "MyWorkflow",
+		},
+	],
 }

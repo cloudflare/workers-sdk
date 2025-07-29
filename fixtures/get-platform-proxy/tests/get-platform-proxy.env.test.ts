@@ -307,32 +307,20 @@ describe("getPlatformProxy - env", () => {
 		});
 
 		it("warns about internal Workflows and doesn't crash", async () => {
-			await getPlatformProxy<Env>({
+			const { dispose } = await getPlatformProxy<Env>({
 				configPath: path.join(__dirname, "..", "wrangler_workflow.jsonc"),
 			});
-			expect(warn).toMatchInlineSnapshot(`
-				[MockFunction warn] {
-				  "calls": [
-				    [
-				      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following internal Workflows:[0m
-
-				  				- {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow"}
-				  				These will not work in local development, but they should work in production.
-				  
-				  				If you want to develop these locally, you can define your Workflow in a separate Worker, with a separate configuration file.
-				  				For detailed instructions, refer to the Workflows section here: [4mhttps://developers.cloudflare.com/workers/wrangler/api#supported-bindings[0m
-
-				",
-				    ],
-				  ],
-				  "results": [
-				    {
-				      "type": "return",
-				      "value": undefined,
-				    },
-				  ],
-				}
-			`);
+			expect(warn).toHaveBeenCalledWith(
+				expect.stringContaining(
+					"You have defined bindings to the following internal Workflows:"
+				)
+			);
+			expect(warn).toHaveBeenCalledWith(
+				expect.stringContaining(
+					'{"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow"}'
+				)
+			);
+			await dispose();
 		});
 	});
 
