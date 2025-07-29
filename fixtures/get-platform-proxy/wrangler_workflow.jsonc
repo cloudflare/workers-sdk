@@ -1,0 +1,12 @@
+{
+	"name": "workflow-test",
+	"main": "src/index.ts",
+	"compatibility_date": "2023-11-21",
+	"workflows": [
+		{
+			"binding": "MY_WORKFLOW",
+			"name": "my-workflow",
+			"class_name": "MyWorkflow",
+		},
+	],
+}

@@ -31,6 +31,7 @@ type Env = {
 	MY_HYPERDRIVE: Hyperdrive;
 	ASSETS: Fetcher;
 	IMAGES: ImagesBinding;
+	MY_WORKFLOW: any;
 };
 
 const wranglerConfigFilePath = path.join(__dirname, "..", "wrangler.jsonc");
@@ -303,6 +304,17 @@ describe("getPlatformProxy - env", () => {
 				configPath: path.join(__dirname, "..", "wrangler_external_do.jsonc"),
 			});
 			expect(warn).not.toHaveBeenCalled();
+		});
+
+		it("doesn't crash with workflow bindings", async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: path.join(__dirname, "..", "wrangler_workflow.jsonc"),
+			});
+			try {
+				expect(env).toBeDefined();
+			} finally {
+				await dispose();
+			}
 		});
 	});
 
