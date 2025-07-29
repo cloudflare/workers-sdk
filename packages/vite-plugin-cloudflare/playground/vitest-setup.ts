@@ -186,9 +186,7 @@ beforeAll(async (s) => {
 	};
 }, 15_000);
 
-beforeEach(async () => {
-	await page.goto(viteTestUrl);
-});
+beforeEach(() => page.goto(viteTestUrl));
 
 export async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;

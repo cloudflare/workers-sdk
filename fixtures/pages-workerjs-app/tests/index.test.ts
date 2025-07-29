@@ -83,7 +83,7 @@ describe("Pages _worker.js", () => {
 				"--inspector-port=0",
 				"--compatibility-date=2025-07-15",
 			]);
-		vi.waitFor(
+		await vi.waitFor(
 			() => {
 				expect(getOutput()).toContain("Ready on");
 			},
@@ -129,7 +129,7 @@ describe("Pages _worker.js", () => {
 				"--port=0",
 				"--inspector-port=0",
 			]);
-		vi.waitFor(
+		await vi.waitFor(
 			() => {
 				expect(getOutput()).toContain("Ready on");
 			},
