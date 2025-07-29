@@ -1,11 +1,5 @@
 ---
-"wrangler": minor
----
-
----
-
 "wrangler": patch
-
 ---
 
 Fix D1 migration files ordering to display in chronological order
