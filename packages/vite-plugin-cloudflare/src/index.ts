@@ -10,6 +10,7 @@ import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/ass
 import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
+import colors from "picocolors";
 import * as vite from "vite";
 import {
 	createModuleReference,
@@ -449,6 +450,13 @@ if (import.meta.hot) {
 					}
 
 					if (hasDevContainers) {
+						viteDevServer.config.logger.info(
+							colors.dim(
+								colors.yellow(
+									"∷ Building container images for local development...\n"
+								)
+							)
+						);
 						containerImageTagsSeen = await prepareContainerImages({
 							containersConfig: entryWorkerConfig.containers,
 							containerBuildId,
@@ -456,6 +464,13 @@ if (import.meta.hot) {
 							dockerPath,
 							configPath: entryWorkerConfig.configPath,
 						});
+						viteDevServer.config.logger.info(
+							colors.dim(
+								colors.yellow(
+									"\n⚡️ Containers successfully built. To rebuild your containers during development, restart the Vite dev server (r + enter)."
+								)
+							)
+						);
 
 						// poll Docker every two seconds and update the list of ids of all
 						// running containers
@@ -575,6 +590,13 @@ if (import.meta.hot) {
 				if (hasDevContainers) {
 					const dockerPath = getDockerPath();
 
+					vitePreviewServer.config.logger.info(
+						colors.dim(
+							colors.yellow(
+								"∷ Building container images for local preview...\n"
+							)
+						)
+					);
 					containerImageTagsSeen = await prepareContainerImages({
 						containersConfig: entryWorkerConfig.containers,
 						containerBuildId,
@@ -582,6 +604,9 @@ if (import.meta.hot) {
 						dockerPath,
 						configPath: entryWorkerConfig.configPath,
 					});
+					vitePreviewServer.config.logger.info(
+						colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
+					);
 
 					const dockerPollIntervalId = setInterval(async () => {
 						if (containerImageTagsSeen?.size) {
