@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
@@ -71,7 +71,7 @@ export default function registerDevHotKeys(
 						})
 					);
 
-					const newContainerBuildId = randomUUID().slice(0, 8);
+					const newContainerBuildId = generateContainerBuildId();
 
 					// updating the build ID will trigger a rebuild of the containers
 					await devEnv.config.patch({

@@ -449,6 +449,9 @@ if (import.meta.hot) {
 					}
 
 					if (hasDevContainers) {
+						viteDevServer.config.logger.info(
+							"Building container images for local development..."
+						);
 						containerImageTagsSeen = await prepareContainerImages({
 							containersConfig: entryWorkerConfig.containers,
 							containerBuildId,
@@ -456,6 +459,9 @@ if (import.meta.hot) {
 							dockerPath,
 							configPath: entryWorkerConfig.configPath,
 						});
+						viteDevServer.config.logger.info(
+							"Containers successfully built. To rebuild your containers during development, restart the Vite dev server (r + enter)."
+						);
 
 						// poll Docker every two seconds and update the list of ids of all
 						// running containers
