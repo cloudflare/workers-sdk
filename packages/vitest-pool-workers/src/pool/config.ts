@@ -65,7 +65,11 @@ const WorkersPoolOptionsSchema = z.object({
 		.passthrough()
 		.optional(),
 	wrangler: z
-		.object({ configPath: z.ostring(), environment: z.ostring() })
+		.object({
+			configPath: z.ostring(),
+			environment: z.ostring(),
+			containerBuildId: z.ostring(),
+		})
 		.optional(),
 });
 export type SourcelessWorkerOptions = Omit<
@@ -253,6 +257,40 @@ async function parseCustomPoolOptions(
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
 
+		// Read the config to check for containers
+		const config = wrangler.unstable_readConfig({
+			config: configPath,
+			env: options.wrangler.environment,
+		});
+
+		// Require explicit container build ID when containers are present
+		if (config.containers?.length && !options.wrangler.containerBuildId) {
+			throw new Error(
+				`
+Container-enabled Durable Objects detected but no container build ID provided.
+
+To use containers in tests:
+1. Build your containers: docker build -t cloudflare-dev/sandbox:my-test-id .
+2. Configure the build ID in vitest.config.ts:
+   {
+     test: {
+       poolOptions: {
+         workers: {
+           wrangler: {
+             containerBuildId: "my-test-id"
+           }
+         }
+       }
+     }
+   }
+
+For more details, see: https://developers.cloudflare.com/durable-objects/platform/testing/
+			`.trim()
+			);
+		}
+
+		const containerBuildId = options.wrangler.containerBuildId;
+
 		const preExistingRemoteProxySessionData = options.wrangler?.configPath
 			? remoteProxySessionsDataMap.get(options.wrangler.configPath)
 			: undefined;
@@ -281,6 +319,7 @@ async function parseCustomPoolOptions(
 					remoteBindingsEnabled: options.experimental_remoteBindings,
 					remoteProxyConnectionString:
 						remoteProxySessionData?.session?.remoteProxyConnectionString,
+					containerBuildId,
 				}
 			);
 
