@@ -21,7 +21,8 @@ export async function performApiFetch(
 	resource: string,
 	init: RequestInit = {},
 	queryParams?: URLSearchParams,
-	abortSignal?: AbortSignal
+	abortSignal?: AbortSignal,
+	apiToken?: ApiCredentials
 ) {
 	const method = init.method ?? "GET";
 	assert(
@@ -29,7 +30,7 @@ export async function performApiFetch(
 		`CF API fetch - resource path must start with a "/" but got "${resource}"`
 	);
 	await requireLoggedIn(complianceConfig);
-	const apiToken = requireApiToken();
+	apiToken ??= requireApiToken();
 	const headers = cloneHeaders(new Headers(init.headers));
 	addAuthorizationHeaderIfUnspecified(headers, apiToken);
 	addUserAgent(headers);
@@ -78,7 +79,8 @@ export async function fetchInternal<ResponseType>(
 	resource: string,
 	init: RequestInit = {},
 	queryParams?: URLSearchParams,
-	abortSignal?: AbortSignal
+	abortSignal?: AbortSignal,
+	apiToken?: ApiCredentials
 ): Promise<ResponseType> {
 	const method = init.method ?? "GET";
 	const response = await performApiFetch(
@@ -86,7 +88,8 @@ export async function fetchInternal<ResponseType>(
 		resource,
 		init,
 		queryParams,
-		abortSignal
+		abortSignal,
+		apiToken
 	);
 	const jsonText = await response.text();
 	logger.debug(
