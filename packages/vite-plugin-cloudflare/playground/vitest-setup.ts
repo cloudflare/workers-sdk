@@ -9,7 +9,7 @@ import {
 	preview,
 	Rollup,
 } from "vite";
-import { beforeAll, beforeEach, inject } from "vitest";
+import { beforeAll, inject } from "vitest";
 import type * as http from "node:http";
 import type { Browser, Page } from "playwright-chromium";
 import type {
@@ -185,8 +185,6 @@ beforeAll(async (s) => {
 		}
 	};
 }, 15_000);
-
-beforeEach(() => page.goto(viteTestUrl));
 
 export async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;
