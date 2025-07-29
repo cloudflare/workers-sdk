@@ -1,7 +1,6 @@
 import path from "node:path";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
@@ -13,7 +12,6 @@ import {
 	tableFromCORSPolicyResponse,
 	validateCORSRules,
 } from "./helpers";
-import type { CORSRule } from "./helpers";
 
 export const r2BucketCORSNamespace = createNamespace({
 	metadata: {
@@ -104,7 +102,7 @@ export const r2BucketCORSSetCommand = createCommand({
 
 		const corsConfigRaw = parseJSON(readFileSync(jsonFilePath), jsonFilePath);
 		const validatedRules = validateCORSRules(corsConfigRaw, jsonFilePath);
-		
+
 		const corsConfig = { rules: validatedRules };
 
 		if (!force) {
