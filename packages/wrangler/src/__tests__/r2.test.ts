@@ -2755,9 +2755,11 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						const filePath = "cors-invalid.json";
 						writeFileSync(filePath, JSON.stringify(invalidFormat));
 
-					await expect(
-						runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
-					).rejects.toThrowError(/Invalid input: expected array, received string.*rules\.0\.allowed\.origins/);
+						await expect(
+							runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
+						).rejects.toThrowError(
+							/Invalid input: expected array, received string.*rules\.0\.allowed\.origins/
+						);
 					});
 
 					it("should require at least one rule", async () => {
@@ -2786,9 +2788,11 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						const filePath = "cors-invalid-maxage.json";
 						writeFileSync(filePath, JSON.stringify(invalidMaxAge));
 
-					await expect(
-						runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
-					).rejects.toThrowError(/Too small: expected number to be >=0.*rules\.0\.maxAgeSeconds/);
+						await expect(
+							runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
+						).rejects.toThrowError(
+							/Too small: expected number to be >=0.*rules\.0\.maxAgeSeconds/
+						);
 					});
 
 					it("should validate exposeHeaders is an array of strings", async () => {
@@ -2805,9 +2809,11 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						const filePath = "cors-invalid-expose.json";
 						writeFileSync(filePath, JSON.stringify(invalidExposeHeaders));
 
-					await expect(
-						runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
-					).rejects.toThrowError(/Invalid input: expected string, received number.*rules\.0\.exposeHeaders\.1/);
+						await expect(
+							runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
+						).rejects.toThrowError(
+							/Invalid input: expected string, received number.*rules\.0\.exposeHeaders\.1/
+						);
 					});
 				});
 			});
