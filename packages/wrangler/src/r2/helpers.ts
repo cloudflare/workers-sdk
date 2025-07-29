@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { ReadableStream } from "node:stream/web";
 import { Miniflare } from "miniflare";
 import prettyBytes from "pretty-bytes";
+import { z } from "zod";
 import { fetchGraphqlResult, fetchResult } from "../cfetch";
 import { fetchR2Objects } from "../cfetch/internal";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
@@ -1340,6 +1341,38 @@ export interface CORSRule {
 	maxAgeSeconds?: number;
 }
 
+const AwsS3CorsSchema = z
+	.object({
+		AllowedOrigins: z.array(z.string()).optional(),
+		AllowedMethods: z.array(z.string()).optional(),
+		AllowedHeaders: z.array(z.string()).optional(),
+		ExposeHeaders: z.array(z.string()).optional(),
+		MaxAgeSeconds: z.number().optional(),
+	})
+	.strict();
+
+const CORSRuleSchema = z.object({
+	id: z.string().optional(),
+	allowed: z
+		.object({
+			origins: z.array(z.string()).optional(),
+			methods: z.array(z.string()).optional(),
+			headers: z.array(z.string()).optional(),
+		})
+		.optional(),
+	exposeHeaders: z.array(z.string()).optional(),
+	maxAgeSeconds: z.number().int().min(0).optional(),
+});
+
+const CORSConfigSchema = z.object({
+	rules: z
+		.array(CORSRuleSchema)
+		.min(
+			1,
+			"The CORS configuration must contain at least one rule in the 'rules' array."
+		),
+});
+
 export function validateCORSRules(
 	corsConfig: unknown,
 	_filePath: string
@@ -1350,16 +1383,9 @@ export function validateCORSRules(
 		);
 	}
 
-	const config = corsConfig as Record<string, unknown>;
-
-	const hasAwsS3Format =
-		"AllowedOrigins" in config ||
-		"AllowedMethods" in config ||
-		"AllowedHeaders" in config ||
-		"ExposeHeaders" in config ||
-		"MaxAgeSeconds" in config;
-
-	if (hasAwsS3Format) {
+	const awsS3Result = AwsS3CorsSchema.safeParse(corsConfig);
+	if (awsS3Result.success) {
+		const config = awsS3Result.data;
 		const convertedExample = {
 			rules: [
 				{
@@ -1403,83 +1429,23 @@ For more details, see: https://developers.cloudflare.com/api/operations/r2-put-b
 		);
 	}
 
-	if (!("rules" in config) || !Array.isArray(config.rules)) {
-		throw new UserError(
-			`The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
-		);
+	const result = CORSConfigSchema.safeParse(corsConfig);
+	if (!result.success) {
+		if (!("rules" in (corsConfig as Record<string, unknown>))) {
+			throw new UserError(
+				`The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
+			);
+		}
+
+		const errorMessages = result.error.issues.map((err) => {
+			const path = err.path.length > 0 ? ` at path: ${err.path.join(".")}` : "";
+			return `CORS rule validation error: ${err.message}${path}`;
+		});
+
+		throw new UserError(errorMessages.join("\n"));
 	}
 
-	const rules = config.rules as unknown[];
-
-	if (rules.length === 0) {
-		throw new UserError(
-			`The CORS configuration must contain at least one rule in the 'rules' array.`
-		);
-	}
-
-	rules.forEach((rule, index) => {
-		if (!rule || typeof rule !== "object") {
-			throw new UserError(`CORS rule at index ${index} must be an object.`);
-		}
-
-		const ruleObj = rule as Record<string, unknown>;
-
-		if ("allowed" in ruleObj) {
-			const allowed = ruleObj.allowed;
-			if (!allowed || typeof allowed !== "object") {
-				throw new UserError(
-					`CORS rule at index ${index}: 'allowed' field must be an object containing origins, methods, and/or headers arrays.`
-				);
-			}
-
-			const allowedObj = allowed as Record<string, unknown>;
-
-			["origins", "methods", "headers"].forEach((field) => {
-				if (field in allowedObj) {
-					if (!Array.isArray(allowedObj[field])) {
-						throw new UserError(
-							`CORS rule at index ${index}: 'allowed.${field}' must be an array of strings.`
-						);
-					}
-					const arr = allowedObj[field] as unknown[];
-					if (arr.some((item) => typeof item !== "string")) {
-						throw new UserError(
-							`CORS rule at index ${index}: 'allowed.${field}' must contain only strings.`
-						);
-					}
-				}
-			});
-		}
-
-		if ("exposeHeaders" in ruleObj) {
-			if (!Array.isArray(ruleObj.exposeHeaders)) {
-				throw new UserError(
-					`CORS rule at index ${index}: 'exposeHeaders' must be an array of strings.`
-				);
-			}
-			const exposeHeaders = ruleObj.exposeHeaders as unknown[];
-			if (exposeHeaders.some((item) => typeof item !== "string")) {
-				throw new UserError(
-					`CORS rule at index ${index}: 'exposeHeaders' must contain only strings.`
-				);
-			}
-		}
-
-		if ("maxAgeSeconds" in ruleObj) {
-			const maxAge = ruleObj.maxAgeSeconds;
-			if (
-				typeof maxAge !== "number" ||
-				maxAge < 0 ||
-				!Number.isInteger(maxAge)
-			) {
-				throw new UserError(
-					`CORS rule at index ${index}: 'maxAgeSeconds' must be a non-negative integer.`
-				);
-			}
-		}
-	});
-
-	return rules as CORSRule[];
+	return result.data.rules as CORSRule[];
 }
 
 export async function getCORSPolicy(
