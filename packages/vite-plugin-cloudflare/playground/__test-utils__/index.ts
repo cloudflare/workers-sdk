@@ -14,7 +14,9 @@ export function mockFileChange(
 ) {
 	const originalContent = fs.readFileSync(filePath, "utf-8");
 	onTestFinished(() => {
+		console.log("Restoring file change for", filePath);
 		fs.writeFileSync(filePath, originalContent);
 	});
+	console.log("Mocking file change for", filePath);
 	fs.writeFileSync(filePath, mutateFn(originalContent));
 }
