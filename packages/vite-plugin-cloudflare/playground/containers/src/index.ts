@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 
-export class Container extends DurableObject<Env> {
+export class VitePluginContainer extends DurableObject<Env> {
 	container: globalThis.Container;
 	monitor?: Promise<unknown>;
 

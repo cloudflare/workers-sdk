@@ -191,7 +191,9 @@ export class LocalRuntimeController extends RuntimeController {
 	};
 
 	onBundleStart(_: BundleStartEvent) {
-		// Ignored in local runtime
+		process.on("exit", () => {
+			this.cleanupContainers();
+		});
 	}
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
@@ -381,12 +383,22 @@ export class LocalRuntimeController extends RuntimeController {
 		// Ignored in local runtime
 	}
 
-	cleanupContainers = async () => {
+	cleanupContainers = () => {
+		if (!this.containerImageTagsSeen.size) {
+			return;
+		}
+
 		assert(
 			this.dockerPath,
 			"Docker path should have been set if containers are enabled"
 		);
-		await cleanupContainers(this.dockerPath, this.containerImageTagsSeen);
+		try {
+			cleanupContainers(this.dockerPath, this.containerImageTagsSeen);
+		} catch {
+			logger.warn(
+				`Failed to clean up containers. You may have to stop and remove them up manually.`
+			);
+		}
 	};
 
 	#teardown = async (): Promise<void> => {
@@ -399,15 +411,6 @@ export class LocalRuntimeController extends RuntimeController {
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
-		if (this.containerImageTagsSeen.size > 0) {
-			try {
-				await this.cleanupContainers();
-			} catch {
-				logger.warn(
-					`Failed to clean up containers. You may have to stop and remove them up manually.`
-				);
-			}
-		}
 		if (this.#remoteProxySessionData) {
 			logger.log(chalk.dim("⎔ Shutting down remote connection..."));
 		}

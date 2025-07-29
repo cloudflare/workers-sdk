@@ -147,27 +147,20 @@ export const isDockerfile = (
  * If you make any changes to this fn, please make sure you persist those
  * changes in `removeContainersByIds` if necessary.
  */
-export const cleanupContainers = async (
+export const cleanupContainers = (
 	dockerPath: string,
 	imageTags: Set<string>
 ) => {
 	try {
 		// Find all containers (stopped and running) for each built image
-		const containerIds = await getContainerIdsByImageTags(
-			dockerPath,
-			imageTags
-		);
+		const containerIds = getContainerIdsByImageTags(dockerPath, imageTags);
 
 		if (containerIds.length === 0) {
 			return true;
 		}
 
 		// Workerd should have stopped all containers, but clean up any in case. Sends a sigkill.
-		await runDockerCmd(
-			dockerPath,
-			["rm", "--force", ...containerIds],
-			["inherit", "pipe", "pipe"]
-		);
+		runDockerCmdWithOutput(dockerPath, ["rm", "--force", ...containerIds]);
 		return true;
 	} catch {
 		return false;
@@ -181,14 +174,14 @@ export const cleanupContainers = async (
  * @param imageTags A set of ancestor image tags
  * @returns The ids of all containers that share the given image tags as ancestors.
  */
-export async function getContainerIdsByImageTags(
+export function getContainerIdsByImageTags(
 	dockerPath: string,
 	imageTags: Set<string>
-): Promise<Array<string>> {
+): string[] {
 	const ids = new Set<string>();
 
 	for (const imageTag of imageTags) {
-		const containerIdsFromImage = await getContainerIdsFromImage(
+		const containerIdsFromImage = getContainerIdsFromImage(
 			dockerPath,
 			imageTag
 		);
@@ -198,7 +191,7 @@ export async function getContainerIdsByImageTags(
 	return Array.from(ids);
 }
 
-export const getContainerIdsFromImage = async (
+export const getContainerIdsFromImage = (
 	dockerPath: string,
 	ancestorImage: string
 ) => {

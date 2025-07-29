@@ -2,8 +2,8 @@ import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
+	cleanupContainers,
 	generateContainerBuildId,
-	getContainerIdsByImageTags,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
@@ -28,11 +28,7 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "./constants";
-import {
-	getDockerPath,
-	prepareContainerImages,
-	removeContainersByIds,
-} from "./containers";
+import { getDockerPath, prepareContainerImages } from "./containers";
 import {
 	addDebugToVitePrintUrls,
 	getDebugPathHtml,
@@ -101,8 +97,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const additionalModulePaths = new Set<string>();
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
-	let containerImageTagsSeen: Set<string> | undefined;
-	let runningContainerIds: Array<string>;
+	const containerImageTagsSeen = new Set<string>();
 
 	return [
 		{
@@ -457,7 +452,7 @@ if (import.meta.hot) {
 								)
 							)
 						);
-						containerImageTagsSeen = await prepareContainerImages({
+						const imageTags = await prepareContainerImages({
 							containersConfig: entryWorkerConfig.containers,
 							containerBuildId,
 							isContainersEnabled: entryWorkerConfig.dev.enable_containers,
@@ -471,17 +466,9 @@ if (import.meta.hot) {
 								)
 							)
 						);
-
-						// poll Docker every two seconds and update the list of ids of all
-						// running containers
-						const dockerPollIntervalId = setInterval(async () => {
-							if (containerImageTagsSeen?.size) {
-								runningContainerIds = await getContainerIdsByImageTags(
-									dockerPath,
-									containerImageTagsSeen
-								);
-							}
-						}, 2000);
+						imageTags.forEach((imageTag) =>
+							containerImageTagsSeen.add(imageTag)
+						);
 
 						/*
 						 * Upon exiting the dev process we should ensure we perform any
@@ -496,21 +483,11 @@ if (import.meta.hot) {
 						 * `process.exit()` imperatively, and therefore causes `beforeExit`
 						 * not to be emitted).
 						 *
-						 * Furthermore, since the `exit` event handler cannot perform async
-						 * ops as per spec (https://nodejs.org/api/process.html#event-exit),
-						 * we also need a mechanism to ensure that list of containers to be
-						 * cleaned up on exit is up to date. This is what the interval with id
-						 * `dockerPollIntervalId` is for.
-						 *
-						 * It is possible, though very unlikely, that in some rare cases,
-						 * we might be left with some orphaned containers, due to the fact
-						 * that at the point of exiting the dev process, our internal list
-						 * of container ids is out of date. We accept this caveat for now.
-						 *
 						 */
-						process.on("exit", () => {
-							clearInterval(dockerPollIntervalId);
-							removeContainersByIds(dockerPath, runningContainerIds);
+						process.on("exit", async () => {
+							if (containerImageTagsSeen.size) {
+								cleanupContainers(dockerPath, containerImageTagsSeen);
+							}
 						});
 					}
 				}
@@ -597,7 +574,7 @@ if (import.meta.hot) {
 							)
 						)
 					);
-					containerImageTagsSeen = await prepareContainerImages({
+					const imageTags = await prepareContainerImages({
 						containersConfig: entryWorkerConfig.containers,
 						containerBuildId,
 						isContainersEnabled: entryWorkerConfig.dev.enable_containers,
@@ -607,19 +584,12 @@ if (import.meta.hot) {
 					vitePreviewServer.config.logger.info(
 						colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
 					);
-
-					const dockerPollIntervalId = setInterval(async () => {
-						if (containerImageTagsSeen?.size) {
-							runningContainerIds = await getContainerIdsByImageTags(
-								dockerPath,
-								containerImageTagsSeen
-							);
-						}
-					}, 2000);
+					imageTags.forEach((imageTag) => containerImageTagsSeen.add(imageTag));
 
 					process.on("exit", () => {
-						clearInterval(dockerPollIntervalId);
-						removeContainersByIds(dockerPath, runningContainerIds);
+						if (containerImageTagsSeen.size) {
+							cleanupContainers(dockerPath, containerImageTagsSeen);
+						}
 					});
 				}
 
@@ -644,14 +614,7 @@ if (import.meta.hot) {
 					containerImageTagsSeen?.size
 				) {
 					const dockerPath = getDockerPath();
-					runningContainerIds = await getContainerIdsByImageTags(
-						dockerPath,
-						containerImageTagsSeen
-					);
-
-					await removeContainersByIds(dockerPath, runningContainerIds);
-					containerImageTagsSeen.clear();
-					runningContainerIds = [];
+					cleanupContainers(dockerPath, containerImageTagsSeen);
 				}
 			},
 		},

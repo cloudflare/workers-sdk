@@ -297,16 +297,6 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
-		if (this.containerImageTagsSeen.size > 0) {
-			try {
-				await this.cleanupContainers();
-			} catch {
-				logger.warn(
-					`Failed to clean up containers. You may have to stop and remove them up manually.`
-				);
-			}
-		}
-
 		if (this.#remoteProxySessionsData.size > 0) {
 			logger.log(chalk.dim("⎔ Shutting down remote connections..."));
 		}
