@@ -1,12 +1,17 @@
 {
 	"name": "workflow-test",
 	"main": "src/index.ts",
+	// Internal workflow = the binding does not specify a script name.
+	// This implies the workflow is exported alongside this worker in `index.ts`,
+	// which it isn't actually. However we don't care about this here because
+	// getPlatformProxy will discard all user code anyway. We are simply making
+	// sure the warning shows up.
 	"compatibility_date": "2023-11-21",
 	"workflows": [
 		{
 			"binding": "MY_WORKFLOW",
 			"name": "my-workflow",
-			"class_name": "MyWorkflow",
-		},
-	],
+			"class_name": "MyWorkflow"
+		}
+	]
 }
