@@ -2716,9 +2716,100 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						"Setting CORS configuration (1 rules) for bucket 'my-bucket'...
 						✨ Set CORS configuration for bucket 'my-bucket'."
 					  `);
+			});
+
+			describe("cors validation", () => {
+				it("should detect and provide helpful error for AWS S3 format", async () => {
+					const bucketName = "my-bucket";
+					const awsS3Format = {
+						AllowedOrigins: ["http://example.com"],
+						AllowedMethods: ["GET", "HEAD", "PUT", "POST", "DELETE"],
+						AllowedHeaders: ["Authorization", "Content-Type"],
+						ExposeHeaders: ["ETag", "Content-Length"],
+						MaxAgeSeconds: 3600
+					};
+
+					const filePath = join(__dirname, "cors-aws-format.json");
+					writeFileSync(filePath, JSON.stringify(awsS3Format));
+
+					await expect(
+						runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
+					).rejects.toThrowError(/AWS S3 format.*Cloudflare R2 format/);
+				});
+
+				it("should validate rule structure and provide specific error messages", async () => {
+					const bucketName = "my-bucket";
+					const invalidFormat = {
+						rules: [
+							{
+								allowed: {
+									origins: "not-an-array",
+									methods: ["GET"]
+								}
+							}
+						]
+					};
+
+					const filePath = join(__dirname, "cors-invalid.json");
+					writeFileSync(filePath, JSON.stringify(invalidFormat));
+
+					await expect(
+						runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
+					).rejects.toThrowError(/allowed.origins.*must be an array/);
+				});
+
+				it("should require at least one rule", async () => {
+					const bucketName = "my-bucket";
+					const emptyRules = { rules: [] };
+
+					const filePath = join(__dirname, "cors-empty.json");
+					writeFileSync(filePath, JSON.stringify(emptyRules));
+
+					await expect(
+						runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
+					).rejects.toThrowError(/must contain at least one rule/);
+				});
+
+				it("should validate maxAgeSeconds is a non-negative integer", async () => {
+					const bucketName = "my-bucket";
+					const invalidMaxAge = {
+						rules: [
+							{
+								allowed: { origins: ["*"] },
+								maxAgeSeconds: -1
+							}
+						]
+					};
+
+					const filePath = join(__dirname, "cors-invalid-maxage.json");
+					writeFileSync(filePath, JSON.stringify(invalidMaxAge));
+
+					await expect(
+						runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
+					).rejects.toThrowError(/maxAgeSeconds.*non-negative integer/);
+				});
+
+				it("should validate exposeHeaders is an array of strings", async () => {
+					const bucketName = "my-bucket";
+					const invalidExposeHeaders = {
+						rules: [
+							{
+								allowed: { origins: ["*"] },
+								exposeHeaders: ["valid", 123]
+							}
+						]
+					};
+
+					const filePath = join(__dirname, "cors-invalid-expose.json");
+					writeFileSync(filePath, JSON.stringify(invalidExposeHeaders));
+
+					await expect(
+						runWrangler(`r2 bucket cors set ${bucketName} --file ${filePath}`)
+					).rejects.toThrowError(/exposeHeaders.*must contain only strings/);
 				});
 			});
-			describe("delete", () => {
+		});
+		describe("delete", () => {
 				it("should delete CORS configuration as expected", async () => {
 					const bucketName = "my-bucket";
 					const corsRules = {

@@ -1340,6 +1340,125 @@ export interface CORSRule {
 	maxAgeSeconds?: number;
 }
 
+export function validateCORSRules(corsConfig: unknown, filePath: string): CORSRule[] {
+	if (!corsConfig || typeof corsConfig !== 'object') {
+		throw new UserError(
+			`The CORS configuration file must contain a valid JSON object. ` +
+			`Please check the file format at: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
+		);
+	}
+
+	const config = corsConfig as Record<string, unknown>;
+
+	const hasAwsS3Format = 
+		'AllowedOrigins' in config || 
+		'AllowedMethods' in config || 
+		'AllowedHeaders' in config || 
+		'ExposeHeaders' in config || 
+		'MaxAgeSeconds' in config;
+
+	if (hasAwsS3Format) {
+		const convertedExample = {
+			rules: [
+				{
+					allowed: {
+						origins: config.AllowedOrigins || ["http://example.com"],
+						methods: config.AllowedMethods || ["GET", "HEAD", "PUT", "POST", "DELETE"],
+						headers: config.AllowedHeaders || ["Authorization", "Content-Type", "Cache-Control", "X-Requested-With"]
+					},
+					exposeHeaders: config.ExposeHeaders || ["ETag", "Content-Type", "Content-Length", "Content-Range"],
+					maxAgeSeconds: config.MaxAgeSeconds || 3600
+				}
+			]
+		};
+
+		throw new UserError(
+			`The CORS configuration appears to be in AWS S3 format, but Cloudflare R2 expects a different format.\n\n` +
+			`Your current format uses: AllowedOrigins, AllowedMethods, AllowedHeaders, ExposeHeaders, MaxAgeSeconds\n\n` +
+			`Please convert it to the Cloudflare R2 format:\n\n` +
+			JSON.stringify(convertedExample, null, 2) + '\n\n' +
+			`For more details, see: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
+		);
+	}
+
+	if (!('rules' in config) || !Array.isArray(config.rules)) {
+		throw new UserError(
+			`The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: ` +
+			`https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
+		);
+	}
+
+	const rules = config.rules as unknown[];
+
+	if (rules.length === 0) {
+		throw new UserError(
+			`The CORS configuration must contain at least one rule in the 'rules' array.`
+		);
+	}
+
+	rules.forEach((rule, index) => {
+		if (!rule || typeof rule !== 'object') {
+			throw new UserError(
+				`CORS rule at index ${index} must be an object.`
+			);
+		}
+
+		const ruleObj = rule as Record<string, unknown>;
+
+		if ('allowed' in ruleObj) {
+			const allowed = ruleObj.allowed;
+			if (!allowed || typeof allowed !== 'object') {
+				throw new UserError(
+					`CORS rule at index ${index}: 'allowed' field must be an object containing origins, methods, and/or headers arrays.`
+				);
+			}
+
+			const allowedObj = allowed as Record<string, unknown>;
+
+			['origins', 'methods', 'headers'].forEach(field => {
+				if (field in allowedObj) {
+					if (!Array.isArray(allowedObj[field])) {
+						throw new UserError(
+							`CORS rule at index ${index}: 'allowed.${field}' must be an array of strings.`
+						);
+					}
+					const arr = allowedObj[field] as unknown[];
+					if (arr.some(item => typeof item !== 'string')) {
+						throw new UserError(
+							`CORS rule at index ${index}: 'allowed.${field}' must contain only strings.`
+						);
+					}
+				}
+			});
+		}
+
+		if ('exposeHeaders' in ruleObj) {
+			if (!Array.isArray(ruleObj.exposeHeaders)) {
+				throw new UserError(
+					`CORS rule at index ${index}: 'exposeHeaders' must be an array of strings.`
+				);
+			}
+			const exposeHeaders = ruleObj.exposeHeaders as unknown[];
+			if (exposeHeaders.some(item => typeof item !== 'string')) {
+				throw new UserError(
+					`CORS rule at index ${index}: 'exposeHeaders' must contain only strings.`
+				);
+			}
+		}
+
+		if ('maxAgeSeconds' in ruleObj) {
+			const maxAge = ruleObj.maxAgeSeconds;
+			if (typeof maxAge !== 'number' || maxAge < 0 || !Number.isInteger(maxAge)) {
+				throw new UserError(
+					`CORS rule at index ${index}: 'maxAgeSeconds' must be a non-negative integer.`
+				);
+			}
+		}
+	});
+
+	return rules as CORSRule[];
+}
+
 export async function getCORSPolicy(
 	complianceConfig: ComplianceConfig,
 	accountId: string,

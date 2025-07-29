@@ -11,6 +11,7 @@ import {
 	getCORSPolicy,
 	putCORSPolicy,
 	tableFromCORSPolicyResponse,
+	validateCORSRules,
 } from "./helpers";
 import type { CORSRule } from "./helpers";
 
@@ -101,16 +102,10 @@ export const r2BucketCORSSetCommand = createCommand({
 
 		const jsonFilePath = path.resolve(file);
 
-		const corsConfig = parseJSON(readFileSync(jsonFilePath), jsonFilePath) as {
-			rules: CORSRule[];
-		};
-
-		if (!corsConfig.rules || !Array.isArray(corsConfig.rules)) {
-			throw new UserError(
-				`The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: ` +
-					`https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
-			);
-		}
+		const corsConfigRaw = parseJSON(readFileSync(jsonFilePath), jsonFilePath);
+		const validatedRules = validateCORSRules(corsConfigRaw, jsonFilePath);
+		
+		const corsConfig = { rules: validatedRules };
 
 		if (!force) {
 			const confirmedRemoval = await confirm(
