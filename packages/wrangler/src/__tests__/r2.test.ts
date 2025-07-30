@@ -101,11 +101,12 @@ describe("r2", () => {
 			  wrangler r2 bucket  Manage R2 buckets
 
 			GLOBAL FLAGS
-			  -c, --config   Path to Wrangler configuration file  [string]
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -130,11 +131,12 @@ describe("r2", () => {
 			  wrangler r2 bucket  Manage R2 buckets
 
 			GLOBAL FLAGS
-			  -c, --config   Path to Wrangler configuration file  [string]
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -166,11 +168,12 @@ describe("r2", () => {
 				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
 
 				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 
@@ -207,11 +210,12 @@ describe("r2", () => {
 				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
 
 				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 
@@ -315,11 +319,12 @@ describe("r2", () => {
 					  name  The name of the new bucket  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
@@ -349,11 +354,12 @@ describe("r2", () => {
 					  name  The name of the new bucket  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
@@ -472,11 +478,12 @@ describe("r2", () => {
 					  wrangler r2 bucket update storage-class <name>  Update the default storage class of an existing R2 bucket
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]"
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
@@ -502,11 +509,12 @@ describe("r2", () => {
 						  name  The name of the existing bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction   The jurisdiction of the bucket to be updated  [string]
@@ -568,11 +576,12 @@ describe("r2", () => {
 					  bucket  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -632,11 +641,12 @@ describe("r2", () => {
 					  bucket  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -700,11 +710,12 @@ describe("r2", () => {
 					  wrangler r2 bucket sippy get <name>      Check the status of Sippy on an R2 bucket
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]"
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
 				`);
 			});
 
@@ -792,11 +803,12 @@ describe("r2", () => {
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction              The jurisdiction where the bucket exists  [string]
@@ -836,11 +848,12 @@ describe("r2", () => {
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -888,11 +901,12 @@ describe("r2", () => {
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -955,11 +969,12 @@ describe("r2", () => {
 					  wrangler r2 bucket catalog get <bucket>      Get the status of the data catalog for an R2 bucket [open-beta]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]"
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
 				`);
 			});
 
@@ -1011,11 +1026,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						  bucket  The name of the bucket to enable  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]"
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]"
 					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1043,11 +1059,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						  bucket  The name of the bucket to disable the data catalog for  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]"
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]"
 					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1132,11 +1149,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						  bucket  The name of the R2 bucket whose data catalog status to retrieve  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]"
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]"
 					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1352,11 +1370,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						  bucket  The name of the R2 bucket to get event notification rules for  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -1713,11 +1732,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						  bucket  The name of the R2 bucket to create an event notification rule for  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						      --event-types, --event-type  The type of event(s) that will emit event notifications  [array] [required] [choices: \\"object-create\\", \\"object-delete\\"]
@@ -1872,11 +1892,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						  bucket  The name of the R2 bucket to delete an event notification rule for  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						      --queue         The name of the queue that corresponds to the event notification rule. If no rule is provided, all event notification rules associated with the bucket and queue will be deleted  [string] [required]
@@ -3201,11 +3222,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				  wrangler r2 object delete <objectPath>  Delete an object in an R2 bucket
 
 				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 		describe("remote", () => {

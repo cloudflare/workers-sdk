@@ -15,6 +15,7 @@ import type { RequestInfo, RequestInit, Response } from "undici";
 export interface Unstable_DevOptions {
 	config?: string; // Path to .toml configuration file, relative to cwd
 	env?: string; // Environment to use for operations, and for selecting .env and .dev.vars files
+	envFiles?: string[]; // Paths to .env files to load, relative to cwd
 	ip?: string; // IP address to listen on
 	port?: number; // Port to listen on
 	bundle?: boolean; // Set to false to skip internal build steps and directly deploy script
@@ -183,6 +184,7 @@ export async function unstable_dev(
 		},
 		config: options?.config,
 		env: options?.env,
+		envFile: options?.envFiles,
 		processEntrypoint,
 		additionalModules,
 		bundle: options?.bundle,

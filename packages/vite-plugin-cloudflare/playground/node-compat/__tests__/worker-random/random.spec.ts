@@ -1,12 +1,15 @@
-import { expect, test } from "vitest";
-import { getJsonResponse } from "../../../__test-utils__";
+import { expect, test, vi } from "vitest";
+import { getJsonResponse, WAIT_FOR_OPTIONS } from "../../../__test-utils__";
 
 test("should be able to call `getRandomValues()` bound to any object", async () => {
-	const result = await getJsonResponse();
-	expect(result).toEqual([
-		expect.any(String),
-		expect.any(String),
-		expect.any(String),
-		expect.any(String),
-	]);
+	await vi.waitFor(
+		async () =>
+			expect(await getJsonResponse()).toEqual([
+				expect.any(String),
+				expect.any(String),
+				expect.any(String),
+				expect.any(String),
+			]),
+		WAIT_FOR_OPTIONS
+	);
 });

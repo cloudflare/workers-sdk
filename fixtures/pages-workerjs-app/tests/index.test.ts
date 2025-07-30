@@ -35,7 +35,12 @@ describe("Pages _worker.js", () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"./workerjs-test",
-			["--no-bundle=false", "--port=0", "--inspector-port=0"]
+			[
+				"--no-bundle=false",
+				"--port=0",
+				"--inspector-port=0",
+				"--compatibility-date=2025-07-15",
+			]
 		);
 		try {
 			await expect(
@@ -52,7 +57,12 @@ describe("Pages _worker.js", () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"./workerjs-test",
-			["--bundle", "--port=0", "--inspector-port=0"]
+			[
+				"--bundle",
+				"--port=0",
+				"--inspector-port=0",
+				"--compatibility-date=2025-07-15",
+			]
 		);
 		try {
 			await expect(
@@ -71,8 +81,9 @@ describe("Pages _worker.js", () => {
 			await runWranglerPagesDev(resolve(__dirname, ".."), "./workerjs-test", [
 				"--port=0",
 				"--inspector-port=0",
+				"--compatibility-date=2025-07-15",
 			]);
-		vi.waitFor(
+		await vi.waitFor(
 			() => {
 				expect(getOutput()).toContain("Ready on");
 			},
@@ -118,7 +129,7 @@ describe("Pages _worker.js", () => {
 				"--port=0",
 				"--inspector-port=0",
 			]);
-		vi.waitFor(
+		await vi.waitFor(
 			() => {
 				expect(getOutput()).toContain("Ready on");
 			},
@@ -154,6 +165,22 @@ describe("Pages _worker.js", () => {
 				"workerjs-test/XXX_routes.json",
 				"workerjs-test/_routes.json"
 			);
+		}
+	});
+
+	// Serendipitously, this .env reading also works for `wrangler pages dev`.
+	it("should read local dev vars from the .env file", async ({ expect }) => {
+		const { ip, port, stop } = await runWranglerPagesDev(
+			resolve(__dirname, ".."),
+			"./workerjs-test",
+			["--port=0", "--inspector-port=0", "--compatibility-date=2025-07-15"]
+		);
+		try {
+			const response = await fetch(`http://${ip}:${port}/env`);
+			const env = (await response.json()) as { FOO: string };
+			expect(env.FOO).toBe("bar");
+		} finally {
+			await stop();
 		}
 	});
 

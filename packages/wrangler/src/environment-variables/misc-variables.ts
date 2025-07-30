@@ -145,9 +145,7 @@ function getStagingSubdomain(): string {
  */
 export const getSanitizeLogs = getBooleanEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_SANITIZE",
-	defaultValue() {
-		return true;
-	},
+	defaultValue: true,
 });
 
 /**
@@ -255,7 +253,7 @@ export const getRegistryPath = getEnvironmentVariableFactory({
 /**
  * `WRANGLER_D1_EXTRA_LOCATION_CHOICES` is an internal variable to let D1 team target their testing environments.
  *
- * External accounts cannot access testing envionments, so should not set this variable.
+ * External accounts cannot access testing environments, so should not set this variable.
  */
 export const getD1ExtraLocationChoices: () => string | undefined =
 	getEnvironmentVariableFactory({
@@ -273,3 +271,22 @@ export const getDockerPath = getEnvironmentVariableFactory({
 		return "docker";
 	},
 });
+
+/**
+/**
+ * `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV` specifies whether to load vars for local dev from `.env` files.
+ */
+export const getCloudflareLoadDevVarsFromDotEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV",
+		defaultValue: true,
+	});
+
+/**
+ * `CLOUDFLARE_INCLUDE_PROCESS_ENV` specifies whether to include the `process.env` in vars loaded from `.env` for local development.
+ */
+export const getCloudflareIncludeProcessEnvFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "CLOUDFLARE_INCLUDE_PROCESS_ENV",
+		defaultValue: false,
+	});

@@ -10,4 +10,7 @@
 	"ai": {
 		"binding": "AI",
 	},
+	"vars": {
+		"VAR_1": "var-1",
+	},
 }
