@@ -34,6 +34,7 @@ export const DurableObjectsOptionsSchema = z.object({
 					unsafeUniqueKey: z
 						.union([z.string(), z.literal(kUnsafeEphemeralUniqueKey)])
 						.optional(),
+					unsafeScriptName: z.string().optional(),
 					// Prevents the Durable Object being evicted.
 					unsafePreventEviction: z.boolean().optional(),
 					remoteProxyConnectionString: z
@@ -69,7 +70,7 @@ export function normaliseDurableObject(
 		isObject && designator.scriptName !== undefined
 			? designator.scriptName
 			: undefined;
-	const serviceName = scriptName ? getUserServiceName(scriptName) : undefined;
+	const serviceName = isObject && designator.unsafeScriptName ? designator.unsafeScriptName : (scriptName ? getUserServiceName(scriptName) : undefined);
 	const enableSql = isObject ? designator.useSQLite : undefined;
 	const unsafeUniqueKey = isObject ? designator.unsafeUniqueKey : undefined;
 	const unsafePreventEviction = isObject

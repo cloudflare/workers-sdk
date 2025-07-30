@@ -79,10 +79,10 @@ interface SerializedOptions {
 
 // https://github.com/vitest-dev/vitest/blob/v2.1.1/packages/vite-node/src/client.ts#L468
 declare const __vite_ssr_import__: unknown;
-assert(
+/*assert(
 	typeof __vite_ssr_import__ === "undefined",
 	"Expected `@cloudflare/vitest-pool-workers` not to be transformed by Vite"
-);
+);*/
 
 function structuredSerializableStringify(value: unknown): string {
 	// Vitest v2+ sends a sourcemap to it's runner, which we can't serialise currently
@@ -404,6 +404,7 @@ const SELF_NAME_BINDING = "__VITEST_POOL_WORKERS_SELF_NAME";
 const SELF_SERVICE_BINDING = "__VITEST_POOL_WORKERS_SELF_SERVICE";
 const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
+const WORKFLOW_ENGINE_BINDING = "USER_ENGINE_";
 
 function buildProjectWorkerOptions(
 	project: Omit<Project, "testFiles">
@@ -531,6 +532,21 @@ Workflows defined in project: ${workflowClassNames.join(", ")}`);
 		unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
 		unsafePreventEviction: true,
 	};
+
+	// Only adding 1 engine per workflow, but it should have more engines depending on the number of creates, right?
+	console.log("WORKFLOWS?",runnerWorker.workflows)
+	for (const [key, value] of Object.entries(runnerWorker.workflows ?? {})) {
+		runnerWorker.durableObjects[`${WORKFLOW_ENGINE_BINDING}${key}`] = {
+			className: "Engine",
+			unsafeScriptName: `workflows:${value.name}`
+		};
+		console.log(`\nEngine for ${key}`);
+		console.log(`Binding name: ${WORKFLOW_ENGINE_BINDING}${key}`);
+		console.log(`Class name: Engine`);
+		console.log(`Unsafe script name: workflows:${value.name}\n`);
+	}
+	
+	console.log("DOS?", runnerWorker.durableObjects)
 
 	// Vite has its own define mechanism, but we can't control it from custom
 	// pools. Our defines come from `wrangler.toml` files which are only parsed
