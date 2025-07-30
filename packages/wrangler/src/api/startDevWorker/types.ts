@@ -183,7 +183,7 @@ export interface StartDevWorkerInput {
 
 		testScheduled?: boolean;
 
-		/** Whether to use Vectorize mixed mode -- the worker is run locally but accesses to Vectorize are made remotely */
+		/** Whether to use Vectorize as a remote binding -- the worker is run locally but accesses to Vectorize are made remotely */
 		bindVectorizeToProd?: boolean;
 
 		/** Whether to use Images local mode -- this is lower fidelity, but doesn't require network access */
