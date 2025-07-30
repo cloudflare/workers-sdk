@@ -32,8 +32,6 @@ export const isWindows = process.platform === "win32";
 export const isCINonLinux =
 	process.platform !== "linux" && process.env.CI === "true";
 
-let server: ViteDevServer | http.Server | PreviewServer;
-
 /**
  * Vite Dev Server when testing serve
  */
@@ -85,6 +83,8 @@ export function resetServerLogs() {
 }
 
 beforeAll(async (s) => {
+	let server: ViteDevServer | http.Server | PreviewServer | undefined;
+
 	const suite = s as RunnerTestFile;
 
 	testPath = suite.filepath!;
@@ -180,9 +180,7 @@ beforeAll(async (s) => {
 		await page?.close();
 		await server?.close();
 		await watcher?.close();
-		if (browser) {
-			await browser.close();
-		}
+		await browser?.close();
 	};
 }, 15_000);
 
@@ -256,12 +254,13 @@ export async function startDefaultServe(): Promise<
 	if (!isBuild) {
 		process.env.VITE_INLINE = "inline-serve";
 		const config = await loadConfig({ command: "serve", mode: "development" });
-		viteServer = server = await (await createServer(config)).listen();
-		viteTestUrl = server!.resolvedUrls!.local[0]!;
-		if (server.config.base === "/") {
+		viteServer = await (await createServer(config)).listen();
+		viteTestUrl = viteServer.resolvedUrls!.local[0]!;
+		if (viteServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
 		}
 		await page.goto(viteTestUrl);
+		return viteServer;
 	} else {
 		process.env.VITE_INLINE = "inline-build";
 		// determine build watch
@@ -299,10 +298,9 @@ export async function startDefaultServe(): Promise<
 		if (previewServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
 		}
-		server = previewServer;
 		await page.goto(viteTestUrl);
+		return previewServer;
 	}
-	return server;
 }
 
 /**
