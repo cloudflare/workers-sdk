@@ -107,14 +107,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let containerImageTagsSeen: Set<string> | undefined;
 	let runningContainerIds: Array<string>;
 
-	// This is needed so that we can tell the difference between the Vite http server closing and restarting.
-	let previousServer: unknown;
 	let restartingServer = false;
-	function updateRestartingServerFlag(viteDevServer: unknown) {
-		restartingServer =
-			previousServer !== undefined && viteDevServer !== previousServer;
-		previousServer = viteDevServer;
-	}
 
 	return [
 		{
@@ -350,7 +343,17 @@ if (import.meta.hot) {
 			// Vite `configureServer` Hook
 			// see https://vite.dev/guide/api-plugin.html#configureserver
 			async configureServer(viteDevServer) {
-				updateRestartingServerFlag(viteDevServer);
+				const restartServer = viteDevServer.restart.bind(viteDevServer);
+				viteDevServer.restart = async () => {
+					try {
+						restartingServer = true;
+						debuglog(configId, "From server.restart(): Restarting server...");
+						await restartServer();
+						debuglog(configId, "From server.restart(): Restarted server...");
+					} finally {
+						restartingServer = false;
+					}
+				};
 				assertIsNotPreview(resolvedPluginConfig);
 
 				// It is possible to get into a situation where the dev server is restarted by a config file change
@@ -426,7 +429,12 @@ if (import.meta.hot) {
 					return;
 				}
 
-				debuglog(configId, new Error("").stack);
+				debuglog(
+					configId,
+					new Error("").stack?.includes("restartServer")
+						? "From stack trace: restarting server..."
+						: "From stack trace: creating new server..."
+				);
 
 				if (!miniflare) {
 					debuglog(configId, "Creating new Miniflare instance");
@@ -624,7 +632,6 @@ if (import.meta.hot) {
 			// Vite `configurePreviewServer` Hook
 			// see https://vite.dev/guide/api-plugin.html#configurepreviewserver
 			async configurePreviewServer(vitePreviewServer) {
-				updateRestartingServerFlag(vitePreviewServer);
 				assertIsPreview(resolvedPluginConfig);
 
 				const inputInspectorPort = await getInputInspectorPortOption(
@@ -719,16 +726,13 @@ if (import.meta.hot) {
 					runningContainerIds = [];
 				}
 
+				debuglog("buildEnd:", restartingServer ? "restarted" : "disposing");
 				if (!restartingServer) {
-					debuglog("Disposing Miniflare instance");
+					debuglog("buildEnd: disposing Miniflare instance");
 					await miniflare?.dispose().catch((error) => {
-						console.error("Error disposing Miniflare instance:", error);
+						debuglog("buildEnd: failed to dispose Miniflare instance:", error);
 					});
 					miniflare = undefined;
-				} else {
-					debuglog(
-						"Vite is restarting so do not dispose of Miniflare instance"
-					);
 				}
 				// Reset the flag so that if a `buildEnd` hook is called again before the next
 				// configureServer hook then we do dispose of miniflare correctly.
