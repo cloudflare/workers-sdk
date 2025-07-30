@@ -82,7 +82,7 @@ export class Engine extends DurableObject<Env> {
 	waiters: Map<string, Array<(event: Event | PromiseLike<Event>) => void>> =
 		new Map();
 	eventMap: Map<string, Array<Event>> = new Map();
-	stubStep: Context | undefined;
+	stubStep: Context;
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
@@ -119,6 +119,9 @@ export class Engine extends DurableObject<Env> {
 			startGracePeriod,
 			ENGINE_TIMEOUT
 		);
+
+		const stubStep = new Context(this, this.ctx);
+		this.stubStep = stubStep;
 	}
 
 	writeLog(
@@ -288,7 +291,8 @@ export class Engine extends DurableObject<Env> {
 
 	// TODO: Figure out how to scope this to a private
 	async disableSleeps() {
-		this.stubStep?.disableSleeps();
+		console.log("calling disable sleep in engine");
+		await this.stubStep.disableSleeps();
 	}
 
 	async init(
@@ -360,9 +364,6 @@ export class Engine extends DurableObject<Env> {
 		// restore eventMap so that waitForEvent across lifetimes works correctly
 		await this.restoreEventMap();
 
-		const stubStep = new Context(this, this.ctx);
-		this.stubStep = stubStep;
-
 		const workflowRunningHandler = async () => {
 			await this.ctx.storage.transaction(async () => {
 				// manually start the grace period
@@ -374,7 +375,7 @@ export class Engine extends DurableObject<Env> {
 		void workflowRunningHandler();
 		try {
 			const target = this.env.USER_WORKFLOW;
-			const result = await target.run(event, stubStep);
+			const result = await target.run(event, this.stubStep);
 			this.writeLog(InstanceEvent.WORKFLOW_SUCCESS, null, null, {
 				result,
 			});

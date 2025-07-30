@@ -58,7 +58,8 @@ export class Context extends RpcTarget {
 	}
 
 	// TODO: Figure out how to make this private
-	disableSleeps() {
+	async disableSleeps() {
+		console.log("calling disable sleep");
 		this.#shouldSkipSleep = true;
 	}
 
@@ -512,11 +513,13 @@ export class Context extends RpcTarget {
 		// @ts-expect-error priorityQueue is initiated in init
 		await this.#engine.priorityQueue.add({
 			hash: cacheKey,
-			targetTimestamp: Date.now() + duration,
+			targetTimestamp: Date.now() + (this.#shouldSkipSleep ? 0 : duration),
 			type: "sleep",
 		});
+
+		console.log("this.#shouldSkipSleep", this.#shouldSkipSleep);
 		// this probably will never finish except if sleep is less than the grace period
-		await scheduler.wait(duration);
+		await scheduler.wait(this.#shouldSkipSleep ? 0 : duration);
 
 		this.#engine.writeLog(
 			InstanceEvent.SLEEP_COMPLETE,
