@@ -122,7 +122,7 @@ export class InstanceModifier extends RpcTarget {
 	}
 
 	public async disableSleeps(steps?: StepSelector[]): Promise<void> {
-		engineStub.console.log("I should disable sleeps!");
+		await this.engineStub.disableSleeps();
 	}
 
 	public async mockStepImplementation(step: StepSelector): Promise<void> {

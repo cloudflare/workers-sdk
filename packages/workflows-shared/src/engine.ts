@@ -82,6 +82,7 @@ export class Engine extends DurableObject<Env> {
 	waiters: Map<string, Array<(event: Event | PromiseLike<Event>) => void>> =
 		new Map();
 	eventMap: Map<string, Array<Event>> = new Map();
+	stubStep: Context | undefined;
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
@@ -285,6 +286,11 @@ export class Engine extends DurableObject<Env> {
 
 	async userTriggeredTerminate() {}
 
+	// TODO: Figure out how to scope this to a private
+	async disableSleeps() {
+		this.stubStep?.disableSleeps();
+	}
+
 	async init(
 		accountId: number,
 		workflow: DatabaseWorkflow,
@@ -355,6 +361,7 @@ export class Engine extends DurableObject<Env> {
 		await this.restoreEventMap();
 
 		const stubStep = new Context(this, this.ctx);
+		this.stubStep = stubStep;
 
 		const workflowRunningHandler = async () => {
 			await this.ctx.storage.transaction(async () => {
