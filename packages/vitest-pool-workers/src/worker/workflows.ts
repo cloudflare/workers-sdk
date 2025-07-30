@@ -87,9 +87,11 @@ class WorkflowInstanceIntrospectorHandle
 		this.instanceId = instanceId;
 	}
 
-	modify(fn: (m: InstanceModifier) => void): WorkflowInstanceIntrospector {
-		const modifier = new InstanceModifier(this.instanceId);
-		fn(modifier);
+	async modify(
+		fn: (m: InstanceModifier) => void
+	): WorkflowInstanceIntrospector {
+		const modifier = new InstanceModifier(this.instanceId, this.engineStub);
+		await fn(modifier);
 		console.log("Should allow modifications");
 		return this;
 	}
@@ -122,6 +124,7 @@ export class InstanceModifier extends RpcTarget {
 	}
 
 	public async disableSleeps(steps?: StepSelector[]): Promise<void> {
+		console.log("calling engineStub.disableSleeps");
 		await this.engineStub.disableSleeps();
 	}
 
