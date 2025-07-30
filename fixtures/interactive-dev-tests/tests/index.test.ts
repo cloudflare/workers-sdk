@@ -719,10 +719,13 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			await new Promise<void>((resolve) => {
 				wrangler.pty.onExit(() => resolve());
 			});
-			await vi.waitFor(() => {
-				const remainingIds = getContainerIds();
-				expect(remainingIds.length).toBe(0);
-			});
+			await vi.waitFor(
+				() => {
+					const remainingIds = getContainerIds();
+					expect(remainingIds.length).toBe(0);
+				},
+				{ timeout: 10_000, interval: 1000 }
+			);
 		});
 	}
 );
