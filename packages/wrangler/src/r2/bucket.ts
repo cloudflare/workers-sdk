@@ -249,7 +249,7 @@ export const r2BucketInfoCommand = createCommand({
 		};
 
 		if (args.json) {
-			console.log(JSON.stringify(output, null, 2));
+			logger.json(output);
 		} else {
 			logger.log(formatLabelledValues(output));
 		}
