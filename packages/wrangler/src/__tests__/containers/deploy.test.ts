@@ -222,6 +222,7 @@ describe("wrangler deploy with containers", () => {
 	});
 
 	it("should be able to deploy a new container with custom instance limits", async () => {
+		// this test checks the deprecated path for setting custom instance limits
 		// note no docker commands have been mocked here!
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
@@ -268,6 +269,14 @@ describe("wrangler deploy with containers", () => {
 					  https://test-name.test-sub-domain.workers.dev
 					Current Version ID: Galaxy-Class"
 				`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+			    - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead.
+			  \\"configuration.image\\" should be \\"image\\", limits should be set via \\"instance_type\\".
+
+			"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
@@ -307,6 +316,7 @@ describe("wrangler deploy with containers", () => {
 	});
 
 	it("should be able to deploy a new container with custom instance limits (instance_type)", async () => {
+		// tests the preferred method for setting custom instance limits
 		// note no docker commands have been mocked here!
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
@@ -353,6 +363,8 @@ describe("wrangler deploy with containers", () => {
 					  https://test-name.test-sub-domain.workers.dev
 					Current Version ID: Galaxy-Class"
 				`);
+		// no deprecation warnings should show up on this run
+		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
