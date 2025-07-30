@@ -153,6 +153,14 @@ async function buildPackage() {
 	const pkg = getPackage(pkgRoot);
 
 	const indexPath = path.join(pkgRoot, "src", "index.ts");
+	// The dev registry proxy will be run in a separate worker thread, so we
+	// will define a separate entry point for it
+	const devRegistryProxyPath = path.join(
+		pkgRoot,
+		"src",
+		"shared",
+		"dev-registry.worker.ts"
+	);
 	// Look for test files ending with .spec.ts in the test directory, default to
 	// empty array if not found
 	let testPaths = [];
@@ -190,7 +198,7 @@ async function buildPackage() {
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,
-		entryPoints: [indexPath, ...testPaths],
+		entryPoints: [indexPath, devRegistryProxyPath, ...testPaths],
 	};
 	if (watch) {
 		const ctx = await esbuild.context(buildOptions);
