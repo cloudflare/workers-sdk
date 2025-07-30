@@ -15,6 +15,7 @@ const execOptions = {
 	env: { ...process.env, ...auth },
 } as const;
 const remoteWorkerName = `tmp-e2e-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
+const remoteStagingWorkerName = `tmp-e2e-staging-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
 const remoteKvName = `tmp-e2e-remote-kv-test-remote-bindings-${randomUUID().split("-")[0]}`;
 
 if (auth) {
@@ -30,6 +31,19 @@ if (auth) {
 
 				if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(deployOut)) {
 					throw new Error(`Failed to deploy ${remoteWorkerName}`);
+				}
+
+				const stagingDeployOut = execSync(
+					`pnpm wrangler deploy remote-worker.staging.js --name ${remoteStagingWorkerName} --compatibility-date 2025-06-19`,
+					execOptions
+				);
+
+				if (
+					!new RegExp(`Deployed\\s+${remoteStagingWorkerName}\\b`).test(
+						stagingDeployOut
+					)
+				) {
+					throw new Error(`Failed to deploy ${remoteStagingWorkerName}`);
 				}
 
 				const kvAddOut = execSync(
@@ -71,6 +85,24 @@ if (auth) {
 									experimental_remote: true,
 								},
 							],
+							env: {
+								staging: {
+									services: [
+										{
+											binding: "MY_WORKER",
+											service: remoteStagingWorkerName,
+											experimental_remote: true,
+										},
+									],
+									kv_namespaces: [
+										{
+											binding: "MY_KV",
+											id: remoteKvId,
+											experimental_remote: true,
+										},
+									],
+								},
+							},
 						},
 						undefined,
 						2
@@ -82,6 +114,10 @@ if (auth) {
 			afterAll(() => {
 				execSync(
 					`pnpm wrangler delete --name ${remoteWorkerName}`,
+					execOptions
+				);
+				execSync(
+					`pnpm wrangler delete --name ${remoteStagingWorkerName}`,
 					execOptions
 				);
 				execSync(
@@ -107,6 +143,31 @@ if (auth) {
 				const workerText = await response?.text();
 				expect(workerText).toEqual(
 					"Hello from a remote Worker part of the getPlatformProxy remote bindings fixture!"
+				);
+
+				const kvValue = await env.MY_KV.get("test-key");
+				expect(kvValue).toEqual("remote-kv-value");
+
+				await dispose();
+			});
+
+			test("getPlatformProxy works with remote bindings specified in an environment", async () => {
+				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", auth.CLOUDFLARE_ACCOUNT_ID);
+				vi.stubEnv("CLOUDFLARE_API_TOKEN", auth.CLOUDFLARE_API_TOKEN);
+				const { env, dispose } = await getPlatformProxy<{
+					MY_WORKER: Fetcher;
+					MY_KV: KVNamespace;
+				}>({
+					configPath: "./.tmp/wrangler.json",
+					experimental: { remoteBindings: true },
+					environment: "staging",
+				});
+
+				const workerText = await (
+					await env.MY_WORKER.fetch("http://example.com")
+				).text();
+				expect(workerText).toEqual(
+					"Hello from a remote Worker, defined for the staging environment, part of the getPlatformProxy remote bindings fixture!"
 				);
 
 				const kvValue = await env.MY_KV.get("test-key");
