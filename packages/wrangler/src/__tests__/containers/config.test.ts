@@ -196,6 +196,7 @@ describe("getNormalizedContainerOptions", () => {
 	});
 
 	it("should handle custom limit configuration", async () => {
+		// deprecated path for setting custom limits
 		const config: Config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",
@@ -234,6 +235,95 @@ describe("getNormalizedContainerOptions", () => {
 			rollout_kind: "full_auto",
 			disk_bytes: 5_000_000_000, // 5000 MB in bytes
 			memory_mib: 1024,
+			vcpu: 2,
+			image_uri: "registry.example.com/test:latest",
+			constraints: { tier: 1 },
+		});
+	});
+
+	it("should handle custom limit configuration through instance_type", async () => {
+		// updated path for setting custom limits
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					name: "test-container",
+					class_name: "TestContainer",
+					image: "registry.example.com/test:latest",
+					instance_type: {
+						disk_mb: 5000,
+						memory_mib: 1024,
+						vcpu: 2,
+					},
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config);
+		expect(result).toHaveLength(1);
+		expect(result[0]).toMatchObject({
+			name: "test-container",
+			class_name: "TestContainer",
+			max_instances: 0,
+			scheduling_policy: "default",
+			rollout_step_percentage: 25,
+			rollout_kind: "full_auto",
+			disk_bytes: 5_000_000_000, // 5000 MB in bytes
+			memory_mib: 1024,
+			vcpu: 2,
+			image_uri: "registry.example.com/test:latest",
+			constraints: { tier: 1 },
+		});
+	});
+
+	it("should normalize and set defaults for custom limits to dev instance type", async () => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					name: "test-container",
+					class_name: "TestContainer",
+					image: "registry.example.com/test:latest",
+					instance_type: {
+						vcpu: 2,
+					},
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config);
+		expect(result).toHaveLength(1);
+		expect(result[0]).toMatchObject({
+			name: "test-container",
+			class_name: "TestContainer",
+			max_instances: 0,
+			scheduling_policy: "default",
+			rollout_step_percentage: 25,
+			rollout_kind: "full_auto",
+			disk_bytes: 2_000_000_000, // 2000 MB in bytes
+			memory_mib: 256,
 			vcpu: 2,
 			image_uri: "registry.example.com/test:latest",
 			constraints: { tier: 1 },
