@@ -18,6 +18,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		id = crypto.randomUUID(),
 		params = {},
 	}: WorkflowInstanceCreateOptions = {}): Promise<WorkflowInstance> {
+		console.log("I WAS HERE");
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 

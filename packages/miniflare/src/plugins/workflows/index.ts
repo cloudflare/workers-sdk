@@ -128,6 +128,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 					},
 				};
 
+				console.log(`OLAAAAA ${JSON.stringify(workflowsBinding.worker?.bindings, undefined, 2)}`)
 				return workflowsBinding;
 			}
 		);

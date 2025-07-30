@@ -21,6 +21,7 @@ import {
 import { createChunkingSocket } from "../shared/chunking-socket";
 import type { SocketLike } from "../shared/chunking-socket";
 import type { VitestExecutor as VitestExecutorType } from "vitest/execute";
+import { env } from "cloudflare:workers";
 
 function structuredSerializableStringify(value: unknown): string {
 	return devalue.stringify(value, structuredSerializableReducers);
@@ -317,6 +318,10 @@ export class RunnerObject implements DurableObject {
 		return this.handleVitestRunRequest(request);
 	}
 }
+
+// @ts-expect-error asd
+console.log("HIII", env["__VITEST_POOL_WORKERS_RUNNER_OBJECT"])
+console.log("HIII", env["USER_ENGINE_MY_WORKFLOW"])
 
 export default createWorkerEntrypointWrapper("default");
 

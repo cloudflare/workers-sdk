@@ -18,4 +18,5 @@ export {
 	getQueueResult,
 	applyD1Migrations,
 	createPagesEventContext,
+	introspectWorkflowInstance,
 } from "cloudflare:test-internal";
