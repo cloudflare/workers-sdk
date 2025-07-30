@@ -916,10 +916,29 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 	}
 
 	const hasDotDevDotVars = existingGitIgnoreContent.match(
-		/^\/?\.dev\.vars(\.?\*)?(\s|$)/m,
+		/^\/?\.dev\.vars\*(\s|$)/m,
 	);
 	if (!hasDotDevDotVars) {
 		wranglerGitIgnoreFilesToAdd.push(".dev.vars*");
+	}
+
+	const hasDotDevVarsExample = existingGitIgnoreContent.match(
+		/^!\/?\.dev\.vars\.example(\s|$)/m,
+	);
+	if (!hasDotDevVarsExample) {
+		wranglerGitIgnoreFilesToAdd.push("!.dev.vars.example");
+	}
+
+	const hasDotEnv = existingGitIgnoreContent.match(/^\/?\.env\*(\s|$)/m);
+	if (!hasDotEnv) {
+		wranglerGitIgnoreFilesToAdd.push(".env*");
+	}
+
+	const hasDotEnvExample = existingGitIgnoreContent.match(
+		/^!\/?\.env\.example(\s|$)/m,
+	);
+	if (!hasDotEnvExample) {
+		wranglerGitIgnoreFilesToAdd.push("!.env.example");
 	}
 
 	if (wranglerGitIgnoreFilesToAdd.length === 0) {
@@ -934,7 +953,7 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 		...(!existingGitIgnoreContent.match(/\n\s*$/) ? [""] : []),
 	];
 
-	if (wranglerGitIgnoreFilesToAdd.length > 1) {
+	if (!hasDotWrangler && wranglerGitIgnoreFilesToAdd.length > 1) {
 		linesToAppend.push("# wrangler files");
 	}
 
