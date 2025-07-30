@@ -14,6 +14,7 @@ import { UserError } from "../errors";
 import {
 	EXTERNAL_IMAGES_WORKER_NAME,
 	EXTERNAL_IMAGES_WORKER_SCRIPT,
+	getImagesRemoteEdgeApiFetcher,
 	getImagesRemoteFetcher,
 } from "../images/fetcher";
 import { logger } from "../logger";
@@ -854,6 +855,9 @@ export function buildMiniflareBindingOptions(
 			],
 			serviceBindings: {
 				FETCHER: getImagesRemoteFetcher({
+					compliance_region: config.complianceRegion,
+				}),
+				EDGE_API_FETCHER: getImagesRemoteEdgeApiFetcher({
 					compliance_region: config.complianceRegion,
 				}),
 			},

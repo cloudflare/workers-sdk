@@ -20,6 +20,18 @@ const IMAGES_LOCAL_FETCHER = /* javascript */ `
 	}
 `;
 
+// TODO: can this be merged with IMAGES_LOCAL_FETCHER?
+const IMAGES_LOCAL_EDGE_API_FETCHER = /* javascript */ `
+  export default {
+	  fetch(req, env) {
+			const request = new Request(req);
+			request.headers.set("${CoreHeaders.CUSTOM_FETCH_SERVICE}", "${CoreBindings.HOSTED_IMAGES_SERVICE}");
+			request.headers.set("${CoreHeaders.ORIGINAL_URL}", request.url);
+			return env.${CoreBindings.SERVICE_LOOPBACK}.fetch(request)
+		}
+	}
+`;
+
 const ImagesSchema = z.object({
 	binding: z.string(),
 	remoteProxyConnectionString: z
@@ -32,6 +44,7 @@ export const ImagesOptionsSchema = z.object({
 });
 
 export const IMAGES_PLUGIN_NAME = "images";
+export const IMAGES_EDGE_API_PLUGIN_NAME = "imagesEdgeApi";
 
 export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 	options: ImagesOptionsSchema,
@@ -51,6 +64,16 @@ export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 							service: {
 								name: getUserBindingServiceName(
 									IMAGES_PLUGIN_NAME,
+									options.images.binding,
+									options.images.remoteProxyConnectionString
+								),
+							},
+						},
+						{
+							name: "edgeApiFetcher",
+							service: {
+								name: getUserBindingServiceName(
+									IMAGES_EDGE_API_PLUGIN_NAME,
 									options.images.binding,
 									options.images.remoteProxyConnectionString
 								),
@@ -94,6 +117,28 @@ export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 								},
 							],
 							compatibilityDate: "2025-04-01",
+							bindings: [WORKER_BINDING_SERVICE_LOOPBACK],
+						},
+			},
+			{
+				name: getUserBindingServiceName(
+					IMAGES_EDGE_API_PLUGIN_NAME,
+					options.images.binding,
+					options.images.remoteProxyConnectionString
+				),
+				worker: options.images.remoteProxyConnectionString
+					? remoteProxyClientWorker(
+							options.images.remoteProxyConnectionString,
+							options.images.binding
+						)
+					: {
+							modules: [
+								{
+									name: "index.worker.js",
+									esModule: IMAGES_LOCAL_EDGE_API_FETCHER,
+								},
+							],
+							compatibilityDate: "2025-04-01", // TODO: what should the compatibility date be here?
 							bindings: [WORKER_BINDING_SERVICE_LOOPBACK],
 						},
 			},
