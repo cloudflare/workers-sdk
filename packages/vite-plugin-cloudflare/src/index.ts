@@ -373,7 +373,7 @@ if (import.meta.hot) {
 					miniflare
 				);
 
-				viteDevServer.watcher.once("change", async (changedFilePath) => {
+				const configChangedHandler = async (changedFilePath: string) => {
 					assertIsNotPreview(resolvedPluginConfig);
 
 					if (
@@ -386,6 +386,7 @@ if (import.meta.hot) {
 						)
 					) {
 						debuglog(configId, "Config changed: " + changedFilePath);
+						viteDevServer.watcher.off("change", configChangedHandler);
 						if (!restartAbortController.signal.aborted) {
 							debuglog(
 								configId,
@@ -401,7 +402,8 @@ if (import.meta.hot) {
 							);
 						}
 					}
-				});
+				};
+				viteDevServer.watcher.on("change", configChangedHandler);
 
 				let containerBuildId: string | undefined;
 				const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
