@@ -132,6 +132,7 @@ export function createWorkerEntrypointWrapper(
 	entrypoint: string
 ): WorkerEntrypointConstructor<WrapperEnv> {
 	class Wrapper extends WorkerEntrypoint<WrapperEnv> {
+		/** A unique identifier used for debugging errors when config updates. */
 		configId?: string;
 		constructor(ctx: ExecutionContext, env: WrapperEnv) {
 			super(ctx, env);

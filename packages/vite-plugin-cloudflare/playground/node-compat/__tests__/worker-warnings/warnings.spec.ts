@@ -1,6 +1,6 @@
 import dedent from "ts-dedent";
 import { expect, test, vi } from "vitest";
-import { isBuild, serverLogs } from "../../../__test-utils__";
+import { isBuild, serverLogs, WAIT_FOR_OPTIONS } from "../../../__test-utils__";
 
 test.skipIf(isBuild)(
 	"should display warnings if nodejs_compat is missing",
@@ -14,7 +14,7 @@ test.skipIf(isBuild)(
 				 - "perf_hooks" imported from "worker-warnings/index.ts"
 				`
 				),
-			{ timeout: 5_000, interval: 500 }
+			WAIT_FOR_OPTIONS
 		);
 	}
 );

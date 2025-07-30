@@ -91,6 +91,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	async initRunner(
 		worker: ReplaceWorkersTypes<Fetcher>,
 		workerConfig: WorkerConfig,
+		/** A unique identifier used for debugging errors when config updates. */
 		configId: string
 	) {
 		this.#worker = worker;
@@ -201,6 +202,7 @@ export function initRunners(
 	resolvedPluginConfig: WorkersResolvedConfig,
 	viteDevServer: vite.ViteDevServer,
 	miniflare: Miniflare,
+	/** A unique identifier used for debugging errors when config updates. */
 	configId: string
 ): Promise<void[]> | undefined {
 	return Promise.all(

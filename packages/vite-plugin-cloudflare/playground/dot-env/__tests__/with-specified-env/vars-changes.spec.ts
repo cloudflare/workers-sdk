@@ -4,6 +4,7 @@ import {
 	getJsonResponse,
 	isBuild,
 	mockFileChange,
+	WAIT_FOR_OPTIONS,
 } from "../../../__test-utils__";
 
 test.runIf(!isBuild)(
@@ -26,18 +27,15 @@ test.runIf(!isBuild)(
 			content.replace(/my \.env staging/g, "my .env UPDATED staging")
 		);
 
-		await vi.waitFor(
-			async () => {
-				const updatedResponse = await getJsonResponse();
-				expect(updatedResponse).toEqual({
-					"variables loaded from .env and .env.staging": {
-						MY_DEV_VAR_A: "my .env UPDATED staging variable A",
-						MY_DEV_VAR_B: "my .env UPDATED staging variable B",
-						MY_DEV_VAR_C: "my .env UPDATED variable C", // Note that unlike .dev.vars, we merge .env files
-					},
-				});
-			},
-			{ timeout: 5000 }
-		);
+		await vi.waitFor(async () => {
+			const updatedResponse = await getJsonResponse();
+			expect(updatedResponse).toEqual({
+				"variables loaded from .env and .env.staging": {
+					MY_DEV_VAR_A: "my .env UPDATED staging variable A",
+					MY_DEV_VAR_B: "my .env UPDATED staging variable B",
+					MY_DEV_VAR_C: "my .env UPDATED variable C", // Note that unlike .dev.vars, we merge .env files
+				},
+			});
+		}, WAIT_FOR_OPTIONS);
 	}
 );

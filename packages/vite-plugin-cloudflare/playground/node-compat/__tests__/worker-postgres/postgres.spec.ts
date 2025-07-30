@@ -6,10 +6,12 @@ import {
 } from "../../../__test-utils__";
 
 test("should be able to create a pg Client", async () => {
-	await vi.waitFor(async () =>
-		expect(await getTextResponse()).toMatchInlineSnapshot(
-			`"hh-pgsql-public.ebi.ac.uk"`
-		)
+	await vi.waitFor(
+		async () =>
+			expect(await getTextResponse()).toMatchInlineSnapshot(
+				`"hh-pgsql-public.ebi.ac.uk"`
+			),
+		WAIT_FOR_OPTIONS
 	);
 });
 

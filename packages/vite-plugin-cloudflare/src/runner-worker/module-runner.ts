@@ -12,6 +12,7 @@ let oldConfigId: string | undefined;
 export async function createModuleRunner(
 	env: WrapperEnv,
 	webSocket: WebSocket,
+	/** A unique identifier used for debugging errors when config updates. */
 	configId?: string
 ) {
 	if (moduleRunner) {

@@ -107,6 +107,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let containerImageTagsSeen: Set<string> | undefined;
 	let runningContainerIds: Array<string>;
 
+	/** Used to track whether hooks are being called because of a server restart or a server close event. */
 	let restartingServer = false;
 
 	return [
@@ -343,6 +344,7 @@ if (import.meta.hot) {
 			// Vite `configureServer` Hook
 			// see https://vite.dev/guide/api-plugin.html#configureserver
 			async configureServer(viteDevServer) {
+				// Patch the `server.restart` method to track whether the server is restarting or not.
 				const restartServer = viteDevServer.restart.bind(viteDevServer);
 				viteDevServer.restart = async () => {
 					try {
@@ -354,12 +356,14 @@ if (import.meta.hot) {
 						restartingServer = false;
 					}
 				};
+
 				assertIsNotPreview(resolvedPluginConfig);
 
 				// It is possible to get into a situation where the dev server is restarted by a config file change
 				// right in the middle of the Vite server and the supporting Workers being initialized.
 				// We use an abort controller to signal to the initialization code that it should stop if the config has changed.
 				const restartAbortController = new AbortController();
+
 				// We use a `configId` to help debug how the config changes are triggering the restarts.
 				const configId = randomUUID();
 
@@ -424,8 +428,8 @@ if (import.meta.hot) {
 						configId,
 						"Aborting setting up miniflare because config has changed."
 					);
-					// The config has changes while this was still trying to setup the server.
-					// So just abort and allow the new server to be set up.
+					// The config has changed while we were still trying to setup the server,
+					// so just abort and allow the new server to be set up instead.
 					return;
 				}
 

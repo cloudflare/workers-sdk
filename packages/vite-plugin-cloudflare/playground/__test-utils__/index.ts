@@ -8,8 +8,13 @@ export function failsIf(condition: boolean) {
 	return condition ? test.fails : test;
 }
 
+/**
+ * Makes a change to a file and restores it after the test is finished.
+ */
 export function mockFileChange(
+	/** The path to the file to change */
 	filePath: string,
+	/** A function that modifies the original content of the file */
 	mutateFn: (originalContent: string) => string
 ) {
 	const originalContent = fs.readFileSync(filePath, "utf-8");
