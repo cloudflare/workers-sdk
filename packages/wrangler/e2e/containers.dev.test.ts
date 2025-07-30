@@ -158,9 +158,11 @@ for (const source of imageSource) {
 				await helper.seed({
 					"wrangler.json": JSON.stringify(wranglerConfig),
 				});
-				// wait a bit in case any cleanup is already happening
+				/// wait a bit in case the expected cleanup from shutting down wrangler dev is already happening
 				await new Promise((resolve) => setTimeout(resolve, 500));
-				// cleanup any running containers
+				// cleanup any running containers. this does happen automatically when we shut down wrangler,
+				// but treekill is being uncooperative. this is also tested in interactive-dev-fixture
+				// where it is working as expected
 				const ids = getContainerIds("e2econtainer");
 				if (ids.length > 0) {
 					execSync(`${getDockerPath()} rm -f ${ids.join(" ")}`, {
@@ -169,8 +171,10 @@ for (const source of imageSource) {
 				}
 			});
 			afterAll(async () => {
-				// wait a bit in case any cleanup is already happening
+				// wait a bit in case the expected cleanup from shutting down wrangler dev is already happening
 				await new Promise((resolve) => setTimeout(resolve, 500));
+				// again this should happen automatically when we shut down wrangler, but treekill is being uncooperative.
+				// this is tested in interactive-dev-fixture where it is working as expected.
 				const ids = getContainerIds("e2econtainer");
 				if (ids.length > 0) {
 					execSync(`${getDockerPath()} rm -f ${ids.join(" ")}`, {
@@ -228,7 +232,7 @@ for (const source of imageSource) {
 						text = await response.text();
 						expect(text).toBe("Hello World! Have an env var! I'm an env var!");
 					},
-					{ timeout: 30_000 }
+					{ timeout: 5_000 }
 				);
 
 				// Check that a container is running using `docker ps`

@@ -3,4 +3,4 @@
 "wrangler": patch
 ---
 
-fix: move local dev container cleanup to process exit hook. this should hopefully clean up containers in more scenarios.
+fix: move local dev container cleanup to process exit hook. This should ensure containers are cleaned up even when Wrangler is shut down programatically.

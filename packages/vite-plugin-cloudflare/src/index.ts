@@ -97,7 +97,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const additionalModulePaths = new Set<string>();
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
-	const containerImageTagsSeen = new Set<string>();
+	let containerImageTagsSeen = new Set<string>();
 
 	return [
 		{
@@ -452,7 +452,7 @@ if (import.meta.hot) {
 								)
 							)
 						);
-						const imageTags = await prepareContainerImages({
+						containerImageTagsSeen = await prepareContainerImages({
 							containersConfig: entryWorkerConfig.containers,
 							containerBuildId,
 							isContainersEnabled: entryWorkerConfig.dev.enable_containers,
@@ -465,9 +465,6 @@ if (import.meta.hot) {
 									"\n⚡️ Containers successfully built. To rebuild your containers during development, restart the Vite dev server (r + enter)."
 								)
 							)
-						);
-						imageTags.forEach((imageTag) =>
-							containerImageTagsSeen.add(imageTag)
 						);
 
 						/*
@@ -486,7 +483,13 @@ if (import.meta.hot) {
 						 */
 						process.on("exit", async () => {
 							if (containerImageTagsSeen.size) {
-								cleanupContainers(dockerPath, containerImageTagsSeen);
+								try {
+									cleanupContainers(dockerPath, containerImageTagsSeen);
+								} catch (error) {
+									viteDevServer.config.logger.warnOnce(
+										"Failed to clean up containers. You may have to stop and remove them up manually"
+									);
+								}
 							}
 						});
 					}
@@ -574,7 +577,7 @@ if (import.meta.hot) {
 							)
 						)
 					);
-					const imageTags = await prepareContainerImages({
+					containerImageTagsSeen = await prepareContainerImages({
 						containersConfig: entryWorkerConfig.containers,
 						containerBuildId,
 						isContainersEnabled: entryWorkerConfig.dev.enable_containers,
@@ -584,11 +587,16 @@ if (import.meta.hot) {
 					vitePreviewServer.config.logger.info(
 						colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
 					);
-					imageTags.forEach((imageTag) => containerImageTagsSeen.add(imageTag));
 
 					process.on("exit", () => {
 						if (containerImageTagsSeen.size) {
-							cleanupContainers(dockerPath, containerImageTagsSeen);
+							try {
+								cleanupContainers(dockerPath, containerImageTagsSeen);
+							} catch (error) {
+								vitePreviewServer.config.logger.warnOnce(
+									"Failed to clean up containers. You may have to stop and remove them up manually"
+								);
+							}
 						}
 					});
 				}
