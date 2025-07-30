@@ -3245,6 +3245,9 @@ importers:
 
   packages/vitest-pool-workers:
     dependencies:
+      async-wait-until:
+        specifier: ^2.0.27
+        version: 2.0.27
       birpc:
         specifier: 0.2.14
         version: 0.2.14
@@ -7949,6 +7952,10 @@ packages:
 
   async-sema@3.1.1:
     resolution: {integrity: sha512-tLRNUXati5MFePdAk8dw7Qt7DpxPB60ofAgn8WRhW6a2rcimZnYBP9oxHiv0OHy+Wz7kPMG+t4LGdt31+4EmGg==}
+
+  async-wait-until@2.0.27:
+    resolution: {integrity: sha512-2l7YlsHXxjmq4o3nSpvH4eav21+ZlUYOflj9TQsPBtzt99v+1Xsy8RvU5+x/OdkFTej40ws3AaKMgT/Ssj+LhQ==}
+    engines: {node: '>= 0.14.0', npm: '>= 1.0.0'}
 
   async@3.2.4:
     resolution: {integrity: sha512-iAB+JbDEGXhyIUavoDl9WP/Jj106Kz9DEn1DPgYw5ruDn0e3Wgi3sKFm55sASdGBNOQB8F59d9qQ7deqrHA8wQ==}
@@ -18072,6 +18079,8 @@ snapshots:
       tslib: 2.8.1
 
   async-sema@3.1.1: {}
+
+  async-wait-until@2.0.27: {}
 
   async@3.2.4: {}
 

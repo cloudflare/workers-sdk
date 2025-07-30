@@ -534,19 +534,19 @@ Workflows defined in project: ${workflowClassNames.join(", ")}`);
 	};
 
 	// Only adding 1 engine per workflow, but it should have more engines depending on the number of creates, right?
-	console.log("WORKFLOWS?",runnerWorker.workflows)
+	console.log("WORKFLOWS?", runnerWorker.workflows);
 	for (const [key, value] of Object.entries(runnerWorker.workflows ?? {})) {
 		runnerWorker.durableObjects[`${WORKFLOW_ENGINE_BINDING}${key}`] = {
 			className: "Engine",
-			unsafeScriptName: `workflows:${value.name}`
+			unsafeScriptName: `workflows:${value.name}`,
 		};
 		console.log(`\nEngine for ${key}`);
 		console.log(`Binding name: ${WORKFLOW_ENGINE_BINDING}${key}`);
 		console.log(`Class name: Engine`);
 		console.log(`Unsafe script name: workflows:${value.name}\n`);
 	}
-	
-	console.log("DOS?", runnerWorker.durableObjects)
+
+	console.log("DOS?", runnerWorker.durableObjects);
 
 	// Vite has its own define mechanism, but we can't control it from custom
 	// pools. Our defines come from `wrangler.toml` files which are only parsed
