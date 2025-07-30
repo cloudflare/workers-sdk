@@ -1203,6 +1203,7 @@ async function executeMethod(
 	// assert(testModule && thingModule);
 	// thingModule.importers.add(testModule);
 }
+
 export default function (ctx: Vitest): ProcessPool {
 	// This function is called when config changes and may be called on re-runs
 	assertCompatibleVitestVersion(ctx);
