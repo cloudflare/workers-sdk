@@ -99,13 +99,29 @@ export function pickRemoteBindings(
 	);
 }
 
+type WranglerConfigObject = {
+	/** The path to the wrangler config file */
+	path: string;
+	/** The target environment */
+	environment?: string;
+};
+
+type WorkerConfigObject = {
+	/** The name of the worker */
+	name?: string;
+	/** The Worker's bindings */
+	bindings: NonNullable<StartDevWorkerInput["bindings"]>;
+	/** If running in a non-public compliance region, set this here. */
+	complianceRegion?: Config["compliance_region"];
+};
+
 /**
  * Utility for potentially starting or updating a remote proxy session.
  *
  * It uses an internal map for storing existing remote proxy session indexed by worker names. If no worker name is provided
  * the remote proxy session won't be retrieved nor saved to/from the internal map.
  *
- * @param configPathOrWorkerConfig either a file path to a wrangler configuration file or an object containing the name of
+ * @param wranglerOrWorkerConfigObject either a file path to a wrangler configuration file or an object containing the name of
  *                                 the target worker alongside its bindings.
  * @param preExistingRemoteProxySessionData the optional data of a pre-existing remote proxy session if there was one, this
  *                                          argument can be omitted or set to null if there is no pre-existing remote proxy session
@@ -113,14 +129,7 @@ export function pickRemoteBindings(
  *          defining any remote bindings), the data associated to the created/updated remote proxy session otherwise.
  */
 export async function maybeStartOrUpdateRemoteProxySession(
-	configPathOrWorkerConfig:
-		| string
-		| {
-				name?: string;
-				/** If running in a non-public compliance region, set this here. */
-				complianceRegion?: Config["compliance_region"];
-				bindings: NonNullable<StartDevWorkerInput["bindings"]>;
-		  },
+	wranglerOrWorkerConfigObject: WranglerConfigObject | WorkerConfigObject,
 	preExistingRemoteProxySessionData?: {
 		session: RemoteProxySession;
 		remoteBindings: Record<string, Binding>;
@@ -129,21 +138,25 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
 } | null> {
-	if (typeof configPathOrWorkerConfig === "string") {
-		const configPath = configPathOrWorkerConfig;
-		const config = readConfig({ config: configPath });
+	if ("path" in wranglerOrWorkerConfigObject) {
+		const wranglerConfigObject = wranglerOrWorkerConfigObject;
+		const config = readConfig({
+			config: wranglerConfigObject.path,
+			env: wranglerConfigObject.environment,
+		});
 
 		assert(config.name);
 
-		configPathOrWorkerConfig = {
+		wranglerOrWorkerConfigObject = {
 			name: config.name,
 			complianceRegion: getCloudflareComplianceRegion(config),
 			bindings: convertConfigBindingsToStartWorkerBindings(config) ?? {},
 		};
 	}
-	const workerConfigs = configPathOrWorkerConfig;
 
-	const remoteBindings = pickRemoteBindings(workerConfigs.bindings);
+	const workerConfigObject = wranglerOrWorkerConfigObject;
+
+	const remoteBindings = pickRemoteBindings(workerConfigObject.bindings);
 
 	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
@@ -157,8 +170,8 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		if (!remoteProxySession) {
 			if (Object.keys(remoteBindings).length > 0) {
 				remoteProxySession = await startRemoteProxySession(remoteBindings, {
-					workerName: configPathOrWorkerConfig.name,
-					complianceRegion: configPathOrWorkerConfig.complianceRegion,
+					workerName: wranglerOrWorkerConfigObject.name,
+					complianceRegion: wranglerOrWorkerConfigObject.complianceRegion,
 				});
 			}
 		} else {
