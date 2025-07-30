@@ -16,39 +16,25 @@ const mockGetR2Bucket = vi.mocked(getR2Bucket);
 const mockGetR2BucketMetrics = vi.mocked(getR2BucketMetrics);
 
 describe("r2 bucket info", () => {
-	beforeEach(() => {
-		vi.resetAllMocks();
+  beforeEach(() => {
+    vi.resetAllMocks();
 
-		mockRequireAuth.mockResolvedValue("test-account-id");
-		mockGetR2Bucket.mockResolvedValue({
-			name: "my-bucket-name",
-			creation_date: "2025-06-07T15:55:22.222Z",
-			location: "APAC",
-			storage_class: "Standard",
-		});
-		mockGetR2BucketMetrics.mockResolvedValue({
-			objectCount: 0,
-			totalSize: "0 B",
-		});
-	});
+    mockRequireAuth.mockResolvedValue("test-account-id");
+    mockGetR2Bucket.mockResolvedValue({
+      name: "my-bucket-name",
+      creation_date: "2025-06-07T15:55:22.222Z",
+      location: "APAC",
+      storage_class: "Standard",
+    });
+    mockGetR2BucketMetrics.mockResolvedValue({
+      objectCount: 0,
+      totalSize: "0 B",
+    });
+  });
 
-	it("should output valid JSON format when --json flag is used", async () => {
-		await runWrangler("r2 bucket info my-bucket-name --json");
-
-		const output = logs.out;
-
-		const jsonMatch = output.match(/\{[\s\S]*\}/);
-		if (!jsonMatch) {
-			throw new Error("No JSON found in output");
-		}
-
-		try {
-			const json = JSON.parse(jsonMatch[0]);
-			expect(json.name).toBe("my-bucket-name");
-		} catch (err) {
-			throw new Error("Output contained invalid JSON");
-		}
-
-		expect(output).not.toMatch(/⛅ wrangler/);
-	});
+  it("should output valid JSON format when --json flag is used", async () => {
+    await runWrangler("r2 bucket info my-bucket-name --json");
+    const json = JSON.parse(logs.out);
+    expect(json.name).toBe("my-bucket-name");
+  });
 });
