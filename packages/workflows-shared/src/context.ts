@@ -48,10 +48,18 @@ export class Context extends RpcTarget {
 
 	#counters: Map<string, number> = new Map();
 
+	#shouldSkipSleep: Boolean;
+
 	constructor(engine: Engine, state: DurableObjectState) {
 		super();
 		this.#engine = engine;
 		this.#state = state;
+		this.#shouldSkipSleep = false;
+	}
+
+	// TODO: Figure out how to make this private
+	disableSleeps() {
+		this.#shouldSkipSleep = true;
 	}
 
 	#getCount(name: string): number {
@@ -464,7 +472,9 @@ export class Context extends RpcTarget {
 			);
 			// in case the engine dies while sleeping and wakes up before the retry period
 			if (entryPQ !== undefined) {
-				await scheduler.wait(entryPQ.targetTimestamp - Date.now());
+				await scheduler.wait(
+					this.#shouldSkipSleep ? 0 : entryPQ.targetTimestamp - Date.now()
+				);
 				// @ts-expect-error priorityQueue is initiated in init
 				this.#engine.priorityQueue.remove({ hash: cacheKey, type: "sleep" });
 			}
