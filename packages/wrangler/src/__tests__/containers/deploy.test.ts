@@ -222,6 +222,7 @@ describe("wrangler deploy with containers", () => {
 	});
 
 	it("should be able to deploy a new container with custom instance limits", async () => {
+		// this test checks the deprecated path for setting custom instance limits
 		// note no docker commands have been mocked here!
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
@@ -268,6 +269,102 @@ describe("wrangler deploy with containers", () => {
 					  https://test-name.test-sub-domain.workers.dev
 					Current Version ID: Galaxy-Class"
 				`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+			    - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead.
+			  \\"configuration.image\\" should be \\"image\\", limits should be set via \\"instance_type\\".
+
+			"
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ NEW my-container
+			│
+			│   [[containers]]
+			│   name = \\"my-container\\"
+			│   scheduling_policy = \\"default\\"
+			│   instances = 0
+			│   max_instances = 10
+			│
+			│     [containers.configuration]
+			│     image = \\"docker.io/hello:world\\"
+			│     memory_mib = 1_000
+			│     vcpu = 1
+			│
+			│       [containers.configuration.disk]
+			│       size_mb = 2_000
+			│
+			│     [containers.constraints]
+			│     tier = 1
+			│
+			│     [containers.durable_objects]
+			│     namespace_id = \\"1\\"
+			│
+			│
+			│  SUCCESS  Created application my-container (Application ID: undefined)
+			│
+			╰ Applied changes
+
+			"
+		`);
+	});
+
+	it("should be able to deploy a new container with custom instance limits (instance_type)", async () => {
+		// tests the preferred method for setting custom instance limits
+		// note no docker commands have been mocked here!
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					instance_type: {
+						vcpu: 1,
+						memory_mib: 1000,
+						disk_mb: 2000,
+					},
+				},
+			],
+		});
+
+		mockGetApplications([]);
+
+		mockCreateApplication({
+			name: "my-container",
+			max_instances: 10,
+			scheduling_policy: SchedulingPolicy.DEFAULT,
+			configuration: {
+				image: "docker.io/hello:world",
+				disk: {
+					size_mb: 2000,
+				},
+				vcpu: 1,
+				memory_mib: 1000,
+			},
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					Binding                                            Resource
+					env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+		// no deprecation warnings should show up on this run
+		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`

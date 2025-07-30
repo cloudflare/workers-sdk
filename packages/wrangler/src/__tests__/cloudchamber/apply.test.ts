@@ -1614,6 +1614,63 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
+	test("can apply a simple application (custom instance type)", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					instances: 3,
+					class_name: "DurableObjectClass",
+					instance_type: {
+						vcpu: 1,
+						memory_mib: 1024,
+						disk_mb: 2000,
+					},
+					image: "docker.io/beep:boop",
+					constraints: {
+						tier: 2,
+					},
+				},
+			],
+		});
+		mockGetApplications([]);
+		mockCreateApplication({ id: "abc" });
+		await runWrangler("cloudchamber apply");
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ NEW my-container-app
+			│
+			│   [[containers]]
+			│   name = \\"my-container-app\\"
+			│   instances = 3
+			│   scheduling_policy = \\"default\\"
+			│
+			│     [containers.constraints]
+			│     tier = 2
+			│
+			│     [containers.configuration]
+			│     image = \\"docker.io/beep:boop\\"
+			│     vcpu = 1
+			│     memory_mib = 1_024
+			│
+			│       [containers.configuration.disk]
+			│       size_mb = 2_000
+			│
+			│
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+	});
+
 	test("can apply a simple existing application (instance type)", async () => {
 		setIsTTY(false);
 		writeWranglerConfig({
@@ -1689,6 +1746,96 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		const app = await applicationReqBodyPromise;
 		expect(app.configuration?.instance_type).toEqual("standard");
+	});
+
+	test("can apply a simple existing application (custom instance type)", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					instances: 4,
+					class_name: "DurableObjectClass",
+					instance_type: {
+						vcpu: 1,
+						memory_mib: 1024,
+						disk_mb: 6000,
+					},
+					image: "docker.io/beep:boop",
+					constraints: {
+						tier: 2,
+					},
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 3,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "docker.io/beep:boop",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tier: 3,
+				},
+			},
+		]);
+		const applicationReqBodyPromise = mockModifyApplication();
+		await runWrangler("cloudchamber apply");
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [[containers]]
+			│ - instances = 3
+			│ + instances = 4
+			│   name = \\"my-container-app\\"
+			│   scheduling_policy = \\"regional\\"
+			│
+			│     [containers.configuration]
+			│     image = \\"docker.io/beep:boop\\"
+			│     memory = \\"256MB\\"
+			│ -   memory_mib = 256
+			│ +   memory_mib = 1_024
+			│
+			│ -   vcpu = 0.0625
+			│ +   vcpu = 1
+			│
+			│       [containers.configuration.disk]
+			│       size = \\"2GB\\"
+			│ -     size_mb = 2_000
+			│ +     size_mb = 6_000
+			│
+			│     [containers.constraints]
+			│ -   tier = 3
+			│ +   tier = 2
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.configuration?.instance_type).toBeUndefined();
 	});
 
 	test("falls back on dev instance type when instance type is absent", async () => {

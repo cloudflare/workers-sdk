@@ -98,13 +98,30 @@ export type ContainerApp = {
 
 	/**
 	 * The instance type to be used for the container.
-	 * dev = 1/16 vCPU, 256 MiB memory, and 2 GB disk
-	 * basic = 1/4 vCPU, 1 GiB memory, and 4 GB disk
-	 * standard = 1/2 vCPU, 4 GiB memory, and 4 GB disk
+	 * Select from one of the following named instance types:
+	 *  - dev: 1/16 vCPU, 256 MiB memory, and 2 GB disk
+	 *  - basic: 1/4 vCPU, 1 GiB memory, and 4 GB disk
+	 *  - standard: 1/2 vCPU, 4 GiB memory, and 4 GB disk
+	 *
+	 * Customers on an enterprise plan have the additional option to set custom limits.
+	 *
 	 * @optional
 	 * @default "dev"
 	 */
-	instance_type?: "dev" | "basic" | "standard";
+	instance_type?:
+		| "dev"
+		| "basic"
+		| "standard"
+		| {
+				/** @defaults to 0.0625 (1/16 vCPU) */
+				vcpu?: number;
+
+				/** @defaults to 256 MiB */
+				memory_mib?: number;
+
+				/** @defaults to 2 GB */
+				disk_mb?: number;
+		  };
 
 	/**
 	 * @deprecated Use top level `containers` fields instead.
