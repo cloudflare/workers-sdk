@@ -9,8 +9,8 @@ import {
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import { Worker } from "node:worker_threads";
 import { FSWatcher, watch } from "chokidar";
-import { INBOUND_DO_PROXY_SERVICE_PATH } from "./external-service";
 import { Log } from "./log";
 import { getGlobalWranglerConfigPath } from "./wrangler";
 
@@ -32,9 +32,17 @@ export type WorkerDefinition = {
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registry: WorkerRegistry = {};
-	private registeredWorkers: Set<string> = new Set();
-	private subscribers: Map<string, Array<() => void>> = new Map();
+	private registeredWorkers = new Set<string>();
+	public externalServices: Map<
+		string,
+		{
+			classNames: Set<string>;
+			entrypoints: Set<string | undefined>;
+		}
+	> = new Map();
 	private watcher: FSWatcher | undefined;
+	private proxyWorker: Worker | undefined;
+	private proxyAddress: string | undefined;
 
 	constructor(
 		private registryPath: string | undefined,
@@ -45,13 +53,61 @@ export class DevRegistry {
 	/**
 	 * Watch files inside the registry directory for changes.
 	 */
-	public watch(): void {
-		if (this.subscribers.size === 0 || !this.registryPath || this.watcher) {
+	public watch(
+		services: Map<
+			string,
+			{
+				classNames: Set<string>;
+				entrypoints: Set<string | undefined>;
+			}
+		>
+	): void {
+		if (services.size === 0 || !this.registryPath) {
 			return;
 		}
 
-		this.watcher = watch(this.registryPath).on("all", () => this.refresh());
-		this.refresh();
+		this.externalServices = new Map(services);
+
+		if (!this.watcher) {
+			this.watcher = watch(this.registryPath).on("all", () => this.refresh());
+			this.refresh();
+		}
+	}
+
+	/**
+	 * Initialize the worker thread proxy server
+	 */
+	public async initializeProxyWorker(): Promise<string | null> {
+		if (!this.isEnabled()) {
+			return null;
+		}
+
+		if (this.proxyAddress !== undefined) {
+			this.log.debug("Dev registry proxy is already running");
+			return this.proxyAddress;
+		}
+
+		const worker = new Worker(
+			path.join(__dirname, "shared", "dev-registry.worker.js")
+		);
+
+		// Wait for the worker to signal it's ready and provide the port
+		const address = await new Promise<string>((resolve, reject) => {
+			worker.once("message", (message) => {
+				if (message.type === "ready") {
+					resolve(message.address);
+				} else if (message.type === "error") {
+					reject(new Error(message.error));
+				}
+			});
+			worker.once("error", reject);
+		});
+
+		this.proxyWorker = worker;
+		this.proxyAddress = address;
+		this.log.debug(`Dev registry proxy started on http://${address}`);
+
+		return address;
 	}
 
 	/**
@@ -60,15 +116,26 @@ export class DevRegistry {
 	 * to ensure all workers are unregistered within the exit hook
 	 */
 	public dispose(): Promise<void> | undefined {
-		for (const worker of this.registeredWorkers) {
-			this.unregister(worker);
-		}
-		this.registeredWorkers.clear();
-		this.subscribers.clear();
+		this.unregisterWorkers();
 		this.registry = {};
 
 		// Only this step is async and could be awaited
-		return this.watcher?.close();
+		return Promise.all([
+			this.watcher?.close(),
+			this.proxyWorker?.terminate(),
+		]).then(() => {
+			this.watcher = undefined;
+			this.proxyWorker = undefined;
+			this.proxyAddress = undefined;
+		});
+	}
+
+	private unregisterWorkers() {
+		for (const worker of this.registeredWorkers) {
+			this.unregister(worker);
+		}
+
+		this.registeredWorkers.clear();
 	}
 
 	/**
@@ -87,8 +154,6 @@ export class DevRegistry {
 			if (this.registryPath) {
 				unlinkSync(path.join(this.registryPath, name));
 			}
-
-			this.notifySubscribers(name);
 		} catch (e) {
 			this.log?.debug(`Failed to unregister worker "${name}": ${e}`);
 		}
@@ -106,9 +171,34 @@ export class DevRegistry {
 		registryPath: string | undefined,
 		enableDurableObjectProxy: boolean
 	): Promise<void> {
-		await this.dispose();
-		this.registryPath = registryPath;
+		// Unregister all registered workers
+		this.unregisterWorkers();
 		this.enableDurableObjectProxy = enableDurableObjectProxy;
+
+		if (registryPath !== this.registryPath) {
+			// Close the existing watcher if it exists.
+			// It will watch the new path if there is any dependent services in a later step
+			await this.watcher?.close();
+
+			this.watcher = undefined;
+			this.registryPath = registryPath;
+		}
+	}
+
+	public configureProxyWorker(
+		runtimeEntryURL: string,
+		fallbackServicePorts: Record<string, Record<string, number>>
+	) {
+		if (!this.proxyWorker) {
+			return;
+		}
+
+		// Send updated config to the proxy worker
+		this.proxyWorker.postMessage({
+			type: "setup",
+			runtimeEntryURL,
+			fallbackServicePorts,
+		});
 	}
 
 	public register(workers: Record<string, WorkerDefinition>) {
@@ -142,115 +232,17 @@ export class DevRegistry {
 		}
 	}
 
-	public getExternalServiceAddress(
-		service: string,
-		entrypoint: string
-	): {
-		httpStyle?: "host" | "proxy";
-		protocol: "http" | "https";
-		host: string;
-		port: number;
-	} | null {
-		if (!this.isEnabled()) {
-			return null;
-		}
-
-		const target = this.registry?.[service];
-		const entrypointAddress = target?.entrypointAddresses[entrypoint];
-
-		if (entrypointAddress !== undefined) {
-			return {
-				httpStyle: "proxy",
-				protocol: target.protocol,
-				host: entrypointAddress.host,
-				port: entrypointAddress.port,
-			};
-		}
-
-		if (target && target.protocol !== "https" && entrypoint === "default") {
-			// Fallback to sending requests directly to the entry worker
-			return {
-				httpStyle: "host",
-				protocol: target.protocol,
-				host: target.host,
-				port: target.port,
-			};
-		}
-
-		return null;
-	}
-
-	public getExternalDurableObjectAddress(
-		scriptName: string,
-		className: string
-	): {
-		httpStyle?: "host" | "proxy";
-		protocol: "http" | "https";
-		host: string;
-		port: number;
-		path: string;
-	} | null {
-		if (!this.isDurableObjectProxyEnabled()) {
-			return null;
-		}
-
-		const target = this.registry?.[scriptName];
-
-		if (
-			target?.durableObjects.some(
-				(durableObject) => durableObject.className === className
-			)
-		) {
-			return {
-				...target,
-				path: `/${INBOUND_DO_PROXY_SERVICE_PATH}`,
-			};
-		}
-
-		return null;
-	}
-
-	public subscribe(workerName: string, callback?: () => void): void {
-		let callbacks = this.subscribers.get(workerName);
-
-		if (!callbacks) {
-			callbacks = [];
-			this.subscribers.set(workerName, callbacks);
-		}
-
-		if (callback !== undefined) {
-			callbacks.push(callback);
-		}
-	}
-
-	private notifySubscribers(workerName: string): void {
-		const callbacks = this.subscribers.get(workerName);
-		if (callbacks) {
-			for (const callback of callbacks) {
-				callback();
-			}
-		}
-	}
-
 	private refresh(): void {
 		if (!this.registryPath) {
 			return;
 		}
 
+		this.registry = {};
+
 		// Make sure the registry path exists
 		mkdirSync(this.registryPath, { recursive: true });
 
-		const workerNames = readdirSync(this.registryPath);
-
-		// Cleanup existing definition that are not in the registry anymore
-		for (const existingWorkerName of Object.keys(this.registry)) {
-			if (!workerNames.includes(existingWorkerName)) {
-				delete this.registry[existingWorkerName];
-				this.notifySubscribers(existingWorkerName);
-			}
-		}
-
-		for (const workerName of workerNames) {
+		for (const workerName of readdirSync(this.registryPath)) {
 			try {
 				const definitionPath = path.join(this.registryPath, workerName);
 				const file = readFileSync(definitionPath, "utf8");
@@ -262,21 +254,21 @@ export class DevRegistry {
 					continue;
 				}
 
-				if (
-					// If the worker is not registered before, or
-					!this.registry[workerName] ||
-					// If the file content is different from the registry
-					file !== JSON.stringify(this.registry[workerName], null, 2)
-				) {
-					this.registry[workerName] = JSON.parse(file);
-					this.notifySubscribers(workerName);
-				}
+				this.registry[workerName] = JSON.parse(file);
 			} catch (e) {
 				// This can safely be ignored. It generally indicates the worker was too old and was removed by a parallel process
 				this.log?.debug(
 					`Error while loading worker definition from the registry: ${e}`
 				);
 			}
+		}
+
+		// Send updated workers to the proxy worker
+		if (this.proxyWorker) {
+			this.proxyWorker.postMessage({
+				type: "update",
+				workers: this.registry,
+			});
 		}
 	}
 }
