@@ -362,8 +362,6 @@ if (import.meta.hot) {
 				// It is possible to get into a situation where the dev server is restarted by a config file change
 				// right in the middle of the Vite server and the supporting Workers being initialized.
 				// We use an abort controller to signal to the initialization code that it should stop if the config has changed.
-				const restartAbortController = new AbortController();
-
 				// We use a `configId` to help debug how the config changes are triggering the restarts.
 				const configId = randomUUID();
 
@@ -387,20 +385,12 @@ if (import.meta.hot) {
 					) {
 						debuglog(configId, "Config changed: " + changedFilePath);
 						viteDevServer.watcher.off("change", configChangedHandler);
-						if (!restartAbortController.signal.aborted) {
-							debuglog(
-								configId,
-								"Restarting dev server and aborting previous setup"
-							);
-							restartAbortController.abort();
-							await viteDevServer.watcher.close();
-							await viteDevServer.restart();
-						} else {
-							debuglog(
-								configId,
-								"Config changed but already aborted previous setup, ignoring."
-							);
-						}
+						debuglog(
+							configId,
+							"Restarting dev server and aborting previous setup"
+						);
+						await viteDevServer.watcher.close();
+						await viteDevServer.restart();
 					}
 				};
 				viteDevServer.watcher.on("change", configChangedHandler);
@@ -425,16 +415,6 @@ if (import.meta.hot) {
 					containerBuildId,
 				});
 
-				if (restartAbortController.signal.aborted) {
-					debuglog(
-						configId,
-						"Aborting setting up miniflare because config has changed."
-					);
-					// The config has changed while we were still trying to setup the server,
-					// so just abort and allow the new server to be set up instead.
-					return;
-				}
-
 				if (!miniflare) {
 					debuglog(configId, "Creating new Miniflare instance");
 					miniflare = new Miniflare(miniflareDevOptions);
@@ -445,16 +425,6 @@ if (import.meta.hot) {
 				}
 
 				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
-
-				if (restartAbortController.signal.aborted) {
-					debuglog(
-						configId,
-						"Aborting setting up the dev server because config has changed."
-					);
-					// The config has changes while this was still trying to setup the server.
-					// So just abort and allow the new server to be set up.
-					return;
-				}
 
 				if (resolvedPluginConfig.type === "workers") {
 					assert(entryWorkerConfig, `No entry Worker config`);
