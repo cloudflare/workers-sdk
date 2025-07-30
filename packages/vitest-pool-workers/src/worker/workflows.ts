@@ -49,7 +49,6 @@ export type WorkflowInstanceIntrospector = {
  * Entry point that targets a single Workflow instance
  * This would allow to apply test rules and mocks to the given instance
  */
-// Needs to target the Engine DO
 export async function introspectWorkflowInstance(
 	workflow: Workflow,
 	instanceId: string
@@ -69,12 +68,19 @@ export async function introspectWorkflowInstance(
 
 	// env.USER_ENGINE_MY_WORKFLOW is DurableObjectNamespace {}
 	// USER_ENGINE_MY_WORKFLOW is the Engine binding hardcoded from the example I'm testing
-	// how to get it dinamically?
+	// TODO: how to get it dinamically
+	console.log("THIS IS ENV", env);
 	const engineStubId = env.USER_ENGINE_MY_WORKFLOW.idFromName(instanceId);
 	const engineStub = env.USER_ENGINE_MY_WORKFLOW.get(engineStubId);
 	console.log("Engine status", await engineStub.getStatus());
 
-	return new WorkflowInstanceIntrospectorHandle(engineStub, instanceId);
+	const instanceModifier = await engineStub.getInstanceModifier();
+
+	return new WorkflowInstanceIntrospectorHandle(
+		engineStub,
+		instanceId,
+		instanceModifier
+	);
 }
 
 class WorkflowInstanceIntrospectorHandle
@@ -82,15 +88,21 @@ class WorkflowInstanceIntrospectorHandle
 {
 	engineStub: DurableObjectStub;
 	instanceId: string;
-	constructor(engineStub: DurableObjectStub, instanceId: string) {
+	instanceModifier: InstanceModifier;
+	constructor(
+		engineStub: DurableObjectStub,
+		instanceId: string,
+		instanceModifier: InstanceModifier
+	) {
 		this.engineStub = engineStub;
 		this.instanceId = instanceId;
+		this.instanceModifier = instanceModifier;
 	}
 
 	async modify(
 		fn: (m: InstanceModifier) => void
 	): WorkflowInstanceIntrospector {
-		const modifier = new InstanceModifier(this.instanceId, this.engineStub);
+		const modifier = this.engineStub.getInstanceModifier();
 		await fn(modifier);
 		console.log("Should allow modifications");
 		return this;
@@ -111,24 +123,5 @@ class WorkflowInstanceIntrospectorHandle
 			console.log("status user wants", opts.status);
 			return currentStatus === opts.status;
 		});
-	}
-}
-
-// This should be in Engine so that I can access Engine data:
-export class InstanceModifier extends RpcTarget {
-	constructor(
-		public id: string,
-		private engineStub: DurableObjectStub
-	) {
-		super();
-	}
-
-	public async disableSleeps(steps?: StepSelector[]): Promise<void> {
-		console.log("calling engineStub.disableSleeps");
-		await this.engineStub.disableSleeps();
-	}
-
-	public async mockStepImplementation(step: StepSelector): Promise<void> {
-		console.log("I should mock the step implementation!");
 	}
 }
