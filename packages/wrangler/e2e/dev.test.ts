@@ -2294,3 +2294,317 @@ This is a random email body.
 		`);
 	});
 });
+
+describe(".env support in local dev", () => {
+	const seedFiles = {
+		"wrangler.jsonc": JSON.stringify({
+			name: workerName,
+			main: "src/index.ts",
+			compatibility_date: "2025-07-01",
+			vars: {
+				WRANGLER_ENV_VAR_0: "default-0",
+				WRANGLER_ENV_VAR_1: "default-1",
+				WRANGLER_ENV_VAR_2: "default-2",
+				WRANGLER_ENV_VAR_3: "default-3",
+			},
+		}),
+		"src/index.ts": dedent`
+				export default {
+					fetch(request, env) {
+						return new Response(JSON.stringify(env, null, 2));
+					}
+				}
+			`,
+	};
+
+	it("should load environment variables from .env file", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seedFiles);
+		await helper.seed({
+			".env": dedent`
+				WRANGLER_ENV_VAR_1=env-1
+				WRANGLER_ENV_VAR_2=env-2
+			`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev");
+		const { url } = await worker.waitForReady();
+		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
+			"{
+			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_1": "env-1",
+			  "WRANGLER_ENV_VAR_2": "env-2",
+			  "WRANGLER_ENV_VAR_3": "default-3"
+			}"
+		`);
+	});
+
+	it("should not load local dev variables from .env files if there is a .dev.vars file", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seedFiles);
+		await helper.seed({
+			".env": dedent`
+				WRANGLER_ENV_VAR_1=env-1
+				WRANGLER_ENV_VAR_2=env-2
+			`,
+		});
+		await helper.seed({
+			".dev.vars": dedent`
+				WRANGLER_ENV_VAR_1=dev-vars-1
+				WRANGLER_ENV_VAR_2=dev-vars-2
+			`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev");
+		const { url } = await worker.waitForReady();
+		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
+			"{
+			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_1": "dev-vars-1",
+			  "WRANGLER_ENV_VAR_2": "dev-vars-2",
+			  "WRANGLER_ENV_VAR_3": "default-3"
+			}"
+		`);
+	});
+
+	it("should not load dev variables from .env files if CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV is set to false", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seedFiles);
+		await helper.seed({
+			".env": dedent`
+				WRANGLER_ENV_VAR_1=env-1
+				WRANGLER_ENV_VAR_2=env-2
+			`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev", {
+			env: { CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false" },
+		});
+		const { url } = await worker.waitForReady();
+		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
+			"{
+			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_1": "default-1",
+			  "WRANGLER_ENV_VAR_2": "default-2",
+			  "WRANGLER_ENV_VAR_3": "default-3"
+			}"
+		`);
+	});
+
+	it("should load environment variables from .env.staging if it exists and --env=staging", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seedFiles);
+		await helper.seed({
+			".env.staging": dedent`
+				WRANGLER_ENV_VAR_2=staging-2
+				WRANGLER_ENV_VAR_3=staging-3
+			`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev --env=staging");
+		const { url } = await worker.waitForReady();
+		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
+			"{
+			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_1": "default-1",
+			  "WRANGLER_ENV_VAR_2": "staging-2",
+			  "WRANGLER_ENV_VAR_3": "staging-3"
+			}"
+		`);
+	});
+
+	it("should prefer to load environment variables from .env.staging over .env, if --env=staging", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seedFiles);
+		await helper.seed({
+			".env": dedent`
+				WRANGLER_ENV_VAR_1=env-1
+				WRANGLER_ENV_VAR_2=env-2
+			`,
+		});
+		await helper.seed({
+			".env.staging": dedent`
+				WRANGLER_ENV_VAR_2=staging-2
+				WRANGLER_ENV_VAR_3=staging-3
+			`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev --env=staging");
+		const { url } = await worker.waitForReady();
+		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
+			"{
+			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_1": "env-1",
+			  "WRANGLER_ENV_VAR_2": "staging-2",
+			  "WRANGLER_ENV_VAR_3": "staging-3"
+			}"
+		`);
+	});
+
+	it("should load environment variables from .env file if --env=xxx and .env.xxx does not exist", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seedFiles);
+		await helper.seed({
+			".env": dedent`
+				WRANGLER_ENV_VAR_1=env-1
+				WRANGLER_ENV_VAR_2=env-2
+			`,
+		});
+		await helper.seed({
+			".env.staging": dedent`
+				WRANGLER_ENV_VAR_2=staging-2
+				WRANGLER_ENV_VAR_3=staging-3
+			`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev --env=xxx");
+		const { url } = await worker.waitForReady();
+		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
+			"{
+			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_1": "env-1",
+			  "WRANGLER_ENV_VAR_2": "env-2",
+			  "WRANGLER_ENV_VAR_3": "default-3"
+			}"
+		`);
+	});
+
+	it("should prefer to load environment variables from .env.local over .env", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seedFiles);
+		await helper.seed({
+			".env": dedent`
+				WRANGLER_ENV_VAR_1=env-1
+				WRANGLER_ENV_VAR_2=env-2
+			`,
+		});
+		await helper.seed({
+			".env.local": dedent`
+				WRANGLER_ENV_VAR_2=local-2
+				WRANGLER_ENV_VAR_3=local-3
+			`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev");
+		const { url } = await worker.waitForReady();
+		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
+			"{
+			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_1": "env-1",
+			  "WRANGLER_ENV_VAR_2": "local-2",
+			  "WRANGLER_ENV_VAR_3": "local-3"
+			}"
+		`);
+	});
+
+	it("should prefer to load environment variables from .env.staging.local over .env.staging, etc", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seedFiles);
+		await helper.seed({
+			".env": dedent`
+				WRANGLER_ENV_VAR_1=env-1
+				WRANGLER_ENV_VAR_2=env-2
+			`,
+		});
+		await helper.seed({
+			".env.local": dedent`
+				WRANGLER_ENV_VAR_2=local-2
+				WRANGLER_ENV_VAR_3=local-3
+			`,
+		});
+		await helper.seed({
+			".env.staging": dedent`
+				WRANGLER_ENV_VAR_3=staging-3
+				WRANGLER_ENV_VAR_4=staging-4
+			`,
+		});
+		await helper.seed({
+			".env.staging.local": dedent`
+				WRANGLER_ENV_VAR_4=staging-local-4
+				WRANGLER_ENV_VAR_5=staging-local-5
+			`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev --env=staging");
+		const { url } = await worker.waitForReady();
+		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
+			"{
+			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_1": "env-1",
+			  "WRANGLER_ENV_VAR_2": "local-2",
+			  "WRANGLER_ENV_VAR_3": "staging-3",
+			  "WRANGLER_ENV_VAR_4": "staging-local-4",
+			  "WRANGLER_ENV_VAR_5": "staging-local-5"
+			}"
+		`);
+	});
+
+	it("should load environment variables from process.env if CLOUDFLARE_INCLUDE_PROCESS_ENV is true", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seedFiles);
+		await helper.seed({
+			".env": dedent`
+				WRANGLER_ENV_VAR_1=env-1
+				WRANGLER_ENV_VAR_2=env-2
+			`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev", {
+			env: { CLOUDFLARE_INCLUDE_PROCESS_ENV: "true", ...process.env },
+		});
+		const { url } = await worker.waitForReady();
+		// We could dump out all the bindings but that would be a lot of noise, and also may change between OSes and runs.
+		// Instead, we know that the `CLOUDFLARE_INCLUDE_PROCESS_ENV` variable should be present, so we just check for that.
+		expect(await (await fetch(url)).text()).contains(
+			'"CLOUDFLARE_INCLUDE_PROCESS_ENV": "true"'
+		);
+		expect(await (await fetch(url)).text()).contains(
+			'"WRANGLER_ENV_VAR_0": "default-0"'
+		);
+		expect(await (await fetch(url)).text()).contains(
+			'"WRANGLER_ENV_VAR_1": "env-1"'
+		);
+	});
+
+	it("should load environment variables from the .env files pointed to by `--env-file`", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seedFiles);
+		await helper.seed({
+			".env": dedent`
+				WRANGLER_ENV_VAR_1=env-1
+				WRANGLER_ENV_VAR_2=env-2
+			`,
+		});
+		await helper.seed({
+			".env.local": dedent`
+				WRANGLER_ENV_VAR_2=local-2
+				WRANGLER_ENV_VAR_3=local-3
+			`,
+		});
+		await helper.seed({
+			"other/.env": dedent`
+				WRANGLER_ENV_VAR_1=other-env-1
+				WRANGLER_ENV_VAR_2=other-env-2
+			`,
+		});
+		await helper.seed({
+			"other/.env.local": dedent`
+				WRANGLER_ENV_VAR_2=other-local-2
+				WRANGLER_ENV_VAR_3=other-local-3
+			`,
+		});
+
+		const worker = helper.runLongLived(
+			"wrangler dev --env-file=other/.env --env-file=other/.env.local"
+		);
+		const { url } = await worker.waitForReady();
+		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
+			"{
+			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_1": "other-env-1",
+			  "WRANGLER_ENV_VAR_2": "other-local-2",
+			  "WRANGLER_ENV_VAR_3": "other-local-3"
+			}"
+		`);
+	});
+});

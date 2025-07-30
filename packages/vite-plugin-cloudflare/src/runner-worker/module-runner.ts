@@ -7,13 +7,21 @@ import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
 
 let moduleRunner: ModuleRunner;
+let oldConfigId: string | undefined;
 
 export async function createModuleRunner(
 	env: WrapperEnv,
-	webSocket: WebSocket
+	webSocket: WebSocket,
+	/** A unique identifier used for debugging errors when config updates. */
+	configId?: string
 ) {
 	if (moduleRunner) {
-		throw new Error("Runner already initialized");
+		throw new Error(
+			"Runner already initialized; old configId: " +
+				oldConfigId +
+				", new configId: " +
+				configId
+		);
 	}
 
 	const transport = createWebSocketModuleRunnerTransport({
@@ -24,6 +32,7 @@ export async function createModuleRunner(
 		},
 	});
 
+	oldConfigId = configId;
 	moduleRunner = new ModuleRunner(
 		{
 			sourcemapInterceptor: "prepareStackTrace",

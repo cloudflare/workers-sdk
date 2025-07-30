@@ -2351,6 +2351,27 @@ importers:
         specifier: workspace:*
         version: link:../../../wrangler
 
+  packages/vite-plugin-cloudflare/playground/dot-env:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250711.0
+        version: 4.20250730.0
+      typescript:
+        specifier: catalog:default
+        version: 5.8.2
+      vite:
+        specifier: catalog:vite-plugin
+        version: 7.0.0(@types/node@20.19.9)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
   packages/vite-plugin-cloudflare/playground/durable-objects:
     devDependencies:
       '@cloudflare/vite-plugin':
@@ -3508,6 +3529,9 @@ importers:
       dotenv:
         specifier: ^16.3.1
         version: 16.3.1
+      dotenv-expand:
+        specifier: ^12.0.2
+        version: 12.0.2
       execa:
         specifier: ^6.1.0
         version: 6.1.0
@@ -8558,12 +8582,20 @@ packages:
     resolution: {integrity: sha512-GopVGCpVS1UKH75VKHGuQFqS1Gusej0z4FyQkPdwjil2gNIv+LNsqBlboOzpJFZKVT95GkCyWJbBSdFEFUWI2A==}
     engines: {node: '>=12'}
 
+  dotenv-expand@12.0.2:
+    resolution: {integrity: sha512-lXpXz2ZE1cea1gL4sz2Ipj8y4PiVjytYr3Ij0SWoms1PGxIv7m2CRKuRuCRtHdVuvM/hNJPMxt5PbhboNC4dPQ==}
+    engines: {node: '>=12'}
+
   dotenv@16.0.3:
     resolution: {integrity: sha512-7GO6HghkA5fYG9TYnNxi14/7K9f5occMlp3zXAuSxn7CKCxt9xbNWG7yF8hTCSUchlfWSe3uLmlPfigevRItzQ==}
     engines: {node: '>=12'}
 
   dotenv@16.3.1:
     resolution: {integrity: sha512-IPzF4w4/Rd94bA9imS68tZBaYyBWSCE47V1RGuMrB94iyTOIEwRmVL2x/4An+6mETpLrKJ5hQkB8W4kFAadeIQ==}
+    engines: {node: '>=12'}
+
+  dotenv@16.6.1:
+    resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
     engines: {node: '>=12'}
 
   dotenv@8.6.0:
@@ -18627,15 +18659,21 @@ snapshots:
   dotenv-cli@7.3.0:
     dependencies:
       cross-spawn: 7.0.6
-      dotenv: 16.3.1
+      dotenv: 16.6.1
       dotenv-expand: 10.0.0
       minimist: 1.2.6
 
   dotenv-expand@10.0.0: {}
 
+  dotenv-expand@12.0.2:
+    dependencies:
+      dotenv: 16.6.1
+
   dotenv@16.0.3: {}
 
   dotenv@16.3.1: {}
+
+  dotenv@16.6.1: {}
 
   dotenv@8.6.0: {}
 

@@ -1,7 +1,8 @@
 import { expect, test, vi } from "vitest";
-import { page } from "../../__test-utils__";
+import { page, viteTestUrl } from "../../__test-utils__";
 
 async function openWebSocket() {
+	await page.goto(viteTestUrl);
 	const openButton = page.getByRole("button", { name: "Open WebSocket" });
 	const statusTextBefore = await page.textContent("h2");
 	expect(statusTextBefore).toBe("WebSocket closed");
@@ -15,6 +16,7 @@ async function openWebSocket() {
 test("opens WebSocket connection", openWebSocket);
 
 test("closes WebSocket connection", async () => {
+	await page.goto(viteTestUrl);
 	await openWebSocket();
 	const closeButton = page.getByRole("button", { name: "Close WebSocket" });
 	const statusTextBefore = await page.textContent("h2");
@@ -27,6 +29,7 @@ test("closes WebSocket connection", async () => {
 });
 
 test("sends and receives WebSocket string messages", async () => {
+	await page.goto(viteTestUrl);
 	await openWebSocket();
 	const sendButton = page.getByRole("button", { name: "Send string" });
 	const messageTextBefore = await page.textContent("p");
@@ -41,6 +44,7 @@ test("sends and receives WebSocket string messages", async () => {
 });
 
 test("sends and receives WebSocket ArrayBuffer messages", async () => {
+	await page.goto(viteTestUrl);
 	await openWebSocket();
 	const sendButton = page.getByRole("button", { name: "Send ArrayBuffer" });
 	const messageTextBefore = await page.textContent("p");

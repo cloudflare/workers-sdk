@@ -1,9 +1,18 @@
-import { expect, test } from "vitest";
-import { getJsonResponse, getTextResponse } from "../../../__test-utils__";
+import { expect, test, vi } from "vitest";
+import {
+	getJsonResponse,
+	getTextResponse,
+	WAIT_FOR_OPTIONS,
+} from "../../../__test-utils__";
 
 test("should be able to create a pg Client", async () => {
-	const result = await getTextResponse();
-	expect(result).toMatchInlineSnapshot(`"hh-pgsql-public.ebi.ac.uk"`);
+	await vi.waitFor(
+		async () =>
+			expect(await getTextResponse()).toMatchInlineSnapshot(
+				`"hh-pgsql-public.ebi.ac.uk"`
+			),
+		WAIT_FOR_OPTIONS
+	);
 });
 
 // Disabling actually querying the database in CI since we are getting this error:
@@ -11,7 +20,12 @@ test("should be able to create a pg Client", async () => {
 test.runIf(!process.env.CI)(
 	"should be able to use pg library to send a query",
 	async () => {
-		const result = await getJsonResponse("/send-query");
-		expect(result!.id).toEqual("21");
+		await vi.waitFor(
+			async () =>
+				expect(await getJsonResponse("/send-query")).toEqual(
+					expect.objectContaining({ id: "21" })
+				),
+			WAIT_FOR_OPTIONS
+		);
 	}
 );

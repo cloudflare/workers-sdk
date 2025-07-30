@@ -177,6 +177,7 @@ async function resolveBindings(
 	const bindings = getBindings(
 		config,
 		input.env,
+		input.envFiles,
 		!input.dev?.remote,
 		{
 			kv: extractBindingsOfType("kv_namespace", input.bindings),
@@ -323,6 +324,7 @@ async function resolveConfig(
 		sendMetrics: input.sendMetrics ?? config.send_metrics,
 		triggers: await resolveTriggers(config, input),
 		env: input.env,
+		envFiles: input.envFiles,
 		build: {
 			alias: input.build?.alias ?? config.alias,
 			additionalModules: input.build?.additionalModules ?? [],
