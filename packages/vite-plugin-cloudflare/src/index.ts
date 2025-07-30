@@ -740,9 +740,6 @@ if (import.meta.hot) {
 					});
 					miniflare = undefined;
 				}
-				// Reset the flag so that if a `buildEnd` hook is called again before the next
-				// configureServer hook then we do dispose of miniflare correctly.
-				restartingServer = false;
 			},
 		},
 		// Plugin to provide a fallback entry file
