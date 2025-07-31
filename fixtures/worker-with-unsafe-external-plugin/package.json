@@ -1,0 +1,14 @@
+{
+    "name": "fixture-worker-with-unsafe-external-plugin",
+    "scripts": {
+        "build": "turbo run build",
+        "start": "wrangler dev"
+    },
+    "devDependencies": {
+        "turbo": "^2.2.3",
+        "wrangler": "workspace:*",
+        "miniflare-shared": "workspace:*",
+        "@fixture/unsafe-external-plugin": "workspace:*",
+        "@cloudflare/workers-tsconfig": "workspace:*"
+    }
+}
