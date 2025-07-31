@@ -63,13 +63,12 @@ export default function registerDevHotKeys(
 						}
 					});
 					// cleanup any existing containers
-					await Promise.all(
-						devEnv.runtimes.map(async (runtime) => {
-							if (runtime instanceof LocalRuntimeController) {
-								await runtime.cleanupContainers();
-							}
-						})
-					);
+
+					devEnv.runtimes.map((runtime) => {
+						if (runtime instanceof LocalRuntimeController) {
+							runtime.cleanupContainers();
+						}
+					});
 
 					const newContainerBuildId = generateContainerBuildId();
 

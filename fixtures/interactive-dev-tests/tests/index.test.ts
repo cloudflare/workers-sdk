@@ -396,7 +396,6 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 
 			wrangler.pty.write("r");
 
-			// wait for build to finish
 			await vi.waitFor(async () => {
 				const status = await fetch(wrangler.url + "/status");
 				expect(await status.json()).toBe(false);
@@ -435,7 +434,7 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			await new Promise<void>((resolve) => {
 				wrangler.pty.onExit(() => resolve());
 			});
-			vi.waitFor(() => {
+			await vi.waitFor(() => {
 				const remainingIds = getContainerIds();
 				expect(remainingIds.length).toBe(0);
 			});
@@ -719,7 +718,7 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			await new Promise<void>((resolve) => {
 				wrangler.pty.onExit(() => resolve());
 			});
-			vi.waitFor(() => {
+			await vi.waitFor(() => {
 				const remainingIds = getContainerIds();
 				expect(remainingIds.length).toBe(0);
 			});
@@ -779,7 +778,7 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			}
 		});
 
-		it("should be interact with both workers, rebuild the containers with the hotkey and all containers should be cleaned up at the end", async () => {
+		it("should be able to interact with both workers, rebuild the containers with the hotkey and all containers should be cleaned up at the end", async () => {
 			const wrangler = await startWranglerDev([
 				"dev",
 				"-c",
