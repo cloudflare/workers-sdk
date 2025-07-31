@@ -1,0 +1,19 @@
+{
+  "name": "@fixture/unsafe-external-plugin",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "node tools/build.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250709.0",
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "esbuild": "catalog:default",
+    "miniflare": "workspace:*",
+    "miniflare-shared": "workspace:*",
+    "tsx": "^3.12.8"
+  },
+  "author": "",
+  "license": "ISC"
+}
