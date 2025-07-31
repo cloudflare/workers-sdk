@@ -1441,7 +1441,8 @@ function setupDockerMocks(
 		.mockImplementationOnce(mocks[4])
 		.mockImplementationOnce(mocks[5])
 		.mockImplementationOnce(mocks[6])
-		.mockImplementationOnce(mocks[7]);
+		.mockImplementationOnce(mocks[7])
+		.mockImplementationOnce(mocks[8]);
 }
 
 // Common test setup
