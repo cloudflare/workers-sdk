@@ -20,12 +20,12 @@ import {
 } from "wrangler";
 import { getAssetsConfig } from "./asset-config";
 import {
-	ASSET_PROXY_WORKER_NAME,
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
 	kRequestType,
 	PUBLIC_DIR_PREFIX,
 	ROUTER_WORKER_NAME,
+	VITE_PROXY_WORKER_NAME,
 } from "./constants";
 import { additionalModuleRE } from "./shared";
 import { withTrailingSlash } from "./utils";
@@ -176,6 +176,7 @@ const ROUTER_WORKER_PATH = "./asset-workers/router-worker.js";
 const ASSET_WORKER_PATH = "./asset-workers/asset-worker.js";
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 const RUNNER_PATH = "./runner-worker/index.js";
+const VITE_PROXY_WORKER_PATH = "./vite-proxy-worker/index.js";
 
 export function getEntryWorkerConfig(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig
@@ -356,47 +357,23 @@ export async function getDevMiniflareOptions(config: {
 			},
 		},
 		{
-			name: ASSET_PROXY_WORKER_NAME,
+			name: VITE_PROXY_WORKER_NAME,
 			compatibilityDate: ASSET_WORKERS_COMPATIBILITY_DATE,
 			modulesRoot: miniflareModulesRoot,
 			modules: [
 				{
 					type: "ESModule",
-					path: path.join(miniflareModulesRoot, "asset-proxy-worker.js"),
-					contents: /*javascript*/ `
-						import { WorkerEntrypoint } from 'cloudflare:workers';
-						export default class RPCProxyWorker extends WorkerEntrypoint {
-							async fetch(request) {
-								return this.env.FETCHER.fetch(request);
-							}
-
-							tail(event) {
-								// Temporary workaround: the tail event is not serializable,
-								// so we are serializing it to JSON and parsing it back to make it transferable.
-								// This loses non-serializable data, but allows us to forward basic info
-								// to the target worker until native support is available.
-							    return this.env.RPC_WORKER.tail(JSON.parse(JSON.stringify(event)));
-							}
-
-							constructor(ctx, env) {
-								super(ctx, env);
-								return new Proxy(this, {
-									get(target, prop) {
-										if (Reflect.has(target, prop)) {
-											return Reflect.get(target, prop);
-										}
-
-										return Reflect.get(target.env.RPC_WORKER, prop);
-									},
-								});
-							}
-						}
-					`,
+					path: path.join(miniflareModulesRoot, VITE_PROXY_WORKER_PATH),
+					contents: fs.readFileSync(
+						fileURLToPath(new URL(VITE_PROXY_WORKER_PATH, import.meta.url))
+					),
 				},
 			],
 			serviceBindings: {
-				...(entryWorkerConfig ? { RPC_WORKER: entryWorkerConfig.name } : {}),
-				FETCHER: {
+				...(entryWorkerConfig
+					? { ENTRY_USER_WORKER: entryWorkerConfig.name }
+					: {}),
+				__VITE_MIDDLEWARE__: {
 					node: (req, res) => viteDevServer.middlewares(req, res),
 				},
 			},
@@ -468,7 +445,7 @@ export async function getDevMiniflareOptions(config: {
 													{
 														// This exposes the default entrypoint of the asset proxy worker
 														// on the dev registry with the name of the entry worker
-														serviceName: ASSET_PROXY_WORKER_NAME,
+														serviceName: VITE_PROXY_WORKER_NAME,
 														entrypoint: undefined,
 														proxy: true,
 													},
