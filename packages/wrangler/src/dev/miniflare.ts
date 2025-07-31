@@ -727,6 +727,21 @@ export function buildMiniflareBindingOptions(
 		}
 	}
 
+	// Partition workflow bindings based on whether they're internal (defined by
+	// this session's worker), or external (defined by another session's worker
+	// registered in the dev registry)
+	const internalWorkflows: CfWorkflow[] = [];
+	const externalWorkflows: CfWorkflow[] = [];
+	for (const binding of bindings.workflows ?? []) {
+		const isInternal =
+			binding.script_name === undefined || binding.script_name === config.name;
+		if (isInternal) {
+			internalWorkflows.push(binding);
+		} else {
+			externalWorkflows.push(binding);
+		}
+	}
+
 	const externalWorkers: WorkerOptions[] = [];
 	if (config.workerDefinitions !== null) {
 		// Setup Durable Object bindings and proxy worker
@@ -955,11 +970,18 @@ export function buildMiniflareBindingOptions(
 				{ dataset: binding.dataset ?? "dataset" },
 			]) ?? []
 		),
-		workflows: Object.fromEntries(
-			bindings.workflows?.map((workflow) =>
+		workflows: Object.fromEntries([
+			...internalWorkflows.map((workflow) => [
+				workflow.binding,
+				{
+					name: workflow.name,
+					className: workflow.class_name,
+				},
+			]),
+			...externalWorkflows.map((workflow) =>
 				workflowEntry(workflow, remoteProxyConnectionString)
-			) ?? []
-		),
+			),
+		]),
 		secretsStoreSecrets: Object.fromEntries(
 			bindings.secrets_store_secrets?.map((binding) => [
 				binding.binding,

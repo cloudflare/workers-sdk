@@ -31,6 +31,7 @@ type Env = {
 	MY_HYPERDRIVE: Hyperdrive;
 	ASSETS: Fetcher;
 	IMAGES: ImagesBinding;
+	MY_WORKFLOW: any;
 };
 
 const wranglerConfigFilePath = path.join(__dirname, "..", "wrangler.jsonc");
@@ -303,6 +304,35 @@ describe("getPlatformProxy - env", () => {
 				configPath: path.join(__dirname, "..", "wrangler_external_do.jsonc"),
 			});
 			expect(warn).not.toHaveBeenCalled();
+		});
+
+		it("warns about internal Workflows and doesn't crash", async () => {
+			await getPlatformProxy<Env>({
+				configPath: path.join(__dirname, "..", "wrangler_workflow.jsonc"),
+			});
+			expect(warn).toMatchInlineSnapshot(`
+				[MockFunction warn] {
+				  "calls": [
+				    [
+				      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following internal Workflows:[0m
+
+				  				- {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow"}
+				  				These will not work in local development, but they should work in production.
+				  
+				  				If you want to develop these locally, you can define your Workflow in a separate Worker, with a separate configuration file.
+				  				For detailed instructions, refer to the Workflows section here: [4mhttps://developers.cloudflare.com/workers/wrangler/api#supported-bindings[0m
+
+				",
+				    ],
+				  ],
+				  "results": [
+				    {
+				      "type": "return",
+				      "value": undefined,
+				    },
+				  ],
+				}
+			`);
 		});
 	});
 

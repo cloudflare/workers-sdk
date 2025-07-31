@@ -2,7 +2,10 @@ import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
-import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
+import {
+	partitionDurableObjectBindings,
+	partitionWorkflowBindings,
+} from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
@@ -217,6 +220,19 @@ async function getMiniflareOptionsFromConfig(args: {
 
 				If you want to develop these locally, you can define your DO in a separate Worker, with a separate configuration file.
 				For detailed instructions, refer to the Durable Objects section here: https://developers.cloudflare.com/workers/wrangler/api#supported-bindings
+				`);
+		}
+	}
+	if (config.workflows && config.workflows.length > 0) {
+		const { localBindings } = partitionWorkflowBindings(config);
+		if (localBindings.length > 0) {
+			logger.warn(dedent`
+				You have defined bindings to the following internal Workflows:
+				${localBindings.map((b) => `- ${JSON.stringify(b)}`).join("\n")}
+				These will not work in local development, but they should work in production.
+
+				If you want to develop these locally, you can define your Workflow in a separate Worker, with a separate configuration file.
+				For detailed instructions, refer to the Workflows section here: https://developers.cloudflare.com/workers/wrangler/api#supported-bindings
 				`);
 		}
 	}
