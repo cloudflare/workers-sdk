@@ -483,13 +483,7 @@ if (import.meta.hot) {
 						 */
 						process.on("exit", async () => {
 							if (containerImageTagsSeen.size) {
-								try {
-									cleanupContainers(dockerPath, containerImageTagsSeen);
-								} catch (error) {
-									viteDevServer.config.logger.warnOnce(
-										"Failed to clean up containers. You may have to stop and remove them up manually"
-									);
-								}
+								cleanupContainers(dockerPath, containerImageTagsSeen);
 							}
 						});
 					}
@@ -590,13 +584,7 @@ if (import.meta.hot) {
 
 					process.on("exit", () => {
 						if (containerImageTagsSeen.size) {
-							try {
-								cleanupContainers(dockerPath, containerImageTagsSeen);
-							} catch (error) {
-								vitePreviewServer.config.logger.warnOnce(
-									"Failed to clean up containers. You may have to stop and remove them up manually"
-								);
-							}
+							cleanupContainers(dockerPath, containerImageTagsSeen);
 						}
 					});
 				}

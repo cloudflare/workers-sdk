@@ -395,8 +395,7 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			);
 
 			wrangler.pty.write("r");
-			await setTimeout(2000); // wait for the rebuild to start
-			// wait for build to finish
+
 			await vi.waitFor(async () => {
 				const status = await fetch(wrangler.url + "/status");
 				expect(await status.json()).toBe(false);

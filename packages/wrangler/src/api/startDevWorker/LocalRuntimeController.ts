@@ -392,13 +392,7 @@ export class LocalRuntimeController extends RuntimeController {
 			this.dockerPath,
 			"Docker path should have been set if containers are enabled"
 		);
-		try {
-			cleanupContainers(this.dockerPath, this.containerImageTagsSeen);
-		} catch {
-			logger.warn(
-				`Failed to clean up containers. You may have to stop and remove them up manually.`
-			);
-		}
+		cleanupContainers(this.dockerPath, this.containerImageTagsSeen);
 	};
 
 	#teardown = async (): Promise<void> => {
