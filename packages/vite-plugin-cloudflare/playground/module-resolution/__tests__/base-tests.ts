@@ -123,4 +123,15 @@ describe("module resolution", async () => {
 			expect(result).toBe("Export from virtual module");
 		});
 	});
+
+	describe("unenv npm shims", () => {
+		test("shims debug package", async () => {
+			const result = await getJsonResponse("/require-debug");
+			expect(result).toEqual({
+				"(requires/debug)": "OK",
+			});
+
+			expect(serverLogs.info).toEqual(["enabled This should be logged +0ms\n"]);
+		});
+	});
 });
