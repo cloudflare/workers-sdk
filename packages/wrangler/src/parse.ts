@@ -433,7 +433,7 @@ const UNSUPPORTED_BOMS = [
  * Removes UTF-8 BOM if present and validates that no other BOMs are present.
  * Throws ParseError for non-UTF-8 BOMs with descriptive error messages.
  */
-function removeBOMAndValidate(buffer: Buffer, file?: string): string {
+function removeBOMAndValidate(buffer: Buffer, file: string): string {
 	for (const bom of UNSUPPORTED_BOMS) {
 		if (
 			buffer.length >= bom.buffer.length &&
@@ -446,7 +446,7 @@ function removeBOMAndValidate(buffer: Buffer, file?: string): string {
 						text: `The file "${file}" appears to be encoded as ${bom.encoding}. Please save the file as UTF-8 without BOM.`,
 					},
 				],
-				location: file ? { file, line: 1, column: 0 } : undefined,
+				location: { file, line: 1, column: 0 },
 				telemetryMessage: `${bom.name} BOM detected`,
 			});
 		}
