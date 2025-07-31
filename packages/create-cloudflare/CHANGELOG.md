@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.50.7
+
+### Patch Changes
+
+- [#10109](https://github.com/cloudflare/workers-sdk/pull/10109) [`d983f2b`](https://github.com/cloudflare/workers-sdk/commit/d983f2be011e94204a1e6a3978c7228842de8524) Thanks [@alan-agius4](https://github.com/alan-agius4)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 20.0.5 | 20.1.3 |
+
 ## 2.50.6
 
 ### Patch Changes
