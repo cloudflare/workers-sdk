@@ -156,7 +156,10 @@ export function resolvePluginConfig(
 	const entryWorkerConfig = entryWorkerResolvedConfig.config;
 
 	if (entryWorkerConfig.main && !path.isAbsolute(entryWorkerConfig.main)) {
-		entryWorkerConfig.main = path.resolve(path.dirname(entryWorkerConfigPath), entryWorkerConfig.main);
+		entryWorkerConfig.main = path.resolve(
+			path.dirname(entryWorkerConfigPath),
+			entryWorkerConfig.main
+		);
 	}
 
 	const entryWorkerEnvironmentName =
@@ -201,7 +204,10 @@ export function resolvePluginConfig(
 		const workerConfig = workerResolvedConfig.config;
 
 		if (workerConfig.main && !path.isAbsolute(workerConfig.main)) {
-			workerConfig.main = path.resolve(path.dirname(workerConfigPath), workerConfig.main);
+			workerConfig.main = path.resolve(
+				path.dirname(workerConfigPath),
+				workerConfig.main
+			);
 		}
 
 		const workerEnvironmentName =
