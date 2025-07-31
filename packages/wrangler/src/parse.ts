@@ -409,23 +409,19 @@ export function parseByteSize(
 const UNSUPPORTED_BOMS = [
 	{
 		buffer: Buffer.from([0x00, 0x00, 0xfe, 0xff]),
-		encoding: "UTF-32 Big Endian",
-		name: "UTF-32 BE",
+		encoding: "UTF-32 BE",
 	},
 	{
 		buffer: Buffer.from([0xff, 0xfe, 0x00, 0x00]),
-		encoding: "UTF-32 Little Endian",
-		name: "UTF-32 LE",
+		encoding: "UTF-32 LE",
 	},
 	{
 		buffer: Buffer.from([0xfe, 0xff]),
-		encoding: "UTF-16 Big Endian",
-		name: "UTF-16 BE",
+		encoding: "UTF-16 BE",
 	},
 	{
 		buffer: Buffer.from([0xff, 0xfe]),
-		encoding: "UTF-16 Little Endian",
-		name: "UTF-16 LE",
+		encoding: "UTF-16 LE",
 	},
 ];
 
@@ -439,16 +435,16 @@ function removeBOMAndValidate(buffer: Buffer, file: string): string {
 			buffer.length >= bom.buffer.length &&
 			buffer.subarray(0, bom.buffer.length).equals(bom.buffer)
 		) {
-			throw new ParseError({
-				text: `Configuration file contains ${bom.name} byte order marker`,
-				notes: [
-					{
-						text: `The file "${file}" appears to be encoded as ${bom.encoding}. Please save the file as UTF-8 without BOM.`,
-					},
-				],
-				location: { file, line: 1, column: 0 },
-				telemetryMessage: `${bom.name} BOM detected`,
-			});
+		throw new ParseError({
+			text: `Configuration file contains ${bom.encoding} byte order marker`,
+			notes: [
+				{
+					text: `The file "${file}" appears to be encoded as ${bom.encoding}. Please save the file as UTF-8 without BOM.`,
+				},
+			],
+			location: { file, line: 1, column: 0 },
+			telemetryMessage: `${bom.encoding} BOM detected`,
+		});
 		}
 	}
 
