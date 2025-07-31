@@ -143,6 +143,7 @@ function handleUnenvAliasedPackages(
 		if (
 			args.kind === "require-call" &&
 			(unresolvedAlias.startsWith("unenv/npm/") ||
+				unresolvedAlias.startsWith("@cloudflare/unenv-preset/npm/") ||
 				unresolvedAlias.startsWith("unenv/mock/"))
 		) {
 			return {

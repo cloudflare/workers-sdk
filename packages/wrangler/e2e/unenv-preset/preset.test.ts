@@ -70,8 +70,9 @@ describe.each(testConfigs)(
 					main: join(__dirname, "/worker/index.ts"),
 					compatibility_date: compatibilityDate,
 					compatibility_flags: ["nodejs_compat", ...compatibilityFlags],
+					// Enable `enabled` logs for the `debug` package
 					vars: {
-						DEBUG: "example",
+						DEBUG: "enabled",
 					},
 				}),
 			});
