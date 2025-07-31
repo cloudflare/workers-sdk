@@ -389,7 +389,6 @@ if (import.meta.hot) {
 							configId,
 							"Restarting dev server and aborting previous setup"
 						);
-						await viteDevServer.watcher.close();
 						await viteDevServer.restart();
 					}
 				};
