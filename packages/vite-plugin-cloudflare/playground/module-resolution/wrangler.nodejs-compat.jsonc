@@ -3,4 +3,7 @@
 	"main": "./src/index.ts",
 	"compatibility_date": "2024-12-30",
 	"compatibility_flags": ["nodejs_compat"],
+	"vars": {
+		"DEBUG": "test",
+	},
 }

@@ -3,6 +3,10 @@
 	"version": "1.0.0",
 	"private": true,
 	"exports": {
+		"./debug": {
+			"default": "./debug.js",
+			"types": "./debug.d.ts"
+		},
 		"./ext": {
 			"default": "./ext.js",
 			"types": "./ext.d.ts"
