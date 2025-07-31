@@ -6652,7 +6652,13 @@ describe("BOM (Byte Order Marker) handling", () => {
 		const configContent = `name = "test-worker"
 compatibility_date = "2022-01-12"`;
 
-		fs.writeFileSync("wrangler.toml", "\uFEFF" + configContent, "utf-8");
+		fs.writeFileSync(
+			"wrangler.toml",
+			Buffer.concat([
+				Buffer.from([0xef, 0xbb, 0xbf]),
+				Buffer.from(configContent, "utf-8"),
+			])
+		);
 
 		const config = readConfig({ config: "wrangler.toml" });
 		expect(config.name).toBe("test-worker");
@@ -6665,7 +6671,13 @@ compatibility_date = "2022-01-12"`;
 	"compatibility_date": "2022-01-12"
 }`;
 
-		fs.writeFileSync("wrangler.json", "\uFEFF" + configContent, "utf-8");
+		fs.writeFileSync(
+			"wrangler.json",
+			Buffer.concat([
+				Buffer.from([0xef, 0xbb, 0xbf]),
+				Buffer.from(configContent, "utf-8"),
+			])
+		);
 
 		const config = readConfig({ config: "wrangler.json" });
 		expect(config.name).toBe("test-worker");

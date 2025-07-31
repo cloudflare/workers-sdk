@@ -406,48 +406,57 @@ export function parseByteSize(
 	);
 }
 
+const UNSUPPORTED_BOMS = [
+	{
+		buffer: Buffer.from([0x00, 0x00, 0xfe, 0xff]),
+		encoding: "UTF-32 Big Endian",
+		name: "UTF-32 BE",
+	},
+	{
+		buffer: Buffer.from([0xff, 0xfe, 0x00, 0x00]),
+		encoding: "UTF-32 Little Endian",
+		name: "UTF-32 LE",
+	},
+	{
+		buffer: Buffer.from([0xfe, 0xff]),
+		encoding: "UTF-16 Big Endian",
+		name: "UTF-16 BE",
+	},
+	{
+		buffer: Buffer.from([0xff, 0xfe]),
+		encoding: "UTF-16 Little Endian",
+		name: "UTF-16 LE",
+	},
+];
+
 /**
  * Removes UTF-8 BOM if present and validates that no other BOMs are present.
  * Throws ParseError for non-UTF-8 BOMs with descriptive error messages.
  */
 function removeBOMAndValidate(buffer: Buffer, file?: string): string {
-	const decoder = new TextDecoder("utf-8");
-
-	const UTF_32_BOM_BE_CHARS = decoder.decode(Buffer.from([0,0,0xFE, 0xFF]));
-	const UTF_32_BOM_LE_CHARS = decoder.decode(Buffer.from([0xFF, 0xFE, 0, 0]));
-	const UTF_16_BOM_CHARS = decoder.decode(Buffer.from([0xFE, 0xFF]));
-
-	const content = decoder.decode(buffer);
-
-	if (content.startsWith(UTF_32_BOM_BE_CHARS)) {
-		throw new BomError("UTF-32 BE","UTF-32 Big Endian", file);
-	}
-	if (content.startsWith(UTF_32_BOM_LE_CHARS)) {
-		throw new BomError("UTF-32 LE","UTF-32 Little Endian", file);
-	}
-	if (content.startsWith(UTF_16_BOM_CHARS)) {
-		if (buffer.at(0) === 0xFE) {
-			throw new BomError("UTF-16 BE","UTF-16 Big Endian", file);
-		} else {
-			throw new BomError("UTF-16 LE","UTF-16 Little Endian", file);
+	for (const bom of UNSUPPORTED_BOMS) {
+		if (
+			buffer.length >= bom.buffer.length &&
+			buffer.subarray(0, bom.buffer.length).equals(bom.buffer)
+		) {
+			throw new ParseError({
+				text: `Configuration file contains ${bom.name} byte order marker`,
+				notes: [
+					{
+						text: `The file "${file}" appears to be encoded as ${bom.encoding}. Please save the file as UTF-8 without BOM.`,
+					},
+				],
+				location: file ? { file, line: 1, column: 0 } : undefined,
+				telemetryMessage: `${bom.name} BOM detected`,
+			});
 		}
 	}
 
-	return content;
-}
+	const content = buffer.toString("utf-8");
 
-class BomError extends ParseError {
-	constructor(type: string, description: string, file: string|undefined
-	) {
-		super({
-			text: `Configuration file contains ${type} byte order marker`,
-			notes: [
-				{
-					text: `The file "${file ?? 'unknown'}" appears to be encoded as ${description}. Please save the file as UTF-8 without BOM.`,
-				},
-			],
-			location: file ? { file, line: 1, column: 0 } : undefined,
-			telemetryMessage: `${type} detected`,
-		})
+	if (content.charCodeAt(0) === 0xfeff) {
+		return content.slice(1);
 	}
+
+	return content;
 }
