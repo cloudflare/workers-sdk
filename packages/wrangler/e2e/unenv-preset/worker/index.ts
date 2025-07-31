@@ -12,8 +12,8 @@ export const TESTS: Record<string, () => void> = {
 	testTimers,
 	testNet,
 	testTls,
-	testDebugImport,
-	testDebugRequire,
+	testImportDebug,
+	testRequireDebug,
 	testHttp,
 	testHttps,
 };
@@ -213,14 +213,10 @@ export async function testTls() {
 	assert.strictEqual(typeof tls.convertALPNProtocols, "function");
 }
 
-export async function testDebugImport() {
+export async function testImportDebug() {
 	// @ts-expect-error "debug" is an unenv alias, not installed locally
 	const debug = (await import("debug")).default;
 	const logs: string[] = [];
-
-	// Append all logs to the array instead of logging to console
-	debug.log = (...args: string[]) =>
-		logs.push(args.map((arg) => arg.toString()).join(" "));
 
 	// Append all logs to the array instead of logging to console
 	debug.log = (...args: string[]) =>
@@ -237,7 +233,7 @@ export async function testDebugImport() {
 	assert.deepEqual(logs, ["enabled This should be logged +0ms"]);
 }
 
-export async function testDebugRequire() {
+export async function testRequireDebug() {
 	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	const debug = require("debug");
 	const logs: string[] = [];
