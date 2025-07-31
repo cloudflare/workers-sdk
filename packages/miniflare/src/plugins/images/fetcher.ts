@@ -1,5 +1,6 @@
 import { File } from "buffer";
 import { Request } from "undici";
+import { importSharp } from "./helper.js";
 import type { ImageInfoResponse } from "@cloudflare/workers-types/experimental";
 import type { Sharp } from "sharp";
 
@@ -29,17 +30,9 @@ function validateTransforms(inputTransforms: unknown): Transform[] | null {
 export async function imagesLocalFetcher(request: Request): Promise<Response> {
 	let sharp;
 	try {
-		// eslint-disable-next-line es/no-dynamic-import
-		const { default: importedSharp } = await import("sharp");
-		sharp = importedSharp;
-	} catch {
-		// This should be unreachable, as we should have errored by now
-		// if sharp isn't installed
-		return errorResponse(
-			503,
-			9523,
-			"The Sharp library is not available, check your version of Node is compatible"
-		);
+		sharp = await importSharp();
+	} catch (error) {
+		return error as Response;
 	}
 
 	const data = await request.formData();

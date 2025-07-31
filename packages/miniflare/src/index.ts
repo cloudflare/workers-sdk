@@ -80,6 +80,7 @@ import {
 	ServiceDesignatorSchema,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
+import { imagesLocalEdgeApiFetcher } from "./plugins/images/edgeApiFetcher";
 import { imagesLocalFetcher } from "./plugins/images/fetcher";
 import {
 	Config,
@@ -1029,6 +1030,9 @@ export class Miniflare {
 		let service: z.infer<typeof ServiceDesignatorSchema> | undefined;
 		if (customService === CoreBindings.IMAGES_SERVICE) {
 			service = imagesLocalFetcher;
+			// do we need special case handling or can we do whatever mad stuff is happening with extractCustomService?
+		} else if (customService === CoreBindings.HOSTED_IMAGES_SERVICE) {
+			service = imagesLocalEdgeApiFetcher;
 		} else {
 			const { workerIndex, serviceKind, serviceName } =
 				extractCustomService(customService);
