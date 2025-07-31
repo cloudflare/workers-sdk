@@ -1,11 +1,10 @@
 import assert from "node:assert";
-import { randomUUID } from "node:crypto";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import util from "node:util";
+import * as util from "node:util";
 import {
+	cleanupContainers,
 	generateContainerBuildId,
-	getContainerIdsByImageTags,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
@@ -30,11 +29,7 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "./constants";
-import {
-	getDockerPath,
-	prepareContainerImages,
-	removeContainersByIds,
-} from "./containers";
+import { getDockerPath, prepareContainerImages } from "./containers";
 import {
 	addDebugToVitePrintUrls,
 	getDebugPathHtml,
@@ -104,8 +99,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const additionalModulePaths = new Set<string>();
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
-	let containerImageTagsSeen: Set<string> | undefined;
-	let runningContainerIds: Array<string>;
+	let containerImageTagsSeen = new Set<string>();
 
 	/** Used to track whether hooks are being called because of a server restart or a server close event. */
 	let restartingServer = false;
@@ -349,23 +343,15 @@ if (import.meta.hot) {
 				viteDevServer.restart = async () => {
 					try {
 						restartingServer = true;
-						debuglog(configId, "From server.restart(): Restarting server...");
+						debuglog("From server.restart(): Restarting server...");
 						await restartServer();
-						debuglog(configId, "From server.restart(): Restarted server...");
+						debuglog("From server.restart(): Restarted server...");
 					} finally {
 						restartingServer = false;
 					}
 				};
 
 				assertIsNotPreview(resolvedPluginConfig);
-
-				// It is possible to get into a situation where the dev server is restarted by a config file change
-				// right in the middle of the Vite server and the supporting Workers being initialized.
-				// We use an abort controller to signal to the initialization code that it should stop if the config has changed.
-				const restartAbortController = new AbortController();
-
-				// We use a `configId` to help debug how the config changes are triggering the restarts.
-				const configId = randomUUID();
 
 				const inputInspectorPort = await getInputInspectorPortOption(
 					resolvedPluginConfig,
@@ -385,22 +371,10 @@ if (import.meta.hot) {
 							changedFilePath
 						)
 					) {
-						debuglog(configId, "Config changed: " + changedFilePath);
+						debuglog("Config changed: " + changedFilePath);
 						viteDevServer.watcher.off("change", configChangedHandler);
-						if (!restartAbortController.signal.aborted) {
-							debuglog(
-								configId,
-								"Restarting dev server and aborting previous setup"
-							);
-							restartAbortController.abort();
-							await viteDevServer.watcher.close();
-							await viteDevServer.restart();
-						} else {
-							debuglog(
-								configId,
-								"Config changed but already aborted previous setup, ignoring."
-							);
-						}
+						debuglog("Restarting dev server and aborting previous setup");
+						await viteDevServer.restart();
 					}
 				};
 				viteDevServer.watcher.on("change", configChangedHandler);
@@ -425,58 +399,22 @@ if (import.meta.hot) {
 					containerBuildId,
 				});
 
-				if (restartAbortController.signal.aborted) {
-					debuglog(
-						configId,
-						"Aborting setting up miniflare because config has changed."
-					);
-					// The config has changed while we were still trying to setup the server,
-					// so just abort and allow the new server to be set up instead.
-					return;
-				}
-
-				debuglog(
-					configId,
-					new Error("").stack?.includes("restartServer")
-						? "From stack trace: restarting server..."
-						: "From stack trace: creating new server..."
-				);
-
 				if (!miniflare) {
-					debuglog(configId, "Creating new Miniflare instance");
+					debuglog("Creating new Miniflare instance");
 					miniflare = new Miniflare(miniflareDevOptions);
 				} else {
-					debuglog(configId, "Waiting for Miniflare to be ready before update");
-					await miniflare.ready;
-					debuglog(configId, "Updating the Miniflare instance");
+					debuglog("Updating the existing Miniflare instance");
 					await miniflare.setOptions(miniflareDevOptions);
-					debuglog(configId, "Waiting for Miniflare to be ready after update");
-					await miniflare.ready;
-					debuglog(configId, "Miniflare is ready");
+					debuglog("Miniflare is ready");
 				}
 
 				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
-				if (restartAbortController.signal.aborted) {
-					debuglog(
-						configId,
-						"Aborting setting up the dev server because config has changed."
-					);
-					// The config has changes while this was still trying to setup the server.
-					// So just abort and allow the new server to be set up.
-					return;
-				}
-
 				if (resolvedPluginConfig.type === "workers") {
 					assert(entryWorkerConfig, `No entry Worker config`);
 
-					debuglog(configId, "Initializing the Vite module runners");
-					await initRunners(
-						resolvedPluginConfig,
-						viteDevServer,
-						miniflare,
-						configId
-					);
+					debuglog("Initializing the Vite module runners");
+					await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
 					const entryWorkerName = entryWorkerConfig.name;
 
@@ -550,17 +488,6 @@ if (import.meta.hot) {
 							)
 						);
 
-						// poll Docker every two seconds and update the list of ids of all
-						// running containers
-						const dockerPollIntervalId = setInterval(async () => {
-							if (containerImageTagsSeen?.size) {
-								runningContainerIds = await getContainerIdsByImageTags(
-									dockerPath,
-									containerImageTagsSeen
-								);
-							}
-						}, 2000);
-
 						/*
 						 * Upon exiting the dev process we should ensure we perform any
 						 * containers-specific cleanup work. Vite recommends using the
@@ -574,21 +501,11 @@ if (import.meta.hot) {
 						 * `process.exit()` imperatively, and therefore causes `beforeExit`
 						 * not to be emitted).
 						 *
-						 * Furthermore, since the `exit` event handler cannot perform async
-						 * ops as per spec (https://nodejs.org/api/process.html#event-exit),
-						 * we also need a mechanism to ensure that list of containers to be
-						 * cleaned up on exit is up to date. This is what the interval with id
-						 * `dockerPollIntervalId` is for.
-						 *
-						 * It is possible, though very unlikely, that in some rare cases,
-						 * we might be left with some orphaned containers, due to the fact
-						 * that at the point of exiting the dev process, our internal list
-						 * of container ids is out of date. We accept this caveat for now.
-						 *
 						 */
-						process.on("exit", () => {
-							clearInterval(dockerPollIntervalId);
-							removeContainersByIds(dockerPath, runningContainerIds);
+						process.on("exit", async () => {
+							if (containerImageTagsSeen.size) {
+								cleanupContainers(dockerPath, containerImageTagsSeen);
+							}
 						});
 					}
 				}
@@ -686,18 +603,10 @@ if (import.meta.hot) {
 						colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
 					);
 
-					const dockerPollIntervalId = setInterval(async () => {
-						if (containerImageTagsSeen?.size) {
-							runningContainerIds = await getContainerIdsByImageTags(
-								dockerPath,
-								containerImageTagsSeen
-							);
-						}
-					}, 2000);
-
 					process.on("exit", () => {
-						clearInterval(dockerPollIntervalId);
-						removeContainersByIds(dockerPath, runningContainerIds);
+						if (containerImageTagsSeen.size) {
+							cleanupContainers(dockerPath, containerImageTagsSeen);
+						}
 					});
 				}
 
@@ -722,14 +631,7 @@ if (import.meta.hot) {
 					containerImageTagsSeen?.size
 				) {
 					const dockerPath = getDockerPath();
-					runningContainerIds = await getContainerIdsByImageTags(
-						dockerPath,
-						containerImageTagsSeen
-					);
-
-					await removeContainersByIds(dockerPath, runningContainerIds);
-					containerImageTagsSeen.clear();
-					runningContainerIds = [];
+					cleanupContainers(dockerPath, containerImageTagsSeen);
 				}
 
 				debuglog("buildEnd:", restartingServer ? "restarted" : "disposing");

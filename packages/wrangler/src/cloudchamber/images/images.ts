@@ -15,11 +15,12 @@ import type {
 import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
-interface CatalogResponse {
-	repositories: string[];
+interface CatalogWithTagsResponse {
+	repositories: Record<string, string[]>;
+	cursor?: string;
 }
 
-interface TagsResponse {
+interface Repository {
 	name: string;
 	tags: string[];
 }
@@ -123,22 +124,20 @@ async function handleListImagesCommand(
 ) {
 	const responses = await promiseSpinner(
 		getCreds().then(async (creds) => {
-			const repos = await listRepos(creds);
-			const responses_: TagsResponse[] = [];
+			const repos = await listReposWithTags(creds);
+			const processed: Repository[] = [];
 			const accountId = config.account_id || (await getAccountId(config));
 			const accountIdPrefix = new RegExp(`^${accountId}/`);
 			const filter = new RegExp(args.filter ?? "");
-			for (const repo of repos) {
+			for (const [repo, tags] of Object.entries(repos)) {
 				const stripped = repo.replace(/^\/+/, "");
 				if (filter.test(stripped)) {
-					// get all tags for repo
-					const tags = await listTags(stripped, creds);
 					const name = stripped.replace(accountIdPrefix, "");
-					responses_.push({ name, tags });
+					processed.push({ name, tags });
 				}
 			}
 
-			return responses_;
+			return processed;
 		}),
 		{ message: "Listing" }
 	);
@@ -147,7 +146,7 @@ async function handleListImagesCommand(
 }
 
 async function listImages(
-	responses: TagsResponse[],
+	responses: Repository[],
 	digests: boolean = false,
 	json: boolean = false
 ) {
@@ -184,25 +183,11 @@ async function listImages(
 	}
 }
 
-async function listTags(repo: string, creds: string): Promise<string[]> {
+async function listReposWithTags(
+	creds: string
+): Promise<Record<string, string[]>> {
 	const url = new URL(`https://${getCloudflareContainerRegistry()}`);
-	const baseUrl = `${url.protocol}//${url.host}`;
-	const tagsUrl = `${baseUrl}/v2/${repo}/tags/list`;
-
-	const tagsResponse = await fetch(tagsUrl, {
-		method: "GET",
-		headers: {
-			Authorization: `Basic ${creds}`,
-		},
-	});
-	const tagsData = (await tagsResponse.json()) as TagsResponse;
-	return tagsData.tags || [];
-}
-
-async function listRepos(creds: string): Promise<string[]> {
-	const url = new URL(`https://${getCloudflareContainerRegistry()}`);
-
-	const catalogUrl = `${url.protocol}//${url.host}/v2/_catalog`;
+	const catalogUrl = `${url.protocol}//${url.host}/v2/_catalog?tags=true`;
 
 	const response = await fetch(catalogUrl, {
 		method: "GET",
@@ -217,9 +202,9 @@ async function listRepos(creds: string): Promise<string[]> {
 		);
 	}
 
-	const data = (await response.json()) as CatalogResponse;
+	const data = (await response.json()) as CatalogWithTagsResponse;
 
-	return data.repositories || [];
+	return data.repositories ?? {};
 }
 
 async function deleteTag(

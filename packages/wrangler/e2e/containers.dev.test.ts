@@ -26,7 +26,7 @@ for (const source of imageSource) {
 	const isPullWithoutAccountId = source === "pull" && !CLOUDFLARE_ACCOUNT_ID;
 
 	describe.skipIf(isCINonLinux || isPullWithoutAccountId)(
-		"containers local dev tests: %s",
+		`containers local dev tests: ${source}`,
 		{ timeout: 90_000 },
 		() => {
 			let helper: WranglerE2ETestHelper;
@@ -158,16 +158,23 @@ for (const source of imageSource) {
 				await helper.seed({
 					"wrangler.json": JSON.stringify(wranglerConfig),
 				});
-				// cleanup any running containers
+				/// wait a bit in case the expected cleanup from shutting down wrangler dev is already happening
+				await new Promise((resolve) => setTimeout(resolve, 500));
+				// cleanup any running containers. this does happen automatically when we shut down wrangler,
+				// but treekill is being uncooperative. this is also tested in interactive-dev-fixture
+				// where it is working as expected
 				const ids = getContainerIds("e2econtainer");
 				if (ids.length > 0) {
-					console.log(ids);
 					execSync(`${getDockerPath()} rm -f ${ids.join(" ")}`, {
 						encoding: "utf8",
 					});
 				}
 			});
 			afterAll(async () => {
+				// wait a bit in case the expected cleanup from shutting down wrangler dev is already happening
+				await new Promise((resolve) => setTimeout(resolve, 500));
+				// again this should happen automatically when we shut down wrangler, but treekill is being uncooperative.
+				// this is tested in interactive-dev-fixture where it is working as expected.
 				const ids = getContainerIds("e2econtainer");
 				if (ids.length > 0) {
 					execSync(`${getDockerPath()} rm -f ${ids.join(" ")}`, {
@@ -209,21 +216,29 @@ for (const source of imageSource) {
 				expect(response.status).toBe(200);
 				expect(text).toBe("Container create request sent...");
 
-				// Wait a bit for container to start
-				await new Promise((resolve) => setTimeout(resolve, 2_000));
+				await vi.waitFor(async () => {
+					response = await fetch(`${ready.url}/status`);
+					expect(response.status).toBe(200);
+					const status = await response.json();
+					expect(status).toBe(true);
+				});
 
-				response = await fetch(`${ready.url}/status`);
-				const status = await response.json();
-				expect(response.status).toBe(200);
-				expect(status).toBe(true);
+				await vi.waitFor(
+					async () => {
+						response = await fetch(`${ready.url}/fetch`, {
+							signal: AbortSignal.timeout(3_000),
+							headers: { "MF-Disable-Pretty-Error": "true" },
+						});
+						text = await response.text();
+						expect(text).toBe("Hello World! Have an env var! I'm an env var!");
+					},
+					{ timeout: 5_000 }
+				);
 
-				response = await fetch(`${ready.url}/fetch`);
-				expect(response.status).toBe(200);
-				text = await response.text();
-				expect(text).toBe("Hello World! Have an env var! I'm an env var!");
 				// Check that a container is running using `docker ps`
 				const ids = getContainerIds("e2econtainer");
 				expect(ids.length).toBe(1);
+				await worker.stop();
 			});
 
 			it("won't start the container service if no containers are present", async () => {

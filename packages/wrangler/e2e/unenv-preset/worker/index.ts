@@ -12,7 +12,8 @@ export const TESTS: Record<string, () => void> = {
 	testTimers,
 	testNet,
 	testTls,
-	testDebug,
+	testImportDebug,
+	testRequireDebug,
 	testHttp,
 	testHttps,
 };
@@ -212,7 +213,7 @@ export async function testTls() {
 	assert.strictEqual(typeof tls.convertALPNProtocols, "function");
 }
 
-export async function testDebug() {
+export async function testImportDebug() {
 	// @ts-expect-error "debug" is an unenv alias, not installed locally
 	const debug = (await import("debug")).default;
 	const logs: string[] = [];
@@ -221,13 +222,35 @@ export async function testDebug() {
 	debug.log = (...args: string[]) =>
 		logs.push(args.map((arg) => arg.toString()).join(" "));
 
-	const exampleLog = debug("example");
-	const testLog = exampleLog.extend("test");
+	// This should log because as `DEBUG` is set to "enabled".
+	const enabledLog = debug("enabled");
+	enabledLog("This should be logged");
 
-	exampleLog("This is an example log");
-	testLog("This is a test log");
+	// This should not log as `DEBUG` does not contain "enabled:disabled"
+	const disabledLog = enabledLog.extend("disabled");
+	disabledLog("This should not be logged");
 
-	assert.deepEqual(logs, ["example This is an example log +0ms"]);
+	assert.deepEqual(logs, ["enabled This should be logged +0ms"]);
+}
+
+export async function testRequireDebug() {
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	const debug = require("debug");
+	const logs: string[] = [];
+
+	// Append all logs to the array instead of logging to console
+	debug.log = (...args: string[]) =>
+		logs.push(args.map((arg) => arg.toString()).join(" "));
+
+	// This should log because as `DEBUG` is set to "enabled".
+	const enabledLog = debug("enabled");
+	enabledLog("This should be logged");
+
+	// This should not log as `DEBUG` does not contain "enabled:disabled"
+	const disabledLog = enabledLog.extend("disabled");
+	disabledLog("This should not be logged");
+
+	assert.deepEqual(logs, ["enabled This should be logged +0ms"]);
 }
 
 export async function testHttp() {
