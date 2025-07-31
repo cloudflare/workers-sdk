@@ -187,8 +187,7 @@ async function listReposWithTags(
 	creds: string
 ): Promise<Record<string, string[]>> {
 	const url = new URL(`https://${getCloudflareContainerRegistry()}`);
-	const query = "tags=true";
-	const catalogUrl = `${url.protocol}//${url.host}/v2/_catalog?${query}`;
+	const catalogUrl = `${url.protocol}//${url.host}/v2/_catalog?tags=true`;
 
 	const response = await fetch(catalogUrl, {
 		method: "GET",
