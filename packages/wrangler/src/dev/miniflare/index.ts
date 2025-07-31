@@ -504,21 +504,6 @@ export function buildMiniflareBindingOptions(
 
 	const durableObjects = bindings.durable_objects?.bindings ?? [];
 
-	// Partition workflow bindings based on whether they're internal (defined by
-	// this session's worker), or external (defined by another session's worker
-	// registered in the dev registry)
-	const internalWorkflows: CfWorkflow[] = [];
-	const externalWorkflows: CfWorkflow[] = [];
-	for (const binding of bindings.workflows ?? []) {
-		const isInternal =
-			binding.script_name === undefined || binding.script_name === config.name;
-		if (isInternal) {
-			internalWorkflows.push(binding);
-		} else {
-			externalWorkflows.push(binding);
-		}
-	}
-
 	const externalWorkers: WorkerOptions[] = [];
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
@@ -741,7 +726,7 @@ export function buildMiniflareBindingOptions(
 			]) ?? []
 		),
 		workflows: Object.fromEntries(
-			externalWorkflows?.map((workflow) =>
+			bindings.workflows?.map((workflow) =>
 				workflowEntry(workflow, remoteProxyConnectionString)
 			) ?? []
 		),
