@@ -30,11 +30,14 @@ export async function getServiceBindings(
 
 	const foundServices: AvailableBindingInfo[] = [];
 	for (const { binding: bindingName, service: serviceName } of services) {
-		const worker = registeredWorkers[serviceName];
+		const serviceNameWithEnvironment = environment == null
+			? serviceName
+			: `${serviceName}-${environment}`;
+		const worker = registeredWorkers[serviceNameWithEnvironment];
 		if (worker) {
 			foundServices.push({
 				bindingName,
-				serviceName,
+		        serviceName: serviceNameWithEnvironment,
 				workerDefinition: worker,
 			});
 		}
