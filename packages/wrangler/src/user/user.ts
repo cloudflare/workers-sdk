@@ -363,8 +363,7 @@ const DefaultScopes = {
 		"See and change secrets + stores within the Secrets Store",
 	"containers:write": "Manage Workers Containers",
 	"cloudchamber:write": "Manage Cloudchamber",
-	// TODO: add this scope to bach
-	// "images:write": "View and transform Cloudflare Images",
+	"images:write": "View and transform Cloudflare Images",
 } as const;
 
 /**

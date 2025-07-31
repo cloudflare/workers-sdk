@@ -29,18 +29,7 @@ export async function performApiFetch(
 		`CF API fetch - resource path must start with a "/" but got "${resource}"`
 	);
 	await requireLoggedIn(complianceConfig);
-	// temporary change until bach oauth update goes through
-	let apiToken = requireApiToken();
-	if (resource.includes("images_edge")) {
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		const imagesApiKey = process.env.WRANGLER_IMAGES_API_KEY;
-		if (!imagesApiKey) {
-			throw new UserError(
-				"WRANGLER_IMAGES_API_KEY environment variable is required for images_edge API requests"
-			);
-		}
-		apiToken = { apiToken: imagesApiKey };
-	}
+	const apiToken = requireApiToken();
 	const headers = cloneHeaders(init.headers);
 	addAuthorizationHeaderIfUnspecified(headers, apiToken);
 	addUserAgent(headers);
