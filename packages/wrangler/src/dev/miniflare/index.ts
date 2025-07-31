@@ -741,7 +741,7 @@ export function buildMiniflareBindingOptions(
 			]) ?? []
 		),
 		workflows: Object.fromEntries(
-			internalWorkflows?.map((workflow) =>
+			externalWorkflows?.map((workflow) =>
 				workflowEntry(workflow, remoteProxyConnectionString)
 			) ?? []
 		),
