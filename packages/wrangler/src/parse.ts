@@ -215,8 +215,13 @@ export function readFileSyncToBuffer(file: string): Buffer {
  */
 export function readFileSync(file: string): string {
 	try {
-		return fs.readFileSync(file, { encoding: "utf-8" });
+		const buffer = fs.readFileSync(file);
+		return removeBOMAndValidate(buffer, file);
 	} catch (err) {
+		if (err instanceof ParseError) {
+			throw err;
+		}
+
 		const { message } = err as Error;
 		throw new ParseError({
 			text: `Could not read file: ${file}`,
@@ -399,4 +404,75 @@ export function parseByteSize(
 	return Math.floor(
 		Number(size) * Math.pow(base ?? (binary ? 1024 : 1000), pow)
 	);
+}
+
+const UTF16_BE_BOM = Buffer.from([0xfe, 0xff]);
+const UTF16_LE_BOM = Buffer.from([0xff, 0xfe]);
+const UTF32_BE_BOM = Buffer.from([0x00, 0x00, 0xfe, 0xff]);
+const UTF32_LE_BOM = Buffer.from([0xff, 0xfe, 0x00, 0x00]);
+
+/**
+ * Removes UTF-8 BOM if present and validates that no other BOMs are present.
+ * Throws ParseError for non-UTF-8 BOMs with descriptive error messages.
+ */
+function removeBOMAndValidate(buffer: Buffer, file?: string): string {
+	if (buffer.length >= 4 && buffer.subarray(0, 4).equals(UTF32_BE_BOM)) {
+		throw new ParseError({
+			text: `Configuration file contains UTF-32 BE byte order marker`,
+			notes: [
+				{
+					text: `The file "${file}" appears to be encoded as UTF-32 Big Endian. Please save the file as UTF-8 without BOM.`,
+				},
+			],
+			location: file ? { file, line: 1, column: 0 } : undefined,
+			telemetryMessage: "UTF-32 BE BOM detected",
+		});
+	}
+
+	if (buffer.length >= 4 && buffer.subarray(0, 4).equals(UTF32_LE_BOM)) {
+		throw new ParseError({
+			text: `Configuration file contains UTF-32 LE byte order marker`,
+			notes: [
+				{
+					text: `The file "${file}" appears to be encoded as UTF-32 Little Endian. Please save the file as UTF-8 without BOM.`,
+				},
+			],
+			location: file ? { file, line: 1, column: 0 } : undefined,
+			telemetryMessage: "UTF-32 LE BOM detected",
+		});
+	}
+
+	if (buffer.length >= 2 && buffer.subarray(0, 2).equals(UTF16_BE_BOM)) {
+		throw new ParseError({
+			text: `Configuration file contains UTF-16 BE byte order marker`,
+			notes: [
+				{
+					text: `The file "${file}" appears to be encoded as UTF-16 Big Endian. Please save the file as UTF-8 without BOM.`,
+				},
+			],
+			location: file ? { file, line: 1, column: 0 } : undefined,
+			telemetryMessage: "UTF-16 BE BOM detected",
+		});
+	}
+
+	if (buffer.length >= 2 && buffer.subarray(0, 2).equals(UTF16_LE_BOM)) {
+		throw new ParseError({
+			text: `Configuration file contains UTF-16 LE byte order marker`,
+			notes: [
+				{
+					text: `The file "${file}" appears to be encoded as UTF-16 Little Endian. Please save the file as UTF-8 without BOM.`,
+				},
+			],
+			location: file ? { file, line: 1, column: 0 } : undefined,
+			telemetryMessage: "UTF-16 LE BOM detected",
+		});
+	}
+
+	const content = buffer.toString("utf-8");
+
+	if (content.charCodeAt(0) === 0xfeff) {
+		return content.slice(1);
+	}
+
+	return content;
 }
