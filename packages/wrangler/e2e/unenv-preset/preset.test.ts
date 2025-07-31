@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import { retry } from "../helpers/retry";
-import { TESTS } from "./worker/index";
+import { WorkerdTests } from "./worker/index";
 import type { WranglerLongLivedCommand } from "../helpers/wrangler";
 
 type TestConfig = {
@@ -27,13 +27,14 @@ const testConfigs: TestConfig[] = [
 			enable_nodejs_http_modules: false,
 		},
 	},
-	// http
+	// http modules
 	[
 		{
 			name: "http disabled by date",
 			compatibilityDate: "2025-07-26",
 			expectRuntimeFlags: {
 				enable_nodejs_http_modules: false,
+				enable_nodejs_http_server_modules: false,
 			},
 		},
 		{
@@ -52,6 +53,19 @@ const testConfigs: TestConfig[] = [
 			compatibilityFlags: ["enable_nodejs_http_modules"],
 			expectRuntimeFlags: {
 				enable_nodejs_http_modules: true,
+			},
+		},
+		{
+			name: "http server enabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: [
+				"enable_nodejs_http_modules",
+				"enable_nodejs_http_server_modules",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_http_modules: true,
+				enable_nodejs_http_server_modules: true,
 			},
 		},
 	],
@@ -104,7 +118,9 @@ describe.each(testConfigs)(
 				for await (const [flag, value] of Object.entries(expectRuntimeFlags)) {
 					const flagResp = await fetch(`${url}/flag?name=${flag}`);
 					expect(flagResp.ok).toEqual(true);
-					await expect(flagResp.json()).resolves.toEqual(value);
+					await expect(flagResp.json(), `flag "${flag}"`).resolves.toEqual(
+						value
+					);
 				}
 			}, 20_000);
 
@@ -112,7 +128,7 @@ describe.each(testConfigs)(
 				await wrangler.stop();
 			});
 
-			test.for(Object.keys(TESTS))(
+			test.for(Object.keys(WorkerdTests))(
 				"%s",
 				{ timeout: 20_000 },
 				async (testName) => {

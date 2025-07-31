@@ -117,10 +117,13 @@ export function getCloudflarePreset({
 /**
  * Returns the aliases for node http modules (unenv or workerd)
  *
- * The native implementation:
+ * The native http implementation (excluding server APIs):
  * - is enabled after 2025-08-15
  * - can be enabled with the "enable_nodejs_http_modules" flag
  * - can be disabled with the "disable_nodejs_http_modules" flag
+ *
+ * The native http server APIS implementation:
+ * - can be enabled with the "enable_nodejs_http_server_modules" flag
  */
 function getHttpAliases({
 	compatibilityDate,
@@ -129,17 +132,22 @@ function getHttpAliases({
 	compatibilityDate: string;
 	compatibilityFlags: string[];
 }): Record<string, string> {
-	const disabledByFlag = compatibilityFlags.includes(
+	const httpDisabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_http_modules"
 	);
-	const enabledByFlags = compatibilityFlags.includes(
+	const httpEnabledByFlags = compatibilityFlags.includes(
 		"enable_nodejs_http_modules"
 	);
-	const enabledByDate = compatibilityDate >= "2025-08-15";
+	const httpEnabledByDate = compatibilityDate >= "2025-08-15";
 
-	const enabled = (enabledByFlags || enabledByDate) && !disabledByFlag;
+	const httpEnabled =
+		(httpEnabledByFlags || httpEnabledByDate) && !httpDisabledByFlag;
 
-	if (!enabled) {
+	const httpServerEnabled = compatibilityFlags.includes(
+		"enable_nodejs_http_server_modules"
+	);
+
+	if (!httpEnabled) {
 		// use the unenv polyfill
 		return {};
 	}
@@ -148,11 +156,12 @@ function getHttpAliases({
 
 	// Override the unenv base aliases to use the native modules
 	const nativeModules = [
-		"_http_common",
-		"_http_outgoing",
-		"_http_client",
-		"_http_incoming",
 		"_http_agent",
+		"_http_client",
+		"_http_common",
+		"_http_incoming",
+		"_http_outgoing",
+		...(httpServerEnabled ? ["_http_server"] : []),
 	];
 
 	for (const nativeModule of nativeModules) {

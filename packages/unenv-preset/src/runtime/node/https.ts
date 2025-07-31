@@ -1,13 +1,25 @@
-import { createServer, Server } from "unenv/node/https";
+import {
+	createServer as unenvCreateServer,
+	Server as unenvServer,
+} from "unenv/node/https";
 import type nodeHttps from "node:https";
-
-// TODO: use the workerd implementation when available
-// See https://github.com/cloudflare/workerd/pull/4591
-export { Server, createServer } from "unenv/node/https";
 
 const workerdHttps = process.getBuiltinModule("node:https");
 
 export const { Agent, globalAgent, request, get } = workerdHttps;
+
+// Use the workerd implementation of server APIs when the
+// `enable_nodejs_http_server_modules` flag is on.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isWorkerdServerEnabled = (globalThis as any).Cloudflare.compatibilityFlags
+	.enable_nodejs_http_server_modules;
+
+export const createServer = isWorkerdServerEnabled
+	? workerdHttps.createServer
+	: unenvCreateServer;
+export const Server = isWorkerdServerEnabled
+	? workerdHttps.Server
+	: unenvServer;
 
 export default {
 	Agent,
