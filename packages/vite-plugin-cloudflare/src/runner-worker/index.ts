@@ -132,8 +132,6 @@ export function createWorkerEntrypointWrapper(
 	entrypoint: string
 ): WorkerEntrypointConstructor<WrapperEnv> {
 	class Wrapper extends WorkerEntrypoint<WrapperEnv> {
-		/** A unique identifier used for debugging errors when config updates. */
-		configId?: string;
 		constructor(ctx: ExecutionContext, env: WrapperEnv) {
 			super(ctx, env);
 
@@ -178,11 +176,7 @@ export function createWorkerEntrypointWrapper(
 						entryPath = viteDevMetadata.entryPath;
 						const { 0: client, 1: server } = new WebSocketPair();
 						webSocket = client;
-						await createModuleRunner(
-							this.env,
-							server,
-							viteDevMetadata.configId
-						);
+						await createModuleRunner(this.env, server);
 					} catch (e) {
 						return new Response(
 							e instanceof Error ? e.message : JSON.stringify(e),
@@ -412,7 +406,7 @@ function getViteDevMetadata(request: Request) {
 		);
 	}
 
-	const { entryPath, configId } = parsedViteDevMetadataHeader;
+	const { entryPath } = parsedViteDevMetadataHeader;
 
 	if (entryPath === undefined) {
 		throw new Error(
@@ -420,5 +414,5 @@ function getViteDevMetadata(request: Request) {
 		);
 	}
 
-	return { entryPath, configId };
+	return { entryPath };
 }
