@@ -194,7 +194,8 @@ describe("'wrangler dev' correctly displays logs", () => {
 		test("default behavior", async ({ expect }) => {
 			const output = await getWranglerDevOutput("service");
 			expect(output).toMatchInlineSnapshot(`
-				"<<<<<this is a log>>>>>
+				"<<<<<this is a debug message>>>>>
+				<<<<<this is a log>>>>>
 				<<<<<this is a warning>>>>>
 				<<<<<this is an error>>>>>
 				<<<<<this is an info message>>>>>"
@@ -204,7 +205,8 @@ describe("'wrangler dev' correctly displays logs", () => {
 		test("with --log-level=log", async ({ expect }) => {
 			const output = await getWranglerDevOutput("service", ["--log-level=log"]);
 			expect(output).toMatchInlineSnapshot(`
-				"<<<<<this is a log>>>>>
+				"<<<<<this is a debug message>>>>>
+				<<<<<this is a log>>>>>
 				<<<<<this is a warning>>>>>
 				<<<<<this is an error>>>>>
 				<<<<<this is an info message>>>>>"
@@ -216,7 +218,9 @@ describe("'wrangler dev' correctly displays logs", () => {
 				"--log-level=info",
 			]);
 			expect(output).toMatchInlineSnapshot(`
-				"<<<<<this is a warning>>>>>
+				"<<<<<this is a debug message>>>>>
+				<<<<<this is a log>>>>>
+				<<<<<this is a warning>>>>>
 				<<<<<this is an error>>>>>
 				<<<<<this is an info message>>>>>"
 			`);
@@ -227,8 +231,11 @@ describe("'wrangler dev' correctly displays logs", () => {
 				"--log-level=warn",
 			]);
 			expect(output).toMatchInlineSnapshot(`
-				"<<<<<this is a warning>>>>>
-				<<<<<this is an error>>>>>"
+				"<<<<<this is a debug message>>>>>
+				<<<<<this is a log>>>>>
+				<<<<<this is a warning>>>>>
+				<<<<<this is an error>>>>>
+				<<<<<this is an info message>>>>>"
 			`);
 		});
 
@@ -236,7 +243,13 @@ describe("'wrangler dev' correctly displays logs", () => {
 			const output = await getWranglerDevOutput("service", [
 				"--log-level=error",
 			]);
-			expect(output).toMatchInlineSnapshot(`"<<<<<this is an error>>>>>"`);
+			expect(output).toMatchInlineSnapshot(`
+				"<<<<<this is a debug message>>>>>
+				<<<<<this is a log>>>>>
+				<<<<<this is a warning>>>>>
+				<<<<<this is an error>>>>>
+				<<<<<this is an info message>>>>>"
+			`);
 		});
 
 		test("with --log-level=debug", async ({ expect }) => {
@@ -250,7 +263,13 @@ describe("'wrangler dev' correctly displays logs", () => {
 			const output = await getWranglerDevOutput("service", [
 				"--log-level=none",
 			]);
-			expect(output).toMatchInlineSnapshot(`""`);
+			expect(output).toMatchInlineSnapshot(`
+				"<<<<<this is a debug message>>>>>
+				<<<<<this is a log>>>>>
+				<<<<<this is a warning>>>>>
+				<<<<<this is an error>>>>>
+				<<<<<this is an info message>>>>>"
+			`);
 		});
 	});
 });
@@ -261,13 +280,19 @@ const logLineToIgnoreRegexps = [
 	// part of the wrangler banner
 	/⛅️ wrangler/,
 	// divisor after the wrangler banner
-	/^─+$/,
+	/^-+$/,
 	// wrangler logs such as ` ⎔ Starting local server...`
 	/^\s*⎔/,
 	// wrangler's ready on log
-	/^\[wrangler:info\] Ready on http:\/\/[^:]+:\d+$/,
+	/^\[wrangler:inf\] Ready on http:\/\/[^:]+:\d+$/,
 	// positive response to get request
-	/^\[wrangler:info\] GET \/ 200 OK \(\d+ms\)$/,
+	/^\[wrangler:inf\] GET \/ 200 OK \(\d+ms\)$/,
 	// let's skip the telemetry messages
 	/^Cloudflare collects anonymous telemetry about your usage of Wrangler\. Learn more at https:\/\/.*$/,
+	// The following are V3 specific log lines that we want to ignore
+	/The version of Wrangler you are using is now out-of-date/,
+	/After installation, run Wrangler with `npx wrangler`/,
+	/Please update to the latest version to prevent critical errors/,
+	/Run `npm install --save-dev wrangler@4` to update to the latest version/,
+	/No bindings found/,
 ];
