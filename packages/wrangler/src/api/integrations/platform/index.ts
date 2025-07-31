@@ -243,6 +243,7 @@ async function getMiniflareOptionsFromConfig(args: {
 				config.containers?.map((c) => c.class_name)
 			),
 			containerBuildId: undefined,
+			enableContainers: config.dev.enable_containers,
 		},
 		remoteProxyConnectionString,
 		remoteBindingsEnabled
@@ -348,6 +349,7 @@ export function unstable_getMiniflareWorkerOptions(
 		remoteBindingsEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
+			enableContainers?: boolean;
 		};
 		containerBuildId?: string;
 	}
@@ -361,6 +363,7 @@ export function unstable_getMiniflareWorkerOptions(
 		remoteBindingsEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
+			enableContainers?: boolean;
 		};
 		containerBuildId?: string;
 	}
@@ -375,6 +378,7 @@ export function unstable_getMiniflareWorkerOptions(
 		remoteBindingsEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
+			enableContainers?: boolean;
 		};
 		containerBuildId?: string;
 	}
@@ -396,6 +400,12 @@ export function unstable_getMiniflareWorkerOptions(
 		config.containers?.map((c) => c.class_name)
 	);
 	const bindings = getBindings(config, env, options?.envFiles, true, {}, true);
+
+	const enableContainers =
+		options?.overrides?.enableContainers !== undefined
+			? options?.overrides?.enableContainers
+			: config.dev.enable_containers;
+
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		{
 			name: config.name,
@@ -410,6 +420,7 @@ export function unstable_getMiniflareWorkerOptions(
 			tails: config.tail_consumers,
 			containerDOClassNames,
 			containerBuildId: options?.containerBuildId,
+			enableContainers,
 		},
 		options?.remoteProxyConnectionString,
 		options?.remoteBindingsEnabled ?? false
@@ -459,11 +470,14 @@ export function unstable_getMiniflareWorkerOptions(
 						className: binding.class_name,
 						scriptName: binding.script_name,
 						useSQLite,
-						container: getImageNameFromDOClassName({
-							doClassName: binding.class_name,
-							containerDOClassNames,
-							containerBuildId: options?.containerBuildId,
-						}),
+						container:
+							enableContainers && config.containers?.length
+								? getImageNameFromDOClassName({
+										doClassName: binding.class_name,
+										containerDOClassNames,
+										containerBuildId: options?.containerBuildId,
+									})
+								: undefined,
 					} satisfies DurableObjectDefinition,
 				];
 			})
