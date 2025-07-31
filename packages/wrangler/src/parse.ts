@@ -414,8 +414,15 @@ function removeBOMAndValidate(buffer: Buffer, file?: string): string {
 	const decoder = new TextDecoder("utf-8");
 	const content = decoder.decode(buffer);
 
-	if (content.length >= 2 && content.charCodeAt(0) === 0 && content.charCodeAt(1) === 0) {
-		if (buffer.length >= 4 && buffer.subarray(0, 4).equals(Buffer.from([0x00, 0x00, 0xfe, 0xff]))) {
+	if (
+		content.length >= 2 &&
+		content.charCodeAt(0) === 0 &&
+		content.charCodeAt(1) === 0
+	) {
+		if (
+			buffer.length >= 4 &&
+			buffer.subarray(0, 4).equals(Buffer.from([0x00, 0x00, 0xfe, 0xff]))
+		) {
 			throw new ParseError({
 				text: "Configuration file contains UTF-32 BE byte order marker",
 				notes: [
@@ -429,8 +436,15 @@ function removeBOMAndValidate(buffer: Buffer, file?: string): string {
 		}
 	}
 
-	if (content.charCodeAt(0) === 0xfffd && content.length >= 3 && content.charCodeAt(2) === 0) {
-		if (buffer.length >= 4 && buffer.subarray(0, 4).equals(Buffer.from([0xff, 0xfe, 0x00, 0x00]))) {
+	if (
+		content.charCodeAt(0) === 0xfffd &&
+		content.length >= 3 &&
+		content.charCodeAt(2) === 0
+	) {
+		if (
+			buffer.length >= 4 &&
+			buffer.subarray(0, 4).equals(Buffer.from([0xff, 0xfe, 0x00, 0x00]))
+		) {
 			throw new ParseError({
 				text: "Configuration file contains UTF-32 LE byte order marker",
 				notes: [
@@ -445,7 +459,10 @@ function removeBOMAndValidate(buffer: Buffer, file?: string): string {
 	}
 
 	if (content.charCodeAt(0) === 0xfffd) {
-		if (buffer.length >= 2 && buffer.subarray(0, 2).equals(Buffer.from([0xfe, 0xff]))) {
+		if (
+			buffer.length >= 2 &&
+			buffer.subarray(0, 2).equals(Buffer.from([0xfe, 0xff]))
+		) {
 			throw new ParseError({
 				text: "Configuration file contains UTF-16 BE byte order marker",
 				notes: [
@@ -457,7 +474,10 @@ function removeBOMAndValidate(buffer: Buffer, file?: string): string {
 				telemetryMessage: "UTF-16 BE BOM detected",
 			});
 		}
-		if (buffer.length >= 2 && buffer.subarray(0, 2).equals(Buffer.from([0xff, 0xfe]))) {
+		if (
+			buffer.length >= 2 &&
+			buffer.subarray(0, 2).equals(Buffer.from([0xff, 0xfe]))
+		) {
 			throw new ParseError({
 				text: "Configuration file contains UTF-16 LE byte order marker",
 				notes: [
