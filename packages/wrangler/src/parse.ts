@@ -435,16 +435,16 @@ function removeBOMAndValidate(buffer: Buffer, file: string): string {
 			buffer.length >= bom.buffer.length &&
 			buffer.subarray(0, bom.buffer.length).equals(bom.buffer)
 		) {
-		throw new ParseError({
-			text: `Configuration file contains ${bom.encoding} byte order marker`,
-			notes: [
-				{
-					text: `The file "${file}" appears to be encoded as ${bom.encoding}. Please save the file as UTF-8 without BOM.`,
-				},
-			],
-			location: { file, line: 1, column: 0 },
-			telemetryMessage: `${bom.encoding} BOM detected`,
-		});
+			throw new ParseError({
+				text: `Configuration file contains ${bom.encoding} byte order marker`,
+				notes: [
+					{
+						text: `The file "${file}" appears to be encoded as ${bom.encoding}. Please save the file as UTF-8 without BOM.`,
+					},
+				],
+				location: { file, line: 1, column: 0 },
+				telemetryMessage: `${bom.encoding} BOM detected`,
+			});
 		}
 	}
 
