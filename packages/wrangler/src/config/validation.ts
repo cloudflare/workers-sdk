@@ -400,11 +400,9 @@ function normalizeAndValidateMainField(
 	configPath: string | undefined,
 	rawMain: string | undefined
 ): string | undefined {
-	const configDir = path.dirname(configPath ?? "wrangler.toml");
 	if (rawMain !== undefined) {
 		if (typeof rawMain === "string") {
-			const directory = path.resolve(configDir);
-			return path.resolve(directory, rawMain);
+			return rawMain;
 		} else {
 			return rawMain;
 		}

@@ -422,6 +422,40 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[main]", () => {
+			it("should preserve relative main field path in readConfig output", () => {
+				const rawConfig: RawConfig = {
+					main: "./src/worker.js",
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					"/path/to/wrangler.toml",
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.main).toBe("./src/worker.js");
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should preserve absolute main field path in readConfig output", () => {
+				const rawConfig: RawConfig = {
+					main: "/absolute/path/to/worker.js",
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					"/path/to/wrangler.toml",
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.main).toBe("/absolute/path/to/worker.js");
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+		});
+
 		describe("[site]", () => {
 			it("should override `site` config defaults with provided values", () => {
 				const expectedConfig: RawConfig = {
@@ -908,7 +942,6 @@ describe("normalizeAndValidateConfig()", () => {
 	describe("top-level environment configuration", () => {
 		it("should override config defaults with provided values", () => {
 			const main = "src/index.ts";
-			const resolvedMain = path.resolve(process.cwd(), main);
 
 			const expectedConfig: RawEnvironment = {
 				name: "mock-name",
@@ -1037,7 +1070,6 @@ describe("normalizeAndValidateConfig()", () => {
 			expect({ ...config, tsconfig: normalizePath(config.tsconfig!) }).toEqual(
 				expect.objectContaining({
 					...expectedConfig,
-					main: resolvedMain,
 					topLevelName: expectedConfig.name,
 				})
 			);
@@ -4353,7 +4385,6 @@ describe("normalizeAndValidateConfig()", () => {
 
 		it("should use top-level values for inheritable config fields", () => {
 			const main = "src/index.ts";
-			const resolvedMain = path.resolve(process.cwd(), main);
 			const rawConfig: RawConfig = {
 				name: "mock-name",
 				account_id: "ACCOUNT_ID",
@@ -4392,7 +4423,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(config).toEqual(
 				expect.objectContaining({
 					...rawConfig,
-					main: resolvedMain,
+					main,
 					name: "mock-name-dev",
 					topLevelName: "mock-name",
 				})
@@ -4403,7 +4434,6 @@ describe("normalizeAndValidateConfig()", () => {
 
 		it("should override top-level values for inheritable config fields", () => {
 			const main = "src/index.ts";
-			const resolvedMain = path.resolve(process.cwd(), main);
 			const rawEnv: RawEnvironment = {
 				name: "mock-env-name",
 				account_id: "ENV_ACCOUNT_ID",
@@ -4470,7 +4500,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(config).toEqual(
 				expect.objectContaining({
 					...rawEnv,
-					main: resolvedMain,
+					main,
 					topLevelName: "mock-name",
 				})
 			);
