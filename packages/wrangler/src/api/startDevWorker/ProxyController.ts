@@ -10,11 +10,8 @@ import {
 	logConsoleMessage,
 	maybeHandleNetworkLoadResource,
 } from "../../dev/inspect";
-import {
-	castLogLevel,
-	handleRuntimeStdio,
-	WranglerLog,
-} from "../../dev/miniflare";
+import { castLogLevel, WranglerLog } from "../../dev/miniflare";
+import { handleRuntimeStdioWithStructuredLogs } from "../../dev/miniflare/stdio";
 import { getHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
@@ -139,7 +136,8 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				},
 				this.localServerReady.promise
 			),
-			handleRuntimeStdio,
+			handleRuntimeStdio: handleRuntimeStdioWithStructuredLogs,
+			structuredWorkerdLogs: true,
 			liveReload: false,
 		};
 
