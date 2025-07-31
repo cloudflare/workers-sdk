@@ -1362,7 +1362,9 @@ describe("wrangler deploy with containers dry run", () => {
 			.mockImplementationOnce(
 				mockDockerBuild("my-container", "worker", "FROM scratch", process.cwd())
 			)
-			.mockImplementationOnce(mockDockerImageInspect("my-container", "worker"))
+			.mockImplementationOnce(
+				mockDockerImageInspectDigests("my-container", "worker")
+			)
 			.mockImplementationOnce(mockDockerLogin("mockpassword"))
 			.mockImplementationOnce(mockDockerManifestInspect("my-container", true))
 			.mockImplementationOnce(mockDockerPush("my-container", "worker"));
@@ -1407,7 +1409,8 @@ function createDockerMockChain(
 			dockerfilePath || "FROM scratch",
 			buildContext || process.cwd()
 		),
-		mockDockerImageInspect(containerName, tag),
+		mockDockerImageInspectDigests(containerName, tag),
+		mockDockerImageInspectSize(containerName, tag),
 		mockDockerLogin("mockpassword"),
 		mockDockerManifestInspect("some-account-id/" + containerName, true),
 		mockDockerTag(containerName, "some-account-id/" + containerName, tag),
@@ -1665,7 +1668,7 @@ function mockDockerBuild(
 	};
 }
 
-function mockDockerImageInspect(containerName: string, tag: string) {
+function mockDockerImageInspectDigests(containerName: string, tag: string) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([
@@ -1673,7 +1676,7 @@ function mockDockerImageInspect(containerName: string, tag: string) {
 			"inspect",
 			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
 			"--format",
-			"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
+			"{{json .RepoDigests}}",
 		]);
 
 		const stdout = new PassThrough();
@@ -1693,8 +1696,41 @@ function mockDockerImageInspect(containerName: string, tag: string) {
 		setImmediate(() => {
 			stdout.emit(
 				"data",
-				`123456 4 ["${getCloudflareContainerRegistry()}/${containerName}@sha256:three"]`
+				`["${getCloudflareContainerRegistry()}/${containerName}@sha256:three"]`
 			);
+		});
+
+		return child as unknown as ChildProcess;
+	};
+}
+
+function mockDockerImageInspectSize(containerName: string, tag: string) {
+	return (cmd: string, args: readonly string[]) => {
+		expect(cmd).toBe("/usr/bin/docker");
+		expect(args).toEqual([
+			"image",
+			"inspect",
+			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
+			"--format",
+			"{{ .Size }} {{ len .RootFS.Layers }}",
+		]);
+
+		const stdout = new PassThrough();
+		const stderr = new PassThrough();
+
+		const child = {
+			stdout,
+			stderr,
+			on(event: string, cb: (code: number) => void) {
+				if (event === "close") {
+					setImmediate(() => cb(0));
+				}
+				return this;
+			},
+		};
+
+		setImmediate(() => {
+			stdout.emit("data", "123456 4");
 		});
 
 		return child as unknown as ChildProcess;

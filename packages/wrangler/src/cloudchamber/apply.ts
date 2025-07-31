@@ -32,11 +32,7 @@ import {
 } from "../utils/sortObjectRecursive";
 import { promiseSpinner } from "./common";
 import { Diff } from "./helpers/diff";
-import {
-	checkInstanceTypeAgainstLimits,
-	cleanForInstanceType,
-} from "./instance-type/instance-type";
-import { loadAccount } from "./locations";
+import { cleanForInstanceType } from "./instance-type/instance-type";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";
 import type {
@@ -366,10 +362,6 @@ export async function apply(
 			config.observability,
 			application,
 			args.skipDefaults
-		);
-		checkInstanceTypeAgainstLimits(
-			appConfig.configuration.instance_type,
-			await loadAccount()
 		);
 
 		if (application !== undefined && application !== null) {

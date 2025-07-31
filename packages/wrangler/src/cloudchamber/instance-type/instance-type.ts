@@ -5,7 +5,6 @@ import type {
 	ContainerApp,
 } from "../../config/environment";
 import type {
-	CompleteAccountCustomer,
 	CreateApplicationRequest,
 	InstanceType,
 	UserDeploymentConfiguration,
@@ -96,41 +95,13 @@ export function checkInstanceType(
 	}
 }
 
-// checks a given InstanceType against account limits
-export function checkInstanceTypeAgainstLimits(
-	instanceType: InstanceType | undefined,
-	account: CompleteAccountCustomer
-) {
-	if (instanceType === undefined) {
-		return;
-	}
-
-	const vcpuLimit = account.limits.vcpu_per_deployment;
-	const memoryLimit = account.limits.memory_mib_per_deployment;
-	const diskLimit = account.limits.disk_mb_per_deployment;
-
-	const usage = instanceTypes[instanceType];
-
-	const errors = [];
-	if (usage.vcpu > vcpuLimit) {
-		errors.push(
-			`Your configured instance type uses ${usage.vcpu} vCPU which exceeds the account limit of ${vcpuLimit}.`
-		);
-	}
-	if (usage.memory_mib > memoryLimit) {
-		errors.push(
-			`Your configured instance type uses ${usage.memory_mib} MiB of memory which exceeds the account limit of ${memoryLimit}.`
-		);
-	}
-	if (usage.disk_mb > diskLimit) {
-		errors.push(
-			`Your configured instance type uses ${usage.disk_mb} MB of disk which exceeds the account limit of ${diskLimit}.`
-		);
-	}
-
-	if (errors.length > 0) {
-		throw new UserError(`Exceeded account limits: ${errors.join(" ")}`);
-	}
+// get the usage for the provided instance type
+export function getInstanceTypeUsage(instanceType: InstanceType): {
+	vcpu: number;
+	memory_mib: number;
+	disk_mb: number;
+} {
+	return instanceTypes[instanceType];
 }
 
 // infers the instance type from a given configuration

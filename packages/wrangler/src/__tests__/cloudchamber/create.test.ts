@@ -89,17 +89,7 @@ describe("cloudchamber create", () => {
 
 	mockAccountId();
 	mockApiToken();
-	beforeEach(() => {
-		mockAccount({
-			external_account_id: process.env.CLOUDFLARE_ACCOUNT_ID,
-			// set limits to allow all instance types
-			limits: {
-				disk_mb_per_deployment: 4000,
-				memory_mib_per_deployment: 4096,
-				vcpu_per_deployment: 1,
-			},
-		});
-	});
+	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
 		patchConsole(() => {});

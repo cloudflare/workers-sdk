@@ -32,7 +32,6 @@ import {
 import { wrap } from "./helpers/wrap";
 import {
 	checkInstanceType,
-	checkInstanceTypeAgainstLimits,
 	promptForInstanceType,
 } from "./instance-type/instance-type";
 import { loadAccount } from "./locations";
@@ -176,9 +175,6 @@ export async function createCommand(
 		if (instanceType === undefined) {
 			deploymentRequest.vcpu = vcpu;
 			deploymentRequest.memory_mib = memoryMib;
-		} else {
-			const account = await loadAccount();
-			checkInstanceTypeAgainstLimits(instanceType, account);
 		}
 		const deployment =
 			await DeploymentsService.createDeploymentV2(deploymentRequest);
@@ -363,8 +359,6 @@ async function handleCreateCommand(
 	if (instanceType === undefined) {
 		deploymentRequest.vcpu = vcpu;
 		deploymentRequest.memory_mib = memoryMib;
-	} else {
-		checkInstanceTypeAgainstLimits(instanceType, account);
 	}
 	const [deployment, err] = await wrap(
 		DeploymentsService.createDeploymentV2(deploymentRequest)
