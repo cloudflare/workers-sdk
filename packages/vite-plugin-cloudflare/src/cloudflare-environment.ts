@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import util from "node:util";
+import * as util from "node:util";
 import * as vite from "vite";
 import { isNodeCompat } from "./node-js-compat";
 import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "./shared";
@@ -90,9 +90,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 	async initRunner(
 		worker: ReplaceWorkersTypes<Fetcher>,
-		workerConfig: WorkerConfig,
-		/** A unique identifier used for debugging errors when config updates. */
-		configId: string
+		workerConfig: WorkerConfig
 	) {
 		this.#worker = worker;
 
@@ -102,7 +100,6 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 				headers: {
 					[VITE_DEV_METADATA_HEADER]: JSON.stringify({
 						entryPath: workerConfig.main,
-						configId,
 					}),
 					upgrade: "websocket",
 				},
@@ -201,21 +198,19 @@ export function createCloudflareEnvironmentOptions(
 export function initRunners(
 	resolvedPluginConfig: WorkersResolvedConfig,
 	viteDevServer: vite.ViteDevServer,
-	miniflare: Miniflare,
-	/** A unique identifier used for debugging errors when config updates. */
-	configId: string
+	miniflare: Miniflare
 ): Promise<void[]> | undefined {
 	return Promise.all(
 		Object.entries(resolvedPluginConfig.workers).map(
 			async ([environmentName, workerConfig]) => {
-				debuglog(configId, "Initializing worker:", workerConfig.name);
+				debuglog("Initializing worker:", workerConfig.name);
 				const worker = await miniflare.getWorker(workerConfig.name);
 
 				return (
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(worker, workerConfig, configId);
+				).initRunner(worker, workerConfig);
 			}
 		)
 	);

@@ -1,8 +1,7 @@
 import assert from "node:assert";
-import { randomUUID } from "node:crypto";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import util from "node:util";
+import * as util from "node:util";
 import {
 	generateContainerBuildId,
 	getContainerIdsByImageTags,
@@ -349,21 +348,15 @@ if (import.meta.hot) {
 				viteDevServer.restart = async () => {
 					try {
 						restartingServer = true;
-						debuglog(configId, "From server.restart(): Restarting server...");
+						debuglog("From server.restart(): Restarting server...");
 						await restartServer();
-						debuglog(configId, "From server.restart(): Restarted server...");
+						debuglog("From server.restart(): Restarted server...");
 					} finally {
 						restartingServer = false;
 					}
 				};
 
 				assertIsNotPreview(resolvedPluginConfig);
-
-				// It is possible to get into a situation where the dev server is restarted by a config file change
-				// right in the middle of the Vite server and the supporting Workers being initialized.
-				// We use an abort controller to signal to the initialization code that it should stop if the config has changed.
-				// We use a `configId` to help debug how the config changes are triggering the restarts.
-				const configId = randomUUID();
 
 				const inputInspectorPort = await getInputInspectorPortOption(
 					resolvedPluginConfig,
@@ -383,12 +376,9 @@ if (import.meta.hot) {
 							changedFilePath
 						)
 					) {
-						debuglog(configId, "Config changed: " + changedFilePath);
+						debuglog("Config changed: " + changedFilePath);
 						viteDevServer.watcher.off("change", configChangedHandler);
-						debuglog(
-							configId,
-							"Restarting dev server and aborting previous setup"
-						);
+						debuglog("Restarting dev server and aborting previous setup");
 						await viteDevServer.restart();
 					}
 				};
@@ -415,12 +405,12 @@ if (import.meta.hot) {
 				});
 
 				if (!miniflare) {
-					debuglog(configId, "Creating new Miniflare instance");
+					debuglog("Creating new Miniflare instance");
 					miniflare = new Miniflare(miniflareDevOptions);
 				} else {
-					debuglog(configId, "Updating the Miniflare instance");
+					debuglog("Updating the existing Miniflare instance");
 					await miniflare.setOptions(miniflareDevOptions);
-					debuglog(configId, "Miniflare is ready");
+					debuglog("Miniflare is ready");
 				}
 
 				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
@@ -428,13 +418,8 @@ if (import.meta.hot) {
 				if (resolvedPluginConfig.type === "workers") {
 					assert(entryWorkerConfig, `No entry Worker config`);
 
-					debuglog(configId, "Initializing the Vite module runners");
-					await initRunners(
-						resolvedPluginConfig,
-						viteDevServer,
-						miniflare,
-						configId
-					);
+					debuglog("Initializing the Vite module runners");
+					await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
 					const entryWorkerName = entryWorkerConfig.name;
 
