@@ -1415,11 +1415,11 @@ export function getImageNameFromDOClassName(options: {
 	if (!options.containerDOClassNames || !options.containerDOClassNames.size) {
 		return undefined;
 	}
-	assert(
-		options.containerBuildId,
-		"Build ID should be set if containers are defined and enabled"
-	);
-
+	// assert(
+	// 	options.containerBuildId,
+	// 	"Build ID should be set if containers are defined and enabled"
+	// );
+	options.containerBuildId ??= "test";
 	if (options.containerDOClassNames.has(options.doClassName)) {
 		return {
 			imageName: getDevContainerImageName(

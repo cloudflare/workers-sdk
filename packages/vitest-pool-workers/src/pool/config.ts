@@ -9,13 +9,20 @@ import {
 	PLUGINS,
 } from "miniflare";
 import { z } from "zod";
+import {
+	generateContainerBuildId,
+	getDevContainerImageName,
+	prepareContainerImagesForDev,
+} from "../../../containers-shared";
 import { getProjectPath, getRelativeProjectPath } from "./helpers";
+import type { ContainerDevOptions } from "../../../containers-shared";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
 import type {
 	Experimental_RemoteProxySession,
 	Unstable_Binding,
+	Unstable_Config,
 } from "wrangler";
 import type { ParseParams, ZodError } from "zod";
 
@@ -270,6 +277,24 @@ async function parseCustomPoolOptions(
 				remoteProxySessionData
 			);
 		}
+		const containerBuildId = generateContainerBuildId();
+
+		const config = wrangler.unstable_readConfig({
+			config: configPath,
+			env: options.wrangler.environment,
+		});
+		if (config.containers?.length && config.dev.enable_containers) {
+			const devOptions = await getContainerDevOptions(
+				config.containers,
+				containerBuildId
+			);
+			await prepareContainerImagesForDev({
+				dockerPath: "docker",
+				containerOptions: devOptions,
+				onContainerImagePreparationEnd: () => {},
+				onContainerImagePreparationStart: () => {},
+			});
+		}
 
 		const { workerOptions, externalWorkers, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(
@@ -281,6 +306,7 @@ async function parseCustomPoolOptions(
 					remoteBindingsEnabled: options.experimental_remoteBindings,
 					remoteProxyConnectionString:
 						remoteProxySessionData?.session?.remoteProxyConnectionString,
+					containerBuildId,
 				}
 			);
 
@@ -397,4 +423,25 @@ export async function parseProjectOptions(
 			`Unexpected pool options in project ${relativePath}:\n${formatted}`
 		);
 	}
+}
+export async function getContainerDevOptions(
+	containersConfig: NonNullable<Unstable_Config["containers"]>,
+
+	containerBuildId: string
+) {
+	const containers: ContainerDevOptions[] = [];
+	for (const container of containersConfig) {
+		containers.push({
+			dockerfile: container.image,
+			image_build_context:
+				container.image_build_context ?? path.dirname(container.image),
+			image_vars: container.image_vars,
+			class_name: container.class_name,
+			image_tag: getDevContainerImageName(
+				container.class_name,
+				containerBuildId
+			),
+		});
+	}
+	return containers;
 }
