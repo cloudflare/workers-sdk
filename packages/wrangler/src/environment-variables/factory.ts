@@ -5,19 +5,18 @@ import { UserError } from "../errors";
  *
  * ## Authentication & API Configuration
  *
- * - `CLOUDFLARE_ACCOUNT_ID` - Overrides the account ID for API requests. Can also be set in wrangler.toml.
+ * - `CLOUDFLARE_ACCOUNT_ID` - Overrides the account ID for API requests. Can also be set in Wrangler config via `account_id` field.
  * - `CLOUDFLARE_API_TOKEN` - API token for authentication. Preferred over API key + email.
- * - `CLOUDFLARE_API_KEY` - Legacy API key for authentication. Requires CLOUDFLARE_EMAIL.
- * - `CLOUDFLARE_EMAIL` - Email address for API key authentication.
+ * - `CLOUDFLARE_API_KEY` - Legacy API key for authentication. Requires CLOUDFLARE_EMAIL. It is preferred to use `CLOUDFLARE_API_TOKEN`.
+ * - `CLOUDFLARE_EMAIL` - Email address for API key authentication. Used with `CLOUDFLARE_API_KEY`. It is preferred to use `CLOUDFLARE_API_TOKEN`.
  * - `CLOUDFLARE_API_BASE_URL` - Custom API base URL. Defaults to https://api.cloudflare.com/client/v4
- * - `CLOUDFLARE_COMPLIANCE_REGION` - Set to "fedramp_high" for FedRAMP High compliance region.
+ * - `CLOUDFLARE_COMPLIANCE_REGION` - Set to "fedramp_high" for FedRAMP High compliance region. This will update the API/AUTH URLs used to make requests to Cloudflare.
  *
  * ## Development & Local Testing
  *
- * - `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_*` - Local database connection strings for Hyperdrive development.
+ * - `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_*` - Local database connection strings for Hyperdrive development. The * should be replaced with the Hyperdrive binding name in the Worker.
  * - `NO_HYPERDRIVE_WARNING` - Suppress Hyperdrive-related warnings during development.
- * - `WRANGLER_HTTPS_KEY_PATH` - Path to HTTPS private key for local development server.
- * - `WRANGLER_HTTPS_CERT_PATH` - Path to HTTPS certificate for local development server.
+ * - `WRANGLER_HTTPS_KEY_PATH`/`WRANGLER_HTTPS_CERT_PATH` - Paths to HTTPS private key and certificate files for running the local development server in HTTP mode. Without this Wrangler will generate keys automatically.
  * - `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV` - Load development variables from .env files (default: true).
  * - `CLOUDFLARE_INCLUDE_PROCESS_ENV` - Include process.env in development variables (default: false).
  *
