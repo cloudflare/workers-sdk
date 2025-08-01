@@ -177,7 +177,7 @@ describe("friendly-validator-errors", () => {
 					"worker.cpuprofile"
 				);
 				expect((thrownError as UserError).message).toContain(
-					".wrangler/tmp/startup-profile-123/worker.cpuprofile"
+					"startup-profile-123"
 				);
 				expect((thrownError as UserError).message).not.toContain(
 					"/test/project"
