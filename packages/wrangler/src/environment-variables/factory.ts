@@ -6,6 +6,7 @@ import { UserError } from "../errors";
  */
 type VariableNames =
 	// ## Authentication & API Configuration
+
 	/** Overrides the account ID for API requests. Can also be set in Wrangler config via `account_id` field. */
 	| "CLOUDFLARE_ACCOUNT_ID"
 	/** API token for authentication. Preferred over API key + email. */
@@ -18,6 +19,7 @@ type VariableNames =
 	| "CLOUDFLARE_API_BASE_URL"
 	/** Set to "fedramp_high" for FedRAMP High compliance region. This will update the API/AUTH URLs used to make requests to Cloudflare. */
 	| "CLOUDFLARE_COMPLIANCE_REGION"
+
 	// ## Development & Local Testing
 
 	/** Local database connection strings for Hyperdrive development. The * should be replaced with the Hyperdrive binding name in the Worker. */
@@ -32,6 +34,7 @@ type VariableNames =
 	| "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV"
 	/** Include process.env in development variables (default: false). */
 	| "CLOUDFLARE_INCLUDE_PROCESS_ENV"
+
 	// ## Logging & Output
 
 	/** Set log level: "debug", "info", "log", "warn", "error". */
@@ -42,10 +45,11 @@ type VariableNames =
 	| "WRANGLER_LOG_SANITIZE"
 	/** Directory for ND-JSON output files. */
 	| "WRANGLER_OUTPUT_FILE_DIRECTORY"
-	/** Specific path for ND-JSON output file. */
-	// ## Build & Deployment Configuration
-	| "WRANGLER_OUTPUT_FILE_PATH"
 
+	// ## Build & Deployment Configuration
+
+	/** Specific path for ND-JSON output file. */
+	| "WRANGLER_OUTPUT_FILE_PATH"
 	/** Comma-separated list of build conditions for esbuild. */
 	| "WRANGLER_BUILD_CONDITIONS"
 	/** Build platform for esbuild (e.g., "node", "browser"). */
@@ -54,9 +58,8 @@ type VariableNames =
 	| "WRANGLER_REGISTRY_PATH"
 	/** Additional D1 location choices (internal use). */
 	| "WRANGLER_D1_EXTRA_LOCATION_CHOICES"
+
 	// ## Advanced Configuration
-	/** Path to docker binary (default: "docker"). */
-	| "WRANGLER_DOCKER_BIN"
 
 	/** Set to "staging" to use staging APIs instead of production. */
 	| "WRANGLER_API_ENVIRONMENT"
@@ -72,24 +75,28 @@ type VariableNames =
 	| "WRANGLER_REVOKE_URL"
 	/** Direct authorization token for API requests. */
 	| "WRANGLER_CF_AUTHORIZATION_TOKEN"
-	/** Override command used by `wrangler init` (default: "create cloudflare@^2.5.0"). */
+
 	// ## CI-specific Variables (Internal Use)
+
+	/** Override command used by `wrangler init` (default: "create cloudflare@^2.5.0"). */
 	| "WRANGLER_C3_COMMAND"
 	/** Enable/disable telemetry data collection. */
 	| "WRANGLER_SEND_METRICS"
-
 	/** CI branch name (internal use). */
 	| "WORKERS_CI_BRANCH"
 	/** CI tag matching configuration (internal use). */
 	| "WRANGLER_CI_MATCH_TAG"
 	/** CI override name configuration (internal use). */
 	| "WRANGLER_CI_OVERRIDE_NAME"
-	// ## Docker Configuration
 	/** CI network mode host override (internal use). */
 	| "WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST"
 	/** CI preview alias generation (internal use). */
 	| "WRANGLER_CI_GENERATE_PREVIEW_ALIAS"
 
+	// ## Docker Configuration
+
+	/** Path to docker binary (default: "docker"). */
+	| "WRANGLER_DOCKER_BIN"
 	/** Docker host configuration (handled separately from environment variable factory). */
 	| "WRANGLER_DOCKER_HOST"
 	/** Docker host configuration (handled separately from environment variable factory). */
