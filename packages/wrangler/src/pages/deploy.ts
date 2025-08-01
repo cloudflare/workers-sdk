@@ -9,12 +9,13 @@ import { findWranglerConfig } from "../config/config-helpers";
 import { createAlias, createCommand } from "../core/create-command";
 import { prompt, select } from "../dialogs";
 import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
-import { FatalError } from "../errors";
+import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
+import { ParseError } from "../parse";
 import { requireAuth } from "../user";
-import { handleStartupError } from "../utils/friendly-validator-errors";
+import { diagnoseStartupError } from "../utils/friendly-validator-errors";
 import {
 	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
 	PAGES_CONFIG_CACHE_FILENAME,
@@ -461,10 +462,18 @@ export const pagesDeployCommand = createCommand({
 				.trim();
 
 			if (failureMessage.includes("Script startup exceeded CPU time limit")) {
+				const startupError = new ParseError({ text: failureMessage });
+				Object.assign(startupError, { code: 10021 }); // Startup error code
 				const workerBundle = formData.get("_worker.bundle") as File;
 				const filePath = path.join(getPagesTmpDir(), "_worker.bundle");
 				await writeFile(filePath, workerBundle.stream());
-				await handleStartupError(filePath, getPagesProjectRoot());
+				throw new UserError(
+					await diagnoseStartupError(
+						startupError,
+						filePath,
+						getPagesProjectRoot()
+					)
+				);
 			}
 
 			throw new FatalError(
