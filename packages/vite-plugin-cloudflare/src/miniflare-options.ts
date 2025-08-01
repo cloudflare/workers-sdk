@@ -25,6 +25,7 @@ import {
 	kRequestType,
 	PUBLIC_DIR_PREFIX,
 	ROUTER_WORKER_NAME,
+	VITE_PROXY_WORKER_NAME,
 } from "./constants";
 import { additionalModuleRE } from "./shared";
 import { withTrailingSlash } from "./utils";
@@ -175,6 +176,7 @@ const ROUTER_WORKER_PATH = "./asset-workers/router-worker.js";
 const ASSET_WORKER_PATH = "./asset-workers/asset-worker.js";
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 const RUNNER_PATH = "./runner-worker/index.js";
+const VITE_PROXY_WORKER_PATH = "./vite-proxy-worker/index.js";
 
 export function getEntryWorkerConfig(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig
@@ -292,6 +294,7 @@ export async function getDevMiniflareOptions(config: {
 			],
 			bindings: {
 				CONFIG: assetsConfig,
+				__VITE_HEADERS__: JSON.stringify(viteDevServer.config.server.headers),
 			},
 			serviceBindings: {
 				__VITE_HTML_EXISTS__: async (request) => {
@@ -351,6 +354,28 @@ export async function getDevMiniflareOptions(config: {
 					} catch (error) {
 						throw new Error(`Unexpected error. Failed to load "${pathname}".`);
 					}
+				},
+			},
+		},
+		{
+			name: VITE_PROXY_WORKER_NAME,
+			compatibilityDate: ASSET_WORKERS_COMPATIBILITY_DATE,
+			modulesRoot: miniflareModulesRoot,
+			modules: [
+				{
+					type: "ESModule",
+					path: path.join(miniflareModulesRoot, VITE_PROXY_WORKER_PATH),
+					contents: fs.readFileSync(
+						fileURLToPath(new URL(VITE_PROXY_WORKER_PATH, import.meta.url))
+					),
+				},
+			],
+			serviceBindings: {
+				...(entryWorkerConfig
+					? { ENTRY_USER_WORKER: entryWorkerConfig.name }
+					: {}),
+				__VITE_MIDDLEWARE__: {
+					node: (req, res) => viteDevServer.middlewares(req, res),
 				},
 			},
 		},
@@ -417,8 +442,15 @@ export async function getDevMiniflareOptions(config: {
 									unsafeDirectSockets:
 										environmentName ===
 										resolvedPluginConfig.entryWorkerEnvironmentName
-											? // Expose the default entrypoint of the entry worker on the dev registry
-												[{ entrypoint: undefined, proxy: true }]
+											? [
+													{
+														// This exposes the default entrypoint of the asset proxy worker
+														// on the dev registry with the name of the entry worker
+														serviceName: VITE_PROXY_WORKER_NAME,
+														entrypoint: undefined,
+														proxy: true,
+													},
+												]
 											: [],
 									modulesRoot: miniflareModulesRoot,
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",

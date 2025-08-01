@@ -51,8 +51,8 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 	it("supports module worker fetch over service binding", async ({
 		devRegistryPath,
 	}) => {
-		const workerEntrypointA = await runViteDev(
-			"vite.worker-entrypoint-a.config.ts",
+		const workerEntrypointB = await runViteDev(
+			"vite.worker-entrypoint-b.config.ts",
 			devRegistryPath
 		);
 
@@ -62,7 +62,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 				"test-service": "module-worker",
 				"test-method": "fetch",
 			});
-			const response = await fetch(`${workerEntrypointA}?${searchParams}`);
+			const response = await fetch(`${workerEntrypointB}?${searchParams}`);
 
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual(
@@ -78,13 +78,21 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 		// Test module-worker -> worker-entrypoint
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
-				"test-service": "worker-entrypoint-a",
+				"test-service": "worker-entrypoint-b",
 				"test-method": "fetch",
 			});
 			const response = await fetch(`${moduleWorker}?${searchParams}`);
 
 			expect(await response.text()).toBe("Hello from Worker Entrypoint!");
 			expect(response.status).toBe(200);
+
+			// Test fetching asset from "worker-entrypoint-b" over service binding
+			// Module worker has no assets, so it will hit the user worker and
+			// forward the request to "worker-entrypoint-b" with the asset path
+			const assetResponse = await fetch(
+				`${moduleWorker}/example.txt?${searchParams}`
+			);
+			expect(await assetResponse.text()).toBe("This is an example asset file");
 		});
 
 		// Test worker-entrypoint -> module-worker
@@ -93,7 +101,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 				"test-service": "module-worker",
 				"test-method": "fetch",
 			});
-			const response = await fetch(`${workerEntrypointA}?${searchParams}`);
+			const response = await fetch(`${workerEntrypointB}?${searchParams}`);
 
 			expect(await response.text()).toEqual("Hello from Module Worker!");
 			expect(response.status).toBe(200);

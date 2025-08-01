@@ -13,9 +13,11 @@ export function normalizeString(input: string): string {
 			normalizeErrorMarkers(
 				replaceByte(
 					stripTrailingWhitespace(
-						normalizeSlashes(
-							normalizeCwd(
-								normalizeTempDirs(stripTimings(replaceThinSpaces(input)))
+						stripStartupProfileHash(
+							normalizeSlashes(
+								normalizeCwd(
+									normalizeTempDirs(stripTimings(replaceThinSpaces(input)))
+								)
 							)
 						)
 					)
@@ -23,6 +25,10 @@ export function normalizeString(input: string): string {
 			)
 		)
 	);
+}
+
+function stripStartupProfileHash(str: string): string {
+	return str.replace(/startup-profile-[^/]+/g, "startup-profile-<HASH>");
 }
 
 function normalizeTables(str: string): string {
