@@ -949,12 +949,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						config.tail_consumers
 					);
 				}
-				await helpIfErrorIsSizeOrScriptStartup(
+				const message = await helpIfErrorIsSizeOrScriptStartup(
 					err,
 					dependencies,
 					workerBundle,
 					props.projectRoot
 				);
+				if (message !== null) {
+					logger.error(message);
+				}
 
 				// Apply source mapping to validation startup errors if possible
 				if (

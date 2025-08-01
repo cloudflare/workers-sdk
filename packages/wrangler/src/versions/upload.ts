@@ -780,12 +780,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					);
 				}
 
-				await helpIfErrorIsSizeOrScriptStartup(
+				const message = await helpIfErrorIsSizeOrScriptStartup(
 					err,
 					dependencies,
 					workerBundle,
 					props.projectRoot
 				);
+				if (message) {
+					logger.error(message);
+				}
 
 				// Apply source mapping to validation startup errors if possible
 				if (

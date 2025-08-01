@@ -1,188 +1,144 @@
-import * as fs from "node:fs/promises";
 import { FormData } from "undici";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import * as checkCommands from "../check/commands";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { ParseError } from "../parse";
-import * as paths from "../paths";
-import {
-	handleStartupError,
-	helpIfErrorIsSizeOrScriptStartup,
-} from "../utils/friendly-validator-errors";
+import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
+import { mockConsoleMethods } from "./helpers/mock-console";
+import { runInTempDir } from "./helpers/run-in-tmp";
 
-vi.mock("../logger");
-vi.mock("../check/commands", () => ({
-	analyseBundle: vi.fn(),
-}));
-vi.mock("../paths", () => ({
-	getWranglerTmpDir: vi.fn(),
-}));
-vi.mock("node:fs/promises", () => ({
-	writeFile: vi.fn(),
-}));
-
+vi.mock("../check/commands", () => ({ analyseBundle: vi.fn() }));
 const mockAnalyseBundle = vi.mocked(checkCommands.analyseBundle);
-const mockGetWranglerTmpDir = vi.mocked(paths.getWranglerTmpDir);
-const mockWriteFile = vi.mocked(fs.writeFile);
 
-describe("friendly-validator-errors", () => {
+describe("helpIfErrorIsSizeOrScriptStartup", () => {
+	const std = mockConsoleMethods();
+	runInTempDir();
 	beforeEach(() => {
-		vi.clearAllMocks();
-		mockGetWranglerTmpDir.mockResolvedValue({
-			path: "/tmp/test",
-			remove: vi.fn(),
-		});
-		mockWriteFile.mockResolvedValue(undefined);
+		mockAnalyseBundle.mockReset();
+
+		// Ensure logger is set to debug level for testing
+		const loggerLevel = logger.loggerLevel;
+		logger.loggerLevel = "debug";
+		return () => (logger.loggerLevel = loggerLevel); // Restore original logger level after test
 	});
 
-	describe("helpIfErrorIsSizeOrScriptStartup", () => {
-		it("reports startup error before attempting profiling", async () => {
-			const startupError = new ParseError({
-				text: "Validation failed",
-				notes: [{ text: "Script startup exceeded CPU limit." }],
-			});
-			Object.assign(startupError, { code: 10021 });
+	it("cleanly reports a startup error even if bundle analysis fails", async () => {
+		mockAnalyseBundle.mockRejectedValue(new Error("workerd profiling failed"));
 
-			mockAnalyseBundle.mockRejectedValue(
-				new Error("workerd profiling failed")
-			);
-			const mockFormData = new FormData();
-
-			await expect(
-				helpIfErrorIsSizeOrScriptStartup(
-					startupError,
-					{},
-					mockFormData,
-					"/test"
-				)
-			).rejects.toThrow(UserError);
-
-			expect(logger.error).toHaveBeenCalledWith(
-				"Worker startup failed:",
-				"Script startup exceeded CPU limit."
-			);
-
-			expect(logger.debug).toHaveBeenCalledWith(
-				"CPU profiling failed during deployment error handling:",
-				expect.any(Error)
-			);
-		});
-
-		it("handles startup errors with missing notes gracefully", async () => {
-			const startupError = new ParseError({
-				text: "Script startup exceeded CPU limit.",
-				notes: [{ text: "Script startup exceeded CPU limit." }],
-			});
-			Object.assign(startupError, { code: 10021 });
-
-			mockAnalyseBundle.mockRejectedValue(
-				new Error("workerd profiling failed")
-			);
-			const mockFormData = new FormData();
-
-			await expect(
-				helpIfErrorIsSizeOrScriptStartup(
-					startupError,
-					{},
-					mockFormData,
-					"/test"
-				)
-			).rejects.toThrow(UserError);
-
-			expect(logger.error).toHaveBeenCalledWith(
-				"Worker startup failed:",
-				"Script startup exceeded CPU limit."
-			);
-		});
-
-		it("does not interfere with size errors", async () => {
-			const sizeError = { code: 10027 };
-			const mockDependencies = { "test.js": { bytesInOutput: 1000 } };
-
+		expect(
 			await helpIfErrorIsSizeOrScriptStartup(
-				sizeError,
-				mockDependencies,
-				new FormData(),
+				makeStartupError("Script startup exceeded CPU limit."),
+				{}, // no dependencies
+				new FormData(), // mock worker bundle
 				"/test"
-			);
+			)
+		).toMatchInlineSnapshot(`
+				"Your Worker failed validation because it exceeded startup limits.
 
-			expect(logger.error).not.toHaveBeenCalled();
-		});
+				Deploy failed
+				 - Script startup exceeded CPU limit.
+
+				To ensure fast responses, there are constraints on Worker startup, such as how much CPU it can use, or how long it can take. Your Worker has hit one of these startup limits. Try reducing the amount of work done during startup (outside the event handler), either by removing code or relocating it inside the event handler.
+
+				Refer to https://developers.cloudflare.com/workers/platform/limits/#worker-startup-time for more details"
+			`);
+
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "An error occurred while trying to locally profile the Worker: Error: workerd profiling failed",
+			  "err": "",
+			  "info": "",
+			  "out": "",
+			  "warn": "",
+			}
+		`);
 	});
 
-	describe("handleStartupError", () => {
-		it("includes profile information when profiling succeeds", async () => {
-			const mockProfile = { nodes: [], samples: [] };
-			mockAnalyseBundle.mockResolvedValue(mockProfile);
+	it("reports size errors even if bundle analysis would fail", async () => {
+		mockAnalyseBundle.mockRejectedValue(new Error("workerd profiling failed"));
 
-			try {
-				await handleStartupError("test-bundle", "/test/project", false);
-				expect.fail("Expected UserError to be thrown");
-			} catch (thrownError) {
-				expect(thrownError).toBeInstanceOf(UserError);
-				expect((thrownError as UserError).message).toContain("CPU Profile");
-				expect((thrownError as UserError).message).toContain(
-					"worker.cpuprofile"
-				);
+		expect(
+			await helpIfErrorIsSizeOrScriptStartup(
+				makeScriptSizeError("Script size exceeded limits."),
+				{ "test.js": { bytesInOutput: 1000 } }, // mock dependencies
+				new FormData(), // mock worker bundle
+				"/test"
+			)
+		).toMatchInlineSnapshot(`
+			"Your Worker failed validation because it exceeded size limits.
+
+			Script size exceeded limits.
+
+			Here are the 1 largest dependencies included in your script:
+
+			- test.js - 0.98 KiB
+
+			If these are unnecessary, consider removing them
+			"
+		`);
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "",
+			  "warn": "",
 			}
-		});
+		`);
+	});
 
-		it("handles profiling failures silently for deployment errors", async () => {
-			mockAnalyseBundle.mockRejectedValue(new Error("profiling failed"));
+	it("includes profile information when bundle analysis succeeds", async () => {
+		mockAnalyseBundle.mockResolvedValue({ nodes: [], samples: [] });
 
-			await expect(
-				handleStartupError("test-bundle", "/test/project", false)
-			).rejects.toThrow(UserError);
+		const message = normalizeMessage(
+			await helpIfErrorIsSizeOrScriptStartup(
+				makeStartupError("Exceeded startup limits."),
+				{}, // no dependencies
+				new FormData(), // mock worker bundle
+				process.cwd() // mock project root (the tmp dir)
+			)
+		);
 
-			expect(logger.debug).toHaveBeenCalledWith(
-				"CPU profiling failed during deployment error handling:",
-				expect.any(Error)
-			);
+		expect(message).toMatchInlineSnapshot(`
+			"Your Worker failed validation because it exceeded startup limits.
 
-			const thrownError = await handleStartupError(
-				"test-bundle",
-				"/test/project",
-				false
-			).catch((e) => e);
-			expect(thrownError.message).not.toContain("CPU Profile");
-			expect(thrownError.message).toContain("exceeded startup limits");
-		});
+			Deploy failed
+			 - Exceeded startup limits.
 
-		it("reports profiling failures for manual profiling", async () => {
-			const profilingError = new Error("manual profiling failed");
-			mockAnalyseBundle.mockRejectedValue(profilingError);
+			To ensure fast responses, there are constraints on Worker startup, such as how much CPU it can use, or how long it can take. Your Worker has hit one of these startup limits. Try reducing the amount of work done during startup (outside the event handler), either by removing code or relocating it inside the event handler.
 
-			await expect(
-				handleStartupError("test-bundle", "/test/project", true)
-			).rejects.toThrow(profilingError);
-
-			expect(logger.debug).not.toHaveBeenCalled();
-		});
-
-		it("uses relative paths for profile output", async () => {
-			const mockProfile = { nodes: [], samples: [] };
-			mockAnalyseBundle.mockResolvedValue(mockProfile);
-			mockGetWranglerTmpDir.mockResolvedValue({
-				path: "/test/project/.wrangler/tmp/startup-profile-123",
-				remove: vi.fn(),
-			});
-
-			try {
-				await handleStartupError("test-bundle", "/test/project", false);
-				expect.fail("Expected UserError to be thrown");
-			} catch (thrownError) {
-				expect(thrownError).toBeInstanceOf(UserError);
-				expect((thrownError as UserError).message).toContain(
-					"worker.cpuprofile"
-				);
-				expect((thrownError as UserError).message).toContain(
-					"startup-profile-123"
-				);
-				expect((thrownError as UserError).message).not.toContain(
-					"/test/project"
-				);
+			Refer to https://developers.cloudflare.com/workers/platform/limits/#worker-startup-time for more details
+			A CPU Profile of your Worker's startup phase has been written to .wrangler/tmp/startup-profile-<HASH>/worker.cpuprofile - load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph."
+		`);
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "",
+			  "warn": "",
 			}
-		});
+		`);
 	});
 });
+
+function makeScriptSizeError(text: string): ParseError {
+	const error = new ParseError({ text });
+	Object.assign(error, { code: 10027 });
+	return error;
+}
+
+function makeStartupError(message: string): ParseError {
+	const error = new ParseError({
+		text: "Deploy failed",
+		notes: [{ text: message }],
+	});
+	Object.assign(error, { code: 10021 });
+	return error;
+}
+
+function normalizeMessage(message: string | null): string {
+	return (
+		message?.replace(/startup-profile-[^/]+/, "startup-profile-<HASH>") ?? ""
+	);
+}
