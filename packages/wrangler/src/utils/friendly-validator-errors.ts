@@ -4,6 +4,7 @@ import dedent from "ts-dedent";
 import { analyseBundle } from "../check/commands";
 import { printOffendingDependencies } from "../deployment-bundle/bundle-reporter";
 import { UserError } from "../errors";
+import { logger } from "../logger";
 import { ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import type { FormData } from "undici";
@@ -46,22 +47,38 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 
 export async function handleStartupError(
 	workerBundle: FormData | string,
-	projectRoot: string | undefined
+	projectRoot: string | undefined,
+	isManualProfiling = false
 ) {
-	const cpuProfile = await analyseBundle(workerBundle);
-	const tmpDir = await getWranglerTmpDir(projectRoot, "startup-profile", false);
-	const profile = path.relative(
-		projectRoot ?? process.cwd(),
-		path.join(tmpDir.path, `worker.cpuprofile`)
-	);
-	await writeFile(profile, JSON.stringify(cpuProfile));
-	throw new UserError(dedent`
-		Your Worker failed validation because it exceeded startup limits.
-		To ensure fast responses, there are constraints on Worker startup, such as how much CPU it can use, or how long it can take. Your Worker has hit one of these startup limits. Try reducing the amount of work done during startup (outside the event handler), either by removing code or relocating it inside the event handler.
+	try {
+		const cpuProfile = await analyseBundle(workerBundle);
+		const tmpDir = await getWranglerTmpDir(
+			projectRoot,
+			"startup-profile",
+			false
+		);
+		const profile = path.relative(
+			projectRoot ?? process.cwd(),
+			path.join(tmpDir.path, `worker.cpuprofile`)
+		);
+		await writeFile(profile, JSON.stringify(cpuProfile));
+		throw new UserError(dedent`
+			Your Worker failed validation because it exceeded startup limits.
+			To ensure fast responses, there are constraints on Worker startup, such as how much CPU it can use, or how long it can take. Your Worker has hit one of these startup limits. Try reducing the amount of work done during startup (outside the event handler), either by removing code or relocating it inside the event handler.
 
-		A CPU Profile of your Worker's startup phase has been written to ${profile} - load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.
+			A CPU Profile of your Worker's startup phase has been written to ${profile} - load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.
 
-		Refer to https://developers.cloudflare.com/workers/platform/limits/#worker-startup-time for more details`);
+			Refer to https://developers.cloudflare.com/workers/platform/limits/#worker-startup-time for more details`);
+	} catch (profilingError) {
+		if (isManualProfiling) {
+			throw profilingError;
+		} else {
+			logger.debug(
+				"CPU profiling failed during deployment error handling:",
+				profilingError
+			);
+		}
+	}
 }
 
 export async function helpIfErrorIsSizeOrScriptStartup(
@@ -73,6 +90,11 @@ export async function helpIfErrorIsSizeOrScriptStartup(
 	if (errIsScriptSize(err)) {
 		printOffendingDependencies(dependencies);
 	} else if (errIsStartupErr(err)) {
-		await handleStartupError(workerBundle, projectRoot);
+		logger.error(
+			"Worker startup failed:",
+			(err as ParseError).notes[0]?.text || String(err)
+		);
+
+		await handleStartupError(workerBundle, projectRoot, false);
 	}
 }

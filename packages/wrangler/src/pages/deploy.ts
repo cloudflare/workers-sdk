@@ -464,7 +464,7 @@ export const pagesDeployCommand = createCommand({
 				const workerBundle = formData.get("_worker.bundle") as File;
 				const filePath = path.join(getPagesTmpDir(), "_worker.bundle");
 				await writeFile(filePath, workerBundle.stream());
-				await handleStartupError(filePath, getPagesProjectRoot());
+				await handleStartupError(filePath, getPagesProjectRoot(), false);
 			}
 
 			throw new FatalError(
