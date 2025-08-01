@@ -62,6 +62,7 @@ export async function handleStartupError(
 			path.join(tmpDir.path, `worker.cpuprofile`)
 		);
 		await writeFile(profile, JSON.stringify(cpuProfile));
+
 		throw new UserError(dedent`
 			Your Worker failed validation because it exceeded startup limits.
 			To ensure fast responses, there are constraints on Worker startup, such as how much CPU it can use, or how long it can take. Your Worker has hit one of these startup limits. Try reducing the amount of work done during startup (outside the event handler), either by removing code or relocating it inside the event handler.
@@ -77,6 +78,11 @@ export async function handleStartupError(
 				"CPU profiling failed during deployment error handling:",
 				profilingError
 			);
+			throw new UserError(dedent`
+				Your Worker failed validation because it exceeded startup limits.
+				To ensure fast responses, there are constraints on Worker startup, such as how much CPU it can use, or how long it can take. Your Worker has hit one of these startup limits. Try reducing the amount of work done during startup (outside the event handler), either by removing code or relocating it inside the event handler.
+
+				Refer to https://developers.cloudflare.com/workers/platform/limits/#worker-startup-time for more details`);
 		}
 	}
 }
