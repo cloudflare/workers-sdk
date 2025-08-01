@@ -326,15 +326,16 @@ export function getWorkerConfig(
 		throw new Error(missingFieldErrorMessage(`'main'`, configPath, env));
 	}
 
-	const mainStat = fs.statSync(config.main, { throwIfNoEntry: false });
+	const resolvedMainPath = path.resolve(path.dirname(configPath), config.main);
+	const mainStat = fs.statSync(resolvedMainPath, { throwIfNoEntry: false });
 	if (!mainStat) {
 		throw new Error(
-			`The provided Wrangler config main field (${config.main}) doesn't point to an existing file`
+			`The provided Wrangler config main field (${resolvedMainPath}) doesn't point to an existing file`
 		);
 	}
 	if (mainStat.isDirectory()) {
 		throw new Error(
-			`The provided Wrangler config main field (${config.main}) points to a directory, it needs to point to a file instead`
+			`The provided Wrangler config main field (${resolvedMainPath}) points to a directory, it needs to point to a file instead`
 		);
 	}
 

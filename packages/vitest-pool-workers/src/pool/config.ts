@@ -301,7 +301,12 @@ async function parseCustomPoolOptions(
 		}
 
 		// If `main` wasn't explicitly configured, fall back to Wrangler config's
-		options.main ??= main;
+		if (options.main === undefined && main !== undefined) {
+			const resolvedMain = path.isAbsolute(main)
+				? main
+				: path.resolve(path.dirname(configPath), main);
+			options.main = resolvedMain;
+		}
 
 		options.miniflare.workers = [
 			...options.miniflare.workers,
