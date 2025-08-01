@@ -10,6 +10,7 @@ describe("validateMacOSVersion", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.unstubAllEnvs();
 	});
 
 	it("should not throw on non-macOS platforms", () => {

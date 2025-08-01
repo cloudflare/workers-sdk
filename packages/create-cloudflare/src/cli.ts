@@ -19,7 +19,7 @@ import {
 	rectifyPmMismatch,
 } from "helpers/packageManagers";
 import { installWrangler, npmInstall } from "helpers/packages";
-import { validateMacOSVersion } from "../../wrangler/src/utils/validate-macos-version";
+import { validateMacOSVersion } from "wrangler";
 import { version } from "../package.json";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
