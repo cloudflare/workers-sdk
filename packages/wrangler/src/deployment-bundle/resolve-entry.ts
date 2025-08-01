@@ -24,7 +24,9 @@ export function resolveEntryWithMain(
 	// which may be different from the project root if the Wrangler was redirected to use a different Wrangler configuration file.
 	const projectRoot = path.resolve(path.dirname(config.userConfigPath ?? "."));
 	const entryRoot = path.resolve(path.dirname(config.configPath ?? "."));
-	const absolutePath = path.resolve(entryRoot, main);
+	const absolutePath = path.isAbsolute(main)
+		? main
+		: path.resolve(entryRoot, main);
 	const relativePath = path.relative(entryRoot, absolutePath) || ".";
 	return { absolutePath, relativePath, projectRoot };
 }
