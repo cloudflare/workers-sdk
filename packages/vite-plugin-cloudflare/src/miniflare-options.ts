@@ -294,6 +294,7 @@ export async function getDevMiniflareOptions(config: {
 			],
 			bindings: {
 				CONFIG: assetsConfig,
+				__VITE_HEADERS__: JSON.stringify(viteDevServer.config.server.headers),
 			},
 			serviceBindings: {
 				__VITE_HTML_EXISTS__: async (request) => {
