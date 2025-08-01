@@ -75,6 +75,9 @@ describe.each(testConfigs)(
 	`Preset test: $name`,
 	({ compatibilityDate, compatibilityFlags = [], expectRuntimeFlags = {} }) => {
 		let helper: WranglerE2ETestHelper;
+		// Can not deploy to remote when the `experimental` flag is used.
+		const hasExperimentalFlag = compatibilityFlags.includes("experimental");
+		const testOn = hasExperimentalFlag ? ["local"] : ["local", "remote"];
 
 		beforeAll(async () => {
 			helper = new WranglerE2ETestHelper();
@@ -98,7 +101,7 @@ describe.each(testConfigs)(
 		//
 		// The "local" and "remote" runtimes do not necessarily use the exact same version
 		// of workerd and we want to make sure the preset works for both.
-		describe.for(["local", "remote"])("%s tests", (localOrRemote) => {
+		describe.for(testOn)("%s tests", (localOrRemote) => {
 			let url: string;
 			let wrangler: WranglerLongLivedCommand;
 			beforeAll(async () => {
