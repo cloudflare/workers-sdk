@@ -286,6 +286,7 @@ import { whoami } from "./user/whoami";
 import { betaCmdColor, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { logPossibleBugMessage } from "./utils/logPossibleBugMessage";
+import { validateMacOSVersion } from "./utils/validate-macos-version";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
 import { vectorizeDeleteCommand } from "./vectorize/delete";
@@ -1487,6 +1488,8 @@ export function createCLIParser(argv: string[]) {
 
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
+
+	validateMacOSVersion();
 
 	const startTime = Date.now();
 	const wrangler = createCLIParser(argv);

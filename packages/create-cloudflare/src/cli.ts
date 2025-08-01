@@ -19,6 +19,7 @@ import {
 	rectifyPmMismatch,
 } from "helpers/packageManagers";
 import { installWrangler, npmInstall } from "helpers/packages";
+import { validateMacOSVersion } from "../../wrangler/src/utils/validate-macos-version";
 import { version } from "../package.json";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
@@ -104,6 +105,8 @@ export const runLatest = async () => {
 // Entrypoint to c3
 export const runCli = async (args: Partial<C3Args>) => {
 	printBanner(args);
+
+	validateMacOSVersion();
 
 	const ctx = await createContext(args);
 
