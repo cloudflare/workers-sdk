@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import path from "node:path";
 import util from "node:util";
 import * as vite from "vite";
 import { isNodeCompat } from "./node-js-compat";
@@ -96,12 +97,19 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	) {
 		this.#worker = worker;
 
+		const entryPath = path.isAbsolute(workerConfig.main)
+			? workerConfig.main
+			: path.resolve(
+					path.dirname(workerConfig.configPath || ""),
+					workerConfig.main
+				);
+
 		const response = await this.#worker.fetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
 				headers: {
 					[VITE_DEV_METADATA_HEADER]: JSON.stringify({
-						entryPath: workerConfig.main,
+						entryPath,
 						configId,
 					}),
 					upgrade: "websocket",
@@ -138,6 +146,13 @@ export function createCloudflareEnvironmentOptions(
 	userConfig: vite.UserConfig,
 	environment: { name: string; isEntry: boolean }
 ): vite.EnvironmentOptions {
+	const mainPath = path.isAbsolute(workerConfig.main)
+		? workerConfig.main
+		: path.resolve(
+				path.dirname(workerConfig.configPath || ""),
+				workerConfig.main
+			);
+
 	return {
 		resolve: {
 			// Note: in order for ssr pre-bundling to take effect we need to ask vite to treat all
@@ -164,7 +179,7 @@ export function createCloudflareEnvironmentOptions(
 			copyPublicDir: false,
 			ssr: true,
 			rollupOptions: {
-				input: workerConfig.main,
+				input: mainPath,
 				// rolldown-only option
 				...("rolldownVersion" in vite ? ({ platform: "neutral" } as any) : {}),
 			},
@@ -173,7 +188,7 @@ export function createCloudflareEnvironmentOptions(
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
 			noDiscovery: false,
 			// We need to normalize the path as it is treated as a glob and backslashes are therefore treated as escape characters.
-			entries: vite.normalizePath(workerConfig.main),
+			entries: vite.normalizePath(mainPath),
 			exclude: [...cloudflareBuiltInModules],
 			esbuildOptions: {
 				platform: "neutral",

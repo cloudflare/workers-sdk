@@ -212,7 +212,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return;
 				}
 
-				const resolvedWorkerEntry = await this.resolve(workerConfig.main);
+				const mainPath = path.isAbsolute(workerConfig.main)
+					? workerConfig.main
+					: path.resolve(
+							path.dirname(workerConfig.configPath || ""),
+							workerConfig.main
+						);
+				const resolvedWorkerEntry = await this.resolve(mainPath);
 
 				if (id === resolvedWorkerEntry?.id) {
 					const modified = new MagicString(code);
@@ -911,7 +917,13 @@ if (import.meta.hot) {
 				if (!workerConfig) {
 					return;
 				}
-				const resolvedId = await this.resolve(workerConfig.main);
+				const mainPath = path.isAbsolute(workerConfig.main)
+					? workerConfig.main
+					: path.resolve(
+							path.dirname(workerConfig.configPath || ""),
+							workerConfig.main
+						);
+				const resolvedId = await this.resolve(mainPath);
 				if (id === resolvedId?.id) {
 					return injectGlobalCode(id, code);
 				}
