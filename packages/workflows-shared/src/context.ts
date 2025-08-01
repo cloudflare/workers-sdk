@@ -562,6 +562,11 @@ export class Context extends RpcTarget {
 
 		const pendingWaiterRegistered = `${cacheKey}-pending`;
 
+		if (await this.#state.storage.get(`forceEventTimeout-${waitForEventKey}`)) {
+			console.log("Forcing event timeout for", waitForEventKey);
+			options.timeout = 0;
+		}
+
 		const timeoutError = new WorkflowTimeoutError(
 			`Execution timed out after ${ms(options.timeout)}ms`
 		) as Error & UserErrorField;
