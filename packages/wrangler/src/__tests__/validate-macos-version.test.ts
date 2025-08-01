@@ -73,4 +73,12 @@ describe("validateMacOSVersion", () => {
 
 		expect(() => validateMacOSVersion()).not.toThrow();
 	});
+
+	it("should not throw when CI environment variable is set", () => {
+		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
+		vi.stubEnv("CI", "true");
+		mockOs.release.mockReturnValue("21.6.0");
+
+		expect(() => validateMacOSVersion()).not.toThrow();
+	});
 });

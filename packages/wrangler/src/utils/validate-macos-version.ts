@@ -10,6 +10,10 @@ export function validateMacOSVersion(): void {
 		return;
 	}
 
+	if (process.env.CI === "true") {
+		return;
+	}
+
 	const release = os.release();
 	const macOSVersion = darwinVersionToMacOSVersion(release);
 
