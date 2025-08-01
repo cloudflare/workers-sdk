@@ -36,6 +36,8 @@ assert(statSync(wranglerPath).isDirectory());
 
 for (const testFile of globIterateSync("e2e/**/*.test.ts", {
 	cwd: wranglerPath,
+	// Return `/` delimited paths, even on Windows.
+	posix: true,
 })) {
 	const options: ExecSyncOptionsWithBufferEncoding = {
 		stdio: "inherit",
