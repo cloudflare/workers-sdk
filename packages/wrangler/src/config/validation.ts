@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { isDockerfile } from "@cloudflare/containers-shared";
 import { dedent } from "ts-dedent";
+import { resolveEnvConfig } from "../api/config";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
@@ -58,6 +59,7 @@ export type NormalizeAndValidateConfigArgs = {
 	upstreamProtocol?: string;
 	script?: string;
 	enableContainers?: boolean;
+	useEnvResolutionFromConfigApi?: boolean;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -89,6 +91,20 @@ export function normalizeAndValidateConfig(
 	config: Config;
 	diagnostics: Diagnostics;
 } {
+	let useEnvResolutionFromConfigApi =
+		// the `true` is for testing purposes, the idea here is to keep this `false` by default
+		// and turn it to `true` only for testing the new code path, once we're confident enough
+		// with the new code path this can be turned on for everyone (and remove the old code path)
+		true; // args.useEnvResolutionFromConfigApi;
+
+	if (isPagesConfig(rawConfig)) {
+		if (useEnvResolutionFromConfigApi) {
+			// log that the env resolution is not supported for pages
+			// TODO: maybe we should just support pages?
+		}
+		useEnvResolutionFromConfigApi = false;
+	}
+
 	const diagnostics = new Diagnostics(
 		`Processing ${
 			configPath ? path.relative(process.cwd(), configPath) : "wrangler"
@@ -153,12 +169,44 @@ export function normalizeAndValidateConfig(
 		typeof args["dispatch-namespace"] === "string" &&
 		args["dispatch-namespace"].trim() !== "";
 
-	const topLevelEnv = normalizeAndValidateEnvironment(
-		diagnostics,
-		configPath,
-		rawConfig,
-		isDispatchNamespace
-	);
+	let topLevelEnv;
+
+	if (!useEnvResolutionFromConfigApi) {
+		topLevelEnv = normalizeAndValidateEnvironment(
+			diagnostics,
+			configPath,
+			rawConfig,
+			isDispatchNamespace
+		);
+	} else {
+		const {
+			envConfig: resolvedTopLevelEnv,
+			errors: topLevelEnvResolutionErrors,
+		} = resolveEnvConfig(rawConfig as Record<string, unknown>, null);
+
+		assert(resolvedTopLevelEnv, "top level environment unexpectedly null");
+
+		for (const topLevelEnvResolutionError of topLevelEnvResolutionErrors) {
+			diagnostics[
+				topLevelEnvResolutionError.severity === "warning"
+					? "warnings"
+					: "errors"
+			].push(topLevelEnvResolutionError.message);
+		}
+
+		topLevelEnv = normalizeAndValidateResolvedEnv(
+			resolvedTopLevelEnv,
+			diagnostics,
+			configPath
+		);
+
+		if (!isDispatchNamespace) {
+			// TODO: this should apply to the final env not just the top level one
+			isValidName(diagnostics, "name", topLevelEnv.name, topLevelEnv);
+		} else {
+			isString(diagnostics, "name", topLevelEnv.name, topLevelEnv);
+		}
+	}
 
 	const isRedirectedConfig = configPath && configPath !== userConfigPath;
 
@@ -217,18 +265,46 @@ export function normalizeAndValidateConfig(
 			 * This is done to cover any legacy environment cases, where the `envName` is used.
 			 */
 			if (rawEnv !== undefined) {
-				activeEnv = normalizeAndValidateEnvironment(
-					envDiagnostics,
-					configPath,
-					rawEnv,
-					isDispatchNamespace,
-					envName,
-					topLevelEnv,
-					isLegacyEnv,
-					rawConfig
-				);
+				if (!useEnvResolutionFromConfigApi) {
+					activeEnv = normalizeAndValidateEnvironment(
+						envDiagnostics,
+						configPath,
+						rawEnv,
+						isDispatchNamespace,
+						envName,
+						topLevelEnv,
+						isLegacyEnv,
+						rawConfig
+					);
+				} else {
+					const { envConfig: resolvedNamedEnv, errors } = resolveEnvConfig(
+						rawConfig as Record<string, unknown>,
+						envName
+					);
+
+					assert(resolvedNamedEnv, "named environment unexpectedly null");
+
+					for (const error of errors) {
+						envDiagnostics[
+							error.severity === "warning" ? "warnings" : "errors"
+						].push(error.message);
+					}
+
+					activeEnv = normalizeAndValidateResolvedEnv(
+						resolvedNamedEnv,
+						envDiagnostics,
+						configPath,
+						envName
+					);
+				}
 				diagnostics.addChild(envDiagnostics);
 			} else if (!isPagesConfig(rawConfig)) {
+				if (useEnvResolutionFromConfigApi) {
+					activeEnv = {
+						...topLevelEnv,
+						name: `${topLevelEnv.name}-${envName}`,
+					};
+				}
 				activeEnv = normalizeAndValidateEnvironment(
 					envDiagnostics,
 					configPath,
@@ -306,12 +382,14 @@ export function normalizeAndValidateConfig(
 
 	validateBindingsHaveUniqueNames(diagnostics, config);
 
-	validateAdditionalProperties(
-		diagnostics,
-		"top-level",
-		Object.keys(rawConfig),
-		[...Object.keys(config), "env", "$schema"]
-	);
+	if (!useEnvResolutionFromConfigApi) {
+		validateAdditionalProperties(
+			diagnostics,
+			"top-level",
+			Object.keys(rawConfig),
+			[...Object.keys(config), "env", "$schema"]
+		);
+	}
 
 	applyPythonConfig(config, args);
 
@@ -1583,7 +1661,11 @@ const validateTriggers: ValidatorFn = (
 
 	let isValid = true;
 
-	if ("crons" in triggersValue && !Array.isArray(triggersValue.crons)) {
+	if (
+		"crons" in triggersValue &&
+		triggersValue.crons !== undefined &&
+		!Array.isArray(triggersValue.crons)
+	) {
 		diagnostics.errors.push(
 			`Expected "${triggersFieldName}.crons" to be of type array, but got ${JSON.stringify(triggersValue)}.`
 		);
@@ -3979,4 +4061,389 @@ function isRemoteValid(
 	}
 
 	return true;
+}
+
+function normalizeAndValidateResolvedEnv(
+	rawEnv: Partial<RawEnvironment>,
+	diagnostics: Diagnostics,
+	configPath: string | undefined,
+	envName?: string | undefined
+): Environment {
+	const env = JSON.parse(JSON.stringify(rawEnv)) as RawEnvironment;
+
+	const defaultFieldTo = <T extends keyof Environment>(
+		field: T,
+		defaultValue: Environment[T]
+	) => {
+		if (!(field in env)) {
+			env[field] = defaultValue;
+			return;
+		}
+
+		if (
+			field === "build" &&
+			typeof env[field] === "object" &&
+			env[field] !== null &&
+			typeof defaultValue === "object"
+		) {
+			const envFieldObj = env[field] as Record<string, unknown>;
+			for (const [defaultSubField, defaultSubValue] of Object.entries(
+				defaultValue
+			)) {
+				if (!(defaultSubField in envFieldObj)) {
+					envFieldObj[defaultSubField] = defaultSubValue;
+				}
+			}
+		}
+	};
+
+	defaultFieldTo("account_id", undefined);
+	defaultFieldTo("build", {
+		command: undefined,
+		cwd: undefined,
+		watch_dir: "./src",
+	});
+	defaultFieldTo("compatibility_date", undefined);
+	defaultFieldTo("compatibility_flags", []);
+	defaultFieldTo("configPath" as keyof Environment, undefined);
+	defaultFieldTo("d1_databases", []);
+	defaultFieldTo("vectorize", []);
+	defaultFieldTo("hyperdrive", []);
+	defaultFieldTo(
+		"dev" as keyof Environment,
+		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+		// @ts-ignore
+		{
+			ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
+			local_protocol: "http",
+			port: undefined, // the default of 8787 is set at runtime
+			upstream_protocol: "http",
+			host: undefined,
+			enable_containers: true,
+		}
+	);
+	defaultFieldTo("containers", undefined);
+	defaultFieldTo("cloudchamber", {});
+	defaultFieldTo("durable_objects", {
+		bindings: [],
+	});
+	defaultFieldTo("jsx_factory", "React.createElement");
+	defaultFieldTo("jsx_fragment", "React.Fragment");
+	defaultFieldTo("tsconfig", undefined);
+	defaultFieldTo("kv_namespaces", []);
+	defaultFieldTo("send_email", []);
+	defaultFieldTo("legacy_env" as keyof Environment, true);
+	defaultFieldTo("logfwdr", {
+		bindings: [],
+		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+		// @ts-ignore
+		schema: undefined,
+	});
+	defaultFieldTo("send_metrics" as keyof Environment, undefined);
+	defaultFieldTo("main", undefined);
+	defaultFieldTo("migrations", []);
+	defaultFieldTo("name", undefined);
+	defaultFieldTo("queues", {
+		consumers: [],
+		producers: [],
+	});
+	defaultFieldTo("r2_buckets", []);
+	defaultFieldTo("secrets_store_secrets", []);
+	defaultFieldTo("unsafe_hello_world", []);
+	defaultFieldTo("services", []);
+	defaultFieldTo("analytics_engine_datasets", []);
+	defaultFieldTo("route", undefined);
+	defaultFieldTo("routes", undefined);
+	defaultFieldTo("rules", []);
+	defaultFieldTo("site" as keyof Environment, undefined);
+	defaultFieldTo("text_blobs" as keyof Environment, undefined);
+	defaultFieldTo("browser", undefined);
+	defaultFieldTo("ai", undefined);
+	defaultFieldTo("version_metadata", undefined);
+	defaultFieldTo("triggers", {
+		crons: undefined,
+	});
+	defaultFieldTo("unsafe", {
+		bindings: undefined,
+		metadata: undefined,
+	});
+	defaultFieldTo("dispatch_namespaces", []);
+	defaultFieldTo("mtls_certificates", []);
+	defaultFieldTo("usage_model" as keyof Environment, undefined);
+	defaultFieldTo("vars", {});
+	defaultFieldTo("define", {});
+	defaultFieldTo("wasm_modules" as keyof Environment, undefined);
+	defaultFieldTo("data_blobs" as keyof Environment, undefined);
+	defaultFieldTo("workers_dev", undefined);
+	defaultFieldTo("preview_urls", true);
+	defaultFieldTo("zone_id" as keyof Environment, undefined);
+	defaultFieldTo("no_bundle", undefined);
+	defaultFieldTo("minify", undefined);
+	defaultFieldTo("first_party_worker", undefined);
+	defaultFieldTo("keep_vars" as keyof Environment, undefined);
+	defaultFieldTo("logpush", undefined);
+	defaultFieldTo("upload_source_maps", undefined);
+	defaultFieldTo("placement", undefined);
+	defaultFieldTo("tail_consumers", undefined);
+	defaultFieldTo("pipelines", []);
+	defaultFieldTo("workflows", []);
+
+	mutateEmptyStringAccountIDValue(diagnostics, env);
+	mutateEmptyStringRouteValue(diagnostics, env);
+
+	const topLevelEnv = envName ? (env as Environment) : undefined;
+
+	isRoute(diagnostics, "route", env.route, topLevelEnv);
+
+	isString(diagnostics, "account_id", env.account_id, topLevelEnv);
+
+	isRouteArray(diagnostics, "routes", env.routes, topLevelEnv);
+
+	isBoolean(diagnostics, "workers_dev", env.workers_dev, topLevelEnv);
+
+	if (env.triggers) {
+		validateTriggers(diagnostics, "triggers", env.triggers, undefined);
+	}
+
+	env.main = normalizeAndValidateMainField(configPath, env.main);
+
+	env.build = normalizeAndValidateBuild(
+		diagnostics,
+		rawEnv,
+		rawEnv.build ?? {},
+		configPath
+	);
+
+	if (env.compatibility_date) {
+		validateCompatibilityDate(
+			diagnostics,
+			"compatibility_date",
+			env.compatibility_date,
+			topLevelEnv
+		);
+	}
+
+	if (env.compatibility_flags) {
+		isStringArray(
+			diagnostics,
+			"compatibility_flags",
+			env.compatibility_flags,
+			topLevelEnv
+		);
+	}
+
+	isString(diagnostics, "jsx_factory", env.jsx_factory, topLevelEnv);
+
+	isString(diagnostics, "jsx_fragment", env.jsx_fragment, topLevelEnv);
+
+	env.tsconfig = validateAndNormalizeTsconfig(
+		diagnostics,
+		topLevelEnv,
+		rawEnv,
+		configPath
+	);
+
+	experimental(diagnostics, rawEnv, "unsafe");
+
+	validateObservability(
+		diagnostics,
+		"observability",
+		env.observability,
+		topLevelEnv
+	);
+
+	validateTailConsumers(
+		diagnostics,
+		"tail_consumers",
+		env.tail_consumers,
+		topLevelEnv
+	);
+
+	validateBindingsProperty(envName ?? "", validateDurableObjectBinding)(
+		diagnostics,
+		"durable_objects",
+		env.durable_objects,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validateKVBinding)(
+		diagnostics,
+		"kv_namespaces",
+		env.kv_namespaces,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validateR2Binding)(
+		diagnostics,
+		"r2_buckets",
+		env.r2_buckets,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validateD1Binding)(
+		diagnostics,
+		"d1_databases",
+		env.d1_databases,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validateAnalyticsEngineBinding)(
+		diagnostics,
+		"analytics_engine_datasets",
+		env.analytics_engine_datasets,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validatePipelineBinding)(
+		diagnostics,
+		"pipelines",
+		env.pipelines,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validateHelloWorldBinding)(
+		diagnostics,
+		"unsafe_hello_world",
+		env.unsafe_hello_world,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validateHyperdriveBinding)(
+		diagnostics,
+		"hyperdrive",
+		env.hyperdrive,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validateSecretsStoreSecretBinding)(
+		diagnostics,
+		"secrets_store_secrets",
+		env.secrets_store_secrets,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validateServiceBinding)(
+		diagnostics,
+		"services",
+		env.services,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validateVectorizeBinding)(
+		diagnostics,
+		"vectorize",
+		env.vectorize,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validateWorkerNamespaceBinding)(
+		diagnostics,
+		"dispatch_namespaces",
+		env.dispatch_namespaces,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validateSendEmailBinding)(
+		diagnostics,
+		"send_email",
+		env.send_email,
+		topLevelEnv
+	);
+
+	validateBindingArray(envName ?? "", validateMTlsCertificateBinding)(
+		diagnostics,
+		"mtls_certificates",
+		env.mtls_certificates,
+		topLevelEnv
+	);
+
+	if (env.version_metadata !== undefined) {
+		validateVersionMetadataBinding(envName ?? "")(
+			diagnostics,
+			"version_metadata",
+			env.version_metadata,
+			topLevelEnv
+		);
+	}
+
+	validateQueues(envName ?? "")(diagnostics, "queues", env.queues, topLevelEnv);
+
+	if (env.images !== undefined) {
+		validateNamedSimpleBinding(envName ?? "")(
+			diagnostics,
+			"images",
+			env.images,
+			topLevelEnv
+		);
+	}
+
+	if (env.browser !== undefined) {
+		validateNamedSimpleBinding(envName ?? "")(
+			diagnostics,
+			"browser",
+			env.browser,
+			topLevelEnv
+		);
+	}
+
+	if (env.ai !== undefined) {
+		validateAIBinding(envName ?? "")(diagnostics, "ai", env.ai, topLevelEnv);
+	}
+
+	validateCloudchamberConfig(
+		diagnostics,
+		"cloudchamber",
+		env.cloudchamber,
+		topLevelEnv
+	);
+	validateContainerApp(envName ?? "", env.name, configPath)(
+		diagnostics,
+		"containers",
+		env.containers,
+		topLevelEnv
+	);
+
+	warnIfDurableObjectsHaveNoMigrations(
+		diagnostics,
+		env.durable_objects ?? { bindings: [] },
+		env.migrations ?? [],
+		configPath
+	);
+
+	validateMigrations(diagnostics, "migrations", env.migrations, topLevelEnv);
+
+	validateAssetsConfig(diagnostics, "assets", env.assets, topLevelEnv);
+
+	validateDefines(envName ?? "")(
+		diagnostics,
+		"define",
+		env.define,
+		topLevelEnv
+	);
+
+	deprecated(
+		diagnostics,
+		rawEnv,
+		// @ts-expect-error Removed from the config type
+		"node_compat",
+		`The "node_compat" field is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`,
+		true,
+		"Removed",
+		"error"
+	);
+
+	validateUnsafeSettings(envName ?? "")(
+		diagnostics,
+		"unsafe",
+		env.unsafe,
+		topLevelEnv
+	);
+
+	if (env.placement?.hint && env.placement.mode !== "smart") {
+		diagnostics.errors.push(
+			`"placement.hint" cannot be set if "placement.mode" is not "smart"`
+		);
+	}
+
+	return env as Environment;
 }

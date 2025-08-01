@@ -108,4 +108,16 @@ export default defineConfig((options) => [
 		},
 		esbuildPlugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
 	},
+	{
+		clean: true,
+		keepNames: true,
+		entry: ["src/api/config/index.ts"],
+		platform: "node",
+		format: "esm",
+		dts: true,
+		outDir: "wrangler-dist/config",
+		tsconfig: "tsconfig.json",
+		metafile: true,
+		sourcemap: process.env.SOURCEMAPS !== "false",
+	},
 ]);
