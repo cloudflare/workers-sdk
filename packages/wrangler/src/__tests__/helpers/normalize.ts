@@ -13,12 +13,10 @@ export function normalizeString(input: string): string {
 			normalizeErrorMarkers(
 				replaceByte(
 					stripTrailingWhitespace(
-						normalizeSlashes(
-							normalizeCwd(
-								normalizeTempDirs(
-									stripTimings(
-										replaceThinSpaces(stripStartupProfileHash(input))
-									)
+						stripStartupProfileHash(
+							normalizeSlashes(
+								normalizeCwd(
+									normalizeTempDirs(stripTimings(replaceThinSpaces(input)))
 								)
 							)
 						)
