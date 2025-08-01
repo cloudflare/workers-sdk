@@ -5,7 +5,9 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	server: {
 		headers: {
-			"custom-header": "custom-value",
+			"custom-string": "string-value",
+			"custom-string-array": ["one", "two", "three"],
+			"custom-number": 123,
 		},
 	},
 	plugins: [react(), cloudflare({ inspectorPort: false, persistState: false })],
