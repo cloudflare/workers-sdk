@@ -10,6 +10,7 @@ import type {
 
 type Env = {
 	ENGINE: DurableObjectNamespace<Engine>;
+	WORKFLOW_NAME: string;
 };
 
 // this.env.WORKFLOW is WorkflowBinding
@@ -18,7 +19,6 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		id = crypto.randomUUID(),
 		params = {},
 	}: WorkflowInstanceCreateOptions = {}): Promise<WorkflowInstance> {
-		console.log("I WAS HERE");
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 
@@ -78,6 +78,9 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		}
 
 		return await Promise.all(batch.map((val) => this.create(val)));
+	}
+	public async getWorkflowName(): Promise<string> {
+		return this.env.WORKFLOW_NAME;
 	}
 }
 
