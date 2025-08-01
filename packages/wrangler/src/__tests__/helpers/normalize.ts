@@ -28,7 +28,7 @@ export function normalizeString(input: string): string {
 }
 
 function stripStartupProfileHash(str: string): string {
-	return str.replace(/start-up-profile-[^/]+/, "startup-profile-<HASH>");
+	return str.replace(/start-up-profile-[^/]+/g, "startup-profile-<HASH>");
 }
 
 function normalizeTables(str: string): string {
