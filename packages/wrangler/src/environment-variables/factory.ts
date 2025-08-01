@@ -1,5 +1,57 @@
 import { UserError } from "../errors";
 
+/**
+ * Environment variables supported by Wrangler for configuration and authentication.
+ *
+ * ## Authentication & API Configuration
+ *
+ * - `CLOUDFLARE_ACCOUNT_ID` - Overrides the account ID for API requests. Can also be set in wrangler.toml.
+ * - `CLOUDFLARE_API_TOKEN` - API token for authentication. Preferred over API key + email.
+ * - `CLOUDFLARE_API_KEY` - Legacy API key for authentication. Requires CLOUDFLARE_EMAIL.
+ * - `CLOUDFLARE_EMAIL` - Email address for API key authentication.
+ * - `CLOUDFLARE_API_BASE_URL` - Custom API base URL. Defaults to https://api.cloudflare.com/client/v4
+ * - `CLOUDFLARE_COMPLIANCE_REGION` - Set to "fedramp_high" for FedRAMP High compliance region.
+ *
+ * ## Development & Local Testing
+ *
+ * - `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_*` - Local database connection strings for Hyperdrive development.
+ * - `NO_HYPERDRIVE_WARNING` - Suppress Hyperdrive-related warnings during development.
+ * - `WRANGLER_HTTPS_KEY_PATH` - Path to HTTPS private key for local development server.
+ * - `WRANGLER_HTTPS_CERT_PATH` - Path to HTTPS certificate for local development server.
+ * - `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV` - Load development variables from .env files (default: true).
+ * - `CLOUDFLARE_INCLUDE_PROCESS_ENV` - Include process.env in development variables (default: false).
+ *
+ * ## Logging & Output
+ *
+ * - `WRANGLER_LOG` - Set log level: "debug", "info", "log", "warn", "error".
+ * - `WRANGLER_LOG_PATH` - Directory for debug log files.
+ * - `WRANGLER_LOG_SANITIZE` - Sanitize sensitive data in debug logs (default: true).
+ * - `WRANGLER_OUTPUT_FILE_DIRECTORY` - Directory for ND-JSON output files.
+ * - `WRANGLER_OUTPUT_FILE_PATH` - Specific path for ND-JSON output file.
+ *
+ * ## Build & Deployment Configuration
+ *
+ * - `WRANGLER_BUILD_CONDITIONS` - Comma-separated list of build conditions for esbuild.
+ * - `WRANGLER_BUILD_PLATFORM` - Build platform for esbuild (e.g., "node", "browser").
+ * - `WRANGLER_REGISTRY_PATH` - Path to file-based dev registry folder.
+ * - `WRANGLER_D1_EXTRA_LOCATION_CHOICES` - Additional D1 location choices (internal use).
+ * - `WRANGLER_DOCKER_BIN` - Path to docker binary (default: "docker").
+ *
+ * ## Advanced Configuration
+ *
+ * - `WRANGLER_API_ENVIRONMENT` - Set to "staging" to use staging APIs instead of production.
+ * - `WRANGLER_AUTH_DOMAIN` - Custom auth domain (usually auto-configured).
+ * - `WRANGLER_AUTH_URL` - Custom auth URL (usually auto-configured).
+ * - `WRANGLER_CLIENT_ID` - Custom OAuth client ID (usually auto-configured).
+ * - `WRANGLER_TOKEN_URL` - Custom token URL (usually auto-configured).
+ * - `WRANGLER_REVOKE_URL` - Custom token revocation URL (usually auto-configured).
+ * - `WRANGLER_CF_AUTHORIZATION_TOKEN` - Direct authorization token for API requests.
+ * - `WRANGLER_C3_COMMAND` - Override command used by `wrangler init` (default: "create cloudflare@^2.5.0").
+ * - `WRANGLER_SEND_METRICS` - Enable/disable telemetry data collection.
+ *
+ * Note: CI-specific variables (WRANGLER_CI_*, WORKERS_CI_BRANCH) are for internal use and not documented here.
+ * Docker-related variables (WRANGLER_DOCKER_HOST, DOCKER_HOST) are also available but handled separately.
+ */
 type VariableNames =
 	| "CLOUDFLARE_ACCOUNT_ID"
 	| "CLOUDFLARE_API_BASE_URL"
