@@ -1731,5 +1731,3 @@ export async function main(argv: string[]): Promise<void> {
 		}
 	}
 }
-
-export { validateMacOSVersion } from "./utils/validate-macos-version";
