@@ -43,6 +43,7 @@ describe("validateMacOSVersion", () => {
 
 	it("should throw UserError on macOS 12.7.6", () => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
+		vi.stubEnv("CI", "");
 		mockOs.release.mockReturnValue("21.6.0");
 
 		expect(() => validateMacOSVersion()).toThrow(UserError);
@@ -54,6 +55,7 @@ describe("validateMacOSVersion", () => {
 
 	it("should throw UserError on macOS 13.4.0", () => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
+		vi.stubEnv("CI", "");
 		mockOs.release.mockReturnValue("22.4.0");
 
 		expect(() => validateMacOSVersion()).toThrow(UserError);
