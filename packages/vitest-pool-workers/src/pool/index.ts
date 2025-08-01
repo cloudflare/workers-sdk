@@ -813,7 +813,7 @@ async function runTests(
 	);
 	if (configPlugin !== undefined) {
 		const api = configPlugin.api as WorkersConfigPluginAPI;
-		api.setMain(project.options.main);
+		api.setMain(maybeGetResolvedMainPath(project));
 	}
 
 	// We reset storage at the end of tests when the user is presumably looking at
