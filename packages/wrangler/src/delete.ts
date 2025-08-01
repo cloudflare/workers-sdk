@@ -32,6 +32,7 @@ export type ServiceReferenceResponse = {
 	services?: {
 		incoming: ServiceReference[];
 		outgoing: ServiceReference[];
+		pages_function?: boolean;
 	};
 	durable_objects?: DurableObjectServiceReference[];
 	dispatch_outbounds?: DispatchOutboundsServiceReference[];
@@ -200,6 +201,10 @@ function isUsedAsServiceBinding(references: ServiceReferenceResponse) {
 	return (references.services?.incoming.length || 0) > 0;
 }
 
+function isUsedByPagesFunction(references: ServiceReferenceResponse) {
+	return references.services?.pages_function === true;
+}
+
 function isUsedAsDurableObjectNamespace(
 	references: ServiceReferenceResponse,
 	scriptName: string
@@ -233,6 +238,7 @@ async function checkAndConfirmForceDeleteIfNecessary(
 	);
 	const isDependentService =
 		isUsedAsServiceBinding(references) ||
+		isUsedByPagesFunction(references) ||
 		isUsedAsDurableObjectNamespace(references, scriptName) ||
 		isUsedAsDispatchOutbound(references) ||
 		isUsedAsTailConsumer(tailProducers);
@@ -245,6 +251,11 @@ async function checkAndConfirmForceDeleteIfNecessary(
 		const dependentScript = renderScriptName(serviceBindingReference);
 		dependentMessages.push(
 			`- Worker ${dependentScript} uses this Worker as a Service Binding`
+		);
+	}
+	if (isUsedByPagesFunction(references)) {
+		dependentMessages.push(
+			`- A Pages project has a Service Binding to this Worker`
 		);
 	}
 	for (const implementedDOBindingReference of references.durable_objects ||
