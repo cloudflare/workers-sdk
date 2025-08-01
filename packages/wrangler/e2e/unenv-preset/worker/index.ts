@@ -48,7 +48,7 @@ function generateTestListResponse(testName: string): Response {
 	return new Response(
 		`<h1>${testName ? `${testName} not found!` : `Pick a test to run`} </h1>
         <ul>
-        ${Object.keys(TESTS)
+        ${Object.keys(WorkerdTests)
 					.map((name) => `<li><a href="/${name}">${name}</a></li>`)
 					.join("")}
         </ul>`,
