@@ -199,17 +199,27 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					);
 				}
 			},
-			resolveId(source, _, options) {
-				const workerConfig = getWorkerConfig(this.environment.name);
+			resolveId: {
+				order: "pre",
+				handler(source, importer, options) {
+					const workerConfig = getWorkerConfig(this.environment.name);
 
-				if (source === workerConfig?.main) {
-					const root = path.join(
-						path.dirname(workerConfig.configPath!),
-						"index.html"
-					);
+					if (
+						source === workerConfig?.main &&
+						(importer ===
+							path.join(this.environment.config.root, "index.html") ||
+							options.isEntry)
+					) {
+						// We use a mock `index.html` file in the same directory as the Worker config as the importer
+						// The `main` value is then resolved relative to this
+						const configRelativeImporter = path.join(
+							path.dirname(workerConfig.userConfigPath),
+							"index.html"
+						);
 
-					return this.resolve(source, root, options);
-				}
+						return this.resolve(source, configRelativeImporter, options);
+					}
+				},
 			},
 			async transform(code, id) {
 				const workerConfig = getWorkerConfig(this.environment.name);

@@ -125,6 +125,8 @@ function readWorkerConfig(
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
 		unstable_readConfig(
 			{ config: configPath, env },
+			// We preserve the original `main` value so that Vite can resolve it
+			// This enables users to provide virtual modules or package imports in `main`, as well as relative and absolute paths
 			{ experimental: { preserveOriginalMain: true } }
 		);
 	const raw = structuredClone(config) as RawWorkerConfig;
@@ -291,6 +293,9 @@ export function getWorkerConfig(
 
 	opts?.visitedConfigPaths?.add(configPath);
 
+	// We pass the config path to `unstable_readConfig` so this will always be defined
+	assert(config.userConfigPath, `'userConfigPath' is undefined`);
+
 	if (!config.name) {
 		throw new Error(missingFieldErrorMessage(`'name'`, configPath, env));
 	}
@@ -308,6 +313,7 @@ export function getWorkerConfig(
 	}
 
 	const requiredFields = {
+		userConfigPath: config.userConfigPath,
 		topLevelName: config.topLevelName,
 		name: config.name,
 		compatibility_date: config.compatibility_date,
