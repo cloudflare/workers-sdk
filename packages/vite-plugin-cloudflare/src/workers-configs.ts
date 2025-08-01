@@ -330,12 +330,12 @@ export function getWorkerConfig(
 	const mainStat = fs.statSync(resolvedMainPath, { throwIfNoEntry: false });
 	if (!mainStat) {
 		throw new Error(
-			`The provided Wrangler config main field (${config.main}) doesn't point to an existing file`
+			`The provided Wrangler config main field (${resolvedMainPath}) doesn't point to an existing file`
 		);
 	}
 	if (mainStat.isDirectory()) {
 		throw new Error(
-			`The provided Wrangler config main field (${config.main}) points to a directory, it needs to point to a file instead`
+			`The provided Wrangler config main field (${resolvedMainPath}) points to a directory, it needs to point to a file instead`
 		);
 	}
 
