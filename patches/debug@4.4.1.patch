@@ -17,13 +17,13 @@ index afc2f8b615b2229c7b3b818c5f4b6f90dcc99f9a..a92870c2e9bda8dfe042ec48a0ed2669
    },
 diff --git a/src/workerd.js b/src/workerd.js
 new file mode 100644
-index 0000000000000000000000000000000000000000..d393a555266e528b23ba4e5d815ba76336ad3bf8
+index 0000000000000000000000000000000000000000..ccc6e14bace87cc7bfccdf957c25f89a9e2df8ca
 --- /dev/null
 +++ b/src/workerd.js
 @@ -0,0 +1,17 @@
-+const { env } = require("cloudflare:workers");
-+const humanize = require("ms");
-+const setup = require("./common");
++import { env } from "cloudflare:workers";
++import humanize from "ms";
++import setup from "./common";
 +
 +const createDebug = setup({
 +	log: console.debug.bind(console),
@@ -37,4 +37,4 @@ index 0000000000000000000000000000000000000000..d393a555266e528b23ba4e5d815ba763
 +    }
 +});
 +
-+module.exports = createDebug;
++export default createDebug;

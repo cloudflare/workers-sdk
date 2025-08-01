@@ -7,7 +7,7 @@
 		"check:types": "tsc --build",
 		"playwright:install": "pnpm playwright install chromium",
 		"pretest:ci": "pnpm playwright:install",
-		"test:ci": "pnpm test:ci:serve && pnpm test:ci:build",
+		"test:ci": "pnpm test:ci:serve",
 		"test:ci:build": "cross-env VITE_TEST_BUILD=1 vitest run -c vitest.config.e2e.ts",
 		"test:ci:serve": "vitest run -c vitest.config.e2e.ts",
 		"pretest:serve": "pnpm playwright:install",

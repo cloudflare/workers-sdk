@@ -8,6 +8,7 @@ export default defineBuildConfig({
 		resolve: {
 			exportConditions: ["workerd"],
 		},
+		emitCJS: true,
 	},
 	externals: [/^cloudflare:/],
 	entries: [
