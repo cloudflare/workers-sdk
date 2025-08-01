@@ -5,6 +5,7 @@ import { logger } from "../logger";
 import { ParseError } from "../parse";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 vi.mock("../check/commands", () => ({ analyseBundle: vi.fn() }));
@@ -90,13 +91,13 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 	it("includes profile information when bundle analysis succeeds", async () => {
 		mockAnalyseBundle.mockResolvedValue({ nodes: [], samples: [] });
 
-		const message = normalizeMessage(
-			await helpIfErrorIsSizeOrScriptStartup(
+		const message = normalizeString(
+			(await helpIfErrorIsSizeOrScriptStartup(
 				makeStartupError("Exceeded startup limits."),
 				{}, // no dependencies
 				new FormData(), // mock worker bundle
 				process.cwd() // mock project root (the tmp dir)
-			)
+			)) ?? ""
 		);
 
 		expect(message).toMatchInlineSnapshot(`
@@ -135,12 +136,4 @@ function makeStartupError(message: string): ParseError {
 	});
 	Object.assign(error, { code: 10021 });
 	return error;
-}
-
-function normalizeMessage(message: string | null): string {
-	return (
-		message
-			?.replace(/startup-profile-[^/\\]+/, "startup-profile-<HASH>")
-			.replace(/\\/g, "/") ?? ""
-	);
 }
