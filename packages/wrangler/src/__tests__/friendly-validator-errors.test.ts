@@ -91,16 +91,14 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 	it("includes profile information when bundle analysis succeeds", async () => {
 		mockAnalyseBundle.mockResolvedValue({ nodes: [], samples: [] });
 
-		const message = normalizeString(
-			(await helpIfErrorIsSizeOrScriptStartup(
-				makeStartupError("Exceeded startup limits."),
-				{}, // no dependencies
-				new FormData(), // mock worker bundle
-				process.cwd() // mock project root (the tmp dir)
-			)) ?? ""
+		const message = await helpIfErrorIsSizeOrScriptStartup(
+			makeStartupError("Exceeded startup limits."),
+			{}, // no dependencies
+			new FormData(), // mock worker bundle
+			process.cwd() // mock project root (the tmp dir)
 		);
 
-		expect(message).toMatchInlineSnapshot(`
+		expect(normalizeString(message ?? "")).toMatchInlineSnapshot(`
 			"Your Worker failed validation because it exceeded startup limits.
 
 			Deploy failed

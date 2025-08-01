@@ -11265,7 +11265,7 @@ export default{
 				  Refer to [4mhttps://developers.cloudflare.com/workers/platform/limits/#worker-startup-time[0m for more
 				  details
 				  A CPU Profile of your Worker's startup phase has been written to
-				  .wrangler/tmp/startup-profile-SREcfF/worker.cpuprofile - load it into the Chrome DevTools profiler
+				  .wrangler/tmp/startup-profile-<HASH>/worker.cpuprofile - load it into the Chrome DevTools profiler
 				  (or directly in VSCode) to view a flamegraph.
 
 				",
