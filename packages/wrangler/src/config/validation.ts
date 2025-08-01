@@ -32,6 +32,7 @@ import {
 	validateOptionalTypedArray,
 	validateRequiredProperty,
 	validateTypedArray,
+	validateUniqueNameProperty,
 } from "./validation-helpers";
 import { configFileName, formatConfigSnippet } from ".";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
@@ -1207,7 +1208,10 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"workflows",
-			validateBindingArray(envName, validateWorkflowBinding),
+			all(
+				validateBindingArray(envName, validateWorkflowBinding),
+				validateUniqueNameProperty
+			),
 			[]
 		),
 		migrations: inheritable(
