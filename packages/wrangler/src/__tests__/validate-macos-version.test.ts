@@ -53,11 +53,11 @@ describe("validateMacOSVersion", () => {
 
 	it("should throw UserError on macOS 13.4.0", () => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-		mockOs.release.mockReturnValue("22.5.0");
+		mockOs.release.mockReturnValue("22.4.0");
 
 		expect(() => validateMacOSVersion()).toThrow(UserError);
 		expect(() => validateMacOSVersion()).toThrow(/Unsupported macOS version/);
-		expect(() => validateMacOSVersion()).toThrow(/13\.5\.0/);
+		expect(() => validateMacOSVersion()).toThrow(/13\.4\.0/);
 	});
 
 	it("should handle invalid Darwin version format gracefully", () => {
