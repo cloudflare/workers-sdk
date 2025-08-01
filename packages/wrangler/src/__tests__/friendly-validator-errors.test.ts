@@ -139,6 +139,8 @@ function makeStartupError(message: string): ParseError {
 
 function normalizeMessage(message: string | null): string {
 	return (
-		message?.replace(/startup-profile-[^/]+/, "startup-profile-<HASH>") ?? ""
+		message
+			?.replace(/startup-profile-[^/\\]+/, "startup-profile-<HASH>")
+			.replace(/\\/g, "/") ?? ""
 	);
 }
