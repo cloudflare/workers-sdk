@@ -53,7 +53,7 @@ describe("config-changes", () => {
 			mockFileChange(path.join(__dirname, "../wrangler.json"), (content) =>
 				JSON.stringify({
 					...JSON.parse(content),
-					main: "./src/non-existing-file.ts",
+					compatibility_date: undefined,
 					vars: {
 						MY_VAR: "two",
 					},
@@ -62,7 +62,7 @@ describe("config-changes", () => {
 
 			await vi.waitFor(async () => {
 				expect(serverLogs.errors.join()).toMatch(
-					/.*The provided Wrangler config main field .+? doesn't point to an existing file.*/
+					/.*No 'compatibility_date' field provided*/
 				);
 				expect(await getTextResponse()).toContain(
 					'The value of MY_VAR is "one"'

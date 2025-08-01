@@ -123,7 +123,10 @@ function readWorkerConfig(
 		notRelevant: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
-		unstable_readConfig({ config: configPath, env });
+		unstable_readConfig(
+			{ config: configPath, env },
+			{ experimental: { preserveOriginalMain: true } }
+		);
 	const raw = structuredClone(config) as RawWorkerConfig;
 
 	nullableNonApplicable.forEach((prop) => {
@@ -300,7 +303,7 @@ export function getWorkerConfig(
 
 	if (!config.compatibility_date) {
 		throw new Error(
-			missingFieldErrorMessage(`'compatibility_date`, configPath, env)
+			missingFieldErrorMessage(`'compatibility_date'`, configPath, env)
 		);
 	}
 
@@ -324,18 +327,6 @@ export function getWorkerConfig(
 
 	if (!config.main) {
 		throw new Error(missingFieldErrorMessage(`'main'`, configPath, env));
-	}
-
-	const mainStat = fs.statSync(config.main, { throwIfNoEntry: false });
-	if (!mainStat) {
-		throw new Error(
-			`The provided Wrangler config main field (${config.main}) doesn't point to an existing file`
-		);
-	}
-	if (mainStat.isDirectory()) {
-		throw new Error(
-			`The provided Wrangler config main field (${config.main}) points to a directory, it needs to point to a file instead`
-		);
 	}
 
 	return {

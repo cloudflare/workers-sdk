@@ -199,6 +199,18 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					);
 				}
 			},
+			resolveId(source, _, options) {
+				const workerConfig = getWorkerConfig(this.environment.name);
+
+				if (source === workerConfig?.main) {
+					const root = path.join(
+						path.dirname(workerConfig.configPath!),
+						"index.html"
+					);
+
+					return this.resolve(source, root, options);
+				}
+			},
 			async transform(code, id) {
 				const workerConfig = getWorkerConfig(this.environment.name);
 
