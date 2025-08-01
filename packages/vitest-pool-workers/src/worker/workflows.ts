@@ -1,5 +1,5 @@
 import { waitUntil } from "async-wait-until";
-import { env, RpcTarget } from "cloudflare:workers";
+import { env } from "cloudflare:workers";
 
 // import { instanceStatusName } from "@cloudflare/workflows-shared";
 
@@ -59,43 +59,27 @@ export async function introspectWorkflowInstance(
 
 	console.log(`Introspecting workflow instance: ${instanceId}`);
 
-	console.log("WORKFLOW", workflow);
-
 	await workflow.create({ id: instanceId }); // why do I need to create? Worked before without it
-	const workflowInstance = await workflow.get(instanceId);
-	console.log(`Workflow instance:`, workflowInstance);
-	console.log("Instance status:", await workflowInstance.status());
 
-	// env.USER_ENGINE_MY_WORKFLOW is DurableObjectNamespace {}
-	// USER_ENGINE_MY_WORKFLOW is the Engine binding hardcoded from the example I'm testing
-	// TODO: how to get it dinamically
-	console.log("THIS IS ENV", env);
-	const engineStubId = env.USER_ENGINE_MY_WORKFLOW.idFromName(instanceId);
-	const engineStub = env.USER_ENGINE_MY_WORKFLOW.get(engineStubId);
-	console.log("Engine status", await engineStub.getStatus());
+	const engineBindingName = `USER_ENGINE_${(await workflow.getWorkflowName()).toUpperCase()}`;
+	const engineStubId = env[engineBindingName].idFromName(instanceId);
+	const engineStub = env[engineBindingName].get(engineStubId);
 
 	const instanceModifier = await engineStub.getInstanceModifier();
 
-	return new WorkflowInstanceIntrospectorHandle(
-		engineStub,
-		instanceId,
-		instanceModifier
-	);
+	return new WorkflowInstanceIntrospectorHandle(engineStub, instanceModifier);
 }
 
 class WorkflowInstanceIntrospectorHandle
 	implements WorkflowInstanceIntrospector
 {
 	engineStub: DurableObjectStub;
-	instanceId: string;
 	instanceModifier: InstanceModifier;
 	constructor(
 		engineStub: DurableObjectStub,
-		instanceId: string,
 		instanceModifier: InstanceModifier
 	) {
 		this.engineStub = engineStub;
-		this.instanceId = instanceId;
 		this.instanceModifier = instanceModifier;
 	}
 
@@ -108,9 +92,11 @@ class WorkflowInstanceIntrospectorHandle
 		return this;
 	}
 
-	async waitForStepResult(step: StepSelector): Promise<any> {
+	async waitForStepResult(step: StepSelector): Promise<unknown> {
+		await waitUntil(async () => {});
+
 		console.log("Should await the step result of step", step.name);
-		return "I waited for a step result";
+		return { result: "result" };
 	}
 
 	async waitUntil(opts: { status: InstanceStatus }): Promise<void> {

@@ -124,11 +124,14 @@ export const WORKFLOWS_PLUGIN: Plugin<
 									entrypoint: workflow.className,
 								},
 							},
+							{
+								name: "WORKFLOW_NAME",
+								json: JSON.stringify(workflow.name),
+							},
 						],
 					},
 				};
 
-				console.log(`OLAAAAA ${JSON.stringify(workflowsBinding.worker?.bindings, undefined, 2)}`)
 				return workflowsBinding;
 			}
 		);

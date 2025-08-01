@@ -536,12 +536,16 @@ Workflows defined in project: ${workflowClassNames.join(", ")}`);
 	// Only adding 1 engine per workflow, but it should have more engines depending on the number of creates, right?
 	console.log("WORKFLOWS?", runnerWorker.workflows);
 	for (const [key, value] of Object.entries(runnerWorker.workflows ?? {})) {
-		runnerWorker.durableObjects[`${WORKFLOW_ENGINE_BINDING}${key}`] = {
+		runnerWorker.durableObjects[
+			`${WORKFLOW_ENGINE_BINDING}${value.name.toUpperCase()}`
+		] = {
 			className: "Engine",
 			unsafeScriptName: `workflows:${value.name}`,
 		};
 		console.log(`\nEngine for ${key}`);
-		console.log(`Binding name: ${WORKFLOW_ENGINE_BINDING}${key}`);
+		console.log(
+			`Binding name: ${WORKFLOW_ENGINE_BINDING}${value.name.toUpperCase()}`
+		);
 		console.log(`Class name: Engine`);
 		console.log(`Unsafe script name: workflows:${value.name}\n`);
 	}
