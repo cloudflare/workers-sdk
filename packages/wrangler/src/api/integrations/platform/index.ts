@@ -144,7 +144,10 @@ export async function getPlatformProxy<
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
 	if (experimentalRemoteBindings && config.configPath) {
 		remoteProxySession = (
-			(await maybeStartOrUpdateRemoteProxySession(config.configPath)) ?? {}
+			(await maybeStartOrUpdateRemoteProxySession({
+				path: config.configPath,
+				environment: env,
+			})) ?? {}
 		).session;
 	}
 

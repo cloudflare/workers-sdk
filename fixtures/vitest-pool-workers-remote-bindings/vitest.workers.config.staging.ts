@@ -12,11 +12,11 @@ class FilteredPushArray<T> extends Array<T> {
 
 export default defineWorkersConfig({
 	test: {
-		include: ["test/**/*.spec.ts"],
+		include: ["test-staging/**/*.spec.ts"],
 		poolOptions: {
 			workers: {
 				experimental_remoteBindings: true,
-				wrangler: { configPath: "./wrangler.json" },
+				wrangler: { configPath: "./wrangler.json", environment: "staging" },
 			},
 		},
 
