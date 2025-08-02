@@ -702,10 +702,16 @@ export async function startDev(args: StartDevOptions) {
 				accountId = await requireAuth(config);
 				if (hotkeysDisplayed) {
 					assert(devEnv !== undefined);
-					unregisterHotKeys = registerDevHotKeys(
-						Array.isArray(devEnv) ? devEnv[0] : devEnv,
-						args
-					);
+					if (
+						isInteractive() &&
+						!TURBOREPO.isTurborepo() &&
+						args.showInteractiveDevSession !== false
+					) {
+						unregisterHotKeys = registerDevHotKeys(
+							Array.isArray(devEnv) ? devEnv[0] : devEnv,
+							args
+						);
+					}
 				}
 			}
 			return {
@@ -719,10 +725,13 @@ export async function startDev(args: StartDevOptions) {
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
+			if (
+				isInteractive() &&
+				!TURBOREPO.isTurborepo() &&
+				args.showInteractiveDevSession !== false
+			) {
 				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
 			}
-
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
 				await setupDevEnv(primaryDevEnv, args.config[0], authHook, {
