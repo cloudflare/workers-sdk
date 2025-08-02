@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync } from "fs";
 import { resolve } from "path";
 import TOML from "@iarna/toml";
+import { parse } from "comment-json";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile, writeJSON } from "helpers/files";
-import { parse as jsoncParse } from "jsonc-parser";
 import type { JsonMap } from "@iarna/toml";
 import type { C3Context } from "types";
 
@@ -37,9 +37,10 @@ async function ensureCompatDateExists(
 export const updateWranglerConfig = async (ctx: C3Context) => {
 	if (wranglerJsonExists(ctx)) {
 		const wranglerJsonStr = readWranglerJson(ctx);
-		const parsed = jsoncParse(wranglerJsonStr, undefined, {
-			allowTrailingComma: true,
-		});
+		const parsed = parse(wranglerJsonStr, undefined, false) as Record<
+			string,
+			unknown
+		>;
 
 		const modified = await ensureCompatDateExists(
 			ensureNameExists(parsed, ctx.project.name),
