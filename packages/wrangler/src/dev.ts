@@ -1135,8 +1135,6 @@ export function getBindings(
 		assets: configParam.assets?.binding
 			? { binding: configParam.assets?.binding }
 			: undefined,
-		secrets_store_secrets: undefined,
-		unsafe_hello_world: undefined,
 	};
 
 	return bindings;

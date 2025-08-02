@@ -765,7 +765,15 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 type PickTemplate<T, K extends string> = {
 	[P in keyof T & K]: T[P];
 };
-type PersistOptions = PickTemplate<MiniflareOptions, `${string}Persist`>;
+type PersistOptions = Pick<
+	MiniflareOptions,
+	| "kvPersist"
+	| "durableObjectsPersist"
+	| "r2Persist"
+	| "d1Persist"
+	| "cachePersist"
+	| "workflowsPersist"
+>;
 export function buildPersistOptions(
 	localPersistencePath: ConfigBundle["localPersistencePath"]
 ): PersistOptions | undefined {
