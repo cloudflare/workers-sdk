@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
+import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
 import {
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
