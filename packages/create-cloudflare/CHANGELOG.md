@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.50.8
+
+### Patch Changes
+
+- [#10189](https://github.com/cloudflare/workers-sdk/pull/10189) [`69e2114`](https://github.com/cloudflare/workers-sdk/commit/69e2114880afe259b92de116779a80248f605d6a) Thanks [@fjararibet](https://github.com/fjararibet)! - add .gitignore to hello-world-assets-only template
+
 ## 2.50.7
 
 ### Patch Changes
