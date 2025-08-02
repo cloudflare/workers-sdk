@@ -14,11 +14,12 @@ import type {
 } from "comment-json";
 import type { C3Context } from "types";
 
-function ensureNameExists(
+function ensurePropertyExists(
 	config: Record<string, unknown>,
-	projectName: string,
+	property: string,
+	value: unknown,
 ): void {
-	config["name"] = projectName;
+	config[property] = value;
 }
 
 async function ensureCompatDateExists(
@@ -73,16 +74,15 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		const wranglerJsonStr = readWranglerJson(ctx);
 		let parsed = parse(wranglerJsonStr, undefined, false) as CommentObject;
 
-		ensureNameExists(parsed, ctx.project.name);
-		await ensureCompatDateExists(parsed);
-		parsed["observability"] ??= { enabled: true };
-
+		// Put the schema at the top of the file
 		parsed = assign(
-			{
-				$schema: "node_modules/wrangler/config-schema.json",
-			},
+			{ $schema: "node_modules/wrangler/config-schema.json" },
 			parsed,
-		);
+		) as unknown as CommentObject;
+
+		ensurePropertyExists(parsed, "name", ctx.project.name);
+		await ensureCompatDateExists(parsed);
+		ensurePropertyExists(parsed, "observability", { enabled: true });
 
 		addComment(
 			parsed,
@@ -121,9 +121,9 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 	} else if (wranglerTomlExists(ctx)) {
 		const wranglerTomlStr = readWranglerToml(ctx);
 		const parsed = TOML.parse(wranglerTomlStr);
-		ensureNameExists(parsed, ctx.project.name);
+		ensurePropertyExists(parsed, "name", ctx.project.name);
 		await ensureCompatDateExists(parsed);
-		parsed["observability"] ??= { enabled: true };
+		ensurePropertyExists(parsed, "observability", { enabled: true });
 
 		const comment = `#:schema node_modules/wrangler/config-schema.json\n# For more details on how to configure Wrangler, refer to:\n# https://developers.cloudflare.com/workers/wrangler/configuration/\n`;
 
