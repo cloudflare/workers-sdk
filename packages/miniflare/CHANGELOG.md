@@ -1,5 +1,13 @@
 # miniflare
 
+## 3.20250718.1
+
+### Minor Changes
+
+- [#10015](https://github.com/cloudflare/workers-sdk/pull/10015) [`b5d9bb0`](https://github.com/cloudflare/workers-sdk/commit/b5d9bb026ebfb4c732c3c4999aa5ac0757f1a1b2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add `structuredWorkerdLogs` option
+
+  add a new top-level option named `structuredWorkerdLogs` that makes workerd print to stdout structured logs (stringified jsons of the following shape: `{ timestamp: number, level: string, message: string }`) instead of printing logs to stdout and stderr
+
 ## 3.20250718.0
 
 ### Patch Changes
