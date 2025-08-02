@@ -14,6 +14,19 @@
 		"DOCKER_HOST",
 		"WRANGLER_DOCKER_HOST"
 	],
+	"globalPassThroughEnv": [
+		"CI",
+		"VSCODE_INSPECTOR_OPTIONS",
+		"WRANGLER_LOG_PATH",
+		"TEST_REPORT_PATH",
+		"CLOUDFLARE_CONTAINER_REGISTRY",
+		"DOCKER_HOST",
+		"WRANGLER_DOCKER_HOST",
+		"TURBO_HASH",
+		"TURBO_TASK",
+		"TURBO_INVOCATION_DIR",
+		"npm_config_user_agent"
+	],
 	"tasks": {
 		"dev": {
 			"persistent": true,
