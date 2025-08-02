@@ -315,5 +315,4 @@ describe("update wrangler config", () => {
 			"
 		`);
 	});
-
 });
