@@ -209,6 +209,7 @@ export interface ConfigBundle {
 	containerDOClassNames: Set<string> | undefined;
 	containerBuildId: string | undefined;
 	containerEngine: ContainerEngine | undefined;
+	enableContainers: boolean;
 }
 
 export class WranglerLog extends Log {
@@ -527,6 +528,7 @@ type MiniflareBindingsConfig = Pick<
 	| "complianceRegion"
 	| "containerDOClassNames"
 	| "containerBuildId"
+	| "enableContainers"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
@@ -1044,11 +1046,14 @@ export function buildMiniflareBindingOptions(
 					{
 						className,
 						useSQLite: classNameToUseSQLite.get(className),
-						container: getImageNameFromDOClassName({
-							doClassName: className,
-							containerDOClassNames: config.containerDOClassNames,
-							containerBuildId: config.containerBuildId,
-						}),
+						container:
+							config.containerDOClassNames?.size && config.enableContainers
+								? getImageNameFromDOClassName({
+										doClassName: className,
+										containerDOClassNames: config.containerDOClassNames,
+										containerBuildId: config.containerBuildId,
+									})
+								: undefined,
 					},
 				];
 			}),
@@ -1278,12 +1283,9 @@ export async function buildMiniflareOptions(
  */
 export function getImageNameFromDOClassName(options: {
 	doClassName: string;
-	containerDOClassNames?: Set<string>;
-	containerBuildId?: string;
+	containerDOClassNames: Set<string>;
+	containerBuildId: string | undefined;
 }): DOContainerOptions | undefined {
-	if (!options.containerDOClassNames || !options.containerDOClassNames.size) {
-		return undefined;
-	}
 	assert(
 		options.containerBuildId,
 		"Build ID should be set if containers are defined and enabled"
