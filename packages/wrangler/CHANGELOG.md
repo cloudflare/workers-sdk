@@ -1,5 +1,48 @@
 # wrangler
 
+## 3.114.13
+
+### Patch Changes
+
+- [#10015](https://github.com/cloudflare/workers-sdk/pull/10015) [`b5d9bb0`](https://github.com/cloudflare/workers-sdk/commit/b5d9bb026ebfb4c732c3c4999aa5ac0757f1a1b2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix `wrangler dev` logs being logged on the incorrect level in some cases
+
+  currently the way `wrangler dev` prints logs is faulty, for example the following code
+
+  ```js
+  console.error("this is an error");
+  console.warn("this is a warning");
+  console.debug("this is a debug");
+  ```
+
+  inside a worker would cause the following logs:
+
+  ```text
+  ✘ [ERROR] this is an error
+
+  ✘ [ERROR] this is a warning
+
+  this is a debug
+  ```
+
+  (note that the warning is printed as an error and the debug log is printed even if by default it should not)
+
+  the changes here make sure that the logs are instead logged to their correct level, so for the code about the following will be logged instead:
+
+  ```text
+  ✘ [ERROR] this is an error
+
+  ▲ [WARNING] this is a warning
+  ```
+
+  (running `wrangler dev` with the `--log-level=debug` flag will also cause the debug log to be included as well)
+
+- [#10182](https://github.com/cloudflare/workers-sdk/pull/10182) [`1f686ef`](https://github.com/cloudflare/workers-sdk/commit/1f686ef3d20e2986d1c2d6d554a7fb99004b9924) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - fix: report startup errors before workerd profiling
+
+- [#10171](https://github.com/cloudflare/workers-sdk/pull/10171) [`0d73563`](https://github.com/cloudflare/workers-sdk/commit/0d73563833d47bb61582eb5569b0af74e8f4de1e) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Handle UTF BOM in config files - detect and remove UTF-8 BOMs, error on unsupported BOMs (UTF-16, UTF-32)
+
+- Updated dependencies [[`b5d9bb0`](https://github.com/cloudflare/workers-sdk/commit/b5d9bb026ebfb4c732c3c4999aa5ac0757f1a1b2)]:
+  - miniflare@3.20250718.1
+
 ## 3.114.12
 
 ### Patch Changes
