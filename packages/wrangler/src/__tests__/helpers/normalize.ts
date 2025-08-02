@@ -5,10 +5,19 @@ export function normalizeString(input: string): string {
 	return normalizeErrorMarkers(
 		replaceByte(
 			stripTrailingWhitespace(
-				normalizeSlashes(normalizeCwd(normalizeTempDirs(stripTimings(input))))
+				stripStartupProfileHash(
+					normalizeSlashes(normalizeCwd(normalizeTempDirs(stripTimings(input))))
+				)
 			)
 		)
 	);
+}
+
+/**
+ * Replace the non-deterministic hash in a startup-profile path with a placeholder.
+ */
+function stripStartupProfileHash(str: string): string {
+	return str.replace(/startup-profile-[^/]+/g, "startup-profile-<HASH>");
 }
 
 /**
