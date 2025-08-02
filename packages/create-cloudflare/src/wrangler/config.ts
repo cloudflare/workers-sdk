@@ -46,35 +46,122 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			ensureNameExists(parsed, ctx.project.name),
 		);
 
+		(modified as Record<string | symbol, unknown>)[Symbol.for("before-all")] = [{
+			type: "BlockComment",
+			value: "*\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n ",
+			inline: false
+		}];
+
+		const orderedConfig: Record<string, unknown> = {};
+		
 		if (!modified["$schema"]) {
-			(modified as Record<string | symbol, unknown>)[
-				Symbol.for("before:$schema")
-			] = [
-				{
-					type: "LineComment",
-					value: " Schema for editor tooling",
-					inline: false,
-				},
-			];
-			modified["$schema"] = "node_modules/wrangler/config-schema.json";
+			orderedConfig["$schema"] = "node_modules/wrangler/config-schema.json";
+		} else {
+			orderedConfig["$schema"] = modified["$schema"];
 		}
-
+		
+		orderedConfig["name"] = modified["name"];
+		orderedConfig["main"] = modified["main"];
+		orderedConfig["compatibility_date"] = modified["compatibility_date"];
+		
 		if (!modified["observability"]) {
-			(modified as Record<string | symbol, unknown>)[
-				Symbol.for("before:observability")
-			] = [
-				{
-					type: "LineComment",
-					value: " Enable observability features",
-					inline: false,
-				},
-			];
-			modified["observability"] = { enabled: true };
+			orderedConfig["observability"] = { enabled: true };
+		} else {
+			orderedConfig["observability"] = modified["observability"];
 		}
 
-		const stringified = stringify(modified, null, "\t");
+		for (const [key, value] of Object.entries(modified)) {
+			if (!["$schema", "name", "main", "compatibility_date", "observability"].includes(key)) {
+				orderedConfig[key] = value;
+			}
+		}
 
-		writeWranglerJson(ctx, stringified);
+		for (const symbol of Object.getOwnPropertySymbols(modified)) {
+			(orderedConfig as Record<string | symbol, unknown>)[symbol] = (modified as Record<string | symbol, unknown>)[symbol];
+		}
+
+		(orderedConfig as Record<string | symbol, unknown>)[Symbol.for("after:observability")] = [
+			{
+				type: "BlockComment",
+				value: "*\n\t * Smart Placement\n\t * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement\n\t ",
+				inline: false
+			},
+			{
+				type: "LineComment",
+				value: ' "placement": { "mode": "smart" },',
+				inline: false
+			},
+			{
+				type: "BlockComment", 
+				value: "*\n\t * Bindings\n\t * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including\n\t * databases, object storage, AI inference, real-time communication and more.\n\t * https://developers.cloudflare.com/workers/runtime-apis/bindings/\n\t ",
+				inline: false
+			},
+			{
+				type: "BlockComment",
+				value: "*\n\t * Environment Variables\n\t * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables\n\t ",
+				inline: false
+			},
+			{
+				type: "LineComment",
+				value: ' "vars": { "MY_VARIABLE": "production_value" },',
+				inline: false
+			},
+			{
+				type: "BlockComment",
+				value: "*\n\t * Note: Use secrets to store sensitive data.\n\t * https://developers.cloudflare.com/workers/configuration/secrets/\n\t ",
+				inline: false
+			},
+			{
+				type: "BlockComment",
+				value: "*\n\t * Static Assets\n\t * https://developers.cloudflare.com/workers/static-assets/binding/\n\t ",
+				inline: false
+			},
+			{
+				type: "LineComment",
+				value: ' "assets": { "directory": "./public/", "binding": "ASSETS" },',
+				inline: false
+			},
+			{
+				type: "BlockComment",
+				value: "*\n\t * Service Bindings (communicate between multiple Workers)\n\t * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings\n\t ",
+				inline: false
+			},
+			{
+				type: "LineComment",
+				value: ' "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]',
+				inline: false
+			}
+		];
+
+		const stringified = stringify(orderedConfig, null, "\t");
+		
+		let fixedStringified = stringified.replace('*/{', '*/\n{');
+		
+		fixedStringified = fixedStringified.replace(
+			/(\t\/\/ "placement": \{ "mode": "smart" \},)\n(\t\/\*\*)/g,
+			'$1\n\n$2'
+		);
+		fixedStringified = fixedStringified.replace(
+			/(\t \*\/)\n(\t\/\*\*)/g,
+			'$1\n\n$2'
+		);
+		fixedStringified = fixedStringified.replace(
+			/(\t \*\/)\n(\t\/\*\*)/g,
+			'$1\n\n$2'
+		);
+		fixedStringified = fixedStringified.replace(
+			/(\t \*\/)\n(\t\/\*\*)/g,
+			'$1\n\n$2'
+		);
+		
+		fixedStringified = fixedStringified.replace(
+			/(\t\/\/ "assets": \{ "directory": "\.\/public\/", "binding": "ASSETS" \},)\n(\t\/\*\*)/g,
+			'$1\n\n$2'
+		);
+		
+		fixedStringified = fixedStringified + '\n';
+
+		writeWranglerJson(ctx, fixedStringified);
 		addVscodeConfig(ctx);
 	} else if (wranglerTomlExists(ctx)) {
 		const wranglerTomlStr = readWranglerToml(ctx);
