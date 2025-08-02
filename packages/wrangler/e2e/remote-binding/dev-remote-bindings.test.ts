@@ -41,7 +41,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
-					name: "mixed-mode-mixed-bindings-test",
+					name: "remote-bindings-mixed-bindings-test",
 					main: "local-and-remote-service-bindings.js",
 					compatibility_date: "2025-05-07",
 					services: [
@@ -70,7 +70,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
-					name: "mixed-mode-mixed-bindings-test",
+					name: "remote-bindings-mixed-bindings-test",
 					main: "simple-service-binding.js",
 					compatibility_date: "2025-05-07",
 					services: [
@@ -127,7 +127,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
-					name: "mixed-mode-mixed-bindings-test",
+					name: "remote-bindings-mixed-bindings-test",
 					main: "local-service-binding-and-remote-ai.js",
 					compatibility_date: "2025-05-07",
 					ai: {
@@ -150,11 +150,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		`);
 		});
 
-		it("doesn't show any logs from startMixedModeSession()", async () => {
+		it("doesn't show any logs from startRemoteProxySession()", async () => {
 			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
-					name: "mixed-mode-mixed-bindings-test",
+					name: "remote-bindings-mixed-bindings-test",
 					main: "ai.js",
 					compatibility_date: "2025-05-07",
 					ai: {
@@ -202,7 +202,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			it("when a remote service binding is not properly configured", async () => {
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
-						name: "mixed-mode-mixed-bindings-test",
+						name: "remote-bindings-mixed-bindings-test",
 						main: "simple-service-binding.js",
 						compatibility_date: "2025-05-07",
 						services: [
@@ -231,7 +231,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			it("when a remote KV binding is not properly configured", async () => {
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
-						name: "mixed-mode-mixed-bindings-test",
+						name: "remote-bindings-mixed-bindings-test",
 						main: "kv.js",
 						compatibility_date: "2025-05-07",
 						kv_namespaces: [
@@ -262,7 +262,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			it("handles both remote and local service bindings at the same time in all workers", async () => {
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
-						name: "mixed-mode-mixed-bindings-multi-worker-test",
+						name: "remote-bindings-mixed-bindings-multi-worker-test",
 						main: "local-and-remote-service-bindings.js",
 						compatibility_date: "2025-05-07",
 						services: [
