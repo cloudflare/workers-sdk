@@ -65,6 +65,9 @@ patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
     hash: r2d7tqjujhdts7e7zxsa3stjki
     path: patches/@cloudflare__component-listbox@1.10.6.patch
+  comment-json:
+    hash: csp23wrtctgqwsii5czznh5k3q
+    path: patches/comment-json.patch
   debug@4.4.1:
     hash: zevdllrsa2u6cp4b3ivya5dqsa
     path: patches/debug@4.4.1.patch
@@ -1523,7 +1526,7 @@ importers:
         version: 1.2.9
       comment-json:
         specifier: ^4.2.5
-        version: 4.2.5
+        version: 4.2.5(patch_hash=csp23wrtctgqwsii5czznh5k3q)
       cross-spawn:
         specifier: ^7.0.3
         version: 7.0.6
@@ -18279,7 +18282,7 @@ snapshots:
 
   commander@7.2.0: {}
 
-  comment-json@4.2.5:
+  comment-json@4.2.5(patch_hash=csp23wrtctgqwsii5czznh5k3q):
     dependencies:
       array-timsort: 1.0.3
       core-util-is: 1.0.3

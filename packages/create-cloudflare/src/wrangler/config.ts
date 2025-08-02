@@ -1,23 +1,30 @@
+import assert from "assert";
 import { existsSync, mkdirSync } from "fs";
 import { resolve } from "path";
 import TOML from "@iarna/toml";
-import { parse } from "comment-json";
+import { assign, parse, stringify } from "comment-json";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile, writeJSON } from "helpers/files";
 import type { JsonMap } from "@iarna/toml";
+import type {
+	CommentDescriptor,
+	CommentObject,
+	CommentSymbol,
+	CommentToken,
+} from "comment-json";
 import type { C3Context } from "types";
 
 function ensureNameExists(
 	config: Record<string, unknown>,
 	projectName: string,
-): Record<string, unknown> {
+): void {
 	config["name"] = projectName;
-	return config;
 }
 
 async function ensureCompatDateExists(
 	config: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
+): Promise<void> {
+	assert(config);
 	if (typeof config["compatibility_date"] === "string") {
 		// If the compat date is already a valid one, leave it since it may be there
 		// for a specific compat reason
@@ -28,8 +35,35 @@ async function ensureCompatDateExists(
 	} else {
 		config["compatibility_date"] = await getWorkerdCompatibilityDate();
 	}
-	return config;
 }
+
+function addComment(
+	config: Partial<CommentObject>,
+	descriptor: CommentDescriptor,
+	comment: string | Partial<CommentToken> | (string | Partial<CommentToken>)[],
+): void {
+	if (!Array.isArray(comment)) {
+		comment = [comment];
+	}
+
+	const commentHolder = config[Symbol.for(descriptor) as CommentSymbol] ?? [];
+
+	for (let c of comment) {
+		if (typeof c === "string") {
+			c = { value: c };
+		}
+		commentHolder.push({
+			type: "BlockComment",
+			value: "",
+			inline: false,
+			loc: { start: { line: 0, column: 0 }, end: { line: 0, column: 0 } },
+			...c,
+		});
+	}
+
+	config[Symbol.for(descriptor) as CommentSymbol] = commentHolder;
+}
+
 /**
  * Update the `wrangler.(toml|json|jsonc)` file for this project by setting the name
  * to the selected project name and adding the latest compatibility date.
@@ -37,80 +71,63 @@ async function ensureCompatDateExists(
 export const updateWranglerConfig = async (ctx: C3Context) => {
 	if (wranglerJsonExists(ctx)) {
 		const wranglerJsonStr = readWranglerJson(ctx);
-		const parsed = parse(wranglerJsonStr, undefined, false) as Record<
-			string,
-			unknown
-		>;
+		let parsed = parse(wranglerJsonStr, undefined, false) as CommentObject;
 
-		const modified = await ensureCompatDateExists(
-			ensureNameExists(parsed, ctx.project.name),
+		ensureNameExists(parsed, ctx.project.name);
+		await ensureCompatDateExists(parsed);
+		parsed["observability"] ??= { enabled: true };
+
+		parsed = assign(
+			{
+				$schema: "node_modules/wrangler/config-schema.json",
+			},
+			parsed,
 		);
 
-		let comment = `/**\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n */\n{`;
-		if (!modified["$schema"]) {
-			comment += `\n\t"$schema": "node_modules/wrangler/config-schema.json",`;
-		}
-
-		if (!modified["observability"]) {
-			modified["observability"] = { enabled: true };
-		}
-		const stringified = comment + JSON.stringify(modified, null, "\t").slice(1);
-
-		writeWranglerJson(
-			ctx,
-			stringified.slice(0, -2) +
-				`
-	/**
-	 * Smart Placement
-	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
-	 */
-	// "placement": { "mode": "smart" },
-
-	/**
-	 * Bindings
-	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
-	 * databases, object storage, AI inference, real-time communication and more.
-	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
-	 */
-
-	/**
-	 * Environment Variables
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-	 */
-	// "vars": { "MY_VARIABLE": "production_value" },
-	/**
-	 * Note: Use secrets to store sensitive data.
-	 * https://developers.cloudflare.com/workers/configuration/secrets/
-	 */
-
-	/**
-	 * Static Assets
-	 * https://developers.cloudflare.com/workers/static-assets/binding/
-	 */
-	// "assets": { "directory": "./public/", "binding": "ASSETS" },
-
-	/**
-	 * Service Bindings (communicate between multiple Workers)
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-	 */
-	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
-}
-`,
+		addComment(
+			parsed,
+			"before-all",
+			"*\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n ",
 		);
+
+		addComment(parsed, "after:observability", [
+			"*\n * Smart Placement\n * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement\n ",
+			{
+				type: "LineComment",
+				value: ` "placement": { "mode": "smart" }`,
+			},
+			"*\n * Bindings\n * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including\n * databases, object storage, AI inference, real-time communication and more.\n * https://developers.cloudflare.com/workers/runtime-apis/bindings/\n ",
+			"*\n * Environment Variables\n * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables\n ",
+			{
+				type: "LineComment",
+				value: ' "vars": { "MY_VARIABLE": "production_value" }',
+			},
+			"*\n * Note: Use secrets to store sensitive data.\n * https://developers.cloudflare.com/workers/configuration/secrets/\n ",
+			"*\n * Static Assets\n * https://developers.cloudflare.com/workers/static-assets/binding/\n ",
+			{
+				type: "LineComment",
+				value: ' "assets": { "directory": "./public/", "binding": "ASSETS" }',
+			},
+			"*\n * Service Bindings (communicate between multiple Workers)\n * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings\n ",
+			{
+				type: "LineComment",
+				value:
+					' "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]',
+			},
+		]);
+
+		writeWranglerJson(ctx, stringify(parsed, null, "\t"));
 		addVscodeConfig(ctx);
 	} else if (wranglerTomlExists(ctx)) {
 		const wranglerTomlStr = readWranglerToml(ctx);
 		const parsed = TOML.parse(wranglerTomlStr);
-		const modified = await ensureCompatDateExists(
-			ensureNameExists(parsed, ctx.project.name),
-		);
-		if (!modified["observability"]) {
-			modified["observability"] = { enabled: true };
-		}
+		ensureNameExists(parsed, ctx.project.name);
+		await ensureCompatDateExists(parsed);
+		parsed["observability"] ??= { enabled: true };
 
 		const comment = `#:schema node_modules/wrangler/config-schema.json\n# For more details on how to configure Wrangler, refer to:\n# https://developers.cloudflare.com/workers/wrangler/configuration/\n`;
 
-		const stringified = comment + TOML.stringify(modified as JsonMap);
+		const stringified = comment + TOML.stringify(parsed as JsonMap);
 
 		writeWranglerToml(
 			ctx,
