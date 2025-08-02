@@ -8,18 +8,20 @@ import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";
 import { getLocation } from "./cli/locations";
 import {
-	checkInstanceType,
 	collectEnvironmentVariables,
 	collectLabels,
 	parseImageName,
 	promptForEnvironmentVariables,
-	promptForInstanceType,
 	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
 	resolveMemory,
 } from "./common";
 import { wrap } from "./helpers/wrap";
+import {
+	checkInstanceType,
+	promptForInstanceType,
+} from "./instance-type/instance-type";
 import { loadAccount } from "./locations";
 import { sshPrompts } from "./ssh/ssh";
 import type { Config } from "../config";

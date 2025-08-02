@@ -37,7 +37,7 @@ export async function maybeBuildContainer(
 		},
 		pathToDocker,
 		!dryRun,
-		"disk_bytes" in containerConfig ? containerConfig.disk_bytes : undefined
+		containerConfig
 	);
 
 	if (buildResult.pushed) {

@@ -30,8 +30,9 @@ import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
-import { cleanForInstanceType, promiseSpinner } from "./common";
+import { promiseSpinner } from "./common";
 import { Diff } from "./helpers/diff";
+import { cleanForInstanceType } from "./instance-type/instance-type";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";
 import type {
