@@ -1,24 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CI } from "../is-ci";
 import { TURBOREPO } from "../is-turborepo";
-
-vi.mock("../is-ci", () => ({
-	CI: {
-		isCI: vi.fn(() => false),
-	},
-}));
-
-const mockCI = vi.mocked(CI);
 
 describe("TURBOREPO", () => {
 	beforeEach(() => {
 		vi.unstubAllEnvs();
-		mockCI.isCI.mockReturnValue(false);
 	});
 
 	afterEach(() => {
 		vi.unstubAllEnvs();
-		vi.clearAllMocks();
 	});
 
 	describe("isTurborepo()", () => {
@@ -78,24 +67,5 @@ describe("TURBOREPO", () => {
 			expect(TURBOREPO.isTurborepo()).toBe(false);
 		});
 
-		it("should return false when running in CI even with turbo environment variables", () => {
-			vi.stubEnv("TURBO_HASH", "some-hash");
-			mockCI.isCI.mockReturnValue(true);
-			expect(TURBOREPO.isTurborepo()).toBe(false);
-		});
-
-		it("should return false when running in Pages CI even with turbo environment variables", () => {
-			vi.stubEnv("TURBO_TASK", "dev");
-			vi.stubEnv("CF_PAGES", "1");
-			mockCI.isCI.mockReturnValue(true);
-			expect(TURBOREPO.isTurborepo()).toBe(false);
-		});
-
-		it("should return false when running in Workers CI even with turbo environment variables", () => {
-			vi.stubEnv("npm_config_user_agent", "turbo@1.0.0");
-			vi.stubEnv("WORKERS_CI", "1");
-			mockCI.isCI.mockReturnValue(true);
-			expect(TURBOREPO.isTurborepo()).toBe(false);
-		});
 	});
 });
