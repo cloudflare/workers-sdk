@@ -1,14 +1,13 @@
 import { isInteractive as __isInteractive } from "@cloudflare/cli/interactive";
 import { CI, isPagesCI, isWorkersCI } from "./is-ci";
-import { TURBOREPO } from "./is-turborepo";
 
 /**
  * Test whether the process is "interactive".
  * Reasons it may not be interactive: it could be running in CI,
- * or you're piping values from / to another process, or running under Turborepo, etc
+ * or you're piping values from / to another process, etc
  */
 export default function isInteractive(): boolean {
-	if (isPagesCI() || isWorkersCI() || TURBOREPO.isTurborepo()) {
+	if (isPagesCI() || isWorkersCI()) {
 		return false;
 	}
 
