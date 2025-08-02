@@ -1,5 +1,28 @@
 # miniflare
 
+## 4.20250801.0
+
+### Minor Changes
+
+- [#10004](https://github.com/cloudflare/workers-sdk/pull/10004) [`b4d1373`](https://github.com/cloudflare/workers-sdk/commit/b4d13733b5f64f84274a194dd725943658d6184e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add `structuredWorkerdLogs` option
+
+  add a new top-level option named `structuredWorkerdLogs` that makes workerd print to stdout structured logs (stringified jsons of the following shape: `{ timestamp: number, level: string, message: string }`) instead of printing logs to stdout and stderr
+
+- [#9556](https://github.com/cloudflare/workers-sdk/pull/9556) [`8ba7736`](https://github.com/cloudflare/workers-sdk/commit/8ba7736a8ae5666870d12945a1cb6185b6ac3633) Thanks [@edmundhung](https://github.com/edmundhung)! - Added a `serviceName` option to `unsafeDirectSockets`
+
+  This allows registering the current worker in the dev registry under its own name, but routing to a different service.
+
+### Patch Changes
+
+- [#10148](https://github.com/cloudflare/workers-sdk/pull/10148) [`631f26d`](https://github.com/cloudflare/workers-sdk/commit/631f26df58d8933da81fb312f2ba2e30dc22821a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250730.0  | 1.20250801.0  |
+  | @cloudflare/workers-types | ^4.20250730.0 | ^4.20250801.0 |
+
 ## 4.20250730.0
 
 ### Patch Changes

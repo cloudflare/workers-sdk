@@ -1,5 +1,19 @@
 # @cloudflare/vite-plugin
 
+## 1.11.1
+
+### Patch Changes
+
+- [#9556](https://github.com/cloudflare/workers-sdk/pull/9556) [`8ba7736`](https://github.com/cloudflare/workers-sdk/commit/8ba7736a8ae5666870d12945a1cb6185b6ac3633) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: cross-process service bindings no longer skip static asset serving
+
+- [#10099](https://github.com/cloudflare/workers-sdk/pull/10099) [`360004d`](https://github.com/cloudflare/workers-sdk/commit/360004d4d96eb1e89f9a3e01eaea27197e08bf8a) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: move local dev container cleanup to process exit hook. This should ensure containers are cleaned up even when Wrangler is shut down programatically.
+
+- [#10173](https://github.com/cloudflare/workers-sdk/pull/10173) [`4e62cd8`](https://github.com/cloudflare/workers-sdk/commit/4e62cd8d30781917857fda8d529637ea45699b89) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Ensure that headers set via `server.headers` in the Vite config are added to HTML asset responses in development.
+
+- Updated dependencies [[`b4d1373`](https://github.com/cloudflare/workers-sdk/commit/b4d13733b5f64f84274a194dd725943658d6184e), [`631f26d`](https://github.com/cloudflare/workers-sdk/commit/631f26df58d8933da81fb312f2ba2e30dc22821a), [`b4d1373`](https://github.com/cloudflare/workers-sdk/commit/b4d13733b5f64f84274a194dd725943658d6184e), [`360004d`](https://github.com/cloudflare/workers-sdk/commit/360004d4d96eb1e89f9a3e01eaea27197e08bf8a), [`e82aa19`](https://github.com/cloudflare/workers-sdk/commit/e82aa199b86f9b9de95f39ad1460d48feec8b00f), [`8ba7736`](https://github.com/cloudflare/workers-sdk/commit/8ba7736a8ae5666870d12945a1cb6185b6ac3633), [`1655bec`](https://github.com/cloudflare/workers-sdk/commit/1655bec50c0bfa3efbfc84b171171a44b120f03f), [`354a001`](https://github.com/cloudflare/workers-sdk/commit/354a001e3e7e8189f80c1baf52bac13bca08ad74), [`5c3b83f`](https://github.com/cloudflare/workers-sdk/commit/5c3b83fc40525590deb62ceda2a8d303a42bc1d8), [`502a8e0`](https://github.com/cloudflare/workers-sdk/commit/502a8e0db0eecda425912340088ae51568bbf4f6)]:
+  - wrangler@4.28.0
+  - miniflare@4.20250801.0
+
 ## 1.11.0
 
 ### Minor Changes

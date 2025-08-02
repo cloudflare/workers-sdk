@@ -1,5 +1,58 @@
 # wrangler
 
+## 4.28.0
+
+### Minor Changes
+
+- [#9530](https://github.com/cloudflare/workers-sdk/pull/9530) [`e82aa19`](https://github.com/cloudflare/workers-sdk/commit/e82aa199b86f9b9de95f39ad1460d48feec8b00f) Thanks [@Akshit222](https://github.com/Akshit222)! - Add --json flag to r2 bucket info command for machine-readable output.
+
+### Patch Changes
+
+- [#10004](https://github.com/cloudflare/workers-sdk/pull/10004) [`b4d1373`](https://github.com/cloudflare/workers-sdk/commit/b4d13733b5f64f84274a194dd725943658d6184e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix `wrangler dev` logs being logged on the incorrect level in some cases
+
+  currently the way `wrangler dev` prints logs is faulty, for example the following code
+
+  ```js
+  console.error("this is an error");
+  console.warn("this is a warning");
+  console.debug("this is a debug");
+  ```
+
+  inside a worker would cause the following logs:
+
+  ```text
+  ✘ [ERROR] this is an error
+
+  ✘ [ERROR] this is a warning
+
+  this is a debug
+  ```
+
+  (note that the warning is printed as an error and the debug log is printed even if by default it should not)
+
+  the changes here make sure that the logs are instead logged to their correct level, so for the code about the following will be logged instead:
+
+  ```text
+  ✘ [ERROR] this is an error
+
+  ▲ [WARNING] this is a warning
+  ```
+
+  (running `wrangler dev` with the `--log-level=debug` flag will also cause the debug log to be included as well)
+
+- [#10099](https://github.com/cloudflare/workers-sdk/pull/10099) [`360004d`](https://github.com/cloudflare/workers-sdk/commit/360004d4d96eb1e89f9a3e01eaea27197e08bf8a) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: move local dev container cleanup to process exit hook. This should ensure containers are cleaned up even when Wrangler is shut down programatically.
+
+- [#10169](https://github.com/cloudflare/workers-sdk/pull/10169) [`1655bec`](https://github.com/cloudflare/workers-sdk/commit/1655bec50c0bfa3efbfc84b171171a44b120f03f) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - fix: report startup errors before workerd profiling
+
+- [#10136](https://github.com/cloudflare/workers-sdk/pull/10136) [`354a001`](https://github.com/cloudflare/workers-sdk/commit/354a001e3e7e8189f80c1baf52bac13bca08ad74) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Update `wrangler containers images list` to make fewer API calls to improve command runtime
+
+- [#10157](https://github.com/cloudflare/workers-sdk/pull/10157) [`5c3b83f`](https://github.com/cloudflare/workers-sdk/commit/5c3b83fc40525590deb62ceda2a8d303a42bc1d8) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Enforce 64-character limit for Workflow binding names locally to match production validation
+
+- [#10154](https://github.com/cloudflare/workers-sdk/pull/10154) [`502a8e0`](https://github.com/cloudflare/workers-sdk/commit/502a8e0db0eecda425912340088ae51568bbf4f6) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Fix UTF BOM handling in config files - remove UTF-8 BOM and error on other BOMs
+
+- Updated dependencies [[`631f26d`](https://github.com/cloudflare/workers-sdk/commit/631f26df58d8933da81fb312f2ba2e30dc22821a), [`b4d1373`](https://github.com/cloudflare/workers-sdk/commit/b4d13733b5f64f84274a194dd725943658d6184e), [`8ba7736`](https://github.com/cloudflare/workers-sdk/commit/8ba7736a8ae5666870d12945a1cb6185b6ac3633)]:
+  - miniflare@4.20250801.0
+
 ## 4.27.0
 
 ### Minor Changes
