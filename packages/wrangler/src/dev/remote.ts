@@ -22,6 +22,7 @@ import type {
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ParseError } from "../parse";
 import type { LegacyAssetPaths } from "../sites";
+import type { ApiCredentials } from "../user";
 import type { CfAccount } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
 
@@ -203,6 +204,7 @@ export async function createRemoteWorkerInit(props: {
 export async function getWorkerAccountAndContext(props: {
 	complianceConfig: ComplianceConfig;
 	accountId: string;
+	apiToken?: ApiCredentials | undefined;
 	env: string | undefined;
 	legacyEnv: boolean | undefined;
 	host: string | undefined;
@@ -212,7 +214,7 @@ export async function getWorkerAccountAndContext(props: {
 }): Promise<{ workerAccount: CfAccount; workerContext: CfWorkerContext }> {
 	const workerAccount: CfAccount = {
 		accountId: props.accountId,
-		apiToken: requireApiToken(),
+		apiToken: props.apiToken ?? requireApiToken(),
 	};
 
 	// What zone should the realish preview for this Worker run on?
