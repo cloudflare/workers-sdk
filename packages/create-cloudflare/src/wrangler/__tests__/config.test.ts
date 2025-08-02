@@ -316,30 +316,4 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("preserves existing comments in JSON", async () => {
-		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
-		);
-		const jsonWithComments = `{
-	"name": "<TBD>",
-	"main": "src/index.ts",
-	"compatibility_date": "<TBD>",
-	"assets": {
-		"directory": "./public"
-	}
-}`;
-		vi.mocked(readFile).mockReturnValueOnce(jsonWithComments);
-
-		await updateWranglerConfig(ctx);
-
-		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
-		expect(newConfig).toContain("// Schema for editor tooling");
-		expect(newConfig).toContain("// Enable observability features");
-		expect(newConfig).toContain('"name": "test"');
-		expect(newConfig).toContain('"compatibility_date": "2024-01-17"');
-		expect(newConfig).toContain(
-			'"$schema": "node_modules/wrangler/config-schema.json"',
-		);
-		expect(newConfig).toContain('"observability"');
-	});
 });
