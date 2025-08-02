@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import { retry } from "../helpers/retry";
@@ -85,6 +86,12 @@ describe.each(testConfigs)(
 		// The "local" and "remote" runtimes do not necessarily use the exact same version
 		// of workerd and we want to make sure the preset works for both.
 		describe.for(["local", "remote"])("%s tests", (localOrRemote) => {
+			// Skip the remote tests if the user is not logged in (e.g. a PR from a forked repo)
+			if (localOrRemote === "remote" && !CLOUDFLARE_ACCOUNT_ID) {
+				test.skip("Remote tests are not supported");
+				return;
+			}
+
 			let url: string;
 			let wrangler: WranglerLongLivedCommand;
 			beforeAll(async () => {
