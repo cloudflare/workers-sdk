@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from "fs";
 import { resolve } from "path";
 import TOML from "@iarna/toml";
-import { parse, stringify } from "comment-json";
+import { parse } from "comment-json";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile, writeJSON } from "helpers/files";
 import type { JsonMap } from "@iarna/toml";
@@ -46,144 +46,57 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			ensureNameExists(parsed, ctx.project.name),
 		);
 
-		(modified as Record<string | symbol, unknown>)[Symbol.for("before-all")] = [
-			{
-				type: "BlockComment",
-				value:
-					"*\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n ",
-				inline: false,
-			},
-		];
-
-		const orderedConfig: Record<string, unknown> = {};
-
+		let comment = `/**\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n */\n{`;
 		if (!modified["$schema"]) {
-			orderedConfig["$schema"] = "node_modules/wrangler/config-schema.json";
-		} else {
-			orderedConfig["$schema"] = modified["$schema"];
+			comment += `\n\t"$schema": "node_modules/wrangler/config-schema.json",`;
 		}
-
-		orderedConfig["name"] = modified["name"];
-		orderedConfig["main"] = modified["main"];
-		orderedConfig["compatibility_date"] = modified["compatibility_date"];
 
 		if (!modified["observability"]) {
-			orderedConfig["observability"] = { enabled: true };
-		} else {
-			orderedConfig["observability"] = modified["observability"];
+			modified["observability"] = { enabled: true };
 		}
+		const stringified = comment + JSON.stringify(modified, null, "\t").slice(1);
 
-		for (const [key, value] of Object.entries(modified)) {
-			if (
-				![
-					"$schema",
-					"name",
-					"main",
-					"compatibility_date",
-					"observability",
-				].includes(key)
-			) {
-				orderedConfig[key] = value;
-			}
-		}
+		writeWranglerJson(
+			ctx,
+			stringified.slice(0, -2) +
+				`
+	/**
+	 * Smart Placement
+	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+	 */
+	// "placement": { "mode": "smart" },
 
-		for (const symbol of Object.getOwnPropertySymbols(modified)) {
-			(orderedConfig as Record<string | symbol, unknown>)[symbol] = (
-				modified as Record<string | symbol, unknown>
-			)[symbol];
-		}
+	/**
+	 * Bindings
+	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+	 * databases, object storage, AI inference, real-time communication and more.
+	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+	 */
 
-		(orderedConfig as Record<string | symbol, unknown>)[
-			Symbol.for("after:observability")
-		] = [
-			{
-				type: "BlockComment",
-				value:
-					"*\n\t * Smart Placement\n\t * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement\n\t ",
-				inline: false,
-			},
-			{
-				type: "LineComment",
-				value: ' "placement": { "mode": "smart" },',
-				inline: false,
-			},
-			{
-				type: "BlockComment",
-				value:
-					"*\n\t * Bindings\n\t * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including\n\t * databases, object storage, AI inference, real-time communication and more.\n\t * https://developers.cloudflare.com/workers/runtime-apis/bindings/\n\t ",
-				inline: false,
-			},
-			{
-				type: "BlockComment",
-				value:
-					"*\n\t * Environment Variables\n\t * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables\n\t ",
-				inline: false,
-			},
-			{
-				type: "LineComment",
-				value: ' "vars": { "MY_VARIABLE": "production_value" },',
-				inline: false,
-			},
-			{
-				type: "BlockComment",
-				value:
-					"*\n\t * Note: Use secrets to store sensitive data.\n\t * https://developers.cloudflare.com/workers/configuration/secrets/\n\t ",
-				inline: false,
-			},
-			{
-				type: "BlockComment",
-				value:
-					"*\n\t * Static Assets\n\t * https://developers.cloudflare.com/workers/static-assets/binding/\n\t ",
-				inline: false,
-			},
-			{
-				type: "LineComment",
-				value: ' "assets": { "directory": "./public/", "binding": "ASSETS" },',
-				inline: false,
-			},
-			{
-				type: "BlockComment",
-				value:
-					"*\n\t * Service Bindings (communicate between multiple Workers)\n\t * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings\n\t ",
-				inline: false,
-			},
-			{
-				type: "LineComment",
-				value:
-					' "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]',
-				inline: false,
-			},
-		];
+	/**
+	 * Environment Variables
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 */
+	// "vars": { "MY_VARIABLE": "production_value" },
+	/**
+	 * Note: Use secrets to store sensitive data.
+	 * https://developers.cloudflare.com/workers/configuration/secrets/
+	 */
 
-		const stringified = stringify(orderedConfig, null, "\t");
+	/**
+	 * Static Assets
+	 * https://developers.cloudflare.com/workers/static-assets/binding/
+	 */
+	// "assets": { "directory": "./public/", "binding": "ASSETS" },
 
-		let fixedStringified = stringified.replace("*/{", "*/\n{");
-
-		fixedStringified = fixedStringified.replace(
-			/(\t\/\/ "placement": \{ "mode": "smart" \},)\n(\t\/\*\*)/g,
-			"$1\n\n$2",
+	/**
+	 * Service Bindings (communicate between multiple Workers)
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+	 */
+	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+}
+`,
 		);
-		fixedStringified = fixedStringified.replace(
-			/(\t \*\/)\n(\t\/\*\*)/g,
-			"$1\n\n$2",
-		);
-		fixedStringified = fixedStringified.replace(
-			/(\t \*\/)\n(\t\/\*\*)/g,
-			"$1\n\n$2",
-		);
-		fixedStringified = fixedStringified.replace(
-			/(\t \*\/)\n(\t\/\*\*)/g,
-			"$1\n\n$2",
-		);
-
-		fixedStringified = fixedStringified.replace(
-			/(\t\/\/ "assets": \{ "directory": "\.\/public\/", "binding": "ASSETS" \},)\n(\t\/\*\*)/g,
-			"$1\n\n$2",
-		);
-
-		fixedStringified = fixedStringified + "\n";
-
-		writeWranglerJson(ctx, fixedStringified);
 		addVscodeConfig(ctx);
 	} else if (wranglerTomlExists(ctx)) {
 		const wranglerTomlStr = readWranglerToml(ctx);
