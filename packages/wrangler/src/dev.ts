@@ -756,7 +756,7 @@ export async function startDev(args: StartDevOptions) {
 				!TURBOREPO.isTurborepo() &&
 				args.showInteractiveDevSession !== false
 			) {
-				unregisterHotKeys = registerDevHotKeys(devEnv, args);
+				unregisterHotKeys = registerDevHotKeys(devEnv[0], args);
 			}
 		} else {
 			devEnv = new DevEnv();
@@ -815,7 +815,7 @@ export async function startDev(args: StartDevOptions) {
 				!TURBOREPO.isTurborepo() &&
 				args.showInteractiveDevSession !== false
 			) {
-				unregisterHotKeys = registerDevHotKeys([devEnv], args);
+				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
 		}
 
@@ -1126,6 +1126,8 @@ export function getBindings(
 		assets: configParam.assets?.binding
 			? { binding: configParam.assets?.binding }
 			: undefined,
+		secrets_store_secrets: undefined,
+		unsafe_hello_world: undefined,
 	};
 
 	return bindings;
