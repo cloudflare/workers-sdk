@@ -102,17 +102,54 @@ describe("update wrangler config", () => {
 
 		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
 		expect(newConfig).toMatchInlineSnapshot(`
-			"{
+			"/**
+			 * For more details on how to configure Wrangler, refer to:
+			 * https://developers.cloudflare.com/workers/wrangler/configuration/
+			 */
+			{
+				"$schema": "node_modules/wrangler/config-schema.json",
 				"name": "test",
 				"main": "src/index.ts",
 				"compatibility_date": "2024-01-17",
-				// Schema for editor tooling
-				"$schema": "node_modules/wrangler/config-schema.json",
-				// Enable observability features
 				"observability": {
 					"enabled": true
 				}
-			}"
+				/**
+				 * Smart Placement
+				 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+				 */
+				// "placement": { "mode": "smart" },
+
+				/**
+				 * Bindings
+				 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+				 * databases, object storage, AI inference, real-time communication and more.
+				 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+				 */
+
+				/**
+				 * Environment Variables
+				 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+				 */
+				// "vars": { "MY_VARIABLE": "production_value" },
+				/**
+				 * Note: Use secrets to store sensitive data.
+				 * https://developers.cloudflare.com/workers/configuration/secrets/
+				 */
+
+				/**
+				 * Static Assets
+				 * https://developers.cloudflare.com/workers/static-assets/binding/
+				 */
+				// "assets": { "directory": "./public/", "binding": "ASSETS" },
+
+				/**
+				 * Service Bindings (communicate between multiple Workers)
+				 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+				 */
+				// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+			}
+			"
 		`);
 	});
 
