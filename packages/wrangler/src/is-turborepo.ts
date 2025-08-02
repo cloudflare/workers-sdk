@@ -1,3 +1,5 @@
+import { CI } from "./is-ci";
+
 /**
  * Use this object to find out if we are currently running under Turborepo.
  *
@@ -6,6 +8,10 @@
 export const TURBOREPO = {
 	/** Is Wrangler currently running under Turborepo? */
 	isTurborepo() {
+		if (CI.isCI()) {
+			return false;
+		}
+
 		return !!(
 			process.env.TURBO_HASH ||
 			process.env.TURBO_TASK ||
