@@ -27,6 +27,7 @@ import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
+import { createAlias, createNamespace } from "./core/create-command";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1Namespace } from "./d1";
 import { d1CreateCommand } from "./d1/create";
@@ -640,11 +641,30 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("triggers");
 
-	registry.define([{ command: "wrangler delete", definition: deleteCommand }]);
-	registry.registerNamespace("delete");
+	const workersNamespace = createNamespace({
+		metadata: {
+			description: "👷 Manage your Workers",
+			status: "stable",
+			owner: "Product: Workflows",
+		},
+	});
 
-	registry.define([{ command: "wrangler list", definition: listCommand }]);
-	registry.registerNamespace("list");
+	const listAlias = createAlias({
+		aliasOf: "wrangler workers list",
+	});
+
+	const deleteAlias = createAlias({
+		aliasOf: "wrangler workers delete",
+	});
+
+	registry.define([
+		{ command: "wrangler workers", definition: workersNamespace },
+		{ command: "wrangler workers list", definition: listCommand },
+		{ command: "wrangler workers delete", definition: deleteCommand },
+		{ command: "wrangler list", definition: listAlias },
+		{ command: "wrangler delete", definition: deleteAlias },
+	]);
+	registry.registerNamespace("workers");
 
 	// tail
 	registry.define([{ command: "wrangler tail", definition: tailCommand }]);
