@@ -1,69 +1,18 @@
-import assert from "assert";
 import { existsSync, mkdirSync } from "fs";
 import { resolve } from "path";
 import TOML from "@iarna/toml";
-import { assign, parse, stringify } from "comment-json";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile, writeJSON } from "helpers/files";
+import {
+	addJSONComment,
+	appendJSONProperty,
+	insertJSONProperty,
+	readJSONWithComments,
+	writeJSONWithComments,
+} from "helpers/json";
 import type { JsonMap } from "@iarna/toml";
-import type {
-	CommentDescriptor,
-	CommentObject,
-	CommentSymbol,
-	CommentToken,
-} from "comment-json";
+import type { CommentObject } from "comment-json";
 import type { C3Context } from "types";
-
-function ensurePropertyExists(
-	config: Record<string, unknown>,
-	property: string,
-	value: unknown,
-): void {
-	config[property] = value;
-}
-
-async function ensureCompatDateExists(
-	config: Record<string, unknown>,
-): Promise<void> {
-	assert(config);
-	if (typeof config["compatibility_date"] === "string") {
-		// If the compat date is already a valid one, leave it since it may be there
-		// for a specific compat reason
-		const validCompatDateRe = /^\d{4}-\d{2}-\d{2}/m;
-		if (!config["compatibility_date"].match(validCompatDateRe)) {
-			config["compatibility_date"] = await getWorkerdCompatibilityDate();
-		}
-	} else {
-		config["compatibility_date"] = await getWorkerdCompatibilityDate();
-	}
-}
-
-function addComment(
-	config: Partial<CommentObject>,
-	descriptor: CommentDescriptor,
-	comment: string | Partial<CommentToken> | (string | Partial<CommentToken>)[],
-): void {
-	if (!Array.isArray(comment)) {
-		comment = [comment];
-	}
-
-	const commentHolder = config[Symbol.for(descriptor) as CommentSymbol] ?? [];
-
-	for (let c of comment) {
-		if (typeof c === "string") {
-			c = { value: c };
-		}
-		commentHolder.push({
-			type: "BlockComment",
-			value: "",
-			inline: false,
-			loc: { start: { line: 0, column: 0 }, end: { line: 0, column: 0 } },
-			...c,
-		});
-	}
-
-	config[Symbol.for(descriptor) as CommentSymbol] = commentHolder;
-}
 
 /**
  * Update the `wrangler.(toml|json|jsonc)` file for this project by setting the name
@@ -71,26 +20,32 @@ function addComment(
  */
 export const updateWranglerConfig = async (ctx: C3Context) => {
 	if (wranglerJsonExists(ctx)) {
-		const wranglerJsonStr = readWranglerJson(ctx);
-		let parsed = parse(wranglerJsonStr, undefined, false) as CommentObject;
+		let wranglerJson = readWranglerJson(ctx);
 
 		// Put the schema at the top of the file
-		parsed = assign(
-			{ $schema: "node_modules/wrangler/config-schema.json" },
-			parsed,
-		) as unknown as CommentObject;
+		wranglerJson = insertJSONProperty(
+			wranglerJson,
+			"$schema",
+			"node_modules/wrangler/config-schema.json",
+		);
 
-		ensurePropertyExists(parsed, "name", ctx.project.name);
-		await ensureCompatDateExists(parsed);
-		ensurePropertyExists(parsed, "observability", { enabled: true });
+		wranglerJson = appendJSONProperty(wranglerJson, "name", ctx.project.name);
+		wranglerJson = appendJSONProperty(
+			wranglerJson,
+			"compatibility_date",
+			await getCompatibilityDate(wranglerJson),
+		);
+		wranglerJson = appendJSONProperty(wranglerJson, "observability", {
+			enabled: true,
+		});
 
-		addComment(
-			parsed,
+		addJSONComment(
+			wranglerJson,
 			"before-all",
 			"*\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n ",
 		);
 
-		addComment(parsed, "after:observability", [
+		addJSONComment(wranglerJson, "after:observability", [
 			"*\n * Smart Placement\n * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement\n ",
 			{
 				type: "LineComment",
@@ -116,14 +71,14 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			},
 		]);
 
-		writeWranglerJson(ctx, stringify(parsed, null, "\t"));
+		writeWranglerJson(ctx, wranglerJson);
 		addVscodeConfig(ctx);
 	} else if (wranglerTomlExists(ctx)) {
 		const wranglerTomlStr = readWranglerToml(ctx);
 		const parsed = TOML.parse(wranglerTomlStr);
-		ensurePropertyExists(parsed, "name", ctx.project.name);
-		await ensureCompatDateExists(parsed);
-		ensurePropertyExists(parsed, "observability", { enabled: true });
+		parsed.name = ctx.project.name;
+		parsed["compatibility_date"] = await getCompatibilityDate(parsed);
+		parsed["observability"] ??= { enabled: true };
 
 		const comment = `#:schema node_modules/wrangler/config-schema.json\n# For more details on how to configure Wrangler, refer to:\n# https://developers.cloudflare.com/workers/wrangler/configuration/\n`;
 
@@ -201,10 +156,10 @@ export const readWranglerToml = (ctx: C3Context) => {
 export const readWranglerJson = (ctx: C3Context) => {
 	const wranglerJsonPath = getWranglerJsonPath(ctx);
 	if (existsSync(wranglerJsonPath)) {
-		return readFile(wranglerJsonPath);
+		return readJSONWithComments(wranglerJsonPath);
 	}
 	const wranglerJsoncPath = getWranglerJsoncPath(ctx);
-	return readFile(wranglerJsoncPath);
+	return readJSONWithComments(wranglerJsoncPath);
 };
 
 export const writeWranglerToml = (ctx: C3Context, contents: string) => {
@@ -212,13 +167,13 @@ export const writeWranglerToml = (ctx: C3Context, contents: string) => {
 	return writeFile(wranglerTomlPath, contents);
 };
 
-export const writeWranglerJson = (ctx: C3Context, contents: string) => {
+export const writeWranglerJson = (ctx: C3Context, config: CommentObject) => {
 	const wranglerJsonPath = getWranglerJsonPath(ctx);
 	if (existsSync(wranglerJsonPath)) {
-		return writeFile(wranglerJsonPath, contents);
+		return writeJSONWithComments(wranglerJsonPath, config);
 	}
 	const wranglerJsoncPath = getWranglerJsoncPath(ctx);
-	return writeFile(wranglerJsoncPath, contents);
+	return writeJSONWithComments(wranglerJsoncPath, config);
 };
 
 export const addVscodeConfig = (ctx: C3Context) => {
@@ -238,3 +193,17 @@ export const addVscodeConfig = (ctx: C3Context) => {
 		},
 	});
 };
+
+async function getCompatibilityDate<T extends Record<string, unknown>>(
+	config: T,
+) {
+	const validCompatDateRe = /^\d{4}-\d{2}-\d{2}/m;
+	if (
+		typeof config["compatibility_date"] === "string" &&
+		config["compatibility_date"].match(validCompatDateRe)
+	) {
+		// If the compat date is already a valid one, leave it since it may be there for a specific compat reason
+		return config["compatibility_date"];
+	}
+	return await getWorkerdCompatibilityDate();
+}
