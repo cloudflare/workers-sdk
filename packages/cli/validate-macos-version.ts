@@ -1,9 +1,8 @@
 import os from "node:os";
-import { crash } from "./index";
 
 /**
  * Validates that the current macOS version supports workerd.
- * Crashes the process if running on macOS below version 13.5.
+ * Throws an error if running on macOS below version 13.5.
  */
 export function validateMacOSVersion(): void {
 	if (process.platform !== "darwin") {
@@ -18,7 +17,7 @@ export function validateMacOSVersion(): void {
 	const macOSVersion = darwinVersionToMacOSVersion(release);
 
 	if (macOSVersion && isVersionLessThan(macOSVersion, "13.5.0")) {
-		crash(
+		throw new Error(
 			`Unsupported macOS version: We don't support the current version of macOS (${macOSVersion}). ` +
 				`The minimum requirement is macOS 13.5+. ` +
 				`If you cannot upgrade your version of macOS, you could try running create-cloudflare/wrangler in a DevContainer setup with Linux.`
