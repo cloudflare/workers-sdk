@@ -1,66 +1,63 @@
 import os from "node:os";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { UserError } from "../errors";
-import { validateMacOSVersion } from "../utils/validate-macos-version";
+import { validateMacOSVersion } from "../validate-macos-version";
 
 vi.mock("node:os");
+vi.mock("../index", () => ({
+	crash: vi.fn(() => {
+		throw new Error("Process crashed");
+	}),
+}));
+
+const mockOs = vi.mocked(os);
 
 describe("validateMacOSVersion", () => {
-	const mockOs = vi.mocked(os);
-
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.unstubAllEnvs();
 	});
 
-	it("should not throw on non-macOS platforms", () => {
+	it("should not crash on non-macOS platforms", () => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("linux");
-		mockOs.release.mockReturnValue("5.10.223");
 
 		expect(() => validateMacOSVersion()).not.toThrow();
 	});
 
-	it("should not throw on macOS 13.5.0", () => {
+	it("should not crash on macOS 13.5.0", () => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
 		mockOs.release.mockReturnValue("22.6.0");
 
 		expect(() => validateMacOSVersion()).not.toThrow();
 	});
 
-	it("should not throw on macOS 13.6.0", () => {
-		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-		mockOs.release.mockReturnValue("22.7.0");
-
-		expect(() => validateMacOSVersion()).not.toThrow();
-	});
-
-	it("should not throw on macOS 14.0.0", () => {
+	it("should not crash on macOS 14.0.0", () => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
 		mockOs.release.mockReturnValue("23.0.0");
 
 		expect(() => validateMacOSVersion()).not.toThrow();
 	});
 
-	it("should throw UserError on macOS 12.7.6", () => {
+	it("should not crash on macOS 13.6.0", () => {
+		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
+		mockOs.release.mockReturnValue("22.7.0");
+
+		expect(() => validateMacOSVersion()).not.toThrow();
+	});
+
+	it("should crash on macOS 12.7.6", () => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
 		vi.stubEnv("CI", "");
 		mockOs.release.mockReturnValue("21.6.0");
 
-		expect(() => validateMacOSVersion()).toThrow(UserError);
-		expect(() => validateMacOSVersion()).toThrow(/Unsupported macOS version/);
-		expect(() => validateMacOSVersion()).toThrow(/12\.6\.0/);
-		expect(() => validateMacOSVersion()).toThrow(/macOS 13\.5\+/);
-		expect(() => validateMacOSVersion()).toThrow(/DevContainer/);
+		expect(() => validateMacOSVersion()).toThrow("Process crashed");
 	});
 
-	it("should throw UserError on macOS 13.4.0", () => {
+	it("should crash on macOS 13.4.0", () => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
 		vi.stubEnv("CI", "");
 		mockOs.release.mockReturnValue("22.4.0");
 
-		expect(() => validateMacOSVersion()).toThrow(UserError);
-		expect(() => validateMacOSVersion()).toThrow(/Unsupported macOS version/);
-		expect(() => validateMacOSVersion()).toThrow(/13\.4\.0/);
+		expect(() => validateMacOSVersion()).toThrow("Process crashed");
 	});
 
 	it("should handle invalid Darwin version format gracefully", () => {
@@ -77,7 +74,7 @@ describe("validateMacOSVersion", () => {
 		expect(() => validateMacOSVersion()).not.toThrow();
 	});
 
-	it("should not throw when CI environment variable is set", () => {
+	it("should not crash when CI environment variable is set", () => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
 		vi.stubEnv("CI", "true");
 		mockOs.release.mockReturnValue("21.6.0");

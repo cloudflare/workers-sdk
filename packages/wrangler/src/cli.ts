@@ -73,5 +73,3 @@ export {
 	type RemoteProxySession as Experimental_RemoteProxySession,
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
 } from "./api";
-
-export { validateMacOSVersion } from "./utils/validate-macos-version";
