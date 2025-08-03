@@ -2,6 +2,7 @@
 "@cloudflare/vite-plugin": patch
 ---
 
-Enable using `import.meta.hot.send` within the context of a request.
+Fix issue that resulted in `A hanging Promise was canceled` errors when developing large applications.
+We now handle requests for modules in a Durable Object so that they can be shared across invocations.
 
-To achieve this, the module runner is now initialized in a Durable Object.
+Additionally, using `import.meta.hot.send` within the context of a request is now supported.
