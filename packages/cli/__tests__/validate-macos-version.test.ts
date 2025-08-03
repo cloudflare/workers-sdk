@@ -45,7 +45,7 @@ describe("validateMacOSVersion", () => {
 		mockOs.release.mockReturnValue("21.6.0");
 
 		expect(() => validateMacOSVersion()).toThrow(
-			"Unsupported macOS version: We don't support the current version of macOS (12.6.0)"
+			"Unsupported macOS version: The Cloudflare Workers runtime cannot run on the current version of macOS (12.6.0)"
 		);
 	});
 
@@ -55,7 +55,7 @@ describe("validateMacOSVersion", () => {
 		mockOs.release.mockReturnValue("22.4.0");
 
 		expect(() => validateMacOSVersion()).toThrow(
-			"Unsupported macOS version: We don't support the current version of macOS (13.4.0)"
+			"Unsupported macOS version: The Cloudflare Workers runtime cannot run on the current version of macOS (13.4.0)"
 		);
 	});
 
