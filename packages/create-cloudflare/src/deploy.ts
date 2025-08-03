@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { startSection, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import TOML from "@iarna/toml";
-import { parse } from "comment-json";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { quoteShellArgs, runCommand } from "helpers/command";
@@ -83,8 +82,7 @@ const isDeployable = async (ctx: C3Context) => {
 
 const readWranglerConfig = (ctx: C3Context) => {
 	if (wranglerJsonExists(ctx)) {
-		const wranglerJsonStr = readWranglerJson(ctx);
-		return parse(wranglerJsonStr, undefined, false);
+		return readWranglerJson(ctx);
 	}
 	const wranglerTomlStr = readWranglerToml(ctx);
 	return TOML.parse(wranglerTomlStr.replace(/\r\n/g, "\n"));
