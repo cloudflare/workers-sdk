@@ -3,9 +3,46 @@ import { ModuleRunner } from "vite/module-runner";
 import { INIT_PATH, UNKNOWN_HOST } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
+import type {
+	EvaluatedModuleNode,
+	ModuleEvaluator,
+	ModuleRunnerOptions,
+} from "vite/module-runner";
+
+/**
+ * Custom `ModuleRunner`.
+ * The `cachedModule` method is overriden to ensure compatibility with the Workers runtime.
+ */
+// @ts-expect-error: `cachedModule` is private
+class CustomModuleRunner extends ModuleRunner {
+	#env: WrapperEnv;
+
+	constructor(
+		options: ModuleRunnerOptions,
+		evaluator: ModuleEvaluator,
+		env: WrapperEnv
+	) {
+		super(options, evaluator);
+		this.#env = env;
+	}
+	override async cachedModule(
+		url: string,
+		importer?: string
+	): Promise<EvaluatedModuleNode> {
+		const stub = this.#env.__VITE_RUNNER_OBJECT__.get("singleton");
+		const moduleId = await stub.getFetchedModuleId(url, importer);
+		const module = this.evaluatedModules.getModuleById(moduleId);
+
+		if (!module) {
+			throw new Error(`Module "${moduleId}" is undefined`);
+		}
+
+		return module;
+	}
+}
 
 /** Module runner instance */
-let moduleRunner: ModuleRunner | undefined;
+let moduleRunner: CustomModuleRunner | undefined;
 
 /**
  * Durable Object that creates the module runner and handles WebSocket communication with the Vite dev server.
@@ -13,6 +50,10 @@ let moduleRunner: ModuleRunner | undefined;
 export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
 	/** WebSocket connection to the Vite dev server */
 	#webSocket?: WebSocket;
+	#concurrentModuleNodePromises = new Map<
+		string,
+		Promise<EvaluatedModuleNode>
+	>();
 
 	/**
 	 * Handles fetch requests to initialize the module runner.
@@ -46,12 +87,47 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
 	 * @param data - The data to send as a string
 	 * @throws Error if the WebSocket is not initialized
 	 */
-	send(data: string) {
+	send(data: string): void {
 		if (!this.#webSocket) {
 			throw new Error(`Module runner WebSocket not initialized`);
 		}
 
 		this.#webSocket.send(data);
+	}
+	/**
+	 * Based on the implementation of `cachedModule` from Vite's `ModuleRunner`.
+	 * Running this in the DO enables us to share promises across invocations.
+	 * @param url - The module URL
+	 * @param importer - The module's importer
+	 * @returns The ID of the fetched module
+	 */
+	async getFetchedModuleId(
+		url: string,
+		importer: string | undefined
+	): Promise<string> {
+		if (!moduleRunner) {
+			throw new Error(`Module runner not initialized`);
+		}
+
+		let cached = this.#concurrentModuleNodePromises.get(url);
+
+		if (!cached) {
+			const cachedModule = moduleRunner.evaluatedModules.getModuleByUrl(url);
+			cached = moduleRunner
+				// @ts-expect-error: `getModuleInformation` is private
+				.getModuleInformation(url, importer, cachedModule)
+				.finally(() => {
+					this.#concurrentModuleNodePromises.delete(url);
+				}) as Promise<EvaluatedModuleNode>;
+			this.#concurrentModuleNodePromises.set(url, cached);
+		} else {
+			// @ts-expect-error: `debug` is private
+			moduleRunner.debug?.("[module runner] using cached module info for", url);
+		}
+
+		const module = await cached;
+
+		return module.id;
 	}
 }
 
@@ -62,7 +138,7 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
  * @returns Configured module runner instance
  */
 async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
-	return new ModuleRunner(
+	return new CustomModuleRunner(
 		{
 			sourcemapInterceptor: "prepareStackTrace",
 			transport: {
@@ -128,7 +204,8 @@ async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 
 				return import(filepath);
 			},
-		}
+		},
+		env
 	);
 }
 
