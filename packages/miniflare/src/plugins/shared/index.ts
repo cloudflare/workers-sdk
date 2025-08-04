@@ -97,13 +97,31 @@ export interface PluginBase<
 	SharedOptions extends z.ZodType | undefined,
 > {
 	options: Options;
+	/**
+	 * getBindings returns a list of bindings that will be made available
+	 * to the "entry" worker.
+	 * @param options
+	 * @param workerIndex
+	 */
 	getBindings(
 		options: z.infer<Options>,
 		workerIndex: number
 	): Awaitable<Worker_Binding[] | void>;
+	/**
+	 * getNodeBindings exposes series of Node (not Workerd) bindings that will be used for the
+	 * 'magic' proxy that will proxy to Workerd bindings.
+	 * See {@link https://developers.cloudflare.com/workers/wrangler/api/#getplatformproxy getPlatformProxy} for more
+	 * details.
+	 * @param options
+	 */
 	getNodeBindings(
 		options: z.infer<Options>
 	): Awaitable<Record<string, unknown>>;
+	/**
+	 * getServices returns a series of "internal" Worker services that help support
+	 * the functioning of any binding exposed in {@link PluginBase.getBindings}.
+	 * @param options
+	 */
 	getServices(
 		options: PluginServicesOptions<Options, SharedOptions>
 	): Awaitable<Service[] | ServicesExtensions | void>;
