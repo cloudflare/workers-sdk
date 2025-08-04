@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { ModuleRunner } from "vite/module-runner";
+import { ModuleRunner, ssrModuleExportsKey } from "vite/module-runner";
 import { INIT_PATH, UNKNOWN_HOST } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
@@ -184,7 +184,7 @@ async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 				try {
 					const fn = env.__VITE_UNSAFE_EVAL__.eval(code, module.id);
 					await fn(...Object.values(context));
-					Object.seal(context.__vite_ssr_exports__);
+					Object.seal(context[ssrModuleExportsKey]);
 				} catch (error) {
 					if (error instanceof Error) {
 						error.message = `Error running module "${module.id}".\n${error.message}.`;
