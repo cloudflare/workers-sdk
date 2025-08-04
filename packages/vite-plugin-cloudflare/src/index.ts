@@ -206,18 +206,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 					if (
 						source === workerConfig?.main &&
-						(importer ===
-							path.join(this.environment.config.root, "index.html") ||
-							options.isEntry)
+						// In build, the importer is `undefined` for entry files
+						(importer === undefined ||
+							importer ===
+								// In dev, Vite uses this path as the default importer
+								path.join(this.environment.config.root, "index.html"))
 					) {
-						// We use a mock `index.html` file in the same directory as the Worker config as the importer
-						// The `main` value is then resolved relative to this
-						const configRelativeImporter = path.join(
-							path.dirname(workerConfig.userConfigPath),
-							"index.html"
-						);
-
-						return this.resolve(source, configRelativeImporter, options);
+						// Resolve the `main` field relative to the Worker config file
+						return this.resolve(source, workerConfig.userConfigPath, options);
 					}
 				},
 			},
