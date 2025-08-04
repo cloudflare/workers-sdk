@@ -8,7 +8,6 @@ import {
 	error,
 	logRaw,
 	startSection,
-	validateMacOSVersion,
 } from "@cloudflare/cli";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive } from "@cloudflare/cli/interactive";
@@ -20,6 +19,7 @@ import {
 	rectifyPmMismatch,
 } from "helpers/packageManagers";
 import { installWrangler, npmInstall } from "helpers/packages";
+import { warnMacOSVersion } from "miniflare";
 import { version } from "../package.json";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
@@ -106,7 +106,7 @@ export const runLatest = async () => {
 export const runCli = async (args: Partial<C3Args>) => {
 	printBanner(args);
 
-	validateMacOSVersion();
+	warnMacOSVersion();
 
 	const ctx = await createContext(args);
 
