@@ -177,12 +177,11 @@ async function fetchFromWorker(
 						),
 					}
 				);
-				if (maybeSuccessfulResponse.statusText === expectedStatusText) {
-					response = maybeSuccessfulResponse;
-				}
+				expect(maybeSuccessfulResponse.statusText).toEqual(expectedStatusText);
+				return maybeSuccessfulResponse;
 			} catch {}
 		},
-		{ timeout: 30_000, interval: fetchTimeout + 500 }
+		{ timeout: 30_000, interval: 500 }
 	);
 
 	return response;
