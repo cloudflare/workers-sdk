@@ -10,7 +10,7 @@ export const TURBOREPO = {
 		if (process.env.CI || process.env.GITHUB_ACTIONS) {
 			return false;
 		}
-		
+
 		return !!(
 			process.env.TURBO_HASH ||
 			process.env.TURBO_TASK ||
