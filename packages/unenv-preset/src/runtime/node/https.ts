@@ -1,8 +1,9 @@
+// This hybrid polyfill is used only when the native implementation is not available
+// See `src/preset.ts` for details
+
 import { createServer, Server } from "unenv/node/https";
 import type nodeHttps from "node:https";
 
-// TODO: use the workerd implementation when available
-// See https://github.com/cloudflare/workerd/pull/4591
 export { Server, createServer } from "unenv/node/https";
 
 const workerdHttps = process.getBuiltinModule("node:https");

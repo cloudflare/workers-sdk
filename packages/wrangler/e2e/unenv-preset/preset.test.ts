@@ -28,7 +28,7 @@ const testConfigs: TestConfig[] = [
 			enable_nodejs_http_modules: false,
 		},
 	},
-	// http modules
+	// http client only modules (no server)
 	[
 		{
 			name: "http disabled by date",
@@ -53,6 +53,45 @@ const testConfigs: TestConfig[] = [
 			compatibilityFlags: ["enable_nodejs_http_modules"],
 			expectRuntimeFlags: {
 				enable_nodejs_http_modules: true,
+			},
+		},
+	],
+	// http client and server modules
+	[
+		{
+			name: "http server disabled by date",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_http_modules: false,
+			},
+		},
+		// TODO: add a config when http server is enabled by default (date no set yet)
+		{
+			name: "http server enabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: [
+				"enable_nodejs_http_modules",
+				"enable_nodejs_http_server_modules",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_http_modules: true,
+				enable_nodejs_http_server_modules: true,
+			},
+		},
+		// TODO: change the date pass the default enabled date (date not set yet)
+		{
+			name: "http server disabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: [
+				"enable_nodejs_http_modules",
+				"disable_nodejs_http_server_modules",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_http_modules: true,
+				enable_nodejs_http_server_modules: false,
 			},
 		},
 	],
