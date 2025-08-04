@@ -66,5 +66,30 @@ describe("TURBOREPO", () => {
 			vi.stubEnv("npm_config_user_agent", undefined);
 			expect(TURBOREPO.isTurborepo()).toBe(false);
 		});
+
+		it("should return false in CI environments even with turbo env vars", () => {
+			vi.stubEnv("CI", "true");
+			vi.stubEnv("TURBO_HASH", "some-hash");
+			vi.stubEnv("npm_config_user_agent", "turbo@1.0.0");
+			expect(TURBOREPO.isTurborepo()).toBe(false);
+		});
+
+		it("should return false in GitHub Actions even with turbo env vars", () => {
+			vi.stubEnv("GITHUB_ACTIONS", "true");
+			vi.stubEnv("TURBO_TASK", "dev");
+			expect(TURBOREPO.isTurborepo()).toBe(false);
+		});
+
+		it("should return false when CI is set to any truthy value", () => {
+			vi.stubEnv("CI", "1");
+			vi.stubEnv("TURBO_HASH", "some-hash");
+			expect(TURBOREPO.isTurborepo()).toBe(false);
+		});
+
+		it("should return false when GITHUB_ACTIONS is set to any truthy value", () => {
+			vi.stubEnv("GITHUB_ACTIONS", "1");
+			vi.stubEnv("TURBO_INVOCATION_DIR", "/project");
+			expect(TURBOREPO.isTurborepo()).toBe(false);
+		});
 	});
 });

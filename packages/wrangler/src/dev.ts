@@ -923,7 +923,7 @@ export function getBindings(
 			return {
 				binding,
 				id: preview_id ?? id,
-				experimental_remote: remoteBindingsEnabled && experimental_remote,
+				experimental_remote: remoteBindingsEnabled && (experimental_remote ?? false),
 			} satisfies CfKvNamespace;
 		}
 	);
@@ -944,7 +944,7 @@ export function getBindings(
 		if (local) {
 			return {
 				...d1Db,
-				experimental_remote: remoteBindingsEnabled && d1Db.experimental_remote,
+				experimental_remote: remoteBindingsEnabled && (d1Db.experimental_remote ?? false),
 				database_id,
 			} satisfies CfD1Database;
 		}
@@ -954,7 +954,7 @@ export function getBindings(
 				`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your ${configFileName(configParam.configPath)} file\n--------------------\n`
 			);
 		}
-		return { ...d1Db, database_id };
+		return { ...d1Db, experimental_remote: remoteBindingsEnabled && (d1Db.experimental_remote ?? false), database_id };
 	});
 	const d1Args = args.d1Databases || [];
 	const mergedD1Bindings = mergeWithOverride(d1Config, d1Args, "binding");
@@ -983,7 +983,7 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
-					experimental_remote: remoteBindingsEnabled && experimental_remote,
+					experimental_remote: remoteBindingsEnabled && (experimental_remote ?? false),
 				} satisfies CfR2Bucket;
 			}
 		) || [];
@@ -1045,7 +1045,7 @@ export function getBindings(
 				binding: queue.binding,
 				queue_name: queue.queue,
 				delivery_delay: queue.delivery_delay,
-				experimental_remote: remoteBindingsEnabled && queue.experimental_remote,
+				experimental_remote: remoteBindingsEnabled && (queue.experimental_remote ?? false),
 			} satisfies CfQueue;
 		}),
 	];
