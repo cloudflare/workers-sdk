@@ -163,7 +163,7 @@ async function fetchFromWorker(
 			const response = await worker.fetch("http://example.com", {
 				signal: AbortSignal.timeout(5_000),
 			});
-			expect(response.status).toEqual(expectedStatusText);
+			expect(response.statusText).toEqual(expectedStatusText);
 			return response;
 		},
 		{ timeout: 30_000, interval: 500 }
