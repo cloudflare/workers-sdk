@@ -34,7 +34,7 @@ export type WorkerDefinition = {
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registry: WorkerRegistry = {};
-	private registeredWorkers = new Set<string>();
+	private registeredWorkers: Set<string> = new Set();
 	private externalServices: Map<
 		string,
 		{
@@ -68,6 +68,8 @@ export class DevRegistry {
 			return;
 		}
 
+		// Keep track of external services we are depending on
+		// To pre-populate the proxy server with the fallback service addresses
 		this.externalServices = new Map(services);
 
 		if (!this.watcher) {

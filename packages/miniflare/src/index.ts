@@ -2103,15 +2103,12 @@ export class Miniflare {
 		);
 	}
 
-	#updateProxyServer(url: URL): void {
-		assert(this.#socketPorts !== undefined);
-		this.#devRegistry.configureProxyWorker(url.toString(), this.#socketPorts);
-	}
-
 	get ready(): Promise<URL> {
 		return this.#waitForReady().then(async (url) => {
+			assert(this.#socketPorts !== undefined);
+
 			// Update proxy server with the addresses of the fallback services
-			this.#updateProxyServer(url);
+			this.#devRegistry.configureProxyWorker(url.toString(), this.#socketPorts);
 			// Register all workers with the dev registry
 			await this.#registerWorkers(url);
 
