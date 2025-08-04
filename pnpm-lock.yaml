@@ -2049,7 +2049,7 @@ importers:
         specifier: 2.0.0-rc.19
         version: 2.0.0-rc.19
       workerd:
-        specifier: ^1.20250722.0
+        specifier: ^1.20250730.0
         version: 1.20250801.0
     devDependencies:
       '@types/debug':

@@ -277,4 +277,52 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof https.globalAgent, "object");
 		assert.strictEqual(typeof https.request, "function");
 	},
+
+	async testHttpServer() {
+		const http = await import("http");
+
+		const useNativeHttp = getRuntimeFlagValue(
+			"enable_nodejs_http_server_modules"
+		);
+
+		if (useNativeHttp) {
+			// Test the workerd implementation only
+			let server: unknown;
+			assert.doesNotThrow(
+				() =>
+					(server = http.createServer((_req, res) => {
+						res.end();
+					}))
+			);
+			assert.deepEqual(server instanceof http.Server, true);
+		} else {
+			// Test the unenv polyfill only
+			assert.throws(() => http.createServer(), /not implemented/);
+			assert.throws(() => new http.Server(), /not implemented/);
+		}
+	},
+
+	async testHttpsServer() {
+		const https = await import("https");
+
+		const useNativeHttp = getRuntimeFlagValue(
+			"enable_nodejs_http_server_modules"
+		);
+
+		if (useNativeHttp) {
+			// Test the workerd implementation only
+			let server: unknown;
+			assert.doesNotThrow(
+				() =>
+					(server = https.createServer((_req, res) => {
+						res.end();
+					}))
+			);
+			assert.deepEqual(server instanceof https.Server, true);
+		} else {
+			// Test the unenv polyfill only
+			assert.throws(() => https.createServer(), /not implemented/);
+			assert.throws(() => new https.Server(), /not implemented/);
+		}
+	},
 };
