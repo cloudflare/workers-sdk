@@ -59,6 +59,33 @@ export const PLUGINS = {
 };
 export type Plugins = typeof PLUGINS;
 
+/**
+ * PluginKey is a type union of all the keys of the PLUGINS object.
+ */
+export type PluginKey = keyof Plugins;
+
+/**
+ * Type guard to check if a string is a valid built-in plugin key.
+ * @param key The key to check
+ * @returns A type predicate indicating if the key is a built-in plugin key
+ */
+export function isBuiltInPluginKey<T extends string>(
+	key: T
+): key is T & PluginKey {
+	return key in PLUGINS;
+}
+
+// Typeguard for determining if a plugin is a built in
+export function isBuiltInPlugin<T extends string>(arg: {
+	key: T;
+	plugin: any;
+}): arg is {
+	key: T & PluginKey;
+	plugin: T extends PluginKey ? Plugins[T] : never;
+} {
+	return isBuiltInPluginKey(arg.key) && PLUGINS[arg.key] != undefined;
+}
+
 // Note, we used to define these as...
 //
 // ```ts
