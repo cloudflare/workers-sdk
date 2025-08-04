@@ -246,7 +246,4 @@ export const error = (
 	}
 };
 
-export {
-	validateMacOSVersion,
-	warnMacOSVersion,
-} from "./validate-macos-version";
+export { validateMacOSVersion } from "./validate-macos-version";

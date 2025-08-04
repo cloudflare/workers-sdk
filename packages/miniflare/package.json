@@ -43,7 +43,6 @@
 		"types:build": "node scripts/types.mjs tsconfig.json && node scripts/types.mjs src/workers/tsconfig.json"
 	},
 	"dependencies": {
-		"@cloudflare/cli": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
 		"acorn": "8.14.0",
 		"acorn-walk": "8.3.2",
@@ -59,6 +58,7 @@
 	},
 	"devDependencies": {
 		"@ava/typescript": "^4.1.0",
+		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",

@@ -8,7 +8,7 @@ import {
 	error,
 	logRaw,
 	startSection,
-	warnMacOSVersion,
+	validateMacOSVersion,
 } from "@cloudflare/cli";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive } from "@cloudflare/cli/interactive";
@@ -106,7 +106,7 @@ export const runLatest = async () => {
 export const runCli = async (args: Partial<C3Args>) => {
 	printBanner(args);
 
-	warnMacOSVersion();
+	validateMacOSVersion(false);
 
 	const ctx = await createContext(args);
 

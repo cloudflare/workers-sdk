@@ -34,13 +34,6 @@ export function validateMacOSVersion(shouldThrow: boolean = true): void {
 	}
 }
 
-/**
- * Warns about unsupported macOS version but does not throw.
- * Used by Wrangler and C3 to warn users without failing.
- */
-export function warnMacOSVersion(): void {
-	validateMacOSVersion(false);
-}
 
 /**
  * Converts Darwin kernel version to macOS version.
