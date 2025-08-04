@@ -54,7 +54,7 @@ describe("json helpers", () => {
 
 	describe("addJSONComment", () => {
 		test("adds a string comment to JSON object", () => {
-			const jsonObject = { name: "foo" } as CommentObject;
+			const jsonObject = { name: "foo" } as unknown as CommentObject;
 
 			addJSONComment(jsonObject, "before:name", " This is a comment ");
 
@@ -71,7 +71,7 @@ describe("json helpers", () => {
 		});
 
 		test("adds multiple comments to JSON object", () => {
-			const jsonObject = { name: "foo" } as CommentObject;
+			const jsonObject = { name: "foo" } as unknown as CommentObject;
 
 			addJSONComment(jsonObject, "before:name", [
 				" Comment 1",
@@ -92,7 +92,7 @@ describe("json helpers", () => {
 		});
 
 		test("appends to existing comments", () => {
-			const jsonObject = { name: "foo" } as CommentObject;
+			const jsonObject = { name: "foo" } as unknown as CommentObject;
 			addJSONComment(jsonObject, "before:name", " This is a comment ");
 
 			addJSONComment(jsonObject, "before:name", " New comment ");
