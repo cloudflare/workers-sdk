@@ -2,7 +2,7 @@ import assert from "node:assert";
 import os from "node:os";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import { validateMacOSVersion } from "@cloudflare/cli";
+import { checkMacOSVersion } from "@cloudflare/cli";
 import { ApiError } from "@cloudflare/containers-shared";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -1489,7 +1489,7 @@ export function createCLIParser(argv: string[]) {
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
 
-	validateMacOSVersion();
+	checkMacOSVersion({ shouldThrow: false });
 
 	const startTime = Date.now();
 	const wrangler = createCLIParser(argv);

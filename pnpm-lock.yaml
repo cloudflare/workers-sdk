@@ -1769,6 +1769,9 @@ importers:
       '@ava/typescript':
         specifier: ^4.1.0
         version: 4.1.0
+      '@cloudflare/cli':
+        specifier: workspace:*
+        version: link:../cli
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared
