@@ -237,8 +237,8 @@ export async function buildCommand(
 		},
 		getDockerPath() ?? args.pathToDocker,
 		args.push,
-		// this means we won't be able to read the disk size from the config, but that option is deprecated anyway at least for containers.
-		// and this never actually worked for cloudchamber as this command was previously reading it from config.containers not config.cloudchamber
+		// this means we aren't validating defined limits for a container when building an image
+		// we will, however, still validate the image size against account level disk limits
 		undefined
 	);
 }
