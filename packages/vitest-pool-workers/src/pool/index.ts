@@ -26,6 +26,7 @@ import { createMethodsRPC } from "vitest/node";
 import { experimental_readRawConfig } from "wrangler";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { createChunkingSocket } from "../shared/chunking-socket";
+import { WORKFLOW_ENGINE_BINDING } from "../shared/workflows";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
 import {
@@ -404,7 +405,6 @@ const SELF_NAME_BINDING = "__VITEST_POOL_WORKERS_SELF_NAME";
 const SELF_SERVICE_BINDING = "__VITEST_POOL_WORKERS_SELF_SERVICE";
 const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
-const WORKFLOW_ENGINE_BINDING = "USER_ENGINE_";
 
 function buildProjectWorkerOptions(
 	project: Omit<Project, "testFiles">
@@ -533,24 +533,15 @@ Workflows defined in project: ${workflowClassNames.join(", ")}`);
 		unsafePreventEviction: true,
 	};
 
-	// Only adding 1 engine per workflow, but it should have more engines depending on the number of creates, right?
-	console.log("WORKFLOWS?", runnerWorker.workflows);
-	for (const [key, value] of Object.entries(runnerWorker.workflows ?? {})) {
+	// Add Workflows Engines DOs bindings to the Runner Worker
+	for (const value of Object.values(runnerWorker.workflows ?? {})) {
 		runnerWorker.durableObjects[
 			`${WORKFLOW_ENGINE_BINDING}${value.name.toUpperCase()}`
 		] = {
 			className: "Engine",
 			unsafeScriptName: `workflows:${value.name}`,
 		};
-		console.log(`\nEngine for ${key}`);
-		console.log(
-			`Binding name: ${WORKFLOW_ENGINE_BINDING}${value.name.toUpperCase()}`
-		);
-		console.log(`Class name: Engine`);
-		console.log(`Unsafe script name: workflows:${value.name}\n`);
 	}
-
-	console.log("DOS?", runnerWorker.durableObjects);
 
 	// Vite has its own define mechanism, but we can't control it from custom
 	// pools. Our defines come from `wrangler.toml` files which are only parsed
