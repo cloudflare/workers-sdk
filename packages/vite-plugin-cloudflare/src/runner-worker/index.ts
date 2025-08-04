@@ -65,11 +65,12 @@ const DURABLE_OBJECT_KEYS = [
 /** Available methods for `WorkflowEntrypoint` classes */
 const WORKFLOW_ENTRYPOINT_KEYS = ["run"] as const;
 
-/** The Worker entry path */
+/** The path to the Worker entry file. We store it in the module scope so that it is easily accessible in error messages etc.. */
 let workerEntryPath = "";
 
 /**
- * Creates a callable thenable that can be both awaited and invoked as a function.
+ * Creates a callable thenable that is used to access the properties of an RPC target.
+ * It can be both awaited and invoked as a function.
  * This enables RPC properties to be used both as promises and callable functions.
  * @param key - The property key name used for error messages
  * @param property - The promise that resolves to the property value

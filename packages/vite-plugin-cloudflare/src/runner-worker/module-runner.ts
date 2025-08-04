@@ -158,7 +158,8 @@ async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 				},
 				send(data) {
 					// We send messages via a binding to the Durable Object.
-					// This is because `import.meta.send` may be called within the context of a Worker.
+					// This is because `import.meta.send` may be called within a Worker's request context.
+					// Directly using a WebSocket created in another context would be forbidden.
 					const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
 					stub.send(JSON.stringify(data));
 				},
@@ -185,7 +186,11 @@ async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 					await fn(...Object.values(context));
 					Object.seal(context.__vite_ssr_exports__);
 				} catch (error) {
-					throw new Error(`Error running module "${module.id}"`);
+					if (error instanceof Error) {
+						error.message = `Error running module "${module.id}".\n${error.message}.`;
+					}
+
+					throw error;
 				}
 			},
 			async runExternalModule(filepath) {
