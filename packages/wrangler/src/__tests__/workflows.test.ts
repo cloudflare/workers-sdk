@@ -780,5 +780,30 @@ describe("wrangler workflows", () => {
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain('"workflows" bindings should be objects');
 		});
+
+		it("should reject workflows binding with same name", async () => {
+			writeWorkerSource({ format: "ts" });
+			writeWranglerConfig({
+				main: "index.ts",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "valid-workflow-name",
+						class_name: "MyWorkflow",
+						script_name: "external-script",
+					},
+					{
+						binding: "MY_WORKFLOW_2",
+						name: "valid-workflow-name",
+						class_name: "MyWorkflow2",
+						script_name: "external-script-2",
+					},
+				],
+			});
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'"workflows" bindings must have unique "name" values'
+			);
+		});
 	});
 });
