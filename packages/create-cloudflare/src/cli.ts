@@ -106,7 +106,7 @@ export const runLatest = async () => {
 export const runCli = async (args: Partial<C3Args>) => {
 	printBanner(args);
 
-	validateMacOSVersion(false);
+	validateMacOSVersion(true);
 
 	const ctx = await createContext(args);
 
