@@ -6,16 +6,14 @@ import os from "node:os";
 const MINIMUM_MACOS_VERSION = "13.5.0";
 
 /**
- * Ensures the current macOS version meets the minimum requirement for workerd compatibility.
+ * Checks the current macOS version for workerd compatibility.
  *
  * This function is a no-op on non-Darwin platforms and in CI environments.
  *
  * @param options - Configuration object
  * @param options.shouldThrow - If true, throws an error on unsupported versions. If false, logs a warning.
  */
-export function ensureMinimumMacOsVersion(options: {
-	shouldThrow: boolean;
-}): void {
+export function checkMacOSVersion(options: { shouldThrow: boolean }): void {
 	if (process.platform !== "darwin") {
 		return;
 	}
@@ -43,13 +41,6 @@ export function ensureMinimumMacOsVersion(options: {
 			);
 		}
 	}
-}
-
-/**
- * @deprecated Use ensureMinimumMacOsVersion instead
- */
-export function validateMacOSVersion(shouldThrow: boolean = true): void {
-	ensureMinimumMacOsVersion({ shouldThrow });
 }
 
 /**

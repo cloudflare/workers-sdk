@@ -4,8 +4,8 @@ import { dirname } from "path";
 import { chdir } from "process";
 import {
 	cancel,
+	checkMacOSVersion,
 	endSection,
-	ensureMinimumMacOsVersion,
 	error,
 	logRaw,
 	startSection,
@@ -106,7 +106,7 @@ export const runLatest = async () => {
 export const runCli = async (args: Partial<C3Args>) => {
 	printBanner(args);
 
-	ensureMinimumMacOsVersion({ shouldThrow: true });
+	checkMacOSVersion({ shouldThrow: true });
 
 	const ctx = await createContext(args);
 
