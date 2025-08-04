@@ -4,12 +4,10 @@ import assert from "node:assert";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { getPlatformProxy } from "wrangler";
-import type {
-	AbortSignal,
-	Fetcher,
-	KVNamespace,
-	Response,
-} from "@cloudflare/workers-types/experimental";
+import type { KVNamespace } from "@cloudflare/workers-types/experimental";
+import type { DispatchFetch, Response } from "miniflare";
+
+type Fetcher = { fetch: DispatchFetch };
 
 const auth = getAuthenticatedEnv();
 const execOptions = {
@@ -159,32 +157,14 @@ if (auth) {
 async function fetchFromWorker(
 	worker: Fetcher,
 	expectedStatusText: string
-): Promise<Response | null> {
-	let response: Response | null = null;
-
-	// It seems like fetching from a remote worker might
-	// sometimes take quite a while...
-	const fetchTimeout = 5_000;
-
-	await vi.waitFor(
-		async () => {
-			try {
-				const maybeSuccessfulResponse = await worker.fetch(
-					"http://example.com",
-					{
-						signal: (global.AbortSignal as typeof AbortSignal).timeout(
-							fetchTimeout
-						),
-					}
-				);
-				expect(maybeSuccessfulResponse.statusText).toEqual(expectedStatusText);
-				return maybeSuccessfulResponse;
-			} catch {}
-		},
-		{ timeout: 30_000, interval: 500 }
-	);
-
-	return response;
+): Promise<Response> {
+	return vi.waitFor(async () => {
+		const response = await worker.fetch("http://example.com", {
+			signal: AbortSignal.timeout(5_000),
+		});
+		expect(response.status).toEqual(expectedStatusText);
+		return response;
+	});
 }
 
 /**
