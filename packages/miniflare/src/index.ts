@@ -894,9 +894,9 @@ export class Miniflare {
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
-		
+
 		// Validate macOS version (hard fail for Miniflare)
-		validateMacOSVersion();
+		validateMacOSVersion(true);
 
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;

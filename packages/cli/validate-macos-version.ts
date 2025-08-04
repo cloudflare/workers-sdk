@@ -1,10 +1,10 @@
 import os from "node:os";
 
 /**
- * Validates that the current macOS version supports workerd.
- * Throws an error if running on macOS below version 13.5.
+ * Validates macOS version compatibility with workerd.
+ * @param shouldThrow - If true, throws an error on unsupported versions. If false, logs a warning.
  */
-export function validateMacOSVersion(): void {
+export function validateMacOSVersion(shouldThrow: boolean = true): void {
 	if (process.platform !== "darwin") {
 		return;
 	}
@@ -17,11 +17,20 @@ export function validateMacOSVersion(): void {
 	const macOSVersion = darwinVersionToMacOSVersion(release);
 
 	if (macOSVersion && isVersionLessThan(macOSVersion, "13.5.0")) {
-		throw new Error(
-			`Unsupported macOS version: The Cloudflare Workers runtime cannot run on the current version of macOS (${macOSVersion}). ` +
-				`The minimum requirement is macOS 13.5+. See https://github.com/cloudflare/workerd?tab=readme-ov-file#running-workerd ` +
-				`If you cannot upgrade your version of macOS, you could try running create-cloudflare/wrangler in a DevContainer setup with Linux.`
-		);
+		if (shouldThrow) {
+			throw new Error(
+				`Unsupported macOS version: The Cloudflare Workers runtime cannot run on the current version of macOS (${macOSVersion}). ` +
+					`The minimum requirement is macOS 13.5+. See https://github.com/cloudflare/workerd?tab=readme-ov-file#running-workerd ` +
+					`If you cannot upgrade your version of macOS, you could try running create-cloudflare/wrangler in a DevContainer setup with Linux.`
+			);
+		} else {
+			// eslint-disable-next-line no-console
+			console.warn(
+				`⚠️  Warning: Unsupported macOS version detected (${macOSVersion}). ` +
+					`The Cloudflare Workers runtime may not work correctly on macOS versions below 13.5. ` +
+					`Consider upgrading to macOS 13.5+ or using a DevContainer setup with Linux.`
+			);
+		}
 	}
 }
 
@@ -30,25 +39,7 @@ export function validateMacOSVersion(): void {
  * Used by Wrangler and C3 to warn users without failing.
  */
 export function warnMacOSVersion(): void {
-	if (process.platform !== "darwin") {
-		return;
-	}
-
-	if (process.env.CI) {
-		return;
-	}
-
-	const release = os.release();
-	const macOSVersion = darwinVersionToMacOSVersion(release);
-
-	if (macOSVersion && isVersionLessThan(macOSVersion, "13.5.0")) {
-		// eslint-disable-next-line no-console
-		console.warn(
-			`⚠️  Warning: Unsupported macOS version detected (${macOSVersion}). ` +
-				`The Cloudflare Workers runtime may not work correctly on macOS versions below 13.5. ` +
-				`Consider upgrading to macOS 13.5+ or using a DevContainer setup with Linux.`
-		);
-	}
+	validateMacOSVersion(false);
 }
 
 /**
