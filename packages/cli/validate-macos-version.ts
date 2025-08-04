@@ -21,14 +21,14 @@ export function validateMacOSVersion(shouldThrow: boolean = true): void {
 			throw new Error(
 				`Unsupported macOS version: The Cloudflare Workers runtime cannot run on the current version of macOS (${macOSVersion}). ` +
 					`The minimum requirement is macOS 13.5+. See https://github.com/cloudflare/workerd?tab=readme-ov-file#running-workerd ` +
-					`If you cannot upgrade your version of macOS, you could try running create-cloudflare/wrangler in a DevContainer setup with Linux.`
+					`If you cannot upgrade your version of macOS, you could try running in a DevContainer setup with a supported version of Linux (glibc 2.35+ required).`
 			);
 		} else {
 			// eslint-disable-next-line no-console
 			console.warn(
 				`⚠️  Warning: Unsupported macOS version detected (${macOSVersion}). ` +
 					`The Cloudflare Workers runtime may not work correctly on macOS versions below 13.5. ` +
-					`Consider upgrading to macOS 13.5+ or using a DevContainer setup with Linux.`
+					`Consider upgrading to macOS 13.5+ or using a DevContainer setup with a supported version of Linux (glibc 2.35+ required).`
 			);
 		}
 	}
