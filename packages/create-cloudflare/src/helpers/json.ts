@@ -32,7 +32,10 @@ export function writeJSONWithComments(
 }
 
 /**
- * Adds a comment to a JSON configuration object that was loaded with
+ * Adds a comment to a JSON configuration object that was loaded with comment-json.
+ * @param jsonObject - The JSON object (with comment properties) to add comments to.
+ * @param descriptor - The comment descriptor (e.g., "before-all", "after:propertyName").
+ * @param comment - The comment(s) to add - can be a string, CommentToken object, or array of either.
  */
 export function addJSONComment(
 	jsonObject: Partial<CommentObject>,
