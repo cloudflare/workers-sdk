@@ -1,9 +1,6 @@
 import os from "node:os";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-	validateMacOSVersion,
-	warnMacOSVersion,
-} from "../validate-macos-version";
+import { validateMacOSVersion } from "../validate-macos-version";
 
 vi.mock("node:os");
 
@@ -101,7 +98,7 @@ describe("validateMacOSVersion", () => {
 	});
 });
 
-describe("warnMacOSVersion", () => {
+describe("validateMacOSVersion with shouldThrow=false", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.unstubAllEnvs();
@@ -111,7 +108,7 @@ describe("warnMacOSVersion", () => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("linux");
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-		warnMacOSVersion();
+		validateMacOSVersion(false);
 
 		expect(warnSpy).not.toHaveBeenCalled();
 	});
@@ -121,7 +118,7 @@ describe("warnMacOSVersion", () => {
 		mockOs.release.mockReturnValue("22.6.0");
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-		warnMacOSVersion();
+		validateMacOSVersion(false);
 
 		expect(warnSpy).not.toHaveBeenCalled();
 	});
@@ -132,7 +129,7 @@ describe("warnMacOSVersion", () => {
 		mockOs.release.mockReturnValue("21.6.0");
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-		warnMacOSVersion();
+		validateMacOSVersion(false);
 
 		expect(warnSpy).toHaveBeenCalledWith(
 			expect.stringContaining(
@@ -147,7 +144,7 @@ describe("warnMacOSVersion", () => {
 		mockOs.release.mockReturnValue("22.4.0");
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-		warnMacOSVersion();
+		validateMacOSVersion(false);
 
 		expect(warnSpy).toHaveBeenCalledWith(
 			expect.stringContaining(
@@ -162,7 +159,7 @@ describe("warnMacOSVersion", () => {
 		mockOs.release.mockReturnValue("21.6.0");
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-		warnMacOSVersion();
+		validateMacOSVersion(false);
 
 		expect(warnSpy).not.toHaveBeenCalled();
 	});
@@ -173,7 +170,7 @@ describe("warnMacOSVersion", () => {
 		mockOs.release.mockReturnValue("21.6.0");
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-		warnMacOSVersion();
+		validateMacOSVersion(false);
 
 		expect(warnSpy).not.toHaveBeenCalled();
 	});
@@ -184,7 +181,7 @@ describe("warnMacOSVersion", () => {
 		mockOs.release.mockReturnValue("21.6.0");
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-		warnMacOSVersion();
+		validateMacOSVersion(false);
 
 		expect(warnSpy).not.toHaveBeenCalled();
 	});
@@ -194,7 +191,7 @@ describe("warnMacOSVersion", () => {
 		mockOs.release.mockReturnValue("invalid-version");
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-		warnMacOSVersion();
+		validateMacOSVersion(false);
 
 		expect(warnSpy).not.toHaveBeenCalled();
 	});
