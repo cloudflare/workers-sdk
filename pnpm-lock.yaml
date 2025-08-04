@@ -1566,9 +1566,6 @@ importers:
       magic-string:
         specifier: ^0.30.5
         version: 0.30.14
-      miniflare:
-        specifier: workspace:*
-        version: link:../miniflare
       open:
         specifier: ^8.4.0
         version: 8.4.0
@@ -1732,6 +1729,9 @@ importers:
 
   packages/miniflare:
     dependencies:
+      '@cloudflare/cli':
+        specifier: workspace:*
+        version: link:../cli
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
