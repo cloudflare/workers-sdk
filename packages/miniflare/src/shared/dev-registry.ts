@@ -124,14 +124,17 @@ export class DevRegistry {
 		this.registry = {};
 
 		// Only this step is async and could be awaited
-		return Promise.all([
-			this.watcher?.close(),
-			this.proxyWorker?.terminate(),
-		]).then(() => {
-			this.watcher = undefined;
-			this.proxyWorker = undefined;
-			this.proxyAddress = undefined;
-		});
+		return Promise.all([this.watcher?.close(), this.proxyWorker?.terminate()])
+			.then(() => {
+				// Typescript complains that the return type is
+				// not compatible with `Promise<void>` without this.
+				return;
+			})
+			.finally(() => {
+				this.watcher = undefined;
+				this.proxyWorker = undefined;
+				this.proxyAddress = undefined;
+			});
 	}
 
 	private unregisterWorkers() {

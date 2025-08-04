@@ -153,8 +153,8 @@ async function buildPackage() {
 	const pkg = getPackage(pkgRoot);
 
 	const indexPath = path.join(pkgRoot, "src", "index.ts");
-	// The dev registry proxy will be run in a separate worker thread, so we
-	// will define a separate entry point for it
+	// The dev registry proxy runs in a Node.js worker thread (instead of workerd) and
+	// requires a separate entry file
 	const devRegistryProxyPath = path.join(
 		pkgRoot,
 		"src",
