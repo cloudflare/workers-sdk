@@ -34,7 +34,6 @@ export function validateMacOSVersion(shouldThrow: boolean = true): void {
 	}
 }
 
-
 /**
  * Converts Darwin kernel version to macOS version.
  * Darwin 21.x.x = macOS 12.x (Monterey)
