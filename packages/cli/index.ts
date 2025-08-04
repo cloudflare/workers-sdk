@@ -245,3 +245,8 @@ export const error = (
 		);
 	}
 };
+
+export {
+	validateMacOSVersion,
+	warnMacOSVersion,
+} from "./validate-macos-version";

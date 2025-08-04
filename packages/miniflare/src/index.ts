@@ -11,6 +11,7 @@ import { Duplex, Transform, Writable } from "stream";
 import { ReadableStream } from "stream/web";
 import util from "util";
 import zlib from "zlib";
+import { validateMacOSVersion } from "@cloudflare/cli";
 import exitHook from "exit-hook";
 import { $ as colors$, green } from "kleur/colors";
 import { npxImport } from "npx-import";
@@ -143,98 +144,6 @@ import type {
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
 import type { ChildProcess } from "child_process";
-
-/**
- * Validates that the current macOS version supports workerd.
- * Throws an error if running on macOS below version 13.5.
- */
-export function validateMacOSVersion(): void {
-	if (process.platform !== "darwin") {
-		return;
-	}
-
-	if (process.env.CI) {
-		return;
-	}
-
-	const release = os.release();
-	const macOSVersion = darwinVersionToMacOSVersion(release);
-
-	if (macOSVersion && isVersionLessThan(macOSVersion, "13.5.0")) {
-		throw new Error(
-			`Unsupported macOS version: The Cloudflare Workers runtime cannot run on the current version of macOS (${macOSVersion}). ` +
-				`The minimum requirement is macOS 13.5+. See https://github.com/cloudflare/workerd?tab=readme-ov-file#running-workerd ` +
-				`If you cannot upgrade your version of macOS, you could try running create-cloudflare/wrangler in a DevContainer setup with Linux.`
-		);
-	}
-}
-
-/**
- * Warns about unsupported macOS version but does not throw.
- * Used by Wrangler and C3 to warn users without failing.
- */
-export function warnMacOSVersion(): void {
-	if (process.platform !== "darwin") {
-		return;
-	}
-
-	if (process.env.CI) {
-		return;
-	}
-
-	const release = os.release();
-	const macOSVersion = darwinVersionToMacOSVersion(release);
-
-	if (macOSVersion && isVersionLessThan(macOSVersion, "13.5.0")) {
-		// eslint-disable-next-line no-console
-		console.warn(
-			`⚠️  Warning: Unsupported macOS version detected (${macOSVersion}). ` +
-				`The Cloudflare Workers runtime may not work correctly on macOS versions below 13.5. ` +
-				`Consider upgrading to macOS 13.5+ or using a DevContainer setup with Linux.`
-		);
-	}
-}
-
-/**
- * Converts Darwin kernel version to macOS version.
- * Darwin 21.x.x = macOS 12.x (Monterey)
- * Darwin 22.x.x = macOS 13.x (Ventura)
- * Darwin 23.x.x = macOS 14.x (Sonoma)
- * etc.
- */
-function darwinVersionToMacOSVersion(darwinVersion: string): string | null {
-	const match = darwinVersion.match(/^(\d+)\.(\d+)\.(\d+)/);
-	if (!match) {
-		return null;
-	}
-
-	const major = parseInt(match[1], 10);
-
-	if (major >= 20) {
-		const macOSMajor = major - 9;
-		const minor = parseInt(match[2], 10);
-		const patch = parseInt(match[3], 10);
-		return `${macOSMajor}.${minor}.${patch}`;
-	}
-
-	return null;
-}
-
-/**
- * Simple semver comparison for major.minor.patch versions
- */
-function isVersionLessThan(version1: string, version2: string): boolean {
-	const [major1, minor1, patch1] = version1.split(".").map(Number);
-	const [major2, minor2, patch2] = version2.split(".").map(Number);
-
-	if (major1 !== major2) {
-		return major1 < major2;
-	}
-	if (minor1 !== minor2) {
-		return minor1 < minor2;
-	}
-	return patch1 < patch2;
-}
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -985,9 +894,6 @@ export class Miniflare {
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
-
-		// Validate macOS version - fail hard if unsupported
-		validateMacOSVersion();
 
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
