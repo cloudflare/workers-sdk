@@ -384,6 +384,99 @@ Are you sure you want to continue?`,
 			}
 		`);
 		});
+
+		it("should prompt for extra confirmation when worker is used by a Pages function", async () => {
+			mockConfirm({
+				text: `Are you sure you want to delete test-name? This action cannot be undone.`,
+				result: true,
+			});
+			mockConfirm({
+				text: `test-name is currently in use by other Workers:
+
+- A Pages project has a Service Binding to this Worker
+
+You can still delete this Worker, but doing so WILL BREAK the Workers that depend on it. This will cause unexpected failures, and cannot be undone.
+Are you sure you want to continue?`,
+				result: true,
+			});
+			writeWranglerConfig();
+			mockListKVNamespacesRequest();
+			mockListReferencesRequest("test-name", {
+				services: {
+					incoming: [],
+					outgoing: [],
+					pages_function: true,
+				},
+			});
+			mockListTailsByConsumerRequest("test-name");
+			mockDeleteWorkerRequest({ force: true });
+			await runWrangler("delete");
+
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Successfully deleted test-name",
+			  "warn": "",
+			}
+		`);
+		});
+
+		it("should include Pages function in confirmation when combined with other dependencies", async () => {
+			mockConfirm({
+				text: `Are you sure you want to delete test-name? This action cannot be undone.`,
+				result: true,
+			});
+			mockConfirm({
+				text: `test-name is currently in use by other Workers:
+
+- Worker existing-worker (production) uses this Worker as a Service Binding
+- A Pages project has a Service Binding to this Worker
+- Worker do-binder (production) has a binding to the Durable Object Namespace "actor_ns" implemented by this Worker
+
+You can still delete this Worker, but doing so WILL BREAK the Workers that depend on it. This will cause unexpected failures, and cannot be undone.
+Are you sure you want to continue?`,
+				result: true,
+			});
+			writeWranglerConfig();
+			mockListKVNamespacesRequest();
+			mockListReferencesRequest("test-name", {
+				services: {
+					incoming: [
+						{
+							service: "existing-worker",
+							environment: "production",
+							name: "BINDING",
+						},
+					],
+					outgoing: [],
+					pages_function: true,
+				},
+				durable_objects: [
+					{
+						service: "do-binder",
+						environment: "production",
+						name: "ACTOR",
+						durable_object_namespace_id: "123",
+						durable_object_namespace_name: "actor_ns",
+					},
+				],
+			});
+			mockListTailsByConsumerRequest("test-name");
+			mockDeleteWorkerRequest({ force: true });
+			await runWrangler("delete");
+
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Successfully deleted test-name",
+			  "warn": "",
+			}
+		`);
+		});
 	});
 });
 
