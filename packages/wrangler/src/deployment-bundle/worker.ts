@@ -325,9 +325,9 @@ export interface CfUnsafeServiceBinding {
 		pluginOptions?: Record<string, unknown>;
 	};
 
-	props?: CfService['props'];
-	entrypoint?: CfService['entrypoint'];
-	
+	props?: CfService["props"];
+	entrypoint?: CfService["entrypoint"];
+
 	[additionalOption: string]: any;
 }
 
@@ -337,11 +337,11 @@ export interface CfUnsafeServiceBinding {
  */
 export type CfUnsafeBinding<BindingType extends string = string> =
 	| {
-		name: string;
-		type: BindingType extends "service" ? never : BindingType;
-		service?: never;
-		dev?: never;
-	}
+			name: string;
+			type: BindingType extends "service" ? never : BindingType;
+			service?: never;
+			dev?: never;
+	  }
 	| CfUnsafeServiceBinding;
 
 type CfUnsafeMetadata = Record<string, unknown>;
