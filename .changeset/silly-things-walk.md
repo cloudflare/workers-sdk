@@ -1,5 +1,4 @@
 ---
-"@cloudflare/cli": minor
 "miniflare": patch
 "wrangler": patch
 ---
