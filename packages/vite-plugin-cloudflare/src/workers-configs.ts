@@ -126,7 +126,7 @@ function readWorkerConfig(
 		unstable_readConfig(
 			{ config: configPath, env },
 			// We preserve the original `main` value so that Vite can resolve it
-			// This enables users to provide virtual modules or package imports in `main`, as well as relative and absolute paths
+			// This enables users to provide virtual modules or package exports in `main`, as well as relative and absolute paths
 			{ experimental: { preserveOriginalMain: true } }
 		);
 	const raw = structuredClone(config) as RawWorkerConfig;

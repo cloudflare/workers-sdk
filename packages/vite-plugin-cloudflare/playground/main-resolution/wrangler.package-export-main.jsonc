@@ -1,5 +1,6 @@
 {
 	"name": "worker",
+	// The export needs to have a `.mjs` extension or Rollup will error at build time
 	"main": "@playground/main-resolution-package",
 	"compatibility_date": "2024-12-30",
 }
