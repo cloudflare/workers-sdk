@@ -1,5 +1,55 @@
 # create-cloudflare
 
+## 2.50.8
+
+### Patch Changes
+
+- [#10127](https://github.com/cloudflare/workers-sdk/pull/10127) [`65f0ef2`](https://github.com/cloudflare/workers-sdk/commit/65f0ef26a511ba810ceddeb8f1d459cdcea8e54f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.17.0 | 3.18.0 |
+
+- [#10197](https://github.com/cloudflare/workers-sdk/pull/10197) [`11225f9`](https://github.com/cloudflare/workers-sdk/commit/11225f9b44163e38bfe8ad1dbf6950faca2fa4b5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.13.0 | 4.13.1 |
+
+- [#10198](https://github.com/cloudflare/workers-sdk/pull/10198) [`626b226`](https://github.com/cloudflare/workers-sdk/commit/626b2269803fa24da19a06ae16cb72bb8b9e91c4) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To    |
+  | ---------- | ------ | ----- |
+  | sv         | 0.8.20 | 0.9.0 |
+
+- [#10199](https://github.com/cloudflare/workers-sdk/pull/10199) [`53a685f`](https://github.com/cloudflare/workers-sdk/commit/53a685f88855c66991f8ebd89ed6fc16fba37060) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 20.1.3 | 20.1.4 |
+
+- [#9956](https://github.com/cloudflare/workers-sdk/pull/9956) [`b70a702`](https://github.com/cloudflare/workers-sdk/commit/b70a70266c5f2c9be8717d798394ab02afaf4c65) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.25.1 | 3.27.0 |
+
+- [#10189](https://github.com/cloudflare/workers-sdk/pull/10189) [`69e2114`](https://github.com/cloudflare/workers-sdk/commit/69e2114880afe259b92de116779a80248f605d6a) Thanks [@fjararibet](https://github.com/fjararibet)! - add .gitignore to hello-world-assets-only template
+
+- [#10176](https://github.com/cloudflare/workers-sdk/pull/10176) [`07c8611`](https://github.com/cloudflare/workers-sdk/commit/07c8611b69721e8aa1300ba209dc45a75173e1d7) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Add macOS version validation to prevent EPIPE errors on unsupported macOS versions (below 13.5). Miniflare and C3 fail hard while Wrangler shows warnings but continues execution.
+
+- [#10192](https://github.com/cloudflare/workers-sdk/pull/10192) [`f5854a9`](https://github.com/cloudflare/workers-sdk/commit/f5854a97ede2d083ac2c351a28ccfbf7e097229a) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Preserve comments in wrangler.json files when C3 updates them during project generation. Previously, comments were stripped when updating configuration files from templates.
+
 ## 2.50.7
 
 ### Patch Changes
