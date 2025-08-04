@@ -9,7 +9,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250801.0",
+		"@cloudflare/workers-types": "^4.20250803.0",
 		"@types/jest-image-snapshot": "^6.4.0",
 		"jest-image-snapshot": "^6.4.0",
 		"typescript": "catalog:default",
