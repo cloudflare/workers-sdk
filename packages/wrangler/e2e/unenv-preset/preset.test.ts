@@ -5,7 +5,7 @@ import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import { retry } from "../helpers/retry";
-import { TESTS } from "./worker/index";
+import { WorkerdTests } from "./worker/index";
 import type { WranglerLongLivedCommand } from "../helpers/wrangler";
 
 type TestConfig = {
@@ -28,7 +28,7 @@ const testConfigs: TestConfig[] = [
 			enable_nodejs_http_modules: false,
 		},
 	},
-	// http
+	// http modules
 	[
 		{
 			name: "http disabled by date",
@@ -88,7 +88,14 @@ describe.each(testConfigs)(
 		describe.for(["local", "remote"])("%s tests", (localOrRemote) => {
 			// Skip the remote tests if the user is not logged in (e.g. a PR from a forked repo)
 			if (localOrRemote === "remote" && !CLOUDFLARE_ACCOUNT_ID) {
-				test.skip("Remote tests are not supported");
+				test.skip("Remote tests require to be logged in");
+				return;
+			}
+
+			// Can not deploy to remote when the `experimental` flag is used.
+			const hasExperimentalFlag = compatibilityFlags.includes("experimental");
+			if (localOrRemote === "remote" && hasExperimentalFlag) {
+				test.skip("Remote tests do not support experimental flag");
 				return;
 			}
 
@@ -111,7 +118,9 @@ describe.each(testConfigs)(
 				for await (const [flag, value] of Object.entries(expectRuntimeFlags)) {
 					const flagResp = await fetch(`${url}/flag?name=${flag}`);
 					expect(flagResp.ok).toEqual(true);
-					await expect(flagResp.json()).resolves.toEqual(value);
+					await expect(flagResp.json(), `flag "${flag}"`).resolves.toEqual(
+						value
+					);
 				}
 			}, 20_000);
 
@@ -119,7 +128,7 @@ describe.each(testConfigs)(
 				await wrangler.stop();
 			});
 
-			test.for(Object.keys(TESTS))(
+			test.for(Object.keys(WorkerdTests))(
 				"%s",
 				{ timeout: 20_000 },
 				async (testName) => {
