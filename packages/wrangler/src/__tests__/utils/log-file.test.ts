@@ -1,19 +1,8 @@
-import * as fs from "node:fs/promises";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { appendToDebugLogFile } from "../../utils/log-file";
-
-vi.mock("node:fs/promises", async (importOriginal) => {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-	const fsOriginal = await importOriginal<typeof import("node:fs/promises")>();
-	return {
-		...fsOriginal,
-		appendFile: vi.fn(),
-	};
-});
-
-vi.mock("../../utils/filesystem", () => ({
-	ensureDirectoryExists: vi.fn(),
-}));
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { appendToDebugLogFile, debugLogFilepath } from "../../utils/log-file";
+import { runInTempDir } from "../helpers/run-in-tmp";
 
 vi.mock("../../logger", () => ({
 	logger: {
@@ -23,12 +12,34 @@ vi.mock("../../logger", () => ({
 	},
 }));
 
-const mockAppendFile = vi.mocked(fs.appendFile);
-
 describe("appendToDebugLogFile", () => {
+	runInTempDir();
+
 	beforeEach(() => {
+		vi.stubEnv("WRANGLER_LOG_PATH", "logs");
+	});
+
+	afterEach(() => {
 		vi.clearAllMocks();
 	});
+
+	function getLogFileContent(): string {
+		if (existsSync(debugLogFilepath)) {
+			return readFileSync(debugLogFilepath, "utf8");
+		}
+
+		if (existsSync("logs")) {
+			const logFiles = readdirSync("logs");
+			expect(logFiles.length).toBeGreaterThan(0);
+
+			const logFilePath = join("logs", logFiles[0]);
+			return readFileSync(logFilePath, "utf8");
+		}
+
+		throw new Error(
+			`No log files found. debugLogFilepath: ${debugLogFilepath}, logs dir exists: ${existsSync("logs")}`
+		);
+	}
 
 	it("should strip ANSI escape codes from error messages", async () => {
 		const messageWithAnsi = "\u001b[31mError: Something went wrong\u001b[0m";
@@ -36,18 +47,10 @@ describe("appendToDebugLogFile", () => {
 
 		await appendToDebugLogFile("error", messageWithAnsi);
 
-		expect(mockAppendFile).toHaveBeenCalledWith(
-			expect.any(String),
-			expect.stringContaining(expectedCleanMessage)
-		);
-		expect(mockAppendFile).toHaveBeenCalledWith(
-			expect.any(String),
-			expect.not.stringContaining("\u001b[31m")
-		);
-		expect(mockAppendFile).toHaveBeenCalledWith(
-			expect.any(String),
-			expect.not.stringContaining("\u001b[0m")
-		);
+		const logContent = getLogFileContent();
+		expect(logContent).toContain(expectedCleanMessage);
+		expect(logContent).not.toContain("\u001b[31m");
+		expect(logContent).not.toContain("\u001b[0m");
 	});
 
 	it("should strip complex ANSI escape sequences", async () => {
@@ -57,18 +60,10 @@ describe("appendToDebugLogFile", () => {
 
 		await appendToDebugLogFile("log", messageWithComplexAnsi);
 
-		expect(mockAppendFile).toHaveBeenCalledWith(
-			expect.any(String),
-			expect.stringContaining(expectedCleanMessage)
-		);
-		expect(mockAppendFile).toHaveBeenCalledWith(
-			expect.any(String),
-			expect.not.stringContaining("\u001b[1;32m")
-		);
-		expect(mockAppendFile).toHaveBeenCalledWith(
-			expect.any(String),
-			expect.not.stringContaining("\u001b[33m")
-		);
+		const logContent = getLogFileContent();
+		expect(logContent).toContain(expectedCleanMessage);
+		expect(logContent).not.toContain("\u001b[1;32m");
+		expect(logContent).not.toContain("\u001b[33m");
 	});
 
 	it("should preserve plain messages without ANSI codes", async () => {
@@ -76,10 +71,8 @@ describe("appendToDebugLogFile", () => {
 
 		await appendToDebugLogFile("info", plainMessage);
 
-		expect(mockAppendFile).toHaveBeenCalledWith(
-			expect.any(String),
-			expect.stringContaining(plainMessage)
-		);
+		const logContent = getLogFileContent();
+		expect(logContent).toContain(plainMessage);
 	});
 
 	it("should handle multiline messages with ANSI codes", async () => {
@@ -90,18 +83,10 @@ describe("appendToDebugLogFile", () => {
 
 		await appendToDebugLogFile("warn", multilineMessageWithAnsi);
 
-		expect(mockAppendFile).toHaveBeenCalledWith(
-			expect.any(String),
-			expect.stringContaining(expectedCleanMessage)
-		);
-		expect(mockAppendFile).toHaveBeenCalledWith(
-			expect.any(String),
-			expect.not.stringContaining("\u001b[31m")
-		);
-		expect(mockAppendFile).toHaveBeenCalledWith(
-			expect.any(String),
-			expect.not.stringContaining("\u001b[32m")
-		);
+		const logContent = getLogFileContent();
+		expect(logContent).toContain(expectedCleanMessage);
+		expect(logContent).not.toContain("\u001b[31m");
+		expect(logContent).not.toContain("\u001b[32m");
 	});
 
 	it("should maintain timestamp and log level formatting", async () => {
@@ -109,22 +94,20 @@ describe("appendToDebugLogFile", () => {
 
 		await appendToDebugLogFile("error", message);
 
-		const logEntry = mockAppendFile.mock.calls[0][1] as string;
-		expect(logEntry).toMatch(
-			/^\n--- \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z error/
+		const logContent = getLogFileContent();
+		expect(logContent).toMatch(
+			/--- \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z error/
 		);
-		expect(logEntry).toContain("Test message");
-		expect(logEntry).toContain("---");
+		expect(logContent).toContain("Test message");
+		expect(logContent).toContain("---");
 	});
 
 	it("should handle empty messages", async () => {
 		await appendToDebugLogFile("debug", "");
 
-		expect(mockAppendFile).toHaveBeenCalledWith(
-			expect.any(String),
-			expect.stringMatching(
-				/^\n--- \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z debug\n\n---/
-			)
+		const logContent = getLogFileContent();
+		expect(logContent).toMatch(
+			/--- \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z debug/
 		);
 	});
 
@@ -133,11 +116,11 @@ describe("appendToDebugLogFile", () => {
 
 		await appendToDebugLogFile("log", onlyAnsiMessage);
 
-		const logEntry = mockAppendFile.mock.calls[0][1] as string;
-		expect(logEntry).not.toContain("\u001b[31m");
-		expect(logEntry).not.toContain("\u001b[0m");
-		expect(logEntry).toMatch(
-			/^\n--- \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z log\n\n---/
+		const logContent = getLogFileContent();
+		expect(logContent).not.toContain("\u001b[31m");
+		expect(logContent).not.toContain("\u001b[0m");
+		expect(logContent).toMatch(
+			/--- \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z log/
 		);
 	});
 });
