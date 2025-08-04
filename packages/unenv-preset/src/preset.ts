@@ -145,7 +145,7 @@ export function getCloudflarePreset({
  *
  * The native http server APIS implementation:
  * - can be enabled with the "enable_nodejs_http_server_modules" flag
- * - can be enabled with the "disable_nodejs_http_server_modules" flag
+ * - can be disabled with the "disable_nodejs_http_server_modules" flag
  */
 function getHttpOverrides({
 	compatibilityDate,
