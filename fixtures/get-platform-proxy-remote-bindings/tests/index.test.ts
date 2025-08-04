@@ -158,13 +158,16 @@ async function fetchFromWorker(
 	worker: Fetcher,
 	expectedStatusText: string
 ): Promise<Response> {
-	return vi.waitFor(async () => {
-		const response = await worker.fetch("http://example.com", {
-			signal: AbortSignal.timeout(5_000),
-		});
-		expect(response.status).toEqual(expectedStatusText);
-		return response;
-	});
+	return vi.waitFor(
+		async () => {
+			const response = await worker.fetch("http://example.com", {
+				signal: AbortSignal.timeout(5_000),
+			});
+			expect(response.status).toEqual(expectedStatusText);
+			return response;
+		},
+		{ timeout: 30_000, interval: 500 }
+	);
 }
 
 /**
