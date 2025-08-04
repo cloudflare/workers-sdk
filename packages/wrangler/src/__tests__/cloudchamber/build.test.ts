@@ -33,7 +33,9 @@ describe("buildAndMaybePush", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(dockerImageInspect)
+			// return empty array of repo digests (i.e. image does not exist remotely)
 			.mockResolvedValueOnce("[]")
+			// return image size and number of layers
 			.mockResolvedValueOnce("53387881 2");
 		mkdirSync("./container-context");
 

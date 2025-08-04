@@ -29,6 +29,7 @@ describe("ensureContainerLimits", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 
+		// Returns image size and number of layers - used to calculate required size.
 		// required size = 53387881 * 1.1 + 2 * 16 * MiB = 93MB
 		vi.mocked(dockerImageInspect).mockResolvedValue("53387881 2");
 	});
