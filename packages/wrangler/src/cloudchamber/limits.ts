@@ -62,7 +62,7 @@ export async function ensureContainerLimits(options: {
 	const errors = [];
 	if (usage.vcpu > limits.vcpu) {
 		errors.push(
-			`Your container configuration uses ${usage.vcpu} vCPU which exceeds the account limit of ${limits.vcpu}.`
+			`Your container configuration uses ${usage.vcpu} vCPU which exceeds the account limit of ${limits.vcpu} vCPU.`
 		);
 	}
 	if (usage.memory_mib > limits.memory_mib) {
