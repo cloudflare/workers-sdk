@@ -54,7 +54,7 @@ describe("ensureContainerLimits", () => {
 					} as ContainerNormalizedConfig,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Exceeded account limits: Your container configuration uses 0.5 vCPU which exceeds the account limit of 0.0625.]`
+				`[Error: Exceeded account limits: Your container configuration uses 0.5 vCPU which exceeds the account limit of 0.0625 vCPU.]`
 			);
 		});
 
@@ -129,7 +129,7 @@ describe("ensureContainerLimits", () => {
 					} as ContainerNormalizedConfig,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Exceeded account limits: Your container configuration uses 5 vCPU which exceeds the account limit of 1.]`
+				`[Error: Exceeded account limits: Your container configuration uses 5 vCPU which exceeds the account limit of 1 vCPU.]`
 			);
 		});
 
