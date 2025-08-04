@@ -305,6 +305,10 @@ export function getWorkerRegistry(
 	return registry;
 }
 
+/**
+ * Get the default path for the dev registry.
+ * This is used by both Wrangler and the Vite plugin to ensure they use the same path.
+ */
 export function getDefaultDevRegistryPath() {
 	return (
 		process.env.MINIFLARE_REGISTRY_PATH ??
