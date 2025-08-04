@@ -1,5 +1,6 @@
 import type { Endpoints } from "@octokit/types";
 import type {
+	IssuesOpenedEvent,
 	PullRequestOpenedEvent,
 	PullRequestReadyForReviewEvent,
 	WebhookEvent,
@@ -24,6 +25,48 @@ async function getBotMessage(ai: Ai, prompt: string) {
 		return "I'm feeling a bit poorly 🥲—try asking me for a message later!";
 	}
 	return message.response;
+}
+
+async function analyzeIssueSecurity(
+	ai: Ai,
+	issueTitle: string,
+	issueBody: string
+): Promise<boolean> {
+	const prompt = `Analyze this GitHub issue to determine if it's likely reporting a security vulnerability or security concern.
+
+Issue Title: ${issueTitle}
+
+Issue Body: ${issueBody}
+
+Look for keywords and patterns that suggest this is a security report, such as:
+- Vulnerability, exploit, security flaw, CVE
+- Authentication bypass, privilege escalation
+- XSS, SQL injection, CSRF, RCE
+- Unauthorized access, data exposure
+- Security disclosure, responsible disclosure
+
+Respond with only "YES" if this appears to be a security-related issue, or "NO" if it appears to be a regular bug report or feature request.`;
+
+	const chat = {
+		messages: [
+			{
+				role: "system",
+				content:
+					"You are a security analyst assistant that helps identify potential security vulnerability reports in GitHub issues. Respond only with YES or NO.",
+			},
+			{
+				role: "user",
+				content: prompt,
+			},
+		] as RoleScopedChatInput[],
+	};
+
+	const message = await ai.run("@cf/meta/llama-2-7b-chat-int8", chat);
+	if (!("response" in message) || !message.response) {
+		return false;
+	}
+
+	return message.response.trim().toUpperCase() === "YES";
 }
 
 type PRList = Endpoints["GET /repos/{owner}/{repo}/pulls"]["response"]["data"];
@@ -312,6 +355,12 @@ function isPullRequestReadyForReviewEvent(
 	return "action" in message && message.action === "ready_for_review";
 }
 
+function isIssueOpenedEvent(
+	message: WebhookEvent
+): message is IssuesOpenedEvent {
+	return "issue" in message && message.action === "opened";
+}
+
 function sendReviewMessage(webhookUrl: string, message: WebhookEvent) {
 	if (
 		(isPullRequestOpenedEvent(message) ||
@@ -362,6 +411,66 @@ function sendReviewMessage(webhookUrl: string, message: WebhookEvent) {
 			],
 		});
 	}
+}
+
+async function sendSecurityAlert(webhookUrl: string, issue: IssuesOpenedEvent) {
+	return sendMessage(
+		webhookUrl,
+		{
+			cardsV2: [
+				{
+					cardId: "unique-card-id",
+					card: {
+						header: {
+							title: "🚨 Potential Security Issue Detected",
+							subtitle: `Issue #${issue.issue.number} in ${issue.repository.full_name}`,
+							imageUrl: issue.sender.avatar_url,
+							imageType: "CIRCLE",
+							imageAltText: "Reporter Avatar",
+						},
+						sections: [
+							{
+								collapsible: false,
+								widgets: [
+									{
+										textParagraph: {
+											text: `<b>Title:</b> ${issue.issue.title}\n\n<b>Reporter:</b> ${issue.sender.login}`,
+										},
+									},
+									{
+										buttonList: {
+											buttons: [
+												{
+													text: "View Issue",
+													onClick: {
+														openLink: {
+															url: issue.issue.html_url,
+														},
+													},
+												},
+											],
+										},
+									},
+								],
+							},
+							{
+								collapsible: true,
+								uncollapsibleWidgetsCount: 0,
+								widgets: [
+									{
+										textParagraph: {
+											text: issue.issue.body || "No description provided",
+										},
+									},
+								],
+							},
+						],
+					},
+				},
+			],
+		},
+		"security-alerts"
+	);
 }
 
 async function sendUpcomingReleaseMessage(pat: string, webhookUrl: string) {
@@ -620,6 +729,17 @@ export default {
 		if (url.pathname === "/github") {
 			const body = await request.json<WebhookEvent>();
 			await sendReviewMessage(env.PROD_WEBHOOK, body);
+
+			if (isIssueOpenedEvent(body)) {
+				const isSecurityIssue = await analyzeIssueSecurity(
+					env.AI,
+					body.issue.title,
+					body.issue.body || ""
+				);
+				if (isSecurityIssue) {
+					await sendSecurityAlert(env.ALERTS_WEBHOOK, body);
+				}
+			}
 		}
 
 		if (url.pathname.startsWith("/pr-project") && request.method === "POST") {
