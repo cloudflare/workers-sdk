@@ -1,0 +1,26 @@
+{
+	"name": "@playground/worker",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vite build",
+		"build:nested-config": "vite build -c vite.config.nested-config.ts",
+		"build:package-export-main": "vite build -c vite.config.package-export-main.ts",
+		"build:virtual-module-main": "vite build -c vite.config.virtual-module-main.ts",
+		"check:types": "tsc --build",
+		"dev": "vite dev",
+		"dev:nested-config": "vite dev -c vite.config.nested-config.ts",
+		"dev:package-export-main": "vite dev -c vite.config.package-export-main.ts",
+		"dev:virtual-module-main": "vite dev -c vite.config.virtual-module-main.ts",
+		"preview": "vite preview"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250801.0",
+		"@playground/main-resolution-package": "file:./package",
+		"typescript": "catalog:default",
+		"vite": "catalog:vite-plugin",
+		"wrangler": "workspace:*"
+	}
+}

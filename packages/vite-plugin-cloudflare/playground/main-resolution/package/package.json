@@ -1,0 +1,6 @@
+{
+	"name": "@playground/main-resolution-package",
+	"version": "0.0.0",
+	"private": true,
+	"main": "./index.mjs"
+}
