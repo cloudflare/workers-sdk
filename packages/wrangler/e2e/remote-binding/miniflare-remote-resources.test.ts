@@ -137,7 +137,7 @@ const testCases: TestCase<string>[] = [
 		setup: async (helper) => {
 			const ns = await helper.kv(false);
 			await helper.run(
-				`wrangler kv key put --remote --namespace-id=${ns} test-mixed-mode-key existing-value`
+				`wrangler kv key put --remote --namespace-id=${ns} test-remote-bindings-key existing-value`
 			);
 			return ns;
 		},
@@ -168,11 +168,11 @@ const testCases: TestCase<string>[] = [
 			await helper.seed({ "test.txt": "existing-value" });
 			const name = await helper.r2(false);
 			await helper.run(
-				`wrangler r2 object put --remote ${name}/test-mixed-mode-key --file test.txt`
+				`wrangler r2 object put --remote ${name}/test-remote-bindings-key --file test.txt`
 			);
 			onTestFinished(async () => {
 				await helper.run(
-					`wrangler r2 object delete --remote ${name}/test-mixed-mode-key`
+					`wrangler r2 object delete --remote ${name}/test-remote-bindings-key`
 				);
 			});
 			return name;
@@ -204,7 +204,7 @@ const testCases: TestCase<string>[] = [
 			await helper.seed({
 				"schema.sql": dedent`
 					CREATE TABLE entries (key TEXT PRIMARY KEY, value TEXT);
-					INSERT INTO entries (key, value) VALUES ('test-mixed-mode-key', 'existing-value');
+					INSERT INTO entries (key, value) VALUES ('test-remote-bindings-key', 'existing-value');
 				`,
 			});
 			const { id, name } = await helper.d1(false);
@@ -288,7 +288,7 @@ const testCases: TestCase<string>[] = [
 		setup: async (helper) => {
 			const namespace = await helper.dispatchNamespace(false);
 
-			const customerWorkerName = "mixed-mode-test-customer-worker";
+			const customerWorkerName = "remote-bindings-test-customer-worker";
 			await helper.seed({
 				"customer-worker.js": dedent/* javascript */ `
 					export default {
@@ -408,7 +408,7 @@ const mtlsTest: TestCase<{ certificateId: string; workerName: string }> = {
 };
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID).each([...testCases, mtlsTest])(
-	"Mixed Mode for $name",
+	"Remote bindings test for $name",
 	(testCase) => {
 		let helper: WranglerE2ETestHelper;
 		beforeEach(() => {
@@ -417,7 +417,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID).each([...testCases, mtlsTest])(
 		it("enabled", async () => {
 			await runTestCase(testCase as TestCase<unknown>, helper);
 		});
-		// Ensure the test case _relies_ on Mixed Mode, and fails in regular local dev
+		// Ensure the test case _relies_ on remote bindings, and fails in regular local dev
 		it.skipIf(testCase.worksWithoutRemoteBindings)(
 			"fails when disabled",
 			// Turn off retries because this test is expected to fail
@@ -453,7 +453,7 @@ async function runTestCase<T>(
 	);
 
 	const miniflareConfig = disableRemoteBindings
-		? // @ts-expect-error Deliberately passing in undefined here to turn off Mixed Mode
+		? // @ts-expect-error Deliberately passing in undefined here to turn off remote bindings
 			testCase.miniflareConfig(undefined)
 		: testCase.miniflareConfig(
 				remoteProxySession.remoteProxyConnectionString,

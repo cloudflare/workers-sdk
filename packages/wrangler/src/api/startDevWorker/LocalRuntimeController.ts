@@ -204,7 +204,7 @@ export class LocalRuntimeController extends RuntimeController {
 				data.config.dev.experimentalRemoteBindings ?? false;
 
 			if (experimentalRemoteBindings && !data.config.dev?.remote) {
-				// note: mixedMode uses (transitively) LocalRuntimeController, so we need to import
+				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
 				const { maybeStartOrUpdateRemoteProxySession } = await import(
 					"../remoteBindings"
