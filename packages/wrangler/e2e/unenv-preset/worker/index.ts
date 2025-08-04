@@ -243,7 +243,7 @@ export const WorkerdTests: Record<string, () => void> = {
 	},
 
 	async testHttp() {
-		const http = await import("http");
+		const http = await import("node:http");
 
 		const useNativeHttp = getRuntimeFlagValue("enable_nodejs_http_modules");
 
@@ -270,7 +270,7 @@ export const WorkerdTests: Record<string, () => void> = {
 	},
 
 	async testHttps() {
-		const https = await import("https");
+		const https = await import("node:https");
 
 		assert.strictEqual(typeof https.Agent, "function");
 		assert.strictEqual(typeof https.get, "function");
@@ -279,7 +279,7 @@ export const WorkerdTests: Record<string, () => void> = {
 	},
 
 	async testHttpServer() {
-		const http = await import("http");
+		const http = await import("node:http");
 
 		const useNativeHttp = getRuntimeFlagValue(
 			"enable_nodejs_http_server_modules"
@@ -303,7 +303,7 @@ export const WorkerdTests: Record<string, () => void> = {
 	},
 
 	async testHttpsServer() {
-		const https = await import("https");
+		const https = await import("node:https");
 
 		const useNativeHttp = getRuntimeFlagValue(
 			"enable_nodejs_http_server_modules"
@@ -324,5 +324,13 @@ export const WorkerdTests: Record<string, () => void> = {
 			assert.throws(() => https.createServer(), /not implemented/);
 			assert.throws(() => new https.Server(), /not implemented/);
 		}
+	},
+
+	async testOs() {
+		const os = await import("node:os");
+
+		assert.strictEqual(typeof os.arch(), "string");
+		assert.strictEqual(typeof os.freemem(), "number");
+		assert.strictEqual(typeof os.availableParallelism(), "number");
 	},
 };

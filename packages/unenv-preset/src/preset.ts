@@ -71,16 +71,23 @@ export function getCloudflarePreset({
 		compatibilityFlags,
 	});
 
+	const osOverrides = getOsOverrides({
+		compatibilityDate,
+		compatibilityFlags,
+	});
+
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
 		...nativeModules,
 		...httpOverrides.nativeModules,
+		...osOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicHybridModules = [
 		...hybridModules,
 		...httpOverrides.hybridModules,
+		...osOverrides.hybridModules,
 	];
 
 	return {
@@ -138,6 +145,7 @@ export function getCloudflarePreset({
  *
  * The native http server APIS implementation:
  * - can be enabled with the "enable_nodejs_http_server_modules" flag
+ * - can be disabled with the "disable_nodejs_http_server_modules" flag
  */
 function getHttpOverrides({
 	compatibilityDate,
@@ -149,31 +157,31 @@ function getHttpOverrides({
 	const httpDisabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_http_modules"
 	);
-	const httpEnabledByFlags = compatibilityFlags.includes(
+	const httpEnabledByFlag = compatibilityFlags.includes(
 		"enable_nodejs_http_modules"
 	);
 	const httpEnabledByDate = compatibilityDate >= "2025-08-15";
 
 	const httpEnabled =
-		(httpEnabledByFlags || httpEnabledByDate) && !httpDisabledByFlag;
+		(httpEnabledByFlag || httpEnabledByDate) && !httpDisabledByFlag;
 
 	if (!httpEnabled) {
 		// use the unenv polyfill
 		return { nativeModules: [], hybridModules: [] };
 	}
 
-	const httpServerEnabledByFlags = compatibilityFlags.includes(
-		"enable_nodejs_http_server_modules"
-	);
+	const httpServerEnabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_http_server_modules") &&
+		compatibilityFlags.includes("experimental");
 
-	const httpServerDisabledByFlags = compatibilityFlags.includes(
+	const httpServerDisabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_http_server_modules"
 	);
 
 	// Note that `httpServerEnabled` requires `httpEnabled`
 	// TODO: add `httpServerEnabledByDate` when a default date is set
 	const httpServerEnabled =
-		httpServerEnabledByFlags && !httpServerDisabledByFlags;
+		httpServerEnabledByFlag && !httpServerDisabledByFlag;
 
 	// Override unenv base aliases with native and hybrid modules
 	// `node:https` is fully implemented by workerd if both flags are enabled
@@ -188,4 +196,43 @@ function getHttpOverrides({
 		],
 		hybridModules: httpServerEnabled ? ["http"] : ["http", "https"],
 	};
+}
+
+/**
+ * Returns the overrides for `node:os` (unenv or workerd)
+ *
+ * The native http implementation:
+ * - can be enabled with the "enable_nodejs_os_module" flag
+ * - can be disabled with the "disable_nodejs_os_module" flag
+ */
+function getOsOverrides({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_os_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_os_module") &&
+		compatibilityFlags.includes("experimental");
+
+	// TODO: add `enabledByDate` when a default date is set
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// The native os module implements all the APIs.
+	// It can then be used as a native module.
+	return enabled
+		? {
+				nativeModules: ["os"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
 }

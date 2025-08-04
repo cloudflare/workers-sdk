@@ -15,8 +15,9 @@ type TestConfig = {
 	compatibilityFlags?: string[];
 	// Assert runtime compatibility flag values
 	expectRuntimeFlags?: {
-		// Whether the http modules are enabled
-		enable_nodejs_http_modules: boolean;
+		enable_nodejs_http_modules?: boolean;
+		enable_nodejs_http_server_modules?: boolean;
+		enable_nodejs_os_module?: boolean;
 	};
 };
 
@@ -92,6 +93,35 @@ const testConfigs: TestConfig[] = [
 			expectRuntimeFlags: {
 				enable_nodejs_http_modules: true,
 				enable_nodejs_http_server_modules: false,
+			},
+		},
+	],
+	// node:os
+	[
+		{
+			name: "os disabled by date",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_os_module: false,
+			},
+		},
+		// TODO: add a config when os is enabled by default (date no set yet)
+		{
+			name: "os enabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["enable_nodejs_os_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_os_module: true,
+			},
+		},
+		// TODO: change the date pass the default enabled date (date not set yet)
+		{
+			name: "os disabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["disable_nodejs_os_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_os_module: false,
 			},
 		},
 	],
