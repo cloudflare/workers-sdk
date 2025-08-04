@@ -232,6 +232,8 @@ export const crash: (msg?: string, extra?: string) => never = (msg, extra) => {
 	exit(1);
 };
 
+export { validateMacOSVersion } from "./validate-macos-version";
+
 export const error = (
 	msg?: string,
 	extra?: string,

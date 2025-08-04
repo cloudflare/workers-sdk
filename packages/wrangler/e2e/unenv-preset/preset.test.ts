@@ -1,10 +1,11 @@
 import { join } from "node:path";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import { retry } from "../helpers/retry";
-import { TESTS } from "./worker/index";
+import { WorkerdTests } from "./worker/index";
 import type { WranglerLongLivedCommand } from "../helpers/wrangler";
 
 type TestConfig = {
@@ -14,8 +15,9 @@ type TestConfig = {
 	compatibilityFlags?: string[];
 	// Assert runtime compatibility flag values
 	expectRuntimeFlags?: {
-		// Whether the http modules are enabled
-		enable_nodejs_http_modules: boolean;
+		enable_nodejs_http_modules?: boolean;
+		enable_nodejs_http_server_modules?: boolean;
+		enable_nodejs_os_module?: boolean;
 	};
 };
 
@@ -27,7 +29,7 @@ const testConfigs: TestConfig[] = [
 			enable_nodejs_http_modules: false,
 		},
 	},
-	// http
+	// http client only modules (no server)
 	[
 		{
 			name: "http disabled by date",
@@ -52,6 +54,74 @@ const testConfigs: TestConfig[] = [
 			compatibilityFlags: ["enable_nodejs_http_modules"],
 			expectRuntimeFlags: {
 				enable_nodejs_http_modules: true,
+			},
+		},
+	],
+	// http client and server modules
+	[
+		{
+			name: "http server disabled by date",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_http_modules: false,
+			},
+		},
+		// TODO: add a config when http server is enabled by default (date no set yet)
+		{
+			name: "http server enabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: [
+				"enable_nodejs_http_modules",
+				"enable_nodejs_http_server_modules",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_http_modules: true,
+				enable_nodejs_http_server_modules: true,
+			},
+		},
+		// TODO: change the date pass the default enabled date (date not set yet)
+		{
+			name: "http server disabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: [
+				"enable_nodejs_http_modules",
+				"disable_nodejs_http_server_modules",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_http_modules: true,
+				enable_nodejs_http_server_modules: false,
+			},
+		},
+	],
+	// node:os
+	[
+		{
+			name: "os disabled by date",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_os_module: false,
+			},
+		},
+		// TODO: add a config when os is enabled by default (date no set yet)
+		{
+			name: "os enabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["enable_nodejs_os_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_os_module: true,
+			},
+		},
+		// TODO: change the date pass the default enabled date (date not set yet)
+		{
+			name: "os disabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["disable_nodejs_os_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_os_module: false,
 			},
 		},
 	],
@@ -85,6 +155,19 @@ describe.each(testConfigs)(
 		// The "local" and "remote" runtimes do not necessarily use the exact same version
 		// of workerd and we want to make sure the preset works for both.
 		describe.for(["local", "remote"])("%s tests", (localOrRemote) => {
+			// Skip the remote tests if the user is not logged in (e.g. a PR from a forked repo)
+			if (localOrRemote === "remote" && !CLOUDFLARE_ACCOUNT_ID) {
+				test.skip("Remote tests require to be logged in");
+				return;
+			}
+
+			// Can not deploy to remote when the `experimental` flag is used.
+			const hasExperimentalFlag = compatibilityFlags.includes("experimental");
+			if (localOrRemote === "remote" && hasExperimentalFlag) {
+				test.skip("Remote tests do not support experimental flag");
+				return;
+			}
+
 			let url: string;
 			let wrangler: WranglerLongLivedCommand;
 			beforeAll(async () => {
@@ -104,7 +187,9 @@ describe.each(testConfigs)(
 				for await (const [flag, value] of Object.entries(expectRuntimeFlags)) {
 					const flagResp = await fetch(`${url}/flag?name=${flag}`);
 					expect(flagResp.ok).toEqual(true);
-					await expect(flagResp.json()).resolves.toEqual(value);
+					await expect(flagResp.json(), `flag "${flag}"`).resolves.toEqual(
+						value
+					);
 				}
 			}, 20_000);
 
@@ -112,7 +197,7 @@ describe.each(testConfigs)(
 				await wrangler.stop();
 			});
 
-			test.for(Object.keys(TESTS))(
+			test.for(Object.keys(WorkerdTests))(
 				"%s",
 				{ timeout: 20_000 },
 				async (testName) => {

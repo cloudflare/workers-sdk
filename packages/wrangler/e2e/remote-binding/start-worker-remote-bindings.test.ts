@@ -35,7 +35,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 			it("allows connecting to a remote worker", testOpts, async () => {
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
-						name: "mixed-mode-mixed-bindings-test",
+						name: "remote-bindings-test",
 						main: "simple-service-binding.js",
 						compatibility_date: "2025-05-07",
 						services: [
@@ -68,7 +68,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 			it("handles code changes during development", testOpts, async () => {
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
-						name: "mixed-mode-mixed-bindings-test",
+						name: "remote-bindings-test",
 						main: "simple-service-binding.js",
 						compatibility_date: "2025-05-07",
 						services: [
