@@ -174,9 +174,9 @@ function getHttpOverrides({
 		compatibilityFlags.includes("enable_nodejs_http_server_modules") &&
 		compatibilityFlags.includes("experimental");
 
-	const httpServerDisabledByFlag =
-		compatibilityFlags.includes("disable_nodejs_http_server_modules") &&
-		compatibilityFlags.includes("experimental");
+	const httpServerDisabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_http_server_modules"
+	);
 
 	// Note that `httpServerEnabled` requires `httpEnabled`
 	// TODO: add `httpServerEnabledByDate` when a default date is set
@@ -213,9 +213,9 @@ function getOsOverrides({
 	compatibilityDate: string;
 	compatibilityFlags: string[];
 }): { nativeModules: string[]; hybridModules: string[] } {
-	const disabledByFlag =
-		compatibilityFlags.includes("disable_nodejs_os_module") &&
-		compatibilityFlags.includes("experimental");
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_os_module"
+	);
 
 	const enabledByFlag =
 		compatibilityFlags.includes("enable_nodejs_os_module") &&
