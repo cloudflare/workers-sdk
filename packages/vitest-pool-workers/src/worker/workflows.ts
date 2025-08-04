@@ -1,5 +1,6 @@
 import { waitUntil } from "async-wait-until";
-import { env } from "cloudflare:workers";
+import { WORKFLOW_ENGINE_BINDING } from "../shared/workflows";
+import { internalEnv } from "./env";
 
 // import { instanceStatusName } from "@cloudflare/workflows-shared";
 
@@ -61,9 +62,9 @@ export async function introspectWorkflowInstance(
 
 	await workflow.create({ id: instanceId }); // why do I need to create? Worked before without it
 
-	const engineBindingName = `USER_ENGINE_${(await workflow.getWorkflowName()).toUpperCase()}`;
-	const engineStubId = env[engineBindingName].idFromName(instanceId);
-	const engineStub = env[engineBindingName].get(engineStubId);
+	const engineBindingName = `${WORKFLOW_ENGINE_BINDING}${(await workflow.getWorkflowName()).toUpperCase()}`;
+	const engineStubId = internalEnv[engineBindingName].idFromName(instanceId);
+	const engineStub = internalEnv[engineBindingName].get(engineStubId);
 
 	const instanceModifier = await engineStub.getInstanceModifier();
 
