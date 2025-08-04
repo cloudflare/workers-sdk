@@ -528,6 +528,8 @@ async function setupDevEnv(
 					d1_databases: args.d1Databases,
 					vectorize: undefined,
 					hyperdrive: undefined,
+					secrets_store_secrets: undefined,
+					unsafe_hello_world: undefined,
 					services: args.services,
 					analytics_engine_datasets: undefined,
 					dispatch_namespaces: undefined,
@@ -952,7 +954,7 @@ export function getBindings(
 				`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your ${configFileName(configParam.configPath)} file\n--------------------\n`
 			);
 		}
-		return { ...d1Db, experimental_remote: remoteBindingsEnabled && d1Db.experimental_remote, database_id };
+		return { ...d1Db, database_id };
 	});
 	const d1Args = args.d1Databases || [];
 	const mergedD1Bindings = mergeWithOverride(d1Config, d1Args, "binding");
@@ -1079,6 +1081,7 @@ export function getBindings(
 		d1_databases: mergedD1Bindings,
 		vectorize: configParam.vectorize,
 		hyperdrive: hyperdriveBindings,
+		secrets_store_secrets: configParam.secrets_store_secrets,
 		services: mergedServiceBindings,
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		browser: configParam.browser,
@@ -1096,6 +1099,7 @@ export function getBindings(
 		assets: configParam.assets?.binding
 			? { binding: configParam.assets?.binding }
 			: undefined,
+		unsafe_hello_world: configParam.unsafe_hello_world,
 	};
 
 	return bindings;
