@@ -181,7 +181,8 @@ async function buildPackage() {
 			"miniflare",
 			// Mark `dependencies` as external, but not `devDependencies` (we use them
 			// to signal single-use/small packages we want inlined in the bundle)
-			...getPackageDependencies(pkg),
+			// Exception: @cloudflare/cli should be bundled, not external
+			...getPackageDependencies(pkg).filter((dep) => dep !== "@cloudflare/cli"),
 			// Mark test dependencies as external
 			"ava",
 			"esbuild",
