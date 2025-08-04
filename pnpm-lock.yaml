@@ -2547,7 +2547,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20250801.0
-        version: 4.20250801.0
+        version: 4.20250803.0
       '@playground/main-resolution-package':
         specifier: file:./package
         version: file:packages/vite-plugin-cloudflare/playground/main-resolution/package

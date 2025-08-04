@@ -1,5 +1,5 @@
 {
-	"name": "@playground/worker",
+	"name": "@playground/main-resolution",
 	"private": true,
 	"type": "module",
 	"scripts": {
