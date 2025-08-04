@@ -197,7 +197,7 @@ export const addVscodeConfig = (ctx: C3Context) => {
 async function getCompatibilityDate<T extends Record<string, unknown>>(
 	config: T,
 ) {
-	const validCompatDateRe = /^\d{4}-\d{2}-\d{2}/m;
+	const validCompatDateRe = /^\d{4}-\d{2}-\d{2}$/m;
 	if (
 		typeof config["compatibility_date"] === "string" &&
 		config["compatibility_date"].match(validCompatDateRe)
