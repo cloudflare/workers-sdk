@@ -11,7 +11,7 @@ import { Duplex, Transform, Writable } from "stream";
 import { ReadableStream } from "stream/web";
 import util from "util";
 import zlib from "zlib";
-import { validateMacOSVersion } from "@cloudflare/cli";
+import { ensureMinimumMacOsVersion } from "@cloudflare/cli";
 import exitHook from "exit-hook";
 import { $ as colors$, green } from "kleur/colors";
 import { npxImport } from "npx-import";
@@ -896,7 +896,7 @@ export class Miniflare {
 		const [sharedOpts, workerOpts] = validateOptions(opts);
 
 		// Validate macOS version (hard fail for Miniflare)
-		validateMacOSVersion(true);
+		ensureMinimumMacOsVersion({ shouldThrow: true });
 
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;

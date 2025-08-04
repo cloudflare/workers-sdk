@@ -5,10 +5,10 @@ import { chdir } from "process";
 import {
 	cancel,
 	endSection,
+	ensureMinimumMacOsVersion,
 	error,
 	logRaw,
 	startSection,
-	validateMacOSVersion,
 } from "@cloudflare/cli";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive } from "@cloudflare/cli/interactive";
@@ -106,7 +106,7 @@ export const runLatest = async () => {
 export const runCli = async (args: Partial<C3Args>) => {
 	printBanner(args);
 
-	validateMacOSVersion(true);
+	ensureMinimumMacOsVersion({ shouldThrow: true });
 
 	const ctx = await createContext(args);
 
