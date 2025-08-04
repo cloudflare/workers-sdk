@@ -39,6 +39,7 @@ import {
 	Response,
 } from "./http";
 import {
+	createPluginLoaderFromUnsafePlugin,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
@@ -46,10 +47,15 @@ import {
 	getGlobalServices,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
+	isBuiltInPlugin,
+	isBuiltInPluginKey,
 	KV_PLUGIN_NAME,
 	launchBrowser,
 	normaliseDurableObject,
 	PLUGIN_ENTRIES,
+	PluginBase,
+	PluginKey,
+	PluginLoader,
 	Plugins,
 	PluginServicesOptions,
 	ProxyClient,
@@ -65,6 +71,7 @@ import {
 	SharedOptions,
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
+	UnsafePluginOption,
 	WorkerOptions,
 	WrappedBindingNames,
 } from "./plugins";
@@ -164,26 +171,91 @@ function getServerPort(server: http.Server) {
 	return address.port;
 }
 
+type UnsafePluginNames<PluginName extends string = string> =
+	PluginName extends PluginKey ? never : PluginName;
+
 // ===== `Miniflare` User Options =====
 export type MiniflareOptions = SharedOptions &
-	(WorkerOptions | { workers: WorkerOptions[] });
+	(WorkerOptions | { workers: WorkerOptions[] }) & {
+		/**
+		 * Allow external plugins NOT specified in the above mapping to have options
+		 */
+		unsafeExternalPlugins?: UnsafePluginOption[];
+	};
 
 // ===== `Miniflare` Validated Options =====
 type PluginWorkerOptions = {
 	[Key in keyof Plugins]: z.infer<Plugins[Key]["options"]>;
+} & {
+	unsafePluginOptions?: {
+		/**
+		 * Allow plugins NOT specified in the above mapping to have options
+		 */
+		[Key in UnsafePluginNames]: unknown;
+	};
 };
+
 type PluginSharedOptions = {
 	[Key in keyof Plugins]: OptionalZodTypeOf<Plugins[Key]["sharedOptions"]>;
+} & {
+	/**
+	 * Allow plugins NOT specified in the above mapping to have shared options
+	 */
+	[Key in UnsafePluginNames]: OptionalZodTypeOf<z.ZodType<any>>;
 };
+
+function isNonNullObject(opts: unknown): opts is object {
+	return typeof opts === "object" && opts !== null;
+}
 
 function hasMultipleWorkers(opts: unknown): opts is { workers: unknown[] } {
 	return (
-		typeof opts === "object" &&
-		opts !== null &&
-		"workers" in opts &&
-		Array.isArray(opts.workers)
+		isNonNullObject(opts) && "workers" in opts && Array.isArray(opts.workers)
 	);
 }
+
+function hasUnsafeExternalPlugins(
+	opts: unknown
+): opts is { unsafeExternalPlugins: UnsafePluginOption[] } {
+	return (
+		isNonNullObject(opts) &&
+		"unsafeExternalPlugins" in opts &&
+		Array.isArray(opts.unsafeExternalPlugins) &&
+		opts.unsafeExternalPlugins.length > 0
+	);
+}
+
+function hasUnsafeBindings(
+	workerOptions: unknown
+): workerOptions is { unsafeBindings: Record<string, unknown> } {
+	return (
+		isNonNullObject(workerOptions) &&
+		"unsafeBindings" in workerOptions &&
+		typeof workerOptions.unsafeBindings === "object"
+	);
+}
+
+function hasUnsafePluginConfiguration(
+	unsafeBindingWorkerOption: unknown
+): unsafeBindingWorkerOption is {
+	plugin: {
+		packageName: string;
+		pluginName: string;
+		pluginOptions: Record<string, unknown>;
+	};
+} {
+	return (
+		isNonNullObject(unsafeBindingWorkerOption) &&
+		"plugin" in unsafeBindingWorkerOption &&
+		isNonNullObject(unsafeBindingWorkerOption.plugin) &&
+		"packageName" in unsafeBindingWorkerOption.plugin &&
+		typeof unsafeBindingWorkerOption.plugin.packageName == "string" &&
+		"pluginName" in unsafeBindingWorkerOption.plugin &&
+		typeof unsafeBindingWorkerOption.plugin.pluginName == "string" &&
+		"pluginOptions" in unsafeBindingWorkerOption.plugin
+	);
+}
+
 export function getRootPath(opts: unknown): string {
 	// `opts` will be validated properly with Zod, this is just a quick check/
 	// extract for the `rootPath` option since it's required for parsing
@@ -199,9 +271,22 @@ export function getRootPath(opts: unknown): string {
 	}
 }
 
+/**
+ * A map of external plugin names to async plugin loaders
+ */
+export type ExternalPluginRegistry = Record<
+	string,
+	() => Promise<PluginLoader>
+>;
+
+export type ExternalPlugin = [
+	string,
+	PluginBase<z.ZodType<any>, z.ZodType<any>>,
+];
+
 function validateOptions(
 	opts: unknown
-): [PluginSharedOptions, PluginWorkerOptions[]] {
+): [PluginSharedOptions, PluginWorkerOptions[], ExternalPluginRegistry] {
 	// Normalise options into shared and worker-specific
 	const sharedOpts = opts;
 	const multipleWorkers = hasMultipleWorkers(opts);
@@ -215,6 +300,78 @@ function validateOptions(
 	const pluginWorkerOpts = Array.from(Array(workerOpts.length)).map(
 		() => ({}) as PluginWorkerOptions
 	);
+
+	const unsafePluginLoadersByPluginName: ExternalPluginRegistry = {};
+	/**
+	 * If there are unsafe external plugins, create a mapping of plugin name
+	 * to async plugin loaders that will be initiated in the {@link Miniflare['#assembleConfig']}
+	 * method.
+	 * TODO: Figure out how to load the plugins *before* validation so they can receive options/shared options
+	 * like built in plugins.
+	 */
+	if (hasUnsafeExternalPlugins(opts)) {
+		for (const unsafePluginCfg of opts.unsafeExternalPlugins) {
+			if (isBuiltInPluginKey(unsafePluginCfg.pluginName)) {
+				throw new MiniflareCoreError(
+					"ERR_DUPLICATE_NAME",
+					`Unsafe external plugin name conflicts with builtin plugin: ${unsafePluginCfg.pluginName}`
+				);
+			}
+			// If we haven't seen this plugin before, create an async plugin loader for it
+			if (!unsafePluginLoadersByPluginName[unsafePluginCfg.pluginName]) {
+				unsafePluginLoadersByPluginName[unsafePluginCfg.pluginName] =
+					async () => {
+						const pluginLoaderRes =
+							await createPluginLoaderFromUnsafePlugin(unsafePluginCfg);
+						if (!pluginLoaderRes.ok) {
+							throw new MiniflareCoreError(
+								"ERR_RUNTIME_FAILURE",
+								"Failed to load external plugin",
+								pluginLoaderRes.error
+							);
+						}
+						return pluginLoaderRes.pluginLoader;
+					};
+			}
+		}
+
+		const unsafePluginNames = new Set(
+			Object.keys(unsafePluginLoadersByPluginName)
+		);
+		// For each Worker, if it uses an unsafe binding that specifies a plugin configuration,
+		// we need to pass any options it sets down to the unsafe plugin
+		for (let i = 0; i < workerOpts.length; i++) {
+			const individualWorkerOptions = workerOpts[i];
+			// If this worker was configued with "unsafe bindings", it should be an object
+			//  whose keys are binding names
+			if (hasUnsafeBindings(individualWorkerOptions)) {
+				// For now, we just validate that any unsafe plugins specified in the Wrangler config
+				// have been specified in the Miniflare options via the `unsafeExternalPlugins` option.
+				for (const [bindingName, unsafeBindingCfg] of Object.entries(
+					individualWorkerOptions.unsafeBindings
+				)) {
+					if (!hasUnsafePluginConfiguration(unsafeBindingCfg)) {
+						// Skip any unsafe plugins that don't specify unsafe plugin behavior
+						continue;
+					}
+					// Do light validation on the configuration for this unsafe binding
+					const { packageName, pluginName, pluginOptions } =
+						unsafeBindingCfg.plugin;
+					if (!unsafePluginNames.has(pluginName)) {
+						throw new MiniflareCoreError(
+							"ERR_VALIDATION",
+							`An unsafe plugin ${pluginName} was specified in the Wrangler config for some unsafe bindings, but no matching plugin was specified in the Miniflare Options`
+						);
+					}
+					// Manually set the unsafe plugin options
+					pluginWorkerOpts[i].unsafePluginOptions ??= {};
+					pluginWorkerOpts[i].unsafePluginOptions![pluginName] = {
+						[bindingName]: pluginOptions,
+					};
+				}
+			}
+		}
+	}
 
 	// If we haven't defined multiple workers, shared options and worker options
 	// are the same, but we only want to resolve the `rootPath` once. Otherwise,
@@ -319,7 +476,7 @@ function validateOptions(
 		names.add(name);
 	}
 
-	return [pluginSharedOpts, pluginWorkerOpts];
+	return [pluginSharedOpts, pluginWorkerOpts, unsafePluginLoadersByPluginName];
 }
 
 // When creating user worker services, we need to know which Durable Objects
@@ -899,6 +1056,17 @@ export class Miniflare {
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
 
+	/**
+	 * pluginLoaders is a map of plugin names to loaded {@link PluginBase} objects
+	 */
+	#pluginLoaders: ExternalPluginRegistry = {};
+
+	/**
+	 * externalPlugins is a list of plugins that have been provided and will
+	 * be dynamically imported to provide Worker simulators for Miniflare
+	 */
+	#externalPlugins: ExternalPlugin[] = [];
+
 	// key is the browser session ID, value is the browser process
 	#browserProcesses: Map<string, Process> = new Map();
 
@@ -941,12 +1109,14 @@ export class Miniflare {
 
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
-		const [sharedOpts, workerOpts] = validateOptions(opts);
+		const [sharedOpts, workerOpts, externalPluginLoaders] =
+			validateOptions(opts);
 
 		checkMacOSVersion({ shouldThrow: true });
 
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
+		this.#pluginLoaders = externalPluginLoaders;
 
 		const workerNamesToProxy = this.#workerNamesToProxy();
 		const enableInspectorProxy = workerNamesToProxy.size > 0;
@@ -1456,6 +1626,24 @@ export class Miniflare {
 		return `${getURLSafeHost(host)}:${requestedPort ?? 0}`;
 	}
 
+	async #loadExternalPlugins(): Promise<
+		Record<string, PluginBase<z.ZodType<any>, z.ZodType<any>>>
+	> {
+		let plugins: Record<
+			string,
+			PluginBase<z.ZodType<any>, z.ZodType<any>>
+		> = {};
+		for (const [pluginName, loadExternalPlugin] of Object.entries(
+			this.#pluginLoaders
+		)) {
+			this.#log.info(`Loading external plugin ${pluginName}`);
+			const loadedPlugin = await loadExternalPlugin();
+			const plugin = loadedPlugin.registerMiniflarePlugins();
+			plugins = { ...plugin };
+		}
+		return plugins;
+	}
+
 	async #assembleConfig(
 		loopbackPort: number,
 		proxyAddress: string | null
@@ -1463,6 +1651,12 @@ export class Miniflare {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
+
+		const plugins = await this.#loadExternalPlugins();
+		this.#externalPlugins = Object.entries(plugins).map(([name, plugin]) => [
+			name,
+			plugin,
+		]);
 
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 		this.#cfObject = sharedOpts.core.cf;
@@ -1520,7 +1714,7 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
-		for (const [key, plugin] of PLUGIN_ENTRIES) {
+		for (const [key, plugin] of this.#mergedPluginEntries) {
 			const pluginExtensions = await plugin.getExtensions?.({
 				// @ts-expect-error `CoreOptionsSchema` has required options which are
 				//  missing in other plugins' options.
@@ -1555,10 +1749,14 @@ export class Miniflare {
 			const workerBindings: Worker_Binding[] = [];
 			allWorkerBindings.set(workerName, workerBindings);
 			const additionalModules: Worker_Module[] = [];
-			for (const [key, plugin] of PLUGIN_ENTRIES) {
-				// @ts-expect-error `CoreOptionsSchema` has required options which are
-				//  missing in other plugins' options.
-				const pluginBindings = await plugin.getBindings(workerOpts[key], i);
+			for (const [key, plugin] of this.#mergedPluginEntries) {
+				let workerOptions: any;
+				if (!isBuiltInPlugin({ key, plugin })) {
+					workerOptions = workerOpts.unsafePluginOptions?.[key] || {};
+				} else {
+					workerOptions = workerOpts[key as keyof PluginWorkerOptions] || {};
+				}
+				const pluginBindings = await plugin.getBindings(workerOptions, i);
 				if (pluginBindings !== undefined) {
 					for (const binding of pluginBindings) {
 						// If this is the Workers Sites manifest, we need to add it as a
@@ -1648,14 +1846,20 @@ export class Miniflare {
 				queueProducers,
 				queueConsumers,
 			};
-			for (const [key, plugin] of PLUGIN_ENTRIES) {
+			for (const [key, plugin] of this.#mergedPluginEntries) {
+				let workerOptions: any;
+				if (!isBuiltInPlugin({ key, plugin })) {
+					workerOptions = workerOpts.unsafePluginOptions?.[key] || {};
+				} else {
+					workerOptions = workerOpts[key as keyof PluginWorkerOptions] || {};
+				}
 				const pluginServicesExtensions = await plugin.getServices({
 					...pluginServicesOptionsBase,
 					// @ts-expect-error `CoreOptionsSchema` has required options which are
 					//  missing in other plugins' options.
-					options: workerOpts[key],
+					options: workerOptions,
 					// @ts-expect-error `QueuesPlugin` doesn't define shared options
-					sharedOptions: sharedOpts[key],
+					sharedOptions: sharedOpts[key] || {},
 				});
 				if (pluginServicesExtensions !== undefined) {
 					let pluginServices: Service[];
@@ -1708,7 +1912,7 @@ export class Miniflare {
 								name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`,
 							}
 						: {
-								name: getUserServiceName(serviceName),
+								name: getUserServiceName(workerName),
 								entrypoint: entrypoint === "default" ? undefined : entrypoint,
 							};
 
@@ -2265,11 +2469,13 @@ export class Miniflare {
 		// This function must be run with `#runtimeMutex` held
 
 		// Split and validate options
-		const [sharedOpts, workerOpts] = validateOptions(opts);
+		const [sharedOpts, workerOpts, unsafePluginLoadersByPluginName] =
+			validateOptions(opts);
 		this.#previousSharedOpts = this.#sharedOpts;
 		this.#previousWorkerOpts = this.#workerOpts;
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
+		this.#pluginLoaders = unsafePluginLoadersByPluginName;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
 		this.#structuredWorkerdLogs =
 			this.#sharedOpts.core.structuredWorkerdLogs ??
@@ -2415,11 +2621,20 @@ export class Miniflare {
 		const workerOpts = this.#workerOpts[workerIndex];
 		workerName = workerOpts.core.name ?? "";
 
+		console.log(this.#externalPlugins);
+
 		// Populate bindings from each plugin
-		for (const [key, plugin] of PLUGIN_ENTRIES) {
-			// @ts-expect-error `CoreOptionsSchema` has required options which are
-			//  missing in other plugins' options.
-			const pluginBindings = await plugin.getNodeBindings(workerOpts[key]);
+		for (const [key, plugin] of this.#mergedPluginEntries) {
+			let perPluginWorkerOptions: any = {};
+			if (!isBuiltInPlugin({ key, plugin })) {
+				perPluginWorkerOptions = workerOpts.unsafePluginOptions?.[key] || {};
+			} else {
+				perPluginWorkerOptions =
+					workerOpts[key as keyof PluginWorkerOptions] || {};
+			}
+			const pluginBindings = await plugin.getNodeBindings(
+				perPluginWorkerOptions
+			);
 			for (const [name, binding] of Object.entries(pluginBindings)) {
 				if (binding instanceof ProxyNodeBinding) {
 					const proxyBindingName = getProxyBindingName(key, workerName, name);
@@ -2578,6 +2793,10 @@ export class Miniflare {
 			if (maybePath !== undefined) result.set(key, maybePath);
 		}
 		return result;
+	}
+
+	get #mergedPluginEntries() {
+		return [...this.#externalPlugins, ...PLUGIN_ENTRIES];
 	}
 
 	async dispose(): Promise<void> {

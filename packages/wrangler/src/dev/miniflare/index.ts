@@ -50,6 +50,7 @@ import type {
 	MiniflareOptions,
 	RemoteProxyConnectionString,
 	SourceOptions,
+	UnsafePluginOption,
 	WorkerOptions,
 	WorkerRegistry,
 } from "miniflare";
@@ -348,6 +349,7 @@ function workflowEntry(
 		},
 	];
 }
+
 function dispatchNamespaceEntry({
 	binding,
 	namespace,
@@ -394,6 +396,31 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 	return [consumer.queue, options] as const;
 }
 
+/**
+ * UnsafeBindingWorkerOptions describes the shape of an "unsafe" binding
+ * that will be provided to Miniflare
+ */
+type UnsafeBindingWorkerOptions =
+	| {
+			bindingType: string;
+			plugin?: {
+				packageName: string;
+				pluginName: string;
+				pluginOptions?: object;
+			};
+			[x: string]: unknown;
+	  }
+	| {
+			bindingType: "service";
+			service: string;
+			plugin?: {
+				packageName: string;
+				pluginName: string;
+				pluginOptions?: object;
+			};
+			[x: string]: unknown;
+	  };
+
 type WorkerOptionsBindings = Pick<
 	WorkerOptions,
 	| "bindings"
@@ -424,7 +451,17 @@ type WorkerOptionsBindings = Pick<
 	| "mtlsCertificates"
 	| "helloWorld"
 	| "workerLoaders"
->;
+> & {
+	/**
+	 * unsafeBindings is a mapping of "unsafe" binding names to their configurations
+	 */
+	unsafeBindings?: {
+		/**
+		 * A mapping of binding names to a map of options describing the binding and any potential plugin integrations it has
+		 */
+		[bindingName: string]: UnsafeBindingWorkerOptions;
+	};
+};
 
 type MiniflareBindingsConfig = Pick<
 	ConfigBundle,
@@ -577,6 +614,39 @@ export function buildMiniflareBindingOptions(
 		};
 	}
 
+	const unsafeBindings: Record<string, UnsafeBindingWorkerOptions> = {};
+	/**
+	 * If unsafe service bindings are specified and "mocked" in local development
+	 * via an external plugin, merge them into regular service bindings
+	 */
+	const { unsafe } = bindings;
+	if (unsafe?.bindings && unsafe.bindings.length > 0) {
+		const unsafeBindingsWithLocalDev = unsafe.bindings.filter((b) =>
+			isUnsafeServiceBindingWithDevCfg(b)
+		);
+		for (const unsafeBindingCfg of unsafeBindingsWithLocalDev) {
+			const {
+				name,
+				type,
+				dev: { package: pkg, plugin, pluginOptions },
+				service,
+			} = unsafeBindingCfg;
+			logger.info(
+				`Binding ${name} is a local binding to plugin ${plugin} provided by package ${pkg}`
+			);
+
+			unsafeBindings[name] = {
+				bindingType: type,
+				service,
+				plugin: {
+					packageName: pkg,
+					pluginName: plugin,
+					pluginOptions,
+				},
+			} satisfies UnsafeBindingWorkerOptions;
+		}
+	}
+
 	if (bindings.vectorize && !remoteBindingsEnabled) {
 		for (const vectorizeBinding of bindings.vectorize) {
 			const bindingName = vectorizeBinding.binding;
@@ -621,7 +691,7 @@ export function buildMiniflareBindingOptions(
 		textBlobBindings,
 		dataBlobBindings,
 		wasmBindings,
-
+		unsafeBindings,
 		ai:
 			bindings.ai && remoteProxyConnectionString
 				? {
@@ -910,6 +980,35 @@ export async function buildMiniflareOptions(
 		}
 	}
 
+	/**
+	 * If the user has specified unsafe bindings,
+	 * extract any local development plugins that may have been specified. Currently this only
+	 * works for unsafe service bindings, but that restraint could be relaxed in the future.
+	 */
+	const expectedLocalPlugins: UnsafePluginOption[] = [];
+	if (hasUnsafeBindings(config.bindings)) {
+		const unsafeServiceBindings = config.bindings.unsafe.bindings.filter((b) =>
+			isUnsafeServiceBindingWithDevCfg(b)
+		);
+		if (unsafeServiceBindings.length > 0) {
+			logger.warn(
+				"You are using unsafe bindings in local development that define local development options via `dev` - this feature is experimental."
+			);
+			for (const { dev, name } of unsafeServiceBindings) {
+				expectedLocalPlugins.push({
+					packageName: dev.package,
+					pluginName: dev.plugin,
+					// Resolve the module relative to the worker project (meaning it must be installed and accessible in the node_modules
+					// relative to this path)
+					resolveWorkingDirectory: path.resolve(
+						config.bundle.entry.projectRoot,
+						"package.json"
+					),
+				});
+			}
+		}
+	}
+
 	const upstream =
 		typeof config.localUpstream === "string"
 			? `${config.upstreamProtocol}://${config.localUpstream}`
@@ -948,6 +1047,7 @@ export async function buildMiniflareOptions(
 		handleRuntimeStdio: handleRuntimeStdioWithStructuredLogs,
 		structuredWorkerdLogs: true,
 		defaultPersistRoot,
+		unsafeExternalPlugins: expectedLocalPlugins,
 		workers: [
 			{
 				name: getName(config),
@@ -995,4 +1095,27 @@ export function getImageNameFromDOClassName(options: {
 			),
 		};
 	}
+}
+
+/**
+ * hasUnsafeBindings is a typeguard that checks whether the user has specified unsafe
+ * bindings in their Worker options
+ */
+export function hasUnsafeBindings(
+	bindings: CfWorkerInit["bindings"]
+): bindings is CfWorkerInit["bindings"] & {
+	unsafe: { bindings: CfUnsafeBinding[] };
+} {
+	const { unsafe } = bindings;
+	return !!unsafe && !!unsafe.bindings && unsafe.bindings.length > 0;
+}
+
+/**
+ * isUnsafeServiceBindingWithDevCfg is a typeguard that checks whether the user has specified unsafe
+ * service bindings with a local development configuration in their Worker options
+ */
+export function isUnsafeServiceBindingWithDevCfg(
+	b: CfUnsafeBinding
+): b is Required<Pick<CfUnsafeServiceBinding, "dev">> & CfUnsafeServiceBinding {
+	return b.type === "service" && b.dev !== undefined;
 }
