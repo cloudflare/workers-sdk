@@ -4,14 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { appendToDebugLogFile, debugLogFilepath } from "../../utils/log-file";
 import { runInTempDir } from "../helpers/run-in-tmp";
 
-vi.mock("../../logger", () => ({
-	logger: {
-		error: vi.fn(),
-		debug: vi.fn(),
-		console: vi.fn(),
-	},
-}));
-
 describe("appendToDebugLogFile", () => {
 	runInTempDir();
 
