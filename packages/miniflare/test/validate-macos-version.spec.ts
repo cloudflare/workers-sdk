@@ -101,6 +101,22 @@ test("validateMacOSVersion should not throw when CI environment variable is set"
 	restoreMocks();
 });
 
+test("validateMacOSVersion should not throw when CI environment variable is set to '1'", (t) => {
+	mockPlatform("darwin");
+	mockOsRelease("21.6.0");
+	mockEnv({ CI: "1" });
+	t.notThrows(() => validateMacOSVersion());
+	restoreMocks();
+});
+
+test("validateMacOSVersion should not throw when CI environment variable is set to 'yes'", (t) => {
+	mockPlatform("darwin");
+	mockOsRelease("21.6.0");
+	mockEnv({ CI: "yes" });
+	t.notThrows(() => validateMacOSVersion());
+	restoreMocks();
+});
+
 test("warnMacOSVersion should not warn on non-macOS platforms", (t) => {
 	mockPlatform("linux");
 
@@ -197,6 +213,47 @@ test("warnMacOSVersion should not warn when CI environment variable is set", (t)
 	mockEnv({ CI: "true" });
 
 	// eslint-disable-next-line no-console
+	const originalWarn = console.warn;
+	let warnCalled = false;
+	// eslint-disable-next-line no-console
+	console.warn = () => {
+		warnCalled = true;
+	};
+
+	warnMacOSVersion();
+
+	t.false(warnCalled);
+	// eslint-disable-next-line no-console
+	console.warn = originalWarn;
+	restoreMocks();
+});
+
+test("warnMacOSVersion should not warn when CI environment variable is set to '1'", (t) => {
+	mockPlatform("darwin");
+	mockOsRelease("21.6.0");
+	mockEnv({ CI: "1" });
+
+	// eslint-disable-next-line no-console
+	const originalWarn = console.warn;
+	let warnCalled = false;
+	// eslint-disable-next-line no-console
+	console.warn = () => {
+		warnCalled = true;
+	};
+
+	warnMacOSVersion();
+
+	t.false(warnCalled);
+	// eslint-disable-next-line no-console
+	console.warn = originalWarn;
+	restoreMocks();
+});
+
+test("warnMacOSVersion should not warn when CI environment variable is set to 'yes'", (t) => {
+	mockPlatform("darwin");
+	mockOsRelease("21.6.0");
+	mockEnv({ CI: "yes" });
+
 	// eslint-disable-next-line no-console
 	const originalWarn = console.warn;
 	let warnCalled = false;

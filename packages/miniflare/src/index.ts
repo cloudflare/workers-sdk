@@ -153,7 +153,7 @@ export function validateMacOSVersion(): void {
 		return;
 	}
 
-	if (process.env.CI === "true") {
+	if (process.env.CI) {
 		return;
 	}
 
@@ -178,7 +178,7 @@ export function warnMacOSVersion(): void {
 		return;
 	}
 
-	if (process.env.CI === "true") {
+	if (process.env.CI) {
 		return;
 	}
 
