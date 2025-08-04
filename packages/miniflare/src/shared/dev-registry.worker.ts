@@ -289,6 +289,10 @@ class ProxyServer {
 		});
 	}
 
+	/**
+	 * To subscribe to updates for a specific worker.
+	 * This is currently used to close HTTP tunnels when a service is updated.
+	 */
 	private subscribe(workerName: string, callback: () => void): void {
 		let callbacks = this.subscribers.get(workerName);
 
@@ -300,6 +304,9 @@ class ProxyServer {
 		callbacks.push(callback);
 	}
 
+	/**
+	 * Notify all subscribers of a worker that has been updated.
+	 */
 	private notifySubscribers(workerName: string): void {
 		const callbacks = this.subscribers.get(workerName);
 		if (callbacks) {
@@ -309,6 +316,9 @@ class ProxyServer {
 		}
 	}
 
+	/**
+	 * Find out which workers have been updated and notify subscribers.
+	 */
 	private updateRegistry(workers: Record<string, WorkerDefinition>) {
 		const workerNames = Object.keys(workers);
 
