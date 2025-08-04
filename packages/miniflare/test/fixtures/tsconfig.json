@@ -10,9 +10,10 @@
 		"noEmit": true,
 		"types": ["@cloudflare/workers-types/experimental"],
 		"paths": {
+			"miniflare": ["../../src"],
 			"miniflare:shared": ["../../src/workers/shared/index.worker.ts"],
 			"miniflare:zod": ["../../src/workers/shared/zod.worker.ts"]
 		}
 	},
-	"include": ["**/*", "../../src/workers/node.d.ts"]
+	"include": ["**/*", "unsafe-plugin", "../../src/workers/node.d.ts"]
 }
