@@ -1,3 +1,16 @@
+# Fix comment-json whitespace formatting for multi-line block comments
+#
+# This patch addresses two formatting issues in the comment-json library:
+# 1. Multi-line comments need proper indentation on each line
+# 2. Block comments at the beginning of objects need proper formatting
+#
+# Without this patch, multi-line block comments would have inconsistent
+# indentation and the header comment would be directly followed by the
+# opening brace instead of having a proper line break.
+#
+# This ensures generated wrangler.json files have properly formatted
+# comments that match the expected snapshot test output.
+
 diff --git a/src/stringify.js b/src/stringify.js
 index 083b83875d8efcc5fc3e1b22e96ee1d46d55034a..f587372508ec60931c2ae81b5f0b2d2f080bccbe 100644
 --- a/src/stringify.js
