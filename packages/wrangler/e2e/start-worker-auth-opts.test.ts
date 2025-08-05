@@ -9,19 +9,21 @@ import type { MockInstance } from "vitest";
 
 type Wrangler = Awaited<ReturnType<WranglerE2ETestHelper["importWrangler"]>>;
 
-describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - auth options", () => {
-	let helper: WranglerE2ETestHelper;
-	let wrangler: Wrangler;
-	let startWorker: Wrangler["unstable_startWorker"];
+describe("startWorker - auth options", () => {
 	let consoleErrorMock: MockInstance<typeof console.error>;
 
 	beforeAll(() => {
 		consoleErrorMock = vi.spyOn(console, "error").mockImplementation(() => {});
 	});
 
-	beforeEach(async () => {
-		helper = new WranglerE2ETestHelper();
-		const aiWorkerScript = dedent`
+	describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("with remote bindings", () => {
+		let helper: WranglerE2ETestHelper;
+		let wrangler: Wrangler;
+		let startWorker: Wrangler["unstable_startWorker"];
+
+		beforeEach(async () => {
+			helper = new WranglerE2ETestHelper();
+			const aiWorkerScript = dedent`
 			export default {
 				async fetch(_request, env) {
 					const messages = [
@@ -40,129 +42,198 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - auth options", () => {
 				},
 			}
 		`;
-		await helper.seed({
-			"src/index.js": aiWorkerScript,
+			await helper.seed({
+				"src/index.js": aiWorkerScript,
+			});
+			wrangler = await helper.importWrangler();
+			startWorker = wrangler.unstable_startWorker;
 		});
-		wrangler = await helper.importWrangler();
-		startWorker = wrangler.unstable_startWorker;
-	});
 
-	test("starting startWorker with the valid auth information and updating it with invalid information", async (t) => {
-		t.onTestFinished(async () => await worker?.dispose());
+		test("starting a worker with startWorker with the valid auth information and updating it with invalid information", async (t) => {
+			t.onTestFinished(async () => await worker?.dispose());
 
-		assert(process.env.CLOUDFLARE_API_TOKEN);
+			const validAuth = vi.fn(() => {
+				assert(process.env.CLOUDFLARE_API_TOKEN);
 
-		const worker = await startWorker({
-			entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
-			bindings: {
-				AI: {
-					type: "ai",
-					experimental_remote: true,
-				},
-			},
-			dev: {
-				experimentalRemoteBindings: true,
-				auth: {
+				return {
 					accountId: CLOUDFLARE_ACCOUNT_ID,
 					apiToken: {
 						apiToken: process.env.CLOUDFLARE_API_TOKEN,
 					},
+				};
+			});
+
+			const worker = await startWorker({
+				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
+				bindings: {
+					AI: {
+						type: "ai",
+						experimental_remote: true,
+					},
 				},
-			},
-		});
+				dev: {
+					experimentalRemoteBindings: true,
+					auth: validAuth,
+				},
+			});
 
-		await assertValidWorkerAiResponse(worker);
+			await assertValidWorkerAiResponse(worker);
 
-		consoleErrorMock.mockReset();
+			expect(validAuth).toHaveBeenCalledOnce();
 
-		await worker.patchConfig({
-			dev: {
-				experimentalRemoteBindings: true,
-				auth: {
+			consoleErrorMock.mockReset();
+
+			const incorrectAuth = vi.fn(() => {
+				return {
 					accountId: CLOUDFLARE_ACCOUNT_ID,
 					apiToken: {
 						apiToken: "This is an incorrect API TOKEN!",
 					},
+				};
+			});
+
+			await worker.patchConfig({
+				dev: {
+					experimentalRemoteBindings: true,
+					auth: incorrectAuth,
 				},
-			},
+			});
+
+			await assertInvalidWorkerAiResponse(worker);
+
+			expect(incorrectAuth).toHaveBeenCalledOnce();
 		});
 
-		await assertInvalidWorkerAiResponse(worker);
-	});
+		test("starting a worker with startWorker with invalid auth information and updating it with valid auth information", async (t) => {
+			t.onTestFinished(async () => await worker?.dispose());
 
-	test("starting startWorker with invalid auth information and updating it with valid auth information", async (t) => {
-		t.onTestFinished(async () => await worker?.dispose());
-
-		assert(process.env.CLOUDFLARE_API_TOKEN);
-
-		const worker = await startWorker({
-			entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
-			bindings: {
-				AI: {
-					type: "ai",
-					experimental_remote: true,
-				},
-			},
-			dev: {
-				experimentalRemoteBindings: true,
-				auth: {
+			const incorrectAuth = vi.fn(() => {
+				return {
 					accountId: CLOUDFLARE_ACCOUNT_ID,
 					apiToken: {
 						apiToken: "This is an incorrect API TOKEN!",
 					},
+				};
+			});
+
+			const worker = await startWorker({
+				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
+				bindings: {
+					AI: {
+						type: "ai",
+						experimental_remote: true,
+					},
 				},
-			},
-		});
+				dev: {
+					experimentalRemoteBindings: true,
+					auth: incorrectAuth,
+				},
+			});
 
-		await assertInvalidWorkerAiResponse(worker);
+			await assertInvalidWorkerAiResponse(worker);
 
-		consoleErrorMock.mockReset();
+			expect(incorrectAuth).toHaveBeenCalledOnce();
 
-		await worker.patchConfig({
-			dev: {
-				experimentalRemoteBindings: true,
-				auth: {
+			consoleErrorMock.mockReset();
+
+			const validAuth = vi.fn(() => {
+				assert(process.env.CLOUDFLARE_API_TOKEN);
+
+				return {
 					accountId: CLOUDFLARE_ACCOUNT_ID,
 					apiToken: {
 						apiToken: process.env.CLOUDFLARE_API_TOKEN,
 					},
+				};
+			});
+
+			await worker.patchConfig({
+				dev: {
+					experimentalRemoteBindings: true,
+					auth: validAuth,
 				},
-			},
+			});
+
+			await assertValidWorkerAiResponse(worker);
+
+			expect(validAuth).toHaveBeenCalledOnce();
 		});
 
-		await assertValidWorkerAiResponse(worker);
+		async function assertValidWorkerAiResponse(worker: Worker) {
+			const responseText = await fetchTimedTextFromWorker(worker);
+
+			// We've fixed the auth information so now we can indeed get
+			// a valid response from the worker
+			expect(responseText).toBeTruthy();
+			expect(responseText).toContain("This is a response from Workers AI.");
+
+			// And there should be no error regarding the Cloudflare API in the console
+			expect(consoleErrorMock).not.toHaveBeenCalledWith(
+				expect.stringMatching(
+					/A request to the Cloudflare API \([^)]*\) failed\./
+				)
+			);
+		}
+
+		async function assertInvalidWorkerAiResponse(worker: Worker) {
+			const responseText = await fetchTimedTextFromWorker(worker);
+
+			// The remote connection is not established so we can't successfully
+			// get a response from the worker
+			expect(responseText).toBe(null);
+
+			// And in the console an appropriate error was logged
+			expect(consoleErrorMock).toHaveBeenCalledWith(
+				expect.stringMatching(
+					/A request to the Cloudflare API \([^)]*\) failed\./
+				)
+			);
+		}
 	});
 
-	async function assertValidWorkerAiResponse(worker: Worker) {
-		const responseText = await fetchTimedTextFromWorker(worker);
+	describe("without remote bindings (no auth is needed)", () => {
+		test("starting a worker via startWorker without any remote bindings (doesn't cause wrangler to try to get the auth information)", async (t) => {
+			t.onTestFinished(async () => await worker?.dispose());
 
-		// We've fixed the auth information so now we can indeed get
-		// a valid response from the worker
-		expect(responseText).toBeTruthy();
-		expect(responseText).toContain("This is a response from Workers AI.");
+			const helper = new WranglerE2ETestHelper();
+			const wrangler = await helper.importWrangler();
+			const startWorker = wrangler.unstable_startWorker;
 
-		// And there should be no error regarding the Cloudflare API in the console
-		expect(consoleErrorMock).not.toHaveBeenCalledWith(
-			expect.stringMatching(
-				/A request to the Cloudflare API \([^)]*\) failed\./
-			)
-		);
-	}
+			const simpleWorkerScript = dedent`
+			export default {
+				async fetch(_request, env) {
+					return new Response('hello from a simple (local-only) worker');
+				},
+			}
+		`;
+			await helper.seed({
+				"src/index.js": simpleWorkerScript,
+			});
 
-	async function assertInvalidWorkerAiResponse(worker: Worker) {
-		const responseText = await fetchTimedTextFromWorker(worker);
+			const someAuth = vi.fn(() => {
+				return {
+					accountId: "",
+					apiToken: {
+						apiToken: "",
+					},
+				};
+			});
 
-		// The remote connection is not established so we can't successfully
-		// get a response from the worker
-		expect(responseText).toBe(null);
+			const worker = await startWorker({
+				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
+				dev: {
+					experimentalRemoteBindings: true,
+					auth: someAuth,
+				},
+			});
 
-		// And in the console an appropriate error was logged
-		expect(consoleErrorMock).toHaveBeenCalledWith(
-			expect.stringMatching(
-				/A request to the Cloudflare API \([^)]*\) failed\./
-			)
-		);
-	}
+			const response = await fetchTimedTextFromWorker(worker);
+
+			expect(response).toEqual("hello from a simple (local-only) worker");
+
+			expect(someAuth).not.toHaveBeenCalled();
+		});
+	});
 });
 
 /**
