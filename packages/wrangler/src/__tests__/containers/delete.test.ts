@@ -46,9 +46,7 @@ describe("containers delete", () => {
 	it("should reject invalid container ID format", async () => {
 		setWranglerConfig({});
 		await expect(runWrangler("containers delete invalid-id")).rejects
-			.toMatchInlineSnapshot(`
-			[Error: You must provide the container ID. Use 'wrangler containers list\` to view your containers and corresponding IDs.]
-		`);
+			.toMatchInlineSnapshot(`[Error: You must provide the container ID. Use \`wrangler containers list\` to view your containers and corresponding IDs.]`);
 	});
 
 	async function testStatusCode(code: number) {
