@@ -1,9 +1,11 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { rpcOverWebSocket } from "./rpc.js";
 
-export default class Client extends WorkerEntrypoint<{
+type Env = {
 	remoteProxyConnectionString: string;
 	binding: string;
-}> {
+};
+export default class Client extends WorkerEntrypoint<Env> {
 	async fetch(request: Request) {
 		const proxiedHeaders = new Headers();
 		for (const [name, value] of request.headers) {
@@ -22,5 +24,26 @@ export default class Client extends WorkerEntrypoint<{
 		});
 
 		return fetch(this.env.remoteProxyConnectionString, req);
+	}
+
+	constructor(ctx: ExecutionContext, env: Env) {
+		const url = new URL(env.remoteProxyConnectionString);
+		url.protocol = "ws:";
+		url.searchParams.set("MF-Binding", env.binding);
+		const session = rpcOverWebSocket(url.href);
+		const stub = session.getStub();
+
+		super(ctx, env);
+
+		return new Proxy(this, {
+			get(target, prop) {
+				if (Reflect.has(target, prop)) {
+					return Reflect.get(target, prop);
+				}
+
+				const value = Reflect.get(stub, prop);
+				return value;
+			},
+		});
 	}
 }

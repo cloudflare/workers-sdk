@@ -1,5 +1,14 @@
+import { receiveRpcOverHttp } from "./rpc.js";
+
 export default {
 	async fetch(request, env) {
+		if (request.headers.get("Upgrade")) {
+			const url = new URL(request.url);
+			return receiveRpcOverHttp(
+				request,
+				env[url.searchParams.get("MF-Binding")!]
+			);
+		}
 		const targetBinding = request.headers.get("MF-Binding");
 
 		if (targetBinding) {
