@@ -25,7 +25,7 @@ export const EXPORTED_FIXTURES = path.resolve(
 	"..",
 	"test",
 	"fixtures"
-)
+);
 
 export const workerTestMacro = test.macro(
 	async (t, ...fixturePath: string[]) => {

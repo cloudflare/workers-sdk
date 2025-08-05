@@ -12,13 +12,13 @@
 					"plugin": "unsafe-plugin",
 					"pluginOptions": {
 						"UNSAFE_SERVICE_BINDING": {
-							"emitLogs": true
-						}
-					}
+							"emitLogs": true,
+						},
+					},
 				},
 				"type": "service",
-				"service": "some-unsafe-service"
-			}
-		]
-	}
+				"service": "some-unsafe-service",
+			},
+		],
+	},
 }

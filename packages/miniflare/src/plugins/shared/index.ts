@@ -193,6 +193,7 @@ export async function createPluginLoaderFromUnsafePlugin({
 		const requireRelativeToWorker = createRequire(resolveWorkingDirectory);
 		const pluginPath = requireRelativeToWorker.resolve(packageName);
 		const moduleURL = pathToFileURL(pluginPath).href;
+		// eslint-disable-next-line es/no-dynamic-import
 		const { registerMiniflarePlugins } = await import(moduleURL);
 		if (!registerMiniflarePlugins) {
 			return {
