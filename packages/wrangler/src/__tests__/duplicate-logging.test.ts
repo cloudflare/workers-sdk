@@ -37,6 +37,8 @@ describe("duplicate logging prevention", () => {
 			dev: { remote: true },
 		};
 
+		// Call controller.set() multiple times to simulate config changes during dev server lifecycle (important-comment)
+		// This tests that warnings only appear once despite multiple config resolutions (important-comment)
 		await controller.set(input);
 		await controller.set(input);
 		await controller.set(input);
@@ -58,6 +60,8 @@ describe("duplicate logging prevention", () => {
 			analytics_engine_datasets: [{ binding: "AE", dataset: "test-dataset" }],
 		});
 
+		// Use service worker format to trigger the Analytics Engine warning
+		// The warning only appears when format === "service-worker" AND local mode AND analytics_engine bindings exist
 		writeFileSync(
 			"index.js",
 			"addEventListener('fetch', event => { event.respondWith(new Response('Hello')); });"
@@ -69,6 +73,8 @@ describe("duplicate logging prevention", () => {
 			dev: { remote: false },
 		};
 
+		// Call controller.set() multiple times to simulate config changes during dev server lifecycle
+		// This tests that warnings only appear once despite multiple config resolutions
 		await controller.set(input);
 		await controller.set(input);
 		await controller.set(input);
@@ -101,6 +107,8 @@ describe("duplicate logging prevention", () => {
 			dev: { remote: true },
 		};
 
+		// Call controller.set() multiple times to simulate config changes during dev server lifecycle
+		// This tests that warnings only appear once despite multiple config resolutions
 		await controller.set(input);
 		await controller.set(input);
 		await controller.set(input);
@@ -140,6 +148,8 @@ describe("duplicate logging prevention", () => {
 			dev: { remote: true, enableContainers: true },
 		};
 
+		// Call controller.set() multiple times to simulate config changes during dev server lifecycle
+		// This tests that warnings only appear once despite multiple config resolutions
 		await controller.set(input);
 		await controller.set(input);
 		await controller.set(input);
@@ -169,6 +179,8 @@ describe("duplicate logging prevention", () => {
 			dev: { remote: true, origin: { secure: false } },
 		};
 
+		// Call controller.set() multiple times to simulate config changes during dev server lifecycle
+		// This tests that warnings only appear once despite multiple config resolutions
 		await controller.set(input);
 		await controller.set(input);
 		await controller.set(input);
