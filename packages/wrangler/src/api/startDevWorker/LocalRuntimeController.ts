@@ -11,7 +11,6 @@ import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { getDockerPath } from "../../environment-variables/misc-variables";
 import { logger } from "../../logger";
-import { pickRemoteBindings } from "../remoteBindings";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import {
@@ -209,9 +208,8 @@ export class LocalRuntimeController extends RuntimeController {
 			if (experimentalRemoteBindings && !data.config.dev?.remote) {
 				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
-				const { maybeStartOrUpdateRemoteProxySession } = await import(
-					"../remoteBindings"
-				);
+				const { maybeStartOrUpdateRemoteProxySession, pickRemoteBindings } =
+					await import("../remoteBindings");
 
 				const remoteBindings = pickRemoteBindings(
 					convertCfWorkerInitBindingsToBindings(configBundle.bindings) ?? {}
