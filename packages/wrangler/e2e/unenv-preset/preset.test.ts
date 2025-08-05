@@ -14,11 +14,7 @@ type TestConfig = {
 	// "nodejs_compat" is included by default
 	compatibilityFlags?: string[];
 	// Assert runtime compatibility flag values
-	expectRuntimeFlags?: {
-		enable_nodejs_http_modules?: boolean;
-		enable_nodejs_http_server_modules?: boolean;
-		enable_nodejs_os_module?: boolean;
-	};
+	expectRuntimeFlags?: Record<string, boolean>;
 };
 
 const testConfigs: TestConfig[] = [
