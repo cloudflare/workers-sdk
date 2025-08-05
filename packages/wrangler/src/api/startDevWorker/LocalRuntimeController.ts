@@ -11,6 +11,7 @@ import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { getDockerPath } from "../../environment-variables/misc-variables";
 import { logger } from "../../logger";
+import { pickRemoteBindings } from "../remoteBindings";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import {
@@ -212,16 +213,22 @@ export class LocalRuntimeController extends RuntimeController {
 					"../remoteBindings"
 				);
 
-				const auth = await unwrapHook(data.config.dev.auth);
+				const remoteBindings = pickRemoteBindings(
+					convertCfWorkerInitBindingsToBindings(configBundle.bindings) ?? {}
+				);
+
+				const auth =
+					Object.keys(remoteBindings).length === 0
+						? // If there are no remote bindings (this is a local only session) there's no need to get auth data
+							undefined
+						: await unwrapHook(data.config.dev.auth);
 
 				this.#remoteProxySessionData =
 					await maybeStartOrUpdateRemoteProxySession(
 						{
 							name: configBundle.name,
 							complianceRegion: configBundle.complianceRegion,
-							bindings:
-								convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
-								{},
+							bindings: remoteBindings,
 						},
 						this.#remoteProxySessionData ?? null,
 						auth
