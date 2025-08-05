@@ -194,6 +194,7 @@ export async function fillOpenAPIConfiguration(
 		...(OpenAPI.HEADERS ?? {}),
 		...Object.fromEntries(headers.entries()),
 	};
+	OpenAPI.LOGGER = logger;
 }
 
 type NonObject = undefined | null | boolean | string | number;
