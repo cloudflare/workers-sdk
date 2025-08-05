@@ -127,6 +127,35 @@ const testConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:fs and node:fs/promises
+	[
+		{
+			name: "fs disabled by date",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_fs_module: false,
+			},
+		},
+		// TODO: add a config when fs is enabled by default (date no set yet)
+		{
+			name: "fs enabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["enable_nodejs_fs_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_fs_module: true,
+			},
+		},
+		// TODO: change the date pass the default enabled date (date not set yet)
+		{
+			name: "fs disabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["disable_nodejs_fs_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_fs_module: false,
+			},
+		},
+	],
 ].flat();
 
 describe.each(testConfigs)(

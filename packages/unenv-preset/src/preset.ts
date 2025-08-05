@@ -60,21 +60,21 @@ export function getCloudflarePreset({
 	compatibilityDate?: string;
 	compatibilityFlags?: string[];
 }): Preset {
-	const httpOverrides = getHttpOverrides({
+	const compat = {
 		compatibilityDate,
 		compatibilityFlags,
-	});
+	};
 
-	const osOverrides = getOsOverrides({
-		compatibilityDate,
-		compatibilityFlags,
-	});
+	const httpOverrides = getHttpOverrides(compat);
+	const osOverrides = getOsOverrides(compat);
+	const fsOverrides = getFsOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
 		...nativeModules,
 		...httpOverrides.nativeModules,
 		...osOverrides.nativeModules,
+		...fsOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -82,6 +82,7 @@ export function getCloudflarePreset({
 		...hybridModules,
 		...httpOverrides.hybridModules,
 		...osOverrides.hybridModules,
+		...fsOverrides.hybridModules,
 	];
 
 	return {
@@ -223,6 +224,45 @@ function getOsOverrides({
 		? {
 				nativeModules: ["os"],
 				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:fs` and `node:fs/promises` (unenv or workerd)
+ *
+ * The native http implementation:
+ * - can be enabled with the "enable_nodejs_fs_module" flag
+ * - can be disabled with the "disable_nodejs_fs_module" flag
+ */
+function getFsOverrides({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_fs_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_fs_module") &&
+		compatibilityFlags.includes("experimental");
+
+	// TODO: add `enabledByDate` when a default date is set
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// The native `fs` module is missing a few APIs so we need an hybrid polyfill
+	// The native `fs/promises` implements all the node APIs so we can use it directly
+	return enabled
+		? {
+				nativeModules: ["fs/promises"],
+				hybridModules: ["fs"],
 			}
 		: {
 				nativeModules: [],
