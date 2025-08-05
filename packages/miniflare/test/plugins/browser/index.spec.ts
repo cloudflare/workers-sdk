@@ -62,8 +62,7 @@ export default {
 };
 `;
 
-// we need to run browser rendering tests in a serial manner to avoid a race condition installing the browser
-test.serial("it creates a browser session", async (t) => {
+test("it creates a browser session", async (t) => {
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -99,7 +98,7 @@ export default {
 };
 `;
 
-test.serial("it closes a browser session", async (t) => {
+test("it closes a browser session", async (t) => {
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -142,7 +141,7 @@ export default {
 };
 `;
 
-test.serial("it reuses a browser session", async (t) => {
+test("it reuses a browser session", async (t) => {
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -185,7 +184,7 @@ export default {
 };
 `;
 
-test.serial("fails if browser session already in use", async (t) => {
+test("fails if browser session already in use", async (t) => {
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -229,7 +228,7 @@ export default {
 };
 `;
 
-test.serial("gets sessions while acquiring and closing session", async (t) => {
+test("gets sessions while acquiring and closing session", async (t) => {
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -277,30 +276,27 @@ export default {
 };
 `;
 
-test.serial(
-	"gets sessions while connecting and disconnecting session",
-	async (t) => {
-		const opts: MiniflareOptions = {
-			name: "worker",
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: GET_SESSIONS_AFTER_DISCONNECT_SCRIPT,
-			browserRendering: { binding: "MYBROWSER" },
-		};
-		const mf = new Miniflare(opts);
-		t.teardown(() => mf.dispose());
+test("gets sessions while connecting and disconnecting session", async (t) => {
+	const opts: MiniflareOptions = {
+		name: "worker",
+		compatibilityDate: "2024-11-20",
+		modules: true,
+		script: GET_SESSIONS_AFTER_DISCONNECT_SCRIPT,
+		browserRendering: { binding: "MYBROWSER" },
+	};
+	const mf = new Miniflare(opts);
+	t.teardown(() => mf.dispose());
 
-		const { connectedSession, disconnectedSession } = (await mf
-			.dispatchFetch("https://localhost")
-			.then((res) => res.json())) as any;
-		t.is(connectedSession.sessionId, disconnectedSession.sessionId);
-		t.true(
-			typeof connectedSession.connectionId === "string" &&
-				typeof connectedSession.connectionStartTime === "number"
-		);
-		t.true(
-			!disconnectedSession.connectionId &&
-				!disconnectedSession.connectionStartTime
-		);
-	}
-);
+	const { connectedSession, disconnectedSession } = (await mf
+		.dispatchFetch("https://localhost")
+		.then((res) => res.json())) as any;
+	t.is(connectedSession.sessionId, disconnectedSession.sessionId);
+	t.true(
+		typeof connectedSession.connectionId === "string" &&
+			typeof connectedSession.connectionStartTime === "number"
+	);
+	t.true(
+		!disconnectedSession.connectionId &&
+			!disconnectedSession.connectionStartTime
+	);
+});
