@@ -28,6 +28,7 @@ import { showHelp } from "./help";
 import { reporter, runTelemetryCommand } from "./metrics";
 import { createProject } from "./pages";
 import {
+	addCloudflareSystemPrompt,
 	addWranglerToGitIgnore,
 	copyTemplateFiles,
 	createContext,
@@ -145,6 +146,7 @@ const create = async (ctx: C3Context) => {
 	}
 
 	await copyTemplateFiles(ctx);
+	await addCloudflareSystemPrompt(ctx);
 	await updatePackageName(ctx);
 
 	chdir(ctx.project.path);
