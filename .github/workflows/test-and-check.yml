@@ -41,6 +41,9 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
+      - name: Check the changesets
+        run: node -r esbuild-register tools/deployments/validate-changesets.ts
+
       - name: Bump package versions
         run: node .github/changeset-version.js
         env:
@@ -51,9 +54,6 @@ jobs:
         env:
           CI_OS: ${{ runner.os }}
           NODE_OPTIONS: "--max_old_space_size=8192"
-
-      - name: Check the changesets
-        run: node -r esbuild-register tools/deployments/validate-changesets.ts
 
       - name: Upload turbo logs
         if: always()
