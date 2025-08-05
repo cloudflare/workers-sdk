@@ -38,6 +38,8 @@ describe("duplicate logging prevention", () => {
 			...startDevWorkerInput,
 			entrypoint: "index.js",
 		};
+		// Call controller.set() multiple times to simulate config changes during dev server lifecycle (important-comment)
+		// This tests that warnings only appear once despite multiple config resolutions (important-comment)
 		await controller.set(input);
 		await controller.set(input);
 
@@ -70,6 +72,8 @@ describe("duplicate logging prevention", () => {
 				analytics_engine_datasets: [{ binding: "AE", dataset: "test-dataset" }],
 			},
 			indexJsContent:
+				// Use service worker format to trigger the Analytics Engine warning
+				// The warning only appears when format === "service-worker" AND local mode AND analytics_engine bindings exist
 				"addEventListener('fetch', event => { event.respondWith(new Response('Hello')); });",
 			startDevWorkerInput: {
 				dev: { remote: false },
