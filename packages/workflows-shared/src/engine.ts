@@ -141,7 +141,7 @@ export class Engine extends DurableObject<Env> {
 	}
 
 	async getInstanceModifier(): Promise<InstanceModifier> {
-		return new InstanceModifier(this.ctx);
+		return new InstanceModifier(this, this.ctx);
 	}
 
 	readLogs(): EngineLogs {
