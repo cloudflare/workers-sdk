@@ -234,7 +234,7 @@ function getOsOverrides({
 /**
  * Returns the overrides for `node:fs` and `node:fs/promises` (unenv or workerd)
  *
- * The native http implementation:
+ * The native fs implementation:
  * - can be enabled with the "enable_nodejs_fs_module" flag
  * - can be disabled with the "disable_nodejs_fs_module" flag
  */
