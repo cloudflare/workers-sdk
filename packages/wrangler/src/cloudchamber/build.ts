@@ -18,6 +18,7 @@ import {
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getAccountId } from "../user";
+import { ensureContainerLimits } from "./limits";
 import { loadAccount } from "./locations";
 import type { Config } from "../config";
 import type {
@@ -26,7 +27,7 @@ import type {
 } from "../yargs-types";
 import type {
 	BuildArgs,
-	CompleteAccountCustomer,
+	ContainerNormalizedConfig,
 } from "@cloudflare/containers-shared";
 
 export function buildYargs(yargs: CommonYargsArgv) {
@@ -80,7 +81,7 @@ export async function buildAndMaybePush(
 	args: BuildArgs,
 	pathToDocker: string,
 	push: boolean,
-	configDiskInBytes: number | undefined
+	containerConfig?: ContainerNormalizedConfig
 ): Promise<{ image: string; pushed: boolean }> {
 	try {
 		const imageTag = `${getCloudflareContainerRegistry()}/${args.tag}`;
@@ -101,28 +102,20 @@ export async function buildAndMaybePush(
 			dockerfile,
 		}).ready;
 
-		const inspectOutput = await dockerImageInspect(pathToDocker, {
+		const repoDigests = await dockerImageInspect(pathToDocker, {
 			imageTag,
-			formatString:
-				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
+			formatString: "{{json .RepoDigests}}",
 		});
-
-		const [sizeStr, layerStr, repoDigests] = inspectOutput.split(" ");
 
 		let pushed = false;
 		if (push) {
 			const account = await loadAccount();
 
-			const size = parseInt(sizeStr, 10);
-			const layers = parseInt(layerStr, 10);
-
-			// 16MiB is the layer size adjustments we use in devmapper
-			const MiB = 1024 * 1024;
-			const requiredSizeInBytes = Math.ceil(size * 1.1 + layers * 16 * MiB);
-			await ensureDiskLimits({
-				requiredSizeInBytes,
+			await ensureContainerLimits({
+				pathToDocker,
+				imageTag,
 				account,
-				configDiskInBytes,
+				containerConfig,
 			});
 
 			await dockerLoginManagedRegistry(pathToDocker);
@@ -244,8 +237,8 @@ export async function buildCommand(
 		},
 		getDockerPath() ?? args.pathToDocker,
 		args.push,
-		// this means we won't be able to read the disk size from the config, but that option is deprecated anyway at least for containers.
-		// and this never actually worked for cloudchamber as this command was previously reading it from config.containers not config.cloudchamber
+		// this means we aren't validating defined limits for a container when building an image
+		// we will, however, still validate the image size against account level disk limits
 		undefined
 	);
 }
@@ -288,36 +281,6 @@ async function checkImagePlatform(
 	if (platform !== expectedPlatform) {
 		throw new Error(
 			`Unsupported platform: Image platform (${platform}) does not match the expected platform (${expectedPlatform})`
-		);
-	}
-}
-
-export async function ensureDiskLimits(options: {
-	requiredSizeInBytes: number;
-	account: CompleteAccountCustomer;
-	configDiskInBytes: number | undefined;
-}): Promise<void> {
-	const MB = 1000 * 1000;
-	const accountDiskSizeInBytes =
-		(options.account.limits.disk_mb_per_deployment ?? 2000) * MB;
-	// if appDiskSize is defined and configured to be more than the accountDiskSize, error
-	if (
-		options.configDiskInBytes &&
-		options.configDiskInBytes > accountDiskSizeInBytes
-	) {
-		throw new UserError(
-			`Exceeded account limits: Your container is configured to use a disk size of ${Math.ceil(options.configDiskInBytes / MB)}MB. However, that exceeds the account limit of ${accountDiskSizeInBytes / MB}MB`
-		);
-	}
-	const maxAllowedImageSizeBytes =
-		options.configDiskInBytes ?? accountDiskSizeInBytes;
-
-	logger.debug(
-		`Disk size limits when building the container: appDiskSize: ${options.configDiskInBytes ? Math.ceil(options.configDiskInBytes / MB) : "n/a"}MB, accountDiskSize:${accountDiskSizeInBytes / MB}MB, maxAllowedImageSizeBytes=${maxAllowedImageSizeBytes}(${maxAllowedImageSizeBytes / MB}MB), requiredSize=${options.requiredSizeInBytes}(${Math.ceil(options.requiredSizeInBytes / MB)}MB)`
-	);
-	if (maxAllowedImageSizeBytes < options.requiredSizeInBytes) {
-		throw new UserError(
-			`Image too large: needs ${Math.ceil(options.requiredSizeInBytes / MB)}MB, but your app is limited to images with size ${maxAllowedImageSizeBytes / MB}MB. Your account needs more disk size per instance to run this container. The default disk size is 2GB.`
 		);
 	}
 }

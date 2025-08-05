@@ -20,18 +20,20 @@ import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
 import {
 	checkEverythingIsSet,
-	checkInstanceType,
 	collectEnvironmentVariables,
 	collectLabels,
 	parseImageName,
 	promptForEnvironmentVariables,
-	promptForInstanceType,
 	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
 	resolveMemory,
 } from "./common";
 import { wrap } from "./helpers/wrap";
+import {
+	checkInstanceType,
+	promptForInstanceType,
+} from "./instance-type/instance-type";
 import { loadAccount } from "./locations";
 import { getNetworkInput } from "./network/network";
 import { sshPrompts as promptForSSHKeyAndGetAddedSSHKey } from "./ssh/ssh";
