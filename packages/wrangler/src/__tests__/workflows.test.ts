@@ -514,7 +514,6 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						script_name: "external-script",
-						experimental_remote: true,
 					},
 				],
 			});
