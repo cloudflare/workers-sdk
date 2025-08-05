@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
 import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { logger } from "../logger";
@@ -25,8 +26,7 @@ describe("duplicate logging prevention", () => {
 			},
 		});
 
-		const fs = await import("node:fs");
-		fs.writeFileSync(
+		writeFileSync(
 			"index.js",
 			"export default { fetch() { return new Response('Hello'); } };"
 		);
@@ -58,8 +58,7 @@ describe("duplicate logging prevention", () => {
 			analytics_engine_datasets: [{ binding: "AE", dataset: "test-dataset" }],
 		});
 
-		const fs = await import("node:fs");
-		fs.writeFileSync(
+		writeFileSync(
 			"index.js",
 			"addEventListener('fetch', event => { event.respondWith(new Response('Hello')); });"
 		);
@@ -91,8 +90,7 @@ describe("duplicate logging prevention", () => {
 			services: [{ binding: "SERVICE", service: "test-service" }],
 		});
 
-		const fs = await import("node:fs");
-		fs.writeFileSync(
+		writeFileSync(
 			"index.js",
 			"export default { fetch() { return new Response('Hello'); } };"
 		);
@@ -131,8 +129,7 @@ describe("duplicate logging prevention", () => {
 			],
 		});
 
-		const fs = await import("node:fs");
-		fs.writeFileSync(
+		writeFileSync(
 			"index.js",
 			"export default { fetch() { return new Response('Hello'); } };"
 		);
@@ -161,8 +158,7 @@ describe("duplicate logging prevention", () => {
 			main: "index.js",
 		});
 
-		const fs = await import("node:fs");
-		fs.writeFileSync(
+		writeFileSync(
 			"index.js",
 			"export default { fetch() { return new Response('Hello'); } };"
 		);
