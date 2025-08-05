@@ -85,7 +85,7 @@ export async function runLongLived(
 	customEnv: Record<string, string | undefined> = {}
 ) {
 	debuglog(`starting \`${command}\` for ${projectPath}`);
-	const process = childProcess.exec(`${pm} run ${command}`, {
+	const childProc = childProcess.exec(`${pm} run ${command}`, {
 		cwd: projectPath,
 		env: {
 			...testEnv,
@@ -96,12 +96,13 @@ export async function runLongLived(
 	onTestFinished(async () => {
 		debuglog(`Closing down process`);
 		const result = await new Promise<number | undefined>((resolve) => {
-			const pid = process?.pid;
+			const pid = childProc?.pid;
 			if (!pid) {
 				resolve(undefined);
 			} else {
 				debuglog(`Killing process, id:${pid}`);
-				kill(pid, "SIGKILL", (error) => {
+				const signal = process.platform === "win32" ? "SIGTERM" : "SIGKILL";
+				kill(pid, signal, (error) => {
 					if (error) {
 						debuglog("Error killing process", error);
 					}
@@ -115,7 +116,7 @@ export async function runLongLived(
 			debuglog("Process had no pid");
 		}
 	});
-	return wrap(process);
+	return wrap(childProc);
 }
 
 export interface Process {
@@ -226,6 +227,9 @@ export function runCommand(
  * If the request has still not succeeded after 20 secs it will fail.
  */
 export async function fetchJson(url: string, info?: RequestInit) {
+	const timeout = process.platform === "win32" ? 30_000 : 20_000;
+	const interval = process.platform === "win32" ? 1500 : 1000;
+
 	return vi.waitFor(
 		async () => {
 			try {
@@ -247,15 +251,16 @@ export async function fetchJson(url: string, info?: RequestInit) {
 				throw error;
 			}
 		},
-		{ timeout: 20_000, interval: 1000 }
+		{ timeout, interval }
 	);
 }
 
 /** Wait until a `vite dev` process is ready and capture the url on which it is listening. */
 export async function waitForReady(proc: Process) {
+	const timeout = process.platform === "win32" ? 30_000 : 20_000;
 	const match = await vi.waitUntil(
 		() => proc.stdout.match(/Local:\s+(http:\/\/localhost:\d+)/),
-		{ interval: 100, timeout: 20_000 }
+		{ interval: 100, timeout }
 	);
 	return match[1];
 }

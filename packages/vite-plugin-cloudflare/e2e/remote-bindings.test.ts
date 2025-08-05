@@ -16,14 +16,8 @@ import {
 const isWindows = os.platform() === "win32";
 const commands = ["dev", "buildAndPreview"] as const;
 
-if (
-	isWindows ||
-	!process.env.CLOUDFLARE_ACCOUNT_ID ||
-	!process.env.CLOUDFLARE_API_TOKEN
-) {
-	describe.skip(
-		"Skipping remote bindings tests on Windows or without account credentials."
-	);
+if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
+	describe.skip("Skipping remote bindings tests without account credentials.");
 } else {
 	describe
 		// Note: the reload test applies changes to the fixture files, so we do want the
@@ -42,17 +36,16 @@ if (
 			}, 35_000);
 
 			afterAll(() => {
-				// Try to clean up the remote workers after tests but give up after a couple of seconds
-				// or if the deletion fails.
+				const timeout = process.platform === "win32" ? 5_000 : 2_000;
 				runCommand(
 					`npx wrangler delete --force`,
 					`${projectPath}/remote-worker`,
-					{ canFail: true, timeout: 2_000 }
+					{ canFail: true, timeout }
 				);
 				runCommand(
 					`npx wrangler delete --force`,
 					`${projectPath}/remote-worker-alt`,
-					{ canFail: true, timeout: 2_000 }
+					{ canFail: true, timeout }
 				);
 			});
 
