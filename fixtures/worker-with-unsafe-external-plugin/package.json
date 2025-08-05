@@ -1,14 +1,14 @@
 {
-    "name": "fixture-worker-with-unsafe-external-plugin",
-    "scripts": {
-        "build": "turbo run build",
-        "start": "wrangler dev"
-    },
-    "devDependencies": {
-        "turbo": "^2.2.3",
-        "wrangler": "workspace:*",
-        "miniflare-shared": "workspace:*",
-        "@fixture/unsafe-external-plugin": "workspace:*",
-        "@cloudflare/workers-tsconfig": "workspace:*"
-    }
+	"name": "@fixture/worker-with-unsafe-external-plugin",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler dev"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@fixture/unsafe-external-plugin": "workspace:*",
+		"miniflare-shared": "workspace:*",
+		"turbo": "^2.2.3",
+		"wrangler": "workspace:*"
+	}
 }

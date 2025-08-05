@@ -27,19 +27,19 @@
 	"dependencies": {
 		"zod": "3.22.3"
 	},
-	"peerDependenciesMeta": {
-		"esbuild": {
-			"optional": true
-		}
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@types/node": "catalog:default",
+		"esbuild": "catalog:default",
+		"typescript": "catalog:default"
 	},
 	"peerDependencies": {
 		"esbuild": "catalog:default"
 	},
-	"devDependencies": {
-        "@types/node": "catalog:default",
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"esbuild": "catalog:default",
-		"typescript": "catalog:default"
+	"peerDependenciesMeta": {
+		"esbuild": {
+			"optional": true
+		}
 	},
 	"engines": {
 		"node": ">=18.0.0"

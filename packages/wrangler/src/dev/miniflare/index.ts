@@ -41,6 +41,7 @@ import type {
 	CfR2Bucket,
 	CfScriptFormat,
 	CfUnsafeBinding,
+	CfUnsafeServiceBinding,
 	CfWorkerInit,
 	CfWorkflow,
 } from "../../deployment-bundle/worker";
@@ -495,7 +496,7 @@ type UnsafeBindingWorkerOptions =
 			plugin?: {
 				packageName: string;
 				pluginName: string;
-				pluginOptions?: object;
+				pluginOptions?: Record<string, unknown>;
 			};
 			[x: string]: unknown;
 	  }
@@ -505,7 +506,7 @@ type UnsafeBindingWorkerOptions =
 			plugin?: {
 				packageName: string;
 				pluginName: string;
-				pluginOptions?: object;
+				pluginOptions?: Record<string, unknown>;
 			};
 			[x: string]: unknown;
 	  };
@@ -1300,7 +1301,7 @@ export async function buildMiniflareOptions(
 			logger.warn(
 				"You are using unsafe bindings in local development that define local development options via `dev` - this feature is experimental."
 			);
-			for (const { dev, name } of unsafeServiceBindings) {
+			for (const { dev } of unsafeServiceBindings) {
 				expectedLocalPlugins.push({
 					packageName: dev.package,
 					pluginName: dev.plugin,
