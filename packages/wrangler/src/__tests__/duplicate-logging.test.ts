@@ -6,6 +6,7 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
+import type { StartDevWorkerInput, Unstable_RawConfig } from "../api";
 
 describe("duplicate logging prevention", () => {
 	runInTempDir();
@@ -17,18 +18,26 @@ describe("duplicate logging prevention", () => {
 		logger.clearHistory();
 	});
 
-	async function testConfigOnceWarning(
-		wranglerConfig: object,
-		indexContent: string,
-		input: object,
-		expectedWarningRegex: RegExp
-	) {
-		writeWranglerConfig(wranglerConfig);
-		writeFileSync("index.js", indexContent);
+	async function testConfigOnceWarning({
+		wranglerConfig,
+		indexJsContent,
+		startDevWorkerInput,
+		expectedWarningRegex,
+	}: {
+		wranglerConfig: Unstable_RawConfig;
+		indexJsContent: string;
+		startDevWorkerInput: StartDevWorkerInput;
+		expectedWarningRegex: RegExp;
+	}) {
+		writeWranglerConfig({ ...wranglerConfig, main: "index.js" });
+		writeFileSync("index.js", indexJsContent);
 
 		const controller = new ConfigController();
 
-		await controller.set(input);
+		const input = {
+			...startDevWorkerInput,
+			entrypoint: "index.js",
+		};
 		await controller.set(input);
 		await controller.set(input);
 
@@ -39,67 +48,61 @@ describe("duplicate logging prevention", () => {
 	}
 
 	it("should not duplicate queue warnings during multiple config resolutions", async () => {
-		await testConfigOnceWarning(
-			{
-				name: "test-worker",
-				main: "index.js",
+		await testConfigOnceWarning({
+			wranglerConfig: {
 				queues: {
 					producers: [{ queue: "test-queue", binding: "QUEUE" }],
 				},
 			},
-			"export default { fetch() { return new Response('Hello'); } };",
-			{
-				entrypoint: "index.js",
+			indexJsContent:
+				"export default { fetch() { return new Response('Hello'); } };",
+			startDevWorkerInput: {
 				dev: { remote: true },
 			},
-			/Queues are not yet supported in wrangler dev remote mode/g
-		);
+			expectedWarningRegex:
+				/Queues are not yet supported in wrangler dev remote mode/g,
+		});
 	});
 
 	it("should not duplicate analytics engine warnings during multiple config resolutions", async () => {
-		await testConfigOnceWarning(
-			{
-				name: "test-worker",
-				main: "index.js",
+		await testConfigOnceWarning({
+			wranglerConfig: {
 				analytics_engine_datasets: [{ binding: "AE", dataset: "test-dataset" }],
 			},
-			"addEventListener('fetch', event => { event.respondWith(new Response('Hello')); });",
-			{
-				entrypoint: "index.js",
+			indexJsContent:
+				"addEventListener('fetch', event => { event.respondWith(new Response('Hello')); });",
+			startDevWorkerInput: {
 				dev: { remote: false },
 			},
-			/Analytics Engine is not supported locally when using the service-worker format/g
-		);
+			expectedWarningRegex:
+				/Analytics Engine is not supported locally when using the service-worker format/g,
+		});
 	});
 
 	it("should not duplicate service binding warnings during multiple config resolutions", async () => {
-		await testConfigOnceWarning(
-			{
-				name: "test-worker",
-				main: "index.js",
+		await testConfigOnceWarning({
+			wranglerConfig: {
 				services: [{ binding: "SERVICE", service: "test-service" }],
 			},
-			"export default { fetch() { return new Response('Hello'); } };",
-			{
-				entrypoint: "index.js",
+			indexJsContent:
+				"export default { fetch() { return new Response('Hello'); } };",
+			startDevWorkerInput: {
 				dev: { remote: true },
 			},
-			/This worker is bound to live services/g
-		);
+			expectedWarningRegex: /This worker is bound to live services/g,
+		});
 	});
 
 	it("should not duplicate upstream protocol warnings during multiple config resolutions", async () => {
-		await testConfigOnceWarning(
-			{
-				name: "test-worker",
-				main: "index.js",
-			},
-			"export default { fetch() { return new Response('Hello'); } };",
-			{
-				entrypoint: "index.js",
+		await testConfigOnceWarning({
+			wranglerConfig: {},
+			indexJsContent:
+				"export default { fetch() { return new Response('Hello'); } };",
+			startDevWorkerInput: {
 				dev: { remote: true, origin: { secure: false } },
 			},
-			/Setting upstream-protocol to http is not currently supported for remote mode/g
-		);
+			expectedWarningRegex:
+				/Setting upstream-protocol to http is not currently supported for remote mode/g,
+		});
 	});
 });
