@@ -11,6 +11,7 @@
 		"test:ci:win32": "vitest run --config vitest.workers.config.ts --exclude test/sqlite-in-do.test.ts"
 	},
 	"devDependencies": {
+		"@cloudflare/containers": "^0.0.25",
 		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250803.0",
 		"@microlabs/otel-cf-workers": "1.0.0-rc.45",
