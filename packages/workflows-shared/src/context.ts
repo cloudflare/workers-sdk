@@ -274,7 +274,14 @@ export class Context extends RpcTarget {
 				await this.#state.storage.put(stepStateKey, stepState);
 				const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 
-				result = await Promise.race([doWrapperClosure(), timeoutPromise()]);
+				const replaceResult = await this.#state.storage.get(
+					`replace-result-${valueKey}`
+				);
+				if (replaceResult) {
+					result = replaceResult;
+				} else {
+					result = await Promise.race([doWrapperClosure(), timeoutPromise()]);
+				}
 
 				// if we reach here, means that the clouse ran successfully and we can remove the timeout from the PQ
 				// @ts-expect-error priorityQueue is initiated in init
