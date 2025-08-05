@@ -10,6 +10,7 @@ import type {
 	ZoneNameRoute,
 } from "../../config/environment";
 import type {
+	CfAIBinding,
 	CfAnalyticsEngineDataset,
 	CfD1Database,
 	CfDispatchNamespace,
@@ -282,7 +283,7 @@ export type Binding =
 	| { type: "wasm_module"; source: BinaryFile }
 	| { type: "text_blob"; source: File }
 	| { type: "browser" }
-	| { type: "ai" }
+	| ({ type: "ai" } & BindingOmit<CfAIBinding>)
 	| { type: "images" }
 	| { type: "version_metadata" }
 	| { type: "data_blob"; source: BinaryFile }

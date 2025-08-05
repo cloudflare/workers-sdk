@@ -16,6 +16,7 @@ import { castErrorCause } from "./events";
 import {
 	convertBindingsToCfWorkerInitBindings,
 	convertCfWorkerInitBindingsToBindings,
+	unwrapHook,
 } from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type { RemoteProxySession } from "../remoteBindings";
@@ -207,20 +208,28 @@ export class LocalRuntimeController extends RuntimeController {
 			if (experimentalRemoteBindings && !data.config.dev?.remote) {
 				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
-				const { maybeStartOrUpdateRemoteProxySession } = await import(
-					"../remoteBindings"
+				const { maybeStartOrUpdateRemoteProxySession, pickRemoteBindings } =
+					await import("../remoteBindings");
+
+				const remoteBindings = pickRemoteBindings(
+					convertCfWorkerInitBindingsToBindings(configBundle.bindings) ?? {}
 				);
+
+				const auth =
+					Object.keys(remoteBindings).length === 0
+						? // If there are no remote bindings (this is a local only session) there's no need to get auth data
+							undefined
+						: await unwrapHook(data.config.dev.auth);
 
 				this.#remoteProxySessionData =
 					await maybeStartOrUpdateRemoteProxySession(
 						{
 							name: configBundle.name,
 							complianceRegion: configBundle.complianceRegion,
-							bindings:
-								convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
-								{},
+							bindings: remoteBindings,
 						},
-						this.#remoteProxySessionData ?? null
+						this.#remoteProxySessionData ?? null,
+						auth
 					);
 			}
 

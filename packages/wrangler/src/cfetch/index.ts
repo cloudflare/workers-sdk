@@ -3,6 +3,7 @@ import { APIError } from "../parse";
 import { maybeThrowFriendlyError } from "./errors";
 import { fetchInternal } from "./internal";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { ApiCredentials } from "../user";
 import type { FetchError } from "./errors";
 import type { RequestInit } from "undici";
 
@@ -26,14 +27,16 @@ export async function fetchResult<ResponseType>(
 	resource: string,
 	init: RequestInit = {},
 	queryParams?: URLSearchParams,
-	abortSignal?: AbortSignal
+	abortSignal?: AbortSignal,
+	apiToken?: ApiCredentials
 ): Promise<ResponseType> {
 	const json = await fetchInternal<FetchResult<ResponseType>>(
 		complianceConfig,
 		resource,
 		init,
 		queryParams,
-		abortSignal
+		abortSignal,
+		apiToken
 	);
 	if (json.success) {
 		return json.result;

@@ -9,6 +9,7 @@ import {
 	startWorker,
 } from "../startDevWorker";
 import type { Config } from "../../config";
+import type { CfAccount } from "../../dev/create-worker-preview";
 import type {
 	Binding,
 	StartDevWorkerInput,
@@ -125,6 +126,7 @@ type WorkerConfigObject = {
  *                                 the target worker alongside its bindings.
  * @param preExistingRemoteProxySessionData the optional data of a pre-existing remote proxy session if there was one, this
  *                                          argument can be omitted or set to null if there is no pre-existing remote proxy session
+ * @param auth the authentication information for establishing the remote proxy connection
  * @returns null if no existing remote proxy session was provided and one should not be created (because the worker is not
  *          defining any remote bindings), the data associated to the created/updated remote proxy session otherwise.
  */
@@ -133,7 +135,9 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	preExistingRemoteProxySessionData?: {
 		session: RemoteProxySession;
 		remoteBindings: Record<string, Binding>;
-	} | null
+		auth?: CfAccount | undefined;
+	} | null,
+	auth?: CfAccount | undefined
 ): Promise<{
 	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
@@ -158,27 +162,48 @@ export async function maybeStartOrUpdateRemoteProxySession(
 
 	const remoteBindings = pickRemoteBindings(workerConfigObject.bindings);
 
-	let remoteProxySession = preExistingRemoteProxySessionData?.session;
-
-	const remoteBindingsAreSameAsBefore = deepStrictEqual(
-		remoteBindings,
-		preExistingRemoteProxySessionData?.remoteBindings
+	const authSameAsBefore = deepStrictEqual(
+		auth,
+		preExistingRemoteProxySessionData?.auth
 	);
 
-	// We only want to perform updates on the remote proxy session if the session's remote bindings have changed
-	if (!remoteBindingsAreSameAsBefore) {
-		if (!remoteProxySession) {
-			if (Object.keys(remoteBindings).length > 0) {
-				remoteProxySession = await startRemoteProxySession(remoteBindings, {
-					workerName: wranglerOrWorkerConfigObject.name,
-					complianceRegion: wranglerOrWorkerConfigObject.complianceRegion,
-				});
+	let remoteProxySession = preExistingRemoteProxySessionData?.session;
+
+	if (!authSameAsBefore) {
+		// The auth values have changed so we do need to restart a new remote proxy session
+
+		if (preExistingRemoteProxySessionData?.session) {
+			await preExistingRemoteProxySessionData.session.dispose();
+		}
+		remoteProxySession = await startRemoteProxySession(remoteBindings, {
+			workerName: workerConfigObject.name,
+			complianceRegion: workerConfigObject.complianceRegion,
+			auth,
+		});
+	} else {
+		// The auth values haven't changed so we can reuse the pre-existing session
+
+		const remoteBindingsAreSameAsBefore = deepStrictEqual(
+			remoteBindings,
+			preExistingRemoteProxySessionData?.remoteBindings
+		);
+
+		// We only want to perform updates on the remote proxy session if the session's remote bindings have changed
+		if (!remoteBindingsAreSameAsBefore) {
+			if (!remoteProxySession) {
+				if (Object.keys(remoteBindings).length > 0) {
+					remoteProxySession = await startRemoteProxySession(remoteBindings, {
+						workerName: workerConfigObject.name,
+						complianceRegion: workerConfigObject.complianceRegion,
+						auth,
+					});
+				}
+			} else {
+				// Note: we always call updateBindings even when there are zero remote bindings, in these
+				//       cases we could terminate the remote session if we wanted, that's probably
+				//       something to consider down the line
+				await remoteProxySession.updateBindings(remoteBindings);
 			}
-		} else {
-			// Note: we always call updateBindings even when there are zero remote bindings, in these
-			//       cases we could terminate the remote session if we wanted, that's probably
-			//       something to consider down the line
-			await remoteProxySession.updateBindings(remoteBindings);
 		}
 	}
 
