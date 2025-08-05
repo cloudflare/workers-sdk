@@ -84,36 +84,102 @@ export async function runLongLived(
 	projectPath: string,
 	customEnv: Record<string, string | undefined> = {}
 ) {
-	debuglog(`starting \`${command}\` for ${projectPath}`);
+	const isWindows = process.platform === "win32";
+	debuglog(
+		`starting \`${command}\` for ${projectPath}${isWindows ? " (Windows)" : ""}`
+	);
+
+	if (isWindows && command === "buildAndPreview") {
+		debuglog("Windows buildAndPreview: Starting build and preview process...");
+	}
+
 	const childProc = childProcess.exec(`${pm} run ${command}`, {
 		cwd: projectPath,
 		env: {
 			...testEnv,
 			...customEnv,
+			...(isWindows && {
+				NODE_OPTIONS: "--max-old-space-size=4096",
+				FORCE_COLOR: "0",
+			}),
 		},
+		...(isWindows && { windowsHide: true }),
 	});
 
+	if (isWindows && command === "buildAndPreview") {
+		let buildCompleted = false;
+		let previewStarted = false;
+
+		childProc.stdout?.on("data", (chunk) => {
+			const output = chunk.toString();
+			if (output.includes("built in") && !buildCompleted) {
+				buildCompleted = true;
+				debuglog("Windows buildAndPreview: Build phase completed");
+			}
+			if (output.includes("Local:") && !previewStarted) {
+				previewStarted = true;
+				debuglog("Windows buildAndPreview: Preview server started");
+			}
+		});
+
+		setTimeout(() => {
+			if (!buildCompleted) {
+				debuglog(
+					"Windows buildAndPreview: Build phase taking longer than expected (>60s)"
+				);
+			}
+		}, 60000);
+
+		setTimeout(() => {
+			if (buildCompleted && !previewStarted) {
+				debuglog(
+					"Windows buildAndPreview: Preview server startup taking longer than expected (>120s)"
+				);
+			}
+		}, 120000);
+	}
+
 	onTestFinished(async () => {
-		debuglog(`Closing down process`);
+		debuglog(`Closing down process${isWindows ? " (Windows)" : ""}`);
 		const result = await new Promise<number | undefined>((resolve) => {
 			const pid = childProc?.pid;
 			if (!pid) {
 				resolve(undefined);
 			} else {
-				debuglog(`Killing process, id:${pid}`);
-				const signal = process.platform === "win32" ? "SIGTERM" : "SIGKILL";
+				debuglog(`Killing process, id:${pid}${isWindows ? " (Windows)" : ""}`);
+				const signal = isWindows ? "SIGTERM" : "SIGKILL";
+				const timeout = isWindows ? 10000 : 5000;
+
+				const killTimer = setTimeout(() => {
+					if (isWindows) {
+						debuglog(
+							"Windows: Process didn't terminate gracefully, forcing kill"
+						);
+						try {
+							process.kill(pid, "SIGKILL");
+						} catch (e) {
+							debuglog("Windows: Force kill failed:", e);
+						}
+					}
+					resolve(pid);
+				}, timeout);
+
 				kill(pid, signal, (error) => {
+					clearTimeout(killTimer);
 					if (error) {
-						debuglog("Error killing process", error);
+						debuglog(
+							`Error killing process${isWindows ? " (Windows)" : ""}:`,
+							error
+						);
 					}
 					resolve(pid);
 				});
 			}
 		});
 		if (result) {
-			debuglog("Killed process", result);
+			debuglog(`Killed process ${result}${isWindows ? " (Windows)" : ""}`);
 		} else {
-			debuglog("Process had no pid");
+			debuglog(`Process had no pid${isWindows ? " (Windows)" : ""}`);
 		}
 	});
 	return wrap(childProc);
