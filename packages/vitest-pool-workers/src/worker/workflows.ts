@@ -1,4 +1,4 @@
-import { waitUntil } from "async-wait-until";
+import { WAIT_FOREVER, waitUntil } from "async-wait-until";
 import { WORKFLOW_ENGINE_BINDING } from "../shared/workflows";
 import { internalEnv } from "./env";
 
@@ -87,8 +87,7 @@ class WorkflowInstanceIntrospectorHandle
 	async modify(
 		fn: (m: InstanceModifier) => void
 	): WorkflowInstanceIntrospector {
-		const modifier = this.engineStub.getInstanceModifier();
-		await fn(modifier);
+		await fn(this.instanceModifier);
 		console.log("Should allow modifications");
 		return this;
 	}
@@ -102,13 +101,16 @@ class WorkflowInstanceIntrospectorHandle
 
 	async waitUntil(opts: { status: InstanceStatus }): Promise<void> {
 		// console.log("I waited until the Engine reached the status", opts.status);
-		await waitUntil(async () => {
-			const currentStatus = instanceStatusName(
-				await this.engineStub.getStatus()
-			);
-			console.log("status from engine", currentStatus);
-			console.log("status user wants", opts.status);
-			return currentStatus === opts.status;
-		});
+		await waitUntil(
+			async () => {
+				const currentStatus = instanceStatusName(
+					await this.engineStub.getStatus()
+				);
+				console.log("status from engine", currentStatus);
+				console.log("status user wants", opts.status);
+				return currentStatus === opts.status;
+			},
+			{ timeout: WAIT_FOREVER } // Default timeout is 5s, crashes the test after that
+		);
 	}
 }
