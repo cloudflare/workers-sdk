@@ -3,5 +3,5 @@
  * files as variables on the global scope.
  */
 declare module "worker:*" {
-    export default function (): string;
+	export default function (): string;
 }

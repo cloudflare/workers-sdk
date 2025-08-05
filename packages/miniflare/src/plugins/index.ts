@@ -94,21 +94,23 @@ const UnsafeBindingMap = z.record(
 	z.string(),
 	z.object({
 		bindingType: z.string(),
-		plugin: z.object({
-			packageName: z.string(),
-			pluginName: z.string(),
-			pluginOptions: z.record(z.string(), z.unknown()).optional(),
-		}).optional(),
+		plugin: z
+			.object({
+				packageName: z.string(),
+				pluginName: z.string(),
+				pluginOptions: z.record(z.string(), z.unknown()).optional(),
+			})
+			.optional(),
 		service: z.string().optional(),
 	})
-)
+);
 
 /**
  * UnsafeBindingOptions configures behavior of unsafe bindings
  */
 export const UnsafeBindingOption = z.object({
-	unsafeBindings: UnsafeBindingMap.optional()
-})
+	unsafeBindings: UnsafeBindingMap.optional(),
+});
 
 // Note, we used to define these as...
 //
@@ -167,8 +169,7 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof VECTORIZE_PLUGIN.options> &
 	z.input<typeof MTLS_PLUGIN.options> &
 	z.input<typeof HELLO_WORLD_PLUGIN.options> &
-	z.input<typeof UnsafeBindingOption>
-
+	z.input<typeof UnsafeBindingOption>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &

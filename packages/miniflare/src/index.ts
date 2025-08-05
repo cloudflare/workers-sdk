@@ -355,8 +355,7 @@ function validateOptions(
 						continue;
 					}
 					// Do light validation on the configuration for this unsafe binding
-					const { packageName, pluginName, pluginOptions } =
-						unsafeBindingCfg.plugin;
+					const { pluginName, pluginOptions } = unsafeBindingCfg.plugin;
 					if (!unsafePluginNames.has(pluginName)) {
 						throw new MiniflareCoreError(
 							"ERR_VALIDATION",
@@ -364,10 +363,12 @@ function validateOptions(
 						);
 					}
 					// Manually set the unsafe plugin options
-					pluginWorkerOpts[i].unsafePluginOptions ??= {};
-					pluginWorkerOpts[i].unsafePluginOptions![pluginName] = {
+					const existingUnsafeOptions =
+						pluginWorkerOpts[i].unsafePluginOptions ?? {};
+					existingUnsafeOptions[pluginName] = {
 						[bindingName]: pluginOptions,
 					};
+					pluginWorkerOpts[i].unsafePluginOptions = existingUnsafeOptions;
 				}
 			}
 		}
@@ -1860,7 +1861,7 @@ export class Miniflare {
 								name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`,
 							}
 						: {
-								name: getUserServiceName(workerName),
+								name: getUserServiceName(serviceName),
 								entrypoint: entrypoint === "default" ? undefined : entrypoint,
 							};
 
@@ -2558,8 +2559,6 @@ export class Miniflare {
 		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
 		const workerOpts = this.#workerOpts[workerIndex];
 		workerName = workerOpts.core.name ?? "";
-
-		console.log(this.#externalPlugins);
 
 		// Populate bindings from each plugin
 		for (const [key, plugin] of this.#mergedPluginEntries) {

@@ -5,7 +5,6 @@ import esbuild from "esbuild";
 const outDir = path.resolve(import.meta.dirname, "../dist");
 
 async function buildPackage() {
-
 	/** @type {esbuild.BuildOptions} */
 	const buildOptions = {
 		platform: "node",
