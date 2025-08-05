@@ -152,7 +152,7 @@ const testConfigs: TestConfig[] = [
 			},
 		},
 	],
-].flat();
+].flat() as TestConfig[];
 
 describe.each(testConfigs)(
 	`Preset test: $name`,
