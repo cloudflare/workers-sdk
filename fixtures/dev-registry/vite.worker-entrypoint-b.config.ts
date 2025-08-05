@@ -12,7 +12,7 @@ export default defineConfig({
 			persistState: false,
 			auxiliaryWorkers: [
 				{
-					configPath: "./wrangler.durable-object.jsonc",
+					configPath: "./wrangler.internal-durable-object.jsonc",
 				},
 			],
 		}),
