@@ -176,6 +176,8 @@ export default {
 			});
 		} catch (error) {
 			return new Response("Failed to connect to browser session");
+		} finally {
+			ws.close();
 		}
 
 		return new Response("Should not reach here");
