@@ -789,12 +789,12 @@ export function warnOrError(
 		);
 	}
 	if (remote === undefined && supports === "remote") {
-		logger.warn(
+		logger.once.warn(
 			`${friendlyBindingNames[type]} bindings do not support local development, and so parts of your Worker may not work correctly. You may be able to set \`experimental_remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
 		);
 	}
 	if (remote === undefined && supports === "always-remote") {
-		logger.warn(
+		logger.once.warn(
 			`${friendlyBindingNames[type]} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`experimental_remote: true\` for the binding definition in your configuration file.`
 		);
 	}
