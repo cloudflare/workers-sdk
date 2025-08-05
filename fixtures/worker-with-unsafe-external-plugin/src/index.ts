@@ -11,12 +11,12 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 
 interface UnsafeBindingService extends WorkerEntrypoint {
-	performUnsafeWrite(key: string, value: number): Promise<void>
-	performUnsafeRead(key: string): Promise<{ ok: boolean; }>
+	performUnsafeWrite(key: string, value: number): Promise<void>;
+	performUnsafeRead(key: string): Promise<{ ok: boolean }>;
 }
 
 export interface Env {
-	UNSAFE_SERVICE_BINDING: Service<UnsafeBindingService>
+	UNSAFE_SERVICE_BINDING: Service<UnsafeBindingService>;
 	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
 	// MY_KV_NAMESPACE: KVNamespace;
 	//

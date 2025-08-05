@@ -57,8 +57,8 @@ const miniflareZodExtensionPath = path.join(
  * via ESBuild
  */
 const fixtureBuilds = [
-	path.join(pkgRoot, "test/fixtures/unsafe-plugin/index.ts")
-]
+	path.join(pkgRoot, "test/fixtures/unsafe-plugin/index.ts"),
+];
 
 /**
  * `workerd` `extensions` don't have access to "built-in" modules like
@@ -181,7 +181,7 @@ async function buildPackage() {
 		if (e.code !== "ENOENT") throw e;
 	}
 	// Add any test fixtures that require transpilation via ESBuild
-	testPaths.push(...fixtureBuilds)
+	testPaths.push(...fixtureBuilds);
 	const outPath = path.join(pkgRoot, "dist");
 
 	const buildOptions = {
