@@ -1,11 +1,9 @@
 /**
  * This fixture is particular since it needs to communicate with remote resources, namely
- * a remote worker.
+ * two remote workers.
  *
- * This script is used to deploy a remote worker and run the fixture using said worker.
- *
- * Alternatively you can simply deploy, using your account, the `./remote-worker.js` file as
- * a worker named `my-worker-test` and directly run the fixture using vitest.
+ * This script is used to deploy the remote workers and run the fixture using said workers
+ * with the appropriate vitest configurations.
  */
 import { execSync } from "child_process";
 import { randomUUID } from "crypto";
@@ -22,11 +20,17 @@ rmSync("./.tmp", { recursive: true, force: true });
 cpSync("./src", "./.tmp/src", { recursive: true });
 cpSync("./test", "./.tmp/test", { recursive: true });
 cpSync("./vitest.workers.config.ts", "./.tmp/vitest.workers.config.ts");
+cpSync(
+	"./vitest.workers.config.staging.ts",
+	"./.tmp/vitest.workers.config.staging.ts"
+);
 
 const remoteWorkerName = `tmp-e2e-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
+const remoteStagingWorkerName = `tmp-e2e-staging-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
 
 const wranglerJson = JSON.parse(readFileSync("./wrangler.json", "utf8"));
 wranglerJson.services[0].service = remoteWorkerName;
+wranglerJson.env.staging.services[0].service = remoteStagingWorkerName;
 
 writeFileSync(
 	"./.tmp/wrangler.json",
@@ -60,12 +64,49 @@ if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(`${deployOut}`)) {
 	throw new Error(`Failed to deploy ${remoteWorkerName}`);
 }
 
+writeFileSync(
+	"./.tmp/remote-wrangler.staging.json",
+	JSON.stringify(
+		{
+			name: remoteStagingWorkerName,
+			main: "../remote-worker.staging.js",
+			compatibility_date: "2025-06-01",
+		},
+		undefined,
+		2
+	),
+	"utf8"
+);
+
+const deployStagingOut = execSync(
+	"pnpm wrangler deploy -c .tmp/remote-wrangler.staging.json",
+	{
+		stdio: "pipe",
+		cwd: "./.tmp",
+		env,
+	}
+);
+if (
+	!new RegExp(`Deployed\\s+${remoteStagingWorkerName}\\b`).test(
+		`${deployStagingOut}`
+	)
+) {
+	throw new Error(`Failed to deploy ${remoteStagingWorkerName}`);
+}
+
 try {
 	execSync("pnpm test:vitest --config ./.tmp/vitest.workers.config.ts", {
 		env,
 	});
+	execSync(
+		"pnpm test:vitest --config ./.tmp/vitest.workers.config.staging.ts",
+		{
+			env,
+		}
+	);
 } finally {
 	execSync(`pnpm wrangler delete --name ${remoteWorkerName}`, { env });
+	execSync(`pnpm wrangler delete --name ${remoteStagingWorkerName}`, { env });
 	rmSync("./.tmp", { recursive: true, force: true });
 }
 
