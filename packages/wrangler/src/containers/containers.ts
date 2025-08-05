@@ -40,7 +40,7 @@ export async function deleteCommand(
 		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 	if (!uuidRegex.test(deleteArgs.ID)) {
 		throw new Error(
-			"You must provide the container ID. Use 'wrangler containers list` to view your containers and corresponding IDs."
+			"You must provide the container ID. Use `wrangler containers list` to view your containers and corresponding IDs."
 		);
 	}
 
