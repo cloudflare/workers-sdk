@@ -16,7 +16,7 @@ packages:
 # Quick Editor update | Every quarter | Update VSCode dependency and patches
 
 catalog:
-  "@types/node": "^20.17.32"
+  "@types/node": "^20.19.9"
   "@typescript-eslint/eslint-plugin": "^8.35.1"
   "@typescript-eslint/parser": "^8.35.1"
   "@vitest/runner": ~3.2.0

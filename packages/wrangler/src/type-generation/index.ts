@@ -305,10 +305,12 @@ export async function generateEnvTypes(
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const stringKeys: string[] = [];
 	const secrets = getVarsForDev(
+		config.userConfigPath,
+		args.envFile,
 		// We do not want `getVarsForDev()` to merge in the standard vars into the dev vars
 		// because we want to be able to work with secrets differently to vars.
 		// So we pass in a fake vars object here.
-		{ ...config, vars: {} },
+		{},
 		args.env,
 		true
 	) as Record<string, string>;
@@ -464,13 +466,13 @@ export async function generateEnvTypes(
 				: undefined;
 
 			const exportExists = serviceEntry?.exports?.some(
-				(e) => e === service.entrypoint
+				(e) => e === (service.entrypoint ?? "default")
 			);
 
 			let typeName: string;
 
 			if (importPath && exportExists) {
-				typeName = `Service<import("${importPath}").${service.entrypoint ?? "default"}>`;
+				typeName = `Service<typeof import("${importPath}").${service.entrypoint ?? "default"}>`;
 			} else if (service.entrypoint) {
 				typeName = `Service /* entrypoint ${service.entrypoint} from ${service.service} */`;
 			} else {

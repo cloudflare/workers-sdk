@@ -37,6 +37,7 @@ import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigController } from "./ConfigController";
 import type { DevEnv } from "./DevEnv";
+import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	DispatchFetch,
 	Json,
@@ -82,6 +83,14 @@ export interface StartDevWorkerInput {
 	complianceRegion?: Config["compliance_region"];
 
 	env?: string;
+
+	/**
+	 * An array of paths to the .env files to load for this worker, relative to the project directory.
+	 *
+	 * If not specified, defaults to the standard `.env` files as given by `getDefaultEnvFiles()`.
+	 * The project directory is where the Wrangler configuration file is located or the current working directory otherwise.
+	 */
+	envFiles?: string[];
 
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
@@ -174,7 +183,7 @@ export interface StartDevWorkerInput {
 
 		testScheduled?: boolean;
 
-		/** Whether to use Vectorize mixed mode -- the worker is run locally but accesses to Vectorize are made remotely */
+		/** Whether to use Vectorize as a remote binding -- the worker is run locally but accesses to Vectorize are made remotely */
 		bindVectorizeToProd?: boolean;
 
 		/** Whether to use Images local mode -- this is lower fidelity, but doesn't require network access */
@@ -204,7 +213,10 @@ export interface StartDevWorkerInput {
 	assets?: string;
 }
 
-export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
+export type StartDevWorkerOptions = Omit<
+	StartDevWorkerInput,
+	"assets" | "containers"
+> & {
 	/** A worker's directory. Usually where the Wrangler configuration file is located */
 	projectRoot: string;
 	build: StartDevWorkerInput["build"] & {
@@ -227,6 +239,7 @@ export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 	};
 	entrypoint: string;
 	assets?: AssetsOptions;
+	containers?: ContainerNormalizedConfig[];
 	name: string;
 	complianceRegion: Config["compliance_region"];
 };

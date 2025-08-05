@@ -1,5 +1,102 @@
 # wrangler
 
+## 4.27.0
+
+### Minor Changes
+
+- [#9914](https://github.com/cloudflare/workers-sdk/pull/9914) [`a24c9d8`](https://github.com/cloudflare/workers-sdk/commit/a24c9d8c83d2cd1363f594d97829467c48fc7e7b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for loading local dev vars from .env files
+
+  If there are no `.dev.vars` or `.dev.vars.<environment>` files, when running Wrangler or the Vite plugin in local development mode,
+  they will now try to load additional local dev vars from `.env`, `.env.local`, `.env.<environment>` and `.env.<environment>.local` files.
+
+  These loaded vars are only for local development and have no effect in production to the vars in a deployed Worker.
+  Wrangler and Vite will continue to load `.env` files in order to configure themselves as a tool.
+
+  Further details:
+
+  - In `vite build` the local vars will be computed and stored in a `.dev.vars` file next to the compiled Worker code, so that `vite preview` can use them.
+  - The `wrangler types` command will similarly read the `.env` files (if no `.dev.vars` files) in order to generate the `Env` interface.
+  - If the `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV` environment variable is `"false"` then local dev variables will not be loaded from `.env` files.
+  - If the `CLOUDFLARE_INCLUDE_PROCESS_ENV` environment variable is `"true"` then all the environment variables found on `process.env` will be included as local dev vars.
+  - Wrangler (but not Vite plugin) also now supports the `--env-file=<path/to/dotenv/file>` global CLI option. This affects both loading `.env` to configure Wrangler the tool as well as loading local dev vars.
+
+### Patch Changes
+
+- [#10051](https://github.com/cloudflare/workers-sdk/pull/10051) [`0f7820e`](https://github.com/cloudflare/workers-sdk/commit/0f7820ee384ed708e5d9058f9859b7f1d87e1807) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Add support for custom instance limits for containers. For example, instead of
+  having to use the preconfigured dev/standard/basic instance types, you can now
+  set:
+
+  ```
+  instance_type: {
+    vcpu: 1,
+    memory_mib: 1024,
+    disk_mb: 4000
+  }
+  ```
+
+  This feature is currently only available to customers on an enterprise plan.
+
+- [#10149](https://github.com/cloudflare/workers-sdk/pull/10149) [`e9bb8d3`](https://github.com/cloudflare/workers-sdk/commit/e9bb8d372a149d9b99119e3b5b077935af0d98ae) Thanks [@vicb](https://github.com/vicb)! - fix `require("debug")` in nodejs_compat mode
+
+- Updated dependencies [[`9b61f44`](https://github.com/cloudflare/workers-sdk/commit/9b61f44c899aa6530ecd20f283dc4e2a9f7c79c7)]:
+  - miniflare@4.20250730.0
+
+## 4.26.1
+
+### Patch Changes
+
+- [#10061](https://github.com/cloudflare/workers-sdk/pull/10061) [`f8a80a8`](https://github.com/cloudflare/workers-sdk/commit/f8a80a807576f7fa6d9eca37d297c50793bca188) Thanks [@emily-shen](https://github.com/emily-shen)! - feat(containers): try to automatically get the socket path that the container engine is listening on.
+
+  Currently, if your container engine isn't set up to listen on `unix:///var/run/docker.sock` (or isn't symlinked to that), then you have to manually set this via the `dev.containerEngine` field in your Wrangler config, or via the env vars `WRANGLER_DOCKER_HOST`. This change means that we will try and get the socket of the current context automatically. This should reduce the occurrence of opaque `internal error`s thrown by the runtime when the daemon is not listening on `unix:///var/run/docker.sock`.
+
+  In addition to `WRANGLER_DOCKER_HOST`, `DOCKER_HOST` can now also be used to set the container engine socket address.
+
+- [#10048](https://github.com/cloudflare/workers-sdk/pull/10048) [`dbdbb8c`](https://github.com/cloudflare/workers-sdk/commit/dbdbb8c41ea5612f9e79bde5cfd0192c70025ee7) Thanks [@vicb](https://github.com/vicb)! - pass the compatibility date and flags to the unenv preset
+
+- [#10096](https://github.com/cloudflare/workers-sdk/pull/10096) [`687655f`](https://github.com/cloudflare/workers-sdk/commit/687655f8d399140e7b8d61c1fc04140e7455344a) Thanks [@vicb](https://github.com/vicb)! - bump unenv to 2.0.0-rc.19
+
+- [#9897](https://github.com/cloudflare/workers-sdk/pull/9897) [`755a249`](https://github.com/cloudflare/workers-sdk/commit/755a24938f1c264baf7fcc76d775449d87e0bbbf) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: wrangler types should infer the types of the default worker entrypoint
+
+- Updated dependencies [[`82a5b2e`](https://github.com/cloudflare/workers-sdk/commit/82a5b2e09fef9046140181c06aba1f82ce8314af), [`f8f7352`](https://github.com/cloudflare/workers-sdk/commit/f8f735282bdcab25c90b986ff1ae45e20a4625c2), [`2df1d06`](https://github.com/cloudflare/workers-sdk/commit/2df1d066cfe376b831ff0b29b656437d869791e5), [`dbdbb8c`](https://github.com/cloudflare/workers-sdk/commit/dbdbb8c41ea5612f9e79bde5cfd0192c70025ee7), [`5991a9c`](https://github.com/cloudflare/workers-sdk/commit/5991a9cb009fa3c24d848467397ceabe23e7c90a), [`687655f`](https://github.com/cloudflare/workers-sdk/commit/687655f8d399140e7b8d61c1fc04140e7455344a)]:
+  - miniflare@4.20250726.0
+  - @cloudflare/unenv-preset@2.5.0
+
+## 4.26.0
+
+### Minor Changes
+
+- [#10016](https://github.com/cloudflare/workers-sdk/pull/10016) [`c5b291d`](https://github.com/cloudflare/workers-sdk/commit/c5b291d3b7a334253aef0593759a59deb0ae4a89) Thanks [@emily-shen](https://github.com/emily-shen)! - Interactively handle `wrangler deploy`s that are probably assets-only, where there is no config file and flags are incorrect or missing.
+
+  For example:
+
+  `npx wrangler deploy ./public` will now ask if you meant to deploy a folder of assets only, ask for a name, set the compat date and then ask whether to write your choices out to `wrangler.json` for subsequent deployments.
+
+  `npx wrangler deploy --assets=./public` will now ask for a name, set the compat date and then ask whether to write your choices out to `wrangler.json` for subsequent deployments.
+
+  In non-interactive contexts, Wrangler will error as it currently does.
+
+- [#9971](https://github.com/cloudflare/workers-sdk/pull/9971) [`19794bf`](https://github.com/cloudflare/workers-sdk/commit/19794bfb57a3ab17433eefbe1820d21d98bc32a4) Thanks [@edmundhung](https://github.com/edmundhung)! - Improved script source display on the pretty error screen
+
+### Patch Changes
+
+- [#9800](https://github.com/cloudflare/workers-sdk/pull/9800) [`3d4f946`](https://github.com/cloudflare/workers-sdk/commit/3d4f94648bdc9edc6260c0f090d2ae665d45a495) Thanks [@helloimalastair](https://github.com/helloimalastair)! - remove banner from r2 getobject in pipe mode
+
+- [#9910](https://github.com/cloudflare/workers-sdk/pull/9910) [`7245101`](https://github.com/cloudflare/workers-sdk/commit/7245101d5aa815d2c258a301f86dbab77f543b60) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - make sure that the ready-on message is printed after the appropriate runtime controller is ready
+
+  fix the fact that when starting a local (or remote) dev session the log saying `Ready on http://localhost:xxxx` could be displayed before the runtime is actually ready to handle requests (this is quite noticeable when locally running dev sessions with containers, where the ready message currently gets displayed before the container images building/pulling process)
+
+- [#10031](https://github.com/cloudflare/workers-sdk/pull/10031) [`823cba8`](https://github.com/cloudflare/workers-sdk/commit/823cba8e51fa6840f50dd949bcfa967ff6fefc37) Thanks [@vicb](https://github.com/vicb)! - wrangler and vite-plugin now depend upon the latest version of unenv-preset
+
+- [#10032](https://github.com/cloudflare/workers-sdk/pull/10032) [`154acf7`](https://github.com/cloudflare/workers-sdk/commit/154acf72c653134ace47174c18e77c9d51effa89) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add support for containers in wrangler multiworker dev
+
+  currently when running `wrangler dev` with different workers (meaning that the `-c|--config` flag is used multiple times) containers are not being included, meaning that trying to interact with them at runtime would not work and cause errors instead. The changes here address the above making wrangler correctly detect and wire up the containers.
+
+- [#9988](https://github.com/cloudflare/workers-sdk/pull/9988) [`7fb0bfd`](https://github.com/cloudflare/workers-sdk/commit/7fb0bfdc8438d1a1e0a967ab178952da9787c012) Thanks [@penalosa](https://github.com/penalosa)! - Correctly label `mtls` remote bindings warning
+
+- Updated dependencies [[`823cba8`](https://github.com/cloudflare/workers-sdk/commit/823cba8e51fa6840f50dd949bcfa967ff6fefc37), [`19794bf`](https://github.com/cloudflare/workers-sdk/commit/19794bfb57a3ab17433eefbe1820d21d98bc32a4), [`059a39e`](https://github.com/cloudflare/workers-sdk/commit/059a39e4f1e9f9b55ed8a5a8598e35af9bd0357f)]:
+  - @cloudflare/unenv-preset@2.4.1
+  - miniflare@4.20250712.2
+
 ## 4.25.1
 
 ### Patch Changes

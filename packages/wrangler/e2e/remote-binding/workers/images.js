@@ -7,7 +7,7 @@ export default {
 
 		const response = (
 			await env.IMAGES.input(image.body)
-				// Without Mixed mode, this fails with: Error: IMAGES_INFO_ERROR 9520: ERROR: Unsupported image type
+				// Without setting IMAGES as a remote binding, this fails with: Error: IMAGES_INFO_ERROR 9520: ERROR: Unsupported image type
 				.output({ format: "image/avif" })
 		).response();
 		const info = await env.IMAGES.info(response.body);

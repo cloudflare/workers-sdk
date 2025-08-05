@@ -184,10 +184,17 @@ async function updateVitePluginVersion(projectPath: string) {
 	);
 }
 
+/**
+ * Runs a short-running command in a child process.
+ *
+ * Will attempt to run the command `attempts` times, retrying on failure.
+ * If `canFail` is true, the command will not throw when it runs out of attempts.
+ * If `timeout` is set, each attempt will be killed after the specified time in milliseconds.
+ */
 export function runCommand(
 	command: string,
 	cwd: string,
-	{ attempts = 1, canFail = false } = {}
+	{ attempts = 1, canFail = false, timeout = 0 } = {}
 ) {
 	while (attempts > 0) {
 		debuglog("Running command:", command);
@@ -196,6 +203,7 @@ export function runCommand(
 				cwd,
 				stdio: debuglog.enabled ? "inherit" : "ignore",
 				env: testEnv,
+				timeout,
 			});
 			break;
 		} catch (e) {
@@ -211,23 +219,35 @@ export function runCommand(
 	}
 }
 
+/**
+ * Fetches JSON data from the `url` using the `info` to create the request.
+ *
+ * Will retry the fetch if it fails or times out (5 seconds), waiting 1 second between attempts.
+ * If the request has still not succeeded after 20 secs it will fail.
+ */
 export async function fetchJson(url: string, info?: RequestInit) {
 	return vi.waitFor(
 		async () => {
-			const response = await fetch(url, {
-				headers: { "MF-Disable-Pretty-Error": "true" },
-				...info,
-			});
-			const text = await response.text();
 			try {
-				return JSON.parse(text) as unknown;
-			} catch (cause) {
-				const err = new Error(`Failed to parse JSON from:\n${text}`);
-				err.cause = cause;
-				throw err;
+				const response = await fetch(url, {
+					headers: { "MF-Disable-Pretty-Error": "true" },
+					...info,
+					signal: AbortSignal.timeout(5_000),
+				});
+				const text = await response.text();
+				try {
+					return JSON.parse(text) as unknown;
+				} catch (cause) {
+					const err = new Error(`Failed to parse JSON from:\n${text}`);
+					err.cause = cause;
+					throw err;
+				}
+			} catch (error) {
+				console.error("Failed to fetch JSON from:" + url, error);
+				throw error;
 			}
 		},
-		{ timeout: 10_000, interval: 250 }
+		{ timeout: 20_000, interval: 1000 }
 	);
 }
 

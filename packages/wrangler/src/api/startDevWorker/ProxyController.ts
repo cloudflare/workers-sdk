@@ -10,11 +10,8 @@ import {
 	logConsoleMessage,
 	maybeHandleNetworkLoadResource,
 } from "../../dev/inspect";
-import {
-	castLogLevel,
-	handleRuntimeStdio,
-	WranglerLog,
-} from "../../dev/miniflare";
+import { castLogLevel, WranglerLog } from "../../dev/miniflare";
+import { handleRuntimeStdioWithStructuredLogs } from "../../dev/miniflare/stdio";
 import { getHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
@@ -41,7 +38,7 @@ import type {
 } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 import type { DeferredPromise } from "./utils";
-import type { MiniflareOptions } from "miniflare";
+import type { LogOptions, MiniflareOptions } from "miniflare";
 
 type ProxyControllerEventMap = ControllerEventMap & {
 	ready: [ReadyEvent];
@@ -49,6 +46,8 @@ type ProxyControllerEventMap = ControllerEventMap & {
 };
 export class ProxyController extends Controller<ProxyControllerEventMap> {
 	public ready = createDeferred<ReadyEvent>();
+
+	public localServerReady = createDeferred<void>();
 
 	public proxyWorker?: Miniflare;
 	proxyWorkerOptions?: MiniflareOptions;
@@ -86,7 +85,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			https: this.latestConfig.dev?.server?.secure,
 			httpsCert: cert?.cert,
 			httpsKey: cert?.key,
-
+			stripDisablePrettyError: false,
 			workers: [
 				{
 					name: "ProxyWorker",
@@ -126,12 +125,19 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			verbose: logger.loggerLevel === "debug",
 
 			// log requests into the ProxyWorker (for local + remote mode)
-			log: new ProxyControllerLogger(castLogLevel(logger.loggerLevel), {
-				prefix:
-					// if debugging, log requests with specic ProxyWorker prefix
-					logger.loggerLevel === "debug" ? "wrangler-ProxyWorker" : "wrangler",
-			}),
-			handleRuntimeStdio,
+			log: new ProxyControllerLogger(
+				castLogLevel(logger.loggerLevel),
+				{
+					prefix:
+						// if debugging, log requests with specic ProxyWorker prefix
+						logger.loggerLevel === "debug"
+							? "wrangler-ProxyWorker"
+							: "wrangler",
+				},
+				this.localServerReady.promise
+			),
+			handleRuntimeStdio: handleRuntimeStdioWithStructuredLogs,
+			structuredWorkerdLogs: true,
 			liveReload: false,
 		};
 
@@ -419,6 +425,8 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		}
 	}
 	onReloadComplete(data: ReloadCompleteEvent) {
+		this.localServerReady.resolve();
+
 		this.latestConfig = data.config;
 		this.latestBundle = data.bundle;
 
@@ -606,6 +614,18 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 }
 
 class ProxyControllerLogger extends WranglerLog {
+	constructor(
+		level: LogLevel,
+		opts: LogOptions,
+		private localServerReady: Promise<void>
+	) {
+		super(level, opts);
+	}
+
+	logReady(message: string): void {
+		this.localServerReady.then(() => super.logReady(message)).catch(() => {});
+	}
+
 	log(message: string) {
 		// filter out request logs being handled by the ProxyWorker
 		// the requests log remaining are handled by the UserWorker

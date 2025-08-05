@@ -32,9 +32,10 @@ describe("pages", () => {
 			  wrangler pages download                   Download settings from your project
 
 			GLOBAL FLAGS
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -52,9 +53,10 @@ describe("pages", () => {
 			  command    The proxy command to run  [deprecated]  [string]
 
 			GLOBAL FLAGS
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
 			      --compatibility-date                         Date to use for compatibility checks  [string]
@@ -100,9 +102,10 @@ describe("pages", () => {
 			  wrangler pages project delete <project-name>  Delete a Cloudflare Pages project
 
 			GLOBAL FLAGS
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -123,9 +126,10 @@ describe("pages", () => {
 			  wrangler pages deployment tail [deployment]   Start a tailing session for a project's deployment and livestream logs from your Functions
 
 			GLOBAL FLAGS
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -142,9 +146,10 @@ describe("pages", () => {
 			  directory  The directory of static files to upload  [string]
 
 			GLOBAL FLAGS
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
 			      --project-name        The name of the project you want to deploy to  [string]
@@ -174,9 +179,10 @@ describe("pages", () => {
 			  wrangler pages secret list          List all secrets for a Pages project
 
 			GLOBAL FLAGS
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -193,9 +199,10 @@ describe("pages", () => {
 			  wrangler pages download config [projectName]  Download your Pages project config as a Wrangler configuration file [experimental]
 
 			GLOBAL FLAGS
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 

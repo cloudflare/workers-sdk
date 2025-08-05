@@ -1,11 +1,15 @@
 import assert from "node:assert";
+import { statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import chalk from "chalk";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { configFileName } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
+import { confirm, prompt } from "../dialogs";
 import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import * as metrics from "../metrics";
@@ -13,6 +17,7 @@ import { writeOutput } from "../output";
 import { getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
@@ -245,8 +250,29 @@ export const deployCommand = createCommand({
 		const projectRoot =
 			config.userConfigPath && path.dirname(config.userConfigPath);
 
-		const entry = await getEntry(args, config, "deploy");
+		if (!config.configPath) {
+			// Attempt to interactively handle `wrangler deploy <directory>`
+			if (args.script) {
+				try {
+					const stats = statSync(args.script);
+					if (stats.isDirectory()) {
+						args = await handleMaybeAssetsDeployment(args.script, args);
+					}
+				} catch (error) {
+					// If this is our UserError, re-throw it
+					if (error instanceof UserError) {
+						throw error;
+					}
+					// If stat fails, let the original flow handle the error
+				}
+			}
+			// atttempt to interactively handle `wrangler deploy --assets <directory>` missing compat date or name
+			else if (args.assets && (!args.compatibilityDate || !args.name)) {
+				args = await handleMaybeAssetsDeployment(args.assets, args);
+			}
+		}
 
+		const entry = await getEntry(args, config, "deploy");
 		validateAssetsArgsAndConfig(args, config);
 
 		const assetsOptions = getAssetsOptions(args, config);
@@ -307,7 +333,7 @@ export const deployCommand = createCommand({
 			entry,
 			env: args.env,
 			compatibilityDate: args.latest
-				? new Date().toISOString().substring(0, 10)
+				? formatCompatibilityDate(new Date())
 				: args.compatibilityDate,
 			compatibilityFlags: args.compatibilityFlags,
 			vars: cliVars,
@@ -363,3 +389,90 @@ export const deployCommand = createCommand({
 });
 
 export type DeployArgs = (typeof deployCommand)["args"];
+
+/**
+ * Handles the case where:
+ * - a user provides a directory as a positional argument probably intending to deploy static assets. e.g. wrangler deploy ./public
+ * - a user provides `--assets` but does not provide a name or compatibility date.
+ * We then interactively take the user through deployment (missing name and/or compatibility date)
+ * and ask to output this as a wrangler.jsonc for future deployments.
+ * If this successfully completes, continue deploying with the updated values.
+ */
+export async function handleMaybeAssetsDeployment(
+	assetDirectory: string,
+	args: DeployArgs
+): Promise<DeployArgs> {
+	if (isNonInteractiveOrCI()) {
+		return args;
+	}
+
+	// Ask if user intended to deploy assets only
+	logger.log("");
+	if (!args.assets) {
+		const deployAssets = await confirm(
+			"It looks like you are trying to deploy a directory of static assets only. Is this correct?",
+			{ defaultValue: true }
+		);
+		logger.log("");
+		if (deployAssets) {
+			args.assets = assetDirectory;
+			args.script = undefined;
+		} else {
+			// let the usual error handling path kick in
+			return args;
+		}
+	}
+
+	// Check if name is provided, if not ask for it
+	if (!args.name) {
+		const defaultName = process.cwd().split(path.sep).pop()?.replace("_", "-");
+		const isValidName = defaultName && /^[a-zA-Z0-9-]+$/.test(defaultName);
+		const projectName = await prompt("What do you want to name your project?", {
+			defaultValue: isValidName ? defaultName : "my-project",
+		});
+		args.name = projectName;
+		logger.log("");
+	}
+
+	// Set compatibility date if not provided
+	if (!args.compatibilityDate) {
+		const compatibilityDate = formatCompatibilityDate(new Date());
+		args.compatibilityDate = compatibilityDate;
+		logger.log(
+			`${chalk.bold("No compatibility date found")} Defaulting to today:`,
+			compatibilityDate
+		);
+		logger.log("");
+	}
+
+	// Ask if user wants to write config file
+	const writeConfig = await confirm(
+		`Do you want Wrangler to write a wrangler.json config file to store this configuration?\n${chalk.dim("This will allow you to simply run `wrangler deploy` on future deployments.")}`
+	);
+
+	if (writeConfig) {
+		const configPath = path.join(process.cwd(), "wrangler.jsonc");
+		const jsonString = JSON.stringify(
+			{
+				name: args.name,
+				compatibility_date: args.compatibilityDate,
+				assets: { directory: args.assets },
+			},
+			null,
+			2
+		);
+		writeFileSync(configPath, jsonString);
+		logger.log(`Wrote \n${jsonString}\n to ${chalk.bold(configPath)}.`);
+		logger.log(
+			`Please run ${chalk.bold("`wrangler deploy`")} instead of ${chalk.bold(`\`wrangler deploy ${args.assets}\``)} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
+		);
+	} else {
+		logger.log(
+			`You should run ${chalk.bold(
+				`wrangler deploy --name ${args.name} --compatibility-date ${args.compatibilityDate} --assets ${args.assets}`
+			)} next time to deploy this Worker without going through this flow again.`
+		);
+	}
+	logger.log("\nProceeding with deployment...\n");
+	return args;
+}

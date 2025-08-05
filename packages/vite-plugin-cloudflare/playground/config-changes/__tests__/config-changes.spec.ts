@@ -1,84 +1,73 @@
-import * as fs from "node:fs";
 import * as path from "node:path";
-import { expect, test, vi } from "vitest";
-import { getTextResponse, isBuild, serverLogs } from "../../__test-utils__";
+import { describe, expect, test, vi } from "vitest";
+import {
+	getTextResponse,
+	isBuild,
+	mockFileChange,
+	serverLogs,
+	WAIT_FOR_OPTIONS,
+} from "../../__test-utils__";
 
-test.runIf(!isBuild)(
-	"successfully updates when a var is updated in the Worker config",
-	async ({ onTestFinished }) => {
-		const workerConfigPath = path.join(__dirname, "../wrangler.json");
-		const originalWorkerConfig = fs.readFileSync(workerConfigPath, "utf-8");
-
-		onTestFinished(async () => {
-			fs.writeFileSync(workerConfigPath, originalWorkerConfig);
-			// We need to ensure that the original config is restored before the next test runs
+describe("config-changes", () => {
+	test.runIf(!isBuild)(
+		"successfully updates when a var is updated in the Worker config",
+		async () => {
 			await vi.waitFor(
-				async () => {
-					const revertedResponse = await getTextResponse();
-					expect(revertedResponse).toContain('The value of MY_VAR is "one"');
-				},
-				{ timeout: 5000 }
+				async () =>
+					expect(await getTextResponse()).toContain(
+						'The value of MY_VAR is "one"'
+					),
+				WAIT_FOR_OPTIONS
 			);
-		});
 
-		const originalResponse = await getTextResponse();
-		expect(originalResponse).toContain('The value of MY_VAR is "one"');
+			mockFileChange(path.join(__dirname, "../wrangler.json"), (content) =>
+				JSON.stringify({
+					...JSON.parse(content),
+					vars: {
+						MY_VAR: "two",
+					},
+				})
+			);
 
-		const updatedWorkerConfig = JSON.stringify({
-			...JSON.parse(originalWorkerConfig),
-			vars: {
-				MY_VAR: "two",
-			},
-		});
-		fs.writeFileSync(workerConfigPath, updatedWorkerConfig);
-		await vi.waitFor(
-			async () => {
-				const updatedResponse = await getTextResponse();
-				expect(updatedResponse).toContain('The value of MY_VAR is "two"');
-			},
-			{ timeout: 5000 }
-		);
-	}
-);
-
-test.runIf(!isBuild)(
-	"reports errors in updates to the Worker config",
-	async ({ onTestFinished }) => {
-		const workerConfigPath = path.join(__dirname, "../wrangler.json");
-		const originalWorkerConfig = fs.readFileSync(workerConfigPath, "utf-8");
-
-		onTestFinished(async () => {
-			fs.writeFileSync(workerConfigPath, originalWorkerConfig);
-			// We need to ensure that the original config is restored before the next test runs
 			await vi.waitFor(
-				async () => {
-					const revertedResponse = await getTextResponse();
-					expect(revertedResponse).toContain('The value of MY_VAR is "one"');
-				},
-				{ timeout: 5000 }
+				async () =>
+					expect(await getTextResponse()).toContain(
+						'The value of MY_VAR is "two"'
+					),
+				WAIT_FOR_OPTIONS
 			);
-		});
+		}
+	);
 
-		const originalResponse = await getTextResponse();
-		expect(originalResponse).toContain('The value of MY_VAR is "one"');
+	test.runIf(!isBuild)(
+		"reports errors in updates to the Worker config",
+		async () => {
+			await vi.waitFor(
+				async () =>
+					expect(await getTextResponse()).toContain(
+						'The value of MY_VAR is "one"'
+					),
+				WAIT_FOR_OPTIONS
+			);
 
-		const updatedWorkerConfig = JSON.stringify({
-			...JSON.parse(originalWorkerConfig),
-			main: "./src/non-existing-file.ts",
-			vars: {
-				MY_VAR: "two",
-			},
-		});
-		fs.writeFileSync(workerConfigPath, updatedWorkerConfig);
-		await vi.waitFor(
-			async () => {
-				const newResponse = await getTextResponse();
+			mockFileChange(path.join(__dirname, "../wrangler.json"), (content) =>
+				JSON.stringify({
+					...JSON.parse(content),
+					main: "./src/non-existing-file.ts",
+					vars: {
+						MY_VAR: "two",
+					},
+				})
+			);
+
+			await vi.waitFor(async () => {
 				expect(serverLogs.errors.join()).toMatch(
 					/.*The provided Wrangler config main field .+? doesn't point to an existing file.*/
 				);
-				expect(newResponse).toContain('The value of MY_VAR is "one"');
-			},
-			{ timeout: 5000 }
-		);
-	}
-);
+				expect(await getTextResponse()).toContain(
+					'The value of MY_VAR is "one"'
+				);
+			}, WAIT_FOR_OPTIONS);
+		}
+	);
+});

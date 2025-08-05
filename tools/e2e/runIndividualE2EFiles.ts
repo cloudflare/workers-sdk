@@ -1,5 +1,8 @@
+import assert from "assert";
 import { execSync } from "child_process";
-import { readdirSync } from "fs";
+import { statSync } from "fs";
+import path from "path";
+import { globIterateSync } from "glob";
 import type { ExecSyncOptionsWithBufferEncoding } from "child_process";
 
 // Turbo only supports caching on the individual task level, but for Wrangler's
@@ -27,19 +30,22 @@ const command =
 	extraParams.join(" ");
 
 const failed: string[] = [];
-for (const file of readdirSync("packages/wrangler/e2e")) {
-	if (!file.endsWith(".test.ts")) {
-		// Ignore other files in the e2e directory (the README, for instance)
-		continue;
-	}
 
-	const WRANGLER_E2E_TEST_FILE = `e2e/${file}`;
+const wranglerPath = path.join(__dirname, "../../packages/wrangler");
+assert(statSync(wranglerPath).isDirectory());
+
+for (const testFile of globIterateSync("e2e/**/*.test.ts", {
+	cwd: wranglerPath,
+	// Return `/` delimited paths, even on Windows.
+	posix: true,
+})) {
 	const options: ExecSyncOptionsWithBufferEncoding = {
 		stdio: "inherit",
-		env: { ...process.env, WRANGLER_E2E_TEST_FILE },
+		env: { ...process.env, WRANGLER_E2E_TEST_FILE: testFile },
 	};
 
-	console.log("::group::Testing: " + WRANGLER_E2E_TEST_FILE);
+	console.log(`::group::Testing: ${testFile}`);
+
 	try {
 		execSync(command, options);
 	} catch {
@@ -48,7 +54,7 @@ for (const file of readdirSync("packages/wrangler/e2e")) {
 			execSync(command, options);
 		} catch {
 			console.error("Still failed, moving on");
-			failed.push(file);
+			failed.push(testFile);
 		}
 	}
 	console.log("::endgroup::");

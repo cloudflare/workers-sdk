@@ -121,6 +121,8 @@ export type BundleOptions = {
 	minify: boolean | undefined;
 	keepNames: boolean;
 	nodejsCompatMode: NodeJSCompatMode | undefined;
+	compatibilityDate: string | undefined;
+	compatibilityFlags: string[] | undefined;
 	define: Config["define"];
 	alias: Config["alias"];
 	checkFetch: boolean;
@@ -157,6 +159,8 @@ export async function bundleWorker(
 		minify,
 		keepNames,
 		nodejsCompatMode,
+		compatibilityDate,
+		compatibilityFlags,
 		alias,
 		define,
 		checkFetch,
@@ -396,6 +400,8 @@ export async function bundleWorker(
 			moduleCollector.plugin,
 			...getNodeJSCompatPlugins({
 				mode: nodejsCompatMode ?? null,
+				compatibilityDate,
+				compatibilityFlags,
 			}),
 			cloudflareInternalPlugin,
 			buildResultPlugin,

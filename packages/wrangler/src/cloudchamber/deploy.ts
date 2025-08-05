@@ -1,6 +1,5 @@
-import { isDockerfile } from "@cloudflare/containers-shared";
+import assert from "assert";
 import { type Config } from "../config";
-import { type ContainerApp } from "../config/environment";
 import { containersScope } from "../containers";
 import { apply } from "../containers/deploy";
 import { getDockerPath } from "../environment-variables/misc-variables";
@@ -9,50 +8,44 @@ import { logger } from "../logger";
 import { fetchVersion } from "../versions/api";
 import { buildAndMaybePush } from "./build";
 import { fillOpenAPIConfiguration } from "./common";
-import type { BuildArgs } from "@cloudflare/containers-shared/src/types";
+import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared/src/types";
 
 export async function maybeBuildContainer(
-	containerConfig: ContainerApp,
+	containerConfig: ContainerNormalizedConfig,
 	/** just the tag component. will be prefixed with the container name */
 	imageTag: string,
 	dryRun: boolean,
-	pathToDocker: string,
-	configPath?: string
-): Promise<{ image: string; imageUpdated: boolean }> {
-	try {
-		if (
-			!isDockerfile(
-				containerConfig.image ?? containerConfig.configuration?.image,
-				configPath
-			)
-		) {
-			return {
-				image: containerConfig.image ?? containerConfig.configuration?.image,
-				// We don't know at this point whether the image was updated or not
-				// but we need to make sure downstream checks if it was updated so
-				// we set this to true.
-				imageUpdated: true,
-			};
-		}
-	} catch (err) {
-		if (err instanceof Error) {
-			throw new UserError(err.message);
-		}
-
-		throw err;
+	pathToDocker: string
+): Promise<{ newImageLink: string | undefined }> {
+	if ("image_uri" in containerConfig) {
+		return {
+			// We don't know at this point whether the image has changed
+			// but we need to make sure API checks so
+			// we always set this to the registry link.
+			newImageLink: containerConfig.image_uri,
+		};
 	}
+	const imageFullName = containerConfig.name + ":" + imageTag.split("-")[0];
+	logger.log("Building image", imageFullName);
 
-	const options = getBuildArguments(containerConfig, imageTag);
-	logger.log("Building image", options.tag);
 	const buildResult = await buildAndMaybePush(
-		options,
+		{
+			tag: imageFullName,
+			pathToDockerfile: containerConfig.dockerfile,
+			buildContext: containerConfig.image_build_context,
+			args: containerConfig.image_vars,
+		},
 		pathToDocker,
 		!dryRun,
-		configPath,
-		containerConfig
+		"disk_bytes" in containerConfig ? containerConfig.disk_bytes : undefined
 	);
 
-	return { image: buildResult.image, imageUpdated: buildResult.pushed };
+	if (buildResult.pushed) {
+		return { newImageLink: buildResult.image };
+	}
+	// if the image has not changed, it will not have been pushed
+	// so we don't need to update anything when we apply the container config
+	return { newImageLink: undefined };
 }
 
 export type DeployContainersArgs = {
@@ -65,27 +58,25 @@ export type DeployContainersArgs = {
 
 export async function deployContainers(
 	config: Config,
-	{ versionId, accountId, scriptName, dryRun }: DeployContainersArgs
+	normalisedContainerConfig: ContainerNormalizedConfig[],
+	{ versionId, accountId, scriptName }: DeployContainersArgs
 ) {
-	if (config.containers === undefined) {
-		return;
-	}
+	await fillOpenAPIConfiguration(config, containersScope);
 
-	if (!dryRun) {
-		await fillOpenAPIConfiguration(config, containersScope);
-	}
 	const pathToDocker = getDockerPath();
-	for (const container of config.containers) {
-		const version = await fetchVersion(
-			config,
-			accountId,
-			scriptName,
-			versionId
+	const version = await fetchVersion(config, accountId, scriptName, versionId);
+	for (const container of normalisedContainerConfig) {
+		const buildResult = await maybeBuildContainer(
+			container,
+			versionId,
+			false,
+			pathToDocker
 		);
 		const targetDurableObject = version.resources.bindings.find(
 			(durableObject) =>
 				durableObject.type === "durable_object_namespace" &&
 				durableObject.class_name === container.class_name &&
+				// DO cannot be defined in a different script to the container
 				durableObject.script_name === undefined &&
 				durableObject.namespace_id !== undefined
 		);
@@ -96,61 +87,18 @@ export async function deployContainers(
 			);
 		}
 
-		if (
-			targetDurableObject.type !== "durable_object_namespace" ||
-			targetDurableObject.namespace_id === undefined
-		) {
-			throw new Error("unreachable");
-		}
-
-		const configuration = {
-			...config,
-			containers: [
-				{
-					...container,
-					durable_objects: {
-						namespace_id: targetDurableObject.namespace_id,
-					},
-				},
-			],
-		};
-
-		const buildResult = await maybeBuildContainer(
-			container,
-			versionId,
-			dryRun,
-			pathToDocker,
-			config.configPath
+		assert(
+			targetDurableObject.type === "durable_object_namespace" &&
+				targetDurableObject.namespace_id !== undefined
 		);
-		container.configuration ??= {};
-		container.configuration.image = buildResult.image;
-		container.image = buildResult.image;
 
 		await apply(
 			{
-				skipDefaults: false,
-				imageUpdateRequired: buildResult.imageUpdated,
+				newImageLink: buildResult.newImageLink,
+				durable_object_namespace_id: targetDurableObject.namespace_id,
 			},
-			configuration
+			container,
+			config
 		);
 	}
-}
-
-// TODO: container app config should be normalized by now in config validation
-// getBuildArguments takes the image from `container.image` or `container.configuration.image`
-// if the first is not defined. It accepts either a URI or path to a Dockerfile.
-// It will return options that are usable with the build() method from containers.
-export function getBuildArguments(
-	container: ContainerApp,
-	idForImageTag: string
-): BuildArgs {
-	const pathToDockerfile = container.image ?? container.configuration?.image;
-	const imageTag = container.name + ":" + idForImageTag.split("-")[0];
-
-	return {
-		tag: imageTag,
-		pathToDockerfile,
-		buildContext: container.image_build_context,
-		args: container.image_vars,
-	};
 }

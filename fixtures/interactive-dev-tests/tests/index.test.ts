@@ -396,7 +396,6 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 
 			wrangler.pty.write("r");
 
-			// wait for build to finish
 			await vi.waitFor(async () => {
 				const status = await fetch(wrangler.url + "/status");
 				expect(await status.json()).toBe(false);
@@ -435,7 +434,7 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			await new Promise<void>((resolve) => {
 				wrangler.pty.onExit(() => resolve());
 			});
-			vi.waitFor(() => {
+			await vi.waitFor(() => {
 				const remainingIds = getContainerIds();
 				expect(remainingIds.length).toBe(0);
 			});
@@ -500,11 +499,10 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 		});
 
 		it("should allow quitting while the image is building", async () => {
-			const wrangler = await startWranglerDev([
-				"dev",
-				"-c",
-				path.join(tmpDir, "wrangler.jsonc"),
-			]);
+			const wrangler = await startWranglerDev(
+				["dev", "-c", path.join(tmpDir, "wrangler.jsonc")],
+				true
+			);
 
 			const waitForOptions = {
 				timeout: 10_000,
@@ -524,11 +522,10 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 		});
 
 		it("should rebuilding while the image is building", async () => {
-			const wrangler = await startWranglerDev([
-				"dev",
-				"-c",
-				path.join(tmpDir, "wrangler.jsonc"),
-			]);
+			const wrangler = await startWranglerDev(
+				["dev", "-c", path.join(tmpDir, "wrangler.jsonc")],
+				true
+			);
 
 			const waitForOptions = {
 				timeout: 15_000,
@@ -721,10 +718,129 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			await new Promise<void>((resolve) => {
 				wrangler.pty.onExit(() => resolve());
 			});
-			vi.waitFor(() => {
+			await vi.waitFor(() => {
 				const remainingIds = getContainerIds();
 				expect(remainingIds.length).toBe(0);
 			});
+		});
+	}
+);
+
+baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
+	"multi-workers containers dev",
+	{ retry: 0, timeout: 50000 },
+	() => {
+		let tmpDir: string;
+		beforeAll(async () => {
+			tmpDir = fs.mkdtempSync(
+				path.join(tmpdir(), "wrangler-multi-workers-containers-")
+			);
+			fs.cpSync(
+				path.resolve(__dirname, "../", "multi-workers-containers-app"),
+				path.join(tmpDir),
+				{
+					recursive: true,
+				}
+			);
+
+			const ids = getContainerIds();
+			if (ids.length > 0) {
+				execSync("docker rm -f " + ids.join(" "), {
+					encoding: "utf8",
+				});
+			}
+		});
+
+		afterEach(async () => {
+			const ids = getContainerIds();
+
+			if (ids.length > 0) {
+				execSync("docker rm -f " + ids.join(" "), {
+					encoding: "utf8",
+				});
+			}
+		});
+		afterAll(async () => {
+			try {
+				fs.rmSync(tmpDir, { recursive: true, force: true });
+			} catch (e) {
+				// It seems that Windows doesn't let us delete this, with errors like:
+				//
+				// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
+				// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+				// Serialized Error: {
+				// 	"code": "EBUSY",
+				// 	"errno": -4082,
+				// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
+				// 	"syscall": "rmdir",
+				// }
+				console.error(e);
+			}
+		});
+
+		it("should be able to interact with both workers, rebuild the containers with the hotkey and all containers should be cleaned up at the end", async () => {
+			const wrangler = await startWranglerDev([
+				"dev",
+				"-c",
+				path.join(tmpDir, "workerA/wrangler.jsonc"),
+				"-c",
+				path.join(tmpDir, "workerB/wrangler.jsonc"),
+			]);
+
+			await vi.waitFor(
+				async () => {
+					const json = await (
+						await fetch(wrangler.url, { signal: AbortSignal.timeout(5_000) })
+					).json();
+					expect(json).toEqual({
+						containerAText: "Hello from Container A",
+						containerBText: "Hello from Container B",
+					});
+				},
+				{ timeout: 10_000, interval: 1000 }
+			);
+
+			const tmpDockerfileAPath = path.join(tmpDir, "workerA/Dockerfile");
+			const dockerFileAContent = fs.readFileSync(tmpDockerfileAPath, "utf8");
+			fs.writeFileSync(
+				tmpDockerfileAPath,
+				dockerFileAContent.replace(
+					'"Hello from Container A"',
+					'"Hello World from Container A"'
+				),
+				"utf-8"
+			);
+
+			const tmpDockerfileBPath = path.join(tmpDir, "workerB/Dockerfile");
+			const dockerFileBContent = fs.readFileSync(tmpDockerfileBPath, "utf8");
+			fs.writeFileSync(
+				tmpDockerfileBPath,
+				dockerFileBContent.replace(
+					'"Hello from Container B"',
+					'"Hello from the B Container"'
+				),
+				"utf-8"
+			);
+
+			wrangler.pty.write("r");
+
+			await vi.waitFor(
+				async () => {
+					const json = await (
+						await fetch(wrangler.url, { signal: AbortSignal.timeout(5_000) })
+					).json();
+					expect(json).toEqual({
+						containerAText: "Hello World from Container A",
+						containerBText: "Hello from the B Container",
+					});
+				},
+				{ timeout: 30_000, interval: 1000 }
+			);
+
+			fs.writeFileSync(tmpDockerfileAPath, dockerFileAContent, "utf-8");
+			fs.writeFileSync(tmpDockerfileBPath, dockerFileBContent, "utf-8");
+
+			wrangler.pty.kill("SIGINT");
 		});
 	}
 );

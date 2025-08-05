@@ -74,7 +74,7 @@ test("DevRegistry: fetch to module worker", async (t) => {
 		script: `
 			export default {
 				async fetch(request, env, ctx) {
-					const response = await env.SERVICE.fetch(request);
+					const response = await env.SERVICE.fetch(request.url);
 					const text = await response.text();
 
 					return new Response("Response from remote worker: " + text, {
@@ -101,7 +101,7 @@ test("DevRegistry: fetch to module worker", async (t) => {
 		script: `
 			export default {
 				async fetch(request, env, ctx) {
-                    const url = new URL(request.url, 'http://placeholder');
+                    const url = new URL(request.url);
                     const name = url.searchParams.get("name") ?? 'anonymous';
 
 					return new Response("Hello " + name);

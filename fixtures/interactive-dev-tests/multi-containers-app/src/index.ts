@@ -16,7 +16,7 @@ class FixtureTestContainerBase extends DurableObject<Env> {
 			});
 			// On the first request we simply start the container and return,
 			// on the following requests the container can actually be accessed.
-			// Note that we do this this way becase container.start is not awaitable
+			// Note that we do this this way because container.start is not awaitable
 			// meaning that we can't simply wait here for the container to be ready
 			return new Response("Container started");
 		}

@@ -1,11 +1,17 @@
-import { expect, test } from "vitest";
-import { getTextResponse, isBuild, serverLogs } from "../../../__test-utils__";
+import { expect, test, vi } from "vitest";
+import {
+	getTextResponse,
+	isBuild,
+	serverLogs,
+	WAIT_FOR_OPTIONS,
+} from "../../../__test-utils__";
 
 test.skipIf(isBuild)(
 	"resolves Node.js external when calling `resolveId` directly",
 	async () => {
-		const result = await getTextResponse();
-		expect(result).toBe(`OK!`);
-		expect(serverLogs.info.join()).toContain("__node:dns__");
+		await vi.waitFor(async () => {
+			expect(await getTextResponse()).toBe(`OK!`);
+			expect(serverLogs.info.join()).toContain("__node:dns__");
+		}, WAIT_FOR_OPTIONS);
 	}
 );

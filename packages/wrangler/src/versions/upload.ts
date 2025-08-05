@@ -50,6 +50,7 @@ import {
 } from "../sourcemap";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
@@ -357,7 +358,7 @@ export const versionsUploadCommand = createCommand({
 				legacyEnv: isLegacyEnv(config),
 				env: args.env,
 				compatibilityDate: args.latest
-					? new Date().toISOString().substring(0, 10)
+					? formatCompatibilityDate(new Date())
 					: args.compatibilityDate,
 				compatibilityFlags: args.compatibilityFlags,
 				vars: cliVars,
@@ -455,12 +456,13 @@ export default async function versionsUpload(props: Props): Promise<{
 		}
 	}
 
-	if (!(props.compatibilityDate || config.compatibility_date)) {
-		const compatibilityDateStr = `${new Date().getFullYear()}-${(
-			new Date().getMonth() +
-			1 +
-			""
-		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
+	const compatibilityDate =
+		props.compatibilityDate || config.compatibility_date;
+	const compatibilityFlags =
+		props.compatibilityFlags ?? config.compatibility_flags;
+
+	if (!compatibilityDate) {
+		const compatibilityDateStr = formatCompatibilityDate(new Date());
 
 		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
@@ -476,15 +478,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const minify = props.minify ?? config.minify;
 
 	const nodejsCompatMode = validateNodeCompatMode(
-		props.compatibilityDate ?? config.compatibility_date,
-		props.compatibilityFlags ?? config.compatibility_flags,
+		compatibilityDate,
+		compatibilityFlags,
 		{
 			noBundle: props.noBundle ?? config.no_bundle,
 		}
 	);
-
-	const compatibilityFlags =
-		props.compatibilityFlags ?? config.compatibility_flags;
 
 	// Warn if user tries minify or node-compat with no-bundle
 	if (props.noBundle && minify) {
@@ -593,6 +592,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						keepNames: config.keep_names ?? true,
 						sourcemap: uploadSourceMaps,
 						nodejsCompatMode,
+						compatibilityDate,
+						compatibilityFlags,
 						define: { ...config.define, ...props.defines },
 						alias: { ...config.alias, ...props.alias },
 						checkFetch: false,
@@ -602,8 +603,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						local: false,
 						projectRoot: props.projectRoot,
 						defineNavigatorUserAgent: isNavigatorDefined(
-							props.compatibilityDate ?? config.compatibility_date,
-							props.compatibilityFlags ?? config.compatibility_flags
+							compatibilityDate,
+							compatibilityFlags
 						),
 						plugins: [logBuildOutput(nodejsCompatMode)],
 
@@ -686,7 +687,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
-			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
+			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars: false, // the wrangler.toml should be the source-of-truth for vars
 			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
@@ -779,12 +780,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					);
 				}
 
-				await helpIfErrorIsSizeOrScriptStartup(
+				const message = await helpIfErrorIsSizeOrScriptStartup(
 					err,
 					dependencies,
 					workerBundle,
 					props.projectRoot
 				);
+				if (message) {
+					logger.error(message);
+				}
 
 				// Apply source mapping to validation startup errors if possible
 				if (

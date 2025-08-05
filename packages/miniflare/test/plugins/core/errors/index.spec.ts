@@ -305,18 +305,29 @@ test("responds with pretty error page", async (t) => {
 		log,
 		modules: true,
 		script: `
-		function doSomething() {
-			try {
-				oops();
-			} catch (e) {
-			 	throw new Error("Unusual oops!", {
-					cause: e,
-				})
-			}
-		}
+		import { connect } from "cloudflare:sockets";
 
-        function oops() {
-		  throw new Error("Test error");
+		// A function to test error thrown by native code
+		async function connectSocket(request) {
+			try {
+				// The following line will throw an error because the port is invalid
+				const socket = connect({ hostname: "gopher.floodgap.com", port: "invalid" });
+
+				const writer = socket.writable.getWriter();
+				const url = new URL(request.url);
+				const encoder = new TextEncoder();
+				const encoded = encoder.encode(url.pathname + "\\r\\n");
+				await writer.write(encoded);
+				await writer.close();
+
+				return new Response(socket.readable, {
+					headers: { "Content-Type": "text/plain" },
+				});
+			} catch (e) {
+				throw new Error("Unusual oops!", {
+					cause: e,
+				});
+			}
 		}
 
 		// This emulates the reduceError function in the Wrangler middleware template
@@ -331,9 +342,9 @@ test("responds with pretty error page", async (t) => {
 		}
 
 		export default {
-			async fetch() {
+			async fetch(request) {
 				try {
-					doSomething();
+					return await connectSocket(request);
 				} catch (e) {
 					const error = reduceError(e);
 					return Response.json(error, {
@@ -341,7 +352,7 @@ test("responds with pretty error page", async (t) => {
 						headers: { "MF-Experimental-Error-Stack": "true" },
 					});
 				}
-			}
+			},
 		}`,
 	});
 	t.teardown(() => mf.dispose());
@@ -360,17 +371,22 @@ test("responds with pretty error page", async (t) => {
 	t.regex(text, /Method.+POST/is);
 	t.regex(text, /URL.+some-unusual-path/is);
 	t.regex(text, /X-Unusual-Key.+some-unusual-value/is);
+	// Check if the stack trace is included
+	t.regex(text, /cloudflare\:sockets/);
+	t.regex(text, /connectSocket/);
+	t.regex(text, /connect/);
+	t.regex(text, /Object\.fetch/);
 
 	// Check error logged
 	const errorLogs = log.getLogs(LogLevel.ERROR);
 	t.deepEqual(errorLogs, [
 		`Error: Unusual oops!
-    at doSomething (script-0:6:12)
-    at Object.fetch (script-0:30:6)
-Caused by: Error: Test error
-    at oops (script-0:13:11)
-    at doSomething (script-0:4:5)
-    at Object.fetch (script-0:30:6)`,
+    at connectSocket (script-0:21:11)
+    at Object.fetch (script-0:41:19)
+Caused by: TypeError: The value cannot be converted because it is not an integer.
+    at connect (cloudflare:sockets:7:20)
+    at connectSocket (script-0:8:20)
+    at Object.fetch (script-0:41:19)`,
 	]);
 
 	// Check `fetch()` accepting HTML returns pretty-error page

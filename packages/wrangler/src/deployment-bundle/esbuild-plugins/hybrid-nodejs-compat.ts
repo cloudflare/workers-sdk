@@ -13,15 +13,26 @@ const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
  *
  * @returns ESBuild plugin
  */
-export function nodejsHybridPlugin(): Plugin {
+export function nodejsHybridPlugin({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate?: string;
+	compatibilityFlags?: string[];
+}): Plugin {
 	return {
 		name: "hybrid-nodejs_compat",
 		async setup(build) {
 			// `unenv` and `@cloudflare/unenv-preset` only publish esm
 			const { defineEnv } = await import("unenv");
-			const { cloudflare } = await import("@cloudflare/unenv-preset");
+			const { getCloudflarePreset } = await import("@cloudflare/unenv-preset");
 			const { alias, inject, external, polyfill } = defineEnv({
-				presets: [cloudflare],
+				presets: [
+					getCloudflarePreset({
+						compatibilityDate,
+						compatibilityFlags,
+					}),
+				],
 				npmShims: true,
 			}).env;
 
@@ -132,6 +143,7 @@ function handleUnenvAliasedPackages(
 		if (
 			args.kind === "require-call" &&
 			(unresolvedAlias.startsWith("unenv/npm/") ||
+				unresolvedAlias.startsWith("@cloudflare/unenv-preset/npm/") ||
 				unresolvedAlias.startsWith("unenv/mock/"))
 		) {
 			return {

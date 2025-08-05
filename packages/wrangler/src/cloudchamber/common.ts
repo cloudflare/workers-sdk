@@ -616,20 +616,6 @@ export function resolveMemory(
 	return undefined;
 }
 
-// Return the amount of disk size in (MB) for an application, falls back to the account limits if the app config doesn't exist
-// sometimes the user wants to just build a container here, we should allow checking those based on the account limits if
-// app.configuration is not set
-// ordering: app.configuration.disk.size -> account.limits.disk_mb_per_deployment -> default fallback to 2GB in bytes
-export function resolveAppDiskSize(
-	app: ContainerApp | undefined
-): number | undefined {
-	if (app === undefined) {
-		return undefined;
-	}
-	const disk = app.configuration?.disk?.size ?? "2GB";
-	return Math.round(parseByteSize(disk));
-}
-
 // Checks that instance type is one of 'dev', 'basic', or 'standard' and that it is not being set alongside memory or vcpu.
 // Returns the instance type to use if correctly set.
 export function checkInstanceType(
@@ -668,7 +654,7 @@ export function checkInstanceType(
 }
 
 // infers the instance type from a given configuration
-function inferInstanceType(
+export function inferInstanceType(
 	configuration: UserDeploymentConfiguration
 ): InstanceType | undefined {
 	if (
@@ -698,8 +684,10 @@ function inferInstanceType(
 	}
 }
 
-// removes any disk, memory, or vcpu that have been set in an objects configuration. Used for rendering
-// diffs.
+/**
+ * THIS IS ONLY USED FOR CLOUDCHAMBER APPLY
+ * removes any disk, memory, or vcpu that have been set in an objects configuration. Used for rendering diffs.
+ */
 export function cleanForInstanceType(
 	app: CreateApplicationRequest
 ): ContainerApp {

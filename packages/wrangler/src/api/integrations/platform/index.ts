@@ -1,3 +1,4 @@
+import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
@@ -12,7 +13,7 @@ import {
 	buildSitesOptions,
 	getImageNameFromDOClassName,
 } from "../../../dev/miniflare";
-import { getDockerHost } from "../../../environment-variables/misc-variables";
+import { getDockerPath } from "../../../environment-variables/misc-variables";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
@@ -31,6 +32,7 @@ import type {
 	WorkerOptions,
 } from "miniflare";
 
+export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
 export type {
 	Config as Unstable_Config,
@@ -55,6 +57,23 @@ export type GetPlatformProxyOptions = {
 	 *       point to a valid file on the filesystem
 	 */
 	configPath?: string;
+	/**
+	 * Paths to `.env` files to load environment variables from, relative to the project directory.
+	 *
+	 * The project directory is computed as the directory containing `configPath` or the current working directory if `configPath` is undefined.
+	 *
+	 * If `envFiles` is defined, only the files in the array will be considered for loading local dev variables.
+	 * If `undefined`, the default behavior is:
+	 *  - compute the project directory as that containing the Wrangler configuration file,
+	 *    or the current working directory if no Wrangler configuration file is specified.
+	 *  - look for `.env` and `.env.local` files in the project directory.
+	 *  - if the `environment` option is specified, also look for `.env.<environment>` and `.env.<environment>.local`
+	 *    files in the project directory
+	 *  - resulting in an `envFiles` array like: `[".env", ".env.local", ".env.<environment>", ".env.<environment>.local"]`.
+	 *
+	 * The values from files earlier in the `envFiles` array (e.g. `envFiles[x]`) will be overridden by values from files later in the array (e.g. `envFiles[x+1)`).
+	 */
+	envFiles?: string[];
 	/**
 	 * Indicates if and where to persist the bindings data, if not present or `true` it defaults to the same location
 	 * used by wrangler: `.wrangler/state/v3` (so that the same data can be easily used by the caller and wrangler).
@@ -182,6 +201,7 @@ async function getMiniflareOptionsFromConfig(args: {
 	const bindings = getBindings(
 		config,
 		options.environment,
+		options.envFiles,
 		true,
 		{},
 		remoteBindingsEnabled
@@ -219,7 +239,9 @@ async function getMiniflareOptionsFromConfig(args: {
 			migrations: config.migrations,
 			imagesLocalMode: true,
 			tails: [],
-			containers: undefined,
+			containerDOClassNames: new Set(
+				config.containers?.map((c) => c.class_name)
+			),
 			containerBuildId: undefined,
 		},
 		remoteProxyConnectionString,
@@ -347,6 +369,7 @@ export function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
 	env?: string,
 	options?: {
+		envFiles?: string[];
 		imagesLocalMode?: boolean;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 		remoteBindingsEnabled?: boolean;
@@ -369,7 +392,10 @@ export function unstable_getMiniflareWorkerOptions(
 			fallthrough: rule.fallthrough,
 		}));
 
-	const bindings = getBindings(config, env, true, {}, true);
+	const containerDOClassNames = new Set(
+		config.containers?.map((c) => c.class_name)
+	);
+	const bindings = getBindings(config, env, options?.envFiles, true, {}, true);
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		{
 			name: config.name,
@@ -382,7 +408,7 @@ export function unstable_getMiniflareWorkerOptions(
 			migrations: config.migrations,
 			imagesLocalMode: !!options?.imagesLocalMode,
 			tails: config.tail_consumers,
-			containers: config.containers,
+			containerDOClassNames,
 			containerBuildId: options?.containerBuildId,
 		},
 		options?.remoteProxyConnectionString,
@@ -435,7 +461,7 @@ export function unstable_getMiniflareWorkerOptions(
 						useSQLite,
 						container: getImageNameFromDOClassName({
 							doClassName: binding.class_name,
-							containers: config.containers,
+							containerDOClassNames,
 							containerBuildId: options?.containerBuildId,
 						}),
 					} satisfies DurableObjectDefinition,
@@ -455,11 +481,15 @@ export function unstable_getMiniflareWorkerOptions(
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};
 
+	const useContainers =
+		config.dev?.enable_containers && config.containers?.length;
 	const workerOptions: SourcelessWorkerOptions = {
 		compatibilityDate: config.compatibility_date,
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
-		containerEngine: config.dev.container_engine ?? getDockerHost(),
+		containerEngine: useContainers
+			? config.dev.container_engine ?? resolveDockerHost(getDockerPath())
+			: undefined,
 
 		...bindingOptions,
 		...sitesOptions,

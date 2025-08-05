@@ -88,6 +88,9 @@ describe("addWranglerToGitIgnore", () => {
 			# wrangler files
 			.wrangler
 			.dev.vars*
+			!.dev.vars.example
+			.env*
+			!.env.example
 			"
 		`);
 	});
@@ -97,7 +100,10 @@ describe("addWranglerToGitIgnore", () => {
 			"my-project/.gitignore",
 			`
       node_modules
-      .dev.vars
+      .dev.vars*
+			!.dev.vars.example
+			.env*
+			!.env.example
       .vscode
       .wrangler
     `,
@@ -116,7 +122,10 @@ describe("addWranglerToGitIgnore", () => {
 			`
       node_modules
       .wrangler # This is for wrangler
-      .dev.vars # this is for wrangler and getPlatformProxy
+      .dev.vars* # this is for wrangler and getPlatformProxy
+			!.dev.vars.example # more comments
+			.env* # even more
+			!.env.example # and a final one
       .vscode
     `,
 		);
@@ -128,12 +137,68 @@ describe("addWranglerToGitIgnore", () => {
 		expect(appendFileResults.content).toBeUndefined();
 	});
 
-	test("should append to the gitignore file the missing wrangler files when some is already present (without including the section heading)", () => {
+	test("should append to the gitignore file the missing wrangler files when some are already present (should add the section heading if including .wrangler and some others)", () => {
 		mockGitIgnore(
 			"my-project/.gitignore",
 			`
       node_modules
-      .dev.vars
+      .dev.vars*
+      .vscode`,
+		);
+		addWranglerToGitIgnore({
+			project: { path: "my-project" },
+		} as unknown as C3Context);
+
+		expect(appendFileResults.file).toMatchInlineSnapshot(
+			`"my-project/.gitignore"`,
+		);
+		expect(appendFileResults.content).toMatchInlineSnapshot(`
+			"
+
+			# wrangler files
+			.wrangler
+			!.dev.vars.example
+			.env*
+			!.env.example
+			"
+		`);
+	});
+
+	test("should append to the gitignore file the missing wrangler files when some are already present (should not add the section heading if .wrangler already exists)", () => {
+		mockGitIgnore(
+			"my-project/.gitignore",
+			`
+      node_modules
+			.wrangler
+      .dev.vars*
+      .vscode`,
+		);
+		addWranglerToGitIgnore({
+			project: { path: "my-project" },
+		} as unknown as C3Context);
+
+		expect(appendFileResults.file).toMatchInlineSnapshot(
+			`"my-project/.gitignore"`,
+		);
+		expect(appendFileResults.content).toMatchInlineSnapshot(`
+			"
+
+			!.dev.vars.example
+			.env*
+			!.env.example
+			"
+		`);
+	});
+
+	test("should append to the gitignore file the missing wrangler files when some are already present (should not add the section heading if only adding .wrangler)", () => {
+		mockGitIgnore(
+			"my-project/.gitignore",
+			`
+      node_modules
+      .dev.vars*
+			!.dev.vars.example
+			.env*
+			!.env.example
       .vscode`,
 		);
 		addWranglerToGitIgnore({
@@ -156,7 +221,10 @@ describe("addWranglerToGitIgnore", () => {
 			"my-project/.gitignore",
 			`
       node_modules
-      .dev.vars
+      .dev.vars*
+			!.dev.vars.example
+			.env*
+			!.env.example
       .vscode
 
     `,
@@ -203,6 +271,9 @@ describe("addWranglerToGitIgnore", () => {
 			# wrangler files
 			.wrangler
 			.dev.vars*
+			!.dev.vars.example
+			.env*
+			!.env.example
 			"
 		`);
 	});
@@ -219,6 +290,34 @@ describe("addWranglerToGitIgnore", () => {
 
 		expect(writeFileResults.file).toBeUndefined();
 		expect(writeFileResults.content).toBeUndefined();
+	});
+
+	test("should add the wildcard .dev.vars* entry even if a .dev.vars is already included", () => {
+		mockGitIgnore(
+			"my-project/.gitignore",
+			`
+      node_modules
+			.dev.vars
+      .vscode
+			`,
+		);
+		addWranglerToGitIgnore({
+			project: { path: "my-project" },
+		} as unknown as C3Context);
+
+		expect(appendFileResults.file).toMatchInlineSnapshot(
+			`"my-project/.gitignore"`,
+		);
+		expect(appendFileResults.content).toMatchInlineSnapshot(`
+			"
+			# wrangler files
+			.wrangler
+			.dev.vars*
+			!.dev.vars.example
+			.env*
+			!.env.example
+			"
+		`);
 	});
 
 	test("should not add the .wrangler entry if a .wrangler/ is already included)", () => {
@@ -240,6 +339,9 @@ describe("addWranglerToGitIgnore", () => {
 		expect(appendFileResults.content).toMatchInlineSnapshot(`
 			"
 			.dev.vars*
+			!.dev.vars.example
+			.env*
+			!.env.example
 			"
 		`);
 	});

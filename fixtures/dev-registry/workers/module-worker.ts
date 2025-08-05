@@ -39,7 +39,7 @@ export default {
 			}
 
 			if (service && testMethod === "fetch") {
-				return await service.fetch(url, request);
+				return await service.fetch(url);
 			}
 
 			if (testMethod === "tail") {

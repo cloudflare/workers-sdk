@@ -68,14 +68,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			assert(match?.groups);
 			deployedUrl = match.groups.url;
 
-			const { text } = await retry(
-				(s) => s.status !== 200,
-				async () => {
-					const r = await fetch(deployedUrl);
-					return { text: await r.text(), status: r.status };
-				}
+			const response = await retry(
+				(resp) => !resp.ok,
+				async () => await fetch(deployedUrl)
 			);
-			expect(text).toMatchInlineSnapshot('"Hello World!"');
+			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
 
 		it("lists 1 deployment", async () => {
@@ -110,14 +107,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			assert(match?.groups);
 			deployedUrl = match.groups.url;
 
-			const { text } = await retry(
-				(s) => s.status !== 200 || s.text === "Hello World!",
-				async () => {
-					const r = await fetch(deployedUrl);
-					return { text: await r.text(), status: r.status };
-				}
+			const response = await retry(
+				(resp) => !resp.ok,
+				async () => await fetch(deployedUrl)
 			);
-			expect(text).toMatchInlineSnapshot('"Updated Worker!"');
+			await expect(response.text()).resolves.toEqual("Updated Worker!");
 		});
 
 		it("lists 2 deployments", async () => {

@@ -16,7 +16,6 @@ export {
 	triggerAsyncId,
 } from "unenv/node/async_hooks";
 
-// @ts-ignore typings are not up to date, but this API exists, see: https://github.com/cloudflare/workerd/pull/2147
 const workerdAsyncHooks = process.getBuiltinModule("node:async_hooks");
 
 // TODO: Ideally this list is not hardcoded but instead is generated when the preset is being generated in the `env()` call

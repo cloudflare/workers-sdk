@@ -13,14 +13,22 @@ export function normalizeString(input: string): string {
 			normalizeErrorMarkers(
 				replaceByte(
 					stripTrailingWhitespace(
-						normalizeSlashes(
-							normalizeCwd(normalizeTempDirs(stripTimings(input)))
+						stripStartupProfileHash(
+							normalizeSlashes(
+								normalizeCwd(
+									normalizeTempDirs(stripTimings(replaceThinSpaces(input)))
+								)
+							)
 						)
 					)
 				)
 			)
 		)
 	);
+}
+
+function stripStartupProfileHash(str: string): string {
+	return str.replace(/startup-profile-[^/]+/g, "startup-profile-<HASH>");
 }
 
 function normalizeTables(str: string): string {
@@ -94,4 +102,11 @@ function replaceByte(stdout: string): string {
  */
 function normalizeTempDirs(stdout: string): string {
 	return stdout.replaceAll(/\/\/.+\/tmp.+/g, "//tmpdir");
+}
+
+/**
+ * Replace thin space characters (U+200A) with regular spaces to normalize output
+ */
+function replaceThinSpaces(str: string): string {
+	return str.replaceAll(/\u200a/g, " ");
 }

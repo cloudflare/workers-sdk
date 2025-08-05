@@ -8,6 +8,7 @@ import { Process as UnenvProcess } from "unenv/node/internal/process/process";
 // This code relies on the that rollup/esbuild/webpack don't evaluate string concatenation
 // so they don't recognize the below as `globalThis.process` which they would try to rewrite
 // into unenv/node/process, thus creating a circular dependency, and breaking this polyfill.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const globalProcess: NodeJS.Process = (globalThis as any)["pro" + "cess"];
 
 export const getBuiltinModule: NodeJS.Process["getBuiltinModule"] =

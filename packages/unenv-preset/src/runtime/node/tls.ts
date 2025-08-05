@@ -48,7 +48,7 @@ export default {
 	DEFAULT_ECDH_CURVE,
 	DEFAULT_MAX_VERSION,
 	DEFAULT_MIN_VERSION,
-	// @ts-expect-error
+	// @ts-expect-error Node types do not match unenv
 	SecureContext,
 	Server,
 	TLSSocket,

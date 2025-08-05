@@ -1,0 +1,13 @@
+diff --git a/build/chunk-JAN2TFI2.js b/build/chunk-JAN2TFI2.js
+index a6321161988abe906e7745bf9d540670dee5b289..28c79363b321cd99809c44fdfeebcf86b05cada6 100644
+--- a/build/chunk-JAN2TFI2.js
++++ b/build/chunk-JAN2TFI2.js
+@@ -50,7 +50,7 @@ var ErrorStack = class extends BaseComponent {
+    */
+   #getEditorLink(ide, frame) {
+     const editorURL = EDITORS[ide] || ide;
+-    if (!editorURL || frame.type === "native") {
++    if (!editorURL || frame.type === "native" || frame.fileType !== 'fs') {
+       return {
+         text: this.#getRelativeFileName(frame.fileName)
+       };

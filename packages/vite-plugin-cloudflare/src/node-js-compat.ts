@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { builtinModules } from "node:module";
 import path from "node:path";
-import { cloudflare } from "@cloudflare/unenv-preset";
+import { getCloudflarePreset } from "@cloudflare/unenv-preset";
 import MagicString from "magic-string";
 import { getNodeCompat } from "miniflare";
 import { resolvePathSync } from "mlly";
@@ -10,8 +10,14 @@ import * as vite from "vite";
 import type { WorkerConfig } from "./plugin-config";
 
 const { env } = defineEnv({
-	nodeCompat: true,
-	presets: [cloudflare],
+	presets: [
+		// TODO: refactor the code to pass the compatibility date and flags.
+		//       maybe move the logic to a class so that `env` is not init on top level any more
+		getCloudflarePreset({
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [""],
+		}),
+	],
 });
 
 export const nodeCompatExternals = new Set(env.external);

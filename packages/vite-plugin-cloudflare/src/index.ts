@@ -1,17 +1,17 @@
 import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { prepareContainerImagesForDev } from "@cloudflare/containers-shared/src/images";
-import { getDevContainerImageName } from "@cloudflare/containers-shared/src/knobs";
+import * as util from "node:util";
 import {
+	cleanupContainers,
 	generateContainerBuildId,
-	getContainerIdsByImageTags,
-	isDockerfile,
+	resolveDockerHost,
 } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
+import colors from "picocolors";
 import * as vite from "vite";
 import {
 	createModuleReference,
@@ -29,7 +29,7 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "./constants";
-import { getDockerPath, removeContainersByIds } from "./containers";
+import { getDockerPath, prepareContainerImages } from "./containers";
 import {
 	addDebugToVitePrintUrls,
 	getDebugPathHtml,
@@ -38,8 +38,8 @@ import {
 } from "./debugging";
 import { writeDeployConfig } from "./deploy-config";
 import {
-	getDotDevDotVarsContent,
-	hasDotDevDotVarsFileChanged,
+	getLocalDevVarsForPreview,
+	hasLocalDevVarsFileChanged,
 } from "./dev-vars";
 import {
 	getDevMiniflareOptions,
@@ -80,9 +80,10 @@ import type { Unstable_RawConfig } from "wrangler";
 
 export type { PluginConfig } from "./plugin-config";
 
+const debuglog = util.debuglog("@cloudflare:vite-plugin");
+
 // this flag is used to show the workers configs warning only once
 let workersConfigsWarningShown = false;
-
 let miniflare: Miniflare | undefined;
 
 /**
@@ -98,8 +99,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const additionalModulePaths = new Set<string>();
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
-	const containerImageTagsSeen = new Set<string>();
-	let runningContainerIds: Array<string>;
+	let containerImageTagsSeen = new Set<string>();
+
+	/** Used to track whether hooks are being called because of a server restart or a server close event. */
+	let restartingServer = false;
 
 	return [
 		{
@@ -264,45 +267,6 @@ if (import.meta.hot) {
 								path.resolve(resolvedViteConfig.root, clientOutputDirectory)
 							),
 						};
-
-						if (workerConfig.containers?.length) {
-							workerConfig.containers = workerConfig.containers.map(
-								(container) => {
-									const baseDir = workerConfig.configPath
-										? path.dirname(workerConfig.configPath)
-										: resolvedViteConfig.root;
-									// Wrangler's config validation resolves to container.configuration.image, even though it is deprecated
-									const image =
-										container.configuration?.image ?? container.image;
-									if (isDockerfile(image, workerConfig.configPath)) {
-										const output = {
-											...container,
-											image: path.resolve(baseDir, image),
-											...(container.image_build_context
-												? {
-														image_build_context: path.resolve(
-															baseDir,
-															container.image_build_context
-														),
-													}
-												: {}),
-										};
-										// however, wrangler deploy will re-resolve the config, so we should
-										// deduplicate the container.configuration.image field in favour of
-										// the non-deprecated one when we write out the deploy config
-										delete output.configuration?.image;
-										// if we don't do this, we get a warning that container.configuration is deprecated
-										if (
-											output.configuration &&
-											Object.keys(output.configuration).length === 0
-										) {
-											delete output.configuration;
-										}
-										return output;
-									} else return container;
-								}
-							);
-						}
 					} else {
 						workerConfig.assets = undefined;
 					}
@@ -310,17 +274,16 @@ if (import.meta.hot) {
 					config = workerConfig;
 
 					if (workerConfig.configPath) {
-						const dotDevDotVarsContent = getDotDevDotVarsContent(
+						const localDevVars = getLocalDevVarsForPreview(
 							workerConfig.configPath,
 							resolvedPluginConfig.cloudflareEnv
 						);
-						// Save a .dev.vars file to the worker's build output directory
-						// when it exists so that it will be then detected by `vite preview`
-						if (dotDevDotVarsContent) {
+						// Save a .dev.vars file to the worker's build output directory if there are local dev vars, so that it will be then detected by `vite preview`.
+						if (localDevVars) {
 							this.emitFile({
 								type: "asset",
 								fileName: ".dev.vars",
-								source: dotDevDotVarsContent,
+								source: localDevVars,
 							});
 						}
 					}
@@ -372,29 +335,22 @@ if (import.meta.hot) {
 					writeDeployConfig(resolvedPluginConfig, resolvedViteConfig);
 				}
 			},
-			hotUpdate(options) {
-				assertIsNotPreview(resolvedPluginConfig);
-
-				// Note that we must "resolve" the changed file since the path from Vite will not match Windows backslashes.
-				const changedFilePath = path.resolve(options.file);
-
-				if (
-					resolvedPluginConfig.configPaths.has(changedFilePath) ||
-					hasDotDevDotVarsFileChanged(resolvedPluginConfig, changedFilePath) ||
-					hasAssetsConfigChanged(
-						resolvedPluginConfig,
-						resolvedViteConfig,
-						changedFilePath
-					)
-				) {
-					// It's OK for this to be called multiple times as Vite prevents concurrent execution
-					options.server.restart();
-					return [];
-				}
-			},
 			// Vite `configureServer` Hook
 			// see https://vite.dev/guide/api-plugin.html#configureserver
 			async configureServer(viteDevServer) {
+				// Patch the `server.restart` method to track whether the server is restarting or not.
+				const restartServer = viteDevServer.restart.bind(viteDevServer);
+				viteDevServer.restart = async () => {
+					try {
+						restartingServer = true;
+						debuglog("From server.restart(): Restarting server...");
+						await restartServer();
+						debuglog("From server.restart(): Restarted server...");
+					} finally {
+						restartingServer = false;
+					}
+				};
+
 				assertIsNotPreview(resolvedPluginConfig);
 
 				const inputInspectorPort = await getInputInspectorPortOption(
@@ -403,14 +359,37 @@ if (import.meta.hot) {
 					miniflare
 				);
 
+				const configChangedHandler = async (changedFilePath: string) => {
+					assertIsNotPreview(resolvedPluginConfig);
+
+					if (
+						resolvedPluginConfig.configPaths.has(changedFilePath) ||
+						hasLocalDevVarsFileChanged(resolvedPluginConfig, changedFilePath) ||
+						hasAssetsConfigChanged(
+							resolvedPluginConfig,
+							resolvedViteConfig,
+							changedFilePath
+						)
+					) {
+						debuglog("Config changed: " + changedFilePath);
+						viteDevServer.watcher.off("change", configChangedHandler);
+						debuglog("Restarting dev server and aborting previous setup");
+						await viteDevServer.restart();
+					}
+				};
+				viteDevServer.watcher.on("change", configChangedHandler);
+
 				let containerBuildId: string | undefined;
 				const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
 				const hasDevContainers =
 					entryWorkerConfig?.containers?.length &&
 					entryWorkerConfig.dev.enable_containers;
+				const dockerPath = getDockerPath();
 
 				if (hasDevContainers) {
 					containerBuildId = generateContainerBuildId();
+					entryWorkerConfig.dev.container_engine =
+						resolveDockerHost(dockerPath);
 				}
 
 				const miniflareDevOptions = await getDevMiniflareOptions({
@@ -421,9 +400,12 @@ if (import.meta.hot) {
 				});
 
 				if (!miniflare) {
+					debuglog("Creating new Miniflare instance");
 					miniflare = new Miniflare(miniflareDevOptions);
 				} else {
+					debuglog("Updating the existing Miniflare instance");
 					await miniflare.setOptions(miniflareDevOptions);
+					debuglog("Miniflare is ready");
 				}
 
 				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
@@ -431,6 +413,7 @@ if (import.meta.hot) {
 				if (resolvedPluginConfig.type === "workers") {
 					assert(entryWorkerConfig, `No entry Worker config`);
 
+					debuglog("Initializing the Vite module runners");
 					await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
 					const entryWorkerName = entryWorkerConfig.name;
@@ -483,40 +466,27 @@ if (import.meta.hot) {
 					}
 
 					if (hasDevContainers) {
-						assert(
+						viteDevServer.config.logger.info(
+							colors.dim(
+								colors.yellow(
+									"∷ Building container images for local development...\n"
+								)
+							)
+						);
+						containerImageTagsSeen = await prepareContainerImages({
+							containersConfig: entryWorkerConfig.containers,
 							containerBuildId,
-							"Build ID should be set if containers are enabled and defined"
+							isContainersEnabled: entryWorkerConfig.dev.enable_containers,
+							dockerPath,
+							configPath: entryWorkerConfig.configPath,
+						});
+						viteDevServer.config.logger.info(
+							colors.dim(
+								colors.yellow(
+									"\n⚡️ Containers successfully built. To rebuild your containers during development, restart the Vite dev server (r + enter)."
+								)
+							)
 						);
-						// Assemble container options and build if necessary
-						const containerOptions = await getContainerOptions(
-							entryWorkerConfig,
-							containerBuildId
-						);
-						const dockerPath = getDockerPath();
-
-						if (containerOptions) {
-							// keep track of them so we can clean up later
-							for (const container of containerOptions) {
-								containerImageTagsSeen.add(container.imageTag);
-							}
-
-							await prepareContainerImagesForDev({
-								dockerPath,
-								configPath: entryWorkerConfig.configPath,
-								containerOptions,
-								onContainerImagePreparationStart: () => {},
-								onContainerImagePreparationEnd: () => {},
-							});
-						}
-
-						// poll Docker every two seconds and update the list of ids of all
-						// running containers
-						const dockerPollIntervalId = setInterval(async () => {
-							runningContainerIds = await getContainerIdsByImageTags(
-								dockerPath,
-								containerImageTagsSeen
-							);
-						}, 2000);
 
 						/*
 						 * Upon exiting the dev process we should ensure we perform any
@@ -531,21 +501,11 @@ if (import.meta.hot) {
 						 * `process.exit()` imperatively, and therefore causes `beforeExit`
 						 * not to be emitted).
 						 *
-						 * Furthermore, since the `exit` event handler cannot perform async
-						 * ops as per spec (https://nodejs.org/api/process.html#event-exit),
-						 * we also need a mechanism to ensure that list of containers to be
-						 * cleaned up on exit is up to date. This is what the interval with id
-						 * `dockerPollIntervalId` is for.
-						 *
-						 * It is possible, though very unlikely, that in some rare cases,
-						 * we might be left with some orphaned containers, due to the fact
-						 * that at the point of exiting the dev process, our internal list
-						 * of container ids is out of date. We accept this caveat for now.
-						 *
 						 */
-						process.on("exit", () => {
-							clearInterval(dockerPollIntervalId);
-							removeContainersByIds(dockerPath, runningContainerIds);
+						process.on("exit", async () => {
+							if (containerImageTagsSeen.size) {
+								cleanupContainers(dockerPath, containerImageTagsSeen);
+							}
 						});
 					}
 				}
@@ -602,13 +562,53 @@ if (import.meta.hot) {
 					vitePreviewServer
 				);
 
+				// first Worker in the Array is always the entry Worker
+				const entryWorkerConfig = resolvedPluginConfig.workers[0];
+				const hasDevContainers =
+					entryWorkerConfig?.containers?.length &&
+					entryWorkerConfig.dev.enable_containers;
+				let containerBuildId: string | undefined;
+
+				if (hasDevContainers) {
+					containerBuildId = generateContainerBuildId();
+				}
+
 				miniflare = new Miniflare(
-					await getPreviewMiniflareOptions(
+					await getPreviewMiniflareOptions({
 						resolvedPluginConfig,
 						vitePreviewServer,
-						inputInspectorPort
-					)
+						inspectorPort: inputInspectorPort,
+						containerBuildId,
+					})
 				);
+
+				if (hasDevContainers) {
+					const dockerPath = getDockerPath();
+
+					vitePreviewServer.config.logger.info(
+						colors.dim(
+							colors.yellow(
+								"∷ Building container images for local preview...\n"
+							)
+						)
+					);
+					containerImageTagsSeen = await prepareContainerImages({
+						containersConfig: entryWorkerConfig.containers,
+						containerBuildId,
+						isContainersEnabled: entryWorkerConfig.dev.enable_containers,
+						dockerPath,
+						configPath: entryWorkerConfig.configPath,
+					});
+					vitePreviewServer.config.logger.info(
+						colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
+					);
+
+					process.on("exit", () => {
+						if (containerImageTagsSeen.size) {
+							cleanupContainers(dockerPath, containerImageTagsSeen);
+						}
+					});
+				}
 
 				handleWebSocket(vitePreviewServer.httpServer, () => {
 					assert(miniflare, `Miniflare not defined`);
@@ -626,16 +626,21 @@ if (import.meta.hot) {
 				);
 			},
 			async buildEnd() {
-				if (resolvedViteConfig.command === "serve") {
+				if (
+					resolvedViteConfig.command === "serve" &&
+					containerImageTagsSeen?.size
+				) {
 					const dockerPath = getDockerPath();
-					runningContainerIds = await getContainerIdsByImageTags(
-						dockerPath,
-						containerImageTagsSeen
-					);
+					cleanupContainers(dockerPath, containerImageTagsSeen);
+				}
 
-					await removeContainersByIds(dockerPath, runningContainerIds);
-					containerImageTagsSeen.clear();
-					runningContainerIds = [];
+				debuglog("buildEnd:", restartingServer ? "restarted" : "disposing");
+				if (!restartingServer) {
+					debuglog("buildEnd: disposing Miniflare instance");
+					await miniflare?.dispose().catch((error) => {
+						debuglog("buildEnd: failed to dispose Miniflare instance:", error);
+					});
+					miniflare = undefined;
 				}
 			},
 		},
@@ -1075,32 +1080,5 @@ if (import.meta.hot) {
 		return resolvedPluginConfig.type === "workers"
 			? resolvedPluginConfig.workers[environmentName]
 			: undefined;
-	}
-
-	/**
-	 * @returns Container options suitable for building or pulling images,
-	 * with image tag set to well-known dev format, or undefined if
-	 * containers are not enabled or not configured.
-	 */
-	async function getContainerOptions(
-		config: WorkerConfig,
-		containerBuildId: string
-	) {
-		if (!config.containers?.length || config.dev.enable_containers === false) {
-			return undefined;
-		}
-
-		return config.containers.map((container) => {
-			return {
-				image: container.image ?? container.configuration?.image,
-				imageTag: getDevContainerImageName(
-					container.class_name,
-					containerBuildId
-				),
-				args: container.image_vars,
-				imageBuildContext: container.image_build_context,
-				class_name: container.class_name,
-			};
-		});
 	}
 }

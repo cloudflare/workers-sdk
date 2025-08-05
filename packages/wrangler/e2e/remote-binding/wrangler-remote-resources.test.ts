@@ -173,7 +173,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 		setup: async (helper) => {
 			const namespace = await helper.dispatchNamespace(false);
 
-			const customerWorkerName = "mixed-mode-test-customer-worker";
+			const customerWorkerName = "remote-bindings-test-customer-worker";
 			await helper.seed({
 				"customer-worker.js": dedent/* javascript */ `
 					export default {
@@ -208,7 +208,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 		setup: async (helper) => {
 			const ns = await helper.kv(false);
 			await helper.run(
-				`wrangler kv key put --remote --namespace-id=${ns} test-mixed-mode-key existing-value`
+				`wrangler kv key put --remote --namespace-id=${ns} test-remote-bindings-key existing-value`
 			);
 			return { id: ns };
 		},
@@ -232,11 +232,11 @@ const testCases: TestCase<Record<string, string>>[] = [
 			await helper.seed({ "test.txt": "existing-value" });
 			const name = await helper.r2(false);
 			await helper.run(
-				`wrangler r2 object put --remote ${name}/test-mixed-mode-key --file test.txt`
+				`wrangler r2 object put --remote ${name}/test-remote-bindings-key --file test.txt`
 			);
 			onTestFinished(async () => {
 				await helper.run(
-					`wrangler r2 object delete --remote ${name}/test-mixed-mode-key`
+					`wrangler r2 object delete --remote ${name}/test-remote-bindings-key`
 				);
 			});
 			return { name };
@@ -261,7 +261,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			await helper.seed({
 				"schema.sql": dedent`
 					CREATE TABLE entries (key TEXT PRIMARY KEY, value TEXT);
-					INSERT INTO entries (key, value) VALUES ('test-mixed-mode-key', 'existing-value');
+					INSERT INTO entries (key, value) VALUES ('test-remote-bindings-key', 'existing-value');
 				`,
 			});
 			const { id, name } = await helper.d1(false);
@@ -356,103 +356,106 @@ const testCases: TestCase<Record<string, string>>[] = [
 	},
 ];
 
-describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Wrangler Mixed Mode E2E Tests", () => {
-	describe.each(testCases)("$name", (testCase) => {
-		let helper: WranglerE2ETestHelper;
-		let workerName: string;
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
+	"Wrangler Remote Bindings E2E Tests",
+	() => {
+		describe.each(testCases)("$name", (testCase) => {
+			let helper: WranglerE2ETestHelper;
+			let workerName: string;
 
-		beforeEach(() => {
-			helper = new WranglerE2ETestHelper();
-			workerName = generateResourceName();
-		});
+			beforeEach(() => {
+				helper = new WranglerE2ETestHelper();
+				workerName = generateResourceName();
+			});
 
-		it("works with remote bindings enabled", async () => {
-			await helper.seed(path.resolve(__dirname, "./workers"));
-
-			await writeWranglerConfig(testCase, helper, workerName);
-
-			const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
-
-			const { url } = await worker.waitForReady();
-
-			const response = await fetchText(url);
-			expect(response).toMatch(testCase.expectedResponseMatch);
-		});
-
-		it.skipIf(testCase.worksWithoutRemoteBindings)(
-			"fails when remote bindings is disabled",
-			// Turn off retries because this test is expected to fail
-			{ retry: 0, fails: true },
-			async () => {
+			it("works with remote bindings enabled", async () => {
 				await helper.seed(path.resolve(__dirname, "./workers"));
 
 				await writeWranglerConfig(testCase, helper, workerName);
 
-				const worker = helper.runLongLived("wrangler dev");
+				const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
 
 				const { url } = await worker.waitForReady();
 
 				const response = await fetchText(url);
 				expect(response).toMatch(testCase.expectedResponseMatch);
+			});
+
+			it.skipIf(testCase.worksWithoutRemoteBindings)(
+				"fails when remote bindings is disabled",
+				// Turn off retries because this test is expected to fail
+				{ retry: 0, fails: true },
+				async () => {
+					await helper.seed(path.resolve(__dirname, "./workers"));
+
+					await writeWranglerConfig(testCase, helper, workerName);
+
+					const worker = helper.runLongLived("wrangler dev");
+
+					const { url } = await worker.waitForReady();
+
+					const response = await fetchText(url);
+					expect(response).toMatch(testCase.expectedResponseMatch);
+				}
+			);
+		});
+
+		describe.sequential(
+			"Sequential remote bindings tests with worker reloads",
+			() => {
+				let worker: WranglerLongLivedCommand;
+				let helper: WranglerE2ETestHelper;
+				let workerName: string;
+
+				let url: string;
+
+				beforeAll(async () => {
+					helper = new WranglerE2ETestHelper();
+					workerName = generateResourceName();
+					await helper.seed(path.resolve(__dirname, "./workers"));
+
+					await helper.seed({
+						"wrangler.json": JSON.stringify(
+							{
+								name: "remote-bindings-sequential-test",
+								main: "placeholder.js",
+								compatibility_date: "2025-01-01",
+							},
+							null,
+							2
+						),
+						"placeholder.js":
+							"export default { fetch() { return new Response('Ready to start tests') } }",
+					});
+
+					worker = helper.runLongLived("wrangler dev --x-remote-bindings", {
+						stopOnTestFinished: false,
+					});
+
+					const ready = await worker.waitForReady();
+					url = ready.url;
+				});
+				afterAll(async () => {
+					await worker.stop();
+				});
+
+				it.each(testCases)("$name with worker reload", async (testCase) => {
+					await writeWranglerConfig(testCase, helper, workerName);
+
+					await worker.waitForReload();
+
+					await vi.waitFor(
+						async () => {
+							const response = await fetchText(url);
+							expect(response).toMatch(testCase.expectedResponseMatch);
+						},
+						{ interval: 1_000, timeout: 40_000 }
+					);
+				});
 			}
 		);
-	});
-
-	describe.sequential(
-		"Sequential remote bindings tests with worker reloads",
-		() => {
-			let worker: WranglerLongLivedCommand;
-			let helper: WranglerE2ETestHelper;
-			let workerName: string;
-
-			let url: string;
-
-			beforeAll(async () => {
-				helper = new WranglerE2ETestHelper();
-				workerName = generateResourceName();
-				await helper.seed(path.resolve(__dirname, "./workers"));
-
-				await helper.seed({
-					"wrangler.json": JSON.stringify(
-						{
-							name: "mixed-mode-sequential-test",
-							main: "placeholder.js",
-							compatibility_date: "2025-01-01",
-						},
-						null,
-						2
-					),
-					"placeholder.js":
-						"export default { fetch() { return new Response('Ready to start tests') } }",
-				});
-
-				worker = helper.runLongLived("wrangler dev --x-remote-bindings", {
-					stopOnTestFinished: false,
-				});
-
-				const ready = await worker.waitForReady();
-				url = ready.url;
-			});
-			afterAll(async () => {
-				await worker.stop();
-			});
-
-			it.each(testCases)("$name with worker reload", async (testCase) => {
-				await writeWranglerConfig(testCase, helper, workerName);
-
-				await worker.waitForReload();
-
-				await vi.waitFor(
-					async () => {
-						const response = await fetchText(url);
-						expect(response).toMatch(testCase.expectedResponseMatch);
-					},
-					{ interval: 1_000, timeout: 40_000 }
-				);
-			});
-		}
-	);
-});
+	}
+);
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"Wrangler Mixed Remote resources E2E Tests",
