@@ -91,6 +91,7 @@ export interface CfKvNamespace {
  */
 export type CfSendEmailBindings = {
 	name: string;
+	experimental_remote?: boolean;
 } & (
 	| { destination_address?: string }
 	| { allowed_destination_addresses?: string[] }

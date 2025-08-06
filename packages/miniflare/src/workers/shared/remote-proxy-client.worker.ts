@@ -41,8 +41,7 @@ export default class Client extends WorkerEntrypoint<Env> {
 					return Reflect.get(target, prop);
 				}
 
-				const value = Reflect.get(stub, prop);
-				return value;
+				return Reflect.get(stub, prop);
 			},
 		});
 	}

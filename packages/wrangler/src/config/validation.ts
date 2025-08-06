@@ -2861,6 +2861,7 @@ const validateSendEmailBinding: ValidatorFn = (diagnostics, field, value) => {
 		"destination_address",
 		"name",
 		"binding",
+		"experimental_remote",
 	]);
 
 	return isValid;

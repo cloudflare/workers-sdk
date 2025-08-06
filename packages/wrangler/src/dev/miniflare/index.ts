@@ -974,7 +974,13 @@ export function buildMiniflareBindingOptions(
 			]) ?? []
 		),
 		email: {
-			send_email: bindings.send_email,
+			send_email: bindings.send_email?.map((b) => ({
+				...b,
+				remoteProxyConnectionString:
+					b.experimental_remote && remoteProxyConnectionString
+						? remoteProxyConnectionString
+						: undefined,
+			})),
 		},
 		images:
 			bindings.images && (config.imagesLocalMode || remoteBindingsEnabled)

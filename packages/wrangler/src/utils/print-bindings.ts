@@ -213,7 +213,9 @@ export function printBindings(
 						destination_address ||
 						allowed_destination_addresses?.join(", ") ||
 						"unrestricted",
-					mode: getMode({ isSimulatedLocally: true }),
+					mode: getMode({
+						isSimulatedLocally: !emailBinding.experimental_remote,
+					}),
 				};
 			})
 		);
