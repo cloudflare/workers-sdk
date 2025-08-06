@@ -96,6 +96,7 @@
 		"npx-import": "^1.1.4",
 		"postal-mime": "^2.4.3",
 		"pretty-bytes": "^6.0.0",
+		"puppeteer": "22.8.2",
 		"rimraf": "catalog:default",
 		"source-map": "^0.6.1",
 		"ts-dedent": "^2.2.0",

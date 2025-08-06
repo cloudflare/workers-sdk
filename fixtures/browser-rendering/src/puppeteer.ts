@@ -32,6 +32,22 @@ export default {
 					const pText = await page.$eval("p", (el) => el.textContent.trim());
 					return new Response(pText);
 				}
+
+				case "disconnect": {
+					const browser = await puppeteer.launch(env.MYBROWSER);
+					const sessionId = browser.sessionId();
+					await browser.disconnect();
+					const sessionInfo = await puppeteer
+						.sessions(env.MYBROWSER)
+						.then((sessions) =>
+							sessions.find((s) => s.sessionId === sessionId)
+						);
+					return new Response(
+						sessionInfo.connectionId
+							? "Browser not disconnected"
+							: "Browser disconnected"
+					);
+				}
 			}
 
 			let img = await env.BROWSER_KV_DEMO.get(url, { type: "arrayBuffer" });
