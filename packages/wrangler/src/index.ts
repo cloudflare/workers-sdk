@@ -1480,29 +1480,284 @@ export function createCLIParser(argv: string[]) {
 	wrangler.version(false);
 
 	registry.registerAll();
-	globalRegistry = registry;
 
 	wrangler.exitProcess(false);
 
 	return wrangler;
 }
 
-let globalRegistry: CommandRegistry | null = null;
-
 /**
  * EXPERIMENTAL: Create and return a command registry for documentation generation.
  * This API is experimental and may change without notice.
  */
 export function createCommandRegistry(): CommandRegistry {
-	if (globalRegistry) {
-		return globalRegistry;
-	}
+	const wrangler = createCLIParser([]);
 
-	createCLIParser([]);
-	if (!globalRegistry) {
-		throw new Error("Failed to create command registry");
-	}
-	return globalRegistry;
+	const subHelp: SubHelp = {
+		command: ["*"],
+		handler: async (args) => {
+			setImmediate(() =>
+				wrangler.parse([...args._.map((a) => `${a}`), "--help"])
+			);
+		},
+	};
+
+	const registerCommand = createRegisterYargsCommand(wrangler, subHelp);
+	const registry = new CommandRegistry(registerCommand);
+
+	registry.define([
+		{
+			command: "wrangler docs",
+			definition: docs,
+		},
+	]);
+	registry.registerNamespace("docs");
+
+	registry.define([
+		{
+			command: "wrangler init",
+			definition: init,
+		},
+	]);
+	registry.registerNamespace("init");
+
+	registry.define([
+		{
+			command: "wrangler dev",
+			definition: dev,
+		},
+	]);
+	registry.registerNamespace("dev");
+
+	registry.define([
+		{
+			command: "wrangler deploy",
+			definition: deployCommand,
+		},
+	]);
+	registry.registerNamespace("deploy");
+
+	registry.define([
+		{ command: "wrangler deployments", definition: deploymentsNamespace },
+		{
+			command: "wrangler deployments list",
+			definition: deploymentsListCommand,
+		},
+		{
+			command: "wrangler deployments status",
+			definition: deploymentsStatusCommand,
+		},
+		{
+			command: "wrangler deployments view",
+			definition: deploymentsViewCommand,
+		},
+	]);
+	registry.registerNamespace("deployments");
+
+	registry.define([
+		{ command: "wrangler rollback", definition: versionsRollbackCommand },
+	]);
+	registry.registerNamespace("rollback");
+
+	registry.define([
+		{
+			command: "wrangler versions",
+			definition: versionsNamespace,
+		},
+		{
+			command: "wrangler versions view",
+			definition: versionsViewCommand,
+		},
+		{
+			command: "wrangler versions list",
+			definition: versionsListCommand,
+		},
+		{
+			command: "wrangler versions upload",
+			definition: versionsUploadCommand,
+		},
+		{
+			command: "wrangler versions deploy",
+			definition: versionsDeployCommand,
+		},
+		{
+			command: "wrangler versions secret",
+			definition: versionsSecretNamespace,
+		},
+		{
+			command: "wrangler versions secret put",
+			definition: versionsSecretPutCommand,
+		},
+		{
+			command: "wrangler versions secret bulk",
+			definition: versionsSecretBulkCommand,
+		},
+		{
+			command: "wrangler versions secret delete",
+			definition: versionsSecretDeleteCommand,
+		},
+		{
+			command: "wrangler versions secret list",
+			definition: versionsSecretsListCommand,
+		},
+	]);
+	registry.registerNamespace("versions");
+
+	registry.define([
+		{ command: "wrangler triggers", definition: triggersNamespace },
+		{ command: "wrangler triggers deploy", definition: triggersDeployCommand },
+	]);
+	registry.registerNamespace("triggers");
+
+	registry.define([{ command: "wrangler delete", definition: deleteCommand }]);
+	registry.registerNamespace("delete");
+
+	registry.define([{ command: "wrangler tail", definition: tailCommand }]);
+	registry.registerNamespace("tail");
+
+	registry.define([
+		{ command: "wrangler secret", definition: secretNamespace },
+		{ command: "wrangler secret put", definition: secretPutCommand },
+		{ command: "wrangler secret delete", definition: secretDeleteCommand },
+		{ command: "wrangler secret list", definition: secretListCommand },
+		{ command: "wrangler secret bulk", definition: secretBulkCommand },
+	]);
+	registry.registerNamespace("secret");
+
+	registry.define([{ command: "wrangler types", definition: typesCommand }]);
+	registry.registerNamespace("types");
+
+	registry.define([
+		{ command: "wrangler d1", definition: d1Namespace },
+		{ command: "wrangler d1 list", definition: d1ListCommand },
+		{ command: "wrangler d1 info", definition: d1InfoCommand },
+		{ command: "wrangler d1 insights", definition: d1InsightsCommand },
+		{ command: "wrangler d1 create", definition: d1CreateCommand },
+		{ command: "wrangler d1 delete", definition: d1DeleteCommand },
+		{ command: "wrangler d1 execute", definition: d1ExecuteCommand },
+		{ command: "wrangler d1 export", definition: d1ExportCommand },
+		{ command: "wrangler d1 time-travel", definition: d1TimeTravelNamespace },
+		{
+			command: "wrangler d1 time-travel info",
+			definition: d1TimeTravelInfoCommand,
+		},
+		{
+			command: "wrangler d1 time-travel restore",
+			definition: d1TimeTravelRestoreCommand,
+		},
+		{ command: "wrangler d1 migrations", definition: d1MigrationsNamespace },
+		{
+			command: "wrangler d1 migrations list",
+			definition: d1MigrationsListCommand,
+		},
+		{
+			command: "wrangler d1 migrations create",
+			definition: d1MigrationsCreateCommand,
+		},
+		{
+			command: "wrangler d1 migrations apply",
+			definition: d1MigrationsApplyCommand,
+		},
+	]);
+	registry.registerNamespace("d1");
+
+	registry.define([
+		{ command: "wrangler kv", definition: kvNamespace },
+		{ command: "wrangler kv namespace", definition: kvNamespaceNamespace },
+		{ command: "wrangler kv key", definition: kvKeyNamespace },
+		{ command: "wrangler kv bulk", definition: kvBulkNamespace },
+		{
+			command: "wrangler kv namespace create",
+			definition: kvNamespaceCreateCommand,
+		},
+		{
+			command: "wrangler kv namespace list",
+			definition: kvNamespaceListCommand,
+		},
+		{
+			command: "wrangler kv namespace delete",
+			definition: kvNamespaceDeleteCommand,
+		},
+		{
+			command: "wrangler kv namespace rename",
+			definition: kvNamespaceRenameCommand,
+		},
+		{ command: "wrangler kv key put", definition: kvKeyPutCommand },
+		{ command: "wrangler kv key list", definition: kvKeyListCommand },
+		{ command: "wrangler kv key get", definition: kvKeyGetCommand },
+		{ command: "wrangler kv key delete", definition: kvKeyDeleteCommand },
+		{ command: "wrangler kv bulk get", definition: kvBulkGetCommand },
+		{ command: "wrangler kv bulk put", definition: kvBulkPutCommand },
+		{ command: "wrangler kv bulk delete", definition: kvBulkDeleteCommand },
+	]);
+	registry.registerNamespace("kv");
+
+	registry.define([
+		{ command: "wrangler queues", definition: queuesNamespace },
+		{ command: "wrangler queues list", definition: queuesListCommand },
+		{ command: "wrangler queues create", definition: queuesCreateCommand },
+		{ command: "wrangler queues update", definition: queuesUpdateCommand },
+		{ command: "wrangler queues delete", definition: queuesDeleteCommand },
+		{ command: "wrangler queues info", definition: queuesInfoCommand },
+		{
+			command: "wrangler queues consumer",
+			definition: queuesConsumerNamespace,
+		},
+		{
+			command: "wrangler queues pause-delivery",
+			definition: queuesPauseCommand,
+		},
+		{
+			command: "wrangler queues resume-delivery",
+			definition: queuesResumeCommand,
+		},
+		{
+			command: "wrangler queues consumer http",
+			definition: queuesConsumerHttpNamespace,
+		},
+		{
+			command: "wrangler queues consumer http add",
+			definition: queuesConsumerHttpAddCommand,
+		},
+		{
+			command: "wrangler queues consumer http remove",
+			definition: queuesConsumerHttpRemoveCommand,
+		},
+		{
+			command: "wrangler queues consumer worker",
+			definition: queuesConsumerWorkerNamespace,
+		},
+		{
+			command: "wrangler queues consumer worker add",
+			definition: queuesConsumerAddCommand,
+		},
+		{
+			command: "wrangler queues consumer worker remove",
+			definition: queuesConsumerRemoveCommand,
+		},
+	]);
+	registry.registerNamespace("queues");
+
+	registry.define([
+		{ command: "wrangler login", definition: loginCommand },
+		{ command: "wrangler logout", definition: logoutCommand },
+		{ command: "wrangler whoami", definition: whoamiCommand },
+	]);
+	registry.registerNamespace("login");
+	registry.registerNamespace("logout");
+	registry.registerNamespace("whoami");
+
+	registry.define([
+		{
+			command: "wrangler build",
+			definition: buildCommand,
+		},
+	]);
+	registry.registerNamespace("build");
+
+	registry.registerAll();
+
+	return registry;
 }
 
 export async function main(argv: string[]): Promise<void> {
