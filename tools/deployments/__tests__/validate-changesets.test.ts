@@ -38,6 +38,7 @@ describe("findPackageNames()", () => {
 				"edge-preview-authenticated-proxy",
 				"format-errors",
 				"miniflare",
+				"miniflare-shared",
 				"playground-preview-worker",
 				"solarflare-theme",
 				"turbo-r2-archive",
