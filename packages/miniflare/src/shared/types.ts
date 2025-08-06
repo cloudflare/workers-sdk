@@ -46,6 +46,20 @@ export const PathSchema = z.string().transform((p) => {
 	return path.resolve(rootPath, p);
 });
 
+/** Filter undefined values from a record object */
+export function filterUndefinedValues<T>(
+	record: Record<string, T | undefined> | undefined
+): Record<string, T> | undefined {
+	if (record === undefined) return undefined;
+	const filtered: Record<string, T> = {};
+	for (const [key, value] of Object.entries(record)) {
+		if (value !== undefined) {
+			filtered[key] = value;
+		}
+	}
+	return Object.keys(filtered).length > 0 ? filtered : undefined;
+}
+
 /** @internal */
 export function _isCyclic(value: unknown, seen = new Set<unknown>()) {
 	if (typeof value !== "object" || value === null) return false;
