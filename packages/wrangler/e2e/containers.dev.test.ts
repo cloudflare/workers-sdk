@@ -1,8 +1,9 @@
 import { execSync } from "child_process";
+import assert from "node:assert";
 import {
 	afterAll,
+	afterEach,
 	beforeAll,
-	beforeEach,
 	describe,
 	expect,
 	it,
@@ -26,7 +27,7 @@ for (const source of imageSource) {
 	const isPullWithoutAccountId = source === "pull" && !CLOUDFLARE_ACCOUNT_ID;
 
 	describe.skipIf(isCINonLinux || isPullWithoutAccountId)(
-		`containers local dev tests: ${source}`,
+		`containers`,
 		{ timeout: 90_000 },
 		() => {
 			let helper: WranglerE2ETestHelper;
@@ -59,7 +60,7 @@ for (const source of imageSource) {
 					migrations: [
 						{
 							tag: "v1",
-							new_classes: [`E2EContainer`],
+							new_sqlite_classes: [`E2EContainer`],
 						},
 					],
 				};
@@ -130,203 +131,252 @@ for (const source of imageSource) {
 					});
 					`,
 				});
-				// if we are pulling we need to push the image first
+			}, 30_000);
+
+			describe(`dev: ${source}`, () => {
 				if (source === "pull") {
-					// pull a container image from the registry
-					await helper.run(
-						`wrangler containers build . -t ${workerName}:tmp-e2e -p`
+					beforeAll(async () => {
+						// if we are pulling we need to push the image first
+						await helper.run(
+							`wrangler containers build . -t ${workerName}:tmp-e2e -p`
+						);
+						wranglerConfig = {
+							...wranglerConfig,
+							containers: [
+								{
+									image: `registry.cloudflare.com/${CLOUDFLARE_ACCOUNT_ID}/${workerName}:tmp-e2e`,
+									class_name: `E2EContainer`,
+									name: `${workerName}-container`,
+								},
+							],
+						};
+						await helper.seed({
+							"wrangler.json": JSON.stringify(wranglerConfig),
+						});
+						// wait a bit for the image to be available to pull
+						await new Promise((resolve) => setTimeout(resolve, 5_000));
+					}, 30_000);
+					afterAll(async () => {
+						await helper.run(
+							`wrangler containers images delete ${workerName}:tmp-e2e`
+						);
+					});
+				}
+
+				afterEach(async () => {
+					/// wait a bit in case the expected cleanup from shutting down wrangler dev is already happening
+					await new Promise((resolve) => setTimeout(resolve, 500));
+					// cleanup any running containers. this does happen automatically when we shut down wrangler,
+					// but treekill is being uncooperative. this is also tested in interactive-dev-fixture
+					// where it is working as expected
+					const ids = getContainerIds("e2econtainer");
+					if (ids.length > 0) {
+						execSync(`${getDockerPath()} rm -f ${ids.join(" ")}`, {
+							encoding: "utf8",
+						});
+					}
+				});
+				it(`will ${source} containers when miniflare starts`, async () => {
+					const worker = helper.runLongLived("wrangler dev");
+					await worker.readUntil(/Preparing container/);
+					if (source === "pull") {
+						await worker.readUntil(/Status/);
+					} else {
+						await worker.readUntil(/DONE/);
+					}
+					// from miniflare output:
+					await worker.readUntil(/Container image\(s\) ready/);
+				});
+
+				it(`will be able to interact with the container`, async () => {
+					const worker = helper.runLongLived("wrangler dev");
+					const ready = await worker.waitForReady();
+
+					await vi.waitFor(async () => {
+						const response = await fetch(`${ready.url}/status`);
+						expect(response.status).toBe(200);
+						const status = await response.json();
+						expect(status).toBe(false);
+					});
+
+					let response = await fetch(`${ready.url}/start`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toBe("Container create request sent...");
+
+					await vi.waitFor(async () => {
+						response = await fetch(`${ready.url}/status`);
+						expect(response.status).toBe(200);
+						const status = await response.json();
+						expect(status).toBe(true);
+					});
+
+					await vi.waitFor(
+						async () => {
+							response = await fetch(`${ready.url}/fetch`, {
+								signal: AbortSignal.timeout(3_000),
+								headers: { "MF-Disable-Pretty-Error": "true" },
+							});
+							text = await response.text();
+							expect(text).toBe(
+								"Hello World! Have an env var! I'm an env var!"
+							);
+						},
+						{ timeout: 5_000 }
 					);
 
-					wranglerConfig = {
-						...wranglerConfig,
-						containers: [
-							{
-								image: `registry.cloudflare.com/${CLOUDFLARE_ACCOUNT_ID}/${workerName}:tmp-e2e`,
-								class_name: `E2EContainer`,
-								name: `${workerName}-container`,
-							},
-						],
-					};
+					// Check that a container is running using `docker ps`
+					const ids = getContainerIds("e2econtainer");
+					expect(ids.length).toBe(1);
+					await worker.stop();
+				});
+
+				it("won't start the container service if no containers are present", async () => {
+					await helper.seed({
+						"wrangler.json": JSON.stringify({
+							...wranglerConfig,
+							containers: [],
+						}),
+					});
+					const worker = helper.runLongLived("wrangler dev");
+					await worker.waitForReady();
+					await worker.stop();
+					const output = await worker.output;
+					expect(output).not.toContain("Preparing container image(s)...");
 					await helper.seed({
 						"wrangler.json": JSON.stringify(wranglerConfig),
 					});
-					// wait a bit for the image to be available to pull
-					await new Promise((resolve) => setTimeout(resolve, 5_000));
-				}
-			}, 30_000);
-			beforeEach(async () => {
-				await helper.seed({
-					"wrangler.json": JSON.stringify(wranglerConfig),
 				});
-				/// wait a bit in case the expected cleanup from shutting down wrangler dev is already happening
-				await new Promise((resolve) => setTimeout(resolve, 500));
-				// cleanup any running containers. this does happen automatically when we shut down wrangler,
-				// but treekill is being uncooperative. this is also tested in interactive-dev-fixture
-				// where it is working as expected
-				const ids = getContainerIds("e2econtainer");
-				if (ids.length > 0) {
-					execSync(`${getDockerPath()} rm -f ${ids.join(" ")}`, {
-						encoding: "utf8",
+
+				it("won't start the container service if enable_containers is set to false via config", async () => {
+					await helper.seed({
+						"wrangler.json": JSON.stringify({
+							...wranglerConfig,
+							dev: { enable_containers: false },
+						}),
 					});
-				}
-			});
-			afterAll(async () => {
-				// wait a bit in case the expected cleanup from shutting down wrangler dev is already happening
-				await new Promise((resolve) => setTimeout(resolve, 500));
-				// again this should happen automatically when we shut down wrangler, but treekill is being uncooperative.
-				// this is tested in interactive-dev-fixture where it is working as expected.
-				const ids = getContainerIds("e2econtainer");
-				if (ids.length > 0) {
-					execSync(`${getDockerPath()} rm -f ${ids.join(" ")}`, {
-						encoding: "utf8",
-					});
-				}
-				if (source === "pull") {
-					// TODO: we won't need to prefix the account id once 9811 lands
-					await helper.run(
-						`wrangler containers images delete ${workerName}:tmp-e2e`
+					const worker = helper.runLongLived("wrangler dev");
+					await worker.waitForReady();
+					await worker.stop();
+					expect(await worker.output).not.toContain(
+						"Preparing container image(s)..."
 					);
-				}
-			});
-			it(`will build or pull containers when miniflare starts`, async () => {
-				const worker = helper.runLongLived("wrangler dev");
-				await worker.readUntil(/Preparing container/);
-				if (source === "pull") {
-					await worker.readUntil(/Status/);
-				} else {
-					await worker.readUntil(/DONE/);
-				}
-				// from miniflare output:
-				await worker.readUntil(/Container image\(s\) ready/);
-			});
-
-			it(`will be able to interact with the container`, async () => {
-				const worker = helper.runLongLived("wrangler dev");
-				const ready = await worker.waitForReady();
-
-				await vi.waitFor(async () => {
-					const response = await fetch(`${ready.url}/status`);
-					expect(response.status).toBe(200);
-					const status = await response.json();
-					expect(status).toBe(false);
+					await helper.seed({
+						"wrangler.json": JSON.stringify(wranglerConfig),
+					});
 				});
 
-				let response = await fetch(`${ready.url}/start`);
-				let text = await response.text();
-				expect(response.status).toBe(200);
-				expect(text).toBe("Container create request sent...");
+				it("will display the ready-on message after the container(s) have been built/pulled", async () => {
+					const worker = helper.runLongLived("wrangler dev");
+					const readyRegexp = /Ready on (http:\/\/[a-z0-9.]+:[0-9]+)/;
+					await worker.readUntil(readyRegexp);
 
-				await vi.waitFor(async () => {
-					response = await fetch(`${ready.url}/status`);
-					expect(response.status).toBe(200);
-					const status = await response.json();
-					expect(status).toBe(true);
+					await worker.stop();
+
+					const fullOutput = await worker.output;
+					const indexOfContainersReadyMessage = fullOutput.indexOf(
+						"Container image(s) ready"
+					);
+
+					const indexOfReadyOnMessage = fullOutput.indexOf("Ready on");
+					expect(indexOfReadyOnMessage).toBeGreaterThan(
+						indexOfContainersReadyMessage
+					);
 				});
 
-				await vi.waitFor(
-					async () => {
-						response = await fetch(`${ready.url}/fetch`, {
-							signal: AbortSignal.timeout(3_000),
-							headers: { "MF-Disable-Pretty-Error": "true" },
-						});
-						text = await response.text();
-						expect(text).toBe("Hello World! Have an env var! I'm an env var!");
-					},
-					{ timeout: 5_000 }
-				);
-
-				// Check that a container is running using `docker ps`
-				const ids = getContainerIds("e2econtainer");
-				expect(ids.length).toBe(1);
-				await worker.stop();
-			});
-
-			it("won't start the container service if no containers are present", async () => {
-				await helper.seed({
-					"wrangler.json": JSON.stringify({
-						...wranglerConfig,
-						containers: [],
-					}),
+				it("won't start the container service if --enable-containers is set to false via CLI", async () => {
+					const worker = helper.runLongLived(
+						"wrangler dev --enable-containers=false"
+					);
+					await worker.waitForReady();
+					await worker.stop();
+					expect(await worker.output).not.toContain(
+						"Preparing container image(s)..."
+					);
 				});
-				const worker = helper.runLongLived("wrangler dev");
-				await worker.waitForReady();
-				await worker.stop();
-				const output = await worker.output;
-				expect(output).not.toContain("Preparing container image(s)...");
-			});
 
-			it("won't start the container service if enable_containers is set to false via config", async () => {
-				await helper.seed({
-					"wrangler.json": JSON.stringify({
-						...wranglerConfig,
-						dev: { enable_containers: false },
-					}),
-				});
-				const worker = helper.runLongLived("wrangler dev");
-				await worker.waitForReady();
-				await worker.stop();
-				expect(await worker.output).not.toContain(
-					"Preparing container image(s)..."
-				);
-			});
-
-			it("will display the ready-on message after the container(s) have been built/pulled", async () => {
-				const worker = helper.runLongLived("wrangler dev");
-				const readyRegexp = /Ready on (http:\/\/[a-z0-9.]+:[0-9]+)/;
-				await worker.readUntil(readyRegexp);
-
-				await worker.stop();
-
-				const fullOutput = await worker.output;
-				const indexOfContainersReadyMessage = fullOutput.indexOf(
-					"Container image(s) ready"
-				);
-
-				const indexOfReadyOnMessage = fullOutput.indexOf("Ready on");
-				expect(indexOfReadyOnMessage).toBeGreaterThan(
-					indexOfContainersReadyMessage
-				);
-			});
-
-			it("won't start the container service if --enable-containers is set to false via CLI", async () => {
-				const worker = helper.runLongLived(
-					"wrangler dev --enable-containers=false"
-				);
-				await worker.waitForReady();
-				await worker.stop();
-				expect(await worker.output).not.toContain(
-					"Preparing container image(s)..."
-				);
-			});
-
-			it("errors if no ports are exposed", async () => {
-				await helper.seed({
-					Dockerfile: dedent`
+				it("errors if no ports are exposed", async () => {
+					await helper.seed({
+						Dockerfile: dedent`
 								FROM alpine:latest
 								CMD ["echo", "hello world"]
 								`,
+					});
+					if (source === "pull") {
+						await helper.run(
+							`wrangler containers build . -t ${workerName}:tmp-e2e -p`
+						);
+					}
+					const worker = helper.runLongLived("wrangler dev");
+					expect(await worker.exitCode).toBe(1);
+					expect(await worker.output).toContain("does not expose any ports");
 				});
-				if (source === "pull") {
-					await helper.run(
-						`wrangler containers build . -t ${workerName}:tmp-e2e -p`
+
+				it("errors if docker is not installed", async () => {
+					vi.stubEnv("WRANGLER_DOCKER_BIN", "not-a-real-docker-binary");
+					const worker = helper.runLongLived("wrangler dev");
+					expect(await worker.exitCode).toBe(1);
+					expect(await worker.output).toContain(
+						`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.`
 					);
-				}
-				const worker = helper.runLongLived("wrangler dev");
-				expect(await worker.exitCode).toBe(1);
-				expect(await worker.output).toContain("does not expose any ports");
+					expect(await worker.output).toContain(
+						`To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false.`
+					);
+					vi.unstubAllEnvs();
+				});
 			});
 
-			it("errors if docker is not installed", async () => {
-				vi.stubEnv("WRANGLER_DOCKER_BIN", "not-a-real-docker-binary");
-				const worker = helper.runLongLived("wrangler dev");
-				expect(await worker.exitCode).toBe(1);
-				expect(await worker.output).toContain(
-					`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.`
+			describe.skipIf(source === "pull")(`deploy`, async () => {
+				let applicationId: string;
+				afterAll(async () => {
+					await helper.run(`wrangler containers delete ${applicationId}`);
+				});
+				it(
+					"won't push image if no change has been made",
+					{ timeout: 60 * 3 * 1000 },
+					async () => {
+						const output = await helper.run(`wrangler deploy`);
+
+						const match = output.stdout.match(
+							/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+						);
+						assert(match?.groups);
+						const matchApplicationId = output.stdout.match(
+							/([(]Application ID: (?<applicationId>.+?)[)])/
+						);
+						assert(matchApplicationId?.groups);
+						applicationId = matchApplicationId.groups.applicationId;
+						expect(output.stdout).toContain(
+							"Image does not exist remotely, pushing"
+						);
+						const output2 = await helper.run(`wrangler deploy`);
+						expect(output2.stdout).toContain(
+							"Image already exists remotely, skipping push"
+						);
+					}
 				);
-				expect(await worker.output).toContain(
-					`To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false.`
+				it(
+					"will push the image if only the dockerfile has changed",
+					{ timeout: 60 * 3 * 1000 },
+					async () => {
+						// just adds 'CMD'
+						await helper.seed({
+							Dockerfile: dedent`
+							FROM node:22-alpine
+
+							WORKDIR /usr/src/app
+
+							COPY ./container/app.js app.js
+							EXPOSE 8080
+							CMD ["node", "app.js"]
+						`,
+						});
+						const output = await helper.run(`wrangler deploy`);
+						expect(output.stdout).toContain(
+							"Image does not exist remotely, pushing"
+						);
+					}
 				);
-				vi.unstubAllEnvs();
 			});
 		}
 	);

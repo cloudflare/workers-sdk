@@ -10,6 +10,7 @@ import {
 	isDir,
 	resolveImageName,
 	runDockerCmd,
+	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
 import {
 	getCIOverrideNetworkModeHost,
@@ -28,6 +29,7 @@ import type {
 import type {
 	BuildArgs,
 	ContainerNormalizedConfig,
+	ImageURIConfig,
 } from "@cloudflare/containers-shared";
 
 export function buildYargs(yargs: CommonYargsArgv) {
@@ -81,7 +83,7 @@ export async function buildAndMaybePush(
 	args: BuildArgs,
 	pathToDocker: string,
 	push: boolean,
-	containerConfig?: ContainerNormalizedConfig
+	containerConfig?: Exclude<ContainerNormalizedConfig, ImageURIConfig>
 ): Promise<{ image: string; pushed: boolean }> {
 	try {
 		const imageTag = `${getCloudflareContainerRegistry()}/${args.tag}`;
@@ -102,9 +104,19 @@ export async function buildAndMaybePush(
 			dockerfile,
 		}).ready;
 
-		const repoDigests = await dockerImageInspect(pathToDocker, {
+		/**
+		 * Get `RepoDigests` and `Id`:
+		 * A Docker image digest (RepoDigest) is a unique, cryptographic identifier (SHA-256 hash)
+		 * representing the content of a Docker image. Unlike tags, which can be reused		or changed, a digest is immutable and ensures that the exact same image is
+		 * pulled every time. This guarantees consistency across different environments
+		 * and deployments. Crucially this is *not* affected by metadata changes (dockerfile only changes).
+		 * From: https://docs.docker.com/dhi/core-concepts/digests/
+		 * The image Id is a sha hash of the image's configuration, so it *does* capture metadata changes.
+		 * We need both to know when to push the image to the managed registry.
+		 */
+		const imageInfo = await dockerImageInspect(pathToDocker, {
 			imageTag,
-			formatString: "{{json .RepoDigests}}",
+			formatString: "{{ json .RepoDigests }} {{ .Id }}",
 		});
 
 		let pushed = false;
@@ -120,18 +132,10 @@ export async function buildAndMaybePush(
 
 			await dockerLoginManagedRegistry(pathToDocker);
 			try {
-				// We don't try to parse repoDigests until this point
+				// We don't try to parse until this point
 				// because we don't want to fail on parse errors if we
 				// won't be pushing the image anyways.
-				//
-				// A Docker image digest is a unique, cryptographic identifier (SHA-256 hash)
-				// representing the content of a Docker image. Unlike tags, which can be reused
-				// or changed, a digest is immutable and ensures that the exact same image is
-				// pulled every time. This guarantees consistency across different environments
-				// and deployments.
-				// From: https://docs.docker.com/dhi/core-concepts/digests/
-				const parsedDigests = JSON.parse(repoDigests);
-
+				const parsedDigests = JSON.parse(imageInfo.split(" ")[0]);
 				if (!Array.isArray(parsedDigests)) {
 					// If it's not the format we expect, fall back to pushing
 					// since it's annoying but safe.
@@ -139,6 +143,7 @@ export async function buildAndMaybePush(
 						`Expected RepoDigests from docker inspect to be an array but got ${JSON.stringify(parsedDigests)}`
 					);
 				}
+				const imageId = imageInfo.split(" ")[1];
 
 				const repositoryOnly = imageTag.split(":")[0];
 				// if this succeeds it means this image already exists remotely
@@ -163,45 +168,51 @@ export async function buildAndMaybePush(
 				);
 				const remoteDigest = `${resolvedImage}@${hash}`;
 
+				// NOTE: this is an experimental docker command so the API may change
+				// and break this flow. Hopefully not!
 				// http://docs.docker.com/reference/cli/docker/manifest/inspect/
 				// Checks if this image already exists in the managed registry
 				// If this errors, it probably doesn't exist. Either way, we fall
 				// back to pushing the image, which is safer.
-				await runDockerCmd(
-					pathToDocker,
-					["manifest", "inspect", remoteDigest],
-					"ignore"
-				);
+				const remoteManifest = runDockerCmdWithOutput(pathToDocker, [
+					"manifest",
+					"inspect",
+					"-v",
+					remoteDigest,
+				]);
+				const parsedRemoteManifest = JSON.parse(remoteManifest);
 
-				logger.log("Image already exists remotely, skipping push");
-				logger.debug(
-					`Untagging built image: ${args.tag} since there was no change.`
-				);
-				await runDockerCmd(pathToDocker, ["image", "rm", imageTag]);
-				return { image: remoteDigest, pushed: false };
+				if (parsedRemoteManifest.Descriptor.digest === imageId) {
+					logger.log("Image already exists remotely, skipping push");
+					logger.debug(
+						`Untagging built image: ${args.tag} since there was no change.`
+					);
+					await runDockerCmd(pathToDocker, ["image", "rm", imageTag]);
+					return { image: remoteDigest, pushed: false };
+				}
 			} catch (error) {
 				if (error instanceof Error) {
 					logger.debug(
 						`Checking for local image ${args.tag} failed with error: ${error.message}`
 					);
 				}
-
-				// Re-tag the image to include the account ID
-				const namespacedImageTag = getCloudflareRegistryWithAccountNamespace(
-					account.external_account_id,
-					args.tag
-				);
-
-				logger.log(
-					`Image does not exist remotely, pushing: ${namespacedImageTag}`
-				);
-				await runDockerCmd(pathToDocker, ["tag", imageTag, namespacedImageTag]);
-				await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
-				await runDockerCmd(pathToDocker, ["image", "rm", namespacedImageTag]);
-				pushed = true;
 			}
+			// Re-tag the image to include the account ID
+			const namespacedImageTag = getCloudflareRegistryWithAccountNamespace(
+				account.external_account_id,
+				args.tag
+			);
+
+			logger.log(
+				`Image does not exist remotely, pushing: ${namespacedImageTag}`
+			);
+			await runDockerCmd(pathToDocker, ["tag", imageTag, namespacedImageTag]);
+			await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
+			await runDockerCmd(pathToDocker, ["image", "rm", namespacedImageTag]);
+			pushed = true;
 		}
-		return { image: imageTag, pushed: pushed };
+
+		return { image: imageTag, pushed };
 	} catch (error) {
 		if (error instanceof Error) {
 			throw new UserError(error.message, { cause: error });
