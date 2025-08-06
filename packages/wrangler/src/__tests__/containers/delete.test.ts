@@ -48,7 +48,7 @@ describe("containers delete", () => {
 		await expect(
 			runWrangler("containers delete invalid-id")
 		).rejects.toMatchInlineSnapshot(
-			`[Error: You must provide the container ID. Use \`wrangler containers list\` to view your containers and corresponding IDs.]`
+			`[Error: Expected a container ID but got invalid-id. Use \`wrangler containers list\` to view your containers and corresponding IDs.]`
 		);
 	});
 

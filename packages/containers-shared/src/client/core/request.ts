@@ -402,7 +402,7 @@ const debugLogRequest = async (
 	config: OpenAPIConfig,
 	url: string,
 	headers: Headers,
-	body: any
+	body: FormData | unknown
 ) => {
 	config.LOGGER?.debug(`-- START CF API REQUEST: ${url}`);
 	const logHeaders = new Headers(headers);
