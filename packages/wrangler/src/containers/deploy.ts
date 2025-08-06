@@ -183,7 +183,7 @@ function containerConfigToCreateRequest(
 		// deprecated in favour of max_instances
 		instances: 0,
 		max_instances: containerApp.max_instances,
-		constraints: containerApp.constraints,
+		constraints: stripUndefined(containerApp.constraints),
 		durable_objects: {
 			namespace_id: durableObjectNamespaceId,
 		},

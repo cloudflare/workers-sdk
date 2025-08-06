@@ -542,4 +542,33 @@ describe("getNormalizedContainerOptions", () => {
 		expect(result[0]).toHaveProperty("image_build_context");
 		expect(result[0]).not.toHaveProperty("image_uri");
 	});
+
+	it("should be able to specify all tiers", async () => {
+		writeFileSync("Dockerfile", "FROM scratch");
+		const config: Config = {
+			name: "test-worker",
+			containers: [
+				{
+					class_name: "TestContainer",
+					image: `${getCloudflareContainerRegistry()}/test:latest`,
+					name: "test-container",
+					constraints: {
+						tier: -1,
+					},
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config);
+		expect(result).toHaveLength(1);
+		expect(result[0].constraints.tier).toBeUndefined();
+	});
 });

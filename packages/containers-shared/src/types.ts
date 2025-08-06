@@ -67,7 +67,7 @@ export type SharedContainerConfig = {
 	constraints: {
 		regions?: string[];
 		cities?: string[];
-		tier: number;
+		tier?: number;
 	};
 	observability: { logs_enabled: boolean };
 } & InstanceTypeOrLimits;
