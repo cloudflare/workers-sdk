@@ -1,5 +1,6 @@
 import os from "node:os";
 import { setTimeout } from "node:timers/promises";
+import { checkMacOSVersion } from "@cloudflare/cli";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
@@ -1021,6 +1022,7 @@ export function createCLIParser(argv: string[]) {
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
 
+	checkMacOSVersion({ shouldThrow: false });
 	const startTime = Date.now();
 	const wrangler = createCLIParser(argv);
 	let command: string | undefined;

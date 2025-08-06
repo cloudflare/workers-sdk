@@ -4,6 +4,7 @@
 		"signature": true
 	},
 	"globalEnv": [
+		"CI",
 		"CI_OS",
 		"NODE_VERSION",
 		"VITEST",
