@@ -40,6 +40,17 @@ async function sendMessage(ws: WebSocket, message: any) {
 	}
 }
 
+async function waitForClosedConnection(ws: WebSocket): Promise<void> {
+	if (ws.readyState === ws.CLOSED) {
+		return;
+	}
+	// local dev browser rendering relies on a ping message to check browser process status
+	const timeoutId = setInterval(() => ws.send("ping"), 1000);
+	await new Promise((resolve) => ws.addEventListener("close", resolve));
+	// clear the interval, no longer need to ping
+	if (timeoutId) clearInterval(timeoutId);
+}
+
 const BROWSER_WORKER_SCRIPT = () => `
 export default {
 	async fetch(request, env) {
@@ -51,8 +62,7 @@ export default {
 };
 `;
 
-// we need to run browser rendering tests in a serial manner to avoid a race condition installing the browser
-test.serial("it creates a browser session", async (t) => {
+test("it creates a browser session", async (t) => {
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -69,6 +79,7 @@ test.serial("it creates a browser session", async (t) => {
 
 const BROWSER_WORKER_CLOSE_SCRIPT = `
 ${sendMessage.toString()}
+${waitForClosedConnection.toString()}
 
 export default {
 	async fetch(request, env) {
@@ -79,23 +90,15 @@ export default {
 		});
 		ws.accept();
 
-		const closePromise = new Promise(resolve => ws.addEventListener("close", resolve));
-		// send a close message to the browser
 		sendMessage(ws, { method: "Browser.close", id: -1 });
+		await waitForClosedConnection(ws);
 
-		const timeoutId = setInterval(() => {
-			// local dev browser rendering relies on a ping message to check browser process status
-			ws.send("ping");
-		}, 1000);
-		await closePromise;
-		// clear the interval, no longer need to ping
-		clearInterval(timeoutId);
 		return new Response("Browser closed");
 	}
 };
 `;
 
-test.serial("it closes a browser session", async (t) => {
+test("it closes a browser session", async (t) => {
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -112,6 +115,7 @@ test.serial("it closes a browser session", async (t) => {
 
 const BROWSER_WORKER_REUSE_SCRIPT = `
 ${sendMessage.toString()}
+${waitForClosedConnection.toString()}
 
 export default {
 	async fetch(request, env) {
@@ -123,8 +127,7 @@ export default {
 		ws.accept();
 		ws.close();
 
-		// wait a bit to ensure webSocket readyState is updated on BrowserSession
-		await new Promise(resolve => setTimeout(resolve, 100));
+		await waitForClosedConnection(ws);
 
 		// Reuse the same session by connecting to it again
 		const { webSocket: ws2 } = await env.MYBROWSER.fetch(\`https://localhost/v1/connectDevtools?browser_session=\${sessionId}\`, {
@@ -138,7 +141,7 @@ export default {
 };
 `;
 
-test.serial("it reuses a browser session", async (t) => {
+test("it reuses a browser session", async (t) => {
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -165,7 +168,6 @@ export default {
 
 		await new Promise(resolve => setTimeout(resolve, 100));
 
-
 		try {
 			// try to open new connection for the same session
 			const { webSocket: ws2 } = await env.MYBROWSER.fetch(\`https://localhost/v1/connectDevtools?browser_session=\${sessionId}\`, {
@@ -173,6 +175,8 @@ export default {
 			});
 		} catch (error) {
 			return new Response("Failed to connect to browser session");
+		} finally {
+			ws.close();
 		}
 
 		return new Response("Should not reach here");
@@ -180,7 +184,7 @@ export default {
 };
 `;
 
-test.serial("fails if browser session already in use", async (t) => {
+test("fails if browser session already in use", async (t) => {
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -193,4 +197,106 @@ test.serial("fails if browser session already in use", async (t) => {
 
 	const res = await mf.dispatchFetch("https://localhost");
 	t.is(await res.text(), "Failed to connect to browser session");
+});
+
+const GET_SESSIONS_SCRIPT = `
+${sendMessage.toString()}
+${waitForClosedConnection.toString()}
+
+export default {
+	async fetch(request, env) {
+		const { sessions: emptySessions } = await env.MYBROWSER.fetch("https://localhost/v1/sessions").then(res => res.json());
+		const { sessionId } = await env.MYBROWSER.fetch("https://localhost/v1/acquire").then(res => res.json());
+		const { sessions: acquiredSessions } = await env.MYBROWSER.fetch("https://localhost/v1/sessions").then(res => res.json());
+
+		const { webSocket: ws } = await env.MYBROWSER.fetch(\`https://localhost/v1/connectDevtools?browser_session=\${sessionId}\`, {
+			headers: { "Upgrade": "websocket" },
+		});
+		ws.accept();
+
+		// send a close message to the browser
+		sendMessage(ws, { method: "Browser.close", id: -1 });
+
+		await waitForClosedConnection(ws);
+
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+
+		const { sessions: afterClosedSessions } = await env.MYBROWSER.fetch("https://localhost/v1/sessions").then(res => res.json());
+
+		return Response.json({ emptySessions, acquiredSessions, afterClosedSessions });
+	}
+};
+`;
+
+test("gets sessions while acquiring and closing session", async (t) => {
+	const opts: MiniflareOptions = {
+		name: "worker",
+		compatibilityDate: "2024-11-20",
+		modules: true,
+		script: GET_SESSIONS_SCRIPT,
+		browserRendering: { binding: "MYBROWSER" },
+	};
+	const mf = new Miniflare(opts);
+	t.teardown(() => mf.dispose());
+
+	const { emptySessions, acquiredSessions, afterClosedSessions } = (await mf
+		.dispatchFetch("https://localhost")
+		.then((res) => res.json())) as any;
+	t.is(emptySessions.length, 0);
+	t.is(acquiredSessions.length, 1);
+	t.true(
+		typeof acquiredSessions[0].sessionId === "string" &&
+			typeof acquiredSessions[0].startTime === "number" &&
+			!acquiredSessions[0].connectionId &&
+			!acquiredSessions[0].connectionId
+	);
+	t.is(afterClosedSessions.length, 0);
+});
+
+const GET_SESSIONS_AFTER_DISCONNECT_SCRIPT = `
+${waitForClosedConnection.toString()}
+
+export default {
+	async fetch(request, env) {
+		const { sessionId } = await env.MYBROWSER.fetch("https://localhost/v1/acquire").then(res => res.json());
+		const { webSocket: ws } = await env.MYBROWSER.fetch(\`https://localhost/v1/connectDevtools?browser_session=\${sessionId}\`, {
+			headers: { "Upgrade": "websocket" },
+		});
+		ws.accept();
+
+		const { sessions: [connectedSession] } = await env.MYBROWSER.fetch("https://localhost/v1/sessions").then(res => res.json());
+		ws.close();
+
+		await waitForClosedConnection(ws);
+
+		const { sessions: [disconnectedSession] } = await env.MYBROWSER.fetch("https://localhost/v1/sessions").then(res => res.json());
+
+		return Response.json({ connectedSession, disconnectedSession });
+	}
+};
+`;
+
+test("gets sessions while connecting and disconnecting session", async (t) => {
+	const opts: MiniflareOptions = {
+		name: "worker",
+		compatibilityDate: "2024-11-20",
+		modules: true,
+		script: GET_SESSIONS_AFTER_DISCONNECT_SCRIPT,
+		browserRendering: { binding: "MYBROWSER" },
+	};
+	const mf = new Miniflare(opts);
+	t.teardown(() => mf.dispose());
+
+	const { connectedSession, disconnectedSession } = (await mf
+		.dispatchFetch("https://localhost")
+		.then((res) => res.json())) as any;
+	t.is(connectedSession.sessionId, disconnectedSession.sessionId);
+	t.true(
+		typeof connectedSession.connectionId === "string" &&
+			typeof connectedSession.connectionStartTime === "number"
+	);
+	t.true(
+		!disconnectedSession.connectionId &&
+			!disconnectedSession.connectionStartTime
+	);
 });
