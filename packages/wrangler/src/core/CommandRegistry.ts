@@ -75,6 +75,14 @@ export class CommandRegistry {
 	}
 
 	/**
+	 * EXPERIMENTAL: Returns the command tree structure for documentation generation.
+	 * This API is experimental and may change without notice.
+	 */
+	experimental_getCommandsForDocs() {
+		return this.#DefinitionTreeRoot;
+	}
+
+	/**
 	 * Registers all commands in the command registry, walking through the definition tree.
 	 */
 	registerAll() {
