@@ -264,7 +264,9 @@ export async function getDevMiniflareOptions(config: {
 			modules: [
 				{
 					type: "ESModule",
-					path: path.join(miniflareModulesRoot, ROUTER_WORKER_PATH),
+					path: vite.normalizePath(
+						path.join(miniflareModulesRoot, ROUTER_WORKER_PATH)
+					),
 					contents: fs.readFileSync(
 						fileURLToPath(new URL(ROUTER_WORKER_PATH, import.meta.url))
 					),
@@ -287,7 +289,9 @@ export async function getDevMiniflareOptions(config: {
 			modules: [
 				{
 					type: "ESModule",
-					path: path.join(miniflareModulesRoot, ASSET_WORKER_PATH),
+					path: vite.normalizePath(
+						path.join(miniflareModulesRoot, ASSET_WORKER_PATH)
+					),
 					contents: fs.readFileSync(
 						fileURLToPath(new URL(ASSET_WORKER_PATH, import.meta.url))
 					),
@@ -365,7 +369,9 @@ export async function getDevMiniflareOptions(config: {
 			modules: [
 				{
 					type: "ESModule",
-					path: path.join(miniflareModulesRoot, VITE_PROXY_WORKER_PATH),
+					path: vite.normalizePath(
+						path.join(miniflareModulesRoot, VITE_PROXY_WORKER_PATH)
+					),
 					contents: fs.readFileSync(
 						fileURLToPath(new URL(VITE_PROXY_WORKER_PATH, import.meta.url))
 					),
@@ -614,12 +620,16 @@ export async function getDevMiniflareOptions(config: {
 					modules: [
 						{
 							type: "ESModule",
-							path: path.join(miniflareModulesRoot, WRAPPER_PATH),
+							path: vite.normalizePath(
+								path.join(miniflareModulesRoot, WRAPPER_PATH)
+							),
 							contents: wrappers.join("\n"),
 						},
 						{
 							type: "ESModule",
-							path: path.join(miniflareModulesRoot, RUNNER_PATH),
+							path: vite.normalizePath(
+								path.join(miniflareModulesRoot, RUNNER_PATH)
+							),
 							contents: fs.readFileSync(
 								fileURLToPath(new URL(RUNNER_PATH, import.meta.url))
 							),

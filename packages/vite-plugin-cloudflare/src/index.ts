@@ -171,7 +171,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 									),
 									client: {
 										build: {
-											outDir: getOutputDirectory(userConfig, "client"),
+											outDir: vite.normalizePath(
+												getOutputDirectory(userConfig, "client")
+											),
 										},
 									},
 								}
@@ -559,13 +561,6 @@ if (import.meta.hot) {
 			async configurePreviewServer(vitePreviewServer) {
 				assertIsPreview(resolvedPluginConfig);
 
-				const isWindows = process.platform === "win32";
-				const logger = vitePreviewServer.config.logger;
-
-				if (isWindows) {
-					logger.info("🪟 Configuring preview server for Windows...");
-				}
-
 				const inputInspectorPort = await getInputInspectorPortOption(
 					resolvedPluginConfig,
 					vitePreviewServer
@@ -580,36 +575,16 @@ if (import.meta.hot) {
 
 				if (hasDevContainers) {
 					containerBuildId = generateContainerBuildId();
-					if (isWindows) {
-						logger.warn("⚠️  Container operations may be slow on Windows CI");
-					}
 				}
 
-				if (isWindows) {
-					logger.info("🔧 Initializing Miniflare for Windows preview...");
-				}
-
-				try {
-					miniflare = new Miniflare(
-						await getPreviewMiniflareOptions({
-							resolvedPluginConfig,
-							vitePreviewServer,
-							inspectorPort: inputInspectorPort,
-							containerBuildId,
-						})
-					);
-
-					if (isWindows) {
-						logger.info("✅ Miniflare initialized successfully on Windows");
-					}
-				} catch (error) {
-					if (isWindows) {
-						logger.error(
-							`❌ Miniflare initialization failed on Windows: ${String(error)}`
-						);
-					}
-					throw error;
-				}
+				miniflare = new Miniflare(
+					await getPreviewMiniflareOptions({
+						resolvedPluginConfig,
+						vitePreviewServer,
+						inspectorPort: inputInspectorPort,
+						containerBuildId,
+					})
+				);
 
 				if (hasDevContainers) {
 					const dockerPath = getDockerPath();
@@ -621,50 +596,22 @@ if (import.meta.hot) {
 							)
 						)
 					);
-
-					if (isWindows) {
-						logger.info(
-							"🐳 Starting container build on Windows (may take longer)..."
-						);
-					}
-
-					try {
-						containerImageTagsSeen = await prepareContainerImages({
-							containersConfig: entryWorkerConfig.containers,
-							containerBuildId,
-							isContainersEnabled: entryWorkerConfig.dev.enable_containers,
-							dockerPath,
-							configPath: entryWorkerConfig.configPath,
-						});
-
-						if (isWindows) {
-							logger.info("✅ Container images built successfully on Windows");
-						}
-					} catch (error) {
-						if (isWindows) {
-							logger.error(
-								`❌ Container build failed on Windows: ${String(error)}`
-							);
-						}
-						throw error;
-					}
-
+					containerImageTagsSeen = await prepareContainerImages({
+						containersConfig: entryWorkerConfig.containers,
+						containerBuildId,
+						isContainersEnabled: entryWorkerConfig.dev.enable_containers,
+						dockerPath,
+						configPath: entryWorkerConfig.configPath,
+					});
 					vitePreviewServer.config.logger.info(
 						colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
 					);
 
 					process.on("exit", () => {
 						if (containerImageTagsSeen.size) {
-							if (isWindows) {
-								logger.info("🧹 Cleaning up container images on Windows...");
-							}
 							cleanupContainers(dockerPath, containerImageTagsSeen);
 						}
 					});
-				}
-
-				if (isWindows) {
-					logger.info("🔌 Setting up WebSocket handling for Windows...");
 				}
 
 				handleWebSocket(vitePreviewServer.httpServer, () => {
@@ -672,10 +619,6 @@ if (import.meta.hot) {
 
 					return miniflare.dispatchFetch;
 				});
-
-				if (isWindows) {
-					logger.info("🌐 Setting up preview middleware for Windows...");
-				}
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 				vitePreviewServer.middlewares.use(
@@ -685,10 +628,6 @@ if (import.meta.hot) {
 						return miniflare.dispatchFetch(request, { redirect: "manual" });
 					})
 				);
-
-				if (isWindows) {
-					logger.info("🎉 Preview server configuration completed on Windows");
-				}
 			},
 			async buildEnd() {
 				if (
