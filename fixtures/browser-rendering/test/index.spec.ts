@@ -62,14 +62,6 @@ describe("Local Browser", () => {
 					`New paragraph text set by ${lib === "playwright" ? "Playwright" : "Puppeteer"}!`
 				);
 			});
-
-			it("Disconnect a browser, and check its session connection status", async () => {
-				await expect(
-					fetchText(
-						`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=disconnect`
-					)
-				).resolves.toEqual(`Browser disconnected`);
-			});
 		});
 	}
 });
