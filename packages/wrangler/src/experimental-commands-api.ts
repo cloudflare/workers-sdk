@@ -1,4 +1,4 @@
-import { createCLIParser } from "./index";
+import { createCommandRegistry } from "./index";
 import type { DefinitionTreeNode } from "./core/types";
 
 /**
@@ -8,6 +8,6 @@ import type { DefinitionTreeNode } from "./core/types";
  * @returns The complete command tree structure with all metadata
  */
 export function experimental_getWranglerCommands(): DefinitionTreeNode {
-	const { registry } = createCLIParser([]);
+	const registry = createCommandRegistry();
 	return registry.getDefinitionTreeRoot();
 }
