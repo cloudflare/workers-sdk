@@ -1,5 +1,5 @@
+import { rpcOverWebSocket } from "@cloudflare/jsrpc";
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { rpcOverWebSocket } from "./rpc.js";
 
 type Env = {
 	remoteProxyConnectionString: string;

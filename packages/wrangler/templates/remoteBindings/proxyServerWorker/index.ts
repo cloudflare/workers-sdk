@@ -1,4 +1,4 @@
-import { receiveRpcOverHttp } from "./rpc.js";
+import { receiveRpcOverHttp } from "@cloudflare/jsrpc";
 
 export default {
 	async fetch(request, env) {
