@@ -21,6 +21,7 @@ import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { UserError } from "./errors";
 import isInteractive from "./is-interactive";
+import { TURBOREPO } from "./is-turborepo";
 import { logger } from "./logger";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
 import { loginOrRefreshIfRequired, requireApiToken, requireAuth } from "./user";
@@ -701,10 +702,16 @@ export async function startDev(args: StartDevOptions) {
 				accountId = await requireAuth(config);
 				if (hotkeysDisplayed) {
 					assert(devEnv !== undefined);
-					unregisterHotKeys = registerDevHotKeys(
-						Array.isArray(devEnv) ? devEnv[0] : devEnv,
-						args
-					);
+					if (
+						isInteractive() &&
+						!TURBOREPO.isTurborepo() &&
+						args.showInteractiveDevSession !== false
+					) {
+						unregisterHotKeys = registerDevHotKeys(
+							Array.isArray(devEnv) ? devEnv[0] : devEnv,
+							args
+						);
+					}
 				}
 			}
 			return {
@@ -718,10 +725,13 @@ export async function startDev(args: StartDevOptions) {
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
+			if (
+				isInteractive() &&
+				!TURBOREPO.isTurborepo() &&
+				args.showInteractiveDevSession !== false
+			) {
 				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
 			}
-
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
 				await setupDevEnv(primaryDevEnv, args.config[0], authHook, {
@@ -750,6 +760,13 @@ export async function startDev(args: StartDevOptions) {
 					})
 				))
 			);
+			if (
+				isInteractive() &&
+				!TURBOREPO.isTurborepo() &&
+				args.showInteractiveDevSession !== false
+			) {
+				unregisterHotKeys = registerDevHotKeys(devEnv[0], args);
+			}
 		} else {
 			devEnv = new DevEnv();
 
@@ -800,11 +817,15 @@ export async function startDev(args: StartDevOptions) {
 				});
 			}
 
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
+			await setupDevEnv(devEnv, args.config, authHook, args);
+
+			if (
+				isInteractive() &&
+				!TURBOREPO.isTurborepo() &&
+				args.showInteractiveDevSession !== false
+			) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
-
-			await setupDevEnv(devEnv, args.config, authHook, args);
 		}
 
 		return {
