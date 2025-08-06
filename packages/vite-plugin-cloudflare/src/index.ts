@@ -199,6 +199,24 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					);
 				}
 			},
+			resolveId: {
+				order: "pre",
+				handler(source, importer, options) {
+					const workerConfig = getWorkerConfig(this.environment.name);
+
+					if (
+						source === workerConfig?.main &&
+						// In build, the importer is `undefined` for entry files
+						(importer === undefined ||
+							importer ===
+								// In dev, Vite uses this path as the default importer
+								path.join(this.environment.config.root, "index.html"))
+					) {
+						// Resolve the `main` field relative to the Worker config file
+						return this.resolve(source, workerConfig.userConfigPath, options);
+					}
+				},
+			},
 			async transform(code, id) {
 				const workerConfig = getWorkerConfig(this.environment.name);
 

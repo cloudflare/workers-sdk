@@ -46,6 +46,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 }
 
 export interface AssetsOnlyConfig extends SanitizedWorkerConfig {
+	userConfigPath: Defined<SanitizedWorkerConfig["userConfigPath"]>;
 	topLevelName: Defined<SanitizedWorkerConfig["topLevelName"]>;
 	name: Defined<SanitizedWorkerConfig["name"]>;
 	compatibility_date: Defined<SanitizedWorkerConfig["compatibility_date"]>;

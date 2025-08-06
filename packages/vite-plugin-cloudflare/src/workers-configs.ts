@@ -123,7 +123,12 @@ function readWorkerConfig(
 		notRelevant: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
-		unstable_readConfig({ config: configPath, env });
+		unstable_readConfig(
+			{ config: configPath, env },
+			// We preserve the original `main` value so that Vite can resolve it
+			// This enables users to provide virtual modules or package exports in `main`, as well as relative and absolute paths
+			{ experimental: { preserveOriginalMain: true } }
+		);
 	const raw = structuredClone(config) as RawWorkerConfig;
 
 	nullableNonApplicable.forEach((prop) => {
@@ -288,6 +293,9 @@ export function getWorkerConfig(
 
 	opts?.visitedConfigPaths?.add(configPath);
 
+	// We pass the config path to `unstable_readConfig` so this will always be defined
+	assert(config.userConfigPath, `'userConfigPath' is undefined`);
+
 	if (!config.name) {
 		throw new Error(missingFieldErrorMessage(`'name'`, configPath, env));
 	}
@@ -300,11 +308,12 @@ export function getWorkerConfig(
 
 	if (!config.compatibility_date) {
 		throw new Error(
-			missingFieldErrorMessage(`'compatibility_date`, configPath, env)
+			missingFieldErrorMessage(`'compatibility_date'`, configPath, env)
 		);
 	}
 
 	const requiredFields = {
+		userConfigPath: config.userConfigPath,
 		topLevelName: config.topLevelName,
 		name: config.name,
 		compatibility_date: config.compatibility_date,
@@ -324,18 +333,6 @@ export function getWorkerConfig(
 
 	if (!config.main) {
 		throw new Error(missingFieldErrorMessage(`'main'`, configPath, env));
-	}
-
-	const mainStat = fs.statSync(config.main, { throwIfNoEntry: false });
-	if (!mainStat) {
-		throw new Error(
-			`The provided Wrangler config main field (${config.main}) doesn't point to an existing file`
-		);
-	}
-	if (mainStat.isDirectory()) {
-		throw new Error(
-			`The provided Wrangler config main field (${config.main}) points to a directory, it needs to point to a file instead`
-		);
 	}
 
 	return {

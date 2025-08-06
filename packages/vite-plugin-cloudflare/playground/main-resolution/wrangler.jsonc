@@ -1,0 +1,6 @@
+{
+	"name": "worker",
+	// Omit leading `./` to test that `main` can still be resolved
+	"main": "src/index.ts",
+	"compatibility_date": "2024-12-30",
+}

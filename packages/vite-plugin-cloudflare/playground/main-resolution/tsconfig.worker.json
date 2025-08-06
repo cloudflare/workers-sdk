@@ -1,0 +1,4 @@
+{
+	"extends": ["@cloudflare/workers-tsconfig/worker.json"],
+	"include": ["src", "nested-config"]
+}

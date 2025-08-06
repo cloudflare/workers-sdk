@@ -34,6 +34,7 @@ import {
 	validateTypedArray,
 } from "./validation-helpers";
 import { configFileName, formatConfigSnippet } from ".";
+import type { ExperimentalReadConfigOptions } from ".";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -78,13 +79,15 @@ export function isPagesConfig(rawConfig: RawConfig): boolean {
  * @param configPath The path to the config file
  * @param userConfigPath
  * @param args
+ * @param experimentalOptions
  * @returns The normalized `config` and `diagnostics` message
  */
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
 	userConfigPath: string | undefined,
-	args: NormalizeAndValidateConfigArgs
+	args: NormalizeAndValidateConfigArgs,
+	experimentalOptions: ExperimentalReadConfigOptions = {}
 ): {
 	config: Config;
 	diagnostics: Diagnostics;
@@ -157,7 +160,8 @@ export function normalizeAndValidateConfig(
 		diagnostics,
 		configPath,
 		rawConfig,
-		isDispatchNamespace
+		isDispatchNamespace,
+		experimentalOptions
 	);
 
 	const isRedirectedConfig = configPath && configPath !== userConfigPath;
@@ -222,6 +226,7 @@ export function normalizeAndValidateConfig(
 					configPath,
 					rawEnv,
 					isDispatchNamespace,
+					experimentalOptions,
 					envName,
 					topLevelEnv,
 					isLegacyEnv,
@@ -234,6 +239,7 @@ export function normalizeAndValidateConfig(
 					configPath,
 					topLevelEnv, // in this case reuse the topLevelEnv to ensure that nonInherited fields are not removed
 					isDispatchNamespace,
+					experimentalOptions,
 					envName,
 					topLevelEnv,
 					isLegacyEnv,
@@ -977,7 +983,8 @@ function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	topLevelEnv: RawEnvironment,
-	isDispatchNamespace: boolean
+	isDispatchNamespace: boolean,
+	experimentalOptions: ExperimentalReadConfigOptions
 ): Environment;
 /**
  * Validate the named environment configuration and return the normalized values.
@@ -987,29 +994,18 @@ function normalizeAndValidateEnvironment(
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
 	isDispatchNamespace: boolean,
+	experimentalOptions: ExperimentalReadConfigOptions,
 	envName: string,
 	topLevelEnv: Environment,
 	isLegacyEnv: boolean,
 	rawConfig: RawConfig
 ): Environment;
-/**
- * Validate the named environment configuration and return the normalized values.
- */
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
 	isDispatchNamespace: boolean,
-	envName?: string,
-	topLevelEnv?: Environment,
-	isLegacyEnv?: boolean,
-	rawConfig?: RawConfig
-): Environment;
-function normalizeAndValidateEnvironment(
-	diagnostics: Diagnostics,
-	configPath: string | undefined,
-	rawEnv: RawEnvironment,
-	isDispatchNamespace: boolean,
+	experimentalOptions: ExperimentalReadConfigOptions,
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
 	isLegacyEnv?: boolean,
@@ -1120,10 +1116,26 @@ function normalizeAndValidateEnvironment(
 			appendEnvName(envName),
 			undefined
 		),
-		main: normalizeAndValidateMainField(
-			configPath,
-			inheritable(diagnostics, topLevelEnv, rawEnv, "main", isString, undefined)
-		),
+		main: experimentalOptions.preserveOriginalMain
+			? inheritable(
+					diagnostics,
+					topLevelEnv,
+					rawEnv,
+					"main",
+					isString,
+					undefined
+				)
+			: normalizeAndValidateMainField(
+					configPath,
+					inheritable(
+						diagnostics,
+						topLevelEnv,
+						rawEnv,
+						"main",
+						isString,
+						undefined
+					)
+				),
 		find_additional_modules: inheritable(
 			diagnostics,
 			topLevelEnv,
