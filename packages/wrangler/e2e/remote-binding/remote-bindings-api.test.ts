@@ -11,6 +11,10 @@ import type {
 	Response,
 } from "miniflare";
 
+// Note: the tests in this file are simple ones that check basic functionalities of the remote bindings programmatic APIs
+//       various other aspects of these APIs (e.g. different bindings, reloading capabilities) are indirectly tested when
+//       generally testing remote bindings
+
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"wrangler dev - remote bindings - programmatic API",
 	async () => {
@@ -19,8 +23,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 		const { Miniflare } = await helper.importMiniflare();
 
-		const { experimental_startRemoteProxySession: startRemoteProxySession } =
-			await helper.importWrangler();
+		const {
+			experimental_startRemoteProxySession: startRemoteProxySession,
+			experimental_maybeStartOrUpdateRemoteProxySession:
+				maybeStartOrUpdateRemoteProxySession,
+		} = await helper.importWrangler();
 
 		beforeAll(async () => {
 			await helper.seed(resolve(__dirname, "./workers"));
@@ -33,28 +40,28 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await helper.run(`wrangler delete --name ${remoteWorkerName}`);
 		});
 
-		describe("startRemoteProxySession", () => {
-			function getMfOptions(
-				remoteProxyConnectionString: RemoteProxyConnectionString
-			): MiniflareOptions {
-				return {
-					modules: true,
-					script: `
-					export default {
-						async fetch(req, env) {
-							const myServiceMsg = !env.MY_SERVICE ? null : await (await env.MY_SERVICE.fetch(req)).text();
-							return new Response("worker response: " + (myServiceMsg ?? ""));
-						}
-					}`,
-					serviceBindings: {
-						MY_SERVICE: {
-							name: remoteWorkerName,
-							remoteProxyConnectionString,
-						},
+		function getMfOptions(
+			remoteProxyConnectionString: RemoteProxyConnectionString
+		): MiniflareOptions {
+			return {
+				modules: true,
+				script: `
+				export default {
+					async fetch(req, env) {
+						const myServiceMsg = !env.MY_SERVICE ? null : await (await env.MY_SERVICE.fetch(req)).text();
+						return new Response("worker response: " + (myServiceMsg ?? ""));
+					}
+				}`,
+				serviceBindings: {
+					MY_SERVICE: {
+						name: remoteWorkerName,
+						remoteProxyConnectionString,
 					},
-				};
-			}
+				},
+			};
+		}
 
+		describe("startRemoteProxySession", () => {
 			test("base usage", async () => {
 				const remoteProxySession = await startRemoteProxySession({
 					MY_SERVICE: {
@@ -124,6 +131,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						},
 					}
 				);
+
 				await amendedRemoteProxySession.ready;
 
 				await mf.setOptions(
@@ -140,6 +148,108 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				await mf.dispose();
 				await remoteProxySession.dispose();
 				await amendedRemoteProxySession.dispose();
+			});
+		});
+
+		describe("maybeStartOrUpdateRemoteProxySession", () => {
+			test("base usage", async () => {
+				const proxySessionData = await maybeStartOrUpdateRemoteProxySession({
+					bindings: {
+						MY_SERVICE: {
+							type: "service",
+							service: remoteWorkerName,
+							experimental_remote: true,
+						},
+					},
+				});
+
+				assert(proxySessionData);
+
+				await proxySessionData.session.ready;
+
+				const mf = new Miniflare(
+					getMfOptions(proxySessionData.session.remoteProxyConnectionString)
+				);
+
+				const response = await timedDispatchFetch(mf);
+				const responseText = await response?.text();
+
+				expect(responseText).toEqual(
+					"worker response: Hello from a remote worker"
+				);
+
+				await mf.dispose();
+				await proxySessionData.session.dispose();
+			});
+
+			test("user provided (incorrect but then corrected) auth data", async () => {
+				let proxySessionData = await maybeStartOrUpdateRemoteProxySession(
+					{
+						bindings: {
+							MY_SERVICE: {
+								type: "service",
+								service: remoteWorkerName,
+								experimental_remote: true,
+							},
+						},
+					},
+					undefined,
+					{
+						accountId: CLOUDFLARE_ACCOUNT_ID,
+						apiToken: {
+							apiToken: "This is an incorrect API TOKEN!",
+						},
+					}
+				);
+
+				assert(proxySessionData);
+
+				await proxySessionData.session.ready;
+
+				const mf = new Miniflare(
+					getMfOptions(proxySessionData.session.remoteProxyConnectionString)
+				);
+
+				const noResponse = await timedDispatchFetch(mf);
+				// We are unable to fetch from the worker since the remote connection is not correctly established
+				expect(noResponse).toBe(null);
+
+				assert(process.env.CLOUDFLARE_API_TOKEN);
+
+				proxySessionData = await maybeStartOrUpdateRemoteProxySession(
+					{
+						bindings: {
+							MY_SERVICE: {
+								type: "service",
+								service: remoteWorkerName,
+								experimental_remote: true,
+							},
+						},
+					},
+					proxySessionData,
+					{
+						accountId: CLOUDFLARE_ACCOUNT_ID,
+						apiToken: {
+							apiToken: process.env.CLOUDFLARE_API_TOKEN,
+						},
+					}
+				);
+
+				assert(proxySessionData);
+
+				await mf.setOptions(
+					getMfOptions(proxySessionData.session.remoteProxyConnectionString)
+				);
+
+				const response = await timedDispatchFetch(mf);
+				const responseText = await response?.text();
+
+				expect(responseText).toEqual(
+					"worker response: Hello from a remote worker"
+				);
+
+				await mf.dispose();
+				await proxySessionData.session.dispose();
 			});
 		});
 	}
