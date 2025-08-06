@@ -3,13 +3,9 @@ import {
 	UNSAFE_PLUGIN_NAME,
 	UNSAFE_SERVICE_PLUGIN,
 } from "./plugins/unsafeService";
-import type {
-	UnsafeServiceBindingOption,
-	UnsafeServiceBindingSharedOptions,
-} from "./plugins/unsafeService";
 
 const pluginRegistry: PluginLoader = {
-	// @ts-expect-error TODO: I need to figure out how to type this better. .
+	// TODO: I need to type this better
 	registerMiniflarePlugins<
 		UnsafeServiceBindingOption,
 		UnsafeServiceBindingSharedOption,
