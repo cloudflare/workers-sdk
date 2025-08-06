@@ -173,9 +173,7 @@ export async function createPluginLoaderFromUnsafePlugin({
 }: UnsafePluginOption): Promise<PluginLoaderResult> {
 	try {
 		const requireRelativeToWorker = createRequire(resolveWorkingDirectory);
-		const pluginPath = requireRelativeToWorker.resolve(packageName, {
-			paths: [resolveWorkingDirectory],
-		});
+		const pluginPath = requireRelativeToWorker.resolve(packageName);
 		const moduleURL = pathToFileURL(pluginPath).href;
 		const { registerMiniflarePlugins } = await import(moduleURL);
 		if (!registerMiniflarePlugins) {
