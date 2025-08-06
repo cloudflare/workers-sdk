@@ -300,6 +300,13 @@ export class DevRegistry {
 	}
 }
 
+/**
+ * Read the worker registry from the specified path.
+ *
+ * This function reads the worker definitions from the registry directory, and skips any stale
+ * workers that have not been updated in the last 5 minutes. If a worker is stale, it will call
+ * the `unregisterStaleWorker` callback if provided.
+ */
 export function getWorkerRegistry(
 	registryPath: string,
 	unregisterStaleWorker?: (workerName: string) => void

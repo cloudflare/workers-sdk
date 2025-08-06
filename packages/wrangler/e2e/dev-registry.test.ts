@@ -1,7 +1,7 @@
 import { execSync } from "child_process";
 import getPort from "get-port";
 import dedent from "ts-dedent";
-import { fetch } from "undici";
+import { fetch, Request } from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
@@ -12,11 +12,15 @@ import { WRANGLER_IMPORT } from "./helpers/wrangler";
 import type { RequestInit } from "undici";
 
 async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
+	const request = new Request(url, info);
+	const headers = new Headers(request.headers);
+
+	headers.set("MF-Disable-Pretty-Error", "true");
+
 	return vi.waitFor(
 		async () => {
-			const text: string = await fetch(url, {
-				headers: { "MF-Disable-Pretty-Error": "true" },
-				...info,
+			const text: string = await fetch(request, {
+				headers,
 			}).then((r) => r.text());
 			try {
 				return JSON.parse(text) as T;

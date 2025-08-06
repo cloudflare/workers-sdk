@@ -5,7 +5,7 @@ import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import type { CfTailConsumer, CfWorkerInit } from "../deployment-bundle/worker";
-import type { WorkerRegistry } from "../dev-registry";
+import type { WorkerRegistry } from "miniflare";
 
 export const friendlyBindingNames: Record<
 	keyof CfWorkerInit["bindings"],

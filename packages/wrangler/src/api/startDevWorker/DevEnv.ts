@@ -84,6 +84,9 @@ export class DevEnv extends EventEmitter {
 			runtime.on("reloadComplete", (event) => {
 				proxy.onReloadComplete(event);
 			});
+			runtime.on("devRegistryUpdate", (event) => {
+				config.onDevRegistryUpdate(event);
+			});
 		});
 
 		proxy.on("previewTokenExpired", (event) => {

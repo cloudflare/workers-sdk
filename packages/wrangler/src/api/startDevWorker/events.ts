@@ -1,8 +1,6 @@
-import type { CfDurableObject } from "../../deployment-bundle/worker";
-import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type { DevToolsEvent } from "./devtools";
 import type { Bundle, StartDevWorkerOptions } from "./types";
-import type { Miniflare } from "miniflare";
+import type { Miniflare, WorkerRegistry } from "miniflare";
 
 export type ErrorEvent =
 	| BaseErrorEvent<
@@ -74,6 +72,11 @@ export type ReloadCompleteEvent = {
 	config: StartDevWorkerOptions;
 	bundle: Bundle;
 	proxyData: ProxyData;
+};
+export type DevRegistryUpdateEvent = {
+	type: "devRegistryUpdate";
+
+	registry: WorkerRegistry;
 };
 
 // ProxyController
@@ -153,6 +156,4 @@ export type ProxyData = {
 	headers: Record<string, string>;
 	liveReload?: boolean;
 	proxyLogsToController?: boolean;
-	internalDurableObjects?: CfDurableObject[];
-	entrypointAddresses: WorkerEntrypointsDefinition | undefined;
 };
