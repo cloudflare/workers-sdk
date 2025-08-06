@@ -22,6 +22,15 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 		return this.env.ROUTER_WORKER.fetch(request);
 	}
 
+	tail(events: TraceItem[]) {
+		// Temporary workaround: the tail events is not serializable over capnproto yet
+		// But they are effectively JSON, so we are serializing them to JSON and parsing it back to make it transferable.
+		// @ts-expect-error FIXME when https://github.com/cloudflare/workerd/pull/4595 lands
+		return this.env.USER_WORKER.tail(
+			JSON.parse(JSON.stringify(events, tailEventsReplacer), tailEventsReviver)
+		);
+	}
+
 	constructor(ctx: ExecutionContext, env: Env) {
 		super(ctx, env);
 		/*
@@ -49,4 +58,23 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 			},
 		});
 	}
+}
+
+const serializedDate = "___serialized_date___";
+
+function tailEventsReplacer(_: string, value: any) {
+	// The tail events might contain Date objects which will not be restored directly
+	if (value instanceof Date) {
+		return { [serializedDate]: value.toISOString() };
+	}
+	return value;
+}
+
+function tailEventsReviver(_: string, value: any) {
+	// To restore Date objects from the serialized events
+	if (value && typeof value === "object" && serializedDate in value) {
+		return new Date(value[serializedDate]);
+	}
+
+	return value;
 }

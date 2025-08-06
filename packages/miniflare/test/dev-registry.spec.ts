@@ -748,7 +748,7 @@ test("DevRegistry: RPC to durable object", async (t) => {
 	const res = await local.dispatchFetch("http://placeholder");
 	t.is(
 		await res.text(),
-		`Cannot access "ping" as Durable Object RPC is not yet supported between multiple dev sessions.`
+		`Cannot access "MyDurableObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.`
 	);
 	t.is(res.status, 500);
 
@@ -779,7 +779,7 @@ test("DevRegistry: RPC to durable object", async (t) => {
 		const res = await local.dispatchFetch("http://placeholder");
 		t.is(
 			await res.text(),
-			`Cannot access "ping" as Durable Object RPC is not yet supported between multiple dev sessions.`
+			`Cannot access "MyDurableObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.`
 		);
 		t.is(res.status, 500);
 	});

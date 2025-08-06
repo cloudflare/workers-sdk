@@ -2570,4 +2570,5 @@ export {
 	type WorkerRegistry,
 	type WorkerDefinition,
 	getDefaultDevRegistryPath,
+	getWorkerRegistry,
 } from "./shared/dev-registry";
