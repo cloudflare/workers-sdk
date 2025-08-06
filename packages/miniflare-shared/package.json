@@ -1,0 +1,56 @@
+{
+	"name": "miniflare-shared",
+	"version": "4.20250705.0",
+	"description": "Shared code + dependencies for Miniflare",
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"worker",
+		"local",
+		"cloudworker"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/miniflare-shared"
+	},
+	"license": "MIT",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "node scripts/build.mjs && pnpm run types:build",
+		"types:build": "tsc --emitDeclarationOnly -d"
+	},
+	"dependencies": {
+		"zod": "3.22.3"
+	},
+	"peerDependenciesMeta": {
+		"esbuild": {
+			"optional": true
+		}
+	},
+	"peerDependencies": {
+		"esbuild": "catalog:default"
+	},
+	"devDependencies": {
+        "@types/node": "catalog:default",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"esbuild": "catalog:default",
+		"typescript": "catalog:default"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"workers-sdk": {
+		"prerelease": true
+	}
+}
