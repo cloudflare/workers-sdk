@@ -76,7 +76,7 @@ jobs:
           git config --global user.name 'Wrangler Tester'
 
       - name: Deploy test worker
-        if: steps.changes.outputs.everything_but_markdown == 'true' && env.TEST_CLOUDFLARE_ACCOUNT_ID != ''
+        if: steps.changes.outputs.everything_but_markdown == 'true' && secrets.TEST_CLOUDFLARE_API_TOKEN != ''
         shell: bash
         run: |
           # Create temporary directory for worker files
