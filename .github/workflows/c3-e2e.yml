@@ -105,11 +105,11 @@ jobs:
 
           # Check if worker exists and deploy only if it doesn't
           cd /tmp/existing-script-worker
-          if ! npx wrangler@latest list | grep -q "existing-script-test-do-not-delete"; then
-            echo "Worker does not exist, deploying..."
+          if ! curl -s -o /dev/null -w "%{http_code}" https://existing-script-test-do-not-delete.devprod-testing7928.workers.dev | grep -q "200"; then
+            echo "Worker does not exist or is not responding, deploying..."
             npx wrangler@latest deploy
           else
-            echo "Worker already exists, skipping deployment"
+            echo "Worker already exists and is responding, skipping deployment"
           fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
