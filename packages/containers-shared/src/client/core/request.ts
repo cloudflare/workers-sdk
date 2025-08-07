@@ -352,6 +352,7 @@ export const request = <T>(
 			const formData = getFormData(options);
 			const body = getRequestBody(options);
 			const headers = await getHeaders(config, options);
+			debugLogRequest(config, url, headers, formData ?? body ?? {});
 
 			if (!onCancel.isCancelled) {
 				const response = await sendRequest(
@@ -387,7 +388,7 @@ export const request = <T>(
 						body: responseHeader ?? responseBody,
 					};
 				}
-
+				debugLogResponse(config, result);
 				catchErrorCodes(options, result);
 				resolve(result.body);
 			}
@@ -395,4 +396,39 @@ export const request = <T>(
 			reject(error);
 		}
 	});
+};
+
+const debugLogRequest = async (
+	config: OpenAPIConfig,
+	url: string,
+	headers: Headers,
+	body: FormData | unknown
+) => {
+	config.LOGGER?.debug(`-- START CF API REQUEST: ${url}`);
+	const logHeaders = new Headers(headers);
+	logHeaders.delete("Authorization");
+	config.LOGGER?.debugWithSanitization(
+		"HEADERS:",
+		JSON.stringify(logHeaders, null, 2)
+	);
+	config.LOGGER?.debugWithSanitization(
+		"BODY:",
+		JSON.stringify(
+			body instanceof FormData ? await new Response(body).text() : body,
+			null,
+			2
+		)
+	);
+	config.LOGGER?.debug("-- END CF API REQUEST");
+};
+
+const debugLogResponse = (config: OpenAPIConfig, response: ApiResult) => {
+	config.LOGGER?.debug(
+		"-- START CF API RESPONSE:",
+		response.statusText,
+		response.status
+	);
+
+	config.LOGGER?.debugWithSanitization("RESPONSE:", response.body);
+	config.LOGGER?.debug("-- END CF API RESPONSE");
 };
