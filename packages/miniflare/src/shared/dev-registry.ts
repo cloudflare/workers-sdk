@@ -295,7 +295,7 @@ export function getWorkerRegistry(
 			const file = readFileSync(definitionPath, "utf8");
 			const stats = statSync(definitionPath);
 
-			// Cleanup existing workers older than 5 minutes
+			// Cleanup old workers that have not sent a heartbeat in over 5 minutes
 			if (stats.mtime.getTime() < Date.now() - 300_000) {
 				unregisterStaleWorker?.(workerName);
 				continue;
