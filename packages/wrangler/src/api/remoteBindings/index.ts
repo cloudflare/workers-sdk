@@ -4,7 +4,7 @@ import getPort from "get-port";
 import { readConfig } from "../../config";
 import { getCloudflareComplianceRegion } from "../../environment-variables/misc-variables";
 import { getBasePath } from "../../paths";
-import { requireApiToken } from "../../user";
+import { requireApiToken, requireAuth } from "../../user";
 import {
 	convertConfigBindingsToStartWorkerBindings,
 	startWorker,
@@ -144,17 +144,15 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
 } | null> {
-	let configAccountId: string | undefined;
+	let config: Config | undefined;
 	if ("path" in wranglerOrWorkerConfigObject) {
 		const wranglerConfigObject = wranglerOrWorkerConfigObject;
-		const config = readConfig({
+		config = readConfig({
 			config: wranglerConfigObject.path,
 			env: wranglerConfigObject.environment,
 		});
 
 		assert(config.name);
-
-		configAccountId = config.account_id;
 
 		wranglerOrWorkerConfigObject = {
 			name: config.name,
@@ -184,7 +182,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		remoteProxySession = await startRemoteProxySession(remoteBindings, {
 			workerName: workerConfigObject.name,
 			complianceRegion: workerConfigObject.complianceRegion,
-			auth: getAuthHook(auth, configAccountId),
+			auth: getAuthHook(auth, config),
 		});
 	} else {
 		// The auth values haven't changed so we can reuse the pre-existing session
@@ -201,7 +199,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 					remoteProxySession = await startRemoteProxySession(remoteBindings, {
 						workerName: workerConfigObject.name,
 						complianceRegion: workerConfigObject.complianceRegion,
-						auth: getAuthHook(auth, configAccountId),
+						auth: getAuthHook(auth, config),
 					});
 				}
 			} else {
@@ -229,21 +227,21 @@ export async function maybeStartOrUpdateRemoteProxySession(
  * config file otherwise.
  *
  * @param auth the auth hook provided by the user if any
- * @param configAccountId the account_id taken from the user's wrangler config if any
+ * @param config the user's wrangler config if any
  * @returns the auth hook to pass to the startRemoteProxy session function if any
  */
 function getAuthHook(
 	auth: CfAccount | undefined,
-	configAccountId: string | undefined
+	config: Config | undefined
 ): AsyncHook<CfAccount, [Pick<Config, "account_id">]> | undefined {
 	if (auth) {
 		return auth;
 	}
 
-	if (configAccountId) {
+	if (config?.account_id) {
 		return async () => {
 			return {
-				accountId: configAccountId,
+				accountId: await requireAuth(config),
 				apiToken: requireApiToken(),
 			};
 		};
