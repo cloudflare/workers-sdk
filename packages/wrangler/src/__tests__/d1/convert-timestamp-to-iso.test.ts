@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { convertTimestampToISO } from "../../d1/timeTravel/utils";
+import { convertTimestampToISO } from "../../d1/time-travel/utils";
 
 describe("convertTimestampToISO", () => {
 	beforeAll(() => {
