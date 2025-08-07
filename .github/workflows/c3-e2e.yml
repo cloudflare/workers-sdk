@@ -75,6 +75,39 @@ jobs:
           git config --global user.email wrangler@cloudflare.com
           git config --global user.name 'Wrangler Tester'
 
+      - name: Deploy test worker
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        shell: bash
+        run: |
+          # Create temporary directory for worker files
+          mkdir -p /tmp/existing-script-worker
+
+          # Create worker script
+          cat > /tmp/existing-script-worker/index.js << 'EOF'
+          export default {
+            async fetch(request, env, ctx) {
+              return new Response('Hello World!');
+            },
+          };
+          EOF
+
+          # Create wrangler.toml with FOO variable
+          cat > /tmp/existing-script-worker/wrangler.toml << 'EOF'
+          name = "existing-script-test-do-not-delete"
+          main = "index.js"
+          compatibility_date = "2023-05-18"
+
+          [vars]
+          FOO = "bar"
+          EOF
+
+          # Deploy the worker
+          cd /tmp/existing-script-worker
+          npx wrangler@latest deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+
       - id: run-e2e
         if: steps.changes.outputs.everything_but_markdown == 'true'
         shell: bash
