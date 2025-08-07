@@ -1,5 +1,17 @@
 # miniflare
 
+## 3.20250718.1
+
+### Minor Changes
+
+- [#10015](https://github.com/cloudflare/workers-sdk/pull/10015) [`b5d9bb0`](https://github.com/cloudflare/workers-sdk/commit/b5d9bb026ebfb4c732c3c4999aa5ac0757f1a1b2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add `structuredWorkerdLogs` option
+
+  add a new top-level option named `structuredWorkerdLogs` that makes workerd print to stdout structured logs (stringified jsons of the following shape: `{ timestamp: number, level: string, message: string }`) instead of printing logs to stdout and stderr
+
+### Patch Changes
+
+- [#10216](https://github.com/cloudflare/workers-sdk/pull/10216) [`76d3002`](https://github.com/cloudflare/workers-sdk/commit/76d3002bf7e03f4b5ee255c9fd0eaa81f092311d) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Add macOS version validation to prevent EPIPE errors on unsupported macOS versions (below 13.5). Miniflare and C3 fail hard while Wrangler shows warnings but continues execution.
+
 ## 3.20250718.0
 
 ### Patch Changes
