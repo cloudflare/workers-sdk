@@ -111,8 +111,6 @@ import {
 	createInboundDoProxyService,
 	createOutboundDoProxyService,
 	createProxyFallbackService,
-	extractDoFetchProxyTarget,
-	extractServiceFetchProxyTarget,
 	getHttpProxyOptions,
 	getOutboundDoProxyClassName,
 	getProtocol,
@@ -397,13 +395,12 @@ function getDurableObjectClassNames(
 
 /**
  * This collects all external service bindings from all workers and overrides
- * it to point to a proxy in the loopback server. A fallback service will be created
+ * it to point to the dev registry proxy. A fallback service will be created
  * for each of the external service in case the external service is not available.
  */
 function getExternalServiceEntrypoints(
 	allWorkerOpts: PluginWorkerOptions[],
-	loopbackHost: string,
-	loopbackPort: number
+	proxyAddress: string
 ) {
 	const externalServices = new Map<
 		string,
@@ -447,7 +444,7 @@ function getExternalServiceEntrypoints(
 					// Override it to connect to the dev registry proxy
 					workerOpts.core.serviceBindings[name] = {
 						external: {
-							address: `${loopbackHost}:${loopbackPort}`,
+							address: proxyAddress,
 							http: getHttpProxyOptions(serviceName, entrypoint),
 						},
 					};
@@ -516,7 +513,7 @@ function getExternalServiceEntrypoints(
 					// Override it to connect to the dev registry proxy
 					workerOpts.core.tails[i] = {
 						external: {
-							address: `${loopbackHost}:${loopbackPort}`,
+							address: proxyAddress,
 							http: getHttpProxyOptions(serviceName, entrypoint),
 						},
 					};
@@ -1096,81 +1093,10 @@ export class Miniflare {
 		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
 
-	#getFallbackServiceAddress(
-		service: string,
-		entrypoint: string
-	): {
-		httpStyle: "host" | "proxy";
-		protocol: "http" | "https";
-		host: string;
-		port: number;
-	} {
-		assert(
-			this.#socketPorts !== undefined && this.#runtimeEntryURL !== undefined,
-			"Cannot resolve address for fallback service before runtime is initialised"
-		);
-
-		const port = this.#socketPorts.get(
-			getProxyFallbackServiceSocketName(service, entrypoint)
-		);
-
-		if (!port) {
-			throw new Error(
-				`There is no socket opened for "${service}" with the "${entrypoint}" entrypoint`
-			);
-		}
-
-		return {
-			httpStyle: "proxy",
-			protocol: getProtocol(this.#runtimeEntryURL),
-			host: this.#runtimeEntryURL.hostname,
-			port,
-		};
-	}
-
 	#handleLoopback = async (
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): Promise<Response | undefined> => {
-		const serviceProxyTarget = extractServiceFetchProxyTarget(req);
-
-		if (serviceProxyTarget) {
-			assert(res !== undefined, "No response object provided");
-
-			const address =
-				this.#devRegistry.getExternalServiceAddress(
-					serviceProxyTarget.service,
-					serviceProxyTarget.entrypoint
-				) ??
-				this.#getFallbackServiceAddress(
-					serviceProxyTarget.service,
-					serviceProxyTarget.entrypoint
-				);
-
-			this.#handleProxy(req, res, address);
-			return;
-		}
-
-		const doProxyTarget = extractDoFetchProxyTarget(req);
-
-		if (doProxyTarget) {
-			assert(res !== undefined, "No response object provided");
-
-			const address = this.#devRegistry.getExternalDurableObjectAddress(
-				doProxyTarget.scriptName,
-				doProxyTarget.className
-			);
-
-			if (!address) {
-				res.writeHead(503);
-				res.end("Service Unavailable");
-				return;
-			}
-
-			this.#handleProxy(req, res, address);
-			return;
-		}
-
 		const customNodeService =
 			req.headers[CoreHeaders.CUSTOM_NODE_SERVICE.toLowerCase()];
 		if (typeof customNodeService === "string") {
@@ -1363,109 +1289,6 @@ export class Miniflare {
 		await this.#writeResponse(response, res);
 	};
 
-	#handleLoopbackConnect = async (
-		req: http.IncomingMessage,
-		clientSocket: Duplex,
-		head: Buffer
-	) => {
-		try {
-			const connectHost = req.url;
-			const [serviceName, entrypoint] = connectHost?.split(":") ?? [];
-			const address =
-				this.#devRegistry.getExternalServiceAddress(serviceName, entrypoint) ??
-				this.#getFallbackServiceAddress(serviceName, entrypoint);
-
-			const serverSocket = net.connect(address.port, address.host, () => {
-				serverSocket.write(`CONNECT ${HOST_CAPNP_CONNECT} HTTP/1.1\r\n\r\n`);
-
-				// Push along any buffered bytes
-				if (head && head.length) {
-					serverSocket.write(head);
-				}
-
-				serverSocket.pipe(clientSocket);
-				clientSocket.pipe(serverSocket);
-			});
-
-			// Errors on either side
-			serverSocket.on("error", (err) => {
-				this.#log.error(err);
-				clientSocket.end();
-			});
-			clientSocket.on("error", () => serverSocket.end());
-
-			// Close the tunnel if the service is updated
-			// This make sure workerd will re-connect to the latest address
-			this.#devRegistry.subscribe(serviceName, () => {
-				this.#log.debug(
-					`Closing tunnel as service "${serviceName}" was updated`
-				);
-				clientSocket.end();
-			});
-		} catch (ex: any) {
-			this.#log.error(ex);
-			clientSocket.end();
-		}
-	};
-
-	#handleProxy = (
-		req: http.IncomingMessage,
-		res: http.ServerResponse,
-		target: {
-			protocol: "http" | "https";
-			host: string;
-			port: number;
-			httpStyle?: "host" | "proxy";
-			path?: string;
-		}
-	) => {
-		const headers = { ...req.headers };
-		let path = target.path;
-
-		if (!path) {
-			switch (target.httpStyle) {
-				case "host": {
-					const url = new URL(req.url ?? `http://${req.headers.host}`);
-					// If the target is a host, use the path from the request URL
-					path = url.pathname + url.search + url.hash;
-					headers.host = url.host;
-					break;
-				}
-				case "proxy": {
-					// If the target is a proxy, use the full request URL
-					path = req.url;
-					break;
-				}
-			}
-		}
-
-		const options: http.RequestOptions = {
-			host: target.host,
-			port: target.port,
-			method: req.method,
-			path,
-			headers,
-		};
-
-		// Res is optional only on websocket upgrade requests
-		assert(res !== undefined, "No response object provided");
-		const upstream = http.request(options, (upRes) => {
-			// Relay status and headers back to the original client
-			res.writeHead(upRes.statusCode ?? 500, upRes.headers);
-			// Pipe the response body
-			upRes.pipe(res);
-		});
-
-		// Pipe the client request body to the upstream
-		req.pipe(upstream);
-
-		upstream.on("error", (err) => {
-			this.#log.error(err);
-			if (!res.headersSent) res.writeHead(502);
-			res.end("Bad Gateway");
-		});
-	};
-
 	async #writeResponse(response: Response, res: http.ServerResponse) {
 		// Convert headers into Node-friendly format
 		const headers: http.OutgoingHttpHeaders = {};
@@ -1551,17 +1374,9 @@ export class Miniflare {
 
 		return new Promise((resolve) => {
 			const server = stoppable(
-				http.createServer(
-					{
-						// There might be no HOST header when proxying a fetch request made over service binding
-						//  e.g. env.MY_WORKER.fetch("https://example.com")
-						requireHostHeader: false,
-					},
-					this.#handleLoopback
-				),
+				http.createServer(this.#handleLoopback),
 				/* grace */ 0
 			);
-			server.on("connect", this.#handleLoopbackConnect);
 			server.on("upgrade", this.#handleLoopbackUpgrade);
 			server.listen(0, hostname, () => resolve(server));
 		});
@@ -1590,8 +1405,8 @@ export class Miniflare {
 	}
 
 	async #assembleConfig(
-		loopbackHost: string,
-		loopbackPort: number
+		loopbackPort: number,
+		proxyAddress: string | null
 	): Promise<Config> {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
 		const allWorkerOpts = this.#workerOpts;
@@ -1600,9 +1415,10 @@ export class Miniflare {
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 		this.#cfObject = sharedOpts.core.cf;
 
-		const externalServices = this.#devRegistry.isEnabled()
-			? getExternalServiceEntrypoints(allWorkerOpts, loopbackHost, loopbackPort)
-			: null;
+		const externalServices =
+			proxyAddress !== null
+				? getExternalServiceEntrypoints(allWorkerOpts, proxyAddress)
+				: null;
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const wrappedBindingNames = getWrappedBindingNames(
 			allWorkerOpts,
@@ -1891,9 +1707,6 @@ export class Miniflare {
 						},
 					});
 				}
-
-				// Ask the dev registry to watch for this service
-				this.#devRegistry.subscribe(serviceName);
 			}
 
 			const externalObjects = Array.from(externalServices).flatMap(
@@ -1905,12 +1718,15 @@ export class Miniflare {
 			);
 			const outboundDoProxyService = createOutboundDoProxyService(
 				externalObjects,
-				`http://${loopbackHost}:${loopbackPort}`,
+				`http://${proxyAddress}`,
 				this.#devRegistry.isDurableObjectProxyEnabled()
 			);
 
 			assert(outboundDoProxyService.name !== undefined);
 			services.set(outboundDoProxyService.name, outboundDoProxyService);
+
+			// Watch the dev registry for changes
+			await this.#devRegistry.watch(externalServices);
 		}
 
 		// Expose all internal durable object with a proxy service
@@ -2014,7 +1830,8 @@ export class Miniflare {
 			maybeGetLocallyAccessibleHost(configuredHost) ??
 			getURLSafeHost(configuredHost);
 		const loopbackPort = await this.#getLoopbackPort();
-		const config = await this.#assembleConfig(loopbackHost, loopbackPort);
+		const proxyAddress = await this.#devRegistry.initializeProxyWorker();
+		const config = await this.#assembleConfig(loopbackPort, proxyAddress);
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
@@ -2292,10 +2109,12 @@ export class Miniflare {
 
 	get ready(): Promise<URL> {
 		return this.#waitForReady().then(async (url) => {
+			assert(this.#socketPorts !== undefined);
+
+			// Update proxy server with the addresses of the fallback services
+			this.#devRegistry.configureProxyWorker(url.toString(), this.#socketPorts);
 			// Register all workers with the dev registry
 			await this.#registerWorkers(url);
-			// Watch for changes to the dev registry
-			await this.#devRegistry.watch();
 
 			return url;
 		});

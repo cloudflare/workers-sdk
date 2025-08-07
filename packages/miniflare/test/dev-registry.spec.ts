@@ -1,5 +1,5 @@
 import test from "ava";
-import { Miniflare } from "miniflare";
+import { Miniflare, MiniflareOptions } from "miniflare";
 import { useTmp, waitUntil } from "./test-shared";
 
 test("DevRegistry: fetch to service worker", async (t) => {
@@ -267,6 +267,153 @@ test("DevRegistry: RPC to custom entrypoint", async (t) => {
 			`Cannot access "ping" as we couldn\'t find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
 		);
 		t.is(res.status, 500);
+	});
+});
+
+test("DevRegistry: fetch to module worker with node bindings", async (t) => {
+	const unsafeDevRegistryPath = await useTmp(t);
+	const local = new Miniflare({
+		name: "local-worker",
+		unsafeDevRegistryPath,
+		serviceBindings: {
+			SERVICE: {
+				name: "remote-worker",
+			},
+		},
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch(request, env, ctx) {
+					return new Response("Not implemented", { status: 501 });
+				}
+			}
+		`,
+	});
+	t.teardown(() => local.dispose());
+
+	const bindings = await local.getBindings<Record<string, any>>();
+	const res = await bindings.SERVICE.fetch("http://example.com?name=World");
+
+	t.is(
+		await res.text(),
+		`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+	);
+	t.is(res.status, 503);
+
+	const remote = new Miniflare({
+		name: "remote-worker",
+		unsafeDevRegistryPath,
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch(request, env, ctx) {
+                    const url = new URL(request.url);
+                    const name = url.searchParams.get("name") ?? 'anonymous';
+
+					return new Response("Hello " + name);
+				}
+			}
+		`,
+		unsafeDirectSockets: [
+			{
+				entrypoint: undefined,
+				proxy: true,
+			},
+		],
+	});
+
+	await remote.ready;
+	await waitUntil(t, async (t) => {
+		const res = await bindings.SERVICE.fetch("http://example.com?name=World");
+		const result = await res.text();
+		t.is(result, "Hello World");
+		t.is(res.status, 200);
+	});
+
+	await remote.dispose();
+	await waitUntil(t, async (t) => {
+		const res = await bindings.SERVICE.fetch("http://example.com?name=World");
+		t.is(
+			await res.text(),
+			`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+		);
+		t.is(res.status, 503);
+	});
+});
+
+test("DevRegistry: RPC to default entrypoint with node bindings", async (t) => {
+	const unsafeDevRegistryPath = await useTmp(t);
+	const local = new Miniflare({
+		name: "local-worker",
+		unsafeDevRegistryPath,
+		serviceBindings: {
+			SERVICE: {
+				name: "remote-worker",
+			},
+		},
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch(request, env, ctx) {
+					return new Response("Not implemented", { status: 501 });
+				}
+			}
+		`,
+	});
+	t.teardown(() => local.dispose());
+
+	const env = await local.getBindings<Record<string, any>>();
+
+	try {
+		const result = await env.SERVICE.ping();
+		t.fail(`Expected error, got result: ${result}`);
+	} catch (e) {
+		t.is(
+			e instanceof Error ? e.message : `${e}`,
+			`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+		);
+	}
+
+	const remote = new Miniflare({
+		name: "remote-worker",
+		unsafeDevRegistryPath,
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			import { WorkerEntrypoint } from "cloudflare:workers";
+			export default class TestEntrypoint extends WorkerEntrypoint {
+				ping() { return "pong"; }
+			}
+		`,
+		unsafeDirectSockets: [
+			{
+				entrypoint: undefined,
+				proxy: true,
+			},
+		],
+	});
+
+	await remote.ready;
+	await waitUntil(t, async (t) => {
+		const result = await env.SERVICE.ping();
+		t.is(result, "pong");
+	});
+
+	// Kill the remote worker to see if it fails gracefully
+	await remote.dispose();
+	await waitUntil(t, async (t) => {
+		try {
+			const result = await env.SERVICE.ping();
+			t.fail(`Expected error, got result: ${result}`);
+		} catch (e) {
+			t.is(
+				e instanceof Error ? e.message : `${e}`,
+				`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+			);
+		}
 	});
 });
 
@@ -651,4 +798,99 @@ test("DevRegistry: tail to unknown worker", async (t) => {
 		result2,
 		`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
 	);
+});
+
+test("DevRegistry: miniflare with different registry path", async (t) => {
+	const unsafeDevRegistryPath = await useTmp(t);
+	const unsafeDevRegistryPath2 = await useTmp(t);
+	const localOptions: MiniflareOptions = {
+		name: "local-worker",
+		serviceBindings: {
+			SERVICE: {
+				name: "remote-worker",
+			},
+		},
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch(request, env, ctx) {
+					try {
+                        const result = await env.SERVICE.ping();
+                        return new Response("Response from remote worker: " + result);
+                    } catch (e) {
+                        return new Response(e.message, { status: 500 });
+                    }
+				}
+			}
+		`,
+	};
+	const remoteOptions: MiniflareOptions = {
+		name: "remote-worker",
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			import { WorkerEntrypoint } from "cloudflare:workers";
+			export default class TestEntrypoint extends WorkerEntrypoint {
+				ping() { return "pong"; }
+			}
+		`,
+		unsafeDirectSockets: [
+			{
+				entrypoint: undefined,
+				proxy: true,
+			},
+		],
+	};
+
+	const local = new Miniflare({
+		...localOptions,
+		unsafeDevRegistryPath,
+	});
+	t.teardown(() => local.dispose());
+
+	const res = await local.dispatchFetch("http://placeholder");
+	t.is(
+		await res.text(),
+		`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+	);
+	t.is(res.status, 500);
+
+	const remote = new Miniflare({
+		...remoteOptions,
+		unsafeDevRegistryPath,
+	});
+	t.teardown(() => remote.dispose());
+
+	await remote.ready;
+	await waitUntil(t, async (t) => {
+		const res = await local.dispatchFetch("http://placeholder");
+		const result = await res.text();
+		t.is(result, "Response from remote worker: pong");
+	});
+
+	// Change remote's registry path to a different value
+	await remote.setOptions({
+		...remoteOptions,
+		unsafeDevRegistryPath: unsafeDevRegistryPath2,
+	});
+	await waitUntil(t, async (t) => {
+		const res = await local.dispatchFetch("http://placeholder");
+		t.is(
+			await res.text(),
+			`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+		);
+		t.is(res.status, 500);
+	});
+
+	// Change local's registry path to the same path as remote's
+	await local.setOptions({
+		...localOptions,
+		unsafeDevRegistryPath: unsafeDevRegistryPath2,
+	});
+	await waitUntil(t, async (t) => {
+		const res = await local.dispatchFetch("http://placeholder");
+		const result = await res.text();
+		t.is(result, "Response from remote worker: pong");
+	});
 });
