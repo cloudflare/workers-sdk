@@ -11,7 +11,7 @@ import {
 	writeJSON,
 	writeToml,
 } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
 import * as jsonc from "jsonc-parser";
