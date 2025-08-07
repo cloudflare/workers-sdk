@@ -76,7 +76,7 @@ jobs:
           git config --global user.name 'Wrangler Tester'
 
       - name: Deploy test worker
-        if: steps.changes.outputs.everything_but_markdown == 'true'
+        if: steps.changes.outputs.everything_but_markdown == 'true' && env.TEST_CLOUDFLARE_ACCOUNT_ID != ''
         shell: bash
         run: |
           # Create temporary directory for worker files
@@ -91,19 +91,26 @@ jobs:
           };
           EOF
 
-          # Create wrangler.toml with FOO variable
-          cat > /tmp/existing-script-worker/wrangler.toml << 'EOF'
-          name = "existing-script-test-do-not-delete"
-          main = "index.js"
-          compatibility_date = "2023-05-18"
-
-          [vars]
-          FOO = "bar"
+          # Create wrangler.jsonc with FOO variable
+          cat > /tmp/existing-script-worker/wrangler.jsonc << 'EOF'
+          {
+            "name": "existing-script-test-do-not-delete",
+            "main": "index.js",
+            "compatibility_date": "2023-05-18",
+            "vars": {
+              "FOO": "bar"
+            }
+          }
           EOF
 
-          # Deploy the worker
+          # Check if worker exists and deploy only if it doesn't
           cd /tmp/existing-script-worker
-          npx wrangler@latest deploy
+          if ! npx wrangler@latest list | grep -q "existing-script-test-do-not-delete"; then
+            echo "Worker does not exist, deploying..."
+            npx wrangler@latest deploy
+          else
+            echo "Worker already exists, skipping deployment"
+          fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
