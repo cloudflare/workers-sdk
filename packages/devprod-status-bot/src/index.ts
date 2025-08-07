@@ -63,19 +63,6 @@ Respond with only "YES" if this appears to be a security-related issue, or "NO" 
 	return message.response.trim().toUpperCase() === "YES";
 }
 
-async function getVersionPackagesPR(pat: string) {
-	const versionPackages = await fetch(
-		"https://api.github.com/repos/cloudflare/workers-sdk/pulls?state=open&per_page=100&head=cloudflare:changeset-release/main",
-		{
-			headers: {
-				"User-Agent": "Cloudflare ANT Status bot",
-				Authorization: `Bearer ${pat}`,
-			},
-		}
-	).then((r) => r.json<{ html_url: string; body: string }[]>());
-
-	return versionPackages[0];
-}
 type ProjectGQLResponse = {
 	data: {
 		organization: {
@@ -248,101 +235,6 @@ async function sendSecurityAlert(webhookUrl: string, issue: IssuesOpenedEvent) {
 			],
 		},
 		"security-alerts"
-	);
-}
-
-async function sendUpcomingReleaseMessage(pat: string, webhookUrl: string) {
-	const releasePr = await getVersionPackagesPR(pat);
-
-	await sendMessage(
-		webhookUrl,
-		{
-			cardsV2: [
-				{
-					cardId: "unique-card-id",
-					card: {
-						header: {
-							title: "🎉 workers-sdk release!",
-						},
-						sections: [
-							{
-								widgets: [
-									{
-										textParagraph: {
-											text:
-												"A new workers-sdk release is scheduled for tomorrow." +
-												" The `main` branch will be locked shortly to allow the release to be checked beforehand." +
-												" Review the release PR linked below for the full details, and let the ANT team know" +
-												" (by responding in this thread) if for any reason you'd like us to delay this release." +
-												"\n\nThe `main` branch will be unlocked tomorrow after the release is completed.",
-										},
-									},
-									{
-										columns: {
-											columnItems: [
-												{
-													horizontalSizeStyle: "FILL_MINIMUM_SPACE",
-													horizontalAlignment: "START",
-													verticalAlignment: "TOP",
-													widgets: [
-														{
-															buttonList: {
-																buttons: [
-																	{
-																		text: "Open Pull Request",
-																		onClick: {
-																			openLink: {
-																				url: releasePr.html_url,
-																			},
-																		},
-																	},
-																],
-															},
-														},
-													],
-												},
-											],
-										},
-									},
-								],
-							},
-							{
-								collapsible: true,
-								uncollapsibleWidgetsCount: 0,
-								widgets: [
-									{
-										columns: {
-											columnItems: [
-												{
-													horizontalSizeStyle: "FILL_AVAILABLE_SPACE",
-													horizontalAlignment: "START",
-													verticalAlignment: "CENTER",
-													widgets: [
-														{
-															textParagraph: {
-																text: releasePr.body,
-															},
-														},
-													],
-												},
-											],
-										},
-									},
-								],
-							},
-						],
-					},
-				},
-			],
-		},
-		"release-notification"
-	);
-	await sendMessage(
-		webhookUrl,
-		{
-			text: "cc <users/103802752659756021218>",
-		},
-		"release-notification"
 	);
 }
 
@@ -540,12 +432,6 @@ export default {
 	},
 
 	async scheduled(controller, env): Promise<void> {
-		if (controller.cron === "0 17 * * MON,WED") {
-			await sendUpcomingReleaseMessage(
-				env.GITHUB_PAT,
-				env.PROD_WRANGLER_CONTRIBUTORS_WEBHOOK
-			);
-		}
 		if (controller.cron === "0 12 * * MON,WED,FRI") {
 			await sendUpcomingMeetingMessage(env.PROD_TEAM_ONLY_WEBHOOK, env.AI);
 		}
