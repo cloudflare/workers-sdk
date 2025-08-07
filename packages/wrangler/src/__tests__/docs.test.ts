@@ -9,7 +9,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 // but in tests we have to attach mocks values to the globalThis object.
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
-declare module globalThis {
+declare namespace globalThis {
 	let ALGOLIA_APP_ID: string | undefined;
 	let ALGOLIA_PUBLIC_KEY: string | undefined;
 }
