@@ -674,6 +674,37 @@ const isRecord = (
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
+ * Ensure that all bindings in an array have unique `name` properties.
+ */
+export const validateUniqueNameProperty: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (Array.isArray(value)) {
+		const nameCount = new Map<string, number>();
+
+		Object.entries(value).forEach(([_, entry]) => {
+			nameCount.set(entry.name, (nameCount.get(entry.name) ?? 0) + 1);
+		});
+
+		const duplicates = Array.from(nameCount.entries())
+			.filter(([_, count]) => count > 1)
+			.map(([name]) => name);
+
+		if (duplicates.length > 0) {
+			const list = duplicates.join('", "');
+			diagnostics.errors.push(
+				`"${field}" bindings must have unique "name" values; duplicate(s) found: "${list}"`
+			);
+			return false;
+		}
+	}
+
+	return true;
+};
+
+/**
  * JavaScript `typeof` operator return values.
  */
 export type TypeofType =

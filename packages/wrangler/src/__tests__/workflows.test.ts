@@ -780,5 +780,54 @@ describe("wrangler workflows", () => {
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain('"workflows" bindings should be objects');
 		});
+
+		it("should reject workflows binding with same name", async () => {
+			writeWorkerSource({ format: "ts" });
+			writeWranglerConfig({
+				main: "index.ts",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "duplicate-workflow-name",
+						class_name: "MyWorkflow",
+						script_name: "external-script",
+					},
+					{
+						binding: "MY_WORKFLOW_2",
+						name: "duplicate-workflow-name",
+						class_name: "MyWorkflow2",
+						script_name: "external-script-2",
+					},
+					{
+						binding: "MY_WORKFLOW_3",
+						name: "valid-workflow-name",
+						class_name: "MyWorkflow3",
+						script_name: "external-script-3",
+					},
+					{
+						binding: "MY_WORKFLOW_4",
+						name: "duplicate-workflow-name-2",
+						class_name: "MyWorkflow4",
+						script_name: "external-script-4",
+					},
+					{
+						binding: "MY_WORKFLOW_5",
+						name: "duplicate-workflow-name-2",
+						class_name: "MyWorkflow5",
+						script_name: "external-script-5",
+					},
+				],
+			});
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - \\"workflows\\" bindings must have unique \\"name\\" values; duplicate(s) found:
+				  \\"duplicate-workflow-name\\", \\"duplicate-workflow-name-2\\"
+
+				"
+			`);
+		});
 	});
 });
