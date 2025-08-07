@@ -36,6 +36,7 @@ const nativeModules = [
 	"string_decoder",
 	"timers",
 	"timers/promises",
+	"tls",
 	"url",
 	"util/types",
 	"zlib",
@@ -48,7 +49,6 @@ const hybridModules = [
 	"crypto",
 	"module",
 	"process",
-	"tls",
 	"util",
 ];
 

@@ -1,24 +1,15 @@
 import {
-	_connectionListener,
-	CloseEvent,
-	maxHeaderSize,
-	MessageEvent,
-	setMaxIdleHTTPParsers,
+	CloseEvent as unenvCloseEvent,
+	_connectionListener as unenvConnectionListener,
 	createServer as unenvCreateServer,
+	maxHeaderSize as unenvmaxHeaderSize,
+	MessageEvent as unenvMessageEvent,
 	Server as unenvServer,
 	ServerResponse as unenvServerResponse,
-	WebSocket,
+	setMaxIdleHTTPParsers as unenvSetMaxIdleHTTPParsers,
+	WebSocket as unenvWebSocket,
 } from "unenv/node/http";
 import type nodeHttp from "node:http";
-
-export {
-	_connectionListener,
-	CloseEvent,
-	maxHeaderSize,
-	MessageEvent,
-	setMaxIdleHTTPParsers,
-	WebSocket,
-} from "unenv/node/http";
 
 const workerdHttp = process.getBuiltinModule("node:http");
 
@@ -49,6 +40,25 @@ export const Server = isWorkerdServerEnabled ? workerdHttp.Server : unenvServer;
 export const ServerResponse = isWorkerdServerEnabled
 	? workerdHttp.ServerResponse
 	: unenvServerResponse;
+export const WebSocket = isWorkerdServerEnabled
+	? workerdHttp.WebSocket
+	: unenvWebSocket;
+export const MessageEvent = isWorkerdServerEnabled
+	? workerdHttp.MessageEvent
+	: unenvMessageEvent;
+export const CloseEvent = isWorkerdServerEnabled
+	? workerdHttp.CloseEvent
+	: unenvCloseEvent;
+export const maxHeaderSize = isWorkerdServerEnabled
+	? workerdHttp.maxHeaderSize
+	: unenvmaxHeaderSize;
+export const setMaxIdleHTTPParsers = isWorkerdServerEnabled
+	? workerdHttp.setMaxIdleHTTPParsers
+	: unenvSetMaxIdleHTTPParsers;
+export const _connectionListener = isWorkerdServerEnabled
+	? // @ts-expect-error Node types does not export this method.
+		workerdHttp._connectionListener
+	: unenvConnectionListener;
 
 export default {
 	_connectionListener,
