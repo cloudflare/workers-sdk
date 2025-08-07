@@ -7,8 +7,8 @@ import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { isWebContainer } from "@webcontainer/env";
 import dedent from "ts-dedent";
 import { DevEnv } from "./api";
-import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
-import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
+import { MultiworkerRuntimeController } from "./api/startDevWorker/multiworker-runtime-controller";
+import { NoOpProxyController } from "./api/startDevWorker/no-op-proxy-controller";
 import {
 	convertCfWorkerInitBindingsToBindings,
 	extractBindingsOfType,
@@ -31,8 +31,8 @@ import { requireApiToken, requireAuth } from "./user";
 import {
 	collectKeyValues,
 	collectPlainTextVars,
-} from "./utils/collectKeyValues";
-import { mergeWithOverride } from "./utils/mergeWithOverride";
+} from "./utils/collect-key-values";
+import { mergeWithOverride } from "./utils/merge-with-override";
 import { getHostFromRoute } from "./zones";
 import type {
 	AsyncHook,

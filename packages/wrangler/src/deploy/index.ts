@@ -16,11 +16,11 @@ import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
-import { collectKeyValues } from "../utils/collectKeyValues";
+import { collectKeyValues } from "../utils/collect-key-values";
 import { formatCompatibilityDate } from "../utils/compatibility-date";
-import { getRules } from "../utils/getRules";
-import { getScriptName } from "../utils/getScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
+import { getRules } from "../utils/get-rules";
+import { getScriptName } from "../utils/get-script-name";
+import { isLegacyEnv } from "../utils/is-legacy-env";
 import deploy from "./deploy";
 
 export const deployCommand = createCommand({

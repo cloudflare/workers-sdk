@@ -36,8 +36,8 @@ import type {
 import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { ConfigController } from "./ConfigController";
-import type { DevEnv } from "./DevEnv";
+import type { ConfigController } from "./config-controller";
+import type { DevEnv } from "./dev-env";
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	DispatchFetch,
