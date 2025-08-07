@@ -1,11 +1,10 @@
 import dedent from "ts-dedent";
-import { formatConfigSnippet } from "../config";
+import { handleResourceBindingAndConfigUpdate } from "../config/auto-update";
 import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { getValidBindingName } from "../utils/getValidBindingName";
 import formatLabelledValues from "../utils/render-labelled-values";
 import { LOCATION_CHOICES } from "./constants";
 import {
@@ -60,10 +59,15 @@ export const r2BucketCreateCommand = createCommand({
 			requiresArg: true,
 			type: "string",
 		},
+		"config-binding-name": {
+			type: "string",
+			description: "The binding name to use when updating wrangler.jsonc",
+		},
 	},
 	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
 		const { name, location, storageClass, jurisdiction } = args;
+
+		const accountId = await requireAuth(config);
 
 		if (!isValidR2BucketName(name)) {
 			throw new UserError(
@@ -94,11 +98,18 @@ export const r2BucketCreateCommand = createCommand({
 		logger.log(dedent`
 			✅ Created bucket '${fullBucketName}' with${
 				location ? ` location hint ${location} and` : ``
-			} default storage class of ${storageClass ? storageClass : `Standard`}.
+			} default storage class of ${storageClass ? storageClass : `Standard`}.`);
 
-			Configure your Worker to write objects to this bucket:
-
-			${formatConfigSnippet({ r2_buckets: [{ bucket_name: args.name, binding: getValidBindingName(args.name, "r2") }] }, config.configPath)}`);
+		// Handle binding name and config update using unified utility
+		await handleResourceBindingAndConfigUpdate(
+			args,
+			{ ...config, configPath: config.configPath },
+			{
+				type: "r2_buckets",
+				id: args.name, // For R2, the bucket name is the identifier
+				name: args.name,
+			}
+		);
 
 		metrics.sendMetricsEvent("create r2 bucket", {
 			sendMetrics: config.send_metrics,
