@@ -21,7 +21,7 @@ import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
-import { ExecutionContext } from "./executionContext";
+import { ExecutionContext } from "./execution-context";
 import type { AssetsOptions } from "../../../assets";
 import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { RemoteProxySession } from "../../remoteBindings";
