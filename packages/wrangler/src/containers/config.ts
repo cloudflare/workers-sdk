@@ -58,7 +58,13 @@ export const getNormalizedContainerOptions = async (
 			scheduling_policy: (container.scheduling_policy ??
 				SchedulingPolicy.DEFAULT) as SchedulingPolicy,
 			constraints: {
-				tier: container.constraints?.tier ?? 1,
+				// if the tier is -1, then we allow all tiers
+				// Wrangler will default an input value to 1. The API, however, will
+				// treat an undefined value to mean no constraints on tier (i.e. "all tiers")
+				tier:
+					container.constraints?.tier === -1
+						? undefined
+						: container.constraints?.tier ?? 1,
 				regions: container.constraints?.regions?.map((region) =>
 					region.toUpperCase()
 				),
