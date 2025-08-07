@@ -35,7 +35,7 @@ import {
 	InternalR2Object,
 	InternalR2ObjectBody,
 	InternalR2Objects,
-} from "./r2Object.worker";
+} from "./r2-object.worker";
 import {
 	InternalR2CreateMultipartUploadOptions,
 	InternalR2GetOptions,

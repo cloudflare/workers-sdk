@@ -18,7 +18,7 @@ import { runCommand } from "helpers/command";
 import {
 	detectPackageManager,
 	rectifyPmMismatch,
-} from "helpers/packageManagers";
+} from "helpers/package-managers";
 import { installWrangler, npmInstall } from "helpers/packages";
 import { version } from "../package.json";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";

@@ -1,7 +1,7 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { runCommand } from "helpers/command";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import { reporter } from "../metrics";
 import type { C3Context } from "types";
 

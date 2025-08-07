@@ -11,7 +11,7 @@ import {
 	viewToBuffer,
 } from "miniflare:shared";
 import { z } from "miniflare:zod";
-import { dumpSql } from "./dumpSql";
+import { dumpSql } from "./dump-sql";
 
 const D1ValueSchema = z.union([
 	z.number(),

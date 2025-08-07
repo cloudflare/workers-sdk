@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { _testR2Conditional } from "../../../src/workers/r2/validator.worker";
 import { createTestHandler } from "../worker-test";
-import type { InternalR2Object } from "../../../src/workers/r2/r2Object.worker";
+import type { InternalR2Object } from "../../../src/workers/r2/r2-object.worker";
 import type { R2Conditional } from "../../../src/workers/r2/schemas.worker";
 
 function test() {

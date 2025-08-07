@@ -11,7 +11,7 @@ import {
 	MetadataTooLarge,
 	PreconditionFailed,
 } from "./errors.worker";
-import { InternalR2Object } from "./r2Object.worker";
+import { InternalR2Object } from "./r2-object.worker";
 import { InternalR2GetOptions, R2Conditional, R2Etag } from "./schemas.worker";
 
 function identity(ms: number) {

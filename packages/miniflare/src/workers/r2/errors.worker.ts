@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import { HttpError } from "miniflare:shared";
 import { R2Headers } from "./constants";
-import { InternalR2Object } from "./r2Object.worker";
+import { InternalR2Object } from "./r2-object.worker";
 
 const R2ErrorCode = {
 	INTERNAL_ERROR: 10001,
