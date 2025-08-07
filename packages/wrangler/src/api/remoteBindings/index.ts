@@ -243,7 +243,7 @@ function getAuthHook(
 	if (configAccountId) {
 		return async () => {
 			return {
-				accountId: configAccountId ?? "",
+				accountId: configAccountId,
 				apiToken: requireApiToken(),
 			};
 		};
