@@ -11,7 +11,7 @@
 		},
 	],
 	"triggers": {
-		"crons": ["0 10 * * MON-FRI", "0 10 * * TUE,THU", "0 15 * * MON,WED,FRI"],
+		"crons": [],
 	},
 	"ai": {
 		"binding": "AI",

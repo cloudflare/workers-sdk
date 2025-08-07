@@ -1,10 +1,4 @@
-import type { Endpoints } from "@octokit/types";
-import type {
-	IssuesOpenedEvent,
-	PullRequestOpenedEvent,
-	PullRequestReadyForReviewEvent,
-	WebhookEvent,
-} from "@octokit/webhooks-types";
+import type { IssuesOpenedEvent, WebhookEvent } from "@octokit/webhooks-types";
 
 async function getBotMessage(ai: Ai, prompt: string) {
 	const chat = {
@@ -69,43 +63,6 @@ Respond with only "YES" if this appears to be a security-related issue, or "NO" 
 	return message.response.trim().toUpperCase() === "YES";
 }
 
-type PRList = Endpoints["GET /repos/{owner}/{repo}/pulls"]["response"]["data"];
-async function getPrs(pat: string) {
-	const workersSdk = await fetch(
-		"https://api.github.com/repos/cloudflare/workers-sdk/pulls?state=open&per_page=100",
-		{
-			headers: {
-				"User-Agent": "Cloudflare ANT Status bot",
-				Authorization: `Bearer ${pat}`,
-			},
-		}
-	).then((r) => r.json<PRList>());
-	const wranglerAction = await fetch(
-		"https://api.github.com/repos/cloudflare/wrangler-action/pulls?state=open&per_page=100",
-		{
-			headers: {
-				"User-Agent": "Cloudflare ANT Status bot",
-				Authorization: `Bearer ${pat}`,
-			},
-		}
-	).then((r) => r.json<PRList>());
-
-	return [...workersSdk, ...wranglerAction];
-}
-
-async function getVersionPackagesPR(pat: string) {
-	const versionPackages = await fetch(
-		"https://api.github.com/repos/cloudflare/workers-sdk/pulls?state=open&per_page=100&head=cloudflare:changeset-release/main",
-		{
-			headers: {
-				"User-Agent": "Cloudflare ANT Status bot",
-				Authorization: `Bearer ${pat}`,
-			},
-		}
-	).then((r) => r.json<PRList>());
-
-	return versionPackages[0];
-}
 type ProjectGQLResponse = {
 	data: {
 		organization: {
@@ -215,202 +172,10 @@ async function sendMessage(
 	console.log(await response.json());
 }
 
-const ONE_DAY = 1000 * 60 * 60 * 24;
-
-async function sendStartThreadMessage(pat: string, webhookUrl: string, ai: Ai) {
-	const message = await getBotMessage(
-		ai,
-		"Write a very short unique positive uplifting message to encourage team members in their work today. Make it fun and quirky!"
-	);
-
-	const prs = (await getPrs(pat))
-		.filter((pr) => !pr.draft)
-		.filter((pr) => getThreadID(pr.created_at) !== getThreadID())
-		.filter((pr) => pr.title !== "Version Packages")
-		.filter(
-			(pr) =>
-				pr.user &&
-				[
-					"penalosa",
-					"lrapoport-cf",
-					"petebacondarwin",
-					"CarmenPopoviciu",
-					"edmundhung",
-					"emily-shen",
-					"dario-piotrowicz",
-					"jculvey",
-					"vicb",
-					"jamesopstad",
-				].includes(pr.user.login)
-		)
-		.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-	await sendMessage(webhookUrl, {
-		cardsV2: [
-			{
-				cardId: "unique-card-id",
-				card: {
-					header: {
-						title: "Beep boop! 👋 PR review thread! 👀 🧵👇",
-					},
-					sections: [
-						{
-							collapsible: false,
-							widgets: [
-								{
-									textParagraph: {
-										text: message,
-									},
-								},
-							],
-						},
-						{
-							collapsible: true,
-							uncollapsibleWidgetsCount: 3,
-							widgets: prs.flatMap((pr) => {
-								const created = new Date(pr.created_at);
-								const createdDaysAgo = Math.round(
-									(Date.now() - created.getTime()) / ONE_DAY
-								);
-								let emoji;
-								let exclaimations = "";
-								if (createdDaysAgo >= 7) {
-									emoji = "🔴";
-									exclaimations = "!!!";
-								} else if (createdDaysAgo >= 5) {
-									emoji = "🟠";
-									exclaimations = "!";
-								} else if (createdDaysAgo >= 3) {
-									emoji = "🟡";
-								} else {
-									emoji = "🟢";
-								}
-								let createdDaysAgoText = "";
-								if (createdDaysAgo >= 3) {
-									createdDaysAgoText = ` <i>(created ${createdDaysAgo} days ago${exclaimations})</i>`;
-								}
-
-								return [
-									{
-										columns: {
-											columnItems: [
-												{
-													horizontalSizeStyle: "FILL_AVAILABLE_SPACE",
-													horizontalAlignment: "START",
-													verticalAlignment: "CENTER",
-													widgets: [
-														{
-															textParagraph: {
-																text: `${emoji} <b>#${pr.number}:</b> ${pr.title}${createdDaysAgoText}`,
-															},
-														},
-													],
-												},
-												{
-													horizontalSizeStyle: "FILL_MINIMUM_SPACE",
-													horizontalAlignment: "START",
-													verticalAlignment: "TOP",
-													widgets: [
-														{
-															buttonList: {
-																buttons: [
-																	{
-																		text: "Open Pull Request",
-																		onClick: {
-																			openLink: {
-																				url: pr.html_url,
-																			},
-																		},
-																	},
-																],
-															},
-														},
-													],
-												},
-											],
-										},
-									},
-								];
-							}),
-						},
-					],
-				},
-			},
-		],
-	});
-}
-
-function isPullRequestOpenedEvent(
-	message: WebhookEvent
-): message is PullRequestOpenedEvent {
-	return (
-		"pull_request" in message &&
-		message.action === "opened" &&
-		!message.pull_request.draft
-	);
-}
-
-function isPullRequestReadyForReviewEvent(
-	message: WebhookEvent
-): message is PullRequestReadyForReviewEvent {
-	return "action" in message && message.action === "ready_for_review";
-}
-
 function isIssueOpenedEvent(
 	message: WebhookEvent
 ): message is IssuesOpenedEvent {
 	return "issue" in message && message.action === "opened";
-}
-
-function sendReviewMessage(webhookUrl: string, message: WebhookEvent) {
-	if (
-		(isPullRequestOpenedEvent(message) ||
-			isPullRequestReadyForReviewEvent(message)) &&
-		message.pull_request.requested_teams.find((t) => t.name === "wrangler")
-	) {
-		return sendMessage(webhookUrl, {
-			cardsV2: [
-				{
-					cardId: "unique-card-id",
-					card: {
-						header: {
-							title: message.pull_request.title,
-							subtitle: message.pull_request.user.login,
-							imageUrl: message.pull_request.user.avatar_url,
-							imageType: "CIRCLE",
-							imageAltText: "Avatar",
-						},
-						sections: [
-							{
-								collapsible: true,
-								uncollapsibleWidgetsCount: 1,
-								widgets: [
-									{
-										buttonList: {
-											buttons: [
-												{
-													text: "Open Pull Request",
-													onClick: {
-														openLink: {
-															url: message.pull_request.html_url,
-														},
-													},
-												},
-											],
-										},
-									},
-									{
-										textParagraph: {
-											text: message.pull_request.body,
-										},
-									},
-								],
-							},
-						],
-					},
-				},
-			],
-		});
-	}
 }
 
 async function sendSecurityAlert(webhookUrl: string, issue: IssuesOpenedEvent) {
@@ -470,101 +235,6 @@ async function sendSecurityAlert(webhookUrl: string, issue: IssuesOpenedEvent) {
 			],
 		},
 		"security-alerts"
-	);
-}
-
-async function sendUpcomingReleaseMessage(pat: string, webhookUrl: string) {
-	const releasePr = await getVersionPackagesPR(pat);
-
-	await sendMessage(
-		webhookUrl,
-		{
-			cardsV2: [
-				{
-					cardId: "unique-card-id",
-					card: {
-						header: {
-							title: "🎉 workers-sdk release!",
-						},
-						sections: [
-							{
-								widgets: [
-									{
-										textParagraph: {
-											text:
-												"A new workers-sdk release is scheduled for tomorrow." +
-												" The `main` branch will be locked shortly to allow the release to be checked beforehand." +
-												" Review the release PR linked below for the full details, and let the ANT team know" +
-												" (by responding in this thread) if for any reason you'd like us to delay this release." +
-												"\n\nThe `main` branch will be unlocked tomorrow after the release is completed.",
-										},
-									},
-									{
-										columns: {
-											columnItems: [
-												{
-													horizontalSizeStyle: "FILL_MINIMUM_SPACE",
-													horizontalAlignment: "START",
-													verticalAlignment: "TOP",
-													widgets: [
-														{
-															buttonList: {
-																buttons: [
-																	{
-																		text: "Open Pull Request",
-																		onClick: {
-																			openLink: {
-																				url: releasePr.html_url,
-																			},
-																		},
-																	},
-																],
-															},
-														},
-													],
-												},
-											],
-										},
-									},
-								],
-							},
-							{
-								collapsible: true,
-								uncollapsibleWidgetsCount: 0,
-								widgets: [
-									{
-										columns: {
-											columnItems: [
-												{
-													horizontalSizeStyle: "FILL_AVAILABLE_SPACE",
-													horizontalAlignment: "START",
-													verticalAlignment: "CENTER",
-													widgets: [
-														{
-															textParagraph: {
-																text: releasePr.body,
-															},
-														},
-													],
-												},
-											],
-										},
-									},
-								],
-							},
-						],
-					},
-				},
-			],
-		},
-		"release-notification"
-	);
-	await sendMessage(
-		webhookUrl,
-		{
-			text: "cc <users/103802752659756021218>",
-		},
-		"release-notification"
 	);
 }
 
@@ -728,7 +398,6 @@ export default {
 		}
 		if (url.pathname === "/github") {
 			const body = await request.json<WebhookEvent>();
-			await sendReviewMessage(env.PROD_WEBHOOK, body);
 
 			if (isIssueOpenedEvent(body)) {
 				const isSecurityIssue = await analyzeIssueSecurity(
@@ -763,15 +432,6 @@ export default {
 	},
 
 	async scheduled(controller, env): Promise<void> {
-		if (controller.cron === "0 10 * * MON-FRI") {
-			await sendStartThreadMessage(env.GITHUB_PAT, env.PROD_WEBHOOK, env.AI);
-		}
-		if (controller.cron === "0 17 * * MON,WED") {
-			await sendUpcomingReleaseMessage(
-				env.GITHUB_PAT,
-				env.PROD_WRANGLER_CONTRIBUTORS_WEBHOOK
-			);
-		}
 		if (controller.cron === "0 12 * * MON,WED,FRI") {
 			await sendUpcomingMeetingMessage(env.PROD_TEAM_ONLY_WEBHOOK, env.AI);
 		}
