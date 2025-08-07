@@ -24,7 +24,7 @@ import {
 	buildRawWorker,
 	checkRawWorker,
 	produceWorkerBundleForWorkerJSDirectory,
-} from "../../pages/functions/buildWorker";
+} from "../../pages/functions/build-worker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
 import { getPagesTmpDir } from "../../pages/utils";

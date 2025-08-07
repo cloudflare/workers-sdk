@@ -29,7 +29,7 @@ import {
 import {
 	buildRawWorker,
 	produceWorkerBundleForWorkerJSDirectory,
-} from "./functions/buildWorker";
+} from "./functions/build-worker";
 import type { Config } from "../config";
 import type { BundleResult } from "../deployment-bundle/bundle";
 import type { NodeJSCompatMode } from "miniflare";

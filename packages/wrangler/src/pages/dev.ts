@@ -27,7 +27,7 @@ import {
 	buildRawWorker,
 	checkRawWorker,
 	produceWorkerBundleForWorkerJSDirectory,
-} from "./functions/buildWorker";
+} from "./functions/build-worker";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
 import type { Config } from "../config";
