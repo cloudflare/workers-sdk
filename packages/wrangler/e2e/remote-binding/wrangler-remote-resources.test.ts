@@ -561,15 +561,22 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				const { url } = await worker.waitForReady();
 
 				const response = await fetchText(url, 5_000);
+
+				await worker.stop();
+
 				if (accountIdValidity === "valid") {
 					expect(response).toEqual(
 						"REMOTE<WORKER>: Hello from a remote worker"
 					);
+					expect(await worker.output).not.toMatch(
+						/A request to the Cloudflare API \(.*?\) failed\./
+					);
 				} else {
 					expect(response).toBeNull();
+					expect(await worker.output).toMatch(
+						/A request to the Cloudflare API \(\/accounts\/invalid account id\/workers\/subdomain\/edge-preview\) failed\./
+					);
 				}
-
-				await worker.stop();
 			}
 		);
 	}
