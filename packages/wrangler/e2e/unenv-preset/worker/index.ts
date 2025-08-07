@@ -104,6 +104,7 @@ export const WorkerdTests: Record<string, () => void> = {
 			"_tls_wrap",
 			"assert",
 			"assert/strict",
+			"async_hooks",
 			"buffer",
 			"diagnostics_channel",
 			"dns",
@@ -332,5 +333,40 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof os.arch(), "string");
 		assert.strictEqual(typeof os.freemem(), "number");
 		assert.strictEqual(typeof os.availableParallelism(), "number");
+	},
+
+	async testAsyncHooks() {
+		const asyncHooks = await import("node:async_hooks");
+
+		const storage = new asyncHooks.AsyncLocalStorage();
+		const result = await storage.run({ test: "value" }, async () => {
+			return storage.getStore();
+		});
+		assert.deepStrictEqual(result, { test: "value" });
+
+		const resource = new asyncHooks.AsyncResource("TEST");
+		assert.ok(resource instanceof asyncHooks.AsyncResource);
+
+		assert.strictEqual(typeof asyncHooks.createHook, "function");
+		const hook = asyncHooks.createHook({});
+		assert.strictEqual(typeof hook.enable, "function");
+		assert.strictEqual(typeof hook.disable, "function");
+
+		assert.strictEqual(typeof asyncHooks.executionAsyncId(), "number");
+		assert.strictEqual(typeof asyncHooks.executionAsyncResource(), "object");
+		assert.strictEqual(typeof asyncHooks.triggerAsyncId(), "number");
+		assert.strictEqual(typeof asyncHooks.asyncWrapProviders, "object");
+	},
+
+	async testAsyncHooksRequire() {
+		const module = await import("node:module");
+		const require = module.createRequire("/");
+		const asyncHooks = require("async_hooks");
+
+		const storage = new asyncHooks.AsyncLocalStorage();
+		const result = await storage.run({ test: "require" }, async () => {
+			return storage.getStore();
+		});
+		assert.deepStrictEqual(result, { test: "require" });
 	},
 };
