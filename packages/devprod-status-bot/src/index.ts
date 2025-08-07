@@ -307,94 +307,98 @@ async function sendUpcomingMeetingMessage(webhookUrl: string, ai: Ai) {
 	);
 }
 
-export default {
-	async fetch(request, env): Promise<Response> {
-		const url = new URL(request.url);
-		if (url.pathname === "/release-failure") {
-			if (request.headers.get("X-Auth-Header") !== env.PRESHARED_SECRET) {
-				return new Response("Not allowed", { status: 401 });
-			}
-			const body = await request.json<{
-				status: { label: string; details: string }[];
-				url: string;
-			}>();
-			await sendMessage(
-				env.PROD_TEAM_ONLY_WEBHOOK,
+async function handleReleaseFailure(request: Request, env: Env) {
+	if (request.headers.get("X-Auth-Header") !== env.PRESHARED_SECRET) {
+		return new Response("Not allowed", { status: 401 });
+	}
+	const body = await request.json<{
+		status: { label: string; details: string }[];
+		url: string;
+	}>();
+	await sendMessage(
+		env.PROD_TEAM_ONLY_WEBHOOK,
+		{
+			cardsV2: [
 				{
-					cardsV2: [
-						{
-							cardId: "unique-card-id",
-							card: {
-								header: {
-									title: "🚨 A workers-sdk release failed!",
-								},
-								sections: [
+					cardId: "unique-card-id",
+					card: {
+						header: {
+							title: "🚨 A workers-sdk release failed!",
+						},
+						sections: [
+							{
+								widgets: [
 									{
-										widgets: [
-											{
-												columns: {
-													columnItems: [
-														{
-															horizontalSizeStyle: "FILL_MINIMUM_SPACE",
-															horizontalAlignment: "START",
-															verticalAlignment: "TOP",
-															widgets: [
-																{
-																	buttonList: {
-																		buttons: [
-																			{
-																				text: "Open Workflow run",
-																				onClick: {
-																					openLink: {
-																						url: body.url,
-																					},
-																				},
-																			},
-																		],
-																	},
-																},
-															],
-														},
-													],
-												},
-											},
-										],
-									},
-									{
-										collapsible: true,
-										uncollapsibleWidgetsCount: 3,
-										widgets: body.status.map(({ label, details }) => {
-											const emoji = "🔴";
-
-											return [
+										columns: {
+											columnItems: [
 												{
-													columns: {
-														columnItems: [
-															{
-																horizontalSizeStyle: "FILL_AVAILABLE_SPACE",
-																horizontalAlignment: "START",
-																verticalAlignment: "CENTER",
-																widgets: [
+													horizontalSizeStyle: "FILL_MINIMUM_SPACE",
+													horizontalAlignment: "START",
+													verticalAlignment: "TOP",
+													widgets: [
+														{
+															buttonList: {
+																buttons: [
 																	{
-																		textParagraph: {
-																			text: `${emoji} <b>${label}:</b> ${details}`,
+																		text: "Open Workflow run",
+																		onClick: {
+																			openLink: {
+																				url: body.url,
+																			},
 																		},
 																	},
 																],
 															},
-														],
-													},
+														},
+													],
 												},
-											];
-										}),
+											],
+										},
 									},
 								],
 							},
-						},
-					],
+							{
+								collapsible: true,
+								uncollapsibleWidgetsCount: 3,
+								widgets: body.status.map(({ label, details }) => {
+									const emoji = "🔴";
+
+									return [
+										{
+											columns: {
+												columnItems: [
+													{
+														horizontalSizeStyle: "FILL_AVAILABLE_SPACE",
+														horizontalAlignment: "START",
+														verticalAlignment: "CENTER",
+														widgets: [
+															{
+																textParagraph: {
+																	text: `${emoji} <b>${label}:</b> ${details}`,
+																},
+															},
+														],
+													},
+												],
+											},
+										},
+									];
+								}),
+							},
+						],
+					},
 				},
-				crypto.randomUUID()
-			);
+			],
+		},
+		crypto.randomUUID()
+	);
+}
+
+export default {
+	async fetch(request, env): Promise<Response> {
+		const url = new URL(request.url);
+		if (url.pathname === "/release-failure") {
+			await handleReleaseFailure(request, env);
 		}
 		if (url.pathname === "/github") {
 			const body = await request.json<WebhookEvent>();
