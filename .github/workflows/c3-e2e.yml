@@ -76,7 +76,7 @@ jobs:
           git config --global user.name 'Wrangler Tester'
 
       - name: Deploy test worker
-        if: steps.changes.outputs.everything_but_markdown == 'true' && secrets.TEST_CLOUDFLARE_API_TOKEN != ''
+        if: steps.changes.outputs.everything_but_markdown == 'true' && (github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group')
         shell: bash
         run: |
           # Create temporary directory for worker files
