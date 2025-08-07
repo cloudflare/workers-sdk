@@ -11,7 +11,7 @@ import {
 	convertToConfigBundle,
 	getContainerDevOptions,
 	LocalRuntimeController,
-} from "./LocalRuntimeController";
+} from "./local-runtime-controller";
 import { convertCfWorkerInitBindingsToBindings } from "./utils";
 import type { RemoteProxySession } from "../remoteBindings";
 import type { BundleCompleteEvent } from "./events";

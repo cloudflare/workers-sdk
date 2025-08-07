@@ -19,7 +19,7 @@ const writeToMockedStdin = (input: string | Key) =>
 			: input
 	);
 let _internalKeyPressCallback: (input: Key) => void;
-vitest.mock("../utils/onKeyPress", async () => {
+vitest.mock("../utils/on-key-press", async () => {
 	return {
 		onKeyPress(callback: () => void) {
 			_internalKeyPressCallback = callback;

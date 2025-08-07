@@ -8,7 +8,7 @@ import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { assert, describe, expect, it } from "vitest";
 import WebSocket from "ws";
-import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
+import { LocalRuntimeController } from "../../../api/startDevWorker/local-runtime-controller";
 import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { RuleTypeToModuleType } from "../../../deployment-bundle/module-collection";
 import { mockConsoleMethods } from "../../helpers/mock-console";

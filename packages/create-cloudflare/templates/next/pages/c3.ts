@@ -13,7 +13,7 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import { installPackages } from "helpers/packages";
 import { getTemplatePath } from "../../../src/templates";
 import type { TemplateConfig } from "../../../src/templates";

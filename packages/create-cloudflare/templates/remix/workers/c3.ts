@@ -1,7 +1,7 @@
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context } from "types";

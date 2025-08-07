@@ -2,7 +2,7 @@ import { existsSync } from "fs";
 import {
 	detectPackageManager,
 	detectPmMismatch,
-} from "helpers/packageManagers";
+} from "helpers/package-managers";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import { mockPackageManager } from "./mocks";

@@ -2,7 +2,7 @@ import { relative } from "path";
 import { hyperlink, logRaw, shapes, stripAnsi } from "@cloudflare/cli";
 import { bgGreen, blue, gray } from "@cloudflare/cli/colors";
 import { quoteShellArgs } from "helpers/command";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import type { C3Args, C3Context } from "types";
 
 /**

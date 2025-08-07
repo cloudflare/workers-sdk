@@ -30,7 +30,7 @@ import { getAccountId } from "../user";
 import {
 	sortObjectRecursive,
 	stripUndefined,
-} from "../utils/sortObjectRecursive";
+} from "../utils/sort-object-recursive";
 import type { Config } from "../config";
 import type { ContainerApp } from "../config/environment";
 import type {

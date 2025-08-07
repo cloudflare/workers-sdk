@@ -11,7 +11,7 @@ import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { getDockerPath } from "../../environment-variables/misc-variables";
 import { logger } from "../../logger";
-import { RuntimeController } from "./BaseController";
+import { RuntimeController } from "./base-controller";
 import { castErrorCause } from "./events";
 import {
 	convertBindingsToCfWorkerInitBindings,

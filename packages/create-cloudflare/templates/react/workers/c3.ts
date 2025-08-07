@@ -5,7 +5,7 @@ import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { transformFile } from "helpers/codemod";
 import { readJSON, usesTypescript, writeJSON } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../../src/templates";

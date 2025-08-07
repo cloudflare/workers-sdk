@@ -1,5 +1,5 @@
 import getPort from "get-port";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
 import { fetch } from "undici";

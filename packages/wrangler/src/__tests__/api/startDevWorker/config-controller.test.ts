@@ -2,7 +2,7 @@ import events from "node:events";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { describe, it } from "vitest";
-import { ConfigController } from "../../../api/startDevWorker/ConfigController";
+import { ConfigController } from "../../../api/startDevWorker/config-controller";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";

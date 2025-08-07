@@ -1,4 +1,4 @@
-import { isLegacyEnv } from "./isLegacyEnv";
+import { isLegacyEnv } from "./is-legacy-env";
 import type { Config } from "../config";
 
 /**

@@ -16,14 +16,14 @@ import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
 import { getWranglerTmpDir } from "../../paths";
 import { debounce } from "../../utils/debounce";
-import { Controller } from "./BaseController";
+import { Controller } from "./base-controller";
 import { castErrorCause } from "./events";
 import { convertBindingsToCfWorkerInitBindings } from "./utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { EphemeralDirectory } from "../../paths";
-import type { ControllerEventMap } from "./BaseController";
+import type { ControllerEventMap } from "./base-controller";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,

@@ -15,11 +15,11 @@ import { handleRuntimeStdioWithStructuredLogs } from "../../dev/miniflare/stdio"
 import { getHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
-import { Controller } from "./BaseController";
+import { Controller } from "./base-controller";
 import { castErrorCause } from "./events";
 import { assertNever, createDeferred } from "./utils";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { ControllerEventMap } from "./BaseController";
+import type { ControllerEventMap } from "./base-controller";
 import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,

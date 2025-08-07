@@ -1,4 +1,4 @@
-import { ProxyController } from "./ProxyController";
+import { ProxyController } from "./proxy-controller";
 import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,

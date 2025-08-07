@@ -7,7 +7,7 @@ import {
 	readMetricsConfig,
 	writeMetricsConfig,
 } from "helpers/metrics-config";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import * as sparrow from "helpers/sparrow";
 import { version as c3Version } from "../package.json";
 import type { Event } from "./event";

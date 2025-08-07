@@ -5,7 +5,7 @@ import { prompt } from "../../dialogs";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
+import { getLegacyScriptName } from "../../utils/get-legacy-script-name";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { WorkerVersion } from "./index";

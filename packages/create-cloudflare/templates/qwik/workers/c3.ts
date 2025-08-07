@@ -5,7 +5,7 @@ import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { removeFile, usesTypescript } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context } from "types";

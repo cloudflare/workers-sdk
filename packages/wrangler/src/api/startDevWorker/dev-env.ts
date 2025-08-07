@@ -2,12 +2,12 @@ import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import { logger, runWithLogLevel } from "../../logger";
 import { formatMessage, ParseError } from "../../parse";
-import { BundlerController } from "./BundlerController";
-import { ConfigController } from "./ConfigController";
-import { LocalRuntimeController } from "./LocalRuntimeController";
-import { ProxyController } from "./ProxyController";
-import { RemoteRuntimeController } from "./RemoteRuntimeController";
-import type { Controller, RuntimeController } from "./BaseController";
+import { BundlerController } from "./bundler-controller";
+import { ConfigController } from "./config-controller";
+import { LocalRuntimeController } from "./local-runtime-controller";
+import { ProxyController } from "./proxy-controller";
+import { RemoteRuntimeController } from "./remote-runtime-controller";
+import type { Controller, RuntimeController } from "./base-controller";
 import type { ErrorEvent } from "./events";
 import type { StartDevWorkerInput, Worker } from "./types";
 

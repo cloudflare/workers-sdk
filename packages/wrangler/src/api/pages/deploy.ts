@@ -12,7 +12,7 @@ import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../../environment-variables/mis
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
-import { buildFunctions } from "../../pages/buildFunctions";
+import { buildFunctions } from "../../pages/build-functions";
 import { MAX_DEPLOYMENT_ATTEMPTS } from "../../pages/constants";
 import {
 	ApiErrorCodes,
@@ -24,7 +24,7 @@ import {
 	buildRawWorker,
 	checkRawWorker,
 	produceWorkerBundleForWorkerJSDirectory,
-} from "../../pages/functions/buildWorker";
+} from "../../pages/functions/build-worker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
 import { getPagesTmpDir } from "../../pages/utils";

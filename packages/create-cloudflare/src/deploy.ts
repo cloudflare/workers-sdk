@@ -8,7 +8,7 @@ import { processArgument } from "helpers/args";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { readFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import { poll } from "helpers/poll";
 import { isInsideGitRepo } from "./git";
 import { chooseAccount, wranglerLogin } from "./wrangler/accounts";

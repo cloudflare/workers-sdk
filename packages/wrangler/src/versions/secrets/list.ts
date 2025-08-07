@@ -4,7 +4,7 @@ import { createCommand } from "../../core/create-command";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
+import { getLegacyScriptName } from "../../utils/get-legacy-script-name";
 import { fetchDeploymentVersions, fetchLatestDeployment } from "../api";
 import type { VersionDetails } from ".";
 import type { ApiVersion, VersionCache } from "../types";

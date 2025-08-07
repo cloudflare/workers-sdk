@@ -10,7 +10,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { APIError } from "../parse";
 import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
+import { isLegacyEnv } from "../utils/is-legacy-env";
 import { printBindings } from "../utils/print-bindings";
 import type { Config } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
