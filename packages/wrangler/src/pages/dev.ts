@@ -20,7 +20,7 @@ import { getBasePath } from "../paths";
 import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { debounce } from "../utils/debounce";
 import * as shellquote from "../utils/shell-quote";
-import { buildFunctions } from "./buildFunctions";
+import { buildFunctions } from "./build-functions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import {

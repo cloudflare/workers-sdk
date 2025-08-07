@@ -18,7 +18,7 @@ import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
-import { buildFunctions } from "./buildFunctions";
+import { buildFunctions } from "./build-functions";
 import {
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
 	EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
