@@ -3,7 +3,7 @@ import { formatConfigSnippet } from "../../../config";
 import { createCommand } from "../../../core/create-command";
 import { CommandLineArgsError } from "../../../errors";
 import { logger } from "../../../logger";
-import { getValidBindingName } from "../../../utils/getValidBindingName";
+import { getValidBindingName } from "../../../utils/get-valid-binding-name";
 import { createQueue } from "../../client";
 import {
 	MAX_DELIVERY_DELAY_SECS,

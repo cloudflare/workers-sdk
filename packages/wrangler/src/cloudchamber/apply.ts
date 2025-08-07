@@ -29,7 +29,7 @@ import { getAccountId } from "../user";
 import {
 	sortObjectRecursive,
 	stripUndefined,
-} from "../utils/sortObjectRecursive";
+} from "../utils/sort-object-recursive";
 import { promiseSpinner } from "./common";
 import { Diff } from "./helpers/diff";
 import { cleanForInstanceType } from "./instance-type/instance-type";

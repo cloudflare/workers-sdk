@@ -5,8 +5,8 @@ import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
-import { isLegacyEnv } from "../../utils/isLegacyEnv";
+import { getLegacyScriptName } from "../../utils/get-legacy-script-name";
+import { isLegacyEnv } from "../../utils/is-legacy-env";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { VersionDetails, WorkerVersion } from "./index";
 

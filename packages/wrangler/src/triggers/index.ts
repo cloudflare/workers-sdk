@@ -2,8 +2,8 @@ import { getAssetsOptions } from "../assets";
 import { createCommand, createNamespace } from "../core/create-command";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { getScriptName } from "../utils/getScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
+import { getScriptName } from "../utils/get-script-name";
+import { isLegacyEnv } from "../utils/is-legacy-env";
 import triggersDeploy from "./deploy";
 
 export const triggersNamespace = createNamespace({

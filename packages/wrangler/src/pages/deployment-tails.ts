@@ -13,7 +13,7 @@ import {
 	createPagesTail,
 	jsonPrintLogs,
 	prettyPrintLogs,
-} from "../tail/createTail";
+} from "../tail/create-tail";
 import { translateCLICommandToFilterMessage } from "../tail/filters";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";

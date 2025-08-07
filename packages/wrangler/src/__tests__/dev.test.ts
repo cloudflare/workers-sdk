@@ -4,7 +4,7 @@ import getPort from "get-port";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { vi } from "vitest";
-import { ConfigController } from "../api/startDevWorker/ConfigController";
+import { ConfigController } from "../api/startDevWorker/config-controller";
 import { unwrapHook } from "../api/startDevWorker/utils";
 import { getWorkerAccountAndContext } from "../dev/remote";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
@@ -31,7 +31,7 @@ import type {
 } from "../api";
 import type { Mock, MockInstance } from "vitest";
 
-vi.mock("../api/startDevWorker/ConfigController", (importOriginal) =>
+vi.mock("../api/startDevWorker/config-controller", (importOriginal) =>
 	importOriginal()
 );
 vi.mock("node:child_process");
