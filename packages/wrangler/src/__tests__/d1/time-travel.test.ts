@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { throwIfDatabaseIsAlpha } from "../../d1/timeTravel/utils";
+import { throwIfDatabaseIsAlpha } from "../../d1/time-travel/utils";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../../environment-variables/misc-variables";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
