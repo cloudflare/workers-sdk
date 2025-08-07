@@ -1,5 +1,18 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.61
+
+### Patch Changes
+
+- [#10162](https://github.com/cloudflare/workers-sdk/pull/10162) [`5bd0a19`](https://github.com/cloudflare/workers-sdk/commit/5bd0a1977a7c127ea52b2823f548c4b4cd3ceb10) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: stop containers breaking vitest-pool-workers
+
+  Testing interactions with containers is still currently unsupported.
+
+- [#10130](https://github.com/cloudflare/workers-sdk/pull/10130) [`773cca3`](https://github.com/cloudflare/workers-sdk/commit/773cca387b5ef01221c7a304883f8b36d1b386da) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix the potentially specified environment not being taken into account for remote bindings
+
+- Updated dependencies [[`773cca3`](https://github.com/cloudflare/workers-sdk/commit/773cca387b5ef01221c7a304883f8b36d1b386da), [`773cca3`](https://github.com/cloudflare/workers-sdk/commit/773cca387b5ef01221c7a304883f8b36d1b386da), [`2e8eb24`](https://github.com/cloudflare/workers-sdk/commit/2e8eb249a1da8a80455e25dba52455ee534c1490), [`93c4c26`](https://github.com/cloudflare/workers-sdk/commit/93c4c26eb5e13bef366add6f96959ccddd64d43b), [`48853a6`](https://github.com/cloudflare/workers-sdk/commit/48853a6882b0bb390b989c55a16aed232cdc8ddc), [`2e8eb24`](https://github.com/cloudflare/workers-sdk/commit/2e8eb249a1da8a80455e25dba52455ee534c1490)]:
+  - wrangler@4.28.1
+
 ## 0.8.60
 
 ### Patch Changes

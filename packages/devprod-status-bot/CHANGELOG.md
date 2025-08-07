@@ -1,5 +1,11 @@
 # devprod-status-bot
 
+## 1.2.0
+
+### Minor Changes
+
+- [#10214](https://github.com/cloudflare/workers-sdk/pull/10214) [`b9d3174`](https://github.com/cloudflare/workers-sdk/commit/b9d317490a0236f3472646b175b75891290e41ef) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Add GitHub issue security analysis feature to detect and alert on potential vulnerability reports
+
 ## 1.1.7
 
 ### Patch Changes

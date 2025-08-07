@@ -1,5 +1,78 @@
 # wrangler
 
+## 4.28.1
+
+### Patch Changes
+
+- [#10130](https://github.com/cloudflare/workers-sdk/pull/10130) [`773cca3`](https://github.com/cloudflare/workers-sdk/commit/773cca387b5ef01221c7a304883f8b36d1b386da) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update `maybeStartOrUpdateRemoteProxySession` config argument (to allow callers to specify an environment)
+
+  Before this change `maybeStartOrUpdateRemoteProxySession` could be called with either the path to a wrangler config file or the configuration of a worker. The former override however did not allow the caller to specify an environment, so the `maybeStartOrUpdateRemoteProxySession` API has been updated so that in the wrangler config case an object (with the path and a potential environment) needs to be passed instead.
+
+  For example, before callers could invoke the function in the following way
+
+  ```ts
+  await maybeStartOrUpdateRemoteProxySession(configPath);
+  ```
+
+  note that there is no way to tell the function what environment to use when parsing the wrangle configuration.
+
+  Now callers will instead call the function in the following way:
+
+  ```ts
+  await maybeStartOrUpdateRemoteProxySession({
+  	path: configPath,
+  	environment: targetEnvironment,
+  });
+  ```
+
+  note that now a target environment can be specified.
+
+- [#10130](https://github.com/cloudflare/workers-sdk/pull/10130) [`773cca3`](https://github.com/cloudflare/workers-sdk/commit/773cca387b5ef01221c7a304883f8b36d1b386da) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix `getPlatformProxy` not taking into account the potentially specified environment for remote bindings
+
+- [#10122](https://github.com/cloudflare/workers-sdk/pull/10122) [`2e8eb24`](https://github.com/cloudflare/workers-sdk/commit/2e8eb249a1da8a80455e25dba52455ee534c1490) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix `startWorker` not respecting `auth` options for remote bindings
+
+  fix `startWorker` currently not taking into account the `auth` field
+  that can be provided as part of the `dev` options when used in conjunction
+  with remote bindings
+
+  example:
+
+  Given the following
+
+  ```js
+  import { unstable_startWorker } from "wrangler";
+
+  const worker = await unstable_startWorker({
+  	entrypoint: "./worker.js",
+  	bindings: {
+  		AI: {
+  			type: "ai",
+  			experimental_remote: true,
+  		},
+  	},
+  	dev: {
+  		experimentalRemoteBindings: true,
+  		auth: {
+  			accountId: "<ACCOUNT_ID>",
+  			apiToken: {
+  				apiToken: "<API_TOKEN>",
+  			},
+  		},
+  	},
+  });
+
+  await worker.ready;
+  ```
+
+  `wrangler` will now use the provided `<ACCOUNT_ID>` and `<API_TOKEN>` to integrate with
+  the remote AI binding instead of requiring the user to authenticate.
+
+- [#10209](https://github.com/cloudflare/workers-sdk/pull/10209) [`93c4c26`](https://github.com/cloudflare/workers-sdk/commit/93c4c26eb5e13bef366add6f96959ccddd64d43b) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - fix: strip ANSI escape codes from log files to improve readability and parsing
+
+- [#9774](https://github.com/cloudflare/workers-sdk/pull/9774) [`48853a6`](https://github.com/cloudflare/workers-sdk/commit/48853a6882b0bb390b989c55a16aed232cdc8ddc) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Validate container configuration against account limits in wrangler to give early feedback to the user
+
+- [#10122](https://github.com/cloudflare/workers-sdk/pull/10122) [`2e8eb24`](https://github.com/cloudflare/workers-sdk/commit/2e8eb249a1da8a80455e25dba52455ee534c1490) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix incorrect TypeScript type for AI binding in the `startWorker` API
+
 ## 4.28.0
 
 ### Minor Changes
