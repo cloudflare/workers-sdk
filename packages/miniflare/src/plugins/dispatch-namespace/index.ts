@@ -41,6 +41,14 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 					moduleName: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-dispatch-namespace`,
 					innerBindings: [
 						{
+							name: "remoteProxyConnectionString",
+							text: config.remoteProxyConnectionString.href,
+						},
+						{
+							name: "binding",
+							text: name,
+						},
+						{
 							name: "fetcher",
 							service: {
 								name: getUserBindingServiceName(

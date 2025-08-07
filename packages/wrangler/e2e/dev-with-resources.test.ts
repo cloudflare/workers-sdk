@@ -715,7 +715,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		await fetch(`${url}/connect`);
 	});
 
-	it.skipIf(!isLocal)("exposes Pipelines bindings", async () => {
+	it("exposes Pipelines bindings", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -724,16 +724,18 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 
 				[[pipelines]]
 				binding = "PIPELINE"
-				pipeline = "my-pipeline"
+				pipeline = "preserve-e2e-pipelines"
 			`,
 			"src/index.ts": dedent`
 				export default {
 					async fetch(request, env, ctx) {
-						if (env.PIPELINE === undefined) {
-							return new Response("env.PIPELINE is undefined");
-						}
-						env.PIPELINE.send([{hello: "world"}]);
-						return new Response("env.PIPELINE is available");
+						let log = {
+							url: request.url,
+							method: request.method,
+							headers: Object.fromEntries(request.headers),
+						};
+						await env.PIPELINE.send([log]);
+						return new Response("Data sent to env.PIPELINE");
 					}
 				}
 			`,
@@ -745,10 +747,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 
-		await expect(res.text()).resolves.toBe("env.PIPELINE is available");
-		// worker.currentOutput is sometimes racey, worker.output will hang
-		const match = await worker.readUntil(/Request received/);
-		expect(match[0]).not.toBeNull();
+		await expect(res.text()).resolves.toBe("Data sent to env.PIPELINE");
 	});
 
 	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {

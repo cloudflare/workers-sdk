@@ -5,6 +5,7 @@ export default {
 			entrypoint: await (
 				await env.SERVICE_WITH_ENTRYPOINT.fetch("http://example.com")
 			).text(),
+			rpc: await env.SERVICE_WITH_ENTRYPOINT.add(1, 2),
 		});
 	},
 };

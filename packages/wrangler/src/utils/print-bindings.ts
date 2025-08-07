@@ -474,11 +474,15 @@ export function printBindings(
 
 	if (pipelines?.length) {
 		output.push(
-			...pipelines.map(({ binding, pipeline }) => ({
+			...pipelines.map(({ binding, pipeline, experimental_remote }) => ({
 				name: binding,
 				type: friendlyBindingNames.pipelines,
 				value: pipeline,
-				mode: getMode(),
+				mode: getMode({
+					isSimulatedLocally: getFlag("REMOTE_BINDINGS")
+						? !experimental_remote
+						: true,
+				}),
 			}))
 		);
 	}

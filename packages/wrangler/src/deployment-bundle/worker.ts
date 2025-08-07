@@ -283,6 +283,7 @@ export interface CfAssetsBinding {
 export interface CfPipeline {
 	binding: string;
 	pipeline: string;
+	experimental_remote?: boolean;
 }
 
 export interface CfUnsafeBinding {

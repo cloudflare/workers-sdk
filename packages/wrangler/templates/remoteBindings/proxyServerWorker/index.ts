@@ -5,7 +5,7 @@ import { EmailMessage } from "cloudflare:email";
 // However, SendEmail bindings need to take EmailMessage as their first parameter, which is not serialisable
 // As such, we reconstruct it before sending it on to the binding.
 // See also packages/miniflare/src/workers/email/email.worker.ts
-function getExposedBinding(b: any) {
+function getExposedBinding(b: any, searchParams: URLSearchParams) {
 	if (b.constructor.name === "SendEmail") {
 		return {
 			async send(e: ForwardableEmailMessage) {
@@ -15,6 +15,12 @@ function getExposedBinding(b: any) {
 			},
 		};
 	}
+	if (searchParams.has("MF-Dispatch-Namespace-Options")) {
+		const { name, args, options } = JSON.parse(
+			searchParams.get("MF-Dispatch-Namespace-Options")!
+		);
+		return b.get(name, args, options);
+	}
 	return b;
 }
 export default {
@@ -23,7 +29,10 @@ export default {
 			const url = new URL(request.url);
 			return receiveRpcOverHttp(
 				request,
-				getExposedBinding(env[url.searchParams.get("MF-Binding")!])
+				getExposedBinding(
+					env[url.searchParams.get("MF-Binding")!],
+					url.searchParams
+				)
 			);
 		}
 		const targetBinding = request.headers.get("MF-Binding");
