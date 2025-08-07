@@ -4,7 +4,7 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { readFile, readJSON, writeFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context, PackageJson } from "types";

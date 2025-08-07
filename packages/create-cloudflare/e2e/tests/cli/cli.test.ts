@@ -1,6 +1,6 @@
 import fs, { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../../../package.json";
 import {

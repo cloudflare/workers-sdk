@@ -4,7 +4,7 @@ import { join } from "path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { processArgument } from "helpers/args";
 import { runCommand } from "helpers/command";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import { chooseAccount, wranglerLogin } from "../../src/wrangler/accounts";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
