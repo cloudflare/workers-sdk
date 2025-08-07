@@ -328,12 +328,21 @@ function d1DatabaseEntry(db: CfD1Database): [string, string] {
 	];
 }
 function queueProducerEntry(
-	queue: CfQueue
-): [string, { queueName: string; deliveryDelay: number | undefined }] {
-	return [
-		queue.binding,
-		{ queueName: queue.queue_name, deliveryDelay: queue.delivery_delay },
-	];
+	{ binding, queue_name: queueName, experimental_remote }: CfQueue,
+	remoteProxyConnectionString?: RemoteProxyConnectionString
+): [
+	string,
+	{
+		queueName: string;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+	},
+] {
+	if (!remoteProxyConnectionString || !experimental_remote) {
+		return [binding, { queueName }];
+	}
+
+	return [binding, { queueName, remoteProxyConnectionString }];
+
 }
 function pipelineEntry(pipeline: CfPipeline): [string, string] {
 	return [pipeline.binding, pipeline.pipeline];

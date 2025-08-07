@@ -169,7 +169,8 @@ export interface CfWorkflow {
 export interface CfQueue {
 	binding: string;
 	queue_name: string;
-	delivery_delay?: number;
+	experimental_remote?: boolean;
+	raw?: boolean;
 }
 
 export interface CfR2Bucket {

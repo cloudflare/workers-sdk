@@ -1196,7 +1196,6 @@ export async function mapBindings(
 							{
 								binding: binding.name,
 								queue: binding.queue_name,
-								delivery_delay: binding.delivery_delay,
 							},
 						];
 						break;

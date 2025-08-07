@@ -11968,7 +11968,6 @@ export default{
 						{
 							queue: queueName,
 							binding: "MY_QUEUE",
-							delivery_delay: 10,
 						},
 					],
 				},
@@ -11987,12 +11986,6 @@ export default{
 				modified_on: "",
 			};
 			mockGetQueueByName(queueName, existingQueue);
-			mockPutQueueById(queueId, {
-				queue_name: queueName,
-				settings: {
-					delivery_delay: 10,
-				},
-			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB

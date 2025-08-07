@@ -2367,8 +2367,456 @@ describe("init", () => {
 								},
 							};
 						`,
+<<<<<<< HEAD
 				schedules = [
-					{
+||||||| parent of b31ef9ccc (wrangler  remove delivery_delay from queue producer binding)
+			schedules = [
+				{
+					cron: "0 0 0 * * *",
+					created_on: new Date(1987, 9, 27),
+					modified_on: new Date(1987, 9, 27),
+				},
+			],
+			bindings = [
+				{
+					type: "secret_text",
+					name: "ABC",
+				},
+				{
+					type: "plain_text",
+					name: "ANOTHER-NAME",
+					text: "thing-TEXT",
+				},
+				{
+					type: "durable_object_namespace",
+					name: "DURABLE_TEST",
+					class_name: "Durability",
+					script_name: "another-durable-object-worker",
+					environment: "production",
+				},
+				{
+					type: "kv_namespace",
+					name: "kv_testing",
+					namespace_id: "some-namespace-id",
+				},
+				{
+					type: "r2_bucket",
+					bucket_name: "test-bucket",
+					name: "test-bucket",
+				},
+				{
+					environment: "production",
+					name: "website",
+					service: "website",
+					type: "service",
+					entrypoint: "WWWHandler",
+				},
+				{
+					type: "dispatch_namespace",
+					name: "name-namespace-mock",
+					namespace: "namespace-mock",
+				},
+				{
+					name: "httplogs",
+					type: "logfwdr",
+					destination: "httplogs",
+				},
+				{
+					name: "trace",
+					type: "logfwdr",
+					destination: "trace",
+				},
+				{
+					type: "wasm_module",
+					name: "WASM_MODULE_ONE",
+					part: "./some_wasm.wasm",
+				},
+				{
+					type: "wasm_module",
+					name: "WASM_MODULE_TWO",
+					part: "./more_wasm.wasm",
+				},
+				{
+					type: "text_blob",
+					name: "TEXT_BLOB_ONE",
+					part: "./my-entire-app-depends-on-this.cfg",
+				},
+				{
+					type: "d1",
+					name: "DB",
+					id: "40160e84-9fdb-4ce7-8578-23893cecc5a3",
+				},
+				{
+					type: "text_blob",
+					name: "TEXT_BLOB_TWO",
+					part: "./the-entirety-of-human-knowledge.txt",
+				},
+				{ type: "data_blob", name: "DATA_BLOB_ONE", part: "DATA_BLOB_ONE" },
+				{ type: "data_blob", name: "DATA_BLOB_TWO", part: "DATA_BLOB_TWO" },
+				{
+					type: "some unsafe thing",
+					name: "UNSAFE_BINDING_ONE",
+					data: { some: { unsafe: "thing" } },
+				},
+				{
+					type: "another unsafe thing",
+					name: "UNSAFE_BINDING_TWO",
+					data: 1337,
+				},
+				{
+					type: "inherit",
+					name: "INHERIT_BINDING",
+				},
+				{
+					type: "pipelines",
+					name: "PIPELINE_BINDING",
+					pipeline: "some-name",
+				},
+				{
+					type: "mtls_certificate",
+					name: "MTLS_BINDING",
+					certificate_id: "some-id",
+				},
+				{
+					type: "hyperdrive",
+					name: "HYPER_BINDING",
+					id: "some-id",
+				},
+				{
+					type: "vectorize",
+					name: "VECTOR_BINDING",
+					index_name: "some-name",
+				},
+				{
+					type: "queue",
+					name: "queue_BINDING",
+					queue_name: "some-name",
+					delivery_delay: 1,
+				},
+				{
+					type: "send_email",
+					name: "EMAIL_BINDING",
+					destination_address: "some@address.com",
+					allowed_destination_addresses: ["some2@address.com"],
+				},
+				{
+					type: "version_metadata",
+					name: "Version_BINDING",
+				},
+			],
+			routes = [
+				{
+					id: "some-route-id",
+					pattern: "delta.quadrant",
+					zone_name: "delta.quadrant",
+				},
+			],
+			customDomains = [],
+			workersDev = true,
+			limits,
+		}: {
+			main?: string;
+			id?: string;
+			usage_model?: string;
+			compatibility_date?: string | null;
+			content?: string | FormData;
+			schedules?: { cron: string; created_on: Date; modified_on: Date }[];
+			bindings?: unknown[];
+			routes?: unknown[];
+			customDomains?: unknown[];
+			workersDev?: boolean;
+			limits?: UserLimits;
+		} = {}) {
+			return {
+				main,
+				schedules,
+				service: {
+					id,
+					default_environment: {
+						environment: "test",
+						created_on: "1987-09-27",
+						modified_on: "1987-09-27",
+						script: {
+							id,
+							tag: "test-tag",
+							etag: "some-etag",
+							handlers: [],
+							modified_on: "1987-09-27",
+							created_on: "1987-09-27",
+							migration_tag: "some-migration-tag",
+							usage_model,
+							limits,
+							compatibility_date,
+							tail_consumers: [{ service: "listener" }],
+							observability: { enabled: true, head_sampling_rate: 0.5 },
+						},
+					},
+					created_on: "1987-09-27",
+					modified_on: "1987-09-27",
+					environments: [
+						{
+							environment: "test",
+							created_on: "1987-09-27",
+							modified_on: "1987-09-27",
+						},
+						{
+							environment: "staging",
+							created_on: "1987-09-27",
+							modified_on: "1987-09-27",
+						},
+					],
+				},
+				usage_model,
+				content,
+				bindings,
+				routes,
+				customDomains,
+				workersDev,
+			} as const;
+		}
+		mockApiToken();
+		const MOCK_ACCOUNT_ID = "LCARS";
+		mockAccountId({ accountId: MOCK_ACCOUNT_ID });
+
+		let worker: ReturnType<typeof makeWorker>;
+
+		beforeEach(() => {
+			worker = makeWorker();
+			mockSupportingDashRequests(MOCK_ACCOUNT_ID);
+		});
+
+		const mockConfigExpected: RawConfig = {
+			workers_dev: true,
+			main: "src/index.js",
+			compatibility_date: "1987-09-27",
+			name: "isolinear-optical-chip",
+			migrations: [
+				{
+					new_classes: ["Durability"],
+					tag: "some-migration-tag",
+				},
+		],
+		bindings = [
+				{
+					type: "secret_text",
+					name: "ABC",
+				},
+				{
+					type: "plain_text",
+					name: "ANOTHER-NAME",
+					text: "thing-TEXT",
+				},
+				{
+					type: "durable_object_namespace",
+					name: "DURABLE_TEST",
+					class_name: "Durability",
+					script_name: "another-durable-object-worker",
+					environment: "production",
+				},
+				{
+					type: "kv_namespace",
+					name: "kv_testing",
+					namespace_id: "some-namespace-id",
+				},
+				{
+					type: "r2_bucket",
+					bucket_name: "test-bucket",
+					name: "test-bucket",
+				},
+				{
+					environment: "production",
+					name: "website",
+					service: "website",
+					type: "service",
+					entrypoint: "WWWHandler",
+				},
+				{
+					type: "dispatch_namespace",
+					name: "name-namespace-mock",
+					namespace: "namespace-mock",
+				},
+				{
+					name: "httplogs",
+					type: "logfwdr",
+					destination: "httplogs",
+				},
+				{
+					name: "trace",
+					type: "logfwdr",
+					destination: "trace",
+				},
+				{
+					type: "wasm_module",
+					name: "WASM_MODULE_ONE",
+					part: "./some_wasm.wasm",
+				},
+				{
+					type: "wasm_module",
+					name: "WASM_MODULE_TWO",
+					part: "./more_wasm.wasm",
+				},
+				{
+					type: "text_blob",
+					name: "TEXT_BLOB_ONE",
+					part: "./my-entire-app-depends-on-this.cfg",
+				},
+				{
+					type: "d1",
+					name: "DB",
+					id: "40160e84-9fdb-4ce7-8578-23893cecc5a3",
+				},
+				{
+					type: "text_blob",
+					name: "TEXT_BLOB_TWO",
+					part: "./the-entirety-of-human-knowledge.txt",
+				},
+				{ type: "data_blob", name: "DATA_BLOB_ONE", part: "DATA_BLOB_ONE" },
+				{ type: "data_blob", name: "DATA_BLOB_TWO", part: "DATA_BLOB_TWO" },
+				{
+					type: "some unsafe thing",
+					name: "UNSAFE_BINDING_ONE",
+					data: { some: { unsafe: "thing" } },
+				},
+				{
+					type: "another unsafe thing",
+					name: "UNSAFE_BINDING_TWO",
+					data: 1337,
+				},
+				{
+					type: "inherit",
+					name: "INHERIT_BINDING",
+				},
+				{
+					type: "pipelines",
+					name: "PIPELINE_BINDING",
+					pipeline: "some-name",
+				},
+				{
+					type: "mtls_certificate",
+					name: "MTLS_BINDING",
+					certificate_id: "some-id",
+				},
+				{
+					type: "hyperdrive",
+					name: "HYPER_BINDING",
+					id: "some-id",
+				},
+				{
+					type: "vectorize",
+					name: "VECTOR_BINDING",
+					index_name: "some-name",
+				},
+				{
+					type: "queue",
+					name: "queue_BINDING",
+					queue_name: "some-name",
+				},
+				{
+					type: "send_email",
+					name: "EMAIL_BINDING",
+					destination_address: "some@address.com",
+					allowed_destination_addresses: ["some2@address.com"],
+				},
+				{
+					type: "version_metadata",
+					name: "Version_BINDING",
+				},
+			],
+			routes = [
+				{
+					id: "some-route-id",
+					pattern: "delta.quadrant",
+					zone_name: "delta.quadrant",
+				},
+			],
+			customDomains = [],
+			workersDev = true,
+			limits,
+		}: {
+			main?: string;
+			id?: string;
+			usage_model?: string;
+			compatibility_date?: string | null;
+			content?: string | FormData;
+			schedules?: { cron: string; created_on: Date; modified_on: Date }[];
+			bindings?: unknown[];
+			routes?: unknown[];
+			customDomains?: unknown[];
+			workersDev?: boolean;
+			limits?: UserLimits;
+		} = {}) {
+			return {
+				main,
+				schedules,
+				service: {
+					id,
+					default_environment: {
+						environment: "test",
+						created_on: "1987-09-27",
+						modified_on: "1987-09-27",
+						script: {
+							id,
+							tag: "test-tag",
+							etag: "some-etag",
+							handlers: [],
+							modified_on: "1987-09-27",
+							created_on: "1987-09-27",
+							migration_tag: "some-migration-tag",
+							usage_model,
+							limits,
+							compatibility_date,
+							tail_consumers: [{ service: "listener" }],
+							observability: { enabled: true, head_sampling_rate: 0.5 },
+						},
+					},
+					created_on: "1987-09-27",
+					modified_on: "1987-09-27",
+					environments: [
+						{
+							environment: "test",
+							created_on: "1987-09-27",
+							modified_on: "1987-09-27",
+						},
+						{
+							environment: "staging",
+							created_on: "1987-09-27",
+							modified_on: "1987-09-27",
+						},
+					],
+				},
+				usage_model,
+				content,
+				bindings,
+				routes,
+				customDomains,
+				workersDev,
+			} as const;
+		}
+		mockApiToken();
+		const MOCK_ACCOUNT_ID = "LCARS";
+		mockAccountId({ accountId: MOCK_ACCOUNT_ID });
+
+		let worker: ReturnType<typeof makeWorker>;
+
+		beforeEach(() => {
+			worker = makeWorker();
+			mockSupportingDashRequests(MOCK_ACCOUNT_ID);
+		});
+
+		const mockConfigExpected: RawConfig = {
+			workers_dev: true,
+			main: "src/index.js",
+			compatibility_date: "1987-09-27",
+			name: "isolinear-optical-chip",
+			migrations: [
+				{
+					new_classes: ["Durability"],
+					tag: "some-migration-tag",
+				},
+		],
+		durable_objects: {
+			bindings: [
+				{
 						cron: "0 0 0 * * *",
 						created_on: new Date(1987, 9, 27),
 						modified_on: new Date(1987, 9, 27),
@@ -2407,12 +2855,11 @@ describe("init", () => {
 						service: "website",
 						type: "service",
 						entrypoint: "WWWHandler",
-					},
-					{
-						type: "dispatch_namespace",
-						name: "name-namespace-mock",
-						namespace: "namespace-mock",
-					},
+				},
+				{
+					binding: "queue_BINDING",
+					queue: "some-name",
+				},
 					{
 						name: "httplogs",
 						type: "logfwdr",
@@ -2696,13 +3143,12 @@ describe("init", () => {
 					},
 				],
 				queues: {
-					producers: [
-						{
-							binding: "queue_BINDING",
-							delivery_delay: 1,
-							queue: "some-name",
-						},
-					],
+				producers: [
+					{
+						binding: "queue_BINDING",
+						queue: "some-name",
+					},
+				],
 				},
 				wasm_modules: {
 					WASM_MODULE_ONE: "./some_wasm.wasm",
@@ -3251,7 +3697,6 @@ describe("init", () => {
 					[[queues.producers]]
 					binding = \\"queue_BINDING\\"
 					queue = \\"some-name\\"
-					delivery_delay = 1
 
 					[[send_email]]
 					name = \\"EMAIL_BINDING\\"
