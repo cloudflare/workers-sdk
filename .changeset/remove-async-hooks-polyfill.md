@@ -1,5 +1,5 @@
 ---
-"@cloudflare/unenv-preset": major
+"@cloudflare/unenv-preset": minor
 "wrangler": patch
 ---
 
