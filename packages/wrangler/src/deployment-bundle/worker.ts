@@ -328,7 +328,7 @@ export interface CfUnsafeServiceBinding {
 	props?: CfService["props"];
 	entrypoint?: CfService["entrypoint"];
 
-	[additionalOption: string]: any;
+	[additionalOption: string]: unknown;
 }
 
 /**
