@@ -512,6 +512,76 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	}
 );
 
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
+	"Wrangler dev uses a provided account_id from the wrangler config file",
+	() => {
+		const remoteWorkerName = generateResourceName();
+		const helper = new WranglerE2ETestHelper();
+
+		beforeAll(async () => {
+			await helper.seed(path.resolve(__dirname, "./workers"));
+			await helper.run(
+				`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
+			);
+		}, 35_000);
+
+		afterAll(async () => {
+			await helper.run(`wrangler delete --name ${remoteWorkerName}`);
+		});
+
+		test.each(["valid", "invalid"] as const)(
+			"usage with a wrangler config file with an %s account id",
+			async (accountIdValidity) => {
+				await helper.seed({
+					"wrangler.json": JSON.stringify({
+						name: "remote-bindings-test",
+						main: "simple-service-binding.js",
+						account_id:
+							accountIdValidity === "valid"
+								? CLOUDFLARE_ACCOUNT_ID
+								: "invalid account id",
+						compatibility_date: "2025-05-07",
+						services: [
+							{
+								binding: "REMOTE_WORKER",
+								service: remoteWorkerName,
+								experimental_remote: true,
+							},
+						],
+					}),
+				});
+
+				const worker = helper.runLongLived("wrangler dev --x-remote-bindings", {
+					env: {
+						...process.env,
+						CLOUDFLARE_ACCOUNT_ID: undefined,
+					},
+				});
+
+				const { url } = await worker.waitForReady();
+
+				const response = await fetchText(url, 5_000);
+
+				await worker.stop();
+
+				if (accountIdValidity === "valid") {
+					expect(response).toEqual(
+						"REMOTE<WORKER>: Hello from a remote worker"
+					);
+					expect(await worker.output).not.toMatch(
+						/A request to the Cloudflare API \(.*?\) failed\./
+					);
+				} else {
+					expect(response).toBeNull();
+					expect(await worker.output).toMatch(
+						/A request to the Cloudflare API \(\/accounts\/invalid account id\/workers\/subdomain\/edge-preview\) failed\./
+					);
+				}
+			}
+		);
+	}
+);
+
 async function writeWranglerConfig(
 	testCase: TestCase<Record<string, string>>,
 	helper: WranglerE2ETestHelper,

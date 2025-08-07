@@ -584,6 +584,7 @@ describe("hyperdrive dev tests", () => {
 
 		const text = await fetchText(url);
 
+		assert(text);
 		const hyperdrive = new URL(text);
 		expect(hyperdrive.pathname).toBe("/some_db");
 		expect(hyperdrive.username).toBe("user");

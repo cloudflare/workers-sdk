@@ -1,11 +1,12 @@
 import type { InstanceType, SchedulingPolicy } from "./client";
 
 export interface Logger {
-	debug: (message: string) => void;
-	log: (message: string) => void;
-	info: (message: string) => void;
-	warn: (message: string) => void;
-	error: (error: Error) => void;
+	debug: (...args: unknown[]) => void;
+	debugWithSanitization: (label: string, ...args: unknown[]) => void;
+	log: (...args: unknown[]) => void;
+	info: (...args: unknown[]) => void;
+	warn: (...args: unknown[]) => void;
+	error: (...args: unknown[]) => void;
 }
 
 export type BuildArgs = {

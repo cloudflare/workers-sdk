@@ -15,44 +15,75 @@ const execOptions = {
 	env: { ...process.env, ...auth },
 } as const;
 const remoteWorkerName = `tmp-e2e-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
+const remoteStagingWorkerName = `tmp-e2e-staging-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
 const remoteKvName = `tmp-e2e-remote-kv-test-remote-bindings-${randomUUID().split("-")[0]}`;
 
 if (auth) {
-	describe(
-		"getPlatformProxy - remote bindings",
-		() => {
-			let remoteKvId: string;
+	describe("getPlatformProxy - remote bindings", { timeout: 50_000 }, () => {
+		let remoteKvId: string;
+
+		beforeAll(async () => {
+			const deployOut = execSync(
+				`pnpm wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-06-19`,
+				execOptions
+			);
+
+			if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(deployOut)) {
+				throw new Error(`Failed to deploy ${remoteWorkerName}`);
+			}
+
+			const stagingDeployOut = execSync(
+				`pnpm wrangler deploy remote-worker.staging.js --name ${remoteStagingWorkerName} --compatibility-date 2025-06-19`,
+				execOptions
+			);
+
+			if (
+				!new RegExp(`Deployed\\s+${remoteStagingWorkerName}\\b`).test(
+					stagingDeployOut
+				)
+			) {
+				throw new Error(`Failed to deploy ${remoteStagingWorkerName}`);
+			}
+
+			const kvAddOut = execSync(
+				`pnpm wrangler kv namespace create ${remoteKvName}`,
+				execOptions
+			);
+
+			const createdKvRegexMatch = kvAddOut.match(/"id": "(?<id>[^"]*?)"/);
+			const maybeRemoteKvId = createdKvRegexMatch?.groups?.["id"];
+			assert(maybeRemoteKvId, `Failed to create remote kv ${remoteKvName}`);
+			remoteKvId = maybeRemoteKvId;
+
+			execSync(
+				`pnpm wrangler kv key put test-key remote-kv-value --namespace-id=${remoteKvId} --remote`,
+				execOptions
+			);
+
+			rmSync("./.tmp", { recursive: true, force: true });
+			mkdirSync("./.tmp");
+		}, 35_000);
+
+		afterAll(() => {
+			execSync(`pnpm wrangler delete --name ${remoteWorkerName}`, execOptions);
+			execSync(
+				`pnpm wrangler delete --name ${remoteStagingWorkerName}`,
+				execOptions
+			);
+			execSync(
+				`pnpm wrangler kv namespace delete --namespace-id=${remoteKvId}`,
+				execOptions
+			);
+
+			rmSync("./.tmp", { recursive: true, force: true });
+		}, 35_000);
+
+		describe("normal usage", () => {
 			beforeAll(async () => {
-				const deployOut = execSync(
-					`pnpm wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-06-19`,
-					execOptions
-				);
-
-				if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(deployOut)) {
-					throw new Error(`Failed to deploy ${remoteWorkerName}`);
-				}
-
-				const kvAddOut = execSync(
-					`pnpm wrangler kv namespace create ${remoteKvName}`,
-					execOptions
-				);
-
-				const createdKvRegexMatch = kvAddOut.match(/"id": "(?<id>[^"]*?)"/);
-				const maybeRemoteKvId = createdKvRegexMatch?.groups?.["id"];
-				assert(maybeRemoteKvId, `Failed to create remote kv ${remoteKvName}`);
-				remoteKvId = maybeRemoteKvId;
-
-				execSync(
-					`pnpm wrangler kv key put test-key remote-kv-value --namespace-id=${remoteKvId} --remote`,
-					execOptions
-				);
-
-				rmSync("./.tmp", { recursive: true, force: true });
-
-				mkdirSync("./.tmp");
+				mkdirSync("./.tmp/normal-usage");
 
 				writeFileSync(
-					"./.tmp/wrangler.json",
+					"./.tmp/normal-usage/wrangler.json",
 					JSON.stringify(
 						{
 							name: "get-platform-proxy-fixture-test",
@@ -71,25 +102,31 @@ if (auth) {
 									experimental_remote: true,
 								},
 							],
+							env: {
+								staging: {
+									services: [
+										{
+											binding: "MY_WORKER",
+											service: remoteStagingWorkerName,
+											experimental_remote: true,
+										},
+									],
+									kv_namespaces: [
+										{
+											binding: "MY_KV",
+											id: remoteKvId,
+											experimental_remote: true,
+										},
+									],
+								},
+							},
 						},
 						undefined,
 						2
 					),
 					"utf8"
 				);
-			}, 25_000);
-
-			afterAll(() => {
-				execSync(
-					`pnpm wrangler delete --name ${remoteWorkerName}`,
-					execOptions
-				);
-				execSync(
-					`pnpm wrangler kv namespace delete --namespace-id=${remoteKvId}`,
-					execOptions
-				);
-				rmSync("./.tmp", { recursive: true, force: true });
-			}, 25_000);
+			});
 
 			test("getPlatformProxy works with remote bindings", async () => {
 				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", auth.CLOUDFLARE_ACCOUNT_ID);
@@ -99,7 +136,7 @@ if (auth) {
 					MY_WORKER: Fetcher;
 					MY_KV: KVNamespace;
 				}>({
-					configPath: "./.tmp/wrangler.json",
+					configPath: "./.tmp/normal-usage/wrangler.json",
 					experimental: { remoteBindings: true },
 				});
 
@@ -115,12 +152,37 @@ if (auth) {
 				await dispose();
 			});
 
+			test("getPlatformProxy works with remote bindings specified in an environment", async () => {
+				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", auth.CLOUDFLARE_ACCOUNT_ID);
+				vi.stubEnv("CLOUDFLARE_API_TOKEN", auth.CLOUDFLARE_API_TOKEN);
+				const { env, dispose } = await getPlatformProxy<{
+					MY_WORKER: Fetcher;
+					MY_KV: KVNamespace;
+				}>({
+					configPath: "./.tmp/normal-usage/wrangler.json",
+					experimental: { remoteBindings: true },
+					environment: "staging",
+				});
+
+				const workerText = await (
+					await env.MY_WORKER.fetch("http://example.com")
+				).text();
+				expect(workerText).toEqual(
+					"Hello from a remote Worker, defined for the staging environment, part of the getPlatformProxy remote bindings fixture!"
+				);
+
+				const kvValue = await env.MY_KV.get("test-key");
+				expect(kvValue).toEqual("remote-kv-value");
+
+				await dispose();
+			});
+
 			test("getPlatformProxy does not work with remote bindings if the experimental remoteBindings flag is not turned on", async () => {
 				const { env, dispose } = await getPlatformProxy<{
 					MY_WORKER: Fetcher;
 					MY_KV: KVNamespace;
 				}>({
-					configPath: "./.tmp/wrangler.json",
+					configPath: "./.tmp/normal-usage/wrangler.json",
 				});
 
 				const response = await fetchFromWorker(
@@ -137,9 +199,91 @@ if (auth) {
 
 				await dispose();
 			});
-		},
-		{ timeout: 50_000 }
-	);
+		});
+
+		describe("account id taken from the wrangler config", () => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", auth.CLOUDFLARE_API_TOKEN);
+
+			test("usage with a wrangler config file with an invalid account id", async () => {
+				mkdirSync("./.tmp/config-with-invalid-account-id");
+
+				writeFileSync(
+					"./.tmp/config-with-invalid-account-id/wrangler.json",
+					JSON.stringify(
+						{
+							name: "get-platform-proxy-fixture-test",
+							account_id: "NOT a valid account id",
+							compatibility_date: "2025-06-01",
+							services: [
+								{
+									binding: "MY_WORKER",
+									service: remoteWorkerName,
+									experimental_remote: true,
+								},
+							],
+						},
+						undefined,
+						2
+					),
+					"utf8"
+				);
+
+				const { env, dispose } = await getPlatformProxy<{
+					MY_WORKER: Fetcher;
+				}>({
+					configPath: "./.tmp/config-with-invalid-account-id/wrangler.json",
+					experimental: { remoteBindings: true },
+				});
+
+				const response = await fetchFromWorker(env.MY_WORKER, "OK", 10_000);
+				// The worker does not return a response
+				expect(response).toBe(undefined);
+
+				await dispose();
+			});
+
+			test("usage with a wrangler config file with a valid account id", async () => {
+				mkdirSync("./.tmp/config-with-no-account-id");
+
+				writeFileSync(
+					"./.tmp/config-with-no-account-id/wrangler.json",
+					JSON.stringify(
+						{
+							name: "get-platform-proxy-fixture-test",
+							account_id: auth.CLOUDFLARE_ACCOUNT_ID,
+							compatibility_date: "2025-06-01",
+							services: [
+								{
+									binding: "MY_WORKER",
+									service: remoteWorkerName,
+									experimental_remote: true,
+								},
+							],
+						},
+						undefined,
+						2
+					),
+					"utf8"
+				);
+
+				const { env, dispose } = await getPlatformProxy<{
+					MY_WORKER: Fetcher;
+				}>({
+					configPath: "./.tmp/config-with-no-account-id/wrangler.json",
+					experimental: { remoteBindings: true },
+				});
+
+				const response = await fetchFromWorker(env.MY_WORKER, "OK");
+				const workerText = await response?.text();
+				expect(workerText).toEqual(
+					"Hello from a remote Worker part of the getPlatformProxy remote bindings fixture!"
+				);
+
+				await dispose();
+			});
+		});
+	});
 } else {
 	test.skip("getPlatformProxy - remote bindings (no auth credentials)");
 }
@@ -156,17 +300,20 @@ if (auth) {
  */
 async function fetchFromWorker(
 	worker: Fetcher,
-	expectedStatusText: string
-): Promise<Response> {
+	expectedStatusText: string,
+	timeout = 30_000
+): Promise<Response | undefined> {
 	return vi.waitFor(
 		async () => {
-			const response = await worker.fetch("http://example.com", {
-				signal: AbortSignal.timeout(5_000),
-			});
-			expect(response.statusText).toEqual(expectedStatusText);
-			return response;
+			try {
+				const response = await worker.fetch("http://example.com", {
+					signal: AbortSignal.timeout(5_000),
+				});
+				expect(response.statusText).toEqual(expectedStatusText);
+				return response;
+			} catch {}
 		},
-		{ timeout: 30_000, interval: 500 }
+		{ timeout, interval: 500 }
 	);
 }
 
