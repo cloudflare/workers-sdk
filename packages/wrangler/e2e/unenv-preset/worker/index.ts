@@ -333,4 +333,29 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof os.freemem(), "number");
 		assert.strictEqual(typeof os.availableParallelism(), "number");
 	},
+
+	async testFs() {
+		const fs = await import("node:fs");
+		const fsp = await import("node:fs/promises");
+
+		const useNativeFs = getRuntimeFlagValue("enable_nodejs_fs_module");
+
+		if (useNativeFs) {
+			// Test the workerd implementation only
+			fs.writeFileSync("/tmp/sync", "sync");
+			assert.strictEqual(fs.readFileSync("/tmp/sync", "utf-8"), "sync");
+			await fsp.writeFile("/tmp/async", "async");
+			assert.strictEqual(await fsp.readFile("/tmp/async", "utf-8"), "async");
+		} else {
+			// Test the unenv polyfill only
+			assert.throws(
+				() => fs.readFileSync("/tmp/file", "utf-8"),
+				/not implemented/
+			);
+			await assert.rejects(
+				async () => await fsp.readFile("/tmp/file", "utf-8"),
+				/not implemented/
+			);
+		}
+	},
 };
