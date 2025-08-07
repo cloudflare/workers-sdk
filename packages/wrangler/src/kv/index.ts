@@ -11,7 +11,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
-import { getValidBindingName } from "../utils/getValidBindingName";
+import { getValidBindingName } from "../utils/get-valid-binding-name";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import {
 	BATCH_MAX_ERRORS_WARNINGS,

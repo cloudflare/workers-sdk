@@ -5,7 +5,7 @@ import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
-import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
+import { getLegacyScriptName } from "../../utils/get-legacy-script-name";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { WorkerVersion } from "./index";
 

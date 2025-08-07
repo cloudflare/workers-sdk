@@ -1,4 +1,4 @@
-import { getValidBindingName } from "../../utils/getValidBindingName";
+import { getValidBindingName } from "../../utils/get-valid-binding-name";
 
 describe("getValidBindingName", () => {
 	it("should replace dashes with underscores", () => {
