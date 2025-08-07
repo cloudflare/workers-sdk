@@ -208,9 +208,6 @@ importers:
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
-      puppeteer:
-        specifier: 22.8.2
-        version: 22.8.2(typescript@5.8.3)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1753,6 +1750,9 @@ importers:
       glob-to-regexp:
         specifier: 0.4.1
         version: 0.4.1
+      puppeteer:
+        specifier: 22.8.2
+        version: 22.8.2(typescript@5.8.3)
       sharp:
         specifier: ^0.33.5
         version: 0.33.5
@@ -1892,9 +1892,6 @@ importers:
       pretty-bytes:
         specifier: ^6.0.0
         version: 6.1.1
-      puppeteer:
-        specifier: 22.8.2
-        version: 22.8.2(typescript@5.8.3)
       rimraf:
         specifier: catalog:default
         version: 6.0.1

@@ -62,7 +62,7 @@ export default {
 };
 `;
 
-test("it creates a browser session", async (t) => {
+test.before("Ensure browser is installed", async (t) => {
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -71,10 +71,14 @@ test("it creates a browser session", async (t) => {
 		browserRendering: { binding: "MYBROWSER" },
 	};
 	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
-
-	const res = await mf.dispatchFetch("https://localhost/session");
-	t.assert((await res.text()).includes("sessionId"));
+	try {
+		const res = await mf.dispatchFetch("https://localhost/session");
+		t.assert((await res.text()).includes("sessionId"));
+	} catch {
+		t.fail(`Failed to create browser session`);
+	} finally {
+		await mf.dispose();
+	}
 });
 
 const BROWSER_WORKER_CLOSE_SCRIPT = `
