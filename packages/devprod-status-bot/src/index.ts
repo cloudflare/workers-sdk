@@ -72,7 +72,7 @@ async function getVersionPackagesPR(pat: string) {
 				Authorization: `Bearer ${pat}`,
 			},
 		}
-	).then((r) => r.json() as unknown as { html_url: string; body: string }[]);
+	).then((r) => r.json<{ html_url: string; body: string }[]>());
 
 	return versionPackages[0];
 }
