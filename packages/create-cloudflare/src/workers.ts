@@ -4,9 +4,9 @@ import { warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import TOML from "@iarna/toml";
 import { runCommand } from "helpers/command";
-import { getLatestTypesEntrypoint } from "helpers/compatDate";
+import { getLatestTypesEntrypoint } from "helpers/compat-date";
 import { readFile, readJSON, usesTypescript, writeFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import { installPackages } from "helpers/packages";
 import * as jsonc from "jsonc-parser";
 import {

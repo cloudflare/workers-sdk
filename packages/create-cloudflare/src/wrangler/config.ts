@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from "fs";
 import { resolve } from "path";
 import TOML from "@iarna/toml";
-import { getWorkerdCompatibilityDate } from "helpers/compatDate";
+import { getWorkerdCompatibilityDate } from "helpers/compat-date";
 import { readFile, writeFile, writeJSON } from "helpers/files";
 import {
 	addJSONComment,

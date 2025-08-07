@@ -2,7 +2,7 @@ import {
 	compatDateFlag,
 	getLatestTypesEntrypoint,
 	getWorkerdCompatibilityDate,
-} from "helpers/compatDate";
+} from "helpers/compat-date";
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";

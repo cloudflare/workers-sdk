@@ -1,13 +1,13 @@
 import { existsSync } from "fs";
 import { mockWorkersTypesDirectory } from "helpers/__tests__/mocks";
-import { getWorkerdCompatibilityDate } from "helpers/compatDate";
+import { getWorkerdCompatibilityDate } from "helpers/compat-date";
 import { readFile, writeFile } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
 import { updateWranglerConfig } from "../config";
 
 vi.mock("helpers/files");
-vi.mock("helpers/compatDate");
+vi.mock("helpers/compat-date");
 vi.mock("fs");
 
 const mockCompatDate = "2024-01-17";

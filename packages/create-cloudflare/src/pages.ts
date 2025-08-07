@@ -1,6 +1,6 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { quoteShellArgs, runCommand } from "helpers/command";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import { retry } from "helpers/retry";
 import { getProductionBranch } from "./git";
 import type { C3Context } from "types";

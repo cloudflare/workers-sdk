@@ -1,6 +1,6 @@
 import { logRaw } from "@cloudflare/cli";
 import { blue, bold, brandColor, dim } from "@cloudflare/cli/colors";
-import { detectPackageManager } from "helpers/packageManagers";
+import { detectPackageManager } from "helpers/package-managers";
 import indentString from "indent-string";
 import wrap from "wrap-ansi";
 import { version } from "../package.json";

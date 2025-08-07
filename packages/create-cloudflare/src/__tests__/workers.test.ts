@@ -1,6 +1,6 @@
 import { existsSync } from "fs";
 import { mockSpinner } from "helpers/__tests__/mocks";
-import { getLatestTypesEntrypoint } from "helpers/compatDate";
+import { getLatestTypesEntrypoint } from "helpers/compat-date";
 import { readFile, writeFile } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { updateTsConfig } from "../workers";
@@ -8,7 +8,7 @@ import { createTestContext } from "./helpers";
 import type { C3Context } from "types";
 
 vi.mock("helpers/files");
-vi.mock("helpers/compatDate");
+vi.mock("helpers/compat-date");
 vi.mock("fs");
 vi.mock("@cloudflare/cli/interactive");
 
