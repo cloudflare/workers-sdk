@@ -7,6 +7,7 @@ export default class Worker extends WorkerEntrypoint<{
 	MODULE_WORKER: Fetcher;
 	WORKER_ENTRYPOINT_A: Fetcher;
 	WORKER_ENTRYPOINT_B: Fetcher;
+	DURABLE_OBJECT: DurableObjectNamespace;
 }> {
 	ping() {
 		return "Pong";
@@ -39,6 +40,12 @@ export default class Worker extends WorkerEntrypoint<{
 				}
 				case "worker-entrypoint-b": {
 					service = this.env.WORKER_ENTRYPOINT_B;
+					break;
+				}
+				case "durable-object": {
+					const id = this.env.DURABLE_OBJECT.newUniqueId();
+					const stub = this.env.DURABLE_OBJECT.get(id);
+					service = stub;
 					break;
 				}
 			}
