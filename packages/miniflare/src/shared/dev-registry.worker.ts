@@ -24,9 +24,8 @@ interface ProxyAddress {
 const log = new Log();
 
 /**
- * Worker thread implementation for dev registry with HTTP proxy server.
- * This runs both the file watching and HTTP proxy in a separate thread
- * to prevent blocking the main thread.
+ * A HTTP proxy server for the dev registry.
+ * This runs in a separate thread to prevent a deadlock when using a node binding
  */
 class ProxyServer {
 	private registry: Record<string, WorkerDefinition> = {};
@@ -283,14 +282,22 @@ class ProxyServer {
 		// Pipe the client request body to the upstream
 		req.pipe(upstream);
 
-		upstream.on("error", () => {
+		upstream.on("error", (error) => {
+			log.error(
+				new Error(
+					`Failed to proxy request to ${target.protocol}://${target.host}:${target.port}${target.path ?? ""}`,
+					{
+						cause: error,
+					}
+				)
+			);
 			if (!res.headersSent) res.writeHead(502);
 			res.end("Bad Gateway");
 		});
 	}
 
 	/**
-	 * To subscribe to updates for a specific worker.
+	 * To subscribe to updates for a specific worker once.
 	 * This is currently used to close HTTP tunnels when a service is updated.
 	 */
 	private subscribe(workerName: string, callback: () => void): void {
@@ -305,7 +312,7 @@ class ProxyServer {
 	}
 
 	/**
-	 * Notify all subscribers of a worker that has been updated.
+	 * Notify all subscribers of a worker that has been updated
 	 */
 	private notifySubscribers(workerName: string): void {
 		const callbacks = this.subscribers.get(workerName);
@@ -314,6 +321,9 @@ class ProxyServer {
 				callback();
 			}
 		}
+
+		// Delete the callback after notifying
+		this.subscribers.delete(workerName);
 	}
 
 	/**
