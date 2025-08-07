@@ -13,5 +13,10 @@
 			"name": "my-workflow2",
 			"class_name": "Demo2",
 		},
+		{
+			"binding": "WORKFLOW3",
+			"name": "my-workflow3",
+			"class_name": "Demo3",
+		},
 	],
 }

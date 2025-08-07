@@ -350,7 +350,7 @@ export class Context extends RpcTarget {
 				if (
 					e instanceof Error &&
 					(error.name === "NonRetryableError" ||
-						error.message.startsWith("NonRetryableError:"))
+						error.message.startsWith("NonRetryableError"))
 				) {
 					this.#engine.writeLog(
 						InstanceEvent.ATTEMPT_FAILURE,
