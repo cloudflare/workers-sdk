@@ -51,20 +51,19 @@ async function runWranglerDev(
 
 async function setupPlatformProxy(config: string, devRegistryPath?: string) {
 	vi.stubEnv("WRANGLER_REGISTRY_PATH", devRegistryPath);
-	try {
-		// @ts-expect-error It works
-		const wrangler = await import("wrangler");
-		const proxy = await wrangler.getPlatformProxy<Record<string, any>>({
-			configPath: config,
-		});
 
-		onTestFinished(() => proxy.dispose());
+	onTestFinished(() => {
+		vi.unstubAllEnvs();
+	});
 
-		return proxy;
-	} finally {
-		// Unset the environment variable to avoid affecting other tests
-		vi.stubEnv("WRANGLER_REGISTRY_PATH", undefined);
-	}
+	const wrangler = await import("wrangler");
+	const proxy = await wrangler.getPlatformProxy<Record<string, any>>({
+		configPath: config,
+	});
+
+	onTestFinished(() => proxy.dispose());
+
+	return proxy;
 }
 
 describe("Dev Registry: vite dev <-> vite dev", () => {
