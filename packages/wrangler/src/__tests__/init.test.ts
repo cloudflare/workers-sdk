@@ -293,7 +293,6 @@ describe("init", () => {
 					type: "queue",
 					name: "queue_BINDING",
 					queue_name: "some-name",
-					delivery_delay: 1,
 				},
 				{
 					type: "send_email",
@@ -504,7 +503,6 @@ describe("init", () => {
 				producers: [
 					{
 						binding: "queue_BINDING",
-						delivery_delay: 1,
 						queue: "some-name",
 					},
 				],
@@ -999,7 +997,6 @@ describe("init", () => {
 					[[queues.producers]]
 					binding = \\"queue_BINDING\\"
 					queue = \\"some-name\\"
-					delivery_delay = 1
 
 					[[send_email]]
 					name = \\"EMAIL_BINDING\\"

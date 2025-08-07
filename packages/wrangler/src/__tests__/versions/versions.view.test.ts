@@ -598,7 +598,6 @@ describe("versions view", () => {
 								type: "queue",
 								name: "QUEUE_2",
 								queue_name: "queue",
-								delivery_delay: 60,
 							},
 							{ type: "r2_bucket", name: "R2", bucket_name: "r2-bucket" },
 							{
@@ -718,7 +717,6 @@ describe("versions view", () => {
 				[[queues.producers]]
 				binding = \\"QUEUE_2\\"
 				queue = \\"queue\\"
-				delivery_delay = 60
 
 				[[r2_buckets]]
 				binding = \\"R2\\"
