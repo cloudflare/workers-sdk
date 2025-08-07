@@ -11,7 +11,7 @@ import {
 	addUserAgent,
 } from "../cfetch/internal";
 import { readConfig } from "../config";
-import { constructStatusMessage } from "../core/CommandRegistry";
+import { constructStatusMessage } from "../core/command-registry";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
