@@ -10,7 +10,7 @@ import type {
 	TailEvent,
 	TailEventMessage,
 	TailInfo,
-} from "./createTail";
+} from "./create-tail";
 import type { Outcome } from "./filters";
 import type WebSocket from "ws";
 
