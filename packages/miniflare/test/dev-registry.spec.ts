@@ -126,6 +126,99 @@ test("DevRegistry: fetch to module worker", async (t) => {
 	});
 });
 
+test("DevRegistry: WebSocket upgrade to module worker", async (t) => {
+	const unsafeDevRegistryPath = await useTmp(t);
+	const local = new Miniflare({
+		name: "local-worker",
+		unsafeDevRegistryPath,
+		serviceBindings: {
+			SERVICE: {
+				name: "remote-worker",
+			},
+		},
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch(request, env, ctx) {
+					const wsResponse = await env.SERVICE.fetch(request.url, {
+						headers: { Upgrade: "websocket" }
+					});
+
+					if (wsResponse.webSocket) {
+						wsResponse.webSocket.accept();
+
+						// Test bidirectional communication
+						wsResponse.webSocket.send("ping");
+
+						const messagePromise = new Promise((resolve) => {
+							wsResponse.webSocket.addEventListener("message", (event) => {
+								resolve(event.data);
+							});
+						});
+
+						const response = await messagePromise;
+
+						return new Response(\`WebSocket communication successful: \${response}\`, {
+							status: 200,
+						});
+					}
+
+					return new Response("WebSocket upgrade failed", {
+						status: 500,
+					});
+				}
+			}
+		`,
+	});
+	t.teardown(() => local.dispose());
+
+	const remote = new Miniflare({
+		name: "remote-worker",
+		unsafeDevRegistryPath,
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch(request, env, ctx) {
+					// Handle WebSocket upgrade requests
+					if (request.headers.get("Upgrade") === "websocket") {
+						const [server, client] = Object.values(new WebSocketPair());
+						server.accept();
+
+						server.addEventListener("message", (event) => {
+							// Echo back with a response to test bidirectional communication
+							if (event.data === "ping") {
+								server.send("pong");
+							}
+						});
+
+						return new Response(null, { status: 101, webSocket: client });
+					}
+
+					// This test only focuses on WebSocket, no HTTP handling needed
+					return new Response("Not a WebSocket request", { status: 400 });
+				}
+			}
+		`,
+		unsafeDirectSockets: [
+			{
+				entrypoint: undefined,
+				proxy: true,
+			},
+		],
+	});
+	t.teardown(() => remote.dispose());
+
+	await remote.ready;
+	await waitUntil(t, async (t) => {
+		const res = await local.dispatchFetch("http://example.com");
+		const result = await res.text();
+		t.is(result, "WebSocket communication successful: pong");
+		t.is(res.status, 200);
+	});
+});
+
 test("DevRegistry: RPC to default entrypoint", async (t) => {
 	const unsafeDevRegistryPath = await useTmp(t);
 	const local = new Miniflare({
