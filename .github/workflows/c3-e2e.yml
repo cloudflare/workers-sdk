@@ -79,32 +79,10 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true' && (github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group')
         shell: bash
         run: |
-          # Create temporary directory for worker files
-          mkdir -p /tmp/existing-script-worker
-
-          # Create worker script
-          cat > /tmp/existing-script-worker/index.js << 'EOF'
-          export default {
-            async fetch(request, env, ctx) {
-              return new Response('Hello World!');
-            },
-          };
-          EOF
-
-          # Create wrangler.jsonc with FOO variable
-          cat > /tmp/existing-script-worker/wrangler.jsonc << 'EOF'
-          {
-            "name": "existing-script-test-do-not-delete",
-            "main": "index.js",
-            "compatibility_date": "2023-05-18",
-            "vars": {
-              "FOO": "bar"
-            }
-          }
-          EOF
+          # Navigate to the test worker directory
+          cd tools/test-workers/existing-script-test-do-not-delete
 
           # Check if worker exists and deploy only if it doesn't
-          cd /tmp/existing-script-worker
           if ! curl -s -o /dev/null -w "%{http_code}" https://existing-script-test-do-not-delete.devprod-testing7928.workers.dev | grep -q "200"; then
             echo "Worker does not exist or is not responding, deploying..."
             npx wrangler@latest deploy
