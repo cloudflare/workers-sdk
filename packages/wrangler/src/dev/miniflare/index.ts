@@ -512,6 +512,7 @@ type WorkerOptionsBindings = Pick<
 	| "dispatchNamespaces"
 	| "mtlsCertificates"
 	| "helloWorld"
+	| "workerLoaders"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -972,6 +973,12 @@ export function buildMiniflareBindingOptions(
 				binding.binding,
 				binding,
 			]) ?? []
+		),
+		workerLoaders: Object.fromEntries(
+			bindings.unsafe?.bindings
+				?.filter((b) => b.type == "worker-loader")
+				// @ts-expect-error unsafe bindings are not typed
+				.map((binding) => [binding.name, { id: binding.id }]) ?? []
 		),
 		email: {
 			send_email: bindings.send_email,
