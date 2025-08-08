@@ -152,7 +152,6 @@ async function resolveDevConfig(
 		testScheduled: input.dev?.testScheduled,
 		// absolute resolved path
 		persist: localPersistencePath,
-		registry: input.dev?.registry,
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
 		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
@@ -213,7 +212,8 @@ async function resolveBindings(
 		},
 		input.tailConsumers ?? config.tail_consumers,
 		{
-			registry: input.dev?.registry,
+			// FIXME: We can use getWorkerRegistry here, but we might need a way to print the bindings when the registry update?
+			// registry: input.dev?.registry,
 			local: !input.dev?.remote,
 			imagesLocalMode: input.dev?.imagesLocalMode,
 			name: config.name,

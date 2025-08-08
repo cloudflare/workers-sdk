@@ -66,6 +66,258 @@ async function setupPlatformProxy(config: string, devRegistryPath?: string) {
 	return proxy;
 }
 
+describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
+	it("supports module worker fetch over service binding", async ({
+		devRegistryPath,
+	}) => {
+		const workerEntrypointB = await runWranglerDev(
+			"wrangler.worker-entrypoint-b.jsonc",
+			devRegistryPath
+		);
+
+		// Test fallback service before module-worker is started
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "module-worker",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${workerEntrypointB}?${searchParams}`);
+
+			expect({
+				status: response.status,
+				body: await response.text(),
+			}).toEqual({
+				status: 503,
+				body: `Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`,
+			});
+		});
+
+		const moduleWorker = await runWranglerDev(
+			"wrangler.module-worker.jsonc",
+			devRegistryPath
+		);
+
+		// Test module-worker -> worker-entrypoint
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "worker-entrypoint-b",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${moduleWorker}?${searchParams}`);
+
+			expect(await response.text()).toBe("Hello from Worker Entrypoint!");
+			expect(response.status).toBe(200);
+
+			// Test fetching asset from "worker-entrypoint-b" over service binding
+			// Module worker has no assets, so it will hit the user worker and
+			// forward the request to "worker-entrypoint-b" with the asset path
+			const assetResponse = await fetch(
+				`${moduleWorker}/example.txt?${searchParams}`
+			);
+			expect(await assetResponse.text()).toBe("This is an example asset file");
+		});
+
+		// Test worker-entrypoint -> module-worker
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "module-worker",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${workerEntrypointB}?${searchParams}`);
+
+			expect(await response.text()).toEqual("Hello from Module Worker!");
+			expect(response.status).toBe(200);
+		});
+	});
+
+	it("supports RPC over service binding", async ({ devRegistryPath }) => {
+		const workerEntrypointA = await runWranglerDev(
+			"wrangler.worker-entrypoint-a.jsonc",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "worker-entrypoint-b",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${workerEntrypointA}?${searchParams}`);
+
+			expect(response.status).toBe(500);
+			expect(await response.text()).toEqual(
+				`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "worker-entrypoint-b" to proxy to.`
+			);
+		});
+
+		const workerEntrypointB = await runWranglerDev(
+			"wrangler.worker-entrypoint-b.jsonc",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "worker-entrypoint-a",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${workerEntrypointB}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong");
+		});
+
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "worker-entrypoint-b",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${workerEntrypointA}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong");
+		});
+	});
+
+	it("supports fetch over durable object binding", async ({
+		devRegistryPath,
+	}) => {
+		const externalDurableObject = await runWranglerDev(
+			"wrangler.external-durable-object.jsonc",
+			devRegistryPath
+		);
+
+		// Test fallback before internal durable object is started
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "durable-object",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${externalDurableObject}?${searchParams}`);
+
+			expect(response.status).toBe(503);
+			expect(await response.text()).toEqual("Service Unavailable");
+		});
+
+		await runWranglerDev(
+			"wrangler.internal-durable-object.jsonc",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "durable-object",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${externalDurableObject}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Hello from Durable Object!");
+		});
+	});
+
+	it("supports RPC over durable object binding", async ({
+		devRegistryPath,
+	}) => {
+		const externalDurableObject = await runWranglerDev(
+			"wrangler.external-durable-object.jsonc",
+			devRegistryPath
+		);
+
+		// Test RPC fallback before internal durable object is started
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "durable-object",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${externalDurableObject}?${searchParams}`);
+
+			expect({
+				status: response.status,
+				body: await response.text(),
+			}).toEqual({
+				status: 500,
+				body: 'Cannot access "ping" as Durable Object RPC is not yet supported between multiple dev sessions.',
+			});
+		});
+
+		await runWranglerDev(
+			"wrangler.internal-durable-object.jsonc",
+			devRegistryPath
+		);
+
+		// Test RPC after internal durable object is started (should still fail)
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "durable-object",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${externalDurableObject}?${searchParams}`);
+
+			expect(response.status).toBe(500);
+			expect(await response.text()).toEqual(
+				'Cannot access "ping" as Durable Object RPC is not yet supported between multiple dev sessions.'
+			);
+		});
+	});
+
+	it("supports tail handler", async ({ devRegistryPath }) => {
+		const moduleWorker = await runWranglerDev(
+			"wrangler.module-worker.jsonc",
+			devRegistryPath
+		);
+		const workerEntrypointA = await runWranglerDev(
+			"wrangler.worker-entrypoint-a.jsonc",
+			devRegistryPath
+		);
+
+		const searchParams = new URLSearchParams({
+			"test-method": "tail",
+		});
+		// Trigger tail handler of worker-entrypoint via module-worker
+		await fetch(`${moduleWorker}?${searchParams}`, {
+			method: "POST",
+			body: JSON.stringify(["hello world", "this is the 2nd log"]),
+		});
+		await fetch(`${moduleWorker}?${searchParams}`, {
+			method: "POST",
+			body: JSON.stringify(["some other log"]),
+		});
+
+		await vi.waitFor(async () => {
+			const response = await fetch(`${workerEntrypointA}?${searchParams}`);
+
+			expect(await response.json()).toEqual({
+				worker: "Worker Entrypoint",
+				tailEvents: [
+					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
+					[["[Module Worker]"], ["some other log"]],
+				],
+			});
+		});
+
+		// Trigger tail handler of module-worker via worker-entrypoint
+		await fetch(`${workerEntrypointA}?${searchParams}`, {
+			method: "POST",
+			body: JSON.stringify(["hello from test"]),
+		});
+		await fetch(`${workerEntrypointA}?${searchParams}`, {
+			method: "POST",
+			body: JSON.stringify(["yet another log", "and another one"]),
+		});
+
+		await vi.waitFor(async () => {
+			const response = await fetch(`${moduleWorker}?${searchParams}`);
+
+			expect(await response.json()).toEqual({
+				worker: "Module Worker",
+				tailEvents: [
+					[["[Worker Entrypoint]"], ["hello from test"]],
+					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
+				],
+			});
+		});
+	});
+});
+
 describe("Dev Registry: vite dev <-> vite dev", () => {
 	it("supports module worker fetch over service binding", async ({
 		devRegistryPath,

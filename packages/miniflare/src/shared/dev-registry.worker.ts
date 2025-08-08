@@ -1,4 +1,5 @@
 import http from "node:http";
+import https from "node:https";
 import net from "node:net";
 import { Duplex } from "node:stream";
 import { parentPort } from "node:worker_threads";
@@ -6,7 +7,6 @@ import { HOST_CAPNP_CONNECT } from "../plugins/shared/constants";
 import {
 	extractDoFetchProxyTarget,
 	extractServiceFetchProxyTarget,
-	getProtocol,
 	INBOUND_DO_PROXY_SERVICE_PATH,
 } from "../shared/external-service";
 import { Log } from "./log";
@@ -103,7 +103,9 @@ class ProxyServer {
 				serviceProxyTarget.entrypoint
 			);
 
-			this.handleProxy(req, res, address);
+			this.handleProxy(req, res, address, (callback) =>
+				this.subscribe(serviceProxyTarget.service, callback)
+			);
 			return;
 		}
 
@@ -120,7 +122,9 @@ class ProxyServer {
 				return;
 			}
 
-			this.handleProxy(req, res, address);
+			this.handleProxy(req, res, address, (callback) =>
+				this.subscribe(doProxyTarget.scriptName, callback)
+			);
 			return;
 		}
 
@@ -175,13 +179,14 @@ class ProxyServer {
 		if (entrypointAddress !== undefined) {
 			return {
 				httpStyle: "proxy",
-				protocol: target.protocol,
+				// Entrypoint addresses are always HTTP
+				protocol: "http",
 				host: entrypointAddress.host,
 				port: entrypointAddress.port,
 			};
 		}
 
-		if (target && target.protocol !== "https" && entrypoint === "default") {
+		if (target && entrypoint === "default") {
 			// Fallback to sending requests directly to the entry worker
 			return {
 				httpStyle: "host",
@@ -213,7 +218,8 @@ class ProxyServer {
 
 		return {
 			httpStyle: "proxy",
-			protocol: getProtocol(url),
+			// Fallback entrypoint are always HTTP
+			protocol: "http",
 			host: url.hostname,
 			port,
 		};
@@ -231,7 +237,9 @@ class ProxyServer {
 			)
 		) {
 			return {
-				...target,
+				protocol: target.protocol,
+				host: target.host,
+				port: target.port,
 				path: `/${INBOUND_DO_PROXY_SERVICE_PATH}`,
 			};
 		}
@@ -242,7 +250,8 @@ class ProxyServer {
 	private handleProxy(
 		req: http.IncomingMessage,
 		res: http.ServerResponse,
-		target: ProxyAddress
+		target: ProxyAddress,
+		onTargetUpdated: (callback: () => void) => void
 	) {
 		const headers = { ...req.headers };
 		let path = target.path;
@@ -264,7 +273,7 @@ class ProxyServer {
 			}
 		}
 
-		const options: http.RequestOptions = {
+		let options: http.RequestOptions | https.RequestOptions = {
 			host: target.host,
 			port: target.port,
 			method: req.method,
@@ -272,15 +281,24 @@ class ProxyServer {
 			headers,
 		};
 
-		const upstream = http.request(options, (upRes) => {
+		// For HTTPS target, disable certificate verification
+		if (target.protocol === "https") {
+			options = {
+				...options,
+				rejectUnauthorized: false,
+			};
+		}
+
+		// Choose the appropriate request module based on target protocol
+		const requestModule = target.protocol === "https" ? https : http;
+		const upstream = requestModule.request(options);
+
+		upstream.on("response", (upRes) => {
 			// Relay status and headers back to the original client
 			res.writeHead(upRes.statusCode ?? 500, upRes.headers);
 			// Pipe the response body
 			upRes.pipe(res);
 		});
-
-		// Pipe the client request body to the upstream
-		req.pipe(upstream);
 
 		upstream.on("error", (error) => {
 			log.error(
@@ -294,6 +312,50 @@ class ProxyServer {
 			if (!res.headersSent) res.writeHead(502);
 			res.end("Bad Gateway");
 		});
+
+		if (req.headers.upgrade?.toLowerCase() === "websocket") {
+			upstream.on("upgrade", (upRes, socket, head) => {
+				// For WebSocket upgrades, we need to respond directly on the original request socket
+				if (req.socket && req.socket.writable) {
+					// Build and write complete HTTP response header
+					const statusLine = `HTTP/1.1 ${upRes.statusCode ?? 101} ${upRes.statusMessage ?? "Switching Protocols"}\r\n`;
+					let headersString = "";
+					for (let i = 0; i < upRes.rawHeaders.length; i += 2) {
+						headersString += `${upRes.rawHeaders[i]}: ${upRes.rawHeaders[i + 1]}\r\n`;
+					}
+
+					req.socket.write(statusLine + headersString + "\r\n");
+
+					// Write any buffered data
+					if (head && head.length > 0) {
+						req.socket.write(head);
+					}
+
+					// Pipe bidirectional WebSocket data
+					socket.pipe(req.socket, { end: false });
+					req.socket.pipe(socket, { end: false });
+
+					// Handle connection cleanup
+					socket.on("error", () => req.socket.destroy());
+					req.socket.on("error", () => socket.destroy());
+					socket.on("close", () => req.socket.destroy());
+					req.socket.on("close", () => socket.destroy());
+
+					// Close the socket when the target address is updated
+					onTargetUpdated(() => {
+						socket.end();
+					});
+				} else {
+					socket.end();
+				}
+			});
+
+			// End the request to trigger the upgrade
+			upstream.end();
+		} else {
+			// Pipe the client request body to the upstream for regular HTTP requests
+			req.pipe(upstream);
+		}
 	}
 
 	/**
