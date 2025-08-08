@@ -3,16 +3,14 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
-import {
-	isDockerfile,
-	verifyDockerInstalled,
-} from "@cloudflare/containers-shared";
+import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { deployContainers, maybeBuildContainer } from "../cloudchamber/deploy";
 import { configFileName, formatConfigSnippet } from "../config";
+import { getNormalizedContainerOptions } from "../containers/config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -49,6 +47,7 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
+import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
@@ -398,19 +397,23 @@ export default async function deploy(props: Props): Promise<{
 		}
 	}
 
-	if (!(props.compatibilityDate || config.compatibility_date)) {
-		const compatibilityDateStr = `${new Date().getFullYear()}-${(
-			new Date().getMonth() +
-			1 +
-			""
-		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
+	const compatibilityDate =
+		props.compatibilityDate ?? config.compatibility_date;
+	const compatibilityFlags =
+		props.compatibilityFlags ?? config.compatibility_flags;
 
-		throw new UserError(`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
+	if (!compatibilityDate) {
+		const compatibilityDateStr = formatCompatibilityDate(new Date());
+
+		throw new UserError(
+			`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
     ${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath, false)}
     \`\`\`
     Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
-See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
+See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
+			{ telemetryMessage: "missing compatibility date when deploying" }
+		);
 	}
 
 	const routes =
@@ -423,10 +426,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const minify = props.minify ?? config.minify;
 
-	const compatibilityDate =
-		props.compatibilityDate ?? config.compatibility_date;
-	const compatibilityFlags =
-		props.compatibilityFlags ?? config.compatibility_flags;
 	const nodejsCompatMode = validateNodeCompatMode(
 		compatibilityDate,
 		compatibilityFlags,
@@ -495,30 +494,34 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		format === "service-worker"
 	) {
 		throw new UserError(
-			"You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
+			"You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/",
+			{ telemetryMessage: true }
 		);
 	}
 
 	if (config.wasm_modules && format === "modules") {
 		throw new UserError(
-			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"
+			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code",
+			{ telemetryMessage: true }
 		);
 	}
 
 	if (config.text_blobs && format === "modules") {
 		throw new UserError(
-			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
+			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			{ telemetryMessage: "[text_blobs] with an ES module worker" }
 		);
 	}
 
 	if (config.data_blobs && format === "modules") {
 		throw new UserError(
-			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
+			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			{ telemetryMessage: "[data_blobs] with an ES module worker" }
 		);
 	}
 
 	let sourceMapSize;
-
+	const normalisedContainerConfig = await getNormalizedContainerOptions(config);
 	try {
 		if (props.noBundle) {
 			// if we're not building, let's just copy the entry to the destination directory
@@ -572,6 +575,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						keepNames: config.keep_names ?? true,
 						sourcemap: uploadSourceMaps,
 						nodejsCompatMode,
+						compatibilityDate,
+						compatibilityFlags,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						alias: config.alias,
@@ -581,8 +586,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						local: false,
 						projectRoot: props.projectRoot,
 						defineNavigatorUserAgent: isNavigatorDefined(
-							props.compatibilityDate ?? config.compatibility_date,
-							props.compatibilityFlags ?? config.compatibility_flags
+							compatibilityDate,
+							compatibilityFlags
 						),
 						plugins: [logBuildOutput(nodejsCompatMode)],
 
@@ -701,7 +706,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
-			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
+			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars,
 			keepSecrets: keepVars, // keepVars implies keepSecrets
@@ -774,13 +779,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// and we have containers so that we don't get into a
 		// disjointed state where the worker updates but the container
 		// fails.
-		if (config.containers) {
+		if (normalisedContainerConfig.length) {
 			// if you have a registry url specified, you don't need docker
-			const hasDockerfiles = config.containers.some((container) =>
-				isDockerfile(
-					container.image ?? container.configuration?.image,
-					config.configPath
-				)
+			const hasDockerfiles = normalisedContainerConfig.some(
+				(container) => "dockerfile" in container
 			);
 			if (hasDockerfiles) {
 				await verifyDockerInstalled(dockerPath, false);
@@ -788,14 +790,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 
 		if (props.dryRun) {
-			if (config.containers) {
-				for (const container of config.containers) {
+			if (normalisedContainerConfig.length) {
+				for (const container of normalisedContainerConfig) {
 					await maybeBuildContainer(
 						container,
 						workerTag ?? "worker-tag",
 						props.dryRun,
-						dockerPath,
-						config.configPath
+						dockerPath
 					);
 				}
 			}
@@ -948,12 +949,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						config.tail_consumers
 					);
 				}
-				await helpIfErrorIsSizeOrScriptStartup(
+				const message = await helpIfErrorIsSizeOrScriptStartup(
 					err,
 					dependencies,
 					workerBundle,
 					props.projectRoot
 				);
+				if (message !== null) {
+					logger.error(message);
+				}
 
 				// Apply source mapping to validation startup errors if possible
 				if (
@@ -969,7 +973,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						"binding DB of type d1 must have a valid `id` specified [code: 10021]"
 					) {
 						throw new UserError(
-							"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development"
+							"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development",
+							{ telemetryMessage: true }
 						);
 					}
 
@@ -1034,9 +1039,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		return { versionId, workerTag };
 	}
 
-	if (config.containers) {
+	if (normalisedContainerConfig.length) {
 		assert(versionId && accountId);
-		await deployContainers(config, {
+		await deployContainers(config, normalisedContainerConfig, {
 			versionId,
 			accountId,
 			scriptName,
@@ -1133,7 +1138,8 @@ async function publishRoutesFallback(
 	if (notProd) {
 		throw new UserError(
 			"Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.\n" +
-				"Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth"
+				"Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth",
+			{ telemetryMessage: true }
 		);
 	}
 	logger.warn(
@@ -1213,7 +1219,8 @@ async function publishRoutesFallback(
 				continue;
 			} else {
 				throw new UserError(
-					`The route with pattern "${routePattern}" is already associated with another worker called "${knownScript}".`
+					`The route with pattern "${routePattern}" is already associated with another worker called "${knownScript}".`,
+					{ telemetryMessage: "route already associated with another worker" }
 				);
 			}
 		}
@@ -1318,7 +1325,8 @@ export async function updateQueueConsumers(
 			if (scriptName === undefined) {
 				// TODO: how can we reliably get the current script name?
 				throw new UserError(
-					"Script name is required to update queue consumers"
+					"Script name is required to update queue consumers",
+					{ telemetryMessage: true }
 				);
 			}
 

@@ -107,7 +107,7 @@ test("fetch: includes headers from web socket upgrade response", async (t) => {
 		headers: { upgrade: "websocket" },
 	});
 	t.not(res.webSocket, undefined);
-	t.is(res.headers.get("set-cookie"), "key=value");
+	t.is(res.headers.getSetCookie()[0], "key=value");
 });
 const fetchDispatchCloseFlakyTest = flaky(async (t) => {
 	let clientCloses = 0;

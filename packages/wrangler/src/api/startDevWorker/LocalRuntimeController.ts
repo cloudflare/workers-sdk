@@ -16,6 +16,7 @@ import { castErrorCause } from "./events";
 import {
 	convertBindingsToCfWorkerInitBindings,
 	convertCfWorkerInitBindingsToBindings,
+	unwrapHook,
 } from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type { RemoteProxySession } from "../remoteBindings";
@@ -141,9 +142,12 @@ export async function convertToConfigBundle(
 		imagesLocalMode: event.config.dev?.imagesLocalMode ?? false,
 		testScheduled: !!event.config.dev.testScheduled,
 		tails: event.config.tailConsumers,
-		containers: event.config.containers,
+		containerDOClassNames: new Set(
+			event.config.containers?.map((c) => c.class_name)
+		),
 		containerBuildId: event.config.dev?.containerBuildId,
 		containerEngine: event.config.dev.containerEngine,
+		enableContainers: event.config.dev.enableContainers ?? true,
 	};
 }
 
@@ -173,9 +177,9 @@ export class LocalRuntimeController extends RuntimeController {
 
 	// Set of container images that have been seen in the current dev session.
 	// This is used to clean up containers at the end of the dev session.
-	#containerImageTagsSeen: Set<string> = new Set();
+	containerImageTagsSeen: Set<string> = new Set();
 	// Stored here, so it can be used in `cleanupContainers()`
-	#dockerPath: string | undefined;
+	dockerPath: string | undefined;
 	// If this doesn't match what is in config, trigger a rebuild.
 	// Used for the rebuild hotkey
 	#currentContainerBuildId: string | undefined;
@@ -189,7 +193,9 @@ export class LocalRuntimeController extends RuntimeController {
 	};
 
 	onBundleStart(_: BundleStartEvent) {
-		// Ignored in local runtime
+		process.on("exit", () => {
+			this.cleanupContainers();
+		});
 	}
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
@@ -200,50 +206,67 @@ export class LocalRuntimeController extends RuntimeController {
 				data.config.dev.experimentalRemoteBindings ?? false;
 
 			if (experimentalRemoteBindings && !data.config.dev?.remote) {
-				// note: mixedMode uses (transitively) LocalRuntimeController, so we need to import
+				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
-				const { maybeStartOrUpdateRemoteProxySession } = await import(
-					"../remoteBindings"
+				const { maybeStartOrUpdateRemoteProxySession, pickRemoteBindings } =
+					await import("../remoteBindings");
+
+				const remoteBindings = pickRemoteBindings(
+					convertCfWorkerInitBindingsToBindings(configBundle.bindings) ?? {}
 				);
+
+				const auth =
+					Object.keys(remoteBindings).length === 0
+						? // If there are no remote bindings (this is a local only session) there's no need to get auth data
+							undefined
+						: await unwrapHook(data.config.dev.auth);
 
 				this.#remoteProxySessionData =
 					await maybeStartOrUpdateRemoteProxySession(
 						{
 							name: configBundle.name,
-							bindings:
-								convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
-								{},
+							complianceRegion: configBundle.complianceRegion,
+							bindings: remoteBindings,
 						},
-						this.#remoteProxySessionData ?? null
+						this.#remoteProxySessionData ?? null,
+						auth
 					);
 			}
 
 			// Assemble container options and build if necessary
-			const containerOptions = await getContainerOptions(data.config);
-			this.#dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
-			// keep track of them so we can clean up later
-			for (const container of containerOptions ?? []) {
-				this.#containerImageTagsSeen.add(container.imageTag);
-			}
+
 			if (
-				containerOptions &&
+				data.config.containers?.length &&
+				data.config.dev.enableContainers &&
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
+				this.dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
+				assert(
+					data.config.dev.containerBuildId,
+					"Build ID should be set if containers are enabled and defined"
+				);
+				const containerDevOptions = await getContainerDevOptions(
+					data.config.containers,
+					data.config.dev.containerBuildId
+				);
+
+				for (const container of containerDevOptions) {
+					this.containerImageTagsSeen.add(container.image_tag);
+				}
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
-				await prepareContainerImagesForDev(
-					this.#dockerPath,
-					containerOptions,
-					data.config.config,
-					(buildStartEvent) => {
+				await prepareContainerImagesForDev({
+					dockerPath: this.dockerPath,
+					containerOptions: containerDevOptions,
+					onContainerImagePreparationStart: (buildStartEvent) => {
 						this.containerBeingBuilt = {
 							...buildStartEvent,
 							abortRequested: false,
 						};
 					},
-					() => {
+					onContainerImagePreparationEnd: () => {
 						this.containerBeingBuilt = undefined;
-					}
-				);
+					},
+				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;
 				}
@@ -370,12 +393,16 @@ export class LocalRuntimeController extends RuntimeController {
 		// Ignored in local runtime
 	}
 
-	cleanupContainers = async () => {
+	cleanupContainers = () => {
+		if (!this.containerImageTagsSeen.size) {
+			return;
+		}
+
 		assert(
-			this.#dockerPath,
+			this.dockerPath,
 			"Docker path should have been set if containers are enabled"
 		);
-		await cleanupContainers(this.#dockerPath, this.#containerImageTagsSeen);
+		cleanupContainers(this.dockerPath, this.containerImageTagsSeen);
 	};
 
 	#teardown = async (): Promise<void> => {
@@ -388,15 +415,6 @@ export class LocalRuntimeController extends RuntimeController {
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
-		if (this.#containerImageTagsSeen.size > 0) {
-			try {
-				await this.cleanupContainers();
-			} catch {
-				logger.warn(
-					`Failed to clean up containers. You may have to stop and remove them up manually.`
-				);
-			}
-		}
 		if (this.#remoteProxySessionData) {
 			logger.log(chalk.dim("⎔ Shutting down remote connection..."));
 		}
@@ -427,29 +445,33 @@ export class LocalRuntimeController extends RuntimeController {
  * with image tag set to well-known dev format.
  * Undefined if containers are not enabled or not configured.
  */
-export async function getContainerOptions(
-	config: BundleCompleteEvent["config"]
+export async function getContainerDevOptions(
+	containersConfig: NonNullable<BundleCompleteEvent["config"]["containers"]>,
+	containerBuildId: string
 ) {
-	if (!config.containers?.length || config.dev.enableContainers === false) {
-		return undefined;
-	}
-	// should be defined if containers are enabled
-	assert(
-		config.dev.containerBuildId,
-		"Build ID should be set if containers are enabled and defined"
-	);
 	const containers: ContainerDevOptions[] = [];
-	for (const container of config.containers) {
-		containers.push({
-			image: container.image ?? container.configuration?.image,
-			imageTag: getDevContainerImageName(
-				container.class_name,
-				config.dev.containerBuildId
-			),
-			args: container.image_vars,
-			imageBuildContext: container.image_build_context,
-			class_name: container.class_name,
-		});
+	for (const container of containersConfig) {
+		if ("image_uri" in container) {
+			containers.push({
+				image_uri: container.image_uri,
+				class_name: container.class_name,
+				image_tag: getDevContainerImageName(
+					container.class_name,
+					containerBuildId
+				),
+			});
+		} else {
+			containers.push({
+				dockerfile: container.dockerfile,
+				image_build_context: container.image_build_context,
+				image_vars: container.image_vars,
+				class_name: container.class_name,
+				image_tag: getDevContainerImageName(
+					container.class_name,
+					containerBuildId
+				),
+			});
+		}
 	}
 	return containers;
 }

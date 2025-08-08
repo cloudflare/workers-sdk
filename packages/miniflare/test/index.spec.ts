@@ -3386,3 +3386,96 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 	);
 	await mf.dispose();
 });
+
+test("Miniflare: logs are treated as standard stdout/stderr chunks be default", async (t) => {
+	const collected = {
+		stdout: "",
+		stderr: "",
+	};
+	const mf = new Miniflare({
+		modules: true,
+		handleRuntimeStdio(stdout, stderr) {
+			stdout.forEach((data) => {
+				collected.stdout += `${data}`;
+			});
+			stderr.forEach((error) => {
+				collected.stderr += `${error}`;
+			});
+		},
+		script: `
+			export default {
+				async fetch(req, env) {
+				console.log('__LOG__');
+				console.warn('__WARN__');
+				console.error('__ERROR__');
+				console.info('__INFO__');
+				console.debug('__DEBUG__');
+				return new Response('Hello world!');
+			}
+		}`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const response = await mf.dispatchFetch("http://localhost");
+	await response.text();
+
+	t.is(collected.stdout, "__LOG__\n__INFO__\n__DEBUG__\n");
+	t.is(collected.stderr, "__WARN__\n__ERROR__\n");
+});
+
+test("Miniflare: logs are structured and all sent to stdout when structuredWorkerdLogs is true", async (t) => {
+	const collected = {
+		stdout: "",
+		stderr: "",
+	};
+	const mf = new Miniflare({
+		modules: true,
+		structuredWorkerdLogs: true,
+		handleRuntimeStdio(stdout, stderr) {
+			stdout.forEach((data) => {
+				collected.stdout += `${data}`;
+			});
+			stderr.forEach((error) => {
+				collected.stderr += `${error}`;
+			});
+		},
+		script: `
+			export default {
+				async fetch(req, env) {
+				console.log('__LOG__');
+				console.warn('__WARN__');
+				console.error('__ERROR__');
+				console.info('__INFO__');
+				console.debug('__DEBUG__');
+				return new Response('Hello world!');
+			}
+		}`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const response = await mf.dispatchFetch("http://localhost");
+	await response.text();
+
+	t.regex(
+		collected.stdout,
+		/{"timestamp":\d+,"level":"log","message":"__LOG__"}/
+	);
+	t.regex(
+		collected.stdout,
+		/{"timestamp":\d+,"level":"warn","message":"__WARN__"}/
+	);
+	t.regex(
+		collected.stdout,
+		/{"timestamp":\d+,"level":"error","message":"__ERROR__"}/
+	);
+	t.regex(
+		collected.stdout,
+		/{"timestamp":\d+,"level":"info","message":"__INFO__"}/
+	);
+	t.regex(
+		collected.stdout,
+		/{"timestamp":\d+,"level":"debug","message":"__DEBUG__"}/
+	);
+
+	t.is(collected.stderr, "");
+});

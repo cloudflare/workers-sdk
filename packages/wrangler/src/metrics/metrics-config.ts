@@ -66,7 +66,7 @@ export function getMetricsConfig({
 	const sendMetricsEnv = getWranglerSendMetricsFromEnv();
 	if (sendMetricsEnv !== undefined) {
 		return {
-			enabled: sendMetricsEnv.toLowerCase() === "true",
+			enabled: sendMetricsEnv,
 			deviceId,
 		};
 	}

@@ -11,7 +11,43 @@ env:
   NODE_VERSION: 22
 
 jobs:
+  deploy-test-workers:
+    name: Deploy Test Workers
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            everything_but_markdown:
+              - '!**/*.md'
+
+      - name: Install Dependencies
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        uses: ./.github/actions/install-dependencies
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Deploy test workers
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        shell: bash
+        run: node -r esbuild-register tools/test-workers/deploy-all.ts
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+
   e2e:
+    needs: deploy-test-workers
     # Runs the non-frameworks C3 E2E tests on all supported operating systems and package managers.
     timeout-minutes: 45
     concurrency:

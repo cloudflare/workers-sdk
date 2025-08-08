@@ -1,8 +1,20 @@
-import { expect, test } from "vitest";
-import { getTextResponse, serverLogs, viteTestUrl } from "../../__test-utils__";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { expect, test, vi } from "vitest";
+import {
+	getTextResponse,
+	isBuild,
+	rootDir,
+	serverLogs,
+	viteTestUrl,
+	WAIT_FOR_OPTIONS,
+} from "../../__test-utils__";
 
 test("basic hello-world functionality", async () => {
-	expect(await getTextResponse()).toEqual("Hello World!");
+	await vi.waitFor(
+		async () => expect(await getTextResponse()).toEqual("Hello World!"),
+		WAIT_FOR_OPTIONS
+	);
 });
 
 test("basic dev logging", async () => {
@@ -13,10 +25,27 @@ test("basic dev logging", async () => {
 
 test("receives the original host as the `X-Forwarded-Host` header", async () => {
 	const testUrl = new URL(viteTestUrl);
-	const response = await getTextResponse("/x-forwarded-host");
-	expect(response).toBe(testUrl.host);
+	await vi.waitFor(
+		async () =>
+			expect(await getTextResponse("/x-forwarded-host")).toEqual(testUrl.host),
+		WAIT_FOR_OPTIONS
+	);
 });
 
 test("does not cause unhandled rejection", async () => {
 	expect(serverLogs.errors.join()).not.toContain("__unhandled rejection__");
 });
+
+test.runIf(!isBuild)(
+	"updates using HMR code in Worker entry file",
+	async () => {
+		// Touch the worker entry file to trigger a HMR update.
+		const workerEntryPath = path.join(rootDir, "src", "index.ts");
+		const originalContent = fs.readFileSync(workerEntryPath, "utf-8");
+		fs.writeFileSync(workerEntryPath, originalContent);
+
+		await vi.waitFor(() => {
+			expect(serverLogs.info.join()).toContain("[vite] hot updated");
+		}, WAIT_FOR_OPTIONS);
+	}
+);

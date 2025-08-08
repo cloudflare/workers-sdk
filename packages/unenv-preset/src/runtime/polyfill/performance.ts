@@ -12,19 +12,19 @@ import {
 } from "node:perf_hooks";
 
 // `performance` augments the existing workerd implementation
-// @ts-expect-error
+// @ts-expect-error Node types do not match unenv
 globalThis.performance = performance;
 
 // Classes not exposes by workerd
 globalThis.Performance = Performance;
-// @ts-expect-error
+// @ts-expect-error Node types do not match unenv
 globalThis.PerformanceEntry = PerformanceEntry;
-// @ts-expect-error
+// @ts-expect-error Node types do not match unenv
 globalThis.PerformanceMark = PerformanceMark;
-// @ts-expect-error
+// @ts-expect-error Node types do not match unenv
 globalThis.PerformanceMeasure = PerformanceMeasure;
-// @ts-expect-error
+// @ts-expect-error Node types do not match unenv
 globalThis.PerformanceObserver = PerformanceObserver;
 globalThis.PerformanceObserverEntryList = PerformanceObserverEntryList;
-// @ts-expect-error
+// @ts-expect-error Node types do not match unenv
 globalThis.PerformanceResourceTiming = PerformanceResourceTiming;

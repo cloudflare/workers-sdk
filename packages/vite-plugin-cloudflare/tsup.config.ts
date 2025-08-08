@@ -33,4 +33,12 @@ export default defineConfig([
 		noExternal: ["vite/module-runner"],
 		tsconfig: "tsconfig.worker.json",
 	},
+	{
+		entry: ["src/vite-proxy-worker/index.ts"],
+		format: "esm",
+		platform: "neutral",
+		outDir: "dist/vite-proxy-worker",
+		external: ["cloudflare:workers"],
+		tsconfig: "tsconfig.worker.json",
+	},
 ]);

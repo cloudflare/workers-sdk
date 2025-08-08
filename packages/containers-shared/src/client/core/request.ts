@@ -113,8 +113,8 @@ const getFormData = (options: ApiRequestOptions): FormData | undefined => {
 	if (options.formData) {
 		const formData = new FormData();
 
-		const process = (key: string, value: any) => {
-			if (isString(value) || isBlob(value)) {
+		const process = async (key: string, value: any) => {
+			if (isString(value)) {
 				formData.append(key, value);
 			} else {
 				formData.append(key, JSON.stringify(value));
@@ -233,7 +233,7 @@ const parseResponseSchemaV4 = <T>(
 			result = {};
 		}
 	} else {
-		result = { error: fetchResult.errors?.[0].message };
+		result = { error: fetchResult.errors?.[0]?.message };
 	}
 	return {
 		url,
@@ -263,6 +263,10 @@ export const sendRequest = async (
 	};
 
 	if (config.WITH_CREDENTIALS) {
+		// :(
+		// The vite-plugin is attempting to typecheck everything with worker types, which does not support request.credentials
+		// Also note this is always set to "omit".
+		// @ts-ignore
 		request.credentials = config.CREDENTIALS;
 	}
 
@@ -348,6 +352,7 @@ export const request = <T>(
 			const formData = getFormData(options);
 			const body = getRequestBody(options);
 			const headers = await getHeaders(config, options);
+			debugLogRequest(config, url, headers, formData ?? body ?? {});
 
 			if (!onCancel.isCancelled) {
 				const response = await sendRequest(
@@ -383,7 +388,7 @@ export const request = <T>(
 						body: responseHeader ?? responseBody,
 					};
 				}
-
+				debugLogResponse(config, result);
 				catchErrorCodes(options, result);
 				resolve(result.body);
 			}
@@ -391,4 +396,39 @@ export const request = <T>(
 			reject(error);
 		}
 	});
+};
+
+const debugLogRequest = async (
+	config: OpenAPIConfig,
+	url: string,
+	headers: Headers,
+	body: FormData | unknown
+) => {
+	config.LOGGER?.debug(`-- START CF API REQUEST: ${url}`);
+	const logHeaders = new Headers(headers);
+	logHeaders.delete("Authorization");
+	config.LOGGER?.debugWithSanitization(
+		"HEADERS:",
+		JSON.stringify(logHeaders, null, 2)
+	);
+	config.LOGGER?.debugWithSanitization(
+		"BODY:",
+		JSON.stringify(
+			body instanceof FormData ? await new Response(body).text() : body,
+			null,
+			2
+		)
+	);
+	config.LOGGER?.debug("-- END CF API REQUEST");
+};
+
+const debugLogResponse = (config: OpenAPIConfig, response: ApiResult) => {
+	config.LOGGER?.debug(
+		"-- START CF API RESPONSE:",
+		response.statusText,
+		response.status
+	);
+
+	config.LOGGER?.debugWithSanitization("RESPONSE:", response.body);
+	config.LOGGER?.debug("-- END CF API RESPONSE");
 };

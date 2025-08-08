@@ -16,6 +16,7 @@ import { logger } from "./logger";
 import { readMetricsConfig } from "./metrics/metrics-config";
 import { getPackageManager } from "./package-manager";
 import { requireAuth } from "./user";
+import { formatCompatibilityDate } from "./utils/compatibility-date";
 import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
 import type { RawConfig } from "./config";
@@ -99,7 +100,10 @@ export const init = createCommand({
 			} catch (err) {
 				if ((err as { code?: number }).code === 10090) {
 					throw new UserError(
-						"wrangler couldn't find a Worker with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account."
+						"wrangler couldn't find a Worker with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account.",
+						{
+							telemetryMessage: true,
+						}
 					);
 				}
 				throw err;
@@ -302,7 +306,7 @@ async function getWorkerConfig(
 		workers_dev: workersDev.enabled,
 		compatibility_date:
 			serviceEnvMetadata.script.compatibility_date ??
-			new Date().toISOString().substring(0, 10),
+			formatCompatibilityDate(new Date()),
 		compatibility_flags: serviceEnvMetadata.script.compatibility_flags,
 		...(allRoutes.length ? { routes: allRoutes } : {}),
 		placement:

@@ -1,0 +1,38 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "external-durable-object",
+	"main": "./workers/worker-entrypoint.ts",
+	"compatibility_date": "2025-05-01",
+	"services": [
+		{
+			"binding": "SERVICE_WORKER",
+			"service": "service-worker",
+		},
+		{
+			"binding": "MODULE_WORKER",
+			"service": "module-worker",
+		},
+		{
+			"binding": "WORKER_ENTRYPOINT_A",
+			"service": "worker-entrypoint-a",
+		},
+		{
+			"binding": "WORKER_ENTRYPOINT_B",
+			"service": "worker-entrypoint-b",
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "DURABLE_OBJECT",
+				"class_name": "TestObject",
+				"script_name": "internal-durable-object",
+			},
+		],
+	},
+	"tail_consumers": [
+		{
+			"service": "module-worker",
+		},
+	],
+}

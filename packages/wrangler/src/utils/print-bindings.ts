@@ -749,9 +749,6 @@ function createGetMode({
 		connected,
 	}: {
 		// Is this binding running locally?
-		//   local = offline simulator in Miniflare
-		//   remote = some sort of Mixed Mode
-		//   undefined = this binding is not supported in a dev session
 		isSimulatedLocally?: boolean;
 		// If this is an external service/tail/etc... binding, is it connected?
 		//   true = connected via the dev registry
@@ -777,12 +774,18 @@ export function warnOrError(
 ) {
 	if (remote === true && supports === "local") {
 		throw new UserError(
-			`${friendlyBindingNames[type]} bindings do not support accessing remote resources.`
+			`${friendlyBindingNames[type]} bindings do not support accessing remote resources.`,
+			{
+				telemetryMessage: true,
+			}
 		);
 	}
 	if (remote === false && supports === "remote") {
 		throw new UserError(
-			`${friendlyBindingNames[type]} bindings do not support local development. You may be able to set \`experimental_remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+			`${friendlyBindingNames[type]} bindings do not support local development. You may be able to set \`experimental_remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
+			{
+				telemetryMessage: true,
+			}
 		);
 	}
 	if (remote === undefined && supports === "remote") {

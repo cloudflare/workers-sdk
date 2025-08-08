@@ -1,58 +1,56 @@
-import * as fs from "node:fs";
 import * as path from "node:path";
+import { unstable_getVarsForDev } from "wrangler";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
 
 /**
- * Gets the content of the `.dev.vars` target file
+ * Gets any variables with which to augment the Worker config in preview mode.
  *
- * Note: This resolves the .dev.vars file path following the same logic
- *       as `loadDotEnv` in `/packages/wrangler/src/config/index.ts`
- *       the two need to be kept in sync
+ * Calls `unstable_getVarsForDev` with the current Cloudflare environment to get local dev variables from the `.dev.vars` and `.env` files.
  */
-export function getDotDevDotVarsContent(
-	configPath: string,
+export function getLocalDevVarsForPreview(
+	configPath: string | undefined,
 	cloudflareEnv: string | undefined
-) {
-	const configDir = path.dirname(configPath);
-
-	const defaultDotDevDotVarsPath = `${configDir}/.dev.vars`;
-	const inputDotDevDotVarsPath = `${defaultDotDevDotVarsPath}${cloudflareEnv ? `.${cloudflareEnv}` : ""}`;
-
-	const targetPath = fs.existsSync(inputDotDevDotVarsPath)
-		? inputDotDevDotVarsPath
-		: fs.existsSync(defaultDotDevDotVarsPath)
-			? defaultDotDevDotVarsPath
-			: null;
-
-	if (targetPath) {
-		const dotDevDotVarsContent = fs.readFileSync(targetPath);
+): string | undefined {
+	const dotDevDotVars = unstable_getVarsForDev(
+		configPath,
+		undefined, // We don't currently support setting a list of custom `.env` files.
+		{}, // Don't pass actual vars since these will be loaded from the wrangler.json.
+		cloudflareEnv
+	);
+	const dotDevDotVarsEntries = Array.from(Object.entries(dotDevDotVars));
+	if (dotDevDotVarsEntries.length > 0) {
+		const dotDevDotVarsContent = dotDevDotVarsEntries
+			.map(([key, value]) => {
+				return `${key} = "${value?.toString().replaceAll(`"`, `\\"`)}"\n`;
+			})
+			.join("");
 		return dotDevDotVarsContent;
 	}
-
-	return null;
 }
 
 /**
- * Returns `true` if the `changedFile` matches a `.dev.vars` file.
+ * Returns `true` if the `changedFile` matches a `.dev.vars` or `.env` file.
  */
-export function hasDotDevDotVarsFileChanged(
-	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
+export function hasLocalDevVarsFileChanged(
+	{
+		configPaths,
+		cloudflareEnv,
+	}: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
 	changedFilePath: string
 ) {
-	return [...resolvedPluginConfig.configPaths].some((configPath) => {
-		const dotDevDotVars = path.join(path.dirname(configPath), ".dev.vars");
-		if (dotDevDotVars === changedFilePath) {
-			return true;
-		}
-
-		if (resolvedPluginConfig.cloudflareEnv) {
-			const dotDevDotVarsForEnv = `${dotDevDotVars}.${resolvedPluginConfig.cloudflareEnv}`;
-			return dotDevDotVarsForEnv === changedFilePath;
-		}
-
-		return false;
+	return [...configPaths].some((configPath) => {
+		const configDir = path.dirname(configPath);
+		return [
+			".dev.vars",
+			".env",
+			...(cloudflareEnv
+				? [`.dev.vars.${cloudflareEnv}`, `.env.${cloudflareEnv}`]
+				: []),
+		].some(
+			(localDevFile) => changedFilePath === path.join(configDir, localDevFile)
+		);
 	});
 }

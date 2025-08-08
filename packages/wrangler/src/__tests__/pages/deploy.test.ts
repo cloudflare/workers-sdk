@@ -64,9 +64,10 @@ describe("pages deploy", () => {
 			  directory  The directory of static files to upload  [string]
 
 			GLOBAL FLAGS
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
 			      --project-name        The name of the project you want to deploy to  [string]
@@ -3438,7 +3439,8 @@ and that at least one include rule is provided.
 							Content-Type: text/plain
 
 							<html><body>Hello text modules</body></html>
-							------formdata-undici-0.test--"
+							------formdata-undici-0.test--
+							"
 						`);
 
 						return HttpResponse.json(
@@ -3679,28 +3681,29 @@ and that at least one include rule is provided.
 						// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
 						// small enough, let's go ahead and snapshot test the whole thing
 						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-				"------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"metadata\\"
+							"------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"metadata\\"
 
-				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
-				Content-Type: application/javascript+module
+							{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+							------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+							Content-Type: application/javascript+module
 
-				// _worker.js
-				var worker_default = {
-				  async fetch(request, env) {
-				    const url = new URL(request.url);
-				    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
-				  }
-				};
-				export {
-				  worker_default as default
-				};
-				//# sourceMappingURL=bundledWorker-0.test.mjs.map
+							// _worker.js
+							var worker_default = {
+							  async fetch(request, env) {
+							    const url = new URL(request.url);
+							    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+							  }
+							};
+							export {
+							  worker_default as default
+							};
+							//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-				------formdata-undici-0.test--"
-			`);
+							------formdata-undici-0.test--
+							"
+						`);
 
 						expect(JSON.parse(customRoutesJSON)).toMatchObject({
 							version: ROUTES_SPEC_VERSION,
@@ -4048,28 +4051,29 @@ and that at least one include rule is provided.
 						// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
 						// small enough, let's go ahead and snapshot test the whole thing
 						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-				"------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"metadata\\"
+							"------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"metadata\\"
 
-				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
-				Content-Type: application/javascript+module
+							{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+							------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+							Content-Type: application/javascript+module
 
-				// _worker.js
-				var worker_default = {
-				  async fetch(request, env) {
-				    const url = new URL(request.url);
-				    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
-				  }
-				};
-				export {
-				  worker_default as default
-				};
-				//# sourceMappingURL=bundledWorker-0.test.mjs.map
+							// _worker.js
+							var worker_default = {
+							  async fetch(request, env) {
+							    const url = new URL(request.url);
+							    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+							  }
+							};
+							export {
+							  worker_default as default
+							};
+							//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-				------formdata-undici-0.test--"
-			`);
+							------formdata-undici-0.test--
+							"
+						`);
 
 						return HttpResponse.json(
 							{

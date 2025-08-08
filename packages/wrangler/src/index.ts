@@ -1,6 +1,8 @@
 import assert from "node:assert";
 import os from "node:os";
+import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { checkMacOSVersion } from "@cloudflare/cli";
 import { ApiError } from "@cloudflare/containers-shared";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -21,7 +23,8 @@ import {
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
-import { experimental_readRawConfig, loadDotEnv, readConfig } from "./config";
+import { experimental_readRawConfig, readConfig } from "./config";
+import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
@@ -100,6 +103,7 @@ import {
 	kvNamespaceDeleteCommand,
 	kvNamespaceListCommand,
 	kvNamespaceNamespace,
+	kvNamespaceRenameCommand,
 } from "./kv";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { getMetricsDispatcher } from "./metrics";
@@ -399,6 +403,13 @@ export function createCLIParser(argv: string[]) {
 			type: "string",
 			requiresArg: true,
 		})
+		.option("env-file", {
+			describe:
+				"Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files",
+			type: "string",
+			array: true,
+			requiresArg: true,
+		})
 		.check(demandSingleValue("env"))
 		.option("experimental-json-config", {
 			alias: "j",
@@ -418,13 +429,14 @@ export function createCLIParser(argv: string[]) {
 			return true;
 		})
 		.check((args) => {
-			// Grab locally specified env params from `.env` file
-			const loaded = loadDotEnv(".env", args.env);
-			for (const [key, value] of Object.entries(loaded?.parsed ?? {})) {
-				if (!(key in process.env)) {
-					process.env[key] = value;
-				}
-			}
+			// Set process environment params from `.env` files if available.
+			const resolvedEnvFilePaths = (
+				args["env-file"] ?? getDefaultEnvFiles(args.env)
+			).map((p) => resolve(p));
+			process.env = loadDotEnv(resolvedEnvFilePaths, {
+				includeProcessEnv: true,
+				silent: true,
+			});
 
 			// Write a session entry to the output file (if there is one).
 			writeOutput({
@@ -462,7 +474,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "help", "version"],
+		["config", "cwd", "env", "env-file", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 	wrangler.help("help", "Show help").alias("h", "help");
@@ -666,6 +678,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler kv namespace delete",
 			definition: kvNamespaceDeleteCommand,
+		},
+		{
+			command: "wrangler kv namespace rename",
+			definition: kvNamespaceRenameCommand,
 		},
 		{ command: "wrangler kv key put", definition: kvKeyPutCommand },
 		{ command: "wrangler kv key list", definition: kvKeyListCommand },
@@ -1472,6 +1488,8 @@ export function createCLIParser(argv: string[]) {
 
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
+
+	checkMacOSVersion({ shouldThrow: false });
 
 	const startTime = Date.now();
 	const wrangler = createCLIParser(argv);

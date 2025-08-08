@@ -1,5 +1,129 @@
 # miniflare
 
+## 4.20250803.0
+
+### Minor Changes
+
+- [#10004](https://github.com/cloudflare/workers-sdk/pull/10004) [`b4d1373`](https://github.com/cloudflare/workers-sdk/commit/b4d13733b5f64f84274a194dd725943658d6184e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add `structuredWorkerdLogs` option
+
+  add a new top-level option named `structuredWorkerdLogs` that makes workerd print to stdout structured logs (stringified jsons of the following shape: `{ timestamp: number, level: string, message: string }`) instead of printing logs to stdout and stderr
+
+- [#9556](https://github.com/cloudflare/workers-sdk/pull/9556) [`8ba7736`](https://github.com/cloudflare/workers-sdk/commit/8ba7736a8ae5666870d12945a1cb6185b6ac3633) Thanks [@edmundhung](https://github.com/edmundhung)! - Added a `serviceName` option to `unsafeDirectSockets`
+
+  This allows registering the current worker in the dev registry under its own name, but routing to a different service.
+
+### Patch Changes
+
+- [#10148](https://github.com/cloudflare/workers-sdk/pull/10148) [`631f26d`](https://github.com/cloudflare/workers-sdk/commit/631f26df58d8933da81fb312f2ba2e30dc22821a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250730.0  | 1.20250801.0  |
+  | @cloudflare/workers-types | ^4.20250730.0 | ^4.20250801.0 |
+
+- [#10203](https://github.com/cloudflare/workers-sdk/pull/10203) [`d6ecd05`](https://github.com/cloudflare/workers-sdk/commit/d6ecd05be5d272857f2b3e243e57ddee4e6a576c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250801.0  | 1.20250803.0  |
+  | @cloudflare/workers-types | ^4.20250801.0 | ^4.20250803.0 |
+
+- [#10176](https://github.com/cloudflare/workers-sdk/pull/10176) [`07c8611`](https://github.com/cloudflare/workers-sdk/commit/07c8611b69721e8aa1300ba209dc45a75173e1d7) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Add macOS version validation to prevent EPIPE errors on unsupported macOS versions (below 13.5). Miniflare and C3 fail hard while Wrangler shows warnings but continues execution.
+
+## 4.20250730.0
+
+### Patch Changes
+
+- [#10129](https://github.com/cloudflare/workers-sdk/pull/10129) [`9b61f44`](https://github.com/cloudflare/workers-sdk/commit/9b61f44c899aa6530ecd20f283dc4e2a9f7c79c7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250726.0  | 1.20250730.0  |
+  | @cloudflare/workers-types | ^4.20250726.0 | ^4.20250730.0 |
+
+## 4.20250726.0
+
+### Patch Changes
+
+- [#10075](https://github.com/cloudflare/workers-sdk/pull/10075) [`82a5b2e`](https://github.com/cloudflare/workers-sdk/commit/82a5b2e09fef9046140181c06aba1f82ce8314af) Thanks [@vicb](https://github.com/vicb)! - fix the type of ForwardableEmailMessage
+
+- [#10058](https://github.com/cloudflare/workers-sdk/pull/10058) [`f8f7352`](https://github.com/cloudflare/workers-sdk/commit/f8f735282bdcab25c90b986ff1ae45e20a4625c2) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: service binding fetch over dev registry should work without host header
+
+- [#9968](https://github.com/cloudflare/workers-sdk/pull/9968) [`2df1d06`](https://github.com/cloudflare/workers-sdk/commit/2df1d066cfe376b831ff0b29b656437d869791e5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250712.0  | 1.20250726.0  |
+  | @cloudflare/workers-types | ^4.20250712.0 | ^4.20250726.0 |
+
+## 4.20250712.2
+
+### Minor Changes
+
+- [#9971](https://github.com/cloudflare/workers-sdk/pull/9971) [`19794bf`](https://github.com/cloudflare/workers-sdk/commit/19794bfb57a3ab17433eefbe1820d21d98bc32a4) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: add stripDisablePrettyError option to control whether the header is stripped
+
+- [#10041](https://github.com/cloudflare/workers-sdk/pull/10041) [`059a39e`](https://github.com/cloudflare/workers-sdk/commit/059a39e4f1e9f9b55ed8a5a8598e35af9bd0357f) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Add @cloudflare/plywright support for Browser Rendering local mode
+
+## 4.20250712.1
+
+### Patch Changes
+
+- [#9866](https://github.com/cloudflare/workers-sdk/pull/9866) [`7e5585d`](https://github.com/cloudflare/workers-sdk/commit/7e5585dbf844fda0e1688797ce31c7e634f3f4ba) Thanks [@invisal](https://github.com/invisal)! - Fix D1 SQL dump generation: escape identifiers and handle SQLite's dynamic typing
+
+  Escape column and table names to prevent SQL syntax errors.
+  Escape values based on their runtime type to support SQLite's flexible typing.
+
+## 4.20250712.0
+
+### Minor Changes
+
+- [#9843](https://github.com/cloudflare/workers-sdk/pull/9843) [`5b0fc9e`](https://github.com/cloudflare/workers-sdk/commit/5b0fc9e96b97e935fa8e60ba442a9d706753ebd4) Thanks [@edmundhung](https://github.com/edmundhung)! - Improved error logging to include error causes in stack traces with internal stack frames removed.
+
+### Patch Changes
+
+- [#9854](https://github.com/cloudflare/workers-sdk/pull/9854) [`ac08e68`](https://github.com/cloudflare/workers-sdk/commit/ac08e6886a10c7cff4cf02002dffe961f5f157b9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix incorrect bindings remote deduplication logic
+
+  when bindings are registered deduplication logic is applied to make sure that the same binding is not unnecessarily registered multiple times, the changes here fix the fact that such deduplication logic doesn't currently take into account whether bindings are used or not in remote mode (which is problematic when the same binding is used both in remote and local mode)
+
+- [#9912](https://github.com/cloudflare/workers-sdk/pull/9912) [`3bb69fa`](https://github.com/cloudflare/workers-sdk/commit/3bb69fae168a7254c0eb396ea90cc274d0d9ce92) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250709.0  | 1.20250710.0  |
+  | @cloudflare/workers-types | ^4.20250709.0 | ^4.20250710.0 |
+
+- [#9930](https://github.com/cloudflare/workers-sdk/pull/9930) [`274a826`](https://github.com/cloudflare/workers-sdk/commit/274a826b3349211e8722baab2d73cdaab3b3aa5d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250710.0  | 1.20250711.0  |
+  | @cloudflare/workers-types | ^4.20250710.0 | ^4.20250711.0 |
+
+- [#9950](https://github.com/cloudflare/workers-sdk/pull/9950) [`77d1cb2`](https://github.com/cloudflare/workers-sdk/commit/77d1cb23761e258720956c0d5d72fb778cf80d42) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250711.0  | 1.20250712.0  |
+  | @cloudflare/workers-types | ^4.20250711.0 | ^4.20250712.0 |
+
+- [#9954](https://github.com/cloudflare/workers-sdk/pull/9954) [`bf4c9ab`](https://github.com/cloudflare/workers-sdk/commit/bf4c9abda7ec70f8633884987db36be2cf1b7e1e) Thanks [@penalosa](https://github.com/penalosa)! - Support Images binding in `getPlatformProxy()`
+
+- [#9847](https://github.com/cloudflare/workers-sdk/pull/9847) [`14ce577`](https://github.com/cloudflare/workers-sdk/commit/14ce5775c775b32bc1166d4e7a1546a00c049ab0) Thanks [@penalosa](https://github.com/penalosa)! - Upgrade Undici
+
 ## 4.20250709.0
 
 ### Patch Changes

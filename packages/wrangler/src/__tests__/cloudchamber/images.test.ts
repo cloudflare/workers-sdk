@@ -42,11 +42,12 @@ describe("cloudchamber image", () => {
 			  wrangler cloudchamber registries list                  list registries configured for this account
 
 			GLOBAL FLAGS
-			  -c, --config   Path to Wrangler configuration file  [string]
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -188,11 +189,12 @@ describe("cloudchamber image list", () => {
 			List images in the Cloudflare managed registry
 
 			GLOBAL FLAGS
-			  -c, --config   Path to Wrangler configuration file  [string]
-			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
 			      --filter  Regex to filter results  [string]
@@ -203,11 +205,11 @@ describe("cloudchamber image list", () => {
 	it("should list images", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		const tags: Map<string, string[]> = new Map([
-			["one", ["hundred", "ten", "sha256:239a0dfhasdfui235"]],
-			["two", ["thousand", "twenty", "sha256:badfga4mag0vhjakf"]],
-			["three", ["million", "thirty", "sha256:23f0adfgbja0f0jf0"]],
-		]);
+		const tags = {
+			one: ["hundred", "ten", "sha256:239a0dfhasdfui235"],
+			two: ["thousand", "twenty", "sha256:badfga4mag0vhjakf"],
+			three: ["million", "thirty", "sha256:23f0adfgbja0f0jf0"],
+		};
 
 		msw.use(
 			http.post("*/registries/:domain/credentials", async ({ params }) => {
@@ -219,16 +221,8 @@ describe("cloudchamber image list", () => {
 					password: "bar",
 				});
 			}),
-			http.get("*/v2/_catalog", async () => {
-				return HttpResponse.json({ repositories: ["one", "two", "three"] });
-			}),
-			http.get("*/v2/:repo/tags/list", async ({ params }) => {
-				const repo = String(params["repo"]);
-				const t = tags.get(repo);
-				return HttpResponse.json({
-					name: `${repo}`,
-					tags: t,
-				});
+			http.get("*/v2/_catalog?tags=true", async () => {
+				return HttpResponse.json({ repositories: tags });
 			})
 		);
 		await runWrangler("cloudchamber images list");
@@ -247,11 +241,11 @@ describe("cloudchamber image list", () => {
 	it("should list images with a filter", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		const tags: Map<string, string[]> = new Map([
-			["one", ["hundred", "ten", "sha256:239a0dfhasdfui235"]],
-			["two", ["thousand", "twenty", "sha256:badfga4mag0vhjakf"]],
-			["three", ["million", "thirty", "sha256:23f0adfgbja0f0jf0"]],
-		]);
+		const tags = {
+			one: ["hundred", "ten", "sha256:239a0dfhasdfui235"],
+			two: ["thousand", "twenty", "sha256:badfga4mag0vhjakf"],
+			three: ["million", "thirty", "sha256:23f0adfgbja0f0jf0"],
+		};
 
 		msw.use(
 			http.post("*/registries/:domain/credentials", async ({ params }) => {
@@ -263,16 +257,8 @@ describe("cloudchamber image list", () => {
 					password: "bar",
 				});
 			}),
-			http.get("*/v2/_catalog", async () => {
-				return HttpResponse.json({ repositories: ["one", "two", "three"] });
-			}),
-			http.get("*/v2/:repo/tags/list", async ({ params }) => {
-				const repo = String(params["repo"]);
-				const t = tags.get(repo);
-				return HttpResponse.json({
-					name: `${repo}`,
-					tags: t,
-				});
+			http.get("*/v2/_catalog?tags=true", async () => {
+				return HttpResponse.json({ repositories: tags });
 			})
 		);
 		await runWrangler("cloudchamber images list --filter '^two$'");
@@ -287,13 +273,13 @@ describe("cloudchamber image list", () => {
 	it("should filter out repos with no non-sha tags", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		const tags: Map<string, string[]> = new Map([
-			["one", ["hundred", "ten", "sha256:239a0dfhasdfui235"]],
-			["two", ["thousand", "twenty", "sha256:badfga4mag0vhjakf"]],
-			["three", ["million", "thirty", "sha256:23f0adfgbja0f0jf0"]],
-			["empty", []],
-			["shaonly", ["sha256:23f0adfgbja0f0jf0"]],
-		]);
+		const tags = {
+			one: ["hundred", "ten", "sha256:239a0dfhasdfui235"],
+			two: ["thousand", "twenty", "sha256:badfga4mag0vhjakf"],
+			three: ["million", "thirty", "sha256:23f0adfgbja0f0jf0"],
+			empty: [],
+			shaonly: ["sha256:23f0adfgbja0f0jf0"],
+		};
 
 		msw.use(
 			http.post("*/registries/:domain/credentials", async ({ params }) => {
@@ -305,16 +291,8 @@ describe("cloudchamber image list", () => {
 					password: "bar",
 				});
 			}),
-			http.get("*/v2/_catalog", async () => {
-				return HttpResponse.json({ repositories: ["one", "two", "three"] });
-			}),
-			http.get("*/v2/:repo/tags/list", async ({ params }) => {
-				const repo = String(params["repo"]);
-				const t = tags.get(repo);
-				return HttpResponse.json({
-					name: `${repo}`,
-					tags: t,
-				});
+			http.get("*/v2/_catalog?tags=true", async () => {
+				return HttpResponse.json({ repositories: tags });
 			})
 		);
 		await runWrangler("cloudchamber images list");
@@ -333,11 +311,11 @@ describe("cloudchamber image list", () => {
 	it("should list repos with json flag set", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		const tags: Map<string, string[]> = new Map([
-			["one", ["hundred", "ten", "sha256:239a0dfhasdfui235"]],
-			["two", ["thousand", "twenty", "sha256:badfga4mag0vhjakf"]],
-			["three", ["million", "thirty", "sha256:23f0adfgbja0f0jf0"]],
-		]);
+		const tags = {
+			one: ["hundred", "ten", "sha256:239a0dfhasdfui235"],
+			two: ["thousand", "twenty", "sha256:badfga4mag0vhjakf"],
+			three: ["million", "thirty", "sha256:23f0adfgbja0f0jf0"],
+		};
 
 		msw.use(
 			http.post("*/registries/:domain/credentials", async ({ params }) => {
@@ -349,16 +327,8 @@ describe("cloudchamber image list", () => {
 					password: "bar",
 				});
 			}),
-			http.get("*/v2/_catalog", async () => {
-				return HttpResponse.json({ repositories: ["one", "two", "three"] });
-			}),
-			http.get("*/v2/:repo/tags/list", async ({ params }) => {
-				const repo = String(params["repo"]);
-				const t = tags.get(repo);
-				return HttpResponse.json({
-					name: `${repo}`,
-					tags: t,
-				});
+			http.get("*/v2/_catalog?tags=true", async () => {
+				return HttpResponse.json({ repositories: tags });
 			})
 		);
 		await runWrangler("cloudchamber images list --json");
@@ -393,13 +363,13 @@ describe("cloudchamber image list", () => {
 	it("should filter out repos with no non-sha tags in json output", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		const tags: Map<string, string[]> = new Map([
-			["one", ["hundred", "ten", "sha256:239a0dfhasdfui235"]],
-			["two", ["thousand", "twenty", "sha256:badfga4mag0vhjakf"]],
-			["three", ["million", "thirty", "sha256:23f0adfgbja0f0jf0"]],
-			["empty", []],
-			["shaonly", ["sha256:23f0adfgbja0f0jf0"]],
-		]);
+		const tags = {
+			one: ["hundred", "ten", "sha256:239a0dfhasdfui235"],
+			two: ["thousand", "twenty", "sha256:badfga4mag0vhjakf"],
+			three: ["million", "thirty", "sha256:23f0adfgbja0f0jf0"],
+			empty: [],
+			shaonly: ["sha256:23f0adfgbja0f0jf0"],
+		};
 
 		msw.use(
 			http.post("*/registries/:domain/credentials", async ({ params }) => {
@@ -411,16 +381,8 @@ describe("cloudchamber image list", () => {
 					password: "bar",
 				});
 			}),
-			http.get("*/v2/_catalog", async () => {
-				return HttpResponse.json({ repositories: ["one", "two", "three"] });
-			}),
-			http.get("*/v2/:repo/tags/list", async ({ params }) => {
-				const repo = String(params["repo"]);
-				const t = tags.get(repo);
-				return HttpResponse.json({
-					name: `${repo}`,
-					tags: t,
-				});
+			http.get("*/v2/_catalog?tags=true", async () => {
+				return HttpResponse.json({ repositories: tags });
 			})
 		);
 		await runWrangler("cloudchamber images list --json");
@@ -451,15 +413,49 @@ describe("cloudchamber image list", () => {
 			]"
 		`);
 	});
+});
+
+describe("cloudchamber image delete", () => {
+	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
+
+	const REGISTRY = getCloudflareContainerRegistry();
+
+	mockAccountId();
+	mockApiToken();
+	beforeEach(mockAccount);
+	runInTempDir();
+	afterEach(() => {
+		patchConsole(() => {});
+		msw.resetHandlers();
+	});
+
+	it("should help", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await runWrangler("cloudchamber images delete --help");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler cloudchamber images delete <image>
+
+			Remove an image from the Cloudflare managed registry
+
+			POSITIONALS
+			  image  Image and tag to delete, of the form IMAGE:TAG  [string] [required]
+
+			GLOBAL FLAGS
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
+		`);
+	});
 
 	it("should delete images", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		const tags: Map<string, string[]> = new Map([
-			["one", ["hundred", "ten", "sha256:239a0dfhasdfui235"]],
-			["two", ["thousand", "twenty", "sha256:badfga4mag0vhjakf"]],
-			["three", ["million", "thirty", "sha256:23f0adfgbja0f0jf0"]],
-		]);
 
 		msw.use(
 			http.post("*/registries/:domain/credentials", async ({ params }) => {
@@ -469,17 +465,6 @@ describe("cloudchamber image list", () => {
 					registry_host: REGISTRY,
 					username: "foo",
 					password: "bar",
-				});
-			}),
-			http.get("*/v2/_catalog", async () => {
-				return HttpResponse.json({ repositories: ["one", "two", "three"] });
-			}),
-			http.get("*/v2/:repo/tags/list", async ({ params }) => {
-				const repo = String(params["repo"]);
-				const t = tags.get(repo);
-				return HttpResponse.json({
-					name: `${repo}`,
-					tags: t,
 				});
 			}),
 			http.head("*/v2/:accountId/:image/manifests/:tag", async ({ params }) => {
@@ -514,11 +499,6 @@ describe("cloudchamber image list", () => {
 	it("should error when provided a repo without a tag", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		const tags: Map<string, string[]> = new Map([
-			["one", ["hundred", "ten", "sha256:239a0dfhasdfui235"]],
-			["two", ["thousand", "twenty", "sha256:badfga4mag0vhjakf"]],
-			["three", ["million", "thirty", "sha256:23f0adfgbja0f0jf0"]],
-		]);
 
 		msw.use(
 			http.post("*/registries/:domain/credentials", async ({ params }) => {
@@ -528,17 +508,6 @@ describe("cloudchamber image list", () => {
 					registry_host: REGISTRY,
 					username: "foo",
 					password: "bar",
-				});
-			}),
-			http.get("*/v2/_catalog", async () => {
-				return HttpResponse.json({ repositories: ["one", "two", "three"] });
-			}),
-			http.get("*/v2/:repo/tags/list", async ({ params }) => {
-				const repo = String(params["repo"]);
-				const t = tags.get(repo);
-				return HttpResponse.json({
-					name: `${repo}`,
-					tags: t,
 				});
 			})
 		);

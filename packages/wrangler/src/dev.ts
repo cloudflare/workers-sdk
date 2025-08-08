@@ -1,9 +1,9 @@
 import assert from "node:assert";
-import { randomUUID } from "node:crypto";
 import events from "node:events";
 import path from "node:path";
 import util from "node:util";
 import { bold, green } from "@cloudflare/cli/colors";
+import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { isWebContainer } from "@webcontainer/env";
 import dedent from "ts-dedent";
 import { DevEnv } from "./api";
@@ -485,6 +485,7 @@ async function setupDevEnv(
 				pattern: r,
 			})),
 			env: args.env,
+			envFiles: args.envFile,
 			build: {
 				bundle: args.bundle !== undefined ? args.bundle : undefined,
 				define: collectKeyValues(args.define),
@@ -574,7 +575,7 @@ async function setupDevEnv(
 				enableContainers: args.enableContainers,
 				dockerPath: args.dockerPath,
 				// initialise with a random id
-				containerBuildId: randomUUID().slice(0, 8),
+				containerBuildId: generateContainerBuildId(),
 			},
 			legacy: {
 				site: (configParam) => {
@@ -624,7 +625,7 @@ export async function startDev(args: StartDevOptions) {
 				if (hotkeysDisplayed) {
 					assert(devEnv !== undefined);
 					unregisterHotKeys = registerDevHotKeys(
-						Array.isArray(devEnv) ? devEnv[0] : devEnv,
+						Array.isArray(devEnv) ? devEnv : [devEnv],
 						args
 					);
 				}
@@ -681,7 +682,7 @@ export async function startDev(args: StartDevOptions) {
 				))
 			);
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
+				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
 		} else {
 			devEnv = new DevEnv();
@@ -736,7 +737,7 @@ export async function startDev(args: StartDevOptions) {
 			await setupDevEnv(devEnv, args.config, authHook, args);
 
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(devEnv, args);
+				unregisterHotKeys = registerDevHotKeys([devEnv], args);
 			}
 		}
 
@@ -864,9 +865,22 @@ function getResolvedSiteAssetPaths(
 	);
 }
 
+/**
+ * Gets the bindings for the Cloudflare Worker.
+ *
+ * @param configParam The loaded configuration.
+ * @param env The environment to use, if any.
+ * @param envFiles An array of paths, relative to the project directory, of .env files to load.
+ * If `undefined` it defaults to the standard .env files from `getDefaultEnvFiles()`.
+ * @param local Whether the dev server should run locally.
+ * @param args Additional arguments for the dev server.
+ * @param remoteBindingsEnabled Whether remote bindings are enabled, defaults to the value of the `REMOTE_BINDINGS` flag.
+ * @returns The bindings for the Cloudflare Worker.
+ */
 export function getBindings(
 	configParam: Config,
 	env: string | undefined,
+	envFiles: string[] | undefined,
 	local: boolean,
 	args: AdditionalDevProps,
 	remoteBindingsEnabled = getFlag("REMOTE_BINDINGS")
@@ -890,7 +904,11 @@ export function getBindings(
 				// TODO: This error has to be a _lot_ better, ideally just asking
 				// to create a preview namespace for the user automatically
 				throw new UserError(
-					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`
+					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`,
+					{
+						telemetryMessage:
+							"no preview kv namespace configured in remote dev",
+					}
 				); // Ugh, I really don't like this message very much
 			}
 			return {
@@ -946,7 +964,10 @@ export function getBindings(
 				// same copy-on-write TODO
 				if (!preview_bucket_name && !local) {
 					throw new UserError(
-						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your ${configFileName(configParam.configPath)} file`
+						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your ${configFileName(configParam.configPath)} file`,
+						{
+							telemetryMessage: "no preview r2 bucket configured in remote dev",
+						}
 					);
 				}
 				return {
@@ -991,7 +1012,8 @@ export function getBindings(
 			hyperdrive.localConnectionString === undefined
 		) {
 			throw new UserError(
-				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
+				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`,
+				{ telemetryMessage: "no local hyperdrive connection string" }
 			);
 		}
 
@@ -1032,7 +1054,12 @@ export function getBindings(
 		// non-inheritable fields
 		vars: {
 			// Use a copy of combinedVars since we're modifying it later
-			...getVarsForDev(configParam, env),
+			...getVarsForDev(
+				configParam.userConfigPath,
+				envFiles,
+				configParam.vars,
+				env
+			),
 			...args.vars,
 		},
 		durable_objects: {

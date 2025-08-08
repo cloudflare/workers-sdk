@@ -2,6 +2,7 @@
 // by running `wrangler types`
 
 interface Env {
+	ALERTS_WEBHOOK: string;
 	GITHUB_PAT: string;
 	PROD_TEAM_ONLY_WEBHOOK: string;
 	PROD_WEBHOOK: string;

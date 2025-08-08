@@ -9,7 +9,7 @@ import {
 	preview,
 	Rollup,
 } from "vite";
-import { beforeAll, beforeEach, inject } from "vitest";
+import { beforeAll, inject } from "vitest";
 import type * as http from "node:http";
 import type { Browser, Page } from "playwright-chromium";
 import type {
@@ -17,6 +17,7 @@ import type {
 	InlineConfig,
 	Logger,
 	PluginOption,
+	PreviewServer,
 	ResolvedConfig,
 	UserConfig,
 	ViteDevServer,
@@ -28,7 +29,8 @@ export const workspaceRoot = path.resolve(__dirname, "../");
 export const isBuild = !!process.env.VITE_TEST_BUILD;
 export const isWindows = process.platform === "win32";
 
-let server: ViteDevServer | http.Server;
+export const isCINonLinux =
+	process.platform !== "linux" && process.env.CI === "true";
 
 /**
  * Vite Dev Server when testing serve
@@ -81,6 +83,8 @@ export function resetServerLogs() {
 }
 
 beforeAll(async (s) => {
+	let server: ViteDevServer | http.Server | PreviewServer | undefined;
+
 	const suite = s as RunnerTestFile;
 
 	testPath = suite.filepath!;
@@ -157,7 +161,7 @@ beforeAll(async (s) => {
 					viteTestUrl = mod.viteTestUrl ?? viteTestUrl;
 				}
 			} else {
-				await startDefaultServe();
+				server = await startDefaultServe();
 			}
 		}
 	} catch (e) {
@@ -176,15 +180,9 @@ beforeAll(async (s) => {
 		await page?.close();
 		await server?.close();
 		await watcher?.close();
-		if (browser) {
-			await browser.close();
-		}
+		await browser?.close();
 	};
 }, 15_000);
-
-beforeEach(async () => {
-	await page.goto(viteTestUrl);
-});
 
 export async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;
@@ -249,19 +247,20 @@ export async function loadConfig(configEnv: ConfigEnv) {
 }
 
 export async function startDefaultServe(): Promise<
-	ViteDevServer | http.Server
+	ViteDevServer | http.Server | PreviewServer
 > {
 	setupConsoleWarnCollector(serverLogs.warns);
 
 	if (!isBuild) {
 		process.env.VITE_INLINE = "inline-serve";
 		const config = await loadConfig({ command: "serve", mode: "development" });
-		viteServer = server = await (await createServer(config)).listen();
-		viteTestUrl = server!.resolvedUrls!.local[0]!;
-		if (server.config.base === "/") {
+		viteServer = await (await createServer(config)).listen();
+		viteTestUrl = viteServer.resolvedUrls!.local[0]!;
+		if (viteServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
 		}
 		await page.goto(viteTestUrl);
+		return viteServer;
 	} else {
 		process.env.VITE_INLINE = "inline-build";
 		// determine build watch
@@ -300,8 +299,8 @@ export async function startDefaultServe(): Promise<
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
 		}
 		await page.goto(viteTestUrl);
+		return previewServer;
 	}
-	return server;
 }
 
 /**

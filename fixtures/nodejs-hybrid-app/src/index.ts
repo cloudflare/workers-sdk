@@ -22,6 +22,10 @@ export default {
 				return testGetRandomValues();
 			case "/test-process":
 				return testProcessBehavior();
+			case "/env":
+				return Response.json(env);
+			case "/process-env":
+				return Response.json(process.env);
 			case "/query":
 				return testPostgresLibrary(env, ctx);
 			case "/test-x509-certificate":

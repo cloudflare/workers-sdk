@@ -6,12 +6,13 @@ import {
 	endSection,
 	log,
 	logRaw,
+	newline,
 	shapes,
 	startSection,
 	success,
 	updateStatus,
 } from "@cloudflare/cli";
-import { bold, brandColor, dim, green, red } from "@cloudflare/cli/colors";
+import { bold, brandColor, dim, green } from "@cloudflare/cli/colors";
 import {
 	ApiError,
 	ApplicationsService,
@@ -25,14 +26,13 @@ import {
 import { formatConfigSnippet } from "../config";
 import { FatalError, UserError } from "../errors";
 import { getAccountId } from "../user";
-import { cleanForInstanceType, promiseSpinner } from "./common";
 import {
-	createLine,
-	diffLines,
-	printLine,
 	sortObjectRecursive,
 	stripUndefined,
-} from "./helpers/diff";
+} from "../utils/sortObjectRecursive";
+import { promiseSpinner } from "./common";
+import { Diff } from "./helpers/diff";
+import { cleanForInstanceType } from "./instance-type/instance-type";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";
 import type {
@@ -189,22 +189,34 @@ function observabilityToConfiguration(
 
 function containerAppToInstanceType(
 	containerApp: ContainerApp
-): InstanceType | undefined {
+): Partial<UserDeploymentConfiguration> {
+	let configuration = (containerApp.configuration ??
+		{}) as Partial<UserDeploymentConfiguration>;
+
 	if (containerApp.instance_type !== undefined) {
-		return containerApp.instance_type as InstanceType;
+		if (typeof containerApp.instance_type === "string") {
+			return { instance_type: containerApp.instance_type as InstanceType };
+		}
+
+		configuration = {
+			vcpu: containerApp.instance_type.vcpu,
+			memory_mib: containerApp.instance_type.memory_mib,
+			disk: {
+				size_mb: containerApp.instance_type.disk_mb,
+			},
+		};
 	}
 
 	// if no other configuration is set, we fall back to the default "dev" instance type
-	const configuration =
-		containerApp.configuration as UserDeploymentConfiguration;
 	if (
-		configuration.disk === undefined &&
+		configuration.disk?.size_mb === undefined &&
 		configuration.vcpu === undefined &&
-		configuration.memory === undefined &&
 		configuration.memory_mib === undefined
 	) {
-		return InstanceType.DEV;
+		return { instance_type: InstanceType.DEV };
 	}
+
+	return configuration;
 }
 
 function containerAppToCreateApplication(
@@ -221,8 +233,8 @@ function containerAppToCreateApplication(
 	const instanceType = containerAppToInstanceType(containerApp);
 	const configuration: UserDeploymentConfiguration = {
 		...(containerApp.configuration as UserDeploymentConfiguration),
+		...instanceType,
 		observability: observabilityConfiguration,
-		instance_type: instanceType,
 	};
 
 	// this should have been set to a default value of worker-name-class-name if unspecified by the user
@@ -272,7 +284,6 @@ export async function apply(
 	args: {
 		skipDefaults: boolean | undefined;
 		env?: string;
-		imageUpdateRequired?: boolean;
 	},
 	config: Config
 ) {
@@ -302,9 +313,7 @@ export async function apply(
 				: { containers: [configuration] };
 		formatConfigSnippet(endConfig, config.configPath)
 			.split("\n")
-			.forEach((el) => {
-				printLine(el, "  ", logRaw);
-			});
+			.forEach((el) => logRaw(`    ${el}`));
 		return;
 	}
 
@@ -334,28 +343,17 @@ export async function apply(
 		  }
 	)[] = [];
 
-	// TODO: JSON formatting is a bit bad due to the trimming.
-	// Try to do a conditional on `configFormat`
-
 	log(dim("Container application changes\n"));
 
 	for (const appConfigNoDefaults of config.containers) {
+		appConfigNoDefaults.configuration ??= {};
+		appConfigNoDefaults.configuration.image = appConfigNoDefaults.image;
 		const application =
 			applicationByNames[
 				appConfigNoDefaults.name ??
 					// we should never actually reach this point, but just in case
 					`${config.name}-${appConfigNoDefaults.class_name}`
 			];
-
-		// while configuration.image is deprecated to the user, we still resolve to this for now.
-		if (!appConfigNoDefaults.configuration?.image && application) {
-			appConfigNoDefaults.configuration ??= {};
-		}
-
-		if (!args.imageUpdateRequired && application) {
-			appConfigNoDefaults.configuration ??= {};
-			appConfigNoDefaults.configuration.image = application.configuration.image;
-		}
 
 		const accountId = config.account_id || (await getAccountId(config));
 		const appConfig = containerAppToCreateApplication(
@@ -409,9 +407,9 @@ export async function apply(
 				{ containers: [nowContainer] },
 				config.configPath
 			);
-			const results = diffLines(prev, now);
-			const changes = results.find((l) => l.added || l.removed) !== undefined;
-			if (!changes) {
+
+			const diff = new Diff(prev, now);
+			if (diff.changes === 0) {
 				updateStatus(`no changes ${brandColor(application.name)}`);
 				continue;
 			}
@@ -421,76 +419,11 @@ export async function apply(
 				false
 			);
 
-			let printedLines: string[] = [];
-			let printedDiff = false;
-			// prints the lines we accumulated to bring context to the edited line
-			const printContext = () => {
-				let index = 0;
-				for (let i = printedLines.length - 1; i >= 0; i--) {
-					if (printedLines[i].trim().startsWith("[")) {
-						log("");
-						index = i;
-						break;
-					}
-				}
+			newline();
 
-				for (let i = index; i < printedLines.length; i++) {
-					log(printedLines[i]);
-					if (printedLines.length - i > 2) {
-						i = printedLines.length - 2;
-						printLine(dim("..."), "  ");
-					}
-				}
+			diff.print();
 
-				printedLines = [];
-			};
-
-			// go line by line and print diff results
-			for (const lines of results) {
-				const trimmedLines = (lines.value ?? "")
-					.split("\n")
-					.map((e) => e.trim())
-					.filter((e) => e !== "");
-
-				for (const l of trimmedLines) {
-					if (lines.added) {
-						printContext();
-						if (l.startsWith("[")) {
-							printLine("");
-						}
-
-						printedDiff = true;
-						printLine(l, green("+ "));
-					} else if (lines.removed) {
-						printContext();
-						if (l.startsWith("[")) {
-							printLine("");
-						}
-
-						printedDiff = true;
-						printLine(l, red("- "));
-					} else {
-						// if we had printed a diff before this line, print a little bit more
-						// so the user has a bit more context on where the edit happens
-						if (printedDiff) {
-							let printDots = false;
-							if (l.startsWith("[")) {
-								printLine("");
-								printDots = true;
-							}
-
-							printedDiff = false;
-							printLine(l, "  ");
-							if (printDots) {
-								printLine(dim("..."), "  ");
-							}
-							continue;
-						}
-
-						printedLines.push(createLine(l, "  "));
-					}
-				}
-			}
+			newline();
 
 			if (appConfigNoDefaults.rollout_kind !== "none") {
 				actions.push({
@@ -509,9 +442,9 @@ export async function apply(
 				});
 			} else {
 				log("Skipping application rollout");
+				newline();
 			}
 
-			printLine("");
 			continue;
 		}
 
@@ -534,12 +467,11 @@ export async function apply(
 			config.configPath
 		);
 
-		// go line by line and pretty print it
-		s.split("\n")
-			.map((line) => line.trim())
-			.forEach((el) => {
-				printLine(el, "  ");
-			});
+		s.trimEnd()
+			.split("\n")
+			.forEach((el) => log(`  ${el}`));
+
+		newline();
 
 		const configToPush = { ...appConfig };
 
@@ -615,7 +547,6 @@ export async function apply(
 				}
 			);
 
-			printLine("");
 			continue;
 		}
 
@@ -696,10 +627,11 @@ export async function apply(
 				shape: shapes.bar,
 			});
 
-			printLine("");
 			continue;
 		}
 	}
+
+	newline();
 
 	endSection("Applied changes");
 }
@@ -716,9 +648,6 @@ export async function applyCommand(
 		{
 			skipDefaults: args.skipDefaults,
 			env: args.env,
-			// For the apply command we want this to default to true
-			// so that the image can be updated if the user modified it.
-			imageUpdateRequired: true,
 		},
 		config
 	);

@@ -10,9 +10,9 @@ class FilteredPushArray<T> extends Array<T> {
 	}
 }
 
-debugger;
 export default defineWorkersConfig({
 	test: {
+		include: ["test/**/*.spec.ts"],
 		poolOptions: {
 			workers: {
 				experimental_remoteBindings: true,

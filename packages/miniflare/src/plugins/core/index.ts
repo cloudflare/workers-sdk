@@ -118,6 +118,7 @@ const UnusableStringSchema = z.string().transform(() => undefined);
 export const UnsafeDirectSocketSchema = z.object({
 	host: z.ostring(),
 	port: z.onumber(),
+	serviceName: z.ostring(),
 	entrypoint: z.ostring(),
 	proxy: z.oboolean(),
 });
@@ -245,6 +246,12 @@ export const CoreSharedOptionsSchema = z.object({
 	// Path to the root directory for persisting data
 	// Used as the default for all plugins with the plugin name as the subdirectory name
 	defaultPersistRoot: z.string().optional(),
+	// Strip the MF-DISABLE_PRETTY_ERROR header from user request
+	stripDisablePrettyError: z.boolean().default(true),
+
+	// Whether to get structured logs from workerd or not (default to `false`)
+	// This option is useful in combination with a custom handleRuntimeStdio.
+	structuredWorkerdLogs: z.boolean().default(false),
 });
 
 export const CORE_PLUGIN_NAME = "core";
@@ -916,6 +923,10 @@ export function getGlobalServices({
 		{
 			name: CoreBindings.DATA_PROXY_SECRET,
 			data: PROXY_SECRET,
+		},
+		{
+			name: CoreBindings.STRIP_DISABLE_PRETTY_ERROR,
+			json: JSON.stringify(sharedOptions.stripDisablePrettyError),
 		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,

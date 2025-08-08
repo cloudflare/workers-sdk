@@ -238,7 +238,6 @@ export interface DevConfig {
 	 * When developing, whether to build and connect to containers. This requires a Docker daemon to be running.
 	 * Defaults to `true`.
 	 *
-	 * @inheritable
 	 * @default true
 	 */
 	enable_containers: boolean;

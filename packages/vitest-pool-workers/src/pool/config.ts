@@ -259,7 +259,10 @@ async function parseCustomPoolOptions(
 
 		const remoteProxySessionData = options.experimental_remoteBindings
 			? await wrangler.experimental_maybeStartOrUpdateRemoteProxySession(
-					configPath,
+					{
+						path: options.wrangler.configPath,
+						environment: options.wrangler.environment,
+					},
 					preExistingRemoteProxySessionData ?? null
 				)
 			: null;
@@ -277,7 +280,11 @@ async function parseCustomPoolOptions(
 				options.wrangler.environment,
 				{
 					imagesLocalMode: true,
-					overrides: { assets: options.miniflare.assets },
+					overrides: {
+						assets: options.miniflare.assets,
+						// doesn't work with containers yet so let's just disable it
+						enableContainers: false,
+					},
 					remoteBindingsEnabled: options.experimental_remoteBindings,
 					remoteProxyConnectionString:
 						remoteProxySessionData?.session?.remoteProxyConnectionString,

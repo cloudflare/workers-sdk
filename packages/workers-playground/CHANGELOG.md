@@ -1,5 +1,11 @@
 # workers-playground
 
+## 0.2.5
+
+### Patch Changes
+
+- [#9886](https://github.com/cloudflare/workers-sdk/pull/9886) [`17b1e5a`](https://github.com/cloudflare/workers-sdk/commit/17b1e5af8fe54cf9ad942278d860cd88eb2a2ebd) Thanks [@dom96](https://github.com/dom96)! - Python packages are now read from cf-requirements.txt instead of requirements.txt by default
+
 ## 0.2.4
 
 ### Patch Changes

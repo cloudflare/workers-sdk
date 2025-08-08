@@ -158,7 +158,7 @@ export async function createPreviewSession(
 	ctx: CfWorkerContext,
 	abortSignal: AbortSignal
 ): Promise<CfPreviewSession> {
-	const { accountId } = account;
+	const { accountId, apiToken } = account;
 	const initUrl = ctx.zone
 		? `/zones/${ctx.zone}/workers/edge-preview`
 		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
@@ -168,7 +168,8 @@ export async function createPreviewSession(
 		initUrl,
 		undefined,
 		undefined,
-		abortSignal
+		abortSignal,
+		apiToken
 	);
 
 	const switchedExchangeUrl = switchHost(

@@ -1,53 +1,34 @@
 import { describe, expect, test } from "vitest";
 import { stripInternalEnv } from "../env";
 
+const internalEnv = {
+	__VITE_RUNNER_OBJECT__: {
+		get: () => ({}) as any,
+	},
+	__VITE_INVOKE_MODULE__: {
+		fetch: async () => new Response(),
+	},
+	__VITE_UNSAFE_EVAL__: {
+		eval: () => () => {},
+	},
+};
+
 describe("stripInternalEnv", () => {
-	test("only __VITE internal fields", () => {
-		const env = {
-			__VITE_INVOKE_MODULE__: {
-				fetch: async () => new Response(),
-			},
-			__VITE_UNSAFE_EVAL__: {
-				eval: () => () => {},
-			},
-		};
-		const result = stripInternalEnv(env);
+	test("strips internal properties", () => {
+		const result = stripInternalEnv(internalEnv);
 		expect(result).toEqual({});
 	});
 
-	test("with extra env fields", () => {
+	test("strips internal properties when extra properties are included", () => {
 		const env = {
-			__VITE_INVOKE_MODULE__: {
-				fetch: async () => new Response(),
-			},
-			__VITE_UNSAFE_EVAL__: {
-				eval: () => () => {},
-			},
+			...internalEnv,
 			test: "this is a test",
-			test1: "this is a test (1)",
 			MY_KV: {},
 		};
 		const result = stripInternalEnv(env);
 		expect(result).toEqual({
-			MY_KV: {},
 			test: "this is a test",
-			test1: "this is a test (1)",
-		});
-	});
-
-	test("with nested fields that share the same name as (top level) internal ones", () => {
-		const env = {
-			__VITE_INVOKE_MODULE__: {
-				fetch: async () => new Response(),
-			},
-			__VITE_UNSAFE_EVAL__: {
-				eval: () => () => {},
-			},
-			myJson: {},
-		};
-		const result = stripInternalEnv(env);
-		expect(result).toEqual({
-			myJson: {},
+			MY_KV: {},
 		});
 	});
 });
