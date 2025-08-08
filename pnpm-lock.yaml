@@ -12,21 +12,9 @@ catalogs:
     '@typescript-eslint/parser':
       specifier: ^8.35.1
       version: 8.35.1
-    '@vitest/runner':
-      specifier: ~3.2.0
-      version: 3.2.3
-    '@vitest/snapshot':
-      specifier: ~3.2.0
-      version: 3.2.3
-    '@vitest/ui':
-      specifier: ~3.2.0
-      version: 3.2.3
     esbuild:
       specifier: 0.25.4
       version: 0.25.4
-    playwright-chromium:
-      specifier: ^1.49.1
-      version: 1.49.1
     rimraf:
       specifier: ^6.0.1
       version: 6.0.1
@@ -36,19 +24,9 @@ catalogs:
     undici:
       specifier: ^7.10.0
       version: 7.11.0
-    vite:
-      specifier: ^5.4.14
-      version: 5.4.14
-    vitest:
-      specifier: ~3.2.0
-      version: 3.2.3
     ws:
       specifier: 8.18.0
       version: 8.18.0
-  vite-plugin:
-    vite:
-      specifier: 7.0.0
-      version: 7.0.0
 
 overrides:
   '@types/react-dom@18>@types/react': ^18
@@ -1799,6 +1777,9 @@ importers:
       '@microsoft/api-extractor':
         specifier: ^7.52.8
         version: 7.52.8(@types/node@20.19.9)
+      '@puppeteer/browsers':
+        specifier: ^2.10.6
+        version: 2.10.6
       '@types/debug':
         specifier: ^4.1.7
         version: 4.1.7
@@ -1883,9 +1864,6 @@ importers:
       mime:
         specifier: ^3.0.0
         version: 3.0.0
-      npx-import:
-        specifier: ^1.1.4
-        version: 1.1.4
       postal-mime:
         specifier: ^2.4.3
         version: 2.4.3(patch_hash=ngwql2fj2dlex3jjynq4iizhk4)
@@ -6038,6 +6016,11 @@ packages:
   '@protobufjs/utf8@1.1.0':
     resolution: {integrity: sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==}
 
+  '@puppeteer/browsers@2.10.6':
+    resolution: {integrity: sha512-pHUn6ZRt39bP3698HFQlu2ZHCkS/lPcpv7fVQcGBSzNNygw171UXAKrCUhy+TEMw4lEttOKDgNpb04hwUAJeiQ==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   '@puppeteer/browsers@2.2.3':
     resolution: {integrity: sha512-bJ0UBsk0ESOs6RFcLXOt99a3yTDcOKlzfjad+rhFwdaG1Lu/Wzq58GHYCDTlZ9z6mldf4g+NTb+TXEfe0PpnsQ==}
     engines: {node: '>=18'}
@@ -7798,11 +7781,27 @@ packages:
   bare-fs@2.3.5:
     resolution: {integrity: sha512-SlE9eTxifPDJrT6YgemQ1WGFleevzwY+XAP1Xqgl56HtcrisC2CHCZ2tq6dBpcH2TnNxwUEUGhweo+lrQtYuiw==}
 
+  bare-fs@4.1.6:
+    resolution: {integrity: sha512-25RsLF33BqooOEFNdMcEhMpJy8EoR88zSMrnOQOaM3USnOK2VmaJ1uaQEwPA6AQjrv1lXChScosN6CzbwbO9OQ==}
+    engines: {bare: '>=1.16.0'}
+    peerDependencies:
+      bare-buffer: '*'
+    peerDependenciesMeta:
+      bare-buffer:
+        optional: true
+
   bare-os@2.4.4:
     resolution: {integrity: sha512-z3UiI2yi1mK0sXeRdc4O1Kk8aOa/e+FNWZcTiPB/dfTWyLypuE99LibgRaQki914Jq//yAWylcAt+mknKdixRQ==}
 
+  bare-os@3.6.1:
+    resolution: {integrity: sha512-uaIjxokhFidJP+bmmvKSgiMzj2sV5GPHaZVAIktcxcpCyBFFWO+YlikVAdhmUo2vYFvFhOXIAlldqV29L8126g==}
+    engines: {bare: '>=1.14.0'}
+
   bare-path@2.1.3:
     resolution: {integrity: sha512-lh/eITfU8hrj9Ru5quUp0Io1kJWIk1bTjzo7JH1P5dWmQ2EL4hFUlfI8FonAhSlgIfhn63p84CDY/x+PisgcXA==}
+
+  bare-path@3.0.0:
+    resolution: {integrity: sha512-tyfW2cQcB5NN8Saijrhqn0Zh7AnFNsnczRcuWODH0eYAXBsJ5gVxAUuNr7tsHSC6IZ77cA0SitzT+s47kot8Mw==}
 
   bare-stream@2.6.5:
     resolution: {integrity: sha512-jSmxKJNJmHySi6hC42zlZnq00rga4jjxcgNZjY9N5WlOe/iOoGRtdwGsHzQv2RlH2KOYMwGUXhf2zXd32BA9RA==}
@@ -7929,9 +7928,6 @@ packages:
   buffers@0.1.1:
     resolution: {integrity: sha512-9q/rDEGSb/Qsvv2qvzIzdluL5k7AaJOTrw23z9reQthrbF7is4CtlT0DXyO1oei2DCp4uojjzQ7igaSHp1kAEQ==}
     engines: {node: '>=0.2.0'}
-
-  builtins@5.1.0:
-    resolution: {integrity: sha512-SW9lzGTLvWTP1AY8xeAMZimqDrIaSdLQUcVr9DMef51niJ022Ri87SwRRKYm4A6iHfkPaiVUu/Duw2Wc4J7kKg==}
 
   bundle-name@3.0.0:
     resolution: {integrity: sha512-PKA4BeSvBpQKQ8iPOGCSiell+N8P+Tf1DlwqmYhpe2gAhKPHn8EYOxVT+ShuGmhg8lN8XiSlS80yiExKXrURlw==}
@@ -10662,9 +10658,6 @@ packages:
     resolution: {integrity: sha512-AqZtDUWOMKs1G/8lwylVjrdYgqA4d9nu8hc+0gzRxlDb1I10+FHBGMXs6aiQHFdCUUlqH99MUMuLfzWDNDtfxw==}
     deprecated: This package is no longer supported.
 
-  npx-import@1.1.4:
-    resolution: {integrity: sha512-3ShymTWOgqGyNlh5lMJAejLuIv3W1K3fbI5Ewc6YErZU3Sp0PqsNs8UIU1O8z5+KVl/Du5ag56Gza9vdorGEoA==}
-
   nth-check@2.1.1:
     resolution: {integrity: sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w==}
 
@@ -10850,9 +10843,6 @@ packages:
   parse-ms@4.0.0:
     resolution: {integrity: sha512-TXfryirbmq34y8QBwgqCVLi+8oA3oWx2eAnSn62ITyEhEYaWRlVZ2DvMM9eZbMs/RfxPu/PK/aBLyGj4IrqMHw==}
     engines: {node: '>=18'}
-
-  parse-package-name@1.0.0:
-    resolution: {integrity: sha512-kBeTUtcj+SkyfaW4+KBe0HtsloBJ/mKTPoxpVdA57GZiPerREsUWJOhVj9anXweFiJkm5y8FG1sxFZkZ0SN6wg==}
 
   parserlib@1.1.1:
     resolution: {integrity: sha512-e1HbF3+7ASJ/uOZirg5/8ZfPljTh100auNterbHB8TUs5egciuWQ2eX/2al8ko0RdV9Xh/5jDei3jqJAmbTDcg==}
@@ -11440,6 +11430,10 @@ packages:
 
   proxy-agent@6.4.0:
     resolution: {integrity: sha512-u0piLU+nCOHMgGjRbimiXmA9kM/L9EHh3zL81xCdp7m+Y2pHIsnmbdDoEDoAz5geaonNR6q6+yOPQs6n4T6sBQ==}
+    engines: {node: '>= 14'}
+
+  proxy-agent@6.5.0:
+    resolution: {integrity: sha512-TmatMXdr2KlRiA2CyDu8GqR8EjahTG3aY3nXjdzFyoZbmB8hrBsTyMezhULIXKnC0jpfjlmiZ3+EaCzoInSu/A==}
     engines: {node: '>= 14'}
 
   proxy-from-env@1.1.0:
@@ -12261,6 +12255,9 @@ packages:
   tar-fs@3.0.5:
     resolution: {integrity: sha512-JOgGAmZyMgbqpLwct7ZV8VzkEB6pxXFBVErLtb+XCOqzc6w1xiWKI9GVd6bwk68EX7eJ4DWmfXVmq8K2ziZTGg==}
 
+  tar-fs@3.1.0:
+    resolution: {integrity: sha512-5Mty5y/sOF1YWj1J6GiBodjlDc05CUR8PKXrsnFAiSG0xA+GHeWLovaZPYUDXkH/1iKRf2+M5+OrRgzC7O9b7w==}
+
   tar-stream@2.2.0:
     resolution: {integrity: sha512-ujeqbceABgwMZxEJnk2HDY2DlnUZ+9oEcb1KzTVfYHio0UE6dG71n60d8D2I4qNvleWrrXpmjpt7vZeF1LnMZQ==}
     engines: {node: '>=6'}
@@ -12738,10 +12735,6 @@ packages:
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
     hasBin: true
-
-  validate-npm-package-name@4.0.0:
-    resolution: {integrity: sha512-mzR0L8ZDktZjpX4OB46KT+56MAhl4EIazWP/+G/HPGuvfdaqg4YsCdtOm6U9+LOFyYDoh4dpnpxZRB9MQQns5Q==}
-    engines: {node: ^12.13.0 || ^14.15.0 || >=16.0.0}
 
   validate-npm-package-name@5.0.1:
     resolution: {integrity: sha512-OljLrQ9SQdOUqTaQxqL5dEfZWrXExyyWsozYlAWFawPVNuD83igl7uJD2RTkNMbniIYgt8l81eCJGIdQF7avLQ==}
@@ -15121,7 +15114,7 @@ snapshots:
   '@eslint/eslintrc@2.1.4':
     dependencies:
       ajv: 6.12.6
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
       espree: 9.6.1
       globals: 13.24.0
       ignore: 5.3.1
@@ -15144,7 +15137,7 @@ snapshots:
   '@humanwhocodes/config-array@0.13.0':
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
       minimatch: 3.1.2
     transitivePeerDependencies:
       - supports-color
@@ -15384,7 +15377,7 @@ snapshots:
   '@mapbox/node-pre-gyp@1.0.11(encoding@0.1.13)':
     dependencies:
       detect-libc: 2.0.3
-      https-proxy-agent: 5.0.1(supports-color@9.2.2)
+      https-proxy-agent: 5.0.1
       make-dir: 3.1.0
       node-fetch: 2.7.0(encoding@0.1.13)
       nopt: 5.0.0
@@ -15801,6 +15794,19 @@ snapshots:
   '@protobufjs/pool@1.1.0': {}
 
   '@protobufjs/utf8@1.1.0': {}
+
+  '@puppeteer/browsers@2.10.6':
+    dependencies:
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
+      extract-zip: 2.0.1
+      progress: 2.0.3
+      proxy-agent: 6.5.0
+      semver: 7.7.2
+      tar-fs: 3.1.0
+      yargs: 17.7.2
+    transitivePeerDependencies:
+      - bare-buffer
+      - supports-color
 
   '@puppeteer/browsers@2.2.3':
     dependencies:
@@ -17069,7 +17075,7 @@ snapshots:
       '@typescript-eslint/types': 8.35.1
       '@typescript-eslint/typescript-estree': 8.35.1(typescript@5.8.3)
       '@typescript-eslint/visitor-keys': 8.35.1
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
       eslint: 8.57.1
       typescript: 5.8.3
     transitivePeerDependencies:
@@ -17079,7 +17085,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/tsconfig-utils': 8.35.1(typescript@5.8.3)
       '@typescript-eslint/types': 8.35.1
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
       typescript: 5.8.3
     transitivePeerDependencies:
       - supports-color
@@ -17097,7 +17103,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 8.35.1(typescript@5.8.3)
       '@typescript-eslint/utils': 8.35.1(eslint@8.57.1)(typescript@5.8.3)
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
       eslint: 8.57.1
       ts-api-utils: 2.1.0(typescript@5.8.3)
       typescript: 5.8.3
@@ -17112,7 +17118,7 @@ snapshots:
       '@typescript-eslint/tsconfig-utils': 8.35.1(typescript@5.8.3)
       '@typescript-eslint/types': 8.35.1
       '@typescript-eslint/visitor-keys': 8.35.1
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
       fast-glob: 3.3.2
       is-glob: 4.0.3
       minimatch: 9.0.5
@@ -17638,6 +17644,12 @@ snapshots:
 
   acorn@8.14.0: {}
 
+  agent-base@6.0.2:
+    dependencies:
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
+    transitivePeerDependencies:
+      - supports-color
+
   agent-base@6.0.2(supports-color@9.2.2):
     dependencies:
       debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
@@ -17883,7 +17895,7 @@ snapshots:
       common-path-prefix: 3.0.0
       concordance: 5.0.4
       currently-unhandled: 0.4.1
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
       emittery: 1.0.1
       figures: 6.0.1
       globby: 14.0.1
@@ -17936,12 +17948,27 @@ snapshots:
       - bare-buffer
     optional: true
 
+  bare-fs@4.1.6:
+    dependencies:
+      bare-events: 2.5.4
+      bare-path: 3.0.0
+      bare-stream: 2.6.5(bare-events@2.5.4)
+    optional: true
+
   bare-os@2.4.4:
+    optional: true
+
+  bare-os@3.6.1:
     optional: true
 
   bare-path@2.1.3:
     dependencies:
       bare-os: 2.4.4
+    optional: true
+
+  bare-path@3.0.0:
+    dependencies:
+      bare-os: 3.6.1
     optional: true
 
   bare-stream@2.6.5(bare-events@2.5.4):
@@ -18081,10 +18108,6 @@ snapshots:
       ieee754: 1.2.1
 
   buffers@0.1.1: {}
-
-  builtins@5.1.0:
-    dependencies:
-      semver: 7.7.2
 
   bundle-name@3.0.0:
     dependencies:
@@ -18598,6 +18621,10 @@ snapshots:
       ms: 2.1.3
 
   debug@4.4.0:
+    dependencies:
+      ms: 2.1.3
+
+  debug@4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa):
     dependencies:
       ms: 2.1.3
 
@@ -19280,7 +19307,7 @@ snapshots:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.6
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
       doctrine: 3.0.0
       escape-string-regexp: 4.0.0
       eslint-scope: 7.2.2
@@ -19491,7 +19518,7 @@ snapshots:
 
   extract-zip@2.0.1:
     dependencies:
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
       get-stream: 5.2.0
       yauzl: 2.10.0
     optionalDependencies:
@@ -19833,7 +19860,7 @@ snapshots:
     dependencies:
       basic-ftp: 5.0.5
       data-uri-to-buffer: 6.0.2
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
     transitivePeerDependencies:
       - supports-color
 
@@ -20024,7 +20051,7 @@ snapshots:
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
     transitivePeerDependencies:
       - supports-color
 
@@ -20037,6 +20064,13 @@ snapshots:
   http-status-codes@2.2.0: {}
 
   http-status-codes@2.3.0: {}
+
+  https-proxy-agent@5.0.1:
+    dependencies:
+      agent-base: 6.0.2
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
+    transitivePeerDependencies:
+      - supports-color
 
   https-proxy-agent@5.0.1(supports-color@9.2.2):
     dependencies:
@@ -20055,7 +20089,7 @@ snapshots:
   https-proxy-agent@7.0.6:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
     transitivePeerDependencies:
       - supports-color
 
@@ -21046,13 +21080,6 @@ snapshots:
       gauge: 3.0.2
       set-blocking: 2.0.0
 
-  npx-import@1.1.4:
-    dependencies:
-      execa: 6.1.0
-      parse-package-name: 1.0.0
-      semver: 7.7.2
-      validate-npm-package-name: 4.0.0
-
   nth-check@2.1.1:
     dependencies:
       boolbase: 1.0.0
@@ -21199,7 +21226,7 @@ snapshots:
     dependencies:
       '@tootallnate/quickjs-emscripten': 0.23.0
       agent-base: 7.1.3
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
       get-uri: 6.0.4
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
@@ -21247,8 +21274,6 @@ snapshots:
       lines-and-columns: 1.2.4
 
   parse-ms@4.0.0: {}
-
-  parse-package-name@1.0.0: {}
 
   parserlib@1.1.1: {}
 
@@ -21776,7 +21801,20 @@ snapshots:
   proxy-agent@6.4.0:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
+      http-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.6
+      lru-cache: 7.18.3
+      pac-proxy-agent: 7.2.0
+      proxy-from-env: 1.1.0
+      socks-proxy-agent: 8.0.5
+    transitivePeerDependencies:
+      - supports-color
+
+  proxy-agent@6.5.0:
+    dependencies:
+      agent-base: 7.1.3
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
       lru-cache: 7.18.3
@@ -22501,7 +22539,7 @@ snapshots:
   socks-proxy-agent@8.0.5:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
+      debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)
       socks: 2.8.5
     transitivePeerDependencies:
       - supports-color
@@ -22793,6 +22831,16 @@ snapshots:
     optionalDependencies:
       bare-fs: 2.3.5
       bare-path: 2.1.3
+    transitivePeerDependencies:
+      - bare-buffer
+
+  tar-fs@3.1.0:
+    dependencies:
+      pump: 3.0.0
+      tar-stream: 3.1.7
+    optionalDependencies:
+      bare-fs: 4.1.6
+      bare-path: 3.0.0
     transitivePeerDependencies:
       - bare-buffer
 
@@ -23304,10 +23352,6 @@ snapshots:
   uuid@8.3.2: {}
 
   uuid@9.0.1: {}
-
-  validate-npm-package-name@4.0.0:
-    dependencies:
-      builtins: 5.1.0
 
   validate-npm-package-name@5.0.1: {}
 

@@ -63,6 +63,7 @@ export default {
 `;
 
 test.before("Ensure browser is installed", async (t) => {
+	t.timeout(60_000);
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
