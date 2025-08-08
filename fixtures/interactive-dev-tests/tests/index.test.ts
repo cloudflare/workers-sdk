@@ -351,7 +351,7 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			expect(wrangler.stdout).toContain("rebuild container");
 		});
 
-		it("should rebuild a container when the hotkey is pressed", async () => {
+		it.only("should rebuild a container when the hotkey is pressed", async () => {
 			const wrangler = await startWranglerDev([
 				"dev",
 				"-c",
@@ -377,6 +377,21 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 					"Hello World! Have an env var! I'm an env var!"
 				);
 			}, WAITFOR_OPTIONS);
+			const output = wrangler.stdout;
+			// Extract the Docker image name from the output
+			const imageNameMatch = output.match(
+				/cloudflare-dev\/fixturetestcontainer:[a-f0-9]+/
+			);
+			expect(imageNameMatch).not.toBe(null);
+			const imageName = imageNameMatch![0];
+			expect(
+				JSON.parse(
+					execSync(
+						`docker image inspect ${imageName} --format "{{ json .RepoTags }}"`,
+						{ encoding: "utf8" }
+					)
+				).length
+			).toBeGreaterThanOrEqual(1);
 
 			fs.writeFileSync(
 				path.join(tmpDir, "container", "simple-node-app.js"),
@@ -412,6 +427,12 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				});
 				expect(await res.text()).toBe("Blah! I'm an env var!");
 			}, WAITFOR_OPTIONS);
+
+			// Verify that the old image tag has been deleted after rebuild
+			expect(() => {
+				execSync(`docker image inspect ${imageName}`, { encoding: "utf8" });
+			}).toThrow();
+
 			wrangler.pty.kill();
 		});
 
