@@ -33,7 +33,7 @@ jobs:
     if: github.repository_owner == 'cloudflare' && github.head_ref != 'main' && (contains(github.event.*.labels.*.name, 'preview:chrome-devtools-patches') || contains(github.event.*.labels.*.name, 'preview:quick-edit') || contains(github.event.*.labels.*.name, 'preview:workers-playground'))
     timeout-minutes: 60
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }}-app-previews
       cancel-in-progress: true
     runs-on: ubuntu-22.04
     steps:
