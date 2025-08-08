@@ -40,7 +40,7 @@ async function deployTestWorkers() {
 				stdio: "inherit",
 			});
 		}
-	} catch (error) {
+	} catch {
 		console.log(
 			"Worker 'existing-script-test-do-not-delete' does not exist or is not responding, deploying..."
 		);

@@ -1,3 +1,0 @@
-# Exclude test workers from ESLint checks
-# These are simple worker files that don't need strict TypeScript linting
-test-workers/
