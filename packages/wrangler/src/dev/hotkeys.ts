@@ -27,13 +27,15 @@ export default function registerDevHotKeys(
 			// Don't display this hotkey if we're in a VSCode debug session
 			disabled: !!process.env.VSCODE_INSPECTOR_OPTIONS,
 			handler: async () => {
-				const { inspectorUrl } = await primaryDevEnv.proxy.ready.promise;
+				const { inspectorUrl, devtoolsUrl } =
+					await primaryDevEnv.proxy.ready.promise;
 
-				if (!inspectorUrl) {
+				if (!inspectorUrl || !devtoolsUrl) {
 					logger.warn("DevTools is not available while in a debug terminal");
 				} else {
 					// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
 					await openInspector(
+						devtoolsUrl,
 						parseInt(inspectorUrl.port),
 						primaryDevEnv.config.latestConfig?.name
 					);
