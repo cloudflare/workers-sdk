@@ -118,20 +118,19 @@ describe.sequential.each([{ cmd: "wrangler pages dev" }])(
 				`${cmd} --inspector-port ${inspectorPort} . --port ${port} --service TEST_SERVICE=test-worker --kv TEST_KV --do TEST_DO=TestDurableObject@a --d1 TEST_D1 --r2 TEST_R2`
 			);
 			await worker.waitForReady();
-			expect(normalizeOutput(worker.currentOutput)).toContain(
-				dedent`Your worker has access to the following bindings:
-					- Durable Objects:
-					  - TEST_DO: TestDurableObject (defined in a [not connected])
-					- KV Namespaces:
-					  - TEST_KV: TEST_KV [simulated locally]
-					- D1 Databases:
-					  - TEST_D1: local-TEST_D1 (TEST_D1) [simulated locally]
-					- R2 Buckets:
-					  - TEST_R2: TEST_R2 [simulated locally]
-					- Services:
-					  - TEST_SERVICE: test-worker [not connected]
-		`
+			const bindingMessages = worker.currentOutput.split(
+				"Your Worker has access to the following bindings:"
 			);
+			const bindings = Array.from(
+				(bindingMessages[1] ?? "").matchAll(/env\.[^\n]+/g)
+			).flat();
+			expect(bindings).toEqual([
+				"env.TEST_DO (TestDurableObject, defined in a)           Durable Object      local [not connected]",
+				"env.TEST_KV (TEST_KV)                                   KV Namespace        local",
+				"env.TEST_D1 (local-TEST_D1)                             D1 Database         local",
+				"env.TEST_R2 (TEST_R2)                                   R2 Bucket           local",
+				"env.TEST_SERVICE (test-worker)                          Worker              local [not connected]",
+			]);
 		});
 
 		it("should support wrangler.toml", async () => {
