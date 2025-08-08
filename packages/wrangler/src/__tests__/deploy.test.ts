@@ -1475,7 +1475,7 @@ describe("deploy", () => {
 				mockPublishCustomDomainsRequest({
 					publishFlags: {
 						override_scope: true,
-						override_existing_origin: false,
+						override_existing_origin: true,
 						override_existing_dns_record: false,
 					},
 					domains: [{ hostname: "api.example.com" }],
@@ -1551,7 +1551,7 @@ Update them to point to this script instead?`,
 				mockPublishCustomDomainsRequest({
 					publishFlags: {
 						override_scope: true,
-						override_existing_origin: false,
+						override_existing_origin: true,
 						override_existing_dns_record: true,
 					},
 					domains: [{ hostname: "api.example.com" }],
@@ -1695,6 +1695,25 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain(
 					'Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again'
 				);
+			});
+			it("should always set override_existing_origin to true even with no conflicts", async () => {
+				writeWranglerConfig({
+					routes: [{ pattern: "api.example.com", custom_domain: true }],
+				});
+				writeWorkerSource();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: true,
+						override_existing_dns_record: false,
+					},
+					domains: [{ hostname: "api.example.com" }],
+				});
+				await runWrangler("deploy ./index");
+				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 		});
 

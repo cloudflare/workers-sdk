@@ -275,6 +275,8 @@ export async function publishCustomDomains(
 		options.override_existing_origin = true;
 		options.override_existing_dns_record = true;
 	} else {
+		options.override_existing_origin = true;
+
 		// get a changeset for operations required to achieve a state with the requested domains
 		const changeset = await fetchResult<CustomDomainChangeset>(
 			complianceConfig,
@@ -314,7 +316,6 @@ Update them to point to this script instead?`;
 			if (!(await confirm(message))) {
 				return fail();
 			}
-			options.override_existing_origin = true;
 		}
 
 		if (changeset.conflicting.length > 0) {
