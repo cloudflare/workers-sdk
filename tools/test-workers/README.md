@@ -45,6 +45,7 @@ node -r esbuild-register test-workers/deploy-all.ts
 ```
 
 The `deploy-all.ts` script:
+
 - Checks for required environment variables (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`)
 - Verifies if workers already exist by checking their URLs
 - Only deploys workers that don't exist or aren't responding
