@@ -484,9 +484,12 @@ const doAction = async (
 			}
 		}
 
-		success(`Modified application ${brandColor(action.name)}`, {
-			shape: shapes.bar,
-		});
+		success(
+			`Modified application ${brandColor(action.name)} (Application ID: ${action.id})`,
+			{
+				shape: shapes.bar,
+			}
+		);
 	}
 };
 

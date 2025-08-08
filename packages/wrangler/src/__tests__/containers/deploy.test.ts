@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import * as fs from "node:fs";
 import { PassThrough, Writable } from "node:stream";
 import {
@@ -111,19 +111,19 @@ describe("wrangler deploy with containers", () => {
 		await runWrangler("deploy index.js");
 
 		expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Your Worker has access to the following bindings:
-					Binding                                            Resource
-					env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your Worker has access to the following bindings:
+			Binding                                            Resource
+			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
-					Uploaded test-name (TIMINGS)
-					Building image my-container:Galaxy
-					Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
+			Uploaded test-name (TIMINGS)
+			Building image my-container:Galaxy
+			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
@@ -448,19 +448,19 @@ describe("wrangler deploy with containers", () => {
 		await runWrangler("deploy --cwd src");
 
 		expect(std.out).toMatchInlineSnapshot(`
-								"Total Upload: xx KiB / gzip: xx KiB
-								Worker Startup Time: 100 ms
-								Your Worker has access to the following bindings:
-								Binding                                            Resource
-								env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your Worker has access to the following bindings:
+			Binding                                            Resource
+			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
-								Uploaded test-name (TIMINGS)
-								Building image my-container:Galaxy
-								Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
-								Deployed test-name triggers (TIMINGS)
-								  https://test-name.test-sub-domain.workers.dev
-								Current Version ID: Galaxy-Class"
-							`);
+			Uploaded test-name (TIMINGS)
+			Building image my-container:Galaxy
+			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
@@ -599,7 +599,7 @@ describe("wrangler deploy with containers", () => {
 			│     [containers.constraints]
 			│
 			│
-			│  SUCCESS  Modified application my-container
+			│  SUCCESS  Modified application my-container (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -740,7 +740,7 @@ describe("wrangler deploy with containers", () => {
 			│     [containers.constraints]
 			│
 			│
-			│  SUCCESS  Modified application my-container
+			│  SUCCESS  Modified application my-container (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -908,7 +908,7 @@ describe("wrangler deploy with containers", () => {
 				│     tier = 1
 				│
 				│
-				│  SUCCESS  Modified application my-container
+				│  SUCCESS  Modified application my-container (Application ID: abc)
 				│
 				╰ Applied changes
 
@@ -954,7 +954,7 @@ describe("wrangler deploy with containers", () => {
 				│     tier = 1
 				│
 				│
-				│  SUCCESS  Modified application my-container
+				│  SUCCESS  Modified application my-container (Application ID: abc)
 				│
 				╰ Applied changes
 
@@ -1012,7 +1012,7 @@ describe("wrangler deploy with containers", () => {
 				│     tier = 1
 				│
 				│
-				│  SUCCESS  Modified application my-container
+				│  SUCCESS  Modified application my-container (Application ID: abc)
 				│
 				╰ Applied changes
 
@@ -1070,7 +1070,7 @@ describe("wrangler deploy with containers", () => {
 				│     tier = 1
 				│
 				│
-				│  SUCCESS  Modified application my-container
+				│  SUCCESS  Modified application my-container (Application ID: abc)
 				│
 				╰ Applied changes
 
@@ -1124,7 +1124,7 @@ describe("wrangler deploy with containers", () => {
 				│     tier = 1
 				│
 				│
-				│  SUCCESS  Modified application my-container
+				│  SUCCESS  Modified application my-container (Application ID: abc)
 				│
 				╰ Applied changes
 
@@ -1183,7 +1183,7 @@ describe("wrangler deploy with containers", () => {
 				│     tier = 1
 				│
 				│
-				│  SUCCESS  Modified application my-container
+				│  SUCCESS  Modified application my-container (Application ID: abc)
 				│
 				╰ Applied changes
 
@@ -1366,7 +1366,6 @@ describe("wrangler deploy with containers dry run", () => {
 				mockDockerImageInspectDigests("my-container", "worker")
 			)
 			.mockImplementationOnce(mockDockerLogin("mockpassword"))
-			.mockImplementationOnce(mockDockerManifestInspect("my-container", true))
 			.mockImplementationOnce(mockDockerPush("my-container", "worker"));
 
 		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
@@ -1412,7 +1411,7 @@ function createDockerMockChain(
 		mockDockerImageInspectDigests(containerName, tag),
 		mockDockerImageInspectSize(containerName, tag),
 		mockDockerLogin("mockpassword"),
-		mockDockerManifestInspect("some-account-id/" + containerName, true),
+		// Skip manifest inspect mock - it's not being called due to empty repoDigests
 		mockDockerTag(containerName, "some-account-id/" + containerName, tag),
 		mockDockerPush("some-account-id/" + containerName, tag),
 		mockDockerImageDelete("some-account-id/" + containerName, tag),
@@ -1441,8 +1440,17 @@ function setupDockerMocks(
 		.mockImplementationOnce(mocks[4])
 		.mockImplementationOnce(mocks[5])
 		.mockImplementationOnce(mocks[6])
-		.mockImplementationOnce(mocks[7])
-		.mockImplementationOnce(mocks[8]);
+		.mockImplementationOnce(mocks[7]);
+	// Default mock for execFileSync to handle docker verification and other calls
+	vi.mocked(execFileSync).mockImplementation(
+		(_file: string, args?: readonly string[]) => {
+			// Handle docker info calls (for verification)
+			if (args && args[0] === "manifest") {
+				return "i promise I am an unsuccessful docker manifest call";
+			}
+			return "";
+		}
+	);
 }
 
 // Common test setup
@@ -1677,7 +1685,7 @@ function mockDockerImageInspectDigests(containerName: string, tag: string) {
 			"inspect",
 			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
 			"--format",
-			"{{json .RepoDigests}}",
+			"{{ json .RepoDigests }} {{ .Id }}",
 		]);
 
 		const stdout = new PassThrough();
@@ -1697,7 +1705,7 @@ function mockDockerImageInspectDigests(containerName: string, tag: string) {
 		setImmediate(() => {
 			stdout.emit(
 				"data",
-				`["${getCloudflareContainerRegistry()}/${containerName}@sha256:three"]`
+				`["${getCloudflareContainerRegistry()}/${containerName}@sha256:three"] config-sha`
 			);
 		});
 
@@ -1767,36 +1775,6 @@ function mockDockerLogin(expectedPassword: string) {
 				if (reason === "close") {
 					expect(password).toEqual(expectedPassword);
 					cbPassed(0);
-				}
-				return this;
-			},
-		} as unknown as ChildProcess;
-	};
-}
-
-function mockDockerManifestInspect(containerName: string, shouldFail = true) {
-	return (cmd: string, args: readonly string[]) => {
-		expect(cmd).toBe("/usr/bin/docker");
-		expect(args[0]).toBe("manifest");
-		expect(args[1]).toBe("inspect");
-		expect(args[2]).toEqual(`${containerName}@three`);
-		expect(args).toEqual([
-			"manifest",
-			"inspect",
-			`${getCloudflareContainerRegistry()}/${containerName}@three`,
-		]);
-		const readable = new Writable({
-			write() {},
-			final() {},
-		});
-		return {
-			stdout: Buffer.from(
-				"i promise I am an unsuccessful docker manifest call"
-			),
-			stdin: readable,
-			on: function (reason: string, cbPassed: (code: number) => unknown) {
-				if (reason === "close") {
-					cbPassed(shouldFail ? 1 : 0);
 				}
 				return this;
 			},
