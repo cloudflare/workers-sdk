@@ -6,9 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@types/node':
-      specifier: ^20.17.32
-      version: 20.17.32
     '@typescript-eslint/eslint-plugin':
       specifier: ^8.35.1
       version: 8.35.1
@@ -1121,13 +1118,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.7
-<<<<<<< HEAD
         version: 3.0.9(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)
-||||||| parent of 2a245cae5 (fix typechecking)
-        version: 3.0.9(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)
-=======
-        version: 3.0.9(@types/node@20.17.32)(@vitest/ui@3.2.3(vitest@3.2.3))(jiti@2.4.2)(lightningcss@1.29.2)
->>>>>>> 2a245cae5 (fix typechecking)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -2017,10 +2008,10 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20250712.0
-        version: 4.20250712.0
+        version: 4.20250803.0
       '@types/node':
-        specifier: catalog:default
-        version: 20.17.32
+        specifier: ^20.19.9
+        version: 20.19.9
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -17181,13 +17172,7 @@ snapshots:
 
   '@verdaccio/loaders@8.0.0-next-8.4':
     dependencies:
-<<<<<<< HEAD
       debug: 4.3.7
-||||||| parent of 2a245cae5 (fix typechecking)
-      debug: 4.3.7(supports-color@9.2.2)
-=======
-      debug: 4.3.7(supports-color@8.1.1)
->>>>>>> 2a245cae5 (fix typechecking)
       lodash: 4.17.21
     transitivePeerDependencies:
       - supports-color
@@ -17248,13 +17233,7 @@ snapshots:
 
   '@verdaccio/signature@8.0.0-next-8.1':
     dependencies:
-<<<<<<< HEAD
       debug: 4.3.7
-||||||| parent of 2a245cae5 (fix typechecking)
-      debug: 4.3.7(supports-color@9.2.2)
-=======
-      debug: 4.3.7(supports-color@8.1.1)
->>>>>>> 2a245cae5 (fix typechecking)
       jsonwebtoken: 9.0.2
     transitivePeerDependencies:
       - supports-color
@@ -17861,13 +17840,7 @@ snapshots:
       common-path-prefix: 3.0.0
       concordance: 5.0.4
       currently-unhandled: 0.4.1
-<<<<<<< HEAD
       debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
-||||||| parent of 2a245cae5 (fix typechecking)
-      debug: 4.3.7(supports-color@9.2.2)
-=======
-      debug: 4.3.7(supports-color@8.1.1)
->>>>>>> 2a245cae5 (fix typechecking)
       emittery: 1.0.1
       figures: 6.0.1
       globby: 14.0.1
@@ -18900,13 +18873,7 @@ snapshots:
 
   esbuild-register@3.5.0(esbuild@0.25.4):
     dependencies:
-<<<<<<< HEAD
       debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
-||||||| parent of 2a245cae5 (fix typechecking)
-      debug: 4.3.7(supports-color@9.2.2)
-=======
-      debug: 4.3.7(supports-color@8.1.1)
->>>>>>> 2a245cae5 (fix typechecking)
       esbuild: 0.25.4
     transitivePeerDependencies:
       - supports-color
@@ -19248,13 +19215,7 @@ snapshots:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.6
-<<<<<<< HEAD
       debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
-||||||| parent of 2a245cae5 (fix typechecking)
-      debug: 4.3.7(supports-color@9.2.2)
-=======
-      debug: 4.3.7(supports-color@8.1.1)
->>>>>>> 2a245cae5 (fix typechecking)
       doctrine: 3.0.0
       escape-string-regexp: 4.0.0
       eslint-scope: 7.2.2
@@ -23389,13 +23350,7 @@ snapshots:
       '@volar/typescript': 2.3.4
       '@vue/language-core': 2.0.29(typescript@5.8.3)
       compare-versions: 6.1.1
-<<<<<<< HEAD
       debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
-||||||| parent of 2a245cae5 (fix typechecking)
-      debug: 4.3.7(supports-color@9.2.2)
-=======
-      debug: 4.3.7(supports-color@8.1.1)
->>>>>>> 2a245cae5 (fix typechecking)
       kolorist: 1.8.0
       local-pkg: 0.5.0
       magic-string: 0.30.17
@@ -23410,13 +23365,7 @@ snapshots:
 
   vite-tsconfig-paths@4.2.0(typescript@5.8.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.29.2)):
     dependencies:
-<<<<<<< HEAD
       debug: 4.4.1(patch_hash=zevdllrsa2u6cp4b3ivya5dqsa)(supports-color@9.2.2)
-||||||| parent of 2a245cae5 (fix typechecking)
-      debug: 4.3.7(supports-color@9.2.2)
-=======
-      debug: 4.3.7(supports-color@8.1.1)
->>>>>>> 2a245cae5 (fix typechecking)
       globrex: 0.1.2
       tsconfck: 2.1.1(typescript@5.8.3)
     optionalDependencies:
@@ -23502,13 +23451,7 @@ snapshots:
       - supports-color
       - terser
 
-<<<<<<< HEAD
   vitest@3.0.9(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2):
-||||||| parent of 2a245cae5 (fix typechecking)
-  vitest@3.0.9(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2):
-=======
-  vitest@3.0.9(@types/node@20.17.32)(@vitest/ui@3.2.3(vitest@3.2.3))(jiti@2.4.2)(lightningcss@1.29.2):
->>>>>>> 2a245cae5 (fix typechecking)
     dependencies:
       '@vitest/expect': 3.0.9
       '@vitest/mocker': 3.0.9(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.29.2))
