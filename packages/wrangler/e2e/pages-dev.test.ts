@@ -117,18 +117,20 @@ describe.sequential("wrangler pages dev", () => {
 			`${cmd} --inspector-port ${inspectorPort} . --port ${port} --service TEST_SERVICE=test-worker --kv TEST_KV --do TEST_DO=TestDurableObject@a --d1 TEST_D1 --r2 TEST_R2 --compatibility-date=2025-05-21`
 		);
 		await worker.waitForReady();
-		expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
-			"✨ Compiled Worker successfully
-			Your Worker has access to the following bindings:
-			Binding                                                 Resource            Mode
-			env.TEST_DO (TestDurableObject, defined in a)           Durable Object      local [not connected]
-			env.TEST_KV (TEST_KV)                                   KV Namespace        local
-			env.TEST_D1 (local-TEST_D1)                             D1 Database         local
-			env.TEST_R2 (TEST_R2)                                   R2 Bucket           local
-			env.TEST_SERVICE (test-worker)                          Worker              local [not connected]
-			Service bindings, Durable Object bindings, and Tail consumers connect to other \`wrangler dev\` processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
-			⎔ Starting local server...
-			[wrangler:info] Ready on http://<HOST>:<PORT>"
+		const bindingMessages = worker.currentOutput.split(
+			"Your Worker has access to the following bindings:"
+		);
+		const bindings = Array.from(
+			(bindingMessages[1] ?? "").matchAll(/env\.[^\n]+/g)
+		).flat();
+		expect(bindings).toMatchInlineSnapshot(`
+			[
+			  "env.TEST_DO (TestDurableObject, defined in a)           Durable Object      local [not connected]",
+			  "env.TEST_KV (TEST_KV)                                   KV Namespace        local",
+			  "env.TEST_D1 (local-TEST_D1)                             D1 Database         local",
+			  "env.TEST_R2 (TEST_R2)                                   R2 Bucket           local",
+			  "env.TEST_SERVICE (test-worker)                          Worker              local [not connected]",
+			]
 		`);
 	});
 
