@@ -103,7 +103,9 @@ class ProxyServer {
 				serviceProxyTarget.entrypoint
 			);
 
-			this.handleProxy(req, res, address);
+			this.handleProxy(req, res, address, (callback) =>
+				this.subscribe(serviceProxyTarget.service, callback)
+			);
 			return;
 		}
 
@@ -120,7 +122,9 @@ class ProxyServer {
 				return;
 			}
 
-			this.handleProxy(req, res, address);
+			this.handleProxy(req, res, address, (callback) =>
+				this.subscribe(doProxyTarget.scriptName, callback)
+			);
 			return;
 		}
 
@@ -242,7 +246,8 @@ class ProxyServer {
 	private handleProxy(
 		req: http.IncomingMessage,
 		res: http.ServerResponse,
-		target: ProxyAddress
+		target: ProxyAddress,
+		onTargetUpdated: (callback: () => void) => void
 	) {
 		const headers = { ...req.headers };
 		let path = target.path;
@@ -271,16 +276,14 @@ class ProxyServer {
 			path,
 			headers,
 		};
+		const upstream = http.request(options);
 
-		const upstream = http.request(options, (upRes) => {
+		upstream.on("response", (upRes) => {
 			// Relay status and headers back to the original client
 			res.writeHead(upRes.statusCode ?? 500, upRes.headers);
 			// Pipe the response body
 			upRes.pipe(res);
 		});
-
-		// Pipe the client request body to the upstream
-		req.pipe(upstream);
 
 		upstream.on("error", (error) => {
 			log.error(
@@ -294,6 +297,50 @@ class ProxyServer {
 			if (!res.headersSent) res.writeHead(502);
 			res.end("Bad Gateway");
 		});
+
+		if (req.headers.upgrade?.toLowerCase() === "websocket") {
+			upstream.on("upgrade", (upRes, socket, head) => {
+				// For WebSocket upgrades, we need to respond directly on the original request socket
+				if (req.socket && req.socket.writable) {
+					// Build and write complete HTTP response header
+					const statusLine = `HTTP/1.1 ${upRes.statusCode ?? 101} ${upRes.statusMessage ?? "Switching Protocols"}\r\n`;
+					let headersString = "";
+					for (let i = 0; i < upRes.rawHeaders.length; i += 2) {
+						headersString += `${upRes.rawHeaders[i]}: ${upRes.rawHeaders[i + 1]}\r\n`;
+					}
+
+					req.socket.write(statusLine + headersString + "\r\n");
+
+					// Write any buffered data
+					if (head && head.length > 0) {
+						req.socket.write(head);
+					}
+
+					// Pipe bidirectional WebSocket data
+					socket.pipe(req.socket, { end: false });
+					req.socket.pipe(socket, { end: false });
+
+					// Handle connection cleanup
+					socket.on("error", () => req.socket.destroy());
+					req.socket.on("error", () => socket.destroy());
+					socket.on("close", () => req.socket.destroy());
+					req.socket.on("close", () => socket.destroy());
+
+					// Close the socket when the target address is updated
+					onTargetUpdated(() => {
+						socket.end();
+					});
+				} else {
+					socket.end();
+				}
+			});
+
+			// End the request to trigger the upgrade
+			upstream.end();
+		} else {
+			// Pipe the client request body to the upstream for regular HTTP requests
+			req.pipe(upstream);
+		}
 	}
 
 	/**
