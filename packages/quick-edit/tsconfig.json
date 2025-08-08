@@ -11,6 +11,7 @@
 		"noUncheckedIndexedAccess": true,
 		"noImplicitOverride": true,
 		"strict": true,
+		"types": ["@cloudflare/workers-types/experimental", "node"],
 		"skipLibCheck": true
 	},
 	"exclude": ["web", "editor-files"]

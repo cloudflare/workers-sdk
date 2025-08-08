@@ -22,6 +22,8 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250712.0",
+		"@types/node": "catalog:default",
 		"concurrently": "^8.2.2",
 		"esbuild": "catalog:default",
 		"tsx": "^3.12.8",
