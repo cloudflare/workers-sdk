@@ -368,71 +368,103 @@ describe("generatePreviewAlias", () => {
 	});
 
 	it("sanitizes branch names correctly", () => {
+		const scriptName = "worker";
 		mockExecSync
 			.mockImplementationOnce(() => {}) // is-inside-work-tree
 			.mockImplementationOnce(() => Buffer.from("feat/awesome-feature"));
 
-		const result = generatePreviewAlias("worker");
+		const result = generatePreviewAlias(scriptName);
 		expect(result).toBe("feat-awesome-feature");
+		expect(result).not.toBeUndefined();
+		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 
-	it("returns undefined for long branch names which don't fit within DNS label constraints", () => {
-		const longBranch = "a".repeat(70);
+	it("truncates and hashes long branch names that don't fit within DNS label constraints", () => {
+		const scriptName = "very-long-worker-name";
+		const longBranch = "a".repeat(62);
 		mockExecSync
 			.mockImplementationOnce(() => {}) // is-inside-work-tree
 			.mockImplementationOnce(() => Buffer.from(longBranch));
 
-		const result = generatePreviewAlias("worker");
-		expect(result).toBeUndefined();
+		const result = generatePreviewAlias(scriptName);
+
+		// Should be truncated to fit: max 63 - 21 - 1 = 41 chars
+		// With 4-char hash + hyphen, we have 41 - 4 - 1 = 36 chars for the prefix
+		expect(result).toBeDefined();
+		expect(result).toMatch(/^a{36}-[a-f0-9]{4}$/);
+		expect(result?.length).toBe(41);
+		expect(result).not.toBeUndefined();
+		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 
 	it("handles multiple, leading, and trailing dashes", () => {
+		const scriptName = "testscript";
 		mockExecSync
 			.mockImplementationOnce(() => {}) // is-inside-work-tree
 			.mockImplementationOnce(() => Buffer.from("--some--branch--name--"));
 
-		const result = generatePreviewAlias("testscript");
+		const result = generatePreviewAlias(scriptName);
 		expect(result).toBe("some-branch-name");
+		expect(result).not.toBeUndefined();
+		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 
 	it("lowercases branch names", () => {
+		const scriptName = "testscript";
 		mockExecSync
 			.mockImplementationOnce(() => {}) // is-inside-work-tree
 			.mockImplementationOnce(() => Buffer.from("HEAD/feature/work"));
 
-		const result = generatePreviewAlias("testscript");
+		const result = generatePreviewAlias(scriptName);
 		expect(result).toBe("head-feature-work");
+		expect(result).not.toBeUndefined();
+		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 
 	it("Generates from workers ci branch", () => {
+		const scriptName = "testscript";
 		vi.stubEnv("WORKERS_CI_BRANCH", "some/debug-branch");
 
-		const result = generatePreviewAlias("testscript");
+		const result = generatePreviewAlias(scriptName);
 		expect(result).toBe("some-debug-branch");
+		expect(result).not.toBeUndefined();
+		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 
-	it("Does not produce an alias from long workers ci branch name", () => {
+	it("Truncates and hashes long workers ci branch names", () => {
+		const scriptName = "testscript";
 		vi.stubEnv(
 			"WORKERS_CI_BRANCH",
 			"some/really-really-really-really-really-long-branch-name"
 		);
 
-		const result = generatePreviewAlias("testscript");
-		expect(result).toBeUndefined();
+		const result = generatePreviewAlias(scriptName);
+		expect(result).toMatch(
+			/^some-really-really-really-really-really-long-br-[a-f0-9]{4}$/
+		);
+		expect(result?.length).toBe(52);
+		expect(result).not.toBeUndefined();
+		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 
 	it("Strips leading dashes from branch name", () => {
+		const scriptName = "testscript";
 		vi.stubEnv("WORKERS_CI_BRANCH", "-some-branch-name");
 
-		const result = generatePreviewAlias("testscript");
+		const result = generatePreviewAlias(scriptName);
 		expect(result).toBe("some-branch-name");
+		expect(result).not.toBeUndefined();
+		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 
 	it("Removes concurrent dashes from branch name", () => {
+		const scriptName = "testscript";
 		vi.stubEnv("WORKERS_CI_BRANCH", "some----branch-----name");
 
-		const result = generatePreviewAlias("testscript");
+		const result = generatePreviewAlias(scriptName);
 		expect(result).toBe("some-branch-name");
+		expect(result).not.toBeUndefined();
+		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 
 	it("Does not produce an alias with leading numbers", () => {
@@ -440,5 +472,34 @@ describe("generatePreviewAlias", () => {
 
 		const result = generatePreviewAlias("testscript");
 		expect(result).toBeUndefined();
+	});
+
+	it("returns undefined when script name is too long to allow any alias", () => {
+		const scriptName = "a".repeat(60);
+		mockExecSync
+			.mockImplementationOnce(() => {}) // is-inside-work-tree
+			.mockImplementationOnce(() => Buffer.from("short-branch"));
+
+		const result = generatePreviewAlias(scriptName);
+		expect(result).toBeUndefined();
+	});
+
+	it("handles complex branch names with truncation", () => {
+		const scriptName = "myworker";
+		const complexBranch =
+			"feat/JIRA-12345/implement-awesome-new-feature-with-detail";
+		mockExecSync
+			.mockImplementationOnce(() => {}) // is-inside-work-tree
+			.mockImplementationOnce(() => Buffer.from(complexBranch));
+
+		const result = generatePreviewAlias(scriptName);
+
+		expect(result).toBeDefined();
+		expect(result).toMatch(
+			/^feat-jira-12345-implement-awesome-new-feature-wit-[a-f0-9]{4}$/
+		);
+		expect(result?.length).toBe(54);
+		expect(result).not.toBeUndefined();
+		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 });
