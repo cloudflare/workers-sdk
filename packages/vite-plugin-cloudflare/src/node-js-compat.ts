@@ -248,7 +248,7 @@ export class NodeJsCompatWarnings {
 				"Refer to https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details.\n";
 			this.sources.forEach((importers, source) => {
 				importers.forEach((importer) => {
-					message += ` - "${source}" imported from "${path.relative(this.resolvedViteConfig.root, importer)}"\n`;
+					message += ` - "${source}" imported from "${vite.normalizePath(path.relative(this.resolvedViteConfig.root, importer))}"\n`;
 				});
 			});
 			this.resolvedViteConfig.logger.warn(message, {

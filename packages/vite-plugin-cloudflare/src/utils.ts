@@ -4,8 +4,8 @@ import {
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
+import * as vite from "vite";
 import type * as http from "node:http";
-import type * as vite from "vite";
 
 export function getOutputDirectory(
 	userConfig: vite.UserConfig,
@@ -13,9 +13,9 @@ export function getOutputDirectory(
 ) {
 	const rootOutputDirectory = userConfig.build?.outDir ?? "dist";
 
-	return (
+	return vite.normalizePath(
 		userConfig.environments?.[environmentName]?.build?.outDir ??
-		path.join(rootOutputDirectory, environmentName)
+			path.join(rootOutputDirectory, environmentName)
 	);
 }
 

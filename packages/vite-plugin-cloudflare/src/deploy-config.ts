@@ -40,9 +40,11 @@ function getRelativePathToWorkerConfig(
 	root: string,
 	outputDirectory: string
 ) {
-	return path.relative(
-		deployConfigDirectory,
-		path.resolve(root, outputDirectory, "wrangler.json")
+	return vite.normalizePath(
+		path.relative(
+			deployConfigDirectory,
+			path.resolve(root, outputDirectory, "wrangler.json")
+		)
 	);
 }
 

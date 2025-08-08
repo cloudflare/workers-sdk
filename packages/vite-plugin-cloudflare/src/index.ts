@@ -171,7 +171,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 									),
 									client: {
 										build: {
-											outDir: getOutputDirectory(userConfig, "client"),
+											outDir: vite.normalizePath(
+												getOutputDirectory(userConfig, "client")
+											),
 										},
 									},
 								}
@@ -262,9 +264,11 @@ if (import.meta.hot) {
 
 						workerConfig.assets = {
 							...workerConfig.assets,
-							directory: path.relative(
-								path.resolve(resolvedViteConfig.root, workerOutputDirectory),
-								path.resolve(resolvedViteConfig.root, clientOutputDirectory)
+							directory: vite.normalizePath(
+								path.relative(
+									path.resolve(resolvedViteConfig.root, workerOutputDirectory),
+									path.resolve(resolvedViteConfig.root, clientOutputDirectory)
+								)
 							),
 						};
 					} else {
