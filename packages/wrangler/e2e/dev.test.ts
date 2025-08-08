@@ -710,7 +710,6 @@ describe("queue dev tests", () => {
 					[[queues.producers]]
 					binding = "QUEUE"
 					queue = "test-queue"
-					delivery_delay = 2
 			`,
 			"src/index.ts": dedent`
 					export default {

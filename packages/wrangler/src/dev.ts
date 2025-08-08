@@ -46,6 +46,7 @@ import type { INHERIT_SYMBOL } from "./deployment-bundle/bindings";
 import type {
 	CfKvNamespace,
 	CfModule,
+	CfQueue,
 	CfWorkerInit,
 } from "./deployment-bundle/worker";
 import type { WorkerRegistry } from "./dev-registry";
@@ -1063,11 +1064,11 @@ export function getBindings(
 	// Queues bindings ??
 	const queuesBindings = [
 		...(configParam.queues.producers || []).map((queue) => {
-			return {
-				binding: queue.binding,
-				queue_name: queue.queue,
-				delivery_delay: queue.delivery_delay,
-			};
+		return {
+			binding: queue.binding,
+			queue_name: queue.queue,
+			experimental_remote: queue.experimental_remote,
+		} satisfies CfQueue;
 		}),
 	];
 
