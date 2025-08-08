@@ -1781,6 +1781,9 @@ importers:
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared
+      '@cloudflare/jsrpc':
+        specifier: file:../../../jsrpc
+        version: file:../jsrpc
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler
@@ -3448,6 +3451,9 @@ importers:
       '@cloudflare/eslint-config-worker':
         specifier: workspace:*
         version: link:../eslint-config-worker
+      '@cloudflare/jsrpc':
+        specifier: file:../../../jsrpc
+        version: file:../jsrpc
       '@cloudflare/pages-shared':
         specifier: workspace:^
         version: link:../pages-shared
@@ -4239,6 +4245,9 @@ packages:
     resolution: {integrity: sha512-zCHVZ9xtvRxDjiqxgG7GPeaS2kpshQsq8dDrZl+c8ppuerrzBreW7hHVw3orllAOe0HLjLCKYWVj47W4O6U8lg==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
+
+  '@cloudflare/jsrpc@file:../jsrpc':
+    resolution: {directory: ../jsrpc, type: directory}
 
   '@cloudflare/kv-asset-handler@0.1.3':
     resolution: {integrity: sha512-FNcunDuTmEfQTLRLtA6zz+buIXUHj1soPvSWzzQFBC+n2lsy+CGf/NIrR3SEPCmsVNQj70/Jx2lViCpq+09YpQ==}
@@ -14311,6 +14320,8 @@ snapshots:
   '@cloudflare/intl-types@1.5.1(react@19.1.0)':
     dependencies:
       react: 19.1.0
+
+  '@cloudflare/jsrpc@file:../jsrpc': {}
 
   '@cloudflare/kv-asset-handler@0.1.3':
     dependencies:

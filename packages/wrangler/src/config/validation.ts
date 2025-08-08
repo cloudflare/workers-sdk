@@ -2860,11 +2860,16 @@ const validateSendEmailBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"allowed_destination_addresses",
 		"destination_address",
 		"name",
 		"binding",
+		"experimental_remote",
 	]);
 
 	return isValid;
@@ -3653,9 +3658,14 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"pipeline",
+		"experimental_remote",
 	]);
 
 	return isValid;
