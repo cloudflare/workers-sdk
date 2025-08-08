@@ -74,6 +74,7 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Deploy Workers Playground preview
         if: contains(github.event.*.labels.*.name, 'preview:workers-playground')
