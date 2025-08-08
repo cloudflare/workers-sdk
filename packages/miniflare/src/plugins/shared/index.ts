@@ -1,8 +1,9 @@
 import crypto, { createHash } from "crypto";
 import { existsSync } from "fs";
 import fs from "fs/promises";
+import { createRequire } from "module";
 import path from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import { z } from "zod";
 import {
 	Extension,
@@ -96,13 +97,31 @@ export interface PluginBase<
 	SharedOptions extends z.ZodType | undefined,
 > {
 	options: Options;
+	/**
+	 * getBindings returns a list of bindings that will be made available
+	 * to the "entry" worker.
+	 * @param options
+	 * @param workerIndex
+	 */
 	getBindings(
 		options: z.infer<Options>,
 		workerIndex: number
 	): Awaitable<Worker_Binding[] | void>;
+	/**
+	 * getNodeBindings exposes series of Node (not Workerd) bindings that will be used for the
+	 * 'magic' proxy that will proxy to Workerd bindings.
+	 * See {@link https://developers.cloudflare.com/workers/wrangler/api/#getplatformproxy getPlatformProxy} for more
+	 * details.
+	 * @param options
+	 */
 	getNodeBindings(
 		options: z.infer<Options>
 	): Awaitable<Record<string, unknown>>;
+	/**
+	 * getServices returns a series of "internal" Worker services that help support
+	 * the functioning of any binding exposed in {@link PluginBase.getBindings}.
+	 * @param options
+	 */
 	getServices(
 		options: PluginServicesOptions<Options, SharedOptions>
 	): Awaitable<Service[] | ServicesExtensions | void>;
@@ -122,6 +141,101 @@ export type Plugin<
 	(SharedOptions extends undefined
 		? { sharedOptions?: undefined }
 		: { sharedOptions: SharedOptions });
+
+/**
+ * PluginLoader describes a contract for loading plugins from an external source. We support loading Miniflare "plugins"
+ * from the `externalPluginLoader` option in Miniflare's options.
+ */
+export interface PluginLoader {
+	/**
+	 * registerMiniflarePlugins is an interface for loading external plugins. It returns a mapping of plugin names to
+	 * plugins that will be merged into Miniflare's default plugins.
+	 * @param config
+	 */
+	registerMiniflarePlugins<
+		Options extends z.ZodType<any>,
+		SharedOptions extends z.ZodType<any>,
+	>(): Record<string, PluginBase<Options, SharedOptions>>;
+}
+
+/**
+ * UnsafePluginOption describes the necessary information to load unsafe plugins
+ */
+export type UnsafePluginOption = {
+	packageName: string;
+	pluginName: string;
+	resolveWorkingDirectory: string;
+};
+
+export type PluginLoaderResult =
+	| {
+			ok: true;
+			pluginLoader: PluginLoader;
+	  }
+	| {
+			ok: false;
+			error: Error;
+	  };
+
+/**
+ * createPluginLoaderFromUnsafePlugin will take a configured 'unsafe plugin'
+ * configuration and attempt to create a {@link PluginLoader} that can be used
+ * to integrate into Miniflare's plugins.
+ * @param {UnsafePluginOption} unsafePluginOption - a configuration object containing information about the plugin to load into Miniflare
+ * @returns
+ */
+export async function createPluginLoaderFromUnsafePlugin({
+	resolveWorkingDirectory,
+	packageName,
+	pluginName,
+}: UnsafePluginOption): Promise<PluginLoaderResult> {
+	try {
+		const requireRelativeToWorker = createRequire(resolveWorkingDirectory);
+		const pluginPath = requireRelativeToWorker.resolve(packageName);
+		const moduleURL = pathToFileURL(pluginPath).href;
+		// eslint-disable-next-line es/no-dynamic-import
+		const { registerMiniflarePlugins } = await import(moduleURL);
+		if (!registerMiniflarePlugins) {
+			return {
+				ok: false,
+				error: new Error(
+					`Provided plugin ${pluginName} provided by package ${packageName} did not provide named export 'registerMiniflarePlugins'`
+				),
+			};
+		}
+		if (typeof registerMiniflarePlugins !== "function") {
+			return {
+				ok: false,
+				error: new Error(
+					`Specified external plugin ${pluginName} exposed non-function 'registerMiniflarePlugins' export.`
+				),
+			};
+		}
+		return {
+			ok: true,
+			pluginLoader: {
+				registerMiniflarePlugins,
+			},
+		};
+	} catch (error) {
+		if (error instanceof Error) {
+			return {
+				ok: false,
+				error: new Error(
+					`failed to load plugin ${pluginName} provided by package ${packageName}`,
+					{ cause: error }
+				),
+			};
+		}
+		return {
+			ok: false,
+			error: new Error(
+				`failed to load plugin ${pluginName} provided by package ${packageName} due to unexpected error: ${error}`,
+				{ cause: error }
+			),
+		};
+	}
+}
 
 // When an instance of this class is returned as the binding from `PluginBase#getNodeBindings()`,
 // Miniflare will replace it with a proxy to the binding in `workerd`, alongside applying the
