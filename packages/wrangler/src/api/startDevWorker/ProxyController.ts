@@ -104,7 +104,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 					// However, the proxy worker only makes outgoing requests to the user Worker Miniflare instance, which _should_ receive CF-Connecting-IP
 					stripCfConnectingIp: false,
 					serviceBindings: {
-						PROXY_CONTROLLER: async (req): Promise<Response> => {
+						PROXY_CONTROLLER: async (req: Request): Promise<Response> => {
 							const message =
 								(await req.json()) as ProxyWorkerOutgoingRequestBody;
 
@@ -160,7 +160,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 						},
 					},
 					serviceBindings: {
-						PROXY_CONTROLLER: async (req): Promise<Response> => {
+						PROXY_CONTROLLER: async (req: Request): Promise<Response> => {
 							const body =
 								(await req.json()) as InspectorProxyWorkerOutgoingRequestBody;
 
