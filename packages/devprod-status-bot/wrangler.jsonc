@@ -16,6 +16,15 @@
 	"ai": {
 		"binding": "AI",
 	},
+	"kv_namespaces": [
+		{
+			// Title: devprod-status-bot/label-to-chat-channel-mapping
+			// This KV namespace is used to map labels to chat channels integration webhook URLs (see Apps and Integrations settings).
+			// Update the mappings via the Cloudflare dashboard.
+			"binding": "LABEL_TO_CHAT_CHANNEL_MAPPING",
+			"id": "feda603505f44753bd10610e8b52bb4b",
+		},
+	],
 	"observability": {
 		"enabled": true,
 	},

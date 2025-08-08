@@ -10,6 +10,7 @@ interface Env {
 	TEST_WEBHOOK: string;
 	AI: Ai;
 	PRESHARED_SECRET: string;
+	LABEL_TO_CHAT_CHANNEL_MAPPING: KVNamespace;
 }
 declare module "*.png" {
 	const value: ArrayBuffer;
