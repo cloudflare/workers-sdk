@@ -148,14 +148,14 @@ test("DevRegistry: WebSocket upgrade to module worker", async (t) => {
 					if (wsResponse.webSocket) {
 						wsResponse.webSocket.accept();
 
-						// Test bidirectional communication
-						wsResponse.webSocket.send("ping");
-
 						const messagePromise = new Promise((resolve) => {
 							wsResponse.webSocket.addEventListener("message", (event) => {
 								resolve(event.data);
 							});
 						});
+
+						// Test bidirectional communication
+						wsResponse.webSocket.send("ping");
 
 						const response = await messagePromise;
 
