@@ -378,15 +378,17 @@ test("responds with pretty error page", async (t) => {
 	t.regex(text, /Object\.fetch/);
 
 	// Check error logged
-	const errorLogs = log.getLogs(LogLevel.ERROR);
+	const errorLogs = log
+		.getLogs(LogLevel.ERROR)
+		.map((log) => log.replaceAll(/:\d+:\d+/g, ":N:N"));
 	t.deepEqual(errorLogs, [
 		`Error: Unusual oops!
-    at connectSocket (script-0:21:11)
-    at Object.fetch (script-0:41:19)
+    at connectSocket (script-0:N:N)
+    at Object.fetch (script-0:N:N)
 Caused by: TypeError: The value cannot be converted because it is not an integer.
-    at connect (cloudflare:sockets:7:20)
-    at connectSocket (script-0:8:20)
-    at Object.fetch (script-0:41:19)`,
+    at connect (cloudflare:sockets:N:N)
+    at connectSocket (script-0:N:N)
+    at Object.fetch (script-0:N:N)`,
 	]);
 
 	// Check `fetch()` accepting HTML returns pretty-error page
