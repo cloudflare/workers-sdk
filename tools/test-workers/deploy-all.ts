@@ -34,7 +34,7 @@ async function deployTestWorkers() {
 			console.log(
 				"Worker 'existing-script-test-do-not-delete' does not exist or is not responding, deploying..."
 			);
-			execSync("npx wrangler@latest deploy", {
+			execSync("pnpx wrangler@latest deploy", {
 				cwd: workerDir,
 				env: process.env,
 				stdio: "inherit",
@@ -44,7 +44,7 @@ async function deployTestWorkers() {
 		console.log(
 			"Worker 'existing-script-test-do-not-delete' does not exist or is not responding, deploying..."
 		);
-		execSync("npx wrangler@latest deploy", {
+		execSync("pnpx wrangler@latest deploy", {
 			cwd: workerDir,
 			env: process.env,
 			stdio: "inherit",
