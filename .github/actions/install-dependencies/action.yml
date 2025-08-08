@@ -41,3 +41,6 @@ runs:
     - name: Install NPM Dependencies
       shell: bash
       run: pnpm install --frozen-lockfile
+      env:
+        # puppeteer will install chrome inside node_modules so that it's cached by CI
+        PUPPETEER_CACHE_DIR: ${{ github.workspace }}/node_modules/.cache/puppeteer

@@ -169,6 +169,8 @@ jobs:
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.description }}
           NODE_DEBUG: "@cloudflare:vite-plugin"
+          # needs to match PUPPETEER_CACHE_DIR in .github/actions/install-dependencies/action.yml
+          PUPPETEER_CACHE_DIR: ${{ github.workspace }}/node_modules/.cache/puppeteer
 
       - name: Upload turbo logs
         if: always()

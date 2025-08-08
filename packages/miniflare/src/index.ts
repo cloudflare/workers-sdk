@@ -12,9 +12,17 @@ import { ReadableStream } from "stream/web";
 import util from "util";
 import zlib from "zlib";
 import { checkMacOSVersion } from "@cloudflare/cli";
+import {
+	Browser,
+	CDP_WEBSOCKET_ENDPOINT_REGEX,
+	detectBrowserPlatform,
+	install,
+	launch,
+	Process,
+	resolveBuildId,
+} from "@puppeteer/browsers";
 import exitHook from "exit-hook";
 import { $ as colors$, green } from "kleur/colors";
-import { npxImport } from "npx-import";
 import stoppable from "stoppable";
 import {
 	Dispatcher,
@@ -141,7 +149,6 @@ import type {
 	Queue,
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
-import type { ChildProcess } from "child_process";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -848,8 +855,8 @@ export class Miniflare {
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
 
-	// key is the browser wsEndpoint, value is the browser process
-	#browserProcesses: Map<string, ChildProcess> = new Map();
+	// key is the browser session ID, value is the browser process
+	#browserProcesses: Map<string, Process> = new Map();
 
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
@@ -1179,31 +1186,108 @@ export class Miniflare {
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/browser/launch") {
-				// Version should be kept in sync with the supported version at https://github.com/cloudflare/puppeteer?tab=readme-ov-file#workers-version-of-puppeteer-core
-				const puppeteer = await npxImport(
-					"puppeteer@22.8.2",
-					this.#log.warn.bind(this.#log)
+				const platform = detectBrowserPlatform();
+				if (!platform) {
+					throw new Error("The current platform is not supported.");
+				}
+				const browser = Browser.CHROME;
+
+				// TODO
+				const { buildId, executablePath } = await install({
+					browser,
+					platform,
+					cacheDir: path.join(os.homedir(), ".cache", "miniflare"),
+					buildId: await resolveBuildId(browser, platform, "126.0.6478.182"),
+				});
+				this.#log.info(
+					`${browser} (${buildId}) downloaded to ${executablePath}`
 				);
 
-				// @ts-expect-error Puppeteer is dynamically installed, and so doesn't have types available
-				const browser = await puppeteer.launch({
-					headless: "old",
-					// workaround for CI environments, to avoid sandboxing issues
-					args: process.env.CI ? ["--no-sandbox"] : [],
+				const tempUserData = fs.mkdtempSync(
+					path.join(os.tmpdir(), "miniflare-chrome-")
+				);
+
+				// TODO See:
+				// https://github.com/GoogleChrome/chrome-launcher/blob/main/docs/chrome-flags-for-tools.md
+				// https://github.com/puppeteer/puppeteer/blob/3f2c0590f154aefd2ad3449a3f943ee79d1e33a9/packages/puppeteer-core/src/node/ChromeLauncher.ts#L159
+				const args = [
+					// Basic connection settings
+					"--use-cmd-decoder=validating",
+					"--remote-debugging-address=127.0.0.1",
+					`--remote-debugging-port=0`,
+
+					// Performance settings
+					"--disable-component-update",
+					"--disable-gpu-shader-disk-cache",
+					"--enable-logging=stderr",
+					"--log-level=1", // warning and above only
+					"--disable-new-content-rendering-timeout",
+
+					// Media optimization
+					"--lite-video-ignore-network-conditions",
+					"--lite-video-force-override-decision",
+					"--enable-features=LiteVideo,ProactiveTabFreezeAndDiscard",
+
+					// Security and privacy features to disable
+					"--disable-features=WebUSB,WebXR,CrashReporting,AutofillServerCommunication," +
+						"NativeFileSystemAPI,FileHandlingAPI,TranslateUI,TranslateRankerQuery," +
+						"TranslateRankerEnforcement,OriginTrials,WebRtcHideLocalIpsWithMdns," +
+						"UrgentDiscardingFromPerformanceManager",
+
+					// Media policies
+					"--autoplay-policy=user-gesture-required",
+
+					// Security settings
+					"--disable-domain-reliability",
+					"--disable-file-system",
+					"--disable-dev-shm-usage",
+
+					// WebRTC settings
+					"--force-fieldtrials=WebRTC-Video-DisableAutomaticResize/Enabled",
+
+					// Homepage
+					"--homepage=about:blank",
+
+					// Temporary user data directory
+					`--user-data-dir=${tempUserData}`,
+
+					"--no-first-run",
+				];
+
+				const sessionId = crypto.randomUUID();
+				const browserProcess = launch({
+					executablePath,
+					args: process.env.CI
+						? [...args, "--no-sandbox", "--headless=new"]
+						: args,
+					handleSIGTERM: false,
+					dumpio: false,
+					pipe: false,
+					onExit: async () => {
+						this.#browserProcesses.delete(sessionId);
+						await fs.promises
+							.rm(tempUserData, { recursive: true, force: true })
+							.catch((e) => {
+								this.#log.debug(
+									`Unable to remove Chrome user data directory: ${String(e)}`
+								);
+							});
+					},
 				});
-				const wsEndpoint = browser.wsEndpoint();
-				this.#browserProcesses.set(wsEndpoint, browser.process());
-				response = new Response(wsEndpoint);
+				const wsEndpoint = await browserProcess.waitForLineOutput(
+					CDP_WEBSOCKET_ENDPOINT_REGEX
+				);
+				const startTime = Date.now();
+				this.#browserProcesses.set(sessionId, browserProcess);
+				response = Response.json({ wsEndpoint, sessionId, startTime });
 			} else if (url.pathname === "/browser/status") {
-				const wsEndpoint = url.searchParams.get("wsEndpoint");
-				assert(wsEndpoint !== null, "Missing wsEndpoint query parameter");
-				const process = this.#browserProcesses.get(wsEndpoint);
-				const status = {
-					stopped: !process || process.exitCode !== null,
-				};
-				response = new Response(JSON.stringify(status), {
-					headers: { "Content-Type": "application/json" },
-				});
+				const sessionId = url.searchParams.get("sessionId");
+				assert(sessionId !== null, "Missing sessionId query parameter");
+				const process = this.#browserProcesses.get(sessionId);
+				response = new Response(null, { status: process ? 200 : 410 });
+			} else if (url.pathname === "/browser/sessionIds") {
+				const sessionIds = this.#browserProcesses.keys();
+				response = Response.json(Array.from(sessionIds));
 			} else if (url.pathname === "/core/store-temp-file") {
 				const prefix = url.searchParams.get("prefix");
 				const folder = prefix ? `files/${prefix}` : "files";
@@ -1817,10 +1901,10 @@ export class Miniflare {
 	}
 
 	async #assembleAndUpdateConfig() {
-		for (const [wsEndpoint, process] of this.#browserProcesses.entries()) {
+		for (const [sessionId, process] of this.#browserProcesses.entries()) {
 			// .close() isn't enough
-			process.kill("SIGKILL");
-			this.#browserProcesses.delete(wsEndpoint);
+			process.kill();
+			this.#browserProcesses.delete(sessionId);
 		}
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
@@ -2528,10 +2612,10 @@ export class Miniflare {
 		try {
 			await this.#waitForReady(/* disposing */ true);
 		} finally {
-			for (const [wsEndpoint, process] of this.#browserProcesses.entries()) {
+			for (const [sessionId, process] of this.#browserProcesses.entries()) {
 				// .close() isn't enough
-				process.kill("SIGKILL");
-				this.#browserProcesses.delete(wsEndpoint);
+				process.kill();
+				this.#browserProcesses.delete(sessionId);
 			}
 
 			// Remove exit hook, we're cleaning up what they would've cleaned up now
