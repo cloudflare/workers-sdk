@@ -313,3 +313,44 @@ export const getDockerHostFromEnv = (): string => {
 		? "//./pipe/docker_engine"
 		: "unix:///var/run/docker.sock";
 };
+
+/**
+ * Get all repository tags for a given image
+ */
+export function getImageRepoTags(
+	dockerPath: string,
+	imageTag: string
+): string[] {
+	try {
+		const output = runDockerCmdWithOutput(dockerPath, [
+			"image",
+			"inspect",
+			imageTag,
+			"--format",
+			"{{ range .RepoTags }}{{ . }}\n{{ end }}",
+		]);
+		return output.split("\n").filter((tag) => tag.trim() !== "");
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * Checks if the given image has any duplicate tags from previous dev sessions,
+ * and remove them if so.
+ */
+export function cleanupDuplicateImageTags(
+	dockerPath: string,
+	imageTag: string
+): void {
+	try {
+		const repoTags = getImageRepoTags(dockerPath, imageTag);
+		// Remove all cloudflare-dev tags from previous sessions except the current one
+		const tagsToRemove = repoTags.filter(
+			(tag) => tag !== imageTag && tag.startsWith("cloudflare-dev")
+		);
+		if (tagsToRemove.length > 0) {
+			runDockerCmdWithOutput(dockerPath, ["rmi", ...tagsToRemove]);
+		}
+	} catch {}
+}

@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import path from "node:path";
 import {
 	afterAll,
 	beforeAll,
@@ -8,6 +9,8 @@ import {
 	it,
 	vi,
 } from "vitest";
+import { buildImage } from "../../containers-shared/src/build";
+import { generateContainerBuildId } from "../../containers-shared/src/utils";
 import { getDockerPath } from "../src/environment-variables/misc-variables";
 import { dedent } from "../src/utils/dedent";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
@@ -239,6 +242,47 @@ for (const source of imageSource) {
 				const ids = getContainerIds("e2econtainer");
 				expect(ids.length).toBe(1);
 				await worker.stop();
+			});
+
+			it("should clean up duplicate image tags after build", async () => {
+				const dockerPath = getDockerPath();
+				const fakeBuildID = generateContainerBuildId();
+				const initialImageTag = `cloudflare-dev/test-cleanup:${fakeBuildID}`;
+
+				// First, build an image directly to create a duplicate tag scenario
+				const build = await buildImage(dockerPath, {
+					dockerfile: path.resolve(helper.tmpPath, "./Dockerfile"),
+					image_tag: initialImageTag,
+					class_name: "TestContainer",
+					image_build_context: helper.tmpPath,
+					image_vars: {},
+				});
+				await build.ready;
+
+				const initialRepoTags = JSON.parse(
+					execSync(
+						`${dockerPath} image inspect ${initialImageTag} --format "{{ json .RepoTags }}"`,
+						{ encoding: "utf8" }
+					)
+				);
+				expect(initialRepoTags.length).toBeGreaterThan(0);
+
+				// wrangler dev will rebuild/pull and trigger cleanup
+				const worker = helper.runLongLived("wrangler dev");
+				const ready = await worker.waitForReady();
+
+				// check that the container can still start
+				await vi.waitFor(async () => {
+					const response = await fetch(`${ready.url}/status`);
+					expect(response.status).toBe(200);
+					const status = await response.json();
+					expect(status).toBe(false);
+				});
+
+				// expect the original tag not to be there any more
+				expect(() => {
+					execSync(`${dockerPath} image inspect ${initialImageTag}`);
+				}).toThrow();
 			});
 
 			it("won't start the container service if no containers are present", async () => {
