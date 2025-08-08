@@ -738,25 +738,28 @@ export function buildMiniflareBindingOptions(
 					)
 				: undefined,
 
-		durableObjects: Object.fromEntries([
-			...durableObjects.map(({ name, class_name: className }) => {
-				return [
-					name,
-					{
-						className,
-						useSQLite: classNameToUseSQLite.get(className),
-						container:
-							config.containerDOClassNames?.size && config.enableContainers
-								? getImageNameFromDOClassName({
-										doClassName: className,
-										containerDOClassNames: config.containerDOClassNames,
-										containerBuildId: config.containerBuildId,
-									})
-								: undefined,
-					},
-				];
-			}),
-		]),
+		durableObjects: Object.fromEntries(
+			durableObjects.map(
+				({ name, class_name: className, script_name: scriptName }) => {
+					return [
+						name,
+						{
+							className,
+							scriptName,
+							useSQLite: classNameToUseSQLite.get(className),
+							container:
+								config.containerDOClassNames?.size && config.enableContainers
+									? getImageNameFromDOClassName({
+											doClassName: className,
+											containerDOClassNames: config.containerDOClassNames,
+											containerBuildId: config.containerBuildId,
+										})
+									: undefined,
+						},
+					];
+				}
+			)
+		),
 
 		ratelimits: Object.fromEntries(
 			bindings.unsafe?.bindings

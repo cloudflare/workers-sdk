@@ -838,7 +838,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		const stub = env.DURABLE_OBJECT.get(id);
 
 		expect(() => stub.ping()).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Cannot access "ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
+			`[Error: Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
 		);
 		await runWranglerDev(
 			"wrangler.internal-durable-object.jsonc",
@@ -846,7 +846,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		);
 
 		expect(() => stub.ping()).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Cannot access "ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
+			`[Error: Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
 		);
 	});
 });

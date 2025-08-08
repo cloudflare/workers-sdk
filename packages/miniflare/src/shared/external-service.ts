@@ -212,7 +212,7 @@ export function createOutboundDoProxyService(
                                 const klass = createProxyPrototypeClass(DurableObject, (key) => {
 									const message = ${
 										isProxyEnabled
-											? `\`Cannot access "\${key}" as Durable Object RPC is not yet supported between multiple dev sessions.\``
+											? `\`Cannot access "\${className}#\${key}" as Durable Object RPC is not yet supported between multiple dev sessions.\``
 											: `\`Couldn't find the durable Object "\${className}" of script "\${scriptName}".\``
 									};
 
