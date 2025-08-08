@@ -30,3 +30,22 @@ To deploy a worker:
 cd tools/test-workers/existing-script-test-do-not-delete
 npx wrangler@latest deploy
 ```
+
+## Deploying All Test Workers
+
+To deploy all test workers at once (used by CI):
+
+```bash
+# From the repository root
+node -r esbuild-register tools/test-workers/deploy-all.ts
+
+# Or from the tools directory
+cd tools
+node -r esbuild-register test-workers/deploy-all.ts
+```
+
+The `deploy-all.ts` script:
+- Checks for required environment variables (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`)
+- Verifies if workers already exist by checking their URLs
+- Only deploys workers that don't exist or aren't responding
+- Skips deployment gracefully if credentials are missing (useful for fork PRs)
