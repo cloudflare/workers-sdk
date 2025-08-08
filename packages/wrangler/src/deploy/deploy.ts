@@ -65,7 +65,6 @@ import type {
 	CfPlacement,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";

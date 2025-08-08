@@ -2843,11 +2843,6 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	if (!isRemoteValid(value, field, diagnostics)) {
-		isValid = false;
-	}
-
-
 	return isValid;
 };
 

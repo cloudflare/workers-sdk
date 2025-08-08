@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { CoreHeaders, HttpOptions_Style, Log, LogLevel } from "miniflare";
 import {
-	AIFetcher,
 	EXTERNAL_AI_WORKER_NAME,
 	EXTERNAL_AI_WORKER_SCRIPT,
 } from "../../ai/fetcher";
@@ -328,21 +327,9 @@ function d1DatabaseEntry(db: CfD1Database): [string, string] {
 	];
 }
 function queueProducerEntry(
-	{ binding, queue_name: queueName, experimental_remote }: CfQueue,
-	remoteProxyConnectionString?: RemoteProxyConnectionString
-): [
-	string,
-	{
-		queueName: string;
-		remoteProxyConnectionString?: RemoteProxyConnectionString;
-	},
-] {
-	if (!remoteProxyConnectionString || !experimental_remote) {
-		return [binding, { queueName }];
-	}
-
-	return [binding, { queueName, remoteProxyConnectionString }];
-
+	{ binding, queue_name: queueName }: CfQueue
+): [string, { queueName: string }] {
+	return [binding, { queueName }];
 }
 function pipelineEntry(pipeline: CfPipeline): [string, string] {
 	return [pipeline.binding, pipeline.pipeline];
@@ -620,9 +607,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 					contents: EXTERNAL_AI_WORKER_SCRIPT,
 				},
 			],
-			serviceBindings: {
-				FETCHER: AIFetcher,
-			},
+				serviceBindings: {
+					FETCHER: () => new Response("AI binding not available in v3", { status: 501 }),
+				},
 		});
 
 		wrappedBindings[bindings.ai.binding] = {
@@ -786,8 +773,7 @@ export function buildPersistOptions(
 			kvPersist: path.join(v3Path, "kv"),
 			r2Persist: path.join(v3Path, "r2"),
 			d1Persist: path.join(v3Path, "d1"),
-			workflowsPersist: path.join(v3Path, "workflows"),
-		};
+		} as any;
 	}
 }
 
@@ -871,8 +857,8 @@ export async function buildMiniflareOptions(
 	if (config.bindings.images && config.imagesLocalMode) {
 		if (!didWarnImagesLocalModeUsage) {
 			try {
-				await import("sharp");
-			} catch {
+				require("sharp");
+			} catch (e) {
 				const msg =
 					"Sharp must be installed to use the Images binding local mode; check your version of Node is compatible";
 				throw createFatalError(msg, false);
@@ -905,12 +891,9 @@ export async function buildMiniflareOptions(
 		upstream,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 
-		unsafeEnableAssetsRpc: getFlag("ASSETS_RPC"),
-
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio: handleRuntimeStdioWithStructuredLogs,
-		structuredWorkerdLogs: true,
 
 		...persistOptions,
 		workers: [
@@ -934,5 +917,5 @@ export async function buildMiniflareOptions(
 			...externalWorkers,
 		],
 	};
-	return { options, internalObjects, entrypointNames };
+	return { options: options as any, internalObjects, entrypointNames };
 }
