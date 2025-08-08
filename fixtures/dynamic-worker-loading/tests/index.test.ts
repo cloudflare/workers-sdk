@@ -22,13 +22,17 @@ describe("dynamic worker loading", () => {
 		let response = await fetch(`http://${ip}:${port}/my-worker`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
-		expect(text).toMatchInlineSnapshot(`"Hello with a dynamic worker loaded for /my-worker"`);
+		expect(text).toMatchInlineSnapshot(
+			`"Hello with a dynamic worker loaded for /my-worker"`
+		);
 	});
 
 	it("should load different worker if ID changes", async ({ expect }) => {
 		let response = await fetch(`http://${ip}:${port}/my-other-worker`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
-		expect(text).toMatchInlineSnapshot(`"Hello with a dynamic worker loaded for /my-other-worker"`);
+		expect(text).toMatchInlineSnapshot(
+			`"Hello with a dynamic worker loaded for /my-other-worker"`
+		);
 	});
 });

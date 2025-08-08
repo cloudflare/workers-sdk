@@ -13,7 +13,7 @@ export const WORKER_LOADER_PLUGIN_NAME = "worker-loader";
 
 export const WORKER_LOADER_PLUGIN: Plugin<typeof WorkerLoaderOptionsSchema> = {
 	options: WorkerLoaderOptionsSchema,
-	getBindings(options: z.infer<typeof WorkerLoaderOptionsSchema>) {
+	getBindings(options) {
 		if (!options.workerLoaders) {
 			return [];
 		}
@@ -27,7 +27,7 @@ export const WORKER_LOADER_PLUGIN: Plugin<typeof WorkerLoaderOptionsSchema> = {
 		);
 		return bindings;
 	},
-	getNodeBindings(options: z.infer<typeof WorkerLoaderOptionsSchema>) {
+	getNodeBindings() {
 		return {};
 	},
 	async getServices() {
