@@ -5,6 +5,7 @@ import {
 	cleanupContainers,
 	getDevContainerImageName,
 	prepareContainerImagesForDev,
+	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
@@ -251,6 +252,16 @@ export class LocalRuntimeController extends RuntimeController {
 				);
 
 				for (const container of containerDevOptions) {
+					// if this was triggered by the rebuild hotkey, delete the old image
+					if (this.#currentContainerBuildId !== undefined) {
+						runDockerCmdWithOutput(this.dockerPath, [
+							"rmi",
+							getDevContainerImageName(
+								container.class_name,
+								this.#currentContainerBuildId
+							),
+						]);
+					}
 					this.containerImageTagsSeen.add(container.image_tag);
 				}
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
