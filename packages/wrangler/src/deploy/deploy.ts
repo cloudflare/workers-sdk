@@ -39,7 +39,6 @@ import {
 	postConsumer,
 	putConsumer,
 	putConsumerById,
-	putQueue,
 } from "../queues/client";
 import { syncWorkersSite } from "../sites";
 import {
@@ -72,7 +71,7 @@ import type {
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
+import type { PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
@@ -1260,27 +1259,10 @@ export function isAuthenticationError(e: unknown): e is ParseError {
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
-export async function updateQueueProducers(
-	config: Config
-): Promise<Promise<string[]>[]> {
-	const producers = config.queues.producers || [];
-	const updateProducers: Promise<string[]>[] = [];
-	for (const producer of producers) {
-		const body: PostQueueBody = {
-			queue_name: producer.queue,
-			settings: {
-				delivery_delay: producer.delivery_delay,
-			},
-		};
-
-		updateProducers.push(
-			putQueue(config, producer.queue, body).then(() => [
-				`Producer for ${producer.queue}`,
-			])
-		);
-	}
-
-	return updateProducers;
+export function updateQueueProducers(config: Config): Promise<string[]>[] {
+	return (config.queues.producers || []).map((producer) =>
+		Promise.resolve([`Producer for ${producer.queue}`])
+	);
 }
 
 export async function updateQueueConsumers(

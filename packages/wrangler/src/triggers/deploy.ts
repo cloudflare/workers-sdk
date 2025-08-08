@@ -279,7 +279,7 @@ export default async function triggersDeploy(
 	}
 
 	if (config.queues.producers && config.queues.producers.length) {
-		const updateProducers = await updateQueueProducers(config);
+		const updateProducers = updateQueueProducers(config);
 		deployments.push(...updateProducers);
 	}
 

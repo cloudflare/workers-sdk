@@ -1035,7 +1035,6 @@ export function getBindings(
 			return {
 				binding: queue.binding,
 				queue_name: queue.queue,
-				delivery_delay: queue.delivery_delay,
 				experimental_remote: remoteBindingsEnabled && queue.experimental_remote,
 			} satisfies CfQueue;
 		}),

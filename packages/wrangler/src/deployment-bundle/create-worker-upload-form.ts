@@ -93,7 +93,6 @@ export type WorkerMetadataBinding =
 			type: "queue";
 			name: string;
 			queue_name: string;
-			delivery_delay?: number;
 			raw?: boolean;
 	  }
 	| {
@@ -328,12 +327,11 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	);
 
-	bindings.queues?.forEach(({ binding, queue_name, delivery_delay, raw }) => {
+	bindings.queues?.forEach(({ binding, queue_name, raw }) => {
 		metadataBindings.push({
 			type: "queue",
 			name: binding,
 			queue_name,
-			delivery_delay,
 			raw,
 		});
 	});

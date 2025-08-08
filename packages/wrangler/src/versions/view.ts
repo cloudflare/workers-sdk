@@ -219,10 +219,7 @@ function printBindingAsToml(binding: WorkerMetadataBinding) {
 			return (
 				"[[queues.producers]]" +
 				`\nbinding = "${binding.name}"` +
-				`\nqueue = "${binding.queue_name}"` +
-				(binding.delivery_delay
-					? `\ndelivery_delay = ${binding.delivery_delay}`
-					: "")
+				`\nqueue = "${binding.queue_name}"`
 			);
 
 		case "r2_bucket":
