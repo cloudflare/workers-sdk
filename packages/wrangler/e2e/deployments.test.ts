@@ -4,6 +4,7 @@ import { fetch } from "undici";
 import {
 	afterAll,
 	afterEach,
+	beforeAll,
 	beforeEach,
 	describe,
 	expect,
@@ -22,63 +23,60 @@ const normalize = (str: string) =>
 		[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
 	}).replaceAll(/^Author:.*$/gm, "Author:      person@example.com");
 
-describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
-	"deployments",
-	{ timeout: TIMEOUT },
-	() => {
-		// Note that we are sharing the workerName and helper across all these tests,
-		// which means that these tests are not isolated from each other.
-		// Seeded files will leak between tests.
-		const workerName = generateResourceName();
-		const helper = new WranglerE2ETestHelper();
-		let deployedUrl: string;
+describe.skip("deployments", { timeout: TIMEOUT }, () => {
+	// Note that we are sharing the workerName and helper across all these tests,
+	// which means that these tests are not isolated from each other.
+	// Seeded files will leak between tests.
+	const workerName = generateResourceName();
+	const helper = new WranglerE2ETestHelper();
+	let deployedUrl: string;
 
-		afterAll(async () => {
-			// clean up user Worker after all tests
-			await helper.run(`wrangler delete`);
-		});
+	afterAll(async () => {
+		// clean up user Worker after all tests
+		await helper.run(`wrangler delete`);
+	});
 
-		it("deploys a Worker", async () => {
-			await helper.seed({
-				"wrangler.toml": dedent`
+	it("deploys a Worker", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
 						`,
-				"src/index.ts": dedent`
+			"src/index.ts": dedent`
 						export default {
 							fetch(request) {
 								return new Response("Hello World!")
 							}
 						}`,
-				"package.json": dedent`
+			"package.json": dedent`
 						{
 							"name": "${workerName}",
 							"version": "0.0.0",
 							"private": true
 						}
 						`,
-			});
-
-			const output = await helper.run(`wrangler deploy`);
-
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			deployedUrl = match.groups.url;
-
-			const response = await retry(
-				(resp) => !resp.ok,
-				async () => await fetch(deployedUrl)
-			);
-			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
 
-		it("lists 1 deployment", async () => {
-			const output = await helper.run(`wrangler deployments list`);
+		const output = await helper.run(`wrangler deploy`);
 
-			expect(normalize(output.stdout)).toMatchInlineSnapshot(`
+		const match = output.stdout.match(
+			/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+		);
+		assert(match?.groups);
+		deployedUrl = match.groups.url;
+
+		const response = await retry(
+			(resp) => !resp.ok,
+			async () => await fetch(deployedUrl)
+		);
+		await expect(response.text()).resolves.toEqual("Hello World!");
+	});
+
+	it("lists 1 deployment", async () => {
+		const output = await helper.run(`wrangler deployments list`);
+
+		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Upload
@@ -88,35 +86,35 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			                     Tag:  -
 			                 Message:  -"
 		`);
-		});
+	});
 
-		it("modifies & deploys a Worker", async () => {
-			await helper.seed({
-				"src/index.ts": dedent`
+	it("modifies & deploys a Worker", async () => {
+		await helper.seed({
+			"src/index.ts": dedent`
         export default {
           fetch(request) {
             return new Response("Updated Worker!")
           }
         }`,
-			});
-			const output = await helper.run(`wrangler deploy`);
-
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			deployedUrl = match.groups.url;
-
-			const response = await retry(
-				(resp) => !resp.ok,
-				async () => await fetch(deployedUrl)
-			);
-			await expect(response.text()).resolves.toEqual("Updated Worker!");
 		});
+		const output = await helper.run(`wrangler deploy`);
 
-		it("lists 2 deployments", async () => {
-			const dep = await helper.run(`wrangler deployments list`);
-			expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
+		const match = output.stdout.match(
+			/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+		);
+		assert(match?.groups);
+		deployedUrl = match.groups.url;
+
+		const response = await retry(
+			(resp) => !resp.ok,
+			async () => await fetch(deployedUrl)
+		);
+		await expect(response.text()).resolves.toEqual("Updated Worker!");
+	});
+
+	it("lists 2 deployments", async () => {
+		const dep = await helper.run(`wrangler deployments list`);
+		expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Upload
@@ -134,13 +132,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			                     Tag:  -
 			                 Message:  -"
 		`);
-		});
+	});
 
-		it("rolls back", async () => {
-			const output = await helper.run(
-				`wrangler rollback --message "A test message"`
-			);
-			expect(normalize(output.stdout)).toMatchInlineSnapshot(`
+	it("rolls back", async () => {
+		const output = await helper.run(
+			`wrangler rollback --message "A test message"`
+		);
+		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
 			"├ Fetching latest deployment
 			│
 			├ Your current deployment has 1 version(s):
@@ -173,11 +171,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			╰  SUCCESS  Worker Version 00000000-0000-0000-0000-000000000000 has been deployed to 100% of traffic.
 			Current Version ID: 00000000-0000-0000-0000-000000000000"
 		`);
-		});
+	});
 
-		it("lists deployments", async () => {
-			const dep = await helper.run(`wrangler deployments list`);
-			expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
+	it("lists deployments", async () => {
+		const dep = await helper.run(`wrangler deployments list`);
+		expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Upload
@@ -203,9 +201,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			                     Tag:  -
 			                 Message:  -"
 		`);
-		});
-	}
-);
+	});
+});
+const isCINonLinux = process.platform !== "linux" && process.env.CI === "true";
 
 type AssetTestCase = {
 	path: string;
@@ -264,7 +262,7 @@ async function checkAssets(testCases: AssetTestCase[], deployedUrl: string) {
 	}
 }
 
-describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
+describe.skip("Workers + Assets deployment", () => {
 	let helper: WranglerE2ETestHelper;
 	let workerName: string;
 
@@ -1106,4 +1104,147 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			}
 		);
 	});
+});
+
+describe.skipIf(isCINonLinux).sequential("durable objects [containers]", () => {
+	let helper: WranglerE2ETestHelper;
+	let workerName: string;
+
+	beforeAll(async () => {
+		// We are recreating the helper on each test to ensure they are isolated from each other.
+		helper = new WranglerE2ETestHelper();
+		// Use a new user Worker in each test
+		workerName = generateResourceName();
+		await helper.seed({
+			"wrangler.json": JSON.stringify({
+				name: `${workerName}`,
+				main: "src/index.ts",
+				compatibility_date: "2025-04-03",
+				containers: [
+					{
+						image: "./Dockerfile",
+						class_name: `E2EContainer`,
+						name: `${workerName}-container`,
+					},
+				],
+				durable_objects: {
+					bindings: [
+						{
+							class_name: `E2EContainer`,
+							name: "CONTAINER",
+						},
+					],
+				},
+				migrations: [
+					{
+						tag: "v1",
+						new_sqlite_classes: [`E2EContainer`],
+					},
+				],
+			}),
+			"src/index.ts": dedent`
+						import { DurableObject } from "cloudflare:workers";
+
+						export class E2EContainer extends DurableObject<Env> {
+							container: globalThis.Container;
+
+							constructor(ctx: DurableObjectState, env: Env) {
+								super(ctx, env);
+								this.container = ctx.container!;
+							}
+
+							async fetch(req: Request) {
+								const path = new URL(req.url).pathname;
+								switch (path) {
+									case "/status":
+										return new Response(JSON.stringify(this.container.running));
+
+									case "/start":
+										this.container.start({
+											entrypoint: ["node", "app.js"],
+											env: { MESSAGE: "I'm an env var!" },
+											enableInternet: false,
+										});
+										return new Response("Container create request sent...");
+
+									case "/fetch":
+										const res = await this.container
+											.getTcpPort(8080)
+											.fetch("http://foo/bar/baz");
+										return new Response(await res.text());
+									default:
+										return new Response("Hi from Container DO");
+								}
+							}
+						}
+
+						export default {
+							async fetch(request, env): Promise<Response> {
+								const id = env.CONTAINER.idFromName("container");
+								const stub = env.CONTAINER.get(id);
+								return stub.fetch(request);
+							},
+						} satisfies ExportedHandler<Env>;`,
+			Dockerfile: dedent`
+						FROM node:22-alpine
+
+						WORKDIR /usr/src/app
+
+						COPY ./container/app.js app.js
+						EXPOSE 8080
+						`,
+			"container/app.js": dedent`
+					const { createServer } = require("http");
+
+					const server = createServer(function (req, res) {
+						res.writeHead(200, { "Content-Type": "text/plain" });
+						res.write("Hello World! Have an env var! " + process.env.MESSAGE);
+						res.end();
+					});
+
+					server.listen(8080, function () {
+						console.log("Server listening on port 8080");
+					});
+					`,
+		});
+	});
+
+	afterAll(async () => {
+		// clean up user Worker after each test
+		await helper.run(`wrangler delete`);
+	});
+
+	it(
+		"won't push image if no change has been made",
+		{ timeout: 60 * 3 * 1000 },
+		async () => {
+			let output = await helper.run(`wrangler deploy`);
+			vi.stubEnv("WRANGLER_LOG", "debug");
+			output = await helper.run(`wrangler deploy`);
+
+			expect(output.stdout).toContain(
+				"Image already exists remotely, skipping push"
+			);
+		}
+	);
+	it(
+		"will push the image if only the dockerfile has changed",
+		{ timeout: 60 * 3 * 1000 },
+		async () => {
+			// just changes the Dockerfile
+			await helper.seed({
+				Dockerfile: dedent`
+									FROM node:22-alpine
+
+									WORKDIR /usr/src/app
+
+									COPY ./container/app.js app.js
+									EXPOSE 1234
+									CMD ["node", "app.js"]
+								`,
+			});
+			const output = await helper.run(`wrangler deploy`);
+			expect(output.stdout).toContain("Image does not exist remotely, pushing");
+		}
+	);
 });
