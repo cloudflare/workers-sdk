@@ -1,5 +1,4 @@
 ---
-"quick-edit-extension": minor
 "@cloudflare/quick-edit": minor
 ---
 
