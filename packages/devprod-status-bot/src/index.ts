@@ -1,4 +1,9 @@
-import type { IssuesOpenedEvent, WebhookEvent } from "@octokit/webhooks-types";
+import type {
+	IssueCommentEvent,
+	IssuesEvent,
+	Schema,
+	WebhookEvent,
+} from "@octokit/webhooks-types";
 
 async function getBotMessage(ai: Ai, prompt: string) {
 	const chat = {
@@ -21,16 +26,20 @@ async function getBotMessage(ai: Ai, prompt: string) {
 	return message.response;
 }
 
-async function analyzeIssueSecurity(
+async function checkForSecurityIssue(
 	ai: Ai,
-	issueTitle: string,
-	issueBody: string
-): Promise<boolean> {
+	message: Schema
+): Promise<IssuesEvent | IssueCommentEvent | null> {
+	if (!isIssueEvent(message)) {
+		return null;
+	}
 	const prompt = `Analyze this GitHub issue to determine if it's likely reporting a security vulnerability or security concern.
 
-Issue Title: ${issueTitle}
+Issue Title: ${message.issue.title}
 
-Issue Body: ${issueBody}
+Issue Body: ${message.issue.body || ""}
+
+Changed Comment: ${"comment" in message ? message.comment.body : "N/A"}
 
 Look for keywords and patterns that suggest this is a security report, such as:
 - Vulnerability, exploit, security flaw, CVE
@@ -55,12 +64,8 @@ Respond with only "YES" if this appears to be a security-related issue, or "NO" 
 		] as RoleScopedChatInput[],
 	};
 
-	const message = await ai.run("@cf/meta/llama-2-7b-chat-int8", chat);
-	if (!("response" in message) || !message.response) {
-		return false;
-	}
-
-	return message.response.trim().toUpperCase() === "YES";
+	const aiMessage = await ai.run("@cf/meta/llama-2-7b-chat-int8", chat);
+	return aiMessage.response?.trim().toUpperCase() === "YES" ? message : null;
 }
 
 type ProjectGQLResponse = {
@@ -139,6 +144,7 @@ async function addPRToProject(pat: string, repo: string, number: string) {
 		}),
 	});
 }
+
 function getThreadID(date?: string | Date, label = "-pull-requests") {
 	// Apply an offset so we rollover days at around 10am UTC
 	return (
@@ -172,13 +178,24 @@ async function sendMessage(
 	console.log(await response.json());
 }
 
-function isIssueOpenedEvent(
+function isIssueEvent(
 	message: WebhookEvent
-): message is IssuesOpenedEvent {
-	return "issue" in message && message.action === "opened";
+): message is IssuesEvent | IssueCommentEvent {
+	if (
+		"issue" in message &&
+		(message.action === "opened" ||
+			message.action === "reopened" ||
+			message.action === "edited")
+	) {
+		return true;
+	}
+	return false;
 }
 
-async function sendSecurityAlert(webhookUrl: string, issue: IssuesOpenedEvent) {
+async function sendSecurityAlert(
+	webhookUrl: string,
+	issue: IssuesEvent | IssueCommentEvent
+) {
 	return sendMessage(
 		webhookUrl,
 		{
@@ -234,7 +251,7 @@ async function sendSecurityAlert(webhookUrl: string, issue: IssuesOpenedEvent) {
 				},
 			],
 		},
-		"security-alerts"
+		"-security-alert-" + issue.issue.number
 	);
 }
 
@@ -399,15 +416,9 @@ export default {
 		if (url.pathname === "/github") {
 			const body = await request.json<WebhookEvent>();
 
-			if (isIssueOpenedEvent(body)) {
-				const isSecurityIssue = await analyzeIssueSecurity(
-					env.AI,
-					body.issue.title,
-					body.issue.body || ""
-				);
-				if (isSecurityIssue) {
-					await sendSecurityAlert(env.ALERTS_WEBHOOK, body);
-				}
+			const maybeSecurityIssue = await checkForSecurityIssue(env.AI, body);
+			if (maybeSecurityIssue) {
+				await sendSecurityAlert(env.ALERTS_WEBHOOK, maybeSecurityIssue);
 			}
 		}
 
