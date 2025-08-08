@@ -34,7 +34,6 @@ jobs:
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-app-previews
-      cancel-in-progress: true
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout Repo
