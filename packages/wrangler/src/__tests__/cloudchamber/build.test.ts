@@ -214,7 +214,7 @@ describe("buildAndMaybePush", () => {
 			],
 			dockerfile,
 		});
-		expect(dockerImageInspect).toHaveBeenCalledOnce();
+		expect(dockerImageInspect).not.toHaveBeenCalledOnce();
 		expect(dockerLoginManagedRegistry).not.toHaveBeenCalled();
 	});
 
