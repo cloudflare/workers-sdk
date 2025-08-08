@@ -79,12 +79,21 @@ export function pushYargs(yargs: CommonYargsArgv) {
 		.positional("TAG", { type: "string", demandOption: true });
 }
 
+/**
+ *
+ * @returns `{ digest: string }` if the image already exists remotely. we will
+ * try and replace this with the image tag from the last deployment if possible.
+ * If a deployment failed between push and deploy, we can't know for certain
+ * what the tag of the last push was, so let's just use the digest instead.
+ *
+ * @returns `{ tag: string }` if the image was built and pushed
+ */
 export async function buildAndMaybePush(
 	args: BuildArgs,
 	pathToDocker: string,
 	push: boolean,
 	containerConfig?: Exclude<ContainerNormalizedConfig, ImageURIConfig>
-): Promise<{ image: string; pushed: boolean }> {
+): Promise<{ remoteDigest: string } | { newTag: string }> {
 	try {
 		const imageTag = `${getCloudflareContainerRegistry()}/${args.tag}`;
 		const { buildCmd, dockerfile } = await constructBuildCommand(
@@ -104,7 +113,6 @@ export async function buildAndMaybePush(
 			dockerfile,
 		}).ready;
 
-		let pushed = false;
 		if (push) {
 			/**
 			 * Get `RepoDigests` and `Id`:
@@ -199,7 +207,7 @@ export async function buildAndMaybePush(
 						`Untagging built image: ${args.tag} since there was no change.`
 					);
 					await runDockerCmd(pathToDocker, ["image", "rm", imageTag]);
-					return { image: remoteDigest, pushed: false };
+					return { remoteDigest };
 				}
 			} catch (error) {
 				if (error instanceof Error) {
@@ -213,17 +221,15 @@ export async function buildAndMaybePush(
 				account.external_account_id,
 				args.tag
 			);
-
 			logger.log(
 				`Image does not exist remotely, pushing: ${namespacedImageTag}`
 			);
 			await runDockerCmd(pathToDocker, ["tag", imageTag, namespacedImageTag]);
 			await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
 			await runDockerCmd(pathToDocker, ["image", "rm", namespacedImageTag]);
-			pushed = true;
 		}
 
-		return { image: imageTag, pushed };
+		return { newTag: imageTag };
 	} catch (error) {
 		if (error instanceof Error) {
 			throw new UserError(error.message, { cause: error });
