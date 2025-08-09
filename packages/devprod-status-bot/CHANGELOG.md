@@ -1,5 +1,13 @@
 # devprod-status-bot
 
+## 1.2.1
+
+### Patch Changes
+
+- [#10270](https://github.com/cloudflare/workers-sdk/pull/10270) [`7caf49e`](https://github.com/cloudflare/workers-sdk/commit/7caf49ef5e25ec3326dfc46f157057ec109a3131) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix security alerts to avoid being in the same notification thread
+
+- [#10269](https://github.com/cloudflare/workers-sdk/pull/10269) [`469f6ee`](https://github.com/cloudflare/workers-sdk/commit/469f6eec9a2a2d29317720f0be6af5bd1fa02404) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Remove PR summary messages and PR update notifications from devprod-status-bot Worker
+
 ## 1.2.0
 
 ### Minor Changes
