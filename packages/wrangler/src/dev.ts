@@ -25,6 +25,7 @@ import { maybeRegisterLocalWorker } from "./dev/local";
 import { UserError } from "./errors";
 import { getFlag } from "./experimental-flags";
 import isInteractive from "./is-interactive";
+import { TURBOREPO } from "./is-turborepo";
 import { logger } from "./logger";
 import { getSiteAssetPaths } from "./sites";
 import { requireApiToken, requireAuth } from "./user";
@@ -681,7 +682,11 @@ export async function startDev(args: StartDevOptions) {
 					})
 				))
 			);
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
+			if (
+				isInteractive() &&
+				!TURBOREPO.isTurborepo() &&
+				args.showInteractiveDevSession !== false
+			) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
 		} else {
@@ -736,7 +741,11 @@ export async function startDev(args: StartDevOptions) {
 
 			await setupDevEnv(devEnv, args.config, authHook, args);
 
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
+			if (
+				isInteractive() &&
+				!TURBOREPO.isTurborepo() &&
+				args.showInteractiveDevSession !== false
+			) {
 				unregisterHotKeys = registerDevHotKeys([devEnv], args);
 			}
 		}

@@ -259,6 +259,27 @@ describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 			expect(wrangler.stdout).not.toContain("to exit");
 			expect(wrangler.stdout).not.toContain("rebuild container");
 		});
+
+		it("should not show hotkeys when running under turborepo", async () => {
+			const originalEnv = process.env;
+			try {
+				process.env = {
+					...originalEnv,
+					TURBO_HASH: "test-hash-123",
+					TURBO_TASK: "dev",
+					TURBO_INVOCATION_DIR: "/test/project",
+				};
+				const wrangler = await startWranglerDev(args);
+				wrangler.pty.kill();
+				expect(wrangler.stdout).not.toContain("open a browser");
+				expect(wrangler.stdout).not.toContain("open devtools");
+				expect(wrangler.stdout).not.toContain("clear console");
+				expect(wrangler.stdout).not.toContain("to exit");
+				expect(wrangler.stdout).not.toContain("rebuild container");
+			} finally {
+				process.env = originalEnv;
+			}
+		});
 	});
 });
 
