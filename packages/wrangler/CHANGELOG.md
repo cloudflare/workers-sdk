@@ -1,5 +1,39 @@
 # wrangler
 
+## 4.29.0
+
+### Minor Changes
+
+- [#10283](https://github.com/cloudflare/workers-sdk/pull/10283) [`80960b9`](https://github.com/cloudflare/workers-sdk/commit/80960b9297a8e6009ee19fa8708651539fec76d6) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Support long branch names in generation of branch aliases in WCI.
+
+### Patch Changes
+
+- [#10232](https://github.com/cloudflare/workers-sdk/pull/10232) [`e7cae16`](https://github.com/cloudflare/workers-sdk/commit/e7cae16d5be9a8a0487ffab351ccf8f27808524f) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: validate `wrangler containers delete ID` to ensure a valid ID has been provided. Previously if you provided the container name (or any non-ID shaped string) you would get an auth error instead of a 404.
+
+- [#10259](https://github.com/cloudflare/workers-sdk/pull/10259) [`c58a05c`](https://github.com/cloudflare/workers-sdk/commit/c58a05cdc6d4e900541857be0e931250352199b8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Ensure that `maybeStartOrUpdateRemoteProxySession` considers the potential account_id from the user's wrangler config
+
+  Currently if the user has an `account_id` in their wrangler config file, such id won't be taken into consideration for the remote proxy session, the changes here make sure that it is (note that the `auth` option of `maybeStartOrUpdateRemoteProxySession`, if provided, takes precedence over this id value).
+
+  The changes here also fix the same issue for `wrangler dev` and `getPlatformProxy` (since they use `maybeStartOrUpdateRemoteProxySession` under the hook).
+
+- [#10258](https://github.com/cloudflare/workers-sdk/pull/10258) [`d391076`](https://github.com/cloudflare/workers-sdk/commit/d39107694b6bd9d63f15b529798aba0fd9a43643) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Add the option to allow all tiers when creating a container
+
+- [#10179](https://github.com/cloudflare/workers-sdk/pull/10179) [`5d5ecd5`](https://github.com/cloudflare/workers-sdk/commit/5d5ecd558d58461f203f882011df3e4d2652305c) Thanks [@pombosilva](https://github.com/pombosilva)! - Prevent defining multiple workflows with the same "name" property in the same wrangler file
+
+- [#10232](https://github.com/cloudflare/workers-sdk/pull/10232) [`e7cae16`](https://github.com/cloudflare/workers-sdk/commit/e7cae16d5be9a8a0487ffab351ccf8f27808524f) Thanks [@emily-shen](https://github.com/emily-shen)! - include containers API calls in output of WRANGLER_LOG=debug
+
+- [#10243](https://github.com/cloudflare/workers-sdk/pull/10243) [`d481901`](https://github.com/cloudflare/workers-sdk/commit/d48190127fbb564c5abdd3c8f33433a6381d8899) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Remove async_hooks polyfill - now uses native workerd implementation
+
+  The async_hooks module is now provided natively by workerd, making the polyfill unnecessary. This improves performance and ensures better compatibility with Node.js async_hooks APIs.
+
+- [#10060](https://github.com/cloudflare/workers-sdk/pull/10060) [`9aad334`](https://github.com/cloudflare/workers-sdk/commit/9aad334d282c863971b1ee84324ecfc60a022222) Thanks [@edmundhung](https://github.com/edmundhung)! - refactor: switch `getPlatformProxy()` to use Miniflare's dev registry implementation
+
+  Updated `getPlatformProxy()` to use Miniflare's dev registry instead of Wrangler's implementation. Previously, you had to start a wrangler or vite dev session before accessing the proxy bindings to connect to those workers. Now the order doesn't matter.
+
+- Updated dependencies [[`1479fd0`](https://github.com/cloudflare/workers-sdk/commit/1479fd06b91f9ab529ba4b8824d938e5da3184a0), [`e3d9703`](https://github.com/cloudflare/workers-sdk/commit/e3d9703c8733567b9bcad4d6264958f6ba6876f6), [`d481901`](https://github.com/cloudflare/workers-sdk/commit/d48190127fbb564c5abdd3c8f33433a6381d8899)]:
+  - miniflare@4.20250803.1
+  - @cloudflare/unenv-preset@2.7.0
+
 ## 4.28.1
 
 ### Patch Changes
