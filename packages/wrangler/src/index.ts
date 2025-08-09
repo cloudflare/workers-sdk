@@ -1483,7 +1483,7 @@ export function createCLIParser(argv: string[]) {
 
 	wrangler.exitProcess(false);
 
-	return wrangler;
+	return { wrangler, registry };
 }
 
 export async function main(argv: string[]): Promise<void> {
@@ -1492,7 +1492,7 @@ export async function main(argv: string[]): Promise<void> {
 	checkMacOSVersion({ shouldThrow: false });
 
 	const startTime = Date.now();
-	const wrangler = createCLIParser(argv);
+	const { wrangler } = createCLIParser(argv);
 	let command: string | undefined;
 	let metricsArgs: Record<string, unknown> | undefined;
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
@@ -1567,7 +1567,8 @@ export async function main(argv: string[]): Promise<void> {
 			// We are not able to ask the `wrangler` CLI parser to show help for a subcommand programmatically.
 			// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
 			// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
-			await createCLIParser([...argv, "--help"]).parse();
+			const { wrangler: helpWrangler } = createCLIParser([...argv, "--help"]);
+			await helpWrangler.parse();
 		} else if (
 			isAuthenticationError(e) ||
 			// Is this a Containers/Cloudchamber-based auth error?

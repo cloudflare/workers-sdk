@@ -73,3 +73,5 @@ export {
 	type RemoteProxySession as Experimental_RemoteProxySession,
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
 } from "./api";
+
+export { experimental_getWranglerCommands } from "./experimental-commands-api";

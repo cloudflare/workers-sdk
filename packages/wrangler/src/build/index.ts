@@ -13,12 +13,13 @@ export const buildCommand = createCommand({
 		provideConfig: false,
 	},
 	async handler(buildArgs) {
-		await createCLIParser([
+		const { wrangler } = createCLIParser([
 			"deploy",
 			"--dry-run",
 			"--outdir=dist",
 			...(buildArgs.env ? ["--env", buildArgs.env] : []),
 			...(buildArgs.config ? ["--config", buildArgs.config] : []),
-		]).parse();
+		]);
+		await wrangler.parse();
 	},
 });

@@ -57,8 +57,8 @@ async function checkStartupHandler(
 		}
 
 		await spinnerWhile({
-			promise: async () =>
-				await createCLIParser(
+			promise: async () => {
+				const { wrangler } = createCLIParser(
 					config.pages_build_output_dir || pages
 						? [
 								"pages",
@@ -73,7 +73,9 @@ async function checkStartupHandler(
 								"--dry-run",
 								`--outfile=${workerBundle}`,
 							]
-				).parse(),
+				);
+				await wrangler.parse();
+			},
 			startMessage: "Building your Worker",
 			endMessage: chalk.green("Worker Built! 🎉"),
 		});
