@@ -4,7 +4,7 @@ import { resolve } from "path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe("Local Browser", () => {
+describe.sequential("Local Browser", () => {
 	let ip: string,
 		port: number,
 		stop: (() => Promise<unknown>) | undefined,

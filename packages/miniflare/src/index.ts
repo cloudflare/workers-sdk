@@ -14,7 +14,6 @@ import zlib from "zlib";
 import { checkMacOSVersion } from "@cloudflare/cli";
 import exitHook from "exit-hook";
 import { $ as colors$, green } from "kleur/colors";
-import { npxImport } from "npx-import";
 import stoppable from "stoppable";
 import {
 	Dispatcher,
@@ -48,6 +47,7 @@ import {
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	KV_PLUGIN_NAME,
+	launchBrowser,
 	normaliseDurableObject,
 	PLUGIN_ENTRIES,
 	Plugins,
@@ -141,7 +141,7 @@ import type {
 	Queue,
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
-import type { ChildProcess } from "child_process";
+import type { Process } from "@puppeteer/browsers";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -849,7 +849,7 @@ export class Miniflare {
 	#log: Log;
 
 	// key is the browser wsEndpoint, value is the browser process
-	#browserProcesses: Map<string, ChildProcess> = new Map();
+	#browserProcesses: Map<string, Process> = new Map();
 
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
@@ -1179,27 +1179,28 @@ export class Miniflare {
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/browser/launch") {
-				// Version should be kept in sync with the supported version at https://github.com/cloudflare/puppeteer?tab=readme-ov-file#workers-version-of-puppeteer-core
-				const puppeteer = await npxImport(
-					"puppeteer@22.8.2",
-					this.#log.warn.bind(this.#log)
-				);
-
-				// @ts-expect-error Puppeteer is dynamically installed, and so doesn't have types available
-				const browser = await puppeteer.launch({
-					headless: "old",
-					// workaround for CI environments, to avoid sandboxing issues
-					args: process.env.CI ? ["--no-sandbox"] : [],
+				const { browserProcess, wsEndpoint } = await launchBrowser({
+					// Puppeteer v22.8.2 supported chrome version:
+					// https://pptr.dev/supported-browsers#supported-browser-version-list
+					//
+					// It should match the supported chrome version for the upstream puppeteer
+					// version from which @cloudflare/puppeteer branched off, which is specified in:
+					// https://github.com/cloudflare/puppeteer/tree/v1.0.2?tab=readme-ov-file#workers-version-of-puppeteer-core
+					browserVersion: "124.0.6367.207",
+					log: this.#log,
+					tmpPath: this.#tmpPath,
 				});
-				const wsEndpoint = browser.wsEndpoint();
-				this.#browserProcesses.set(wsEndpoint, browser.process());
+				browserProcess.nodeProcess.on("exit", () => {
+					this.#browserProcesses.delete(wsEndpoint);
+				});
+				this.#browserProcesses.set(wsEndpoint, browserProcess);
 				response = new Response(wsEndpoint);
 			} else if (url.pathname === "/browser/status") {
 				const wsEndpoint = url.searchParams.get("wsEndpoint");
 				assert(wsEndpoint !== null, "Missing wsEndpoint query parameter");
 				const process = this.#browserProcesses.get(wsEndpoint);
 				const status = {
-					stopped: !process || process.exitCode !== null,
+					stopped: !process,
 				};
 				response = new Response(JSON.stringify(status), {
 					headers: { "Content-Type": "application/json" },
@@ -1817,11 +1818,8 @@ export class Miniflare {
 	}
 
 	async #assembleAndUpdateConfig() {
-		for (const [wsEndpoint, process] of this.#browserProcesses.entries()) {
-			// .close() isn't enough
-			process.kill("SIGKILL");
-			this.#browserProcesses.delete(wsEndpoint);
-		}
+		await this.#closeBrowserProcesses();
+
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
@@ -1986,6 +1984,18 @@ export class Miniflare {
 
 			this.#handleReload();
 		}
+	}
+
+	async #closeBrowserProcesses() {
+		await Promise.all(
+			Array.from(this.#browserProcesses.values()).map((process) =>
+				process.close()
+			)
+		);
+		assert(
+			this.#browserProcesses.size === 0,
+			"Not all browser processes were closed"
+		);
 	}
 
 	async #waitForReady(disposing = false) {
@@ -2528,11 +2538,7 @@ export class Miniflare {
 		try {
 			await this.#waitForReady(/* disposing */ true);
 		} finally {
-			for (const [wsEndpoint, process] of this.#browserProcesses.entries()) {
-				// .close() isn't enough
-				process.kill("SIGKILL");
-				this.#browserProcesses.delete(wsEndpoint);
-			}
+			await this.#closeBrowserProcesses();
 
 			// Remove exit hook, we're cleaning up what they would've cleaned up now
 			this.#removeExitHook?.();
