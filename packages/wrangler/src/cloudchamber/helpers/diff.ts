@@ -50,11 +50,20 @@ type BestPath = {
 	lastComponent?: Result;
 };
 
+// TODO: move this Diff Class to a shared location (since it is not Cloudchamber specific)
 export class Diff {
 	#results: Result[] = [];
 
 	get changes(): number {
 		return this.#results.filter((r) => r.added || r.removed).length;
+	}
+
+	get added(): number {
+		return this.#results.filter((r) => r.added).length;
+	}
+
+	get removed(): number {
+		return this.#results.filter((r) => r.removed).length;
 	}
 
 	constructor(a: string, b: string) {
@@ -190,7 +199,7 @@ export class Diff {
 		}
 	}
 
-	print(
+	toString(
 		options: {
 			// Number of lines of context to print before and after each diff segment
 			contextLines: number;
@@ -198,6 +207,7 @@ export class Diff {
 			contextLines: 3,
 		}
 	) {
+		let output = "";
 		let state: "init" | "diff" = "init";
 		const context: string[] = [];
 
@@ -209,11 +219,16 @@ export class Diff {
 			if (result.added || result.removed) {
 				if (state === "diff") {
 					// Print the context after the last diff, if any
-					context.splice(0, options.contextLines).forEach((c) => log(`  ${c}`));
+					context
+						.splice(0, options.contextLines)
+						.filter(Boolean)
+						.forEach((c) => {
+							output += `  ${c}\n`;
+						});
 
 					// Indicate gaps between context chunks
 					if (context.length > options.contextLines) {
-						log("  ...");
+						output += "  ...\n\n";
 						newline();
 					}
 				}
@@ -228,11 +243,15 @@ export class Diff {
 					}
 				}
 
-				context.forEach((c) => log(`  ${c}`));
+				context.filter(Boolean).forEach((c) => {
+					output += `  ${c}\n`;
+				});
 				context.length = 0;
 
 				for (const l of result.value.split("\n")) {
-					log(`${result.added ? green("+") : red("-")} ${l}`);
+					if (l) {
+						output += `${result.added ? green("+") : red("-")} ${l}\n`;
+					}
 				}
 
 				state = "diff";
@@ -251,8 +270,23 @@ export class Diff {
 				context.pop();
 			}
 
-			context.forEach((c) => log(`  ${c}`));
+			context.filter(Boolean).forEach((c) => {
+				output += `  ${c}\n`;
+			});
 		}
+
+		return output;
+	}
+
+	print(
+		options: {
+			// Number of lines of context to print before and after each diff segment
+			contextLines: number;
+		} = {
+			contextLines: 3,
+		}
+	) {
+		log(this.toString(options));
 	}
 
 	#addToPath(

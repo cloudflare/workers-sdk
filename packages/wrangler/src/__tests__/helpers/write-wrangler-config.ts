@@ -8,6 +8,7 @@ export function writeWranglerConfig(
 	config: RawConfig = {},
 	path = "./wrangler.toml"
 ) {
+	const json = /\.json(c)$/.test(path);
 	fs.mkdirSync(dirname(path), { recursive: true });
 	fs.writeFileSync(
 		path,
@@ -17,7 +18,8 @@ export function writeWranglerConfig(
 				name: "test-name",
 				...config,
 			},
-			path
+			path,
+			!!json
 		),
 		"utf-8"
 	);
