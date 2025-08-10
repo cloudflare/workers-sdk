@@ -215,20 +215,19 @@ type WorkersDevRes = {
 	enabled: boolean;
 };
 type CronTriggersRes = {
-	schedules: [
-		{
-			cron: string;
-			created_on: Date;
-			modified_on: Date;
-		},
-	];
+	schedules: {
+		cron: string;
+		created_on: Date;
+		modified_on: Date;
+	}[];
 };
 
 function isNpm(packageManager: PackageManager) {
 	return packageManager.type === "npm";
 }
 
-async function getWorkerConfig(
+// TODO: move this to a shared location
+export async function downloadWorkerConfig(
 	accountId: string,
 	workerName: string,
 	entrypoint: string,
@@ -254,12 +253,10 @@ async function getWorkerConfig(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${serviceEnvironment}`
 		),
-
 		fetchResult<WorkersDevRes>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/subdomain`
 		),
-
 		fetchResult<ServiceMetadataRes["default_environment"]>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}`
@@ -331,7 +328,7 @@ async function getWorkerConfig(
 					},
 				}
 			: {}),
-		tail_consumers: serviceEnvMetadata.script.tail_consumers,
+		tail_consumers: serviceEnvMetadata.script.tail_consumers ?? undefined,
 		observability: serviceEnvMetadata.script.observability,
 		...mappedBindings,
 	};
@@ -669,7 +666,7 @@ export async function downloadWorker(accountId: string, workerName: string) {
 		`/accounts/${accountId}/workers/services/${workerName}/environments/${defaultEnvironment}/content/v2`
 	);
 
-	const config = await getWorkerConfig(
+	const config = await downloadWorkerConfig(
 		accountId,
 		workerName,
 		entrypoint,

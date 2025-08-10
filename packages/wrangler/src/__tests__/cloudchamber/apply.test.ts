@@ -198,7 +198,6 @@ describe("cloudchamber apply", () => {
 			│   ...
 			│
 			│     instance_type = \\"dev\\"
-			│
 			│     [containers.constraints]
 			│ -   tier = 3
 			│ +   tier = 2
@@ -588,27 +587,21 @@ describe("cloudchamber apply", () => {
 			│   ...
 			│
 			│       value = \\"value\\"
-			│
 			│       [[containers.configuration.labels]]
 			│ +     name = \\"name-1\\"
 			│ +     value = \\"value-1\\"
-			│ +
 			│ +     [[containers.configuration.labels]]
-			│ +
 			│       name = \\"name-2\\"
 			│       value = \\"value-2\\"
 			│
 			│   ...
 			│
 			│       type = \\"env\\"
-			│
 			│       [[containers.configuration.secrets]]
 			│ -     name = \\"MY_SECRET_1\\"
 			│ -     secret = \\"SECRET_NAME_1\\"
 			│ -     type = \\"env\\"
-			│ -
 			│ -     [[containers.configuration.secrets]]
-			│ -
 			│       name = \\"MY_SECRET_2\\"
 			│       secret = \\"SECRET_NAME_2\\"
 			│       type = \\"env\\"
@@ -1004,11 +997,8 @@ describe("cloudchamber apply", () => {
 			│
 			│     image = \\"docker.io/beep:boop\\"
 			│     instance_type = \\"dev\\"
-			│
 			│ + [containers.configuration.observability.logs]
 			│ + enabled = true
-			│ +
-			│ +
 			│     [containers.constraints]
 			│     tier = 1
 			│
@@ -1074,11 +1064,8 @@ describe("cloudchamber apply", () => {
 			│
 			│     image = \\"docker.io/beep:boop\\"
 			│     instance_type = \\"dev\\"
-			│
 			│ + [containers.configuration.observability.logs]
 			│ + enabled = true
-			│ +
-			│ +
 			│     [containers.constraints]
 			│     tier = 1
 			│
@@ -1148,11 +1135,9 @@ describe("cloudchamber apply", () => {
 			├ EDIT my-container-app
 			│
 			│     instance_type = \\"dev\\"
-			│
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
-			│
 			│     [containers.constraints]
 			│     tier = 1
 			│
@@ -1222,11 +1207,9 @@ describe("cloudchamber apply", () => {
 			├ EDIT my-container-app
 			│
 			│     instance_type = \\"dev\\"
-			│
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
-			│
 			│     [containers.constraints]
 			│     tier = 1
 			│
@@ -1295,11 +1278,9 @@ describe("cloudchamber apply", () => {
 			├ EDIT my-container-app
 			│
 			│     instance_type = \\"dev\\"
-			│
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
-			│
 			│     [containers.constraints]
 			│     tier = 1
 			│
@@ -1371,11 +1352,9 @@ describe("cloudchamber apply", () => {
 			├ EDIT my-container-app
 			│
 			│     instance_type = \\"dev\\"
-			│
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
-			│
 			│     [containers.constraints]
 			│     tier = 1
 			│
@@ -1726,12 +1705,10 @@ describe("cloudchamber apply", () => {
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
 			│   scheduling_policy = \\"regional\\"
-			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/beep:boop\\"
 			│ -   instance_type = \\"dev\\"
 			│ +   instance_type = \\"standard\\"
-			│
 			│     [containers.constraints]
 			│ -   tier = 3
 			│ +   tier = 2
@@ -1807,21 +1784,17 @@ describe("cloudchamber apply", () => {
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
 			│   scheduling_policy = \\"regional\\"
-			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/beep:boop\\"
 			│     memory = \\"256MB\\"
 			│ -   memory_mib = 256
 			│ +   memory_mib = 1_024
-			│
 			│ -   vcpu = 0.0625
 			│ +   vcpu = 1
-			│
 			│       [containers.configuration.disk]
 			│       size = \\"2GB\\"
 			│ -     size_mb = 2_000
 			│ +     size_mb = 6_000
-			│
 			│     [containers.constraints]
 			│ -   tier = 3
 			│ +   tier = 2
@@ -1892,12 +1865,10 @@ describe("cloudchamber apply", () => {
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
 			│   scheduling_policy = \\"regional\\"
-			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/beep:boop\\"
 			│ -   instance_type = \\"basic\\"
 			│ +   instance_type = \\"dev\\"
-			│
 			│     [containers.constraints]
 			│ -   tier = 3
 			│ +   tier = 2
@@ -2026,10 +1997,9 @@ describe("cloudchamber apply", () => {
 			├ EDIT my-container-app
 			│
 			│     [containers.configuration]
-			│     image = \\"${registry}/some-account-id/hello:1.0\\"
+			│     image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
 			│ -   instance_type = \\"dev\\"
 			│ +   instance_type = \\"standard\\"
-			│
 			│     [containers.constraints]
 			│ -   tier = 3
 			│ +   tier = 2
