@@ -95,29 +95,42 @@ describe("TURBOREPO", () => {
 			expect(TURBOREPO.isTurborepo()).toBe(false);
 		});
 
-		it("should return false in CI environments even with turbo env vars", () => {
+		it("should return false in CI environments when no turbo env vars are set", () => {
 			vi.stubEnv("CI", "true");
-			vi.stubEnv("TURBO_HASH", "some-hash");
-			vi.stubEnv("npm_config_user_agent", "turbo@1.0.0");
+			vi.stubEnv("TURBO_HASH", undefined);
+			vi.stubEnv("TURBO_TASK", undefined);
+			vi.stubEnv("TURBO_INVOCATION_DIR", undefined);
+			vi.stubEnv("npm_config_user_agent", undefined);
 			expect(TURBOREPO.isTurborepo()).toBe(false);
 		});
 
-		it("should return false in GitHub Actions even with turbo env vars", () => {
+		it("should return false in GitHub Actions when no turbo env vars are set", () => {
 			vi.stubEnv("GITHUB_ACTIONS", "true");
-			vi.stubEnv("TURBO_TASK", "dev");
+			vi.stubEnv("TURBO_HASH", undefined);
+			vi.stubEnv("TURBO_TASK", undefined);
+			vi.stubEnv("TURBO_INVOCATION_DIR", undefined);
+			vi.stubEnv("npm_config_user_agent", undefined);
 			expect(TURBOREPO.isTurborepo()).toBe(false);
 		});
 
-		it("should return false when CI is set to any truthy value", () => {
-			vi.stubEnv("CI", "1");
+		it("should return true when turborepo vars are set even in CI environment", () => {
+			vi.stubEnv("CI", "true");
+			vi.stubEnv("GITHUB_ACTIONS", undefined);
 			vi.stubEnv("TURBO_HASH", "some-hash");
-			expect(TURBOREPO.isTurborepo()).toBe(false);
+			vi.stubEnv("TURBO_TASK", undefined);
+			vi.stubEnv("TURBO_INVOCATION_DIR", undefined);
+			vi.stubEnv("npm_config_user_agent", undefined);
+			expect(TURBOREPO.isTurborepo()).toBe(true);
 		});
 
-		it("should return false when GITHUB_ACTIONS is set to any truthy value", () => {
-			vi.stubEnv("GITHUB_ACTIONS", "1");
-			vi.stubEnv("TURBO_INVOCATION_DIR", "/project");
-			expect(TURBOREPO.isTurborepo()).toBe(false);
+		it("should return true when turborepo vars are set even in GitHub Actions", () => {
+			vi.stubEnv("CI", undefined);
+			vi.stubEnv("GITHUB_ACTIONS", "true");
+			vi.stubEnv("TURBO_HASH", undefined);
+			vi.stubEnv("TURBO_TASK", "dev");
+			vi.stubEnv("TURBO_INVOCATION_DIR", undefined);
+			vi.stubEnv("npm_config_user_agent", undefined);
+			expect(TURBOREPO.isTurborepo()).toBe(true);
 		});
 	});
 });

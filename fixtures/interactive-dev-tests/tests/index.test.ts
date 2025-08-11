@@ -107,7 +107,7 @@ afterEach(() => {
 });
 
 const readyRegexp = /Ready on (http:\/\/[a-z0-9.]+:[0-9]+)/;
-async function startWranglerDev(args: string[], skipWaitingForReady = false) {
+async function startWranglerDev(args: string[], skipWaitingForReady = false, envOverrides?: Record<string, string>) {
 	const stdoutStream = new stream.PassThrough();
 	const stdoutInterface = rl.createInterface(stdoutStream);
 
@@ -115,6 +115,10 @@ async function startWranglerDev(args: string[], skipWaitingForReady = false) {
 	const exitPromise = new Promise<number>((resolve) => (exitResolve = resolve));
 
 	const pty = await import("@cdktf/node-pty-prebuilt-multiarch");
+	const currentPtyOptions = envOverrides ? {
+		...ptyOptions,
+		env: { ...process.env, ...envOverrides } as Record<string, string>
+	} : ptyOptions;
 	const ptyProcess = pty.spawn(
 		process.execPath,
 		[
@@ -124,7 +128,7 @@ async function startWranglerDev(args: string[], skipWaitingForReady = false) {
 			"--port=0",
 			"--inspector-port=0",
 		],
-		ptyOptions
+		currentPtyOptions
 	);
 	const result: PtyProcess = {
 		pty: ptyProcess,
@@ -261,24 +265,18 @@ describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 		});
 
 		it("should not show hotkeys when running under turborepo", async () => {
-			const originalEnv = process.env;
-			try {
-				process.env = {
-					...originalEnv,
-					TURBO_HASH: "test-hash-123",
-					TURBO_TASK: "dev",
-					TURBO_INVOCATION_DIR: "/test/project",
-				};
-				const wrangler = await startWranglerDev(args);
-				wrangler.pty.kill();
-				expect(wrangler.stdout).not.toContain("open a browser");
-				expect(wrangler.stdout).not.toContain("open devtools");
-				expect(wrangler.stdout).not.toContain("clear console");
-				expect(wrangler.stdout).not.toContain("to exit");
-				expect(wrangler.stdout).not.toContain("rebuild container");
-			} finally {
-				process.env = originalEnv;
-			}
+			const turborepoEnv = {
+				TURBO_HASH: "test-hash-123",
+				TURBO_TASK: "dev",
+				TURBO_INVOCATION_DIR: "/test/project",
+			};
+			const wrangler = await startWranglerDev(args, false, turborepoEnv);
+			wrangler.pty.kill();
+			expect(wrangler.stdout).not.toContain("open a browser");
+			expect(wrangler.stdout).not.toContain("open devtools");
+			expect(wrangler.stdout).not.toContain("clear console");
+			expect(wrangler.stdout).not.toContain("to exit");
+			expect(wrangler.stdout).not.toContain("rebuild container");
 		});
 	});
 });

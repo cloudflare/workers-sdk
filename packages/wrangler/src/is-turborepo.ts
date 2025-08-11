@@ -7,16 +7,22 @@ export const TURBOREPO = {
 	 * that Turbo sets when executing tasks
 	 */
 	isTurborepo(): boolean {
-		if (process.env.CI || process.env.GITHUB_ACTIONS) {
-			return false;
-		}
-
-		return !!(
+		const hasTurborepoVars = !!(
 			process.env.TURBO_HASH ||
 			process.env.TURBO_TASK ||
 			process.env.TURBO_INVOCATION_DIR ||
 			(process.env.npm_config_user_agent &&
 				process.env.npm_config_user_agent.includes("turbo"))
 		);
+
+		if (hasTurborepoVars) {
+			return true;
+		}
+
+		if (process.env.CI || process.env.GITHUB_ACTIONS) {
+			return false;
+		}
+
+		return false;
 	},
 };
