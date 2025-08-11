@@ -14,10 +14,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 	const shouldManageWorkers = !workerAFromEnv;
 
 	beforeAll(async () => {
+		await helper.seed(resolve(__dirname, "./workers"));
 		if (!shouldManageWorkers) {
 			return;
 		}
-		await helper.seed(resolve(__dirname, "./workers"));
 		await helper.run(
 			`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
 		);
