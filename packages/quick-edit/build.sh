@@ -1,7 +1,7 @@
 set -eu
 
 # Build vscode
-npm --prefix ../../vendor/vscode run gulp vscode-web-min
+node --max-old-space-size=16000 ../../vendor/vscode/node_modules/gulp/bin/gulp.js vscode-web-min
 
 # Move the output assets to the assets direcotry for the `quick-edit` Worker
 mv ../../vendor/vscode-web web/assets
