@@ -387,6 +387,7 @@ describe("getNormalizedContainerOptions", () => {
 					scheduling_policy: "regional",
 					rollout_step_percentage: 50,
 					rollout_kind: "full_manual",
+					rollout_active_grace_period: 600,
 					instance_type: "basic",
 					constraints: {
 						tier: 2,
@@ -414,6 +415,7 @@ describe("getNormalizedContainerOptions", () => {
 			scheduling_policy: "regional",
 			rollout_step_percentage: 50,
 			rollout_kind: "full_manual",
+			rollout_active_grace_period: 600,
 			instance_type: "basic",
 			image_uri: "registry.example.com/test:latest",
 			constraints: {

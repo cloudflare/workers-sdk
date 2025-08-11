@@ -162,7 +162,12 @@ describe("wrangler deploy with containers", () => {
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
-			containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					rollout_active_grace_period: 600,
+				},
+			],
 		});
 
 		mockGetApplications([]);
@@ -171,6 +176,7 @@ describe("wrangler deploy with containers", () => {
 			name: "my-container",
 			max_instances: 10,
 			scheduling_policy: SchedulingPolicy.DEFAULT,
+			rollout_active_grace_period: 600,
 		});
 
 		await runWrangler("deploy index.js");
@@ -201,6 +207,7 @@ describe("wrangler deploy with containers", () => {
 			│   scheduling_policy = \\"default\\"
 			│   instances = 0
 			│   max_instances = 10
+			│   rollout_active_grace_period = 600
 			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/hello:world\\"
@@ -531,7 +538,12 @@ describe("wrangler deploy with containers", () => {
 		setupDockerMocks("my-container", "Galaxy");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
-			containers: [DEFAULT_CONTAINER_FROM_DOCKERFILE],
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_DOCKERFILE,
+					rollout_active_grace_period: 600,
+				},
+			],
 		});
 		mockGetApplications([
 			{
@@ -559,6 +571,7 @@ describe("wrangler deploy with containers", () => {
 				durable_objects: {
 					namespace_id: "1",
 				},
+				rollout_active_grace_period: 500,
 			},
 		]);
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
@@ -568,6 +581,7 @@ describe("wrangler deploy with containers", () => {
 				image: "registry.cloudflare.com/some-account-id/my-container:Galaxy",
 			},
 			max_instances: 10,
+			rollout_active_grace_period: 600,
 		});
 		mockCreateApplicationRollout({
 			description: "Progressive update",
@@ -589,6 +603,8 @@ describe("wrangler deploy with containers", () => {
 			│ - max_instances = 2
 			│ + max_instances = 10
 			│   name = \\"my-container\\"
+			│ - rollout_active_grace_period = 500
+			│ + rollout_active_grace_period = 600
 			│   scheduling_policy = \\"default\\"
 			│
 			│     [containers.configuration]
