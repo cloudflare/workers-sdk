@@ -1319,8 +1319,6 @@ describe("wrangler deploy with containers", () => {
 			"
 		`);
 	});
-
-	// todo it should use the remote digest as image ref if found
 });
 
 // This is a separate describe block because we intentionally do not mock any
