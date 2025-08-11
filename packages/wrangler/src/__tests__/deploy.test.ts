@@ -1742,7 +1742,7 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("app.example.com (custom domain)");
 			});
 
-			it("should combine --domain flags with existing routes configuration", async () => {
+			it("should deploy --domain flags alongside routes (from config when no CLI routes)", async () => {
 				writeWranglerConfig({
 					routes: ["example.com/api/*"],
 				});
@@ -1806,6 +1806,48 @@ Update them to point to this script instead?`,
 					api.example.com/path:
 					Paths are not allowed in Custom Domains]
 				`);
+			});
+
+			it("should handle both --route and --domain flags together", async () => {
+				writeWranglerConfig({
+					routes: ["config.com/api/*"],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [{ hostname: "api.example.com" }],
+				});
+				// Mock the regular route deployment for the CLI route (should override config)
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workers/scripts/:scriptName/routes",
+						() => {
+							return HttpResponse.json(
+								{
+									success: true,
+									errors: [],
+									messages: [],
+									result: ["cli.com/override/*"],
+								},
+								{ status: 200 }
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler("deploy ./index --route cli.com/override/* --domain api.example.com");
+				expect(std.out).toContain("cli.com/override/*");
+				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).not.toContain("config.com/api/*");
 			});
 		});
 
