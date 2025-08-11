@@ -7,7 +7,6 @@ import { resolve } from "node:path";
 async function deployTestWorkers() {
 	console.log("Deploying test workers...");
 
-	// Check if we have the required environment variables
 	if (!process.env.CLOUDFLARE_API_TOKEN) {
 		console.log("CLOUDFLARE_API_TOKEN not set, skipping worker deployment");
 		return;
@@ -18,14 +17,39 @@ async function deployTestWorkers() {
 		return;
 	}
 
-	// Deploy existing-script-test-do-not-delete worker
-	const workerDir = resolve(__dirname, "existing-script-test-do-not-delete");
-	const workerUrl =
-		"https://existing-script-test-do-not-delete.devprod-testing7928.workers.dev";
+	const ensureWorkerDeployed = async (params: {
+		dir: string;
+		name: string;
+		url: string;
+		entry: string;
+		compatibilityDate?: string;
+	}) => {
+		const { dir, name, url, entry, compatibilityDate = "2025-01-01" } = params;
+		try {
+			const res = await fetch(url);
+			if (res.ok) {
+				console.log(
+					`Worker '${name}' already exists and is responding, skipping deployment`
+				);
+				return;
+			}
+		} catch {}
+		console.log(`Deploying '${name}' from ${entry} ...`);
+		execSync(
+			`pnpx wrangler@latest deploy ${entry} --name ${name} --compatibility-date ${compatibilityDate}`,
+			{ cwd: dir, env: process.env, stdio: "inherit" }
+		);
+	};
 
+	// Ensure existing-script-test-do-not-delete worker
+	const existingScriptDir = resolve(
+		__dirname,
+		"existing-script-test-do-not-delete"
+	);
+	const existingScriptUrl =
+		"https://existing-script-test-do-not-delete.devprod-testing7928.workers.dev";
 	try {
-		// Check if worker exists and deploy only if it doesn't
-		const response = await fetch(workerUrl);
+		const response = await fetch(existingScriptUrl);
 		if (response.ok) {
 			console.log(
 				"Worker 'existing-script-test-do-not-delete' already exists and is responding, skipping deployment"
@@ -35,7 +59,7 @@ async function deployTestWorkers() {
 				"Worker 'existing-script-test-do-not-delete' does not exist or is not responding, deploying..."
 			);
 			execSync("pnpx wrangler@latest deploy", {
-				cwd: workerDir,
+				cwd: existingScriptDir,
 				env: process.env,
 				stdio: "inherit",
 			});
@@ -45,11 +69,30 @@ async function deployTestWorkers() {
 			"Worker 'existing-script-test-do-not-delete' does not exist or is not responding, deploying..."
 		);
 		execSync("pnpx wrangler@latest deploy", {
-			cwd: workerDir,
+			cwd: existingScriptDir,
 			env: process.env,
 			stdio: "inherit",
 		});
 	}
+
+	const remoteBindingWorkersDir = resolve(
+		__dirname,
+		"../../packages/wrangler/e2e/remote-binding/workers"
+	);
+
+	await ensureWorkerDeployed({
+		dir: remoteBindingWorkersDir,
+		name: "wrangler-e2e-remote-binding-a",
+		url: "https://wrangler-e2e-remote-binding-a.devprod-testing7928.workers.dev",
+		entry: "remote-worker.js",
+	});
+
+	await ensureWorkerDeployed({
+		dir: remoteBindingWorkersDir,
+		name: "wrangler-e2e-remote-binding-b",
+		url: "https://wrangler-e2e-remote-binding-b.devprod-testing7928.workers.dev",
+		entry: "alt-remote-worker.js",
+	});
 
 	console.log("Test worker deployment complete");
 }

@@ -14,11 +14,19 @@ import { makeRoot, seed } from "../helpers/setup";
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"wrangler dev - remote bindings",
 	() => {
-		const remoteWorkerName = generateResourceName();
-		const alternativeRemoteWorkerName = generateResourceName();
+		const workerAFromEnv = process.env.E2E_REMOTE_BINDINGS_WORKER_A;
+		const workerBFromEnv = process.env.E2E_REMOTE_BINDINGS_WORKER_B;
+		const remoteWorkerName = workerAFromEnv ?? generateResourceName();
+		const alternativeRemoteWorkerName =
+			workerBFromEnv ?? generateResourceName();
 		const helper = new WranglerE2ETestHelper();
 
+		const shouldManageWorkers = !(workerAFromEnv && workerBFromEnv);
+
 		beforeAll(async () => {
+			if (!shouldManageWorkers) {
+				return;
+			}
 			await helper.seed(resolve(__dirname, "./workers"));
 			const deploy = helper.run(
 				`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
@@ -30,6 +38,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		}, 35_000);
 
 		afterAll(async () => {
+			if (!shouldManageWorkers) {
+				return;
+			}
 			const del = helper.run(`wrangler delete --name ${remoteWorkerName}`);
 			const delAlt = helper.run(
 				`wrangler delete --name ${alternativeRemoteWorkerName}`
