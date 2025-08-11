@@ -11,7 +11,6 @@ jobs:
   deploy-test-workers:
     name: Deploy test workers
     runs-on: ubuntu-22.04
-    if: github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -20,6 +19,7 @@ jobs:
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
       - name: Deploy Test Workers
+        if: github.event.pull_request.head.repo.owner.login == 'cloudflare'
         run: node -r esbuild-register tools/test-workers/deploy-all.ts
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
