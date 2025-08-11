@@ -3,13 +3,16 @@
 	"remoteCache": {
 		"signature": true
 	},
-	"globalEnv": [
+	"globalEnv": ["CI_OS", "NODE_VERSION"],
+	"globalPassThroughEnv": [
+		"NODE_EXTRA_CA_CERTS",
 		"CI",
-		"CI_OS",
-		"NODE_VERSION",
-		"VITEST",
-		"NODE_DEBUG",
-		"NODE_EXTRA_CA_CERTS"
+		"VSCODE_INSPECTOR_OPTIONS",
+		"WRANGLER_LOG_PATH",
+		"TEST_REPORT_PATH",
+		"CLOUDFLARE_CONTAINER_REGISTRY",
+		"DOCKER_HOST",
+		"WRANGLER_DOCKER_HOST"
 	],
 	"tasks": {
 		"dev": {
@@ -27,24 +30,20 @@
 			"persistent": true,
 			"cache": false
 		},
-		"topological": {
-			"dependsOn": ["^topological"]
-		},
 		"check:lint": {
-			"dependsOn": ["topological"]
+			"dependsOn": ["^check:lint"]
 		},
 		"check:type": {
-			"dependsOn": ["topological"]
+			"dependsOn": ["build"]
 		},
 		"type:tests": {
-			"dependsOn": ["topological"]
+			"dependsOn": ["build"]
 		},
 		"test:ci": {
 			"dependsOn": ["build"],
 			"outputLogs": "new-only"
 		},
 		"test:e2e": {
-			"env": ["WRANGLER", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"],
 			"dependsOn": ["build"],
 			"outputLogs": "new-only"
 		},
