@@ -417,14 +417,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	const configRoutes =
-		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 	const domainRoutes = (props.domains || []).map((domain) => ({
 		pattern: domain,
 		custom_domain: true,
 	}));
-	const routes = [...configRoutes, ...domainRoutes];
-	validateRoutes(routes, props.assetsOptions);
+	const routes = props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
+	const allRoutes = [...routes, ...domainRoutes];
+	validateRoutes(allRoutes, props.assetsOptions);
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
@@ -1058,7 +1057,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// deploy triggers
 	const targets = await triggersDeploy({
 		...props,
-		routes: routes,
+		routes: allRoutes,
 	});
 
 	logger.log("Current Version ID:", versionId);
