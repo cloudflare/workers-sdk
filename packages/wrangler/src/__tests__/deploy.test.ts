@@ -58,11 +58,7 @@ import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type {
-	PostQueueBody,
-	PostTypedConsumerBody,
-	QueueResponse,
-} from "../queues/client";
+import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
 import type { FormData } from "undici";
 import type { Mock } from "vitest";
 
@@ -11443,10 +11439,6 @@ export default{
 				modified_on: "",
 			};
 			mockGetQueueByName(queueName, existingQueue);
-			mockPutQueueById(queueId, {
-				queue_name: queueName,
-				settings: {},
-			});
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -11490,12 +11482,7 @@ export default{
 				modified_on: "",
 			};
 			mockGetQueueByName(queueName, existingQueue);
-			mockPutQueueById(queueId, {
-				queue_name: queueName,
-				settings: {
-					delivery_delay: 10,
-				},
-			});
+
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
@@ -13646,37 +13633,6 @@ function mockPostConsumerById(
 				});
 			},
 			{ once: true }
-		)
-	);
-	return requests;
-}
-
-function mockPutQueueById(
-	expectedQueueId: string,
-	expectedBody: PostQueueBody
-) {
-	const requests = { count: 0 };
-	msw.use(
-		http.put(
-			`*/accounts/:accountId/queues/:queueId`,
-			async ({ request, params }) => {
-				const body = await request.json();
-				expect(params.queueId).toEqual(expectedQueueId);
-				expect(params.accountId).toEqual("some-account-id");
-				expect(body).toEqual(expectedBody);
-				requests.count += 1;
-				return HttpResponse.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: {
-						queue: expectedBody.queue_name,
-						settings: {
-							delivery_delay: expectedBody.settings?.delivery_delay,
-						},
-					},
-				});
-			}
 		)
 	);
 	return requests;
