@@ -30,6 +30,7 @@ import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
+import type { ImageRef } from "../cloudchamber/build";
 import type { Config } from "../config";
 import type { ContainerApp } from "../config/environment";
 import type {
@@ -191,7 +192,7 @@ function containerConfigToCreateRequest(
 
 export async function apply(
 	args: {
-		imageRef: { remoteDigest: string } | { newTag: string };
+		imageRef: ImageRef;
 		durable_object_namespace_id: string;
 	},
 	containerConfig: ContainerNormalizedConfig,

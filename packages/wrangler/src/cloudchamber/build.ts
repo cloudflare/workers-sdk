@@ -81,19 +81,22 @@ export function pushYargs(yargs: CommonYargsArgv) {
 
 /**
  *
- * @returns `{ digest: string }` if the image already exists remotely. we will
+ * `{ remoteDigest: string }` implies the image already exists remotely. we will
  * try and replace this with the image tag from the last deployment if possible.
  * If a deployment failed between push and deploy, we can't know for certain
- * what the tag of the last push was, so let's just use the digest instead.
+ * what the tag of the last push was, so we will use the digest instead.
  *
- * @returns `{ tag: string }` if the image was built and pushed
+ * `{ newTag: string }` implies the image was built and pushed and the deployment
+ * should be associated with a new tag.
  */
+export type ImageRef = { remoteDigest: string } | { newTag: string };
+
 export async function buildAndMaybePush(
 	args: BuildArgs,
 	pathToDocker: string,
 	push: boolean,
 	containerConfig?: Exclude<ContainerNormalizedConfig, ImageURIConfig>
-): Promise<{ remoteDigest: string } | { newTag: string }> {
+): Promise<ImageRef> {
 	try {
 		const imageTag = `${getCloudflareContainerRegistry()}/${args.tag}`;
 		const { buildCmd, dockerfile } = await constructBuildCommand(

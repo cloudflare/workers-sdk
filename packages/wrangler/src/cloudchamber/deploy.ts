@@ -8,6 +8,7 @@ import { logger } from "../logger";
 import { fetchVersion } from "../versions/api";
 import { buildAndMaybePush } from "./build";
 import { fillOpenAPIConfiguration } from "./common";
+import type { ImageRef } from "./build";
 import type {
 	ContainerNormalizedConfig,
 	ImageURIConfig,
@@ -19,7 +20,7 @@ export async function buildContainer(
 	imageTag: string,
 	dryRun: boolean,
 	pathToDocker: string
-): Promise<{ remoteDigest: string } | { newTag: string }> {
+): Promise<ImageRef> {
 	const imageFullName = containerConfig.name + ":" + imageTag.split("-")[0];
 	logger.log("Building image", imageFullName);
 
@@ -57,7 +58,7 @@ export async function deployContainers(
 
 	const pathToDocker = getDockerPath();
 	const version = await fetchVersion(config, accountId, scriptName, versionId);
-	let imageRef: { remoteDigest: string } | { newTag: string };
+	let imageRef: ImageRef;
 	for (const container of normalisedContainerConfig) {
 		if ("dockerfile" in container) {
 			imageRef = await buildContainer(
