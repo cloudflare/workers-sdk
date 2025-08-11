@@ -10,19 +10,22 @@
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",
 	"scripts": {
-		"check:lint": "eslint functions --max-warnings=0",
+		"check:lint": "eslint --max-warnings=0",
 		"check:type": "tsc",
 		"custom:build": "./build.sh",
-		"deploy": "pnpm run setup && pnpm run custom:build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 pnpm exec wrangler pages deploy --project-name quick-edit ./web",
-		"dev": "concurrently 'pnpm exec wrangler pages dev ./web' 'npm --prefix web/quick-edit-extension run watch-web' 'yarn --cwd ../../vendor/vscode watch' 'yarn --cwd ../../vendor/vscode watch-web'",
-		"setup": "rm -rf web/assets web/quick-edit-extension && ./setup.sh"
+		"deploy": "pnpm run setup && pnpm run custom:build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 pnpm wrangler deploy",
+		"preview": "pnpm run setup && pnpm run custom:build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 pnpm wrangler versions upload",
+		"setup": "./setup.sh"
 	},
 	"dependencies": {
 		"yarn": "^1.22.19"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250712.0",
+		"@types/node": "catalog:default",
 		"concurrently": "^8.2.2",
+		"esbuild": "catalog:default",
 		"tsx": "^3.12.8",
 		"wrangler": "workspace:*"
 	},

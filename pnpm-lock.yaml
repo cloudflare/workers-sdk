@@ -2006,9 +2006,18 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250712.0
+        version: 4.20250803.0
+      '@types/node':
+        specifier: ^20.19.9
+        version: 20.19.9
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      esbuild:
+        specifier: catalog:default
+        version: 0.25.4
       tsx:
         specifier: ^3.12.8
         version: 3.12.10
