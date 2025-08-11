@@ -87,7 +87,6 @@ export async function buildAndMaybePush(
 ): Promise<{ image: string; pushed: boolean }> {
 	try {
 		const imageTag = `${getCloudflareContainerRegistry()}/${args.tag}`;
-		logger.debug("imageTag", imageTag);
 		const { buildCmd, dockerfile } = await constructBuildCommand(
 			{
 				tag: imageTag,
@@ -121,7 +120,7 @@ export async function buildAndMaybePush(
 				imageTag,
 				formatString: "{{ json .RepoDigests }} {{ .Id }}",
 			});
-			logger.debug("imageInfo", imageInfo);
+			logger.debug(`'docker image inspect ${imageTag}':`, imageInfo);
 
 			const account = await loadAccount();
 
@@ -135,13 +134,10 @@ export async function buildAndMaybePush(
 			await dockerLoginManagedRegistry(pathToDocker);
 			try {
 				const [digests, imageId] = imageInfo.split(" ");
-				logger.debug("digests", digests);
-				logger.debug("imageId", imageId);
 				// We don't try to parse until this point
 				// because we don't want to fail on parse errors if we
 				// won't be pushing the image anyways.
 				const parsedDigests = JSON.parse(digests);
-				logger.debug("parsedDigests", parsedDigests);
 				if (!Array.isArray(parsedDigests)) {
 					// If it's not the format we expect, fall back to pushing
 					// since it's annoying but safe.
@@ -154,19 +150,15 @@ export async function buildAndMaybePush(
 					account.external_account_id,
 					imageTag
 				).split(":")[0];
-				logger.debug("repositoryOnly", repositoryOnly);
 
 				// if this succeeds it means this image already exists remotely
 				// if it fails it means it doesn't exist remotely and should be pushed.
 				const [digest, ...rest] = parsedDigests.filter((d): d is string => {
 					const resolved = resolveImageName(account.external_account_id, d);
-					logger.debug("resolved", resolved);
 					return (
 						typeof d === "string" && resolved.split("@")[0] === repositoryOnly
 					);
 				});
-				logger.debug("digest", digest);
-
 				if (rest.length > 0) {
 					throw new Error(
 						`Expected there to only be 1 valid digests for this repository: ${repositoryOnly} but there were ${rest.length + 1}`
@@ -182,7 +174,6 @@ export async function buildAndMaybePush(
 					image
 				);
 				const remoteDigest = `${resolvedImage}@${hash}`;
-				logger.debug("remoteDigest", remoteDigest);
 
 				// NOTE: this is an experimental docker command so the API may change
 				// and break this flow. Hopefully not!
@@ -196,13 +187,12 @@ export async function buildAndMaybePush(
 					"-v",
 					remoteDigest,
 				]);
-				logger.debug("remoteManifest", remoteManifest);
-				const parsedRemoteManifest = JSON.parse(remoteManifest);
 				logger.debug(
-					"parsedRemoteManifest.Descriptor.digest",
-					parsedRemoteManifest.Descriptor.digest
+					`'docker manifest inspect -v ${remoteDigest}:`,
+					remoteManifest
 				);
-				logger.debug("imageId", imageId);
+				const parsedRemoteManifest = JSON.parse(remoteManifest);
+
 				if (parsedRemoteManifest.Descriptor.digest === imageId) {
 					logger.log("Image already exists remotely, skipping push");
 					logger.debug(
