@@ -1,8 +1,11 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "external-durable-object",
-	"main": "./workers/worker-entrypoint.ts",
+	"name": "module-worker-with-assets",
+	"main": "./workers/module-worker.ts",
 	"compatibility_date": "2025-05-01",
+	"assets": {
+		"directory": "./assets",
+	},
 	"services": [
 		{
 			"binding": "SERVICE_WORKER",
@@ -20,19 +23,15 @@
 			"binding": "WORKER_ENTRYPOINT_WITH_ASSETS",
 			"service": "worker-entrypoint-with-assets",
 		},
+		{
+			"binding": "NAMED_ENTRYPOINT",
+			"service": "unknown-worker",
+			"entrypoint": "UnknownEntrypoint",
+		},
 	],
-	"durable_objects": {
-		"bindings": [
-			{
-				"name": "DURABLE_OBJECT",
-				"class_name": "TestObject",
-				"script_name": "internal-durable-object",
-			},
-		],
-	},
 	"tail_consumers": [
 		{
-			"service": "module-worker",
+			"service": "worker-entrypoint",
 		},
 	],
 }
