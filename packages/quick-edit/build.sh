@@ -1,10 +1,14 @@
 set -eu
 
+cd ../../vendor/vscode
+
 # Build vscode
-node --max-old-space-size=16000 ../../vendor/vscode/node_modules/gulp/bin/gulp.js vscode-web-min
+node --max-old-space-size=16000 ./node_modules/gulp/bin/gulp.js vscode-web-min
 
 # Move the output assets to the assets direcotry for the `quick-edit` Worker
-mv ../../vendor/vscode-web web/assets
+mv ../vscode-web ../../packages/quick-edit/web/assets
+
+cd ../../packages/quick-edit
 
 pnpm esbuild editor-files/workbench.ts --outfile=web/assets/workbench.js
 
