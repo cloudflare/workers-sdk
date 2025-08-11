@@ -107,7 +107,11 @@ afterEach(() => {
 });
 
 const readyRegexp = /Ready on (http:\/\/[a-z0-9.]+:[0-9]+)/;
-async function startWranglerDev(args: string[], skipWaitingForReady = false, envOverrides?: Record<string, string>) {
+async function startWranglerDev(
+	args: string[],
+	skipWaitingForReady = false,
+	envOverrides?: Record<string, string>
+) {
 	const stdoutStream = new stream.PassThrough();
 	const stdoutInterface = rl.createInterface(stdoutStream);
 
@@ -115,10 +119,12 @@ async function startWranglerDev(args: string[], skipWaitingForReady = false, env
 	const exitPromise = new Promise<number>((resolve) => (exitResolve = resolve));
 
 	const pty = await import("@cdktf/node-pty-prebuilt-multiarch");
-	const currentPtyOptions = envOverrides ? {
-		...ptyOptions,
-		env: { ...process.env, ...envOverrides } as Record<string, string>
-	} : ptyOptions;
+	const currentPtyOptions = envOverrides
+		? {
+				...ptyOptions,
+				env: { ...process.env, ...envOverrides } as Record<string, string>,
+			}
+		: ptyOptions;
 	const ptyProcess = pty.spawn(
 		process.execPath,
 		[
