@@ -93,6 +93,7 @@ type Props = {
 	alias: Record<string, string> | undefined;
 	triggers: string[] | undefined;
 	routes: string[] | undefined;
+	domains: string[] | undefined;
 	legacyEnv: boolean | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
@@ -415,9 +416,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	const domainRoutes = (props.domains || []).map((domain) => ({
+		pattern: domain,
+		custom_domain: true,
+	}));
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
-	validateRoutes(routes, props.assetsOptions);
+	const allRoutes = [...routes, ...domainRoutes];
+	validateRoutes(allRoutes, props.assetsOptions);
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
@@ -1049,7 +1055,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	// deploy triggers
-	const targets = await triggersDeploy(props);
+	const targets = await triggersDeploy({
+		...props,
+		routes: allRoutes,
+	});
 
 	logger.log("Current Version ID:", versionId);
 

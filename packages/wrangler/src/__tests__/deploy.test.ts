@@ -1692,6 +1692,161 @@ Update them to point to this script instead?`,
 					'Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again'
 				);
 			});
+			it("should deploy domains passed via --domain flag as custom domains", async () => {
+				writeWranglerConfig({});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [{ hostname: "api.example.com" }],
+				});
+
+				await runWrangler("deploy ./index --domain api.example.com");
+				expect(std.out).toContain("api.example.com (custom domain)");
+			});
+
+			it("should deploy multiple domains passed via --domain flags", async () => {
+				writeWranglerConfig({});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [
+						{ hostname: "api.example.com" },
+						{ hostname: "app.example.com" },
+					],
+				});
+
+				await runWrangler(
+					"deploy ./index --domain api.example.com --domain app.example.com"
+				);
+				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("app.example.com (custom domain)");
+			});
+
+			it("should deploy --domain flags alongside routes (from config when no CLI routes)", async () => {
+				writeWranglerConfig({
+					routes: ["example.com/api/*"],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [{ hostname: "api.example.com" }],
+				});
+				// Mock the regular route deployment for the configured route
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workers/scripts/:scriptName/routes",
+						() => {
+							return HttpResponse.json(
+								{
+									success: true,
+									errors: [],
+									messages: [],
+									result: ["example.com/api/*"],
+								},
+								{ status: 200 }
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler("deploy ./index --domain api.example.com");
+				expect(std.out).toContain("example.com/api/*");
+				expect(std.out).toContain("api.example.com (custom domain)");
+			});
+
+			it("should validate domain flags and reject invalid domains with wildcards", async () => {
+				writeWranglerConfig({});
+				writeWorkerSource();
+
+				await expect(runWrangler("deploy ./index --domain *.example.com"))
+					.rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Invalid Routes:
+					*.example.com:
+					Wildcard operators (*) are not allowed in Custom Domains]
+				`);
+			});
+
+			it("should validate domain flags and reject invalid domains with paths", async () => {
+				writeWranglerConfig({});
+				writeWorkerSource();
+
+				await expect(
+					runWrangler("deploy ./index --domain api.example.com/path")
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Invalid Routes:
+					api.example.com/path:
+					Paths are not allowed in Custom Domains]
+				`);
+			});
+
+			it("should handle both --route and --domain flags together", async () => {
+				writeWranglerConfig({
+					routes: ["config.com/api/*"],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [{ hostname: "api.example.com" }],
+				});
+				// Mock the regular route deployment for the CLI route (should override config)
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workers/scripts/:scriptName/routes",
+						() => {
+							return HttpResponse.json(
+								{
+									success: true,
+									errors: [],
+									messages: [],
+									result: ["cli.com/override/*"],
+								},
+								{ status: 200 }
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler(
+					"deploy ./index --route cli.com/override/* --domain api.example.com"
+				);
+				expect(std.out).toContain("cli.com/override/*");
+				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).not.toContain("config.com/api/*");
+			});
 		});
 
 		describe("deploy asset routes", () => {

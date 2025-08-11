@@ -26,7 +26,7 @@ type Props = {
 	name: string | undefined;
 	env: string | undefined;
 	triggers: string[] | undefined;
-	routes: string[] | undefined;
+	routes: Route[] | undefined;
 	legacyEnv: boolean | undefined;
 	dryRun: boolean | undefined;
 	assetsOptions: AssetsOptions | undefined;
