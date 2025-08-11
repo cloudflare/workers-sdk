@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-app-previews
-    runs-on: ubuntu-22.04
+    runs-on: macos-latest-large
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -69,7 +69,7 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          NODE_OPTIONS: "--max_old_space_size=16000"
+          NODE_OPTIONS: "--max_old_space_size=30000"
 
       - name: Deploy Workers Playground preview
         if: contains(github.event.*.labels.*.name, 'preview:workers-playground')

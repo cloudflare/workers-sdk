@@ -3,7 +3,7 @@ set -eu
 cd ../../vendor/vscode
 
 # Build vscode
-node --max-old-space-size=16000 ./node_modules/gulp/bin/gulp.js vscode-web-min
+node --max-old-space-size=30000 ./node_modules/gulp/bin/gulp.js vscode-web-min
 
 # Move the output assets to the assets direcotry for the `quick-edit` Worker
 mv ../vscode-web ../../packages/quick-edit/web/assets
