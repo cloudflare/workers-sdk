@@ -386,13 +386,15 @@ test("DevRegistry: fetch to module worker with node bindings", async (t) => {
 	t.teardown(() => local.dispose());
 
 	const bindings = await local.getBindings<Record<string, any>>();
-	const res = await bindings.SERVICE.fetch("http://example.com?name=World");
 
-	t.is(
-		await res.text(),
-		`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
-	);
-	t.is(res.status, 503);
+	await waitUntil(t, async (t) => {
+		const res = await bindings.SERVICE.fetch("http://example.com?name=World");
+		t.is(
+			await res.text(),
+			`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+		);
+		t.is(res.status, 503);
+	});
 
 	const remote = new Miniflare({
 		name: "remote-worker",
@@ -460,15 +462,17 @@ test("DevRegistry: RPC to default entrypoint with node bindings", async (t) => {
 
 	const env = await local.getBindings<Record<string, any>>();
 
-	try {
-		const result = await env.SERVICE.ping();
-		t.fail(`Expected error, got result: ${result}`);
-	} catch (e) {
-		t.is(
-			e instanceof Error ? e.message : `${e}`,
-			`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
-		);
-	}
+	await waitUntil(t, async (t) => {
+		try {
+			const result = await env.SERVICE.ping();
+			t.fail(`Expected error, got result: ${result}`);
+		} catch (e) {
+			t.is(
+				e instanceof Error ? e.message : `${e}`,
+				`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+			);
+		}
+	});
 
 	const remote = new Miniflare({
 		name: "remote-worker",
