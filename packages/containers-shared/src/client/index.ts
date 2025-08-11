@@ -30,6 +30,7 @@ export type { ApplicationNotFoundError } from "./models/ApplicationNotFoundError
 export type { ApplicationPriorities } from "./models/ApplicationPriorities";
 export type { ApplicationPriority } from "./models/ApplicationPriority";
 export { ApplicationRollout } from "./models/ApplicationRollout";
+export type { ApplicationRolloutActiveGracePeriod } from "./models/ApplicationRolloutActiveGracePeriod";
 export type { ApplicationRolloutProgress } from "./models/ApplicationRolloutProgress";
 export type { ApplicationSchedulingHint } from "./models/ApplicationSchedulingHint";
 export type { ApplicationStatus } from "./models/ApplicationStatus";
