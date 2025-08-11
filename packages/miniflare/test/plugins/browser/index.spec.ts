@@ -180,17 +180,21 @@ export default {
 };
 `;
 
-test.serial("fails if browser session already in use", async (t) => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: BROWSER_WORKER_ALREADY_USED_SCRIPT,
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+const isWindows = process.platform === "win32";
+(isWindows ? test.skip : test.serial)(
+	"fails if browser session already in use",
+	async (t) => {
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: BROWSER_WORKER_ALREADY_USED_SCRIPT,
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		t.teardown(() => mf.dispose());
 
-	const res = await mf.dispatchFetch("https://localhost");
-	t.is(await res.text(), "Failed to connect to browser session");
-});
+		const res = await mf.dispatchFetch("https://localhost");
+		t.is(await res.text(), "Failed to connect to browser session");
+	}
+);
