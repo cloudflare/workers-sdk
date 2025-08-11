@@ -81,6 +81,7 @@ function createApplicationToModifyApplication(
 		constraints: req.constraints,
 		affinities: req.affinities,
 		scheduling_policy: req.scheduling_policy,
+		rollout_active_grace_period: req.rollout_active_grace_period,
 	};
 }
 
@@ -187,6 +188,7 @@ function containerConfigToCreateRequest(
 		durable_objects: {
 			namespace_id: durableObjectNamespaceId,
 		},
+		rollout_active_grace_period: containerApp.rollout_active_grace_period,
 	};
 }
 
@@ -509,6 +511,7 @@ export function cleanApplicationFromAPI(
 		name: prev.name,
 		scheduling_policy: prev.scheduling_policy,
 		affinities: prev.affinities,
+		rollout_active_grace_period: prev.rollout_active_grace_period,
 	};
 
 	if ("instance_type" in currentConfig) {

@@ -175,6 +175,13 @@ export type ContainerApp = {
 	 * @default "full_auto"
 	 */
 	rollout_kind?: "full_auto" | "none" | "full_manual";
+
+	/**
+	 * Configures the grace period (in seconds) for active instances before being shutdown during a rollout.
+	 * @optional
+	 * @default 0
+	 */
+	rollout_active_grace_period?: number;
 };
 
 /**
