@@ -70,7 +70,16 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const { url } = await worker.waitForReady();
 
-			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
+			let text: string | undefined;
+			for (let i = 0; i < 3; i++) {
+				try {
+					text = (await fetchText(url)) ?? undefined;
+					break;
+				} catch {
+					await setTimeout(400);
+				}
+			}
+			expect(text).toMatchInlineSnapshot(`
 			"LOCAL<WORKER>: Hello from a local worker!
 			REMOTE<WORKER>: Hello from a remote worker
 			"
