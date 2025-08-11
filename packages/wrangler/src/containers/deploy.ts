@@ -17,7 +17,6 @@ import {
 	ApiError,
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
-	DeploymentMutationError,
 	resolveImageName,
 	RolloutsService,
 } from "@cloudflare/containers-shared";
@@ -348,25 +347,21 @@ export async function apply(
 }
 
 function formatError(err: ApiError): string {
-	// TODO: this is bad bad. Please fix like we do in create.ts.
-	// On Cloudchamber API side, we have to improve as well the object validation errors,
-	// so we can detect them here better and pinpoint to the user what's going on.
-	if (
-		err.body.error === DeploymentMutationError.VALIDATE_INPUT &&
-		err.body.details !== undefined
-	) {
-		let message = "";
-		for (const key in err.body.details) {
-			message += `  ${brandColor(key)} ${err.body.details[key]}\n`;
+	try {
+		const maybeError = JSON.parse(err.body.error);
+		if (
+			maybeError.error !== undefined &&
+			maybeError.details !== undefined &&
+			typeof maybeError.details === "object"
+		) {
+			let message = "";
+			for (const key in maybeError.details) {
+				message += `${brandColor(key)} ${maybeError.details[key]}\n`;
+			}
+			return message;
 		}
-
-		return message;
-	}
-
-	if (err.body.error !== undefined) {
-		return `  ${err.body.error}`;
-	}
-
+	} catch {}
+	// if we can't make it pretty, just dump out the error body
 	return JSON.stringify(err.body);
 }
 
@@ -387,7 +382,7 @@ const doAction = async (
 		try {
 			application = await promiseSpinner(
 				ApplicationsService.createApplication(action.application),
-				{ message: `Creating ${action.application.name}` }
+				{ message: `Creating "${action.application.name}"` }
 			);
 		} catch (err) {
 			if (!(err instanceof Error)) {
@@ -395,20 +390,18 @@ const doAction = async (
 			}
 
 			if (!(err instanceof ApiError)) {
-				throw new UserError(
+				throw new FatalError(
 					`Unexpected error creating application: ${err.message}`
 				);
 			}
 
 			if (err.status === 400) {
 				throw new UserError(
-					`Error creating application due to a misconfiguration\n${formatError(err)}`
+					`Error creating application due to a misconfiguration:\n${formatError(err)}`
 				);
 			}
 
-			throw new UserError(
-				`Error creating application due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
-			);
+			throw new UserError(`Error creating application:\n${formatError(err)}`);
 		}
 
 		success(
@@ -432,18 +425,18 @@ const doAction = async (
 
 			if (!(err instanceof ApiError)) {
 				throw new UserError(
-					`Unexpected error modifying application ${action.name}: ${err.message}`
+					`Unexpected error modifying application "${action.name}": ${err.message}`
 				);
 			}
 
 			if (err.status === 400) {
 				throw new UserError(
-					`Error modifying application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
+					`Error modifying application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`
 				);
 			}
 
 			throw new UserError(
-				`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
+				`Error modifying application "${action.name}":\n${formatError(err)}`
 			);
 		}
 
@@ -468,18 +461,18 @@ const doAction = async (
 
 				if (!(err instanceof ApiError)) {
 					throw new UserError(
-						`Unexpected error rolling out application ${action.name}:\n${err.message}`
+						`Unexpected error rolling out application "${action.name}":\n${err.message}`
 					);
 				}
 
 				if (err.status === 400) {
 					throw new UserError(
-						`Error rolling out application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
+						`Error rolling out application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`
 					);
 				}
 
 				throw new UserError(
-					`Error rolling out application ${action.name} due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`
+					`Error rolling out application "${action.name}":\n${formatError(err)}`
 				);
 			}
 		}
