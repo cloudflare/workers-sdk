@@ -11471,7 +11471,6 @@ export default{
 						{
 							queue: queueName,
 							binding: "MY_QUEUE",
-							delivery_delay: 10,
 						},
 					],
 				},

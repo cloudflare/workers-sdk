@@ -371,26 +371,20 @@ function d1DatabaseEntry(
 	return [binding, { id, remoteProxyConnectionString }];
 }
 function queueProducerEntry(
-	{
-		binding,
-		queue_name: queueName,
-		delivery_delay: deliveryDelay,
-		experimental_remote,
-	}: CfQueue,
+	{ binding, queue_name: queueName, experimental_remote }: CfQueue,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
 	{
 		queueName: string;
-		deliveryDelay: number | undefined;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
 	if (!remoteProxyConnectionString || !experimental_remote) {
-		return [binding, { queueName, deliveryDelay }];
+		return [binding, { queueName }];
 	}
 
-	return [binding, { queueName, deliveryDelay, remoteProxyConnectionString }];
+	return [binding, { queueName, remoteProxyConnectionString }];
 }
 function pipelineEntry(pipeline: CfPipeline): [string, string] {
 	return [pipeline.binding, pipeline.pipeline];
