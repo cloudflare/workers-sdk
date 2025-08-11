@@ -75,3 +75,4 @@ export {
 } from "./api";
 
 export { experimental_getWranglerCommands } from "./experimental-commands-api";
+export { createCLIParser } from "./index";
