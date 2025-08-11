@@ -2,6 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import { ApplicationRolloutActiveGracePeriod } from "./ApplicationRolloutActiveGracePeriod";
 import type { ApplicationAffinities } from "./ApplicationAffinities";
 import type { ApplicationConstraints } from "./ApplicationConstraints";
 import type { ApplicationJobsConfig } from "./ApplicationJobsConfig";
@@ -40,4 +41,5 @@ export type CreateApplicationRequest = {
 	durable_objects?: DurableObjectsConfiguration;
 	affinities?: ApplicationAffinities;
 	priorities?: ApplicationPriorities;
+	rollout_active_grace_period?: ApplicationRolloutActiveGracePeriod;
 };
