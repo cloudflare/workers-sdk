@@ -1844,7 +1844,9 @@ Update them to point to this script instead?`,
 					)
 				);
 
-				await runWrangler("deploy ./index --route cli.com/override/* --domain api.example.com");
+				await runWrangler(
+					"deploy ./index --route cli.com/override/* --domain api.example.com"
+				);
 				expect(std.out).toContain("cli.com/override/*");
 				expect(std.out).toContain("api.example.com (custom domain)");
 				expect(std.out).not.toContain("config.com/api/*");

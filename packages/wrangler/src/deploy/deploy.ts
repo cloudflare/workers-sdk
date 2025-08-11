@@ -421,7 +421,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		pattern: domain,
 		custom_domain: true,
 	}));
-	const routes = props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
+	const routes =
+		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 	const allRoutes = [...routes, ...domainRoutes];
 	validateRoutes(allRoutes, props.assetsOptions);
 
