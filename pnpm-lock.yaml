@@ -1731,6 +1731,9 @@ importers:
       find-up:
         specifier: ^6.3.0
         version: 6.3.0
+      glob:
+        specifier: ^10.4.5
+        version: 10.4.5
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
