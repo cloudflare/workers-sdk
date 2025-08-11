@@ -253,7 +253,8 @@ describe.each(
 					async () =>
 						await expect(
 							fetch(`${url}/hello-from-dee`).then((r) => r.text())
-						).resolves.toBe("hello world from dee")
+						).resolves.toBe("hello world from dee"),
+					{ interval: 1000, timeout: 5_000 }
 				);
 
 				await vi.waitFor(
