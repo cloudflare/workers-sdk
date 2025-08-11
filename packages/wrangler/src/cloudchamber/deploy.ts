@@ -24,9 +24,7 @@ export async function buildContainer(
 	const imageFullName = containerConfig.name + ":" + imageTag.split("-")[0];
 	logger.log("Building image", imageFullName);
 
-	// if something already exists on remote, it will be {digest:string} and
-	// otherwise, it will be the new image tag {tag:string}
-	const updatedImageRef = await buildAndMaybePush(
+	return await buildAndMaybePush(
 		{
 			tag: imageFullName,
 			pathToDockerfile: containerConfig.dockerfile,
@@ -37,8 +35,6 @@ export async function buildContainer(
 		!dryRun,
 		containerConfig
 	);
-
-	return updatedImageRef;
 }
 
 export type DeployContainersArgs = {
