@@ -1,19 +1,34 @@
+export interface Env {
+	LOADER: {
+		get(
+			id: string,
+			factory: () => unknown
+		): {
+			getEntrypoint(): Fetcher;
+		};
+	};
+}
+
 export default {
-	async fetch(request) {
+	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
 
-		if (url.pathname === "/x-forwarded-host") {
-			return new Response(request.headers.get("X-Forwarded-Host"));
-		}
+		let worker = env.LOADER.get(url.pathname, () => {
+			return {
+				compatibilityDate: "2025-06-01",
 
-		console.log("__console log__");
-		console.warn("__console warn__");
-		console.error("__console error__");
+				mainModule: "foo.js",
 
-		return new Response("Hello World!");
+				modules: {
+					"foo.js":
+						"export default {\n" +
+						`  fetch(req, env, ctx) { return new Response('Hello with a dynamic worker loaded for ${url.pathname}'); }\n` +
+						"}\n",
+				},
+			};
+		});
+
+		let defaultEntrypoint = worker.getEntrypoint();
+		return await defaultEntrypoint.fetch(request);
 	},
-} satisfies ExportedHandler;
-
-addEventListener("unhandledrejection", (event) => {
-	console.error("__unhandled rejection__");
-});
+};

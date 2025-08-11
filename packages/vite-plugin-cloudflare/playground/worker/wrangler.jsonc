@@ -9,4 +9,12 @@
 			"entrypoint": "NamedEntrypoint",
 		},
 	],
+	"unsafe": {
+		"bindings": [
+			{
+				"name": "LOADER",
+				"type": "worker-loader",
+			},
+		],
+	},
 }

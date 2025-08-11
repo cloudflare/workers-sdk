@@ -977,8 +977,7 @@ export function buildMiniflareBindingOptions(
 		workerLoaders: Object.fromEntries(
 			bindings.unsafe?.bindings
 				?.filter((b) => b.type == "worker-loader")
-				// @ts-expect-error unsafe bindings are not typed
-				.map((binding) => [binding.name, { id: binding.id }]) ?? []
+				.map((binding) => [binding.name, {}]) ?? []
 		),
 		email: {
 			send_email: bindings.send_email,

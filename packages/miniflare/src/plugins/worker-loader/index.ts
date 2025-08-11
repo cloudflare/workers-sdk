@@ -18,11 +18,9 @@ export const WORKER_LOADER_PLUGIN: Plugin<typeof WorkerLoaderOptionsSchema> = {
 			return [];
 		}
 		const bindings = Object.entries(options.workerLoaders).map<Worker_Binding>(
-			([name, config]) => ({
+			([name]) => ({
 				name,
-				workerLoader: {
-					id: config.id,
-				},
+				workerLoader: {},
 			})
 		);
 		return bindings;
