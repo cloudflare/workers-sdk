@@ -144,6 +144,13 @@ export const deployCommand = createCommand({
 			requiresArg: true,
 			array: true,
 		},
+		domains: {
+			describe: "Custom domains to deploy to",
+			alias: "domain",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
 		"jsx-factory": {
 			describe: "The function that is called for each JSX element",
 			type: "string",
@@ -344,6 +351,7 @@ export const deployCommand = createCommand({
 			jsxFragment: args.jsxFragment,
 			tsconfig: args.tsconfig,
 			routes: args.routes,
+			domains: args.domains,
 			assetsOptions,
 			legacyAssetPaths: siteAssetPaths,
 			legacyEnv: isLegacyEnv(config),
