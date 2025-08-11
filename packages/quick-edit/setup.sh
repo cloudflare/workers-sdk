@@ -4,10 +4,10 @@ set -eu
 VERSION="1.102.1"
 
 # Setup for the CI environment
-if [ -n "${CI:-}" ]; then
-    sudo apt-get install -y libkrb5-dev
-    yarn global add node-gyp
-fi
+# if [ -n "${CI:-}" ]; then
+#     sudo apt-get install -y libkrb5-dev
+#     yarn global add node-gyp
+# fi
 
 rm -rf web
 rm -rf ../../vendor/vscode
