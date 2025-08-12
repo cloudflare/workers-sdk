@@ -1,6 +1,6 @@
 import { green, red } from "@cloudflare/cli/colors";
 import { Diff } from "../cloudchamber/helpers/diff";
-import type { Config, RawConfig } from "../config";
+import type { RawConfig } from "../config";
 
 /**
  * Object representing the difference of two configuration objects.
@@ -21,24 +21,30 @@ type ConfigDiff = {
  *
  * @param remoteConfig The remote representation of a Worker's config
  * @param localConfig The local config
- * @param localResolvedConfig The resolved local config (used to resolve some values on the raw config)
  * @returns Object containing the diffing information
  */
 export function getRemoteConfigDiff(
 	remoteConfig: RawConfig,
-	localConfig: RawConfig,
-	localResolvedConfig: Config
+	localConfig: RawConfig
 ): ConfigDiff {
-	const normalizedLocal = normalizeLocalConfigAsRemote(
-		localConfig,
-		localResolvedConfig
-	);
+	const normalizedLocal = normalizeLocalConfigAsRemote(localConfig);
+
+	const remoteConfigClone = structuredClone(remoteConfig);
+
+	if (localConfig.main) {
+		// Note: if present we want to replace the `main` field in the remote config
+		//       with the local one so that no diff will be shown for it while making
+		//       it still visible in the output (we don't want to include `main` in
+		//       the diffing logic because it is very easy for it to change although
+		//       that doesn't really constitute a significative config change)
+		remoteConfigClone.main = localConfig.main;
+	}
 
 	// We reorder the remote config so that its ordering follows that
 	// of the local one (this ensures that the diff users see lists
 	// the configuration options in the same order as their config file)
 	const reorderedRemoteConfig: RawConfig = orderObjectFields(
-		remoteConfig as Record<string, unknown>,
+		remoteConfigClone as Record<string, unknown>,
 		localConfig as Record<string, unknown>
 	);
 
@@ -123,21 +129,12 @@ function configDiffOnlyHasAdditionsIfAny(diff: Diff): boolean {
  * a Worker's config. This includes resolving some values and setting the default values to some others.
  *
  * @param localConfig The local config to normalize
- * @param localResolvedConfig The resolved local config (used to resolve some values on the raw config)
  * @returns The local config normalized, ready to be compared to a remote one
  */
-function normalizeLocalConfigAsRemote(
-	localConfig: RawConfig,
-	localResolvedConfig: Config
-): RawConfig {
+function normalizeLocalConfigAsRemote(localConfig: RawConfig): RawConfig {
 	const asRemoteConfig: RawConfig = Object.fromEntries(
 		Object.entries(localConfig).filter(([key]) => remoteConfigKeys.has(key))
 	);
-
-	if ("main" in asRemoteConfig) {
-		// For the main field we want to consider the normalized/resolved value
-		asRemoteConfig.main = localResolvedConfig.main;
-	}
 
 	if (asRemoteConfig.observability === undefined) {
 		asRemoteConfig.observability = {

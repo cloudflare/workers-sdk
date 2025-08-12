@@ -396,11 +396,7 @@ export default async function deploy(props: Props): Promise<{
 						// in either case the more comprehensive diffing won't kick in
 					}
 					if (rawConfig) {
-						configDiff = getRemoteConfigDiff(
-							remoteWorkerConfig,
-							rawConfig,
-							config
-						);
+						configDiff = getRemoteConfigDiff(remoteWorkerConfig, rawConfig);
 					}
 				}
 

@@ -13012,7 +13012,7 @@ export default{
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour local configuration differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
 
 				      \\"name\\": \\"test-name\\",
-				      \\"main\\": \\"<cwd>/index.js\\",
+				      \\"main\\": \\"./index.js\\",
 				      \\"vars\\": {
 				  -     \\"MY_VAR\\": \\"abc\\"
 				  +     \\"MY_VAR\\": 123
@@ -13077,7 +13077,7 @@ export default{
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour local configuration differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
 
 				      \\"name\\": \\"test-name\\",
-				      \\"main\\": \\"<cwd>/index.js\\",
+				      \\"main\\": \\"./index.js\\",
 				      \\"vars\\": {
 				  -     \\"MY_VAR\\": \\"abc\\"
 				  +     \\"MY_VAR\\": \\"this is a toml file\\"

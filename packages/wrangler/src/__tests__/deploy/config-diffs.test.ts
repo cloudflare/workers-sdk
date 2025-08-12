@@ -1,5 +1,5 @@
 import { getRemoteConfigDiff } from "../../deploy/config-diffs";
-import type { Config, RawConfig } from "../../config";
+import type { RawConfig } from "../../config";
 
 describe("getRemoteConfigsDiff", () => {
 	it("should handle a very simple diffing scenario (no diffs, random order)", () => {
@@ -25,10 +25,7 @@ describe("getRemoteConfigsDiff", () => {
 				tail_consumers: undefined,
 				observability: { enabled: true },
 				limits: undefined,
-			} as unknown as RawConfig,
-			{
-				main: "/tmp/src/index.js",
-			} as Config
+			} as unknown as RawConfig
 		);
 
 		expect(`${diff}`).toEqual("");
@@ -58,10 +55,7 @@ describe("getRemoteConfigsDiff", () => {
 				placement: undefined,
 				tail_consumers: undefined,
 				observability: { enabled: true, head_sampling_rate: 1 },
-			} as unknown as Config,
-			{
-				main: "/tmp/src/index.js",
-			} as Config
+			}
 		);
 
 		expect(`${diff}`).toMatchInlineSnapshot(`
@@ -103,10 +97,7 @@ describe("getRemoteConfigsDiff", () => {
 				},
 				account_id: "377c4d8c370d3a28e89f25ec1887fa71",
 				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
-			} satisfies RawConfig,
-			{
-				main: "/tmp/src/index.js",
-			} as Config
+			}
 		);
 		expect(`${diff}`).toMatchInlineSnapshot(`
 			"    \\"compatibility_date\\": \\"2025-07-08\\",
@@ -155,15 +146,12 @@ describe("getRemoteConfigsDiff", () => {
 					enabled: false,
 				},
 				account_id: "377c4d8c370d3a28e89f25ec1887fa71",
-			} satisfies RawConfig,
-			{
-				main: "/tmp/src/index.js",
-			} as Config
+			}
 		);
 		expect(`${diff}`).toMatchInlineSnapshot(`
 			"  {
 			    \\"name\\": \\"silent-firefly-dbe3\\",
-			    \\"main\\": \\"/tmp/src/index.js\\",
+			    \\"main\\": \\"src/index.js\\",
 			-   \\"compatibility_date\\": \\"2025-07-08\\",
 			+   \\"compatibility_date\\": \\"2025-07-09\\",
 			    \\"observability\\": {
