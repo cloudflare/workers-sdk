@@ -409,7 +409,7 @@ export default async function deploy(props: Props): Promise<{
 					// just using the local config (and override the remote one) should be totally fine
 					if (!configDiff.onlyAdditionsIfAny) {
 						logger.warn(
-							"Your local configuration differs from the remote configuration of your Worker set via the Cloudflare Dashboard, you can see the difference below:" +
+							"Your local configuration differs from the remote configuration of your Worker set via the Cloudflare Dashboard:" +
 								`\n${configDiff.diff}\n\n` +
 								"Deploying the Worker will override the remote configuration with your local one."
 						);
