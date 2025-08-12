@@ -1,5 +1,11 @@
 # @cloudflare/quick-edit
 
+## 0.4.0
+
+### Minor Changes
+
+- [#10047](https://github.com/cloudflare/workers-sdk/pull/10047) [`a4c4c5b`](https://github.com/cloudflare/workers-sdk/commit/a4c4c5bd9597d977d2e93f9d75a3260cf028decb) Thanks [@penalosa](https://github.com/penalosa)! - Bump base VSCode version for Quick Edit & Playground to 1.102.1
+
 ## 0.3.3
 
 ### Patch Changes
