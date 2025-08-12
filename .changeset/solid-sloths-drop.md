@@ -4,7 +4,7 @@
 
 Add information about local vs. dashboard configuration differences on deploys
 
-when a user changes the remote configuration of a Worker and then tries to re-deploy using Wrangler they will received a warning mentioning that some config edits have been made via the dashboard and that those will be overridden by the local configuration. They will also be asked if they want to proceed with the deployment or not.
+When a user changes the remote configuration of a Worker and then tries to re-deploy using Wrangler they will receive a warning mentioning that some config edits have been made via the dashboard and that those will be overridden by the local configuration. They will also be asked if they want to proceed with the deployment or not.
 
 The changes here improve the above flow in the following way:
 
