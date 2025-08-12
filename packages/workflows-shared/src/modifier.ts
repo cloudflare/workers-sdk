@@ -48,13 +48,40 @@ export class InstanceModifier extends RpcTarget {
 		return valueKey;
 	}
 
-	async disableSleeps(): Promise<void> {
-		await this.#state.storage.put("disableSleeps", true);
+	async #getSleepStepDisableKey(step: StepSelector): Promise<string> {
+		let count = 1;
+		if (step.index) {
+			count = step.index;
+		}
+		const sleepNameCountHash = await computeHash(step.name + count);
+
+		return sleepNameCountHash;
+	}
+
+	async disableSleeps(steps?: StepSelector[]): Promise<void> {
+		if (!steps) {
+			await this.#state.storage.put("disableAllSleeps", true);
+		} else {
+			for (const step of steps) {
+				const sleepDisableKey = await this.#getSleepStepDisableKey(step);
+				await this.#state.storage.put(sleepDisableKey, true);
+			}
+		}
 	}
 
 	async mockStepResult(step: StepSelector, stepResult: unknown): Promise<void> {
+		console.log("mocking step result");
 		const valueKey = await this.#getStepCacheKey(step);
 		await this.#state.storage.put(`replace-result-${valueKey}`, stepResult);
+	}
+
+	async mockStepImplementation(
+		_step: StepSelector,
+		_implementation: () => Promise<unknown>
+	): Promise<void> {
+		// TODO
+		// can call the new implementation here and replace the step result - meh
+		// ideally pass the implementation to context so it can race with timeout
 	}
 
 	async mockEvent(event: UserEvent): Promise<void> {
