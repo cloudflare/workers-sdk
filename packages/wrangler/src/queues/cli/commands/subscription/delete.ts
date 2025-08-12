@@ -1,7 +1,10 @@
 import { createCommand } from "../../../../core/create-command";
 import { confirm } from "../../../../dialogs";
 import { logger } from "../../../../logger";
-import { deleteEventSubscription, getEventSubscriptionForQueue } from "../../../client";
+import {
+	deleteEventSubscription,
+	getEventSubscriptionForQueue,
+} from "../../../client";
 
 export const queuesSubscriptionDeleteCommand = createCommand({
 	metadata: {
@@ -29,7 +32,11 @@ export const queuesSubscriptionDeleteCommand = createCommand({
 		},
 	},
 	async handler(args, { config }) {
-		const subscription = await getEventSubscriptionForQueue(config, args.queue, args.id);
+		const subscription = await getEventSubscriptionForQueue(
+			config,
+			args.queue,
+			args.id
+		);
 
 		if (!args.force) {
 			const confirmedDelete = await confirm(

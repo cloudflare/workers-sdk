@@ -29,7 +29,11 @@ export const queuesSubscriptionGetCommand = createCommand({
 		},
 	},
 	async handler(args, { config }) {
-		const subscription = await getEventSubscriptionForQueue(config, args.queue, args.id);
+		const subscription = await getEventSubscriptionForQueue(
+			config,
+			args.queue,
+			args.id
+		);
 
 		if (args.json) {
 			logger.log(JSON.stringify(subscription, null, 2));

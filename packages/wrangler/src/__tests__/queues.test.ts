@@ -2847,6 +2847,7 @@ describe("wrangler", () => {
 						worker_name: "my-worker",
 					},
 					destination: {
+						type: "queues.queue",
 						queue_id: "queue-id-1",
 					},
 					events: ["build.completed"],
@@ -2886,6 +2887,7 @@ describe("wrangler", () => {
 						worker_name: "my-worker",
 					},
 					destination: {
+						type: "queues.queue",
 						queue_id: "queue-id-1",
 					},
 					events: ["build.completed"],
