@@ -843,6 +843,109 @@ describe("wrangler deploy with containers", () => {
 		);
 	});
 
+	describe("rollout_percentage_steps", () => {
+		it("should create rollout with step_percentage when rollout_step_percentage is a number", async () => {
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						rollout_step_percentage: 50,
+					},
+				],
+			});
+
+			mockGetVersion("Galaxy-Class");
+
+			mockGetApplications([]);
+
+			mockCreateApplication();
+
+			mockCreateApplicationRollout({
+				description: "Progressive update",
+				strategy: "rolling",
+				kind: "full_auto",
+				step_percentage: 50,
+			});
+
+			fs.writeFileSync(
+				"index.js",
+				`export class ExampleDurableObject {}; export default{};`
+			);
+			await runWrangler("deploy index.js");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should create rollout with step_percentage when rollout_step_percentage is a number", async () => {
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						rollout_step_percentage: [20, 30, 50],
+					},
+				],
+			});
+
+			mockGetVersion("Galaxy-Class");
+
+			mockGetApplications([
+				{
+					id: "abc",
+					name: "my-container",
+					instances: 0,
+					max_instances: 2,
+					created_at: new Date().toString(),
+					version: 1,
+					account_id: "1",
+					scheduling_policy: SchedulingPolicy.DEFAULT,
+					configuration: {
+						image: "registry.cloudflare.com/some-account-id/my-container:old",
+						disk: {
+							size: "2GB",
+							size_mb: 2000,
+						},
+						vcpu: 0.0625,
+						memory: "256MB",
+						memory_mib: 256,
+					},
+					constraints: {
+						tier: 1,
+					},
+					durable_objects: {
+						namespace_id: "1",
+					},
+				},
+			]);
+
+			mockModifyApplication();
+
+			mockCreateApplicationRollout({
+				description: "Progressive update",
+				strategy: "rolling",
+				kind: "full_auto",
+				steps: [
+					{
+						step_size: { percentage: 20 },
+						description: "Step 1 of 3 applying to 20% of instances",
+					},
+					{
+						step_size: { percentage: 30 },
+						description: "Step 2 of 3 applying to 30% of instances",
+					},
+					{
+						step_size: { percentage: 50 },
+						description: "Step 3 of 3 applying to 50% of instances",
+					},
+				],
+			});
+			await runWrangler("deploy index.js");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+	});
+
 	describe("observability config resolution", () => {
 		const sharedGetApplicationResult = {
 			id: "abc",
@@ -1531,7 +1634,6 @@ function mockCreateApplication(expected?: Partial<Application>) {
 	msw.use(
 		http.post("*/applications", async ({ request }) => {
 			const json = await request.json();
-
 			if (expected !== undefined) {
 				expect(json).toMatchObject(expected);
 			}

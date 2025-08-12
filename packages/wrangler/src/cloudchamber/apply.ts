@@ -24,6 +24,7 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { formatConfigSnippet } from "../config";
+import { configRolloutStepsToAPI } from "../containers/deploy";
 import { FatalError, UserError } from "../errors";
 import { getAccountId } from "../user";
 import {
@@ -338,7 +339,7 @@ export async function apply(
 				application: ModifyApplicationRequestBody;
 				id: ApplicationID;
 				name: ApplicationName;
-				rollout_step_percentage?: number;
+				rollout_step_percentage?: number | number[];
 				rollout_kind: CreateApplicationRolloutRequest.kind;
 		  }
 	)[] = [];
@@ -593,7 +594,7 @@ export async function apply(
 							target_configuration:
 								(action.application
 									.configuration as ModifyDeploymentV2RequestBody) ?? {},
-							step_percentage: action.rollout_step_percentage,
+							...configRolloutStepsToAPI(action.rollout_step_percentage),
 							kind: action.rollout_kind,
 						}),
 						{

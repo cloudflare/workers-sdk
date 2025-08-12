@@ -2556,19 +2556,58 @@ function validateContainerApp(
 			containerAppOptional.image = resolvedImage;
 			containerAppOptional.image_build_context = resolvedBuildContextPath;
 
-			// Validate rollout related configs
-			if (
-				!isOptionalProperty(
-					containerAppOptional,
-					"rollout_step_percentage",
-					"number"
-				) ||
-				containerAppOptional.rollout_step_percentage > 100 ||
-				containerAppOptional.rollout_step_percentage < 25
-			) {
-				diagnostics.errors.push(
-					`"containers.rollout_step_percentage" field should be a number between 25 and 100, but got "${containerAppOptional.rollout_step_percentage}"`
-				);
+			// Validate rollout related configuration
+			if (containerAppOptional.rollout_step_percentage !== undefined) {
+				const rolloutStep = containerAppOptional.rollout_step_percentage;
+
+				if (typeof rolloutStep === "number") {
+					// If it's a number, it must be one of the allowed values
+					const allowedSingleValues = [5, 10, 20, 25, 50, 100];
+					if (!allowedSingleValues.includes(rolloutStep)) {
+						diagnostics.errors.push(
+							`"containers.rollout_step_percentage" must be one of [5, 10, 20, 25, 50, 100], but got ${rolloutStep}`
+						);
+					}
+				} else if (Array.isArray(rolloutStep)) {
+					// If it's an array, validate each step and ensure they sum to 100
+					const nonNumber: unknown[] = [];
+					const outOfRange: number[] = [];
+					for (const step of rolloutStep) {
+						if (typeof step !== "number") {
+							nonNumber.push(step);
+						} else if (step < 10 || step > 100) {
+							outOfRange.push(step);
+						}
+					}
+
+					// Only check sum if no type/range errors
+
+					if (nonNumber.length === 0 && outOfRange.length === 0) {
+						const sum = rolloutStep.reduce(
+							(acc: number, step: number) => acc + step,
+							0
+						);
+						if (sum !== 100) {
+							diagnostics.errors.push(
+								`"containers.rollout_step_percentage" array elements must sum to 100, but values summed to "${sum}"`
+							);
+						}
+					}
+					if (nonNumber.length) {
+						diagnostics.errors.push(
+							`"containers.rollout_step_percentage" array elements must be numbers, but got "${nonNumber.join(", ")}"`
+						);
+					}
+					if (outOfRange.length) {
+						diagnostics.errors.push(
+							`"containers.rollout_step_percentage" array elements must be between 10 and 100, but got "${outOfRange.join(", ")}"`
+						);
+					}
+				} else {
+					diagnostics.errors.push(
+						`"containers.rollout_step_percentage" must be a number or array of numbers, but got "${rolloutStep}"`
+					);
+				}
 			}
 			validateOptionalProperty(
 				diagnostics,
