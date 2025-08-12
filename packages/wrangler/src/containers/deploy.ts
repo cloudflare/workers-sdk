@@ -40,6 +40,7 @@ import type {
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 	Observability as ObservabilityConfiguration,
+	RolloutStepRequest,
 } from "@cloudflare/containers-shared";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
@@ -372,7 +373,7 @@ const doAction = async (
 				application: ModifyApplicationRequestBody;
 				id: ApplicationID;
 				name: ApplicationName;
-				rollout_step_percentage?: number;
+				rollout_step_percentage: number | number[];
 				rollout_kind: CreateApplicationRolloutRequest.kind;
 		  }
 ) => {
@@ -439,24 +440,23 @@ const doAction = async (
 			);
 		}
 
-		if (action.rollout_step_percentage !== undefined) {
-			try {
-				await promiseSpinner(
-					RolloutsService.createApplicationRollout(action.id, {
-						description: "Progressive update",
-						strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
-						target_configuration: action.application.configuration ?? {},
-						step_percentage: action.rollout_step_percentage,
-						kind: action.rollout_kind,
-					}),
-					{
-						message: `rolling out container version ${action.name}`,
-					}
-				);
-			} catch (err) {
-				if (!(err instanceof Error)) {
-					throw err;
+		try {
+			await promiseSpinner(
+				RolloutsService.createApplicationRollout(action.id, {
+					description: "Progressive update",
+					strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
+					target_configuration: action.application.configuration ?? {},
+					...configRolloutStepsToAPI(action.rollout_step_percentage),
+					kind: action.rollout_kind,
+				}),
+				{
+					message: `rolling out container version ${action.name}`,
 				}
+			);
+		} catch (err) {
+			if (!(err instanceof Error)) {
+				throw err;
+			}
 
 				if (!(err instanceof ApiError)) {
 					throw new UserError(
@@ -524,3 +524,20 @@ export function cleanApplicationFromAPI(
 
 	return cleanedPreviousApp;
 }
+
+export const configRolloutStepsToAPI = (rolloutSteps: number | number[]) => {
+	if (typeof rolloutSteps === "number") {
+		return { step_percentage: rolloutSteps };
+	} else {
+		const output: RolloutStepRequest[] = [];
+		let index = 1;
+		for (const step of rolloutSteps) {
+			output.push({
+				step_size: { percentage: step },
+				description: `Step ${index} of ${rolloutSteps.length} applying to ${step}% of instances`,
+			});
+			index++;
+		}
+		return { steps: output };
+	}
+};
