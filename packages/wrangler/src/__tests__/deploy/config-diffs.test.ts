@@ -6,7 +6,7 @@ describe("getRemoteConfigsDiff", () => {
 		const { diff, onlyAdditionsIfAny } = getRemoteConfigDiff(
 			{
 				name: "silent-firefly-dbe3",
-				main: "/Users/dario/Desktop/silent-firefly-dbe3/src/index.js",
+				main: "/tmp/src/index.js",
 				workers_dev: true,
 				compatibility_date: "2025-07-08",
 				compatibility_flags: undefined,
@@ -27,7 +27,7 @@ describe("getRemoteConfigsDiff", () => {
 				limits: undefined,
 			} as unknown as RawConfig,
 			{
-				main: "/Users/dario/Desktop/silent-firefly-dbe3/src/index.js",
+				main: "/tmp/src/index.js",
 			} as Config
 		);
 
@@ -39,7 +39,7 @@ describe("getRemoteConfigsDiff", () => {
 		const { diff, onlyAdditionsIfAny } = getRemoteConfigDiff(
 			{
 				name: "silent-firefly-dbe3",
-				main: "/Users/dario/Desktop/silent-firefly-dbe3/src/index.js",
+				main: "/tmp/src/index.js",
 				workers_dev: true,
 				compatibility_date: "2025-07-08",
 				compatibility_flags: undefined,
@@ -50,7 +50,7 @@ describe("getRemoteConfigsDiff", () => {
 			},
 			{
 				compatibility_date: "2025-07-09",
-				main: "/Users/dario/Desktop/silent-firefly-dbe3/src/index.js",
+				main: "/tmp/src/index.js",
 				compatibility_flags: undefined,
 				name: "silent-firefly-dbe3",
 				workers_dev: true,
@@ -60,7 +60,7 @@ describe("getRemoteConfigsDiff", () => {
 				observability: { enabled: true, head_sampling_rate: 1 },
 			} as unknown as Config,
 			{
-				main: "/Users/dario/Desktop/silent-firefly-dbe3/src/index.js",
+				main: "/tmp/src/index.js",
 			} as Config
 		);
 
@@ -68,7 +68,7 @@ describe("getRemoteConfigsDiff", () => {
 			"  {
 			-   \\"compatibility_date\\": \\"2025-07-08\\",
 			+   \\"compatibility_date\\": \\"2025-07-09\\",
-			    \\"main\\": \\"/Users/dario/Desktop/silent-firefly-dbe3/src/index.js\\",
+			    \\"main\\": \\"/tmp/src/index.js\\",
 			    \\"name\\": \\"silent-firefly-dbe3\\",
 			    \\"workers_dev\\": true,"
 		`);
@@ -79,7 +79,7 @@ describe("getRemoteConfigsDiff", () => {
 		const { diff, onlyAdditionsIfAny } = getRemoteConfigDiff(
 			{
 				name: "silent-firefly-dbe3",
-				main: "/Users/dario/Desktop/silent-firefly-dbe3/src/index.js",
+				main: "/tmp/src/index.js",
 				workers_dev: true,
 				compatibility_date: "2025-07-08",
 				compatibility_flags: undefined,
@@ -105,7 +105,7 @@ describe("getRemoteConfigsDiff", () => {
 				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
 			} satisfies RawConfig,
 			{
-				main: "/Users/dario/Desktop/silent-firefly-dbe3/src/index.js",
+				main: "/tmp/src/index.js",
 			} as Config
 		);
 		expect(`${diff}`).toMatchInlineSnapshot(`
@@ -136,7 +136,7 @@ describe("getRemoteConfigsDiff", () => {
 		const { diff, onlyAdditionsIfAny } = getRemoteConfigDiff(
 			{
 				name: "silent-firefly-dbe3",
-				main: "/Users/dario/Desktop/silent-firefly-dbe3/src/index.js",
+				main: "/tmp/src/index.js",
 				workers_dev: true,
 				compatibility_date: "2025-07-08",
 				compatibility_flags: undefined,
@@ -157,13 +157,13 @@ describe("getRemoteConfigsDiff", () => {
 				account_id: "377c4d8c370d3a28e89f25ec1887fa71",
 			} satisfies RawConfig,
 			{
-				main: "/Users/dario/Desktop/silent-firefly-dbe3/src/index.js",
+				main: "/tmp/src/index.js",
 			} as Config
 		);
 		expect(`${diff}`).toMatchInlineSnapshot(`
 			"  {
 			    \\"name\\": \\"silent-firefly-dbe3\\",
-			    \\"main\\": \\"/Users/dario/Desktop/silent-firefly-dbe3/src/index.js\\",
+			    \\"main\\": \\"/tmp/src/index.js\\",
 			-   \\"compatibility_date\\": \\"2025-07-08\\",
 			+   \\"compatibility_date\\": \\"2025-07-09\\",
 			    \\"observability\\": {
