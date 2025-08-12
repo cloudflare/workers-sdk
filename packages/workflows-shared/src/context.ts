@@ -464,7 +464,13 @@ export class Context extends RpcTarget {
 		const sleepLogWrittenKey = `${cacheKey}-log-written`;
 		const maybeResult = await this.#state.storage.get(sleepKey);
 
-		const disableSleeps = await this.#state.storage.get("disableSleeps");
+		const sleepNameCountHash = await computeHash(
+			name + this.#getCount("sleep-" + name)
+		);
+		const disableThisSleep = await this.#state.storage.get(sleepNameCountHash);
+		const disableAllSleeps = await this.#state.storage.get("disableAllSleeps");
+
+		const disableSleep = disableAllSleeps || disableThisSleep;
 
 		if (maybeResult != undefined) {
 			// @ts-expect-error priorityQueue is initiated in init
@@ -474,7 +480,7 @@ export class Context extends RpcTarget {
 			// in case the engine dies while sleeping and wakes up before the retry period
 			if (entryPQ !== undefined) {
 				await scheduler.wait(
-					disableSleeps ? 0 : entryPQ.targetTimestamp - Date.now()
+					disableSleep ? 0 : entryPQ.targetTimestamp - Date.now()
 				);
 				// @ts-expect-error priorityQueue is initiated in init
 				this.#engine.priorityQueue.remove({ hash: cacheKey, type: "sleep" });
@@ -513,13 +519,12 @@ export class Context extends RpcTarget {
 		// @ts-expect-error priorityQueue is initiated in init
 		await this.#engine.priorityQueue.add({
 			hash: cacheKey,
-			targetTimestamp: Date.now() + (disableSleeps ? 0 : duration),
+			targetTimestamp: Date.now() + (disableSleep ? 0 : duration),
 			type: "sleep",
 		});
 
-		console.log("disable sleeps:", disableSleeps);
 		// this probably will never finish except if sleep is less than the grace period
-		await scheduler.wait(disableSleeps ? 0 : duration);
+		await scheduler.wait(disableSleep ? 0 : duration);
 
 		this.#engine.writeLog(
 			InstanceEvent.SLEEP_COMPLETE,
