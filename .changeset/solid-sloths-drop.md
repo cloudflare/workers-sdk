@@ -2,11 +2,11 @@
 "wrangler": minor
 ---
 
-Add information about local vs. dashboard configuration differences on deploys
+Show possible local vs. dashboard diff information on deploys
 
-When a user changes the remote configuration of a Worker and then tries to re-deploy using Wrangler they will receive a warning mentioning that some config edits have been made via the dashboard and that those will be overridden by the local configuration. They will also be asked if they want to proceed with the deployment or not.
+When re-deploying a Worker using `wrangler deploy`, if the configuration has been modified in the Cloudflare dashboard, the local configuration will overwrite the remote one. This can lead to unexpected results for users. To address this, currently `wrangler deploy` warns users about potential configuration overrides (without presenting them) and prompts them to confirm whether they want to proceed.
 
 The changes here improve the above flow in the following way:
 
-- if the local changes are only adding configurations the deployment happens without warning the users nor asking for their permissions (since no conflict/data loss happens in this case it should be totally safe to just proceed without inconveniencing users)
-- if the local changes are modifying/removing configurations then the differences from the dashboard configurations and the local ones are presented to the user (in a git-like diff format), so that they can know and understand the changes before deciding whether or not they do want to proceed with the deployment
+- If the local changes only add new configurations (without modifying or removing existing ones), the deployment proceeds automatically without warnings or prompts, as these changes are non-destructive and safe.
+- If the local changes modify or remove existing configurations, `wrangler deploy` now displays a git-like diff showing the differences between the dashboard and local configurations. This allows users to review and understand the impact of their changes before confirming the deployment.
