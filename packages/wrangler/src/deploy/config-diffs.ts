@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { green, red } from "@cloudflare/cli/colors";
 import { Diff } from "../cloudchamber/helpers/diff";
 import type { RawConfig } from "../config";
@@ -27,30 +28,13 @@ export function getRemoteConfigDiff(
 	remoteConfig: RawConfig,
 	localConfig: RawConfig
 ): ConfigDiff {
-	const normalizedLocal = normalizeLocalConfigAsRemote(localConfig);
-
-	const remoteConfigClone = structuredClone(remoteConfig);
-
-	if (localConfig.main) {
-		// Note: if present we want to replace the `main` field in the remote config
-		//       with the local one so that no diff will be shown for it while making
-		//       it still visible in the output (we don't want to include `main` in
-		//       the diffing logic because it is very easy for it to change although
-		//       that doesn't really constitute a significative config change)
-		remoteConfigClone.main = localConfig.main;
-	}
-
-	// We reorder the remote config so that its ordering follows that
-	// of the local one (this ensures that the diff users see lists
-	// the configuration options in the same order as their config file)
-	const reorderedRemoteConfig: RawConfig = orderObjectFields(
-		remoteConfigClone as Record<string, unknown>,
-		localConfig as Record<string, unknown>
-	);
-
 	const diff = new Diff(
-		JSON.stringify(reorderedRemoteConfig, null, 2),
-		JSON.stringify(normalizedLocal, null, 2)
+		JSON.stringify(
+			normalizeRemoteConfigAsLocal(remoteConfig, localConfig),
+			null,
+			2
+		),
+		JSON.stringify(localConfig, null, 2)
 	);
 
 	return {
@@ -125,48 +109,124 @@ function configDiffOnlyHasAdditionsIfAny(diff: Diff): boolean {
 }
 
 /**
- * Normalizes a local config object into an object that can be compared to the remote representation of
- * a Worker's config. This includes resolving some values and setting the default values to some others.
+ * Normalizes a remote config object (or more precisely our representation of it) into an object that can be
+ * compared to the local target config.
  *
- * @param localConfig The local config to normalize
- * @returns The local config normalized, ready to be compared to a remote one
+ * The normalization is comprized of:
+ *  - making sure that the various config fields are in the same order
+ *  - adding to the remote config object all the non-remote config keys
+ *  - removing from the remote config all the default values that in the local config are either not present or undefined
+ *
+ * Important: This operation is important to make sure that the diff out presented to the user looks as close as possible
+ *            to their real local configuration. For this reason we do not want to change anything in the local config
+ *            and all the changes to adapt the two need to be done on the remote one
+ *
+ * @param remoteConfig The remote config object to normalize
+ * @param localConfig The target/local config object
+ * @returns The remote config object normalized and ready to be compared with the local one
  */
-function normalizeLocalConfigAsRemote(localConfig: RawConfig): RawConfig {
-	const asRemoteConfig: RawConfig = Object.fromEntries(
-		Object.entries(localConfig).filter(([key]) => remoteConfigKeys.has(key))
-	);
+function normalizeRemoteConfigAsLocal(
+	remoteConfig: RawConfig,
+	localConfig: RawConfig
+): RawConfig {
+	let normalizedRemote: RawConfig = structuredClone(remoteConfig);
 
-	if (asRemoteConfig.observability === undefined) {
-		asRemoteConfig.observability = {
+	Object.entries(localConfig).forEach(([key, value]) => {
+		// Note: we want to copy all the non-remote keys in the local config onto
+		//       the remote one, so that in the diffing output those keys will appear
+		//       and without being shown/detected as additions
+		if (
+			!remoteConfigKeys.has(key) ||
+			// We also include `main` here since this field can easily change but
+			// it changing does not really constitute a relevant config change
+			key === "main"
+		) {
+			normalizedRemote[key as keyof RawConfig] = value;
+		}
+	});
+
+	if (
+		deepStrictEqual(normalizedRemote.observability, {
 			enabled: true,
 			head_sampling_rate: 1,
-		};
-	}
+		})
+	) {
+		// the `observability` field in the remote config is to its default value
 
-	if (asRemoteConfig.observability.enabled === undefined) {
-		asRemoteConfig.observability.enabled = true;
-	}
+		if (!("observability" in localConfig)) {
+			// If `observability` is not in the local config we also remote it from the remote one
+			delete normalizedRemote.observability;
+		}
 
-	// The remote config defaults `head_sampling_rate` to `1`
-	// while wrangler defaults it to `undefined`
-	if (asRemoteConfig.observability.head_sampling_rate === undefined) {
-		asRemoteConfig.observability.head_sampling_rate = 1;
+		if (localConfig.observability === undefined) {
+			// If `observability` is `undefined` in the local config we make sure the same applies to the remote one
+			normalizedRemote.observability = undefined;
+		}
 	}
 
 	if (
-		asRemoteConfig.observability.logs &&
-		asRemoteConfig.observability.logs.enabled === undefined
+		normalizedRemote.observability &&
+		localConfig.observability &&
+		normalizedRemote.observability.enabled === true
 	) {
-		asRemoteConfig.observability.logs.enabled = true;
+		if (!("enabled" in localConfig.observability)) {
+			delete normalizedRemote.observability.enabled;
+		}
+
+		if (localConfig.observability.enabled === undefined) {
+			normalizedRemote.observability.enabled = undefined;
+		}
 	}
 
-	if (asRemoteConfig.workers_dev === undefined) {
-		// The remote config defaults `workers_dev` to `true`
-		// while wrangler defaults it to `undefined`
-		asRemoteConfig.workers_dev = true;
+	if (
+		normalizedRemote.observability &&
+		localConfig.observability &&
+		normalizedRemote.observability?.head_sampling_rate === 1
+	) {
+		if (!("head_sampling_rate" in localConfig.observability)) {
+			delete normalizedRemote.observability.head_sampling_rate;
+		}
+
+		if (localConfig.observability.head_sampling_rate === undefined) {
+			normalizedRemote.observability.head_sampling_rate = undefined;
+		}
 	}
 
-	return asRemoteConfig;
+	if (
+		normalizedRemote.observability?.logs &&
+		localConfig.observability?.logs &&
+		normalizedRemote.observability.logs.enabled === true
+	) {
+		if (!("enabled" in localConfig.observability.logs)) {
+			delete normalizedRemote.observability.logs.enabled;
+		}
+
+		if (localConfig.observability.logs.enabled === undefined) {
+			normalizedRemote.observability.enabled = undefined;
+		}
+	}
+
+	if (normalizedRemote.workers_dev === true) {
+		if (!("workers_dev" in localConfig)) {
+			// If `workers_dev` is not in the local config we also remote it from the remote one
+			delete normalizedRemote.workers_dev;
+		}
+
+		if (localConfig.workers_dev === undefined) {
+			// If `workers_dev` is `undefined` in the local config we make sure the same applies to the remote one
+			normalizedRemote.workers_dev = undefined;
+		}
+	}
+
+	// We reorder the remote config so that its ordering follows that
+	// of the local one (this ensures that the diff users see lists
+	// the configuration options in the same order as their config file)
+	normalizedRemote = orderObjectFields(
+		normalizedRemote as Record<string, unknown>,
+		localConfig as Record<string, unknown>
+	);
+
+	return normalizedRemote;
 }
 
 /**
@@ -295,3 +355,12 @@ const remoteConfigKeys = new Set<string>([
 	"unsafe",
 	"workflows",
 ] satisfies (keyof RawConfig)[]);
+
+function deepStrictEqual(source: unknown, target: unknown): boolean {
+	try {
+		assert.deepStrictEqual(source, target);
+		return true;
+	} catch {
+		return false;
+	}
+}

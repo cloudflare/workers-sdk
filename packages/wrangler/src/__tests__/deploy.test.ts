@@ -13018,7 +13018,7 @@ export default{
 				  +     \\"MY_VAR\\": 123
 				      },
 				      \\"observability\\": {
-				        \\"enabled\\": true,
+				        \\"enabled\\": true
 
 				  Deploying the Worker will override the remote configuration with your local one.
 
@@ -13083,7 +13083,7 @@ export default{
 				  +     \\"MY_VAR\\": \\"this is a toml file\\"
 				      },
 				      \\"observability\\": {
-				        \\"enabled\\": true,
+				        \\"enabled\\": true
 
 				  Deploying the Worker will override the remote configuration with your local one.
 

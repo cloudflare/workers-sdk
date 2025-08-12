@@ -95,7 +95,7 @@ describe("getRemoteConfigsDiff", () => {
 						invocation_logs: true,
 					},
 				},
-				account_id: "377c4d8c370d3a28e89f25ec1887fa71",
+				account_id: "account-id-123",
 				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
 			}
 		);
@@ -107,17 +107,17 @@ describe("getRemoteConfigsDiff", () => {
 			+     \\"head_sampling_rate\\": 1,
 			+     \\"logs\\": {
 			+       \\"head_sampling_rate\\": 0.95,
-			+       \\"invocation_logs\\": true,
-			+       \\"enabled\\": true
+			+       \\"invocation_logs\\": true
 			+     }
 			    },
+			-   \\"account_id\\": \\"account-id-123\\"
+			+   \\"account_id\\": \\"account-id-123\\",
 			+   \\"kv_namespaces\\": [
 			+     {
 			+       \\"binding\\": \\"MY_KV\\",
 			+       \\"id\\": \\"my-kv-123\\"
 			+     }
-			+   ],
-			    \\"workers_dev\\": true
+			+   ]
 			  }"
 		`);
 		expect(nonDestructive).toBe(true);
@@ -145,22 +145,21 @@ describe("getRemoteConfigsDiff", () => {
 				observability: {
 					enabled: false,
 				},
-				account_id: "377c4d8c370d3a28e89f25ec1887fa71",
+				account_id: "account-id-123",
 			}
 		);
 		expect(`${diff}`).toMatchInlineSnapshot(`
-			"  {
+			"    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
 			    \\"name\\": \\"silent-firefly-dbe3\\",
 			    \\"main\\": \\"src/index.js\\",
 			-   \\"compatibility_date\\": \\"2025-07-08\\",
 			+   \\"compatibility_date\\": \\"2025-07-09\\",
 			    \\"observability\\": {
-			-     \\"enabled\\": true,
-			+     \\"enabled\\": false,
-			      \\"head_sampling_rate\\": 1
+			-     \\"enabled\\": true
+			+     \\"enabled\\": false
 			    },
-			-   \\"workers_dev\\": true,
-			+   \\"workers_dev\\": true
+			-   \\"account_id\\": \\"account-id-123\\",
+			+   \\"account_id\\": \\"account-id-123\\"
 			-   \\"kv_namespaces\\": [
 			-     {
 			-       \\"binding\\": \\"MY_KV\\",
