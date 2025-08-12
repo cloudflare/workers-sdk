@@ -3,7 +3,7 @@ import type { Config, RawConfig } from "../../config";
 
 describe("getRemoteConfigsDiff", () => {
 	it("should handle a very simple diffing scenario (no diffs, random order)", () => {
-		const { diff, onlyAdditionsIfAny } = getRemoteConfigDiff(
+		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
 				name: "silent-firefly-dbe3",
 				main: "/tmp/src/index.js",
@@ -32,11 +32,11 @@ describe("getRemoteConfigsDiff", () => {
 		);
 
 		expect(`${diff}`).toEqual("");
-		expect(onlyAdditionsIfAny).toBe(true);
+		expect(nonDestructive).toBe(true);
 	});
 
 	it("should handle a very simple diffing scenario (some diffs, random order)", () => {
-		const { diff, onlyAdditionsIfAny } = getRemoteConfigDiff(
+		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
 				name: "silent-firefly-dbe3",
 				main: "/tmp/src/index.js",
@@ -72,11 +72,11 @@ describe("getRemoteConfigsDiff", () => {
 			    \\"name\\": \\"silent-firefly-dbe3\\",
 			    \\"workers_dev\\": true,"
 		`);
-		expect(onlyAdditionsIfAny).toBe(false);
+		expect(nonDestructive).toBe(false);
 	});
 
 	it("should handle a diffing scenario with only additions", () => {
-		const { diff, onlyAdditionsIfAny } = getRemoteConfigDiff(
+		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
 				name: "silent-firefly-dbe3",
 				main: "/tmp/src/index.js",
@@ -129,11 +129,11 @@ describe("getRemoteConfigsDiff", () => {
 			    \\"workers_dev\\": true
 			  }"
 		`);
-		expect(onlyAdditionsIfAny).toBe(true);
+		expect(nonDestructive).toBe(true);
 	});
 
 	it("should handle a diffing scenario with modifications and removals", () => {
-		const { diff, onlyAdditionsIfAny } = getRemoteConfigDiff(
+		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
 				name: "silent-firefly-dbe3",
 				main: "/tmp/src/index.js",
@@ -181,6 +181,6 @@ describe("getRemoteConfigsDiff", () => {
 			-   ]
 			  }"
 		`);
-		expect(onlyAdditionsIfAny).toBe(false);
+		expect(nonDestructive).toBe(false);
 	});
 });

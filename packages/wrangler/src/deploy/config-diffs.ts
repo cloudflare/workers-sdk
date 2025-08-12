@@ -8,8 +8,12 @@ import type { Config, RawConfig } from "../config";
 type ConfigDiff = {
 	/** The actual (raw) computed diff of the two objects */
 	diff: Diff;
-	/** Boolean indicating whether the difference is not present or only comprized of the addition of configuration options */
-	onlyAdditionsIfAny: boolean;
+	/**
+	 * Flag indicating whether the difference includes some destructive changes.
+	 *
+	 * In other words, if the second config is not applying any change or only adding options, such diff is considered non destructive, on the other hand if the config is removing or modifying values it is considered destructive instead.
+	 */
+	nonDestructive: boolean;
 };
 
 /**
@@ -45,7 +49,7 @@ export function getRemoteConfigDiff(
 
 	return {
 		diff,
-		onlyAdditionsIfAny: configDiffOnlyHasAdditionsIfAny(diff),
+		nonDestructive: configDiffOnlyHasAdditionsIfAny(diff),
 	};
 }
 
