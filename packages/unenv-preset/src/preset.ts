@@ -257,12 +257,11 @@ function getFsOverrides({
 	// TODO: add `enabledByDate` when a default date is set
 	const enabled = enabledByFlag && !disabledByFlag;
 
-	// The native `fs` module is missing a few APIs so we need an hybrid polyfill
-	// The native `fs/promises` implements all the node APIs so we can use it directly
+	// The native `fs` and `fs/promises` modules implement all the node APIs so we can use them directly
 	return enabled
 		? {
-				nativeModules: ["fs/promises"],
-				hybridModules: ["fs"],
+				nativeModules: ["fs/promises", "fs"],
+				hybridModules: [],
 			}
 		: {
 				nativeModules: [],
