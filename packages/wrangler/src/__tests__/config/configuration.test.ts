@@ -2465,7 +2465,7 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("and some more invalid container fields", () => {
+			it("should error if rollout_active_grace_period and rollout_step_percentage are out of range", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "test-worker",
