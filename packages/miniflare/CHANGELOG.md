@@ -1,5 +1,28 @@
 # miniflare
 
+## 4.20250803.1
+
+### Patch Changes
+
+- [#10273](https://github.com/cloudflare/workers-sdk/pull/10273) [`1479fd0`](https://github.com/cloudflare/workers-sdk/commit/1479fd06b91f9ab529ba4b8824d938e5da3184a0) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: support WebSocket proxying to workerd
+
+  The dev registry proxy server now correctly handles WebSocket upgrade requests and
+  tunnels bidirectional frames between the workerd processes. Previously,
+  handshakes would fail due to missing upgrade logic.
+
+- [#10281](https://github.com/cloudflare/workers-sdk/pull/10281) [`05c5b28`](https://github.com/cloudflare/workers-sdk/commit/05c5b286307bb4b55bd7768bd5873b54f8b06079) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: enable HTTPS support when proxying to workerd
+
+  The Miniflare dev-registry proxy previously assumed workerd would always use HTTP,
+  so enabling `https` on miniflare might caused connection failures in some setups.
+
+  This ensures proxying works whether the option is enabled or not.
+
+- [#10142](https://github.com/cloudflare/workers-sdk/pull/10142) [`e3d9703`](https://github.com/cloudflare/workers-sdk/commit/e3d9703c8733567b9bcad4d6264958f6ba6876f6) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: support `mf.getBindings()` when dev registry is enabled
+
+  Fixes a deadlock when using bindings from `mf.getBindings()` with the dev registry enabled. The deadlock happened because the runtime attempted to resolve a worker address via the loopback server, which was blocked by the Node.js thread waiting on the same runtime.
+
+  Address lookup has been moved to a proxy running in a worker thread to avoid blocking the main thread.
+
 ## 4.20250803.0
 
 ### Minor Changes
