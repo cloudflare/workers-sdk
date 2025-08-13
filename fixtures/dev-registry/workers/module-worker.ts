@@ -1,4 +1,16 @@
+import { WorkerEntrypoint } from "cloudflare:workers";
+
 let tailEvents = [];
+
+export class NamedEntrypoint extends WorkerEntrypoint {
+	ping() {
+		return "Pong from Named Entrypoint";
+	}
+
+	fetch() {
+		return new Response("Hello from Named Entrypoint!");
+	}
+}
 
 export default {
 	async fetch(request, env) {
@@ -28,6 +40,14 @@ export default {
 				}
 				case "worker-entrypoint-with-assets": {
 					service = env.WORKER_ENTRYPOINT_WITH_ASSETS;
+					break;
+				}
+				case "named-entrypoint": {
+					service = env.NAMED_ENTRYPOINT;
+					break;
+				}
+				case "named-entrypoint-with-assets": {
+					service = env.NAMED_ENTRYPOINT_WITH_ASSETS;
 					break;
 				}
 			}
@@ -86,4 +106,6 @@ export default {
 	MODULE_WORKER: Fetcher;
 	WORKER_ENTRYPOINT: Fetcher;
 	WORKER_ENTRYPOINT_WITH_ASSETS: Fetcher;
+	NAMED_ENTRYPOINT: Fetcher;
+	NAMED_ENTRYPOINT_WITH_ASSETS: Fetcher;
 }>;

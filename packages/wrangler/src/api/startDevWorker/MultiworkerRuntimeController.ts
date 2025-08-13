@@ -184,7 +184,13 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				this.#proxyToUserWorkerAuthenticationSecret,
 				this.#remoteProxySessionsData.get(data.config.name)?.session
 					?.remoteProxyConnectionString,
-				!!experimentalRemoteBindings
+				!!experimentalRemoteBindings,
+				(registry) => {
+					this.emitDevRegistryUpdateEvent({
+						type: "devRegistryUpdate",
+						registry,
+					});
+				}
 			);
 
 			this.#options.set(data.config.name, {

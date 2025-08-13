@@ -23,6 +23,16 @@
 			"binding": "WORKER_ENTRYPOINT_WITH_ASSETS",
 			"service": "worker-entrypoint-with-assets",
 		},
+		{
+			"binding": "NAMED_ENTRYPOINT",
+			"service": "worker-entrypoint",
+			"entrypoint": "NamedEntrypoint",
+		},
+		{
+			"binding": "NAMED_ENTRYPOINT_WITH_ASSETS",
+			"service": "module-worker-with-assets",
+			"entrypoint": "NamedEntrypoint",
+		},
 	],
 	"tail_consumers": [
 		{

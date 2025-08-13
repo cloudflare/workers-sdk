@@ -260,7 +260,8 @@ describe("multiworker", () => {
 			);
 		});
 
-		it("shows error on startup with non-existent service", async () => {
+		it("shows runtime error when fetching non-existent service", async () => {
+			const service = randomUUID();
 			await baseSeed(a, {
 				"wrangler.toml": dedent`
 						name = "${workerName}"
@@ -269,7 +270,7 @@ describe("multiworker", () => {
 
 						[[services]]
 						binding = "BEE"
-						service = '${randomUUID()}'
+						service = '${service}'
 				`,
 			});
 
@@ -277,9 +278,16 @@ describe("multiworker", () => {
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
 				{ cwd: a }
 			);
-			await workerA.readUntil(/no such service is defined/);
 
-			expect(await workerA.exitCode).toBe(1);
+			const { url } = await workerA.waitForReady(5_000);
+
+			await vi.waitFor(
+				async () =>
+					await expect(fetchText(url)).resolves.toBe(
+						`Couldn't find a local dev session for the "default" entrypoint of service "${service}" to proxy to`
+					),
+				{ interval: 1000, timeout: 10_000 }
+			);
 		});
 	});
 
