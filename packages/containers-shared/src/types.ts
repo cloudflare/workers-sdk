@@ -65,6 +65,7 @@ export type SharedContainerConfig = {
 	rollout_step_percentage: number;
 	/** if undefined in config, defaults to "full_auto" */
 	rollout_kind: "full_auto" | "full_manual" | "none";
+	rollout_active_grace_period?: number;
 	constraints: {
 		regions?: string[];
 		cities?: string[];

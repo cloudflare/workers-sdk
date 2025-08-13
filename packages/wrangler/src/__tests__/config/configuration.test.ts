@@ -2436,6 +2436,8 @@ describe("normalizeAndValidateConfig()", () => {
 								image_vars: "invalid",
 								scheduling_policy: "invalid",
 								unknown_field: "value",
+								rollout_active_grace_period: "60s",
+								rollout_step_percentage: "full",
 							},
 						],
 					} as unknown as RawConfig,
@@ -2453,11 +2455,40 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Expected \\"containers.image_build_context\\" to be of type string but got 123.
 					  - The image \\"something\\" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
 					    If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)
+					  - \\"containers.rollout_step_percentage\\" field should be a number between 25 and 100, but got \\"full\\"
 					  - Expected \\"containers.rollout_kind\\" field to be one of [\\"full_auto\\",\\"full_manual\\",\\"none\\"] but got \\"invalid\\".
+					  - \\"containers.rollout_active_grace_period\\" field should be a positive number but got \\"60s\\"
 					  - Expected \\"containers.max_instances\\" to be of type number but got \\"invalid\\".
 					  - Expected \\"containers.image_vars\\" to be of type object but got \\"invalid\\".
 					  - Expected \\"containers.scheduling_policy\\" field to be one of [\\"regional\\",\\"moon\\",\\"default\\"] but got \\"invalid\\".
 					  - Expected \\"containers.instance_type\\" field to be one of [\\"dev\\",\\"basic\\",\\"standard\\"] but got \\"invalid\\"."
+				`);
+			});
+
+			it("should error if rollout_active_grace_period and rollout_step_percentage are out of range", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								image: "blah",
+								class_name: "test-class",
+								rollout_active_grace_period: -1,
+								rollout_step_percentage: 10,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The image \\"blah\\" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
+					    If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)
+					  - \\"containers.rollout_step_percentage\\" field should be a number between 25 and 100, but got \\"10\\"
+					  - \\"containers.rollout_active_grace_period\\" field should be a positive number but got \\"-1\\""
 				`);
 			});
 
