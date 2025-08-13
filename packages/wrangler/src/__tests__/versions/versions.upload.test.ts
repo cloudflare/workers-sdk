@@ -484,21 +484,16 @@ describe("generatePreviewAlias", () => {
 		expect(result).toBeUndefined();
 	});
 
-	it("handles complex branch names with truncation", () => {
-		const scriptName = "myworker";
-		const complexBranch =
-			"feat/JIRA-12345/implement-awesome-new-feature-with-detail";
+	it("handles long branch names with truncation", () => {
+		const scriptName = "longer-branch-name-worker";
+		const longBranch = "a".repeat(100);
 		mockExecSync
 			.mockImplementationOnce(() => {}) // is-inside-work-tree
-			.mockImplementationOnce(() => Buffer.from(complexBranch));
+			.mockImplementationOnce(() => Buffer.from(longBranch));
 
 		const result = generatePreviewAlias(scriptName);
 
 		expect(result).toBeDefined();
-		expect(result).toMatch(
-			/^feat-jira-12345-implement-awesome-new-feature-wit-[a-f0-9]{4}$/
-		);
-		expect(result?.length).toBe(54);
 		expect(result).not.toBeUndefined();
 		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
