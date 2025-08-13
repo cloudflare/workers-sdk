@@ -58,7 +58,7 @@
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250813.0",
+		"@cloudflare/workers-types": "catalog:default",
 		"@types/node": "catalog:vite-plugin",
 		"@types/ws": "^8.5.13",
 		"magic-string": "^0.30.12",
