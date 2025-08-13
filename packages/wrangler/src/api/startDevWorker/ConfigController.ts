@@ -10,7 +10,6 @@ import {
 	getInferredHost,
 	maskVars,
 } from "../../dev";
-import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
