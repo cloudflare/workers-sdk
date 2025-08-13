@@ -9,6 +9,10 @@ permissions:
   contents: read
   # note: no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
 
+env:
+  # quick editor build requires Node.js 22
+  NODE_VERSION: 22
+
 jobs:
   release:
     if: ${{ github.repository_owner == 'cloudflare' }}
@@ -25,6 +29,7 @@ jobs:
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
         with:
+          node-version: ${{ env.NODE_VERSION }}
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
