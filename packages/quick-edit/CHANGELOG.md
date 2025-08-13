@@ -1,5 +1,11 @@
 # @cloudflare/quick-edit
 
+## 0.4.1
+
+### Patch Changes
+
+- [#10338](https://github.com/cloudflare/workers-sdk/pull/10338) [`d419fd8`](https://github.com/cloudflare/workers-sdk/commit/d419fd8cbb946b00b1758869b073567f2bb3a740) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Dummy changeset
+
 ## 0.4.0
 
 ### Minor Changes
