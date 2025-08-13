@@ -55,12 +55,16 @@ async function runViteDev(
 }
 
 async function runWranglerDev(
-	config: string,
+	config: string | string[],
 	devRegistryPath?: string
 ): Promise<string> {
 	const session = await baseRunWranglerDev(
 		cwd,
-		["--port=0", "--inspector-port=0", `--config=${config}`],
+		["--port=0", "--inspector-port=0"].concat(
+			Array.isArray(config)
+				? config.map((configPath) => `--config=${configPath}`)
+				: [`--config=${config}`]
+		),
 		{ WRANGLER_REGISTRY_PATH: devRegistryPath }
 	);
 
@@ -128,7 +132,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 		});
 
 		const moduleWorker = await runWranglerDev(
-			"wrangler.module-worker.jsonc",
+			[
+				"wrangler.module-worker.jsonc",
+				"wrangler.internal-durable-object.jsonc",
+			],
 			devRegistryPath
 		);
 
@@ -169,7 +176,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 	it("supports RPC over service binding", async ({ devRegistryPath }) => {
 		const workerEntrypoint = await runWranglerDev(
-			"wrangler.worker-entrypoint.jsonc",
+			[
+				"wrangler.worker-entrypoint.jsonc",
+				"wrangler.internal-durable-object.jsonc",
+			],
 			devRegistryPath
 		);
 
@@ -237,7 +247,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 		});
 
 		await runWranglerDev(
-			"wrangler.internal-durable-object.jsonc",
+			[
+				"wrangler.internal-durable-object.jsonc",
+				"wrangler.module-worker.jsonc",
+			],
 			devRegistryPath
 		);
 
@@ -257,7 +270,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 		devRegistryPath,
 	}) => {
 		const externalDurableObject = await runWranglerDev(
-			"wrangler.external-durable-object.jsonc",
+			[
+				"wrangler.external-durable-object.jsonc",
+				"wrangler.module-worker.jsonc",
+			],
 			devRegistryPath
 		);
 
@@ -304,7 +320,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			devRegistryPath
 		);
 		const workerEntrypoint = await runWranglerDev(
-			"wrangler.worker-entrypoint.jsonc",
+			[
+				"wrangler.worker-entrypoint.jsonc",
+				"wrangler.internal-durable-object.jsonc",
+			],
 			devRegistryPath
 		);
 
@@ -349,8 +368,14 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			expect(await response.json()).toEqual({
 				worker: "Module Worker",
 				tailEvents: [
-					[["[Worker Entrypoint]"], ["hello from test"]],
-					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
+					[
+						["[worker-entrypoint]", "[Worker Entrypoint]"],
+						["[worker-entrypoint]", "hello from test"],
+					],
+					[
+						["[worker-entrypoint]", "[Worker Entrypoint]"],
+						["[worker-entrypoint]", "yet another log", "and another one"],
+					],
 				],
 			});
 		});
