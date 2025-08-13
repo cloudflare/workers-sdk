@@ -22,12 +22,12 @@ export default {
 					service = env.MODULE_WORKER;
 					break;
 				}
-				case "worker-entrypoint-a": {
-					service = env.WORKER_ENTRYPOINT_A;
+				case "worker-entrypoint": {
+					service = env.WORKER_ENTRYPOINT;
 					break;
 				}
-				case "worker-entrypoint-b": {
-					service = env.WORKER_ENTRYPOINT_B;
+				case "worker-entrypoint-with-assets": {
+					service = env.WORKER_ENTRYPOINT_WITH_ASSETS;
 					break;
 				}
 			}
@@ -52,10 +52,15 @@ export default {
 					return new Response("ok");
 				}
 
-				return Response.json({
-					worker: "Module Worker",
-					tailEvents,
-				});
+				try {
+					return Response.json({
+						worker: "Module Worker",
+						tailEvents,
+					});
+				} finally {
+					// Clear the tail events after sending them
+					tailEvents = [];
+				}
 			}
 
 			return new Response("Hello from Module Worker!");
@@ -79,6 +84,6 @@ export default {
 } satisfies ExportedHandler<{
 	SERVICE_WORKER: Fetcher;
 	MODULE_WORKER: Fetcher;
-	WORKER_ENTRYPOINT_A: Fetcher;
-	WORKER_ENTRYPOINT_B: Fetcher;
+	WORKER_ENTRYPOINT: Fetcher;
+	WORKER_ENTRYPOINT_WITH_ASSETS: Fetcher;
 }>;
