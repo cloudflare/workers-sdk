@@ -72,7 +72,7 @@ export function getRemoteConfigDiff(
  * @returns true if there are only additions or no diffs at all, false otherwise
  */
 function configDiffOnlyHasAdditionsIfAny(diff: Diff): boolean {
-	const diffLines = `${diff}`.split("\n");
+	const diffLines = diff.toString().split("\n");
 	let currentRemovalIdx = 0;
 	while (currentRemovalIdx !== -1) {
 		const nextRemovalIdx = diffLines.findIndex((line, idx) => {
