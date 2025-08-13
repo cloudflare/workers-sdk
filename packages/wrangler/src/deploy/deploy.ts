@@ -8,7 +8,7 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { deployContainers, maybeBuildContainer } from "../cloudchamber/deploy";
+import { buildContainer, deployContainers } from "../cloudchamber/deploy";
 import { configFileName, formatConfigSnippet } from "../config";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
@@ -39,7 +39,6 @@ import {
 	postConsumer,
 	putConsumer,
 	putConsumerById,
-	putQueue,
 } from "../queues/client";
 import { syncWorkersSite } from "../sites";
 import {
@@ -72,7 +71,7 @@ import type {
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
+import type { PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
@@ -94,6 +93,7 @@ type Props = {
 	alias: Record<string, string> | undefined;
 	triggers: string[] | undefined;
 	routes: string[] | undefined;
+	domains: string[] | undefined;
 	legacyEnv: boolean | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
@@ -416,9 +416,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	const domainRoutes = (props.domains || []).map((domain) => ({
+		pattern: domain,
+		custom_domain: true,
+	}));
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
-	validateRoutes(routes, props.assetsOptions);
+	const allRoutes = [...routes, ...domainRoutes];
+	validateRoutes(allRoutes, props.assetsOptions);
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
@@ -792,12 +797,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (props.dryRun) {
 			if (normalisedContainerConfig.length) {
 				for (const container of normalisedContainerConfig) {
-					await maybeBuildContainer(
-						container,
-						workerTag ?? "worker-tag",
-						props.dryRun,
-						dockerPath
-					);
+					if ("dockerfile" in container) {
+						await buildContainer(
+							container,
+							workerTag ?? "worker-tag",
+							props.dryRun,
+							dockerPath
+						);
+					}
 				}
 			}
 
@@ -1050,7 +1057,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	// deploy triggers
-	const targets = await triggersDeploy(props);
+	const targets = await triggersDeploy({
+		...props,
+		routes: allRoutes,
+	});
 
 	logger.log("Current Version ID:", versionId);
 
@@ -1258,29 +1268,6 @@ async function publishRoutesFallback(
 export function isAuthenticationError(e: unknown): e is ParseError {
 	// TODO: don't want to report these
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
-}
-
-export async function updateQueueProducers(
-	config: Config
-): Promise<Promise<string[]>[]> {
-	const producers = config.queues.producers || [];
-	const updateProducers: Promise<string[]>[] = [];
-	for (const producer of producers) {
-		const body: PostQueueBody = {
-			queue_name: producer.queue,
-			settings: {
-				delivery_delay: producer.delivery_delay,
-			},
-		};
-
-		updateProducers.push(
-			putQueue(config, producer.queue, body).then(() => [
-				`Producer for ${producer.queue}`,
-			])
-		);
-	}
-
-	return updateProducers;
 }
 
 export async function updateQueueConsumers(

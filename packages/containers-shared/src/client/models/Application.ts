@@ -10,6 +10,7 @@ import type { ApplicationID } from "./ApplicationID";
 import type { ApplicationJobsConfig } from "./ApplicationJobsConfig";
 import type { ApplicationName } from "./ApplicationName";
 import type { ApplicationPriorities } from "./ApplicationPriorities";
+import type { ApplicationRolloutActiveGracePeriod } from "./ApplicationRolloutActiveGracePeriod";
 import type { ApplicationSchedulingHint } from "./ApplicationSchedulingHint";
 import type { DurableObjectsConfiguration } from "./DurableObjectsConfiguration";
 import type { ISO8601Timestamp } from "./ISO8601Timestamp";
@@ -43,5 +44,6 @@ export type Application = {
 	durable_objects?: DurableObjectsConfiguration;
 	scheduling_hint?: ApplicationSchedulingHint;
 	active_rollout_id?: RolloutID;
+	rollout_active_grace_period?: ApplicationRolloutActiveGracePeriod;
 	health?: ApplicationHealth;
 };

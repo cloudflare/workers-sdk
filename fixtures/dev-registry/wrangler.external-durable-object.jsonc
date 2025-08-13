@@ -13,12 +13,12 @@
 			"service": "module-worker",
 		},
 		{
-			"binding": "WORKER_ENTRYPOINT_A",
-			"service": "worker-entrypoint-a",
+			"binding": "WORKER_ENTRYPOINT",
+			"service": "worker-entrypoint",
 		},
 		{
-			"binding": "WORKER_ENTRYPOINT_B",
-			"service": "worker-entrypoint-b",
+			"binding": "WORKER_ENTRYPOINT_WITH_ASSETS",
+			"service": "worker-entrypoint-with-assets",
 		},
 	],
 	"durable_objects": {

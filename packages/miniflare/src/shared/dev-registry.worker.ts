@@ -1,4 +1,5 @@
 import http from "node:http";
+import https from "node:https";
 import net from "node:net";
 import { Duplex } from "node:stream";
 import { parentPort } from "node:worker_threads";
@@ -6,7 +7,6 @@ import { HOST_CAPNP_CONNECT } from "../plugins/shared/constants";
 import {
 	extractDoFetchProxyTarget,
 	extractServiceFetchProxyTarget,
-	getProtocol,
 	INBOUND_DO_PROXY_SERVICE_PATH,
 } from "../shared/external-service";
 import { Log } from "./log";
@@ -179,13 +179,14 @@ class ProxyServer {
 		if (entrypointAddress !== undefined) {
 			return {
 				httpStyle: "proxy",
-				protocol: target.protocol,
+				// Entrypoint addresses are always HTTP
+				protocol: "http",
 				host: entrypointAddress.host,
 				port: entrypointAddress.port,
 			};
 		}
 
-		if (target && target.protocol !== "https" && entrypoint === "default") {
+		if (target && entrypoint === "default") {
 			// Fallback to sending requests directly to the entry worker
 			return {
 				httpStyle: "host",
@@ -217,7 +218,8 @@ class ProxyServer {
 
 		return {
 			httpStyle: "proxy",
-			protocol: getProtocol(url),
+			// Fallback entrypoint are always HTTP
+			protocol: "http",
 			host: url.hostname,
 			port,
 		};
@@ -235,7 +237,9 @@ class ProxyServer {
 			)
 		) {
 			return {
-				...target,
+				protocol: target.protocol,
+				host: target.host,
+				port: target.port,
 				path: `/${INBOUND_DO_PROXY_SERVICE_PATH}`,
 			};
 		}
@@ -269,14 +273,25 @@ class ProxyServer {
 			}
 		}
 
-		const options: http.RequestOptions = {
+		let options: http.RequestOptions | https.RequestOptions = {
 			host: target.host,
 			port: target.port,
 			method: req.method,
 			path,
 			headers,
 		};
-		const upstream = http.request(options);
+
+		// For HTTPS target, disable certificate verification
+		if (target.protocol === "https") {
+			options = {
+				...options,
+				rejectUnauthorized: false,
+			};
+		}
+
+		// Choose the appropriate request module based on target protocol
+		const requestModule = target.protocol === "https" ? https : http;
+		const upstream = requestModule.request(options);
 
 		upstream.on("response", (upRes) => {
 			// Relay status and headers back to the original client

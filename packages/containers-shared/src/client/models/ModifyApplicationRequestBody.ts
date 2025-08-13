@@ -5,6 +5,7 @@
 import type { ApplicationAffinities } from "./ApplicationAffinities";
 import type { ApplicationConstraints } from "./ApplicationConstraints";
 import type { ApplicationPriorities } from "./ApplicationPriorities";
+import type { ApplicationRolloutActiveGracePeriod } from "./ApplicationRolloutActiveGracePeriod";
 import type { ModifyUserDeploymentConfiguration } from "./ModifyUserDeploymentConfiguration";
 import type { SchedulingPolicy } from "./SchedulingPolicy";
 
@@ -30,6 +31,7 @@ export type ModifyApplicationRequestBody = {
 	priorities?: ApplicationPriorities;
 	scheduling_policy?: SchedulingPolicy;
 	constraints?: ApplicationConstraints;
+	rollout_active_grace_period?: ApplicationRolloutActiveGracePeriod;
 	/**
 	 * The deployment configuration of all deployments created by this application.
 	 * Right now, if you modify the application configuration, only new deployments

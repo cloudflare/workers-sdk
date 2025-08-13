@@ -2562,12 +2562,12 @@ function validateContainerApp(
 					containerAppOptional,
 					"rollout_step_percentage",
 					"number"
-				) &&
-				(containerAppOptional.rollout_step_percentage > 100 ||
-					containerAppOptional.rollout_step_percentage < 25)
+				) ||
+				containerAppOptional.rollout_step_percentage > 100 ||
+				containerAppOptional.rollout_step_percentage < 25
 			) {
 				diagnostics.errors.push(
-					`"containers.rollout_step_percentage" field should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
+					`"containers.rollout_step_percentage" field should be a number between 25 and 100, but got "${containerAppOptional.rollout_step_percentage}"`
 				);
 			}
 			validateOptionalProperty(
@@ -2578,6 +2578,19 @@ function validateContainerApp(
 				"string",
 				["full_auto", "full_manual", "none"]
 			);
+
+			if (
+				!isOptionalProperty(
+					containerAppOptional,
+					"rollout_active_grace_period",
+					"number"
+				) ||
+				containerAppOptional.rollout_active_grace_period < 0
+			) {
+				diagnostics.errors.push(
+					`"containers.rollout_active_grace_period" field should be a positive number but got "${containerAppOptional.rollout_active_grace_period}"`
+				);
+			}
 			validateOptionalProperty(
 				diagnostics,
 				field,
@@ -2640,6 +2653,7 @@ function validateContainerApp(
 					"rollout_step_percentage",
 					"rollout_kind",
 					"durable_objects",
+					"rollout_active_grace_period",
 				]
 			);
 			if ("configuration" in containerAppOptional) {

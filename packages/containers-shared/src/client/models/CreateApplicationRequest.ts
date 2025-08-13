@@ -6,6 +6,7 @@ import type { ApplicationAffinities } from "./ApplicationAffinities";
 import type { ApplicationConstraints } from "./ApplicationConstraints";
 import type { ApplicationJobsConfig } from "./ApplicationJobsConfig";
 import type { ApplicationPriorities } from "./ApplicationPriorities";
+import type { ApplicationRolloutActiveGracePeriod } from "./ApplicationRolloutActiveGracePeriod";
 import type { DurableObjectsConfiguration } from "./DurableObjectsConfiguration";
 import type { SchedulingPolicy } from "./SchedulingPolicy";
 import type { UserDeploymentConfiguration } from "./UserDeploymentConfiguration";
@@ -40,4 +41,5 @@ export type CreateApplicationRequest = {
 	durable_objects?: DurableObjectsConfiguration;
 	affinities?: ApplicationAffinities;
 	priorities?: ApplicationPriorities;
+	rollout_active_grace_period?: ApplicationRolloutActiveGracePeriod;
 };

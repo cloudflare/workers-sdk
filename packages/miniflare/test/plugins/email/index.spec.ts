@@ -75,18 +75,21 @@ test("Unbound send_email binding works", async (t) => {
 	);
 	t.is(await res.text(), "ok");
 	t.is(res.status, 200);
-	t.true(
-		log.logs.some(
+	await waitFor(async () => {
+		const entry = log.logs.find(
 			([type, message]) =>
 				type === LogLevel.INFO &&
-				message.includes(
-					"send_email binding called with the following message:"
-				)
-		)
-	);
-
-	const file = log.logs[1][1].split("\n")[1].trim();
-	t.is(await readFile(file, "utf-8"), email);
+				message.match(/send_email binding called with the following message:\n/)
+		);
+		if (!entry) {
+			throw new Error(
+				"send_email binding log not found in " +
+					JSON.stringify(log.logs, null, 2)
+			);
+		}
+		const file = entry[/* message */ 1].split("\n")[1].trim();
+		t.is(await readFile(file, "utf-8"), email);
+	});
 });
 
 test("Invalid email throws", async (t) => {
@@ -159,7 +162,7 @@ test("Single allowed destination send_email binding works", async (t) => {
 	t.is(await res.text(), "ok");
 	t.is(res.status, 200);
 
-	const bindingLog = await waitFor(async () => {
+	await waitFor(async () => {
 		const entry = log.logs.find(
 			([type, message]) =>
 				type === LogLevel.INFO &&
@@ -171,11 +174,9 @@ test("Single allowed destination send_email binding works", async (t) => {
 					JSON.stringify(log.logs, null, 2)
 			);
 		}
-		return entry[/* message */ 1];
+		const file = entry[/* message */ 1].split("\n")[1].trim();
+		t.is(await readFile(file, "utf-8"), email);
 	});
-
-	const file = bindingLog.split("\n")[1].trim();
-	t.is(await readFile(file, "utf-8"), email);
 });
 
 test("Single allowed destination send_email binding throws if destination is not equal", async (t) => {
