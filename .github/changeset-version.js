@@ -31,7 +31,7 @@ function getWorkerdVersion() {
 	const match = /workerd: "(\d+\.\d+\.\d+)"/.exec(
 		fs.readFileSync(pnpmWorkspacePath, "utf8")
 	);
-	assert(match !== null, `Expected ${version} to be <major>.<minor>.<patch>`);
+	assert(match !== null, `Expected ${match[1]} to be <major>.<minor>.<patch>`);
 	return match[1];
 }
 /**
