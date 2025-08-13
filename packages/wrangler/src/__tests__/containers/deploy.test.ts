@@ -928,15 +928,15 @@ describe("wrangler deploy with containers", () => {
 				steps: [
 					{
 						step_size: { percentage: 20 },
-						description: "Step 1 of 3 applying to 20% of instances",
+						description: "Step 1 of 3 - rolled out for 20% of instances",
 					},
 					{
 						step_size: { percentage: 30 },
-						description: "Step 2 of 3 applying to 30% of instances",
+						description: "Step 2 of 3 - rolled out for 50% of instances",
 					},
 					{
 						step_size: { percentage: 50 },
-						description: "Step 3 of 3 applying to 50% of instances",
+						description: "Step 3 of 3 - rolled out for 100% of instances",
 					},
 				],
 			});

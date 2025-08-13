@@ -458,22 +458,21 @@ const doAction = async (
 				throw err;
 			}
 
-				if (!(err instanceof ApiError)) {
-					throw new UserError(
-						`Unexpected error rolling out application "${action.name}":\n${err.message}`
-					);
-				}
-
-				if (err.status === 400) {
-					throw new UserError(
-						`Error rolling out application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`
-					);
-				}
-
+			if (!(err instanceof ApiError)) {
 				throw new UserError(
-					`Error rolling out application "${action.name}":\n${formatError(err)}`
+					`Unexpected error rolling out application "${action.name}":\n${err.message}`
 				);
 			}
+
+			if (err.status === 400) {
+				throw new UserError(
+					`Error rolling out application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`
+				);
+			}
+
+			throw new UserError(
+				`Error rolling out application "${action.name}":\n${formatError(err)}`
+			);
 		}
 
 		success(
@@ -531,10 +530,12 @@ export const configRolloutStepsToAPI = (rolloutSteps: number | number[]) => {
 	} else {
 		const output: RolloutStepRequest[] = [];
 		let index = 1;
+		let progress = 0;
 		for (const step of rolloutSteps) {
+			progress += step;
 			output.push({
 				step_size: { percentage: step },
-				description: `Step ${index} of ${rolloutSteps.length} applying to ${step}% of instances`,
+				description: `Step ${index} of ${rolloutSteps.length} - rolled out for ${progress}% of instances`,
 			});
 			index++;
 		}
