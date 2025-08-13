@@ -905,7 +905,7 @@ function formatTime(duration: number) {
 // Constants for DNS label constraints and hash configuration
 const MAX_DNS_LABEL_LENGTH = 63;
 const HASH_LENGTH = 4;
-const ALIAS_VALIDATION_REGEX = /^[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+const ALIAS_VALIDATION_REGEX = /^[a-z](?:[a-z0-9-]*[a-z0-9])?$/i;
 
 /**
  * Sanitizes a branch name to create a valid DNS label alias.
