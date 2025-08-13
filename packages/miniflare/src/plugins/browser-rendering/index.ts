@@ -1,5 +1,4 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
@@ -16,6 +15,7 @@ import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
 import { Log } from "../../shared";
+import { getGlobalWranglerCachePath } from "../../shared/wrangler";
 import {
 	getUserBindingServiceName,
 	Plugin,
@@ -137,7 +137,7 @@ export async function launchBrowser({
 	const { executablePath } = await install({
 		browser,
 		platform,
-		cacheDir: path.join(os.homedir(), ".cache", "miniflare"),
+		cacheDir: getGlobalWranglerCachePath(),
 		buildId: await resolveBuildId(browser, platform, browserVersion),
 		downloadProgressCallback: (downloadedBytes, totalBytes) => {
 			if (!startedDownloading) {

@@ -24,3 +24,7 @@ export function getGlobalWranglerConfigPath() {
 		return configDir;
 	}
 }
+
+export function getGlobalWranglerCachePath() {
+	return xdgAppPaths(".wrangler").cache();
+}
