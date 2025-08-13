@@ -8,6 +8,9 @@ import {
 	SharedBindings,
 } from "miniflare";
 import { z } from "miniflare-shared";
+// The below imports (prefixed with `worker:`)
+// will be converted by our ESBuild plugin
+// into functions that load the transpiled Workers as JS
 import BINDING_WORKER from "worker:binding.worker";
 import OBJECT_WORKER from "worker:object.worker";
 import type { Service, Worker_Binding } from "miniflare";
@@ -17,39 +20,35 @@ export const UNSAFE_PLUGIN_NAME = "unsafe-plugin";
 /**
  * Options for the unsafe plugin. It takes a map of binding names to options for that specific binding
  */
-export const UnsafeServiceBindingOption = z.record(
+export const UnsafeServiceBindingOptionSchema = z.record(
 	z.string(),
 	z.object({
 		emitLogs: z.boolean(),
 	})
 );
-export type UnsafeServiceBindingOption = typeof UnsafeServiceBindingOption;
+export type UnsafeServiceBindingOption =
+	typeof UnsafeServiceBindingOptionSchema;
 
 export const UnsafeServiceBindingSharedOptions = z.undefined();
 export type UnsafeServiceBindingSharedOption =
 	typeof UnsafeServiceBindingSharedOptions;
 
 export const UNSAFE_SERVICE_PLUGIN: Plugin<
-	typeof UnsafeServiceBindingOption,
+	typeof UnsafeServiceBindingOptionSchema,
 	typeof UnsafeServiceBindingSharedOptions
 > = {
-	options: UnsafeServiceBindingOption,
+	options: UnsafeServiceBindingOptionSchema,
 	sharedOptions: UnsafeServiceBindingSharedOptions,
 	/**
-	 * getBindings will add bindings to the user's Workers. Specifically, we add a service
+	 * getBindings will add bindings to the user's Workers. Specifically, we add a binding to a service
 	 * that will expose an `UnsafeBindingServiceEntrypoint`
-	 * @param options
+	 * @param options - A map of bindings names to options provided for that binding.
 	 * @returns
 	 */
-	async getBindings(options) {
+	async getBindings(options: z.infer<typeof UnsafeServiceBindingOptionSchema>) {
 		const configOptions = Object.entries(options);
 
-		// If the user hasn't specified pre-determined mappings, we will skip adding any services
-		if (!configOptions.length) {
-			return [];
-		}
-
-		return configOptions.map<Worker_Binding>(([bindingName, config]) => {
+		return configOptions.map<Worker_Binding>(([bindingName]) => {
 			return {
 				name: bindingName,
 				service: {
@@ -59,13 +58,10 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 			};
 		});
 	},
-	getNodeBindings(options: z.infer<typeof UnsafeServiceBindingOption>) {
-		if (!options?.accountConverters) {
-			return {};
-		}
+	getNodeBindings(options: z.infer<typeof UnsafeServiceBindingOptionSchema>) {
 		return Object.fromEntries(
-			Object.keys(options.accountConverters).map((name) => [
-				name,
+			Object.keys(options).map((bindingName) => [
+				bindingName,
 				new ProxyNodeBinding(),
 			])
 		);
