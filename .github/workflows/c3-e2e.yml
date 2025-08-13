@@ -128,6 +128,14 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() || steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
-          name: e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}-${{runner.os}}-${{matrix.pm.name}}
+          name: ${{ format('e2e-logs-{0}-{1}-{2}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
           path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}
+          include-hidden-files: true
+
+      - name: Upload Turbo Summary
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() || steps.changes.outputs.everything_but_markdown == 'true' }}
+        with:
+          name: ${{ format('turbo-runs-{0}-{1}-{2}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
+          path: .turbo/runs
           include-hidden-files: true

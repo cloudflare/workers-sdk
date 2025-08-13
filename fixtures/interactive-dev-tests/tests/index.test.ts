@@ -422,18 +422,23 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				path.join(tmpDir, "wrangler.jsonc"),
 			]);
 			await fetch(wrangler.url + "/start");
+
 			// wait container to be ready
 			await vi.waitFor(async () => {
 				const status = await fetch(wrangler.url + "/status");
 				expect(await status.json()).toBe(true);
 			}, WAITFOR_OPTIONS);
-			const ids = getContainerIds();
-			expect(ids.length).toBe(1);
+
+			await vi.waitFor(async () => {
+				const ids = getContainerIds();
+				expect(ids.length).toBe(1);
+			}, WAITFOR_OPTIONS);
 
 			wrangler.pty.kill("SIGINT");
 			await new Promise<void>((resolve) => {
 				wrangler.pty.onExit(() => resolve());
 			});
+
 			await vi.waitFor(() => {
 				const remainingIds = getContainerIds();
 				expect(remainingIds.length).toBe(0);
