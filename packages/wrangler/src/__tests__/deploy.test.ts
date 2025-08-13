@@ -13006,7 +13006,7 @@ export default{
 				result: true,
 			});
 
-			await runWrangler("deploy");
+			await runWrangler("deploy --x-remote-diff-check");
 
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour local configuration differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
@@ -13068,7 +13068,7 @@ export default{
 				result: true,
 			});
 
-			await runWrangler("deploy");
+			await runWrangler("deploy --x-remote-diff-check");
 
 			// Note: we display the toml config diff in json format since code-wise we'd have to convert the rawConfig to toml
 			//       to be able to show toml content/diffs, that combined with the fact that json(c) config files are the

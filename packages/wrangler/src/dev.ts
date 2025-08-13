@@ -69,6 +69,7 @@ export const dev = createCommand({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
+			DEPLOY_REMOTE_DIFF_CHECK: false,
 		}),
 	},
 	metadata: {

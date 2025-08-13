@@ -239,6 +239,7 @@ export async function unstable_dev(
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
 			REMOTE_BINDINGS: false,
+			DEPLOY_REMOTE_DIFF_CHECK: false,
 		},
 		() => startDev(devOptions)
 	);

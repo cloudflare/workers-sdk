@@ -379,24 +379,26 @@ export default async function deploy(props: Props): Promise<{
 			workerTag = script.tag;
 
 			if (script.last_deployed_from === "dash") {
-				const remoteWorkerConfig = await downloadWorkerConfig(
-					accountId,
-					name,
-					entry.file,
-					serviceMetaData.default_environment.environment
-				);
-
 				let configDiff: ReturnType<typeof getRemoteConfigDiff> | undefined;
-				let rawConfig: RawConfig | undefined;
-				if (config.configPath) {
-					try {
-						rawConfig = parseRawConfigFile(config.configPath);
-					} catch {
-						// We were unable to either read the file so the more comprehensive diffing just won't kick in
-						// (but a warning with a confirmation prompt will still be shown to the user)
-					}
-					if (rawConfig) {
-						configDiff = getRemoteConfigDiff(remoteWorkerConfig, rawConfig);
+				if (getFlag("DEPLOY_REMOTE_DIFF_CHECK")) {
+					const remoteWorkerConfig = await downloadWorkerConfig(
+						accountId,
+						name,
+						entry.file,
+						serviceMetaData.default_environment.environment
+					);
+
+					let rawConfig: RawConfig | undefined;
+					if (config.configPath) {
+						try {
+							rawConfig = parseRawConfigFile(config.configPath);
+						} catch {
+							// We were unable to either read the file so the more comprehensive diffing just won't kick in
+							// (but a warning with a confirmation prompt will still be shown to the user)
+						}
+						if (rawConfig) {
+							configDiff = getRemoteConfigDiff(remoteWorkerConfig, rawConfig);
+						}
 					}
 				}
 
