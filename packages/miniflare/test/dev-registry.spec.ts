@@ -1,5 +1,5 @@
 import test from "ava";
-import { Miniflare, MiniflareOptions } from "miniflare";
+import { Miniflare, MiniflareOptions, WorkerRegistry } from "miniflare";
 import { useTmp, waitUntil } from "./test-shared";
 
 test("DevRegistry: fetch to service worker", async (t) => {
@@ -1123,5 +1123,182 @@ test("DevRegistry: fetch to durable object with https enabled", async (t) => {
 		const res = await local.dispatchFetch("http://placeholder");
 		t.is(await res.text(), "Hello from Durable Object!");
 		t.is(res.status, 200);
+	});
+});
+
+test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
+	const unsafeDevRegistryPath = await useTmp(t);
+	const firstCallbackInvocations: Array<{
+		registry: WorkerRegistry;
+	}> = [];
+	const secondCallbackInvocations: Array<{
+		registry: WorkerRegistry;
+	}> = [];
+
+	// Create local Worker with service binding and callback
+	const local = new Miniflare({
+		name: "local-worker",
+		unsafeDevRegistryPath,
+		unsafeHandleDevRegistryUpdate(registry) {
+			firstCallbackInvocations.push({ registry });
+		},
+		serviceBindings: {
+			SERVICE: {
+				name: "remote-worker",
+			},
+		},
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch(request, env, ctx) {
+					try {
+						const result = await env.SERVICE.ping();
+						return new Response("Response from remote Worker: " + result);
+					} catch (e) {
+						return new Response(e.message, { status: 500 });
+					}
+				}
+			}
+		`,
+	});
+	t.teardown(() => local.dispose());
+
+	// Callback should not be triggered initially since no external services exist
+	t.is(firstCallbackInvocations.length, 0);
+	t.is(secondCallbackInvocations.length, 0);
+
+	// Create an unrelated Worker - callback should NOT be triggered
+	const unrelated = new Miniflare({
+		name: "unrelated-worker",
+		unsafeDevRegistryPath,
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch() {
+					return new Response("Hello from unrelated-worker!");
+				}
+			}
+		`,
+		unsafeDirectSockets: [
+			{
+				entrypoint: undefined,
+				proxy: true,
+			},
+		],
+	});
+	t.teardown(() => unrelated.dispose());
+
+	await unrelated.ready;
+
+	// Callback should not be triggered since we're not bound to unrelated-worker
+	t.is(firstCallbackInvocations.length, 0);
+	t.is(secondCallbackInvocations.length, 0);
+
+	// Create remote worker (one we're actually bound to) - this should trigger the callback
+	const remote = new Miniflare({
+		name: "remote-worker",
+		unsafeDevRegistryPath,
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			import { WorkerEntrypoint } from "cloudflare:workers";
+			export default class TestEntrypoint extends WorkerEntrypoint {
+				ping() { return "pong"; }
+			}
+		`,
+		unsafeDirectSockets: [
+			{
+				entrypoint: undefined,
+				proxy: true,
+			},
+		],
+	});
+	t.teardown(async () => {
+		try {
+			await remote.dispose();
+		} catch {
+			// Ignore if already disposed
+		}
+	});
+
+	await remote.ready;
+
+	// Wait for the callback to be triggered
+	await waitUntil(t, async (t) => {
+		t.true(
+			firstCallbackInvocations.length >= 1,
+			"Callback should be triggered when bound Worker starts"
+		);
+		t.true(
+			secondCallbackInvocations.length === 0,
+			"Second callback should not be triggered yet"
+		);
+	});
+
+	// Verify the callback was called with the correct registry data
+	await waitUntil(t, async (t) => {
+		const latestInvocation = firstCallbackInvocations.at(-1);
+
+		t.true(
+			latestInvocation && "remote-worker" in latestInvocation.registry,
+			"Registry should contain remote-worker"
+		);
+	});
+
+	// Update unsafeHandleDevRegistryUpdate callback to push to a different array
+	await local.setOptions({
+		name: "local-worker",
+		unsafeDevRegistryPath,
+		unsafeHandleDevRegistryUpdate(registry) {
+			secondCallbackInvocations.push({
+				registry,
+			});
+		},
+		serviceBindings: {
+			SERVICE: {
+				name: "remote-worker",
+			},
+		},
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch(request, env, ctx) {
+					try {
+						const result = await env.SERVICE.ping();
+						return new Response("Response from updated local Worker: " + result);
+					} catch (e) {
+						return new Response(e.message, { status: 500 });
+					}
+				}
+			}
+		`,
+	});
+
+	// Test disposal
+	await remote.dispose();
+
+	// Wait for callback to be triggered by the update
+	await waitUntil(t, async (t) => {
+		t.true(
+			firstCallbackInvocations.length === 1,
+			"First callback should not be triggered again after update"
+		);
+		t.true(
+			secondCallbackInvocations.length === 1,
+			"Second callback should be triggered after update"
+		);
+	});
+
+	// Verify if the remote worker is no longer in the registry
+	await waitUntil(t, async (t) => {
+		const latestInvocation = secondCallbackInvocations.at(-1);
+
+		t.false(
+			!latestInvocation || "remote-worker" in latestInvocation.registry,
+			"Registry should not contain remote-worker"
+		);
 	});
 });

@@ -18,16 +18,14 @@ import { getGlobalWranglerConfigPath } from "./wrangler";
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
-export type WorkerEntrypointsDefinition = Record<
-	"default" | string,
-	{ host: string; port: number } | undefined
->;
-
 export type WorkerDefinition = {
 	protocol: "http" | "https";
 	host: string;
 	port: number;
-	entrypointAddresses: WorkerEntrypointsDefinition;
+	entrypointAddresses: Record<
+		"default" | string,
+		{ host: string; port: number } | undefined
+	>;
 	durableObjects: { name: string; className: string }[];
 };
 
@@ -49,6 +47,7 @@ export class DevRegistry {
 	constructor(
 		private registryPath: string | undefined,
 		private enableDurableObjectProxy: boolean,
+		private onUpdate: ((registry: WorkerRegistry) => void) | undefined,
 		private log: Log
 	) {}
 
@@ -176,11 +175,13 @@ export class DevRegistry {
 
 	public async updateRegistryPath(
 		registryPath: string | undefined,
-		enableDurableObjectProxy: boolean
+		enableDurableObjectProxy: boolean,
+		onUpdate?: (registry: WorkerRegistry) => void
 	): Promise<void> {
 		// Unregister all registered workers
 		this.unregisterWorkers();
 		this.enableDurableObjectProxy = enableDurableObjectProxy;
+		this.onUpdate = onUpdate;
 
 		if (registryPath !== this.registryPath) {
 			// Close the existing watcher if it exists.
@@ -265,17 +266,37 @@ export class DevRegistry {
 			return;
 		}
 
-		this.registry = getWorkerRegistry(this.registryPath, (workerName) => {
+		const registry = getWorkerRegistry(this.registryPath, (workerName) => {
 			this.unregister(workerName);
 		});
+
+		// Only trigger callback if there are actual changes to services we care about
+		if (this.onUpdate) {
+			// Check only external services (ones we're bound to) for changes
+			// This prevents unnecessary callback triggers for unrelated registry updates
+			for (const [service] of this.externalServices) {
+				if (
+					JSON.stringify(registry[service]) !==
+					JSON.stringify(this.registry[service])
+				) {
+					// A service we depend on has changed, notify listeners
+					// Provide a deep copy to prevent accidental mutations by consumers
+					this.onUpdate(JSON.parse(JSON.stringify(registry)));
+					break;
+				}
+			}
+		}
 
 		// Send updated workers to the proxy worker
 		if (this.proxyWorker) {
 			this.proxyWorker.postMessage({
 				type: "update",
-				workers: this.registry,
+				workers: registry,
 			});
 		}
+
+		// Update our cached registry state
+		this.registry = registry;
 	}
 }
 
