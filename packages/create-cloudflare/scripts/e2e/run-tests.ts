@@ -20,6 +20,19 @@ class TestRunner {
 				`::group::${description} (${testPackageManager}${testPackageManagerVersion ? `@${testPackageManagerVersion}` : ""}${isExperimental ? " / experimental" : ""})`,
 			);
 			execSync(
+				`pnpm turbo test:e2e --dry-run --output-logs=new-only --summarize --filter=create-cloudflare -- ${testFilter}`,
+				{
+					stdio: "inherit",
+					env: {
+						...process.env,
+						E2E_EXPERIMENTAL: `${isExperimental}`,
+						E2E_TEST_PM: testPackageManager,
+						E2E_TEST_PM_VERSION: testPackageManagerVersion,
+						...extraEnv,
+					},
+				},
+			);
+			execSync(
 				`pnpm turbo test:e2e --log-order=stream --output-logs=new-only --summarize --filter=create-cloudflare -- ${testFilter}`,
 				{
 					stdio: "inherit",
