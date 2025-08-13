@@ -2,7 +2,6 @@
  * Note! Much of this is copied and modified from cloudchamber/apply.ts
  * However this code is only used for containers interactions, not cloudchamber ones!
  */
-import assert from "node:assert";
 import {
 	endSection,
 	log,
@@ -30,6 +29,7 @@ import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
+import type { ImageRef } from "../cloudchamber/build";
 import type { Config } from "../config";
 import type { ContainerApp } from "../config/environment";
 import type {
@@ -191,12 +191,7 @@ function containerConfigToCreateRequest(
 
 export async function apply(
 	args: {
-		imageUpdateRequired?: boolean;
-		/**
-		 * If the image was built and pushed, or is a registry link, we have to update the image ref and this will be defined
-		 * If it is undefined, the image has not changed, and we do not need to update the image ref
-		 */
-		newImageLink: string | undefined;
+		imageRef: ImageRef;
 		durable_object_namespace_id: string;
 	},
 	containerConfig: ContainerNormalizedConfig,
@@ -224,14 +219,16 @@ export async function apply(
 		(app) => app.name === containerConfig.name
 	);
 
+	// if there is a remote digest, it indicates that the image already exists in the managed registry
+	// so we should try and use the tag from the previous deployment if possible.
+	// however deployments that fail after push may result in no previous app but the image still existing
+	const imageRef =
+		"remoteDigest" in args.imageRef
+			? prevApp?.configuration.image ?? args.imageRef.remoteDigest
+			: args.imageRef.newTag;
 	log(dim("Container application changes\n"));
 
 	const accountId = config.account_id || (await getAccountId(config));
-	const imageRef = args.newImageLink ?? prevApp?.configuration.image;
-
-	// image ref is undefined if the image is a dockerfile and has not changed since the last deploy
-	// if image ref is undefined and there is no previous app, something weird has happened.
-	assert(imageRef, "No changes detected but no previous image found");
 
 	// let's always convert normalised container config -> CreateApplicationRequest
 	// since CreateApplicationRequest is a superset of ModifyApplicationRequestBody

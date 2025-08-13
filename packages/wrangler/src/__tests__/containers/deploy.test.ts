@@ -7,7 +7,6 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { http, HttpResponse } from "msw";
-import { maybeBuildContainer } from "../../cloudchamber/deploy";
 import { clearCachedAccount } from "../../cloudchamber/locations";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -27,30 +26,12 @@ import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type {
 	AccountRegistryToken,
 	Application,
-	ContainerNormalizedConfig,
 	CreateApplicationRequest,
 	ImageRegistryCredentialsConfiguration,
 } from "@cloudflare/containers-shared";
 import type { ChildProcess } from "node:child_process";
 
 vi.mock("node:child_process");
-describe("maybeBuildContainer", () => {
-	it("Should return imageUpdate: true if using an image URI", async () => {
-		const config = {
-			image_uri: "registry.cloudflare.com/some-image:uri",
-			class_name: "Test",
-		} as ContainerNormalizedConfig;
-		const result = await maybeBuildContainer(
-			config,
-			"some-tag:thing",
-			false,
-			"/usr/bin/docker"
-		);
-		expect(result.newImageLink).toEqual(
-			"registry.cloudflare.com/some-image:uri"
-		);
-	});
-});
 
 describe("wrangler deploy with containers", () => {
 	runInTempDir();

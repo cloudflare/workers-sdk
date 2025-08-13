@@ -8,7 +8,7 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { deployContainers, maybeBuildContainer } from "../cloudchamber/deploy";
+import { buildContainer, deployContainers } from "../cloudchamber/deploy";
 import { configFileName, formatConfigSnippet } from "../config";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
@@ -797,12 +797,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (props.dryRun) {
 			if (normalisedContainerConfig.length) {
 				for (const container of normalisedContainerConfig) {
-					await maybeBuildContainer(
-						container,
-						workerTag ?? "worker-tag",
-						props.dryRun,
-						dockerPath
-					);
+					if ("dockerfile" in container) {
+						await buildContainer(
+							container,
+							workerTag ?? "worker-tag",
+							props.dryRun,
+							dockerPath
+						);
+					}
 				}
 			}
 
