@@ -7,7 +7,6 @@ import {
 	publishRoutes,
 	renderRoute,
 	updateQueueConsumers,
-	updateQueueProducers,
 	validateRoutes,
 } from "../deploy/deploy";
 import { UserError } from "../errors";
@@ -27,7 +26,7 @@ type Props = {
 	name: string | undefined;
 	env: string | undefined;
 	triggers: string[] | undefined;
-	routes: string[] | undefined;
+	routes: Route[] | undefined;
 	legacyEnv: boolean | undefined;
 	dryRun: boolean | undefined;
 	assetsOptions: AssetsOptions | undefined;
@@ -279,8 +278,11 @@ export default async function triggersDeploy(
 	}
 
 	if (config.queues.producers && config.queues.producers.length) {
-		const updateProducers = await updateQueueProducers(config);
-		deployments.push(...updateProducers);
+		deployments.push(
+			...config.queues.producers.map((producer) =>
+				Promise.resolve([`Producer for ${producer.queue}`])
+			)
+		);
 	}
 
 	if (config.queues.consumers && config.queues.consumers.length) {

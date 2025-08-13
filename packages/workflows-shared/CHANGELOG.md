@@ -1,5 +1,11 @@
 # @cloudflare/workflows-shared
 
+## 0.3.5
+
+### Patch Changes
+
+- [#10219](https://github.com/cloudflare/workers-sdk/pull/10219) [`28494f4`](https://github.com/cloudflare/workers-sdk/commit/28494f413bba3c509c56762b9260edd0ffef4f28) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix `NonRetryableError` thrown with an empty error message not stopping workflow retries locally
+
 ## 0.3.4
 
 ### Patch Changes

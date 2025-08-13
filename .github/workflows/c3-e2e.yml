@@ -14,7 +14,6 @@ jobs:
   deploy-test-workers:
     name: Deploy Test Workers
     runs-on: ubuntu-latest
-    if: github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -39,7 +38,7 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Deploy test workers
-        if: steps.changes.outputs.everything_but_markdown == 'true'
+        if: github.event.pull_request.head.repo.owner.login == 'cloudflare' && steps.changes.outputs.everything_but_markdown == 'true'
         shell: bash
         run: node -r esbuild-register tools/test-workers/deploy-all.ts
         env:

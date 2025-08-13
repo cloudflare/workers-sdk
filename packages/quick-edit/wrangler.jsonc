@@ -1,0 +1,10 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"main": "src/index.ts",
+	"name": "quick-edit",
+	"compatibility_date": "2025-07-01",
+	"assets": {
+		"directory": "web",
+		"binding": "ASSETS",
+	},
+}

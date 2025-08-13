@@ -39,8 +39,9 @@ describe("buildAndMaybePush", () => {
 			.mockResolvedValueOnce("[]")
 			// return image size and number of layers
 			.mockResolvedValueOnce("53387881 2");
+		// we can set this to anything since there is nothing to match from docker image inspect
 		vi.mocked(runDockerCmdWithOutput).mockReturnValueOnce(
-			'{"Descriptor":{"digest":"config-sha"}}'
+			'{"Descriptor":{"digest":"wont-match-sha"}}'
 		);
 		mkdirSync("./container-context");
 
@@ -144,7 +145,7 @@ describe("buildAndMaybePush", () => {
 		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
 	});
 
-	it("should be able to build image and not push if it already exists in remote", async () => {
+	it("should be able to build image and not push if it already exists in remote if config sha and digest both match", async () => {
 		vi.mocked(runDockerCmd).mockResolvedValueOnce({
 			abort: () => {},
 			ready: Promise.resolve({ aborted: false }),
@@ -152,9 +153,14 @@ describe("buildAndMaybePush", () => {
 		vi.mocked(dockerImageInspect).mockReset();
 		vi.mocked(dockerImageInspect)
 			.mockResolvedValueOnce(
-				'["registry.cloudflare.com/test-app@sha256:three"] config-sha'
+				'["registry.cloudflare.com/test-app@sha256:three"] matching-config-sha'
 			)
 			.mockResolvedValueOnce("53387881 2");
+		vi.mocked(runDockerCmdWithOutput).mockReset();
+		vi.mocked(runDockerCmdWithOutput).mockImplementationOnce(() => {
+			return '{"Descriptor":{"digest":"matching-config-sha"}}';
+		});
+
 		await runWrangler(
 			"containers build ./container-context -t test-app:tag -p"
 		);
@@ -179,7 +185,7 @@ describe("buildAndMaybePush", () => {
 			"-v",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app@sha256:three`,
 		]);
-		expect(runDockerCmd).toHaveBeenCalledTimes(1);
+		expect(runDockerCmd).toHaveBeenCalledOnce();
 		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
 			"image",
 			"rm",
