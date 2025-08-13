@@ -299,6 +299,7 @@ import { vectorizeInfoCommand } from "./vectorize/info";
 import { vectorizeInsertCommand } from "./vectorize/insert";
 import { vectorizeListCommand } from "./vectorize/list";
 import { vectorizeListMetadataIndexCommand } from "./vectorize/listMetadataIndex";
+import { vectorizeListVectorsCommand } from "./vectorize/listVectors";
 import { vectorizeQueryCommand } from "./vectorize/query";
 import { vectorizeUpsertCommand } from "./vectorize/upsert";
 import { versionsNamespace } from "./versions";
@@ -1030,6 +1031,10 @@ export function createCLIParser(argv: string[]) {
 		},
 		{ command: "wrangler vectorize get", definition: vectorizeGetCommand },
 		{ command: "wrangler vectorize list", definition: vectorizeListCommand },
+		{
+			command: "wrangler vectorize list-vectors",
+			definition: vectorizeListVectorsCommand,
+		},
 		{ command: "wrangler vectorize query", definition: vectorizeQueryCommand },
 		{
 			command: "wrangler vectorize insert",
