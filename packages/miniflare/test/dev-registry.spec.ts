@@ -1135,7 +1135,7 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 		registry: WorkerRegistry;
 	}> = [];
 
-	// Create local worker with service binding and callback
+	// Create local Worker with service binding and callback
 	const local = new Miniflare({
 		name: "local-worker",
 		unsafeDevRegistryPath,
@@ -1154,7 +1154,7 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 				async fetch(request, env, ctx) {
 					try {
 						const result = await env.SERVICE.ping();
-						return new Response("Response from remote worker: " + result);
+						return new Response("Response from remote Worker: " + result);
 					} catch (e) {
 						return new Response(e.message, { status: 500 });
 					}
@@ -1168,7 +1168,7 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 	t.is(firstCallbackInvocations.length, 0);
 	t.is(secondCallbackInvocations.length, 0);
 
-	// Create an unrelated worker - callback should NOT be triggered
+	// Create an unrelated Worker - callback should NOT be triggered
 	const unrelated = new Miniflare({
 		name: "unrelated-worker",
 		unsafeDevRegistryPath,
@@ -1177,7 +1177,7 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 		script: `
 			export default {
 				async fetch() {
-					return new Response("Hello from unrelate-worker!");
+					return new Response("Hello from unrelated-worker!");
 				}
 			}
 		`,
@@ -1229,7 +1229,7 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 	await waitUntil(t, async (t) => {
 		t.true(
 			firstCallbackInvocations.length >= 1,
-			"Callback should be triggered when bound worker starts"
+			"Callback should be triggered when bound Worker starts"
 		);
 		t.true(
 			secondCallbackInvocations.length === 0,
@@ -1268,7 +1268,7 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 				async fetch(request, env, ctx) {
 					try {
 						const result = await env.SERVICE.ping();
-						return new Response("Response from updated local worker: " + result);
+						return new Response("Response from updated local Worker: " + result);
 					} catch (e) {
 						return new Response(e.message, { status: 500 });
 					}
