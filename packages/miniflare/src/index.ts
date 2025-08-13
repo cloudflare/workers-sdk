@@ -966,6 +966,7 @@ export class Miniflare {
 		this.#devRegistry = new DevRegistry(
 			this.#sharedOpts.core.unsafeDevRegistryPath,
 			this.#sharedOpts.core.unsafeDevRegistryDurableObjectProxy,
+			this.#sharedOpts.core.unsafeHandleDevRegistryUpdate,
 			this.#log
 		);
 
@@ -2216,7 +2217,8 @@ export class Miniflare {
 
 		await this.#devRegistry.updateRegistryPath(
 			sharedOpts.core.unsafeDevRegistryPath,
-			sharedOpts.core.unsafeDevRegistryDurableObjectProxy
+			sharedOpts.core.unsafeDevRegistryDurableObjectProxy,
+			sharedOpts.core.unsafeHandleDevRegistryUpdate
 		);
 		// Send to runtime and wait for updates to process
 		await this.#assembleAndUpdateConfig();
@@ -2564,4 +2566,8 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
-export { getDefaultDevRegistryPath } from "./shared/dev-registry";
+export {
+	type WorkerRegistry,
+	type WorkerDefinition,
+	getDefaultDevRegistryPath,
+} from "./shared/dev-registry";
