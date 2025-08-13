@@ -2,6 +2,10 @@ import { createCommand } from "../../../../core/create-command";
 import { UserError } from "../../../../errors";
 import { logger } from "../../../../logger";
 import { createEventSubscription } from "../../../client";
+import {
+	EVENT_SOURCE_TYPES,
+	EventSourceType,
+} from "../../../subscription-types";
 import type {
 	CreateEventSubscriptionRequest,
 	EventSource,
@@ -15,55 +19,55 @@ function parseSourceArgument(
 		workflowName?: string;
 	}
 ): EventSource {
-	switch (source) {
-		case "kv":
-			return { type: "kv" };
+	switch (source as EventSourceType) {
+		case EventSourceType.KV:
+			return { type: EventSourceType.KV };
 
-		case "r2":
-			return { type: "r2" };
+		case EventSourceType.R2:
+			return { type: EventSourceType.R2 };
 
-		case "superSlurper":
-			return { type: "superSlurper" };
+		case EventSourceType.SUPER_SLURPER:
+			return { type: EventSourceType.SUPER_SLURPER };
 
-		case "vectorize":
-			return { type: "vectorize" };
+		case EventSourceType.VECTORIZE:
+			return { type: EventSourceType.VECTORIZE };
 
-		case "workersAi.model":
+		case EventSourceType.WORKERS_AI_MODEL:
 			if (!args.modelName) {
 				throw new UserError(
-					"--model-name is required when using source 'workersAi.model'"
+					`--model-name is required when using source '${EventSourceType.WORKERS_AI_MODEL}'`
 				);
 			}
 			return {
-				type: "workersAi.model",
+				type: EventSourceType.WORKERS_AI_MODEL,
 				model_name: args.modelName,
 			};
 
-		case "workersBuilds.worker":
+		case EventSourceType.WORKERS_BUILDS_WORKER:
 			if (!args.workerName) {
 				throw new UserError(
-					"--worker-name is required when using source 'workersBuilds.worker'"
+					`--worker-name is required when using source '${EventSourceType.WORKERS_BUILDS_WORKER}'`
 				);
 			}
 			return {
-				type: "workersBuilds.worker",
+				type: EventSourceType.WORKERS_BUILDS_WORKER,
 				worker_name: args.workerName,
 			};
 
-		case "workflows.workflow":
+		case EventSourceType.WORKFLOWS_WORKFLOW:
 			if (!args.workflowName) {
 				throw new UserError(
-					"--workflow-name is required when using source 'workflows.workflow'"
+					`--workflow-name is required when using source '${EventSourceType.WORKFLOWS_WORKFLOW}'`
 				);
 			}
 			return {
-				type: "workflows.workflow",
+				type: EventSourceType.WORKFLOWS_WORKFLOW,
 				workflow_name: args.workflowName,
 			};
 
 		default:
 			throw new UserError(
-				`Unknown source type: ${source}. Supported sources: kv, r2, superSlurper, vectorize, workersAi.model, workersBuilds.worker, workflows.workflow`
+				`Unknown source type: ${source}. Supported sources: ${EVENT_SOURCE_TYPES.join(", ")}`
 			);
 	}
 }
@@ -85,15 +89,7 @@ export const queuesSubscriptionCreateCommand = createCommand({
 			describe: "The event source type",
 			type: "string",
 			demandOption: true,
-			choices: [
-				"kv",
-				"r2",
-				"superSlurper",
-				"vectorize",
-				"workersAi.model",
-				"workersBuilds.worker",
-				"workflows.workflow",
-			],
+			choices: EVENT_SOURCE_TYPES,
 		},
 		events: {
 			describe: "Comma-separated list of event types to subscribe to",
@@ -139,7 +135,7 @@ export const queuesSubscriptionCreateCommand = createCommand({
 		}
 
 		const request: CreateEventSubscriptionRequest = {
-			name: args.name || `${args.queue} ${args.source} subscription`,
+			name: args.name || `${args.queue} ${args.source}`,
 			enabled: args.enabled,
 			source,
 			destination: {

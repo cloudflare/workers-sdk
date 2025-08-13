@@ -14,6 +14,18 @@ export interface EventDestination {
 	queue_id: string;
 }
 
+export enum EventSourceType {
+	KV = "kv",
+	R2 = "r2",
+	SUPER_SLURPER = "superSlurper",
+	VECTORIZE = "vectorize",
+	WORKERS_AI_MODEL = "workersAi.model",
+	WORKERS_BUILDS_WORKER = "workersBuilds.worker",
+	WORKFLOWS_WORKFLOW = "workflows.workflow",
+}
+
+export const EVENT_SOURCE_TYPES = Object.values(EventSourceType);
+
 export type EventSource =
 	| KvEventSource
 	| R2EventSource
@@ -24,33 +36,33 @@ export type EventSource =
 	| WorkflowsWorkflowEventSource;
 
 export interface KvEventSource {
-	type: "kv";
+	type: EventSourceType.KV;
 }
 
 export interface R2EventSource {
-	type: "r2";
+	type: EventSourceType.R2;
 }
 
 export interface SuperSlurperEventSource {
-	type: "superSlurper";
+	type: EventSourceType.SUPER_SLURPER;
 }
 
 export interface VectorizeEventSource {
-	type: "vectorize";
+	type: EventSourceType.VECTORIZE;
 }
 
 export interface WorkersAiModelEventSource {
-	type: "workersAi.model";
+	type: EventSourceType.WORKERS_AI_MODEL;
 	model_name: string;
 }
 
 export interface WorkersBuildsWorkerEventSource {
-	type: "workersBuilds.worker";
+	type: EventSourceType.WORKERS_BUILDS_WORKER;
 	worker_name: string;
 }
 
 export interface WorkflowsWorkflowEventSource {
-	type: "workflows.workflow";
+	type: EventSourceType.WORKFLOWS_WORKFLOW;
 	workflow_name: string;
 }
 

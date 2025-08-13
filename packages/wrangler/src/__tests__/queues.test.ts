@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { EventSourceType } from "../queues/subscription-types";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
@@ -2267,10 +2268,10 @@ describe("wrangler", () => {
 				);
 
 				const expectedRequest: Partial<CreateEventSubscriptionRequest> = {
-					name: "testQueue workersBuilds.worker subscription",
+					name: "testQueue workersBuilds.worker",
 					enabled: true,
 					source: {
-						type: "workersBuilds.worker",
+						type: EventSourceType.WORKERS_BUILDS_WORKER,
 						worker_name: "my-worker",
 					},
 					events: ["build.completed", "build.failed"],
@@ -2287,7 +2288,7 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"Creating event subscription for queue 'testQueue'...
-					✨ Successfully created event subscription 'testQueue workersBuilds.worker subscription' (sub-123)."
+					✨ Successfully created event subscription 'testQueue workersBuilds.worker' (sub-123)."
 				`);
 			});
 
@@ -2310,7 +2311,7 @@ describe("wrangler", () => {
 					name: "Custom Subscription",
 					enabled: false,
 					source: {
-						type: "workersBuilds.worker",
+						type: EventSourceType.WORKERS_BUILDS_WORKER,
 						worker_name: "my-worker",
 					},
 					events: ["build.completed"],
@@ -2419,7 +2420,7 @@ describe("wrangler", () => {
 			name: "Test Subscription 1",
 			enabled: true,
 			source: {
-				type: "workersBuilds.worker",
+				type: EventSourceType.WORKERS_BUILDS_WORKER,
 				worker_name: "my-worker",
 			},
 			destination: {
@@ -2436,7 +2437,7 @@ describe("wrangler", () => {
 			name: "Test Subscription 2",
 			enabled: false,
 			source: {
-				type: "kv",
+				type: EventSourceType.KV,
 			},
 			destination: {
 				type: "queues.queue",
@@ -2805,7 +2806,7 @@ describe("wrangler", () => {
 									id: subscriptionId,
 									name: "updated-subscription",
 									source: {
-										type: "workersBuilds.worker",
+										type: EventSourceType.WORKERS_BUILDS_WORKER,
 										worker_name: "my-worker",
 									},
 									destination: {
@@ -2843,7 +2844,7 @@ describe("wrangler", () => {
 					id: subscriptionId,
 					name: "old-subscription",
 					source: {
-						type: "workersBuilds.worker",
+						type: EventSourceType.WORKERS_BUILDS_WORKER,
 						worker_name: "my-worker",
 					},
 					destination: {
@@ -2883,7 +2884,7 @@ describe("wrangler", () => {
 					id: subscriptionId,
 					name: "old-subscription",
 					source: {
-						type: "workersBuilds.worker",
+						type: EventSourceType.WORKERS_BUILDS_WORKER,
 						worker_name: "my-worker",
 					},
 					destination: {
