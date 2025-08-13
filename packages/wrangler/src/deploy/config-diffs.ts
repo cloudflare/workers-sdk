@@ -145,78 +145,47 @@ function normalizeRemoteConfigAsLocal(
 		}
 	});
 
-	if (
-		deepStrictEqual(normalizedRemote.observability, {
+	cleanupRemoteDefault({
+		remoteObj: normalizedRemote as Record<string, unknown>,
+		localObj: localConfig as Record<string, unknown>,
+		field: "observability",
+		remoteDefaultValue: {
 			enabled: true,
 			head_sampling_rate: 1,
-		})
-	) {
-		// the `observability` field in the remote config is to its default value
+		},
+	});
 
-		if (!("observability" in localConfig)) {
-			// If `observability` is not in the local config we also remote it from the remote one
-			delete normalizedRemote.observability;
-		}
+	if (normalizedRemote.observability && localConfig.observability) {
+		cleanupRemoteDefault({
+			remoteObj: normalizedRemote.observability as Record<string, unknown>,
+			localObj: localConfig.observability as Record<string, unknown>,
+			field: "enabled",
+			remoteDefaultValue: true,
+		});
 
-		if (localConfig.observability === undefined) {
-			// If `observability` is `undefined` in the local config we make sure the same applies to the remote one
-			normalizedRemote.observability = undefined;
-		}
-	}
+		cleanupRemoteDefault({
+			remoteObj: normalizedRemote.observability as Record<string, unknown>,
+			localObj: localConfig.observability as Record<string, unknown>,
+			field: "head_sampling_rate",
+			remoteDefaultValue: 1,
+		});
 
-	if (
-		normalizedRemote.observability &&
-		localConfig.observability &&
-		normalizedRemote.observability.enabled === true
-	) {
-		if (!("enabled" in localConfig.observability)) {
-			delete normalizedRemote.observability.enabled;
-		}
-
-		if (localConfig.observability.enabled === undefined) {
-			normalizedRemote.observability.enabled = undefined;
-		}
-	}
-
-	if (
-		normalizedRemote.observability &&
-		localConfig.observability &&
-		normalizedRemote.observability?.head_sampling_rate === 1
-	) {
-		if (!("head_sampling_rate" in localConfig.observability)) {
-			delete normalizedRemote.observability.head_sampling_rate;
-		}
-
-		if (localConfig.observability.head_sampling_rate === undefined) {
-			normalizedRemote.observability.head_sampling_rate = undefined;
+		if (normalizedRemote.observability.logs && localConfig.observability.logs) {
+			cleanupRemoteDefault({
+				remoteObj: normalizedRemote.observability.logs,
+				localObj: localConfig.observability.logs,
+				field: "enabled",
+				remoteDefaultValue: true,
+			});
 		}
 	}
 
-	if (
-		normalizedRemote.observability?.logs &&
-		localConfig.observability?.logs &&
-		normalizedRemote.observability.logs.enabled === true
-	) {
-		if (!("enabled" in localConfig.observability.logs)) {
-			delete normalizedRemote.observability.logs.enabled;
-		}
-
-		if (localConfig.observability.logs.enabled === undefined) {
-			normalizedRemote.observability.enabled = undefined;
-		}
-	}
-
-	if (normalizedRemote.workers_dev === true) {
-		if (!("workers_dev" in localConfig)) {
-			// If `workers_dev` is not in the local config we also remote it from the remote one
-			delete normalizedRemote.workers_dev;
-		}
-
-		if (localConfig.workers_dev === undefined) {
-			// If `workers_dev` is `undefined` in the local config we make sure the same applies to the remote one
-			normalizedRemote.workers_dev = undefined;
-		}
-	}
+	cleanupRemoteDefault({
+		remoteObj: normalizedRemote as Record<string, unknown>,
+		localObj: localConfig as Record<string, unknown>,
+		field: "workers_dev",
+		remoteDefaultValue: true,
+	});
 
 	// We reorder the remote config so that its ordering follows that
 	// of the local one (this ensures that the diff users see lists
@@ -227,6 +196,41 @@ function normalizeRemoteConfigAsLocal(
 	);
 
 	return normalizedRemote;
+}
+
+/**
+ * Fields in the remote configuration get some defaults values, in order to perform the diffing against
+ * the local configuration such fields need to be cleaned up if they don't appear in locally
+ * (for example if field `x` defaults to `true` remotely, but locally it is not set then we do want to
+ * remove it from the remote object so that it won't look like the value is being removed from the local one).
+ *
+ * This function performs such cleanup on a specific field.
+ *
+ * @param field The target field
+ * @param localObj The local object (this can be the local raw config or a nested object of it)
+ * @param remoteObj The remote object (this can be the remote config or a nested object of it)
+ * @param remoteDefaultValue The remote default value that the field gets.
+ */
+function cleanupRemoteDefault({
+	field,
+	localObj,
+	remoteObj,
+	remoteDefaultValue,
+}: {
+	field: string;
+	localObj: Record<string, unknown>;
+	remoteObj: Record<string, unknown>;
+	remoteDefaultValue: unknown;
+}) {
+	if (deepStrictEqual(remoteObj[field], remoteDefaultValue)) {
+		if (!(field in localObj)) {
+			delete remoteObj[field];
+		}
+
+		if (localObj[field] === undefined) {
+			remoteObj[field] = undefined;
+		}
+	}
 }
 
 /**
