@@ -392,8 +392,8 @@ export default async function deploy(props: Props): Promise<{
 					try {
 						rawConfig = parseRawConfigFile(config.configPath);
 					} catch {
-						// We were unable to either read the file or the file is a TOML one
-						// in either case the more comprehensive diffing won't kick in
+						// We were unable to either read the file so the more comprehensive diffing just won't kick in
+						// (but a warning with a confirmation prompt will still be shown to the user)
 					}
 					if (rawConfig) {
 						configDiff = getRemoteConfigDiff(remoteWorkerConfig, rawConfig);
