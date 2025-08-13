@@ -595,7 +595,6 @@ export async function startDev(args: StartDevOptions) {
 			devEnv = [
 				await setupDevEnv(primaryDevEnv, args.config[0], authHook, {
 					...args,
-					disableDevRegistry: true,
 					multiworkerPrimary: true,
 				}),
 			];
@@ -612,7 +611,7 @@ export async function startDev(args: StartDevOptions) {
 							c,
 							authHook,
 							{
-								disableDevRegistry: true,
+								disableDevRegistry: args.disableDevRegistry,
 								multiworkerPrimary: false,
 							}
 						);
@@ -625,27 +624,6 @@ export async function startDev(args: StartDevOptions) {
 		} else {
 			devEnv = new DevEnv();
 
-			// The ProxyWorker will have a stable host and port, so only listen for the first update
-			void devEnv.proxy.ready.promise.then(({ url }) => {
-				if (args.onReady) {
-					args.onReady(url.hostname, parseInt(url.port));
-				}
-
-				if (
-					(args.enableIpc || !args.onReady) &&
-					process.send &&
-					typeof vitest === "undefined"
-				) {
-					process.send(
-						JSON.stringify({
-							event: "DEV_SERVER_READY",
-							ip: url.hostname,
-							port: parseInt(url.port),
-						})
-					);
-				}
-			});
-
 			await setupDevEnv(devEnv, args.config, authHook, args);
 
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
@@ -653,9 +631,34 @@ export async function startDev(args: StartDevOptions) {
 			}
 		}
 
+		const [primaryDevEnv, ...secondary] = Array.isArray(devEnv)
+			? devEnv
+			: [devEnv];
+
+		// The ProxyWorker will have a stable host and port, so only listen for the first update
+		void primaryDevEnv.proxy.ready.promise.then(({ url }) => {
+			if (args.onReady) {
+				args.onReady(url.hostname, parseInt(url.port));
+			}
+
+			if (
+				(args.enableIpc || !args.onReady) &&
+				process.send &&
+				typeof vitest === "undefined"
+			) {
+				process.send(
+					JSON.stringify({
+						event: "DEV_SERVER_READY",
+						ip: url.hostname,
+						port: parseInt(url.port),
+					})
+				);
+			}
+		});
+
 		return {
-			devEnv: Array.isArray(devEnv) ? devEnv[0] : devEnv,
-			secondary: Array.isArray(devEnv) ? devEnv.slice(1) : [],
+			devEnv: primaryDevEnv,
+			secondary,
 			unregisterHotKeys,
 			teardownRegistryPromise,
 		};
