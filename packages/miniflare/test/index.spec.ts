@@ -1386,7 +1386,7 @@ test("Miniflare: python modules", async (t) => {
 				type: "PythonModule",
 				path: "index.py",
 				contents:
-					"from test_module import add; from js import Response;\ndef on_fetch(request):\n  return Response.new(add(2,2))",
+					"from test_module import add; from workers import Response, WorkerEntrypoint;\nclass Default(WorkerEntrypoint):\n  def fetch(self, request):\n    return Response(str(add(2,2)))",
 			},
 			{
 				type: "PythonModule",
@@ -1394,7 +1394,7 @@ test("Miniflare: python modules", async (t) => {
 				contents: `def add(a, b):\n  return a + b`,
 			},
 		],
-		compatibilityFlags: ["python_workers"],
+		compatibilityFlags: ["python_workers", "python_no_global_handlers"],
 	});
 	t.teardown(() => mf.dispose());
 	const res = await mf.dispatchFetch("http://localhost");
