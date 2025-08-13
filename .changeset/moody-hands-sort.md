@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": patch
+"create-cloudflare": minor
 ---
 
-feat(create-cloudflare): Add Waku workers template
+feat(create-cloudflare): Add Waku Workers template
