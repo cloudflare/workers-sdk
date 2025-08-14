@@ -1,3 +1,4 @@
+import { validateWorkflowId } from "../../../workflows-shared/src/lib/validators";
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { requireAuth } from "../../user";
@@ -33,6 +34,14 @@ export const workflowsTriggerCommand = createCommand({
 
 	async handler(args, { config, logger }) {
 		const accountId = await requireAuth(config);
+
+		// Validate workflow ID length if provided
+		if (args.id && !validateWorkflowId(args.id)) {
+			logger.error(
+				`Error: Workflow ID "${args.id}" exceeds maximum length of 64 characters or contains invalid characters`
+			);
+			return;
+		}
 
 		if (args.params.length != 0) {
 			try {
