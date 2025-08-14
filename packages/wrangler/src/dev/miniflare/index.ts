@@ -487,14 +487,6 @@ export function buildMiniflareBindingOptions(
 		tails.push({ name: tail.service });
 	}
 
-	// TODO: add this log somewhere
-	// if (notFoundTails.size > 0) {
-	// 	logger.debug(
-	// 		"Couldn't connect to the following configured `tail_consumers`: ",
-	// 		[...notFoundTails.values()].join(", ")
-	// 	);
-	// }
-
 	const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
 
 	const durableObjects = bindings.durable_objects?.bindings ?? [];

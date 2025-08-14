@@ -283,6 +283,7 @@ export class LocalRuntimeController extends RuntimeController {
 				this.#remoteProxySessionData?.session?.remoteProxyConnectionString,
 				!!experimentalRemoteBindings,
 				(registry) => {
+					logger.log(chalk.dim("⎔ Connection status updated"));
 					this.emitDevRegistryUpdateEvent({
 						type: "devRegistryUpdate",
 						registry,
