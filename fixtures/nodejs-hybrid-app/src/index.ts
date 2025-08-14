@@ -42,6 +42,10 @@ export default {
 				return await testSqlite();
 			case "/test-http":
 				return await testHttp();
+			case "/test-debug-import":
+				return await testDebugImport();
+			case "/test-debug-require":
+				return await testDebugRequire();
 		}
 
 		return new Response(
@@ -55,6 +59,8 @@ export default {
 <a href="test-crypto">node:crypto</a>
 <a href="test-sqlite">node:sqlite</a>
 <a href="test-http">node:http</a>
+<a href="test-debug-import">debug (import)</a>
+<a href="test-debug-require">debug (require)</a>
 `,
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
@@ -280,4 +286,68 @@ async function testHttp() {
 	assert.strictEqual(typeof agent.options, "object");
 
 	return new Response("OK");
+}
+
+async function testDebugImport() {
+	const debug = (await import("debug")).default;
+	const capturedLogs: string[] = [];
+
+	// Override debug.log to capture output for verification
+	debug.log = (...args: string[]) => {
+		capturedLogs.push(args.join(" "));
+	};
+
+	// Test different namespaces based on DEBUG env var: "example:*,test"
+	const testNamespace = debug("test"); // Should log (matches "test")
+	const exampleNamespace = debug("example"); // Should NOT log (doesn't match "example:*")
+	const exampleFooNamespace = debug("example:foo"); // Should log (matches "example:*")
+
+	testNamespace("Test import message 1");
+	exampleNamespace("Example import message (should not appear)");
+	exampleFooNamespace("Example foo import message");
+
+	if (testNamespace.enabled) {
+		testNamespace("Test import enabled message");
+	}
+
+	// Strip timestamps from captured logs, keeping namespace and message
+	// Format: "2025-08-14T20:09:49.769Z test Test import message 1"
+	const logsWithoutTimestamp = capturedLogs.map((log) => {
+		const parts = log.split(" ");
+		return parts.slice(1).join(" "); // Remove timestamp, keep namespace + message
+	});
+
+	return Response.json(logsWithoutTimestamp);
+}
+
+async function testDebugRequire() {
+	const debug = require("debug");
+	const capturedLogs: string[] = [];
+
+	// Override debug.log to capture output for verification
+	debug.log = (...args: string[]) => {
+		capturedLogs.push(args.join(" "));
+	};
+
+	// Test different namespaces based on DEBUG env var: "example:*,test"
+	const testNamespace = debug("test"); // Should log (matches "test")
+	const exampleNamespace = debug("example"); // Should NOT log (doesn't match "example:*")
+	const exampleFooNamespace = debug("example:foo"); // Should log (matches "example:*")
+
+	testNamespace("Test require message 1");
+	exampleNamespace("Example require message (should not appear)");
+	exampleFooNamespace("Example foo require message");
+
+	if (testNamespace.enabled) {
+		testNamespace("Test require enabled message");
+	}
+
+	// Strip timestamps from captured logs, keeping namespace and message
+	// Format: "2025-08-14T20:09:49.769Z test Test require message 1"
+	const logsWithoutTimestamp = capturedLogs.map((log) => {
+		const parts = log.split(" ");
+		return parts.slice(1).join(" "); // Remove timestamp, keep namespace + message
+	});
+
+	return Response.json(logsWithoutTimestamp);
 }

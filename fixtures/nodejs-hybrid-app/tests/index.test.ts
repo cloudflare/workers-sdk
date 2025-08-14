@@ -89,6 +89,26 @@ describe("nodejs compat", () => {
 		await expect(response.text()).resolves.toBe("OK");
 	});
 
+	test("debug import", async ({ expect }) => {
+		const { ip, port } = wrangler;
+		const response = await fetch(`http://${ip}:${port}/test-debug-import`);
+		await expect(response.json()).resolves.toEqual([
+			"test Test import message 1",
+			"example:foo Example foo import message",
+			"test Test import enabled message",
+		]);
+	});
+
+	test("debug require", async ({ expect }) => {
+		const { ip, port } = wrangler;
+		const response = await fetch(`http://${ip}:${port}/test-debug-require`);
+		await expect(response.json()).resolves.toEqual([
+			"test Test require message 1",
+			"example:foo Example foo require message",
+			"test Test require enabled message",
+		]);
+	});
+
 	test("process.env contains vars", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/process-env`);

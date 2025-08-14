@@ -203,46 +203,6 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof tls.convertALPNProtocols, "function");
 	},
 
-	async testImportDebug() {
-		// @ts-expect-error "debug" is an unenv alias, not installed locally
-		const debug = (await import("debug")).default;
-		const logs: string[] = [];
-
-		// Append all logs to the array instead of logging to console
-		debug.log = (...args: string[]) =>
-			logs.push(args.map((arg) => arg.toString()).join(" "));
-
-		// This should log because as `DEBUG` is set to "enabled".
-		const enabledLog = debug("enabled");
-		enabledLog("This should be logged");
-
-		// This should not log as `DEBUG` does not contain "enabled:disabled"
-		const disabledLog = enabledLog.extend("disabled");
-		disabledLog("This should not be logged");
-
-		assert.deepEqual(logs, ["enabled This should be logged +0ms"]);
-	},
-
-	async testRequireDebug() {
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const debug = require("debug");
-		const logs: string[] = [];
-
-		// Append all logs to the array instead of logging to console
-		debug.log = (...args: string[]) =>
-			logs.push(args.map((arg) => arg.toString()).join(" "));
-
-		// This should log because as `DEBUG` is set to "enabled".
-		const enabledLog = debug("enabled");
-		enabledLog("This should be logged");
-
-		// This should not log as `DEBUG` does not contain "enabled:disabled"
-		const disabledLog = enabledLog.extend("disabled");
-		disabledLog("This should not be logged");
-
-		assert.deepEqual(logs, ["enabled This should be logged +0ms"]);
-	},
-
 	async testHttp() {
 		const http = await import("node:http");
 
