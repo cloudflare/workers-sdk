@@ -27,6 +27,11 @@
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.mjs"
 		},
+		"./runtime/npm/debug": {
+			"types": "./dist/index.d.ts",
+			"require": "./dist/runtime/npm/debug.cjs",
+			"import": "./dist/runtime/npm/debug.mjs"
+		},
 		"./*": {
 			"types": "./dist/runtime/*.d.mts",
 			"default": "./dist/runtime/*.mjs"
