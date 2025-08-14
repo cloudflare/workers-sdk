@@ -121,9 +121,6 @@ type WorkerConfigObject = {
 /**
  * Utility for potentially starting or updating a remote proxy session.
  *
- * It uses an internal map for storing existing remote proxy session indexed by worker names. If no worker name is provided
- * the remote proxy session won't be retrieved nor saved to/from the internal map.
- *
  * @param wranglerOrWorkerConfigObject either a file path to a wrangler configuration file or an object containing the name of
  *                                 the target worker alongside its bindings.
  * @param preExistingRemoteProxySessionData the optional data of a pre-existing remote proxy session if there was one, this
