@@ -1,8 +1,8 @@
+import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
-import os from "node:os";
 import { setTimeout } from "node:timers/promises";
-import { afterAll, beforeAll, describe, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 import {
 	fetchJson,
 	isBuildAndPreviewOnWindows,
@@ -21,32 +21,74 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 		// Note: the reload test applies changes to the fixture files, so we do want the
 		//       tests to run sequentially in order to avoid race conditions
 		.sequential("remote bindings tests", () => {
+			const remoteWorkerName = `tmp-e2e-vite-remote-${randomUUID().split("-")[0]}`;
+			const remoteAltWorkerName = `tmp-e2e-vite-remote-alt-${randomUUID().split("-")[0]}`;
+
 			const replacements = {
-				"<<REMOTE_WORKER_PLACEHOLDER>>": `tmp-e2e-vite-remote-${randomUUID().split("-")[0]}`,
-				"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `tmp-e2e-vite-remote-alt-${randomUUID().split("-")[0]}`,
+				"<<REMOTE_WORKER_PLACEHOLDER>>": remoteWorkerName,
+				"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": remoteAltWorkerName,
 			};
 
 			const projectPath = seed("remote-bindings", "pnpm", replacements);
 
-			beforeAll(() => {
-				runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker`);
-				runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker-alt`);
-			}, 35_000);
+			beforeAll(async () => {
+				const deployOut = runCommand(
+					`npx wrangler deploy`,
+					`${projectPath}/remote-worker`
+				);
+				const deployedUrl = deployOut.match(
+					/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+				)?.groups?.url;
+				assert(
+					deployedUrl,
+					"Failed to find deployed worker URL from " + deployOut
+				);
 
-			afterAll(() => {
-				// Try to clean up the remote workers after tests but give up after a couple of seconds
-				// or if the deletion fails.
-				runCommand(
-					`npx wrangler delete --force`,
-					`${projectPath}/remote-worker`,
-					{ canFail: true, timeout: 2_000 }
+				const altDeployOutput = runCommand(
+					`npx wrangler deploy`,
+					`${projectPath}/remote-worker-alt`
 				);
-				runCommand(
-					`npx wrangler delete --force`,
-					`${projectPath}/remote-worker-alt`,
-					{ canFail: true, timeout: 2_000 }
+				const altDeployedUrl = altDeployOutput.match(
+					/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+				)?.groups?.url;
+				assert(
+					altDeployedUrl,
+					"Failed to find deployed worker URL from " + altDeployOutput
 				);
-			});
+
+				// Wait for the workers to become available
+				await Promise.all([
+					vi.waitFor(
+						async () => {
+							const response = await fetch(deployedUrl);
+							expect(response.status).toBe(200);
+						},
+						{ timeout: 10_000, interval: 500 }
+					),
+					vi.waitFor(
+						async () => {
+							const response = await fetch(altDeployedUrl);
+							expect(response.status).toBe(200);
+						},
+						{ timeout: 10_000, interval: 500 }
+					),
+				]);
+
+				return () => {
+					// Try to clean up the remote workers after tests but give up after a couple of seconds
+					// or if the deletion fails.
+					runCommand(
+						`npx wrangler delete --force`,
+						`${projectPath}/remote-worker`,
+						{ canFail: true, timeout: 2_000 }
+					);
+					runCommand(
+						`npx wrangler delete --force`,
+						`${projectPath}/remote-worker-alt`,
+						{ canFail: true, timeout: 2_000 }
+					);
+				};
+			}, 35_000);
 
 			describe.each(commands)('with "%s" command', (command) => {
 				test.skipIf(isBuildAndPreviewOnWindows(command))(
