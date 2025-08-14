@@ -1,7 +1,4 @@
-import path from "node:path";
-import { maybeGetFile } from "@cloudflare/workers-shared";
 import TOML from "@iarna/toml";
-import dotenv from "dotenv";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
@@ -210,45 +207,4 @@ export function withConfig<T>(
 	return (args: OnlyCamelCase<T & CommonYargsOptions>) => {
 		return handler({ ...args, config: readConfig(args, options) });
 	};
-}
-
-export interface DotEnv {
-	path: string;
-	parsed: dotenv.DotenvParseOutput;
-}
-
-function tryLoadDotEnv(basePath: string): DotEnv | undefined {
-	try {
-		const contents = maybeGetFile(basePath);
-		if (contents === undefined) {
-			logger.debug(
-				`.env file not found at "${path.relative(".", basePath)}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
-			);
-			return;
-		}
-
-		const parsed = dotenv.parse(contents);
-		return { path: basePath, parsed };
-	} catch (e) {
-		logger.debug(
-			`Failed to load .env file "${path.relative(".", basePath)}":`,
-			e
-		);
-	}
-}
-
-/**
- * Loads a dotenv file from `envPath`, preferring to read `${envPath}.${env}` if
- * `env` is defined and that file exists.
- *
- * Note: The `getDotDevDotVarsContent` function in the `packages/vite-plugin-cloudflare/src/dev-vars.ts` file
- *       follows the same logic implemented here, the two need to be kept in sync, so if you modify some logic
- *       here make sure that, if applicable, the same change is reflected there
- */
-export function loadDotEnv(envPath: string, env?: string): DotEnv | undefined {
-	if (env === undefined) {
-		return tryLoadDotEnv(envPath);
-	} else {
-		return tryLoadDotEnv(`${envPath}.${env}`) ?? tryLoadDotEnv(envPath);
-	}
 }

@@ -52,6 +52,7 @@ export type ContainerApp = {
 	 */
 	name?: string;
 
+	// not used when deploying container with wrangler deploy
 	/**
 	 * Number of application instances
 	 * @deprecated
@@ -77,7 +78,8 @@ export type ContainerApp = {
 	image_build_context?: string;
 
 	/**
-	 * Image variables to be passed along the image at build time.
+	 * Image variables available to the image at build-time only.
+	 * For runtime env vars, refer to https://developers.cloudflare.com/containers/examples/env-vars-and-secrets/
 	 * @optional
 	 */
 	image_vars?: Record<string, string>;
@@ -92,25 +94,50 @@ export type ContainerApp = {
 	 * @optional
 	 * @default "default"
 	 */
-	scheduling_policy?: "regional" | "moon" | "default";
+	scheduling_policy?: "default" | "moon" | "regional";
 
 	/**
-	 * The instance type to be used for the container. This sets preconfigured options for vcpu and memory
+	 * The instance type to be used for the container.
+	 * Select from one of the following named instance types:
+	 *  - dev: 1/16 vCPU, 256 MiB memory, and 2 GB disk
+	 *  - basic: 1/4 vCPU, 1 GiB memory, and 4 GB disk
+	 *  - standard: 1/2 vCPU, 4 GiB memory, and 4 GB disk
+	 *
+	 * Customers on an enterprise plan have the additional option to set custom limits.
+	 *
 	 * @optional
+	 * @default "dev"
 	 */
-	instance_type?: "dev" | "basic" | "standard";
+	instance_type?:
+		| "dev"
+		| "basic"
+		| "standard"
+		| {
+				/** @defaults to 0.0625 (1/16 vCPU) */
+				vcpu?: number;
+
+				/** @defaults to 256 MiB */
+				memory_mib?: number;
+
+				/** @defaults to 2 GB */
+				disk_mb?: number;
+		  };
 
 	/**
 	 * @deprecated Use top level `containers` fields instead.
 	 * `configuration.image` should be `image`
-	 * `configuration.disk` should be set via `instance_type`
+	 * limits should be set via `instance_type`
 	 * @hidden
 	 */
 	configuration?: {
 		image?: string;
+		// not used when deploying container with wrangler deploy
 		labels?: { name: string; value: string }[];
+		// not used when deploying container with wrangler deploy
 		secrets?: { name: string; type: "env"; secret: string }[];
-		disk?: { size: string };
+		disk?: { size_mb: number };
+		vcpu?: number;
+		memory_mib?: number;
 	};
 
 	/**
@@ -123,6 +150,7 @@ export type ContainerApp = {
 		tier?: number;
 	};
 
+	// not used when deploying container with wrangler deploy
 	/**
 	 * @deprecated use the `class_name` field instead.
 	 * @hidden
@@ -147,6 +175,13 @@ export type ContainerApp = {
 	 * @default "full_auto"
 	 */
 	rollout_kind?: "full_auto" | "none" | "full_manual";
+
+	/**
+	 * Configures the grace period (in seconds) for active instances before being shutdown during a rollout.
+	 * @optional
+	 * @default 0
+	 */
+	rollout_active_grace_period?: number;
 };
 
 /**

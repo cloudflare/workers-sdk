@@ -1,11 +1,12 @@
 import assert from "node:assert";
 import path from "node:path";
-import { isDockerfile } from "@cloudflare/containers-shared";
+import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { watch } from "chokidar";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig } from "../../config";
 import { containersScope } from "../../containers";
+import { getNormalizedContainerOptions } from "../../containers/config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
 	getBindings,
@@ -15,10 +16,7 @@ import {
 } from "../../dev";
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
-import {
-	getDockerHost,
-	getDockerPath,
-} from "../../environment-variables/misc-variables";
+import { getDockerPath } from "../../environment-variables/misc-variables";
 import { UserError } from "../../errors";
 import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
@@ -28,11 +26,11 @@ import {
 	requireApiToken,
 	requireAuth,
 } from "../../user";
+import { getDevCompatibilityDate } from "../../utils/compatibility-date";
 import {
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
 } from "../../utils/constants";
-import { getDevCompatibilityDate } from "../../utils/getDevCompatibilityDate";
 import { getRules } from "../../utils/getRules";
 import { getScriptName } from "../../utils/getScriptName";
 import { isLegacyEnv } from "../../utils/isLegacyEnv";
@@ -119,6 +117,9 @@ async function resolveDevConfig(
 
 	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
 
+	const useContainers =
+		config.dev.enable_containers && config.containers?.length;
+
 	return {
 		auth,
 		remote: input.dev?.remote,
@@ -160,10 +161,11 @@ async function resolveDevConfig(
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
-		containerEngine:
-			input.dev?.containerEngine ??
-			config.dev.container_engine ??
-			getDockerHost(),
+		containerEngine: useContainers
+			? input.dev?.containerEngine ??
+				config.dev.container_engine ??
+				resolveDockerHost(input.dev?.dockerPath ?? getDockerPath())
+			: undefined,
 		containerBuildId: input.dev?.containerBuildId,
 	} satisfies StartDevWorkerOptions["dev"];
 }
@@ -175,6 +177,7 @@ async function resolveBindings(
 	const bindings = getBindings(
 		config,
 		input.env,
+		input.envFiles,
 		!input.dev?.remote,
 		{
 			kv: extractBindingsOfType("kv_namespace", input.bindings),
@@ -321,6 +324,7 @@ async function resolveConfig(
 		sendMetrics: input.sendMetrics ?? config.send_metrics,
 		triggers: await resolveTriggers(config, input),
 		env: input.env,
+		envFiles: input.envFiles,
 		build: {
 			alias: input.build?.alias ?? config.alias,
 			additionalModules: input.build?.additionalModules ?? [],
@@ -347,7 +351,7 @@ async function resolveConfig(
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
 			exports: entry.exports,
 		},
-		containers: config.containers,
+		containers: await getNormalizedContainerOptions(config),
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
@@ -399,8 +403,8 @@ async function resolveConfig(
 	// for pulling containers, we need to make sure the OpenAPI config for the
 	// container API client is properly set so that we can get the correct permissions
 	// from the cloudchamber API to pull from the repository.
-	const needsPulling = resolved.containers?.some(
-		(c) => !isDockerfile(c.image ?? c.configuration?.image, config.configPath)
+	const needsPulling = resolved.containers.some(
+		(c) => "image_uri" in c && c.image_uri
 	);
 	if (needsPulling && !resolved.dev.remote) {
 		await fillOpenAPIConfiguration(config, containersScope);

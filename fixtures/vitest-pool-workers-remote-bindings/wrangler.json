@@ -8,5 +8,16 @@
 			"service": "my-worker-test",
 			"experimental_remote": true
 		}
-	]
+	],
+	"env": {
+		"staging": {
+			"services": [
+				{
+					"binding": "MY_WORKER",
+					"service": "my-staging-worker-test",
+					"experimental_remote": true
+				}
+			]
+		}
+	}
 }

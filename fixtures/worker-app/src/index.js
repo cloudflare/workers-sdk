@@ -25,6 +25,7 @@ export default {
 		const { pathname, origin, hostname, host } = new URL(request.url);
 		if (pathname.startsWith("/fav"))
 			return new Response("Not found", { status: 404 });
+		if (pathname === "/env") return Response.json(env.FOO);
 		if (pathname === "/version_metadata") return Response.json(env.METADATA);
 		if (pathname === "/random") return new Response(hexEncode(randomBytes(8)));
 		if (pathname === "/error") throw new Error("Oops!");

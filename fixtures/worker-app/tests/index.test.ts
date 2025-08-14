@@ -203,4 +203,10 @@ describe("'wrangler dev' correctly renders pages", () => {
 			]
 		`);
 	});
+
+	it("reads local dev vars from the .env file", async ({ expect }) => {
+		const response = await fetch(`http://${ip}:${port}/env`);
+		const env = await response.text();
+		expect(env).toBe(`"bar"`);
+	});
 });

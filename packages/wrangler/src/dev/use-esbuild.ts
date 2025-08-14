@@ -44,6 +44,8 @@ export function runBuild(
 		minify,
 		keepNames,
 		nodejsCompatMode,
+		compatibilityDate,
+		compatibilityFlags,
 		define,
 		alias,
 		noBundle,
@@ -71,6 +73,8 @@ export function runBuild(
 		minify: boolean | undefined;
 		keepNames: boolean;
 		nodejsCompatMode: NodeJSCompatMode | undefined;
+		compatibilityDate: string | undefined;
+		compatibilityFlags: string[] | undefined;
 		noBundle: boolean;
 		findAdditionalModules: boolean | undefined;
 		durableObjects: Config["durable_objects"];
@@ -152,6 +156,8 @@ export function runBuild(
 						minify,
 						keepNames,
 						nodejsCompatMode,
+						compatibilityDate,
+						compatibilityFlags,
 						doBindings: durableObjects.bindings,
 						workflowBindings: workflows,
 						alias,

@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { execSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
@@ -50,6 +51,7 @@ import {
 } from "../sourcemap";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
@@ -357,7 +359,7 @@ export const versionsUploadCommand = createCommand({
 				legacyEnv: isLegacyEnv(config),
 				env: args.env,
 				compatibilityDate: args.latest
-					? new Date().toISOString().substring(0, 10)
+					? formatCompatibilityDate(new Date())
 					: args.compatibilityDate,
 				compatibilityFlags: args.compatibilityFlags,
 				vars: cliVars,
@@ -455,12 +457,13 @@ export default async function versionsUpload(props: Props): Promise<{
 		}
 	}
 
-	if (!(props.compatibilityDate || config.compatibility_date)) {
-		const compatibilityDateStr = `${new Date().getFullYear()}-${(
-			new Date().getMonth() +
-			1 +
-			""
-		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
+	const compatibilityDate =
+		props.compatibilityDate || config.compatibility_date;
+	const compatibilityFlags =
+		props.compatibilityFlags ?? config.compatibility_flags;
+
+	if (!compatibilityDate) {
+		const compatibilityDateStr = formatCompatibilityDate(new Date());
 
 		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
@@ -476,15 +479,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const minify = props.minify ?? config.minify;
 
 	const nodejsCompatMode = validateNodeCompatMode(
-		props.compatibilityDate ?? config.compatibility_date,
-		props.compatibilityFlags ?? config.compatibility_flags,
+		compatibilityDate,
+		compatibilityFlags,
 		{
 			noBundle: props.noBundle ?? config.no_bundle,
 		}
 	);
-
-	const compatibilityFlags =
-		props.compatibilityFlags ?? config.compatibility_flags;
 
 	// Warn if user tries minify or node-compat with no-bundle
 	if (props.noBundle && minify) {
@@ -593,6 +593,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						keepNames: config.keep_names ?? true,
 						sourcemap: uploadSourceMaps,
 						nodejsCompatMode,
+						compatibilityDate,
+						compatibilityFlags,
 						define: { ...config.define, ...props.defines },
 						alias: { ...config.alias, ...props.alias },
 						checkFetch: false,
@@ -602,8 +604,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						local: false,
 						projectRoot: props.projectRoot,
 						defineNavigatorUserAgent: isNavigatorDefined(
-							props.compatibilityDate ?? config.compatibility_date,
-							props.compatibilityFlags ?? config.compatibility_flags
+							compatibilityDate,
+							compatibilityFlags
 						),
 						plugins: [logBuildOutput(nodejsCompatMode)],
 
@@ -686,7 +688,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
-			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
+			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars: false, // the wrangler.toml should be the source-of-truth for vars
 			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
@@ -779,12 +781,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					);
 				}
 
-				await helpIfErrorIsSizeOrScriptStartup(
+				const message = await helpIfErrorIsSizeOrScriptStartup(
 					err,
 					dependencies,
 					workerBundle,
 					props.projectRoot
 				);
+				if (message) {
+					logger.error(message);
+				}
 
 				// Apply source mapping to validation startup errors if possible
 				if (
@@ -897,9 +902,71 @@ function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
 }
 
+// Constants for DNS label constraints and hash configuration
+const MAX_DNS_LABEL_LENGTH = 63;
+const HASH_LENGTH = 4;
+const ALIAS_VALIDATION_REGEX = /^[a-z](?:[a-z0-9-]*[a-z0-9])?$/i;
+
+/**
+ * Sanitizes a branch name to create a valid DNS label alias.
+ * Converts to lowercase, replaces invalid chars with dashes, removes consecutive dashes.
+ */
+function sanitizeBranchName(branchName: string): string {
+	return branchName
+		.replace(/[^a-zA-Z0-9-]/g, "-")
+		.replace(/-+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.toLowerCase();
+}
+
+/**
+ * Gets the current branch name from CI environment or git.
+ */
+function getBranchName(): string | undefined {
+	// Try CI environment variable first
+	const ciBranchName = getWorkersCIBranchName();
+	if (ciBranchName) {
+		return ciBranchName;
+	}
+
+	// Fall back to git commands
+	try {
+		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
+		return execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim();
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Creates a truncated alias with hash suffix when the branch name is too long.
+ * Hash from original branch name to preserve uniqueness.
+ */
+function createTruncatedAlias(
+	branchName: string,
+	sanitizedAlias: string,
+	availableSpace: number
+): string | undefined {
+	const spaceForHash = HASH_LENGTH + 1; // +1 for hyphen separator
+	const maxPrefixLength = availableSpace - spaceForHash;
+
+	if (maxPrefixLength < 1) {
+		// Not enough space even with truncation
+		return undefined;
+	}
+
+	const hash = createHash("sha256")
+		.update(branchName)
+		.digest("hex")
+		.slice(0, HASH_LENGTH);
+
+	const truncatedPrefix = sanitizedAlias.slice(0, maxPrefixLength);
+	return `${truncatedPrefix}-${hash}`;
+}
+
 /**
  * Generates a preview alias based on the current git branch.
- * Alias must be <= 63 characters, alphanumeric + dashes only.
+ * Alias must be <= 63 characters, alphanumeric + dashes only, and start with a letter.
  * Returns undefined if not in a git directory or requirements cannot be met.
  */
 export function generatePreviewAlias(scriptName: string): string | undefined {
@@ -910,47 +977,31 @@ export function generatePreviewAlias(scriptName: string): string | undefined {
 		return undefined;
 	};
 
-	let branchName = getWorkersCIBranchName();
-	if (!branchName) {
-		try {
-			execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
-			branchName = execSync(`git rev-parse --abbrev-ref HEAD`)
-				.toString()
-				.trim();
-		} catch {
-			return warnAndExit();
-		}
-	}
-
+	const branchName = getBranchName();
 	if (!branchName) {
 		return warnAndExit();
 	}
 
-	const sanitizedAlias = branchName
-		.replace(/[^a-zA-Z0-9-]/g, "-") // Replace all non-alphanumeric characters
-		.replace(/-+/g, "-") // replace multiple dashes
-		.replace(/^-+|-+$/g, "") // trim dashes
-		.toLowerCase(); // lowercase the name
+	const sanitizedAlias = sanitizeBranchName(branchName);
 
-	// Ensure the alias name meets requirements:
-	// - only alphanumeric or hyphen characters
-	// - no trailing slashes
-	// - begins with letter
-	// - no longer than 63 total characters
-	const isValidAlias = /^[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(
-		sanitizedAlias
+	// Validate the sanitized alias meets DNS label requirements
+	if (!ALIAS_VALIDATION_REGEX.test(sanitizedAlias)) {
+		return warnAndExit();
+	}
+
+	const availableSpace = MAX_DNS_LABEL_LENGTH - scriptName.length - 1;
+
+	// If the sanitized alias fits within the remaining space, return it,
+	// otherwise otherwise try truncation with hash suffixed
+	if (sanitizedAlias.length <= availableSpace) {
+		return sanitizedAlias;
+	}
+
+	const truncatedAlias = createTruncatedAlias(
+		branchName,
+		sanitizedAlias,
+		availableSpace
 	);
-	if (!isValidAlias) {
-		return warnAndExit();
-	}
 
-	// Dns labels can only have a max of 63 chars. We use preview urls in the form of <alias>-<workerName>
-	// which means our alias must be shorter than 63-scriptNameLen-1
-	const maxDnsLabelLength = 63;
-	const available = maxDnsLabelLength - scriptName.length - 1;
-	if (sanitizedAlias.length > available) {
-		return warnAndExit();
-	}
-
-	return sanitizedAlias;
+	return truncatedAlias || warnAndExit();
 }

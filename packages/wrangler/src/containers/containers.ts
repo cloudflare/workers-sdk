@@ -27,6 +27,7 @@ export function deleteYargs(args: CommonYargsArgv) {
 	return args.positional("ID", {
 		describe: "id of the containers to delete",
 		type: "string",
+		demandOption: true,
 	});
 }
 
@@ -34,9 +35,12 @@ export async function deleteCommand(
 	deleteArgs: StrictYargsOptionsToInterface<typeof deleteYargs>,
 	_config: Config
 ) {
-	if (!deleteArgs.ID) {
-		throw new Error(
-			"You must provide an ID. Use 'wrangler containers list` to view your containers."
+	// API gateway has path restrictions so if someone provides a string that isn't ID shaped, we get a weird error instead of a 404
+	const uuidRegex =
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+	if (!uuidRegex.test(deleteArgs.ID)) {
+		throw new UserError(
+			`Expected a container ID but got ${deleteArgs.ID}. Use \`wrangler containers list\` to view your containers and corresponding IDs.`
 		);
 	}
 

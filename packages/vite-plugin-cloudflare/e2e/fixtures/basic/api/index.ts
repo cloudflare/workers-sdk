@@ -17,6 +17,10 @@ export default {
 			});
 		}
 
+		if (url.pathname === "/env/") {
+			return Response.json(env);
+		}
+
 		if (url.pathname.startsWith("/ai/")) {
 			const messages = [
 				{

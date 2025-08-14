@@ -4,22 +4,22 @@ import {
 	isCloudflareRegistryLink,
 } from "./knobs";
 import { dockerLoginManagedRegistry } from "./login";
-import { ContainerDevOptions } from "./types";
 import {
 	checkExposedPorts,
-	isDockerfile,
+	cleanupDuplicateImageTags,
 	runDockerCmd,
 	verifyDockerInstalled,
 } from "./utils";
+import type { ContainerDevOptions, DockerfileConfig } from "./types";
 
 export async function pullImage(
 	dockerPath: string,
-	options: ContainerDevOptions
+	options: Exclude<ContainerDevOptions, DockerfileConfig>
 ): Promise<{ abort: () => void; ready: Promise<void> }> {
 	await dockerLoginManagedRegistry(dockerPath);
 	const pull = runDockerCmd(dockerPath, [
 		"pull",
-		options.image,
+		options.image_uri,
 		// All containers running on our platform need to be built for amd64 architecture, but by default docker pull seems to look for an image matching the host system, so we need to specify this here
 		"--platform",
 		"linux/amd64",
@@ -27,7 +27,11 @@ export async function pullImage(
 	const ready = pull.ready.then(async ({ aborted }: { aborted: boolean }) => {
 		if (!aborted) {
 			// re-tag image with the expected dev-formatted image tag for consistency
-			await runDockerCmd(dockerPath, ["tag", options.image, options.imageTag]);
+			await runDockerCmd(dockerPath, [
+				"tag",
+				options.image_uri,
+				options.image_tag,
+			]);
 		}
 	});
 
@@ -49,18 +53,23 @@ export async function pullImage(
  * such as checking if the Docker CLI is installed, and if the container images
  * expose any ports.
  */
-export async function prepareContainerImagesForDev(
-	dockerPath: string,
-	containerOptions: ContainerDevOptions[],
-	configPath: string | undefined,
+export async function prepareContainerImagesForDev(args: {
+	dockerPath: string;
+	containerOptions: ContainerDevOptions[];
 	onContainerImagePreparationStart: (args: {
 		containerOptions: ContainerDevOptions;
 		abort: () => void;
-	}) => void,
+	}) => void;
 	onContainerImagePreparationEnd: (args: {
 		containerOptions: ContainerDevOptions;
-	}) => void
-) {
+	}) => void;
+}) {
+	const {
+		dockerPath,
+		containerOptions,
+		onContainerImagePreparationStart,
+		onContainerImagePreparationEnd,
+	} = args;
 	let aborted = false;
 	if (process.platform === "win32") {
 		throw new Error(
@@ -69,8 +78,8 @@ export async function prepareContainerImagesForDev(
 	}
 	await verifyDockerInstalled(dockerPath);
 	for (const options of containerOptions) {
-		if (isDockerfile(options.image, configPath)) {
-			const build = await buildImage(dockerPath, options, configPath);
+		if ("dockerfile" in options) {
+			const build = await buildImage(dockerPath, options);
 			onContainerImagePreparationStart({
 				containerOptions: options,
 				abort: () => {
@@ -79,13 +88,14 @@ export async function prepareContainerImagesForDev(
 				},
 			});
 			await build.ready;
+
 			onContainerImagePreparationEnd({
 				containerOptions: options,
 			});
 		} else {
-			if (!isCloudflareRegistryLink(options.image)) {
+			if (!isCloudflareRegistryLink(options.image_uri)) {
 				throw new Error(
-					`Image "${options.image}" is a registry link but does not point to the Cloudflare container registry.\n` +
+					`Image "${options.image_uri}" is a registry link but does not point to the Cloudflare container registry.\n` +
 						`To use an existing image from another repository, see https://developers.cloudflare.com/containers/image-management/#using-existing-images`
 				);
 			}
@@ -103,6 +113,9 @@ export async function prepareContainerImagesForDev(
 			});
 		}
 		if (!aborted) {
+			// Clean up duplicate image tags. This is scoped to cloudflare-dev only
+			await cleanupDuplicateImageTags(dockerPath, options.image_tag);
+
 			await checkExposedPorts(dockerPath, options);
 		}
 	}

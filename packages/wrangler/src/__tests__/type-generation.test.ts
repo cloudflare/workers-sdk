@@ -701,9 +701,9 @@ describe("generate types", () => {
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
-					SERVICE_BINDING: Fetcher /* service_name */;
+					SERVICE_BINDING: Service<typeof import(\\"../b/index\\").default>;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
-					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<import(\\"../c/index\\").RealEntrypoint>;
+					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<typeof import(\\"../c/index\\").RealEntrypoint>;
 					AE_DATASET_BINDING: AnalyticsEngineDataset;
 					NAMESPACE_BINDING: DispatchNamespace;
 					LOGFWDR_SCHEMA: any;
@@ -1046,6 +1046,16 @@ describe("generate types", () => {
 		`;
 		fs.writeFileSync(".dev.vars", localVarsEnvContent, "utf8");
 
+		// Add a .env file that will be ignored due to there being a .dev.vars file
+		const dotEnvContent = dedent`
+			# Preceding comment
+			SECRET_A="A from .dev.vars"
+			MULTI_LINE_SECRET="A: line 1
+			line 2"
+			UNQUOTED_SECRET= unquoted value
+		`;
+		fs.writeFileSync(".env", dotEnvContent, "utf8");
+
 		await runWrangler("types --include-runtime=false");
 
 		expect(std.out).toMatchInlineSnapshot(`
@@ -1056,6 +1066,51 @@ describe("generate types", () => {
 					myTomlVarA: \\"A from wrangler toml\\";
 					myTomlVarB: \\"B from wrangler toml\\";
 					SECRET_A: string;
+					MULTI_LINE_SECRET: string;
+					UNQUOTED_SECRET: string;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should include secret keys from .env, if there is no .dev.vars", async () => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				vars: {
+					myTomlVarA: "A from wrangler toml",
+					myTomlVarB: "B from wrangler toml",
+				},
+			}),
+			"utf-8"
+		);
+
+		const dotEnvContent = dedent`
+		# Preceding comment
+		SECRET_A_DOT_ENV="A from .env"
+		MULTI_LINE_SECRET="A: line 1
+		line 2"
+		UNQUOTED_SECRET= unquoted value
+		`;
+		fs.writeFileSync(".env", dotEnvContent, "utf8");
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Generating project types...
+
+			declare namespace Cloudflare {
+				interface Env {
+					myTomlVarA: \\"A from wrangler toml\\";
+					myTomlVarB: \\"B from wrangler toml\\";
+					SECRET_A_DOT_ENV: string;
 					MULTI_LINE_SECRET: string;
 					UNQUOTED_SECRET: string;
 				}

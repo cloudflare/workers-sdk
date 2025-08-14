@@ -34,7 +34,7 @@ import type { Mock, MockInstance } from "vitest";
 vi.mock("../api/startDevWorker/ConfigController", (importOriginal) =>
 	importOriginal()
 );
-
+vi.mock("node:child_process");
 vi.mock("../dev/hotkeys");
 
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
@@ -89,31 +89,29 @@ async function expectedHostAndZone(
 		configPath: config.config,
 	});
 
-	expect(ctx).toEqual(
-		expect.objectContaining({
-			workerContext: {
-				host,
-				zone,
-				routes: config.triggers
-					?.filter(
-						(trigger): trigger is Extract<Trigger, { type: "route" }> =>
-							trigger.type === "route"
-					)
-					.map((trigger) => {
-						const { type: _, ...route } = trigger;
-						if (
-							"custom_domain" in route ||
-							"zone_id" in route ||
-							"zone_name" in route
-						) {
-							return route;
-						} else {
-							return route.pattern;
-						}
-					}),
-			},
-		})
-	);
+	expect(ctx).toMatchObject({
+		workerContext: {
+			host,
+			zone,
+			routes: config.triggers
+				?.filter(
+					(trigger): trigger is Extract<Trigger, { type: "route" }> =>
+						trigger.type === "route"
+				)
+				.map((trigger) => {
+					const { type: _, ...route } = trigger;
+					if (
+						"custom_domain" in route ||
+						"zone_id" in route ||
+						"zone_name" in route
+					) {
+						return route;
+					} else {
+						return route.pattern;
+					}
+				}),
+		},
+	});
 
 	return config;
 }
@@ -958,44 +956,167 @@ describe.sequential("wrangler dev", () => {
 			afterEach(() => (process.env = processEnv));
 
 			beforeEach(() => {
-				fs.writeFileSync(".env", "CUSTOM_BUILD_VAR=default");
-				fs.writeFileSync(".env.custom", "CUSTOM_BUILD_VAR=custom");
+				fs.writeFileSync(
+					".env",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=default-1
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=default-2
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=default-3
+					`
+				);
+				fs.writeFileSync(
+					".env.local",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=default-local-1
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=default-local
+					`
+				);
+				fs.writeFileSync(
+					".env.custom",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=custom-2
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=custom-3
+					`
+				);
+				fs.writeFileSync(
+					".env.custom.local",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=custom-local-1
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=custom-local-3
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=custom-local
+					`
+				);
+				fs.writeFileSync(
+					"build.js",
+					dedent`
+						const customFields = Object.entries(process.env).filter(([key]) => key.startsWith('__DOT_ENV_TEST_CUSTOM_BUILD_VAR'));
+						console.log(customFields.map(([key, value]) => key + "=" + value).join('\\n'));
+					`
+				);
 				fs.writeFileSync("index.js", `export default {};`);
 				writeWranglerConfig({
 					main: "index.js",
-					env: { custom: {} },
-					build: {
-						// Ideally, we'd just log the var here and match it in `std.out`,
-						// but stdout from custom builds is piped directly to
-						// `process.stdout` which we don't capture.
-						command: `node -e "require('fs').writeFileSync('var.txt', process.env.CUSTOM_BUILD_VAR)"`,
-					},
+					env: { custom: {}, noEnv: {} },
+					build: { command: `node ./build.js` },
 				});
-
-				// We won't overwrite existing process.env keys with .env values (to
-				// allow .env overrides to be specified on the shell), so make sure this
-				// key definitely doesn't exist.
-				vi.stubEnv("CUSTOM_BUILD_VAR", "");
-				delete process.env.CUSTOM_BUILD_VAR;
 			});
 
-			it("should load environment variables from `.env`", async () => {
+			function extractCustomBuildLogs(stdout: string) {
+				return stdout
+					.split("\n")
+					.filter((line) => line.startsWith("[custom build]"))
+					.map((line) => line.replace(/\[custom build\]( |$)/, ""))
+					.sort()
+					.join("\n");
+			}
+
+			it("should pass environment variables from `.env` to custom builds", async () => {
 				await runWranglerUntilConfig("dev");
-				const output = fs.readFileSync("var.txt", "utf8");
-				expect(output).toMatch("default");
+				expect(extractCustomBuildLogs(std.out)).toMatchInlineSnapshot(`
+					"
+					Running: node ./build.js
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=default-local-1
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=default-2
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=default-3
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=default-local"
+				`);
 			});
+
 			it("should prefer to load environment variables from `.env.<environment>` if `--env <environment>` is set", async () => {
 				await runWranglerUntilConfig("dev --env custom");
-				const output = fs.readFileSync("var.txt", "utf8");
-				expect(output).toMatch("custom");
+				expect(extractCustomBuildLogs(std.out)).toMatchInlineSnapshot(`
+					"
+					Running: node ./build.js
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=custom-local-1
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=custom-2
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=custom-local-3
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=custom-local"
+				`);
 			});
-			it("should show reasonable debug output if `.env` does not exist", async () => {
-				fs.rmSync(".env");
-				writeWranglerConfig({
-					main: "index.js",
-				});
-				await runWranglerUntilConfig("dev --log-level debug");
-				expect(std.debug).toContain(".env file not found at");
+
+			it("should use default `.env` if `.env.<environment>` does not exist", async () => {
+				await runWranglerUntilConfig("dev --env=noEnv");
+				expect(extractCustomBuildLogs(std.out)).toMatchInlineSnapshot(`
+					"
+					Running: node ./build.js
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=default-local-1
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=default-2
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=default-3
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=default-local"
+				`);
+			});
+
+			it("should not override environment variables already on process.env", async () => {
+				vi.stubEnv("__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1", "process-env");
+				await runWranglerUntilConfig("dev");
+				expect(extractCustomBuildLogs(std.out)).toMatchInlineSnapshot(`
+					"
+					Running: node ./build.js
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=process-env
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=default-2
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=default-3
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=default-local"
+				`);
+			});
+
+			it("should prefer to load environment variables from a custom path `.env` if `--env-file` is set", async () => {
+				fs.mkdirSync("other", { recursive: true });
+				fs.writeFileSync(
+					"other/.env",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=other-2
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=other-3
+					`
+				);
+
+				// This file will not be loaded because `--env-file` is set for it.
+				fs.writeFileSync(
+					"other/.env.local",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=other-local-1
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=other-local-3
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=other-local
+					`
+				);
+
+				await runWranglerUntilConfig("dev --env-file other/.env");
+				expect(extractCustomBuildLogs(std.out)).toMatchInlineSnapshot(`
+					"
+					Running: node ./build.js
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=other-2
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=other-3"
+				`);
+			});
+
+			it("should prefer to load environment variables from a custom path `.env` if multiple `--env-file` is set", async () => {
+				fs.mkdirSync("other", { recursive: true });
+				fs.writeFileSync(
+					"other/.env",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=other-2
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=other-3
+					`
+				);
+				fs.writeFileSync(
+					"other/.env.local",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=other-local-1
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=other-local-3
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=other-local
+					`
+				);
+
+				await runWranglerUntilConfig(
+					"dev --env-file other/.env --env-file other/.env.local"
+				);
+				expect(extractCustomBuildLogs(std.out)).toMatchInlineSnapshot(`
+					"
+					Running: node ./build.js
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=other-local-1
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=other-2
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=other-local-3
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=other-local"
+				`);
 			});
 		});
 	});
@@ -1245,16 +1366,44 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("container engine", () => {
-		it("should default to docker socket", async () => {
+		const minimalContainerConfig = {
+			durable_objects: {
+				bindings: [
+					{
+						name: "EXAMPLE_DO_BINDING",
+						class_name: "ExampleDurableObject",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] }],
+			containers: [
+				{
+					name: "my-container",
+					max_instances: 10,
+					class_name: "ExampleDurableObject",
+					image: "docker.io/hello:world",
+				},
+			],
+		};
+		let mockExecFileSync: ReturnType<typeof vi.fn>;
+		const mockedDockerContextLsOutput = `{"Current":true,"Description":"Current DOCKER_HOST based configuration","DockerEndpoint":"unix:///current/run/docker.sock","Error":"","Name":"default"}
+{"Current":false,"Description":"Docker Desktop","DockerEndpoint":"unix:///other/run/docker.sock","Error":"","Name":"desktop-linux"}`;
+
+		beforeEach(async () => {
+			const childProcess = await import("node:child_process");
+			mockExecFileSync = vi.mocked(childProcess.execFileSync);
+
+			mockExecFileSync.mockReturnValue(mockedDockerContextLsOutput);
+		});
+		it("should default to socket of current docker context", async () => {
 			writeWranglerConfig({
 				main: "index.js",
+				...minimalContainerConfig,
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev");
 			expect(config.dev.containerEngine).toEqual(
-				process.platform === "win32"
-					? "//./pipe/docker_engine"
-					: "unix:///var/run/docker.sock"
+				"unix:///current/run/docker.sock"
 			);
 		});
 
@@ -1265,6 +1414,7 @@ describe.sequential("wrangler dev", () => {
 					port: 8888,
 					container_engine: "test.sock",
 				},
+				...minimalContainerConfig,
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 
@@ -1277,6 +1427,7 @@ describe.sequential("wrangler dev", () => {
 				dev: {
 					port: 8888,
 				},
+				...minimalContainerConfig,
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			vi.stubEnv("WRANGLER_DOCKER_HOST", "blah.sock");
@@ -1436,6 +1587,214 @@ describe.sequential("wrangler dev", () => {
 				env.CUSTOM_VAR (\\"(hidden)\\")      Environment Variable      local
 
 				"
+			`);
+		});
+	});
+
+	describe(".env in local dev", () => {
+		const processEnv = process.env;
+		beforeEach(() => (process.env = { ...processEnv }));
+		afterEach(() => (process.env = processEnv));
+
+		beforeEach(() => {
+			fs.writeFileSync(
+				".env",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_1=default-1
+						__DOT_ENV_LOCAL_DEV_VAR_2=default-2
+						__DOT_ENV_LOCAL_DEV_VAR_3=default-3
+					`
+			);
+			fs.writeFileSync(
+				".env.local",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_1=default-local-1
+						__DOT_ENV_LOCAL_DEV_VAR_LOCAL=default-local
+					`
+			);
+			fs.writeFileSync(
+				".env.custom",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_2=custom-2
+						__DOT_ENV_LOCAL_DEV_VAR_3=custom-3
+					`
+			);
+			fs.writeFileSync(
+				".env.custom.local",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_1=custom-local-1
+						__DOT_ENV_LOCAL_DEV_VAR_3=custom-local-3
+						__DOT_ENV_LOCAL_DEV_VAR_LOCAL=custom-local
+					`
+			);
+			fs.writeFileSync("index.js", `export default {};`);
+			writeWranglerConfig({
+				main: "index.js",
+			});
+		});
+
+		function extractUsingVars(stdout: string) {
+			return stdout
+				.split("\n")
+				.filter((line) => line.startsWith("Using vars"))
+				.sort()
+				.join("\n");
+		}
+
+		function extractBindings(stdout: string) {
+			return stdout
+				.split("\n")
+				.filter((line) => line.startsWith("env."))
+				.sort()
+				.join("\n");
+		}
+
+		it("should get local dev `vars` from `.env`", async () => {
+			await runWranglerUntilConfig("dev");
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+				"Using vars defined in .env
+				Using vars defined in .env.local"
+			`);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\\"(hidden)\\")      Environment Variable      local"
+			`);
+		});
+
+		it("should not load local dev `vars` from `.env` if there is a `.dev.vars` file", async () => {
+			fs.writeFileSync(
+				".dev.vars",
+				dedent`
+						__DOT_DEV_DOT_VARS_LOCAL_DEV_VAR_1=dot-dev-var-1
+						__DOT_DEV_DOT_VARS_LOCAL_DEV_VAR_2=dot-dev-var-2
+					`
+			);
+			await runWranglerUntilConfig("dev");
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+				"Using vars defined in .dev.vars"
+			`);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_DEV_DOT_VARS_LOCAL_DEV_VAR_1 (\\"(hidden)\\")      Environment Variable      local
+				env.__DOT_DEV_DOT_VARS_LOCAL_DEV_VAR_2 (\\"(hidden)\\")      Environment Variable      local"
+			`);
+		});
+
+		it("should not load local dev `vars` from `.env` if CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV is set to false", async () => {
+			await runWranglerUntilConfig("dev", {
+				CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false",
+			});
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`""`);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should get local dev `vars` from appropriate `.env.<environment>` files when --env=<environment> is set", async () => {
+			await runWranglerUntilConfig("dev --env custom");
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+				"Using vars defined in .env
+				Using vars defined in .env.custom
+				Using vars defined in .env.custom.local
+				Using vars defined in .env.local"
+			`);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\\"(hidden)\\")      Environment Variable      local"
+			`);
+		});
+
+		it("should get local dev vars from appropriate `.env` files when --env=<environment> is set but no .env.<environment> file exists", async () => {
+			await runWranglerUntilConfig("dev --env noEnv");
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+				"Using vars defined in .env
+				Using vars defined in .env.local"
+			`);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\\"(hidden)\\")      Environment Variable      local"
+			`);
+		});
+
+		it("should get local dev `vars` from `process.env` when `CLOUDFLARE_INCLUDE_PROCESS_ENV` is true", async () => {
+			await runWranglerUntilConfig("dev --env custom", {
+				CLOUDFLARE_INCLUDE_PROCESS_ENV: "true",
+			});
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+				"Using vars defined in .env
+				Using vars defined in .env.custom
+				Using vars defined in .env.custom.local
+				Using vars defined in .env.local
+				Using vars defined in process.env"
+			`);
+			// We could dump out all the bindings but that would be a lot of noise, and also may change between OSes and runs.
+			// Instead, we know that the `CLOUDFLARE_INCLUDE_PROCESS_ENV` variable should be present, so we just check for that.
+			expect(extractBindings(std.out)).contains(
+				'env.CLOUDFLARE_INCLUDE_PROCESS_ENV ("(hidden)")'
+			);
+		});
+
+		it("should get local dev `vars` from appropriate `.env.<environment>` files when --env-file is set", async () => {
+			fs.mkdirSync("other", { recursive: true });
+			fs.writeFileSync(
+				"other/.env",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_2=custom-2
+						__DOT_ENV_LOCAL_DEV_VAR_3=custom-3
+					`
+			);
+			fs.writeFileSync(
+				"other/.env.local",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_1=custom-local-1
+						__DOT_ENV_LOCAL_DEV_VAR_3=custom-local-3
+						__DOT_ENV_LOCAL_DEV_VAR_LOCAL=custom-local
+					`
+			);
+
+			await runWranglerUntilConfig("dev --env-file=other/.env");
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(
+				`"Using vars defined in other/.env"`
+			);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")      Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")      Environment Variable      local"
+			`);
+		});
+
+		it("should get local dev `vars` from appropriate `.env.<environment>` files when multiple --env-file options are set", async () => {
+			fs.mkdirSync("other", { recursive: true });
+			fs.writeFileSync(
+				"other/.env",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_2=custom-2
+						__DOT_ENV_LOCAL_DEV_VAR_3=custom-3
+					`
+			);
+			fs.writeFileSync(
+				"other/.env.local",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_1=custom-local-1
+						__DOT_ENV_LOCAL_DEV_VAR_3=custom-local-3
+						__DOT_ENV_LOCAL_DEV_VAR_LOCAL=custom-local
+					`
+			);
+
+			await runWranglerUntilConfig(
+				"dev --env-file=other/.env --env-file=other/.env.local"
+			);
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+				"Using vars defined in other/.env
+				Using vars defined in other/.env.local"
+			`);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\\"(hidden)\\")      Environment Variable      local"
 			`);
 		});
 	});
@@ -1791,27 +2150,45 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("containers", () => {
-		it("should warn when run in remote mode with (enabled) containers", async () => {
-			writeWranglerConfig({
-				main: "index.js",
-				compatibility_date: "2024-01-01",
-				containers: [
+		const containerConfig = {
+			main: "index.js",
+			compatibility_date: "2024-01-01",
+			containers: [
+				{
+					class_name: "ContainerClass",
+					image: "./Dockerfile",
+				},
+			],
+			durable_objects: {
+				bindings: [
 					{
+						name: "ContainerClass",
 						class_name: "ContainerClass",
-						image: "./Dockerfile",
 					},
 				],
-			});
+			},
+			migrations: [
+				{
+					tag: "v1",
+					new_sqlite_classes: ["ContainerClass"],
+				},
+			],
+		};
+		it("should warn when run in remote mode with (enabled) containers", async () => {
+			writeWranglerConfig(containerConfig);
 			fs.writeFileSync("index.js", `export default {};`);
 
 			await expect(
 				runWrangler("dev --remote")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				"[Error: Bailing early in tests]"
+				`[Error: Bailing early in tests]`
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mContainers are only supported in local mode, to suppress this warning set \`dev.enable_containers\` to \`false\` or pass \`--enable-containers=false\` to the \`wrangler dev\` command[0m
+
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSQLite in Durable Objects is only supported in local mode.[0m
 
 				"
 			`);
@@ -1819,14 +2196,7 @@ describe.sequential("wrangler dev", () => {
 
 		it("should not warn when run in remote mode with disabled containers", async () => {
 			writeWranglerConfig({
-				main: "index.js",
-				compatibility_date: "2024-01-01",
-				containers: [
-					{
-						class_name: "ContainerClass",
-						image: "./Dockerfile",
-					},
-				],
+				...containerConfig,
 				dev: {
 					enable_containers: false,
 				},
@@ -1836,10 +2206,14 @@ describe.sequential("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --remote")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				"[Error: Bailing early in tests]"
+				`[Error: Bailing early in tests]`
 			);
 
-			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSQLite in Durable Objects is only supported in local mode.[0m
+
+				"
+			`);
 		});
 	});
 });

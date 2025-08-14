@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import path from "node:path";
 import {
 	afterAll,
 	beforeAll,
@@ -8,6 +9,8 @@ import {
 	it,
 	vi,
 } from "vitest";
+import { buildImage } from "../../containers-shared/src/build";
+import { generateContainerBuildId } from "../../containers-shared/src/utils";
 import { getDockerPath } from "../src/environment-variables/misc-variables";
 import { dedent } from "../src/utils/dedent";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
@@ -26,7 +29,7 @@ for (const source of imageSource) {
 	const isPullWithoutAccountId = source === "pull" && !CLOUDFLARE_ACCOUNT_ID;
 
 	describe.skipIf(isCINonLinux || isPullWithoutAccountId)(
-		"containers local dev tests: %s",
+		`containers local dev tests: ${source}`,
 		{ timeout: 90_000 },
 		() => {
 			let helper: WranglerE2ETestHelper;
@@ -158,16 +161,23 @@ for (const source of imageSource) {
 				await helper.seed({
 					"wrangler.json": JSON.stringify(wranglerConfig),
 				});
-				// cleanup any running containers
+				/// wait a bit in case the expected cleanup from shutting down wrangler dev is already happening
+				await new Promise((resolve) => setTimeout(resolve, 500));
+				// cleanup any running containers. this does happen automatically when we shut down wrangler,
+				// but treekill is being uncooperative. this is also tested in interactive-dev-fixture
+				// where it is working as expected
 				const ids = getContainerIds("e2econtainer");
 				if (ids.length > 0) {
-					console.log(ids);
 					execSync(`${getDockerPath()} rm -f ${ids.join(" ")}`, {
 						encoding: "utf8",
 					});
 				}
 			});
 			afterAll(async () => {
+				// wait a bit in case the expected cleanup from shutting down wrangler dev is already happening
+				await new Promise((resolve) => setTimeout(resolve, 500));
+				// again this should happen automatically when we shut down wrangler, but treekill is being uncooperative.
+				// this is tested in interactive-dev-fixture where it is working as expected.
 				const ids = getContainerIds("e2econtainer");
 				if (ids.length > 0) {
 					execSync(`${getDockerPath()} rm -f ${ids.join(" ")}`, {
@@ -196,33 +206,83 @@ for (const source of imageSource) {
 			it(`will be able to interact with the container`, async () => {
 				const worker = helper.runLongLived("wrangler dev");
 				const ready = await worker.waitForReady();
-				await worker.readUntil(/Container image\(s\) ready/);
 
-				let response = await fetch(`${ready.url}/status`);
-				expect(response.status).toBe(200);
-				let status = await response.json();
-				expect(status).toBe(false);
+				await vi.waitFor(async () => {
+					const response = await fetch(`${ready.url}/status`);
+					expect(response.status).toBe(200);
+					const status = await response.json();
+					expect(status).toBe(false);
+				});
 
-				response = await fetch(`${ready.url}/start`);
+				let response = await fetch(`${ready.url}/start`);
 				let text = await response.text();
 				expect(response.status).toBe(200);
 				expect(text).toBe("Container create request sent...");
 
-				// Wait a bit for container to start
-				await new Promise((resolve) => setTimeout(resolve, 2_000));
+				await vi.waitFor(async () => {
+					response = await fetch(`${ready.url}/status`);
+					expect(response.status).toBe(200);
+					const status = await response.json();
+					expect(status).toBe(true);
+				});
 
-				response = await fetch(`${ready.url}/status`);
-				status = await response.json();
-				expect(response.status).toBe(200);
-				expect(status).toBe(true);
+				await vi.waitFor(
+					async () => {
+						response = await fetch(`${ready.url}/fetch`, {
+							signal: AbortSignal.timeout(3_000),
+							headers: { "MF-Disable-Pretty-Error": "true" },
+						});
+						text = await response.text();
+						expect(text).toBe("Hello World! Have an env var! I'm an env var!");
+					},
+					{ timeout: 5_000 }
+				);
 
-				response = await fetch(`${ready.url}/fetch`);
-				expect(response.status).toBe(200);
-				text = await response.text();
-				expect(text).toBe("Hello World! Have an env var! I'm an env var!");
 				// Check that a container is running using `docker ps`
 				const ids = getContainerIds("e2econtainer");
 				expect(ids.length).toBe(1);
+				await worker.stop();
+			});
+
+			it("should clean up duplicate image tags after build", async () => {
+				const dockerPath = getDockerPath();
+				const fakeBuildID = generateContainerBuildId();
+				const initialImageTag = `cloudflare-dev/test-cleanup:${fakeBuildID}`;
+
+				// First, build an image directly to create a duplicate tag scenario
+				const build = await buildImage(dockerPath, {
+					dockerfile: path.resolve(helper.tmpPath, "./Dockerfile"),
+					image_tag: initialImageTag,
+					class_name: "TestContainer",
+					image_build_context: helper.tmpPath,
+					image_vars: {},
+				});
+				await build.ready;
+
+				const initialRepoTags = JSON.parse(
+					execSync(
+						`${dockerPath} image inspect ${initialImageTag} --format "{{ json .RepoTags }}"`,
+						{ encoding: "utf8" }
+					)
+				);
+				expect(initialRepoTags.length).toBeGreaterThan(0);
+
+				// wrangler dev will rebuild/pull and trigger cleanup
+				const worker = helper.runLongLived("wrangler dev");
+				const ready = await worker.waitForReady();
+
+				// check that the container can still start
+				await vi.waitFor(async () => {
+					const response = await fetch(`${ready.url}/status`);
+					expect(response.status).toBe(200);
+					const status = await response.json();
+					expect(status).toBe(false);
+				});
+
+				// expect the original tag not to be there any more
+				expect(() => {
+					execSync(`${dockerPath} image inspect ${initialImageTag}`);
+				}).toThrow();
 			});
 
 			it("won't start the container service if no containers are present", async () => {
@@ -251,6 +311,24 @@ for (const source of imageSource) {
 				await worker.stop();
 				expect(await worker.output).not.toContain(
 					"Preparing container image(s)..."
+				);
+			});
+
+			it("will display the ready-on message after the container(s) have been built/pulled", async () => {
+				const worker = helper.runLongLived("wrangler dev");
+				const readyRegexp = /Ready on (http:\/\/[a-z0-9.]+:[0-9]+)/;
+				await worker.readUntil(readyRegexp);
+
+				await worker.stop();
+
+				const fullOutput = await worker.output;
+				const indexOfContainersReadyMessage = fullOutput.indexOf(
+					"Container image(s) ready"
+				);
+
+				const indexOfReadyOnMessage = fullOutput.indexOf("Ready on");
+				expect(indexOfReadyOnMessage).toBeGreaterThan(
+					indexOfContainersReadyMessage
 				);
 			});
 

@@ -6,6 +6,7 @@ import type {
 	VectorizeAsyncMutation,
 	VectorizeIndex,
 	VectorizeIndexDetails,
+	VectorizeListVectorsResponse,
 	VectorizeMatches,
 	VectorizeMetadataIndexList,
 	VectorizeMetadataIndexProperty,
@@ -292,4 +293,32 @@ export async function deleteMetadataIndex(
 			body: JSON.stringify(payload),
 		}
 	);
+}
+
+export async function listVectors(
+	config: Config,
+	indexName: string,
+	options?: {
+		count?: number;
+		cursor?: string;
+	}
+): Promise<VectorizeListVectorsResponse> {
+	const accountId = await requireAuth(config);
+
+	const searchParams = new URLSearchParams();
+	if (options?.count !== undefined) {
+		searchParams.set("count", options.count.toString());
+	}
+	if (options?.cursor !== undefined) {
+		searchParams.set("cursor", options.cursor);
+	}
+
+	const queryString = searchParams.toString();
+	const url = `/accounts/${accountId}/vectorize/v2/indexes/${indexName}/list${
+		queryString ? `?${queryString}` : ""
+	}`;
+
+	return await fetchResult(config, url, {
+		method: "GET",
+	});
 }

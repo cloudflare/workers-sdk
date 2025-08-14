@@ -1,8 +1,10 @@
-import { execFile, spawn, StdioOptions } from "child_process";
+import { execFileSync, spawn } from "child_process";
+import { randomUUID } from "crypto";
 import { existsSync, statSync } from "fs";
 import path from "path";
 import { dockerImageInspect } from "./inspect";
-import { ContainerDevOptions } from "./types";
+import type { ContainerDevOptions } from "./types";
+import type { StdioOptions } from "child_process";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = (
@@ -55,26 +57,19 @@ export const runDockerCmd = (
 			}
 		},
 		ready,
-		then: async (resolve, reject) => ready.then(resolve).catch(reject),
+		then: async (onResolve, onReject) => ready.then(onResolve).catch(onReject),
 	};
 };
 
-export const runDockerCmdWithOutput = async (
-	dockerPath: string,
-	args: string[]
-): Promise<string> => {
-	return new Promise((resolve, reject) => {
-		execFile(dockerPath, args, (error, stdout) => {
-			if (error) {
-				return reject(
-					new Error(
-						`Failed running docker command: ${error.message}. Command: ${dockerPath} ${args.join(" ")}`
-					)
-				);
-			}
-			return resolve(stdout.trim());
-		});
-	});
+export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
+	try {
+		const stdout = execFileSync(dockerPath, args, { encoding: "utf8" });
+		return stdout.trim();
+	} catch (error) {
+		throw new Error(
+			`Failed running docker command: ${(error as Error).message}. Command: ${dockerPath} ${args.join(" ")}`
+		);
+	}
 };
 
 /** throws when docker is not installed */
@@ -88,14 +83,14 @@ export const verifyDockerInstalled = async (
 		// We assume this command is unlikely to fail for reasons other than the Docker daemon not running, or the Docker CLI not being installed or in the PATH.
 		throw new Error(
 			`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.\n` +
-				`Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with WRANGLER_DOCKER_HOST.` +
+				`Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with DOCKER_HOST.` +
 				`${isDev ? "\nTo suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false." : ""}`
 		);
 	}
 };
 
-export function isDir(path: string) {
-	const stats = statSync(path);
+export function isDir(inputPath: string) {
+	const stats = statSync(inputPath);
 	return stats.isDirectory();
 }
 
@@ -127,7 +122,7 @@ export const isDockerfile = (
 	}
 	const imageParts = image.split("/");
 
-	if (!imageParts[imageParts.length - 1].includes(":")) {
+	if (!imageParts[imageParts.length - 1]?.includes(":")) {
 		throw new Error(
 			errorPrefix +
 				`If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)`
@@ -147,40 +142,55 @@ export const isDockerfile = (
 /**
  * Kills and removes any containers which come from the given image tag
  */
-export const cleanupContainers = async (
+export const cleanupContainers = (
 	dockerPath: string,
 	imageTags: Set<string>
 ) => {
 	try {
 		// Find all containers (stopped and running) for each built image
-		const containerIds: string[] = [];
-		for (const imageTag of imageTags) {
-			containerIds.push(
-				...(await getContainerIdsFromImage(dockerPath, imageTag))
-			);
-		}
+		const containerIds = getContainerIdsByImageTags(dockerPath, imageTags);
 
 		if (containerIds.length === 0) {
 			return true;
 		}
 
 		// Workerd should have stopped all containers, but clean up any in case. Sends a sigkill.
-		await runDockerCmd(
-			dockerPath,
-			["rm", "--force", ...containerIds],
-			["inherit", "pipe", "pipe"]
-		);
+		runDockerCmdWithOutput(dockerPath, ["rm", "--force", ...containerIds]);
 		return true;
-	} catch (error) {
+	} catch {
 		return false;
 	}
 };
 
-const getContainerIdsFromImage = async (
+/**
+ * See https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
+ *
+ * @param dockerPath The path to the Docker executable
+ * @param imageTags A set of ancestor image tags
+ * @returns The ids of all containers that share the given image tags as ancestors.
+ */
+export function getContainerIdsByImageTags(
+	dockerPath: string,
+	imageTags: Set<string>
+): string[] {
+	const ids = new Set<string>();
+
+	for (const imageTag of imageTags) {
+		const containerIdsFromImage = getContainerIdsFromImage(
+			dockerPath,
+			imageTag
+		);
+		containerIdsFromImage.forEach((id) => ids.add(id));
+	}
+
+	return Array.from(ids);
+}
+
+export const getContainerIdsFromImage = (
 	dockerPath: string,
 	ancestorImage: string
 ) => {
-	const output = await runDockerCmdWithOutput(dockerPath, [
+	const output = runDockerCmdWithOutput(dockerPath, [
 		"ps",
 		"-a",
 		"--filter",
@@ -204,7 +214,7 @@ export async function checkExposedPorts(
 	options: ContainerDevOptions
 ) {
 	const output = await dockerImageInspect(dockerPath, {
-		imageTag: options.imageTag,
+		imageTag: options.image_tag,
 		formatString: "{{ len .Config.ExposedPorts }}",
 	});
 	if (output === "0") {
@@ -213,4 +223,131 @@ export async function checkExposedPorts(
 				"For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.\n"
 		);
 	}
+}
+
+/**
+ * Generates a random container build id
+ */
+export function generateContainerBuildId() {
+	return randomUUID().slice(0, 8);
+}
+
+/**
+ * Output of docker context ls --format json
+ */
+type DockerContext = {
+	Current: boolean;
+	Description: string;
+	DockerEndpoint: string;
+	Error: string;
+	Name: string;
+};
+
+/**
+ * Run `docker context ls` to get the socket from the currently active Docker context
+ * @returns The socket path or null if we are not able to determine it
+ */
+export function getDockerSocketFromContext(dockerPath: string): string | null {
+	try {
+		const output = runDockerCmdWithOutput(dockerPath, [
+			"context",
+			"ls",
+			"--format",
+			"json",
+		]);
+
+		// Parse each line as a separate JSON object
+		const lines = output.trim().split("\n");
+		const contexts: DockerContext[] = lines.map((line) => JSON.parse(line));
+
+		// Find the current context
+		const currentContext = contexts.find((context) => context.Current === true);
+
+		if (currentContext && currentContext.DockerEndpoint) {
+			return currentContext.DockerEndpoint;
+		}
+	} catch {
+		// Fall back to null if docker context inspection fails so that we can use platform defaults
+	}
+	return null;
+}
+/**
+ * Resolve Docker host as follows:
+ * 1. Check WRANGLER_DOCKER_HOST environment variable
+ * 2. Check DOCKER_HOST environment variable
+ * 3. Try to get socket from active Docker context
+ * 4. Fall back to platform-specific defaults
+ */
+export function resolveDockerHost(dockerPath: string): string {
+	if (process.env.WRANGLER_DOCKER_HOST) {
+		return process.env.WRANGLER_DOCKER_HOST;
+	}
+
+	if (process.env.DOCKER_HOST) {
+		return process.env.DOCKER_HOST;
+	}
+
+	// 3. Try to get socket from by running `docker context ls`
+
+	const contextSocket = getDockerSocketFromContext(dockerPath);
+	if (contextSocket) {
+		return contextSocket;
+	}
+
+	// 4. Fall back to platform-specific defaults
+	// (note windows doesn't work yet due to a runtime limitation)
+	return process.platform === "win32"
+		? "//./pipe/docker_engine"
+		: "unix:///var/run/docker.sock";
+}
+
+/**
+ *
+ * Get docker host from environment variables or platform defaults.
+ * Does not use the docker context ls command, so we
+ */
+export const getDockerHostFromEnv = (): string => {
+	const fromEnv = process.env.WRANGLER_DOCKER_HOST ?? process.env.DOCKER_HOST;
+
+	return fromEnv ?? process.platform === "win32"
+		? "//./pipe/docker_engine"
+		: "unix:///var/run/docker.sock";
+};
+
+/**
+ * Get all repository tags for a given image
+ */
+export async function getImageRepoTags(
+	dockerPath: string,
+	imageTag: string
+): Promise<string[]> {
+	try {
+		const output = await dockerImageInspect(dockerPath, {
+			imageTag,
+			formatString: "{{ range .RepoTags }}{{ . }}\n{{ end }}",
+		});
+		return output.split("\n").filter((tag) => tag.trim() !== "");
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * Checks if the given image has any duplicate tags from previous dev sessions,
+ * and remove them if so.
+ */
+export async function cleanupDuplicateImageTags(
+	dockerPath: string,
+	imageTag: string
+): Promise<void> {
+	try {
+		const repoTags = await getImageRepoTags(dockerPath, imageTag);
+		// Remove all cloudflare-dev tags from previous sessions except the current one
+		const tagsToRemove = repoTags.filter(
+			(tag) => tag !== imageTag && tag.startsWith("cloudflare-dev")
+		);
+		if (tagsToRemove.length > 0) {
+			runDockerCmdWithOutput(dockerPath, ["rmi", ...tagsToRemove]);
+		}
+	} catch {}
 }

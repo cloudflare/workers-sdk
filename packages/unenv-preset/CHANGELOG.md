@@ -1,5 +1,49 @@
 # @cloudflare/unenv-preset
 
+## 2.6.1
+
+### Patch Changes
+
+- [#10243](https://github.com/cloudflare/workers-sdk/pull/10243) [`d481901`](https://github.com/cloudflare/workers-sdk/commit/d48190127fbb564c5abdd3c8f33433a6381d8899) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Remove async_hooks polyfill - now uses native workerd implementation
+
+  The async_hooks module is now provided natively by workerd, making the polyfill unnecessary. This improves performance and ensures better compatibility with Node.js async_hooks APIs.
+
+## 2.6.0
+
+### Minor Changes
+
+- [#10208](https://github.com/cloudflare/workers-sdk/pull/10208) [`6b9cd5b`](https://github.com/cloudflare/workers-sdk/commit/6b9cd5b18775446760e938a10bf8ca1cfbb8c96f) Thanks [@vicb](https://github.com/vicb)! - add support for native `node:os`
+
+- [#10205](https://github.com/cloudflare/workers-sdk/pull/10205) [`7e204a9`](https://github.com/cloudflare/workers-sdk/commit/7e204a941e4e907b690f2ad6ff3cb10f2d2f20bd) Thanks [@vicb](https://github.com/vicb)! - Add support for http and https server APIs
+
+### Patch Changes
+
+- [#10150](https://github.com/cloudflare/workers-sdk/pull/10150) [`3f83ac1`](https://github.com/cloudflare/workers-sdk/commit/3f83ac1d8b67c07a0c7d08961b8a81a830543853) Thanks [@vicb](https://github.com/vicb)! - Refactor http overrides
+
+## 2.5.0
+
+### Minor Changes
+
+- [#10048](https://github.com/cloudflare/workers-sdk/pull/10048) [`dbdbb8c`](https://github.com/cloudflare/workers-sdk/commit/dbdbb8c41ea5612f9e79bde5cfd0192c70025ee7) Thanks [@vicb](https://github.com/vicb)! - pass the compatibility date and flags to the unenv preset
+
+- [#10078](https://github.com/cloudflare/workers-sdk/pull/10078) [`5991a9c`](https://github.com/cloudflare/workers-sdk/commit/5991a9cb009fa3c24d848467397ceabe23e7c90a) Thanks [@vicb](https://github.com/vicb)! - add support for the native http modules
+
+### Patch Changes
+
+- [#10096](https://github.com/cloudflare/workers-sdk/pull/10096) [`687655f`](https://github.com/cloudflare/workers-sdk/commit/687655f8d399140e7b8d61c1fc04140e7455344a) Thanks [@vicb](https://github.com/vicb)! - bump unenv to 2.0.0-rc.19
+
+## 2.4.1
+
+### Patch Changes
+
+- [#10031](https://github.com/cloudflare/workers-sdk/pull/10031) [`823cba8`](https://github.com/cloudflare/workers-sdk/commit/823cba8e51fa6840f50dd949bcfa967ff6fefc37) Thanks [@vicb](https://github.com/vicb)! - wrangler and vite-plugin now depend upon the latest version of unenv-preset
+
+## 2.4.0
+
+### Minor Changes
+
+- [#10014](https://github.com/cloudflare/workers-sdk/pull/10014) [`189fe23`](https://github.com/cloudflare/workers-sdk/commit/189fe23830373e75c881481939665384c18246dc) Thanks [@edmundhung](https://github.com/edmundhung)! - Shim `debug` npm package with patched version for cloudflare env support
+
 ## 2.3.3
 
 ### Patch Changes

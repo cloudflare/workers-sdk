@@ -30,8 +30,9 @@ import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
-import { cleanForInstanceType, promiseSpinner } from "./common";
+import { promiseSpinner } from "./common";
 import { Diff } from "./helpers/diff";
+import { cleanForInstanceType } from "./instance-type/instance-type";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";
 import type {
@@ -188,22 +189,34 @@ function observabilityToConfiguration(
 
 function containerAppToInstanceType(
 	containerApp: ContainerApp
-): InstanceType | undefined {
+): Partial<UserDeploymentConfiguration> {
+	let configuration = (containerApp.configuration ??
+		{}) as Partial<UserDeploymentConfiguration>;
+
 	if (containerApp.instance_type !== undefined) {
-		return containerApp.instance_type as InstanceType;
+		if (typeof containerApp.instance_type === "string") {
+			return { instance_type: containerApp.instance_type as InstanceType };
+		}
+
+		configuration = {
+			vcpu: containerApp.instance_type.vcpu,
+			memory_mib: containerApp.instance_type.memory_mib,
+			disk: {
+				size_mb: containerApp.instance_type.disk_mb,
+			},
+		};
 	}
 
 	// if no other configuration is set, we fall back to the default "dev" instance type
-	const configuration =
-		containerApp.configuration as UserDeploymentConfiguration;
 	if (
-		configuration.disk === undefined &&
+		configuration.disk?.size_mb === undefined &&
 		configuration.vcpu === undefined &&
-		configuration.memory === undefined &&
 		configuration.memory_mib === undefined
 	) {
-		return InstanceType.DEV;
+		return { instance_type: InstanceType.DEV };
 	}
+
+	return configuration;
 }
 
 function containerAppToCreateApplication(
@@ -220,8 +233,8 @@ function containerAppToCreateApplication(
 	const instanceType = containerAppToInstanceType(containerApp);
 	const configuration: UserDeploymentConfiguration = {
 		...(containerApp.configuration as UserDeploymentConfiguration),
+		...instanceType,
 		observability: observabilityConfiguration,
-		instance_type: instanceType,
 	};
 
 	// this should have been set to a default value of worker-name-class-name if unspecified by the user
@@ -271,7 +284,6 @@ export async function apply(
 	args: {
 		skipDefaults: boolean | undefined;
 		env?: string;
-		imageUpdateRequired?: boolean;
 	},
 	config: Config
 ) {
@@ -334,22 +346,14 @@ export async function apply(
 	log(dim("Container application changes\n"));
 
 	for (const appConfigNoDefaults of config.containers) {
+		appConfigNoDefaults.configuration ??= {};
+		appConfigNoDefaults.configuration.image = appConfigNoDefaults.image;
 		const application =
 			applicationByNames[
 				appConfigNoDefaults.name ??
 					// we should never actually reach this point, but just in case
 					`${config.name}-${appConfigNoDefaults.class_name}`
 			];
-
-		// while configuration.image is deprecated to the user, we still resolve to this for now.
-		if (!appConfigNoDefaults.configuration?.image && application) {
-			appConfigNoDefaults.configuration ??= {};
-		}
-
-		if (!args.imageUpdateRequired && application) {
-			appConfigNoDefaults.configuration ??= {};
-			appConfigNoDefaults.configuration.image = application.configuration.image;
-		}
 
 		const accountId = config.account_id || (await getAccountId(config));
 		const appConfig = containerAppToCreateApplication(
@@ -644,9 +648,6 @@ export async function applyCommand(
 		{
 			skipDefaults: args.skipDefaults,
 			env: args.env,
-			// For the apply command we want this to default to true
-			// so that the image can be updated if the user modified it.
-			imageUpdateRequired: true,
 		},
 		config
 	);

@@ -23,6 +23,7 @@ import {
 } from "miniflare";
 import semverSatisfies from "semver/functions/satisfies.js";
 import { createMethodsRPC } from "vitest/node";
+import { experimental_readRawConfig } from "wrangler";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { createChunkingSocket } from "../shared/chunking-socket";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
@@ -328,8 +329,36 @@ function fixupDurableObjectBindingsToSelf(
 	return result;
 }
 
+function getWranglerWorkerName(
+	relativeWranglerConfigPath?: string
+): string | undefined {
+	if (!relativeWranglerConfigPath) {
+		return undefined;
+	}
+	const wranglerConfigObject = experimental_readRawConfig({
+		config: relativeWranglerConfigPath,
+	});
+	return wranglerConfigObject.rawConfig.name;
+}
+
+function updateWorkflowsScriptNames(
+	runnerWorker: WorkerOptions,
+	wranglerWorkerName: string | undefined
+): void {
+	const workflows = runnerWorker.workflows;
+	if (!workflows || wranglerWorkerName === undefined) {
+		return;
+	}
+	for (const workflow of Object.values(workflows)) {
+		if (workflow.scriptName === wranglerWorkerName) {
+			delete workflow.scriptName;
+		}
+	}
+}
+
 function fixupWorkflowBindingsToSelf(
-	worker: SourcelessWorkerOptions
+	worker: SourcelessWorkerOptions,
+	relativeWranglerConfigPath: string | undefined
 ): Set<string> {
 	// TODO(someday): may need to extend this to take into account other workers
 	//  if doing multi-worker tests across workspace projects
@@ -340,8 +369,21 @@ function fixupWorkflowBindingsToSelf(
 	}
 	for (const key of Object.keys(worker.workflows)) {
 		const designator = worker.workflows[key];
+
+		let workerName: string | undefined;
+		// If the designator's scriptName matches its own Worker name,
+		// use that as the worker name, otherwise use the vitest worker's name
+		const wranglerWorkerName = getWranglerWorkerName(
+			relativeWranglerConfigPath
+		);
+		if (wranglerWorkerName && designator.scriptName === wranglerWorkerName) {
+			workerName = wranglerWorkerName;
+		} else {
+			workerName = worker.name;
+		}
+
 		// `designator` hasn't been validated at this point
-		if (isWorkflowDesignatorToSelf(designator, worker.name)) {
+		if (isWorkflowDesignatorToSelf(designator, workerName)) {
 			result.add(designator.className);
 			// Shallow clone to avoid mutating config
 			worker.workflows[key] = {
@@ -448,7 +490,7 @@ function buildProjectWorkerOptions(
 		fixupDurableObjectBindingsToSelf(runnerWorker)
 	).sort();
 	const workflowClassNames = Array.from(
-		fixupWorkflowBindingsToSelf(runnerWorker)
+		fixupWorkflowBindingsToSelf(runnerWorker, relativeWranglerConfigPath)
 	).sort();
 
 	if (
@@ -634,6 +676,13 @@ function buildProjectMiniflareOptions(
 		//  --> single instance with single runner worker
 		// Multiple Workers, Isolated Storage:
 		//  --> multiple instances each with single runner worker
+
+		// Set Workflows scriptName to the runner worker name if it matches the Wrangler worker name
+		const wranglerWorkerName = getWranglerWorkerName(
+			project.options.wrangler?.configPath
+		);
+		updateWorkflowsScriptNames(runnerWorker, wranglerWorkerName);
+
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
 			inspectorPort,
@@ -652,6 +701,12 @@ function buildProjectMiniflareOptions(
 			assert(testWorker.bindings !== undefined);
 			testWorker.bindings = { ...testWorker.bindings };
 			testWorker.bindings[SELF_NAME_BINDING] = testWorker.name;
+
+			// Set Workflows scriptName to the test worker name if it matches the Wrangler worker name
+			const wranglerWorkerName = getWranglerWorkerName(
+				project.options.wrangler?.configPath
+			);
+			updateWorkflowsScriptNames(testWorker, wranglerWorkerName);
 
 			testWorkers.push(testWorker);
 		}

@@ -1,5 +1,144 @@
 # @cloudflare/vite-plugin
 
+## 1.11.4
+
+### Patch Changes
+
+- Updated dependencies [[`5020694`](https://github.com/cloudflare/workers-sdk/commit/5020694dd35578dcf3f1669780889fc0ba632c8e)]:
+  - miniflare@4.20250813.0
+  - wrangler@4.29.1
+
+## 1.11.3
+
+### Patch Changes
+
+- Updated dependencies [[`e7cae16`](https://github.com/cloudflare/workers-sdk/commit/e7cae16d5be9a8a0487ffab351ccf8f27808524f), [`3b6ab8a`](https://github.com/cloudflare/workers-sdk/commit/3b6ab8a8745367f05f370df163d908560b7e18a6), [`c58a05c`](https://github.com/cloudflare/workers-sdk/commit/c58a05cdc6d4e900541857be0e931250352199b8), [`42aafa3`](https://github.com/cloudflare/workers-sdk/commit/42aafa3bbea18aa41962610eb5b828790c9a4727), [`70bd966`](https://github.com/cloudflare/workers-sdk/commit/70bd9665fefd33ddf84b84d6938a46f0501eec1a), [`d391076`](https://github.com/cloudflare/workers-sdk/commit/d39107694b6bd9d63f15b529798aba0fd9a43643), [`422ae22`](https://github.com/cloudflare/workers-sdk/commit/422ae22348ca7b4cc394987e547517ae0aae461d), [`1479fd0`](https://github.com/cloudflare/workers-sdk/commit/1479fd06b91f9ab529ba4b8824d938e5da3184a0), [`80960b9`](https://github.com/cloudflare/workers-sdk/commit/80960b9297a8e6009ee19fa8708651539fec76d6), [`05c5b28`](https://github.com/cloudflare/workers-sdk/commit/05c5b286307bb4b55bd7768bd5873b54f8b06079), [`5d5ecd5`](https://github.com/cloudflare/workers-sdk/commit/5d5ecd558d58461f203f882011df3e4d2652305c), [`e3d9703`](https://github.com/cloudflare/workers-sdk/commit/e3d9703c8733567b9bcad4d6264958f6ba6876f6), [`bd8223d`](https://github.com/cloudflare/workers-sdk/commit/bd8223de34e74b150a0c7ac5fc66488791f17178), [`e7cae16`](https://github.com/cloudflare/workers-sdk/commit/e7cae16d5be9a8a0487ffab351ccf8f27808524f), [`d481901`](https://github.com/cloudflare/workers-sdk/commit/d48190127fbb564c5abdd3c8f33433a6381d8899), [`9aad334`](https://github.com/cloudflare/workers-sdk/commit/9aad334d282c863971b1ee84324ecfc60a022222), [`28494f4`](https://github.com/cloudflare/workers-sdk/commit/28494f413bba3c509c56762b9260edd0ffef4f28), [`8cf47f9`](https://github.com/cloudflare/workers-sdk/commit/8cf47f954d621d20e4dfb3685f7e496792853c51)]:
+  - wrangler@4.29.0
+  - miniflare@4.20250803.1
+  - @cloudflare/unenv-preset@2.6.1
+
+## 1.11.2
+
+### Patch Changes
+
+- Updated dependencies [[`773cca3`](https://github.com/cloudflare/workers-sdk/commit/773cca387b5ef01221c7a304883f8b36d1b386da), [`773cca3`](https://github.com/cloudflare/workers-sdk/commit/773cca387b5ef01221c7a304883f8b36d1b386da), [`2e8eb24`](https://github.com/cloudflare/workers-sdk/commit/2e8eb249a1da8a80455e25dba52455ee534c1490), [`93c4c26`](https://github.com/cloudflare/workers-sdk/commit/93c4c26eb5e13bef366add6f96959ccddd64d43b), [`48853a6`](https://github.com/cloudflare/workers-sdk/commit/48853a6882b0bb390b989c55a16aed232cdc8ddc), [`2e8eb24`](https://github.com/cloudflare/workers-sdk/commit/2e8eb249a1da8a80455e25dba52455ee534c1490)]:
+  - wrangler@4.28.1
+
+## 1.11.1
+
+### Patch Changes
+
+- [#9993](https://github.com/cloudflare/workers-sdk/pull/9993) [`9901788`](https://github.com/cloudflare/workers-sdk/commit/9901788035e858d11632d2df857fa3cc536531e6) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix issue that resulted in `A hanging Promise was canceled` errors when developing large applications.
+  We now handle requests for modules in a Durable Object so that they can be shared across invocations.
+
+  Additionally, using `import.meta.hot.send` within the context of a request is now supported.
+
+- [#9556](https://github.com/cloudflare/workers-sdk/pull/9556) [`8ba7736`](https://github.com/cloudflare/workers-sdk/commit/8ba7736a8ae5666870d12945a1cb6185b6ac3633) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: cross-process service bindings no longer skip static asset serving
+
+- [#10099](https://github.com/cloudflare/workers-sdk/pull/10099) [`360004d`](https://github.com/cloudflare/workers-sdk/commit/360004d4d96eb1e89f9a3e01eaea27197e08bf8a) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: move local dev container cleanup to process exit hook. This should ensure containers are cleaned up even when Wrangler is shut down programatically.
+
+- [#10173](https://github.com/cloudflare/workers-sdk/pull/10173) [`4e62cd8`](https://github.com/cloudflare/workers-sdk/commit/4e62cd8d30781917857fda8d529637ea45699b89) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Ensure that headers set via `server.headers` in the Vite config are added to HTML asset responses in development.
+
+- Updated dependencies [[`6b9cd5b`](https://github.com/cloudflare/workers-sdk/commit/6b9cd5b18775446760e938a10bf8ca1cfbb8c96f), [`b4d1373`](https://github.com/cloudflare/workers-sdk/commit/b4d13733b5f64f84274a194dd725943658d6184e), [`631f26d`](https://github.com/cloudflare/workers-sdk/commit/631f26df58d8933da81fb312f2ba2e30dc22821a), [`d6ecd05`](https://github.com/cloudflare/workers-sdk/commit/d6ecd05be5d272857f2b3e243e57ddee4e6a576c), [`b4d1373`](https://github.com/cloudflare/workers-sdk/commit/b4d13733b5f64f84274a194dd725943658d6184e), [`360004d`](https://github.com/cloudflare/workers-sdk/commit/360004d4d96eb1e89f9a3e01eaea27197e08bf8a), [`e82aa19`](https://github.com/cloudflare/workers-sdk/commit/e82aa199b86f9b9de95f39ad1460d48feec8b00f), [`dae1377`](https://github.com/cloudflare/workers-sdk/commit/dae1377cbee54cf394e070917087da6c9df37d1f), [`8ba7736`](https://github.com/cloudflare/workers-sdk/commit/8ba7736a8ae5666870d12945a1cb6185b6ac3633), [`1655bec`](https://github.com/cloudflare/workers-sdk/commit/1655bec50c0bfa3efbfc84b171171a44b120f03f), [`354a001`](https://github.com/cloudflare/workers-sdk/commit/354a001e3e7e8189f80c1baf52bac13bca08ad74), [`5c3b83f`](https://github.com/cloudflare/workers-sdk/commit/5c3b83fc40525590deb62ceda2a8d303a42bc1d8), [`502a8e0`](https://github.com/cloudflare/workers-sdk/commit/502a8e0db0eecda425912340088ae51568bbf4f6), [`07c8611`](https://github.com/cloudflare/workers-sdk/commit/07c8611b69721e8aa1300ba209dc45a75173e1d7), [`7e204a9`](https://github.com/cloudflare/workers-sdk/commit/7e204a941e4e907b690f2ad6ff3cb10f2d2f20bd), [`3f83ac1`](https://github.com/cloudflare/workers-sdk/commit/3f83ac1d8b67c07a0c7d08961b8a81a830543853)]:
+  - @cloudflare/unenv-preset@2.6.0
+  - wrangler@4.28.0
+  - miniflare@4.20250803.0
+
+## 1.11.0
+
+### Minor Changes
+
+- [#9914](https://github.com/cloudflare/workers-sdk/pull/9914) [`a24c9d8`](https://github.com/cloudflare/workers-sdk/commit/a24c9d8c83d2cd1363f594d97829467c48fc7e7b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for loading local dev vars from .env files
+
+  If there are no `.dev.vars` or `.dev.vars.<environment>` files, when running Wrangler or the Vite plugin in local development mode,
+  they will now try to load additional local dev vars from `.env`, `.env.local`, `.env.<environment>` and `.env.<environment>.local` files.
+
+  These loaded vars are only for local development and have no effect in production to the vars in a deployed Worker.
+  Wrangler and Vite will continue to load `.env` files in order to configure themselves as a tool.
+
+  Further details:
+
+  - In `vite build` the local vars will be computed and stored in a `.dev.vars` file next to the compiled Worker code, so that `vite preview` can use them.
+  - The `wrangler types` command will similarly read the `.env` files (if no `.dev.vars` files) in order to generate the `Env` interface.
+  - If the `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV` environment variable is `"false"` then local dev variables will not be loaded from `.env` files.
+  - If the `CLOUDFLARE_INCLUDE_PROCESS_ENV` environment variable is `"true"` then all the environment variables found on `process.env` will be included as local dev vars.
+  - Wrangler (but not Vite plugin) also now supports the `--env-file=<path/to/dotenv/file>` global CLI option. This affects both loading `.env` to configure Wrangler the tool as well as loading local dev vars.
+
+### Patch Changes
+
+- [#10071](https://github.com/cloudflare/workers-sdk/pull/10071) [`4a4049c`](https://github.com/cloudflare/workers-sdk/commit/4a4049c69aa5e556127f9aa1304c5ce0d348b5a0) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat(vite-plugin): Add Containers-related info logs
+
+  Add logs, when a Worker has Containers configured, providing information about container build status, and how to rebuild containers during local development.
+
+- Updated dependencies [[`9b61f44`](https://github.com/cloudflare/workers-sdk/commit/9b61f44c899aa6530ecd20f283dc4e2a9f7c79c7), [`0f7820e`](https://github.com/cloudflare/workers-sdk/commit/0f7820ee384ed708e5d9058f9859b7f1d87e1807), [`a24c9d8`](https://github.com/cloudflare/workers-sdk/commit/a24c9d8c83d2cd1363f594d97829467c48fc7e7b), [`e9bb8d3`](https://github.com/cloudflare/workers-sdk/commit/e9bb8d372a149d9b99119e3b5b077935af0d98ae)]:
+  - miniflare@4.20250730.0
+  - wrangler@4.27.0
+
+## 1.10.2
+
+### Patch Changes
+
+- [#10048](https://github.com/cloudflare/workers-sdk/pull/10048) [`dbdbb8c`](https://github.com/cloudflare/workers-sdk/commit/dbdbb8c41ea5612f9e79bde5cfd0192c70025ee7) Thanks [@vicb](https://github.com/vicb)! - pass the compatibility date and flags to the unenv preset
+
+- [#10096](https://github.com/cloudflare/workers-sdk/pull/10096) [`687655f`](https://github.com/cloudflare/workers-sdk/commit/687655f8d399140e7b8d61c1fc04140e7455344a) Thanks [@vicb](https://github.com/vicb)! - bump unenv to 2.0.0-rc.19
+
+- [#10040](https://github.com/cloudflare/workers-sdk/pull/10040) [`26ffa05`](https://github.com/cloudflare/workers-sdk/commit/26ffa055cedcec9ac80ec952d7e9c4736ffdb0ee) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat(vite-plugin): Add containers support in `vite preview`
+
+  Adds support for Cloudflare Containers in `vite preview`. Please note that at the time of this PR a container image can only specify the path to a `Dockerfile`. Support for registry links will be added in a later version.
+
+- [#10054](https://github.com/cloudflare/workers-sdk/pull/10054) [`bc910f9`](https://github.com/cloudflare/workers-sdk/commit/bc910f9a313c403530d46838279affadb2b21e75) Thanks [@eltigerchino](https://github.com/eltigerchino)! - Add `worker` to the default conditions for resolving packages
+
+  This makes it consistent with the conditions used when bundling Worker code with Wrangler.
+
+- [#10061](https://github.com/cloudflare/workers-sdk/pull/10061) [`f8a80a8`](https://github.com/cloudflare/workers-sdk/commit/f8a80a807576f7fa6d9eca37d297c50793bca188) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: properly set the socket path that the container engine is listening on.
+
+  Previously, this was only picking up the value set in Wrangler config under `dev.containerEngine`, but this value can also be set from env vars or automatically read from the current docker context.
+
+- Updated dependencies [[`82a5b2e`](https://github.com/cloudflare/workers-sdk/commit/82a5b2e09fef9046140181c06aba1f82ce8314af), [`f8f7352`](https://github.com/cloudflare/workers-sdk/commit/f8f735282bdcab25c90b986ff1ae45e20a4625c2), [`2df1d06`](https://github.com/cloudflare/workers-sdk/commit/2df1d066cfe376b831ff0b29b656437d869791e5), [`f8a80a8`](https://github.com/cloudflare/workers-sdk/commit/f8a80a807576f7fa6d9eca37d297c50793bca188), [`dbdbb8c`](https://github.com/cloudflare/workers-sdk/commit/dbdbb8c41ea5612f9e79bde5cfd0192c70025ee7), [`5991a9c`](https://github.com/cloudflare/workers-sdk/commit/5991a9cb009fa3c24d848467397ceabe23e7c90a), [`687655f`](https://github.com/cloudflare/workers-sdk/commit/687655f8d399140e7b8d61c1fc04140e7455344a), [`755a249`](https://github.com/cloudflare/workers-sdk/commit/755a24938f1c264baf7fcc76d775449d87e0bbbf)]:
+  - miniflare@4.20250726.0
+  - wrangler@4.26.1
+  - @cloudflare/unenv-preset@2.5.0
+
+## 1.10.1
+
+### Patch Changes
+
+- [#10031](https://github.com/cloudflare/workers-sdk/pull/10031) [`823cba8`](https://github.com/cloudflare/workers-sdk/commit/823cba8e51fa6840f50dd949bcfa967ff6fefc37) Thanks [@vicb](https://github.com/vicb)! - wrangler and vite-plugin now depend upon the latest version of unenv-preset
+
+- Updated dependencies [[`c5b291d`](https://github.com/cloudflare/workers-sdk/commit/c5b291d3b7a334253aef0593759a59deb0ae4a89), [`3d4f946`](https://github.com/cloudflare/workers-sdk/commit/3d4f94648bdc9edc6260c0f090d2ae665d45a495), [`7245101`](https://github.com/cloudflare/workers-sdk/commit/7245101d5aa815d2c258a301f86dbab77f543b60), [`823cba8`](https://github.com/cloudflare/workers-sdk/commit/823cba8e51fa6840f50dd949bcfa967ff6fefc37), [`19794bf`](https://github.com/cloudflare/workers-sdk/commit/19794bfb57a3ab17433eefbe1820d21d98bc32a4), [`154acf7`](https://github.com/cloudflare/workers-sdk/commit/154acf72c653134ace47174c18e77c9d51effa89), [`19794bf`](https://github.com/cloudflare/workers-sdk/commit/19794bfb57a3ab17433eefbe1820d21d98bc32a4), [`7fb0bfd`](https://github.com/cloudflare/workers-sdk/commit/7fb0bfdc8438d1a1e0a967ab178952da9787c012), [`059a39e`](https://github.com/cloudflare/workers-sdk/commit/059a39e4f1e9f9b55ed8a5a8598e35af9bd0357f)]:
+  - wrangler@4.26.0
+  - @cloudflare/unenv-preset@2.4.1
+  - miniflare@4.20250712.2
+
+## 1.10.0
+
+### Minor Changes
+
+- [#10001](https://github.com/cloudflare/workers-sdk/pull/10001) [`5796ca9`](https://github.com/cloudflare/workers-sdk/commit/5796ca979b09ce89d0f819a312f3ca21a5c7347e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - We now automatically inject the following HMR code into your Worker entry file:
+
+  ```ts
+  if (import.meta.hot) {
+  	import.meta.hot.accept();
+  }
+  ```
+
+  This prevents file changes from invalidating the full module graph and improves HMR performance in development.
+
+### Patch Changes
+
+- [#10038](https://github.com/cloudflare/workers-sdk/pull/10038) [`a355327`](https://github.com/cloudflare/workers-sdk/commit/a3553276f8cd4eb520dc872a56c20b6e329493c7) Thanks [@emily-shen](https://github.com/emily-shen)! - Resolve `containers.image` (if it is a path to a Dockerfile) to an absolute path in the deploy config.
+
+- [#9891](https://github.com/cloudflare/workers-sdk/pull/9891) [`dd416e9`](https://github.com/cloudflare/workers-sdk/commit/dd416e93afbc52d869fd154899d260bfc04fc493) Thanks [@hi-ogawa](https://github.com/hi-ogawa)! - set `build.rollupOptions.platform: "neutral"` on rolldown-vite to prevent Rolldown's `node:module` based `require` polyfill from breaking the build.
+
+- [#9819](https://github.com/cloudflare/workers-sdk/pull/9819) [`0c4008c`](https://github.com/cloudflare/workers-sdk/commit/0c4008ce183c82ebff8eac2469ff9a8256cffa5f) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat(vite-plugin): Add containers support in `vite dev`
+
+  Adds support for Cloudflare Containers in `vite dev`. Please note that at the time of this PR a container image can only specify the path to a `Dockerfile`. Support for registry links will be added in a later version, as will containers support in `vite preview`.
+
+- Updated dependencies [[`189fe23`](https://github.com/cloudflare/workers-sdk/commit/189fe23830373e75c881481939665384c18246dc), [`c02b067`](https://github.com/cloudflare/workers-sdk/commit/c02b067fc0a21d92b5c22bd744f2daf263906e50), [`7e5585d`](https://github.com/cloudflare/workers-sdk/commit/7e5585dbf844fda0e1688797ce31c7e634f3f4ba), [`b0217f9`](https://github.com/cloudflare/workers-sdk/commit/b0217f965cf97a71bf7391628bdb15dc69663dcb), [`e87198a`](https://github.com/cloudflare/workers-sdk/commit/e87198a6f43a52ff3b1509e99023932e62de97fe), [`ad02ad3`](https://github.com/cloudflare/workers-sdk/commit/ad02ad3dfc151ed6ec016222dd42b9e99fe32ca0), [`0c4008c`](https://github.com/cloudflare/workers-sdk/commit/0c4008ce183c82ebff8eac2469ff9a8256cffa5f)]:
+  - @cloudflare/unenv-preset@2.4.0
+  - wrangler@4.25.1
+  - miniflare@4.20250712.1
+
 ## 1.9.6
 
 ### Patch Changes

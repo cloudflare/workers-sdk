@@ -1,11 +1,18 @@
 {
-	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
-		"target": "esnext",
-		"module": "esnext",
-		"lib": ["esnext"],
-		"types": ["@cloudflare/workers-types"]
+		"target": "es2021",
+		"lib": ["es2021"],
+		"module": "NodeNext",
+		"moduleResolution": "nodenext",
+		"noEmit": true,
+		"isolatedModules": true,
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"strict": true,
+		"types": ["@cloudflare/workers-types/experimental", "node"],
+		"skipLibCheck": true
 	},
-	"include": ["functions/**/*.ts"],
-	"exclude": ["vscode", "dist"]
+	"exclude": ["web", "editor-files"]
 }

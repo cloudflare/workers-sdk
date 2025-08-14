@@ -14,6 +14,7 @@
 		"@typescript-eslint/eslint-plugin": "catalog:default",
 		"@typescript-eslint/parser": "catalog:default",
 		"find-up": "^6.3.0",
+		"glob": "^11.0.3",
 		"ts-dedent": "^2.2.0",
 		"undici": "catalog:default",
 		"wrangler": "workspace:*"

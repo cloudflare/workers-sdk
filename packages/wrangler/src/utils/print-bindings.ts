@@ -749,9 +749,6 @@ function createGetMode({
 		connected,
 	}: {
 		// Is this binding running locally?
-		//   local = offline simulator in Miniflare
-		//   remote = some sort of Mixed Mode
-		//   undefined = this binding is not supported in a dev session
 		isSimulatedLocally?: boolean;
 		// If this is an external service/tail/etc... binding, is it connected?
 		//   true = connected via the dev registry

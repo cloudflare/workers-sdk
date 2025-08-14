@@ -1,10 +1,17 @@
 import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
+import * as util from "node:util";
+import {
+	cleanupContainers,
+	generateContainerBuildId,
+	resolveDockerHost,
+} from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
+import colors from "picocolors";
 import * as vite from "vite";
 import {
 	createModuleReference,
@@ -22,6 +29,7 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "./constants";
+import { getDockerPath, prepareContainerImages } from "./containers";
 import {
 	addDebugToVitePrintUrls,
 	getDebugPathHtml,
@@ -30,11 +38,12 @@ import {
 } from "./debugging";
 import { writeDeployConfig } from "./deploy-config";
 import {
-	getDotDevDotVarsContent,
-	hasDotDevDotVarsFileChanged,
+	getLocalDevVarsForPreview,
+	hasLocalDevVarsFileChanged,
 } from "./dev-vars";
 import {
 	getDevMiniflareOptions,
+	getEntryWorkerConfig,
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
 import {
@@ -71,9 +80,10 @@ import type { Unstable_RawConfig } from "wrangler";
 
 export type { PluginConfig } from "./plugin-config";
 
+const debuglog = util.debuglog("@cloudflare:vite-plugin");
+
 // this flag is used to show the workers configs warning only once
 let workersConfigsWarningShown = false;
-
 let miniflare: Miniflare | undefined;
 
 /**
@@ -89,12 +99,18 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const additionalModulePaths = new Set<string>();
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
+	let containerImageTagsSeen = new Set<string>();
+
+	/** Used to track whether hooks are being called because of a server restart or a server close event. */
+	let restartingServer = false;
 
 	return [
 		{
 			name: "vite-plugin-cloudflare",
 			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
 			sharedDuringBuild: true,
+			// Vite `config` Hook
+			// see https://vite.dev/guide/api-plugin.html#config
 			config(userConfig, env) {
 				resolvedPluginConfig = resolvePluginConfig(
 					pluginConfig,
@@ -171,6 +187,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// This resets the value when the dev server restarts
 				workersConfigsWarningShown = false;
 			},
+			// Vite `configResolved` Hook
+			// see https://vite.dev/guide/api-plugin.html#configresolved
 			configResolved(config) {
 				resolvedViteConfig = config;
 
@@ -179,6 +197,30 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						resolvedPluginConfig,
 						resolvedViteConfig
 					);
+				}
+			},
+			async transform(code, id) {
+				const workerConfig = getWorkerConfig(this.environment.name);
+
+				if (!workerConfig) {
+					return;
+				}
+
+				const resolvedWorkerEntry = await this.resolve(workerConfig.main);
+
+				if (id === resolvedWorkerEntry?.id) {
+					const modified = new MagicString(code);
+					const hmrCode = `
+if (import.meta.hot) {
+  import.meta.hot.accept();
+}
+						`;
+					modified.append(hmrCode);
+
+					return {
+						code: modified.toString(),
+						map: modified.generateMap({ hires: "boundary", source: id }),
+					};
 				}
 			},
 			generateBundle(_, bundle) {
@@ -232,17 +274,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					config = workerConfig;
 
 					if (workerConfig.configPath) {
-						const dotDevDotVarsContent = getDotDevDotVarsContent(
+						const localDevVars = getLocalDevVarsForPreview(
 							workerConfig.configPath,
 							resolvedPluginConfig.cloudflareEnv
 						);
-						// Save a .dev.vars file to the worker's build output directory
-						// when it exists so that it will be then detected by `vite preview`
-						if (dotDevDotVarsContent) {
+						// Save a .dev.vars file to the worker's build output directory if there are local dev vars, so that it will be then detected by `vite preview`.
+						if (localDevVars) {
 							this.emitFile({
 								type: "asset",
 								fileName: ".dev.vars",
-								source: dotDevDotVarsContent,
+								source: localDevVars,
 							});
 						}
 					}
@@ -294,27 +335,22 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					writeDeployConfig(resolvedPluginConfig, resolvedViteConfig);
 				}
 			},
-			hotUpdate(options) {
-				assertIsNotPreview(resolvedPluginConfig);
-
-				// Note that we must "resolve" the changed file since the path from Vite will not match Windows backslashes.
-				const changedFilePath = path.resolve(options.file);
-
-				if (
-					resolvedPluginConfig.configPaths.has(changedFilePath) ||
-					hasDotDevDotVarsFileChanged(resolvedPluginConfig, changedFilePath) ||
-					hasAssetsConfigChanged(
-						resolvedPluginConfig,
-						resolvedViteConfig,
-						changedFilePath
-					)
-				) {
-					// It's OK for this to be called multiple times as Vite prevents concurrent execution
-					options.server.restart();
-					return [];
-				}
-			},
+			// Vite `configureServer` Hook
+			// see https://vite.dev/guide/api-plugin.html#configureserver
 			async configureServer(viteDevServer) {
+				// Patch the `server.restart` method to track whether the server is restarting or not.
+				const restartServer = viteDevServer.restart.bind(viteDevServer);
+				viteDevServer.restart = async () => {
+					try {
+						restartingServer = true;
+						debuglog("From server.restart(): Restarting server...");
+						await restartServer();
+						debuglog("From server.restart(): Restarted server...");
+					} finally {
+						restartingServer = false;
+					}
+				};
+
 				assertIsNotPreview(resolvedPluginConfig);
 
 				const inputInspectorPort = await getInputInspectorPortOption(
@@ -323,27 +359,63 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					miniflare
 				);
 
-				const miniflareDevOptions = await getDevMiniflareOptions(
+				const configChangedHandler = async (changedFilePath: string) => {
+					assertIsNotPreview(resolvedPluginConfig);
+
+					if (
+						resolvedPluginConfig.configPaths.has(changedFilePath) ||
+						hasLocalDevVarsFileChanged(resolvedPluginConfig, changedFilePath) ||
+						hasAssetsConfigChanged(
+							resolvedPluginConfig,
+							resolvedViteConfig,
+							changedFilePath
+						)
+					) {
+						debuglog("Config changed: " + changedFilePath);
+						viteDevServer.watcher.off("change", configChangedHandler);
+						debuglog("Restarting dev server and aborting previous setup");
+						await viteDevServer.restart();
+					}
+				};
+				viteDevServer.watcher.on("change", configChangedHandler);
+
+				let containerBuildId: string | undefined;
+				const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
+				const hasDevContainers =
+					entryWorkerConfig?.containers?.length &&
+					entryWorkerConfig.dev.enable_containers;
+				const dockerPath = getDockerPath();
+
+				if (hasDevContainers) {
+					containerBuildId = generateContainerBuildId();
+					entryWorkerConfig.dev.container_engine =
+						resolveDockerHost(dockerPath);
+				}
+
+				const miniflareDevOptions = await getDevMiniflareOptions({
 					resolvedPluginConfig,
 					viteDevServer,
-					inputInspectorPort
-				);
+					inspectorPort: inputInspectorPort,
+					containerBuildId,
+				});
 
 				if (!miniflare) {
+					debuglog("Creating new Miniflare instance");
 					miniflare = new Miniflare(miniflareDevOptions);
 				} else {
+					debuglog("Updating the existing Miniflare instance");
 					await miniflare.setOptions(miniflareDevOptions);
+					debuglog("Miniflare is ready");
 				}
 
 				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
 				if (resolvedPluginConfig.type === "workers") {
+					assert(entryWorkerConfig, `No entry Worker config`);
+
+					debuglog("Initializing the Vite module runners");
 					await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
-					const entryWorkerConfig = getWorkerConfig(
-						resolvedPluginConfig.entryWorkerEnvironmentName
-					);
-					assert(entryWorkerConfig, `No entry Worker config`);
 					const entryWorkerName = entryWorkerConfig.name;
 
 					// The HTTP server is not available in middleware mode
@@ -392,6 +464,50 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							}
 						};
 					}
+
+					if (hasDevContainers) {
+						viteDevServer.config.logger.info(
+							colors.dim(
+								colors.yellow(
+									"∷ Building container images for local development...\n"
+								)
+							)
+						);
+						containerImageTagsSeen = await prepareContainerImages({
+							containersConfig: entryWorkerConfig.containers,
+							containerBuildId,
+							isContainersEnabled: entryWorkerConfig.dev.enable_containers,
+							dockerPath,
+							configPath: entryWorkerConfig.configPath,
+						});
+						viteDevServer.config.logger.info(
+							colors.dim(
+								colors.yellow(
+									"\n⚡️ Containers successfully built. To rebuild your containers during development, restart the Vite dev server (r + enter)."
+								)
+							)
+						);
+
+						/*
+						 * Upon exiting the dev process we should ensure we perform any
+						 * containers-specific cleanup work. Vite recommends using the
+						 * `buildEnd` and `closeBundle` hooks, which are called when the
+						 * server is closed. Unfortunately none of these hooks work if the
+						 * process exits forcefully, via `ctrl+C`, and Vite provides no
+						 * other alternatives. For this reason we decided to hook into both
+						 * `buildEnd` and the `exit` event, and ensure we always cleanup
+						 * (please note that handling the `beforeExit` event, which does
+						 * support async ops, is not an option, since Vite calls
+						 * `process.exit()` imperatively, and therefore causes `beforeExit`
+						 * not to be emitted).
+						 *
+						 */
+						process.on("exit", async () => {
+							if (containerImageTagsSeen.size) {
+								cleanupContainers(dockerPath, containerImageTagsSeen);
+							}
+						});
+					}
 				}
 
 				return () => {
@@ -436,6 +552,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					);
 				};
 			},
+			// Vite `configurePreviewServer` Hook
+			// see https://vite.dev/guide/api-plugin.html#configurepreviewserver
 			async configurePreviewServer(vitePreviewServer) {
 				assertIsPreview(resolvedPluginConfig);
 
@@ -444,13 +562,53 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					vitePreviewServer
 				);
 
+				// first Worker in the Array is always the entry Worker
+				const entryWorkerConfig = resolvedPluginConfig.workers[0];
+				const hasDevContainers =
+					entryWorkerConfig?.containers?.length &&
+					entryWorkerConfig.dev.enable_containers;
+				let containerBuildId: string | undefined;
+
+				if (hasDevContainers) {
+					containerBuildId = generateContainerBuildId();
+				}
+
 				miniflare = new Miniflare(
-					await getPreviewMiniflareOptions(
+					await getPreviewMiniflareOptions({
 						resolvedPluginConfig,
 						vitePreviewServer,
-						inputInspectorPort
-					)
+						inspectorPort: inputInspectorPort,
+						containerBuildId,
+					})
 				);
+
+				if (hasDevContainers) {
+					const dockerPath = getDockerPath();
+
+					vitePreviewServer.config.logger.info(
+						colors.dim(
+							colors.yellow(
+								"∷ Building container images for local preview...\n"
+							)
+						)
+					);
+					containerImageTagsSeen = await prepareContainerImages({
+						containersConfig: entryWorkerConfig.containers,
+						containerBuildId,
+						isContainersEnabled: entryWorkerConfig.dev.enable_containers,
+						dockerPath,
+						configPath: entryWorkerConfig.configPath,
+					});
+					vitePreviewServer.config.logger.info(
+						colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
+					);
+
+					process.on("exit", () => {
+						if (containerImageTagsSeen.size) {
+							cleanupContainers(dockerPath, containerImageTagsSeen);
+						}
+					});
+				}
 
 				handleWebSocket(vitePreviewServer.httpServer, () => {
 					assert(miniflare, `Miniflare not defined`);
@@ -466,6 +624,24 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						return miniflare.dispatchFetch(request, { redirect: "manual" });
 					})
 				);
+			},
+			async buildEnd() {
+				if (
+					resolvedViteConfig.command === "serve" &&
+					containerImageTagsSeen?.size
+				) {
+					const dockerPath = getDockerPath();
+					cleanupContainers(dockerPath, containerImageTagsSeen);
+				}
+
+				debuglog("buildEnd:", restartingServer ? "restarted" : "disposing");
+				if (!restartingServer) {
+					debuglog("buildEnd: disposing Miniflare instance");
+					await miniflare?.dispose().catch((error) => {
+						debuglog("buildEnd: failed to dispose Miniflare instance:", error);
+					});
+					miniflare = undefined;
+				}
 			},
 		},
 		// Plugin to provide a fallback entry file

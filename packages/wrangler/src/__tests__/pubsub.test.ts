@@ -35,11 +35,12 @@ describe("wrangler", () => {
 					  wrangler pubsub broker     Interact with your Pub/Sub Brokers
 
 					GLOBAL FLAGS
-					  -c, --config   Path to Wrangler configuration file  [string]
-					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
 					  "warn": "",
@@ -68,11 +69,12 @@ describe("wrangler", () => {
 						  wrangler pubsub namespace describe <name>  Describe a Pub/Sub Namespace
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
 						  "warn": "",
@@ -196,11 +198,12 @@ describe("wrangler", () => {
 						  wrangler pubsub broker public-keys <name>       Show the public keys used for verifying on-publish hooks and credentials for a Broker.
 
 						GLOBAL FLAGS
-						  -c, --config   Path to Wrangler configuration file  [string]
-						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
 						  "warn": "",

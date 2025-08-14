@@ -16,7 +16,7 @@ packages:
 # Quick Editor update | Every quarter | Update VSCode dependency and patches
 
 catalog:
-  "@types/node": "^20.17.32"
+  "@types/node": "^20.19.9"
   "@typescript-eslint/eslint-plugin": "^8.35.1"
   "@typescript-eslint/parser": "^8.35.1"
   "@vitest/runner": ~3.2.0
@@ -31,6 +31,8 @@ catalog:
   "ws": "8.18.0"
   esbuild: "0.25.4"
   playwright-chromium: "^1.49.1"
+  "@cloudflare/workers-types": "^4.20250813.0"
+  workerd: "1.20250813.0"
 
 catalogs:
   vite-plugin:

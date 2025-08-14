@@ -54,6 +54,8 @@ export function buildPluginFromFunctions({
 		// but if someone wants to publish a Plugin which does require this new `nodejs_compat` flag
 		// and they document that on their README.md, we should let them.
 		nodejsCompatMode: nodejsCompatMode ?? "v1",
+		compatibilityDate: undefined,
+		compatibilityFlags: undefined,
 		define: {},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects

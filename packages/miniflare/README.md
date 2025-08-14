@@ -759,6 +759,22 @@ Options shared between all Workers/"nanoservices".
   automatically reloads the page in-browser whenever the Miniflare instance's
   options are updated.
 
+- `unsafeDevRegistryPath?: string`
+
+  Path to the dev registry directory. This allows Miniflare to automatically
+  discover external services and Durable Objects running on another miniflare instance and connect them.
+
+- `unsafeDevRegistryDurableObjectProxy?: boolean`
+
+  If `true`, Miniflare will automatically proxy requests to Durable Objects
+  bound to external services and register all Workers' Durable Objects in the dev registry.
+
+- `unsafeHandleDevRegistryUpdate?: (registry: WorkerRegistry) => void`
+
+  Callback invoked when the dev registry is updated with changes to bound services.
+  Receives a copy of the updated registry object. Useful for reacting to external
+  service changes during development.
+
 #### Cache, Durable Objects, KV, R2 and D1
 
 - `cachePersist?: Persistence`

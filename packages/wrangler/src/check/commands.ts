@@ -57,8 +57,8 @@ async function checkStartupHandler(
 		}
 
 		await spinnerWhile({
-			promise: async () =>
-				await createCLIParser(
+			promise: async () => {
+				const { wrangler } = createCLIParser(
 					config.pages_build_output_dir || pages
 						? [
 								"pages",
@@ -73,7 +73,9 @@ async function checkStartupHandler(
 								"--dry-run",
 								`--outfile=${workerBundle}`,
 							]
-				).parse(),
+				);
+				await wrangler.parse();
+			},
 			startMessage: "Building your Worker",
 			endMessage: chalk.green("Worker Built! 🎉"),
 		});
@@ -138,9 +140,9 @@ export const checkStartupCommand = createCommand({
 
 async function getEntryValue(
 	entry: FormDataEntryValue
-): Promise<Uint8Array<ArrayBuffer> | string> {
+): Promise<Uint8Array | string> {
 	if (entry instanceof Blob) {
-		return new Uint8Array(await entry.arrayBuffer());
+		return new Uint8Array((await entry.arrayBuffer()) as ArrayBuffer);
 	} else {
 		return entry as string;
 	}
@@ -166,11 +168,19 @@ async function convertWorkerBundleToModules(
 	workerBundle: FormData
 ): Promise<ModuleDefinition[]> {
 	return await Promise.all(
-		[...workerBundle.entries()].map(async (m) => ({
-			type: getModuleType(m[1]),
-			path: m[0],
-			contents: await getEntryValue(m[1]),
-		}))
+		[...workerBundle.entries()]
+			// Sourcemaps aren't "real" modules in the application and won't be imported by user code, so lets not load them when analyzing the bundle
+			.filter(
+				(m) => m[1] instanceof Blob && m[1].type !== "application/source-map"
+			)
+			.map(
+				async (m) =>
+					({
+						type: getModuleType(m[1]),
+						path: m[0],
+						contents: await getEntryValue(m[1]),
+					}) as ModuleDefinition
+			)
 	);
 }
 

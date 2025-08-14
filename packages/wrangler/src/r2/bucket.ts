@@ -198,7 +198,7 @@ export const r2BucketInfoCommand = createCommand({
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
-			describe: "The name of the bucket to delete",
+			describe: "The name of the bucket to retrieve info for",
 			type: "string",
 			demandOption: true,
 		},
@@ -208,11 +208,22 @@ export const r2BucketInfoCommand = createCommand({
 			requiresArg: true,
 			type: "string",
 		},
+		json: {
+			describe: "Return the bucket information as JSON",
+			type: "boolean",
+			default: false,
+		},
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
+
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		logger.log(`Getting info for '${args.bucket}'...`);
+		if (!args.json) {
+			logger.log(`Getting info for '${args.bucket}'...`);
+		}
 
 		const bucketInfo = await getR2Bucket(
 			config,
@@ -220,6 +231,7 @@ export const r2BucketInfoCommand = createCommand({
 			args.bucket,
 			args.jurisdiction
 		);
+
 		const bucketMetrics = await getR2BucketMetrics(
 			config,
 			accountId,
@@ -236,7 +248,11 @@ export const r2BucketInfoCommand = createCommand({
 			bucket_size: bucketMetrics.totalSize,
 		};
 
-		logger.log(formatLabelledValues(output));
+		if (args.json) {
+			logger.json(output);
+		} else {
+			logger.log(formatLabelledValues(output));
+		}
 	},
 });
 

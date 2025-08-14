@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.25.0",
+	"version": "4.29.1",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -67,13 +67,13 @@
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
-		"@cloudflare/unenv-preset": "2.3.3",
+		"@cloudflare/unenv-preset": "workspace:*",
 		"blake3-wasm": "2.1.5",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
-		"unenv": "2.0.0-rc.17",
-		"workerd": "1.20250712.0"
+		"unenv": "2.0.0-rc.19",
+		"workerd": "catalog:default"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -84,7 +84,7 @@
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250712.0",
+		"@cloudflare/workers-types": "catalog:default",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@sentry/node": "^7.86.0",
@@ -116,6 +116,7 @@
 		"date-fns": "^4.1.0",
 		"devtools-protocol": "^0.0.1182435",
 		"dotenv": "^16.3.1",
+		"dotenv-expand": "^12.0.2",
 		"execa": "^6.1.0",
 		"find-up": "^6.3.0",
 		"get-port": "^7.0.0",
@@ -159,7 +160,7 @@
 		"yargs": "^17.7.2"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20250712.0"
+		"@cloudflare/workers-types": "catalog:default"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {

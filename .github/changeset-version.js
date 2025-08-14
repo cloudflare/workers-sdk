@@ -25,8 +25,15 @@ function parseVersion(version) {
 const rootPath = path.resolve(__dirname, "..");
 const miniflarePath = path.join(rootPath, "packages/miniflare");
 const miniflarePkgPath = path.join(miniflarePath, "package.json");
-const miniflareChangelogPath = path.join(miniflarePath, "CHANGELOG.md");
 
+function getWorkerdVersion() {
+	const pnpmWorkspacePath = path.join(rootPath, "pnpm-workspace.yaml");
+	const match = /workerd: "(\d+\.\d+\.\d+)"/.exec(
+		fs.readFileSync(pnpmWorkspacePath, "utf8")
+	);
+	assert(match !== null, `Expected ${match[1]} to be <major>.<minor>.<patch>`);
+	return match[1];
+}
 /**
  * Gets the correct version to bump `miniflare` to, ensuring the minor versions
  * of `workerd` and `miniflare` match. Minor bumps in changesets will become
@@ -69,7 +76,7 @@ function main() {
 	// 3. Force `miniflare`'s minor version to be the same as `workerd`
 	const miniflarePkg = getPkg(miniflarePkgPath);
 	const miniflareVersion = miniflarePkg.version;
-	const workerdVersion = miniflarePkg.dependencies.workerd;
+	const workerdVersion = getWorkerdVersion();
 	const nextMiniflareVersion = getNextMiniflareVersion(
 		workerdVersion,
 		previousMiniflareVersion,

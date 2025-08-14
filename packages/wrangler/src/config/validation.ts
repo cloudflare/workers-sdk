@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import { isDockerfile } from "@cloudflare/containers-shared";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
@@ -31,6 +32,7 @@ import {
 	validateOptionalTypedArray,
 	validateRequiredProperty,
 	validateTypedArray,
+	validateUniqueNameProperty,
 } from "./validation-helpers";
 import { configFileName, formatConfigSnippet } from ".";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
@@ -1206,7 +1208,10 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"workflows",
-			validateBindingArray(envName, validateWorkflowBinding),
+			all(
+				validateBindingArray(envName, validateWorkflowBinding),
+				validateUniqueNameProperty
+			),
 			[]
 		),
 		migrations: inheritable(
@@ -1244,7 +1249,7 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"containers",
-			validateContainerApp(envName, rawEnv.name),
+			validateContainerApp(envName, rawEnv.name, configPath),
 			undefined
 		),
 		send_email: notInheritable(
@@ -1999,10 +2004,75 @@ const validateDurableObjectBinding: ValidatorFn = (
 /**
  * Check that the given field is a valid "workflow" binding object.
  */
-const validateWorkflowBinding: ValidatorFn = (_diagnostics, _field, _value) => {
-	// TODO
+const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"workflows" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
 
-	return true;
+	let isValid = true;
+
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	} else if (value.name.length > 64) {
+		diagnostics.errors.push(
+			`"${field}" binding "name" field must be 64 characters or less, but got ${value.name.length} characters.`
+		);
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "class_name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "class_name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isOptionalProperty(value, "script_name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "script_name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isOptionalProperty(value, "experimental_remote", "boolean")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a boolean "experimental_remote" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"name",
+		"class_name",
+		"script_name",
+		"experimental_remote",
+	]);
+
+	return isValid;
 };
 
 const validateCflogfwdrObject: (env: string) => ValidatorFn =
@@ -2365,7 +2435,8 @@ const validateBindingArray =
 
 function validateContainerApp(
 	envName: string,
-	topLevelName: string | undefined
+	topLevelName: string | undefined,
+	configPath: string | undefined
 ): ValidatorFn {
 	return (diagnostics, field, value, config) => {
 		if (!value) {
@@ -2426,38 +2497,64 @@ function validateContainerApp(
 				!containerAppOptional.image
 			) {
 				diagnostics.errors.push(
-					`"containers.image" field must be defined for each container app. This should be the path to your Dockerfile or a image URI pointing to the Cloudflare registry.`
-				);
-			}
-			if ("configuration" in containerAppOptional) {
-				diagnostics.warnings.push(
-					`"containers.configuration" is deprecated. Use top level "containers" fields instead. "configuration.image" should be "image", "configuration.disk" should be set via "instance_type".`
+					`"containers.image" field must be defined for each container app. This should be the path to your Dockerfile or an image URI pointing to the Cloudflare registry.`
 				);
 			}
 
-			// Validate that we have an image configuration for this container app.
-			// For legacy reasons we have to check both at containerAppOptional.image and
-			// containerAppOptional.configuration.image.
-			//
-			//
-			// At the moment logic in other places downstream of this rely on containerAppOptional.configuration.image be set
-			// so we set it here regardless of which place it is set by the user.
-			if (
-				"image" in containerAppOptional &&
-				containerAppOptional.image !== undefined
-			) {
-				if (containerAppOptional.configuration?.image !== undefined) {
+			if ("configuration" in containerAppOptional) {
+				diagnostics.warnings.push(
+					`"containers.configuration" is deprecated. Use top level "containers" fields instead. "configuration.image" should be "image", limits should be set via "instance_type".`
+				);
+				if (
+					typeof containerAppOptional.configuration !== "object" ||
+					Array.isArray(containerAppOptional.configuration)
+				) {
 					diagnostics.errors.push(
-						`"containers.image" and "containers.configuration.image" fields can't be defined at the same time.`
+						`"containers.configuration" should be an object`
 					);
-					return false;
 				}
-				// consolidate the image into the configuration object
-				// TODO: consolidate it into the top level image field instead
-				containerAppOptional.configuration ??= {};
-				containerAppOptional.configuration.image = containerAppOptional.image;
-				delete containerAppOptional["image"];
+
+				if (
+					containerAppOptional.instance_type &&
+					(containerAppOptional.configuration.disk !== undefined ||
+						containerAppOptional.configuration.vcpu !== undefined ||
+						containerAppOptional.configuration.memory_mib !== undefined)
+				) {
+					diagnostics.errors.push(
+						`Cannot set custom limits via "containers.configuration" and use preset "instance_type" limits at the same time.`
+					);
+				}
 			}
+
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"image_build_context",
+				containerAppOptional.image_build_context,
+				"string"
+			);
+			// make sure both image fields is always set, because cloudchamber apply requires one and containers the other :(
+			let resolvedImage =
+				containerAppOptional.image ?? containerAppOptional.configuration?.image;
+			let resolvedBuildContextPath: string | undefined = undefined;
+			try {
+				if (isDockerfile(resolvedImage, configPath)) {
+					const baseDir = configPath ? path.dirname(configPath) : process.cwd();
+
+					resolvedImage = path.resolve(baseDir, resolvedImage);
+					resolvedBuildContextPath = containerAppOptional.image_build_context
+						? path.resolve(baseDir, containerAppOptional.image_build_context)
+						: path.dirname(resolvedImage);
+				}
+			} catch (err) {
+				if (err instanceof Error && err.message) {
+					diagnostics.errors.push(err.message);
+				} else {
+					throw err;
+				}
+			}
+			containerAppOptional.image = resolvedImage;
+			containerAppOptional.image_build_context = resolvedBuildContextPath;
 
 			// Validate rollout related configs
 			if (
@@ -2465,20 +2562,12 @@ function validateContainerApp(
 					containerAppOptional,
 					"rollout_step_percentage",
 					"number"
-				) &&
-				(containerAppOptional.rollout_step_percentage > 100 ||
-					containerAppOptional.rollout_step_percentage < 25)
+				) ||
+				containerAppOptional.rollout_step_percentage > 100 ||
+				containerAppOptional.rollout_step_percentage < 25
 			) {
 				diagnostics.errors.push(
-					`"containers.rollout_step_percentage" field should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
-				);
-			}
-			// Leaving for legacy reasons
-			// TODO: When cleaning up container.configuration usage in other places clean this up
-			// as well.
-			if (Array.isArray(containerAppOptional.configuration)) {
-				diagnostics.errors.push(
-					`"containers.configuration" is defined as an array, it should be an object`
+					`"containers.rollout_step_percentage" field should be a number between 25 and 100, but got "${containerAppOptional.rollout_step_percentage}"`
 				);
 			}
 			validateOptionalProperty(
@@ -2489,14 +2578,19 @@ function validateContainerApp(
 				"string",
 				["full_auto", "full_manual", "none"]
 			);
-			validateOptionalProperty(
-				diagnostics,
-				field,
-				"instance_type",
-				containerAppOptional.instance_type,
-				"string",
-				["dev", "basic", "standard"]
-			);
+
+			if (
+				!isOptionalProperty(
+					containerAppOptional,
+					"rollout_active_grace_period",
+					"number"
+				) ||
+				containerAppOptional.rollout_active_grace_period < 0
+			) {
+				diagnostics.errors.push(
+					`"containers.rollout_active_grace_period" field should be a positive number but got "${containerAppOptional.rollout_active_grace_period}"`
+				);
+			}
 			validateOptionalProperty(
 				diagnostics,
 				field,
@@ -2512,13 +2606,6 @@ function validateContainerApp(
 					`"containers.max_instances" field should be a positive number, but got ${containerAppOptional.max_instances}`
 				);
 			}
-			validateOptionalProperty(
-				diagnostics,
-				field,
-				"image_build_context",
-				containerAppOptional.image_build_context,
-				"string"
-			);
 			validateOptionalProperty(
 				diagnostics,
 				field,
@@ -2566,6 +2653,7 @@ function validateContainerApp(
 					"rollout_step_percentage",
 					"rollout_kind",
 					"durable_objects",
+					"rollout_active_grace_period",
 				]
 			);
 			if ("configuration" in containerAppOptional) {
@@ -2574,6 +2662,56 @@ function validateContainerApp(
 					`${field}.configuration`,
 					Object.keys(containerAppOptional.configuration),
 					["image", "secrets", "labels", "disk", "vcpu", "memory_mib"]
+				);
+			}
+
+			// Instance Type validation: When present, the instance type should be either (1) a string
+			// representing a predefined instance type or (2) an object that optionally defines vcpu,
+			// memory, and disk.
+			//
+			// If an instance type is not set, a 'dev' instance type will be used. If a custom instance
+			// type doesn't set a value, that value will default to the corresponding value in a 'dev'
+			// instance type
+			if (typeof containerAppOptional.instance_type === "string") {
+				// validate named instance type
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"instance_type",
+					containerAppOptional.instance_type,
+					"string",
+					["dev", "basic", "standard"]
+				);
+			} else if (
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"instance_type",
+					containerAppOptional.instance_type,
+					"object"
+				) &&
+				containerAppOptional.instance_type
+			) {
+				// validate custom instance type
+				const instanceTypeProperties = ["vcpu", "memory_mib", "disk_mb"];
+				instanceTypeProperties.forEach((key) => {
+					if (
+						!isOptionalProperty(
+							containerAppOptional.instance_type,
+							key,
+							"number"
+						)
+					) {
+						diagnostics.errors.push(
+							`"containers.instance_type.${key}", when present, should be a number.`
+						);
+					}
+				});
+				validateAdditionalProperties(
+					diagnostics,
+					`${field}.instance_type`,
+					Object.keys(containerAppOptional.instance_type),
+					instanceTypeProperties
 				);
 			}
 		}

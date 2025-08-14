@@ -33,8 +33,13 @@ export const pagesDeploymentListCommand = createCommand({
 			choices: ["production", "preview"],
 			description: "Environment type to list deployments for",
 		},
+		json: {
+			type: "boolean",
+			description: "Return output as clean JSON",
+			default: false,
+		},
 	},
-	async handler({ projectName, environment }) {
+	async handler({ projectName, environment, json }) {
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
@@ -93,7 +98,11 @@ export const pagesDeploymentListCommand = createCommand({
 			account_id: accountId,
 		});
 
-		logger.table(data);
+		if (json) {
+			logger.log(JSON.stringify(data, null, 2));
+		} else {
+			logger.table(data);
+		}
 		metrics.sendMetricsEvent("list pages deployments");
 	},
 });

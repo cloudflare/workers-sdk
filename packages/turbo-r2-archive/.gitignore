@@ -1,6 +1,8 @@
 node_modules
-.env
 dist
 .wrangler
 .turbo
-.dev.vars
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example

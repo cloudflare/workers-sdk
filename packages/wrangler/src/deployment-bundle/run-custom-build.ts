@@ -136,6 +136,10 @@ function getMissingEntryPointMessage(
 				"```\n" +
 				possiblePaths.map((filePath) => `main = "./${filePath}"\n`).join("") +
 				"```";
+		} else {
+			message +=
+				`\n If you want to deploy a directory of static assets, you can do so by using the \`--assets\` flag. For example:\n\n` +
+				`wrangler deploy --assets=./${relativeEntryPointPath}\n`;
 		}
 	}
 	return message;

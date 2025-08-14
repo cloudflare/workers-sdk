@@ -81,6 +81,8 @@ export function buildWorkerFromFunctions({
 		sourcemap,
 		watch,
 		nodejsCompatMode,
+		compatibilityDate: undefined,
+		compatibilityFlags: undefined,
 		define: {
 			__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 		},
@@ -176,6 +178,8 @@ export function buildRawWorker({
 		sourcemap,
 		watch,
 		nodejsCompatMode,
+		compatibilityDate: undefined,
+		compatibilityFlags: undefined,
 		define: {},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects

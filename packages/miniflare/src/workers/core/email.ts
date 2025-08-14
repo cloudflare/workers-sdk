@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { ForwardableEmailMessage } from "@cloudflare/workers-types";
+import { ForwardableEmailMessage } from "@cloudflare/workers-types/experimental";
 import { $, blue, red, reset, yellow } from "kleur/colors";
 import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime, { Email } from "postal-mime";

@@ -10,6 +10,7 @@ import {
 	isDir,
 	resolveImageName,
 	runDockerCmd,
+	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
 import {
 	getCIOverrideNetworkModeHost,
@@ -18,17 +19,17 @@ import {
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getAccountId } from "../user";
-import { resolveAppDiskSize } from "./common";
+import { ensureContainerLimits } from "./limits";
 import { loadAccount } from "./locations";
 import type { Config } from "../config";
-import type { ContainerApp } from "../config/environment";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type {
 	BuildArgs,
-	CompleteAccountCustomer,
+	ContainerNormalizedConfig,
+	ImageURIConfig,
 } from "@cloudflare/containers-shared";
 
 export function buildYargs(yargs: CommonYargsArgv) {
@@ -78,13 +79,24 @@ export function pushYargs(yargs: CommonYargsArgv) {
 		.positional("TAG", { type: "string", demandOption: true });
 }
 
+/**
+ *
+ * `{ remoteDigest: string }` implies the image already exists remotely. we will
+ * try and replace this with the image tag from the last deployment if possible.
+ * If a deployment failed between push and deploy, we can't know for certain
+ * what the tag of the last push was, so we will use the digest instead.
+ *
+ * `{ newTag: string }` implies the image was built and pushed and the deployment
+ * should be associated with a new tag.
+ */
+export type ImageRef = { remoteDigest: string } | { newTag: string };
+
 export async function buildAndMaybePush(
 	args: BuildArgs,
 	pathToDocker: string,
 	push: boolean,
-	configPath: string | undefined,
-	containerConfig?: ContainerApp
-): Promise<{ image: string; pushed: boolean }> {
+	containerConfig?: Exclude<ContainerNormalizedConfig, ImageURIConfig>
+): Promise<ImageRef> {
 	try {
 		const imageTag = `${getCloudflareContainerRegistry()}/${args.tag}`;
 		const { buildCmd, dockerfile } = await constructBuildCommand(
@@ -96,7 +108,6 @@ export async function buildAndMaybePush(
 				platform: args.platform,
 				setNetworkToHost: Boolean(getCIOverrideNetworkModeHost()),
 			},
-			configPath,
 			logger
 		);
 
@@ -105,44 +116,39 @@ export async function buildAndMaybePush(
 			dockerfile,
 		}).ready;
 
-		const inspectOutput = await dockerImageInspect(pathToDocker, {
-			imageTag,
-			formatString:
-				"{{ .Size }} {{ len .RootFS.Layers }} {{json .RepoDigests}}",
-		});
-
-		const [sizeStr, layerStr, repoDigests] = inspectOutput.split(" ");
-
-		let pushed = false;
 		if (push) {
+			/**
+			 * Get `RepoDigests` and `Id`:
+			 * A Docker image digest (RepoDigest) is a unique, cryptographic identifier (SHA-256 hash)
+			 * representing the content of a Docker image. Unlike tags, which can be reused		or changed, a digest is immutable and ensures that the exact same image is
+			 * pulled every time. This guarantees consistency across different environments
+			 * and deployments. Crucially this is *not* affected by metadata changes (dockerfile only changes).
+			 * From: https://docs.docker.com/dhi/core-concepts/digests/
+			 * The image Id is a sha hash of the image's configuration, so it *does* capture metadata changes.
+			 * We need both to know when to push the image to the managed registry.
+			 */
+			const imageInfo = await dockerImageInspect(pathToDocker, {
+				imageTag,
+				formatString: "{{ json .RepoDigests }} {{ .Id }}",
+			});
+			logger.debug(`'docker image inspect ${imageTag}':`, imageInfo);
+
 			const account = await loadAccount();
 
-			const size = parseInt(sizeStr, 10);
-			const layers = parseInt(layerStr, 10);
-
-			// 16MiB is the layer size adjustments we use in devmapper
-			const MiB = 1024 * 1024;
-			const requiredSize = Math.ceil(size * 1.1 + layers * 16 * MiB);
-			await ensureDiskLimits({
-				requiredSize,
+			await ensureContainerLimits({
+				pathToDocker,
+				imageTag,
 				account,
-				containerApp: containerConfig,
+				containerConfig,
 			});
 
 			await dockerLoginManagedRegistry(pathToDocker);
 			try {
-				// We don't try to parse repoDigests until this point
+				const [digests, imageId] = imageInfo.split(" ");
+				// We don't try to parse until this point
 				// because we don't want to fail on parse errors if we
 				// won't be pushing the image anyways.
-				//
-				// A Docker image digest is a unique, cryptographic identifier (SHA-256 hash)
-				// representing the content of a Docker image. Unlike tags, which can be reused
-				// or changed, a digest is immutable and ensures that the exact same image is
-				// pulled every time. This guarantees consistency across different environments
-				// and deployments.
-				// From: https://docs.docker.com/dhi/core-concepts/digests/
-				const parsedDigests = JSON.parse(repoDigests);
-
+				const parsedDigests = JSON.parse(digests);
 				if (!Array.isArray(parsedDigests)) {
 					// If it's not the format we expect, fall back to pushing
 					// since it's annoying but safe.
@@ -151,13 +157,19 @@ export async function buildAndMaybePush(
 					);
 				}
 
-				const repositoryOnly = imageTag.split(":")[0];
+				const repositoryOnly = resolveImageName(
+					account.external_account_id,
+					imageTag
+				).split(":")[0];
+
 				// if this succeeds it means this image already exists remotely
 				// if it fails it means it doesn't exist remotely and should be pushed.
-				const [digest, ...rest] = parsedDigests.filter(
-					(d): d is string =>
-						typeof d === "string" && d.split("@")[0] === repositoryOnly
-				);
+				const [digest, ...rest] = parsedDigests.filter((d): d is string => {
+					const resolved = resolveImageName(account.external_account_id, d);
+					return (
+						typeof d === "string" && resolved.split("@")[0] === repositoryOnly
+					);
+				});
 				if (rest.length > 0) {
 					throw new Error(
 						`Expected there to only be 1 valid digests for this repository: ${repositoryOnly} but there were ${rest.length + 1}`
@@ -168,47 +180,59 @@ export async function buildAndMaybePush(
 				// account ID before checking if it exists in
 				// the managed registry.
 				const [image, hash] = digest.split("@");
-				const resolvedImage = await resolveImageName(
+				const resolvedImage = resolveImageName(
 					account.external_account_id,
 					image
 				);
 				const remoteDigest = `${resolvedImage}@${hash}`;
 
-				await runDockerCmd(
-					pathToDocker,
-					["manifest", "inspect", remoteDigest],
-					"ignore"
-				);
-
-				logger.log("Image already exists remotely, skipping push");
+				// NOTE: this is an experimental docker command so the API may change
+				// and break this flow. Hopefully not!
+				// http://docs.docker.com/reference/cli/docker/manifest/inspect/
+				// Checks if this image already exists in the managed registry
+				// If this errors, it probably doesn't exist. Either way, we fall
+				// back to pushing the image, which is safer.
+				const remoteManifest = runDockerCmdWithOutput(pathToDocker, [
+					"manifest",
+					"inspect",
+					"-v",
+					remoteDigest,
+				]);
 				logger.debug(
-					`Untagging built image: ${args.tag} since there was no change.`
+					`'docker manifest inspect -v ${remoteDigest}:`,
+					remoteManifest
 				);
-				await runDockerCmd(pathToDocker, ["image", "rm", imageTag]);
-				return { image: remoteDigest, pushed: false };
+				const parsedRemoteManifest = JSON.parse(remoteManifest);
+
+				if (parsedRemoteManifest.Descriptor.digest === imageId) {
+					logger.log("Image already exists remotely, skipping push");
+					logger.debug(
+						`Untagging built image: ${args.tag} since there was no change.`
+					);
+					await runDockerCmd(pathToDocker, ["image", "rm", imageTag]);
+					return { remoteDigest };
+				}
 			} catch (error) {
 				if (error instanceof Error) {
 					logger.debug(
 						`Checking for local image ${args.tag} failed with error: ${error.message}`
 					);
 				}
-
-				// Re-tag the image to include the account ID
-				const namespacedImageTag = getCloudflareRegistryWithAccountNamespace(
-					account.external_account_id,
-					args.tag
-				);
-
-				logger.log(
-					`Image does not exist remotely, pushing: ${namespacedImageTag}`
-				);
-				await runDockerCmd(pathToDocker, ["tag", imageTag, namespacedImageTag]);
-				await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
-				await runDockerCmd(pathToDocker, ["image", "rm", namespacedImageTag]);
-				pushed = true;
 			}
+			// Re-tag the image to include the account ID
+			const namespacedImageTag = getCloudflareRegistryWithAccountNamespace(
+				account.external_account_id,
+				args.tag
+			);
+			logger.log(
+				`Image does not exist remotely, pushing: ${namespacedImageTag}`
+			);
+			await runDockerCmd(pathToDocker, ["tag", imageTag, namespacedImageTag]);
+			await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
+			await runDockerCmd(pathToDocker, ["image", "rm", namespacedImageTag]);
 		}
-		return { image: imageTag, pushed: pushed };
+
+		return { newTag: imageTag };
 	} catch (error) {
 		if (error instanceof Error) {
 			throw new UserError(error.message, { cause: error });
@@ -218,8 +242,7 @@ export async function buildAndMaybePush(
 }
 
 export async function buildCommand(
-	args: StrictYargsOptionsToInterface<typeof buildYargs>,
-	config: Config
+	args: StrictYargsOptionsToInterface<typeof buildYargs>
 ) {
 	// TODO: merge args with Wrangler config if available
 	if (existsSync(args.PATH) && !isDir(args.PATH)) {
@@ -232,24 +255,23 @@ export async function buildCommand(
 			`Unsupported platform: Platform "${args.platform}" is unsupported. Please use "linux/amd64" instead.`
 		);
 	}
-	// if containers are not defined, the build should still work.
-	const containers = config.containers ?? [undefined];
+
 	const pathToDockerfile = join(args.PATH, "Dockerfile");
-	for (const container of containers) {
-		await buildAndMaybePush(
-			{
-				tag: args.tag,
-				pathToDockerfile,
-				buildContext: args.PATH,
-				platform: args.platform,
-				// no option to add env vars at build time...?
-			},
-			getDockerPath() ?? args.pathToDocker,
-			args.push,
-			config.configPath,
-			container
-		);
-	}
+
+	await buildAndMaybePush(
+		{
+			tag: args.tag,
+			pathToDockerfile,
+			buildContext: args.PATH,
+			platform: args.platform,
+			// no option to add env vars at build time...?
+		},
+		getDockerPath() ?? args.pathToDocker,
+		args.push,
+		// this means we aren't validating defined limits for a container when building an image
+		// we will, however, still validate the image size against account level disk limits
+		undefined
+	);
 }
 
 export async function pushCommand(
@@ -290,34 +312,6 @@ async function checkImagePlatform(
 	if (platform !== expectedPlatform) {
 		throw new Error(
 			`Unsupported platform: Image platform (${platform}) does not match the expected platform (${expectedPlatform})`
-		);
-	}
-}
-
-export async function ensureDiskLimits(options: {
-	requiredSize: number;
-	account: CompleteAccountCustomer;
-	containerApp: ContainerApp | undefined;
-}): Promise<void> {
-	const MB = 1000 * 1000;
-	const MiB = 1024 * 1024;
-	const appDiskSize = resolveAppDiskSize(options.containerApp);
-	const accountDiskSize =
-		(options.account.limits.disk_mb_per_deployment ?? 2000) * MB;
-	// if appDiskSize is defined and configured to be more than the accountDiskSize, error
-	if (appDiskSize && appDiskSize > accountDiskSize) {
-		throw new UserError(
-			`Exceeded account limits: Your container is configured to use a disk size of ${appDiskSize / MB} MB. However, that exceeds the account limit of ${accountDiskSize / MB}`
-		);
-	}
-	const maxAllowedImageSizeBytes = appDiskSize ?? accountDiskSize;
-
-	logger.debug(
-		`Disk size limits when building the container: appDiskSize:${appDiskSize}, accountDiskSize:${accountDiskSize}, maxAllowedImageSizeBytes=${maxAllowedImageSizeBytes}(${maxAllowedImageSizeBytes / MB} MB), requiredSized=${options.requiredSize}(${Math.ceil(options.requiredSize / MiB)}MiB)`
-	);
-	if (maxAllowedImageSizeBytes < options.requiredSize) {
-		throw new UserError(
-			`Image too large: needs ${Math.ceil(options.requiredSize / MB)} MB, but your app is limited to images with size ${maxAllowedImageSizeBytes / MB} MB. Your account needs more disk size per instance to run this container. The default disk size is 2GB.`
 		);
 	}
 }

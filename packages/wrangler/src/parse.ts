@@ -215,8 +215,13 @@ export function readFileSyncToBuffer(file: string): Buffer {
  */
 export function readFileSync(file: string): string {
 	try {
-		return fs.readFileSync(file, { encoding: "utf-8" });
+		const buffer = fs.readFileSync(file);
+		return removeBOMAndValidate(buffer, file);
 	} catch (err) {
+		if (err instanceof ParseError) {
+			throw err;
+		}
+
 		const { message } = err as Error;
 		throw new ParseError({
 			text: `Could not read file: ${file}`,
@@ -399,4 +404,55 @@ export function parseByteSize(
 	return Math.floor(
 		Number(size) * Math.pow(base ?? (binary ? 1024 : 1000), pow)
 	);
+}
+
+const UNSUPPORTED_BOMS = [
+	{
+		buffer: Buffer.from([0x00, 0x00, 0xfe, 0xff]),
+		encoding: "UTF-32 BE",
+	},
+	{
+		buffer: Buffer.from([0xff, 0xfe, 0x00, 0x00]),
+		encoding: "UTF-32 LE",
+	},
+	{
+		buffer: Buffer.from([0xfe, 0xff]),
+		encoding: "UTF-16 BE",
+	},
+	{
+		buffer: Buffer.from([0xff, 0xfe]),
+		encoding: "UTF-16 LE",
+	},
+];
+
+/**
+ * Removes UTF-8 BOM if present and validates that no other BOMs are present.
+ * Throws ParseError for non-UTF-8 BOMs with descriptive error messages.
+ */
+function removeBOMAndValidate(buffer: Buffer, file: string): string {
+	for (const bom of UNSUPPORTED_BOMS) {
+		if (
+			buffer.length >= bom.buffer.length &&
+			buffer.subarray(0, bom.buffer.length).equals(bom.buffer)
+		) {
+			throw new ParseError({
+				text: `Configuration file contains ${bom.encoding} byte order marker`,
+				notes: [
+					{
+						text: `The file "${file}" appears to be encoded as ${bom.encoding}. Please save the file as UTF-8 without BOM.`,
+					},
+				],
+				location: { file, line: 1, column: 0 },
+				telemetryMessage: `${bom.encoding} BOM detected`,
+			});
+		}
+	}
+
+	const content = buffer.toString("utf-8");
+
+	if (content.charCodeAt(0) === 0xfeff) {
+		return content.slice(1);
+	}
+
+	return content;
 }

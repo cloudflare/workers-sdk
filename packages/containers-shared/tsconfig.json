@@ -7,8 +7,8 @@
 		"allowSyntheticDefaultImports": true,
 		"experimentalDecorators": true,
 		"skipLibCheck": true,
-		"outDir": "./dist",
-		"types": ["node"]
+		"types": ["node"],
+		"noUncheckedIndexedAccess": true
 	},
 	"include": ["src/**/*", "index.ts"],
 	"exclude": ["dist", "node_modules"]

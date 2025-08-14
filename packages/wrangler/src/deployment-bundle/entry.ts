@@ -3,6 +3,7 @@ import dedent from "ts-dedent";
 import { configFileName, formatConfigSnippet } from "../config";
 import { UserError } from "../errors";
 import { sniffUserAgent } from "../package-manager";
+import { formatCompatibilityDate } from "../utils/compatibility-date";
 import guessWorkerFormat from "./guess-worker-format";
 import {
 	resolveEntryWithAssets,
@@ -75,11 +76,7 @@ export async function getEntry(
 			);
 		}
 
-		const compatibilityDateStr = [
-			new Date().getFullYear(),
-			(new Date().getMonth() + 1 + "").padStart(2, "0"),
-			(new Date().getDate() + "").padStart(2, "0"),
-		].join("-");
+		const compatibilityDateStr = formatCompatibilityDate(new Date());
 
 		const updateConfigMessage = (snippet: RawConfig) => dedent`
 			${

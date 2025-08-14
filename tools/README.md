@@ -19,3 +19,5 @@ Tools for helping with CI
 - `e2e/runIndividualE2EFiles.ts` - Used to shard the e2e tests into separately cache-able Turbo runs, which helps with flakey tests.
 
 - `test/run-test-file.ts` - Used by in VS Code configuration to launch a debug session to run a single test file.
+
+- `test-workers/` - Contains worker definitions used by CI tests. Each worker has its own subdirectory with `index.js` and `wrangler.jsonc` files. See `test-workers/README.md` for details.

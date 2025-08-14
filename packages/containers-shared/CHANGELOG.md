@@ -1,5 +1,31 @@
 # @cloudflare/containers-shared
 
+## 0.2.9
+
+### Patch Changes
+
+- [#10258](https://github.com/cloudflare/workers-sdk/pull/10258) [`d391076`](https://github.com/cloudflare/workers-sdk/commit/d39107694b6bd9d63f15b529798aba0fd9a43643) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Add the option to allow all tiers when creating a container
+
+- [#10232](https://github.com/cloudflare/workers-sdk/pull/10232) [`e7cae16`](https://github.com/cloudflare/workers-sdk/commit/e7cae16d5be9a8a0487ffab351ccf8f27808524f) Thanks [@emily-shen](https://github.com/emily-shen)! - include containers API calls in output of WRANGLER_LOG=debug
+
+## 0.2.8
+
+### Patch Changes
+
+- [#10061](https://github.com/cloudflare/workers-sdk/pull/10061) [`f8a80a8`](https://github.com/cloudflare/workers-sdk/commit/f8a80a807576f7fa6d9eca37d297c50793bca188) Thanks [@emily-shen](https://github.com/emily-shen)! - feat(containers): try to automatically get the socket path that the container engine is listening on.
+
+  Currently, if your container engine isn't set up to listen on `unix:///var/run/docker.sock` (or isn't symlinked to that), then you have to manually set this via the `dev.containerEngine` field in your Wrangler config, or via the env vars `WRANGLER_DOCKER_HOST`. This change means that we will try and get the socket of the current context automatically. This should reduce the occurrence of opaque `internal error`s thrown by the runtime when the daemon is not listening on `unix:///var/run/docker.sock`.
+
+  In addition to `WRANGLER_DOCKER_HOST`, `DOCKER_HOST` can now also be used to set the container engine socket address.
+
+## 0.2.7
+
+### Patch Changes
+
+- [#9819](https://github.com/cloudflare/workers-sdk/pull/9819) [`0c4008c`](https://github.com/cloudflare/workers-sdk/commit/0c4008ce183c82ebff8eac2469ff9a8256cffa5f) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat(vite-plugin): Add containers support in `vite dev`
+
+  Adds support for Cloudflare Containers in `vite dev`. Please note that at the time of this PR a container image can only specify the path to a `Dockerfile`. Support for registry links will be added in a later version, as will containers support in `vite preview`.
+
 ## 0.2.6
 
 ### Patch Changes

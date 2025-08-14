@@ -1,0 +1,27 @@
+{
+	"name": "worker-b",
+	"main": "index.ts",
+	"compatibility_date": "2025-04-03",
+	"containers": [
+		{
+			"image": "./Dockerfile",
+			"class_name": "FixtureTestContainerB",
+			"name": "container",
+			"max_instances": 2,
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "FixtureTestContainerB",
+				"name": "CONTAINER_B",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["FixtureTestContainerB"],
+		},
+	],
+}

@@ -11,9 +11,9 @@ import { Duplex, Transform, Writable } from "stream";
 import { ReadableStream } from "stream/web";
 import util from "util";
 import zlib from "zlib";
+import { checkMacOSVersion } from "@cloudflare/cli";
 import exitHook from "exit-hook";
 import { $ as colors$, green } from "kleur/colors";
-import { npxImport } from "npx-import";
 import stoppable from "stoppable";
 import {
 	Dispatcher,
@@ -47,6 +47,7 @@ import {
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	KV_PLUGIN_NAME,
+	launchBrowser,
 	normaliseDurableObject,
 	PLUGIN_ENTRIES,
 	Plugins,
@@ -110,8 +111,6 @@ import {
 	createInboundDoProxyService,
 	createOutboundDoProxyService,
 	createProxyFallbackService,
-	extractDoFetchProxyTarget,
-	extractServiceFetchProxyTarget,
 	getHttpProxyOptions,
 	getOutboundDoProxyClassName,
 	getProtocol,
@@ -142,7 +141,7 @@ import type {
 	Queue,
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
-import type { ChildProcess } from "child_process";
+import type { Process } from "@puppeteer/browsers";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -396,13 +395,12 @@ function getDurableObjectClassNames(
 
 /**
  * This collects all external service bindings from all workers and overrides
- * it to point to a proxy in the loopback server. A fallback service will be created
+ * it to point to the dev registry proxy. A fallback service will be created
  * for each of the external service in case the external service is not available.
  */
 function getExternalServiceEntrypoints(
 	allWorkerOpts: PluginWorkerOptions[],
-	loopbackHost: string,
-	loopbackPort: number
+	proxyAddress: string
 ) {
 	const externalServices = new Map<
 		string,
@@ -446,7 +444,7 @@ function getExternalServiceEntrypoints(
 					// Override it to connect to the dev registry proxy
 					workerOpts.core.serviceBindings[name] = {
 						external: {
-							address: `${loopbackHost}:${loopbackPort}`,
+							address: proxyAddress,
 							http: getHttpProxyOptions(serviceName, entrypoint),
 						},
 					};
@@ -515,7 +513,7 @@ function getExternalServiceEntrypoints(
 					// Override it to connect to the dev registry proxy
 					workerOpts.core.tails[i] = {
 						external: {
-							address: `${loopbackHost}:${loopbackPort}`,
+							address: proxyAddress,
 							http: getHttpProxyOptions(serviceName, entrypoint),
 						},
 					};
@@ -776,56 +774,6 @@ export function _transformsForContentEncodingAndContentType(
 	return encoders;
 }
 
-async function writeResponse(response: Response, res: http.ServerResponse) {
-	// Convert headers into Node-friendly format
-	const headers: http.OutgoingHttpHeaders = {};
-	for (const entry of response.headers) {
-		const key = entry[0].toLowerCase();
-		const value = entry[1];
-		if (key === "set-cookie") {
-			headers[key] = response.headers.getSetCookie();
-		} else {
-			headers[key] = value;
-		}
-	}
-
-	// If a `Content-Encoding` header is set, we'll need to encode the body
-	// (likely only set by custom service bindings)
-	const encoding = headers["content-encoding"]?.toString();
-	const type = headers["content-type"]?.toString();
-	const encoders = _transformsForContentEncodingAndContentType(encoding, type);
-	if (encoders.length > 0) {
-		// `Content-Length` if set, will be wrong as it's for the decoded length
-		delete headers["content-length"];
-	}
-
-	res.writeHead(response.status, response.statusText, headers);
-
-	// `initialStream` is the stream we'll write the response to. It
-	// should end up as the first encoder, piping to the next encoder,
-	// and finally piping to the response:
-	//
-	// encoders[0] (initialStream) -> encoders[1] -> res
-	//
-	// Not using `pipeline(passThrough, ...encoders, res)` here as that
-	// gives a premature close error with server sent events. This also
-	// avoids creating an extra stream even when we're not encoding.
-	let initialStream: Writable = res;
-	for (let i = encoders.length - 1; i >= 0; i--) {
-		encoders[i].pipe(initialStream);
-		initialStream = encoders[i];
-	}
-
-	// Response body may be null if empty
-	if (response.body) {
-		for await (const chunk of response.body) {
-			if (chunk) initialStream.write(chunk);
-		}
-	}
-
-	initialStream.end();
-}
-
 function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 	// Adapted from `undici`, catches errors from `next()` to avoid unhandled
 	// rejections from aborted request body streams:
@@ -900,10 +848,8 @@ export class Miniflare {
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
 
-	#browsers: Set<{
-		wsEndpoint: () => string;
-		process: () => ChildProcess;
-	}> = new Set();
+	// key is the browser wsEndpoint, value is the browser process
+	#browserProcesses: Map<string, Process> = new Map();
 
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
@@ -911,6 +857,8 @@ export class Miniflare {
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
+
+	#structuredWorkerdLogs: boolean;
 
 	#cfObject?: Record<string, any> = {};
 
@@ -943,6 +891,9 @@ export class Miniflare {
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
+
+		checkMacOSVersion({ shouldThrow: true });
+
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 
@@ -967,6 +918,8 @@ export class Miniflare {
 		}
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
+		this.#structuredWorkerdLogs =
+			this.#sharedOpts.core.structuredWorkerdLogs ?? false;
 
 		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
 		// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
@@ -1013,6 +966,7 @@ export class Miniflare {
 		this.#devRegistry = new DevRegistry(
 			this.#sharedOpts.core.unsafeDevRegistryPath,
 			this.#sharedOpts.core.unsafeDevRegistryDurableObjectProxy,
+			this.#sharedOpts.core.unsafeHandleDevRegistryUpdate,
 			this.#log
 		);
 
@@ -1140,81 +1094,10 @@ export class Miniflare {
 		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
 
-	#getFallbackServiceAddress(
-		service: string,
-		entrypoint: string
-	): {
-		httpStyle: "host" | "proxy";
-		protocol: "http" | "https";
-		host: string;
-		port: number;
-	} {
-		assert(
-			this.#socketPorts !== undefined && this.#runtimeEntryURL !== undefined,
-			"Cannot resolve address for fallback service before runtime is initialised"
-		);
-
-		const port = this.#socketPorts.get(
-			getProxyFallbackServiceSocketName(service, entrypoint)
-		);
-
-		if (!port) {
-			throw new Error(
-				`There is no socket opened for "${service}" with the "${entrypoint}" entrypoint`
-			);
-		}
-
-		return {
-			httpStyle: "proxy",
-			protocol: getProtocol(this.#runtimeEntryURL),
-			host: this.#runtimeEntryURL.hostname,
-			port,
-		};
-	}
-
 	#handleLoopback = async (
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): Promise<Response | undefined> => {
-		const serviceProxyTarget = extractServiceFetchProxyTarget(req);
-
-		if (serviceProxyTarget) {
-			assert(res !== undefined, "No response object provided");
-
-			const address =
-				this.#devRegistry.getExternalServiceAddress(
-					serviceProxyTarget.service,
-					serviceProxyTarget.entrypoint
-				) ??
-				this.#getFallbackServiceAddress(
-					serviceProxyTarget.service,
-					serviceProxyTarget.entrypoint
-				);
-
-			this.#handleProxy(req, res, address);
-			return;
-		}
-
-		const doProxyTarget = extractDoFetchProxyTarget(req);
-
-		if (doProxyTarget) {
-			assert(res !== undefined, "No response object provided");
-
-			const address = this.#devRegistry.getExternalDurableObjectAddress(
-				doProxyTarget.scriptName,
-				doProxyTarget.className
-			);
-
-			if (!address) {
-				res.writeHead(503);
-				res.end("Service Unavailable");
-				return;
-			}
-
-			this.#handleProxy(req, res, address);
-			return;
-		}
-
 		const customNodeService =
 			req.headers[CoreHeaders.CUSTOM_NODE_SERVICE.toLowerCase()];
 		if (typeof customNodeService === "string") {
@@ -1297,17 +1180,32 @@ export class Miniflare {
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/browser/launch") {
-				// Version should be kept in sync with the supported version at https://github.com/cloudflare/puppeteer?tab=readme-ov-file#workers-version-of-puppeteer-core
-				const puppeteer = await npxImport(
-					"puppeteer@22.8.2",
-					this.#log.warn.bind(this.#log)
-				);
-
-				// @ts-expect-error Puppeteer is dynamically installed, and so doesn't have types available
-				const browser = await puppeteer.launch({ headless: "old" });
-				this.#browsers.add(browser);
-
-				response = new Response(browser.wsEndpoint());
+				const { browserProcess, wsEndpoint } = await launchBrowser({
+					// Puppeteer v22.8.2 supported chrome version:
+					// https://pptr.dev/supported-browsers#supported-browser-version-list
+					//
+					// It should match the supported chrome version for the upstream puppeteer
+					// version from which @cloudflare/puppeteer branched off, which is specified in:
+					// https://github.com/cloudflare/puppeteer/tree/v1.0.2?tab=readme-ov-file#workers-version-of-puppeteer-core
+					browserVersion: "124.0.6367.207",
+					log: this.#log,
+					tmpPath: this.#tmpPath,
+				});
+				browserProcess.nodeProcess.on("exit", () => {
+					this.#browserProcesses.delete(wsEndpoint);
+				});
+				this.#browserProcesses.set(wsEndpoint, browserProcess);
+				response = new Response(wsEndpoint);
+			} else if (url.pathname === "/browser/status") {
+				const wsEndpoint = url.searchParams.get("wsEndpoint");
+				assert(wsEndpoint !== null, "Missing wsEndpoint query parameter");
+				const process = this.#browserProcesses.get(wsEndpoint);
+				const status = {
+					stopped: !process,
+				};
+				response = new Response(JSON.stringify(status), {
+					headers: { "Content-Type": "application/json" },
+				});
 			} else if (url.pathname === "/core/store-temp-file") {
 				const prefix = url.searchParams.get("prefix");
 				const folder = prefix ? `files/${prefix}` : "files";
@@ -1332,7 +1230,7 @@ export class Miniflare {
 				res.writeHead(404);
 				res.end();
 			} else {
-				await writeResponse(response, res);
+				await this.#writeResponse(response, res);
 			}
 		}
 
@@ -1390,111 +1288,67 @@ export class Miniflare {
 		}
 
 		// Otherwise, send the response as is (e.g. unauthorised)
-		await writeResponse(response, res);
+		await this.#writeResponse(response, res);
 	};
 
-	#handleLoopbackConnect = async (
-		req: http.IncomingMessage,
-		clientSocket: Duplex,
-		head: Buffer
-	) => {
-		try {
-			const connectHost = req.url;
-			const [serviceName, entrypoint] = connectHost?.split(":") ?? [];
-			const address =
-				this.#devRegistry.getExternalServiceAddress(serviceName, entrypoint) ??
-				this.#getFallbackServiceAddress(serviceName, entrypoint);
-
-			const serverSocket = net.connect(address.port, address.host, () => {
-				serverSocket.write(`CONNECT ${HOST_CAPNP_CONNECT} HTTP/1.1\r\n\r\n`);
-
-				// Push along any buffered bytes
-				if (head && head.length) {
-					serverSocket.write(head);
-				}
-
-				serverSocket.pipe(clientSocket);
-				clientSocket.pipe(serverSocket);
-			});
-
-			// Errors on either side
-			serverSocket.on("error", (err) => {
-				this.#log.error(err);
-				clientSocket.end();
-			});
-			clientSocket.on("error", () => serverSocket.end());
-
-			// Close the tunnel if the service is updated
-			// This make sure workerd will re-connect to the latest address
-			this.#devRegistry.subscribe(serviceName, () => {
-				this.#log.debug(
-					`Closing tunnel as service "${serviceName}" was updated`
-				);
-				clientSocket.end();
-			});
-		} catch (ex: any) {
-			this.#log.error(ex);
-			clientSocket.end();
-		}
-	};
-
-	#handleProxy = (
-		req: http.IncomingMessage,
-		res: http.ServerResponse,
-		target: {
-			protocol: "http" | "https";
-			host: string;
-			port: number;
-			httpStyle?: "host" | "proxy";
-			path?: string;
-		}
-	) => {
-		const headers = { ...req.headers };
-		let path = target.path;
-
-		if (!path) {
-			switch (target.httpStyle) {
-				case "host": {
-					const url = new URL(req.url ?? `http://${req.headers.host}`);
-					// If the target is a host, use the path from the request URL
-					path = url.pathname + url.search + url.hash;
-					headers.host = url.host;
-					break;
-				}
-				case "proxy": {
-					// If the target is a proxy, use the full request URL
-					path = req.url;
-					break;
-				}
+	async #writeResponse(response: Response, res: http.ServerResponse) {
+		// Convert headers into Node-friendly format
+		const headers: http.OutgoingHttpHeaders = {};
+		for (const entry of response.headers) {
+			const key = entry[0].toLowerCase();
+			const value = entry[1];
+			if (key === "set-cookie") {
+				headers[key] = response.headers.getSetCookie();
+			} else {
+				headers[key] = value;
 			}
 		}
 
-		const options: http.RequestOptions = {
-			host: target.host,
-			port: target.port,
-			method: req.method,
-			path,
-			headers,
-		};
+		// If a `Content-Encoding` header is set, we'll need to encode the body
+		// (likely only set by custom service bindings)
+		const encoding = headers["content-encoding"]?.toString();
+		const type = headers["content-type"]?.toString();
+		const encoders = _transformsForContentEncodingAndContentType(
+			encoding,
+			type
+		);
+		if (encoders.length > 0) {
+			// `Content-Length` if set, will be wrong as it's for the decoded length
+			delete headers["content-length"];
+		}
 
-		// Res is optional only on websocket upgrade requests
-		assert(res !== undefined, "No response object provided");
-		const upstream = http.request(options, (upRes) => {
-			// Relay status and headers back to the original client
-			res.writeHead(upRes.statusCode ?? 500, upRes.headers);
-			// Pipe the response body
-			upRes.pipe(res);
-		});
+		res.writeHead(response.status, response.statusText, headers);
 
-		// Pipe the client request body to the upstream
-		req.pipe(upstream);
+		// `initialStream` is the stream we'll write the response to. It
+		// should end up as the first encoder, piping to the next encoder,
+		// and finally piping to the response:
+		//
+		// encoders[0] (initialStream) -> encoders[1] -> res
+		//
+		// Not using `pipeline(passThrough, ...encoders, res)` here as that
+		// gives a premature close error with server sent events. This also
+		// avoids creating an extra stream even when we're not encoding.
+		let initialStream: Writable = res;
+		for (let i = encoders.length - 1; i >= 0; i--) {
+			encoders[i].pipe(initialStream);
+			initialStream = encoders[i];
+		}
 
-		upstream.on("error", (err) => {
-			this.#log.error(err);
-			if (!res.headersSent) res.writeHead(502);
-			res.end("Bad Gateway");
-		});
-	};
+		// Response body may be null if empty
+		if (response.body) {
+			try {
+				for await (const chunk of response.body) {
+					if (chunk) initialStream.write(chunk);
+				}
+			} catch (error) {
+				this.#log.debug(
+					`Error writing response body, closing response early: ${error}`
+				);
+			}
+		}
+
+		initialStream.end();
+	}
 
 	async #getLoopbackPort(): Promise<number> {
 		// This function must be run with `#runtimeMutex` held
@@ -1525,7 +1379,6 @@ export class Miniflare {
 				http.createServer(this.#handleLoopback),
 				/* grace */ 0
 			);
-			server.on("connect", this.#handleLoopbackConnect);
 			server.on("upgrade", this.#handleLoopbackUpgrade);
 			server.listen(0, hostname, () => resolve(server));
 		});
@@ -1554,8 +1407,8 @@ export class Miniflare {
 	}
 
 	async #assembleConfig(
-		loopbackHost: string,
-		loopbackPort: number
+		loopbackPort: number,
+		proxyAddress: string | null
 	): Promise<Config> {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
 		const allWorkerOpts = this.#workerOpts;
@@ -1564,9 +1417,10 @@ export class Miniflare {
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 		this.#cfObject = sharedOpts.core.cf;
 
-		const externalServices = this.#devRegistry.isEnabled()
-			? getExternalServiceEntrypoints(allWorkerOpts, loopbackHost, loopbackPort)
-			: null;
+		const externalServices =
+			proxyAddress !== null
+				? getExternalServiceEntrypoints(allWorkerOpts, proxyAddress)
+				: null;
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const wrappedBindingNames = getWrappedBindingNames(
 			allWorkerOpts,
@@ -1787,6 +1641,7 @@ export class Miniflare {
 			for (let j = 0; j < directSockets.length; j++) {
 				const previousDirectSocket = previousDirectSockets[j];
 				const directSocket = directSockets[j];
+				const serviceName = directSocket.serviceName ?? workerName;
 				const entrypoint = directSocket.entrypoint ?? "default";
 				const name = getDirectSocketName(i, entrypoint);
 				const address = this.#getSocketAddress(
@@ -1803,7 +1658,7 @@ export class Miniflare {
 								name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`,
 							}
 						: {
-								name: getUserServiceName(workerName),
+								name: getUserServiceName(serviceName),
 								entrypoint: entrypoint === "default" ? undefined : entrypoint,
 							};
 
@@ -1854,9 +1709,6 @@ export class Miniflare {
 						},
 					});
 				}
-
-				// Ask the dev registry to watch for this service
-				this.#devRegistry.subscribe(serviceName);
 			}
 
 			const externalObjects = Array.from(externalServices).flatMap(
@@ -1868,12 +1720,15 @@ export class Miniflare {
 			);
 			const outboundDoProxyService = createOutboundDoProxyService(
 				externalObjects,
-				`http://${loopbackHost}:${loopbackPort}`,
+				`http://${proxyAddress}`,
 				this.#devRegistry.isDurableObjectProxyEnabled()
 			);
 
 			assert(outboundDoProxyService.name !== undefined);
 			services.set(outboundDoProxyService.name, outboundDoProxyService);
+
+			// Watch the dev registry for changes
+			await this.#devRegistry.watch(externalServices);
 		}
 
 		// Expose all internal durable object with a proxy service
@@ -1954,14 +1809,18 @@ export class Miniflare {
 					"Ensure wrapped bindings don't have bindings to themselves."
 			);
 		}
-		return { services: servicesArray, sockets, extensions };
+
+		return {
+			services: servicesArray,
+			sockets,
+			extensions,
+			structuredLogging: this.#structuredWorkerdLogs,
+		};
 	}
 
 	async #assembleAndUpdateConfig() {
-		for (const browser of this.#browsers) {
-			// .close() isn't enough
-			await browser.process().kill("SIGKILL");
-		}
+		await this.#closeBrowserProcesses();
+
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
@@ -1970,7 +1829,8 @@ export class Miniflare {
 			maybeGetLocallyAccessibleHost(configuredHost) ??
 			getURLSafeHost(configuredHost);
 		const loopbackPort = await this.#getLoopbackPort();
-		const config = await this.#assembleConfig(loopbackHost, loopbackPort);
+		const proxyAddress = await this.#devRegistry.initializeProxyWorker();
+		const config = await this.#assembleConfig(loopbackPort, proxyAddress);
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
@@ -2127,6 +1987,18 @@ export class Miniflare {
 		}
 	}
 
+	async #closeBrowserProcesses() {
+		await Promise.all(
+			Array.from(this.#browserProcesses.values()).map((process) =>
+				process.close()
+			)
+		);
+		assert(
+			this.#browserProcesses.size === 0,
+			"Not all browser processes were closed"
+		);
+	}
+
 	async #waitForReady(disposing = false) {
 		// If `#init()` threw, we'd like to propagate the error here, so `await` it.
 		// Note we can't use `async`/`await` with getters. We'd also like to wait
@@ -2248,10 +2120,12 @@ export class Miniflare {
 
 	get ready(): Promise<URL> {
 		return this.#waitForReady().then(async (url) => {
+			assert(this.#socketPorts !== undefined);
+
+			// Update proxy server with the addresses of the fallback services
+			this.#devRegistry.configureProxyWorker(url.toString(), this.#socketPorts);
 			// Register all workers with the dev registry
 			await this.#registerWorkers(url);
-			// Watch for changes to the dev registry
-			await this.#devRegistry.watch();
 
 			return url;
 		});
@@ -2347,10 +2221,14 @@ export class Miniflare {
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
+		this.#structuredWorkerdLogs =
+			this.#sharedOpts.core.structuredWorkerdLogs ??
+			this.#structuredWorkerdLogs;
 
 		await this.#devRegistry.updateRegistryPath(
 			sharedOpts.core.unsafeDevRegistryPath,
-			sharedOpts.core.unsafeDevRegistryDurableObjectProxy
+			sharedOpts.core.unsafeDevRegistryDurableObjectProxy,
+			sharedOpts.core.unsafeHandleDevRegistryUpdate
 		);
 		// Send to runtime and wait for updates to process
 		await this.#assembleAndUpdateConfig();
@@ -2662,10 +2540,7 @@ export class Miniflare {
 		try {
 			await this.#waitForReady(/* disposing */ true);
 		} finally {
-			for (const browser of this.#browsers) {
-				// .close() isn't enough
-				await browser.process().kill("SIGKILL");
-			}
+			await this.#closeBrowserProcesses();
 
 			// Remove exit hook, we're cleaning up what they would've cleaned up now
 			this.#removeExitHook?.();
@@ -2697,4 +2572,8 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
-export { getDefaultDevRegistryPath } from "./shared/dev-registry";
+export {
+	type WorkerRegistry,
+	type WorkerDefinition,
+	getDefaultDevRegistryPath,
+} from "./shared/dev-registry";

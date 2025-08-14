@@ -16,6 +16,7 @@ import { logger } from "./logger";
 import { readMetricsConfig } from "./metrics/metrics-config";
 import { getPackageManager } from "./package-manager";
 import { requireAuth } from "./user";
+import { formatCompatibilityDate } from "./utils/compatibility-date";
 import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
 import type { RawConfig } from "./config";
@@ -305,7 +306,7 @@ async function getWorkerConfig(
 		workers_dev: workersDev.enabled,
 		compatibility_date:
 			serviceEnvMetadata.script.compatibility_date ??
-			new Date().toISOString().substring(0, 10),
+			formatCompatibilityDate(new Date()),
 		compatibility_flags: serviceEnvMetadata.script.compatibility_flags,
 		...(allRoutes.length ? { routes: allRoutes } : {}),
 		placement:

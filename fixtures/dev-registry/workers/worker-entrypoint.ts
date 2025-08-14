@@ -5,8 +5,9 @@ let tailEvents = [];
 export default class Worker extends WorkerEntrypoint<{
 	SERVICE_WORKER: Fetcher;
 	MODULE_WORKER: Fetcher;
-	WORKER_ENTRYPOINT_A: Fetcher;
-	WORKER_ENTRYPOINT_B: Fetcher;
+	WORKER_ENTRYPOINT: Fetcher;
+	WORKER_ENTRYPOINT_WITH_ASSETS: Fetcher;
+	DURABLE_OBJECT: DurableObjectNamespace;
 }> {
 	ping() {
 		return "Pong";
@@ -33,12 +34,18 @@ export default class Worker extends WorkerEntrypoint<{
 					service = this.env.MODULE_WORKER;
 					break;
 				}
-				case "worker-entrypoint-a": {
-					service = this.env.WORKER_ENTRYPOINT_A;
+				case "worker-entrypoint": {
+					service = this.env.WORKER_ENTRYPOINT;
 					break;
 				}
-				case "worker-entrypoint-b": {
-					service = this.env.WORKER_ENTRYPOINT_B;
+				case "worker-entrypoint-with-assets": {
+					service = this.env.WORKER_ENTRYPOINT_WITH_ASSETS;
+					break;
+				}
+				case "durable-object": {
+					const id = this.env.DURABLE_OBJECT.newUniqueId();
+					const stub = this.env.DURABLE_OBJECT.get(id);
+					service = stub;
 					break;
 				}
 			}
@@ -63,10 +70,15 @@ export default class Worker extends WorkerEntrypoint<{
 					return new Response("ok");
 				}
 
-				return Response.json({
-					worker: "Worker Entrypoint",
-					tailEvents,
-				});
+				try {
+					return Response.json({
+						worker: "Worker Entrypoint",
+						tailEvents,
+					});
+				} finally {
+					// Clear the tail events after sending them
+					tailEvents = [];
+				}
 			}
 
 			return new Response("Hello from Worker Entrypoint!");

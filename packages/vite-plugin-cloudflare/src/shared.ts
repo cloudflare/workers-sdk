@@ -10,4 +10,4 @@ export const additionalModuleGlobalRE = new RegExp(
 	"g"
 );
 
-export const VITE_DEV_METADATA_HEADER = "__VITE_DEV_METADATA__";
+export const WORKER_ENTRY_PATH_HEADER = "__VITE_WORKER_ENTRY_PATH__";

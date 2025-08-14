@@ -55,6 +55,51 @@ describe("pages deployment list", () => {
 		`);
 	});
 
+	it("should make request to list deployments and return result as json", async () => {
+		const deployments: Deployment[] = [
+			{
+				id: "87bbc8fe-16be-45cd-81e0-63d722e82cdf",
+				url: "https://87bbc8fe.images.pages.dev",
+				environment: "preview",
+				created_on: "2021-11-17T14:52:26.133835Z",
+				latest_stage: {
+					ended_on: "2021-11-17T14:52:26.133835Z",
+					status: "success",
+				},
+				deployment_trigger: {
+					metadata: {
+						branch: "main",
+						commit_hash: "c7649364c4cb32ad4f65b530b9424e8be5bec9d6",
+					},
+				},
+				project_name: "images",
+			},
+		];
+
+		const requests = mockDeploymentListRequest(deployments);
+		await runWrangler("pages deployment list --project-name=images --json");
+
+		expect(requests.count).toBe(1);
+		const output = JSON.parse(std.out);
+
+		expect(output[0].Status).toBeTypeOf("string");
+		output[0].Status = "SNAPSHOT_VALUE"; // This value would drift from snapshot if not hardcoded as is
+
+		expect(JSON.stringify(output, null, 2)).toMatchInlineSnapshot(`
+			"[
+			  {
+			    \\"Id\\": \\"87bbc8fe-16be-45cd-81e0-63d722e82cdf\\",
+			    \\"Environment\\": \\"Preview\\",
+			    \\"Branch\\": \\"main\\",
+			    \\"Source\\": \\"c764936\\",
+			    \\"Deployment\\": \\"https://87bbc8fe.images.pages.dev\\",
+			    \\"Status\\": \\"SNAPSHOT_VALUE\\",
+			    \\"Build\\": \\"https://dash.cloudflare.com/some-account-id/pages/view/images/87bbc8fe-16be-45cd-81e0-63d722e82cdf\\"
+			  }
+			]"
+		`);
+	});
+
 	it("should pass no environment", async () => {
 		const deployments: Deployment[] = [
 			{

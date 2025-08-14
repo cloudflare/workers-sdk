@@ -1,6 +1,7 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
+		"module": "esnext",
 		"types": ["node"]
 	},
 	"include": ["**/*.ts", "../../../node-types.d.ts"]

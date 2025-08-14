@@ -42,15 +42,17 @@ if (
 			}, 35_000);
 
 			afterAll(() => {
+				// Try to clean up the remote workers after tests but give up after a couple of seconds
+				// or if the deletion fails.
 				runCommand(
 					`npx wrangler delete --force`,
 					`${projectPath}/remote-worker`,
-					{ canFail: true }
+					{ canFail: true, timeout: 2_000 }
 				);
 				runCommand(
 					`npx wrangler delete --force`,
 					`${projectPath}/remote-worker-alt`,
-					{ canFail: true }
+					{ canFail: true, timeout: 2_000 }
 				);
 			});
 

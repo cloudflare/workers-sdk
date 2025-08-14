@@ -66,7 +66,7 @@ export async function waitFor<T>(
 export async function waitUntil(
 	t: ExecutionContext,
 	impl: (t: ExecutionContext) => Awaitable<void>,
-	timeout: number = 5000
+	timeout: number = 10000
 ): Promise<void> {
 	const start = Date.now();
 

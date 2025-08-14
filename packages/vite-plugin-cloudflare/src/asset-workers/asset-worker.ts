@@ -1,10 +1,12 @@
 import AssetWorker from "@cloudflare/workers-shared/asset-worker";
 import { UNKNOWN_HOST } from "../shared";
 import type { Env as _Env } from "@cloudflare/workers-shared/asset-worker";
+import type { ResolvedConfig } from "vite";
 
 interface Env extends _Env {
 	__VITE_HTML_EXISTS__: Fetcher;
 	__VITE_FETCH_HTML__: Fetcher;
+	__VITE_HEADERS__: string;
 }
 
 export default class CustomAssetWorker extends AssetWorker<Env> {
@@ -13,6 +15,20 @@ export default class CustomAssetWorker extends AssetWorker<Env> {
 		const modifiedResponse = new Response(response.body, response);
 		modifiedResponse.headers.delete("ETag");
 		modifiedResponse.headers.delete("Cache-Control");
+		// Add headers set via `server.headers` in the Vite config
+		const viteHeaders = JSON.parse(
+			this.env.__VITE_HEADERS__
+		) as ResolvedConfig["server"]["headers"];
+
+		for (const [key, value] of Object.entries(viteHeaders)) {
+			if (Array.isArray(value)) {
+				for (const item of value) {
+					modifiedResponse.headers.append(key, item);
+				}
+			} else if (value !== undefined) {
+				modifiedResponse.headers.set(key, String(value));
+			}
+		}
 
 		return modifiedResponse;
 	}

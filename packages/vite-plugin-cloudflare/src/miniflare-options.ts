@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
 	getDefaultDevRegistryPath,
 	kCurrentWorker,
+	kUnsafeEphemeralUniqueKey,
 	Log,
 	LogLevel,
 	Response as MiniflareResponse,
@@ -25,6 +26,7 @@ import {
 	kRequestType,
 	PUBLIC_DIR_PREFIX,
 	ROUTER_WORKER_NAME,
+	VITE_PROXY_WORKER_NAME,
 } from "./constants";
 import { additionalModuleRE } from "./shared";
 import { withTrailingSlash } from "./utils";
@@ -175,8 +177,9 @@ const ROUTER_WORKER_PATH = "./asset-workers/router-worker.js";
 const ASSET_WORKER_PATH = "./asset-workers/asset-worker.js";
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 const RUNNER_PATH = "./runner-worker/index.js";
+const VITE_PROXY_WORKER_PATH = "./vite-proxy-worker/index.js";
 
-function getEntryWorkerConfig(
+export function getEntryWorkerConfig(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig
 ): WorkerConfig | undefined {
 	if (resolvedPluginConfig.type === "assets-only") {
@@ -232,11 +235,18 @@ const remoteProxySessionsDataMap = new Map<
 	} | null
 >();
 
-export async function getDevMiniflareOptions(
-	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
-	viteDevServer: vite.ViteDevServer,
-	inspectorPort: number | false
-): Promise<MiniflareOptions> {
+export async function getDevMiniflareOptions(config: {
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig;
+	viteDevServer: vite.ViteDevServer;
+	inspectorPort: number | false;
+	containerBuildId?: string;
+}): Promise<MiniflareOptions> {
+	const {
+		resolvedPluginConfig,
+		viteDevServer,
+		inspectorPort,
+		containerBuildId,
+	} = config;
 	const resolvedViteConfig = viteDevServer.config;
 	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
 
@@ -285,6 +295,7 @@ export async function getDevMiniflareOptions(
 			],
 			bindings: {
 				CONFIG: assetsConfig,
+				__VITE_HEADERS__: JSON.stringify(viteDevServer.config.server.headers),
 			},
 			serviceBindings: {
 				__VITE_HTML_EXISTS__: async (request) => {
@@ -347,6 +358,28 @@ export async function getDevMiniflareOptions(
 				},
 			},
 		},
+		{
+			name: VITE_PROXY_WORKER_NAME,
+			compatibilityDate: ASSET_WORKERS_COMPATIBILITY_DATE,
+			modulesRoot: miniflareModulesRoot,
+			modules: [
+				{
+					type: "ESModule",
+					path: path.join(miniflareModulesRoot, VITE_PROXY_WORKER_PATH),
+					contents: fs.readFileSync(
+						fileURLToPath(new URL(VITE_PROXY_WORKER_PATH, import.meta.url))
+					),
+				},
+			],
+			serviceBindings: {
+				...(entryWorkerConfig
+					? { ENTRY_USER_WORKER: entryWorkerConfig.name }
+					: {}),
+				__VITE_MIDDLEWARE__: {
+					node: (req, res) => viteDevServer.middlewares(req, res),
+				},
+			},
+		},
 	];
 
 	const workersFromConfig =
@@ -393,6 +426,7 @@ export async function getDevMiniflareOptions(
 											?.remoteProxyConnectionString,
 									remoteBindingsEnabled:
 										resolvedPluginConfig.experimental.remoteBindings,
+									containerBuildId,
 								}
 							);
 
@@ -409,8 +443,15 @@ export async function getDevMiniflareOptions(
 									unsafeDirectSockets:
 										environmentName ===
 										resolvedPluginConfig.entryWorkerEnvironmentName
-											? // Expose the default entrypoint of the entry worker on the dev registry
-												[{ entrypoint: undefined, proxy: true }]
+											? [
+													{
+														// This exposes the default entrypoint of the asset proxy worker
+														// on the dev registry with the name of the entry worker
+														serviceName: VITE_PROXY_WORKER_NAME,
+														entrypoint: undefined,
+														proxy: true,
+													},
+												]
 											: [],
 									modulesRoot: miniflareModulesRoot,
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
@@ -509,6 +550,7 @@ export async function getDevMiniflareOptions(
 			...userWorkers.map((workerOptions) => {
 				const wrappers = [
 					`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from '${RUNNER_PATH}';`,
+					`export { __VITE_RUNNER_OBJECT__ } from '${RUNNER_PATH}';`,
 					`export default createWorkerEntrypointWrapper('default');`,
 				];
 
@@ -561,6 +603,14 @@ export async function getDevMiniflareOptions(
 
 				return {
 					...workerOptions,
+					durableObjects: {
+						...workerOptions.durableObjects,
+						__VITE_RUNNER_OBJECT__: {
+							className: "__VITE_RUNNER_OBJECT__",
+							unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
+							unsafePreventEviction: true,
+						},
+					},
 					modules: [
 						{
 							type: "ESModule",
@@ -652,11 +702,18 @@ function getPreviewModules(
 	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
 }
 
-export async function getPreviewMiniflareOptions(
-	resolvedPluginConfig: PreviewResolvedConfig,
-	vitePreviewServer: vite.PreviewServer,
-	inspectorPort: number | false
-): Promise<MiniflareOptions> {
+export async function getPreviewMiniflareOptions(config: {
+	resolvedPluginConfig: PreviewResolvedConfig;
+	vitePreviewServer: vite.PreviewServer;
+	inspectorPort: number | false;
+	containerBuildId?: string;
+}): Promise<MiniflareOptions> {
+	const {
+		resolvedPluginConfig,
+		vitePreviewServer,
+		inspectorPort,
+		containerBuildId,
+	} = config;
 	const resolvedViteConfig = vitePreviewServer.config;
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
@@ -694,6 +751,7 @@ export async function getPreviewMiniflareOptions(
 							remoteProxySessionData?.session?.remoteProxyConnectionString,
 						remoteBindingsEnabled:
 							resolvedPluginConfig.experimental.remoteBindings,
+						containerBuildId,
 					}
 				);
 

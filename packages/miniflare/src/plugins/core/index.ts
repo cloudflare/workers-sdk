@@ -71,6 +71,7 @@ import {
 	kCurrentWorker,
 	ServiceDesignatorSchema,
 } from "./services";
+import type { WorkerRegistry } from "../../shared/dev-registry";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses
@@ -118,6 +119,7 @@ const UnusableStringSchema = z.string().transform(() => undefined);
 export const UnsafeDirectSocketSchema = z.object({
 	host: z.ostring(),
 	port: z.onumber(),
+	serviceName: z.ostring(),
 	entrypoint: z.ostring(),
 	proxy: z.oboolean(),
 });
@@ -230,6 +232,10 @@ export const CoreSharedOptionsSchema = z.object({
 	unsafeDevRegistryPath: z.string().optional(),
 	// Enable External Durable Objects Proxy / Internal DOs registration
 	unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
+	// Called when external workers this instance depends on are updated in the dev registry
+	unsafeHandleDevRegistryUpdate: z
+		.function(z.tuple([z.custom<WorkerRegistry>()]))
+		.optional(),
 	// This is a shared secret between a proxy server and miniflare that can be
 	// passed in a header to prove that the request came from the proxy and not
 	// some malicious attacker.
@@ -245,6 +251,12 @@ export const CoreSharedOptionsSchema = z.object({
 	// Path to the root directory for persisting data
 	// Used as the default for all plugins with the plugin name as the subdirectory name
 	defaultPersistRoot: z.string().optional(),
+	// Strip the MF-DISABLE_PRETTY_ERROR header from user request
+	stripDisablePrettyError: z.boolean().default(true),
+
+	// Whether to get structured logs from workerd or not (default to `false`)
+	// This option is useful in combination with a custom handleRuntimeStdio.
+	structuredWorkerdLogs: z.boolean().default(false),
 });
 
 export const CORE_PLUGIN_NAME = "core";
@@ -916,6 +928,10 @@ export function getGlobalServices({
 		{
 			name: CoreBindings.DATA_PROXY_SECRET,
 			data: PROXY_SECRET,
+		},
+		{
+			name: CoreBindings.STRIP_DISABLE_PRETTY_ERROR,
+			json: JSON.stringify(sharedOptions.stripDisablePrettyError),
 		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,

@@ -64,10 +64,7 @@ async function generateWorkersTypes(ctx: C3Context, npm: string) {
 const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
 	let parsedConfig: Record<string, unknown> = {};
 	if (wranglerJsonExists(ctx)) {
-		const wranglerJsonStr = readWranglerJson(ctx);
-		parsedConfig = jsonc.parse(wranglerJsonStr, undefined, {
-			allowTrailingComma: true,
-		});
+		parsedConfig = readWranglerJson(ctx);
 	} else if (wranglerTomlExists(ctx)) {
 		const wranglerTomlStr = readWranglerToml(ctx);
 		parsedConfig = TOML.parse(wranglerTomlStr);

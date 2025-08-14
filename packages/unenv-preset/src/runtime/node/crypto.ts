@@ -19,7 +19,7 @@ export const {
 	checkPrime,
 	checkPrimeSync,
 	constants,
-	// @ts-expect-error
+	// @ts-expect-error  Node types do not match unenv
 	Cipheriv,
 	createCipheriv,
 	createDecipheriv,
@@ -33,7 +33,7 @@ export const {
 	createSecretKey,
 	createSign,
 	createVerify,
-	// @ts-expect-error
+	// @ts-expect-error  Node types do not match unenv
 	Decipheriv,
 	diffieHellman,
 	DiffieHellman,
@@ -86,7 +86,7 @@ export const {
 
 // See https://github.com/cloudflare/workerd/issues/3751
 export const webcrypto = {
-	// @ts-expect-error
+	// @ts-expect-error Node types do not match unenv
 	CryptoKey: unenvCryptoWebcrypto.CryptoKey,
 	getRandomValues,
 	randomUUID,

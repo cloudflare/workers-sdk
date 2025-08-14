@@ -10,17 +10,17 @@ import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { vi } from "vitest";
-import {
-	printBundleSize,
-	printOffendingDependencies,
-} from "../deployment-bundle/bundle-reporter";
+import { findWranglerConfig } from "../config/config-helpers";
+import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { sniffUserAgent } from "../package-manager";
+import { ParseError } from "../parse";
 import { writeAuthConfigFile } from "../user";
+import { diagnoseScriptSizeError } from "../utils/friendly-validator-errors";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
@@ -58,11 +58,7 @@ import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type {
-	PostQueueBody,
-	PostTypedConsumerBody,
-	QueueResponse,
-} from "../queues/client";
+import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
 import type { FormData } from "undici";
 import type { Mock } from "vitest";
 
@@ -1696,6 +1692,161 @@ Update them to point to this script instead?`,
 					'Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again'
 				);
 			});
+			it("should deploy domains passed via --domain flag as custom domains", async () => {
+				writeWranglerConfig({});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [{ hostname: "api.example.com" }],
+				});
+
+				await runWrangler("deploy ./index --domain api.example.com");
+				expect(std.out).toContain("api.example.com (custom domain)");
+			});
+
+			it("should deploy multiple domains passed via --domain flags", async () => {
+				writeWranglerConfig({});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [
+						{ hostname: "api.example.com" },
+						{ hostname: "app.example.com" },
+					],
+				});
+
+				await runWrangler(
+					"deploy ./index --domain api.example.com --domain app.example.com"
+				);
+				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("app.example.com (custom domain)");
+			});
+
+			it("should deploy --domain flags alongside routes (from config when no CLI routes)", async () => {
+				writeWranglerConfig({
+					routes: ["example.com/api/*"],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [{ hostname: "api.example.com" }],
+				});
+				// Mock the regular route deployment for the configured route
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workers/scripts/:scriptName/routes",
+						() => {
+							return HttpResponse.json(
+								{
+									success: true,
+									errors: [],
+									messages: [],
+									result: ["example.com/api/*"],
+								},
+								{ status: 200 }
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler("deploy ./index --domain api.example.com");
+				expect(std.out).toContain("example.com/api/*");
+				expect(std.out).toContain("api.example.com (custom domain)");
+			});
+
+			it("should validate domain flags and reject invalid domains with wildcards", async () => {
+				writeWranglerConfig({});
+				writeWorkerSource();
+
+				await expect(runWrangler("deploy ./index --domain *.example.com"))
+					.rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Invalid Routes:
+					*.example.com:
+					Wildcard operators (*) are not allowed in Custom Domains]
+				`);
+			});
+
+			it("should validate domain flags and reject invalid domains with paths", async () => {
+				writeWranglerConfig({});
+				writeWorkerSource();
+
+				await expect(
+					runWrangler("deploy ./index --domain api.example.com/path")
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Invalid Routes:
+					api.example.com/path:
+					Paths are not allowed in Custom Domains]
+				`);
+			});
+
+			it("should handle both --route and --domain flags together", async () => {
+				writeWranglerConfig({
+					routes: ["config.com/api/*"],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [{ hostname: "api.example.com" }],
+				});
+				// Mock the regular route deployment for the CLI route (should override config)
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workers/scripts/:scriptName/routes",
+						() => {
+							return HttpResponse.json(
+								{
+									success: true,
+									errors: [],
+									messages: [],
+									result: ["cli.com/override/*"],
+								},
+								{ status: 200 }
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler(
+					"deploy ./index --route cli.com/override/* --domain api.example.com"
+				);
+				expect(std.out).toContain("cli.com/override/*");
+				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).not.toContain("config.com/api/*");
+			});
 		});
 
 		describe("deploy asset routes", () => {
@@ -2718,6 +2869,266 @@ addEventListener('fetch', event => {});`
 				await expect(runWrangler("deploy ./index.js")).rejects.toMatchObject({
 					notes: [{ text: expect.stringContaining("index.ts:2:1") }, {}],
 				});
+			});
+		});
+
+		describe("should interactively handle misconfigured asset-only deployments", () => {
+			beforeEach(() => {
+				setIsTTY(true);
+
+				// Mock the date to ensure consistent compatibility_date
+				vi.setSystemTime(new Date("2024-01-01T00:00:00Z"));
+
+				// so that we can test that the name prompt defaults to the directory name
+				fs.mkdirSync("my-site");
+				process.chdir("my-site");
+				const assets = [
+					{ filePath: "index.html", content: "<html>test</html>" },
+				];
+				writeAssets(assets);
+				expect(findWranglerConfig().configPath).toBe(undefined);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedAssets: {
+						jwt: "<<aus-completion-token>>",
+						config: {},
+					},
+					expectedType: "none",
+				});
+			});
+			afterEach(() => {
+				setIsTTY(false);
+				vi.useRealTimers();
+			});
+
+			it("should handle `wrangler deploy <directory>`", async () => {
+				mockConfirm({
+					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
+					result: true,
+				});
+				mockPrompt({
+					text: "What do you want to name your project?",
+					options: { defaultValue: "my-site" },
+					result: "test-name",
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					result: true,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy ./assets");
+				expect(bodies.length).toBe(1);
+				expect(bodies[0]).toEqual({
+					manifest: {
+						"/index.html": {
+							hash: "8308ce789f3d08668ce87176838d59d0",
+							size: 17,
+						},
+					},
+				});
+				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
+					.toMatchInlineSnapshot(`
+					"{
+					  \\"name\\": \\"test-name\\",
+					  \\"compatibility_date\\": \\"2024-01-01\\",
+					  \\"assets\\": {
+					    \\"directory\\": \\"./assets\\"
+					  }
+					}"
+				`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+
+
+					No compatibility date found Defaulting to today: 2024-01-01
+
+					Wrote
+					{
+					  \\"name\\": \\"test-name\\",
+					  \\"compatibility_date\\": \\"2024-01-01\\",
+					  \\"assets\\": {
+					    \\"directory\\": \\"./assets\\"
+					  }
+					}
+					 to <cwd>/wrangler.jsonc.
+					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+
+					Proceeding with deployment...
+
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+
+			it("should handle `wrangler deploy --assets` without name or compat date", async () => {
+				// if the user has used --assets flag and args.script is not set, we just need to prompt for the name and add compat date
+				mockPrompt({
+					text: "What do you want to name your project?",
+					options: { defaultValue: "my-site" },
+					result: "test-name",
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					result: true,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy --assets ./assets");
+				expect(bodies.length).toBe(1);
+				expect(bodies[0]).toEqual({
+					manifest: {
+						"/index.html": {
+							hash: "8308ce789f3d08668ce87176838d59d0",
+							size: 17,
+						},
+					},
+				});
+				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
+					.toMatchInlineSnapshot(`
+					"{
+					  \\"name\\": \\"test-name\\",
+					  \\"compatibility_date\\": \\"2024-01-01\\",
+					  \\"assets\\": {
+					    \\"directory\\": \\"./assets\\"
+					  }
+					}"
+				`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+
+					No compatibility date found Defaulting to today: 2024-01-01
+
+					Wrote
+					{
+					  \\"name\\": \\"test-name\\",
+					  \\"compatibility_date\\": \\"2024-01-01\\",
+					  \\"assets\\": {
+					    \\"directory\\": \\"./assets\\"
+					  }
+					}
+					 to <cwd>/wrangler.jsonc.
+					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+
+					Proceeding with deployment...
+
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+
+			it("should suggest 'my-project' if the default name from the cwd is invalid", async () => {
+				process.chdir("../");
+				fs.renameSync("my-site", "[blah]");
+				process.chdir("[blah]");
+				// if the user has used --assets flag and args.script is not set, we just need to prompt for the name and add compat date
+				mockPrompt({
+					text: "What do you want to name your project?",
+					// not [blah] because it is an invalid worker name
+					options: { defaultValue: "my-project" },
+					result: "test-name",
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					result: true,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy --assets ./assets");
+				expect(bodies.length).toBe(1);
+				expect(bodies[0]).toEqual({
+					manifest: {
+						"/index.html": {
+							hash: "8308ce789f3d08668ce87176838d59d0",
+							size: 17,
+						},
+					},
+				});
+				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
+					.toMatchInlineSnapshot(`
+					"{
+					  \\"name\\": \\"test-name\\",
+					  \\"compatibility_date\\": \\"2024-01-01\\",
+					  \\"assets\\": {
+					    \\"directory\\": \\"./assets\\"
+					  }
+					}"
+				`);
+			});
+
+			it("should bail if the user denies that they are trying to deploy a directory", async () => {
+				mockConfirm({
+					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
+					result: false,
+				});
+
+				await expect(runWrangler("deploy ./assets")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The entry-point file at "assets" was not found.
+					The provided entry-point path, "assets", points to a directory, rather than a file.
+
+					 If you want to deploy a directory of static assets, you can do so by using the \`--assets\` flag. For example:
+
+					wrangler deploy --assets=./assets
+					]
+				`);
+			});
+
+			it("does not write out a wrangler config file if the user says no", async () => {
+				mockPrompt({
+					text: "What do you want to name your project?",
+					options: { defaultValue: "my-site" },
+					result: "test-name",
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					result: false,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy --assets ./assets");
+				expect(bodies.length).toBe(1);
+				expect(bodies[0]).toEqual({
+					manifest: {
+						"/index.html": {
+							hash: "8308ce789f3d08668ce87176838d59d0",
+							size: 17,
+						},
+					},
+				});
+				expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+
+					No compatibility date found Defaulting to today: 2024-01-01
+
+					You should run wrangler deploy --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.
+
+					Proceeding with deployment...
+
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 			});
 		});
 	});
@@ -4346,7 +4757,8 @@ addEventListener('fetch', event => {});`
 			);
 		});
 
-		it("should error if directory specified by flag --assets does not exist", async () => {
+		it("should error if directory specified by flag --assets does not exist in non-interactive mode", async () => {
+			setIsTTY(false);
 			await expect(runWrangler("deploy --assets abc")).rejects.toThrow(
 				new RegExp(
 					'^The directory specified by the "--assets" command line argument does not exist:[Ss]*'
@@ -5353,6 +5765,14 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("workers_dev setting", () => {
+		beforeEach(() => {
+			vi.useFakeTimers();
+		});
+
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
 		it("should deploy to a workers.dev domain if workers_dev is undefined", async () => {
 			writeWranglerConfig();
 			writeWorkerSource();
@@ -5788,26 +6208,20 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should error if a compatibility_date is missing and suggest the correct month", async () => {
-			vi.spyOn(Date.prototype, "getMonth").mockImplementation(() => 11);
-			vi.spyOn(Date.prototype, "getFullYear").mockImplementation(() => 2020);
-			vi.spyOn(Date.prototype, "getDate").mockImplementation(() => 1);
+		it("should error if a compatibility_date is missing and suggest the correct date", async () => {
+			vi.setSystemTime(new Date(2020, 11, 1));
 
 			writeWorkerSource();
-			let err: undefined | Error;
-			try {
-				await runWrangler("deploy ./index.js --name my-worker");
-			} catch (e) {
-				err = e as Error;
-			}
 
-			expect(err?.message).toMatchInlineSnapshot(`
-				"A compatibility_date is required when publishing. Add the following to your Wrangler configuration file:
+			await expect(
+				async () => await runWrangler("deploy ./index.js --name my-worker")
+			).rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: A compatibility_date is required when publishing. Add the following to your Wrangler configuration file:
 				    \`\`\`
-				    {\\"compatibility_date\\":\\"2020-12-01\\"}
+				    {"compatibility_date":"2020-12-01"}
 				    \`\`\`
 				    Or you could pass it in your terminal as \`--compatibility-date 2020-12-01\`
-				See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+				See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.]
 			`);
 		});
 
@@ -10914,7 +11328,23 @@ export default{
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
-				  "err": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYour Worker failed validation because it exceeded size limits.[0m
+
+
+				  A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions)
+				  failed.
+				   - workers.api.error.script_too_large [code: 10027]
+				  Here are the 4 largest dependencies included in your script:
+
+				  - index.js - xx KiB
+				  - add.wasm - xx KiB
+				  - dependency.js - xx KiB
+				  - message.txt - xx KiB
+
+				  If these are unnecessary, consider removing them
+
+
+				",
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 
@@ -10926,15 +11356,7 @@ export default{
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
 				",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 4 largest dependencies included in your script:[0m
-
-				  - index.js - xx KiB
-				  - add.wasm - xx KiB
-				  - dependency.js - xx KiB
-				  - message.txt - xx KiB
-				  If these are unnecessary, consider removing them
-
-				",
+				  "warn": "",
 				}
 			`);
 		});
@@ -10975,9 +11397,43 @@ export default{
 				main: "index.js",
 			});
 
-			await expect(runWrangler("deploy")).rejects.toThrowError(
-				`Your Worker failed validation because it exceeded startup limits.`
-			);
+			await expect(runWrangler("deploy")).rejects.toThrowError();
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYour Worker failed validation because it exceeded startup limits.[0m
+
+
+				  A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions)
+				  failed.
+				   - Error: Script startup exceeded CPU time limit. [code: 10021]
+
+				  To ensure fast responses, there are constraints on Worker startup, such as how much CPU it can
+				  use, or how long it can take. Your Worker has hit one of these startup limits. Try reducing the
+				  amount of work done during startup (outside the event handler), either by removing code or
+				  relocating it inside the event handler.
+
+				  Refer to [4mhttps://developers.cloudflare.com/workers/platform/limits/#worker-startup-time[0m for more
+				  details
+				  A CPU Profile of your Worker's startup phase has been written to
+				  .wrangler/tmp/startup-profile-<HASH>/worker.cpuprofile - load it into the Chrome DevTools profiler
+				  (or directly in VSCode) to view a flamegraph.
+
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
+
+				  Error: Script startup exceeded CPU time limit. [code: 10021]
+
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+				",
+				  "warn": "",
+				}
+			`);
 		});
 
 		describe("unit tests", () => {
@@ -11022,25 +11478,26 @@ export default{
 					"node_modules/k-mod/module.js": { bytesInOutput: 79 },
 				};
 
-				printOffendingDependencies(deps);
-				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 5 largest dependencies included in your script:[0m
+				const message = diagnoseScriptSizeError(
+					new ParseError({ text: "too big" }),
+					deps
+				);
+				expect(message).toMatchInlineSnapshot(`
+					"Your Worker failed validation because it exceeded size limits.
 
-			  - node_modules/d-mod/module.js - xx KiB
-			  - node_modules/g-mod/module.js - xx KiB
-			  - node_modules/e-mod/module.js - xx KiB
-			  - node_modules/i-mod/module.js - xx KiB
-			  - node_modules/j-mod/module.js - xx KiB
-			  If these are unnecessary, consider removing them
+					too big
 
-			",
-			}
-		`);
+					Here are the 5 largest dependencies included in your script:
+
+					- node_modules/d-mod/module.js - 2061.72 KiB
+					- node_modules/g-mod/module.js - 77.05 KiB
+					- node_modules/e-mod/module.js - 8.02 KiB
+					- node_modules/i-mod/module.js - 1.95 KiB
+					- node_modules/j-mod/module.js - 0.88 KiB
+
+					If these are unnecessary, consider removing them
+					"
+				`);
 			});
 		});
 	});
@@ -11137,10 +11594,6 @@ export default{
 				modified_on: "",
 			};
 			mockGetQueueByName(queueName, existingQueue);
-			mockPutQueueById(queueId, {
-				queue_name: queueName,
-				settings: {},
-			});
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -11184,12 +11637,7 @@ export default{
 				modified_on: "",
 			};
 			mockGetQueueByName(queueName, existingQueue);
-			mockPutQueueById(queueId, {
-				queue_name: queueName,
-				settings: {
-					delivery_delay: 10,
-				},
-			});
+
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
@@ -13340,37 +13788,6 @@ function mockPostConsumerById(
 				});
 			},
 			{ once: true }
-		)
-	);
-	return requests;
-}
-
-function mockPutQueueById(
-	expectedQueueId: string,
-	expectedBody: PostQueueBody
-) {
-	const requests = { count: 0 };
-	msw.use(
-		http.put(
-			`*/accounts/:accountId/queues/:queueId`,
-			async ({ request, params }) => {
-				const body = await request.json();
-				expect(params.queueId).toEqual(expectedQueueId);
-				expect(params.accountId).toEqual("some-account-id");
-				expect(body).toEqual(expectedBody);
-				requests.count += 1;
-				return HttpResponse.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: {
-						queue: expectedBody.queue_name,
-						settings: {
-							delivery_delay: expectedBody.settings?.delivery_delay,
-						},
-					},
-				});
-			}
 		)
 	);
 	return requests;

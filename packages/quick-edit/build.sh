@@ -1,22 +1,18 @@
 set -eu
 
-# The preinstall script in vscode will fail if npm_execpath is not set by yarn
-# This make sure the env is unset so yarn can set it accordingly
-unset npm_execpath
-# We cannot run yarn without disabling the corepack check as the packageManager field is set to pnpm
-SKIP_YARN_COREPACK_CHECK=0
-
-# Cleanup development symlink to vscode
-rm -f web/assets
-
-yarn --cwd ../../vendor/vscode
+cd ../../vendor/vscode
 
 # Build vscode
-yarn --cwd ../../vendor/vscode gulp vscode-web-min
+node --max-old-space-size=30000 ./node_modules/gulp/bin/gulp.js vscode-web-min
 
-mv ../../vendor/vscode-web web/assets
-# Pages doesn't support uploading folders called node_modules
-mv web/assets/node_modules web/assets/modules
+# Move the output assets to the assets direcotry for the `quick-edit` Worker
+mv ../vscode-web ../../packages/quick-edit/web/assets
+
+cd ../../packages/quick-edit
+
+pnpm esbuild editor-files/workbench.ts --outfile=web/assets/workbench.js
+
+cp editor-files/workbench.html web/assets
 
 # Build quick-edit-extension
 pnpm --filter quick-edit-extension run package-web

@@ -10,7 +10,8 @@ export class Config extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Config",
 		id: "8794486c76aaa7d6",
-		size: new $.ObjectSize(0, 5),
+		size: new $.ObjectSize(8, 5),
+		defaultStructuredLogging: $.getBitMask(false, 0),
 	};
 	static _Services: $.ListCtor<Service>;
 	static _Sockets: $.ListCtor<Socket>;
@@ -150,6 +151,19 @@ export class Config extends $.Struct {
 	}
 	set autogates(value: $.List<string>) {
 		$.utils.copyFrom(value, $.utils.getPointer(4, this));
+	}
+	/**
+	 * If true, logs will be emitted as JSON for structured logging.
+	 * When false, logs use the traditional human-readable format.
+	 * This affects the format of logs from KJ_LOG and exception reporting as well as js logs.
+	 * This won't work for logs coming from service worker syntax workers with the old module registry.
+	 *
+	 */
+	get structuredLogging(): boolean {
+		return $.utils.getBit(0, this, Config._capnp.defaultStructuredLogging);
+	}
+	set structuredLogging(value: boolean) {
+		$.utils.setBit(0, value, this, Config._capnp.defaultStructuredLogging);
 	}
 	toString(): string {
 		return "Config_" + super.toString();
@@ -952,6 +966,7 @@ export const Worker_Binding_Type_Which = {
 	QUEUE: 11,
 	ANALYTICS_ENGINE: 12,
 	HYPERDRIVE: 13,
+	DURABLE_OBJECT_CLASS: 14,
 } as const;
 export type Worker_Binding_Type_Which =
 	(typeof Worker_Binding_Type_Which)[keyof typeof Worker_Binding_Type_Which];
@@ -975,6 +990,8 @@ export class Worker_Binding_Type extends $.Struct {
 	static readonly QUEUE = Worker_Binding_Type_Which.QUEUE;
 	static readonly ANALYTICS_ENGINE = Worker_Binding_Type_Which.ANALYTICS_ENGINE;
 	static readonly HYPERDRIVE = Worker_Binding_Type_Which.HYPERDRIVE;
+	static readonly DURABLE_OBJECT_CLASS =
+		Worker_Binding_Type_Which.DURABLE_OBJECT_CLASS;
 	static readonly _capnp = {
 		displayName: "Type",
 		id: "8906a1296519bf8a",
@@ -1093,6 +1110,12 @@ export class Worker_Binding_Type extends $.Struct {
 	}
 	set hyperdrive(_: true) {
 		$.utils.setUint16(0, 13, this);
+	}
+	get _isDurableObjectClass(): boolean {
+		return $.utils.getUint16(0, this) === 14;
+	}
+	set durableObjectClass(_: true) {
+		$.utils.setUint16(0, 14, this);
 	}
 	toString(): string {
 		return "Worker_Binding_Type_" + super.toString();
@@ -1698,6 +1721,39 @@ export class Worker_Binding_MemoryCache extends $.Struct {
 		return "Worker_Binding_MemoryCache_" + super.toString();
 	}
 }
+/**
+ * A binding representing the ability to dynamically load Workers from code presented at
+ * runtime.
+ *
+ * A Worker loader is not just a function that loads a Worker, but also serves as a
+ * cache of Workers, automatically unloading Workers that are not in use. To that end, each
+ * Worker must have a name, and if a Worker with that name already exists, it'll be reused.
+ *
+ */
+export class Worker_Binding_WorkerLoader extends $.Struct {
+	static readonly _capnp = {
+		displayName: "workerLoader",
+		id: "a3de996091635c4d",
+		size: new $.ObjectSize(8, 6),
+	};
+	/**
+	 * Optional: The identifier associated with this Worker loader. Multiple Workers can bind to
+	 * the same ID in order to access the same loader, so that if they request the same name
+	 * from it, they'll end up sharing the same loaded Worker.
+	 *
+	 * (If omitted, the binding will not share a cache with any other binding.)
+	 *
+	 */
+	get id(): string {
+		return $.utils.getText(1, this);
+	}
+	set id(value: string) {
+		$.utils.setText(1, value, this);
+	}
+	toString(): string {
+		return "Worker_Binding_WorkerLoader_" + super.toString();
+	}
+}
 export const Worker_Binding_Which = {
 	UNSPECIFIED: 0,
 	/**
@@ -1743,6 +1799,11 @@ export const Worker_Binding_Which = {
 	 *
 	 */
 	SERVICE: 7,
+	/**
+	 * A binding representing access to an in-memory cache.
+	 *
+	 */
+	DURABLE_OBJECT_CLASS: 19,
 	/**
 	 * Binding to a named service (possibly, a worker).
 	 *
@@ -1810,6 +1871,12 @@ export const Worker_Binding_Which = {
 	 *
 	 */
 	MEMORY_CACHE: 18,
+	/**
+	 * A Durable Object class binding, without an actual storage namespace. This can be used to
+	 * implement a facet.
+	 *
+	 */
+	WORKER_LOADER: 20,
 } as const;
 export type Worker_Binding_Which =
 	(typeof Worker_Binding_Which)[keyof typeof Worker_Binding_Which];
@@ -1822,6 +1889,8 @@ export class Worker_Binding extends $.Struct {
 	static readonly WASM_MODULE = Worker_Binding_Which.WASM_MODULE;
 	static readonly CRYPTO_KEY = Worker_Binding_Which.CRYPTO_KEY;
 	static readonly SERVICE = Worker_Binding_Which.SERVICE;
+	static readonly DURABLE_OBJECT_CLASS =
+		Worker_Binding_Which.DURABLE_OBJECT_CLASS;
 	static readonly DURABLE_OBJECT_NAMESPACE =
 		Worker_Binding_Which.DURABLE_OBJECT_NAMESPACE;
 	static readonly KV_NAMESPACE = Worker_Binding_Which.KV_NAMESPACE;
@@ -1834,6 +1903,7 @@ export class Worker_Binding extends $.Struct {
 	static readonly HYPERDRIVE = Worker_Binding_Which.HYPERDRIVE;
 	static readonly UNSAFE_EVAL = Worker_Binding_Which.UNSAFE_EVAL;
 	static readonly MEMORY_CACHE = Worker_Binding_Which.MEMORY_CACHE;
+	static readonly WORKER_LOADER = Worker_Binding_Which.WORKER_LOADER;
 	static readonly Type = Worker_Binding_Type;
 	static readonly DurableObjectNamespaceDesignator =
 		Worker_Binding_DurableObjectNamespaceDesignator;
@@ -2027,6 +2097,41 @@ export class Worker_Binding extends $.Struct {
 	}
 	set service(value: ServiceDesignator) {
 		$.utils.setUint16(0, 7, this);
+		$.utils.copyFrom(value, $.utils.getPointer(1, this));
+	}
+	_adoptDurableObjectClass(value: $.Orphan<ServiceDesignator>): void {
+		$.utils.setUint16(0, 19, this);
+		$.utils.adopt(value, $.utils.getPointer(1, this));
+	}
+	_disownDurableObjectClass(): $.Orphan<ServiceDesignator> {
+		return $.utils.disown(this.durableObjectClass);
+	}
+	/**
+	 * A Durable Object class binding, without an actual storage namespace. This can be used to
+	 * implement a facet.
+	 *
+	 */
+	get durableObjectClass(): ServiceDesignator {
+		$.utils.testWhich(
+			"durableObjectClass",
+			$.utils.getUint16(0, this),
+			19,
+			this
+		);
+		return $.utils.getStruct(1, ServiceDesignator, this);
+	}
+	_hasDurableObjectClass(): boolean {
+		return !$.utils.isNull($.utils.getPointer(1, this));
+	}
+	_initDurableObjectClass(): ServiceDesignator {
+		$.utils.setUint16(0, 19, this);
+		return $.utils.initStructAt(1, ServiceDesignator, this);
+	}
+	get _isDurableObjectClass(): boolean {
+		return $.utils.getUint16(0, this) === 19;
+	}
+	set durableObjectClass(value: ServiceDesignator) {
+		$.utils.setUint16(0, 19, this);
 		$.utils.copyFrom(value, $.utils.getPointer(1, this));
 	}
 	_adoptDurableObjectNamespace(
@@ -2317,6 +2422,29 @@ export class Worker_Binding extends $.Struct {
 	}
 	set memoryCache(_: true) {
 		$.utils.setUint16(0, 18, this);
+	}
+	/**
+	 * A binding representing the ability to dynamically load Workers from code presented at
+	 * runtime.
+	 *
+	 * A Worker loader is not just a function that loads a Worker, but also serves as a
+	 * cache of Workers, automatically unloading Workers that are not in use. To that end, each
+	 * Worker must have a name, and if a Worker with that name already exists, it'll be reused.
+	 *
+	 */
+	get workerLoader(): Worker_Binding_WorkerLoader {
+		$.utils.testWhich("workerLoader", $.utils.getUint16(0, this), 20, this);
+		return $.utils.getAs(Worker_Binding_WorkerLoader, this);
+	}
+	_initWorkerLoader(): Worker_Binding_WorkerLoader {
+		$.utils.setUint16(0, 20, this);
+		return $.utils.getAs(Worker_Binding_WorkerLoader, this);
+	}
+	get _isWorkerLoader(): boolean {
+		return $.utils.getUint16(0, this) === 20;
+	}
+	set workerLoader(_: true) {
+		$.utils.setUint16(0, 20, this);
 	}
 	toString(): string {
 		return "Worker_Binding_" + super.toString();

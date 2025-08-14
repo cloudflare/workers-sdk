@@ -24,7 +24,7 @@ export default async function guessWorkerFormat(
 			`The entrypoint ${path.relative(
 				process.cwd(),
 				entryFile
-			)} defines a Python worker, support for Python workers is currently experimental. Python workers with a cf-requirements.txt file can only be run locally and cannot be deployed.`
+			)} defines a Python worker, support for Python workers is currently experimental.`
 		);
 		return { format: "modules", exports: [] };
 	}

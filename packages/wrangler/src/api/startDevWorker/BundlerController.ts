@@ -120,6 +120,8 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						minify: config.build.minify,
 						keepNames: config.build.keepNames ?? true,
 						nodejsCompatMode: config.build.nodejsCompatMode,
+						compatibilityDate: config.compatibilityDate,
+						compatibilityFlags: config.compatibilityFlags,
 						define: config.build.define,
 						checkFetch: shouldCheckFetch(
 							config.compatibilityDate,
@@ -253,6 +255,8 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				minify: config.build?.minify,
 				keepNames: config.build?.keepNames ?? true,
 				nodejsCompatMode: config.build.nodejsCompatMode,
+				compatibilityDate: config.compatibilityDate,
+				compatibilityFlags: config.compatibilityFlags,
 				define: config.build.define,
 				alias: config.build.alias,
 				noBundle: !config.build?.bundle,

@@ -8,7 +8,8 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250712.0",
+		"@cloudflare/workers-types": "catalog:default",
+		"miniflare": "workspace:*",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"

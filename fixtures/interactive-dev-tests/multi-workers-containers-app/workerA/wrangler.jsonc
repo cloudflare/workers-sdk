@@ -1,0 +1,28 @@
+{
+	"name": "worker-a",
+	"main": "index.ts",
+	"compatibility_date": "2025-04-03",
+	"services": [{ "binding": "WORKER_B", "service": "worker-b" }],
+	"containers": [
+		{
+			"image": "./Dockerfile",
+			"class_name": "FixtureTestContainerA",
+			"name": "container",
+			"max_instances": 2,
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "FixtureTestContainerA",
+				"name": "CONTAINER_A",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["FixtureTestContainerA"],
+		},
+	],
+}

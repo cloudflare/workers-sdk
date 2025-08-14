@@ -1,7 +1,11 @@
 {
+	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "worker-entrypoint-b",
 	"main": "./workers/worker-entrypoint.ts",
 	"compatibility_date": "2025-05-01",
+	"assets": {
+		"directory": "./assets",
+	},
 	"services": [
 		{
 			"binding": "SERVICE_WORKER",

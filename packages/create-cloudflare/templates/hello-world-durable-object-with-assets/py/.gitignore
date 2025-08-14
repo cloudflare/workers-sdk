@@ -48,14 +48,6 @@ jspm_packages/
 
 \*.tgz
 
-# dotenv environment variable files
-
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
 # public
 
 # Stores VSCode versions used for testing VSCode extensions
@@ -64,5 +56,8 @@ jspm_packages/
 
 # wrangler project
 
-.dev.vars
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
 .wrangler/

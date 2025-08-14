@@ -1,0 +1,20 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "internal-durable-object",
+	"main": "./workers/durable-object.ts",
+	"compatibility_date": "2025-05-01",
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "DURABLE_OBJECT",
+				"class_name": "TestObject",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["TestObject"],
+		},
+	],
+}

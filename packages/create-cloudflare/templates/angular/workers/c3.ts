@@ -12,11 +12,7 @@ import type { C3Context, PackageJson } from "types";
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [
-		ctx.project.name,
-		"--ssr",
-		"--server-routing" /** Dev Preview API */,
-	]);
+	await runFrameworkGenerator(ctx, [ctx.project.name, "--ssr"]);
 	logRaw("");
 };
 

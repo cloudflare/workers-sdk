@@ -18,3 +18,7 @@ const { alias, inject, external, polyfill } = env;
 ```
 
 See the unenv [README](https://github.com/unjs/unenv/blob/main/README.md) for more details.
+
+## Tests
+
+This package is tested via wrangler e2e tests.

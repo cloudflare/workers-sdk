@@ -1,6 +1,8 @@
 import assert from "node:assert";
 import os from "node:os";
+import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { checkMacOSVersion } from "@cloudflare/cli";
 import { ApiError } from "@cloudflare/containers-shared";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -21,7 +23,8 @@ import {
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
-import { experimental_readRawConfig, loadDotEnv, readConfig } from "./config";
+import { experimental_readRawConfig, readConfig } from "./config";
+import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
@@ -293,6 +296,7 @@ import { vectorizeInfoCommand } from "./vectorize/info";
 import { vectorizeInsertCommand } from "./vectorize/insert";
 import { vectorizeListCommand } from "./vectorize/list";
 import { vectorizeListMetadataIndexCommand } from "./vectorize/listMetadataIndex";
+import { vectorizeListVectorsCommand } from "./vectorize/listVectors";
 import { vectorizeQueryCommand } from "./vectorize/query";
 import { vectorizeUpsertCommand } from "./vectorize/upsert";
 import { versionsNamespace } from "./versions";
@@ -397,6 +401,13 @@ export function createCLIParser(argv: string[]) {
 			type: "string",
 			requiresArg: true,
 		})
+		.option("env-file", {
+			describe:
+				"Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files",
+			type: "string",
+			array: true,
+			requiresArg: true,
+		})
 		.check(demandSingleValue("env"))
 		.option("experimental-json-config", {
 			alias: "j",
@@ -416,13 +427,14 @@ export function createCLIParser(argv: string[]) {
 			return true;
 		})
 		.check((args) => {
-			// Grab locally specified env params from `.env` file
-			const loaded = loadDotEnv(".env", args.env);
-			for (const [key, value] of Object.entries(loaded?.parsed ?? {})) {
-				if (!(key in process.env)) {
-					process.env[key] = value;
-				}
-			}
+			// Set process environment params from `.env` files if available.
+			const resolvedEnvFilePaths = (
+				args["env-file"] ?? getDefaultEnvFiles(args.env)
+			).map((p) => resolve(p));
+			process.env = loadDotEnv(resolvedEnvFilePaths, {
+				includeProcessEnv: true,
+				silent: true,
+			});
 
 			// Write a session entry to the output file (if there is one).
 			writeOutput({
@@ -460,7 +472,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "help", "version"],
+		["config", "cwd", "env", "env-file", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 	wrangler.help("help", "Show help").alias("h", "help");
@@ -1008,6 +1020,10 @@ export function createCLIParser(argv: string[]) {
 		},
 		{ command: "wrangler vectorize get", definition: vectorizeGetCommand },
 		{ command: "wrangler vectorize list", definition: vectorizeListCommand },
+		{
+			command: "wrangler vectorize list-vectors",
+			definition: vectorizeListVectorsCommand,
+		},
 		{ command: "wrangler vectorize query", definition: vectorizeQueryCommand },
 		{
 			command: "wrangler vectorize insert",
@@ -1461,14 +1477,16 @@ export function createCLIParser(argv: string[]) {
 
 	wrangler.exitProcess(false);
 
-	return wrangler;
+	return { wrangler, registry };
 }
 
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
 
+	checkMacOSVersion({ shouldThrow: false });
+
 	const startTime = Date.now();
-	const wrangler = createCLIParser(argv);
+	const { wrangler } = createCLIParser(argv);
 	let command: string | undefined;
 	let metricsArgs: Record<string, unknown> | undefined;
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
@@ -1543,7 +1561,8 @@ export async function main(argv: string[]): Promise<void> {
 			// We are not able to ask the `wrangler` CLI parser to show help for a subcommand programmatically.
 			// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
 			// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
-			await createCLIParser([...argv, "--help"]).parse();
+			const { wrangler: helpWrangler } = createCLIParser([...argv, "--help"]);
+			await helpWrangler.parse();
 		} else if (
 			isAuthenticationError(e) ||
 			// Is this a Containers/Cloudchamber-based auth error?

@@ -15,6 +15,7 @@
 		"templates",
 		"**/__tests__",
 		"**/*.test.ts",
-		"kv-asset-handler.js"
+		"kv-asset-handler.js",
+		"e2e"
 	]
 }

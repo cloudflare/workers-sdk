@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { rm } from "fs/promises";
 import { resolve } from "path";
 import { fetch } from "undici";
@@ -137,6 +138,88 @@ describe("Workflows", () => {
 				{ timeout: 5000 }
 			),
 		]);
+	});
+
+	describe("retrying a step", () => {
+		test("should retry a step if a generic Error (with a generic error message) is thrown", async ({
+			expect,
+		}) => {
+			const name = randomUUID();
+			await fetchJson(
+				`http://${ip}:${port}/createDemo3?workflowName=${name}&doRetry=true&errorMessage=generic_error_message`
+			);
+
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get3?workflowName=${name}`
+					);
+
+					expect(result["output"]).toEqual("The step was retried 3 times");
+				},
+				{ timeout: 1500 }
+			);
+		});
+
+		test("should retry a step if a generic Error (with an empty error message) is thrown", async ({
+			expect,
+		}) => {
+			const name = randomUUID();
+			await fetchJson(
+				`http://${ip}:${port}/createDemo3?workflowName=${name}&doRetry=true&errorMessage=`
+			);
+
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get3?workflowName=${name}`
+					);
+
+					expect(result["output"]).toEqual("The step was retried 3 times");
+				},
+				{ timeout: 1500 }
+			);
+		});
+
+		test("should not retry a step if a NonRetryableError (with a generic error message) is thrown", async ({
+			expect,
+		}) => {
+			const name = randomUUID();
+			await fetchJson(
+				`http://${ip}:${port}/createDemo3?workflowName=${name}&doRetry=false&errorMessage=generic_error_message"`
+			);
+
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get3?workflowName=${name}`
+					);
+
+					expect(result["output"]).toEqual("The step was retried 0 times");
+				},
+				{ timeout: 1500 }
+			);
+		});
+
+		test("should not retry a step if a NonRetryableError (with an empty error message) is thrown", async ({
+			expect,
+		}) => {
+			const name = randomUUID();
+			await fetchJson(
+				`http://${ip}:${port}/createDemo3?workflowName=${name}&doRetry=false&errorMessage=`
+			);
+
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get3?workflowName=${name}`
+					);
+
+					expect(result["output"]).toEqual("The step was retried 0 times");
+				},
+				{ timeout: 1500 }
+			);
+		});
 	});
 
 	test("waitForEvent should work", async ({ expect }) => {

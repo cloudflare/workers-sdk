@@ -4,7 +4,7 @@
 	"sideEffects": false,
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "wrangler pages dev ./workerjs-test --port 8792",
+		"dev": "wrangler pages dev ./workerjs-test --port 8792 --compatibility-date=2025-07-15",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"

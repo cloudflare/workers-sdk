@@ -1,5 +1,122 @@
 # miniflare
 
+## 4.20250813.0
+
+### Patch Changes
+
+- [#10229](https://github.com/cloudflare/workers-sdk/pull/10229) [`5020694`](https://github.com/cloudflare/workers-sdk/commit/5020694dd35578dcf3f1669780889fc0ba632c8e) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250803.0  | 1.20250813.0  |
+  | @cloudflare/workers-types | ^4.20250803.0 | ^4.20250813.0 |
+
+## 4.20250803.1
+
+### Patch Changes
+
+- [#10273](https://github.com/cloudflare/workers-sdk/pull/10273) [`1479fd0`](https://github.com/cloudflare/workers-sdk/commit/1479fd06b91f9ab529ba4b8824d938e5da3184a0) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: support WebSocket proxying to workerd
+
+  The dev registry proxy server now correctly handles WebSocket upgrade requests and
+  tunnels bidirectional frames between the workerd processes. Previously,
+  handshakes would fail due to missing upgrade logic.
+
+- [#10281](https://github.com/cloudflare/workers-sdk/pull/10281) [`05c5b28`](https://github.com/cloudflare/workers-sdk/commit/05c5b286307bb4b55bd7768bd5873b54f8b06079) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: enable HTTPS support when proxying to workerd
+
+  The Miniflare dev-registry proxy previously assumed workerd would always use HTTP,
+  so enabling `https` on miniflare might caused connection failures in some setups.
+
+  This ensures proxying works whether the option is enabled or not.
+
+- [#10142](https://github.com/cloudflare/workers-sdk/pull/10142) [`e3d9703`](https://github.com/cloudflare/workers-sdk/commit/e3d9703c8733567b9bcad4d6264958f6ba6876f6) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: support `mf.getBindings()` when dev registry is enabled
+
+  Fixes a deadlock when using bindings from `mf.getBindings()` with the dev registry enabled. The deadlock happened because the runtime attempted to resolve a worker address via the loopback server, which was blocked by the Node.js thread waiting on the same runtime.
+
+  Address lookup has been moved to a proxy running in a worker thread to avoid blocking the main thread.
+
+## 4.20250803.0
+
+### Minor Changes
+
+- [#10004](https://github.com/cloudflare/workers-sdk/pull/10004) [`b4d1373`](https://github.com/cloudflare/workers-sdk/commit/b4d13733b5f64f84274a194dd725943658d6184e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add `structuredWorkerdLogs` option
+
+  add a new top-level option named `structuredWorkerdLogs` that makes workerd print to stdout structured logs (stringified jsons of the following shape: `{ timestamp: number, level: string, message: string }`) instead of printing logs to stdout and stderr
+
+- [#9556](https://github.com/cloudflare/workers-sdk/pull/9556) [`8ba7736`](https://github.com/cloudflare/workers-sdk/commit/8ba7736a8ae5666870d12945a1cb6185b6ac3633) Thanks [@edmundhung](https://github.com/edmundhung)! - Added a `serviceName` option to `unsafeDirectSockets`
+
+  This allows registering the current worker in the dev registry under its own name, but routing to a different service.
+
+### Patch Changes
+
+- [#10148](https://github.com/cloudflare/workers-sdk/pull/10148) [`631f26d`](https://github.com/cloudflare/workers-sdk/commit/631f26df58d8933da81fb312f2ba2e30dc22821a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250730.0  | 1.20250801.0  |
+  | @cloudflare/workers-types | ^4.20250730.0 | ^4.20250801.0 |
+
+- [#10203](https://github.com/cloudflare/workers-sdk/pull/10203) [`d6ecd05`](https://github.com/cloudflare/workers-sdk/commit/d6ecd05be5d272857f2b3e243e57ddee4e6a576c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250801.0  | 1.20250803.0  |
+  | @cloudflare/workers-types | ^4.20250801.0 | ^4.20250803.0 |
+
+- [#10176](https://github.com/cloudflare/workers-sdk/pull/10176) [`07c8611`](https://github.com/cloudflare/workers-sdk/commit/07c8611b69721e8aa1300ba209dc45a75173e1d7) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Add macOS version validation to prevent EPIPE errors on unsupported macOS versions (below 13.5). Miniflare and C3 fail hard while Wrangler shows warnings but continues execution.
+
+## 4.20250730.0
+
+### Patch Changes
+
+- [#10129](https://github.com/cloudflare/workers-sdk/pull/10129) [`9b61f44`](https://github.com/cloudflare/workers-sdk/commit/9b61f44c899aa6530ecd20f283dc4e2a9f7c79c7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250726.0  | 1.20250730.0  |
+  | @cloudflare/workers-types | ^4.20250726.0 | ^4.20250730.0 |
+
+## 4.20250726.0
+
+### Patch Changes
+
+- [#10075](https://github.com/cloudflare/workers-sdk/pull/10075) [`82a5b2e`](https://github.com/cloudflare/workers-sdk/commit/82a5b2e09fef9046140181c06aba1f82ce8314af) Thanks [@vicb](https://github.com/vicb)! - fix the type of ForwardableEmailMessage
+
+- [#10058](https://github.com/cloudflare/workers-sdk/pull/10058) [`f8f7352`](https://github.com/cloudflare/workers-sdk/commit/f8f735282bdcab25c90b986ff1ae45e20a4625c2) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: service binding fetch over dev registry should work without host header
+
+- [#9968](https://github.com/cloudflare/workers-sdk/pull/9968) [`2df1d06`](https://github.com/cloudflare/workers-sdk/commit/2df1d066cfe376b831ff0b29b656437d869791e5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250712.0  | 1.20250726.0  |
+  | @cloudflare/workers-types | ^4.20250712.0 | ^4.20250726.0 |
+
+## 4.20250712.2
+
+### Minor Changes
+
+- [#9971](https://github.com/cloudflare/workers-sdk/pull/9971) [`19794bf`](https://github.com/cloudflare/workers-sdk/commit/19794bfb57a3ab17433eefbe1820d21d98bc32a4) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: add stripDisablePrettyError option to control whether the header is stripped
+
+- [#10041](https://github.com/cloudflare/workers-sdk/pull/10041) [`059a39e`](https://github.com/cloudflare/workers-sdk/commit/059a39e4f1e9f9b55ed8a5a8598e35af9bd0357f) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Add @cloudflare/plywright support for Browser Rendering local mode
+
+## 4.20250712.1
+
+### Patch Changes
+
+- [#9866](https://github.com/cloudflare/workers-sdk/pull/9866) [`7e5585d`](https://github.com/cloudflare/workers-sdk/commit/7e5585dbf844fda0e1688797ce31c7e634f3f4ba) Thanks [@invisal](https://github.com/invisal)! - Fix D1 SQL dump generation: escape identifiers and handle SQLite's dynamic typing
+
+  Escape column and table names to prevent SQL syntax errors.
+  Escape values based on their runtime type to support SQLite's flexible typing.
+
 ## 4.20250712.0
 
 ### Minor Changes
