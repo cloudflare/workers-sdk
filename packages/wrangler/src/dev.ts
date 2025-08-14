@@ -7,12 +7,12 @@ import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { isWebContainer } from "@webcontainer/env";
 import dedent from "ts-dedent";
 import { DevEnv } from "./api";
-import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
-import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
+import { MultiworkerRuntimeController } from "./api/start-dev-worker/MultiworkerRuntimeController";
+import { NoOpProxyController } from "./api/start-dev-worker/NoOpProxyController";
 import {
 	convertCfWorkerInitBindingsToBindings,
 	extractBindingsOfType,
-} from "./api/startDevWorker/utils";
+} from "./api/start-dev-worker/utils";
 import { getAssetsOptions } from "./assets";
 import { configFileName, formatConfigSnippet } from "./config";
 import { createCommand } from "./core/create-command";

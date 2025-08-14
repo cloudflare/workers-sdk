@@ -2,7 +2,7 @@ import { once } from "events";
 import path from "path";
 import dedent from "ts-dedent";
 import { test as base, describe } from "vitest";
-import { BundlerController } from "../../../api/startDevWorker/BundlerController";
+import { BundlerController } from "../../../api/start-dev-worker/BundlerController";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { seed } from "../../helpers/seed";

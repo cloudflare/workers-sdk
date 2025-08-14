@@ -6,20 +6,20 @@ import {
 	DevToolsEvent,
 	DevToolsEvents,
 	serialiseError,
-} from "../../src/api/startDevWorker/events";
+} from "../../src/api/start-dev-worker/events";
 import {
 	assertNever,
 	createDeferred,
 	DeferredPromise,
 	MaybePromise,
 	urlFromParts,
-} from "../../src/api/startDevWorker/utils";
+} from "../../src/api/start-dev-worker/utils";
 import type {
 	InspectorProxyWorkerIncomingWebSocketMessage,
 	InspectorProxyWorkerOutgoingRequestBody,
 	InspectorProxyWorkerOutgoingWebsocketMessage,
 	ProxyData,
-} from "../../src/api/startDevWorker/events";
+} from "../../src/api/start-dev-worker/events";
 
 const ALLOWED_HOST_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
 const ALLOWED_ORIGIN_HOSTNAMES = [

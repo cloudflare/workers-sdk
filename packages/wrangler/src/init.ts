@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path, { dirname } from "node:path";
 import TOML from "@iarna/toml";
 import { execa } from "execa";
-import { assertNever } from "./api/startDevWorker/utils";
+import { assertNever } from "./api/start-dev-worker/utils";
 import { fetchResult } from "./cfetch";
 import { fetchWorkerDefinitionFromDash } from "./cfetch/internal";
 import { createCommand } from "./core/create-command";
