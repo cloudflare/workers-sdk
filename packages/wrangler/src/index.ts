@@ -27,7 +27,7 @@ import { experimental_readRawConfig, readConfig } from "./config";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
-import { CommandRegistry } from "./core/CommandRegistry";
+import { CommandRegistry } from "./core/command-registry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1Namespace } from "./d1";
 import { d1CreateCommand } from "./d1/create";

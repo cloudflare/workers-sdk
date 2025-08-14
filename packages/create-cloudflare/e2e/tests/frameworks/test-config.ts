@@ -1,4 +1,4 @@
-import { detectPackageManager } from "../../../src/helpers/packageManagers";
+import { detectPackageManager } from "../../../src/helpers/package-managers";
 import {
 	frameworkToTestFilter,
 	isExperimental,

@@ -1,5 +1,5 @@
 import assert from "assert";
-import { CommandRegistry } from "../../core/CommandRegistry";
+import { CommandRegistry } from "../../core/command-registry";
 import {
 	createAlias,
 	createCommand,
