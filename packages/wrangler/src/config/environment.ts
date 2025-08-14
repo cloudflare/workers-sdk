@@ -171,7 +171,7 @@ export type ContainerApp = {
 	 *
 	 *
 	 * @optional
-	 * @default [90,10]
+	 * @default [10,90]
 	 * */
 	rollout_step_percentage?: number | number[];
 
