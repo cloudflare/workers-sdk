@@ -6,6 +6,7 @@ import {
 import { dockerLoginManagedRegistry } from "./login";
 import {
 	checkExposedPorts,
+	cleanupDuplicateImageTags,
 	runDockerCmd,
 	verifyDockerInstalled,
 } from "./utils";
@@ -87,6 +88,7 @@ export async function prepareContainerImagesForDev(args: {
 				},
 			});
 			await build.ready;
+
 			onContainerImagePreparationEnd({
 				containerOptions: options,
 			});
@@ -111,6 +113,9 @@ export async function prepareContainerImagesForDev(args: {
 			});
 		}
 		if (!aborted) {
+			// Clean up duplicate image tags. This is scoped to cloudflare-dev only
+			await cleanupDuplicateImageTags(dockerPath, options.image_tag);
+
 			await checkExposedPorts(dockerPath, options);
 		}
 	}
