@@ -351,7 +351,7 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			expect(wrangler.stdout).toContain("rebuild container");
 		});
 
-		it.only("should rebuild a container when the hotkey is pressed", async () => {
+		it("should rebuild a container when the hotkey is pressed", async () => {
 			const wrangler = await startWranglerDev([
 				"dev",
 				"-c",
@@ -445,11 +445,6 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			await fetch(wrangler.url + "/start");
 
 			// wait container to be ready
-			await vi.waitFor(async () => {
-				const status = await fetch(wrangler.url + "/status");
-				expect(await status.json()).toBe(true);
-			}, WAITFOR_OPTIONS);
-
 			await vi.waitFor(async () => {
 				const ids = getContainerIds();
 				expect(ids.length).toBe(1);

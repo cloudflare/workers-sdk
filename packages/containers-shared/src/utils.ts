@@ -317,18 +317,15 @@ export const getDockerHostFromEnv = (): string => {
 /**
  * Get all repository tags for a given image
  */
-export function getImageRepoTags(
+export async function getImageRepoTags(
 	dockerPath: string,
 	imageTag: string
-): string[] {
+): Promise<string[]> {
 	try {
-		const output = runDockerCmdWithOutput(dockerPath, [
-			"image",
-			"inspect",
+		const output = await dockerImageInspect(dockerPath, {
 			imageTag,
-			"--format",
-			"{{ range .RepoTags }}{{ . }}\n{{ end }}",
-		]);
+			formatString: "{{ range .RepoTags }}{{ . }}\n{{ end }}",
+		});
 		return output.split("\n").filter((tag) => tag.trim() !== "");
 	} catch {
 		return [];
@@ -339,12 +336,12 @@ export function getImageRepoTags(
  * Checks if the given image has any duplicate tags from previous dev sessions,
  * and remove them if so.
  */
-export function cleanupDuplicateImageTags(
+export async function cleanupDuplicateImageTags(
 	dockerPath: string,
 	imageTag: string
-): void {
+): Promise<void> {
 	try {
-		const repoTags = getImageRepoTags(dockerPath, imageTag);
+		const repoTags = await getImageRepoTags(dockerPath, imageTag);
 		// Remove all cloudflare-dev tags from previous sessions except the current one
 		const tagsToRemove = repoTags.filter(
 			(tag) => tag !== imageTag && tag.startsWith("cloudflare-dev")

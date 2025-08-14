@@ -113,8 +113,8 @@ export async function prepareContainerImagesForDev(args: {
 			});
 		}
 		if (!aborted) {
-			// Clean up duplicate image tags. this is scoped to cloudflare-dev only
-			cleanupDuplicateImageTags(dockerPath, options.image_tag);
+			// Clean up duplicate image tags. This is scoped to cloudflare-dev only
+			await cleanupDuplicateImageTags(dockerPath, options.image_tag);
 
 			await checkExposedPorts(dockerPath, options);
 		}
