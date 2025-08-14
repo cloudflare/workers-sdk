@@ -4,7 +4,7 @@ import {
 	generateHandler,
 	isPreservationCacheResponseExpiring,
 } from "../../asset-server/handler";
-import { createMetadataObject } from "../../metadata-generator/createMetadataObject";
+import { createMetadataObject } from "../../metadata-generator/create-metadata-object";
 import type { HandlerContext } from "../../asset-server/handler";
 import type { Metadata } from "../../asset-server/metadata";
 import type { RedirectRule } from "@cloudflare/workers-shared/utils/configuration/types";

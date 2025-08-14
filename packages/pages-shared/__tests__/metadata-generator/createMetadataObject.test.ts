@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { createMetadataObject } from "../..//metadata-generator/createMetadataObject";
+import { createMetadataObject } from "../..//metadata-generator/create-metadata-object";
 import type {
 	HeadersRule,
 	RedirectRule,
