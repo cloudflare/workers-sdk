@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
@@ -12,14 +12,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 
 	beforeAll(async () => {
 		await helper.seed(resolve(__dirname, "./workers"));
-		await helper.run(
-			`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
-		);
+		const { cleanup } = await helper.worker({
+			entryPoint: "remote-worker.js",
+			workerName: remoteWorkerName,
+		});
+		return cleanup;
 	}, 35_000);
-
-	afterAll(async () => {
-		await helper.run(`wrangler delete --name ${remoteWorkerName}`);
-	});
 
 	describe.each([
 		{ experimentalRemoteBindings: true },
@@ -53,6 +51,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 					config: `${helper.tmpPath}/wrangler.json`,
 					dev: {
 						experimentalRemoteBindings,
+						inspector: false,
+						server: { port: 0 },
 					},
 				});
 
@@ -87,6 +87,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 					config: `${helper.tmpPath}/wrangler.json`,
 					dev: {
 						experimentalRemoteBindings,
+						inspector: false,
+						server: { port: 0 },
 					},
 				});
 
