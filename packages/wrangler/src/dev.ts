@@ -25,6 +25,7 @@ import { maybeRegisterLocalWorker } from "./dev/local";
 import { UserError } from "./errors";
 import { getFlag } from "./experimental-flags";
 import isInteractive from "./is-interactive";
+import { TURBOREPO } from "./is-turborepo";
 import { logger } from "./logger";
 import { getSiteAssetPaths } from "./sites";
 import { requireApiToken, requireAuth } from "./user";
@@ -527,8 +528,6 @@ async function setupDevEnv(
 					d1_databases: args.d1Databases,
 					vectorize: undefined,
 					hyperdrive: undefined,
-					secrets_store_secrets: undefined,
-					unsafe_hello_world: undefined,
 					services: args.services,
 					analytics_engine_datasets: undefined,
 					dispatch_namespaces: undefined,
@@ -681,7 +680,11 @@ export async function startDev(args: StartDevOptions) {
 					})
 				))
 			);
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
+			if (
+				isInteractive() &&
+				!TURBOREPO.isTurborepo() &&
+				args.showInteractiveDevSession !== false
+			) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
 		} else {
@@ -736,7 +739,11 @@ export async function startDev(args: StartDevOptions) {
 
 			await setupDevEnv(devEnv, args.config, authHook, args);
 
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
+			if (
+				isInteractive() &&
+				!TURBOREPO.isTurborepo() &&
+				args.showInteractiveDevSession !== false
+			) {
 				unregisterHotKeys = registerDevHotKeys([devEnv], args);
 			}
 		}
@@ -893,7 +900,9 @@ export function getBindings(
 	 */
 	// merge KV bindings
 	const kvConfig = (configParam.kv_namespaces || []).map<CfKvNamespace>(
-		({ binding, preview_id, id, experimental_remote }) => {
+		({ binding, preview_id, id, ...rest }) => {
+			const experimental_remote = (rest as { experimental_remote?: boolean })
+				.experimental_remote;
 			// In remote `dev`, we make folks use a separate kv namespace called
 			// `preview_id` instead of `id` so that they don't
 			// break production data. So here we check that a `preview_id`
@@ -914,7 +923,8 @@ export function getBindings(
 			return {
 				binding,
 				id: preview_id ?? id,
-				experimental_remote: remoteBindingsEnabled && experimental_remote,
+				experimental_remote:
+					remoteBindingsEnabled && (experimental_remote ?? false),
 			} satisfies CfKvNamespace;
 		}
 	);
@@ -935,7 +945,10 @@ export function getBindings(
 		if (local) {
 			return {
 				...d1Db,
-				experimental_remote: remoteBindingsEnabled && d1Db.experimental_remote,
+				experimental_remote:
+					remoteBindingsEnabled &&
+					((d1Db as { experimental_remote?: boolean }).experimental_remote ??
+						false),
 				database_id,
 			} satisfies CfD1Database;
 		}
@@ -945,7 +958,14 @@ export function getBindings(
 				`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your ${configFileName(configParam.configPath)} file\n--------------------\n`
 			);
 		}
-		return { ...d1Db, database_id };
+		return {
+			...d1Db,
+			experimental_remote:
+				remoteBindingsEnabled &&
+				((d1Db as { experimental_remote?: boolean }).experimental_remote ??
+					false),
+			database_id,
+		};
 	});
 	const d1Args = args.d1Databases || [];
 	const mergedD1Bindings = mergeWithOverride(d1Config, d1Args, "binding");
@@ -958,8 +978,10 @@ export function getBindings(
 				preview_bucket_name,
 				bucket_name,
 				jurisdiction,
-				experimental_remote,
+				...rest
 			}) => {
+				const experimental_remote = (rest as { experimental_remote?: boolean })
+					.experimental_remote;
 				// same idea as kv namespace preview id,
 				// same copy-on-write TODO
 				if (!preview_bucket_name && !local) {
@@ -974,7 +996,8 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
-					experimental_remote: remoteBindingsEnabled && experimental_remote,
+					experimental_remote:
+						remoteBindingsEnabled && (experimental_remote ?? false),
 				} satisfies CfR2Bucket;
 			}
 		) || [];
@@ -1036,7 +1059,10 @@ export function getBindings(
 				binding: queue.binding,
 				queue_name: queue.queue,
 				delivery_delay: queue.delivery_delay,
-				experimental_remote: remoteBindingsEnabled && queue.experimental_remote,
+				experimental_remote:
+					remoteBindingsEnabled &&
+					((queue as { experimental_remote?: boolean }).experimental_remote ??
+						false),
 			} satisfies CfQueue;
 		}),
 	];
@@ -1072,7 +1098,7 @@ export function getBindings(
 		d1_databases: mergedD1Bindings,
 		vectorize: configParam.vectorize,
 		hyperdrive: hyperdriveBindings,
-		secrets_store_secrets: configParam.secrets_store_secrets,
+		secrets_store_secrets: undefined,
 		services: mergedServiceBindings,
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		browser: configParam.browser,
@@ -1090,7 +1116,7 @@ export function getBindings(
 		assets: configParam.assets?.binding
 			? { binding: configParam.assets?.binding }
 			: undefined,
-		unsafe_hello_world: configParam.unsafe_hello_world,
+		unsafe_hello_world: undefined,
 	};
 
 	return bindings;
