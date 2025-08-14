@@ -8,7 +8,7 @@ import { requireApiToken, requireAuth } from "../../user";
 import {
 	convertConfigBindingsToStartWorkerBindings,
 	startWorker,
-} from "../startDevWorker";
+} from "../start-dev-worker";
 import type { Config } from "../../config";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type {

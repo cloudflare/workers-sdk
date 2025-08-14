@@ -6,8 +6,8 @@ import { createFatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { getLegacyScriptName } from "../utils/getLegacyScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
+import { getLegacyScriptName } from "../utils/get-legacy-script-name";
+import { isLegacyEnv } from "../utils/is-legacy-env";
 import { printWranglerBanner } from "../wrangler-banner";
 import { getWorkerForZone } from "../zones";
 import {

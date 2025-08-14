@@ -4,7 +4,7 @@ import dedent from "ts-dedent";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
-import type { Worker } from "../src/api/startDevWorker";
+import type { Worker } from "../src/api/start-dev-worker";
 import type { MockInstance } from "vitest";
 
 type Wrangler = Awaited<ReturnType<WranglerE2ETestHelper["importWrangler"]>>;

@@ -10,7 +10,7 @@ import { mapBindings } from "./init";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
-import { getScriptName } from "./utils/getScriptName";
+import { getScriptName } from "./utils/get-script-name";
 import { printWranglerBanner } from "./wrangler-banner";
 import type { Config } from "./config";
 import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";

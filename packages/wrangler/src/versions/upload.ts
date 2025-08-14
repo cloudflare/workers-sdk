@@ -50,12 +50,12 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
 import { requireAuth } from "../user";
-import { collectKeyValues } from "../utils/collectKeyValues";
+import { collectKeyValues } from "../utils/collect-key-values";
 import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
-import { getRules } from "../utils/getRules";
-import { getScriptName } from "../utils/getScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
+import { getRules } from "../utils/get-rules";
+import { getScriptName } from "../utils/get-script-name";
+import { isLegacyEnv } from "../utils/is-legacy-env";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
 import type { AssetsOptions } from "../assets";

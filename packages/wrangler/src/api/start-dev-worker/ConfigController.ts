@@ -31,10 +31,10 @@ import {
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
 } from "../../utils/constants";
-import { getRules } from "../../utils/getRules";
-import { getScriptName } from "../../utils/getScriptName";
-import { isLegacyEnv } from "../../utils/isLegacyEnv";
-import { memoizeGetPort } from "../../utils/memoizeGetPort";
+import { getRules } from "../../utils/get-rules";
+import { getScriptName } from "../../utils/get-script-name";
+import { isLegacyEnv } from "../../utils/is-legacy-env";
+import { memoizeGetPort } from "../../utils/memoize-get-port";
 import { printBindings } from "../../utils/print-bindings";
 import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";

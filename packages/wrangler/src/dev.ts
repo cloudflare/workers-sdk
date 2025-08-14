@@ -31,8 +31,8 @@ import { requireApiToken, requireAuth } from "./user";
 import {
 	collectKeyValues,
 	collectPlainTextVars,
-} from "./utils/collectKeyValues";
-import { mergeWithOverride } from "./utils/mergeWithOverride";
+} from "./utils/collect-key-values";
+import { mergeWithOverride } from "./utils/merge-with-override";
 import { getHostFromRoute } from "./zones";
 import type {
 	AsyncHook,

@@ -8,7 +8,7 @@ import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
-import { getScriptName } from "./utils/getScriptName";
+import { getScriptName } from "./utils/get-script-name";
 import type { ComplianceConfig } from "./environment-variables/misc-variables";
 
 // Types returned by the /script/{name}/references API

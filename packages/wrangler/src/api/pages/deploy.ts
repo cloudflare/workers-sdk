@@ -12,7 +12,7 @@ import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../../environment-variables/mis
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
-import { buildFunctions } from "../../pages/buildFunctions";
+import { buildFunctions } from "../../pages/build-functions";
 import { MAX_DEPLOYMENT_ATTEMPTS } from "../../pages/constants";
 import {
 	ApiErrorCodes,
