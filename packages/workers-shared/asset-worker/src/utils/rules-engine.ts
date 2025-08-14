@@ -140,10 +140,23 @@ export const generateRedirectsMatcher = (
 		configuration.redirects.version === REDIRECTS_VERSION
 			? configuration.redirects.rules
 			: {},
-		({ status, to }, replacements) => ({
-			status,
-			to: replacer(to, replacements),
-		})
+		({ status, to }, replacements) => {
+			const target = replacer(to, replacements).trim();
+			const protoPattern = /^(\w+:\/\/)/;
+			if (protoPattern.test(target)) {
+				// External redirects are not modified.
+				return {
+					status,
+					to: target,
+				};
+			} else {
+				// Relative redirects are modified to remove multiple slashes.
+				return {
+					status,
+					to: target.replace(/\/+/g, "/"),
+				};
+			}
+		}
 	);
 
 export const generateStaticRoutingRuleMatcher =

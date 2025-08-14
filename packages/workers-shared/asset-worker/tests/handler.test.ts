@@ -941,7 +941,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 			);
 
 			expect(response.status).toBe(302);
-			expect(response.headers.get("Location")).toBe("https://new-splat/"); // pretty wonky!
+			expect(response.headers.get("Location")).toBe("/new-splat");
 
 			// Dynamic rules are first-come-first-serve
 			response = await handleRequest(
@@ -1025,6 +1025,48 @@ describe("[Asset Worker] `handleRequest`", () => {
 			);
 
 			expect(response.status).toBe(200);
+		});
+
+		it("should prevent external redirects via double slash", async () => {
+			const configuration: AssetConfig = normalizeConfiguration({
+				html_handling: "none",
+				not_found_handling: "none",
+				redirects: {
+					version: 1,
+					staticRules: {},
+					rules: {
+						"/foo/*": {
+							status: 302,
+							to: "/:splat",
+						},
+					},
+				},
+			});
+			const exists = vi.fn().mockReturnValue(null);
+			const getByETag = vi.fn().mockReturnValue({
+				readableStream: new ReadableStream(),
+				contentType: "text/html",
+			});
+
+			// Test the vulnerability: double slash should not create external redirect
+			const response = await handleRequest(
+				new Request("https://example.com/foo//google.com"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag,
+				analytics
+			);
+
+			expect(response.status).toBe(302);
+			const location = response.headers.get("Location");
+
+			// SECURITY: Location should be relative, not absolute
+			// The vulnerability would cause: location to be "https://google.com"
+			// The fix should make: location be ".//google.com" (relative)
+			expect(location).toBe("/google.com");
+			expect(location).not.toMatch(/^https?:\/\//);
 		});
 	});
 });
