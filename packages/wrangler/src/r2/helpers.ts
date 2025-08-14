@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { ReadableStream } from "node:stream/web";
 import { Miniflare } from "miniflare";
 import prettyBytes from "pretty-bytes";
+import { z } from "zod";
 import { fetchGraphqlResult, fetchResult } from "../cfetch";
 import { fetchR2Objects } from "../cfetch/internal";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
@@ -1338,6 +1339,112 @@ export interface CORSRule {
 	};
 	exposeHeaders?: string[];
 	maxAgeSeconds?: number;
+}
+
+const AwsS3CORSSchema = z
+	.object({
+		AllowedOrigins: z.array(z.string()).optional(),
+		AllowedMethods: z.array(z.string()).optional(),
+		AllowedHeaders: z.array(z.string()).optional(),
+		ExposeHeaders: z.array(z.string()).optional(),
+		MaxAgeSeconds: z.number().optional(),
+	})
+	.strict();
+
+const CORSRuleSchema = z.object({
+	id: z.string().optional(),
+	allowed: z
+		.object({
+			origins: z.array(z.string()).optional(),
+			methods: z.array(z.string()).optional(),
+			headers: z.array(z.string()).optional(),
+		})
+		.optional(),
+	exposeHeaders: z.array(z.string()).optional(),
+	maxAgeSeconds: z.number().int().min(0).optional(),
+});
+
+const CORSConfigSchema = z
+	.object({
+		rules: z
+			.array(CORSRuleSchema)
+			.min(
+				1,
+				"The CORS configuration must contain at least one rule in the 'rules' array."
+			),
+	})
+	.refine((data) => "rules" in data, {
+		message:
+			"The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy",
+	});
+
+export function validateCORSRules(
+	corsConfig: unknown,
+	_filePath: string
+): CORSRule[] {
+	if (!corsConfig || typeof corsConfig !== "object") {
+		throw new UserError(
+			`The CORS configuration file must contain a valid JSON object. Please check the file format at: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
+		);
+	}
+
+	const awsS3Result = AwsS3CORSSchema.safeParse(corsConfig);
+	if (awsS3Result.success) {
+		const config = awsS3Result.data;
+		const convertedExample = {
+			rules: [
+				{
+					allowed: {
+						origins: config.AllowedOrigins || ["http://example.com"],
+						methods: config.AllowedMethods || [
+							"GET",
+							"HEAD",
+							"PUT",
+							"POST",
+							"DELETE",
+						],
+						headers: config.AllowedHeaders || [
+							"Authorization",
+							"Content-Type",
+							"Cache-Control",
+							"X-Requested-With",
+						],
+					},
+					exposeHeaders: config.ExposeHeaders || [
+						"ETag",
+						"Content-Type",
+						"Content-Length",
+						"Content-Range",
+					],
+					maxAgeSeconds: config.MaxAgeSeconds || 3600,
+				},
+			],
+		};
+
+		throw new UserError(
+			`The CORS configuration appears to be in AWS S3 format, but Cloudflare R2 expects a different format.
+
+Your current format uses: AllowedOrigins, AllowedMethods, AllowedHeaders, ExposeHeaders, MaxAgeSeconds
+
+Please convert it to the Cloudflare R2 format:
+
+${JSON.stringify(convertedExample, null, 2)}
+
+For more details, see: https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
+		);
+	}
+
+	const result = CORSConfigSchema.safeParse(corsConfig);
+	if (!result.success) {
+		const errorMessages = result.error.issues.map((err) => {
+			const path = err.path.length > 0 ? ` at path: ${err.path.join(".")}` : "";
+			return `CORS rule validation error: ${err.message}${path}`;
+		});
+
+		throw new UserError(errorMessages.join("\n"));
+	}
+
+	return result.data.rules as CORSRule[];
 }
 
 export async function getCORSPolicy(

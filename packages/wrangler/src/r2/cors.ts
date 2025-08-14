@@ -1,7 +1,6 @@
 import path from "node:path";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
@@ -11,8 +10,8 @@ import {
 	getCORSPolicy,
 	putCORSPolicy,
 	tableFromCORSPolicyResponse,
+	validateCORSRules,
 } from "./helpers";
-import type { CORSRule } from "./helpers";
 
 export const r2BucketCORSNamespace = createNamespace({
 	metadata: {
@@ -101,16 +100,10 @@ export const r2BucketCORSSetCommand = createCommand({
 
 		const jsonFilePath = path.resolve(file);
 
-		const corsConfig = parseJSON(readFileSync(jsonFilePath), jsonFilePath) as {
-			rules: CORSRule[];
-		};
+		const corsConfigRaw = parseJSON(readFileSync(jsonFilePath), jsonFilePath);
+		const validatedRules = validateCORSRules(corsConfigRaw, jsonFilePath);
 
-		if (!corsConfig.rules || !Array.isArray(corsConfig.rules)) {
-			throw new UserError(
-				`The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: ` +
-					`https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
-			);
-		}
+		const corsConfig = { rules: validatedRules };
 
 		if (!force) {
 			const confirmedRemoval = await confirm(
