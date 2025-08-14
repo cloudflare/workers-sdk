@@ -4,7 +4,7 @@ import { FatalError } from "../errors";
 import { toUrlPath } from "../paths";
 import { FunctionsNoRoutesError } from "./errors";
 import { buildWorkerFromFunctions } from "./functions/build-worker";
-import { buildPluginFromFunctions } from "./functions/buildPlugin";
+import { buildPluginFromFunctions } from "./functions/build-plugin";
 import { generateConfigFromFileTree } from "./functions/filepath-routing";
 import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
