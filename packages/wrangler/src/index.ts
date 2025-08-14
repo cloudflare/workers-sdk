@@ -10,7 +10,7 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { aiFineTuneNamespace, aiNamespace } from "./ai";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
-import { aiModelsCommand } from "./ai/listCatalog";
+import { aiModelsCommand } from "./ai/list-catalog";
 import { aiFineTuneListCommand } from "./ai/list-finetune";
 import { buildCommand } from "./build";
 import {

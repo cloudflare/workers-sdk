@@ -17,7 +17,7 @@ import type {
 	ScheduledEvent,
 	TailEventMessage,
 	TailEventMessageType,
-} from "../../tail/createTail";
+} from "../../tail/create-tail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 

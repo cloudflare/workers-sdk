@@ -4,9 +4,9 @@ import { bundleWorker } from "../../deployment-bundle/bundle";
 import { createModuleCollector } from "../../deployment-bundle/module-collection";
 import { getBasePath } from "../../paths";
 import { getPagesProjectRoot } from "../utils";
-import { buildNotifierPlugin } from "./buildWorker";
+import { buildNotifierPlugin } from "./build-worker";
 import type { Entry } from "../../deployment-bundle/entry";
-import type { Options as WorkerOptions } from "./buildWorker";
+import type { Options as WorkerOptions } from "./build-worker";
 
 type Options = Omit<
 	WorkerOptions,

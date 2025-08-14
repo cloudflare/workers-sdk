@@ -15,8 +15,8 @@ import {
 	jsonPrintLogs,
 	prettyPrintLogs,
 	translateCLICommandToFilterMessage,
-} from "./createTail";
-import type { TailCLIFilters } from "./createTail";
+} from "./create-tail";
+import type { TailCLIFilters } from "./create-tail";
 import type WebSocket from "ws";
 
 export const tailCommand = createCommand({
