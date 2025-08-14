@@ -1,7 +1,5 @@
-import assert from "node:assert";
 import path from "node:path";
 import dedent from "ts-dedent";
-import { fetch } from "undici";
 import {
 	afterAll,
 	beforeAll,
@@ -14,11 +12,6 @@ import {
 	vi,
 } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
-import {
-	generateLeafCertificate,
-	generateMtlsCertName,
-	generateRootCertificate,
-} from "../helpers/cert";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { fetchText } from "../helpers/fetch-text";
 import { generateResourceName } from "../helpers/generate-resource-name";
@@ -61,24 +54,11 @@ const testCases: TestCase<Record<string, string>>[] = [
 					}
 					`,
 			});
-			const { stdout } = await helper.run(
-				`wrangler deploy target-worker.js --name ${targetWorkerName} --compatibility-date 2025-01-01`
-			);
-			const match = stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			const deployedUrl = match.groups.url;
-			await vi.waitFor(
-				async () => {
-					const resp = await fetch(deployedUrl);
-					expect(await resp.text()).toBe("Hello from target worker");
-				},
-				{ interval: 1_000, timeout: 40_000 }
-			);
-			onTestFinished(async () => {
-				await helper.run(`wrangler delete --name ${targetWorkerName}`);
+			await helper.worker({
+				entryPoint: "target-worker.js",
+				workerName: targetWorkerName,
 			});
+
 			return { worker: targetWorkerName };
 		},
 		generateWranglerConfig: ({ worker: targetWorkerName }) => ({
@@ -197,6 +177,8 @@ const testCases: TestCase<Record<string, string>>[] = [
 					}
 				`,
 			});
+			// We don't need to clean up this customer worker as it will be removed
+			// when the dispatch namespace gets cleaned up.
 			await helper.run(
 				`wrangler deploy customer-worker.js --name ${customerWorkerName} --compatibility-date 2025-01-01 --dispatch-namespace ${namespace}`
 			);
@@ -310,23 +292,8 @@ const testCases: TestCase<Record<string, string>>[] = [
 		name: "mTLS",
 		scriptPath: "mtls.js",
 		setup: async (helper, workerName) => {
-			// Generate root and leaf certificates
-			const { certificate: rootCert, privateKey: rootKey } =
-				generateRootCertificate();
-			const { certificate: leafCert, privateKey: leafKey } =
-				generateLeafCertificate(rootCert, rootKey);
-			// Generate filenames for concurrent e2e test environment
-			const mtlsCertName = generateMtlsCertName();
-			// const caCertName = generateCaCertName();
-			// locally generated certs/key
-			await helper.seed({ "mtls_client_cert_file.pem": leafCert });
-			await helper.seed({ "mtls_client_private_key_file.pem": leafKey });
-			const output = await helper.run(
-				`wrangler cert upload mtls-certificate --name ${mtlsCertName} --cert mtls_client_cert_file.pem --key mtls_client_private_key_file.pem`
-			);
-			const match = output.stdout.match(/ID:\s+(?<certId>.*)$/m);
-			const certificateId = match?.groups?.certId;
-			assert(certificateId);
+			const certificateId = await helper.cert();
+
 			await helper.seed({
 				"worker.js": dedent/* javascript */ `
 								export default {
@@ -346,11 +313,11 @@ const testCases: TestCase<Record<string, string>>[] = [
 			await helper.seed({
 				"pre-deployment-wrangler.json": JSON.stringify(wranglerConfig, null, 2),
 			});
-			await helper.run(
-				`wrangler deploy worker.js --name ${workerName} -c pre-deployment-wrangler.json --compatibility-date 2025-01-01`
-			);
-			onTestFinished(async () => {
-				await helper.run(`wrangler delete --name ${workerName}`);
+
+			await helper.worker({
+				entryPoint: "worker.js",
+				workerName,
+				configPath: "pre-deployment-wrangler.json",
 			});
 			return { certificateId };
 		},
@@ -617,9 +584,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 		beforeAll(async () => {
 			await helper.seed(path.resolve(__dirname, "./workers"));
-			await helper.run(
-				`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
-			);
+			const { cleanup } = await helper.worker({
+				workerName: remoteWorkerName,
+				entryPoint: "remote-worker.js",
+				cleanOnTestFinished: false,
+			});
+			return cleanup;
 		}, 35_000);
 
 		afterAll(async () => {

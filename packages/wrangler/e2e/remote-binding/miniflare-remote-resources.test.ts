@@ -1,13 +1,7 @@
-import assert from "node:assert";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { beforeEach, describe, expect, it, onTestFinished } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
-import {
-	generateLeafCertificate,
-	generateMtlsCertName,
-	generateRootCertificate,
-} from "../helpers/cert";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import type { startRemoteProxySession } from "../../src/api";
@@ -91,12 +85,11 @@ const testCases: TestCase<string>[] = [
 					}
 				`,
 			});
-			await helper.run(
-				`wrangler deploy target-worker.js --name ${targetWorkerName} --compatibility-date 2025-01-01`
-			);
-			onTestFinished(async () => {
-				await helper.run(`wrangler delete --name ${targetWorkerName}`);
+			await helper.worker({
+				entryPoint: "target-worker.js",
+				workerName: targetWorkerName,
 			});
+
 			return targetWorkerName;
 		},
 		remoteProxySessionConfig: (target) => [
@@ -306,6 +299,8 @@ const testCases: TestCase<string>[] = [
 					}
 				`,
 			});
+			// Deploy a customer's worker to the dispatch namespace
+			// This doesn't need to be cleaned up, since it will be removed when the dispatch names is cleaned up.
 			await helper.run(
 				`wrangler deploy customer-worker.js --name ${customerWorkerName} --compatibility-date 2025-01-01 --dispatch-namespace ${namespace}`
 			);
@@ -390,39 +385,12 @@ const mtlsTest: TestCase<{ certificateId: string; workerName: string }> = {
 	name: "mTLS",
 	scriptPath: "mtls.js",
 	setup: async (helper) => {
-		// Generate root and leaf certificates
-		const { certificate: rootCert, privateKey: rootKey } =
-			generateRootCertificate();
-		const { certificate: leafCert, privateKey: leafKey } =
-			generateLeafCertificate(rootCert, rootKey);
-
-		// Generate filenames for concurrent e2e test environment
-		const mtlsCertName = generateMtlsCertName();
-		// const caCertName = generateCaCertName();
-
-		// locally generated certs/key
-		await helper.seed({ "mtls_client_cert_file.pem": leafCert });
-		await helper.seed({ "mtls_client_private_key_file.pem": leafKey });
-
-		const output = await helper.run(
-			`wrangler cert upload mtls-certificate --name ${mtlsCertName} --cert mtls_client_cert_file.pem --key mtls_client_private_key_file.pem`
-		);
-
-		const match = output.stdout.match(/ID:\s+(?<certId>.*)$/m);
-		const certificateId = match?.groups?.certId;
-		assert(certificateId);
+		const certificateId = await helper.cert();
 
 		const workerName = generateResourceName();
-		await helper.seed({
-			"worker.js": dedent/* javascript */ `
-					export default {
-						fetch(request) { return new Response("Hello"); }
-					}
-				`,
-		});
-
 		const wranglerConfig: RawConfig = {
 			name: workerName,
+			main: "worker.js",
 			mtls_certificates: [
 				{
 					certificate_id: certificateId,
@@ -430,15 +398,19 @@ const mtlsTest: TestCase<{ certificateId: string; workerName: string }> = {
 				},
 			],
 		};
+
 		await helper.seed({
+			"worker.js": dedent/* javascript */ `
+					export default {
+						fetch(request) { return new Response("Hello"); }
+					}
+				`,
 			"pre-deployment-wrangler.json": JSON.stringify(wranglerConfig, null, 2),
 		});
 
-		await helper.run(
-			`wrangler deploy worker.js --name ${workerName} -c pre-deployment-wrangler.json --compatibility-date 2025-01-01`
-		);
-		onTestFinished(async () => {
-			await helper.run(`wrangler delete --name ${workerName}`);
+		await helper.worker({
+			workerName,
+			configPath: "pre-deployment-wrangler.json",
 		});
 
 		return { certificateId, workerName };
