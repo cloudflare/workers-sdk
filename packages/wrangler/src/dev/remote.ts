@@ -9,7 +9,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { syncWorkersSite } from "../sites";
 import { requireApiToken } from "../user";
-import { isAbortError } from "../utils/isAbortError";
+import { isAbortError } from "../utils/is-abort-error";
 import { getZoneIdForPreview } from "../zones";
 import type { AssetsOptions } from "../assets";
 import type { Route } from "../config/environment";

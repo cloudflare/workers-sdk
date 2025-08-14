@@ -5,7 +5,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { getValidBindingName } from "../utils/getValidBindingName";
+import { getValidBindingName } from "../utils/get-valid-binding-name";
 import formatLabelledValues from "../utils/render-labelled-values";
 import { LOCATION_CHOICES } from "./constants";
 import {

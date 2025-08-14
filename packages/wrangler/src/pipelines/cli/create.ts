@@ -4,7 +4,7 @@ import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";
 import { bucketFormatMessage, isValidR2BucketName } from "../../r2/helpers";
 import { requireAuth } from "../../user";
-import { getValidBindingName } from "../../utils/getValidBindingName";
+import { getValidBindingName } from "../../utils/get-valid-binding-name";
 import { createPipeline } from "../client";
 import {
 	authorizeR2Bucket,
