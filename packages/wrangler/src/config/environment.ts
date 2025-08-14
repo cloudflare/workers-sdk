@@ -563,8 +563,8 @@ export interface EnvironmentNonInheritable {
 			/** The name of this Queue. */
 			queue: string;
 
-			/** The number of seconds to wait before delivering a message */
-			delivery_delay?: number;
+			/** Whether the Queue producer should be remote or not (only available under `--x-remote-bindings`) */
+			experimental_remote?: boolean;
 		}[];
 
 		/** Consumer configuration */

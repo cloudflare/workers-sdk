@@ -54,7 +54,7 @@ export interface CfModule {
 	 *   }
 	 * }
 	 */
-	content: string | Buffer<ArrayBuffer>;
+	content: string | Buffer;
 	/**
 	 * An optional sourcemap for this module if it's of a ESM or CJS type, this will only be present
 	 * if we're deploying with sourcemaps enabled. Since we copy extra modules that aren't bundled
@@ -98,7 +98,7 @@ export interface CfSendEmailBindings {
  */
 
 export interface CfWasmModuleBindings {
-	[key: string]: string | Uint8Array<ArrayBuffer>;
+	[key: string]: string | Uint8Array;
 }
 
 /**
@@ -146,7 +146,7 @@ export interface CfVersionMetadataBinding {
  */
 
 export interface CfDataBlobBindings {
-	[key: string]: string | Uint8Array<ArrayBuffer>;
+	[key: string]: string | Uint8Array;
 }
 
 /**
@@ -169,7 +169,8 @@ export interface CfWorkflow {
 export interface CfQueue {
 	binding: string;
 	queue_name: string;
-	delivery_delay?: number;
+	experimental_remote?: boolean;
+	raw?: boolean;
 }
 
 export interface CfR2Bucket {
