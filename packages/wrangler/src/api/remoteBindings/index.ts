@@ -16,7 +16,7 @@ import type {
 	Binding,
 	StartDevWorkerInput,
 	Worker,
-} from "../startDevWorker/types";
+} from "../start-dev-worker/types";
 import type { RemoteProxyConnectionString } from "miniflare";
 
 export type RemoteProxySession = Pick<Worker, "ready" | "dispose"> & {
