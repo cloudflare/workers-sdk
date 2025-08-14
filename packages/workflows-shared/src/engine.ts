@@ -11,8 +11,8 @@ import {
 	ENGINE_TIMEOUT,
 	GracePeriodSemaphore,
 	startGracePeriod,
-} from "./lib/gracePeriodSemaphore";
-import { TimePriorityQueue } from "./lib/timePriorityQueue";
+} from "./lib/grace-period-semaphore";
+import { TimePriorityQueue } from "./lib/time-priority-queue";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
 import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
