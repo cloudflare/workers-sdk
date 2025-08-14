@@ -1,5 +1,36 @@
 # wrangler
 
+## 4.30.0
+
+### Minor Changes
+
+- [#10341](https://github.com/cloudflare/workers-sdk/pull/10341) [`76a6701`](https://github.com/cloudflare/workers-sdk/commit/76a6701fd5dc2d8493ad28a0ba8e79530885c05e) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - feat: Add Wrangler command for Vectorize list-vectors operation
+
+### Patch Changes
+
+- [#10217](https://github.com/cloudflare/workers-sdk/pull/10217) [`979984b`](https://github.com/cloudflare/workers-sdk/commit/979984b8dfd3bc5d18c2aeedc4850da8c41d0476) Thanks [@veggiedefender](https://github.com/veggiedefender)! - Increase the maxBuffer size for capnp uploads
+
+- [#10356](https://github.com/cloudflare/workers-sdk/pull/10356) [`80e964c`](https://github.com/cloudflare/workers-sdk/commit/80e964c7c756895719b94c0597da23dca91c2c34) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - fix: Update regex for valid branch name to remove 61 char length requirement, allowing for longer branch names to be specified for preview aliases.
+
+- [#10289](https://github.com/cloudflare/workers-sdk/pull/10289) [`a5a1426`](https://github.com/cloudflare/workers-sdk/commit/a5a1426a9ead85d2518f01fde0c1dbc02f98c4df) Thanks [@emily-shen](https://github.com/emily-shen)! - Cleanup container images created during local dev if no changes have been made.
+
+  We now untag old images that were created by Wrangler/Vite if we find that the image content and configuration is unchanged, so that we don't keep accumulating image tags.
+
+- [#10315](https://github.com/cloudflare/workers-sdk/pull/10315) [`0c04da9`](https://github.com/cloudflare/workers-sdk/commit/0c04da9b3a8dcf1220b46a0fdd463ba0bad0f9a1) Thanks [@emily-shen](https://github.com/emily-shen)! - Add `rollout_active_grace_period` option to containers configuration.
+
+  This allows users to configure how long an active container should keep running for during a rollout, before the upgrade is applied.
+
+- [#10321](https://github.com/cloudflare/workers-sdk/pull/10321) [`b524a6f`](https://github.com/cloudflare/workers-sdk/commit/b524a6fd4a19ef551517bb6c8cb32582862f7202) Thanks [@emily-shen](https://github.com/emily-shen)! - print prettier errors during container deployment
+
+- [#10253](https://github.com/cloudflare/workers-sdk/pull/10253) [`eb32a3a`](https://github.com/cloudflare/workers-sdk/commit/eb32a3ab4c4446a4844bea71353b59e36715e6a6) Thanks [@emily-shen](https://github.com/emily-shen)! - fix redeploying container apps when previous deploy failed or container (but not image) was deleted.
+
+  Previously this failed with `No changes detected but no previous image found` as we assumed there would be a previous deployment when an image exists in the registry.
+
+- [#9990](https://github.com/cloudflare/workers-sdk/pull/9990) [`4288a61`](https://github.com/cloudflare/workers-sdk/commit/4288a61c1f8abd8243d3218749ea700a383954b9) Thanks [@penalosa](https://github.com/penalosa)! - Fix startup profiling when sourcemaps are enabled
+
+- Updated dependencies [[`d54d8b7`](https://github.com/cloudflare/workers-sdk/commit/d54d8b73a2771cde9645937ff241675dddf0e8d2), [`ae0c806`](https://github.com/cloudflare/workers-sdk/commit/ae0c806087c203da6a3d7da450e8fabe0d81c987)]:
+  - miniflare@4.20250813.1
+
 ## 4.29.1
 
 ### Patch Changes

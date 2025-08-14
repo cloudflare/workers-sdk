@@ -1,5 +1,29 @@
 # miniflare
 
+## 4.20250813.1
+
+### Minor Changes
+
+- [#10349](https://github.com/cloudflare/workers-sdk/pull/10349) [`d54d8b7`](https://github.com/cloudflare/workers-sdk/commit/d54d8b73a2771cde9645937ff241675dddf0e8d2) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: add `unsafeHandleDevRegistryUpdate` callback option to Miniflare
+
+  Adds a new option to Miniflare that allows users to register a callback function that gets invoked whenever the dev registry is updated with changes to external services that the current Worker depends on.
+
+  This callback is useful for scenarios where you need to react to changes in bound services, such as updating bindings tables or reloading configurations when dependent Workers are added, removed, or modified in the dev registry.
+
+  ```typescript
+  const mf = new Miniflare({
+  	// ... other options
+  	unsafeHandleDevRegistryUpdate(registry) {
+  		console.log("Dev registry updated:", registry);
+  		// Handle registry updates (e.g., reprint bindings, reload config)
+  	},
+  });
+  ```
+
+### Patch Changes
+
+- [#10306](https://github.com/cloudflare/workers-sdk/pull/10306) [`ae0c806`](https://github.com/cloudflare/workers-sdk/commit/ae0c806087c203da6a3d7da450e8fabe0d81c987) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Browser Rendering for local development now uses @puppeteer/browsers package instead of puppeteer
+
 ## 4.20250813.0
 
 ### Patch Changes
