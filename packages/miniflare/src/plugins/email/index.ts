@@ -5,6 +5,8 @@ import { Service, Worker_Binding } from "../../runtime";
 import {
 	getUserBindingServiceName,
 	Plugin,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 
@@ -12,6 +14,9 @@ import {
 const EmailBindingOptionsSchema = z
 	.object({
 		name: z.string(),
+		remoteProxyConnectionString: z
+			.custom<RemoteProxyConnectionString>()
+			.optional(),
 	})
 	.and(
 		z.union([
@@ -53,10 +58,12 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 
 		const sendEmailBindings = options.email.send_email;
 
-		return sendEmailBindings.map(({ name }) => ({
+		return sendEmailBindings.map(({ name, remoteProxyConnectionString }) => ({
 			name,
 			service: {
-				entrypoint: "SendEmailBinding",
+				entrypoint: remoteProxyConnectionString
+					? undefined
+					: "SendEmailBinding",
 				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
 			},
 		}));
@@ -67,22 +74,25 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 	async getServices(args) {
 		const services: Service[] = [];
 
-		for (const { name, ...config } of args.options.email?.send_email ?? []) {
+		for (const { name, remoteProxyConnectionString, ...config } of args.options
+			.email?.send_email ?? []) {
 			services.push({
 				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
-				worker: {
-					compatibilityDate: "2025-03-17",
-					modules: [
-						{
-							name: "send_email.mjs",
-							esModule: SEND_EMAIL_BINDING(),
+				worker: remoteProxyConnectionString
+					? remoteProxyClientWorker(remoteProxyConnectionString, name)
+					: {
+							compatibilityDate: "2025-03-17",
+							modules: [
+								{
+									name: "send_email.mjs",
+									esModule: SEND_EMAIL_BINDING(),
+								},
+							],
+							bindings: [
+								...buildJsonBindings(config),
+								WORKER_BINDING_SERVICE_LOOPBACK,
+							],
 						},
-					],
-					bindings: [
-						...buildJsonBindings(config),
-						WORKER_BINDING_SERVICE_LOOPBACK,
-					],
-				},
 			});
 		}
 

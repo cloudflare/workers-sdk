@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import dedent from "ts-dedent";
 import {
 	afterAll,
@@ -23,13 +24,15 @@ import { fetchText } from "../helpers/fetch-text";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import type { RawConfig } from "../../src/config";
 import type { WranglerLongLivedCommand } from "../helpers/wrangler";
+import type { ExpectStatic } from "vitest";
 
 type TestCase<T = void> = {
 	name: string;
 	scriptPath: string;
 	setup?: (helper: WranglerE2ETestHelper, workerName: string) => Promise<T> | T;
 	generateWranglerConfig: (setupResult: T) => Omit<RawConfig, "name">;
-	expectedResponseMatch: string | RegExp;
+	expectedResponseMatch: ExpectStatic;
+	expectedOutputMatch?: ExpectStatic;
 	// Flag for resources that can work without remote bindings opt-in
 	worksWithoutRemoteBindings?: boolean;
 };
@@ -45,12 +48,15 @@ const testCases: TestCase<Record<string, string>>[] = [
 					import { WorkerEntrypoint } from "cloudflare:workers"
 					export default {
 						fetch(request) {
-						return new Response("Hello from target worker")
+							return new Response("Hello from target worker")
 						}
 					}
 					export class CustomEntrypoint extends WorkerEntrypoint {
 						fetch(request) {
-						return new Response("Hello from target worker entrypoint")
+							return new Response("Hello from target worker entrypoint")
+						}
+						add(a, b) {
+							return a + b;
 						}
 					}
 					`,
@@ -63,7 +69,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 			);
 			assert(match?.groups);
 			const deployedUrl = match.groups.url;
-
 			await vi.waitFor(
 				async () => {
 					const resp = await fetch(deployedUrl);
@@ -71,7 +76,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 				},
 				{ interval: 1_000, timeout: 40_000 }
 			);
-
 			onTestFinished(async () => {
 				await helper.run(`wrangler delete --name ${targetWorkerName}`);
 			});
@@ -94,10 +98,13 @@ const testCases: TestCase<Record<string, string>>[] = [
 				},
 			],
 		}),
-		expectedResponseMatch: JSON.stringify({
-			default: "Hello from target worker",
-			entrypoint: "Hello from target worker entrypoint",
-		}),
+		expectedResponseMatch: expect.stringMatching(
+			JSON.stringify({
+				default: "Hello from target worker",
+				entrypoint: "Hello from target worker entrypoint",
+				rpc: 3,
+			})
+		),
 	},
 	{
 		name: "AI",
@@ -110,7 +117,9 @@ const testCases: TestCase<Record<string, string>>[] = [
 				experimental_remote: true,
 			},
 		}),
-		expectedResponseMatch: "This is a response from Workers AI",
+		expectedResponseMatch: expect.stringMatching(
+			"This is a response from Workers AI"
+		),
 		// AI bindings work without opt in flag
 		worksWithoutRemoteBindings: true,
 	},
@@ -125,7 +134,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				experimental_remote: true,
 			},
 		}),
-		expectedResponseMatch: /sessionId/,
+		expectedResponseMatch: expect.stringMatching(/sessionId/),
 		worksWithoutRemoteBindings: true,
 	},
 	{
@@ -139,7 +148,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				experimental_remote: true,
 			},
 		}),
-		expectedResponseMatch: "image/avif",
+		expectedResponseMatch: expect.stringMatching("image/avif"),
 		// The Images binding "works" without opt in flag because the current default is an older remote binding implementation
 		worksWithoutRemoteBindings: true,
 	},
@@ -165,20 +174,25 @@ const testCases: TestCase<Record<string, string>>[] = [
 				},
 			],
 		}),
-		expectedResponseMatch: /a44706aa-a366-48bc-8cc1-3feffd87d548/,
+		expectedResponseMatch: expect.stringMatching(
+			/a44706aa-a366-48bc-8cc1-3feffd87d548/
+		),
 	},
 	{
 		name: "Dispatch Namespace",
 		scriptPath: "dispatch-namespace.js",
 		setup: async (helper) => {
 			const namespace = await helper.dispatchNamespace(false);
-
 			const customerWorkerName = "remote-bindings-test-customer-worker";
 			await helper.seed({
 				"customer-worker.js": dedent/* javascript */ `
-					export default {
+					import {WorkerEntrypoint} from "cloudflare:workers"
+					export default class W extends WorkerEntrypoint {
 						fetch(request) {
 							return new Response("Hello from customer worker")
+						}
+						add(a, b) {
+							return a + b;
 						}
 					}
 				`,
@@ -186,7 +200,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 			await helper.run(
 				`wrangler deploy customer-worker.js --name ${customerWorkerName} --compatibility-date 2025-01-01 --dispatch-namespace ${namespace}`
 			);
-
 			return { namespace };
 		},
 		generateWranglerConfig: ({ namespace }) => ({
@@ -200,7 +213,12 @@ const testCases: TestCase<Record<string, string>>[] = [
 				},
 			],
 		}),
-		expectedResponseMatch: /Hello from customer worker/,
+		expectedResponseMatch: expect.stringMatching(
+			JSON.stringify({
+				worker: "Hello from customer worker",
+				rpc: 3,
+			})
+		),
 	},
 	{
 		name: "KV",
@@ -223,7 +241,9 @@ const testCases: TestCase<Record<string, string>>[] = [
 				},
 			],
 		}),
-		expectedResponseMatch: "The pre-existing value is: existing-value",
+		expectedResponseMatch: expect.stringMatching(
+			"The pre-existing value is: existing-value"
+		),
 	},
 	{
 		name: "R2",
@@ -252,7 +272,9 @@ const testCases: TestCase<Record<string, string>>[] = [
 				},
 			],
 		}),
-		expectedResponseMatch: "The pre-existing value is: existing-value",
+		expectedResponseMatch: expect.stringMatching(
+			"The pre-existing value is: existing-value"
+		),
 	},
 	{
 		name: "D1",
@@ -282,7 +304,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				},
 			],
 		}),
-		expectedResponseMatch: "existing-value",
+		expectedResponseMatch: expect.stringMatching("existing-value"),
 	},
 	{
 		name: "mTLS",
@@ -293,23 +315,18 @@ const testCases: TestCase<Record<string, string>>[] = [
 				generateRootCertificate();
 			const { certificate: leafCert, privateKey: leafKey } =
 				generateLeafCertificate(rootCert, rootKey);
-
 			// Generate filenames for concurrent e2e test environment
 			const mtlsCertName = generateMtlsCertName();
 			// const caCertName = generateCaCertName();
-
 			// locally generated certs/key
 			await helper.seed({ "mtls_client_cert_file.pem": leafCert });
 			await helper.seed({ "mtls_client_private_key_file.pem": leafKey });
-
 			const output = await helper.run(
 				`wrangler cert upload mtls-certificate --name ${mtlsCertName} --cert mtls_client_cert_file.pem --key mtls_client_private_key_file.pem`
 			);
-
 			const match = output.stdout.match(/ID:\s+(?<certId>.*)$/m);
 			const certificateId = match?.groups?.certId;
 			assert(certificateId);
-
 			await helper.seed({
 				"worker.js": dedent/* javascript */ `
 								export default {
@@ -317,7 +334,6 @@ const testCases: TestCase<Record<string, string>>[] = [
 								}
 							`,
 			});
-
 			const wranglerConfig: RawConfig = {
 				name: workerName,
 				mtls_certificates: [
@@ -330,14 +346,12 @@ const testCases: TestCase<Record<string, string>>[] = [
 			await helper.seed({
 				"pre-deployment-wrangler.json": JSON.stringify(wranglerConfig, null, 2),
 			});
-
 			await helper.run(
 				`wrangler deploy worker.js --name ${workerName} -c pre-deployment-wrangler.json --compatibility-date 2025-01-01`
 			);
 			onTestFinished(async () => {
 				await helper.run(`wrangler delete --name ${workerName}`);
 			});
-
 			return { certificateId };
 		},
 		generateWranglerConfig: ({ certificateId }) => ({
@@ -352,7 +366,46 @@ const testCases: TestCase<Record<string, string>>[] = [
 			],
 		}),
 		// Note: in this test we are making sure that TLS negotiation does work by checking that we get an SSL certificate error
-		expectedResponseMatch: /The SSL certificate error/,
+		expectedResponseMatch: expect.stringMatching(/The SSL certificate error/),
+	},
+	{
+		name: "Pipelines",
+		scriptPath: "pipelines.js",
+		generateWranglerConfig: () => ({
+			main: "pipelines.js",
+			compatibility_date: "2025-01-01",
+			pipelines: [
+				{
+					binding: "PIPELINE",
+					pipeline: "preserve-e2e-pipelines",
+					experimental_remote: true,
+				},
+			],
+		}),
+		expectedResponseMatch: expect.stringMatching(/Data sent to env.PIPELINE/),
+		// Make sure we're not hitting the local simulator (which logs a "Request received" message)
+		expectedOutputMatch: expect.not.stringMatching(/Request received/),
+	},
+	{
+		name: "Email",
+		scriptPath: "email.js",
+		generateWranglerConfig: () => ({
+			main: "email.js",
+			compatibility_date: "2025-01-01",
+			send_email: [
+				{
+					name: "EMAIL",
+					experimental_remote: true,
+				},
+			],
+		}),
+		// This error message comes from the production binding, and so indicates that the binding has been called
+		// successfully, which is all we care about. Full E2E testing of email sending would be _incredibly_ flaky
+		expectedResponseMatch: expect.stringMatching(
+			/email from example.com not allowed because domain is not owned by the same account/
+		),
+		// Make sure we're not hitting the local simulator (which logs a "send_email binding called" message)
+		expectedOutputMatch: expect.not.stringMatching(/send_email binding called/),
 	},
 ];
 
@@ -378,7 +431,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				const { url } = await worker.waitForReady();
 
 				const response = await fetchText(url);
-				expect(response).toMatch(testCase.expectedResponseMatch);
+
+				expect(response).toEqual(testCase.expectedResponseMatch);
+				if (testCase.expectedOutputMatch) {
+					expect(await worker.currentOutput).toEqual(
+						testCase.expectedOutputMatch
+					);
+				}
 			});
 
 			it.skipIf(testCase.worksWithoutRemoteBindings)(
@@ -395,7 +454,16 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					const { url } = await worker.waitForReady();
 
 					const response = await fetchText(url);
-					expect(response).toMatch(testCase.expectedResponseMatch);
+					expect(response).toEqual(testCase.expectedResponseMatch);
+
+					// Wait for async logging (e.g. pipeline messages received)
+					await setTimeout(1_000);
+
+					if (testCase.expectedOutputMatch) {
+						expect(await worker.currentOutput).toEqual(
+							testCase.expectedOutputMatch
+						);
+					}
 				}
 			);
 		});
@@ -447,7 +515,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					await vi.waitFor(
 						async () => {
 							const response = await fetchText(url);
-							expect(response).toMatch(testCase.expectedResponseMatch);
+							expect(response).toEqual(testCase.expectedResponseMatch);
+							if (testCase.expectedOutputMatch) {
+								expect(await worker.currentOutput).toEqual(
+									testCase.expectedOutputMatch
+								);
+							}
 						},
 						{ interval: 1_000, timeout: 40_000 }
 					);

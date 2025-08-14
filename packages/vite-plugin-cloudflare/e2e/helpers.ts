@@ -253,7 +253,7 @@ export async function fetchJson(url: string, info?: RequestInit) {
 				const response = await fetch(url, {
 					headers: { "MF-Disable-Pretty-Error": "true" },
 					...info,
-					signal: AbortSignal.timeout(5_000),
+					signal: AbortSignal.timeout(10_000),
 				});
 				const text = await response.text();
 				try {
@@ -268,7 +268,7 @@ export async function fetchJson(url: string, info?: RequestInit) {
 				throw error;
 			}
 		},
-		{ timeout: 20_000, interval: 1000 }
+		{ timeout: 40_000, interval: 1000 }
 	);
 }
 
