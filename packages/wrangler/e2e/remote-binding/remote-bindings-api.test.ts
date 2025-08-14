@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { resolve } from "node:path";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
@@ -31,14 +31,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 		beforeAll(async () => {
 			await helper.seed(resolve(__dirname, "./workers"));
-			await helper.run(
-				`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
-			);
+			const { cleanup } = await helper.worker({
+				workerName: remoteWorkerName,
+				entryPoint: "remote-worker.js",
+			});
+			return cleanup;
 		}, 35_000);
-
-		afterAll(async () => {
-			await helper.run(`wrangler delete --name ${remoteWorkerName}`);
-		});
 
 		function getMfOptions(
 			remoteProxyConnectionString: RemoteProxyConnectionString
