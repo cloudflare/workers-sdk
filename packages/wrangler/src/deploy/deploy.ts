@@ -112,6 +112,7 @@ type Props = {
 	dispatchNamespace: string | undefined;
 	experimentalAutoCreate: boolean;
 	metafile: string | boolean | undefined;
+	rolloutStepPercentage: number | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;

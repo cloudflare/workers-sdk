@@ -21,7 +21,11 @@ import type {
  * we want to revert to the default rather than inheriting from the prev deployment
  */
 export const getNormalizedContainerOptions = async (
-	config: Config
+	config: Config,
+	args?: {
+		/** set to 100 if --full-containers-rollout=true */
+		rolloutStepPercentage?: number | undefined;
+	}
 ): Promise<ContainerNormalizedConfig[]> => {
 	if (!config.containers || config.containers.length === 0) {
 		return [];
@@ -73,6 +77,7 @@ export const getNormalizedContainerOptions = async (
 				),
 			},
 			rollout_step_percentage:
+				args?.rolloutStepPercentage ??
 				container.rollout_step_percentage ??
 				((container.max_instances ?? 0) < 2 ? 100 : [10, 100]),
 			rollout_kind: container.rollout_kind ?? "full_auto",
