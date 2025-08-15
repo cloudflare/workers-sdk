@@ -13,6 +13,7 @@ export function normalizeOutput(
 		removeUUID,
 		removeBinding,
 		removeKVId,
+		normalizeTempResourceName,
 		normalizeErrorMarkers,
 		replaceByte,
 		stripTrailingWhitespace,
@@ -61,8 +62,15 @@ function removeWorkersDev(str: string) {
 
 function removeTimestamp(str: string) {
 	return str
-		.replace(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d+?Z/g, "TIMESTAMP")
-		.replace(/\d\d:\d\d:\d\d/g, "TIMESTAMP");
+		.replaceAll(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d+?Z/g, "TIMESTAMP")
+		.replaceAll(/\d\d:\d\d:\d\d/g, "TIMESTAMP");
+}
+
+function normalizeTempResourceName(str: string) {
+	return str.replace(
+		/tmp[-_]e2e[-_](\d{4}[-_]\d{2}[-_]\d{2})[-_](\w+)[-_]([a-z0-9-]+)/g,
+		"tmp-e2e-$1-$2-00000000-0000-0000-0000-000000000000"
+	);
 }
 
 function removeUUID(str: string) {
@@ -71,6 +79,7 @@ function removeUUID(str: string) {
 		"00000000-0000-0000-0000-000000000000"
 	);
 }
+
 function removeBinding(str: string) {
 	return str.replace(
 		/\w{8}_\w{4}_\w{4}_\w{4}_\w{12}/g,

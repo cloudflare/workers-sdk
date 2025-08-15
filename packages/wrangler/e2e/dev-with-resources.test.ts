@@ -686,11 +686,13 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		);
 	});
 
-	it.skipIf(isLocal)("exposes Hyperdrive bindings", async () => {
-		const { id } = await helper.hyperdrive(isLocal);
+	it.skipIf(isLocal || !process.env.HYPERDRIVE_DATABASE_URL)(
+		"exposes Hyperdrive bindings",
+		async () => {
+			const { id } = await helper.hyperdrive(isLocal);
 
-		await helper.seed({
-			"wrangler.toml": dedent`
+			await helper.seed({
+				"wrangler.toml": dedent`
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-10-25"
@@ -699,7 +701,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 					binding = "HYPERDRIVE"
 					id = "${id}"
 			`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 					export default {
 						async fetch(request, env) {
 							if (request.url.includes("connect")) {
@@ -708,12 +710,13 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
 						}
 					}`,
-		});
+			});
 
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
-		const { url } = await worker.waitForReady();
-		await fetch(`${url}/connect`);
-	});
+			const worker = helper.runLongLived(`wrangler dev ${flags}`);
+			const { url } = await worker.waitForReady();
+			await fetch(`${url}/connect`);
+		}
+	);
 
 	it("exposes Pipelines bindings", async () => {
 		await helper.seed({

@@ -436,7 +436,33 @@ describe.sequential("wrangler pages dev", () => {
 			"⎔ Starting local server..."
 		);
 
-		expect(prestartOutput).toMatchSnapshot();
+		expect(prestartOutput).toMatchInlineSnapshot(`
+			"✨ Compiled Worker successfully
+			Your Worker has access to the following bindings:
+			Binding                                                                  Resource                  Mode
+			env.DO_BINDING_1_TOML (NEW_DO_1, defined in NEW_DO_SCRIPT_1)             Durable Object            local [not connected]
+			env.DO_BINDING_2_TOML (DO_2_TOML, defined in DO_SCRIPT_2_TOML)           Durable Object            local [not connected]
+			env.DO_BINDING_3_ARGS (DO_3_ARGS, defined in DO_SCRIPT_3_ARGS)           Durable Object            local [not connected]
+			env.KV_BINDING_1_TOML (NEW_KV_ID_1)                                      KV Namespace              local
+			env.KV_BINDING_2_TOML (KV_ID_2_TOML)                                     KV Namespace              local
+			env.KV_BINDING_3_ARGS (KV_ID_3_ARGS)                                     KV Namespace              local
+			env.D1_BINDING_1_TOML (local-D1_BINDING_1_TOML=NEW_D1_NAME_1)            D1 Database               local
+			env.D1_BINDING_2_TOML (D1_NAME_2_TOML)                                   D1 Database               local
+			env.D1_BINDING_3_ARGS (local-D1_BINDING_3_ARGS=D1_NAME_3_ARGS)           D1 Database               local
+			env.R2_BINDING_1_TOML (new-r2-bucket-1)                                  R2 Bucket                 local
+			env.R2_BINDING_2_TOML (r2-bucket-2-toml)                                 R2 Bucket                 local
+			env.R2_BINDING_3_TOML (r2-bucket-3-args)                                 R2 Bucket                 local
+			env.SERVICE_BINDING_1_TOML (NEW_SERVICE_NAME_1)                          Worker                    local [not connected]
+			env.SERVICE_BINDING_2_TOML (SERVICE_NAME_2_TOML)                         Worker                    local [not connected]
+			env.SERVICE_BINDING_3_TOML (SERVICE_NAME_3_ARGS)                         Worker                    local [not connected]
+			env.AI_BINDING_2_TOML                                                    AI                        remote
+			env.VAR1 ("(hidden)")                                                    Environment Variable      local
+			env.VAR2 ("VAR_2_TOML")                                                  Environment Variable      local
+			env.VAR3 ("(hidden)")                                                    Environment Variable      local
+			Service bindings, Durable Object bindings, and Tail consumers connect to other \`wrangler dev\` processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
+			▲ [WARNING] Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development.
+			"
+		`);
 	});
 
 	it("should pick up wrangler.toml configuration even in cases when `pages_build_output_dir` was not specified, but the <directory> command argument was", async () => {

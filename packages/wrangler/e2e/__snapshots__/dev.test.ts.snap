@@ -1,5 +1,23 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`basic js dev: 'wrangler dev --port=0' > --test-scheduled works with wrangler dev --port=0 > custom build 1`] = `"Ran scheduled event"`;
+
+exports[`basic js dev: 'wrangler dev --port=0' > --test-scheduled works with wrangler dev --port=0 > no custom build 1`] = `"Ran scheduled event"`;
+
+exports[`basic js dev: 'wrangler dev --port=0' > Workers + Assets > can modify User Worker during wrangler dev --port=0 1`] = `"Hello World!"`;
+
+exports[`basic js dev: 'wrangler dev --port=0' > Workers + Assets > can modify User Worker during wrangler dev --port=0 2`] = `"Updated Worker!"`;
+
+exports[`basic js dev: 'wrangler dev --port=0' > Workers + Assets > can modify assets during wrangler dev --port=0 1`] = `"Hello World!"`;
+
+exports[`basic js dev: 'wrangler dev --port=0' > Workers + Assets > can modify assets during wrangler dev --port=0 2`] = `"Hello World!"`;
+
+exports[`basic js dev: 'wrangler dev --port=0' > can modify Worker during wrangler dev --port=0 1`] = `"Hello World!"`;
+
+exports[`basic js dev: 'wrangler dev --port=0' > can modify Worker during wrangler dev --port=0 2`] = `"Updated Worker! value"`;
+
+exports[`basic js dev: 'wrangler dev --port=0' > hotkeys can be disabled with wrangler dev --port=0 1`] = `"Hello World!"`;
+
 exports[`basic js dev: 'wrangler dev --remote' > --test-scheduled works with wrangler dev --remote > custom build 1`] = `"Ran scheduled event"`;
 
 exports[`basic js dev: 'wrangler dev --remote' > --test-scheduled works with wrangler dev --remote > no custom build 1`] = `"Ran scheduled event"`;
@@ -12,26 +30,10 @@ exports[`basic js dev: 'wrangler dev --remote' > Workers + Assets > can modify a
 
 exports[`basic js dev: 'wrangler dev --remote' > Workers + Assets > can modify assets during wrangler dev --remote 2`] = `"Hello World!"`;
 
+exports[`basic js dev: 'wrangler dev --remote' > Workers + Assets > can modify assets during wrangler dev --remote 3`] = `"Hello World!"`;
+
 exports[`basic js dev: 'wrangler dev --remote' > can modify Worker during wrangler dev --remote 1`] = `"Hello World!"`;
 
 exports[`basic js dev: 'wrangler dev --remote' > can modify Worker during wrangler dev --remote 2`] = `"Updated Worker! value"`;
 
 exports[`basic js dev: 'wrangler dev --remote' > hotkeys can be disabled with wrangler dev --remote 1`] = `"Hello World!"`;
-
-exports[`basic js dev: 'wrangler dev' > --test-scheduled works with wrangler dev > custom build 1`] = `"Ran scheduled event"`;
-
-exports[`basic js dev: 'wrangler dev' > --test-scheduled works with wrangler dev > no custom build 1`] = `"Ran scheduled event"`;
-
-exports[`basic js dev: 'wrangler dev' > Workers + Assets > can modify User Worker during wrangler dev 1`] = `"Hello World!"`;
-
-exports[`basic js dev: 'wrangler dev' > Workers + Assets > can modify User Worker during wrangler dev 2`] = `"Updated Worker!"`;
-
-exports[`basic js dev: 'wrangler dev' > Workers + Assets > can modify assets during wrangler dev 1`] = `"Hello World!"`;
-
-exports[`basic js dev: 'wrangler dev' > Workers + Assets > can modify assets during wrangler dev 2`] = `"Hello World!"`;
-
-exports[`basic js dev: 'wrangler dev' > can modify Worker during wrangler dev 1`] = `"Hello World!"`;
-
-exports[`basic js dev: 'wrangler dev' > can modify Worker during wrangler dev 2`] = `"Updated Worker! value"`;
-
-exports[`basic js dev: 'wrangler dev' > hotkeys can be disabled with wrangler dev 1`] = `"Hello World!"`;
