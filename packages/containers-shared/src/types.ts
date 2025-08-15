@@ -61,11 +61,11 @@ export type SharedContainerConfig = {
 	max_instances: number;
 	/** if undefined in config, defaults to "default" */
 	scheduling_policy: SchedulingPolicy;
-	/** if undefined in config, defaults to 25 */
-	rollout_step_percentage: number;
+	/** if undefined in config, defaults to [90, 10] */
+	rollout_step_percentage: number | number[];
 	/** if undefined in config, defaults to "full_auto" */
 	rollout_kind: "full_auto" | "full_manual" | "none";
-	rollout_active_grace_period?: number;
+	rollout_active_grace_period: number;
 	constraints: {
 		regions?: string[];
 		cities?: string[];

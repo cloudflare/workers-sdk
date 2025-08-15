@@ -2556,19 +2556,62 @@ function validateContainerApp(
 			containerAppOptional.image = resolvedImage;
 			containerAppOptional.image_build_context = resolvedBuildContextPath;
 
-			// Validate rollout related configs
-			if (
-				!isOptionalProperty(
-					containerAppOptional,
-					"rollout_step_percentage",
-					"number"
-				) ||
-				containerAppOptional.rollout_step_percentage > 100 ||
-				containerAppOptional.rollout_step_percentage < 25
-			) {
-				diagnostics.errors.push(
-					`"containers.rollout_step_percentage" field should be a number between 25 and 100, but got "${containerAppOptional.rollout_step_percentage}"`
-				);
+			// Validate rollout related configuration
+			if (containerAppOptional.rollout_step_percentage !== undefined) {
+				const rolloutStep = containerAppOptional.rollout_step_percentage;
+
+				if (typeof rolloutStep === "number") {
+					// If it's a number, it must be one of the allowed values
+					const allowedSingleValues = [5, 10, 20, 25, 50, 100];
+					if (!allowedSingleValues.includes(rolloutStep)) {
+						diagnostics.errors.push(
+							`"containers.rollout_step_percentage" must be one of [5, 10, 20, 25, 50, 100], but got ${rolloutStep}`
+						);
+					}
+				} else if (Array.isArray(rolloutStep)) {
+					// If it's an array, validate each step and ensure they sum to 100
+					const nonNumber: unknown[] = [];
+					const outOfRange: number[] = [];
+					let index = 0;
+					let ascending = true;
+					for (const step of rolloutStep) {
+						if (typeof step !== "number") {
+							nonNumber.push(step);
+						} else {
+							if (step < 10 || step > 100) {
+								outOfRange.push(step);
+							}
+
+							if (ascending && index > 0 && step < rolloutStep[index - 1]) {
+								diagnostics.errors.push(
+									`"containers.rollout_step_percentage" array elements must be in ascending order, but got "${rolloutStep}"`
+								);
+								ascending = false;
+							}
+							if (index === rolloutStep.length - 1 && step !== 100) {
+								diagnostics.errors.push(
+									`The final step in "containers.rollout_step_percentage" must be 100, but got "${step}"`
+								);
+							}
+							index++;
+						}
+					}
+
+					if (nonNumber.length) {
+						diagnostics.errors.push(
+							`"containers.rollout_step_percentage" array elements must be numbers, but got "${nonNumber.join(", ")}"`
+						);
+					}
+					if (outOfRange.length) {
+						diagnostics.errors.push(
+							`"containers.rollout_step_percentage" array elements must be between 10 and 100, but got "${outOfRange.join(", ")}"`
+						);
+					}
+				} else {
+					diagnostics.errors.push(
+						`"containers.rollout_step_percentage" must be a number or array of numbers, but got "${rolloutStep}"`
+					);
+				}
 			}
 			validateOptionalProperty(
 				diagnostics,
@@ -2606,6 +2649,22 @@ function validateContainerApp(
 					`"containers.max_instances" field should be a positive number, but got ${containerAppOptional.max_instances}`
 				);
 			}
+
+			// Validate rollout steps vs max_instances
+			if (
+				containerAppOptional.rollout_step_percentage !== undefined &&
+				containerAppOptional.max_instances !== undefined &&
+				Array.isArray(containerAppOptional.rollout_step_percentage)
+			) {
+				const rolloutStepsCount =
+					containerAppOptional.rollout_step_percentage.length;
+				if (rolloutStepsCount > containerAppOptional.max_instances) {
+					diagnostics.errors.push(
+						`"containers.rollout_step_percentage" cannot have more steps (${rolloutStepsCount}) than "max_instances" (${containerAppOptional.max_instances})`
+					);
+				}
+			}
+
 			validateOptionalProperty(
 				diagnostics,
 				field,

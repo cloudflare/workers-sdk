@@ -160,11 +160,19 @@ export type ContainerApp = {
 	};
 
 	/**
-	 * How a rollout should be done, defining the size of it
+	 * Configures what percentage of instances should be updated at each step of a rollout.
+	 * You can specify this as a single number, or an array of numbers.
+	 *
+	 * If this is a single number, each step will progress by that percentage.
+	 * The options are 5, 10, 20, 25, 50 or 100.
+	 *
+	 * If this is an array, each step specifies the cumulative rollout progress.
+	 * The final step must be 100.
+	 *
 	 * @optional
-	 * @default 25
+	 * @default [10,100]
 	 * */
-	rollout_step_percentage?: number;
+	rollout_step_percentage?: number | number[];
 
 	/**
 	 * How a rollout should be created. It supports the following modes:

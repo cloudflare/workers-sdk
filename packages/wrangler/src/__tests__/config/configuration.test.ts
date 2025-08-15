@@ -2437,7 +2437,7 @@ describe("normalizeAndValidateConfig()", () => {
 								scheduling_policy: "invalid",
 								unknown_field: "value",
 								rollout_active_grace_period: "60s",
-								rollout_step_percentage: "full",
+								rollout_step_percentage: "invalid",
 							},
 						],
 					} as unknown as RawConfig,
@@ -2455,7 +2455,7 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Expected \\"containers.image_build_context\\" to be of type string but got 123.
 					  - The image \\"something\\" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
 					    If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)
-					  - \\"containers.rollout_step_percentage\\" field should be a number between 25 and 100, but got \\"full\\"
+					  - \\"containers.rollout_step_percentage\\" must be a number or array of numbers, but got \\"invalid\\"
 					  - Expected \\"containers.rollout_kind\\" field to be one of [\\"full_auto\\",\\"full_manual\\",\\"none\\"] but got \\"invalid\\".
 					  - \\"containers.rollout_active_grace_period\\" field should be a positive number but got \\"60s\\"
 					  - Expected \\"containers.max_instances\\" to be of type number but got \\"invalid\\".
@@ -2474,7 +2474,7 @@ describe("normalizeAndValidateConfig()", () => {
 								image: "blah",
 								class_name: "test-class",
 								rollout_active_grace_period: -1,
-								rollout_step_percentage: 10,
+								rollout_step_percentage: 9,
 							},
 						],
 					} as unknown as RawConfig,
@@ -2487,7 +2487,7 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - The image \\"blah\\" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
 					    If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)
-					  - \\"containers.rollout_step_percentage\\" field should be a number between 25 and 100, but got \\"10\\"
+					  - \\"containers.rollout_step_percentage\\" must be one of [5, 10, 20, 25, 50, 100], but got 9
 					  - \\"containers.rollout_active_grace_period\\" field should be a positive number but got \\"-1\\""
 				`);
 			});
@@ -2552,6 +2552,113 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", limits should be set via \\"instance_type\\".
 					  - Unexpected fields found in containers.configuration field: \\"memory\\",\\"invalid_field\\",\\"another_invalid\\""
+				`);
+			});
+
+			it.each([{ value: 25 }, { value: [20, 50, 100] }])(
+				"should accept rollout_step_percentage set to $value",
+				(value) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "test-worker",
+							containers: [
+								{
+									class_name: "test-class",
+									image: "docker.io/test:latest",
+									rollout_step_percentage: value.value,
+								},
+							],
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(diagnostics.hasErrors()).toBe(false);
+				}
+			);
+
+			it("should error for invalid rollout_step_percentage number values", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "docker.io/test:latest",
+								rollout_step_percentage: 15,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers.rollout_step_percentage\\" must be one of [5, 10, 20, 25, 50, 100], but got 15"
+				`);
+			});
+
+			it("should error for rollout_step_percentage array with invalid items", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "docker.io/test:latest",
+								rollout_step_percentage: [20, 30, 1, 101],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers.rollout_step_percentage\\" array elements must be in ascending order, but got \\"20,30,1,101\\"
+					  - The final step in \\"containers.rollout_step_percentage\\" must be 100, but got \\"101\\"
+					  - \\"containers.rollout_step_percentage\\" array elements must be between 10 and 100, but got \\"1, 101\\""
+				`);
+			});
+
+			it("should error when rollout_step_percentage has more steps than max_instances", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								max_instances: 2,
+								rollout_step_percentage: [10, 50, 75, 100],
+							},
+						],
+						durable_objects: {
+							bindings: [
+								{
+									name: "TEST_DO",
+									class_name: "TestClass",
+								},
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers.rollout_step_percentage\\" cannot have more steps (4) than \\"max_instances\\" (2)"
 				`);
 			});
 		});
