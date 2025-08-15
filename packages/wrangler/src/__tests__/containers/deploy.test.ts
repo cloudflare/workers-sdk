@@ -883,7 +883,7 @@ describe("wrangler deploy with containers", () => {
 				containers: [
 					{
 						...DEFAULT_CONTAINER_FROM_REGISTRY,
-						rollout_step_percentage: [20, 30, 50],
+						rollout_step_percentage: [20, 30, 100],
 					},
 				],
 			});
@@ -928,15 +928,15 @@ describe("wrangler deploy with containers", () => {
 				steps: [
 					{
 						step_size: { percentage: 20 },
-						description: "Step 1 of 3 - rolled out for 20% of instances",
+						description: "Step 1 of 3 - rollout at 20% of instances",
 					},
 					{
 						step_size: { percentage: 30 },
-						description: "Step 2 of 3 - rolled out for 50% of instances",
+						description: "Step 2 of 3 - rollout at 30% of instances",
 					},
 					{
-						step_size: { percentage: 50 },
-						description: "Step 3 of 3 - rolled out for 100% of instances",
+						step_size: { percentage: 100 },
+						description: "Step 3 of 3 - rollout at 100% of instances",
 					},
 				],
 			});
@@ -1667,6 +1667,8 @@ function mockCreateApplicationRollout(expected?: Record<string, unknown>) {
 	msw.use(
 		http.post("*/applications/:id/rollouts", async ({ request }) => {
 			const json = await request.json();
+			console.dir(json);
+			console.dir(expected);
 			if (expected !== undefined) {
 				expect(json).toMatchObject(expected);
 			}

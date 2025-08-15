@@ -2628,6 +2628,39 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"containers.rollout_step_percentage\\" array elements must be between 10 and 100, but got \\"1, 101\\""
 				`);
 			});
+
+			it("should error when rollout_step_percentage has more steps than max_instances", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								max_instances: 2,
+								rollout_step_percentage: [10, 50, 75, 100],
+							},
+						],
+						durable_objects: {
+							bindings: [
+								{
+									name: "TEST_DO",
+									class_name: "TestClass",
+								},
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"containers.rollout_step_percentage\\" cannot have more steps (4) than \\"max_instances\\" (2)"
+				`);
+			});
 		});
 
 		describe("[kv_namespaces]", () => {

@@ -530,12 +530,10 @@ export const configRolloutStepsToAPI = (rolloutSteps: number | number[]) => {
 	} else {
 		const output: RolloutStepRequest[] = [];
 		let index = 1;
-		let progress = 0;
 		for (const step of rolloutSteps) {
-			progress += step;
 			output.push({
 				step_size: { percentage: step },
-				description: `Step ${index} of ${rolloutSteps.length} - rolled out for ${progress}% of instances`,
+				description: `Step ${index} of ${rolloutSteps.length} - rollout at ${step}% of instances`,
 			});
 			index++;
 		}
