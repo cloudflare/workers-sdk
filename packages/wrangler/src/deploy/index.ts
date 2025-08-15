@@ -226,6 +226,11 @@ export const deployCommand = createCommand({
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		"full-containers-rollout": {
+			describe:
+				"Rollout changes to Containers to 100% in one step. Overrides your Wrangler configuration file.",
+			type: "boolean",
+		},
 		"experimental-deploy-remote-diff-check": {
 			describe: `Experimental: Enable The Deployment Remote Diff check`,
 			type: "boolean",
@@ -376,6 +381,7 @@ export const deployCommand = createCommand({
 			projectRoot,
 			dispatchNamespace: args.dispatchNamespace,
 			experimentalAutoCreate: args.experimentalAutoCreate,
+			rolloutStepPercentage: args.fullContainersRollout ? 100 : undefined,
 		});
 
 		writeOutput({
