@@ -1,5 +1,19 @@
 # miniflare
 
+## 4.20250813.2
+
+### Minor Changes
+
+- [#10255](https://github.com/cloudflare/workers-sdk/pull/10255) [`ddadb93`](https://github.com/cloudflare/workers-sdk/commit/ddadb9320fef96f52fe010f0e98fd75d5a2925ea) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Add `/v1/session` endpoint for Browser Rendering local mode
+
+### Patch Changes
+
+- [#10249](https://github.com/cloudflare/workers-sdk/pull/10249) [`875197a`](https://github.com/cloudflare/workers-sdk/commit/875197a570edacbf1849a2f3d76c011e9b6f9cbf) Thanks [@penalosa](https://github.com/penalosa)! - Support JSRPC for remote bindings. This unlocks:
+  - JSRPC over Service Bindings
+  - JSRPC over Dispatch Namespace Bindings
+  - Email
+  - Pipelines
+
 ## 4.20250813.1
 
 ### Minor Changes

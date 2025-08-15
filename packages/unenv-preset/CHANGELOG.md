@@ -1,5 +1,13 @@
 # @cloudflare/unenv-preset
 
+## 2.6.2
+
+### Patch Changes
+
+- [#10374](https://github.com/cloudflare/workers-sdk/pull/10374) [`20520fa`](https://github.com/cloudflare/workers-sdk/commit/20520faa340005b9713007ccb8480fb6e97028d3) Thanks [@edmundhung](https://github.com/edmundhung)! - Simplify debug package resolution with nodejs_compat
+
+  A patched version of `debug` was previously introduced that resolved the package to a custom implementation. However, this caused issues due to CJS/ESM interop problems. We now resolve the `debug` package to use the Node.js implementation instead.
+
 ## 2.6.1
 
 ### Patch Changes
