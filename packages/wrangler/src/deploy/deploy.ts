@@ -9,7 +9,11 @@ import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { buildContainer, deployContainers } from "../cloudchamber/deploy";
-import { configFileName, formatConfigSnippet } from "../config";
+import {
+	configFileName,
+	formatConfigSnippet,
+	parseRawConfigFile,
+} from "../config";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -28,6 +32,7 @@ import { getMigrationsToUpload } from "../durable";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
+import { downloadWorkerConfig } from "../init";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -56,8 +61,9 @@ import {
 } from "../versions/api";
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
+import { getRemoteConfigDiff } from "./config-diffs";
 import type { AssetsOptions } from "../assets";
-import type { Config } from "../config";
+import type { Config, RawConfig } from "../config";
 import type {
 	CustomDomainRoute,
 	Route,
@@ -350,7 +356,7 @@ export default async function deploy(props: Props): Promise<{
 	targets?: string[];
 }> {
 	// TODO: warn if git/hg has uncommitted changes
-	const { config, accountId, name } = props;
+	const { config, accountId, name, entry } = props;
 	let workerTag: string | null = null;
 	let versionId: string | null = null;
 
@@ -360,6 +366,7 @@ export default async function deploy(props: Props): Promise<{
 		try {
 			const serviceMetaData = await fetchResult<{
 				default_environment: {
+					environment: string;
 					script: {
 						tag: string;
 						last_deployed_from: "dash" | "wrangler" | "api";
@@ -372,11 +379,49 @@ export default async function deploy(props: Props): Promise<{
 			workerTag = script.tag;
 
 			if (script.last_deployed_from === "dash") {
-				logger.warn(
-					`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
-				);
-				if (!(await confirm("Would you like to continue?"))) {
-					return { versionId, workerTag };
+				let configDiff: ReturnType<typeof getRemoteConfigDiff> | undefined;
+				if (getFlag("DEPLOY_REMOTE_DIFF_CHECK")) {
+					const remoteWorkerConfig = await downloadWorkerConfig(
+						accountId,
+						name,
+						entry.file,
+						serviceMetaData.default_environment.environment
+					);
+
+					let rawConfig: RawConfig | undefined;
+					if (config.configPath) {
+						try {
+							rawConfig = parseRawConfigFile(config.configPath);
+						} catch {
+							// We were unable to either read the file so the more comprehensive diffing just won't kick in
+							// (but a warning with a confirmation prompt will still be shown to the user)
+						}
+						if (rawConfig) {
+							configDiff = getRemoteConfigDiff(remoteWorkerConfig, rawConfig);
+						}
+					}
+				}
+
+				if (configDiff) {
+					// If there are only additive changes (or no changes at all) there should be no problem,
+					// just using the local config (and override the remote one) should be totally fine
+					if (!configDiff.nonDestructive) {
+						logger.warn(
+							"Your local configuration differs from the remote configuration of your Worker set via the Cloudflare Dashboard:" +
+								`\n${configDiff.diff}\n\n` +
+								"Deploying the Worker will override the remote configuration with your local one."
+						);
+						if (!(await confirm("Would you like to continue?"))) {
+							return { versionId, workerTag };
+						}
+					}
+				} else {
+					logger.warn(
+						`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
+					);
+					if (!(await confirm("Would you like to continue?"))) {
+						return { versionId, workerTag };
+					}
 				}
 			} else if (script.last_deployed_from === "api") {
 				logger.warn(

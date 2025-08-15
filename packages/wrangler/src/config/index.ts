@@ -176,6 +176,18 @@ export function readPagesConfig(
 	};
 }
 
+export const parseRawConfigFile = (configPath: string): RawConfig => {
+	if (configPath.endsWith(".toml")) {
+		return parseTOML(readFileSync(configPath), configPath);
+	}
+
+	if (configPath.endsWith(".json") || configPath.endsWith(".jsonc")) {
+		return parseJSONC(readFileSync(configPath), configPath) as RawConfig;
+	}
+
+	return {};
+};
+
 export const experimental_readRawConfig = (
 	args: ReadConfigCommandArgs,
 	options: ReadConfigOptions = {}
@@ -189,12 +201,9 @@ export const experimental_readRawConfig = (
 		args,
 		options
 	);
-	let rawConfig: RawConfig = {};
-	if (configPath?.endsWith("toml")) {
-		rawConfig = parseTOML(readFileSync(configPath), configPath);
-	} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
-		rawConfig = parseJSONC(readFileSync(configPath), configPath) as RawConfig;
-	}
+
+	const rawConfig = parseRawConfigFile(configPath ?? "");
+
 	return { rawConfig, configPath, userConfigPath };
 };
 

@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`pages deploy > with wrangler.json configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `"2ea0b43fa4411e79883bfbfc1dcb4360d1789067eca64a492604d59b8eab932c"`;
+exports[`pages deploy > with wrangler.json configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `"f8352930be2817a08c63c3e742d07a79dd080b48629186d000b8029a3a46ecc3"`;
 
 exports[`pages deploy > with wrangler.json configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 2`] = `
 "✨ Success! Uploaded 1 files (TIMINGS)
@@ -13,7 +13,7 @@ exports[`pages deploy > with wrangler.json configuration > should always deploy 
 
 exports[`pages deploy > with wrangler.json configuration > should error if user attempts to specify a custom config file path 1`] = `[Error: Pages does not support custom paths for the Wrangler configuration file]`;
 
-exports[`pages deploy > with wrangler.json configuration > should support wrangler.json 1`] = `"b6a9158832033622c937859452cd6fe4d9542ec8a863c17aa84f761140b750b9"`;
+exports[`pages deploy > with wrangler.json configuration > should support wrangler.json 1`] = `"fba80c98085b0cf492d832f1a5bf27c09f8ace84c721ccc315e0362074f9fe5d"`;
 
 exports[`pages deploy > with wrangler.json configuration > should support wrangler.json 2`] = `
 "✨ Success! Uploaded 1 files (TIMINGS)

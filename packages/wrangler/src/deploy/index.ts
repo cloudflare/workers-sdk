@@ -226,6 +226,12 @@ export const deployCommand = createCommand({
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		"experimental-deploy-remote-diff-check": {
+			describe: `Experimental: Enable The Deployment Remote Diff check`,
+			type: "boolean",
+			hidden: true,
+			alias: ["x-remote-diff-check"],
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -233,6 +239,7 @@ export const deployCommand = createCommand({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
+			DEPLOY_REMOTE_DIFF_CHECK: args.experimentalDeployRemoteDiffCheck ?? false,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
