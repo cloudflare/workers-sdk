@@ -154,7 +154,7 @@ async function resolveDevConfig(
 		testScheduled: input.dev?.testScheduled,
 		// absolute resolved path
 		persist: localPersistencePath,
-		registryPath: input.dev?.registryPath,
+		registry: input.dev?.registry,
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
 		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
@@ -231,7 +231,7 @@ async function resolveBindings(
 
 	// Print the initial bindings table
 	printCurrentBindings(
-		input.dev?.registryPath ? getWorkerRegistry(input.dev.registryPath) : null
+		input.dev?.registry ? getWorkerRegistry(input.dev.registry) : null
 	);
 
 	return {

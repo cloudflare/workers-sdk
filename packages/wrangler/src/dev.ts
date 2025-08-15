@@ -506,7 +506,7 @@ async function setupDevEnv(
 				liveReload: args.liveReload,
 				testScheduled: args.testScheduled,
 				logLevel: args.logLevel,
-				registryPath: args.disableDevRegistry ? undefined : getRegistryPath(),
+				registry: args.disableDevRegistry ? undefined : getRegistryPath(),
 				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
