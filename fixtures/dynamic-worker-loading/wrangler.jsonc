@@ -1,0 +1,13 @@
+{
+	"name": "dynamic-worker-loading",
+	"main": "src/index.ts",
+	"compatibility_date": "2023-05-04",
+	"unsafe": {
+		"bindings": [
+			{
+				"name": "LOADER",
+				"type": "worker-loader",
+			},
+		],
+	},
+}

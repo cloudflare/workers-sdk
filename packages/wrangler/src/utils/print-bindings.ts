@@ -510,10 +510,10 @@ export function printBindings(
 	if (unsafe?.bindings !== undefined && unsafe.bindings.length > 0) {
 		output.push(
 			...unsafe.bindings.map(({ name, type }) => ({
-				name: type,
+				name,
 				type: friendlyBindingNames.unsafe,
-				value: name,
-				mode: getMode({ isSimulatedLocally: false }),
+				value: type,
+				mode: getMode({ isSimulatedLocally: undefined }),
 			}))
 		);
 	}

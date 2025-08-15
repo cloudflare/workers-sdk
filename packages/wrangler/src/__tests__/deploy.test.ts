@@ -7901,31 +7901,31 @@ addEventListener('fetch', event => {});`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
-				Binding                                                                                        Resource
-				env.DATA_BLOB_ONE (some-data-blob.bin)                                                         Data Blob
-				env.DATA_BLOB_TWO (more-data-blob.bin)                                                         Data Blob
-				env.DURABLE_OBJECT_ONE (SomeDurableObject, defined in some-durable-object-worker)              Durable Object
-				env.DURABLE_OBJECT_TWO (AnotherDurableObject, defined in another-durable-object-worker)        Durable Object
-				env.KV_NAMESPACE_ONE (kv-ns-one-id)                                                            KV Namespace
-				env.KV_NAMESPACE_TWO (kv-ns-two-id)                                                            KV Namespace
-				env.R2_BUCKET_ONE (r2-bucket-one-name)                                                         R2 Bucket
-				env.R2_BUCKET_TWO (r2-bucket-two-name)                                                         R2 Bucket
-				env.R2_BUCKET_ONE_EU (r2-bucket-one-name (eu))                                                 R2 Bucket
-				env.R2_BUCKET_TWO_EU (r2-bucket-two-name (eu))                                                 R2 Bucket
-				env.httplogs (httplogs)                                                                        logfwdr
-				env.trace (trace)                                                                              logfwdr
-				env.AE_DATASET_ONE (ae-dataset-one-name)                                                       Analytics Engine Dataset
-				env.AE_DATASET_TWO (ae-dataset-two-name)                                                       Analytics Engine Dataset
-				env.TEXT_BLOB_ONE (my-entire-app-depends-on-this.cfg)                                          Text Blob
-				env.TEXT_BLOB_TWO (the-entirety-of-human-knowledge.txt)                                        Text Blob
-				env.some unsafe thing (UNSAFE_BINDING_ONE)                                                     Unsafe Metadata
-				env.another unsafe thing (UNSAFE_BINDING_TWO)                                                  Unsafe Metadata
-				env.ENV_VAR_ONE (123)                                                                          Environment Variable
-				env.ENV_VAR_TWO (\\"Hello, I'm an environment variable\\")                                         Environment Variable
-				env.WASM_MODULE_ONE (some_wasm.wasm)                                                           Wasm Module
-				env.WASM_MODULE_TWO (more_wasm.wasm)                                                           Wasm Module
-				env.extra_data (\\"interesting value\\")                                                           Unsafe Metadata
-				env.more_data (\\"dubious value\\")                                                                Unsafe Metadata
+				Binding                                                                                      Resource
+				env.DATA_BLOB_ONE (some-data-blob.bin)                                                       Data Blob
+				env.DATA_BLOB_TWO (more-data-blob.bin)                                                       Data Blob
+				env.DURABLE_OBJECT_ONE (SomeDurableObject, defined in some-durable-object-worker)            Durable Object
+				env.DURABLE_OBJECT_TWO (AnotherDurableObject, defined in another-durable-object-worker)      Durable Object
+				env.KV_NAMESPACE_ONE (kv-ns-one-id)                                                          KV Namespace
+				env.KV_NAMESPACE_TWO (kv-ns-two-id)                                                          KV Namespace
+				env.R2_BUCKET_ONE (r2-bucket-one-name)                                                       R2 Bucket
+				env.R2_BUCKET_TWO (r2-bucket-two-name)                                                       R2 Bucket
+				env.R2_BUCKET_ONE_EU (r2-bucket-one-name (eu))                                               R2 Bucket
+				env.R2_BUCKET_TWO_EU (r2-bucket-two-name (eu))                                               R2 Bucket
+				env.httplogs (httplogs)                                                                      logfwdr
+				env.trace (trace)                                                                            logfwdr
+				env.AE_DATASET_ONE (ae-dataset-one-name)                                                     Analytics Engine Dataset
+				env.AE_DATASET_TWO (ae-dataset-two-name)                                                     Analytics Engine Dataset
+				env.TEXT_BLOB_ONE (my-entire-app-depends-on-this.cfg)                                        Text Blob
+				env.TEXT_BLOB_TWO (the-entirety-of-human-knowledge.txt)                                      Text Blob
+				env.UNSAFE_BINDING_ONE (some unsafe thing)                                                   Unsafe Metadata
+				env.UNSAFE_BINDING_TWO (another unsafe thing)                                                Unsafe Metadata
+				env.ENV_VAR_ONE (123)                                                                        Environment Variable
+				env.ENV_VAR_TWO (\\"Hello, I'm an environment variable\\")                                       Environment Variable
+				env.WASM_MODULE_ONE (some_wasm.wasm)                                                         Wasm Module
+				env.WASM_MODULE_TWO (more_wasm.wasm)                                                         Wasm Module
+				env.extra_data (\\"interesting value\\")                                                         Unsafe Metadata
+				env.more_data (\\"dubious value\\")                                                              Unsafe Metadata
 
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -9585,7 +9585,7 @@ addEventListener('fetch', event => {});`
 						Worker Startup Time: 100 ms
 						Your Worker has access to the following bindings:
 						Binding                            Resource
-						env.binding-type (my-binding)      Unsafe Metadata
+						env.my-binding (binding-type)      Unsafe Metadata
 
 						Uploaded test-name (TIMINGS)
 						Deployed test-name triggers (TIMINGS)
@@ -9633,7 +9633,7 @@ addEventListener('fetch', event => {});`
 						Worker Startup Time: 100 ms
 						Your Worker has access to the following bindings:
 						Binding                          Resource
-						env.plain_text (my-binding)      Unsafe Metadata
+						env.my-binding (plain_text)      Unsafe Metadata
 
 						Uploaded test-name (TIMINGS)
 						Deployed test-name triggers (TIMINGS)
