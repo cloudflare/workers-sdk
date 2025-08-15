@@ -26,6 +26,12 @@
 			"miniflare:zod": ["./src/workers/shared/zod.worker.ts"]
 		}
 	},
-	"include": ["src/**/*.ts", "test/**/*.ts", "types"],
+	"files": ["test/fixtures/unsafe-plugin/index.ts"],
+	"include": [
+		"src/**/*.ts",
+		"test/**/*.ts",
+		"types",
+		"test/fixtures/unsafe-plugin/**/*.ts"
+	],
 	"exclude": ["src/workers/**/*.ts", "src/workers/node.d.ts", "test/fixtures"]
 }

@@ -51,6 +51,15 @@ const miniflareZodExtensionPath = path.join(
 	"shared",
 	"zod.worker.ts"
 );
+
+/**
+ * An array of folders in `test/fixtures` that require transpilation
+ * via ESBuild
+ */
+const fixtureBuilds = [
+	path.join(pkgRoot, "test/fixtures/unsafe-plugin/index.ts"),
+];
+
 /**
  * `workerd` `extensions` don't have access to "built-in" modules like
  * `node:buffer`, but do have access to "internal" modules like
@@ -171,6 +180,8 @@ async function buildPackage() {
 	} catch (e) {
 		if (e.code !== "ENOENT") throw e;
 	}
+	// Add any test fixtures that require transpilation via ESBuild
+	testPaths.push(...fixtureBuilds);
 	const outPath = path.join(pkgRoot, "dist");
 
 	const buildOptions = {
