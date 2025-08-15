@@ -227,5 +227,6 @@ export async function launchBrowser({
 	const wsEndpoint = await browserProcess.waitForLineOutput(
 		CDP_WEBSOCKET_ENDPOINT_REGEX
 	);
-	return { sessionId, browserProcess, wsEndpoint };
+	const startTime = Date.now();
+	return { sessionId, browserProcess, startTime, wsEndpoint };
 }
