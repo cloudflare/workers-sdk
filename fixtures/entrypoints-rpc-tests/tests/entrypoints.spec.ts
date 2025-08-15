@@ -1,10 +1,10 @@
-import assert from "node:assert";
 import fs, { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { Miniflare } from "miniflare";
 import dedent from "ts-dedent";
 import { Agent, fetch, setGlobalDispatcher } from "undici";
-import { test as baseTest, describe, expect, vi } from "vitest";
+import { test as baseTest, describe, expect, onTestFinished, vi } from "vitest";
 import {
 	runWranglerDev,
 	runWranglerPagesDev,
@@ -720,7 +720,7 @@ describe("entrypoints", () => {
 	}) => {
 		// Start entry worker first, so the server starts with a stubbed service not
 		// found binding
-		const { url, session } = await dev({
+		const { url } = await dev({
 			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
@@ -774,7 +774,7 @@ describe("entrypoints", () => {
 	}) => {
 		// Start entry worker first, so the server starts with a stubbed service not
 		// found binding
-		const { url, session } = await dev({
+		const { url } = await dev({
 			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
@@ -816,6 +816,57 @@ describe("entrypoints", () => {
 			const response = await fetch(url);
 			const text = await response.text();
 			expect(text).toBe("secure");
+		});
+	});
+
+	test("should support binding to version of wrangler without entrypoints support over HTTPS", async ({
+		dev,
+		isolatedDevRegistryPath,
+	}) => {
+		// Start entry worker first, so the server starts with a stubbed service not
+		// found binding
+		const { url } = await dev({
+			"wrangler.toml": dedent`
+			name = "entry"
+			main = "index.ts"
+			[[services]]
+			binding = "SERVICE"
+			service = "bound"
+		`,
+			"index.ts": dedent`
+			export default {
+				async fetch(request, env, ctx) {
+					return env.SERVICE.fetch('http://placeholder/');
+				}
+			}
+		`,
+		});
+		let response = await fetch(url);
+		expect(await response.text()).toBe(
+			'Couldn\'t find a local dev session for the "default" entrypoint of service "bound" to proxy to'
+		);
+
+		const boundWorker = new Miniflare({
+			name: "bound",
+			unsafeDevRegistryPath: isolatedDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			https: true,
+			script: `
+				export default {
+					async fetch(request, env, ctx) {
+						return new Response("Hello from bound!");
+					}
+				}
+			`,
+			// No direct sockets so that no entrypointAddresses will be registered
+		});
+		onTestFinished(() => boundWorker.dispose());
+
+		await boundWorker.ready;
+		await waitFor(async () => {
+			let response = await fetch(url);
+			expect(await response.text()).toBe("Hello from bound!");
 		});
 	});
 
