@@ -2649,6 +2649,22 @@ function validateContainerApp(
 					`"containers.max_instances" field should be a positive number, but got ${containerAppOptional.max_instances}`
 				);
 			}
+
+			// Validate rollout steps vs max_instances
+			if (
+				containerAppOptional.rollout_step_percentage !== undefined &&
+				containerAppOptional.max_instances !== undefined &&
+				Array.isArray(containerAppOptional.rollout_step_percentage)
+			) {
+				const rolloutStepsCount =
+					containerAppOptional.rollout_step_percentage.length;
+				if (rolloutStepsCount > containerAppOptional.max_instances) {
+					diagnostics.errors.push(
+						`"containers.rollout_step_percentage" cannot have more steps (${rolloutStepsCount}) than "max_instances" (${containerAppOptional.max_instances})`
+					);
+				}
+			}
+
 			validateOptionalProperty(
 				diagnostics,
 				field,
