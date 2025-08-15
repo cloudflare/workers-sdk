@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import getPort from "get-port";
+import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
 import { readConfig } from "../../config";
 import { getCloudflareComplianceRegion } from "../../environment-variables/misc-variables";
 import { getBasePath } from "../../paths";
@@ -35,11 +36,6 @@ export async function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
 	options?: StartRemoteProxySessionOptions
 ): Promise<RemoteProxySession> {
-	const proxyServerWorkerWranglerConfig = path.resolve(
-		getBasePath(),
-		"templates/remoteBindings/proxyServerWorker/wrangler.jsonc"
-	);
-
 	// Transform all bindings to use "raw" mode
 	const rawBindings = Object.fromEntries(
 		Object.entries(bindings ?? {}).map(([key, binding]) => [
@@ -48,9 +44,16 @@ export async function startRemoteProxySession(
 		])
 	);
 
+	const proxyServerWorkerWranglerConfig = path.resolve(
+		getBasePath(),
+		"templates/remoteBindings/wrangler.jsonc"
+	);
+
 	const worker = await startWorker({
 		name: options?.workerName,
+		entrypoint: remoteBindingsWorkerPath,
 		config: proxyServerWorkerWranglerConfig,
+		compatibilityDate: "2025-04-28",
 		dev: {
 			remote: "minimal",
 			auth: options?.auth,

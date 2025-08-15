@@ -3,10 +3,8 @@ import LOCAL_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespa
 import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
 import {
-	getUserBindingServiceName,
 	Plugin,
 	ProxyNodeBinding,
-	remoteProxyClientWorker,
 	RemoteProxyConnectionString,
 } from "../shared";
 
@@ -35,20 +33,23 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 		const bindings = Object.entries(
 			options.dispatchNamespaces
 		).map<Worker_Binding>(([name, config]) => {
+			assert(
+				config.remoteProxyConnectionString,
+				"Dispatch Namespace bindings only support running remotely"
+			);
+
 			return {
 				name,
 				wrapped: {
 					moduleName: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-dispatch-namespace`,
 					innerBindings: [
 						{
-							name: "fetcher",
-							service: {
-								name: getUserBindingServiceName(
-									DISPATCH_NAMESPACE_PLUGIN_NAME,
-									config.namespace,
-									config.remoteProxyConnectionString
-								),
-							},
+							name: "remoteProxyConnectionString",
+							text: config.remoteProxyConnectionString.href,
+						},
+						{
+							name: "binding",
+							text: name,
 						},
 					],
 				},
@@ -67,28 +68,8 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 			])
 		);
 	},
-	async getServices({ options }) {
-		if (!options.dispatchNamespaces) {
-			return [];
-		}
-
-		return Object.entries(options.dispatchNamespaces).map(([name, config]) => {
-			assert(
-				config.remoteProxyConnectionString,
-				"Dispatch Namespace bindings only support running remotely"
-			);
-			return {
-				name: getUserBindingServiceName(
-					DISPATCH_NAMESPACE_PLUGIN_NAME,
-					config.namespace,
-					config.remoteProxyConnectionString
-				),
-				worker: remoteProxyClientWorker(
-					config.remoteProxyConnectionString,
-					name
-				),
-			};
-		});
+	async getServices() {
+		return [];
 	},
 	getExtensions({ options }) {
 		if (!options.some((o) => o.dispatchNamespaces)) {

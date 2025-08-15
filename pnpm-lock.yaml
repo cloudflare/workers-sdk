@@ -1787,6 +1787,9 @@ importers:
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared
+      '@cloudflare/jsrpc':
+        specifier: link:../../vendor/jsrpc
+        version: link:../../vendor/jsrpc
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler
@@ -3463,6 +3466,9 @@ importers:
       '@cloudflare/eslint-config-worker':
         specifier: workspace:*
         version: link:../eslint-config-worker
+      '@cloudflare/jsrpc':
+        specifier: link:../../vendor/jsrpc
+        version: link:../../vendor/jsrpc
       '@cloudflare/pages-shared':
         specifier: workspace:^
         version: link:../pages-shared

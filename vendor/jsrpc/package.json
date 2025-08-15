@@ -1,0 +1,13 @@
+{
+	"name": "@cloudflare/jsrpc",
+	"version": "0.0.1-7b27c5754f2a48e21929a903c8718a425c224ea5",
+	"description": "JavaScript/TypeScript-native RPC library with Promise Pipelining",
+	"license": "MIT",
+	"author": "Kenton Varda <kenton@cloudflare.com>",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist"
+	]
+}

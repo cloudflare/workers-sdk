@@ -1,8 +1,7 @@
-import { randomUUID } from "node:crypto";
+import assert from "node:assert";
 import { readFile, writeFile } from "node:fs/promises";
-import os from "node:os";
 import { setTimeout } from "node:timers/promises";
-import { afterAll, beforeAll, describe, test, vi } from "vitest";
+import { beforeAll, describe, test, vi } from "vitest";
 import {
 	fetchJson,
 	isBuildAndPreviewOnWindows,
@@ -22,31 +21,36 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 		//       tests to run sequentially in order to avoid race conditions
 		.sequential("remote bindings tests", () => {
 			const replacements = {
-				"<<REMOTE_WORKER_PLACEHOLDER>>": `tmp-e2e-vite-remote-${randomUUID().split("-")[0]}`,
-				"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `tmp-e2e-vite-remote-alt-${randomUUID().split("-")[0]}`,
+				"<<REMOTE_WORKER_PLACEHOLDER>>": `preserve-e2e-vite-remote`,
+				"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `preserve-e2e-vite-remote-alt`,
 			};
 
 			const projectPath = seed("remote-bindings", "pnpm", replacements);
 
-			beforeAll(() => {
-				runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker`);
-				runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker-alt`);
+			beforeAll(async () => {
+				try {
+					assert(
+						(
+							await fetch(
+								"https://preserve-e2e-vite-remote.devprod-testing7928.workers.dev/"
+							)
+						).status !== 404
+					);
+				} catch (e) {
+					runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker`);
+				}
+				try {
+					assert(
+						(
+							await fetch(
+								"https://preserve-e2e-vite-remote-alt.devprod-testing7928.workers.dev/"
+							)
+						).status !== 404
+					);
+				} catch {
+					runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker-alt`);
+				}
 			}, 35_000);
-
-			afterAll(() => {
-				// Try to clean up the remote workers after tests but give up after a couple of seconds
-				// or if the deletion fails.
-				runCommand(
-					`npx wrangler delete --force`,
-					`${projectPath}/remote-worker`,
-					{ canFail: true, timeout: 2_000 }
-				);
-				runCommand(
-					`npx wrangler delete --force`,
-					`${projectPath}/remote-worker-alt`,
-					{ canFail: true, timeout: 2_000 }
-				);
-			});
 
 			describe.each(commands)('with "%s" command', (command) => {
 				test.skipIf(isBuildAndPreviewOnWindows(command))(
