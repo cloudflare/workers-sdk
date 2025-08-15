@@ -5,6 +5,7 @@
 		"worker-basic",
 		"worker-cross-env",
 		"worker-crypto",
+		"worker-debug",
 		"worker-postgres",
 		"worker-process",
 		"worker-random",

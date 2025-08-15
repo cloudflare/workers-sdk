@@ -2662,6 +2662,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20250813.0
+      '@types/debug':
+        specifier: ^4.1.12
+        version: 4.1.12
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
@@ -2671,6 +2674,9 @@ importers:
       cross-fetch:
         specifier: ^4.0.0
         version: 4.1.0(encoding@0.1.13)
+      debug:
+        specifier: ^4.4.1
+        version: 4.4.1(supports-color@9.2.2)
       pg:
         specifier: ^8.16.3
         version: 8.16.3
