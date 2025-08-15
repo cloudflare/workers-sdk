@@ -60,7 +60,9 @@ export const queuesSubscriptionUpdateCommand = createCommand({
 				.filter(Boolean);
 
 			if (events.length === 0) {
-				throw new UserError("At least one event must be specified");
+				throw new UserError(
+					"No events specified. Use --events to provide a comma-separated list of event types to subscribe to. For a complete list of sources and corresponding events, please refer to: https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/"
+				);
 			}
 
 			updateRequest.events = events;
@@ -73,7 +75,7 @@ export const queuesSubscriptionUpdateCommand = createCommand({
 		// Check if any updates were provided
 		if (Object.keys(updateRequest).length === 0) {
 			throw new UserError(
-				"At least one field must be specified to update (--name, --events, or --enabled)"
+				"No fields specified for update. Provide at least one of --name, --events, or --enabled to update the subscription."
 			);
 		}
 
@@ -94,7 +96,7 @@ export const queuesSubscriptionUpdateCommand = createCommand({
 		}
 
 		logger.log(
-			`✨ Successfully updated event subscription '${updatedSubscription.name}' (${args.id}).`
+			`✨ Successfully updated event subscription '${updatedSubscription.name}' with id '${args.id}'.`
 		);
 	},
 });

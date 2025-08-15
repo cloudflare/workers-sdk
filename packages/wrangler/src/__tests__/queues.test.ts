@@ -2304,7 +2304,7 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"Creating event subscription for queue 'testQueue'...
-					✨ Successfully created event subscription 'testQueue workersBuilds.worker' (sub-123)."
+					✨ Successfully created event subscription 'testQueue workersBuilds.worker' with id 'sub-123'."
 				`);
 			});
 
@@ -2344,7 +2344,7 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"Creating event subscription for queue 'testQueue'...
-					✨ Successfully created event subscription 'Custom Subscription' (sub-123)."
+					✨ Successfully created event subscription 'Custom Subscription' with id 'sub-123'."
 				`);
 			});
 
@@ -2375,7 +2375,7 @@ describe("wrangler", () => {
 						"queues subscription create testQueue --source workersBuilds.worker --events '' --worker-name my-worker"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: At least one event must be specified]`
+					`[Error: No events specified. Use --events to provide a comma-separated list of event types to subscribe to. For a complete list of sources and corresponding events, please refer to: https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/]`
 				);
 			});
 
@@ -2753,7 +2753,7 @@ describe("wrangler", () => {
 				expect(deleteRequest.count).toEqual(1);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"✨ Successfully deleted event subscription 'Test Subscription 1' (sub-123)."
+					"✨ Successfully deleted event subscription 'Test Subscription 1' with id 'sub-123'."
 				`);
 			});
 
@@ -2782,7 +2782,7 @@ describe("wrangler", () => {
 				expect(deleteRequest.count).toEqual(1);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"✨ Successfully deleted event subscription 'Test Subscription 1' (sub-123)."
+					"✨ Successfully deleted event subscription 'Test Subscription 1' with id 'sub-123'."
 				`);
 			});
 
@@ -2883,7 +2883,7 @@ describe("wrangler", () => {
 				expect(requests.count).toBe(1);
 				expect(std.out).toMatchInlineSnapshot(`
 					"Updating event subscription...
-					✨ Successfully updated event subscription 'updated-subscription' (subscription-123)."
+					✨ Successfully updated event subscription 'updated-subscription' with id 'subscription-123'."
 				`);
 			});
 
@@ -2921,7 +2921,7 @@ describe("wrangler", () => {
 						`queues subscription update test-queue --id ${subscriptionId}`
 					)
 				).rejects.toThrowError(
-					"At least one field must be specified to update (--name, --events, or --enabled)"
+					"No fields specified for update. Provide at least one of --name, --events, or --enabled to update the subscription."
 				);
 			});
 		});

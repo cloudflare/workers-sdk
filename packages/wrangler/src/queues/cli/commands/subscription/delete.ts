@@ -51,7 +51,7 @@ export const queuesSubscriptionDeleteCommand = createCommand({
 		await deleteEventSubscription(config, args.id);
 
 		logger.log(
-			`✨ Successfully deleted event subscription '${subscription.name}' (${args.id}).`
+			`✨ Successfully deleted event subscription '${subscription.name}' with id '${subscription.id}'.`
 		);
 	},
 });

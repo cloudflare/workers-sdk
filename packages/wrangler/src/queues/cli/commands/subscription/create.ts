@@ -131,7 +131,9 @@ export const queuesSubscriptionCreateCommand = createCommand({
 			.filter(Boolean);
 
 		if (events.length === 0) {
-			throw new UserError("At least one event must be specified");
+			throw new UserError(
+				"No events specified. Use --events to provide a comma-separated list of event types to subscribe to. For a complete list of sources and corresponding events, please refer to: https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/"
+			);
 		}
 
 		const request: CreateEventSubscriptionRequest = {
@@ -154,7 +156,7 @@ export const queuesSubscriptionCreateCommand = createCommand({
 		);
 
 		logger.log(
-			`✨ Successfully created event subscription '${subscription.name}' (${subscription.id}).`
+			`✨ Successfully created event subscription '${subscription.name}' with id '${subscription.id}'.`
 		);
 	},
 });
