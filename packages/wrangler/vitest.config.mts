@@ -34,6 +34,7 @@ function embedWorkersPlugin() {
 				metafile: true,
 				entryPoints: [id],
 				outdir: OUTDIR,
+				external: ["cloudflare:email", "cloudflare:workers"],
 			});
 			const watchFiles = Object.keys(result?.metafile?.inputs ?? {});
 			const scriptPath = Object.keys(result?.metafile?.outputs ?? {}).find(
