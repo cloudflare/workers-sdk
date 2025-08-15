@@ -14,11 +14,7 @@ type TestConfig = {
 	// "nodejs_compat" is included by default
 	compatibilityFlags?: string[];
 	// Assert runtime compatibility flag values
-	expectRuntimeFlags?: {
-		enable_nodejs_http_modules?: boolean;
-		enable_nodejs_http_server_modules?: boolean;
-		enable_nodejs_os_module?: boolean;
-	};
+	expectRuntimeFlags?: Record<string, boolean>;
 };
 
 const testConfigs: TestConfig[] = [
@@ -125,7 +121,36 @@ const testConfigs: TestConfig[] = [
 			},
 		},
 	],
-].flat();
+	// node:fs and node:fs/promises
+	[
+		{
+			name: "fs disabled by date",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_fs_module: false,
+			},
+		},
+		// TODO: add a config when fs is enabled by default (date no set yet)
+		{
+			name: "fs enabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["enable_nodejs_fs_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_fs_module: true,
+			},
+		},
+		// TODO: change the date pass the default enabled date (date not set yet)
+		{
+			name: "fs disabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["disable_nodejs_fs_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_fs_module: false,
+			},
+		},
+	],
+].flat() as TestConfig[];
 
 describe.each(testConfigs)(
 	`Preset test: $name`,
@@ -197,13 +222,15 @@ describe.each(testConfigs)(
 				"%s",
 				{ timeout: 20_000 },
 				async (testName) => {
-					// Retries the callback until it succeeds or times out.
-					// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-					await vi.waitFor(async () => {
-						const response = await fetch(`${url}/${testName}`);
-						const body = await response.text();
-						expect(body).toMatch("passed");
-					});
+					if (testName === "testFs") {
+						// Retries the callback until it succeeds or times out.
+						// Useful for the i.e. DNS tests where underlying requests might error/timeout.
+						await vi.waitFor(async () => {
+							const response = await fetch(`${url}/${testName}`);
+							const body = await response.text();
+							expect(body).toMatch("passed");
+						});
+					}
 				}
 			);
 		});
