@@ -2572,27 +2572,31 @@ function validateContainerApp(
 					// If it's an array, validate each step and ensure they sum to 100
 					const nonNumber: unknown[] = [];
 					const outOfRange: number[] = [];
+					let index = 0;
+					let ascending = true;
 					for (const step of rolloutStep) {
 						if (typeof step !== "number") {
 							nonNumber.push(step);
-						} else if (step < 10 || step > 100) {
-							outOfRange.push(step);
+						} else {
+							if (step < 10 || step > 100) {
+								outOfRange.push(step);
+							}
+
+							if (ascending && index > 0 && step < rolloutStep[index - 1]) {
+								diagnostics.errors.push(
+									`"containers.rollout_step_percentage" array elements must be in ascending order, but got "${rolloutStep}"`
+								);
+								ascending = false;
+							}
+							if (index === rolloutStep.length - 1 && step !== 100) {
+								diagnostics.errors.push(
+									`The final step in "containers.rollout_step_percentage" must be 100, but got "${step}"`
+								);
+							}
+							index++;
 						}
 					}
 
-					// Only check sum if no type/range errors
-
-					if (nonNumber.length === 0 && outOfRange.length === 0) {
-						const sum = rolloutStep.reduce(
-							(acc: number, step: number) => acc + step,
-							0
-						);
-						if (sum !== 100) {
-							diagnostics.errors.push(
-								`"containers.rollout_step_percentage" array elements must sum to 100, but values summed to "${sum}"`
-							);
-						}
-					}
 					if (nonNumber.length) {
 						diagnostics.errors.push(
 							`"containers.rollout_step_percentage" array elements must be numbers, but got "${nonNumber.join(", ")}"`
