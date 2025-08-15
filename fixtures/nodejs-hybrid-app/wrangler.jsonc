@@ -16,5 +16,6 @@
 		"DB_NAME": "pfmegrnargs",
 		"DB_USERNAME": "reader",
 		"DB_PASSWORD": "NWDMCE5xdipIjRrp",
+		"DEBUG": "example:*,test",
 	},
 }
