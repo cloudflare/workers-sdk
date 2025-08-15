@@ -2555,7 +2555,7 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it.each([{ value: 25 }, { value: [20, 30, 50] }])(
+			it.each([{ value: 25 }, { value: [20, 50, 100] }])(
 				"should accept rollout_step_percentage set to $value",
 				(value) => {
 					const { diagnostics } = normalizeAndValidateConfig(
@@ -2611,7 +2611,7 @@ describe("normalizeAndValidateConfig()", () => {
 							{
 								class_name: "test-class",
 								image: "docker.io/test:latest",
-								rollout_step_percentage: [20, 30, 1, 101, "1%"],
+								rollout_step_percentage: [20, 30, 1, 101],
 							},
 						],
 					} as unknown as RawConfig,
@@ -2623,32 +2623,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers.rollout_step_percentage\\" array elements must be numbers, but got \\"1%\\"
+					  - \\"containers.rollout_step_percentage\\" array elements must be in ascending order, but got \\"20,30,1,101\\"
+					  - The final step in \\"containers.rollout_step_percentage\\" must be 100, but got \\"101\\"
 					  - \\"containers.rollout_step_percentage\\" array elements must be between 10 and 100, but got \\"1, 101\\""
-				`);
-			});
-
-			it("should error for rollout_step_percentage array that does not sum to 100", () => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "test-worker",
-						containers: [
-							{
-								class_name: "test-class",
-								image: "docker.io/test:latest",
-								rollout_step_percentage: [20, 30],
-							},
-						],
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - \\"containers.rollout_step_percentage\\" array elements must sum to 100, but values summed to \\"50\\""
 				`);
 			});
 		});

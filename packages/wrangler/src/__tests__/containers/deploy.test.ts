@@ -844,7 +844,7 @@ describe("wrangler deploy with containers", () => {
 	});
 
 	describe("rollout_percentage_steps", () => {
-		it("should create rollout with step_percentage when rollout_step_percentage is a number", async () => {
+		it("should create rollout with *step_percentage* when rollout_step_percentage is a number", async () => {
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
 				containers: [
@@ -877,7 +877,7 @@ describe("wrangler deploy with containers", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should create rollout with step_percentage when rollout_step_percentage is a number", async () => {
+		it("should create rollout with *steps* when rollout_step_percentage is an array of numbers", async () => {
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
 				containers: [

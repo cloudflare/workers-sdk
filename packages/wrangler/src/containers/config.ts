@@ -72,7 +72,7 @@ export const getNormalizedContainerOptions = async (
 					city.toLowerCase()
 				),
 			},
-			rollout_step_percentage: container.rollout_step_percentage ?? [10, 90],
+			rollout_step_percentage: container.rollout_step_percentage ?? [10, 100],
 			rollout_kind: container.rollout_kind ?? "full_auto",
 			rollout_active_grace_period: container.rollout_active_grace_period ?? 0,
 			observability: {
