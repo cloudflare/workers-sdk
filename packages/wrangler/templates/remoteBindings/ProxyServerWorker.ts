@@ -16,10 +16,10 @@ class BindingNotFoundError extends Error {
  * However, there are some special cases:
  *  - SendEmail bindings need to take EmailMessage as their first parameter,
  *    which is not serialisable. As such, we reconstruct it before sending it
- *    on to the binding. See also packages/miniflare/src/workers/email/email.worker.ts
+ *    on to the binding. See packages/miniflare/src/workers/email/email.worker.ts
  *  - Dispatch Namespace bindings have a synchronous .get() method. Since we
  *    can't emulate that over an async boundary, we mock it locally and _actually_
- *    perform the .get() remotely at the first appropriate async point. See also
+ *    perform the .get() remotely at the first appropriate async point. See
  *    packages/miniflare/src/workers/dispatch-namespace/dispatch-namespace.worker.ts
  *
  * getExposedJSRPCBinding() and getExposedFetcher() perform the logic for figuring out
