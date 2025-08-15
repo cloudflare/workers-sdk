@@ -15,7 +15,7 @@ function stripSlashPrefix(path: string) {
 	return path[0] === "/" ? path.slice(1) : path;
 }
 
-const quickEditHost = "https://quick-edit.devprod.cloudflare.dev";
+const quickEditHost = "https://e98a7604.quick-edit-workers.devprod.cloudflare.dev";
 
 function constructVSCodeURL(serviceId: string, baseURL: string) {
 	const workerPath = `cfs:/${serviceId}`;
