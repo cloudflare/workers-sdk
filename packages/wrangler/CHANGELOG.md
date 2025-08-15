@@ -1,5 +1,20 @@
 # wrangler
 
+## 3.114.14
+
+### Patch Changes
+
+- [#10330](https://github.com/cloudflare/workers-sdk/pull/10330) [`dab7683`](https://github.com/cloudflare/workers-sdk/commit/dab768338918ca3ae19ef6ec432beeb4b11032ed) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Do not attempt to update queue producer settings when deploying a Worker with a queue binding
+
+  Previously, each deployed Worker would update a subset of the queue producer's settings for each queue binding, which could result in broken queue producers or at least conflicts where different Workers tried to set different producer settings on a shared queue.
+
+- [#10233](https://github.com/cloudflare/workers-sdk/pull/10233) [`a00a124`](https://github.com/cloudflare/workers-sdk/commit/a00a1246d478fe8184d1f7249394afa99bcddc72) Thanks [@veggiedefender](https://github.com/veggiedefender)! - Increase the maxBuffer size for capnp uploads
+
+- [#10228](https://github.com/cloudflare/workers-sdk/pull/10228) [`77a4364`](https://github.com/cloudflare/workers-sdk/commit/77a43641c2d5eb7700adb9c3ef7bc3b04eaa3207) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix `NonRetryableError` thrown with an empty error message not stopping workflow retries locally
+
+- Updated dependencies []:
+  - miniflare@3.20250718.1
+
 ## 3.114.13
 
 ### Patch Changes
