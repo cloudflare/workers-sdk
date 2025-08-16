@@ -19,11 +19,11 @@ import {
 	convertCfWorkerInitBindingsToBindings,
 	unwrapHook,
 } from "./utils";
-import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type { RemoteProxySession } from "../remoteBindings";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
+	DevRegistryUpdateEvent,
 	PreviewTokenExpiredEvent,
 	ReloadCompleteEvent,
 	ReloadStartEvent,
@@ -106,7 +106,7 @@ export async function convertToConfigBundle(
 		complianceRegion: event.config.complianceRegion,
 		bindings,
 		migrations: event.config.migrations,
-		workerDefinitions: event.config.dev?.registry,
+		devRegistry: event.config.dev.registry,
 		legacyAssetPaths: event.config.legacy?.site?.bucket
 			? {
 					baseDirectory: event.config.legacy?.site?.bucket,
@@ -287,14 +287,20 @@ export class LocalRuntimeController extends RuntimeController {
 				logger.log(chalk.dim("⎔ Container image(s) ready"));
 			}
 
-			const { options, internalObjects, entrypointNames } =
-				await MF.buildMiniflareOptions(
-					this.#log,
-					configBundle,
-					this.#proxyToUserWorkerAuthenticationSecret,
-					this.#remoteProxySessionData?.session?.remoteProxyConnectionString,
-					!!experimentalRemoteBindings
-				);
+			const options = await MF.buildMiniflareOptions(
+				this.#log,
+				configBundle,
+				this.#proxyToUserWorkerAuthenticationSecret,
+				this.#remoteProxySessionData?.session?.remoteProxyConnectionString,
+				!!experimentalRemoteBindings,
+				(registry) => {
+					logger.log(chalk.dim("⎔ Connection status updated"));
+					this.emitDevRegistryUpdateEvent({
+						type: "devRegistryUpdate",
+						registry,
+					});
+				}
+			);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
 				logger.log(chalk.dim("⎔ Starting local server..."));
@@ -322,13 +328,6 @@ export class LocalRuntimeController extends RuntimeController {
 				return;
 			}
 
-			// Get entrypoint addresses
-			const entrypointAddresses: WorkerEntrypointsDefinition = {};
-			for (const name of entrypointNames) {
-				const directUrl = await this.#mf.unsafeGetDirectURL(undefined, name);
-				const port = parseInt(directUrl.port);
-				entrypointAddresses[name] = { host: directUrl.hostname, port };
-			}
 			this.emitReloadCompleteEvent({
 				type: "reloadComplete",
 				config: data.config,
@@ -361,8 +360,6 @@ export class LocalRuntimeController extends RuntimeController {
 					},
 					liveReload: data.config.dev?.liveReload,
 					proxyLogsToController: data.bundle.entry.format === "service-worker",
-					internalDurableObjects: internalObjects,
-					entrypointAddresses,
 				},
 			});
 		} catch (error) {
@@ -448,6 +445,9 @@ export class LocalRuntimeController extends RuntimeController {
 	}
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
 		this.emit("reloadComplete", data);
+	}
+	emitDevRegistryUpdateEvent(data: DevRegistryUpdateEvent): void {
+		this.emit("devRegistryUpdate", data);
 	}
 }
 

@@ -285,8 +285,6 @@ export class RemoteRuntimeController extends RuntimeController {
 					},
 					liveReload: config.dev.liveReload,
 					proxyLogsToController: true,
-					internalDurableObjects: [],
-					entrypointAddresses: {},
 				},
 			});
 		} catch (error) {
