@@ -4,8 +4,8 @@ import events from "node:events";
 import path from "node:path";
 import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
 import dedent from "ts-dedent";
-import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
-import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
+import inspectorProxyWorkerPath from "worker:start-dev-worker/InspectorProxyWorker";
+import proxyWorkerPath from "worker:start-dev-worker/ProxyWorker";
 import WebSocket from "ws";
 import {
 	logConsoleMessage,

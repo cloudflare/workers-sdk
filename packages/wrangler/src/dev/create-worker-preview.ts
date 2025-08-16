@@ -7,7 +7,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { ParseError, parseJSON } from "../parse";
 import { getAccessToken } from "../user/access";
-import { isAbortError } from "../utils/isAbortError";
+import { isAbortError } from "../utils/is-abort-error";
 import type { CfWorkerContext } from "../deployment-bundle/worker";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";

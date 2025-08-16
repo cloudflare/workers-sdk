@@ -1,5 +1,5 @@
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
+import { LocalRuntimeController } from "../api/start-dev-worker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";

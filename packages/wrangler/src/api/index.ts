@@ -10,6 +10,6 @@ export {
 	deleteMTlsCertificate,
 	uploadCaCertificateFromFs,
 } from "./mtls-certificate";
-export * from "./startDevWorker";
+export * from "./start-dev-worker";
 export * from "./integrations";
 export * from "./remoteBindings";

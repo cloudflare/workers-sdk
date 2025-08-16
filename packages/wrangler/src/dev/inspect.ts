@@ -5,7 +5,7 @@ import open from "open";
 import {
 	isAllowedSourceMapPath,
 	isAllowedSourcePath,
-} from "../api/startDevWorker/bundle-allowed-paths";
+} from "../api/start-dev-worker/bundle-allowed-paths";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import type { EsbuildBundle } from "../dev/use-esbuild";

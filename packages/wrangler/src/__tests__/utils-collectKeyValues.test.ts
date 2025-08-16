@@ -1,4 +1,4 @@
-import { collectKeyValues } from "../utils/collectKeyValues";
+import { collectKeyValues } from "../utils/collect-key-values";
 
 describe("collectKeyValues()", () => {
 	it("should return an empty object when passed undefined", () => {

@@ -1,8 +1,8 @@
 import { dim } from "@cloudflare/cli/colors";
 import stripAnsi from "strip-ansi";
-import { unwrapHook } from "./api/startDevWorker/utils";
+import { unwrapHook } from "./api/start-dev-worker/utils";
 import { logger } from "./logger";
-import { onKeyPress } from "./utils/onKeyPress";
+import { onKeyPress } from "./utils/on-key-press";
 import type { Hook } from "./api";
 
 export default function (

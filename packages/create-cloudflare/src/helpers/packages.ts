@@ -3,7 +3,7 @@ import path from "path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { fetch } from "undici";
 import { runCommand } from "./command";
-import { detectPackageManager } from "./packageManagers";
+import { detectPackageManager } from "./package-managers";
 import type { C3Context } from "types";
 
 type InstallConfig = {
