@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { unstable_readConfig } from "wrangler";
+import { ENTRY_FILE_EXTENSIONS } from "./constants";
 import type { AssetsOnlyConfig, WorkerConfig } from "./plugin-config";
 import type { Optional } from "./utils";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
@@ -123,7 +124,11 @@ function readWorkerConfig(
 		notRelevant: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
-		unstable_readConfig({ config: configPath, env });
+		unstable_readConfig(
+			{ config: configPath, env },
+			// Preserve the original `main` value so that we can resolve it
+			{ experimental: { preserveOriginalMain: true } }
+		);
 	const raw = structuredClone(config) as RawWorkerConfig;
 
 	nullableNonApplicable.forEach((prop) => {
@@ -326,16 +331,17 @@ export function getWorkerConfig(
 		throw new Error(missingFieldErrorMessage(`'main'`, configPath, env));
 	}
 
-	const mainStat = fs.statSync(config.main, { throwIfNoEntry: false });
-	if (!mainStat) {
-		throw new Error(
-			`The provided Wrangler config main field (${config.main}) doesn't point to an existing file`
-		);
-	}
-	if (mainStat.isDirectory()) {
-		throw new Error(
-			`The provided Wrangler config main field (${config.main}) points to a directory, it needs to point to a file instead`
-		);
+	let main = config.main;
+
+	if (hasAllowedExtension(main)) {
+		// Resolve `main` to an absolute path
+		main = path.resolve(path.dirname(configPath), main);
+
+		if (!fs.existsSync(main)) {
+			throw new Error(
+				`The provided Wrangler config main field (${main}) doesn't point to an existing file`
+			);
+		}
 	}
 
 	return {
@@ -344,10 +350,19 @@ export function getWorkerConfig(
 		config: {
 			...config,
 			...requiredFields,
-			main: config.main,
+			main,
 		},
 		nonApplicable,
 	};
+}
+
+/**
+ * Returns `true` if the entry file path ends with an allowed extension
+ * @param main - The entry file path
+ * @returns boolean
+ */
+function hasAllowedExtension(main: string): boolean {
+	return ENTRY_FILE_EXTENSIONS.some((extension) => main.endsWith(extension));
 }
 
 /**

@@ -170,21 +170,5 @@ describe("getWorkerConfig", () => {
 				/The provided Wrangler config main field \(.*?index\.ts\) doesn't point to an existing file/
 			);
 		});
-
-		test("should throw if the provided main config doesn't point to an existing file", () => {
-			expect(() =>
-				getWorkerConfig(
-					fileURLToPath(
-						new URL(
-							"fixtures/incorrect-dir-main-wrangler.jsonc",
-							import.meta.url
-						)
-					),
-					undefined
-				)
-			).toThrowError(
-				/The provided Wrangler config main field \(.*?fixtures\) points to a directory, it needs to point to a file instead/
-			);
-		});
 	});
 });

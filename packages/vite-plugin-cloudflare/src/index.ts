@@ -183,10 +183,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					},
 				};
 			},
-			buildStart() {
-				// This resets the value when the dev server restarts
-				workersConfigsWarningShown = false;
-			},
 			// Vite `configResolved` Hook
 			// see https://vite.dev/guide/api-plugin.html#configresolved
 			configResolved(config) {
@@ -198,6 +194,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						resolvedViteConfig
 					);
 				}
+			},
+			async buildStart() {
+				// This resets the value when the dev server restarts
+				workersConfigsWarningShown = false;
 			},
 			async transform(code, id) {
 				const workerConfig = getWorkerConfig(this.environment.name);
@@ -212,7 +212,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					const modified = new MagicString(code);
 					const hmrCode = `
 if (import.meta.hot) {
-  import.meta.hot.accept();
+	import.meta.hot.accept();
 }
 						`;
 					modified.append(hmrCode);
