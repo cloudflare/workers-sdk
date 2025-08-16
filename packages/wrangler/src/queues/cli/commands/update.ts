@@ -13,7 +13,7 @@ import type { PostQueueBody, QueueSettings } from "../../client";
 
 export const queuesUpdateCommand = createCommand({
 	metadata: {
-		description: "Update a Queue",
+		description: "Update a queue",
 		owner: "Product: Queues",
 		status: "stable",
 	},

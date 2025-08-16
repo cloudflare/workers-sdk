@@ -7,7 +7,7 @@ import { purgeQueue } from "../../client";
 
 export const queuesPurgeCommand = createCommand({
 	metadata: {
-		description: "Purge messages from a Queue",
+		description: "Purge messages from a queue",
 		owner: "Product: Queues",
 		status: "stable",
 	},
