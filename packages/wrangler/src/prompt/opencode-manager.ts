@@ -1,6 +1,6 @@
 import { Writable } from "node:stream";
 import chalk from "chalk";
-import { execaCommand, execaCommandSync } from "execa";
+import { execa, execaCommandSync } from "execa";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
@@ -18,19 +18,18 @@ export async function detectOpencode(): Promise<boolean> {
 export async function installOpencode(): Promise<void> {
 	const packageManager = await getPackageManager();
 
-	// Construct the global install command based on package manager
-	const installCommand = getGlobalInstallCommand(
+	const { command, args } = getGlobalInstallCommand(
 		packageManager.type,
 		"opencode-ai@latest"
 	);
 
+	const installCommand = `${command} ${args.join(" ")}`;
 	logger.log(`Installing opencode using ${packageManager.type}...`);
 	logger.log(chalk.dim(`Running: ${installCommand}`));
 
 	try {
-		const res = execaCommand(installCommand);
+		const res = execa(command, args);
 
-		// Stream stdout with prefix
 		res.stdout?.pipe(
 			new Writable({
 				write(chunk: Buffer, _, callback) {
@@ -45,7 +44,6 @@ export async function installOpencode(): Promise<void> {
 			})
 		);
 
-		// Stream stderr with red prefix
 		res.stderr?.pipe(
 			new Writable({
 				write(chunk: Buffer, _, callback) {
@@ -61,6 +59,7 @@ export async function installOpencode(): Promise<void> {
 		);
 
 		await res;
+
 		logger.log("✨ Successfully installed opencode");
 	} catch (e) {
 		throw new UserError(
@@ -73,15 +72,15 @@ export async function installOpencode(): Promise<void> {
 function getGlobalInstallCommand(
 	packageManager: PackageManager["type"],
 	packageName: string
-): string {
+): { command: string; args: string[] } {
 	switch (packageManager) {
 		case "npm":
-			return `npm install -g ${packageName}`;
+			return { command: "npm", args: ["install", "-g", packageName] };
 		case "yarn":
-			return `yarn global add ${packageName}`;
+			return { command: "yarn", args: ["global", "add", packageName] };
 		case "pnpm":
-			return `pnpm add -g ${packageName}`;
+			return { command: "pnpm", args: ["add", "-g", packageName] };
 		default:
-			return `npm install -g ${packageName}`;
+			return { command: "npm", args: ["install", "-g", packageName] };
 	}
 }
