@@ -54,7 +54,7 @@ graph TB
 2. **Auto-Installation**
    - Detect if opencode is installed via PATH
    - Auto-install via `npm install -g opencode-ai` if missing
-   - Allow `--no-install` flag to skip auto-installation
+   - Provide clear error messages if installation fails
 
 3. **Configuration Generation**
    - Generate temporary opencode configuration with:
@@ -171,7 +171,7 @@ graph TB
 **Execution Steps:**
 1. Print Wrangler banner
 2. Detect opencode installation
-3. Install if needed (unless --no-install)
+3. Install if needed (automatic)
 4. Generate temporary configuration
 5. Launch opencode with OPENCODE_CONFIG env var
 6. Handle SIGINT for graceful shutdown
