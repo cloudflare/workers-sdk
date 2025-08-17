@@ -154,7 +154,7 @@ I need you to implement Milestone 3 from the spec at `@docs/opencode.SPEC.md`. T
 1. Build with `pnpm build --filter wrangler`
 2. Run `node packages/wrangler/wrangler-dist/cli.js prompt`
 3. Check that temporary config file is created in `.wrangler/tmp/` directory
-4. Verify config JSON is valid and contains inline prompt in agent definition
+4. Verify config JSON is valid and contains inline prompt in agent definition (may have to temporarily disable config deletion to check this).
 5. Verify cleanup happens on process exit
 
 **Dependencies:**
