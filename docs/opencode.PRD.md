@@ -92,7 +92,6 @@ graph LR
 - Look for wrangler.toml/wrangler.jsonc
 - Prefer step-by-step instructions
 - Link to docs when relevant
-- Mention that Wrangler commands can be executed via bash
 
 ## Example CLI Output
 

@@ -130,7 +130,7 @@ graph TB
 **System Prompt Elements:**
 
 - Cloudflare expertise declaration
-- Mention that Wrangler commands can be executed via bash
+- Current project context
 
 ### Milestone 4: Main Command Flow
 
