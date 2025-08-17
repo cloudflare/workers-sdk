@@ -1,6 +1,6 @@
 import { Writable } from "node:stream";
 import chalk from "chalk";
-import { execa, execaCommandSync } from "execa";
+import { execa } from "execa";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
@@ -8,7 +8,7 @@ import type { PackageManager } from "../package-manager";
 
 export async function detectOpencode(): Promise<boolean> {
 	try {
-		execaCommandSync("opencode --version", { stdio: "ignore" });
+		execa("opencode", ["--version"], { stdio: "ignore" });
 		return true;
 	} catch {
 		return false;
