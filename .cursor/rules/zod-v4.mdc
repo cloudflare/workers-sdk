@@ -1,0 +1,179 @@
+---
+description: Zod v4 Coding Guidelines. ALWAYS read this when using Zod
+globs:
+alwaysApply: false
+---
+<zod-v4-guidelines>
+
+<critical-import-rule>
+<requirement>Always import from 'zod/v4', never 'zod'</requirement>
+</critical-import-rule>
+
+<core-rules>
+
+<rule>
+<name>Type Inference</name>
+<requirement>Every schema MUST have inferred type above it</requirement>
+<example type="good">
+```typescript
+export type User = z.infer<typeof User>
+export const User = z.object({...})
+```
+</example>
+<requirements>
+- ALWAYS place type above schema
+- ALWAYS same name for type & schema
+- NEVER use "Schema" suffix
+- ALWAYS use JSDoc (/** */), never //
+- NO EXCEPTIONS - even for internal/helper schemas
+</requirements>
+</rule>
+
+<rule>
+<name>String Validation</name>
+<requirement>String validations are standalone functions</requirement>
+<example type="comparison">
+```typescript
+// WRONG: z.string().email()
+// RIGHT: z.email(), z.url(), z.uuid(), z.ip()
+```
+</example>
+</rule>
+
+<rule>
+<name>Error Messages</name>
+<requirement>Use `error` param sparingly - Zod's defaults are excellent</requirement>
+<example type="comparison">
+```typescript
+// WRONG: z.email({error: "Invalid email"}) // Redundant!
+// RIGHT: z.email() // Zod says "Invalid email"
+// RIGHT: Only for business logic:
+z.string().refine((val) => /[A-Z]/.test(val), {
+	error: 'Must contain uppercase',
+})
+```
+</example>
+</rule>
+
+<rule>
+<name>Number Types</name>
+<requirements>
+- Use z.number() for general numbers
+- z.int() for integers only (not z.number().int())
+- z.int32(), z.float64() for specific types
+- Numbers finite by default
+</requirements>
+</rule>
+
+<rule>
+<name>Object Types</name>
+<types>
+- `z.object()` - strips unknowns (default)
+- `z.strictObject()` - rejects extras
+- `z.looseObject()` - allows extras
+</types>
+</rule>
+
+<rule>
+<name>Custom Validation</name>
+<requirement>Use .check() for advanced validation, .refine() for simple validation</requirement>
+<migration-steps>
+- .superRefine() → .check() for advanced validation with multiple issues
+- In .check(): `val` → `ctx.value`, `ctx.addIssue()` → `ctx.issues.push()`
+- `z.ZodIssueCode.custom` → `'custom'` string
+- Add `input: ctx.value` to issue object
+- Use .refine() for simple boolean validation with single error
+</migration-steps>
+</rule>
+
+<rule>
+<name>Error Formatting</name>
+<methods>
+- `z.prettifyError()` - Human-readable format
+- `z.treeifyError()` - Tree structure format
+</methods>
+</rule>
+
+<rule>
+<name>Functions</name>
+<requirement>Define function schemas with input/output types</requirement>
+<example type="good">
+```typescript
+z.function({
+	input: [z.string()],
+	output: z.number(),
+})
+```
+</example>
+</rule>
+
+<rule>
+<name>Records</name>
+<syntax>`z.record(keyType, valueType)`</syntax>
+</rule>
+
+<rule>
+<name>ISO Formats</name>
+<formats>
+- `z.iso.datetime()` - ISO 8601 datetime
+- `z.iso.date()` - ISO 8601 date
+</formats>
+</rule>
+
+<rule>
+<name>Additional Features</name>
+<features>
+- Default: `.default()` applies to output; use `.prefault()` for v3 behavior
+- File validation: `z.file().min(1024).max(5*1024*1024).mime(['image/jpeg'])`
+- Pipe: `z.pipe(z.string(), z.number())` for transformations
+- Async: Use `.check(async (val) => {...})` for async validation
+- Arrays: `z.array(z.email())` or `z.email().array()`
+- Optional: `.optional()`, `.nullable()`, `.nullish()`
+</features>
+</rule>
+
+</core-rules>
+
+<quick-reference>
+
+| v3                      | v4                          |
+| ----------------------- | --------------------------- |
+| z.string().email()      | z.email()                   |
+| {message: "err"}        | {error: "err"}              |
+| .strict()               | z.strictObject()            |
+| .format()               | z.treeifyError()            |
+| z.string().datetime()   | z.iso.datetime()            |
+| .args().returns()       | {input:[...], output:...}   |
+| .superRefine()          | .check()                    |
+| ctx.addIssue()          | ctx.issues.push()           |
+| z.ZodIssueCode.custom   | 'custom'                    |
+</quick-reference>
+
+<complete-example>
+```typescript
+import { z } from 'zod/v4'
+
+/** User registration */
+export type UserReg = z.infer<typeof UserReg>
+export const UserReg = z.object({
+	email: z.email(),
+	password: z
+		.string()
+		.min(8)
+		.refine((pwd) => /[A-Z]/.test(pwd) && /\d/.test(pwd), { error: 'Need uppercase & number' }),
+	age: z.number().min(18),
+})
+
+/** Function with input/output types */
+export type ProcessUser = z.infer<typeof ProcessUser>
+export const ProcessUser = z.function({
+	input: [UserReg],
+	output: z.object({
+		id: z.string(),
+		createdAt: z.iso.datetime(),
+	}),
+})
+```
+</complete-example>
+
+</zod-v4-guidelines>

@@ -1,0 +1,55 @@
+---
+description: Formatting requirements for Mermaid diagrams to ensure compatibility and avoid parsing errors. ALWAYS read when creating/updating mermaid diagrams.
+globs:
+alwaysApply: false
+---
+<mermaid-diagram-formatting>
+
+<rules>
+- Wrap node labels containing special characters, multiline text, or complex syntax in double quotes and <p> tags: `["<p>content</p>"]`
+- Use `<br/>` for line breaks within node labels, never `\n`
+- NEVER use unquoted special characters: parentheses `()`, curly braces `{}`, angle brackets `<>`, single quotes `'`, colons `:`
+- Database/cylinder nodes use special shape syntax: `NodeName[(content)]` where `[(` and `)]` define the shape
+  - For simple labels: `DB[(PostgreSQL)]`
+  - For multiline/special chars: `DB[("<p>PostgreSQL<br/>via Hyperdrive</p>")]`
+- Regular nodes with special content: `Node["<p>content with special chars</p>"]`
+- Use markdown code blocks with `mermaid` language identifier
+- Edge labels with special characters should use quotes: `-- "label text" -->`
+- Edge labels starting with numbers should be wrapped: `-- "<p>1. Step name</p>" -->`
+- NEVER apply style properties or classes to subgraph names - only to node IDs
+  - ❌ WRONG: `style MySubgraph fill:#f9f,stroke:#333` 
+  - ❌ WRONG: `class MySubgraph className`
+  - ✅ RIGHT: `subgraph MySubgraph ["Display Label"]` (labels are allowed!)
+  - ✅ RIGHT: `style NodeA fill:#f9f` (styling nodes is fine)
+- NEVER use Mermaid keywords (graph, subgraph, node, edge, etc.) as class names or node IDs
+- Use proper class syntax: `classDef className styles;` then `class nodeId1,nodeId2 className;`
+- Only use supported HTML tags: `<p>`, `<b>`, `<i>`, `<u>`, `<br/>`
+- Sequence diagram participants can use simpler syntax but messages with special chars still need escaping
+</rules>
+
+<important-notes>
+- The `<p>` tags are a compatibility workaround for certain parsers - not standard Mermaid syntax
+- Database syntax `[(` and `)]` are shape delimiters, not content delimiters
+</important-notes>
+
+<example>
+```mermaid
+graph TB
+    User[👤 User in Dashboard] -- "<p>1. Submit request</p>" --> API["<p>External API<br/>Service Layer</p>"]
+    API --> DB[("<p>PostgreSQL<br/>Storage Layer</p>")]
+    API --> Worker["<p>Background Worker<br/>processJob()<br/>Async execution</p>"]
+    
+    subgraph ProcessingLayer ["📊 Processing Layer"]
+        Client["<p>typed client<br/>interface</p>"]
+        Methods["<p>Method calls:<br/>client.getData({id: string})<br/>client.process({data: object})</p>"]
+    end
+    
+    classDef userNode fill:#4a90e2,stroke:#357abd,color:#ffffff
+    classDef dbNode fill:#50c878,stroke:#3da35d,color:#ffffff
+    
+    class User userNode
+    class DB dbNode
+```
+</example>
+
+</mermaid-diagram-formatting>

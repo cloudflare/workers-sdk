@@ -1,0 +1,13 @@
+{
+	"mcpServers": {
+		"rules": {
+			"command": "bun x llm-rules@latest"
+		},
+		"cloudflare-docs": {
+			"url": "https://docs.mcp.cloudflare.com/mcp"
+		},
+		"context7": {
+			"command": "bun x @upstash/context7-mcp"
+		}
+	}
+}

@@ -1,0 +1,16 @@
+{
+  "permissions": {},
+  "enableAllProjectMcpServers": true,
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/UserPromptSubmit/prompt_flags.py"
+          }
+        ]
+      }
+		]
+  }
+}
