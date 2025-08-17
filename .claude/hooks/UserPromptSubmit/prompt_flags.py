@@ -13,13 +13,12 @@ from pydantic import BaseModel
 
 flags: dict[str, str] = {
     # ultrathink
-    '-u': """
+    "-u": """
         Use the maximum amount of ultrathink. Take all the time you need.
         It's much better if you do too much research and thinking than not enough.
-        Decorate and animate the response in an explainable way.
     """,
     # explain
-    '-e': """
+    "-e": """
         above are the relevant logs - your job is to:
         think harder about what these logs say
         and give me a simpler & short explanation
@@ -32,7 +31,7 @@ flags: dict[str, str] = {
 
 
 class HookData(BaseModel):
-    prompt: str = ''
+    prompt: str = ""
 
 
 class PromptFlag(BaseModel):
@@ -61,5 +60,5 @@ def main():
         print(instruction)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
