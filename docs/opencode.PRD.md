@@ -20,7 +20,7 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 - **G3.** Minimal first‑run friction (clear auth flow, sensible defaults, no manual config needed).
 - **G4.** Use opencode defaults for execution (no restrictive permissions on tool calls - see https://opencode.ai/docs/permissions/).
 - **G5.** Works cross‑platform (macOS, Linux, Windows) and from any Wrangler project.
-- **G6.** Local Wrangler MCP server is first‑class and enabled by default (plan → dry‑run → confirm → execute).
+- **G6.** Local Wrangler MCP server is first‑class and enabled by default.
 
 ### Non‑Goals
 
@@ -48,9 +48,9 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 - **US2.** As a user, I can authenticate once (`wrangler prompt auth`) using 3rd-party providers (Claude Code Max, Anthropic API key, etc.) and the assistant remembers it securely.
 - **US3.** As a user, I get answers with **citations** into Cloudflare docs and copy‑pastable commands.
 - **US4.** As a user, I can ask "why did `wrangler deploy` fail?" and get step‑by‑step fixes.
-- **US5.** As a user, I can opt‑out of any command execution; assistant will show dry‑run diffs or commands to run manually.
+- **US5.** As a user, I can see what commands the assistant suggests to run.
 - **US6.** As a user, I can launch from any project directory and the assistant picks up local context (e.g., `wrangler.toml`, bindings) read‑only by default.
-- **US7.** As a user, I can request actions (e.g., "bind KV", "deploy") and get a **plan → dry‑run → confirm** flow with clear diffs before any execution.
+- **US7.** As a user, I can request actions (e.g., "bind KV", "deploy") and the assistant will execute them using opencode's permission model.
 
 **Nice‑to‑haves**
 
@@ -108,7 +108,7 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 **Wrangler Local MCP (first‑class)**
 
 - **FRL1.** A local MCP server embedded in Wrangler starts automatically with `wrangler prompt` and exposes a **Wrangler Tool** surface (introspects allowed commands).
-- **FRL2.** Support a **plan → dry‑run → confirm → execute** loop with human‑readable diffs when applicable.
+- **FRL2.** Tools execute according to opencode's permission model.
 - **FRL3.** opencode starts without restrictive permissions (see https://opencode.ai/docs/permissions/ for details).
 - **FRL4.** Allow pluggable helpers (e.g., project file reader scoped to the current workspace, tail logs, Workers KV/D1 helpers) behind explicit approval.
 
@@ -133,7 +133,7 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 
 ## Risks & Mitigations
 
-- **R1. Incorrect or unsafe suggestions** → Guardrails in system prompt; require confirmation for any action; prefer dry‑run diffs.
+- **R1. Incorrect or unsafe suggestions** → Guardrails in system prompt; opencode's permission model handles execution safety.
 - **R2. Auth/setup friction** → Dedicated `wrangler prompt auth` for 3rd-party providers; auto-install if needed.
 - **R3. Docs drift** → Versioned system prompt and MCP config; scheduled updates.
 - **R4. Platform variance (Windows/macOS/Linux)** → Explicit testing matrix; platform‑specific install guidance.
