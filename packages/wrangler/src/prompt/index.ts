@@ -1,4 +1,5 @@
 import { createCommand } from "../core/create-command";
+import { detectOpencode, installOpencode } from "./opencode-manager";
 
 export const promptCommand = createCommand({
 	metadata: {
@@ -18,10 +19,19 @@ export const promptCommand = createCommand({
 		},
 	},
 	async handler(args, { logger }) {
+		const isInstalled = await detectOpencode();
+
+		if (!isInstalled) {
+			logger.log("Opencode not found. Installing...");
+			await installOpencode();
+		}
+
 		if (args.auth) {
-			logger.log("Not yet implemented: opencode auth");
+			logger.log("Not yet implemented: opencode auth flow");
 		} else {
-			logger.log("Not yet implemented: launch opencode");
+			logger.log(
+				"Not yet implemented: launching opencode with Cloudflare configuration"
+			);
 		}
 	},
 });
