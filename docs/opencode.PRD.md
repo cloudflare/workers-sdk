@@ -4,20 +4,14 @@
 **Doc status:** Draft
 **Last updated:** 2025-08-17
 
----
-
 ## Summary
 
 Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfigured **opencode** experience via a new CLI entry point `wrangler prompt`. The assistant is opinionated for Cloudflare products, ships with a Cloudflare Docs MCP server, and **runs a built‑in local Wrangler MCP server by default** to let the assistant plan and (with user confirmation) execute Wrangler tasks safely. Keep it simple, fast, and privacy‑respecting.
-
----
 
 ## Problem & Opportunity
 
 - **Problem:** New and existing Wrangler users spend time context‑switching between docs, examples, and trial‑and‑error in the terminal. This slows onboarding, debugging, and adoption of Cloudflare features.
 - **Opportunity:** A contextual assistant that knows Wrangler and Cloudflare products can cut time‑to‑first‑deploy, improve success rates for common tasks, and reduce support load.
-
----
 
 ## Goals (What success looks like)
 
@@ -35,8 +29,6 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 - Pricing/billing changes or user‑visible quotas.
 - Detailed delivery timeline in this PRD.
 
----
-
 ## Target Users & Key Jobs
 
 - **Indie/solo developers**: "Guide me from zero → deploy quickly."
@@ -49,8 +41,6 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 2. Diagnose failed deploys and runtime errors with actionable steps.
 3. Find and apply the right Wrangler command/flag without leaving the terminal.
 4. Execute safe Wrangler operations via a local tool interface.
-
----
 
 ## User Stories (must‑haves)
 
@@ -66,8 +56,6 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 
 - **US7.** Remember recent projects and preferences (telemetry‑light, local‑only by default).
 - **US8.** Provide templated flows (e.g., "Add D1 to this Worker").
-
----
 
 ## Experience Overview
 
@@ -85,8 +73,6 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 - Local **Wrangler MCP server** is started and attached; tools are scoped and gated (dry‑run first; confirmation required for destructive actions).
 
 5. The session home screen explains capabilities and privacy at a glance.
-
----
 
 ## Functional Requirements
 
@@ -126,8 +112,6 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 - **FRL3.** Tools are permissioned and logged per session; destructive actions require explicit confirmation. Provide `--no-exec` to disable execution for a session.
 - **FRL4.** Allow pluggable helpers (e.g., project file reader scoped to the current workspace, tail logs, Workers KV/D1 helpers) behind explicit approval.
 
----
-
 ## Non‑Functional Requirements
 
 - **NFR1.** Launch time target: fast perceived start (≤2s when opencode already installed).
@@ -138,8 +122,6 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 - **NFR6.** Local‑first; offline‑friendly messaging when docs/MCP unreachable.
 - **NFR7.** Local MCP binds to localhost only and uses an ephemeral per‑session token; no externally exposed ports.
 
----
-
 ## Success Metrics (directional)
 
 - **Activation:** % of unique Wrangler users who run `wrangler prompt` at least once.
@@ -149,8 +131,6 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 - **Support impact:** Reduction in top doc/support search queries related to Wrangler errors.
 - **Quality:** User‑reported helpfulness (thumbs up rate) and citation click‑through.
 
----
-
 ## Risks & Mitigations
 
 - **R1. Incorrect or unsafe suggestions** → Guardrails in system prompt; require confirmation for any action; prefer dry‑run diffs.
@@ -159,8 +139,6 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 - **R4. Platform variance (Windows/macOS/Linux)** → Explicit testing matrix; platform‑specific install guidance.
 - **R5. Privacy concerns** → Transparent messaging; opt‑out flag; local‑only by default.
 - **R6. MCP server security** → Bind to localhost, per‑session auth, explicit permission prompts; clear `--no-exec` escape hatch.
-
----
 
 ## Open Questions (for Jacob)
 
@@ -182,8 +160,6 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
    **Answer:** keep `wrangler prompt` because `wrangler ai` already exists and is used for unrelated features.
 9. Default execution mode: start with execution enabled (confirm required) or start in suggest‑only mode with `--exec` to enable?
    **Answer:** for this MVP, we will start opencode without any restrictive permissions - see docs for details: [https://opencode.ai/docs/permissions/](https://opencode.ai/docs/permissions/)
-
----
 
 ## Acceptance Criteria (MVP)
 
