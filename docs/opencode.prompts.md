@@ -145,7 +145,7 @@ I need you to implement Milestone 3 from the spec at `@docs/opencode.SPEC.md`. T
 - Config structure must match opencode's schema (see spec for JSON structure)
 - System prompt should be included inline in the agent definition
 - System prompt should detect if wrangler config file exists in project (wrangler.jsonc, wrangler.json, wrangler.toml)
-- Include project path info in the prompt
+- Include project config path in the prompt
 - Cloudflare docs MCP URL: `https://docs.mcp.cloudflare.com/mcp`
 
 **Validation:**
