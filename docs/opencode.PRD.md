@@ -18,7 +18,7 @@ Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfig
 - **G1.** One‑command launch of an AI assistant tuned for Cloudflare (`wrangler prompt`).
 - **G2.** Assistant is grounded in Cloudflare docs via MCP; answers are accurate and linkable.
 - **G3.** Minimal first‑run friction (clear auth flow, sensible defaults, no manual config needed).
-- **G4.** Safe execution (no destructive actions without explicit user consent; dry‑run guidance).
+- **G4.** Use opencode defaults for execution (no restrictive permissions on tool calls - see https://opencode.ai/docs/permissions/).
 - **G5.** Works cross‑platform (macOS, Linux, Windows) and from any Wrangler project.
 - **G6.** Local Wrangler MCP server is first‑class and enabled by default (plan → dry‑run → confirm → execute).
 
