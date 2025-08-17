@@ -102,8 +102,7 @@ graph TB
 
 **Components:**
 
-- Temporary config file in OS temp directory
-- System prompt with Cloudflare context
+- Temporary config file in `.wrangler/tmp/` directory with inline system prompt
 - Remote MCP server configuration for docs
 
 **Configuration Structure:**
@@ -114,14 +113,14 @@ graph TB
 	"agent": {
 		"cloudflare": {
 			"model": "anthropic/claude-sonnet-4-20250514",
-			"prompt": "{file:/path/to/system-prompt.txt}",
+			"prompt": "You are a helpful AI assistant specialized in Cloudflare Workers development...",
 			"mode": "primary"
 		}
 	},
 	"mcp": {
 		"cloudflare-docs": {
 			"type": "remote",
-			"url": "https://docs.mcp.cloudflare.com/sse"
+			"url": "https://docs.mcp.cloudflare.com/mcp"
 		}
 	}
 }
@@ -130,7 +129,7 @@ graph TB
 **System Prompt Elements:**
 
 - Cloudflare expertise declaration
-- Current project context
+- Current project context (working directory, wrangler config file detection)
 
 ### Milestone 4: Main Command Flow
 
@@ -236,8 +235,7 @@ packages/wrangler/src/
 ├── prompt/
 │   ├── index.ts                 # Command definition
 │   ├── opencode-manager.ts      # Detection & installation
-│   ├── config-generator.ts      # Config generation
-│   └── system-prompt.ts         # System prompt
+│   └── config-generator.ts      # Config generation with inline prompt
 └── __tests__/
     └── prompt.test.ts           # Unit tests
 ```
