@@ -152,6 +152,7 @@ import { pipelinesDeleteCommand } from "./pipelines/cli/delete";
 import { pipelinesGetCommand } from "./pipelines/cli/get";
 import { pipelinesListCommand } from "./pipelines/cli/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
+import { promptCommand } from "./prompt";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
@@ -658,6 +659,10 @@ export function createCLIParser(argv: string[]) {
 	// types
 	registry.define([{ command: "wrangler types", definition: typesCommand }]);
 	registry.registerNamespace("types");
+
+	// prompt
+	registry.define([{ command: "wrangler prompt", definition: promptCommand }]);
+	registry.registerNamespace("prompt");
 
 	/******************** CMD GROUP ***********************/
 	registry.define([
