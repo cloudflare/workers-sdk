@@ -1,4 +1,4 @@
-# Wrangler AI Assistant PRD
+# Wrangler AI Assistant powered by opencode
 
 **Owner:** Jacob Hands
 **Status:** Draft
