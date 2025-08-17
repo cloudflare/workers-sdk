@@ -48,7 +48,7 @@ graph TB
 
 1. **Command Structure**
    - `wrangler prompt` - Launch opencode with Cloudflare profile
-   - `wrangler prompt auth` - Pass-through to opencode authentication
+   - `wrangler prompt --auth` - Pass-through to opencode authentication
    - `wrangler prompt --help` - Display usage information
 
 2. **Auto-Installation**
@@ -92,13 +92,14 @@ graph TB
 ### Milestone 1: Command Infrastructure
 
 **Components:**
-- Command namespace and definitions following Wrangler patterns
+- Single command definition with `--auth` flag
 - Integration with existing command registry
 
 **Key Decisions:**
-- Use `createNamespace()` and `createCommand()` patterns
+- Use `createCommand()` pattern (no namespace needed)
 - Status: "beta" initially
 - Owner: "Workers: Authoring and Testing"
+- `--auth` flag to trigger authentication flow instead of normal launch
 
 ### Milestone 2: Opencode Detection & Installation
 

@@ -27,7 +27,7 @@ I need you to implement Milestone 1 from the spec at `@docs/opencode.SPEC.md`. T
 
    - How commands are registered in `packages/wrangler/src/index.ts`
    - The command creation patterns in `packages/wrangler/src/core/`
-   - How existing commands with subcommands work (like d1, r2, pages)
+   - How existing single commands work (like deploy, dev, etc.)
 
 2. Review the project instructions at `@CLAUDE.md` for coding standards
 
@@ -35,21 +35,20 @@ I need you to implement Milestone 1 from the spec at `@docs/opencode.SPEC.md`. T
 
 1. Create `packages/wrangler/src/prompt/index.ts` with:
 
-   - `promptNamespace` - The namespace for the prompt commands
-   - `promptCommand` - The main command (handler can be a stub for now)
-   - `promptAuthCommand` - The auth subcommand (handler can be a stub)
+   - `promptCommand` - The main command with an `--auth` flag (handler can be a stub for now)
+   - The `--auth` flag should trigger authentication flow instead of normal launch
 
-2. Register these commands in `packages/wrangler/src/index.ts`:
-   - Import the new definitions
-   - Add them to the registry.define() call
-   - Register the namespace
+2. Register this command in `packages/wrangler/src/index.ts`:
+   - Import the new definition
+   - Add it to the registry.define() call
 
 **Key requirements from the spec:**
 
 - Status should be "beta"
 - Owner should be "Workers: Authoring and Testing"
 - Description should indicate it launches an AI assistant
-- The main command should have `printConfigWarnings: false` behavior
+- Include an `--auth` flag (boolean) for authentication flow
+- The command should have `printConfigWarnings: false` behavior
 - Follow the exact same patterns as existing commands
 
 **Validation:**
