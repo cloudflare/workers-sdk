@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { findWranglerConfig } from "../config/config-helpers";
 import { getWranglerTmpDir } from "../paths";
+import { OpencodeConfig } from "./types";
 
 export function generateSystemPrompt(projectPath: string): string {
 	const { userConfigPath } = findWranglerConfig(projectPath);
@@ -36,8 +37,9 @@ export async function generateOpencodeConfig(
 
 	const systemPrompt = generateSystemPrompt(projectPath);
 
-	const config = {
+	const config: OpencodeConfig = {
 		$schema: "https://opencode.ai/config.json",
+		theme: "gruvbox",
 		agent: {
 			cloudflare: {
 				model: "anthropic/claude-sonnet-4-20250514",
