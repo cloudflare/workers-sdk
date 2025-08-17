@@ -1,5 +1,7 @@
 import { createCommand } from "../core/create-command";
+import { generateOpencodeConfig } from "./config-generator";
 import { detectOpencode, installOpencode } from "./opencode-manager";
+import type { EphemeralDirectory } from "../paths";
 
 export const promptCommand = createCommand({
 	metadata: {
@@ -25,6 +27,10 @@ export const promptCommand = createCommand({
 			logger.log("Opencode not found. Installing...");
 			await installOpencode();
 		}
+
+		// Generate temporary opencode configuration
+		const ocConfig = await generateOpencodeConfig(process.cwd());
+		logger.debug(`Generated opencode configuration at: ${ocConfig}`);
 
 		if (args.auth) {
 			logger.log("Not yet implemented: opencode auth flow");

@@ -141,7 +141,6 @@ graph TB
 4. Generate temporary configuration
 5. Launch opencode with OPENCODE_CONFIG env var
 6. Handle SIGINT for graceful shutdown
-7. Clean up temporary files on exit
 
 ### Milestone 5: Help & Documentation
 

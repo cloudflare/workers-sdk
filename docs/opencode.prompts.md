@@ -145,17 +145,15 @@ I need you to implement Milestone 3 from the spec at `@docs/opencode.SPEC.md`. T
 - Config structure must match opencode's schema (see spec for JSON structure)
 - System prompt should be included inline in the agent definition
 - System prompt should detect if wrangler config file exists in project (wrangler.jsonc, wrangler.json, wrangler.toml)
-- Include project path and platform info in the prompt
+- Include project path info in the prompt
 - Cloudflare docs MCP URL: `https://docs.mcp.cloudflare.com/mcp`
-- Clean up temporary directory on exit using the `EphemeralDirectory` pattern
 
 **Validation:**
 
 1. Build with `pnpm build --filter wrangler`
 2. Run `node packages/wrangler/wrangler-dist/cli.js prompt`
 3. Check that temporary config file is created in `.wrangler/tmp/` directory
-4. Verify config JSON is valid and contains inline prompt in agent definition (may have to temporarily disable config deletion to check this).
-5. Verify cleanup happens on process exit
+4. Verify config JSON is valid and contains inline prompt in agent definition
 
 **Dependencies:**
 
