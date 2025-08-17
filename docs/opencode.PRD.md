@@ -1,162 +1,133 @@
-# PRD - Wrangler AI Assistant (opencode Integration)
+# Wrangler AI Assistant PRD
 
-**Owner:** Jacob
-**Doc status:** Draft
-**Last updated:** 2025-08-17
+**Owner:** Jacob Hands
+**Status:** Draft
+**Updated:** 2025-08-17
 
-## Summary
+## What We're Building
 
-Add a first‑party AI assistant to Cloudflare Wrangler by launching a preconfigured **opencode** experience via a new CLI entry point `wrangler prompt`. The assistant uses existing opencode installation or auto-installs via npm, is opinionated for Cloudflare products, ships with a Cloudflare Docs MCP server, and **runs a built‑in local Wrangler MCP server by default** to let the assistant plan and execute Wrangler tasks. Keep it simple, fast, and privacy‑respecting.
+Add `wrangler prompt` command that launches [opencode](https://opencode.ai) with Cloudflare-specific configuration and a built-in local Wrangler MCP server for command execution.
 
-## Problem & Opportunity
+## Why
 
-- **Problem:** New and existing Wrangler users spend time context‑switching between docs, examples, and trial‑and‑error in the terminal. This slows onboarding, debugging, and adoption of Cloudflare features.
-- **Opportunity:** A contextual assistant that knows Wrangler and Cloudflare products can cut time‑to‑first‑deploy, improve success rates for common tasks, and reduce support load.
+Developers waste time context-switching between docs, examples, and trial-and-error. A contextual assistant that understands Wrangler can:
 
-## Goals (What success looks like)
+- Cut time-to-first-deploy
+- Reduce support load
+- Improve task success rates
 
-- **G1.** One‑command launch of an AI assistant tuned for Cloudflare (`wrangler prompt`).
-- **G2.** Assistant is grounded in Cloudflare docs via MCP; answers are accurate and linkable.
-- **G3.** Minimal first‑run friction (clear auth flow, sensible defaults, no manual config needed).
-- **G4.** Use opencode defaults for execution (no restrictive permissions on tool calls - see https://opencode.ai/docs/permissions/).
-- **G5.** Works cross‑platform (macOS, Linux, Windows) and from any Wrangler project.
-- **G6.** Local Wrangler MCP server is first‑class and enabled by default.
+## How It Works
 
-### Non‑Goals
+```mermaid
+graph LR
+    User[wrangler prompt] --> Check{opencode installed?}
+    Check -->|No| Install[Auto-install via npm]
+    Check -->|Yes| Launch
+    Install --> Launch[Launch opencode]
+    Launch --> Config[With Cloudflare Profile]
+    Config --> MCP1[Cloudflare Docs MCP]
+    Config --> MCP2[Local Wrangler MCP]
+    Config --> Prompt[System Prompt]
+```
 
-- Full IDE replacement; this is a **companion** launched from Wrangler.
+### User Flow
 
-## Target Users & Key Jobs
+1. Run `wrangler prompt`
+2. Auto-installs opencode if needed (via npm)
+3. First run: authenticate with 3rd-party provider (Claude/Anthropic)
+4. Opens assistant with Cloudflare context + local MCP server
 
-- **Indie/solo developers**: "Guide me from zero → deploy quickly."
-- **Pro/power users**: "Automate repetitive Wrangler tasks; remind me of exact flags."
-- **Enterprise practitioners**: "Answer policy/compliance questions with citations to docs."
+## Core Requirements
 
-**Top Jobs‑to‑Be‑Done**
+### CLI Commands
 
-1. Bootstrap a new Worker, D1, KV, Queues, or AI service with correct config.
-2. Diagnose failed deploys and runtime errors with actionable steps.
-3. Find and apply the right Wrangler command/flag without leaving the terminal.
-4. Execute Wrangler operations via a local tool interface.
+- `wrangler prompt` - Launch assistant
+- `wrangler prompt auth` - Pass-through to opencode auth
+- `wrangler prompt --help` - Show usage
 
-## User Stories (must‑haves)
+### Configuration Profile
 
-- **US1.** As a new user, I can run `wrangler prompt` and immediately get an assistant that understands Wrangler and Cloudflare docs.
-- **US2.** As a user, I can authenticate once (`wrangler prompt auth`) using 3rd-party providers (Claude Code Max, Anthropic API key, etc.) and the assistant remembers it across sessions (already built into opencode).
-- **US3.** As a user, I get answers from Cloudflare docs.
-- **US4.** As a user, I can ask "why did `wrangler deploy` fail?" and get step‑by‑step fixes.
-- **US5.** As a user, I can see what commands the assistant suggests to run.
-- **US6.** As a user, I can launch from any project directory and the assistant picks up local context (e.g., `wrangler.toml`, bindings) read‑only by default.
+- **System Prompt**: Cloudflare/Wrangler focused instructions
+- **Docs MCP**: https://docs.mcp.cloudflare.com/mcp (pre-configured)
+- **Local MCP**: Wrangler server starts automatically (localhost-only)
 
-## Experience Overview
+### Platform Support
 
-### Primary Flow
-
-1. User runs `wrangler prompt` in a terminal.
-2. If **opencode** not installed → auto-install latest version from npm using the same package manager as wrangler (or npm if unknown).
-3. On first run, prompt to authenticate via `wrangler prompt auth` using 3rd-party providers (Claude Code Max, Anthropic API key, etc.).
-4. opencode launches with a **Cloudflare profile**:
-
-   - Preloaded **system prompt**: teach the assistant Wrangler/Cloudflare voice, defaults, and guide it to look for wrangler.jsonc and other project files.
-   - **Cloudflare Docs MCP server** (https://docs.mcp.cloudflare.com/mcp) configured and enabled.
-
-- Local **Wrangler MCP server** is started and attached; tools are scoped and gated (dry‑run first; confirmation required for destructive actions).
-
-1. The session home screen explains capabilities and privacy at a glance.
-
-## Functional Requirements
-
-**CLI**
-
-- **FR1.** `wrangler prompt` launches opencode with a Cloudflare configuration profile.
-- **FR2.** `wrangler prompt auth` passes through to opencode's auth flow for 3rd-party provider authentication (no Cloudflare account auth).
-- **FR3.** `wrangler prompt --help` documents behavior, privacy, and examples.
-
-**opencode Configuration**
-
-- **FR4.** Ship a Cloudflare **system prompt** (versioned) focused on Wrangler tasks, safety, and tone.
-- **FR5.** Preconfigure **Cloudflare Docs MCP server** at https://docs.mcp.cloudflare.com/mcp (source of truth docs; citation friendly).
-- **FR6.** System prompt guides opencode to discover project context (wrangler.jsonc, etc.)
-
-**Platform/Distribution**
-
-- **FR8.** Support macOS, Linux, Windows.
-- **FR9.** Handle cases where opencode is absent: auto-install from npm using detected package manager.
-- **FR10.** Graceful failure: if assistant cannot launch, Wrangler still works normally.
-
-**Telemetry & Privacy**
-
-- **FR11.** No additional telemetry beyond existing wrangler collection.
-- **FR12.** Clear privacy statement in `--help` and first‑run banner.
-
-**Docs & Support**
-
-- **FR13.** Dedicated docs page with quickstart, privacy, and troubleshooting.
-- **FR14.** In‑product messages link to docs and community resources.
-
-**Wrangler Local MCP (first‑class)**
-
-- **FRL1.** A local MCP server embedded in Wrangler starts automatically with `wrangler prompt` and exposes a **Wrangler Tool** surface (introspects allowed commands).
-- **FRL2.** Tools execute according to opencode's permission model.
-- **FRL3.** opencode starts without restrictive permissions (see https://opencode.ai/docs/permissions/ for details).
-
-## Non‑Functional Requirements
-
-- **NFR1.** Reliability: Wrangler remains fully functional even if opencode fails.
-- **NFR2.** Security: least‑privilege; do not store secrets in plaintext; respect platform keychains where relevant.
-- **NFR3.** Local MCP binds to localhost only; no externally exposed ports.
-
-## Risks & Mitigations
-
-- **R1. Incorrect or unsafe suggestions** → Guardrails in system prompt; opencode's permission model handles execution safety.
-- **R2. Auth/setup friction** → Dedicated `wrangler prompt auth` for 3rd-party providers; auto-install if needed.
-- **R3. Platform variance (Windows/macOS/Linux)** → Explicit testing matrix; platform‑specific install guidance.
-- **R4. Privacy concerns** → Transparent messaging; opt‑out flag.
-- **R5. MCP server security** → Bind to localhost; opencode handles permissions per its documentation.
+- macOS, Linux, Windows
+- Works from any directory
+- Graceful failure (Wrangler continues working if launch fails)
 
 ## Key Decisions
 
-1. **opencode Distribution:** Use existing opencode installation if present; otherwise auto-install latest version from npm package `opencode-ai` using the same package manager as wrangler (or npm if unknown). opencode auto-updates independently.
+| Decision            | Choice                              | Rationale                             |
+| ------------------- | ----------------------------------- | ------------------------------------- |
+| **Distribution**    | Auto-install from npm if missing    | Zero friction onboarding              |
+| **Authentication**  | Pass-through to opencode's UI       | Leverage existing auth flow           |
+| **Permissions**     | opencode defaults (unrestricted)    | Full capability, user controls safety |
+| **Local MCP**       | Built into Wrangler, localhost-only | Security + convenience                |
+| **Project Context** | System prompt guides discovery      | No automatic file injection           |
+| **Telemetry**       | None beyond existing Wrangler       | Privacy first                         |
 
-2. **Authentication:** Pass-through to opencode's interactive UI for 3rd-party provider auth (Claude Code Max, Anthropic API key, etc.). No Cloudflare account authentication.
+## Security & Privacy
 
-3. **Cloudflare Docs MCP:** Endpoint is https://docs.mcp.cloudflare.com/mcp
+- Local MCP binds to localhost only
+- No additional telemetry collection
+- Project files read locally (nothing uploaded without consent)
+- Clear privacy messaging in --help and first run
 
-4. **Project Context:** No automatic injection; system prompt guides opencode to discover wrangler.jsonc and other project files.
+## Target Users
 
-5. **Configuration:** No user-editable config overrides.
+1. **New developers**: "Guide me from zero to deploy"
+2. **Power users**: "Automate repetitive tasks"
+3. **Enterprise**: "Answer with doc citations"
 
-6. **Telemetry:** No additional telemetry beyond existing wrangler collection.
+## Success Metrics
 
-7. **Interaction Model:** Purely conversational; no templates or wizards.
+- One-command launch (`wrangler prompt`)
+- Grounded in official docs
+- Minimal first-run friction
+- Cross-platform compatibility
 
-8. **Naming:** Keep `wrangler prompt` (avoids conflict with existing `wrangler ai` command).
+## Implementation Notes
 
-9. **Execution Permissions:** opencode starts without restrictive permissions (see https://opencode.ai/docs/permissions/).
+### System Prompt Guidelines
 
-## Appendix
+- Prioritize accuracy and citations
+- Look for wrangler.toml/wrangler.jsonc
+- Prefer step-by-step instructions
+- Link to docs when relevant
 
-### Example CLI Help (draft)
+### MCP Server Scope
 
+- Read project configuration
+- Execute Wrangler commands
+- Respect opencode's permission model
+- Dry-run destructive operations
+
+## Example CLI Output
+
+```bash
+$ wrangler prompt --help
+
+Launch AI assistant for Cloudflare development (powered by opencode)
+
+Usage:
+  wrangler prompt         Start assistant with local MCP server
+  wrangler prompt auth    Authenticate with AI provider
+
+Features:
+  " Answers cite Cloudflare docs
+  " Executes Wrangler commands locally
+  " Project context stays on your machine
+
+Learn more: https://developers.cloudflare.com/workers/wrangler/prompt
 ```
-wrangler prompt
-    Launch a Cloudflare‑tuned AI assistant (via opencode) with a **local Wrangler MCP server**.
 
-    Examples:
-      wrangler prompt                  # start assistant + local MCP in current project
-      wrangler prompt auth             # authenticate with 3rd-party provider
+## Risks & Mitigations
 
-    Notes:
-      • Answers cite Cloudflare docs when possible.
-      • opencode handles permissions per its documentation.
-      • Project files are read locally; nothing is uploaded without consent.
-      • Uses existing wrangler telemetry settings.
-```
-
-### System Prompt (outline - to be authored)
-
-- Prioritize accuracy, citations, and least‑privilege recommendations.
-- Prefer Wrangler commands with brief reasoning; link to docs.
-- Look for wrangler.jsonc and other project configuration files.
-- Follow opencode's permission model.
-- Be concise; use step‑by‑step bullets.
+| Risk                  | Mitigation                            |
+| --------------------- | ------------------------------------- |
+| Incorrect suggestions | System prompt guardrails              |
+| Auth friction         | Dedicated auth command                |
+| Platform variance     | Test matrix coverage                  |
+| Security concerns     | Localhost-only, transparent messaging |
