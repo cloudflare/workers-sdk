@@ -6,7 +6,7 @@
 
 ## What We're Building
 
-Add `wrangler prompt` command that launches [opencode](https://opencode.ai) with Cloudflare-specific configuration and a built-in local Wrangler MCP server for command execution.
+Add `wrangler prompt` command that launches [opencode](https://opencode.ai) with Cloudflare-specific configuration, providing an AI assistant that understands Wrangler and can help with Workers development.
 
 ## Why
 
@@ -25,8 +25,7 @@ graph LR
     Check -->|Yes| Launch
     Install --> Launch[Launch opencode]
     Launch --> Config[With Cloudflare Profile]
-    Config --> MCP1[Cloudflare Docs MCP]
-    Config --> MCP2[Local Wrangler MCP]
+    Config --> MCP[Cloudflare Docs MCP]
     Config --> Prompt[System Prompt]
 ```
 
@@ -35,21 +34,20 @@ graph LR
 1. Run `wrangler prompt`
 2. Auto-installs opencode if needed (via npm)
 3. First run: authenticate with 3rd-party provider (Claude/Anthropic)
-4. Opens assistant with Cloudflare context + local MCP server
+4. Opens assistant with Cloudflare context and docs access
 
 ## Core Requirements
 
 ### CLI Commands
 
 - `wrangler prompt` - Launch assistant
-- `wrangler prompt auth` - Pass-through to opencode auth
+- `wrangler prompt --auth` - Pass-through to opencode auth
 - `wrangler prompt --help` - Show usage
 
 ### Configuration Profile
 
 - **System Prompt**: Cloudflare/Wrangler focused instructions
 - **Docs MCP**: https://docs.mcp.cloudflare.com/mcp (pre-configured)
-- **Local MCP**: Wrangler server starts automatically (localhost-only)
 
 ### Platform Support
 
@@ -59,18 +57,16 @@ graph LR
 
 ## Key Decisions
 
-| Decision            | Choice                              | Rationale                             |
-| ------------------- | ----------------------------------- | ------------------------------------- |
-| **Distribution**    | Auto-install from npm if missing    | Zero friction onboarding              |
-| **Authentication**  | Pass-through to opencode's UI       | Leverage existing auth flow           |
-| **Permissions**     | opencode defaults (unrestricted)    | Full capability, user controls safety |
-| **Local MCP**       | Built into Wrangler, localhost-only | Security + convenience                |
-| **Project Context** | System prompt guides discovery      | No automatic file injection           |
-| **Telemetry**       | None beyond existing Wrangler       | Privacy first                         |
+| Decision            | Choice                           | Rationale                             |
+| ------------------- | -------------------------------- | ------------------------------------- |
+| **Distribution**    | Auto-install from npm if missing | Zero friction onboarding              |
+| **Authentication**  | Pass-through to opencode's UI    | Leverage existing auth flow           |
+| **Permissions**     | opencode defaults (unrestricted) | Full capability, user controls safety |
+| **Project Context** | System prompt guides discovery   | No automatic file injection           |
+| **Telemetry**       | None beyond existing Wrangler    | Privacy first                         |
 
 ## Security & Privacy
 
-- Local MCP binds to localhost only
 - No additional telemetry collection
 - Project files read locally (nothing uploaded without consent)
 - Clear privacy messaging in --help and first run
@@ -96,11 +92,7 @@ graph LR
 - Look for wrangler.toml/wrangler.jsonc
 - Prefer step-by-step instructions
 - Link to docs when relevant
-
-### MCP Server Scope
-
-- **Single tool**: Execute Wrangler commands
-- Respects opencode's permission model
+- Mention that Wrangler commands can be executed via bash
 
 ## Example CLI Output
 
@@ -110,12 +102,12 @@ $ wrangler prompt --help
 Launch AI assistant for Cloudflare development (powered by opencode)
 
 Usage:
-  wrangler prompt         Start assistant with local MCP server
-  wrangler prompt auth    Authenticate with AI provider
+  wrangler prompt         Start assistant
+  wrangler prompt --auth  Authenticate with AI provider
 
 Features:
   " Answers cite Cloudflare docs
-  " Executes Wrangler commands locally
+  " Can execute Wrangler commands
   " Project context stays on your machine
 
 Learn more: https://developers.cloudflare.com/workers/wrangler/prompt
@@ -123,9 +115,8 @@ Learn more: https://developers.cloudflare.com/workers/wrangler/prompt
 
 ## Risks & Mitigations
 
-| Risk                  | Mitigation                            |
-| --------------------- | ------------------------------------- |
-| Incorrect suggestions | System prompt guardrails              |
-| Auth friction         | Dedicated auth command                |
-| Platform variance     | Test matrix coverage                  |
-| Security concerns     | Localhost-only, transparent messaging |
+| Risk                  | Mitigation               |
+| --------------------- | ------------------------ |
+| Incorrect suggestions | System prompt guardrails |
+| Auth friction         | Dedicated --auth flag    |
+| Platform variance     | Test matrix coverage     |
