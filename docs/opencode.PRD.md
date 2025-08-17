@@ -41,9 +41,7 @@ graph LR
 ### CLI Commands
 
 - `wrangler prompt [prompt]` - Launch assistant (with optional initial prompt)
-- `wrangler prompt --auth login [url]` - Authenticate with AI provider
-- `wrangler prompt --auth logout` - Log out from provider
-- `wrangler prompt --auth list` - List configured providers
+- `wrangler prompt --auth [login/logout/list]` - Pass-through to opencode auth (defaults to login)
 - `wrangler prompt --help` - Show usage
 
 ### Configuration Profile

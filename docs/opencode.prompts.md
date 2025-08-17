@@ -39,7 +39,6 @@ I need you to implement Milestone 1 from the spec at `@docs/opencode.SPEC.md`. T
    - The `--auth` flag should take a string value (login/logout/list)
    - Define positional args to capture:
      - Optional prompt text for main flow
-     - Additional arguments for auth commands
 
 2. Register this command in `packages/wrangler/src/index.ts`:
    - Import the new definition
@@ -52,7 +51,6 @@ I need you to implement Milestone 1 from the spec at `@docs/opencode.SPEC.md`. T
 - Description should indicate it launches an AI assistant
 - Include an optional positional argument for prompt text
 - Include an `--auth` flag (string type) that accepts: login, logout, or list
-- Support additional positional arguments for auth login URL
 - The command should have `printConfigWarnings: false` behavior
 - Follow the exact same patterns as existing commands
 
@@ -193,14 +191,13 @@ Complete the handler in `packages/wrangler/src/prompt/index.ts`:
    - Install if needed
    - Generate configuration using config-generator
    - Launch opencode with the generated config
-   - If prompt text was provided, add `-p` flag with the prompt
+   - If prompt text was provided, add `--prompt` flag with the prompt
    - Let opencode handle its own signals (no special signal handling needed)
 
 2. For the auth flow (when `--auth` flag IS provided):
-   - Check if opencode is installed (don't auto-install for auth)
-   - If not installed, throw UserError directing to run `wrangler prompt` first
+   - Auto-install opencode if needed (same as main flow)
    - Based on the auth value (login/logout/list):
-     - Pass through to `opencode auth login [url]` (include URL if provided)
+     - Pass through to `opencode auth login`
      - Pass through to `opencode auth logout`
      - Pass through to `opencode auth list`
 
@@ -208,7 +205,7 @@ Complete the handler in `packages/wrangler/src/prompt/index.ts`:
 
 - Set `OPENCODE_CONFIG` environment variable to the generated config path
 - Launch opencode with `--agent cloudflare` argument
-- If prompt text provided, add `-p "prompt text"` to opencode command
+- If prompt text provided, add `--prompt "prompt text"` to opencode command
 - Use `stdio: "inherit"` to pass through all I/O and signals
 - The temporary directory cleanup is automatic via `getWranglerTmpDir`
 - No explicit signal handling needed - opencode will receive signals directly

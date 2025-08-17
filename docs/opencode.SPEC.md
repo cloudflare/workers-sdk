@@ -46,9 +46,7 @@ graph TB
 1. **Command Structure**
 
    - `wrangler prompt [prompt]` - Launch opencode with Cloudflare profile (optional prompt)
-   - `wrangler prompt --auth login [url]` - Pass-through to opencode auth login
-   - `wrangler prompt --auth logout` - Pass-through to opencode auth logout
-   - `wrangler prompt --auth list` - Pass-through to opencode auth list
+   - `wrangler prompt --auth [login/logout/list]` - Pass-through to opencode auth (defaults to login)
    - `wrangler prompt --help` - Display usage information
 
 2. **Auto-Installation**
@@ -86,7 +84,6 @@ graph TB
 - Owner: "Workers: Authoring and Testing"
 - Optional positional argument for prompt text (when --auth is not used)
 - `--auth` flag takes a string value (login/logout/list) for auth management
-- For `--auth login`, capture optional URL positional argument to pass through
 
 ### Milestone 2: Opencode Detection & Installation
 
@@ -143,7 +140,7 @@ graph TB
 2. Install if needed (automatic)
 3. Generate temporary configuration
 4. Launch opencode with OPENCODE_CONFIG env var
-5. If prompt provided, add `-p` flag with prompt text
+5. If prompt provided, add `--prompt` flag with prompt text
 6. Pass signals through to opencode process
 
 ### Milestone 5: Help & Documentation
