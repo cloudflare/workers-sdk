@@ -77,18 +77,6 @@ export const promptCommand = createCommand({
 	behaviour: {
 		printConfigWarnings: false,
 	},
-	args: {
-		"no-install": {
-			type: "boolean",
-			default: false,
-			description: "Skip automatic opencode installation",
-		},
-		debug: {
-			type: "boolean",
-			default: false,
-			description: "Enable debug logging",
-		},
-	},
 	async handler(args, { config }) {
 		// Implementation in Milestone 2
 	},
