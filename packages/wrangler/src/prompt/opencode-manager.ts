@@ -8,7 +8,7 @@ import type { PackageManager } from "../package-manager";
 
 export async function detectOpencode(): Promise<boolean> {
 	try {
-		execa("opencode", ["--version"], { stdio: "ignore" });
+		await execa("opencode", ["--version"], { stdio: "ignore" });
 		return true;
 	} catch {
 		return false;
