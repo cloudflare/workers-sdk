@@ -99,10 +99,8 @@ graph LR
 
 ### MCP Server Scope
 
-- Read project configuration
-- Execute Wrangler commands
-- Respect opencode's permission model
-- Dry-run destructive operations
+- **Single tool**: Execute Wrangler commands
+- Respects opencode's permission model
 
 ## Example CLI Output
 
