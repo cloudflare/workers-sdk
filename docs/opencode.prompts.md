@@ -10,6 +10,11 @@ Before starting any milestone:
 2. Read the PRD at `@docs/opencode.PRD.md` for context
 3. Use `@agent-codebase-explainer` to understand existing patterns before implementing (use multiple agents if needed). Note that opencode source code is available at `tmp/opencode` if needed.
 
+Notes:
+
+- Build with: `pnpm build --filter wrangler`
+- Run with: `node packages/wrangler/wrangler-dist/cli.js`
+
 ## Milestone 1: Command Infrastructure
 
 ### Prompt
