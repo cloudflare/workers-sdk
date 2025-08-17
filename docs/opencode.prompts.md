@@ -35,8 +35,11 @@ I need you to implement Milestone 1 from the spec at `@docs/opencode.SPEC.md`. T
 
 1. Create `packages/wrangler/src/prompt/index.ts` with:
 
-   - `promptCommand` - The main command with an `--auth` flag (handler can be a stub for now)
-   - The `--auth` flag should trigger authentication flow instead of normal launch
+   - `promptCommand` - The main command with an `--auth` flag and optional prompt positional (handler can be a stub for now)
+   - The `--auth` flag should take a string value (login/logout/list)
+   - Define positional args to capture:
+     - Optional prompt text for main flow
+     - Additional arguments for auth commands
 
 2. Register this command in `packages/wrangler/src/index.ts`:
    - Import the new definition
@@ -47,7 +50,9 @@ I need you to implement Milestone 1 from the spec at `@docs/opencode.SPEC.md`. T
 - Status should be "experimental"
 - Owner should be "Workers: Authoring and Testing"
 - Description should indicate it launches an AI assistant
-- Include an `--auth` flag (boolean) for authentication flow
+- Include an optional positional argument for prompt text
+- Include an `--auth` flag (string type) that accepts: login, logout, or list
+- Support additional positional arguments for auth login URL
 - The command should have `printConfigWarnings: false` behavior
 - Follow the exact same patterns as existing commands
 
@@ -160,6 +165,72 @@ I need you to implement Milestone 3 from the spec at `@docs/opencode.SPEC.md`. T
 - Requires Milestone 2 (opencode detection)
 - Uses `getWranglerTmpDir` from `packages/wrangler/src/paths.ts`
 - Uses Node.js `fs/promises` and `path` modules
+
+---
+
+## Milestone 4: Main Command Flow
+
+### Prompt
+
+I need you to implement Milestone 4 from the spec at `@docs/opencode.SPEC.md`. This milestone completes the main command flow by orchestrating all the pieces together.
+
+**Before you start:**
+
+1. Use `@agent-codebase-explainer` to understand:
+
+   - How wrangler launches external processes (look for `execa` usage patterns)
+   - How processes inherit signals when using `stdio: "inherit"`
+
+2. Review Milestones 1-3 implementations to understand all the components
+
+**What to implement:**
+
+Complete the handler in `packages/wrangler/src/prompt/index.ts`:
+
+1. For the main flow (when `--auth` flag is NOT provided):
+
+   - Detect opencode using the opencode-manager
+   - Install if needed
+   - Generate configuration using config-generator
+   - Launch opencode with the generated config
+   - If prompt text was provided, add `-p` flag with the prompt
+   - Let opencode handle its own signals (no special signal handling needed)
+
+2. For the auth flow (when `--auth` flag IS provided):
+   - Check if opencode is installed (don't auto-install for auth)
+   - If not installed, throw UserError directing to run `wrangler prompt` first
+   - Based on the auth value (login/logout/list):
+     - Pass through to `opencode auth login [url]` (include URL if provided)
+     - Pass through to `opencode auth logout`
+     - Pass through to `opencode auth list`
+
+**Key requirements from the spec:**
+
+- Set `OPENCODE_CONFIG` environment variable to the generated config path
+- Launch opencode with `--agent cloudflare` argument
+- If prompt text provided, add `-p "prompt text"` to opencode command
+- Use `stdio: "inherit"` to pass through all I/O and signals
+- The temporary directory cleanup is automatic via `getWranglerTmpDir`
+- No explicit signal handling needed - opencode will receive signals directly
+
+**Validation:**
+
+1. Build with `pnpm build --filter wrangler`
+2. Test main flow: Run `node packages/wrangler/wrangler-dist/cli.js prompt`
+   - Should detect/install opencode, generate config, and launch
+3. Test with prompt: Run `node packages/wrangler/wrangler-dist/cli.js prompt "How do I deploy a Worker?"`
+   - Should launch opencode with the initial prompt
+4. Test auth commands:
+   - `node packages/wrangler/wrangler-dist/cli.js prompt --auth login` - Should pass through to opencode auth login
+   - `node packages/wrangler/wrangler-dist/cli.js prompt --auth logout` - Should pass through to opencode auth logout
+   - `node packages/wrangler/wrangler-dist/cli.js prompt --auth list` - Should pass through to opencode auth list
+5. Test signals: Press Ctrl+C while opencode is running
+   - Opencode should handle the signal and exit cleanly
+
+**Dependencies:**
+
+- Requires all previous milestones (1-3)
+- Uses `execa` for process execution
 
 ---
 

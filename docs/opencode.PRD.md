@@ -40,8 +40,10 @@ graph LR
 
 ### CLI Commands
 
-- `wrangler prompt` - Launch assistant
-- `wrangler prompt --auth` - Pass-through to opencode auth
+- `wrangler prompt [prompt]` - Launch assistant (with optional initial prompt)
+- `wrangler prompt --auth login [url]` - Authenticate with AI provider
+- `wrangler prompt --auth logout` - Log out from provider
+- `wrangler prompt --auth list` - List configured providers
 - `wrangler prompt --help` - Show usage
 
 ### Configuration Profile
@@ -101,8 +103,10 @@ $ wrangler prompt --help
 Launch AI assistant for Cloudflare development (powered by opencode)
 
 Usage:
-  wrangler prompt         Start assistant
-  wrangler prompt --auth  Authenticate with AI provider
+  wrangler prompt [prompt]       Start assistant (with initial prompt)
+  wrangler prompt --auth login   Authenticate with AI provider
+  wrangler prompt --auth logout  Log out from provider
+  wrangler prompt --auth list    List configured providers
 
 Features:
   " Answers cite Cloudflare docs
@@ -114,8 +118,8 @@ Learn more: https://developers.cloudflare.com/workers/wrangler/prompt
 
 ## Risks & Mitigations
 
-| Risk                  | Mitigation               |
-| --------------------- | ------------------------ |
-| Incorrect suggestions | System prompt guardrails |
-| Auth friction         | Dedicated --auth flag    |
-| Platform variance     | Test matrix coverage     |
+| Risk                  | Mitigation                    |
+| --------------------- | ----------------------------- |
+| Incorrect suggestions | System prompt guardrails      |
+| Auth friction         | Full auth management commands |
+| Platform variance     | Test matrix coverage          |

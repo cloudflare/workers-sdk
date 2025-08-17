@@ -45,8 +45,10 @@ graph TB
 
 1. **Command Structure**
 
-   - `wrangler prompt` - Launch opencode with Cloudflare profile
-   - `wrangler prompt --auth` - Pass-through to opencode authentication
+   - `wrangler prompt [prompt]` - Launch opencode with Cloudflare profile (optional prompt)
+   - `wrangler prompt --auth login [url]` - Pass-through to opencode auth login
+   - `wrangler prompt --auth logout` - Pass-through to opencode auth logout
+   - `wrangler prompt --auth list` - Pass-through to opencode auth list
    - `wrangler prompt --help` - Display usage information
 
 2. **Auto-Installation**
@@ -74,15 +76,17 @@ graph TB
 
 **Components:**
 
-- Single command definition with `--auth` flag
+- Single command definition with `--auth` flag and optional prompt positional
 - Integration with existing command registry
 
 **Key Decisions:**
 
-- Use `createCommand()` pattern (no namespace needed)
-- Status: "beta" initially
+- Use `createCommand()` pattern
+- Status: "experimental" initially
 - Owner: "Workers: Authoring and Testing"
-- `--auth` flag to trigger authentication flow instead of normal launch
+- Optional positional argument for prompt text (when --auth is not used)
+- `--auth` flag takes a string value (login/logout/list) for auth management
+- For `--auth login`, capture optional URL positional argument to pass through
 
 ### Milestone 2: Opencode Detection & Installation
 
@@ -135,12 +139,12 @@ graph TB
 
 **Execution Steps:**
 
-1. Print Wrangler banner
-2. Detect opencode installation
-3. Install if needed (automatic)
-4. Generate temporary configuration
-5. Launch opencode with OPENCODE_CONFIG env var
-6. Handle SIGINT for graceful shutdown
+1. Detect opencode installation
+2. Install if needed (automatic)
+3. Generate temporary configuration
+4. Launch opencode with OPENCODE_CONFIG env var
+5. If prompt provided, add `-p` flag with prompt text
+6. Pass signals through to opencode process
 
 ### Milestone 5: Help & Documentation
 
