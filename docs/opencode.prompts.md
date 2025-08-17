@@ -44,7 +44,7 @@ I need you to implement Milestone 1 from the spec at `@docs/opencode.SPEC.md`. T
 
 **Key requirements from the spec:**
 
-- Status should be "beta"
+- Status should be "experimental"
 - Owner should be "Workers: Authoring and Testing"
 - Description should indicate it launches an AI assistant
 - Include an `--auth` flag (boolean) for authentication flow
@@ -55,6 +55,58 @@ I need you to implement Milestone 1 from the spec at `@docs/opencode.SPEC.md`. T
 After implementation, running `pnpm build --filter wrangler` should succeed and `wrangler prompt --help` should show the new command.
 
 Don't implement the actual functionality yet - just set up the command structure with placeholder handlers that log "Not yet implemented".
+
+---
+
+## Milestone 2: Opencode Detection & Installation
+
+### Prompt
+
+I need you to implement Milestone 2 from the spec at `@docs/opencode.SPEC.md`. This milestone adds opencode detection and auto-installation functionality.
+
+**Before you start:**
+
+1. Use `@agent-codebase-explainer` to understand:
+
+   - How wrangler handles external tool detection (look for patterns with `execaCommand` or `execaCommandSync`)
+   - How wrangler displays progress and logs (analyze `packages/wrangler/src/logger.ts`)
+   - How wrangler handles errors (look at `packages/wrangler/src/errors.ts`)
+
+2. Review Milestone 1 implementation to understand the command structure
+
+**What to implement:**
+
+1. Create `packages/wrangler/src/prompt/opencode-manager.ts` with:
+
+   - `detectOpencode()` function - Check if opencode is in PATH
+   - `installOpencode()` function - Install via npm if missing
+
+2. Update the handler in `packages/wrangler/src/prompt/index.ts`:
+   - Add logic to detect opencode
+   - If missing, call installOpencode
+   - Log appropriate messages during the process
+   - For now, just log success after detection/installation
+
+**Key requirements from the spec:**
+
+- Detection: Use `opencode --version` to check if installed
+- Installation: Use `npm install -g opencode-ai`
+- Stream npm output with prefix for visibility
+- Use wrangler's logger for all output
+- Throw UserError with helpful message if installation fails
+- Use the string "opencode" directly when executing commands (rely on PATH)
+
+**Validation:**
+
+1. Build with `pnpm build --filter wrangler`
+2. Test detection: Run `node packages/wrangler/wrangler-dist/cli.js prompt` with opencode installed
+3. Test installation: Temporarily remove opencode with `npm uninstall -g opencode-ai` and run command again
+4. Verify npm output is streamed with proper formatting
+
+**Dependencies:**
+
+- Requires Milestone 1 (command infrastructure)
+- Uses `execa` for command execution (already in wrangler dependencies)
 
 ---
 
