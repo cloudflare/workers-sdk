@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import events from "node:events";
 import path from "node:path";
 import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
-import dedent from "ts-dedent";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
 import WebSocket from "ws";
@@ -104,7 +103,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 					// However, the proxy worker only makes outgoing requests to the user Worker Miniflare instance, which _should_ receive CF-Connecting-IP
 					stripCfConnectingIp: false,
 					serviceBindings: {
-						PROXY_CONTROLLER: async (req: Request): Promise<Response> => {
+						PROXY_CONTROLLER: async (req): Promise<Response> => {
 							const message =
 								(await req.json()) as ProxyWorkerOutgoingRequestBody;
 
@@ -143,76 +142,43 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		};
 
 		if (this.latestConfig.dev.inspector !== false && !inVscodeJsDebugTerminal) {
-			proxyWorkerOptions.workers.push(
-				{
-					name: "InspectorProxyWorker",
-					compatibilityDate: "2023-12-18",
-					compatibilityFlags: [
-						"nodejs_compat",
-						"increase_websocket_message_size",
-					],
-					modulesRoot: path.dirname(inspectorProxyWorkerPath),
-					modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
-					durableObjects: {
-						DURABLE_OBJECT: {
-							className: "InspectorProxyWorker",
-							unsafePreventEviction: true,
-						},
+			proxyWorkerOptions.workers.push({
+				name: "InspectorProxyWorker",
+				compatibilityDate: "2023-12-18",
+				compatibilityFlags: [
+					"nodejs_compat",
+					"increase_websocket_message_size",
+				],
+				modulesRoot: path.dirname(inspectorProxyWorkerPath),
+				modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
+				durableObjects: {
+					DURABLE_OBJECT: {
+						className: "InspectorProxyWorker",
+						unsafePreventEviction: true,
 					},
-					serviceBindings: {
-						PROXY_CONTROLLER: async (req: Request): Promise<Response> => {
-							const body =
-								(await req.json()) as InspectorProxyWorkerOutgoingRequestBody;
-
-							return this.onInspectorProxyWorkerRequest(body);
-						},
-					},
-					bindings: {
-						PROXY_CONTROLLER_AUTH_SECRET: this.secret,
-					},
-
-					unsafeDirectSockets: [
-						{
-							host: this.latestConfig.dev?.inspector?.hostname,
-							port: this.latestConfig.dev?.inspector?.port ?? 0,
-						},
-					],
-					// no need to use file-system, so don't
-					cache: false,
-					unsafeEphemeralDurableObjects: true,
 				},
-				{
-					name: "DevtoolsProxyWorker",
-					compatibilityDate: "2025-01-01",
-					modules: [
-						{
-							type: "ESModule",
-							contents: dedent/* javascript */ `
-								export default {
-									fetch(request) {
-										const url = new URL(request.url);
-										url.host = "devtools.devprod.cloudflare.dev"
-										url.protocol = "https"
-										url.port = 443
-										return fetch(url.toString(), request)
-									}
-								}
-							`,
-							path: "index.js",
-						},
-					],
-					unsafeDirectSockets: [
-						{
-							host: this.latestConfig.dev?.inspector?.hostname,
-							port: 0,
-						},
-					],
+				serviceBindings: {
+					PROXY_CONTROLLER: async (req): Promise<Response> => {
+						const body =
+							(await req.json()) as InspectorProxyWorkerOutgoingRequestBody;
 
-					// no need to use file-system, so don't
-					cache: false,
-					unsafeEphemeralDurableObjects: true,
-				}
-			);
+						return this.onInspectorProxyWorkerRequest(body);
+					},
+				},
+				bindings: {
+					PROXY_CONTROLLER_AUTH_SECRET: this.secret,
+				},
+
+				unsafeDirectSockets: [
+					{
+						host: this.latestConfig.dev?.inspector?.hostname,
+						port: this.latestConfig.dev?.inspector?.port ?? 0,
+					},
+				],
+				// no need to use file-system, so don't
+				cache: false,
+				unsafeEphemeralDurableObjects: true,
+			});
 		}
 
 		const proxyWorkerOptionsChanged = didMiniflareOptionsChange(
@@ -246,13 +212,10 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				this.latestConfig.dev.inspector === false || inVscodeJsDebugTerminal
 					? Promise.resolve(undefined)
 					: proxyWorker.unsafeGetDirectURL("InspectorProxyWorker"),
-				this.latestConfig.dev.inspector === false || inVscodeJsDebugTerminal
-					? Promise.resolve(undefined)
-					: proxyWorker.unsafeGetDirectURL("DevtoolsProxyWorker"),
 			])
-				.then(([url, inspectorUrl, devtoolsUrl]) => {
+				.then(([url, inspectorUrl]) => {
 					if (!inspectorUrl || inVscodeJsDebugTerminal) {
-						return [url, undefined, undefined];
+						return [url, undefined];
 					}
 					// Don't connect the inspector proxy worker until we have a valid ready Miniflare instance.
 					// Otherwise, tearing down the ProxyController immediately after setting it up
@@ -261,12 +224,11 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 					return this.reconnectInspectorProxyWorker().then(() => [
 						url,
 						inspectorUrl,
-						devtoolsUrl,
 					]);
 				})
-				.then(([url, inspectorUrl, devtoolsUrl]) => {
+				.then(([url, inspectorUrl]) => {
 					assert(url);
-					this.emitReadyEvent(proxyWorker, url, inspectorUrl, devtoolsUrl);
+					this.emitReadyEvent(proxyWorker, url, inspectorUrl);
 				})
 				.catch((error) => {
 					if (this._torndown) {
@@ -613,15 +575,13 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 	emitReadyEvent(
 		proxyWorker: Miniflare,
 		url: URL,
-		inspectorUrl: URL | undefined,
-		devtoolsUrl: URL | undefined
+		inspectorUrl: URL | undefined
 	) {
 		const data: ReadyEvent = {
 			type: "ready",
 			proxyWorker,
 			url,
 			inspectorUrl,
-			devtoolsUrl,
 		};
 
 		this.emit("ready", data);
