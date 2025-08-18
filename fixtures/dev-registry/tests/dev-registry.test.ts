@@ -100,9 +100,7 @@ async function setupPlatformProxy(config: string, devRegistryPath?: string) {
 }
 
 describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
-	it("supports module worker fetch over service binding", async ({
-		devRegistryPath,
-	}) => {
+	it("supports fetch over service binding", async ({ devRegistryPath }) => {
 		const workerEntrypointWithAssets = await runWranglerDev(
 			"wrangler.worker-entrypoint-with-assets.jsonc",
 			devRegistryPath
