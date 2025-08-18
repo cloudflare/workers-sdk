@@ -1,7 +1,12 @@
 import { execa } from "execa";
 import { createCommand } from "../core/create-command";
 import { generateOpencodeConfig } from "./config-generator";
-import { detectOpencode, installOpencode } from "./opencode-manager";
+import {
+	detectOpencode,
+	installOpencode,
+	isOpencodeVersionCompatible,
+	upgradeOpencode,
+} from "./opencode-manager";
 
 export const promptCommand = createCommand({
 	metadata: {
@@ -26,8 +31,13 @@ export const promptCommand = createCommand({
 	},
 	positionalArgs: ["prompt"],
 	async handler(args, { logger }) {
-		const isInstalled = await detectOpencode();
-		if (!isInstalled) {
+		const ocVersion = await detectOpencode();
+		if (ocVersion) {
+			if (!isOpencodeVersionCompatible(ocVersion)) {
+				logger.log("opencode is not compatible. Upgrading...");
+				await upgradeOpencode();
+			}
+		} else {
 			logger.log("opencode not found. Installing...");
 			await installOpencode();
 		}

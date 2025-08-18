@@ -1,17 +1,68 @@
 import { Writable } from "node:stream";
 import chalk from "chalk";
 import { execa } from "execa";
+import semiver from "semiver";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import type { PackageManager } from "../package-manager";
 
-export async function detectOpencode(): Promise<boolean> {
+export function isOpencodeVersionCompatible(version: string): boolean {
+	return semiver(version.replace(/^v/, ""), "0.5.6") >= 0;
+}
+
+export async function detectOpencode(): Promise<string | null> {
 	try {
-		await execa("opencode", ["--version"], { stdio: "ignore" });
-		return true;
+		const res = await execa("opencode", ["--version"]);
+		return res.stdout.trim();
 	} catch {
-		return false;
+		return null;
+	}
+}
+
+export async function upgradeOpencode(): Promise<void> {
+	logger.log("Upgrading opencode to latest version...");
+	logger.log(chalk.dim("Running: opencode upgrade"));
+
+	try {
+		const res = execa("opencode", ["upgrade"]);
+
+		res.stdout?.pipe(
+			new Writable({
+				write(chunk: Buffer, _, callback) {
+					const lines = chunk.toString().split("\n");
+					for (const line of lines) {
+						if (line.trim()) {
+							logger.log(chalk.blue("[opencode upgrade]"), line);
+						}
+					}
+					callback();
+				},
+			})
+		);
+
+		res.stderr?.pipe(
+			new Writable({
+				write(chunk: Buffer, _, callback) {
+					const lines = chunk.toString().split("\n");
+					for (const line of lines) {
+						if (line.trim()) {
+							logger.log(chalk.red("[opencode upgrade]"), line);
+						}
+					}
+					callback();
+				},
+			})
+		);
+
+		await res;
+
+		logger.log("✨ Successfully upgraded opencode");
+	} catch (e) {
+		throw new UserError(
+			"Failed to upgrade opencode. Please run 'opencode upgrade' manually.",
+			{ cause: e }
+		);
 	}
 }
 
