@@ -1,5 +1,53 @@
 # create-cloudflare
 
+## 2.51.0
+
+### Minor Changes
+
+- [#10357](https://github.com/cloudflare/workers-sdk/pull/10357) [`565c3a3`](https://github.com/cloudflare/workers-sdk/commit/565c3a3ddf381945b0bea6c99029d8783e68f6bb) Thanks [@dom96](https://github.com/dom96)! - Use new default entrypoint handlers for Python examples
+
+### Patch Changes
+
+- [#10384](https://github.com/cloudflare/workers-sdk/pull/10384) [`839b8f0`](https://github.com/cloudflare/workers-sdk/commit/839b8f00fdce30b66986d7d9b233863aaa2dd0d7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.9.0 | 0.9.2 |
+
+- [#10385](https://github.com/cloudflare/workers-sdk/pull/10385) [`f0f995d`](https://github.com/cloudflare/workers-sdk/commit/f0f995da7ef22cc72294d1c2d9e149eb31d69c63) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 7.1.0 | 7.1.1 |
+
+- [#10386](https://github.com/cloudflare/workers-sdk/pull/10386) [`516dc20`](https://github.com/cloudflare/workers-sdk/commit/516dc20be624042533af0cd0b4205f92e256bb3f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.27.0 | 3.28.0 |
+
+- [#10387](https://github.com/cloudflare/workers-sdk/pull/10387) [`4390c9f`](https://github.com/cloudflare/workers-sdk/commit/4390c9f3974f0a5db90e71cd1f70dc6a6ab49b93) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 20.1.5 | 20.1.6 |
+
+- [#10388](https://github.com/cloudflare/workers-sdk/pull/10388) [`6778d0f`](https://github.com/cloudflare/workers-sdk/commit/6778d0f1038066b3669a8b4edf0c8d93fc78bce8) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.8.0 | 7.8.1 |
+
 ## 2.50.9
 
 ### Patch Changes
