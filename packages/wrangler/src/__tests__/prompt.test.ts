@@ -1,14 +1,22 @@
 import { execa } from "execa";
 import { vi } from "vitest";
 import { UserError } from "../errors";
-import { detectOpencode, upgradeOpencode } from "../prompt/opencode-manager";
+import { getPackageManager } from "../package-manager";
+import {
+	detectOpencode,
+	installOpencode,
+	upgradeOpencode,
+} from "../prompt/opencode-manager";
 import type { Mock } from "vitest";
 
-describe("detectOpencode()", () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
+vi.mock("execa");
+vi.mock("../package-manager");
 
+beforeEach(() => {
+	vi.clearAllMocks();
+});
+
+describe("detectOpencode()", () => {
 	it("should return version string when opencode command succeeds", async () => {
 		const mockVersion = "v1.2.3";
 
@@ -107,5 +115,96 @@ describe("upgradeOpencode()", () => {
 		);
 
 		expect(execa).toHaveBeenCalledWith("opencode", ["upgrade"]);
+	});
+});
+
+describe("installOpencode()", () => {
+	describe("should install with detected package manager", () => {
+		it("npm", async () => {
+			vi.mocked(getPackageManager as Mock).mockResolvedValueOnce({
+				type: "npm",
+			});
+			vi.mocked(execa as Mock).mockResolvedValueOnce({
+				stdout: null,
+				stderr: null,
+			});
+
+			await installOpencode();
+
+			expect(execa).toHaveBeenCalledWith("npm", [
+				"install",
+				"-g",
+				"opencode-ai@latest",
+			]);
+		});
+
+		it("yarn", async () => {
+			vi.mocked(getPackageManager as Mock).mockResolvedValueOnce({
+				type: "yarn",
+			});
+			vi.mocked(execa as Mock).mockResolvedValueOnce({
+				stdout: null,
+				stderr: null,
+			});
+
+			await installOpencode();
+
+			expect(execa).toHaveBeenCalledWith("yarn", [
+				"global",
+				"add",
+				"opencode-ai@latest",
+			]);
+		});
+
+		it("pnpm", async () => {
+			vi.mocked(getPackageManager as Mock).mockResolvedValueOnce({
+				type: "pnpm",
+			});
+			vi.mocked(execa as Mock).mockResolvedValueOnce({
+				stdout: null,
+				stderr: null,
+			});
+
+			await installOpencode();
+
+			expect(execa).toHaveBeenCalledWith("pnpm", [
+				"add",
+				"-g",
+				"opencode-ai@latest",
+			]);
+		});
+	});
+
+	it("should throw UserError when install command fails", async () => {
+		vi.mocked(getPackageManager as Mock).mockResolvedValue({
+			type: "npm",
+		});
+		vi.mocked(execa as Mock).mockRejectedValue(new Error("Install failed"));
+
+		await expect(() => installOpencode()).rejects.toThrowError(UserError);
+		await expect(() =>
+			installOpencode()
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Failed to install opencode. Please run 'npm install -g opencode-ai@latest' manually.]`
+		);
+
+		expect(execa).toHaveBeenCalledWith("npm", [
+			"install",
+			"-g",
+			"opencode-ai@latest",
+		]);
+	});
+
+	it("should throw UserError with correct command when pnpm install fails", async () => {
+		vi.mocked(getPackageManager as Mock).mockResolvedValue({
+			type: "pnpm",
+		});
+		vi.mocked(execa as Mock).mockRejectedValue(new Error("Install failed"));
+
+		await expect(() =>
+			installOpencode()
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Failed to install opencode. Please run 'pnpm add -g opencode-ai@latest' manually.]`
+		);
 	});
 });
