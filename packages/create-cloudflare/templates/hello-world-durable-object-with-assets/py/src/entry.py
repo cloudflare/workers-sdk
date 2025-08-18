@@ -49,15 +49,15 @@ class MyDurableObject(DurableObject):
 * @returns {Promise<Response>} The response to be sent back to the client
 """
 class Default(WorkerEntrypoint):
-    async def fetch(self, request, env, ctx):
+    async def fetch(self, request):
         # Create a `DurableObjectId` for an instance of the `MyDurableObject`
         # class named "foo". Requests from all Workers to the instance named
         # "foo" will go to a single globally unique Durable Object instance.
-        id = env.MY_DURABLE_OBJECT.idFromName("foo")
+        id = self.env.MY_DURABLE_OBJECT.idFromName("foo")
 
         # Create a stub to open a communication channel with the Durable
         # Object instance.
-        stub = env.MY_DURABLE_OBJECT.get(id)
+        stub = self.env.MY_DURABLE_OBJECT.get(id)
 
         # Call the `say_hello()` RPC method on the stub to invoke the method on
         # the remote Durable Object instance

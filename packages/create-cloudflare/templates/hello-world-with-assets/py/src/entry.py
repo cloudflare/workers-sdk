@@ -3,7 +3,7 @@ from uuid import uuid4
 from urllib.parse import urlparse
 
 class Default(WorkerEntrypoint):
-    async def fetch(self, request, env):
+    async def fetch(self, request):
         url = urlparse(request.url)
         if url.path == '/message':
             return Response('Hello, World!')
