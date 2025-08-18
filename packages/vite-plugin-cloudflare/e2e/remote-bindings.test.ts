@@ -1,74 +1,71 @@
-import { execSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import fs from "node:fs";
+import assert from "node:assert";
 import { readFile, writeFile } from "node:fs/promises";
-import os from "node:os";
 import { setTimeout } from "node:timers/promises";
-import { afterAll, beforeAll, describe, test, vi } from "vitest";
+import { beforeAll, describe, test, vi } from "vitest";
 import {
 	fetchJson,
+	isBuildAndPreviewOnWindows,
 	runCommand,
 	runLongLived,
 	seed,
 	waitForReady,
 } from "./helpers.js";
 
-const isWindows = os.platform() === "win32";
 const commands = ["dev", "buildAndPreview"] as const;
 
-if (
-	isWindows ||
-	!process.env.CLOUDFLARE_ACCOUNT_ID ||
-	!process.env.CLOUDFLARE_API_TOKEN
-) {
-	describe.skip(
-		"Skipping remote bindings tests on Windows or without account credentials."
-	);
+if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
+	describe.skip("Skipping remote bindings tests without account credentials.");
 } else {
 	describe
 		// Note: the reload test applies changes to the fixture files, so we do want the
 		//       tests to run sequentially in order to avoid race conditions
 		.sequential("remote bindings tests", () => {
 			const replacements = {
-				"<<REMOTE_WORKER_PLACEHOLDER>>": `tmp-e2e-vite-remote-${randomUUID().split("-")[0]}`,
-				"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `tmp-e2e-vite-remote-alt-${randomUUID().split("-")[0]}`,
+				"<<REMOTE_WORKER_PLACEHOLDER>>": `preserve-e2e-vite-remote`,
+				"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `preserve-e2e-vite-remote-alt`,
 			};
 
 			const projectPath = seed("remote-bindings", "pnpm", replacements);
 
-			beforeAll(() => {
-				runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker`);
-				runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker-alt`);
+			beforeAll(async () => {
+				try {
+					assert(
+						(
+							await fetch(
+								"https://preserve-e2e-vite-remote.devprod-testing7928.workers.dev/"
+							)
+						).status !== 404
+					);
+				} catch (e) {
+					runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker`);
+				}
+				try {
+					assert(
+						(
+							await fetch(
+								"https://preserve-e2e-vite-remote-alt.devprod-testing7928.workers.dev/"
+							)
+						).status !== 404
+					);
+				} catch {
+					runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker-alt`);
+				}
 			}, 35_000);
 
-			afterAll(() => {
-				// Try to clean up the remote workers after tests but give up after a couple of seconds
-				// or if the deletion fails.
-				runCommand(
-					`npx wrangler delete --force`,
-					`${projectPath}/remote-worker`,
-					{ canFail: true, timeout: 2_000 }
-				);
-				runCommand(
-					`npx wrangler delete --force`,
-					`${projectPath}/remote-worker-alt`,
-					{ canFail: true, timeout: 2_000 }
-				);
-			});
-
 			describe.each(commands)('with "%s" command', (command) => {
-				test("can fetch from both local (/auxiliary) and remote workers", async ({
-					expect,
-				}) => {
-					const proc = await runLongLived("pnpm", command, projectPath);
-					const url = await waitForReady(proc);
-					expect(await fetchJson(url)).toEqual({
-						localWorkerResponse: {
-							remoteWorkerResponse: "Hello from an alternative remote worker",
-						},
-						remoteWorkerResponse: "Hello from a remote worker",
-					});
-				});
+				test.skipIf(isBuildAndPreviewOnWindows(command))(
+					"can fetch from both local (/auxiliary) and remote workers",
+					async ({ expect }) => {
+						const proc = await runLongLived("pnpm", command, projectPath);
+						const url = await waitForReady(proc);
+						expect(await fetchJson(url)).toEqual({
+							localWorkerResponse: {
+								remoteWorkerResponse: "Hello from an alternative remote worker",
+							},
+							remoteWorkerResponse: "Hello from a remote worker",
+						});
+					}
+				);
 			});
 
 			test("reflects changes applied during dev", async ({ expect }) => {

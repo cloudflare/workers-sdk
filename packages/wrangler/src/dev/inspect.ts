@@ -1,5 +1,4 @@
 import { readFileSync } from "fs";
-import os from "node:os";
 import { fileURLToPath, URL } from "node:url";
 import path from "path";
 import open from "open";
@@ -249,6 +248,7 @@ export function maybeHandleNetworkLoadResource(
  * Opens the chrome debugger
  */
 export const openInspector = async (
+	devtoolsUrl: URL,
 	inspectorPort: number,
 	worker: string | undefined
 ) => {
@@ -259,37 +259,10 @@ export const openInspector = async (
 		query.set("domain", worker);
 	}
 	query.set("debugger", "true");
-	const url = `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
-	const errorMessage =
-		"Failed to open inspector.\nInspector depends on having a Chromium-based browser installed, maybe you need to install one?";
+	const url = new URL(`/js_app?${query.toString()}`, devtoolsUrl);
+	const errorMessage = "Failed to open inspector.";
 
-	// see: https://github.com/sindresorhus/open/issues/177#issue-610016699
-	let braveBrowser: string;
-	switch (os.platform()) {
-		case "darwin":
-		case "win32":
-			braveBrowser = "Brave";
-			break;
-		default:
-			braveBrowser = "brave";
-	}
-
-	const childProcess = await open(url, {
-		app: [
-			{
-				name: open.apps.chrome,
-			},
-			{
-				name: braveBrowser,
-			},
-			{
-				name: open.apps.edge,
-			},
-			{
-				name: open.apps.firefox,
-			},
-		],
-	});
+	const childProcess = await open(url.href);
 	childProcess.on("error", () => {
 		logger.warn(errorMessage);
 	});

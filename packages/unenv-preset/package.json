@@ -43,9 +43,7 @@
 		"check:type": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"@types/debug": "4.1.12",
 		"@types/node-unenv": "npm:@types/node@^22.14.0",
-		"debug": "4.4.1",
 		"typescript": "catalog:default",
 		"unbuild": "^3.2.0"
 	},

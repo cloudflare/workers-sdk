@@ -848,7 +848,7 @@ export class Miniflare {
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
 
-	// key is the browser wsEndpoint, value is the browser process
+	// key is the browser session ID, value is the browser process
 	#browserProcesses: Map<string, Process> = new Map();
 
 	readonly #runtime?: Runtime;
@@ -1180,32 +1180,31 @@ export class Miniflare {
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/browser/launch") {
-				const { browserProcess, wsEndpoint } = await launchBrowser({
-					// Puppeteer v22.8.2 supported chrome version:
-					// https://pptr.dev/supported-browsers#supported-browser-version-list
-					//
-					// It should match the supported chrome version for the upstream puppeteer
-					// version from which @cloudflare/puppeteer branched off, which is specified in:
-					// https://github.com/cloudflare/puppeteer/tree/v1.0.2?tab=readme-ov-file#workers-version-of-puppeteer-core
-					browserVersion: "124.0.6367.207",
-					log: this.#log,
-					tmpPath: this.#tmpPath,
-				});
+				const { sessionId, browserProcess, startTime, wsEndpoint } =
+					await launchBrowser({
+						// Puppeteer v22.8.2 supported chrome version:
+						// https://pptr.dev/supported-browsers#supported-browser-version-list
+						//
+						// It should match the supported chrome version for the upstream puppeteer
+						// version from which @cloudflare/puppeteer branched off, which is specified in:
+						// https://github.com/cloudflare/puppeteer/tree/v1.0.2?tab=readme-ov-file#workers-version-of-puppeteer-core
+						browserVersion: "124.0.6367.207",
+						log: this.#log,
+						tmpPath: this.#tmpPath,
+					});
 				browserProcess.nodeProcess.on("exit", () => {
-					this.#browserProcesses.delete(wsEndpoint);
+					this.#browserProcesses.delete(sessionId);
 				});
-				this.#browserProcesses.set(wsEndpoint, browserProcess);
-				response = new Response(wsEndpoint);
+				this.#browserProcesses.set(sessionId, browserProcess);
+				response = Response.json({ wsEndpoint, sessionId, startTime });
 			} else if (url.pathname === "/browser/status") {
-				const wsEndpoint = url.searchParams.get("wsEndpoint");
-				assert(wsEndpoint !== null, "Missing wsEndpoint query parameter");
-				const process = this.#browserProcesses.get(wsEndpoint);
-				const status = {
-					stopped: !process,
-				};
-				response = new Response(JSON.stringify(status), {
-					headers: { "Content-Type": "application/json" },
-				});
+				const sessionId = url.searchParams.get("sessionId");
+				assert(sessionId !== null, "Missing sessionId query parameter");
+				const process = this.#browserProcesses.get(sessionId);
+				response = new Response(null, { status: process ? 200 : 410 });
+			} else if (url.pathname === "/browser/sessionIds") {
+				const sessionIds = this.#browserProcesses.keys();
+				response = Response.json(Array.from(sessionIds));
 			} else if (url.pathname === "/core/store-temp-file") {
 				const prefix = url.searchParams.get("prefix");
 				const folder = prefix ? `files/${prefix}` : "files";

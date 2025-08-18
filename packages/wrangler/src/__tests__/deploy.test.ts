@@ -58,6 +58,8 @@ import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
+import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
+import type { ServiceMetadataRes } from "../init";
 import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
 import type { FormData } from "undici";
 import type { Mock } from "vitest";
@@ -10692,217 +10694,6 @@ export default{
 		});
 	});
 
-	describe("--outfile", () => {
-		it("should generate worker bundle at --outfile if specified", async () => {
-			writeWranglerConfig();
-			writeWorkerSource();
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
-			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "",
-				}
-			`);
-		});
-
-		it("should include any module imports related assets in the worker bundle", async () => {
-			writeWranglerConfig();
-			fs.writeFileSync(
-				"./index.js",
-				`
-import txt from './textfile.txt';
-import hello from './hello.wasm';
-export default{
-  async fetch(){
-		const module = await WebAssembly.instantiate(hello);
-    return new Response(txt + module.exports.hello);
-  }
-}
-`
-			);
-			fs.writeFileSync("./textfile.txt", "Hello, World!");
-			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({
-				expectedModules: {
-					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
-						"Hello, World!",
-					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
-						"Hello wasm World!",
-				},
-			});
-			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
-
-			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
-			expect(
-				fs
-					.readFileSync("some-dir/worker.bundle", "utf8")
-					.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
-					)
-					.replace(/wrangler_(.+?)_default/g, "wrangler_default")
-			).toMatchInlineSnapshot(`
-				"------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"metadata\\"
-
-				{\\"main_module\\":\\"index.js\\",\\"bindings\\":[],\\"compatibility_date\\":\\"2022-01-12\\",\\"compatibility_flags\\":[]}
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"index.js\\"; filename=\\"index.js\\"
-				Content-Type: application/javascript+module
-
-				// index.js
-				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
-				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
-				var index_default = {
-				  async fetch() {
-				    const module = await WebAssembly.instantiate(hello);
-				    return new Response(txt + module.exports.hello);
-				  }
-				};
-				export {
-				  index_default as default
-				};
-				//# sourceMappingURL=index.js.map
-
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"; filename=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"
-				Content-Type: text/plain
-
-				Hello, World!
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"; filename=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"
-				Content-Type: application/wasm
-
-				Hello wasm World!
-				------formdata-undici-0.test--
-				"
-			`);
-
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "",
-				}
-			`);
-		});
-
-		it("should include bindings in the worker bundle", async () => {
-			writeWranglerConfig({
-				kv_namespaces: [{ binding: "KV", id: "kv-namespace-id" }],
-			});
-			fs.writeFileSync(
-				"./index.js",
-				`
-import txt from './textfile.txt';
-import hello from './hello.wasm';
-export default{
-  async fetch(){
-		const module = await WebAssembly.instantiate(hello);
-    return new Response(txt + module.exports.hello);
-  }
-}
-`
-			);
-			fs.writeFileSync("./textfile.txt", "Hello, World!");
-			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({
-				expectedModules: {
-					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
-						"Hello, World!",
-					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
-						"Hello wasm World!",
-				},
-			});
-			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
-
-			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
-			expect(
-				fs
-					.readFileSync("some-dir/worker.bundle", "utf8")
-					.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
-					)
-					.replace(/wrangler_(.+?)_default/g, "wrangler_default")
-			).toMatchInlineSnapshot(`
-				"------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"metadata\\"
-
-				{\\"main_module\\":\\"index.js\\",\\"bindings\\":[{\\"name\\":\\"KV\\",\\"type\\":\\"kv_namespace\\",\\"namespace_id\\":\\"kv-namespace-id\\"}],\\"compatibility_date\\":\\"2022-01-12\\",\\"compatibility_flags\\":[]}
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"index.js\\"; filename=\\"index.js\\"
-				Content-Type: application/javascript+module
-
-				// index.js
-				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
-				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
-				var index_default = {
-				  async fetch() {
-				    const module = await WebAssembly.instantiate(hello);
-				    return new Response(txt + module.exports.hello);
-				  }
-				};
-				export {
-				  index_default as default
-				};
-				//# sourceMappingURL=index.js.map
-
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"; filename=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"
-				Content-Type: text/plain
-
-				Hello, World!
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"; filename=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"
-				Content-Type: application/wasm
-
-				Hello wasm World!
-				------formdata-undici-0.test--
-				"
-			`);
-
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Your Worker has access to the following bindings:
-				Binding                       Resource
-				env.KV (kv-namespace-id)      KV Namespace
-
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "",
-				}
-			`);
-		});
-	});
-
 	describe("--dry-run", () => {
 		it("should not deploy the worker if --dry-run is specified", async () => {
 			writeWranglerConfig({
@@ -13171,6 +12962,156 @@ export default{
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 	});
+
+	describe("config remote differences", () => {
+		it("should present a diff warning to the user when there are differences between the local config (json/jsonc) and the dash config", async () => {
+			writeWorkerSource();
+			mockGetServiceByName("test-name", "production", "dash");
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					vars: {
+						MY_VAR: 123,
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.json"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetServiceBindings("test-name", [
+				{ name: "MY_VAR", text: "abc", type: "plain_text" },
+			]);
+			mockGetServiceRoutes("test-name", []);
+			mockGetServiceCustomDomainRecords([]);
+			mockGetServiceSubDomainData("test-name", { enabled: true });
+			mockGetServiceSchedules("test-name", { schedules: [] });
+			mockGetServiceMetadata("test-name", {
+				created_on: "2025-08-07T09:34:47.846308Z",
+				modified_on: "2025-08-08T10:48:12.688997Z",
+				script: {
+					created_on: "2025-08-07T09:34:47.846308Z",
+					modified_on: "2025-08-08T10:48:12.688997Z",
+					id: "silent-firefly-dbe3",
+					observability: { enabled: true, head_sampling_rate: 1 },
+					compatibility_date: "2024-04-24",
+				},
+			} as unknown as ServiceMetadataRes["default_environment"]);
+
+			mockConfirm({
+				text: "Would you like to continue?",
+				result: true,
+			});
+
+			await runWrangler("deploy --x-remote-diff-check");
+
+			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour local configuration differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
+
+				      \\"name\\": \\"test-name\\",
+				      \\"main\\": \\"./index.js\\",
+				      \\"vars\\": {
+				  -     \\"MY_VAR\\": \\"abc\\"
+				  +     \\"MY_VAR\\": 123
+				      },
+				      \\"observability\\": {
+				        \\"enabled\\": true
+
+				  Deploying the Worker will override the remote configuration with your local one.
+
+				"
+			`);
+		});
+
+		it("should present a diff warning to the user when there are differences between the local config (toml) and the dash config", async () => {
+			writeWorkerSource();
+			mockGetServiceByName("test-name", "production", "dash");
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					vars: {
+						MY_VAR: "this is a toml file",
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.toml"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetServiceBindings("test-name", [
+				{ name: "MY_VAR", text: "abc", type: "plain_text" },
+			]);
+			mockGetServiceRoutes("test-name", []);
+			mockGetServiceCustomDomainRecords([]);
+			mockGetServiceSubDomainData("test-name", { enabled: true });
+			mockGetServiceSchedules("test-name", { schedules: [] });
+			mockGetServiceMetadata("test-name", {
+				created_on: "2025-08-07T09:34:47.846308Z",
+				modified_on: "2025-08-08T10:48:12.688997Z",
+				script: {
+					created_on: "2025-08-07T09:34:47.846308Z",
+					modified_on: "2025-08-08T10:48:12.688997Z",
+					id: "silent-firefly-dbe3",
+					observability: { enabled: true, head_sampling_rate: 1 },
+					compatibility_date: "2024-04-24",
+				},
+			} as unknown as ServiceMetadataRes["default_environment"]);
+
+			mockConfirm({
+				text: "Would you like to continue?",
+				result: true,
+			});
+
+			await runWrangler("deploy --x-remote-diff-check");
+
+			// Note: we display the toml config diff in json format since code-wise we'd have to convert the rawConfig to toml
+			//       to be able to show toml content/diffs, that combined with the fact that json(c) config files are the
+			//       recommended ones moving forward makes this small shortcoming of the config diffing acceptable
+			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour local configuration differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
+
+				      \\"name\\": \\"test-name\\",
+				      \\"main\\": \\"./index.js\\",
+				      \\"vars\\": {
+				  -     \\"MY_VAR\\": \\"abc\\"
+				  +     \\"MY_VAR\\": \\"this is a toml file\\"
+				      },
+				      \\"observability\\": {
+				        \\"enabled\\": true
+
+				  Deploying the Worker will override the remote configuration with your local one.
+
+				"
+			`);
+		});
+
+		function normalizeLogWithConfigDiff(log: string): string {
+			// If the path is long the log could be wrapped so we need to remove the potential wrapping
+			let normalizedLog = log.replace(/"main":\s*"/, '"main": "');
+
+			if (process.platform === "win32") {
+				// On windows the snapshot paths incorrectly use double slashes, such as:
+				//  `\"main\": \"C://Users//RUNNER~1//AppData//Local//Temp//wrangler-testse63LuJ//index.js\",
+				// so in the `main` field we replace all possible occurrences of `//` with just `\\`
+				// (so that the path normalization of `normalizeString` can appropriately work)
+				normalizedLog = normalizedLog.replace(
+					/"main": "(.*?)"/,
+					(_, mainPath: string) =>
+						`"main": "${mainPath.replaceAll("//", "\\")}"`
+				);
+			}
+
+			normalizedLog = normalizeString(normalizedLog);
+
+			return normalizedLog;
+		}
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
@@ -13678,7 +13619,9 @@ function mockServiceScriptData(options: {
 							success: true,
 							errors: [],
 							messages: [],
-							result: { default_environment: { script } },
+							result: {
+								default_environment: { environment: "production", script },
+							},
 						});
 					},
 					{ once: true }
@@ -13712,7 +13655,11 @@ function mockGetQueueByName(queueName: string, queue: QueueResponse | null) {
 	return requests;
 }
 
-function mockGetServiceByName(serviceName: string, defaultEnvironment: string) {
+function mockGetServiceByName(
+	serviceName: string,
+	defaultEnvironment: string,
+	lastDeploymentFrom: "wrangler" | "dash" = "wrangler"
+) {
 	const requests = { count: 0 };
 	const resource = `*/accounts/:accountId/workers/services/:serviceName`;
 	msw.use(
@@ -13730,7 +13677,7 @@ function mockGetServiceByName(serviceName: string, defaultEnvironment: string) {
 					default_environment: {
 						environment: defaultEnvironment,
 						script: {
-							last_deployed_from: "wrangler",
+							last_deployed_from: lastDeploymentFrom,
 						},
 					},
 				},
@@ -13903,6 +13850,151 @@ const mockAssetUploadRequest = async (
 		)
 	);
 };
+
+function mockGetServiceBindings(
+	serviceName: string,
+	bindings: WorkerMetadataBinding[]
+) {
+	const resource = `*/accounts/:accountId/workers/services/:serviceName/environments/:serviceEnvironment/bindings`;
+	msw.use(
+		http.get(resource, async ({ params }) => {
+			expect(params.accountId).toEqual("some-account-id");
+			expect(params.serviceName).toEqual(serviceName);
+
+			return HttpResponse.json({
+				success: true,
+				errors: [],
+				messages: [],
+				result: bindings,
+			});
+		})
+	);
+}
+
+function mockGetServiceRoutes(
+	serviceName: string,
+	routes: {
+		id: string;
+		pattern: string;
+		zone_name: string;
+		script: string;
+	}[]
+) {
+	const resource = `*/accounts/:accountId/workers/services/:serviceName/environments/:serviceEnvironment/routes`;
+	msw.use(
+		http.get(resource, async ({ params }) => {
+			expect(params.accountId).toEqual("some-account-id");
+			expect(params.serviceName).toEqual(serviceName);
+
+			return HttpResponse.json({
+				success: true,
+				errors: [],
+				messages: [],
+				result: routes,
+			});
+		})
+	);
+}
+
+function mockGetServiceCustomDomainRecords(
+	customDomanRecords: {
+		id: string;
+		zone_id: string;
+		zone_name: string;
+		hostname: string;
+		service: string;
+		environment: string;
+		cert_id: string;
+	}[]
+) {
+	msw.use(
+		http.get(`*/accounts/:accountId/workers/domains/records`, ({ params }) => {
+			expect(params.accountId).toEqual("some-account-id");
+
+			return HttpResponse.json({
+				success: true,
+				errors: [],
+				messages: [],
+				result: customDomanRecords,
+			});
+		})
+	);
+}
+
+function mockGetServiceSubDomainData(
+	serviceName: string,
+	data: {
+		enabled: boolean;
+	}
+) {
+	msw.use(
+		http.get(
+			`*/accounts/:accountId/workers/services/:workerName/environments/:serviceEnvironment/subdomain`,
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.workerName).toEqual(serviceName);
+
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: data,
+				});
+			}
+		)
+	);
+}
+
+function mockGetServiceSchedules(
+	serviceName: string,
+	data: {
+		schedules: {
+			cron: string;
+			created_on: Date;
+			modified_on: Date;
+		}[];
+	}
+) {
+	msw.use(
+		http.get(
+			`*/accounts/:accountId/workers/scripts/:workerName/schedules`,
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.workerName).toEqual(serviceName);
+
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: data,
+				});
+			}
+		)
+	);
+}
+
+function mockGetServiceMetadata(
+	serviceName: string,
+	data: ServiceMetadataRes["default_environment"]
+) {
+	msw.use(
+		http.get(
+			`*/accounts/:accountId/workers/services/:workerName/environments/:serviceEnvironment`,
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.workerName).toEqual(serviceName);
+
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: data,
+				});
+			}
+		)
+	);
+}
+
 expect.extend({
 	async toBeAFileWhichMatches(
 		received: File,

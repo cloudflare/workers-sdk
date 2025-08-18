@@ -85,6 +85,9 @@ const testCases: TestCase<string>[] = [
 						fetch(request) {
 							return new Response("Hello from target worker entrypoint")
 						}
+						add(a, b) {
+							return a + b;
+						}
 					}
 				`,
 			});
@@ -127,6 +130,7 @@ const testCases: TestCase<string>[] = [
 				JSON.stringify({
 					default: "Hello from target worker",
 					entrypoint: "Hello from target worker entrypoint",
+					rpc: 3,
 				})
 			),
 		],
@@ -291,9 +295,13 @@ const testCases: TestCase<string>[] = [
 			const customerWorkerName = "remote-bindings-test-customer-worker";
 			await helper.seed({
 				"customer-worker.js": dedent/* javascript */ `
-					export default {
+					import {WorkerEntrypoint} from "cloudflare:workers"
+					export default class W extends WorkerEntrypoint {
 						fetch(request) {
 							return new Response("Hello from customer worker")
+						}
+						add(a, b) {
+							return a + b;
 						}
 					}
 				`,
@@ -320,7 +328,61 @@ const testCases: TestCase<string>[] = [
 				},
 			},
 		}),
-		matches: [expect.stringMatching(/Hello from customer worker/)],
+		matches: [
+			expect.stringMatching(
+				JSON.stringify({
+					worker: "Hello from customer worker",
+					rpc: 3,
+				})
+			),
+		],
+	},
+	{
+		name: "Pipelines",
+		scriptPath: "pipelines.js",
+		remoteProxySessionConfig: [
+			{
+				PIPELINE: {
+					type: "pipeline",
+					pipeline: "preserve-e2e-pipelines",
+				},
+			},
+		],
+		miniflareConfig: (connection) => ({
+			pipelines: {
+				PIPELINE: {
+					pipeline: "preserve-e2e-pipelines",
+					remoteProxyConnectionString: connection,
+				},
+			},
+		}),
+		matches: [expect.stringContaining(`Data sent to env.PIPELINE`)],
+		worksWithoutRemoteBindings: true,
+	},
+	{
+		name: "Email",
+		scriptPath: "email.js",
+		remoteProxySessionConfig: [
+			{
+				EMAIL: {
+					type: "send_email",
+				},
+			},
+		],
+		miniflareConfig: (connection) => ({
+			email: {
+				send_email: [
+					{ name: "EMAIL", remoteProxyConnectionString: connection },
+				],
+			},
+		}),
+		matches: [
+			// This error message comes from the production binding, and so indicates that the binding has been called
+			// successfully, which is all we care about. Full E2E testing of email sending would be _incredibly_ flaky
+			expect.stringContaining(
+				`email from example.com not allowed because domain is not owned by the same account`
+			),
+		],
 	},
 ];
 

@@ -587,12 +587,10 @@ describe("wrangler deploy with containers", () => {
 			│ - rollout_active_grace_period = 500
 			│ + rollout_active_grace_period = 600
 			│   scheduling_policy = \\"default\\"
-			│
 			│     [containers.configuration]
 			│ -   image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
 			│ +   image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
 			│     instance_type = \\"dev\\"
-			│
 			│     [containers.constraints]
 			│
 			│
@@ -728,12 +726,10 @@ describe("wrangler deploy with containers", () => {
 			│ + max_instances = 10
 			│   name = \\"my-container\\"
 			│   scheduling_policy = \\"default\\"
-			│
 			│     [containers.configuration]
 			│ -   image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
 			│ +   image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
 			│     instance_type = \\"dev\\"
-			│
 			│     [containers.constraints]
 			│
 			│
@@ -896,11 +892,8 @@ describe("wrangler deploy with containers", () => {
 				│
 				│     image = \\"docker.io/hello:world\\"
 				│     instance_type = \\"dev\\"
-				│
 				│ + [containers.configuration.observability.logs]
 				│ + enabled = true
-				│ +
-				│ +
 				│     [containers.constraints]
 				│     tier = 1
 				│
@@ -942,11 +935,8 @@ describe("wrangler deploy with containers", () => {
 				│
 				│     image = \\"docker.io/hello:world\\"
 				│     instance_type = \\"dev\\"
-				│
 				│ + [containers.configuration.observability.logs]
 				│ + enabled = true
-				│ +
-				│ +
 				│     [containers.constraints]
 				│     tier = 1
 				│
@@ -1000,11 +990,9 @@ describe("wrangler deploy with containers", () => {
 				├ EDIT my-container
 				│
 				│     instance_type = \\"dev\\"
-				│
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
-				│
 				│     [containers.constraints]
 				│     tier = 1
 				│
@@ -1058,11 +1046,9 @@ describe("wrangler deploy with containers", () => {
 				├ EDIT my-container
 				│
 				│     instance_type = \\"dev\\"
-				│
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
-				│
 				│     [containers.constraints]
 				│     tier = 1
 				│
@@ -1112,11 +1098,9 @@ describe("wrangler deploy with containers", () => {
 				├ EDIT my-container
 				│
 				│     instance_type = \\"dev\\"
-				│
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
-				│
 				│     [containers.constraints]
 				│     tier = 1
 				│
@@ -1171,11 +1155,9 @@ describe("wrangler deploy with containers", () => {
 				├ EDIT my-container
 				│
 				│     instance_type = \\"dev\\"
-				│
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
-				│
 				│     [containers.constraints]
 				│     tier = 1
 				│

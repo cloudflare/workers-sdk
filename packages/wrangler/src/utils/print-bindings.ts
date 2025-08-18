@@ -213,7 +213,11 @@ export function printBindings(
 						destination_address ||
 						allowed_destination_addresses?.join(", ") ||
 						"unrestricted",
-					mode: getMode({ isSimulatedLocally: true }),
+					mode: getMode({
+						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
+							? !emailBinding.experimental_remote
+							: true,
+					}),
 				};
 			})
 		);
@@ -472,11 +476,15 @@ export function printBindings(
 
 	if (pipelines?.length) {
 		output.push(
-			...pipelines.map(({ binding, pipeline }) => ({
+			...pipelines.map(({ binding, pipeline, experimental_remote }) => ({
 				name: binding,
 				type: friendlyBindingNames.pipelines,
 				value: pipeline,
-				mode: getMode(),
+				mode: getMode({
+					isSimulatedLocally: getFlag("REMOTE_BINDINGS")
+						? !experimental_remote
+						: true,
+				}),
 			}))
 		);
 	}

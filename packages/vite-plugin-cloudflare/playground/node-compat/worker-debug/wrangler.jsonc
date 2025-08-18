@@ -1,0 +1,9 @@
+{
+	"name": "worker",
+	"main": "./index.ts",
+	"compatibility_date": "2025-07-30",
+	"compatibility_flags": ["nodejs_compat"],
+	"vars": {
+		"DEBUG": "example:*,test",
+	},
+}

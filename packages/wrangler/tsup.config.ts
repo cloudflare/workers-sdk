@@ -38,6 +38,7 @@ function embedWorkersPlugin({
 						sourcemap: process.env.SOURCEMAPS !== "false",
 						sourcesContent: false,
 						metafile: true,
+						external: ["cloudflare:email", "cloudflare:workers"],
 						entryPoints: [args.path],
 						outdir: build.initialOptions.outdir,
 					}));

@@ -91,6 +91,7 @@ export interface CfKvNamespace {
  */
 export type CfSendEmailBindings = {
 	name: string;
+	experimental_remote?: boolean;
 } & (
 	| { destination_address?: string }
 	| { allowed_destination_addresses?: string[] }
@@ -282,6 +283,7 @@ export interface CfAssetsBinding {
 export interface CfPipeline {
 	binding: string;
 	pipeline: string;
+	experimental_remote?: boolean;
 }
 
 export interface CfUnsafeBinding {

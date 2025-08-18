@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.29.1",
+	"version": "4.30.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -80,6 +80,7 @@
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/jsrpc": "link:../../vendor/jsrpc",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-shared": "workspace:*",

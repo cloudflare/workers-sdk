@@ -32,6 +32,24 @@ export default {
 					const pText = await page.locator("p").first().textContent();
 					return new Response(pText);
 				}
+
+				case "disconnect": {
+					const { sessionId } = await playwright.acquire(env.MYBROWSER);
+					const browser = await playwright.connect(env.MYBROWSER, sessionId);
+					// closing a browser obtained with playwright.connect actually disconnects
+					// (it doesn's close the porcess)
+					await browser.close();
+					const sessionInfo = await playwright
+						.sessions(env.MYBROWSER)
+						.then((sessions) =>
+							sessions.find((s) => s.sessionId === sessionId)
+						);
+					return new Response(
+						sessionInfo.connectionId
+							? "Browser not disconnected"
+							: "Browser disconnected"
+					);
+				}
 			}
 
 			let img = await env.BROWSER_KV_DEMO.get(url, { type: "arrayBuffer" });

@@ -392,8 +392,23 @@ function queueProducerEntry(
 
 	return [binding, { queueName, deliveryDelay, remoteProxyConnectionString }];
 }
-function pipelineEntry(pipeline: CfPipeline): [string, string] {
-	return [pipeline.binding, pipeline.pipeline];
+function pipelineEntry(
+	pipeline: CfPipeline,
+	remoteProxyConnectionString?: RemoteProxyConnectionString
+): [
+	string,
+	{
+		pipeline: string;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+	},
+] {
+	if (!remoteProxyConnectionString || !pipeline.experimental_remote) {
+		return [pipeline.binding, { pipeline: pipeline.pipeline }];
+	}
+	return [
+		pipeline.binding,
+		{ pipeline: pipeline.pipeline, remoteProxyConnectionString },
+	];
 }
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
@@ -946,7 +961,11 @@ export function buildMiniflareBindingOptions(
 		queueConsumers: Object.fromEntries(
 			config.queueConsumers?.map(queueConsumerEntry) ?? []
 		),
-		pipelines: Object.fromEntries(bindings.pipelines?.map(pipelineEntry) ?? []),
+		pipelines: Object.fromEntries(
+			bindings.pipelines?.map((pipeline) =>
+				pipelineEntry(pipeline, remoteProxyConnectionString)
+			) ?? []
+		),
 		hyperdrives: Object.fromEntries(
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
@@ -974,7 +993,13 @@ export function buildMiniflareBindingOptions(
 			]) ?? []
 		),
 		email: {
-			send_email: bindings.send_email,
+			send_email: bindings.send_email?.map((b) => ({
+				...b,
+				remoteProxyConnectionString:
+					b.experimental_remote && remoteProxyConnectionString
+						? remoteProxyConnectionString
+						: undefined,
+			})),
 		},
 		images:
 			bindings.images && (config.imagesLocalMode || remoteBindingsEnabled)

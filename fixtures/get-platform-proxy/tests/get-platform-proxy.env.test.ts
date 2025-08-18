@@ -98,7 +98,7 @@ describe("getPlatformProxy - env", () => {
 					"..",
 					"custom-toml",
 					"path",
-					"test-toml"
+					"test.toml"
 				),
 			});
 			try {

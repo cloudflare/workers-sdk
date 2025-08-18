@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import childProcess from "node:child_process";
 import events from "node:events";
 import fs from "node:fs/promises";
@@ -219,6 +220,26 @@ export function runCommand(
 	}
 }
 
+function getWranglerCommand(command: string) {
+	// Enforce a `wrangler` prefix to make commands clearer to read
+	assert(
+		command.startsWith("wrangler "),
+		"Commands must start with `wrangler` (e.g. `wrangler dev`) but got " +
+			command
+	);
+	const wranglerBin = path.resolve(
+		`${__dirname}/../../../packages/wrangler/bin/wrangler.js`
+	);
+	return `node ${wranglerBin} ${command.slice("wrangler ".length)}`;
+}
+
+export async function runWrangler(
+	wranglerCommand: string,
+	{ cwd }: { cwd?: string } = {}
+) {
+	return runCommand(getWranglerCommand(wranglerCommand), cwd);
+}
+
 /**
  * Fetches JSON data from the `url` using the `info` to create the request.
  *
@@ -232,7 +253,7 @@ export async function fetchJson(url: string, info?: RequestInit) {
 				const response = await fetch(url, {
 					headers: { "MF-Disable-Pretty-Error": "true" },
 					...info,
-					signal: AbortSignal.timeout(5_000),
+					signal: AbortSignal.timeout(10_000),
 				});
 				const text = await response.text();
 				try {
@@ -247,7 +268,7 @@ export async function fetchJson(url: string, info?: RequestInit) {
 				throw error;
 			}
 		},
-		{ timeout: 20_000, interval: 1000 }
+		{ timeout: 40_000, interval: 1000 }
 	);
 }
 
@@ -279,4 +300,18 @@ async function fixupReplacements(
 			await fs.writeFile(path.join(projectPath, file.name), content, "utf8");
 		}
 	}
+}
+
+/**
+ * `buildAndPreview` commands (i.e. `vite build && vite preview`) don't work in CI on windows
+ * this needs to be investigated and solved: https://jira.cfdata.org/browse/DEVX-2030
+ *
+ * This minimal utility simply detects if the command is being tested on windows
+ *
+ * @param command the command being tested (either 'dev' or 'buildAndPreview')
+ * @returns true is the command is buildAndPreview and the os is windows
+ */
+export function isBuildAndPreviewOnWindows(command: "dev" | "buildAndPreview") {
+	const isWindows = process.platform === "win32";
+	return isWindows && command === "buildAndPreview";
 }

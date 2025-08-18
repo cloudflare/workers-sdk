@@ -264,6 +264,7 @@ export const versionsUploadCommand = createCommand({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
+			DEPLOY_REMOTE_DIFF_CHECK: false,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},

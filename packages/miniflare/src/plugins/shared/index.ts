@@ -131,7 +131,7 @@ export class ProxyNodeBinding {
 }
 
 export function namespaceKeys(
-	namespaces?: Record<string, string | { id: string }> | string[]
+	namespaces?: Record<string, unknown> | string[]
 ): string[] {
 	if (Array.isArray(namespaces)) {
 		return namespaces;

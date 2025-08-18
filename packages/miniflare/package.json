@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "4.20250813.0",
+	"version": "4.20250813.1",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -60,6 +60,7 @@
 		"@ava/typescript": "^4.1.0",
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
+		"@cloudflare/jsrpc": "link:../../vendor/jsrpc",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",

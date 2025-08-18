@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.2.10
+
+### Patch Changes
+
+- [#10289](https://github.com/cloudflare/workers-sdk/pull/10289) [`a5a1426`](https://github.com/cloudflare/workers-sdk/commit/a5a1426a9ead85d2518f01fde0c1dbc02f98c4df) Thanks [@emily-shen](https://github.com/emily-shen)! - Cleanup container images created during local dev if no changes have been made.
+
+  We now untag old images that were created by Wrangler/Vite if we find that the image content and configuration is unchanged, so that we don't keep accumulating image tags.
+
 ## 0.2.9
 
 ### Patch Changes
