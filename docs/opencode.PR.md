@@ -1,8 +1,10 @@
-# Add `wrangler prompt` - AI Assistant Integration
+# Add `wrangler prompt` - AI Assistant powered by opencode
 
 ## Summary
 
-Adds `wrangler prompt` command that launches [opencode](https://opencode.ai) AI assistant with Cloudflare Workers-specific configuration and documentation access.
+Adds `wrangler prompt` command that launches [opencode](https://opencode.ai) AI assistant with Cloudflare Workers-specific system prompt and Cloudflare docs MCP server.
+
+In the future, this can be expanded with additional system prompts, MCP prompts, and potentially more advanced behavior using [opencode plugins](https://opencode.ai/docs/plugins/).
 
 ## What This Does
 
@@ -21,7 +23,23 @@ graph LR
     B -->|Yes| D[Generate config]
     C --> D
     D --> E[Launch opencode with Cloudflare profile]
-    E --> F[AI assistant with docs access]
+    E --> F["AI assistant (opencode)<br>with Cloudflare docs MCP"]
+
+    %% Assign classes to nodes
+    class A wrangler;
+    class B decision;
+    class C install;
+    class D config;
+    class E launch;
+    class F ai;
+
+    %% Define styles for dark mode
+    classDef wrangler fill:#243748,stroke:#63c7f7,stroke-width:2px,color:#eaf6fb;
+    classDef decision fill:#31224b,stroke:#ef6fff,stroke-width:2px,color:#fff;
+    classDef install fill:#233a24,stroke:#6bf757,stroke-width:2px,color:#e0ffea;
+    classDef config fill:#233a30,stroke:#1faeb7,stroke-width:2px,color:#cafbff;
+    classDef launch fill:#342a25,stroke:#ffb86b,stroke-width:2px,color:#fff6e0;
+    classDef ai fill:#17313f,stroke:#f87663,stroke-width:2px,color:#ffe8e5;
 ```
 
 ## Implementation
@@ -32,23 +50,16 @@ graph LR
 packages/wrangler/src/prompt/
 ├── index.ts              # Command definition and handler
 ├── opencode-manager.ts   # Detection and auto-installation
-├── config-generator.ts   # Configuration generation
-└── types.ts             # TypeScript interfaces
+├── config-generator.ts   # opencode config generation
+└── types.ts              # opencode config schema
 ```
-
-**Key Components:**
-
-1. **Command Registration** - Standard wrangler command pattern with experimental status
-2. **Opencode Management** - Detects via PATH, auto-installs via npm/yarn/pnpm
-3. **Config Generation** - Creates temporary config with project-aware system prompt and Cloudflare docs MCP
-4. **Process Launch** - Uses `execa` with `stdio: "inherit"` for seamless UX
 
 **Generated Configuration:**
 
-- Cloudflare-specialized agent
+- Cloudflare-specialized agent (see: https://opencode.ai/docs/agents/)
 - System prompt includes detected wrangler config file path
-- Pre-configured MCP server for https://docs.mcp.cloudflare.com/mcp
-- Temporary config stored in `.wrangler/tmp/`
+- Pre-configured MCP server for Cloudflare docs (`https://docs.mcp.cloudflare.com/mcp`)
+- Temporary opencode config stored in `.wrangler/tmp/`
 
 ## Example Usage
 
@@ -63,22 +74,9 @@ npx wrangler prompt "add a queue named my-queue to my worker"
 npx wrangler prompt --auth login
 ```
 
-## Integration Points
-
-- Uses existing wrangler patterns: `createCommand()`, `UserError`, logging
-- Leverages `getWranglerTmpDir()` and `findWranglerConfig()` utilities
-- Follows established external tool integration patterns
-- No new dependencies added
-
 ## Testing
 
-Currently no dedicated tests (experimental feature). Manual testing completed on macOS/Linux/Windows with npm/yarn/pnpm.
-
-## Files Changed
-
-- `packages/wrangler/src/index.ts` - Command registration
-- `packages/wrangler/src/prompt/` - New directory with implementation
-- No package.json changes (uses existing dependencies)
+Currently no dedicated tests (experimental feature). Manual testing completed on macOS with npm.
 
 # Diagrams
 
