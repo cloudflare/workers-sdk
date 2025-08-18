@@ -1,7 +1,14 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import { execa } from "execa";
 import { vi } from "vitest";
 import { UserError } from "../errors";
 import { getPackageManager } from "../package-manager";
+import { getWranglerTmpDir } from "../paths";
+import {
+	generateOpencodeConfig,
+	generateSystemPrompt,
+} from "../prompt/config-generator";
 import {
 	detectOpencode,
 	installOpencode,
@@ -10,7 +17,9 @@ import {
 import type { Mock } from "vitest";
 
 vi.mock("execa");
+vi.mock("node:fs/promises");
 vi.mock("../package-manager");
+vi.mock("../paths");
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -205,6 +214,75 @@ describe("installOpencode()", () => {
 			installOpencode()
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Failed to install opencode. Please run 'pnpm add -g opencode-ai@latest' manually.]`
+		);
+	});
+});
+
+describe("generateOpencodeConfig()", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("should generate config file", async () => {
+		const mockTmpDir = { path: "/dev/null/wrangler-opencode" };
+		const projectPath = "/project";
+		const expectedConfigPath = path.join(mockTmpDir.path, "opencode.json");
+
+		vi.mocked(getWranglerTmpDir as Mock).mockReturnValue(mockTmpDir);
+		vi.mocked(fs.writeFile as Mock).mockResolvedValue(undefined);
+
+		const result = await generateOpencodeConfig(projectPath);
+
+		expect(result).toBe(expectedConfigPath);
+		expect(getWranglerTmpDir).toHaveBeenCalledWith(projectPath, "opencode");
+		expect(fs.writeFile).toHaveBeenCalledWith(
+			expectedConfigPath,
+			expect.stringContaining('"$schema": "https://opencode.ai/config.json"'),
+			"utf8"
+		);
+
+		const writeFileCall = vi.mocked(fs.writeFile as Mock).mock.calls[0];
+		const configContent = JSON.parse(writeFileCall[1]);
+		expect(configContent).toMatchInlineSnapshot(`
+			Object {
+			  "$schema": "https://opencode.ai/config.json",
+			  "agent": Object {
+			    "cloudflare": Object {
+			      "description": "Cloudflare Workers development specialist",
+			      "mode": "primary",
+			      "prompt": "You are a helpful AI assistant specialized in Cloudflare Workers development.
+			You are an expert in Cloudflare Workers development, deployment, troubleshooting, and following Cloudflare best practices.
+
+			<project-info>
+
+			</project-info>
+
+			<rules>
+			- ALWAYS run wrangler using the package manager (e.g. npx wrangler), NEVER use global wrangler.
+			</rules>",
+			    },
+			  },
+			  "mcp": Object {
+			    "cloudflare-docs": Object {
+			      "type": "remote",
+			      "url": "https://docs.mcp.cloudflare.com/mcp",
+			    },
+			  },
+			}
+		`);
+	});
+
+	it("should throw error when file write fails", async () => {
+		const mockTmpDir = { path: "/dev/null/wrangler-opencode" };
+		const projectPath = "/project";
+
+		vi.mocked(getWranglerTmpDir as Mock).mockReturnValue(mockTmpDir);
+		vi.mocked(fs.writeFile as Mock).mockRejectedValue(
+			new Error("Permission denied")
+		);
+
+		await expect(generateOpencodeConfig(projectPath)).rejects.toThrow(
+			"Permission denied"
 		);
 	});
 });
