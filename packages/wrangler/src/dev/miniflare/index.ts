@@ -568,7 +568,7 @@ export function buildMiniflareBindingOptions(
 			const indexVersion = "v2";
 
 			externalWorkers.push({
-				name: `${EXTERNAL_VECTORIZE_WORKER_NAME}:${config.name}:${bindingName}`,
+				name: `${EXTERNAL_VECTORIZE_WORKER_NAME}-${config.name}-${bindingName}`,
 				modules: [
 					{
 						type: "ESModule",
@@ -589,7 +589,7 @@ export function buildMiniflareBindingOptions(
 			});
 
 			wrappedBindings[bindingName] = {
-				scriptName: `${EXTERNAL_VECTORIZE_WORKER_NAME}:${config.name}:${bindingName}`,
+				scriptName: `${EXTERNAL_VECTORIZE_WORKER_NAME}-${config.name}-${bindingName}`,
 			};
 		}
 	}
