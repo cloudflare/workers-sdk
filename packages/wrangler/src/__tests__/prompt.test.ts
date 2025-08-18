@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { execa } from "execa";
 import { vi } from "vitest";
+import { findWranglerConfig } from "../config/config-helpers";
 import { UserError } from "../errors";
 import { getPackageManager } from "../package-manager";
 import { getWranglerTmpDir } from "../paths";
@@ -16,8 +17,8 @@ import {
 } from "../prompt/opencode-manager";
 import type { Mock } from "vitest";
 
-vi.mock("execa");
 vi.mock("node:fs/promises");
+vi.mock("../config/config-helpers");
 vi.mock("../package-manager");
 vi.mock("../paths");
 
@@ -222,13 +223,68 @@ describe("installOpencode()", () => {
 	});
 });
 
+describe("generateSystemPrompt()", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("should include config file info when config exists", () => {
+		const projectPath = "/project";
+		const configPath = "/project/wrangler.toml";
+
+		vi.mocked(findWranglerConfig as Mock).mockReturnValue({
+			userConfigPath: configPath,
+		});
+
+		const prompt = generateSystemPrompt(projectPath);
+
+		expect(findWranglerConfig).toHaveBeenCalledWith(projectPath);
+		expect(prompt).toMatchInlineSnapshot(`
+			"You are a helpful AI assistant specialized in Cloudflare Workers development.
+			You are an expert in Cloudflare Workers development, deployment, troubleshooting, and following Cloudflare best practices.
+
+			<project-info>
+			- Wrangler config file: /project/wrangler.toml
+			</project-info>
+
+			<rules>
+			- ALWAYS run wrangler using the package manager (e.g. npx wrangler), NEVER use global wrangler.
+			</rules>"
+		`);
+	});
+
+	it("should omit config file info when no config exists", () => {
+		const projectPath = "/project";
+
+		vi.mocked(findWranglerConfig as Mock).mockReturnValue({
+			userConfigPath: null,
+		});
+
+		const prompt = generateSystemPrompt(projectPath);
+
+		expect(findWranglerConfig).toHaveBeenCalledWith(projectPath);
+		expect(prompt).toMatchInlineSnapshot(`
+			"You are a helpful AI assistant specialized in Cloudflare Workers development.
+			You are an expert in Cloudflare Workers development, deployment, troubleshooting, and following Cloudflare best practices.
+
+			<project-info>
+
+			</project-info>
+
+			<rules>
+			- ALWAYS run wrangler using the package manager (e.g. npx wrangler), NEVER use global wrangler.
+			</rules>"
+		`);
+	});
+});
+
 describe("generateOpencodeConfig()", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
 	it("should generate config file", async () => {
-		const mockTmpDir = { path: "/dev/null/wrangler-opencode" };
+		const mockTmpDir = { path: "/tmp/wrangler-opencode" };
 		const projectPath = "/project";
 		const expectedConfigPath = path.join(mockTmpDir.path, "opencode.json");
 
@@ -277,7 +333,7 @@ describe("generateOpencodeConfig()", () => {
 	});
 
 	it("should throw error when file write fails", async () => {
-		const mockTmpDir = { path: "/dev/null/wrangler-opencode" };
+		const mockTmpDir = { path: "/tmp/wrangler-opencode" };
 		const projectPath = "/project";
 
 		vi.mocked(getWranglerTmpDir as Mock).mockReturnValue(mockTmpDir);
