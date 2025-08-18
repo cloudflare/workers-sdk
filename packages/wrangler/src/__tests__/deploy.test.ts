@@ -13009,16 +13009,16 @@ export default{
 			await runWrangler("deploy --x-remote-diff-check");
 
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour local configuration differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
 
-				      \\"name\\": \\"test-name\\",
-				      \\"main\\": \\"./index.js\\",
+				      \\"workers_dev\\": true,
+				      \\"preview_urls\\": true,
 				      \\"vars\\": {
 				  -     \\"MY_VAR\\": \\"abc\\"
 				  +     \\"MY_VAR\\": 123
 				      },
-				      \\"observability\\": {
-				        \\"enabled\\": true
+				      \\"define\\": {},
+				      \\"durable_objects\\": {
 
 				  Deploying the Worker will override the remote configuration with your local one.
 
@@ -13074,16 +13074,16 @@ export default{
 			//       to be able to show toml content/diffs, that combined with the fact that json(c) config files are the
 			//       recommended ones moving forward makes this small shortcoming of the config diffing acceptable
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour local configuration differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
 
-				      \\"name\\": \\"test-name\\",
-				      \\"main\\": \\"./index.js\\",
+				      \\"workers_dev\\": true,
+				      \\"preview_urls\\": true,
 				      \\"vars\\": {
 				  -     \\"MY_VAR\\": \\"abc\\"
 				  +     \\"MY_VAR\\": \\"this is a toml file\\"
 				      },
-				      \\"observability\\": {
-				        \\"enabled\\": true
+				      \\"define\\": {},
+				      \\"durable_objects\\": {
 
 				  Deploying the Worker will override the remote configuration with your local one.
 

@@ -1,5 +1,5 @@
 import { getRemoteConfigDiff } from "../../deploy/config-diffs";
-import type { RawConfig } from "../../config";
+import type { Config } from "../../config";
 
 describe("getRemoteConfigsDiff", () => {
 	it("should handle a very simple diffing scenario (no diffs, random order)", () => {
@@ -25,7 +25,7 @@ describe("getRemoteConfigsDiff", () => {
 				tail_consumers: undefined,
 				observability: { enabled: true },
 				limits: undefined,
-			} as unknown as RawConfig
+			} as unknown as Config
 		);
 
 		expect(diff.toString()).toEqual("");
@@ -48,14 +48,14 @@ describe("getRemoteConfigsDiff", () => {
 			{
 				compatibility_date: "2025-07-09",
 				main: "/tmp/src/index.js",
-				compatibility_flags: undefined,
+				compatibility_flags: [],
 				name: "silent-firefly-dbe3",
 				workers_dev: true,
 				limits: undefined,
 				placement: undefined,
 				tail_consumers: undefined,
 				observability: { enabled: true, head_sampling_rate: 1 },
-			}
+			} as unknown as Config
 		);
 
 		expect(diff.toString()).toMatchInlineSnapshot(`
@@ -63,8 +63,8 @@ describe("getRemoteConfigsDiff", () => {
 			-   \\"compatibility_date\\": \\"2025-07-08\\",
 			+   \\"compatibility_date\\": \\"2025-07-09\\",
 			    \\"main\\": \\"/tmp/src/index.js\\",
-			    \\"name\\": \\"silent-firefly-dbe3\\",
-			    \\"workers_dev\\": true,"
+			    \\"compatibility_flags\\": [],
+			    \\"name\\": \\"silent-firefly-dbe3\\","
 		`);
 		expect(nonDestructive).toBe(false);
 	});
@@ -83,7 +83,6 @@ describe("getRemoteConfigsDiff", () => {
 				observability: { enabled: true, head_sampling_rate: 1 },
 			},
 			{
-				$schema: "node_modules/wrangler/config-schema.json",
 				name: "silent-firefly-dbe3",
 				main: "src/index.js",
 				compatibility_date: "2025-07-08",
@@ -97,7 +96,7 @@ describe("getRemoteConfigsDiff", () => {
 				},
 				account_id: "account-id-123",
 				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
-			}
+			} as unknown as Config
 		);
 		expect(diff.toString()).toMatchInlineSnapshot(`
 			"    \\"compatibility_date\\": \\"2025-07-08\\",
@@ -107,18 +106,12 @@ describe("getRemoteConfigsDiff", () => {
 			+     \\"head_sampling_rate\\": 1,
 			+     \\"logs\\": {
 			+       \\"head_sampling_rate\\": 0.95,
-			+       \\"invocation_logs\\": true
+			+       \\"invocation_logs\\": true,
+			+       \\"enabled\\": true
 			+     }
 			    },
-			-   \\"account_id\\": \\"account-id-123\\"
-			+   \\"account_id\\": \\"account-id-123\\",
-			+   \\"kv_namespaces\\": [
-			+     {
-			+       \\"binding\\": \\"MY_KV\\",
-			+       \\"id\\": \\"my-kv-123\\"
-			+     }
-			+   ]
-			  }"
+			    \\"account_id\\": \\"account-id-123\\",
+			    \\"kv_namespaces\\": ["
 		`);
 		expect(nonDestructive).toBe(true);
 	});
@@ -138,7 +131,6 @@ describe("getRemoteConfigsDiff", () => {
 				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
 			},
 			{
-				$schema: "node_modules/wrangler/config-schema.json",
 				name: "silent-firefly-dbe3",
 				main: "src/index.js",
 				compatibility_date: "2025-07-09",
@@ -146,20 +138,22 @@ describe("getRemoteConfigsDiff", () => {
 					enabled: false,
 				},
 				account_id: "account-id-123",
-			}
+			} as unknown as Config
 		);
 		expect(diff.toString()).toMatchInlineSnapshot(`
-			"    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+			"  {
 			    \\"name\\": \\"silent-firefly-dbe3\\",
 			    \\"main\\": \\"src/index.js\\",
 			-   \\"compatibility_date\\": \\"2025-07-08\\",
 			+   \\"compatibility_date\\": \\"2025-07-09\\",
 			    \\"observability\\": {
-			-     \\"enabled\\": true
-			+     \\"enabled\\": false
+			-     \\"enabled\\": true,
+			+     \\"enabled\\": false,
+			      \\"head_sampling_rate\\": 1
 			    },
-			-   \\"account_id\\": \\"account-id-123\\",
-			+   \\"account_id\\": \\"account-id-123\\"
+			    \\"account_id\\": \\"account-id-123\\",
+			-   \\"workers_dev\\": true,
+			+   \\"workers_dev\\": true
 			-   \\"kv_namespaces\\": [
 			-     {
 			-       \\"binding\\": \\"MY_KV\\",
