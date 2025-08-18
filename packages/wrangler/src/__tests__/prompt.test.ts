@@ -21,11 +21,11 @@ vi.mock("node:fs/promises");
 vi.mock("../package-manager");
 vi.mock("../paths");
 
-beforeEach(() => {
-	vi.clearAllMocks();
-});
-
 describe("detectOpencode()", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
 	it("should return version string when opencode command succeeds", async () => {
 		const mockVersion = "v1.2.3";
 
@@ -128,6 +128,10 @@ describe("upgradeOpencode()", () => {
 });
 
 describe("installOpencode()", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
 	describe("should install with detected package manager", () => {
 		it("npm", async () => {
 			vi.mocked(getPackageManager as Mock).mockResolvedValueOnce({
