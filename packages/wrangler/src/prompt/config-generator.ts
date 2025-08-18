@@ -37,7 +37,6 @@ export async function generateOpencodeConfig(
 
 	const config: OpencodeConfig = {
 		$schema: "https://opencode.ai/config.json",
-		theme: "gruvbox",
 		agent: {
 			cloudflare: {
 				prompt: systemPrompt,
