@@ -1,6 +1,7 @@
 import { execa } from "execa";
 import { vi } from "vitest";
-import { detectOpencode } from "../prompt/opencode-manager";
+import { UserError } from "../errors";
+import { detectOpencode, upgradeOpencode } from "../prompt/opencode-manager";
 import type { Mock } from "vitest";
 
 describe("detectOpencode()", () => {
@@ -76,5 +77,35 @@ describe("detectOpencode()", () => {
 		const res = await detectOpencode();
 
 		expect(res).toBe("");
+	});
+});
+
+describe("upgradeOpencode()", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("should call execa with opencode upgrade", async () => {
+		vi.mocked(execa as Mock).mockReturnValueOnce({
+			stdout: null,
+			stderr: null,
+		});
+
+		await upgradeOpencode();
+
+		expect(execa).toHaveBeenCalledWith("opencode", ["upgrade"]);
+	});
+
+	it("should throw UserError when upgrade command fails", async () => {
+		vi.mocked(execa as Mock).mockRejectedValue(new Error("Command failed"));
+
+		await expect(() => upgradeOpencode()).rejects.toThrowError(UserError);
+		await expect(() =>
+			upgradeOpencode()
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Failed to upgrade opencode. Please run 'opencode upgrade' manually.]`
+		);
+
+		expect(execa).toHaveBeenCalledWith("opencode", ["upgrade"]);
 	});
 });
