@@ -32,6 +32,15 @@ type Props = {
 	assetsOptions: AssetsOptions | undefined;
 };
 
+export function getResolvedWorkersDev(
+	configWorkersDev: boolean | undefined,
+	routes: Route[]
+): boolean {
+	// resolvedWorkersDev defaults to true only if there aren't any routes defined
+	const resolvedWorkersDev = configWorkersDev ?? routes.length === 0;
+	return resolvedWorkersDev;
+}
+
 export default async function triggersDeploy(
 	props: Props
 ): Promise<string[] | void> {
@@ -52,7 +61,7 @@ export default async function triggersDeploy(
 	}
 
 	// deployToWorkersDev defaults to true only if there aren't any routes defined
-	const deployToWorkersDev = config.workers_dev ?? routes.length === 0;
+	const deployToWorkersDev = getResolvedWorkersDev(config.workers_dev, routes);
 
 	if (!scriptName) {
 		throw new UserError(
