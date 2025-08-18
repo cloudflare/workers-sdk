@@ -691,7 +691,11 @@ export interface EnvironmentNonInheritable {
 		| {
 				/** The binding name used to refer to the bound service. */
 				binding: string;
-				/** The name of the service. */
+				/**
+				 * The name of the service.
+				 * To bind to a worker in a specific environment,
+				 * you should use the format `<worker_name>-<environment_name>`.
+				 */
 				service: string;
 				/**
 				 * @hidden
