@@ -656,13 +656,13 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("secret");
 
-	// types
-	registry.define([{ command: "wrangler types", definition: typesCommand }]);
-	registry.registerNamespace("types");
-
 	// prompt
 	registry.define([{ command: "wrangler prompt", definition: promptCommand }]);
 	registry.registerNamespace("prompt");
+
+	// types
+	registry.define([{ command: "wrangler types", definition: typesCommand }]);
+	registry.registerNamespace("types");
 
 	/******************** CMD GROUP ***********************/
 	registry.define([
