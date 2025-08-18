@@ -1,13 +1,14 @@
 import { http, HttpResponse } from "msw";
-import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockPrompt } from "./helpers/mock-dialogs";
-import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
-import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
-import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { mockConsoleMethods } from "../helpers/mock-console";
+import { mockPrompt } from "../helpers/mock-dialogs";
+import { useMockIsTTY } from "../helpers/mock-istty";
+import { msw } from "../helpers/msw";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { runWrangler } from "../helpers/run-wrangler";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
+import { mockGetQueueByNameRequest } from "./mock-utils";
+import type { PostTypedConsumerBody, QueueResponse } from "../../queues/client";
 
 describe("wrangler", () => {
 	mockAccountId();
@@ -29,15 +30,16 @@ describe("wrangler", () => {
 				📬 Manage Workers Queues
 
 				COMMANDS
-				  wrangler queues list                    List Queues
-				  wrangler queues create <name>           Create a Queue
-				  wrangler queues update <name>           Update a Queue
-				  wrangler queues delete <name>           Delete a Queue
-				  wrangler queues info <name>             Get Queue information
-				  wrangler queues consumer                Configure Queue consumers
-				  wrangler queues pause-delivery <name>   Pause message delivery for a Queue
-				  wrangler queues resume-delivery <name>  Resume message delivery for a Queue
-				  wrangler queues purge <name>            Purge messages from a Queue
+				  wrangler queues list                    List queues
+				  wrangler queues create <name>           Create a queue
+				  wrangler queues update <name>           Update a queue
+				  wrangler queues delete <name>           Delete a queue
+				  wrangler queues info <name>             Get queue information
+				  wrangler queues consumer                Configure queue consumers
+				  wrangler queues pause-delivery <name>   Pause message delivery for a queue
+				  wrangler queues resume-delivery <name>  Resume message delivery for a queue
+				  wrangler queues purge <name>            Purge messages from a queue
+				  wrangler queues subscription            Manage event subscriptions for a queue
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]
@@ -48,37 +50,6 @@ describe("wrangler", () => {
 				  -v, --version   Show version number  [boolean]"
 			`);
 		});
-
-		function mockGetQueueByNameRequest(
-			queueName: string,
-			queue: QueueResponse | null
-		) {
-			const requests = { count: 0 };
-			msw.use(
-				http.get(
-					"*/accounts/:accountId/queues?*",
-					async ({ request }) => {
-						const url = new URL(request.url);
-
-						requests.count += 1;
-						if (queue) {
-							const nameParam = url.searchParams.getAll("name");
-							expect(nameParam.length).toBeGreaterThan(0);
-							expect(nameParam[0]).toEqual(queueName);
-						}
-						expect(await request.text()).toEqual("");
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: queue ? [queue] : [],
-						});
-					},
-					{ once: true }
-				)
-			);
-			return requests;
-		}
 
 		describe("list", () => {
 			function mockListRequest(queues: QueueResponse[], page: number) {
@@ -112,7 +83,7 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"wrangler queues list
 
-					List Queues
+					List queues
 
 					GLOBAL FLAGS
 					  -c, --config    Path to Wrangler configuration file  [string]
@@ -258,7 +229,7 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"wrangler queues create <name>
 
-					Create a Queue
+					Create a queue
 
 					POSITIONALS
 					  name  The name of the queue  [string] [required]
@@ -479,7 +450,7 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"wrangler queues update <name>
 
-					Update a Queue
+					Update a queue
 
 					POSITIONALS
 					  name  The name of the queue  [string] [required]
@@ -634,7 +605,7 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"wrangler queues delete <name>
 
-					Delete a Queue
+					Delete a queue
 
 					POSITIONALS
 					  name  The name of the queue  [string] [required]
@@ -701,7 +672,7 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"wrangler queues consumer
 
-					Configure Queue consumers
+					Configure queue consumers
 
 					COMMANDS
 					  wrangler queues consumer add <queue-name> <script-name>     Add a Queue Worker Consumer
@@ -1734,7 +1705,7 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"wrangler queues info <name>
 
-					Get Queue information
+					Get queue information
 
 					POSITIONALS
 					  name  The name of the queue  [string] [required]
@@ -1898,7 +1869,7 @@ describe("wrangler", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler queues pause-delivery <name>
 
-				Pause message delivery for a Queue
+				Pause message delivery for a queue
 
 				POSITIONALS
 				  name  The name of the queue  [string] [required]
@@ -2009,7 +1980,7 @@ describe("wrangler", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler queues resume-delivery <name>
 
-				Resume message delivery for a Queue
+				Resume message delivery for a queue
 
 				POSITIONALS
 				  name  The name of the queue  [string] [required]
@@ -2112,7 +2083,7 @@ describe("wrangler", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler queues purge <name>
 
-				Purge messages from a Queue
+				Purge messages from a queue
 
 				POSITIONALS
 				  name  The name of the queue  [string] [required]

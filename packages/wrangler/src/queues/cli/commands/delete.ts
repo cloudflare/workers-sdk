@@ -4,7 +4,7 @@ import { deleteQueue } from "../../client";
 
 export const queuesDeleteCommand = createCommand({
 	metadata: {
-		description: "Delete a Queue",
+		description: "Delete a queue",
 		owner: "Product: Queues",
 		status: "stable",
 	},

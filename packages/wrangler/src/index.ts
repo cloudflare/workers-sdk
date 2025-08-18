@@ -68,15 +68,6 @@ import {
 	UserError,
 } from "./errors";
 import {
-	eventSubscriptionsBrowseCommand,
-	eventSubscriptionsCreateCommand,
-	eventSubscriptionsDeleteCommand,
-	eventSubscriptionsGetCommand,
-	eventSubscriptionsListCommand,
-	eventSubscriptionsNamespace,
-	eventSubscriptionsUpdateCommand,
-} from "./event-subscriptions";
-import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
 	helloWorldSetCommand,
@@ -179,6 +170,12 @@ import {
 	queuesResumeCommand,
 } from "./queues/cli/commands/pause-resume";
 import { queuesPurgeCommand } from "./queues/cli/commands/purge";
+import { queuesSubscriptionNamespace } from "./queues/cli/commands/subscription";
+import { queuesSubscriptionCreateCommand } from "./queues/cli/commands/subscription/create";
+import { queuesSubscriptionDeleteCommand } from "./queues/cli/commands/subscription/delete";
+import { queuesSubscriptionGetCommand } from "./queues/cli/commands/subscription/get";
+import { queuesSubscriptionListCommand } from "./queues/cli/commands/subscription/list";
+import { queuesSubscriptionUpdateCommand } from "./queues/cli/commands/subscription/update";
 import { queuesUpdateCommand } from "./queues/cli/commands/update";
 import { r2Namespace } from "./r2";
 import {
@@ -717,6 +714,30 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler queues purge",
 			definition: queuesPurgeCommand,
 		},
+		{
+			command: "wrangler queues subscription",
+			definition: queuesSubscriptionNamespace,
+		},
+		{
+			command: "wrangler queues subscription create",
+			definition: queuesSubscriptionCreateCommand,
+		},
+		{
+			command: "wrangler queues subscription list",
+			definition: queuesSubscriptionListCommand,
+		},
+		{
+			command: "wrangler queues subscription get",
+			definition: queuesSubscriptionGetCommand,
+		},
+		{
+			command: "wrangler queues subscription delete",
+			definition: queuesSubscriptionDeleteCommand,
+		},
+		{
+			command: "wrangler queues subscription update",
+			definition: queuesSubscriptionUpdateCommand,
+		},
 
 		{
 			command: "wrangler queues consumer add",
@@ -752,38 +773,6 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("queues");
-
-	registry.define([
-		{
-			command: "wrangler event-subscriptions",
-			definition: eventSubscriptionsNamespace,
-		},
-		{
-			command: "wrangler event-subscriptions browse",
-			definition: eventSubscriptionsBrowseCommand,
-		},
-		{
-			command: "wrangler event-subscriptions list",
-			definition: eventSubscriptionsListCommand,
-		},
-		{
-			command: "wrangler event-subscriptions create",
-			definition: eventSubscriptionsCreateCommand,
-		},
-		{
-			command: "wrangler event-subscriptions update",
-			definition: eventSubscriptionsUpdateCommand,
-		},
-		{
-			command: "wrangler event-subscriptions delete",
-			definition: eventSubscriptionsDeleteCommand,
-		},
-		{
-			command: "wrangler event-subscriptions get",
-			definition: eventSubscriptionsGetCommand,
-		},
-	]);
-	registry.registerNamespace("event-subscriptions");
 
 	// r2
 	registry.define([

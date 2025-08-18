@@ -4,6 +4,10 @@ import { type Config } from "../config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import type {
+	CreateEventSubscriptionRequest,
+	EventSubscription,
+} from "./subscription-types";
 
 export interface PostQueueBody {
 	queue_name: string;
@@ -438,4 +442,116 @@ export async function purgeQueue(
 		method: "POST",
 		body: JSON.stringify(body),
 	});
+}
+
+export async function createEventSubscription(
+	config: Config,
+	queueName: string,
+	request: CreateEventSubscriptionRequest
+): Promise<EventSubscription> {
+	const accountId = await requireAuth(config);
+	const queue = await getQueue(config, queueName);
+
+	const body = {
+		...request,
+		destination: {
+			type: "queues.queue" as const,
+			queue_id: queue.queue_id,
+		},
+	};
+
+	return fetchResult(
+		config,
+		`/accounts/${accountId}/event_subscriptions/subscriptions`,
+		{
+			method: "POST",
+			body: JSON.stringify(body),
+		}
+	);
+}
+
+export async function listEventSubscriptions(
+	config: Config,
+	queueName: string,
+	options?: { page?: number; per_page?: number }
+): Promise<EventSubscription[]> {
+	const accountId = await requireAuth(config);
+	const queue = await getQueue(config, queueName);
+
+	const params = new URLSearchParams({
+		queue_id: queue.queue_id,
+		page: (options?.page || 1).toString(),
+		per_page: (options?.per_page || 20).toString(),
+	});
+
+	return fetchResult(
+		config,
+		`/accounts/${accountId}/event_subscriptions/subscriptions`,
+		{},
+		params
+	);
+}
+
+export async function getEventSubscription(
+	config: Config,
+	subscriptionId: string
+): Promise<EventSubscription> {
+	const accountId = await requireAuth(config);
+
+	return fetchResult(
+		config,
+		`/accounts/${accountId}/event_subscriptions/subscriptions/${subscriptionId}`
+	);
+}
+
+export async function updateEventSubscription(
+	config: Config,
+	subscriptionId: string,
+	request: Partial<
+		Pick<CreateEventSubscriptionRequest, "name" | "enabled" | "events">
+	>
+): Promise<EventSubscription> {
+	const accountId = await requireAuth(config);
+
+	return fetchResult(
+		config,
+		`/accounts/${accountId}/event_subscriptions/subscriptions/${subscriptionId}`,
+		{
+			method: "PATCH",
+			body: JSON.stringify(request),
+		}
+	);
+}
+
+export async function deleteEventSubscription(
+	config: Config,
+	subscriptionId: string
+): Promise<void> {
+	const accountId = await requireAuth(config);
+
+	return fetchResult(
+		config,
+		`/accounts/${accountId}/event_subscriptions/subscriptions/${subscriptionId}`,
+		{
+			method: "DELETE",
+		}
+	);
+}
+
+export async function getEventSubscriptionForQueue(
+	config: Config,
+	queueName: string,
+	subscriptionId: string
+): Promise<EventSubscription> {
+	const subscription = await getEventSubscription(config, subscriptionId);
+	const queue = await getQueue(config, queueName);
+
+	if (subscription.destination.queue_id !== queue.queue_id) {
+		throw new UserError(
+			`Subscription '${subscriptionId}' does not belong to queue '${queueName}'. ` +
+				`This subscription is configured for a different queue.`
+		);
+	}
+
+	return subscription;
 }
