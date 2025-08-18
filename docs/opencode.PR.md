@@ -45,7 +45,7 @@ packages/wrangler/src/prompt/
 
 **Generated Configuration:**
 
-- Cloudflare-specialized agent with Claude Sonnet model
+- Cloudflare-specialized agent
 - System prompt includes detected wrangler config file path
 - Pre-configured MCP server for https://docs.mcp.cloudflare.com/mcp
 - Temporary config stored in `.wrangler/tmp/`
@@ -54,13 +54,13 @@ packages/wrangler/src/prompt/
 
 ```bash
 # Basic usage
-wrangler prompt
+npx wrangler prompt
 
-# With initial question
-wrangler prompt "How do I add custom domains to my Worker?"
+# With initial prompt
+npx wrangler prompt "add a queue named my-queue to my worker"
 
 # Authentication
-wrangler prompt --auth login
+npx wrangler prompt --auth login
 ```
 
 ## Integration Points

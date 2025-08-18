@@ -46,7 +46,6 @@ export async function generateOpencodeConfig(
 		theme: "gruvbox",
 		agent: {
 			cloudflare: {
-				model: "anthropic/claude-sonnet-4-20250514",
 				prompt: systemPrompt,
 				mode: "primary",
 				description: "Cloudflare Workers development specialist",
