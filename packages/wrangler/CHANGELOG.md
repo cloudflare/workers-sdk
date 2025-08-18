@@ -1,5 +1,35 @@
 # wrangler
 
+## 4.31.0
+
+### Minor Changes
+
+- [#10314](https://github.com/cloudflare/workers-sdk/pull/10314) [`9b09751`](https://github.com/cloudflare/workers-sdk/commit/9b097518456fecee5eb0fab1f56d3a269e8bdfc5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Show possible local vs. dashboard diff information on deploys
+
+  When re-deploying a Worker using `wrangler deploy`, if the configuration has been modified in the Cloudflare dashboard, the local configuration will overwrite the remote one. This can lead to unexpected results for users. To address this, currently `wrangler deploy` warns users about potential configuration overrides (without presenting them) and prompts them to confirm whether they want to proceed.
+
+  The changes here improve the above flow in the following way:
+
+  - If the local changes only add new configurations (without modifying or removing existing ones), the deployment proceeds automatically without warnings or prompts, as these changes are non-destructive and safe.
+  - If the local changes modify or remove existing configurations, `wrangler deploy` now displays a git-like diff showing the differences between the dashboard and local configurations. This allows users to review and understand the impact of their changes before confirming the deployment.
+
+- [#10334](https://github.com/cloudflare/workers-sdk/pull/10334) [`cadf19a`](https://github.com/cloudflare/workers-sdk/commit/cadf19ad1050627ab0b0e107c9533657e01c178d) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Added queues subscription command to Wrangler including create, update, delete, get, list
+
+### Patch Changes
+
+- [#10374](https://github.com/cloudflare/workers-sdk/pull/10374) [`20520fa`](https://github.com/cloudflare/workers-sdk/commit/20520faa340005b9713007ccb8480fb6e97028d3) Thanks [@edmundhung](https://github.com/edmundhung)! - Simplify debug package resolution with nodejs_compat
+
+  A patched version of `debug` was previously introduced that resolved the package to a custom implementation. However, this caused issues due to CJS/ESM interop problems. We now resolve the `debug` package to use the Node.js implementation instead.
+
+- [#10249](https://github.com/cloudflare/workers-sdk/pull/10249) [`875197a`](https://github.com/cloudflare/workers-sdk/commit/875197a570edacbf1849a2f3d76c011e9b6f9cbf) Thanks [@penalosa](https://github.com/penalosa)! - Support JSRPC for remote bindings. This unlocks:
+  - JSRPC over Service Bindings
+  - JSRPC over Dispatch Namespace Bindings
+  - Email
+  - Pipelines
+- Updated dependencies [[`565c3a3`](https://github.com/cloudflare/workers-sdk/commit/565c3a3ddf381945b0bea6c99029d8783e68f6bb), [`ddadb93`](https://github.com/cloudflare/workers-sdk/commit/ddadb9320fef96f52fe010f0e98fd75d5a2925ea), [`20520fa`](https://github.com/cloudflare/workers-sdk/commit/20520faa340005b9713007ccb8480fb6e97028d3), [`875197a`](https://github.com/cloudflare/workers-sdk/commit/875197a570edacbf1849a2f3d76c011e9b6f9cbf)]:
+  - miniflare@4.20250816.0
+  - @cloudflare/unenv-preset@2.6.2
+
 ## 4.30.0
 
 ### Minor Changes
