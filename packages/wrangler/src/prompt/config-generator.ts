@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { findWranglerConfig } from "../config/config-helpers";
 import { getWranglerTmpDir } from "../paths";
-import { OpencodeConfig } from "./types";
+import type { OpencodeConfig } from "./types";
 
 export function generateSystemPrompt(projectPath: string): string {
 	const { userConfigPath } = findWranglerConfig(projectPath);
