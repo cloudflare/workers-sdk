@@ -51,6 +51,3 @@ fixtures/redirected-config-worker-with-environments/build/*
 packages/vite-plugin-cloudflare/playground/**/*.d.ts
 
 vendor/jsrpc
-
-/.claude/
-/.cursor/
