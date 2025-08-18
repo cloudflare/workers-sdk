@@ -1,5 +1,5 @@
-from workers import Response, handler
+from workers import Response, WorkerEntrypoint
 
-@handler
-async def on_fetch(request, env):
-    return Response("Hello World!")
+class Default(WorkerEntrypoint):
+    async def fetch(self, request):
+        return Response("Hello World!")

@@ -1,4 +1,4 @@
-from workers import DurableObject, Response, handler
+from workers import DurableObject, Response, WorkerEntrypoint
 
 """
  * Welcome to Cloudflare Workers! This is your first Durable Objects application.
@@ -40,28 +40,28 @@ class MyDurableObject(DurableObject):
         return f"Hello, {name}!"
 
 
-"""
-* This is the standard fetch handler for a Cloudflare Worker
-*
-* @param {Request} request - The request submitted to the Worker from the client
-* @param {Env} env - The interface to reference bindings declared in wrangler.jsonc
-* @param {ExecutionContext} ctx - The execution context of the Worker
-* @returns {Promise<Response>} The response to be sent back to the client
-"""
-@handler
-async def on_fetch(request, env, ctx):
-    # Create a `DurableObjectId` for an instance of the `MyDurableObject`
-    # class named "foo". Requests from all Workers to the instance named
-    # "foo" will go to a single globally unique Durable Object instance.
-    id = env.MY_DURABLE_OBJECT.idFromName("foo")
+class Default(WorkerEntrypoint):
+    """
+    * This is the standard fetch handler for a Cloudflare Worker
+    *
+    * @param {Request} request - The request submitted to the Worker from the client
+    * @param {Env} env - The interface to reference bindings declared in wrangler.jsonc
+    * @param {ExecutionContext} ctx - The execution context of the Worker
+    * @returns {Promise<Response>} The response to be sent back to the client
+    """
+    async def fetch(self, request):
+        # Create a `DurableObjectId` for an instance of the `MyDurableObject`
+        # class named "foo". Requests from all Workers to the instance named
+        # "foo" will go to a single globally unique Durable Object instance.
+        id = self.env.MY_DURABLE_OBJECT.idFromName("foo")
 
-    # Create a stub to open a communication channel with the Durable
-    # Object instance.
-    stub = env.MY_DURABLE_OBJECT.get(id)
+        # Create a stub to open a communication channel with the Durable
+        # Object instance.
+        stub = self.env.MY_DURABLE_OBJECT.get(id)
 
-    # Call the `say_hello()` RPC method on the stub to invoke the method on
-    # the remote Durable Object instance
-    greeting = await stub.say_hello("world")
+        # Call the `say_hello()` RPC method on the stub to invoke the method on
+        # the remote Durable Object instance
+        greeting = await stub.say_hello("world")
 
-    return Response(greeting)
+        return Response(greeting)
 
