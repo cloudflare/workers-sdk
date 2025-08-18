@@ -1,13 +1,11 @@
 import { execa } from "execa";
 import { createCommand } from "../core/create-command";
-import { UserError } from "../errors";
 import { generateOpencodeConfig } from "./config-generator";
 import { detectOpencode, installOpencode } from "./opencode-manager";
 
 export const promptCommand = createCommand({
 	metadata: {
-		description:
-			"🤖 Launch opencode AI assistant with Cloudflare configuration",
+		description: "🤖 Launch AI assistant (opencode)",
 		status: "experimental",
 		owner: "Workers: Authoring and Testing",
 	},
