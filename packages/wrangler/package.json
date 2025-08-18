@@ -111,6 +111,7 @@
 		"chalk": "^5.2.0",
 		"chokidar": "^4.0.1",
 		"cli-table3": "^0.6.3",
+		"cloudflare": "^4.5.0",
 		"cmd-shim": "^4.1.0",
 		"command-exists": "^1.2.9",
 		"concurrently": "^8.2.2",

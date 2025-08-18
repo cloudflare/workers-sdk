@@ -1,3 +1,4 @@
+import Cloudflare from "cloudflare";
 import type { fetchResult } from "../cfetch";
 import type { Config } from "../config";
 import type { OnlyCamelCase } from "../config/config";
@@ -73,9 +74,12 @@ export type HandlerContext = {
 
 		// TODO: extend with other categories of error
 	};
+	/**
+	 * API SDK
+	 */
+	sdk: Cloudflare;
 
 	// TODO: experiments
-	// TODO(future): API SDK
 
 	// TODO: prompt (cli package)
 	// TODO: accountId

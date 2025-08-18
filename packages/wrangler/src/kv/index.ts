@@ -131,16 +131,19 @@ export const kvNamespaceListCommand = createCommand({
 	args: {},
 
 	behaviour: { printBanner: false, printResourceLocation: false },
-	async handler(args) {
-		const config = readConfig(args);
-
+	async handler(_, { config, sdk }) {
 		const accountId = await requireAuth(config);
 
-		// TODO: we should show bindings if they exist for given ids
+		const allNamespaces = [];
 
-		logger.log(
-			JSON.stringify(await listKVNamespaces(config, accountId), null, "  ")
-		);
+		for await (const namespace of sdk.kv.namespaces.list({
+			account_id: accountId,
+			per_page: 1000,
+		})) {
+			allNamespaces.push(namespace);
+		}
+
+		logger.log(JSON.stringify(allNamespaces, null, "  "));
 		metrics.sendMetricsEvent("list kv namespaces", {
 			sendMetrics: config.send_metrics,
 		});
