@@ -16,7 +16,7 @@ const execOptions = {
 } as const;
 const remoteWorkerName = `tmp-e2e-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
 const remoteStagingWorkerName = `tmp-e2e-staging-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
-const remoteKvName = `tmp-e2e-remote-kv-test-remote-bindings-${randomUUID().split("-")[0]}`;
+const remoteKvName = `tmp-e2e-kv${Date.now()}-test-remote-bindings-${randomUUID().split("-")[0]}`;
 
 if (auth) {
 	describe("getPlatformProxy - remote bindings", { timeout: 50_000 }, () => {

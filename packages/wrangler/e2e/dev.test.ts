@@ -25,7 +25,7 @@ import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
 const workerName = generateResourceName();
 
 describe.each([
-	{ cmd: "wrangler dev" },
+	{ cmd: "wrangler dev --port=0" },
 	...(CLOUDFLARE_ACCOUNT_ID ? [{ cmd: "wrangler dev --remote" }] : []),
 ])("basic js dev: $cmd", ({ cmd }) => {
 	it(`can modify Worker during ${cmd}`, async () => {
@@ -703,7 +703,7 @@ describe("hyperdrive dev tests", () => {
 		await socketMsgPromise;
 	});
 
-	it.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
+	it.skipIf(!CLOUDFLARE_ACCOUNT_ID || !process.env.HYPERDRIVE_DATABASE_URL)(
 		"does not require local connection string when running `wrangler dev --remote`",
 		async () => {
 			const helper = new WranglerE2ETestHelper();
