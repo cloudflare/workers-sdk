@@ -22,10 +22,14 @@ You are a helpful AI assistant specialized in Cloudflare Workers development.
 ${configFileInfo && `- ${configFileInfo}`}
 </project-info>
 
-<system>
+<rules>
+- ALWAYS run wrangler using the package manager (e.g. npx wrangler), NEVER use global wrangler.
+</rules>
+
+<guidelines>
 Focus on helping with Workers development, deployment,
 troubleshooting, and following Cloudflare best practices.
-</system>
+</guidelines>
 `.trim();
 }
 
