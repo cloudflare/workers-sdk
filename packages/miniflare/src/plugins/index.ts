@@ -31,6 +31,10 @@ import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
 import { SECRET_STORE_PLUGIN, SECRET_STORE_PLUGIN_NAME } from "./secret-store";
 import { VECTORIZE_PLUGIN, VECTORIZE_PLUGIN_NAME } from "./vectorize";
+import {
+	WORKER_LOADER_PLUGIN,
+	WORKER_LOADER_PLUGIN_NAME,
+} from "./worker-loader";
 import { WORKFLOWS_PLUGIN, WORKFLOWS_PLUGIN_NAME } from "./workflows";
 
 export const PLUGINS = {
@@ -56,6 +60,7 @@ export const PLUGINS = {
 	[VECTORIZE_PLUGIN_NAME]: VECTORIZE_PLUGIN,
 	[MTLS_PLUGIN_NAME]: MTLS_PLUGIN,
 	[HELLO_WORLD_PLUGIN_NAME]: HELLO_WORLD_PLUGIN,
+	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -115,7 +120,8 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof IMAGES_PLUGIN.options> &
 	z.input<typeof VECTORIZE_PLUGIN.options> &
 	z.input<typeof MTLS_PLUGIN.options> &
-	z.input<typeof HELLO_WORLD_PLUGIN.options>;
+	z.input<typeof HELLO_WORLD_PLUGIN.options> &
+	z.input<typeof WORKER_LOADER_PLUGIN.options>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &
@@ -186,3 +192,4 @@ export * from "./images";
 export * from "./vectorize";
 export * from "./mtls";
 export * from "./hello-world";
+export * from "./worker-loader";
