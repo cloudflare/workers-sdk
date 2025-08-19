@@ -682,10 +682,18 @@ export const validateUniqueNameProperty: ValidatorFn = (
 	value
 ) => {
 	if (Array.isArray(value)) {
-		const names = value.map((entry) => entry.name);
-		const duplicates = names.filter((name, i) => names.indexOf(name) !== i);
+		const nameCount = new Map<string, number>();
+
+		Object.entries(value).forEach(([_, entry]) => {
+			nameCount.set(entry.name, (nameCount.get(entry.name) ?? 0) + 1);
+		});
+
+		const duplicates = Array.from(nameCount.entries())
+			.filter(([_, count]) => count > 1)
+			.map(([name]) => name);
+
 		if (duplicates.length > 0) {
-			const list = Array.from(new Set(duplicates)).join('", "');
+			const list = duplicates.join('", "');
 			diagnostics.errors.push(
 				`"${field}" bindings must have unique "name" values; duplicate(s) found: "${list}"`
 			);
