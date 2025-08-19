@@ -119,6 +119,7 @@ describe("wrangler deploy with containers", () => {
 			│   scheduling_policy = \\"default\\"
 			│   instances = 0
 			│   max_instances = 10
+			│   rollout_active_grace_period = 0
 			│
 			│     [containers.configuration]
 			│     image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
@@ -279,6 +280,7 @@ describe("wrangler deploy with containers", () => {
 			│   scheduling_policy = \\"default\\"
 			│   instances = 0
 			│   max_instances = 10
+			│   rollout_active_grace_period = 0
 			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/hello:world\\"
@@ -367,6 +369,7 @@ describe("wrangler deploy with containers", () => {
 			│   scheduling_policy = \\"default\\"
 			│   instances = 0
 			│   max_instances = 10
+			│   rollout_active_grace_period = 0
 			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/hello:world\\"
@@ -674,6 +677,7 @@ describe("wrangler deploy with containers", () => {
 				version: 1,
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.DEFAULT,
+				rollout_active_grace_period: 0,
 				configuration: {
 					image: "registry.cloudflare.com/some-account-id/my-container:old",
 					disk: {
@@ -725,6 +729,7 @@ describe("wrangler deploy with containers", () => {
 			│ - max_instances = 2
 			│ + max_instances = 10
 			│   name = \\"my-container\\"
+			│   rollout_active_grace_period = 0
 			│   scheduling_policy = \\"default\\"
 			│     [containers.configuration]
 			│ -   image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
@@ -748,6 +753,7 @@ describe("wrangler deploy with containers", () => {
 			│   scheduling_policy = \\"default\\"
 			│   instances = 0
 			│   max_instances = 3
+			│   rollout_active_grace_period = 0
 			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/hello:world\\"
@@ -784,6 +790,7 @@ describe("wrangler deploy with containers", () => {
 				version: 1,
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.DEFAULT,
+				rollout_active_grace_period: 0,
 				configuration: {
 					image: "registry.cloudflare.com/some-account-id/my-container:Galaxy",
 					disk: {
@@ -846,6 +853,7 @@ describe("wrangler deploy with containers", () => {
 			version: 1,
 			account_id: "1",
 			scheduling_policy: SchedulingPolicy.DEFAULT,
+			rollout_active_grace_period: 0,
 			configuration: {
 				image: "docker.io/hello:world",
 				disk: {
@@ -1298,6 +1306,7 @@ describe("wrangler deploy with containers", () => {
 			│   scheduling_policy = \\"default\\"
 			│   instances = 0
 			│   max_instances = 10
+			│   rollout_active_grace_period = 0
 			│
 			│     [containers.configuration]
 			│     image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
