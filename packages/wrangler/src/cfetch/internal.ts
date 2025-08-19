@@ -73,7 +73,8 @@ export function createCloudflareClient(complianceConfig: ComplianceConfig) {
 
 			await logRequest(request);
 
-			const response = await fetch(request, {
+			const response = await fetch(request.url, {
+				...request,
 				headers,
 			});
 			await logResponse(response);
