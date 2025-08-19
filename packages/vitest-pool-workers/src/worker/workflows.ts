@@ -1,37 +1,7 @@
-import { WAIT_FOREVER, waitUntil } from "async-wait-until";
 import { WORKFLOW_ENGINE_BINDING } from "../shared/workflows";
 import { internalEnv } from "./env";
-
-// import { instanceStatusName } from "@cloudflare/workflows-shared";
-
-export enum InstanceStatus {
-	Queued = 0, // Queued and waiting to start
-	Running = 1,
-	Paused = 2, // TODO (WOR-73): Implement pause
-	Errored = 3, // Stopped due to a user or system Error
-	Terminated = 4, // Stopped explicitly by user
-	Complete = 5, // Successful completion
-	// TODO (WOR-71): Sleep
-}
-
-export function instanceStatusName(status: InstanceStatus) {
-	switch (status) {
-		case InstanceStatus.Queued:
-			return "queued";
-		case InstanceStatus.Running:
-			return "running";
-		case InstanceStatus.Paused:
-			return "paused";
-		case InstanceStatus.Errored:
-			return "errored";
-		case InstanceStatus.Terminated:
-			return "terminated";
-		case InstanceStatus.Complete:
-			return "complete";
-		default:
-			return "unknown";
-	}
-}
+// import type { InstanceStatus } from "@cloudflare/workflows-shared/src/instance";
+import type { InstanceModifier } from "@cloudflare/workflows-shared/src/modifier";
 
 export type StepSelector = {
 	name: string;
@@ -39,11 +9,15 @@ export type StepSelector = {
 };
 
 export type WorkflowInstanceIntrospector = {
-	modify(fn: (m: InstanceModifier) => void): WorkflowInstanceIntrospector;
+	modify(
+		fn: (m: InstanceModifier) => Promise<void>
+	): Promise<WorkflowInstanceIntrospector>;
 
-	waitForStepResult(step: StepSelector): Promise<any>;
+	waitForStepResult(step: StepSelector): Promise<unknown>;
 
-	waitUntil(opts: { status: InstanceStatus }): Promise<void>;
+	waitForStatus(status: string): Promise<void>;
+
+	cleanUp(): Promise<void>;
 };
 
 /**
@@ -58,12 +32,17 @@ export async function introspectWorkflowInstance(
 		throw new Error("Workflow binding and instance id are required.");
 	}
 
-	console.log(`Introspecting workflow instance: ${instanceId}`);
+	console.log(
+		`[Vitest-Workflows] Introspecting workflow instance: ${instanceId}`
+	);
 
-	await workflow.create({ id: instanceId }); // why do I need to create? Worked before without it
+	//await workflow.create({ id: instanceId });
 
+	// @ts-expect-error getWorkflowName() not exposed
 	const engineBindingName = `${WORKFLOW_ENGINE_BINDING}${(await workflow.getWorkflowName()).toUpperCase()}`;
+	// @ts-expect-error binding created at in runner worker start
 	const engineStubId = internalEnv[engineBindingName].idFromName(instanceId);
+	// @ts-expect-error binding created at in runner worker start
 	const engineStub = internalEnv[engineBindingName].get(engineStubId);
 
 	const instanceModifier = await engineStub.getInstanceModifier();
@@ -84,33 +63,40 @@ class WorkflowInstanceIntrospectorHandle
 		this.instanceModifier = instanceModifier;
 	}
 
-	async modify(
-		fn: (m: InstanceModifier) => void
-	): WorkflowInstanceIntrospector {
+	public async modify(
+		fn: (m: InstanceModifier) => Promise<void>
+	): Promise<WorkflowInstanceIntrospector> {
+		console.log("[Vitest-Workflows] I should go call a modifier");
 		await fn(this.instanceModifier);
-		console.log("Should allow modifications");
 		return this;
 	}
 
-	async waitForStepResult(step: StepSelector): Promise<unknown> {
-		await waitUntil(async () => {});
+	public async waitForStepResult(step: StepSelector): Promise<unknown> {
+		console.log("waiting for step result of step", step.name);
+		// @ts-expect-error waitForStepResult not exposed
+		const stepResult = await this.engineStub.waitForStepResult(
+			step.name,
+			step.index
+		);
 
-		console.log("Should await the step result of step", step.name);
-		return { result: "result" };
+		console.log("result of step", step.name, "awaited");
+		return stepResult;
 	}
 
-	async waitUntil(opts: { status: InstanceStatus }): Promise<void> {
-		// console.log("I waited until the Engine reached the status", opts.status);
-		await waitUntil(
-			async () => {
-				const currentStatus = instanceStatusName(
-					await this.engineStub.getStatus()
-				);
-				console.log("status from engine", currentStatus);
-				console.log("status user wants", opts.status);
-				return currentStatus === opts.status;
-			},
-			{ timeout: WAIT_FOREVER } // Default timeout is 5s, crashes the test after that
-		);
+	public async waitForStatus(status: string): Promise<void> {
+		console.log("[Vitest-Workflows] waiting for status");
+		// @ts-expect-error waitForStatus not exposed
+		await this.engineStub.waitForStatus(status);
+
+		console.log("[Vitest-Workflows] status awaited");
+	}
+
+	public async cleanUp(): Promise<void> {
+		// works with isolatedStorage = false
+		try {
+			await this.engineStub.abort("user called delete");
+		} catch {
+			// do nothing because we want to clean up this instance
+		}
 	}
 }

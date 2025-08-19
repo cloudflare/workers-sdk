@@ -274,10 +274,35 @@ export class Context extends RpcTarget {
 				await this.#state.storage.put(stepStateKey, stepState);
 				const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 
+				const mockErrorKey = `mock-error-${valueKey}`;
+				const mockedErrorPayload =
+					(await this.#state.storage.get<{
+						name: string;
+						message: string;
+					}>(mockErrorKey)) ||
+					(await this.#state.storage.get<{
+						name: string;
+						message: string;
+					}>(`${mockErrorKey}-${stepState.attemptedCount}`));
+
+				// if a mocked error exists, throw it immediately
+				if (mockedErrorPayload) {
+					const errorToThrow = new Error(mockedErrorPayload.message);
+					errorToThrow.name = mockedErrorPayload.name;
+					console.log("[Context.do()] Will throw an error for step:", name);
+					throw errorToThrow;
+				}
+
 				const replaceResult = await this.#state.storage.get(
 					`replace-result-${valueKey}`
 				);
 				if (replaceResult) {
+					console.log(
+						"[Context.do()] Will replace the result of step:",
+						name,
+						"with:",
+						replaceResult
+					);
 					result = replaceResult;
 				} else {
 					result = await Promise.race([doWrapperClosure(), timeoutPromise()]);
