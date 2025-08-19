@@ -17,6 +17,8 @@
 
 # Cloudchamber ownership
 /packages/wrangler/src/cloudchamber/ @cloudflare/cloudchamber @cloudflare/wrangler
+/packages/wrangler/src/containers/ @cloudflare/cloudchamber @cloudflare/wrangler
+/packages/containers-shared/ @cloudflare/cloudchamber @cloudflare/wrangler
 
 # C3 ownership
 /packages/create-cloudflare/ @cloudflare/c3 @cloudflare/wrangler
