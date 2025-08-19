@@ -240,9 +240,21 @@ export class Context extends RpcTarget {
 			const { accountId, instance } = instanceMetadata;
 
 			try {
+				const forceStepTimeoutKey = `force-step-timeout-${valueKey}`;
+				const forceStepTimeout =
+					(await this.#state.storage.get(forceStepTimeoutKey)) ||
+					(await this.#state.storage.get(
+						`${forceStepTimeoutKey}-${stepState.attemptedCount}`
+					));
+
 				const timeoutPromise = async () => {
 					const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
-					const timeout = ms(config.timeout);
+					// inserir aqui
+					let timeout = ms(config.timeout);
+					if (forceStepTimeout) {
+						timeout = 0;
+						console.log("[Context] I will timeout");
+					}
 					// @ts-expect-error priorityQueue is initiated in init
 					await this.#engine.priorityQueue.add({
 						hash: priorityQueueHash,
@@ -304,6 +316,9 @@ export class Context extends RpcTarget {
 						replaceResult
 					);
 					result = replaceResult;
+					// if there is a timeout to be forced we dont want to race with closure
+				} else if (forceStepTimeout) {
+					result = await timeoutPromise();
 				} else {
 					result = await Promise.race([doWrapperClosure(), timeoutPromise()]);
 				}
@@ -425,6 +440,8 @@ export class Context extends RpcTarget {
 				if (stepState.attemptedCount <= config.retries.limit) {
 					// TODO (WOR-71): Think through if every Error should transition
 					const durationMs = calcRetryDuration(config, stepState);
+
+					console.log("Vou esperar", durationMs);
 
 					const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 					// @ts-expect-error priorityQueue is initiated in init
