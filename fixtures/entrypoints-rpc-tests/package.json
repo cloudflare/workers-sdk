@@ -7,6 +7,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"miniflare": "workspace:*",
 		"ts-dedent": "^2.2.0",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

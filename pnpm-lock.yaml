@@ -340,6 +340,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      miniflare:
+        specifier: workspace:*
+        version: link:../../packages/miniflare
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0

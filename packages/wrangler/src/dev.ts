@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import events from "node:events";
 import path from "node:path";
-import util from "node:util";
 import { bold, green } from "@cloudflare/cli/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { isWebContainer } from "@webcontainer/env";
@@ -9,19 +8,15 @@ import dedent from "ts-dedent";
 import { DevEnv } from "./api";
 import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
-import {
-	convertCfWorkerInitBindingsToBindings,
-	extractBindingsOfType,
-} from "./api/startDevWorker/utils";
+import { convertCfWorkerInitBindingsToBindings } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { configFileName, formatConfigSnippet } from "./config";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
-import { devRegistry, getBoundRegisteredWorkers } from "./dev-registry";
 import { getVarsForDev } from "./dev/dev-vars";
 import registerDevHotKeys from "./dev/hotkeys";
-import { maybeRegisterLocalWorker } from "./dev/local";
+import { getRegistryPath } from "./environment-variables/misc-variables";
 import { UserError } from "./errors";
 import { getFlag } from "./experimental-flags";
 import isInteractive from "./is-interactive";
@@ -34,12 +29,7 @@ import {
 } from "./utils/collectKeyValues";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
-import type {
-	AsyncHook,
-	ReloadCompleteEvent,
-	StartDevWorkerInput,
-	Trigger,
-} from "./api";
+import type { AsyncHook, StartDevWorkerInput, Trigger } from "./api";
 import type { Config, Environment } from "./config";
 import type {
 	EnvironmentNonInheritable,
@@ -56,7 +46,6 @@ import type {
 	CfService,
 	CfWorkerInit,
 } from "./deployment-bundle/worker";
-import type { WorkerRegistry } from "./dev-registry";
 import type { CfAccount } from "./dev/create-worker-preview";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { watch } from "chokidar";
@@ -393,55 +382,6 @@ export type StartDevOptions = DevArguments &
 		containerEngine?: string;
 	};
 
-async function updateDevEnvRegistry(
-	devEnv: DevEnv,
-	registry: WorkerRegistry | undefined
-) {
-	// Make sure we're not patching an empty config
-	if (!devEnv.config.latestConfig) {
-		await events.once(devEnv.config, "configUpdate");
-	}
-
-	let boundWorkers = await getBoundRegisteredWorkers(
-		{
-			name: devEnv.config.latestConfig?.name,
-			services: extractBindingsOfType(
-				"service",
-				devEnv.config.latestConfig?.bindings
-			),
-			durableObjects: {
-				bindings: extractBindingsOfType(
-					"durable_object_namespace",
-					devEnv.config.latestConfig?.bindings
-				),
-			},
-			tailConsumers: devEnv.config.latestConfig?.tailConsumers,
-		},
-		registry
-	);
-
-	// Normalise an empty registry to undefined
-	if (boundWorkers && Object.keys(boundWorkers).length === 0) {
-		boundWorkers = undefined;
-	}
-
-	if (
-		util.isDeepStrictEqual(
-			boundWorkers,
-			devEnv.config.latestConfig?.dev?.registry
-		)
-	) {
-		return;
-	}
-
-	void devEnv.config.patch({
-		dev: {
-			...devEnv.config.latestConfig?.dev,
-			registry: boundWorkers,
-		},
-	});
-}
-
 async function getPagesAssetsFetcher(
 	options: EnablePagesAssetsServiceBindingOptions | undefined
 ): Promise<StartDevWorkerInput["bindings"] | undefined> {
@@ -567,9 +507,7 @@ async function setupDevEnv(
 				liveReload: args.liveReload,
 				testScheduled: args.testScheduled,
 				logLevel: args.logLevel,
-				registry: args.disableDevRegistry
-					? null
-					: devEnv.config.latestConfig?.dev.registry,
+				registry: args.disableDevRegistry ? undefined : getRegistryPath(),
 				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
@@ -708,32 +646,6 @@ export async function startDev(args: StartDevOptions) {
 					);
 				}
 			});
-
-			if (!args.disableDevRegistry) {
-				teardownRegistryPromise = devRegistry((registry) => {
-					assert(devEnv !== undefined && !Array.isArray(devEnv));
-					void updateDevEnvRegistry(devEnv, registry);
-				});
-
-				devEnv.runtimes.forEach((runtime) => {
-					runtime.on(
-						"reloadComplete",
-						async (reloadEvent: ReloadCompleteEvent) => {
-							if (!reloadEvent.config.dev?.remote) {
-								assert(devEnv !== undefined && !Array.isArray(devEnv));
-								const { url } = await devEnv.proxy.ready.promise;
-
-								await maybeRegisterLocalWorker(
-									url,
-									reloadEvent.config.name,
-									reloadEvent.proxyData.internalDurableObjects,
-									reloadEvent.proxyData.entrypointAddresses
-								);
-							}
-						}
-					);
-				});
-			}
 
 			await setupDevEnv(devEnv, args.config, authHook, args);
 

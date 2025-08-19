@@ -33,7 +33,6 @@ import type {
 	CfVectorize,
 	CfWorkflow,
 } from "../../deployment-bundle/worker";
-import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigController } from "./ConfigController";
@@ -179,9 +178,6 @@ export interface StartDevWorkerInput {
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
 		mockFetch?: undici.MockAgent;
 
-		/** Describes the registry of other Workers running locally */
-		registry?: WorkerRegistry | null;
-
 		testScheduled?: boolean;
 
 		/** Whether to use Vectorize as a remote binding -- the worker is run locally but accesses to Vectorize are made remotely */
@@ -199,6 +195,9 @@ export interface StartDevWorkerInput {
 		containerBuildId?: string;
 		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
 		enableContainers?: boolean;
+
+		/** Path to the dev registry directory */
+		registry?: string;
 
 		/** Path to the docker executable. Defaults to 'docker' */
 		dockerPath?: string;

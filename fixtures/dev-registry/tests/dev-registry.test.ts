@@ -99,6 +99,262 @@ async function setupPlatformProxy(config: string, devRegistryPath?: string) {
 	return proxy;
 }
 
+describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
+	it("supports fetch over service binding", async ({ devRegistryPath }) => {
+		const workerEntrypointWithAssets = await runWranglerDev(
+			"wrangler.worker-entrypoint-with-assets.jsonc",
+			devRegistryPath
+		);
+
+		// Test fallback service before module-worker is started
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "module-worker",
+				"test-method": "fetch",
+			});
+			const response = await fetch(
+				`${workerEntrypointWithAssets}?${searchParams}`
+			);
+
+			expect({
+				status: response.status,
+				body: await response.text(),
+			}).toEqual({
+				status: 503,
+				body: `Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`,
+			});
+		});
+
+		const moduleWorker = await runWranglerDev(
+			"wrangler.module-worker.jsonc",
+			devRegistryPath
+		);
+
+		// Test module-worker -> worker-entrypoint
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "worker-entrypoint-with-assets",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${moduleWorker}?${searchParams}`);
+
+			expect(await response.text()).toBe("Hello from Worker Entrypoint!");
+			expect(response.status).toBe(200);
+
+			// Test fetching asset from "worker-entrypoint-with-assets" over service binding
+			// Module worker has no assets, so it will hit the user worker and
+			// forward the request to "worker-entrypoint-with-assets" with the asset path
+			const assetResponse = await fetch(
+				`${moduleWorker}/example.txt?${searchParams}`
+			);
+			expect(await assetResponse.text()).toBe("This is an example asset file");
+		});
+
+		// Test worker-entrypoint -> module-worker
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "module-worker",
+				"test-method": "fetch",
+			});
+			const response = await fetch(
+				`${workerEntrypointWithAssets}?${searchParams}`
+			);
+
+			expect(await response.text()).toEqual("Hello from Module Worker!");
+			expect(response.status).toBe(200);
+		});
+	});
+
+	it("supports RPC over service binding", async ({ devRegistryPath }) => {
+		const workerEntrypoint = await runWranglerDev(
+			"wrangler.worker-entrypoint.jsonc",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "worker-entrypoint-with-assets",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+
+			expect(response.status).toBe(500);
+			expect(await response.text()).toEqual(
+				`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "worker-entrypoint-with-assets" to proxy to.`
+			);
+		});
+
+		const workerEntrypointWithAssets = await runWranglerDev(
+			"wrangler.worker-entrypoint-with-assets.jsonc",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "worker-entrypoint",
+				"test-method": "rpc",
+			});
+			const response = await fetch(
+				`${workerEntrypointWithAssets}?${searchParams}`
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong");
+		});
+
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "worker-entrypoint-with-assets",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong");
+		});
+	});
+
+	it("supports fetch over durable object binding", async ({
+		devRegistryPath,
+	}) => {
+		const externalDurableObject = await runWranglerDev(
+			"wrangler.external-durable-object.jsonc",
+			devRegistryPath
+		);
+
+		// Test fallback before internal durable object is started
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "durable-object",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${externalDurableObject}?${searchParams}`);
+
+			expect(response.status).toBe(503);
+			expect(await response.text()).toEqual("Service Unavailable");
+		});
+
+		await runWranglerDev(
+			"wrangler.internal-durable-object.jsonc",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "durable-object",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${externalDurableObject}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Hello from Durable Object!");
+		});
+	});
+
+	it("supports RPC over durable object binding", async ({
+		devRegistryPath,
+	}) => {
+		const externalDurableObject = await runWranglerDev(
+			"wrangler.external-durable-object.jsonc",
+			devRegistryPath
+		);
+
+		// Test RPC fallback before internal durable object is started
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "durable-object",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${externalDurableObject}?${searchParams}`);
+
+			expect({
+				status: response.status,
+				body: await response.text(),
+			}).toEqual({
+				status: 500,
+				body: 'Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.',
+			});
+		});
+
+		await runWranglerDev(
+			"wrangler.internal-durable-object.jsonc",
+			devRegistryPath
+		);
+
+		// Test RPC after internal durable object is started (should still fail)
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "durable-object",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${externalDurableObject}?${searchParams}`);
+
+			expect(response.status).toBe(500);
+			expect(await response.text()).toEqual(
+				'Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.'
+			);
+		});
+	});
+
+	it("supports tail handler", async ({ devRegistryPath }) => {
+		const moduleWorkerWithAssets = await runWranglerDev(
+			"wrangler.module-worker-with-assets.jsonc",
+			devRegistryPath
+		);
+		const workerEntrypoint = await runWranglerDev(
+			"wrangler.worker-entrypoint.jsonc",
+			devRegistryPath
+		);
+
+		const searchParams = new URLSearchParams({
+			"test-method": "tail",
+		});
+
+		await vi.waitFor(async () => {
+			// Trigger tail handler of worker-entrypoint via module-worker
+			await fetch(`${moduleWorkerWithAssets}?${searchParams}`, {
+				method: "POST",
+				body: JSON.stringify(["hello world", "this is the 2nd log"]),
+			});
+			await fetch(`${moduleWorkerWithAssets}?${searchParams}`, {
+				method: "POST",
+				body: JSON.stringify(["some other log"]),
+			});
+
+			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+
+			expect(await response.json()).toEqual({
+				worker: "Worker Entrypoint",
+				tailEvents: expect.arrayContaining([
+					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
+					[["[Module Worker]"], ["some other log"]],
+				]),
+			});
+		});
+
+		await vi.waitFor(async () => {
+			// Trigger tail handler of module-worker via worker-entrypoint
+			await fetch(`${workerEntrypoint}?${searchParams}`, {
+				method: "POST",
+				body: JSON.stringify(["hello from test"]),
+			});
+			await fetch(`${workerEntrypoint}?${searchParams}`, {
+				method: "POST",
+				body: JSON.stringify(["yet another log", "and another one"]),
+			});
+			const response = await fetch(`${moduleWorkerWithAssets}?${searchParams}`);
+
+			expect(await response.json()).toEqual({
+				worker: "Module Worker",
+				tailEvents: expect.arrayContaining([
+					[["[Worker Entrypoint]"], ["hello from test"]],
+					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
+				]),
+			});
+		});
+	});
+});
+
 describe("Dev Registry: vite dev <-> vite dev", () => {
 	it("supports module worker fetch over service binding", async ({
 		devRegistryPath,
@@ -244,10 +500,10 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Worker Entrypoint",
-				tailEvents: [
+				tailEvents: expect.arrayContaining([
 					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
 					[["[Module Worker]"], ["some other log"]],
-				],
+				]),
 			});
 		});
 
@@ -266,10 +522,10 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Module Worker",
-				tailEvents: [
+				tailEvents: expect.arrayContaining([
 					[["[Worker Entrypoint]"], ["hello from test"]],
 					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
-				],
+				]),
 			});
 		});
 	});
@@ -466,10 +722,10 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Worker Entrypoint",
-				tailEvents: [
+				tailEvents: expect.arrayContaining([
 					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
 					[["[Module Worker]"], ["some other log"]],
-				],
+				]),
 			});
 		});
 
@@ -490,10 +746,10 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Module Worker",
-				tailEvents: [
+				tailEvents: expect.arrayContaining([
 					[["[Worker Entrypoint]"], ["hello from test"]],
 					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
-				],
+				]),
 			});
 		});
 	});
@@ -642,7 +898,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		const stub = env.DURABLE_OBJECT.get(id);
 
 		expect(() => stub.ping()).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Cannot access "ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
+			`[Error: Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
 		);
 		await runWranglerDev(
 			"wrangler.internal-durable-object.jsonc",
@@ -650,7 +906,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		);
 
 		expect(() => stub.ping()).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Cannot access "ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
+			`[Error: Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
 		);
 	});
 });

@@ -1,11 +1,10 @@
-import assert from "node:assert";
 import fs, { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { Miniflare } from "miniflare";
 import dedent from "ts-dedent";
 import { Agent, fetch, setGlobalDispatcher } from "undici";
-import { test as baseTest, describe, expect, vi } from "vitest";
-import { unstable_startWorkerRegistryServer } from "wrangler";
+import { test as baseTest, describe, expect, onTestFinished, vi } from "vitest";
 import {
 	runWranglerDev,
 	runWranglerPagesDev,
@@ -586,11 +585,11 @@ describe("entrypoints", () => {
 		const rpcResponse = await fetch(new URL("/rpc", url));
 		const errors = await rpcResponse.json();
 		expect(errors).toMatchInlineSnapshot(`
-		[
-		  "Error: Cannot access \`ThingObject#property\` as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions.",
-		  "Error: Cannot access \`ThingObject#method\` as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions.",
-		]
-	`);
+			[
+			  "Error: Cannot access "ThingObject#property" as Durable Object RPC is not yet supported between multiple dev sessions.",
+			  "Error: Cannot access "ThingObject#method" as Durable Object RPC is not yet supported between multiple dev sessions.",
+			]
+		`);
 	});
 
 	test("should support binding to Durable Object in same worker", async ({
@@ -669,7 +668,7 @@ describe("entrypoints", () => {
 	}) => {
 		// Start entry worker first, so the server starts with a stubbed service not
 		// found binding
-		const { url, session } = await dev({
+		const { url } = await dev({
 			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
@@ -690,7 +689,7 @@ describe("entrypoints", () => {
 		let response = await fetch(url);
 		expect(response.status).toBe(503);
 		expect(await response.text()).toBe(
-			'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
+			'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
 		);
 
 		await writeFile(
@@ -707,11 +706,11 @@ describe("entrypoints", () => {
 			})
 		);
 
-		// Wait for error to be thrown
-		await waitFor(() => {
-			const output = session.getOutput();
-			expect(output).toMatch(
-				'The `wrangler dev` session for service "bound" does not support proxying entrypoints. Please upgrade "bound"\'s `wrangler` version.'
+		await waitFor(async () => {
+			let response = await fetch(url);
+			expect(response.status).toBe(503);
+			expect(await response.text()).toBe(
+				'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
 			);
 		});
 	});
@@ -721,7 +720,7 @@ describe("entrypoints", () => {
 	}) => {
 		// Start entry worker first, so the server starts with a stubbed service not
 		// found binding
-		const { url, session } = await dev({
+		const { url } = await dev({
 			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
@@ -741,7 +740,7 @@ describe("entrypoints", () => {
 		});
 		let response = await fetch(url);
 		expect(await response.text()).toBe(
-			'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
+			'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
 		);
 
 		// Start up the bound worker without the expected entrypoint
@@ -762,10 +761,10 @@ describe("entrypoints", () => {
 		});
 
 		// Wait for error to be thrown
-		await waitFor(() => {
-			const output = session.getOutput();
-			expect(output).toMatch(
-				'The `wrangler dev` session for service "bound" does not export an entrypoint named "ThingEntrypoint"'
+		await waitFor(async () => {
+			let response = await fetch(url);
+			expect(await response.text()).toBe(
+				'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
 			);
 		});
 	});
@@ -775,7 +774,7 @@ describe("entrypoints", () => {
 	}) => {
 		// Start entry worker first, so the server starts with a stubbed service not
 		// found binding
-		const { url, session } = await dev({
+		const { url } = await dev({
 			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
@@ -794,7 +793,7 @@ describe("entrypoints", () => {
 		});
 		let response = await fetch(url);
 		expect(await response.text()).toBe(
-			'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
+			'Couldn\'t find a local dev session for the "default" entrypoint of service "bound" to proxy to'
 		);
 
 		// Start up the bound worker using HTTPS
@@ -820,17 +819,16 @@ describe("entrypoints", () => {
 		});
 	});
 
-	test("should throw if binding to version of wrangler without entrypoints support over HTTPS", async ({
+	test("should support binding to version of wrangler without entrypoints support over HTTPS", async ({
 		dev,
 		isolatedDevRegistryPath,
 	}) => {
 		// Start entry worker first, so the server starts with a stubbed service not
 		// found binding
-		const { url, session } = await dev({
+		const { url } = await dev({
 			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
-
 			[[services]]
 			binding = "SERVICE"
 			service = "bound"
@@ -838,36 +836,37 @@ describe("entrypoints", () => {
 			"index.ts": dedent`
 			export default {
 				async fetch(request, env, ctx) {
-					return env.SERVICE.fetch("http://placeholder/");
+					return env.SERVICE.fetch('http://placeholder/');
 				}
 			}
 		`,
 		});
 		let response = await fetch(url);
 		expect(await response.text()).toBe(
-			'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
+			'Couldn\'t find a local dev session for the "default" entrypoint of service "bound" to proxy to'
 		);
 
-		await writeFile(
-			path.join(isolatedDevRegistryPath, "bound"),
-			JSON.stringify({
-				protocol: "https",
-				mode: "local",
-				port: 0,
-				host: "localhost",
-				durableObjects: [],
-				durableObjectsHost: "localhost",
-				durableObjectsPort: 0,
-				// Intentionally omitting `entrypointAddresses`
-			})
-		);
+		const boundWorker = new Miniflare({
+			name: "bound",
+			unsafeDevRegistryPath: isolatedDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			https: true,
+			script: `
+				export default {
+					async fetch(request, env, ctx) {
+						return new Response("Hello from bound!");
+					}
+				}
+			`,
+			// No direct sockets so that no entrypointAddresses will be registered
+		});
+		onTestFinished(() => boundWorker.dispose());
 
-		// Wait for error to be thrown
-		await waitFor(() => {
-			const output = session.getOutput();
-			expect(output).toMatch(
-				'Cannot proxy to `wrangler dev` session for service "bound" because it uses HTTPS. Please upgrade "bound"\'s `wrangler` version, or remove the `--local-protocol`/`dev.local_protocol` option.'
-			);
+		await boundWorker.ready;
+		await waitFor(async () => {
+			let response = await fetch(url);
+			expect(await response.text()).toBe("Hello from bound!");
 		});
 	});
 
@@ -899,10 +898,10 @@ describe("entrypoints", () => {
 		const response = await fetch(url);
 		const errors = await response.json();
 		expect(errors).toMatchInlineSnapshot(`
-		[
-		  "Error: Cannot access \`property\` as we couldn't find a \`wrangler dev\` session for service "bound" to proxy to.",
-		  "Error: Cannot access \`method\` as we couldn't find a \`wrangler dev\` session for service "bound" to proxy to.",
-		]
-	`);
+			[
+			  "Error: Cannot access "property" as we couldn't find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to.",
+			  "Error: Cannot access "method" as we couldn't find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to.",
+			]
+		`);
 	});
 });

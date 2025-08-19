@@ -23,7 +23,7 @@ env.AI_BINDING_2_TOML                                                    AI     
 env.VAR1 ("(hidden)")                                                    Environment Variable      local
 env.VAR2 ("VAR_2_TOML")                                                  Environment Variable      local
 env.VAR3 ("(hidden)")                                                    Environment Variable      local
-Service bindings, Durable Object bindings, and Tail consumers connect to other \`wrangler dev\` processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
+Service bindings, Durable Object bindings, and Tail consumers connect to other wrangler or vite dev processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
 ▲ [WARNING] Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development.
 "
 `;
