@@ -74,7 +74,7 @@ export const getNormalizedContainerOptions = async (
 			},
 			rollout_step_percentage: container.rollout_step_percentage ?? 25,
 			rollout_kind: container.rollout_kind ?? "full_auto",
-			rollout_active_grace_period: container.rollout_active_grace_period,
+			rollout_active_grace_period: container.rollout_active_grace_period ?? 0,
 			observability: {
 				logs_enabled:
 					config.observability?.logs?.enabled ??
