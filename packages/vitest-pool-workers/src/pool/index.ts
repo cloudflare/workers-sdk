@@ -535,13 +535,15 @@ Workflows defined in project: ${workflowClassNames.join(", ")}`);
 
 	// Add Workflows Engines DOs bindings to the Runner Worker
 	for (const value of Object.values(runnerWorker.workflows ?? {})) {
-		runnerWorker.durableObjects[
-			`${WORKFLOW_ENGINE_BINDING}${value.name.toUpperCase()}`
-		] = {
+		const engineName = `${WORKFLOW_ENGINE_BINDING}${value.name.toUpperCase()}`;
+		runnerWorker.durableObjects[engineName] = {
 			className: "Engine",
 			unsafeScriptName: `workflows:${value.name}`,
+			unsafeUniqueKey: `miniflare-workflows-${value.name}`,
 		};
 	}
+
+	// console.log("Runner Worker", runnerWorker);
 
 	// Vite has its own define mechanism, but we can't control it from custom
 	// pools. Our defines come from `wrangler.toml` files which are only parsed

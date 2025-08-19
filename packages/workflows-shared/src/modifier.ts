@@ -58,33 +58,68 @@ export class InstanceModifier extends RpcTarget {
 		return sleepNameCountHash;
 	}
 
-	async disableSleeps(steps?: StepSelector[]): Promise<void> {
+	public async disableSleeps(steps?: StepSelector[]): Promise<void> {
 		if (!steps) {
+			console.log("[Modifier.disableSleeps()] Disabling all sleeps");
 			await this.#state.storage.put("disableAllSleeps", true);
 		} else {
 			for (const step of steps) {
+				console.log(
+					"[Modifier.disableSleeps()] Disabling sleep of step:",
+					step.name
+				);
 				const sleepDisableKey = await this.#getSleepStepDisableKey(step);
 				await this.#state.storage.put(sleepDisableKey, true);
 			}
 		}
 	}
 
-	async mockStepResult(step: StepSelector, stepResult: unknown): Promise<void> {
-		console.log("mocking step result");
+	public async mockStepResult(
+		step: StepSelector,
+		stepResult: unknown
+	): Promise<void> {
+		console.log(
+			"[Modifier.mockStepResult()] Mocking step result of step:",
+			step.name
+		);
 		const valueKey = await this.#getStepCacheKey(step);
 		await this.#state.storage.put(`replace-result-${valueKey}`, stepResult);
 	}
 
-	async mockStepImplementation(
+	public async mockStepImplementation(
 		_step: StepSelector,
 		_implementation: () => Promise<unknown>
 	): Promise<void> {
 		// TODO
-		// can call the new implementation here and replace the step result - meh
-		// ideally pass the implementation to context so it can race with timeout
+		// somehow pass the implementation to context so it can race with timeout
 	}
 
-	async mockEvent(event: UserEvent): Promise<void> {
+	public async mockStepError(
+		step: StepSelector,
+		error: Error,
+		times?: number
+	): Promise<void> {
+		console.log(
+			"[Modifier.mockStepError()] Mocking step error of step",
+			step.name
+		);
+		const valueKey = await this.#getStepCacheKey(step);
+		const serializableError = {
+			name: error.name,
+			message: error.message,
+		};
+		if (times) {
+			for (let time = 1; time <= times; time++) {
+				const mockErrorKey = `mock-error-${valueKey}-${time}`;
+				await this.#state.storage.put(mockErrorKey, serializableError);
+			}
+		} else {
+			const mockErrorKey = `mock-error-${valueKey}`;
+			await this.#state.storage.put(mockErrorKey, serializableError);
+		}
+	}
+
+	public async mockEvent(event: UserEvent): Promise<void> {
 		// could maybe:
 		// WorkflowInstance.sendEvent()
 		// Engine.receiveEvent()
@@ -99,7 +134,7 @@ export class InstanceModifier extends RpcTarget {
 		await this.#engine.receiveEvent(myEvent);
 	}
 
-	async forceEventTimeout(step: StepSelector): Promise<void> {
+	public async forceEventTimeout(step: StepSelector): Promise<void> {
 		const waitForEventKey = await this.#getWaitForEventCacheKey(step);
 		await this.#state.storage.put(`forceEventTimeout-${waitForEventKey}`, true);
 	}

@@ -4,8 +4,11 @@ import {
 	INSTANCE_METADATA,
 	InstanceEvent,
 	InstanceStatus,
+	instanceStatusName,
 	InstanceTrigger,
+	toInstanceStatus,
 } from "./instance";
+import { computeHash } from "./lib/cache";
 import { WorkflowFatalError } from "./lib/errors";
 import {
 	ENGINE_TIMEOUT,
@@ -16,6 +19,7 @@ import { TimePriorityQueue } from "./lib/timePriorityQueue";
 import { InstanceModifier } from "./modifier";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
+import type { StepSelector } from "./modifier";
 import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 
 export interface Env {
@@ -86,6 +90,7 @@ export class Engine extends DurableObject<Env> {
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
+		console.log("[Engine] I am constructing Engine");
 		void this.ctx.blockConcurrencyWhile(async () => {
 			this.ctx.storage.transactionSync(() => {
 				try {
@@ -119,6 +124,8 @@ export class Engine extends DurableObject<Env> {
 			startGracePeriod,
 			ENGINE_TIMEOUT
 		);
+
+		console.log("[Engine] I am done constructing Engine");
 	}
 
 	writeLog(
@@ -134,10 +141,32 @@ export class Engine extends DurableObject<Env> {
 			target,
 			JSON.stringify(metadata)
 		);
+
+		// Wake any waiters if this is a terminal step event
+		if (group) {
+			this.handleStepResultWaiter(group, event, metadata);
+		}
 	}
 
-	readLogsFromStep(_cacheKey: string): RawInstanceLog[] {
-		return [];
+	async readLogsFromStepSelector(
+		step: StepSelector
+	): Promise<RawInstanceLog[]> {
+		const hash = await computeHash(step.name);
+		let count = 1;
+		if (step.index) {
+			count = step.index;
+		}
+		const cacheKey = `${hash}-${count}`;
+		return this.readLogsFromStep(cacheKey);
+	}
+
+	readLogsFromStep(cacheKey: string): RawInstanceLog[] {
+		return [
+			...this.ctx.storage.sql.exec(
+				"SELECT * FROM states WHERE groupKey = ? ORDER BY id",
+				cacheKey
+			),
+		] as RawInstanceLog[];
 	}
 
 	async getInstanceModifier(): Promise<InstanceModifier> {
@@ -196,10 +225,107 @@ export class Engine extends DurableObject<Env> {
 		status: InstanceStatus
 	): Promise<void> {
 		await this.ctx.storage.put(ENGINE_STATUS_KEY, status);
+
+		// Check if anyone is waiting for this new status
+		this.handleStatusWaiter(status);
+
+		console.log("[Engine] Changed my status to", instanceStatusName(status));
 	}
 
-	async abort(_reason: string) {
-		// TODO: Maybe don't actually kill but instead check a flag and return early if true
+	private statusWaiters: Map<InstanceStatus, { resolve: () => void }> =
+		new Map();
+	async waitForStatus(status: string): Promise<void> {
+		const targetStatus = toInstanceStatus(status);
+		const currentStatus =
+			await this.ctx.storage.get<InstanceStatus>(ENGINE_STATUS_KEY);
+
+		// if the workflow has already reached the desired state, resolve immediately
+		if (currentStatus === targetStatus) {
+			return;
+		}
+
+		// if it hasn't reached the desired state, create a new promise and add its resolver to the waiters map
+		return new Promise((resolve) => {
+			this.statusWaiters.set(targetStatus, { resolve });
+		});
+	}
+
+	handleStatusWaiter(status: InstanceStatus) {
+		const waiter = this.statusWaiters.get(status);
+		if (waiter) {
+			waiter.resolve();
+			this.statusWaiters.delete(status);
+		}
+	}
+
+	private stepResultWaiters: Map<
+		string,
+		{ resolve: (v: unknown) => void; reject: (e: unknown) => void }
+	> = new Map();
+	async waitForStepResult(
+		stepName: string,
+		stepCount?: number
+	): Promise<unknown> {
+		const hash = await computeHash(stepName);
+		const count = stepCount ?? 1;
+		const cacheKey = `${hash}-${count}`;
+
+		const rows = [
+			...this.ctx.storage.sql.exec<{
+				event: InstanceEvent;
+				metadata: string;
+			}>(
+				"SELECT event, metadata FROM states WHERE groupKey = ? ORDER BY id DESC LIMIT 1",
+				cacheKey
+			),
+		];
+
+		if (rows.length > 0) {
+			const { event, metadata } = rows[0];
+			const parsed = JSON.parse(metadata);
+			if (event === InstanceEvent.STEP_SUCCESS) {
+				return parsed?.result;
+			}
+			if (event === InstanceEvent.STEP_FAILURE) {
+				throw parsed?.error ?? parsed ?? new Error("Step failed");
+			}
+		}
+
+		// if it hasn't completed the step, create a new promise and add its resolver and rejecter to the waiters map
+		return new Promise<unknown>((resolve, reject) => {
+			this.stepResultWaiters.set(cacheKey, { resolve, reject });
+		});
+	}
+
+	handleStepResultWaiter(
+		group: string,
+		event: InstanceEvent,
+		metadata: Record<string, unknown>
+	) {
+		const waiter = this.stepResultWaiters.get(group);
+		if (!waiter) {
+			return;
+		}
+		if (event === InstanceEvent.STEP_SUCCESS) {
+			const result = metadata?.result;
+			waiter.resolve(result);
+			this.stepResultWaiters.delete(group);
+		} else if (event === InstanceEvent.STEP_FAILURE) {
+			const errorLike = metadata?.error ?? metadata;
+			waiter.reject(errorLike);
+			this.stepResultWaiters.delete(group);
+		}
+	}
+
+	async abort(reason?: string) {
+		console.log("[Engine] Will abort because", reason);
+
+		// TODO: have the grace period end somehow?
+
+		await this.ctx.storage.sync();
+		await this.ctx.storage.deleteAlarm();
+		await this.ctx.storage.deleteAll();
+		this.ctx.abort(reason);
 	}
 
 	async storeEventMap() {
@@ -297,6 +423,7 @@ export class Engine extends DurableObject<Env> {
 		instance: DatabaseInstance,
 		event: WorkflowEvent<unknown>
 	) {
+		console.log("[Engine.init()] I INITED ENGINE");
 		if (this.priorityQueue === undefined) {
 			this.priorityQueue = new TimePriorityQueue(
 				this.ctx,
@@ -363,6 +490,7 @@ export class Engine extends DurableObject<Env> {
 			await this.ctx.storage.transaction(async () => {
 				// manually start the grace period
 				// startGracePeriod(this, this.timeoutHandler.timeoutMs);
+				console.log("[Engine.init()] Set status to running");
 				await this.setStatus(accountId, instance.id, InstanceStatus.Running);
 			});
 		};
