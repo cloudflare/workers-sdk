@@ -840,9 +840,18 @@ export interface EnvironmentNonInheritable {
 		| {
 				/** The binding name used to refer to the bound service. */
 				binding: string;
-				/** The name of the service. */
+				/**
+				 * The name of the service.
+				 * To bind to a worker in a specific environment,
+				 * you should use the format `<worker_name>-<environment_name>`.
+				 */
 				service: string;
-				/** The environment of the service (e.g. production, staging, etc). */
+				/**
+				 * @hidden
+				 * @deprecated you should use `service: <worker_name>-<environment_name>` instead.
+				 * This refers to the deprecated concept of 'service environments'.
+				 * The environment of the service (e.g. production, staging, etc).
+				 */
 				environment?: string;
 				/** Optionally, the entrypoint (named export) of the service to bind to. */
 				entrypoint?: string;
