@@ -6,6 +6,7 @@ import { clearDialogs } from "./helpers/mock-dialogs";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { Instance, Workflow } from "../workflows/types";
 
@@ -431,6 +432,118 @@ describe("wrangler workflows", () => {
 			expect(std.info).toMatchInlineSnapshot(
 				`"🚫 delete command not yet implement"`
 			);
+		});
+	});
+
+	describe("workflow binding validation", () => {
+		it("should validate workflow binding with valid name", async () => {
+			writeWorkerSource({ format: "ts" });
+			writeWranglerConfig({
+				main: "index.ts",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "valid-workflow-name",
+						class_name: "MyWorkflow",
+						script_name: "external-script",
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should reject workflow binding with name exceeding 64 characters", async () => {
+			const longName = "a".repeat(65); // 65 characters
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: longName,
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain("must be 64 characters or less");
+			expect(std.err).toContain("but got 65 characters");
+		});
+
+		it("should accept workflow binding with name exactly 64 characters", async () => {
+			const maxLengthName = "a".repeat(64); // exactly 64 characters
+			writeWorkerSource({ format: "ts" });
+			writeWranglerConfig({
+				main: "index.ts",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: maxLengthName,
+						class_name: "MyWorkflow",
+						script_name: "external-script",
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should validate required fields for workflow binding", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain('should have a string "name" field');
+			expect(std.err).toContain('should have a string "class_name" field');
+		});
+
+		it("should validate optional fields for workflow binding", async () => {
+			writeWorkerSource({ format: "ts" });
+			writeWranglerConfig({
+				main: "index.ts",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "external-script",
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should reject workflow binding with invalid field types", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: 123, // should be string
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain('should have a string "binding" field');
+		});
+
+		it("should reject workflow binding that is not an object", async () => {
+			writeWranglerConfig({
+				workflows: ["invalid-workflow-config"] as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain('"workflows" bindings should be objects');
 		});
 	});
 });

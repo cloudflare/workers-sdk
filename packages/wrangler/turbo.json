@@ -3,17 +3,7 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"inputs": [
-				"!*/**/__tests__/**",
-				"!*/**/.wrangler/**",
-				"bin/**",
-				"src/**",
-				"scripts/**",
-				"templates/**",
-				"*.json",
-				"*.js",
-				"*.ts"
-			],
+			"inputs": ["$TURBO_DEFAULT$", "!**/__tests__/**", "!e2e/**"],
 			"outputs": [
 				"miniflare-dist/**",
 				"emitted-types/**",
@@ -21,55 +11,68 @@
 				"config-schema.json"
 			],
 			"env": [
-				"NODE_EXTRA_CA_CERTS",
-				"CLOUDFLARE_ACCOUNT_ID",
-				"SOURCEMAPS",
-				"NODE_ENV",
-				"SPARROW_SOURCE_KEY",
 				"ALGOLIA_APP_ID",
 				"ALGOLIA_PUBLIC_KEY",
-				"CLOUDFLARE_API_TOKEN",
+				"NODE_ENV",
+				"SOURCEMAPS",
+				"SPARROW_SOURCE_KEY",
+				"SENTRY_DSN",
+				"WRANGLER_PRERELEASE_LABEL"
+			],
+			"passThroughEnv": [
+				"CF_PAGES_UPLOAD_JWT",
+				"CF_PAGES",
+				"CI",
 				"CLOUDFLARE_ACCOUNT_ID",
-				"WRANGLER_AUTH_DOMAIN",
-				"PATH",
-				"WRANGLER_LOG",
+				"CLOUDFLARE_API_TOKEN",
+				"CUSTOM_BUILD_VAR",
 				"EXPERIMENTAL_MIDDLEWARE",
 				"FORMAT_WRANGLER_ERRORS",
-				"CF_PAGES",
-				"WORKERS_CI",
-				"CI",
-				"CF_PAGES_UPLOAD_JWT",
-				"EXPERIMENTAL_MIDDLEWARE",
-				"NO_D1_WARNING",
-				"NO_HYPERDRIVE_WARNING",
-				"WRANGLER",
-				"WRANGLER_IMPORT",
-				"CUSTOM_BUILD_VAR",
-				"PWD",
-				"LC_ALL",
-				"WRANGLER_SEND_METRICS",
-				"https_proxy",
-				"HTTPS_PROXY",
 				"http_proxy",
 				"HTTP_PROXY",
-				"CI_OS",
-				"SENTRY_DSN",
+				"https_proxy",
+				"HTTPS_PROXY",
+				"HYPERDRIVE_DATABASE_URL",
+				"WRANGLER_DOCKER_BIN",
+				"WRANGLER_DOCKER_HOST",
+				"LC_ALL",
+				"NO_D1_WARNING",
+				"NO_HYPERDRIVE_WARNING",
+				"PATH",
+				"PWD",
 				"SYSTEMROOT",
 				"TZ",
+				"WORKERS_CI",
+				"WRANGLER_API_ENVIRONMENT",
+				"WRANGLER_AUTH_DOMAIN",
+				"WRANGLER_D1_EXTRA_LOCATION_CHOICES",
 				"WRANGLER_DISABLE_EXPERIMENTAL_WARNING",
 				"WRANGLER_DISABLE_REQUEST_BODY_DRAINING",
+				"WRANGLER_LOG",
+				"WRANGLER_SEND_METRICS",
 				"WRANGLER_WORKER_REGISTRY_PORT",
-				"WRANGLER_API_ENVIRONMENT",
-				"HYPERDRIVE_DATABASE_URL"
+				"DOCKER_HOST",
+				"WRANGLER_DOCKER_HOST"
 			]
 		},
 		"test:ci": {
-			"inputs": ["!*/**/.wrangler/**", "**/__tests__/**"],
-			"dependsOn": ["build"]
+			"dependsOn": ["build"],
+			"env": ["VITEST", "NODE_DEBUG", "MINIFLARE_WORKERD_PATH"]
 		},
 		"test:e2e": {
 			"inputs": ["e2e/**"],
-			"dependsOn": ["build"]
+			"dependsOn": ["build"],
+			"env": [
+				"VITEST",
+				"NODE_DEBUG",
+				"MINIFLARE_WORKERD_PATH",
+				"WRANGLER",
+				"WRANGLER_IMPORT",
+				"MINIFLARE_IMPORT",
+				"CLOUDFLARE_ACCOUNT_ID",
+				"CLOUDFLARE_API_TOKEN",
+				"WRANGLER_E2E_TEST_FILE"
+			]
 		}
 	}
 }

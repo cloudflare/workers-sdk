@@ -1175,6 +1175,9 @@ importers:
       '@ava/typescript':
         specifier: ^4.1.0
         version: 4.1.0
+      '@cloudflare/cli':
+        specifier: workspace:*
+        version: link:../cli
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler
@@ -1728,6 +1731,9 @@ importers:
       find-up:
         specifier: ^6.3.0
         version: 6.3.0
+      glob:
+        specifier: ^10.4.5
+        version: 10.4.5
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0

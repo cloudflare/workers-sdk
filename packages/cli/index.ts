@@ -245,3 +245,5 @@ export const error = (
 		);
 	}
 };
+
+export { checkMacOSVersion } from "./check-macos-version";
