@@ -58,7 +58,7 @@ export class InstanceModifier extends RpcTarget {
 		return sleepNameCountHash;
 	}
 
-	public async disableSleeps(steps?: StepSelector[]): Promise<void> {
+	async disableSleeps(steps?: StepSelector[]): Promise<void> {
 		if (!steps) {
 			console.log("[Modifier.disableSleeps()] Disabling all sleeps");
 			await this.#state.storage.put("disableAllSleeps", true);
@@ -74,10 +74,7 @@ export class InstanceModifier extends RpcTarget {
 		}
 	}
 
-	public async mockStepResult(
-		step: StepSelector,
-		stepResult: unknown
-	): Promise<void> {
+	async mockStepResult(step: StepSelector, stepResult: unknown): Promise<void> {
 		console.log(
 			"[Modifier.mockStepResult()] Mocking step result of step:",
 			step.name
@@ -86,7 +83,7 @@ export class InstanceModifier extends RpcTarget {
 		await this.#state.storage.put(`replace-result-${valueKey}`, stepResult);
 	}
 
-	public async mockStepImplementation(
+	async mockStepImplementation(
 		_step: StepSelector,
 		_implementation: () => Promise<unknown>
 	): Promise<void> {
@@ -94,7 +91,7 @@ export class InstanceModifier extends RpcTarget {
 		// somehow pass the implementation to context so it can race with timeout
 	}
 
-	public async mockStepError(
+	async mockStepError(
 		step: StepSelector,
 		error: Error,
 		times?: number
@@ -119,7 +116,7 @@ export class InstanceModifier extends RpcTarget {
 		}
 	}
 
-	public async forceStepTimeout(step: StepSelector, times?: number) {
+	async forceStepTimeout(step: StepSelector, times?: number) {
 		const valueKey = await this.#getStepCacheKey(step);
 		if (times) {
 			for (let time = 1; time <= times; time++) {
@@ -132,22 +129,19 @@ export class InstanceModifier extends RpcTarget {
 		}
 	}
 
-	public async mockEvent(event: UserEvent): Promise<void> {
-		// could maybe:
-		// WorkflowInstance.sendEvent()
-		// Engine.receiveEvent()
-		// flag with waitForEventKey
-
+	async mockEvent(event: UserEvent): Promise<void> {
 		const myEvent: Event = {
 			timestamp: new Date(),
 			payload: event.payload,
 			type: event.type,
 		};
 
+		await this.#state.storage.put(`mockEvent-${event.type}`, true);
+
 		await this.#engine.receiveEvent(myEvent);
 	}
 
-	public async forceEventTimeout(step: StepSelector): Promise<void> {
+	async forceEventTimeout(step: StepSelector): Promise<void> {
 		const waitForEventKey = await this.#getWaitForEventCacheKey(step);
 		await this.#state.storage.put(`forceEventTimeout-${waitForEventKey}`, true);
 	}

@@ -398,8 +398,14 @@ export class Engine extends DurableObject<Env> {
 				}
 			}
 		} else {
+			const mockEvent = await this.ctx.storage.get(`mockEvent-${event.type}`);
+			if (mockEvent) {
+				return;
+			}
+
 			const metadata =
 				await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+
 			if (metadata === undefined) {
 				throw new Error("Engine was never started");
 			}
