@@ -1,4 +1,4 @@
-import { formatConfigSnippet } from "../../config";
+import { formatConfigSnippet, updateConfigFile } from "../../config";
 import { createCommand } from "../../core/create-command";
 import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";
@@ -277,21 +277,17 @@ export const pipelinesCreateCommand = createCommand({
 		logger.log("🎉 You can now send data to your pipeline!");
 
 		if (args.source.includes("worker")) {
-			logger.log(
-				`\nTo send data to your pipeline from a Worker, add the following to your wrangler config file:\n`
-			);
-			logger.log(
-				formatConfigSnippet(
-					{
-						pipelines: [
-							{
-								pipeline: pipeline.name,
-								binding: getValidBindingName("PIPELINE", "PIPELINE"),
-							},
-						],
-					},
-					config.configPath
-				)
+			await updateConfigFile(
+				{
+					pipelines: [
+						{
+							pipeline: pipeline.name,
+							binding: getValidBindingName("PIPELINE", "PIPELINE"),
+						},
+					],
+				},
+				config.configPath,
+				args.env
 			);
 		}
 

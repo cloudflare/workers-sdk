@@ -1,9 +1,13 @@
 import TOML from "@iarna/toml";
+import { CfWorkerInit } from "../deployment-bundle/worker";
+import { confirm } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
+import { friendlyBindingNames } from "../utils/print-bindings";
 import { resolveWranglerConfigPath } from "./config-helpers";
+import { experimental_patchConfig } from "./patch-config";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
 import type { CommonYargsOptions } from "../yargs-types";
@@ -58,6 +62,34 @@ export function formatConfigSnippet(
 		return formatted
 			? JSON.stringify(snippet, null, 2)
 			: JSON.stringify(snippet);
+	}
+}
+
+export async function updateConfigFile(
+	snippet: Partial<{ [K in keyof CfWorkerInit["bindings"]]: RawConfig[K] }>,
+	configPath: Config["configPath"],
+	env: string | undefined,
+	offerToUpdate: boolean = true
+) {
+	const resource = Object.keys(snippet)[0] as keyof CfWorkerInit["bindings"];
+	const envString = env ? ` in the "${env}" environment` : "";
+	logger.log(
+		`To access your new ${friendlyBindingNames[resource]} in your Worker, add the following snippet to your configuration file${envString}:`
+	);
+
+	logger.log(formatConfigSnippet(snippet, configPath));
+
+	if (configPath && offerToUpdate) {
+		const autoAdd = await confirm(
+			"Would you like Wrangler to add it on your behalf?",
+			{
+				defaultValue: true,
+				fallbackValue: false,
+			}
+		);
+		if (autoAdd) {
+			experimental_patchConfig(configPath, snippet, true);
+		}
 	}
 }
 

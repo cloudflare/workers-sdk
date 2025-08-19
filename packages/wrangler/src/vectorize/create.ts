@@ -1,4 +1,8 @@
-import { configFileName, formatConfigSnippet } from "../config";
+import {
+	configFileName,
+	formatConfigSnippet,
+	updateConfigFile,
+} from "../config";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -112,21 +116,18 @@ export const vectorizeCreateCommand = createCommand({
 		logger.log(
 			`✅ Successfully created a new Vectorize index: '${indexResult.name}'`
 		);
-		logger.log(
-			`📋 To start querying from a Worker, add the following binding configuration to your ${configFileName(config.configPath)} file:\n`
-		);
-		logger.log(
-			formatConfigSnippet(
-				{
-					vectorize: [
-						{
-							binding: bindingName,
-							index_name: indexResult.name,
-						},
-					],
-				},
-				config.configPath
-			)
+
+		await updateConfigFile(
+			{
+				vectorize: [
+					{
+						binding: bindingName,
+						index_name: indexResult.name,
+					},
+				],
+			},
+			config.configPath,
+			args.env
 		);
 	},
 });
