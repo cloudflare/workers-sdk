@@ -79,7 +79,7 @@ export async function updateConfigFile(
 
 	logger.log(formatConfigSnippet(snippet, configPath));
 
-	if (configPath && offerToUpdate) {
+	if (configPath && offerToUpdate && configFormat(configPath) === "jsonc") {
 		const autoAdd = await confirm(
 			"Would you like Wrangler to add it on your behalf?",
 			{
