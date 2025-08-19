@@ -627,6 +627,7 @@ export async function getDevMiniflareOptions(config: {
 						},
 					],
 					unsafeUseModuleFallbackService: true,
+					unsafeRegisterWorker: true,
 				} satisfies WorkerOptions;
 			}),
 		],
@@ -772,6 +773,7 @@ export async function getPreviewMiniflareOptions(config: {
 						...workerOptions,
 						name: workerOptions.name ?? workerConfig.name,
 						unsafeInspectorProxy: inspectorPort !== false,
+						unsafeRegisterWorker: true,
 						unsafeDirectSockets:
 							// This exposes the default entrypoint of the entry worker on the dev registry
 							// Assuming that the first worker config to be the entry worker.

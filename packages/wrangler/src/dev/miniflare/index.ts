@@ -958,6 +958,7 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
+				unsafeRegisterWorker: true,
 				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
 				unsafeDirectSockets: entrypointNames.map((name) => ({
 					host: "127.0.0.1",
