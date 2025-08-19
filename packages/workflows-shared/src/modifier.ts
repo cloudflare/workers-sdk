@@ -119,6 +119,19 @@ export class InstanceModifier extends RpcTarget {
 		}
 	}
 
+	public async forceStepTimeout(step: StepSelector, times?: number) {
+		const valueKey = await this.#getStepCacheKey(step);
+		if (times) {
+			for (let time = 1; time <= times; time++) {
+				const forceStepTimeoutKey = `force-step-timeout-${valueKey}-${time}`;
+				await this.#state.storage.put(forceStepTimeoutKey, true);
+			}
+		} else {
+			const forceStepTimeoutKey = `force-step-timeout-${valueKey}`;
+			await this.#state.storage.put(forceStepTimeoutKey, true);
+		}
+	}
+
 	public async mockEvent(event: UserEvent): Promise<void> {
 		// could maybe:
 		// WorkflowInstance.sendEvent()
