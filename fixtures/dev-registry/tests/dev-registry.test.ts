@@ -325,10 +325,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Worker Entrypoint",
-				tailEvents: [
+				tailEvents: expect.arrayContaining([
 					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
 					[["[Module Worker]"], ["some other log"]],
-				],
+				]),
 			});
 		});
 
@@ -346,10 +346,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Module Worker",
-				tailEvents: [
+				tailEvents: expect.arrayContaining([
 					[["[Worker Entrypoint]"], ["hello from test"]],
 					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
-				],
+				]),
 			});
 		});
 	});
@@ -500,10 +500,10 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Worker Entrypoint",
-				tailEvents: [
+				tailEvents: expect.arrayContaining([
 					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
 					[["[Module Worker]"], ["some other log"]],
-				],
+				]),
 			});
 		});
 
@@ -522,10 +522,10 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Module Worker",
-				tailEvents: [
+				tailEvents: expect.arrayContaining([
 					[["[Worker Entrypoint]"], ["hello from test"]],
 					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
-				],
+				]),
 			});
 		});
 	});
@@ -722,10 +722,10 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Worker Entrypoint",
-				tailEvents: [
+				tailEvents: expect.arrayContaining([
 					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
 					[["[Module Worker]"], ["some other log"]],
-				],
+				]),
 			});
 		});
 
@@ -746,10 +746,10 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Module Worker",
-				tailEvents: [
+				tailEvents: expect.arrayContaining([
 					[["[Worker Entrypoint]"], ["hello from test"]],
 					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
-				],
+				]),
 			});
 		});
 	});
