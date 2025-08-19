@@ -291,7 +291,7 @@ export class Engine extends DurableObject<Env> {
 			}
 		}
 
-		// if it hasn't completed the step, create a new promise and add its resolver and rejecter to the waiters map
+		// if it hasn't completed the step, create a new promise to later resolve/reject
 		return new Promise<unknown>((resolve, reject) => {
 			this.stepResultWaiters.set(cacheKey, { resolve, reject });
 		});
@@ -317,14 +317,16 @@ export class Engine extends DurableObject<Env> {
 		}
 	}
 
-	async abort(reason?: string) {
+	async abort(_reason: string) {
+		// TODO: Maybe don't actually kill but instead check a flag and return early if true
+	}
+
+	async unsafeAbort(reason?: string) {
 		console.log("[Engine] Will abort because", reason);
 
-		// TODO: have the grace period end somehow?
-
 		await this.ctx.storage.sync();
-		await this.ctx.storage.deleteAlarm();
-		await this.ctx.storage.deleteAll();
+		await this.ctx.storage.deleteAll({ noCache: true });
+
 		this.ctx.abort(reason);
 	}
 
