@@ -1,3 +1,4 @@
+import "cloudflare/shims/web";
 import process from "process";
 import { hideBin } from "yargs/helpers";
 import {

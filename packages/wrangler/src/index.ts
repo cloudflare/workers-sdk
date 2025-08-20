@@ -1,4 +1,3 @@
-import "cloudflare/shims/web";
 import assert from "node:assert";
 import os from "node:os";
 import { resolve } from "node:path";
