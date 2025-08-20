@@ -91,6 +91,7 @@ export async function prompt(
 interface SelectOptions<Values> {
 	choices: SelectOption<Values>[];
 	defaultOption?: number;
+	fallbackOption?: number;
 }
 
 interface SelectOption<Values> {
@@ -104,16 +105,17 @@ export async function select<Values extends string>(
 	options: SelectOptions<Values>
 ): Promise<Values> {
 	if (isNonInteractiveOrCI()) {
-		if (options?.defaultOption === undefined) {
+		const fallback = options.fallbackOption ?? options.defaultOption;
+		if (fallback === undefined) {
 			throw new NoDefaultValueProvided();
 		}
 		logger.log(`? ${text}`);
 		logger.log(
 			`🤖 ${chalk.dim(
-				"Using default value in non-interactive context:"
-			)} ${chalk.white.bold(options.choices[options.defaultOption].title)}`
+				"Using fallback value in non-interactive context:"
+			)} ${chalk.white.bold(options.choices[fallback].title)}`
 		);
-		return options.choices[options.defaultOption].value;
+		return options.choices[fallback].value;
 	}
 
 	const { value } = await prompts({

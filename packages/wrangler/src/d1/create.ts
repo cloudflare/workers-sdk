@@ -6,6 +6,7 @@ import { getD1ExtraLocationChoices } from "../environment-variables/misc-variabl
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { getValidBindingName } from "../utils/getValidBindingName";
 import { LOCATION_CHOICES } from "./constants";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { DatabaseCreationResult } from "./types";
@@ -88,11 +89,15 @@ export const d1CreateCommand = createCommand({
 		logger.log("Created your new D1 database.\n");
 
 		await updateConfigFile(
-			{
+			(name) => ({
 				d1_databases: [
-					{ binding: "DB", database_name: db.name, database_id: db.uuid },
+					{
+						binding: getValidBindingName(name ?? db.name, "DB"),
+						database_name: db.name,
+						database_id: db.uuid,
+					},
 				],
-			},
+			}),
 			config.configPath,
 			env
 		);

@@ -97,14 +97,14 @@ export const r2BucketCreateCommand = createCommand({
 			} default storage class of ${storageClass ? storageClass : `Standard`}.`);
 
 		await updateConfigFile(
-			{
+			(name) => ({
 				r2_buckets: [
 					{
 						bucket_name: args.name,
-						binding: getValidBindingName(args.name, "r2"),
+						binding: getValidBindingName(name ?? args.name, "r2"),
 					},
 				],
-			},
+			}),
 			config.configPath,
 			args.env
 		);

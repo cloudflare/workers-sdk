@@ -105,14 +105,14 @@ export const kvNamespaceCreateCommand = createCommand({
 		const previewString = args.preview ? "preview_" : "";
 
 		await updateConfigFile(
-			{
+			(name) => ({
 				kv_namespaces: [
 					{
-						binding: getValidBindingName(args.namespace, "KV"),
+						binding: getValidBindingName(name ?? args.namespace, "KV"),
 						[`${previewString}id`]: namespaceId,
 					},
 				],
-			},
+			}),
 			config.configPath,
 			args.env,
 			!args.preview

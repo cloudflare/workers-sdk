@@ -6,6 +6,7 @@ import {
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { getValidBindingName } from "../utils/getValidBindingName";
 import { createIndex } from "./client";
 import { deprecatedV1DefaultFlag } from "./common";
 import type { VectorizeDistanceMetric } from "./types";
@@ -118,14 +119,14 @@ export const vectorizeCreateCommand = createCommand({
 		);
 
 		await updateConfigFile(
-			{
+			(name) => ({
 				vectorize: [
 					{
-						binding: bindingName,
+						binding: getValidBindingName(name ?? bindingName, bindingName),
 						index_name: indexResult.name,
 					},
 				],
-			},
+			}),
 			config.configPath,
 			args.env
 		);

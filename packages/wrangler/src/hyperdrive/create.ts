@@ -5,6 +5,7 @@ import {
 } from "../config";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
+import { getValidBindingName } from "../utils/getValidBindingName";
 import { createConfig } from "./client";
 import { capitalizeScheme } from "./shared";
 import {
@@ -46,9 +47,14 @@ export const hyperdriveCreateCommand = createCommand({
 		);
 
 		await updateConfigFile(
-			{
-				hyperdrive: [{ binding: "HYPERDRIVE", id: database.id }],
-			},
+			(name) => ({
+				hyperdrive: [
+					{
+						binding: getValidBindingName(name ?? "HYPERDRIVE", "HYPERDRIVE"),
+						id: database.id,
+					},
+				],
+			}),
 			config.configPath,
 			args.env
 		);

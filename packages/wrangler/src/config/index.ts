@@ -1,6 +1,6 @@
 import TOML from "@iarna/toml";
 import { CfWorkerInit } from "../deployment-bundle/worker";
-import { confirm } from "../dialogs";
+import { confirm, prompt, select } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
@@ -66,29 +66,49 @@ export function formatConfigSnippet(
 }
 
 export async function updateConfigFile(
-	snippet: Partial<{ [K in keyof CfWorkerInit["bindings"]]: RawConfig[K] }>,
+	snippet: (
+		bindingName?: string
+	) => Partial<{ [K in keyof CfWorkerInit["bindings"]]: RawConfig[K] }>,
 	configPath: Config["configPath"],
 	env: string | undefined,
 	offerToUpdate: boolean = true
 ) {
-	const resource = Object.keys(snippet)[0] as keyof CfWorkerInit["bindings"];
+	const resource = Object.keys(snippet())[0] as keyof CfWorkerInit["bindings"];
 	const envString = env ? ` in the "${env}" environment` : "";
 	logger.log(
 		`To access your new ${friendlyBindingNames[resource]} in your Worker, add the following snippet to your configuration file${envString}:`
 	);
 
-	logger.log(formatConfigSnippet(snippet, configPath));
+	logger.log(formatConfigSnippet(snippet(), configPath));
 
 	if (configPath && offerToUpdate && configFormat(configPath) === "jsonc") {
-		const autoAdd = await confirm(
+		const autoAdd = await select(
 			"Would you like Wrangler to add it on your behalf?",
 			{
-				defaultValue: true,
-				fallbackValue: false,
+				choices: [
+					{ title: "Yes", value: "yes" },
+					{
+						title: "Yes, but let me choose the binding name",
+						value: "yes-but",
+					},
+					{ title: "No", value: "no" },
+				],
+				defaultOption: 0,
+				fallbackOption: 2,
 			}
 		);
-		if (autoAdd) {
-			experimental_patchConfig(configPath, snippet, true);
+		let bindingName;
+
+		if (autoAdd === "yes-but") {
+			bindingName = await prompt("What binding name would you like to use?");
+		}
+
+		if (autoAdd !== "no") {
+			experimental_patchConfig(
+				configPath,
+				env ? { env: { [env]: snippet(bindingName) } } : snippet(bindingName),
+				true
+			);
 		}
 	}
 }

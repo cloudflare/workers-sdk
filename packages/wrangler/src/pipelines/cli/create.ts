@@ -278,14 +278,14 @@ export const pipelinesCreateCommand = createCommand({
 
 		if (args.source.includes("worker")) {
 			await updateConfigFile(
-				{
+				(name) => ({
 					pipelines: [
 						{
 							pipeline: pipeline.name,
-							binding: getValidBindingName("PIPELINE", "PIPELINE"),
+							binding: getValidBindingName(name ?? "PIPELINE", "PIPELINE"),
 						},
 					],
-				},
+				}),
 				config.configPath,
 				args.env
 			);
