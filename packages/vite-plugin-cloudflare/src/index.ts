@@ -20,6 +20,7 @@ import {
 import { hasAssetsConfigChanged } from "./asset-config";
 import { createBuildApp } from "./build";
 import {
+	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
 	initRunners,
 } from "./cloudflare-environment";
@@ -172,6 +173,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 									client: {
 										build: {
 											outDir: getOutputDirectory(userConfig, "client"),
+										},
+										optimizeDeps: {
+											// Some frameworks allow users to mix client and server code in the same file and then extract the server code.
+											// As the dependency optimization may happen before the server code is extracted, we should exclude Cloudflare built-ins from client optimization.
+											exclude: [...cloudflareBuiltInModules],
 										},
 									},
 								}
