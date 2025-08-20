@@ -9,7 +9,7 @@ export default {
 				React.createElement(
 					"p",
 					null,
-					"This page was server side rendered by using directly 'renderToString' from 'react-dom/server'"
+					`The value of process.env.NODE_ENV is "${process.env.NODE_ENV}"`
 				),
 			])
 		);

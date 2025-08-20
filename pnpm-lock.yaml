@@ -2714,6 +2714,40 @@ importers:
         specifier: workspace:*
         version: link:../../../wrangler
 
+  packages/vite-plugin-cloudflare/playground/node-env:
+    dependencies:
+      react:
+        specifier: ^19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: ^19.1.0
+        version: 19.1.0(react@19.1.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250816.0
+      '@types/react':
+        specifier: ^19.1.0
+        version: 19.1.0
+      '@types/react-dom':
+        specifier: ^19.1.1
+        version: 19.1.1(@types/react@19.1.0)
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 7.0.0(@types/node@20.19.9)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
   packages/vite-plugin-cloudflare/playground/partyserver:
     dependencies:
       partyserver:
@@ -2783,40 +2817,6 @@ importers:
       prisma:
         specifier: ^6.3.0
         version: 6.3.1(typescript@5.8.3)
-      typescript:
-        specifier: catalog:default
-        version: 5.8.3
-      vite:
-        specifier: catalog:vite-plugin
-        version: 7.0.0(@types/node@20.19.9)(jiti@2.4.2)(lightningcss@1.29.2)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
-
-  packages/vite-plugin-cloudflare/playground/react-dom-server:
-    dependencies:
-      react:
-        specifier: ^19.1.0
-        version: 19.1.0
-      react-dom:
-        specifier: ^19.1.0
-        version: 19.1.0(react@19.1.0)
-    devDependencies:
-      '@cloudflare/vite-plugin':
-        specifier: workspace:*
-        version: link:../..
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../../../workers-tsconfig
-      '@cloudflare/workers-types':
-        specifier: catalog:default
-        version: 4.20250816.0
-      '@types/react':
-        specifier: ^19.1.0
-        version: 19.1.0
-      '@types/react-dom':
-        specifier: ^19.1.1
-        version: 19.1.1(@types/react@19.1.0)
       typescript:
         specifier: catalog:default
         version: 5.8.3
