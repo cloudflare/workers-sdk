@@ -325,7 +325,7 @@ importers:
         version: 4.20250829.0
       undici:
         specifier: catalog:default
-        version: 7.11.0
+        version: 7.14.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)
