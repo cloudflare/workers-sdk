@@ -21,7 +21,11 @@ import type {
  * we want to revert to the default rather than inheriting from the prev deployment
  */
 export const getNormalizedContainerOptions = async (
-	config: Config
+	config: Config,
+	args: {
+		/** set by args.containersRollout */
+		containersRollout?: "gradual" | "immediate";
+	}
 ): Promise<ContainerNormalizedConfig[]> => {
 	if (!config.containers || config.containers.length === 0) {
 		return [];
@@ -51,6 +55,9 @@ export const getNormalizedContainerOptions = async (
 			);
 		}
 
+		const rolloutStepPercentageFallback =
+			(container.max_instances ?? 0) < 2 ? 100 : [10, 100];
+
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
 			class_name: container.class_name,
@@ -72,7 +79,10 @@ export const getNormalizedContainerOptions = async (
 					city.toLowerCase()
 				),
 			},
-			rollout_step_percentage: container.rollout_step_percentage ?? 25,
+			rollout_step_percentage:
+				args?.containersRollout === "immediate"
+					? 100
+					: container.rollout_step_percentage ?? rolloutStepPercentageFallback,
 			rollout_kind: container.rollout_kind ?? "full_auto",
 			rollout_active_grace_period: container.rollout_active_grace_period ?? 0,
 			observability: {

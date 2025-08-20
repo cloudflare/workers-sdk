@@ -118,6 +118,7 @@ type Props = {
 	dispatchNamespace: string | undefined;
 	experimentalAutoCreate: boolean;
 	metafile: string | boolean | undefined;
+	containersRollout: "immediate" | "gradual" | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -466,7 +467,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		custom_domain: true,
 	}));
 	const routes =
-		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
+		props.routes ?? config.routes ?? (config.route ? [config.route] : []);
 	const allRoutes = [...routes, ...domainRoutes];
 	validateRoutes(allRoutes, props.assetsOptions);
 
@@ -571,7 +572,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	let sourceMapSize;
-	const normalisedContainerConfig = await getNormalizedContainerOptions(config);
+	const normalisedContainerConfig = await getNormalizedContainerOptions(
+		config,
+		props
+	);
 	try {
 		if (props.noBundle) {
 			// if we're not building, let's just copy the entry to the destination directory

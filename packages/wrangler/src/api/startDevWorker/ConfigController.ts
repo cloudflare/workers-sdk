@@ -371,7 +371,7 @@ async function resolveConfig(
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
 			exports: entry.exports,
 		},
-		containers: await getNormalizedContainerOptions(config),
+		containers: await getNormalizedContainerOptions(config, {}),
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
