@@ -22,9 +22,9 @@ import type {
  */
 export const getNormalizedContainerOptions = async (
 	config: Config,
-	args?: {
-		/** set to 100 if --full-containers-rollout=true */
-		rolloutStepPercentage?: number | undefined;
+	args: {
+		/** set by args.containersRollout */
+		containersRollout?: "gradual" | "immediate";
 	}
 ): Promise<ContainerNormalizedConfig[]> => {
 	if (!config.containers || config.containers.length === 0) {
@@ -55,6 +55,9 @@ export const getNormalizedContainerOptions = async (
 			);
 		}
 
+		const rolloutStepPercentageFallback =
+			(container.max_instances ?? 0) < 2 ? 100 : [10, 100];
+
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
 			class_name: container.class_name,
@@ -77,9 +80,9 @@ export const getNormalizedContainerOptions = async (
 				),
 			},
 			rollout_step_percentage:
-				args?.rolloutStepPercentage ??
-				container.rollout_step_percentage ??
-				((container.max_instances ?? 0) < 2 ? 100 : [10, 100]),
+				args?.containersRollout === "immediate"
+					? 100
+					: container.rollout_step_percentage ?? rolloutStepPercentageFallback,
 			rollout_kind: container.rollout_kind ?? "full_auto",
 			rollout_active_grace_period: container.rollout_active_grace_period ?? 0,
 			observability: {

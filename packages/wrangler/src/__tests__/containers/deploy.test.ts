@@ -945,7 +945,7 @@ describe("wrangler deploy with containers", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should override rollout to 100 if --full-containers-rollout flag is true ", async () => {
+		it("should override rollout to 100 if deploying with --containers-rollout=immediate ", async () => {
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
 				containers: [
@@ -974,7 +974,41 @@ describe("wrangler deploy with containers", () => {
 				"index.js",
 				`export class ExampleDurableObject {}; export default{};`
 			);
-			await runWrangler("deploy index.js --full-containers-rollout");
+			await runWrangler("deploy index.js --containers-rollout=immediate");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("deploying with --containers-rollout=rolling should pass through the config value of rollout_step_percentage", async () => {
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						rollout_step_percentage: [50, 100],
+					},
+				],
+			});
+
+			mockGetVersion("Galaxy-Class");
+
+			mockGetApplications([]);
+
+			mockCreateApplication();
+
+			// expect to see 100
+			mockCreateApplicationRollout({
+				description: "Progressive update",
+				strategy: "rolling",
+				kind: "full_auto",
+				step_percentage: [50, 100],
+			});
+
+			fs.writeFileSync(
+				"index.js",
+				`export class ExampleDurableObject {}; export default{};`
+			);
+			await runWrangler("deploy index.js --containers-rollout=gradual");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});

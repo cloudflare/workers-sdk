@@ -169,6 +169,9 @@ export type ContainerApp = {
 	 * If this is an array, each step specifies the cumulative rollout progress.
 	 * The final step must be 100.
 	 *
+	 * This can be overridden adhoc by deploying with the `--containers-rollout=immediate` flag,
+	 * which will roll out to 100% of instances in one step.
+	 *
 	 * @optional
 	 * @default [10,100]
 	 * */
@@ -181,6 +184,7 @@ export type ContainerApp = {
 	 *  - manual: The container application will be rollout fully by manually actioning progress steps.
 	 * @optional
 	 * @default "full_auto"
+	 * @hidden
 	 */
 	rollout_kind?: "full_auto" | "none" | "full_manual";
 
