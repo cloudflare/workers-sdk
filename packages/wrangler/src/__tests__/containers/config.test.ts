@@ -29,7 +29,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toEqual([]);
 	});
 
@@ -45,7 +45,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toEqual([]);
 	});
 
@@ -67,10 +67,10 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		await expect(getNormalizedContainerOptions(config)).rejects.toThrow(
+		await expect(getNormalizedContainerOptions(config, {})).rejects.toThrow(
 			UserError
 		);
-		await expect(getNormalizedContainerOptions(config)).rejects.toThrow(
+		await expect(getNormalizedContainerOptions(config, {})).rejects.toThrow(
 			"The container class_name TestContainer does not match any durable object class_name defined in your Wrangler config file"
 		);
 	});
@@ -99,11 +99,11 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		await expect(getNormalizedContainerOptions(config)).rejects.toThrow(
+		await expect(getNormalizedContainerOptions(config, {})).rejects.toThrow(
 			UserError
 		);
 		await expect(
-			getNormalizedContainerOptions(config)
+			getNormalizedContainerOptions(config, {})
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: The container test-container is referencing the durable object TestContainer, which appears to be defined on the other-script Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.]`
 		);
@@ -134,7 +134,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 
 		expect(result).toHaveLength(1);
 		expect(result[0]).toMatchObject({
@@ -178,7 +178,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 
 		expect(result).toHaveLength(1);
 		expect(result[0]).toMatchObject({
@@ -227,7 +227,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toHaveLength(1);
 		expect(result[0]).toMatchObject({
 			name: "test-container",
@@ -274,7 +274,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toHaveLength(1);
 		expect(result[0]).toMatchObject({
 			name: "test-container",
@@ -318,7 +318,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toHaveLength(1);
 		expect(result[0]).toMatchObject({
 			name: "test-container",
@@ -360,7 +360,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toHaveLength(1);
 		expect(result[0]).toMatchObject({
 			name: "test-container",
@@ -412,7 +412,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toHaveLength(1);
 		expect(result[0]).toEqual({
 			name: "custom-name",
@@ -461,7 +461,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toHaveLength(1);
 		expect(result[0]).toMatchObject({
 			name: "test-container",
@@ -513,7 +513,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 
 		expect(result).toHaveLength(2);
 		expect(result[0].class_name).toBe("Container1");
@@ -544,7 +544,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toHaveLength(1);
 		// Check that it has dockerfile properties (not image_uri)
 		expect(result[0]).toHaveProperty("dockerfile");
@@ -576,7 +576,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toHaveLength(1);
 		expect(result[0].constraints.tier).toBeUndefined();
 	});
@@ -605,7 +605,7 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config);
+		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toHaveLength(1);
 		expect(result[0].rollout_step_percentage).toBe(100);
 	});
