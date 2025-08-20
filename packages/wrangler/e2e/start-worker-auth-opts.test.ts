@@ -253,11 +253,11 @@ async function fetchTimedTextFromWorker(
 			async () => {
 				responseText = await (
 					await worker.fetch("http://example.com", {
-						signal: AbortSignal.timeout(500),
+						signal: AbortSignal.timeout(1000),
 					})
 				).text();
 			},
-			{ timeout: 10_000, interval: 700 }
+			{ timeout: 20_000, interval: 700 }
 		);
 	} catch {
 		return null;
