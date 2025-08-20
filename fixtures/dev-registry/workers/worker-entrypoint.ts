@@ -2,11 +2,23 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 
 let tailEvents = [];
 
+export class NamedEntrypoint extends WorkerEntrypoint {
+	ping() {
+		return "Pong from Named Entrypoint";
+	}
+
+	fetch() {
+		return new Response("Hello from Named Entrypoint!");
+	}
+}
+
 export default class Worker extends WorkerEntrypoint<{
 	SERVICE_WORKER: Fetcher;
 	MODULE_WORKER: Fetcher;
 	WORKER_ENTRYPOINT: Fetcher;
 	WORKER_ENTRYPOINT_WITH_ASSETS: Fetcher;
+	NAMED_ENTRYPOINT: Fetcher;
+	NAMED_ENTRYPOINT_WITH_ASSETS: Fetcher;
 	DURABLE_OBJECT: DurableObjectNamespace;
 }> {
 	ping() {
@@ -40,6 +52,14 @@ export default class Worker extends WorkerEntrypoint<{
 				}
 				case "worker-entrypoint-with-assets": {
 					service = this.env.WORKER_ENTRYPOINT_WITH_ASSETS;
+					break;
+				}
+				case "named-entrypoint": {
+					service = this.env.NAMED_ENTRYPOINT;
+					break;
+				}
+				case "named-entrypoint-with-assets": {
+					service = this.env.NAMED_ENTRYPOINT_WITH_ASSETS;
 					break;
 				}
 				case "durable-object": {

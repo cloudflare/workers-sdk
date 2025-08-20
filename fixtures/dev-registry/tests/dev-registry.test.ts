@@ -55,12 +55,16 @@ async function runViteDev(
 }
 
 async function runWranglerDev(
-	config: string,
+	config: string | string[],
 	devRegistryPath?: string
 ): Promise<string> {
 	const session = await baseRunWranglerDev(
 		cwd,
-		["--port=0", "--inspector-port=0", `--config=${config}`],
+		["--port=0", "--inspector-port=0"].concat(
+			Array.isArray(config)
+				? config.map((configPath) => `--config=${configPath}`)
+				: [`--config=${config}`]
+		),
 		{ WRANGLER_REGISTRY_PATH: devRegistryPath }
 	);
 
@@ -100,8 +104,50 @@ async function setupPlatformProxy(config: string, devRegistryPath?: string) {
 }
 
 describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
-	it("supports fetch over service binding", async ({ devRegistryPath }) => {
-		const workerEntrypointWithAssets = await runWranglerDev(
+	it("supports service worker fetch over service binding", async ({
+		devRegistryPath,
+	}) => {
+		const moduleWorkers = await runWranglerDev(
+			"wrangler.module-worker.jsonc",
+			devRegistryPath
+		);
+
+		// Test fallback service before module-worker is started
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "service-worker",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${moduleWorkers}?${searchParams}`);
+
+			expect({
+				status: response.status,
+				body: await response.text(),
+			}).toEqual({
+				status: 503,
+				body: `Couldn't find a local dev session for the "default" entrypoint of service "service-worker" to proxy to`,
+			});
+		});
+
+		await runWranglerDev("wrangler.service-worker.jsonc", devRegistryPath);
+
+		// Test module worker -> service worker
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "service-worker",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${moduleWorkers}?${searchParams}`);
+
+			expect(await response.text()).toBe("Hello from service worker!");
+			expect(response.status).toBe(200);
+		});
+	});
+
+	it("supports module worker fetch over service binding", async ({
+		devRegistryPath,
+	}) => {
+		const singleWorkerWithAssets = await runWranglerDev(
 			"wrangler.worker-entrypoint-with-assets.jsonc",
 			devRegistryPath
 		);
@@ -112,9 +158,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				"test-service": "module-worker",
 				"test-method": "fetch",
 			});
-			const response = await fetch(
-				`${workerEntrypointWithAssets}?${searchParams}`
-			);
+			const response = await fetch(`${singleWorkerWithAssets}?${searchParams}`);
 
 			expect({
 				status: response.status,
@@ -125,18 +169,18 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			});
 		});
 
-		const moduleWorker = await runWranglerDev(
-			"wrangler.module-worker.jsonc",
+		const multiWorkers = await runWranglerDev(
+			["wrangler.module-worker.jsonc", "wrangler.worker-entrypoint.jsonc"],
 			devRegistryPath
 		);
 
-		// Test module-worker -> worker-entrypoint
+		// Test multi workers -> single worker
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "worker-entrypoint-with-assets",
 				"test-method": "fetch",
 			});
-			const response = await fetch(`${moduleWorker}?${searchParams}`);
+			const response = await fetch(`${multiWorkers}?${searchParams}`);
 
 			expect(await response.text()).toBe("Hello from Worker Entrypoint!");
 			expect(response.status).toBe(200);
@@ -145,29 +189,54 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			// Module worker has no assets, so it will hit the user worker and
 			// forward the request to "worker-entrypoint-with-assets" with the asset path
 			const assetResponse = await fetch(
-				`${moduleWorker}/example.txt?${searchParams}`
+				`${multiWorkers}/example.txt?${searchParams}`
 			);
 			expect(await assetResponse.text()).toBe("This is an example asset file");
 		});
 
-		// Test worker-entrypoint -> module-worker
+		// Test single worker -> multi workers
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "module-worker",
 				"test-method": "fetch",
 			});
-			const response = await fetch(
-				`${workerEntrypointWithAssets}?${searchParams}`
-			);
+			const response = await fetch(`${singleWorkerWithAssets}?${searchParams}`);
 
 			expect(await response.text()).toEqual("Hello from Module Worker!");
+			expect(response.status).toBe(200);
+		});
+
+		// Test single worker -> named entrypoint
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${singleWorkerWithAssets}?${searchParams}`);
+
+			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
+			expect(response.status).toBe(200);
+		});
+
+		// Test multi workers -> named entrypoint with assets
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint-with-assets",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${multiWorkers}?${searchParams}`);
+
+			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
 			expect(response.status).toBe(200);
 		});
 	});
 
 	it("supports RPC over service binding", async ({ devRegistryPath }) => {
-		const workerEntrypoint = await runWranglerDev(
-			"wrangler.worker-entrypoint.jsonc",
+		const multiWorkers = await runWranglerDev(
+			[
+				"wrangler.worker-entrypoint.jsonc",
+				"wrangler.internal-durable-object.jsonc",
+			],
 			devRegistryPath
 		);
 
@@ -176,7 +245,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				"test-service": "worker-entrypoint-with-assets",
 				"test-method": "rpc",
 			});
-			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+			const response = await fetch(`${multiWorkers}?${searchParams}`);
 
 			expect(response.status).toBe(500);
 			expect(await response.text()).toEqual(
@@ -184,33 +253,57 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			);
 		});
 
-		const workerEntrypointWithAssets = await runWranglerDev(
+		const singleWorkerWithAssets = await runWranglerDev(
 			"wrangler.worker-entrypoint-with-assets.jsonc",
 			devRegistryPath
 		);
 
+		// Test RPC to default entrypoint
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "worker-entrypoint",
 				"test-method": "rpc",
 			});
-			const response = await fetch(
-				`${workerEntrypointWithAssets}?${searchParams}`
-			);
+			const response = await fetch(`${singleWorkerWithAssets}?${searchParams}`);
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong");
 		});
 
+		// Test RPC to default entrypoint with static assets
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "worker-entrypoint-with-assets",
 				"test-method": "rpc",
 			});
-			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+			const response = await fetch(`${multiWorkers}?${searchParams}`);
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong");
+		});
+
+		// Test RPC to named entrypoint
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${singleWorkerWithAssets}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong from Named Entrypoint");
+		});
+
+		// Test RPC to named entrypoint with static assets
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint-with-assets",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${multiWorkers}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong from Named Entrypoint");
 		});
 	});
 
@@ -235,7 +328,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 		});
 
 		await runWranglerDev(
-			"wrangler.internal-durable-object.jsonc",
+			[
+				"wrangler.internal-durable-object.jsonc",
+				"wrangler.module-worker.jsonc",
+			],
 			devRegistryPath
 		);
 
@@ -255,7 +351,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 		devRegistryPath,
 	}) => {
 		const externalDurableObject = await runWranglerDev(
-			"wrangler.external-durable-object.jsonc",
+			[
+				"wrangler.external-durable-object.jsonc",
+				"wrangler.module-worker.jsonc",
+			],
 			devRegistryPath
 		);
 
@@ -302,7 +401,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			devRegistryPath
 		);
 		const workerEntrypoint = await runWranglerDev(
-			"wrangler.worker-entrypoint.jsonc",
+			[
+				"wrangler.worker-entrypoint.jsonc",
+				"wrangler.internal-durable-object.jsonc",
+			],
 			devRegistryPath
 		);
 
@@ -347,8 +449,14 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			expect(await response.json()).toEqual({
 				worker: "Module Worker",
 				tailEvents: expect.arrayContaining([
-					[["[Worker Entrypoint]"], ["hello from test"]],
-					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
+					[
+						["[worker-entrypoint]", "[Worker Entrypoint]"],
+						["[worker-entrypoint]", "hello from test"],
+					],
+					[
+						["[worker-entrypoint]", "[Worker Entrypoint]"],
+						["[worker-entrypoint]", "yet another log", "and another one"],
+					],
 				]),
 			});
 		});
@@ -633,7 +741,10 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			);
 		});
 
-		await runWranglerDev("wrangler.service-worker.jsonc", devRegistryPath);
+		await runWranglerDev(
+			["wrangler.service-worker.jsonc", "wrangler.worker-entrypoint.jsonc"],
+			devRegistryPath
+		);
 
 		// Test vite dev -> wrangler dev
 		await vi.waitFor(async () => {
@@ -847,7 +958,10 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		});
 
 		await runWranglerDev(
-			"wrangler.worker-entrypoint-with-assets.jsonc",
+			[
+				"wrangler.worker-entrypoint-with-assets.jsonc",
+				"wrangler.internal-durable-object.jsonc",
+			],
 			devRegistryPath
 		);
 
