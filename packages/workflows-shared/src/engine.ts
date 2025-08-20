@@ -16,7 +16,7 @@ import {
 	startGracePeriod,
 } from "./lib/gracePeriodSemaphore";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
-import { InstanceModifier } from "./modifier";
+import { InstanceModifier, WorkflowIntrospectorError } from "./modifier";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
 import type { StepSelector } from "./modifier";
@@ -226,14 +226,16 @@ export class Engine extends DurableObject<Env> {
 	): Promise<void> {
 		await this.ctx.storage.put(ENGINE_STATUS_KEY, status);
 
-		// Check if anyone is waiting for this new status
+		// check if anyone is waiting for this status
 		this.handleStatusWaiter(status);
 
 		console.log("[Engine] Changed my status to", instanceStatusName(status));
 	}
 
-	private statusWaiters: Map<InstanceStatus, { resolve: () => void }> =
-		new Map();
+	private statusWaiters: Map<
+		InstanceStatus,
+		{ resolve: () => void; reject: (e: unknown) => void }
+	> = new Map();
 	async waitForStatus(status: string): Promise<void> {
 		const targetStatus = toInstanceStatus(status);
 		const currentStatus =
@@ -245,16 +247,74 @@ export class Engine extends DurableObject<Env> {
 		}
 
 		// if it hasn't reached the desired state, create a new promise and add its resolver to the waiters map
-		return new Promise((resolve) => {
-			this.statusWaiters.set(targetStatus, { resolve });
+		return new Promise((resolve, reject) => {
+			this.statusWaiters.set(targetStatus, { resolve, reject });
 		});
 	}
 
-	handleStatusWaiter(status: InstanceStatus) {
+	handleStatusWaiter(status: InstanceStatus): void {
 		const waiter = this.statusWaiters.get(status);
+
+		// resolve if it reached the desired status
 		if (waiter) {
 			waiter.resolve();
 			this.statusWaiters.delete(status);
+			return;
+		}
+
+		switch (status) {
+			case InstanceStatus.Errored: {
+				// if it reaches final status "errored", then it can't be waiting for it to complete or terminate
+				const unreachableStatuses = [
+					InstanceStatus.Complete,
+					InstanceStatus.Terminated,
+				];
+
+				this.rejectUnreachableStatus(status, unreachableStatuses);
+				break;
+			}
+			case InstanceStatus.Terminated: {
+				// if it reaches final status "terminated", then it can't be waiting for it to complete or error
+				const unreachableStatuses = [
+					InstanceStatus.Complete,
+					InstanceStatus.Errored,
+				];
+
+				this.rejectUnreachableStatus(status, unreachableStatuses);
+				break;
+			}
+			case InstanceStatus.Complete: {
+				// if it reaches final status "complete", then it can't be waiting for it to terminate or error
+				const unreachableStatuses = [
+					InstanceStatus.Terminated,
+					InstanceStatus.Errored,
+				];
+
+				this.rejectUnreachableStatus(status, unreachableStatuses);
+				break;
+			}
+			default:
+				break;
+		}
+	}
+
+	rejectUnreachableStatus(
+		reachedStatus: number,
+		unreachableStatuses: number[]
+	): void {
+		if (unreachableStatuses) {
+			for (const unreachableStatus of unreachableStatuses) {
+				const waiter = this.statusWaiters.get(unreachableStatus);
+				if (waiter) {
+					waiter.reject(
+						new WorkflowIntrospectorError(
+							`The Wokflow instance ${this.instanceId} has reached status '${instanceStatusName(reachedStatus)}'. This is a final state that prevents it from ever reaching the expected status of '${instanceStatusName(unreachableStatus)}'.`
+						)
+					);
+					this.statusWaiters.delete(unreachableStatus);
+					return;
+				}
+			}
 		}
 	}
 
@@ -287,7 +347,7 @@ export class Engine extends DurableObject<Env> {
 				return parsed?.result;
 			}
 			if (event === InstanceEvent.STEP_FAILURE) {
-				throw parsed?.error ?? parsed ?? new Error("Step failed");
+				throw parsed?.error ?? parsed;
 			}
 		}
 
@@ -311,8 +371,8 @@ export class Engine extends DurableObject<Env> {
 			waiter.resolve(result);
 			this.stepResultWaiters.delete(group);
 		} else if (event === InstanceEvent.STEP_FAILURE) {
-			const errorLike = metadata?.error ?? metadata;
-			waiter.reject(errorLike);
+			const error = metadata?.error ?? new Error("Step failed");
+			waiter.reject(error);
 			this.stepResultWaiters.delete(group);
 		}
 	}
