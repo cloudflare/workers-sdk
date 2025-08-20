@@ -133,7 +133,7 @@ export function createCloudflareEnvironmentOptions({
 }: {
 	workerConfig: WorkerConfig;
 	userConfig: vite.UserConfig;
-	mode: string;
+	mode: vite.ConfigEnv["mode"];
 	environmentName: string;
 	isEntryWorker: boolean;
 }): vite.EnvironmentOptions {
@@ -211,7 +211,7 @@ export function createCloudflareEnvironmentOptions({
  */
 function getProcessEnvReplacements(
 	workerConfig: WorkerConfig,
-	mode: string
+	mode: vite.ConfigEnv["mode"]
 ): Record<string, string> {
 	const nodeEnv = process.env.NODE_ENV || mode;
 	const nodeEnvReplacements = {
