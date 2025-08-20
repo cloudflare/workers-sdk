@@ -1,3 +1,8 @@
+import {
+	instanceStatusName,
+	InstanceStatus as InstanceStatusNumber,
+} from "@cloudflare/workflows-shared/src/instance";
+import { WorkflowIntrospectorError } from "@cloudflare/workflows-shared/src/modifier";
 import { WORKFLOW_ENGINE_BINDING } from "../shared/workflows";
 import { internalEnv } from "./env";
 import type { InstanceModifier } from "@cloudflare/workflows-shared/src/modifier";
@@ -80,8 +85,23 @@ class WorkflowInstanceIntrospectorHandle
 		return stepResult;
 	}
 
-	async waitForStatus(status: string): Promise<void> {
+	async waitForStatus(status: InstanceStatus["status"]): Promise<void> {
 		console.log("[Vitest-Workflows] waiting for status");
+
+		if (
+			status === instanceStatusName(InstanceStatusNumber.Terminated) ||
+			status === instanceStatusName(InstanceStatusNumber.Paused)
+		) {
+			throw new WorkflowIntrospectorError(
+				`InstanceStatus '${status}' is not implemented yet and cannot be waited.`
+			);
+		}
+
+		if (status === instanceStatusName(InstanceStatusNumber.Queued)) {
+			// we currently don't have a queue mechanism, but it would happen before it
+			// starts running, so waiting for it to be queued should always return
+			return;
+		}
 		// @ts-expect-error waitForStatus not exposed
 		await this.engineStub.waitForStatus(status);
 
@@ -89,7 +109,7 @@ class WorkflowInstanceIntrospectorHandle
 	}
 
 	async cleanUp(): Promise<void> {
-		// works with isolatedStorage = false
+		// this cleans state with isolatedStorage = false
 		try {
 			// @ts-expect-error DO binding created in runner worker start
 			await this.engineStub.unsafeAbort("user called delete");
