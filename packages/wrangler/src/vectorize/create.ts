@@ -1,6 +1,4 @@
-import {
-	updateConfigFile,
-} from "../config";
+import { updateConfigFile } from "../config";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";

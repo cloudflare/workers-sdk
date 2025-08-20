@@ -1,5 +1,4 @@
 import TOML from "@iarna/toml";
-import type { CfWorkerInit } from "../deployment-bundle/worker";
 import { prompt, select } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
@@ -10,6 +9,7 @@ import { resolveWranglerConfigPath } from "./config-helpers";
 import { experimental_patchConfig } from "./patch-config";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
+import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
 import type { ResolveConfigPathOptions } from "./config-helpers";
