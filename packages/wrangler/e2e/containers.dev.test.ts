@@ -1,5 +1,6 @@
 import { execSync } from "child_process";
 import path from "node:path";
+import { fetch } from "undici";
 import {
 	afterAll,
 	beforeAll,

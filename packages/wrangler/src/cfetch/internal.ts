@@ -56,7 +56,6 @@ async function logResponse(response: Response) {
  */
 export function createCloudflareClient(complianceConfig: ComplianceConfig) {
 	return new Cloudflare({
-		// @ts-expect-error Something is messed up in the `cloudflare` fetch typings...
 		fetch: async (url: RequestInfo, init?: RequestInit): Promise<Response> => {
 			const request = new Request(url, { ...init, duplex: "half" });
 			await requireLoggedIn(complianceConfig);
@@ -86,10 +85,6 @@ export function createCloudflareClient(complianceConfig: ComplianceConfig) {
 		apiToken: "dummy",
 		baseURL: getCloudflareApiBaseUrl(complianceConfig),
 	});
-}
-
-export function apiErrorCode(error: unknown, code: number): boolean {
-	return error instanceof Cloudflare.APIError && error.errors[0].code === code;
 }
 
 /*

@@ -6,7 +6,7 @@ import {
 import type { fetch as workerFetch } from "@cloudflare/workers-types/experimental";
 
 export type PolyfilledRuntimeEnvironment = {
-	fetch: typeof fetch;
+	fetch: typeof workerFetch;
 	Headers: typeof Headers;
 	Request: typeof Request;
 	Response: typeof Response;

@@ -1,4 +1,4 @@
-# @cloudflare/eslint-config-worker
+# @cloudflare/eslint-config-shared
 
 ## 1.1.0
 
