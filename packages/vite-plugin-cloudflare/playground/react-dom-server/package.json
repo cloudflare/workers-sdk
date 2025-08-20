@@ -3,9 +3,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build --app",
+		"build": "vite build",
+		"build:with-nodejs-compat": "vite build -c vite.config.with-nodejs-compat.ts",
 		"check:types": "tsc --build",
 		"dev": "vite dev",
+		"dev:with-nodejs-compat": "vite dev -c vite.config.with-nodejs-compat.ts",
 		"preview": "vite preview"
 	},
 	"dependencies": {

@@ -2121,9 +2121,6 @@ importers:
       '@mjackson/node-fetch-server':
         specifier: ^0.6.1
         version: 0.6.1
-      '@rollup/plugin-replace':
-        specifier: ^6.0.1
-        version: 6.0.2(rollup@4.44.1)
       get-port:
         specifier: ^7.1.0
         version: 7.1.0
@@ -16038,13 +16035,6 @@ snapshots:
     optionalDependencies:
       rollup: 4.30.1
 
-  '@rollup/plugin-replace@6.0.2(rollup@4.44.1)':
-    dependencies:
-      '@rollup/pluginutils': 5.1.4(rollup@4.44.1)
-      magic-string: 0.30.17
-    optionalDependencies:
-      rollup: 4.44.1
-
   '@rollup/pluginutils@4.2.1':
     dependencies:
       estree-walker: 2.0.2
@@ -16065,14 +16055,6 @@ snapshots:
       picomatch: 4.0.2
     optionalDependencies:
       rollup: 4.30.1
-
-  '@rollup/pluginutils@5.1.4(rollup@4.44.1)':
-    dependencies:
-      '@types/estree': 1.0.6
-      estree-walker: 2.0.2
-      picomatch: 4.0.2
-    optionalDependencies:
-      rollup: 4.44.1
 
   '@rollup/rollup-android-arm-eabi@4.30.1':
     optional: true

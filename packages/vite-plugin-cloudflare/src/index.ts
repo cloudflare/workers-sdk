@@ -8,7 +8,6 @@ import {
 	resolveDockerHost,
 } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
-import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
 import colors from "picocolors";
@@ -155,17 +154,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 											([environmentName, workerConfig]) => {
 												return [
 													environmentName,
-													createCloudflareEnvironmentOptions(
+													createCloudflareEnvironmentOptions({
 														workerConfig,
 														userConfig,
-														{
-															name: environmentName,
-															isEntry:
-																resolvedPluginConfig.type === "workers" &&
-																environmentName ===
-																	resolvedPluginConfig.entryWorkerEnvironmentName,
-														}
-													),
+														mode: env.mode,
+														environmentName,
+														isEntryWorker:
+															resolvedPluginConfig.type === "workers" &&
+															environmentName ===
+																resolvedPluginConfig.entryWorkerEnvironmentName,
+													}),
 												];
 											}
 										)
@@ -788,18 +786,6 @@ if (import.meta.hot) {
 				// Only configure this environment if it is a Worker using Node.js compatibility.
 				if (isNodeCompat(getWorkerConfig(name))) {
 					return {
-						build: {
-							rollupOptions: {
-								plugins: [
-									replace({
-										"process.env.NODE_ENV": JSON.stringify(
-											process.env.NODE_ENV ?? "production"
-										),
-										preventAssignment: true,
-									}),
-								],
-							},
-						},
 						resolve: {
 							builtins: [...nodeCompatExternals],
 						},
