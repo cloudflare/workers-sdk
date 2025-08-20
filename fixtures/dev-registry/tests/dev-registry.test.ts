@@ -741,7 +741,10 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			);
 		});
 
-		await runWranglerDev("wrangler.service-worker.jsonc", devRegistryPath);
+		await runWranglerDev(
+			["wrangler.service-worker.jsonc", "wrangler.worker-entrypoint.jsonc"],
+			devRegistryPath
+		);
 
 		// Test vite dev -> wrangler dev
 		await vi.waitFor(async () => {
@@ -955,7 +958,10 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		});
 
 		await runWranglerDev(
-			"wrangler.worker-entrypoint-with-assets.jsonc",
+			[
+				"wrangler.worker-entrypoint-with-assets.jsonc",
+				"wrangler.internal-durable-object.jsonc",
+			],
 			devRegistryPath
 		);
 
