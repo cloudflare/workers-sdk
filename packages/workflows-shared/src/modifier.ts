@@ -13,6 +13,10 @@ type UserEvent = {
 	payload: unknown;
 };
 
+export class WorkflowIntrospectorError extends Error {
+	name = "WorkflowIntrospectorError";
+}
+
 export class InstanceModifier extends RpcTarget {
 	#engine: Engine;
 	#state: DurableObjectState;
@@ -80,6 +84,13 @@ export class InstanceModifier extends RpcTarget {
 			step.name
 		);
 		const valueKey = await this.#getStepCacheKey(step);
+
+		if (await this.#state.storage.get(`replace-result-${valueKey}`)) {
+			throw new WorkflowIntrospectorError(
+				"You're trying to mock the same step multiple times!"
+			);
+		}
+
 		await this.#state.storage.put(`replace-result-${valueKey}`, stepResult);
 	}
 
@@ -137,7 +148,6 @@ export class InstanceModifier extends RpcTarget {
 		};
 
 		await this.#state.storage.put(`mockEvent-${event.type}`, true);
-
 		await this.#engine.receiveEvent(myEvent);
 	}
 
