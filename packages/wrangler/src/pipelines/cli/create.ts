@@ -1,4 +1,4 @@
-import { formatConfigSnippet, updateConfigFile } from "../../config";
+import { updateConfigFile } from "../../config";
 import { createCommand } from "../../core/create-command";
 import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";
@@ -278,11 +278,14 @@ export const pipelinesCreateCommand = createCommand({
 
 		if (args.source.includes("worker")) {
 			await updateConfigFile(
-				(name) => ({
+				(bindingName) => ({
 					pipelines: [
 						{
 							pipeline: pipeline.name,
-							binding: getValidBindingName(name ?? "PIPELINE", "PIPELINE"),
+							binding: getValidBindingName(
+								bindingName ?? "PIPELINE",
+								"PIPELINE"
+							),
 						},
 					],
 				}),

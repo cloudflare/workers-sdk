@@ -1,6 +1,6 @@
 import TOML from "@iarna/toml";
-import { CfWorkerInit } from "../deployment-bundle/worker";
-import { confirm, prompt, select } from "../dialogs";
+import type { CfWorkerInit } from "../deployment-bundle/worker";
+import { prompt, select } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";

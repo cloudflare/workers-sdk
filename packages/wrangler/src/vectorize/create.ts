@@ -1,6 +1,4 @@
 import {
-	configFileName,
-	formatConfigSnippet,
 	updateConfigFile,
 } from "../config";
 import { createCommand } from "../core/create-command";

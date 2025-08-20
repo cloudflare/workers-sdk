@@ -1,5 +1,5 @@
 import dedent from "ts-dedent";
-import { formatConfigSnippet, updateConfigFile } from "../config";
+import { updateConfigFile } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -97,11 +97,11 @@ export const r2BucketCreateCommand = createCommand({
 			} default storage class of ${storageClass ? storageClass : `Standard`}.`);
 
 		await updateConfigFile(
-			(name) => ({
+			(bindingName) => ({
 				r2_buckets: [
 					{
 						bucket_name: args.name,
-						binding: getValidBindingName(name ?? args.name, "r2"),
+						binding: getValidBindingName(bindingName ?? args.name, "r2"),
 					},
 				],
 			}),

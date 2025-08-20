@@ -1,6 +1,6 @@
 import dedent from "ts-dedent";
 import { fetchResult } from "../cfetch";
-import { formatConfigSnippet, updateConfigFile } from "../config";
+import { updateConfigFile } from "../config";
 import { createCommand } from "../core/create-command";
 import { getD1ExtraLocationChoices } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -89,10 +89,10 @@ export const d1CreateCommand = createCommand({
 		logger.log("Created your new D1 database.\n");
 
 		await updateConfigFile(
-			(name) => ({
+			(bindingName) => ({
 				d1_databases: [
 					{
-						binding: getValidBindingName(name ?? db.name, "DB"),
+						binding: getValidBindingName(bindingName ?? db.name, "DB"),
 						database_name: db.name,
 						database_id: db.uuid,
 					},
