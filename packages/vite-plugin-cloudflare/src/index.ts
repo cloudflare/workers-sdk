@@ -9,7 +9,7 @@ import {
 } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import MagicString from "magic-string";
-import { Miniflare } from "miniflare";
+import { CoreHeaders, Miniflare } from "miniflare";
 import colors from "picocolors";
 import * as vite from "vite";
 import {
@@ -1064,6 +1064,39 @@ if (import.meta.hot) {
 						};
 					}
 				}
+			},
+		},
+		// Plugin to handle cron/email/etc triggers
+		{
+			name: "vite-plugin-cloudflare:trigger-handlers",
+			async configureServer(viteDevServer) {
+				assertIsNotPreview(resolvedPluginConfig);
+
+				const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
+				assert(entryWorkerConfig, `No entry Worker config`);
+
+				const entryWorkerName = entryWorkerConfig.name;
+
+				viteDevServer.middlewares.use((req, res, next) => {
+					assert(req.url, "Request URL is undefined");
+					const url = new URL(req.url, UNKNOWN_HOST);
+
+					const requestHandler = createRequestHandler((request) => {
+						assert(miniflare, `Miniflare not defined`);
+
+						// email triggers
+						if (url.pathname === "/cdn-cgi/handler/email") {
+							// set the target service that handles these requests
+							// to point to the User Worker
+							// see `getTargetService` fn in packages/miniflare/src/workers/core/entry.worker.ts
+							request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+						}
+
+						return miniflare.dispatchFetch(request, { redirect: "manual" });
+					});
+
+					requestHandler(req, res, next);
+				});
 			},
 		},
 	];
