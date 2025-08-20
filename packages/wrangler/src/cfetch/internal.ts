@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import "cloudflare/shims/web";
 import Cloudflare from "cloudflare";
 import { fetch, FormData, Headers, Request, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
