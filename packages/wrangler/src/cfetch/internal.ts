@@ -61,21 +61,16 @@ export function createCloudflareClient(complianceConfig: ComplianceConfig) {
 			await requireLoggedIn(complianceConfig);
 			const apiToken = requireApiToken();
 
-			const headers = cloneHeaders(request.headers);
-
 			addAuthorizationHeader(
-				headers,
+				request.headers,
 				apiToken,
 				/* The CF SDK will inject `Bearer dummy` */ true
 			);
-			addUserAgent(headers);
+			addUserAgent(request.headers);
 
-			await logRequest(request);
+			await logRequest(request, init);
 
-			const response = await fetch(request.url, {
-				...request,
-				headers,
-			});
+			const response = await fetch(request.url, request);
 			await logResponse(response);
 			return response;
 		},
