@@ -380,7 +380,6 @@ describe("versions secret put", () => {
 						),
 						"module.wasm"
 					);
-					// @ts-expect-error MSW (with types from Undici v6) and Undici v7 are not type-compatible, but this works at runtime
 					return HttpResponse.formData(formData, {
 						headers: { "cf-entrypoint": "index.js" },
 					});
