@@ -64,6 +64,7 @@ describe("create", () => {
 			"✅ Successfully created DB 'test' in region OC
 			Created your new D1 database.
 
+			To access your new D1 Database in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"d1_databases\\": [
 			    {
