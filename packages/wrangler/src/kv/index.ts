@@ -86,7 +86,7 @@ export const kvNamespaceCreateCommand = createCommand({
 	},
 	positionalArgs: ["namespace"],
 
-	async handler(args) {
+	async handler(args, { sdk }) {
 		const config = readConfig(args);
 		const environment = args.env ? `${args.env}-` : "";
 		const preview = args.preview ? "_preview" : "";
@@ -96,7 +96,11 @@ export const kvNamespaceCreateCommand = createCommand({
 		printResourceLocation("remote");
 		// TODO: generate a binding name stripping non alphanumeric chars
 		logger.log(`🌀 Creating namespace with title "${title}"`);
-		const namespaceId = await createKVNamespace(config, accountId, title);
+
+		const { id: namespaceId } = await sdk.kv.namespaces.create({
+			account_id: accountId,
+			title,
+		});
 		metrics.sendMetricsEvent("create kv namespace", {
 			sendMetrics: config.send_metrics,
 		});

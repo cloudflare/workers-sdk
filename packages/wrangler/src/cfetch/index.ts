@@ -5,6 +5,7 @@ import { fetchInternal } from "./internal";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
 import type { FetchError } from "./errors";
+import type { ErrorData } from "cloudflare/resources/shared";
 import type { RequestInit } from "undici";
 
 // Check out https://api.cloudflare.com/ for API docs.
@@ -209,15 +210,17 @@ function hasCursor(result_info: unknown): result_info is { cursor: string } {
 	return cursor !== undefined && cursor !== null && cursor !== "";
 }
 
-function renderError(err: FetchError, level = 0): string {
+export function renderError(err: FetchError | ErrorData, level = 0): string {
 	const indent = "  ".repeat(level);
 	const chainedMessages =
-		err.error_chain
-			?.map(
-				(chainedError) =>
-					`\n\n${indent}- ${renderError(chainedError, level + 1)}`
-			)
-			.join("\n") ?? "";
+		"error_chain" in err
+			? err.error_chain
+					?.map(
+						(chainedError) =>
+							`\n\n${indent}- ${renderError(chainedError, level + 1)}`
+					)
+					.join("\n") ?? ""
+			: "";
 	return (
 		(err.code ? `${err.message} [code: ${err.code}]` : err.message) +
 		(err.documentation_url
