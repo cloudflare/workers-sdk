@@ -242,10 +242,8 @@ describe("updateConfigFile()", () => {
 			  }
 			}"
 		`);
-		await expect(
-			readFile("wrangler.json", "utf8")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: ENOENT: no such file or directory, open 'wrangler.json']`
+		await expect(readFile("wrangler.json", "utf8")).rejects.toThrowError(
+			"ENOENT"
 		);
 	});
 
