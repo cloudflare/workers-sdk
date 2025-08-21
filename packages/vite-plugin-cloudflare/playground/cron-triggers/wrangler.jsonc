@@ -1,0 +1,9 @@
+{
+	"name": "cron-trigger-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-02-14",
+	"compatibility_flags": ["nodejs_compat"],
+	"triggers": {
+		"crons": ["* * * * *"], // every minute
+	},
+}

@@ -2348,6 +2348,27 @@ importers:
         specifier: workspace:*
         version: link:../../../wrangler
 
+  packages/vite-plugin-cloudflare/playground/cron-triggers:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250803.0
+        version: 4.20250816.0
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 7.0.0(@types/node@20.19.9)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
   packages/vite-plugin-cloudflare/playground/custom-build-app:
     devDependencies:
       '@cloudflare/vite-plugin':
