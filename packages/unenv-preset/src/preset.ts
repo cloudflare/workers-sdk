@@ -37,13 +37,14 @@ const nativeModules = [
 	"string_decoder",
 	"timers",
 	"timers/promises",
+	"tls",
 	"url",
 	"util/types",
 	"zlib",
 ];
 
 // Modules implemented via a mix of workerd APIs and polyfills.
-const hybridModules = ["console", "crypto", "module", "process", "tls", "util"];
+const hybridModules = ["console", "crypto", "module", "process", "util"];
 
 /**
  * Creates the Cloudflare preset for the given compatibility date and compatibility flags

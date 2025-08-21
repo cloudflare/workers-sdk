@@ -201,6 +201,19 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof tls, "object");
 		// @ts-expect-error Node types are wrong
 		assert.strictEqual(typeof tls.convertALPNProtocols, "function");
+		assert.strictEqual(typeof tls.createSecureContext, "function");
+		assert.strictEqual(typeof tls.createServer, "function");
+		assert.strictEqual(typeof tls.checkServerIdentity, "function");
+		assert.strictEqual(typeof tls.getCiphers, "function");
+
+		// Test constants
+		assert.strictEqual(typeof tls.CLIENT_RENEG_LIMIT, "number");
+		assert.strictEqual(typeof tls.CLIENT_RENEG_WINDOW, "number");
+		assert.strictEqual(typeof tls.DEFAULT_ECDH_CURVE, "string");
+		assert.strictEqual(typeof tls.DEFAULT_CIPHERS, "string");
+		assert.strictEqual(typeof tls.DEFAULT_MIN_VERSION, "string");
+		assert.strictEqual(typeof tls.DEFAULT_MAX_VERSION, "string");
+		assert.ok(Array.isArray(tls.rootCertificates));
 	},
 
 	async testHttp() {
