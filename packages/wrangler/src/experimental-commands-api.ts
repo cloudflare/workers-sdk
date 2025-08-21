@@ -7,7 +7,10 @@ import type { DefinitionTreeNode } from "./core/types";
  *
  * @returns The complete command tree structure with all metadata
  */
-export function experimental_getWranglerCommands(): DefinitionTreeNode {
-	const { registry } = createCLIParser([]);
-	return registry.getDefinitionTreeRoot();
+export function experimental_getWranglerCommands(): {
+	registry: DefinitionTreeNode;
+	globalFlags: ReturnType<typeof createCLIParser>["globalFlags"];
+} {
+	const { registry, globalFlags } = createCLIParser([]);
+	return { registry: registry.getDefinitionTreeRoot(), globalFlags };
 }
