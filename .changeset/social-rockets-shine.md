@@ -1,5 +1,5 @@
 ---
-"@cloudflare/workers-shared": minor
+"@cloudflare/workers-shared": patch
 ---
 
 Sanitize double-slashes in asset-worker relative redirects.
