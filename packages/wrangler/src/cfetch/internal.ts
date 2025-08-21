@@ -40,9 +40,7 @@ export async function performApiFetch(
 		`-- START CF API REQUEST: ${method} ${getCloudflareApiBaseUrl(complianceConfig)}${resource}`
 	);
 	logger.debugWithSanitization("QUERY STRING:", queryString);
-	const logHeaders = cloneHeaders(headers);
-	logHeaders.delete("Authorization");
-	logger.debugWithSanitization("HEADERS:", JSON.stringify(logHeaders, null, 2));
+	logHeaders(headers);
 
 	logger.debugWithSanitization("INIT:", JSON.stringify({ ...init }, null, 2));
 	if (init.body instanceof FormData) {
@@ -62,6 +60,15 @@ export async function performApiFetch(
 			headers,
 			signal: abortSignal,
 		}
+	);
+}
+
+function logHeaders(headers: Headers) {
+	headers = cloneHeaders(headers);
+	headers.delete("Authorization");
+	logger.debugWithSanitization(
+		"HEADERS:",
+		JSON.stringify(Object.fromEntries(headers), null, 2)
 	);
 }
 
@@ -97,9 +104,7 @@ export async function fetchInternal<ResponseType>(
 		response.statusText,
 		response.status
 	);
-	const logHeaders = cloneHeaders(response.headers);
-	logHeaders.delete("Authorization");
-	logger.debugWithSanitization("HEADERS:", JSON.stringify(logHeaders, null, 2));
+	logHeaders(response.headers);
 	logger.debugWithSanitization("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");
 

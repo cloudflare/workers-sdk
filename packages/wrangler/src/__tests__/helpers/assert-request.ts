@@ -29,7 +29,7 @@ export function makeApiRequestAsserter(
 				/HEADERS: (?<headers>(.|\n)*?)\nINIT: (?<init>(.|\n)*?)\n(BODY: (?<bodyMatch>(.|\n)*?)\n)?-- END CF API REQUEST/
 			);
 		const {
-			headers: _headers,
+			headers: headersStr,
 			init: _init,
 			bodyMatch,
 		} = requestDetails?.groups ?? {};
@@ -37,5 +37,8 @@ export function makeApiRequestAsserter(
 		if (body) {
 			expect(bodyMatch).toMatch(body);
 		}
+
+		const headers = JSON.parse(headersStr);
+		expect(headers).toEqual({ "user-agent": "wrangler/x.x.x" });
 	};
 }
