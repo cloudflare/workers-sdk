@@ -15,7 +15,6 @@ import { getValidBindingName } from "../utils/getValidBindingName";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import {
 	BATCH_MAX_ERRORS_WARNINGS,
-	createKVNamespace,
 	deleteKVBulkKeyValue,
 	deleteKVKeyValue,
 	deleteKVNamespace,
