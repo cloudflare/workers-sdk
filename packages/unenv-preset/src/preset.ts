@@ -30,6 +30,7 @@ const nativeModules = [
 	"path/posix",
 	"path/win32",
 	"querystring",
+	"module",
 	"stream",
 	"stream/consumers",
 	"stream/promises",
@@ -43,7 +44,7 @@ const nativeModules = [
 ];
 
 // Modules implemented via a mix of workerd APIs and polyfills.
-const hybridModules = ["console", "crypto", "module", "process", "tls", "util"];
+const hybridModules = ["console", "crypto", "process", "tls", "util"];
 
 /**
  * Creates the Cloudflare preset for the given compatibility date and compatibility flags
