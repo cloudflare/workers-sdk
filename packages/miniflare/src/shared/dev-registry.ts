@@ -27,18 +27,22 @@ export type WorkerDefinition = {
 		{ host: string; port: number } | undefined
 	>;
 	durableObjects: { name: string; className: string }[];
+	dependencies?: Record<string, string[]>;
 };
 
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registry: WorkerRegistry = {};
 	private registeredWorkers: Set<string> = new Set();
-	private externalServices: Map<
+	private externalServicesByWorker: Map<
 		string,
-		{
-			classNames: Set<string>;
-			entrypoints: Set<string | undefined>;
-		}
+		Map<
+			string,
+			{
+				classNames: Set<string>;
+				entrypoints: Set<string | undefined>;
+			}
+		>
 	> = new Map();
 	private watcher: FSWatcher | undefined;
 	private proxyWorker: Worker | undefined;
@@ -47,7 +51,12 @@ export class DevRegistry {
 	constructor(
 		private registryPath: string | undefined,
 		private enableDurableObjectProxy: boolean,
-		private onUpdate: ((registry: WorkerRegistry) => void) | undefined,
+		private onUpdate:
+			| ((
+					registry: WorkerRegistry,
+					ctx: { dependencies: Set<string>; prevRegistry: WorkerRegistry }
+			  ) => void)
+			| undefined,
 		private log: Log
 	) {}
 
@@ -55,21 +64,24 @@ export class DevRegistry {
 	 * Watch files inside the registry directory for changes.
 	 */
 	public watch(
-		services: Map<
+		servicesByWorker: Map<
 			string,
-			{
-				classNames: Set<string>;
-				entrypoints: Set<string | undefined>;
-			}
+			Map<
+				string,
+				{
+					classNames: Set<string>;
+					entrypoints: Set<string | undefined>;
+				}
+			>
 		>
 	): void {
-		if (services.size === 0 || !this.registryPath) {
+		if (servicesByWorker.size === 0 || !this.registryPath) {
 			return;
 		}
 
 		// Keep track of external services we are depending on
 		// To pre-populate the proxy server with the fallback service addresses
-		this.externalServices = new Map(services);
+		this.externalServicesByWorker = new Map(servicesByWorker);
 
 		if (!this.watcher) {
 			this.watcher = watch(this.registryPath).on("all", () => this.refresh());
@@ -176,7 +188,10 @@ export class DevRegistry {
 	public async updateRegistryPath(
 		registryPath: string | undefined,
 		enableDurableObjectProxy: boolean,
-		onUpdate?: (registry: WorkerRegistry) => void
+		onUpdate?: (
+			registry: WorkerRegistry,
+			ctx: { dependencies: Set<string>; prevRegistry: WorkerRegistry }
+		) => void
 	): Promise<void> {
 		// Unregister all registered workers
 		this.unregisterWorkers();
@@ -203,20 +218,22 @@ export class DevRegistry {
 
 		const fallbackServicePorts: Record<string, Record<string, number>> = {};
 
-		for (const [service, { entrypoints }] of this.externalServices) {
-			for (const entrypoint of entrypoints) {
-				const port = socketPorts.get(
-					getProxyFallbackServiceSocketName(service, entrypoint)
-				);
-
-				if (!port) {
-					throw new Error(
-						`There is no socket opened for "${service}" with the "${entrypoint ?? "default"}" entrypoint`
+		for (const externalServices of this.externalServicesByWorker.values()) {
+			for (const [service, { entrypoints }] of externalServices) {
+				for (const entrypoint of entrypoints) {
+					const port = socketPorts.get(
+						getProxyFallbackServiceSocketName(service, entrypoint)
 					);
-				}
 
-				fallbackServicePorts[service] ??= {};
-				fallbackServicePorts[service][entrypoint ?? "default"] = port;
+					if (!port) {
+						throw new Error(
+							`There is no socket opened for "${service}" with the "${entrypoint ?? "default"}" entrypoint`
+						);
+					}
+
+					fallbackServicePorts[service] ??= {};
+					fallbackServicePorts[service][entrypoint ?? "default"] = port;
+				}
 			}
 		}
 
@@ -248,6 +265,18 @@ export class DevRegistry {
 				definition.durableObjects = [];
 			}
 
+			definition.dependencies ??= {};
+
+			const externalServices = this.externalServicesByWorker.get(name);
+
+			if (externalServices) {
+				for (const [service, { entrypoints }] of externalServices) {
+					definition.dependencies[service] = Array.from(entrypoints).map(
+						(entrypoint) => entrypoint ?? "default"
+					);
+				}
+			}
+
 			writeFileSync(definitionPath, JSON.stringify(definition, null, 2));
 			this.registeredWorkers.add(name);
 			this.heartbeats.set(
@@ -261,6 +290,10 @@ export class DevRegistry {
 		}
 	}
 
+	private clone(registry: WorkerRegistry): WorkerRegistry {
+		return JSON.parse(JSON.stringify(registry));
+	}
+
 	private refresh(): void {
 		if (!this.registryPath) {
 			return;
@@ -270,21 +303,22 @@ export class DevRegistry {
 			this.unregister(workerName);
 		});
 
-		// Only trigger callback if there are actual changes to services we care about
-		if (this.onUpdate) {
-			// Check only external services (ones we're bound to) for changes
-			// This prevents unnecessary callback triggers for unrelated registry updates
-			for (const [service] of this.externalServices) {
-				if (
-					JSON.stringify(registry[service]) !==
-					JSON.stringify(this.registry[service])
-				) {
-					// A service we depend on has changed, notify listeners
-					// Provide a deep copy to prevent accidental mutations by consumers
-					this.onUpdate(JSON.parse(JSON.stringify(registry)));
-					break;
+		if (
+			this.onUpdate &&
+			JSON.stringify(registry) !== JSON.stringify(this.registry)
+		) {
+			const dependencies = new Set<string>();
+
+			for (const externalServices of this.externalServicesByWorker.values()) {
+				for (const [service] of externalServices) {
+					dependencies.add(service);
 				}
 			}
+
+			this.onUpdate(this.clone(registry), {
+				prevRegistry: this.clone(this.registry),
+				dependencies,
+			});
 		}
 
 		// Send updated workers to the proxy worker

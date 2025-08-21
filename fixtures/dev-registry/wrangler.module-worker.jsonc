@@ -9,8 +9,8 @@
 			"service": "service-worker",
 		},
 		{
-			"binding": "MODULE_WORKER",
-			"service": "module-worker",
+			"binding": "MODULE_WORKER_WITH_ASSETS",
+			"service": "module-worker-with-assets",
 		},
 		{
 			"binding": "WORKER_ENTRYPOINT",
@@ -28,6 +28,11 @@
 		{
 			"binding": "NAMED_ENTRYPOINT_WITH_ASSETS",
 			"service": "worker-entrypoint-with-assets",
+			"entrypoint": "NamedEntrypoint",
+		},
+		{
+			"binding": "NAMED_MODULE_WORKER_WITH_ASSETS",
+			"service": "module-worker-with-assets",
 			"entrypoint": "NamedEntrypoint",
 		},
 	],

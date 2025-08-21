@@ -292,15 +292,31 @@ export class LocalRuntimeController extends RuntimeController {
 				configBundle,
 				this.#proxyToUserWorkerAuthenticationSecret,
 				this.#remoteProxySessionData?.session?.remoteProxyConnectionString,
-				!!experimentalRemoteBindings,
-				(registry) => {
-					logger.log(chalk.dim("⎔ Connection status updated"));
-					this.emitDevRegistryUpdateEvent({
-						type: "devRegistryUpdate",
-						registry,
-					});
-				}
+				!!experimentalRemoteBindings
 			);
+
+			if (options.unsafeDevRegistryPath) {
+				// Monitor the dev registry for changes to the workers this worker depends on
+				options.unsafeHandleDevRegistryUpdate = (
+					registry,
+					{ prevRegistry, dependencies }
+				) => {
+					for (const service of dependencies) {
+						if (
+							JSON.stringify(prevRegistry[service]) !==
+							JSON.stringify(registry[service])
+						) {
+							logger.log(chalk.dim("⎔ Connection status updated"));
+							this.emitDevRegistryUpdateEvent({
+								type: "devRegistryUpdate",
+								registry,
+							});
+							break;
+						}
+					}
+				};
+			}
+
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
 				logger.log(chalk.dim("⎔ Starting local server..."));

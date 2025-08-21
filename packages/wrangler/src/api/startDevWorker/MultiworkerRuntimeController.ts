@@ -184,13 +184,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				this.#proxyToUserWorkerAuthenticationSecret,
 				this.#remoteProxySessionsData.get(data.config.name)?.session
 					?.remoteProxyConnectionString,
-				!!experimentalRemoteBindings,
-				(registry) => {
-					this.emitDevRegistryUpdateEvent({
-						type: "devRegistryUpdate",
-						registry,
-					});
-				}
+				!!experimentalRemoteBindings
 			);
 
 			this.#options.set(data.config.name, {
@@ -200,6 +194,26 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 			if (this.#canStartMiniflare()) {
 				const mergedMfOptions = ensureMatchingSql(this.#mergedMfOptions());
+
+				if (mergedMfOptions.unsafeDevRegistryPath) {
+					mergedMfOptions.unsafeHandleDevRegistryUpdate = (
+						registry,
+						{ prevRegistry, dependencies }
+					) => {
+						for (const service of dependencies) {
+							if (
+								JSON.stringify(prevRegistry[service]) !==
+								JSON.stringify(registry[service])
+							) {
+								logger.log(chalk.dim("⎔ Connection status updated"));
+								this.emitDevRegistryUpdateEvent({
+									type: "devRegistryUpdate",
+									registry,
+								});
+							}
+						}
+					};
+				}
 
 				if (this.#mf === undefined) {
 					logger.log(chalk.dim("⎔ Starting local server..."));

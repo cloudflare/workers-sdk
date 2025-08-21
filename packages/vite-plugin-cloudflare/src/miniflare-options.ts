@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
 	getDefaultDevRegistryPath,
+	getWorkerRegistry,
 	kCurrentWorker,
 	kUnsafeEphemeralUniqueKey,
 	Log,
@@ -38,7 +39,11 @@ import type {
 	WorkerConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
-import type { MiniflareOptions, WorkerOptions } from "miniflare";
+import type {
+	MiniflareOptions,
+	WorkerOptions,
+	WorkerRegistry,
+} from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
 	Experimental_RemoteProxySession,
@@ -440,19 +445,19 @@ export async function getDevMiniflareOptions(config: {
 									...workerOptions,
 									name: workerOptions.name ?? workerConfig.name,
 									unsafeInspectorProxy: inspectorPort !== false,
-									unsafeDirectSockets:
-										environmentName ===
-										resolvedPluginConfig.entryWorkerEnvironmentName
-											? [
-													{
-														// This exposes the default entrypoint of the asset proxy worker
-														// on the dev registry with the name of the entry worker
-														serviceName: VITE_PROXY_WORKER_NAME,
-														entrypoint: undefined,
-														proxy: true,
-													},
-												]
-											: [],
+									unsafeDirectSockets: [
+										{
+											// This exposes the default entrypoint of the asset proxy worker
+											// on the dev registry with the name of the entry worker
+											serviceName:
+												environmentName ===
+												resolvedPluginConfig.entryWorkerEnvironmentName
+													? VITE_PROXY_WORKER_NAME
+													: undefined,
+											entrypoint: undefined,
+											proxy: true,
+										},
+									],
 									modulesRoot: miniflareModulesRoot,
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 									serviceBindings: {
@@ -524,6 +529,26 @@ export async function getDevMiniflareOptions(config: {
 		getWorkerToDurableObjectClassNamesMap(userWorkers);
 	const workerToWorkflowEntrypointClassNamesMap =
 		getWorkerToWorkflowEntrypointClassNamesMap(userWorkers);
+	const registryPath = getDefaultDevRegistryPath();
+	const registry = getWorkerRegistry(registryPath);
+
+	for (const workerOptions of userWorkers) {
+		let entrypoints = workerToWorkerEntrypointNamesMap.get(workerOptions.name);
+
+		if (!entrypoints) {
+			entrypoints = new Set();
+			workerToWorkerEntrypointNamesMap.set(workerOptions.name, entrypoints);
+		}
+
+		const requiredEntrypoitns = getExternalEntrypointsFromRegistry(
+			registry,
+			workerOptions.name
+		);
+
+		for (const entrypoint of requiredEntrypoitns) {
+			entrypoints.add(entrypoint);
+		}
+	}
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
@@ -532,8 +557,31 @@ export async function getDevMiniflareOptions(config: {
 		logRequests: false,
 		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
-		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		unsafeTriggerHandlers: true,
+		unsafeDevRegistryPath: registryPath,
+		unsafeHandleDevRegistryUpdate(registry) {
+			// Check if there are any workers in the registry that
+			// depends on entrypoints that we haven't registered yet
+			for (const workerOptions of userWorkers) {
+				const requiredEntrypoints = getExternalEntrypointsFromRegistry(
+					registry,
+					workerOptions.name
+				);
+				const existingEntrypoints = workerToWorkerEntrypointNamesMap.get(
+					workerOptions.name
+				);
+
+				if (
+					requiredEntrypoints.some(
+						(entrypoint) => !existingEntrypoints?.has(entrypoint)
+					)
+				) {
+					// Restart the server to pick up any changes from the registry
+					viteDevServer.restart();
+					break;
+				}
+			}
+		},
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
@@ -604,6 +652,22 @@ export async function getDevMiniflareOptions(config: {
 
 				return {
 					...workerOptions,
+					unsafeDirectSockets: Array.from(workerEntrypointNames).reduce<
+						Required<WorkerOptions>["unsafeDirectSockets"]
+					>(
+						(list, entrypoint) => {
+							if (entrypoint !== "default") {
+								list.push({
+									entrypoint,
+									proxy: true,
+								});
+							}
+
+							return list;
+						},
+						// The default entrypoint is already defined in the workerOptions
+						Array.from(workerOptions.unsafeDirectSockets)
+					),
 					durableObjects: {
 						...workerOptions.durableObjects,
 						__VITE_RUNNER_OBJECT__: {
@@ -848,4 +912,26 @@ function miniflareLogLevelFromViteLogLevel(
 		case "silent":
 			return LogLevel.NONE;
 	}
+}
+
+function getExternalEntrypointsFromRegistry(
+	registry: WorkerRegistry,
+	workerName: string
+): string[] {
+	const entrypoints = new Set<string>();
+
+	for (const definition of Object.values(registry)) {
+		const dependencies = definition.dependencies?.[workerName];
+
+		for (const entrypoint of dependencies ?? []) {
+			if (entrypoint === "default") {
+				// The default entrypoint is always included
+				continue;
+			}
+
+			entrypoints.add(entrypoint);
+		}
+	}
+
+	return Array.from(entrypoints);
 }

@@ -33,6 +33,11 @@
 			"service": "worker-entrypoint-with-assets",
 			"entrypoint": "NamedEntrypoint",
 		},
+		{
+			"binding": "NAMED_MODULE_WORKER",
+			"service": "module-worker",
+			"entrypoint": "NamedEntrypoint",
+		},
 	],
 	"tail_consumers": [
 		{

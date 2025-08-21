@@ -234,7 +234,12 @@ export const CoreSharedOptionsSchema = z.object({
 	unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
 	// Called when external workers this instance depends on are updated in the dev registry
 	unsafeHandleDevRegistryUpdate: z
-		.function(z.tuple([z.custom<WorkerRegistry>()]))
+		.function(
+			z.tuple([
+				z.custom<WorkerRegistry>(),
+				z.custom<{ dependencies: Set<string>; prevRegistry: WorkerRegistry }>(),
+			])
+		)
 		.optional(),
 	// This is a shared secret between a proxy server and miniflare that can be
 	// passed in a header to prove that the request came from the proxy and not
