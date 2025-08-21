@@ -526,6 +526,32 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			expect(await response.text()).toEqual("Hello from Module Worker!");
 			expect(response.status).toBe(200);
 		});
+
+		// Test worker-entrypoint -> named entrypoint
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-module-worker",
+				"test-method": "fetch",
+			});
+			const response = await fetch(
+				`${workerEntrypointWithAssets}?${searchParams}`
+			);
+
+			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
+			expect(response.status).toBe(200);
+		});
+
+		// Test module-worker -> named entrypoint with assets
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint-with-assets",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${moduleWorker}?${searchParams}`);
+
+			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
+			expect(response.status).toBe(200);
+		});
 	});
 
 	it("supports RPC over service binding", async ({ devRegistryPath }) => {
@@ -574,6 +600,32 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong");
+		});
+
+		// Test RPC to named entrypoint
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint",
+				"test-method": "rpc",
+			});
+			const response = await fetch(
+				`${workerEntrypointWithAssets}?${searchParams}`
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong from Named Entrypoint");
+		});
+
+		// Test RPC to named entrypoint with static assets
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint-with-assets",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong from Named Entrypoint");
 		});
 	});
 
@@ -644,7 +696,9 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		const workerEntrypoint = await runViteDev(
 			"vite.worker-entrypoint.config.ts"
 		);
-		const moduleWorker = await runWranglerDev("wrangler.module-worker.jsonc");
+		const moduleWorkerWithAssets = await runWranglerDev(
+			"wrangler.module-worker-with-assets.jsonc"
+		);
 
 		// Test wrangler dev -> vite dev yet
 		await vi.waitFor(async () => {
@@ -652,7 +706,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				"test-service": "worker-entrypoint",
 				"test-method": "fetch",
 			});
-			const response = await fetch(`${moduleWorker}?${searchParams}`);
+			const response = await fetch(`${moduleWorkerWithAssets}?${searchParams}`);
 			expect(await response.text()).toBe("Hello from Worker Entrypoint!");
 			expect(response.status).toBe(200);
 		});
@@ -660,11 +714,33 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		// Test vite dev -> wrangler dev
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
-				"test-service": "module-worker",
+				"test-service": "module-worker-with-assets",
 				"test-method": "fetch",
 			});
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 			expect(await response.text()).toBe("Hello from Module Worker!");
+			expect(response.status).toBe(200);
+		});
+
+		// Test vite dev -> wrangler dev named entrypoint
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-module-worker-with-assets",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+			expect(await response.text()).toBe("Hello from Named Entrypoint!");
+			expect(response.status).toBe(200);
+		});
+
+		// Test wrangler dev -> vite dev named entrypoint with assets
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${moduleWorkerWithAssets}?${searchParams}`);
+			expect(await response.text()).toBe("Hello from Named Entrypoint!");
 			expect(response.status).toBe(200);
 		});
 	});
@@ -672,8 +748,8 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 	it("supports module worker fetch over service binding", async ({
 		devRegistryPath,
 	}) => {
-		const workerEntrypoint = await runViteDev(
-			"vite.worker-entrypoint.config.ts",
+		const workerEntrypointWithAssets = await runViteDev(
+			"vite.worker-entrypoint-with-assets.config.ts",
 			devRegistryPath
 		);
 
@@ -683,7 +759,9 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				"test-service": "module-worker",
 				"test-method": "fetch",
 			});
-			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+			const response = await fetch(
+				`${workerEntrypointWithAssets}?${searchParams}`
+			);
 
 			expect(await response.text()).toEqual(
 				`Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`
@@ -699,7 +777,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		// Test wrangler dev -> vite dev yet
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
-				"test-service": "worker-entrypoint",
+				"test-service": "worker-entrypoint-with-assets",
 				"test-method": "fetch",
 			});
 			const response = await fetch(`${moduleWorker}?${searchParams}`);
@@ -713,8 +791,34 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				"test-service": "module-worker",
 				"test-method": "fetch",
 			});
-			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+			const response = await fetch(
+				`${workerEntrypointWithAssets}?${searchParams}`
+			);
 			expect(await response.text()).toBe("Hello from Module Worker!");
+			expect(response.status).toBe(200);
+		});
+
+		// Test vite dev -> wrangler dev named entrypoint
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-module-worker",
+				"test-method": "fetch",
+			});
+			const response = await fetch(
+				`${workerEntrypointWithAssets}?${searchParams}`
+			);
+			expect(await response.text()).toBe("Hello from Named Entrypoint!");
+			expect(response.status).toBe(200);
+		});
+
+		// Test wrangler dev -> vite dev named entrypoint with assets
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint-with-assets",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${moduleWorker}?${searchParams}`);
+			expect(await response.text()).toBe("Hello from Named Entrypoint!");
 			expect(response.status).toBe(200);
 		});
 	});
@@ -800,6 +904,30 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			});
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 			expect(await response.text()).toEqual("Pong");
+			expect(response.status).toBe(200);
+		});
+
+		// Test RPC to named entrypoint
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint",
+				"test-method": "rpc",
+			});
+			const response = await fetch(
+				`${workerEntrypointWithAssets}?${searchParams}`
+			);
+			expect(await response.text()).toEqual("Pong from Named Entrypoint");
+			expect(response.status).toBe(200);
+		});
+
+		// Test RPC to named entrypoint with static assets
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint-with-assets",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+			expect(await response.text()).toEqual("Pong from Named Entrypoint");
 			expect(response.status).toBe(200);
 		});
 	});
