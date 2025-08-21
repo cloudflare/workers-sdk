@@ -1,5 +1,16 @@
 # @cloudflare/vite-plugin
 
+## 1.11.7
+
+### Patch Changes
+
+- [#10415](https://github.com/cloudflare/workers-sdk/pull/10415) [`718fffc`](https://github.com/cloudflare/workers-sdk/commit/718fffcd73c51eeb4ba9175c5bc5878342e03d4c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Exclude Cloudflare built-ins from client dependency optimization.
+  Some frameworks allow users to mix client and server code in the same file and then extract the server code.
+  As the dependency optimization may happen before the server code is extracted, we now exclude Cloudflare built-ins from client optimization.
+- Updated dependencies [[`d304055`](https://github.com/cloudflare/workers-sdk/commit/d3040550adaad031f24327fbfbe9fecdeface0b5), [`f534c0d`](https://github.com/cloudflare/workers-sdk/commit/f534c0d9fd8df1c620311c4acffa6d4f0fc12576), [`da40571`](https://github.com/cloudflare/workers-sdk/commit/da40571245f4276c236503ff563a27caadf02ba4), [`0a96e69`](https://github.com/cloudflare/workers-sdk/commit/0a96e6949cf0097a2b315d44a6262017bb4129a3), [`f9f7519`](https://github.com/cloudflare/workers-sdk/commit/f9f75195f8b2aa28bc297cb04e6fd4e4195a1300), [`4728c68`](https://github.com/cloudflare/workers-sdk/commit/4728c684dad6e91748cdd3f40a216664c53ae007)]:
+  - wrangler@4.32.0
+  - miniflare@4.20250816.1
+
 ## 1.11.6
 
 ### Patch Changes

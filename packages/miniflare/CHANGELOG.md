@@ -1,5 +1,11 @@
 # miniflare
 
+## 4.20250816.1
+
+### Minor Changes
+
+- [#10012](https://github.com/cloudflare/workers-sdk/pull/10012) [`4728c68`](https://github.com/cloudflare/workers-sdk/commit/4728c684dad6e91748cdd3f40a216664c53ae007) Thanks [@penalosa](https://github.com/penalosa)! - Support unsafe dynamic worker loading bindings
+
 ## 4.20250816.0
 
 ### Minor Changes

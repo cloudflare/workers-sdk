@@ -1,5 +1,38 @@
 # wrangler
 
+## 4.32.0
+
+### Minor Changes
+
+- [#10354](https://github.com/cloudflare/workers-sdk/pull/10354) [`da40571`](https://github.com/cloudflare/workers-sdk/commit/da40571245f4276c236503ff563a27caadf02ba4) Thanks [@edmundhung](https://github.com/edmundhung)! - Enable cross-process communication for `wrangler dev` with multiple config files
+
+  Workers running in separate `wrangler dev` sessions can now communicate with each other regardless of whether you are running with single or multiple config files.
+
+  Check out the [Developing with multiple Workers](https://developers.cloudflare.com/workers/development-testing/multi-workers) guide to learn more about the different approaches and when to use each one.
+
+- [#10012](https://github.com/cloudflare/workers-sdk/pull/10012) [`4728c68`](https://github.com/cloudflare/workers-sdk/commit/4728c684dad6e91748cdd3f40a216664c53ae007) Thanks [@penalosa](https://github.com/penalosa)! - Support unsafe dynamic worker loading bindings
+
+### Patch Changes
+
+- [#10245](https://github.com/cloudflare/workers-sdk/pull/10245) [`d304055`](https://github.com/cloudflare/workers-sdk/commit/d3040550adaad031f24327fbfbe9fecdeface0b5) Thanks [@edmundhung](https://github.com/edmundhung)! - Migrate wrangler dev to use Miniflare dev registry implementation
+
+  Updated `wrangler dev` to use a shared dev registry implementation that now powers both the Cloudflare Vite plugin and Wrangler. This internal refactoring has no user-facing changes but consolidates registry logic for better consistency across tools.
+
+- [#10407](https://github.com/cloudflare/workers-sdk/pull/10407) [`f534c0d`](https://github.com/cloudflare/workers-sdk/commit/f534c0d9fd8df1c620311c4acffa6d4f0fc12576) Thanks [@emily-shen](https://github.com/emily-shen)! - default `containers.rollout_active_grace_period` to 0
+
+- [#10425](https://github.com/cloudflare/workers-sdk/pull/10425) [`0a96e69`](https://github.com/cloudflare/workers-sdk/commit/0a96e6949cf0097a2b315d44a6262017bb4129a3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix debugging logs not including headers for CF API requests and responses
+
+  Fix the fact that `wrangler`, when run with the `WRANGLER_LOG=DEBUG` and `WRANGLER_LOG_SANITIZE=false` environment variables, displays `{}` instead of the actual headers for requests and responses for CF API fetches
+
+- [#10337](https://github.com/cloudflare/workers-sdk/pull/10337) [`f9f7519`](https://github.com/cloudflare/workers-sdk/commit/f9f75195f8b2aa28bc297cb04e6fd4e4195a1300) Thanks [@emily-shen](https://github.com/emily-shen)! - containers: `rollout_step_percentage` now also accepts an array of numbers. Previously it accepted a single number, and each rollout step would target the same percentage of instances. Now users can customise percentages for each step.
+
+  `rollout_step_percentage` also now defaults to `[10,100]` (previously `25`), which should make rollouts progress slightly faster.
+
+  You can also use `wrangler deploy --containers-rollout=immediate` to override rollout settings in Wrangler configuration and update all instances in one step. Note this doesn't override `rollout_active_grace_period` if configured.
+
+- Updated dependencies [[`4728c68`](https://github.com/cloudflare/workers-sdk/commit/4728c684dad6e91748cdd3f40a216664c53ae007)]:
+  - miniflare@4.20250816.1
+
 ## 4.31.0
 
 ### Minor Changes
