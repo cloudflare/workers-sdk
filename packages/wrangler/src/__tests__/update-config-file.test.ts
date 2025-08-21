@@ -21,14 +21,6 @@ describe("updateConfigFile()", () => {
 	afterEach(() => {
 		clearDialogs();
 	});
-	// mockSelect({
-	// 	text: "Would you like Wrangler to add it on your behalf?",
-	// 	result: "yes-but",
-	// });
-	// mockPrompt({
-	// 	text: "What binding name would you like to use?",
-	// 	result: "HELLO",
-	// });
 
 	it("non interactive: no prompts and no file update", async () => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");

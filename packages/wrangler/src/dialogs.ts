@@ -105,17 +105,16 @@ export async function select<Values extends string>(
 	options: SelectOptions<Values>
 ): Promise<Values> {
 	if (isNonInteractiveOrCI()) {
-		const fallback = options.fallbackOption ?? options.defaultOption;
-		if (fallback === undefined) {
+		if (options.fallbackOption === undefined) {
 			throw new NoDefaultValueProvided();
 		}
 		logger.log(`? ${text}`);
 		logger.log(
 			`🤖 ${chalk.dim(
 				"Using fallback value in non-interactive context:"
-			)} ${chalk.white.bold(options.choices[fallback].title)}`
+			)} ${chalk.white.bold(options.choices[options.fallbackOption].title)}`
 		);
-		return options.choices[fallback].value;
+		return options.choices[options.fallbackOption].value;
 	}
 
 	const { value } = await prompts({
