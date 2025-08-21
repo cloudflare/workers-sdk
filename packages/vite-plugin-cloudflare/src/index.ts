@@ -1069,6 +1069,7 @@ if (import.meta.hot) {
 		// Plugin to handle cron/email/etc triggers
 		{
 			name: "vite-plugin-cloudflare:trigger-handlers",
+			enforce: "pre",
 			async configureServer(viteDevServer) {
 				assertIsNotPreview(resolvedPluginConfig);
 
@@ -1077,24 +1078,27 @@ if (import.meta.hot) {
 
 				const entryWorkerName = entryWorkerConfig.name;
 
-				viteDevServer.middlewares.use((req, res, next) => {
-					assert(req.url, "Request URL is undefined");
-					const url = new URL(req.url, UNKNOWN_HOST);
-
+				// cron && email triggers
+				viteDevServer.middlewares.use("/cdn-cgi/", (req, res, next) => {
 					const requestHandler = createRequestHandler((request) => {
 						assert(miniflare, `Miniflare not defined`);
 
-						// email triggers
-						if (url.pathname === "/cdn-cgi/handler/email") {
-							// set the target service that handles these requests
-							// to point to the User Worker
-							// see `getTargetService` fn in packages/miniflare/src/workers/core/entry.worker.ts
-							request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
-						}
-
+						// set the target service that handles these requests
+						// to point to the User Worker (see `getTargetService` fn in
+						// `packages/miniflare/src/workers/core/entry.worker.ts`)
+						request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 						return miniflare.dispatchFetch(request, { redirect: "manual" });
 					});
 
+					// `req.url` is the URL of the request relative to the middleware
+					// mount path. Here we ensure that miniflare receives a request that
+					// reflects the original request url
+					// 🚨🚨🚨 A potential side effect of mutating the original request is
+					// that other middleware functions in the chain will no longer see
+					// the original, relative `req.url`. If a subsequent middleware
+					// depends on the relative path for its logic, this change could
+					// break it
+					req.url = req.originalUrl;
 					requestHandler(req, res, next);
 				});
 			},

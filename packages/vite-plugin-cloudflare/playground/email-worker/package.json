@@ -1,5 +1,5 @@
 {
-	"name": "@playground/worker-email",
+	"name": "@playground/email-worker",
 	"private": true,
 	"type": "module",
 	"scripts": {
