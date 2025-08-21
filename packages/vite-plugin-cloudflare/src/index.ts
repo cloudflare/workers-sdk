@@ -1073,34 +1073,36 @@ if (import.meta.hot) {
 			async configureServer(viteDevServer) {
 				assertIsNotPreview(resolvedPluginConfig);
 
-				const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
-				assert(entryWorkerConfig, `No entry Worker config`);
+				if (resolvedPluginConfig.type === "workers") {
+					const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
+					assert(entryWorkerConfig, `No entry Worker config`);
 
-				const entryWorkerName = entryWorkerConfig.name;
+					const entryWorkerName = entryWorkerConfig.name;
 
-				// cron && email triggers
-				viteDevServer.middlewares.use("/cdn-cgi/", (req, res, next) => {
-					const requestHandler = createRequestHandler((request) => {
-						assert(miniflare, `Miniflare not defined`);
+					// cron && email triggers
+					viteDevServer.middlewares.use("/cdn-cgi/", (req, res, next) => {
+						const requestHandler = createRequestHandler((request) => {
+							assert(miniflare, `Miniflare not defined`);
 
-						// set the target service that handles these requests
-						// to point to the User Worker (see `getTargetService` fn in
-						// `packages/miniflare/src/workers/core/entry.worker.ts`)
-						request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
-						return miniflare.dispatchFetch(request, { redirect: "manual" });
+							// set the target service that handles these requests
+							// to point to the User Worker (see `getTargetService` fn in
+							// `packages/miniflare/src/workers/core/entry.worker.ts`)
+							request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+							return miniflare.dispatchFetch(request, { redirect: "manual" });
+						});
+
+						// `req.url` is the URL of the request relative to the middleware
+						// mount path. Here we ensure that miniflare receives a request that
+						// reflects the original request url
+						// 🚨🚨🚨 A potential side effect of mutating the original request is
+						// that other middleware functions in the chain will no longer see
+						// the original, relative `req.url`. If a subsequent middleware
+						// depends on the relative path for its logic, this change could
+						// break it
+						req.url = req.originalUrl;
+						requestHandler(req, res, next);
 					});
-
-					// `req.url` is the URL of the request relative to the middleware
-					// mount path. Here we ensure that miniflare receives a request that
-					// reflects the original request url
-					// 🚨🚨🚨 A potential side effect of mutating the original request is
-					// that other middleware functions in the chain will no longer see
-					// the original, relative `req.url`. If a subsequent middleware
-					// depends on the relative path for its logic, this change could
-					// break it
-					req.url = req.originalUrl;
-					requestHandler(req, res, next);
-				});
+				}
 			},
 		},
 	];

@@ -772,7 +772,6 @@ export async function getPreviewMiniflareOptions(config: {
 						...workerOptions,
 						name: workerOptions.name ?? workerConfig.name,
 						unsafeInspectorProxy: inspectorPort !== false,
-						unsafeTriggerHandlers: true,
 						unsafeDirectSockets:
 							// This exposes the default entrypoint of the entry worker on the dev registry
 							// Assuming that the first worker config to be the entry worker.
@@ -782,7 +781,7 @@ export async function getPreviewMiniflareOptions(config: {
 							: { modules: true, script: "" }),
 					},
 					...externalWorkers,
-				] as Array<WorkerOptions>;
+				] satisfies Array<WorkerOptions>;
 			})
 		)
 	).flat();
@@ -794,6 +793,7 @@ export async function getPreviewMiniflareOptions(config: {
 		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
 		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
+		unsafeTriggerHandlers: true,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
