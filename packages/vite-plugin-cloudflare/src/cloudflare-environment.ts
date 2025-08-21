@@ -124,11 +124,21 @@ export const cloudflareBuiltInModules = [
 const defaultConditions = ["workerd", "worker", "module", "browser"];
 const target = "es2022";
 
-export function createCloudflareEnvironmentOptions(
-	workerConfig: WorkerConfig,
-	userConfig: vite.UserConfig,
-	environment: { name: string; isEntry: boolean }
-): vite.EnvironmentOptions {
+export function createCloudflareEnvironmentOptions({
+	workerConfig,
+	userConfig,
+	mode,
+	environmentName,
+	isEntryWorker,
+}: {
+	workerConfig: WorkerConfig;
+	userConfig: vite.UserConfig;
+	mode: vite.ConfigEnv["mode"];
+	environmentName: string;
+	isEntryWorker: boolean;
+}): vite.EnvironmentOptions {
+	const define = getProcessEnvReplacements(workerConfig, mode);
+
 	return {
 		resolve: {
 			// Note: in order for ssr pre-bundling to take effect we need to ask vite to treat all
@@ -139,6 +149,7 @@ export function createCloudflareEnvironmentOptions(
 			// The Cloudflare ones are proper builtins in the environment
 			builtins: [...cloudflareBuiltInModules],
 		},
+		define,
 		dev: {
 			createEnvironment(name, config) {
 				return new CloudflareDevEnvironment(name, config);
@@ -150,8 +161,8 @@ export function createCloudflareEnvironmentOptions(
 			},
 			target,
 			emitAssets: true,
-			manifest: environment.isEntry,
-			outDir: getOutputDirectory(userConfig, environment.name),
+			manifest: isEntryWorker,
+			outDir: getOutputDirectory(userConfig, environmentName),
 			copyPublicDir: false,
 			ssr: true,
 			rollupOptions: {
@@ -182,11 +193,41 @@ export function createCloudflareEnvironmentOptions(
 					".cts",
 					".ctx",
 				],
+				define,
 			},
 		},
-		// if nodeCompat is enabled then let's keep the real process.env so that workerd can manipulate it
-		keepProcessEnv: isNodeCompat(workerConfig),
+		// We manually set `process.env` replacements using `define`
+		keepProcessEnv: true,
 	};
+}
+
+/**
+ * Gets `process.env` replacement values.
+ * `process.env.NODE_ENV` is always replaced.
+ * `process.env` is replaced with an empty object if `nodejs_compat` is not enabled
+ * @param workerConfig - the Worker config (used to determine if `nodejs_compat` is enabled)
+ * @param mode - the Vite mode
+ * @returns replacement values
+ */
+function getProcessEnvReplacements(
+	workerConfig: WorkerConfig,
+	mode: vite.ConfigEnv["mode"]
+): Record<string, string> {
+	const nodeEnv = process.env.NODE_ENV || mode;
+	const nodeEnvReplacements = {
+		"process.env.NODE_ENV": JSON.stringify(nodeEnv),
+		"global.process.env.NODE_ENV": JSON.stringify(nodeEnv),
+		"globalThis.process.env.NODE_ENV": JSON.stringify(nodeEnv),
+	};
+
+	return isNodeCompat(workerConfig)
+		? nodeEnvReplacements
+		: {
+				...nodeEnvReplacements,
+				"process.env": "{}",
+				"global.process.env": "{}",
+				"globalThis.process.env": "{}",
+			};
 }
 
 export function initRunners(

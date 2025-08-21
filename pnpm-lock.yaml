@@ -2121,9 +2121,6 @@ importers:
       '@mjackson/node-fetch-server':
         specifier: ^0.6.1
         version: 0.6.1
-      '@rollup/plugin-replace':
-        specifier: ^6.0.1
-        version: 6.0.2(rollup@4.44.1)
       get-port:
         specifier: ^7.1.0
         version: 7.1.0
@@ -2717,6 +2714,40 @@ importers:
         specifier: workspace:*
         version: link:../../../wrangler
 
+  packages/vite-plugin-cloudflare/playground/node-env:
+    dependencies:
+      react:
+        specifier: ^19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: ^19.1.0
+        version: 19.1.0(react@19.1.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250816.0
+      '@types/react':
+        specifier: ^19.1.0
+        version: 19.1.0
+      '@types/react-dom':
+        specifier: ^19.1.1
+        version: 19.1.1(@types/react@19.1.0)
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 7.0.0(@types/node@20.19.9)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
   packages/vite-plugin-cloudflare/playground/partyserver:
     dependencies:
       partyserver:
@@ -2786,40 +2817,6 @@ importers:
       prisma:
         specifier: ^6.3.0
         version: 6.3.1(typescript@5.8.3)
-      typescript:
-        specifier: catalog:default
-        version: 5.8.3
-      vite:
-        specifier: catalog:vite-plugin
-        version: 7.0.0(@types/node@20.19.9)(jiti@2.4.2)(lightningcss@1.29.2)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
-
-  packages/vite-plugin-cloudflare/playground/react-dom-server:
-    dependencies:
-      react:
-        specifier: ^19.1.0
-        version: 19.1.0
-      react-dom:
-        specifier: ^19.1.0
-        version: 19.1.0(react@19.1.0)
-    devDependencies:
-      '@cloudflare/vite-plugin':
-        specifier: workspace:*
-        version: link:../..
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../../../workers-tsconfig
-      '@cloudflare/workers-types':
-        specifier: catalog:default
-        version: 4.20250816.0
-      '@types/react':
-        specifier: ^19.1.0
-        version: 19.1.0
-      '@types/react-dom':
-        specifier: ^19.1.1
-        version: 19.1.1(@types/react@19.1.0)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -16038,13 +16035,6 @@ snapshots:
     optionalDependencies:
       rollup: 4.30.1
 
-  '@rollup/plugin-replace@6.0.2(rollup@4.44.1)':
-    dependencies:
-      '@rollup/pluginutils': 5.1.4(rollup@4.44.1)
-      magic-string: 0.30.17
-    optionalDependencies:
-      rollup: 4.44.1
-
   '@rollup/pluginutils@4.2.1':
     dependencies:
       estree-walker: 2.0.2
@@ -16065,14 +16055,6 @@ snapshots:
       picomatch: 4.0.2
     optionalDependencies:
       rollup: 4.30.1
-
-  '@rollup/pluginutils@5.1.4(rollup@4.44.1)':
-    dependencies:
-      '@types/estree': 1.0.6
-      estree-walker: 2.0.2
-      picomatch: 4.0.2
-    optionalDependencies:
-      rollup: 4.44.1
 
   '@rollup/rollup-android-arm-eabi@4.30.1':
     optional: true
