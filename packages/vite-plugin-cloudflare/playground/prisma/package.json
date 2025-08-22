@@ -5,7 +5,7 @@
 	"scripts": {
 		"prebuild": "pnpm generate",
 		"build": "vite build --app",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"predev": "pnpm generate",
 		"dev": "vite dev",
 		"generate": "pnpm prisma generate",
