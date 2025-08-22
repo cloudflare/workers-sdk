@@ -5,7 +5,7 @@ import type { DefinitionTreeNode } from "./core/types";
  * EXPERIMENTAL: Get all registered Wrangler commands for documentation generation.
  * This API is experimental and may change without notice.
  *
- * @returns The complete command tree structure with all metadata
+ * @returns An object containing the command tree structure and global flags
  */
 export function experimental_getWranglerCommands(): {
 	registry: DefinitionTreeNode;
