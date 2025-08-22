@@ -1,5 +1,6 @@
+import dedent from "ts-dedent";
 import { expect, test } from "vitest";
-import { getTextResponse, viteTestUrl } from "../../__test-utils__";
+import { getTextResponse, serverLogs, viteTestUrl } from "../../__test-utils__";
 
 test("Supports sending email via the email binding", async () => {
 	const sendEmailResponse = await getTextResponse("/send");
@@ -15,7 +16,7 @@ test("Supports testing Email Workers at '/cdn-cgi/handler/scheduled' route", asy
 		`${viteTestUrl}/cdn-cgi/handler/email?${params}`,
 		{
 			method: "POST",
-			body: `From: "John" <sender@example.com>
+			body: dedent`From: "John" <sender@example.com>
 Reply-To: sender@example.com
 To: recipient@example.com
 Subject: Testing Email Workers Local Dev
@@ -28,7 +29,12 @@ Hi there`,
 		}
 	);
 
+	const emailStdout = serverLogs.info[1];
 	expect(await fetchResponse.text()).toBe(
 		"Worker successfully processed email"
 	);
+	expect(emailStdout).toContain(
+		`Received email from sender@example.com on ${new Date(" 27 Aug 2024 08:49:44 -0700").toISOString()} with following message:`
+	);
+	expect(emailStdout).toContain("Hi there");
 });

@@ -2,9 +2,14 @@ import { EmailMessage } from "cloudflare:email";
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { createMimeMessage } from "mimetext";
 import * as PostalMime from "postal-mime";
+import type { SendEmail } from "@cloudflare/workers-types";
+
+interface Env {
+	EMAIL: SendEmail;
+}
 
 export default class extends WorkerEntrypoint<Env> {
-	async fetch(request: Request): Promise<Response> {
+	override async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);
 
 		if (url.pathname === "/send") {
@@ -24,8 +29,8 @@ export default class extends WorkerEntrypoint<Env> {
 
 			try {
 				await this.env.EMAIL.send(message);
-			} catch (e) {
-				return new Response(e.message);
+			} catch (error) {
+				throw error;
 			}
 
 			return new Response("Email message sent successfully!");
