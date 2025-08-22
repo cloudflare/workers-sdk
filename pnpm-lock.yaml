@@ -2513,7 +2513,7 @@ importers:
         specifier: ^3.0.27
         version: 3.0.27
       postal-mime:
-        specifier: ^2.4.4
+        specifier: 2.4.4
         version: 2.4.4(patch_hash=ngwql2fj2dlex3jjynq4iizhk4)
       ts-dedent:
         specifier: ^2.2.0
