@@ -2348,6 +2348,27 @@ importers:
         specifier: workspace:*
         version: link:../../../wrangler
 
+  packages/vite-plugin-cloudflare/playground/cron-triggers:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250816.0
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 7.0.0(@types/node@20.19.9)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
   packages/vite-plugin-cloudflare/playground/custom-build-app:
     devDependencies:
       '@cloudflare/vite-plugin':
@@ -2464,6 +2485,39 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20250816.0
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 7.0.0(@types/node@20.19.9)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/email-worker:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250816.0
+      '@types/mimetext':
+        specifier: ^2.0.4
+        version: 2.0.4
+      mimetext:
+        specifier: ^3.0.27
+        version: 3.0.27
+      postal-mime:
+        specifier: 2.4.4
+        version: 2.4.4(patch_hash=ngwql2fj2dlex3jjynq4iizhk4)
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -11148,6 +11202,9 @@ packages:
 
   postal-mime@2.4.3:
     resolution: {integrity: sha512-KT8P+/We7LH48EhjmLRLEiQx+HI6zZ5TTeuzhuZkMbcJnp9mdmxm/FgiRIzmhZm8mxmk8mtisIAelq1wNwumxg==}
+
+  postal-mime@2.4.4:
+    resolution: {integrity: sha512-LDaFIsmGO+uNnPu28H52cubuHrovfewviU8Y8p+KgIKGVF871t/IQxzlO8QwhJMiG0ih2Lk2jTL3aGVoNz3NZQ==}
 
   postcss-calc@10.1.0:
     resolution: {integrity: sha512-uQ/LDGsf3mgsSUEXmAt3VsCSHR3aKqtEIkmB+4PhzYwRYOW5MZs/GhCCFpsOtJJkP6EC6uGipbrnaTjqaJZcJw==}
@@ -21484,6 +21541,8 @@ snapshots:
   possible-typed-array-names@1.0.0: {}
 
   postal-mime@2.4.3(patch_hash=ngwql2fj2dlex3jjynq4iizhk4): {}
+
+  postal-mime@2.4.4(patch_hash=ngwql2fj2dlex3jjynq4iizhk4): {}
 
   postcss-calc@10.1.0(postcss@8.5.6):
     dependencies:
