@@ -2357,7 +2357,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250803.0
+        specifier: catalog:default
         version: 4.20250816.0
       typescript:
         specifier: catalog:default
@@ -2504,7 +2504,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250803.0
+        specifier: catalog:default
         version: 4.20250816.0
       '@types/mimetext':
         specifier: ^2.0.4
