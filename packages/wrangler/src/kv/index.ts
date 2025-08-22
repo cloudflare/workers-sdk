@@ -141,7 +141,7 @@ export const kvNamespaceListCommand = createCommand({
 
 		for await (const namespace of sdk.kv.namespaces.list({
 			account_id: accountId,
-			per_page: 500,
+			per_page: 1000,
 			order: "title",
 			direction: "asc",
 		})) {
