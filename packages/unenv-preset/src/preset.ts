@@ -184,7 +184,7 @@ function getHttpOverrides({
 			"_http_outgoing",
 			...(httpServerEnabled ? ["_http_server", "https"] : []),
 		],
-		hybridModules: httpServerEnabled ? ["http"] : ["http", "https"],
+		hybridModules: ["http", "https"],
 	};
 }
 

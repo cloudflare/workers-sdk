@@ -237,6 +237,8 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof https.get, "function");
 		assert.strictEqual(typeof https.globalAgent, "object");
 		assert.strictEqual(typeof https.request, "function");
+		assert.strictEqual(typeof https.Server, "function");
+		assert.strictEqual(typeof https.createServer, "function");
 	},
 
 	async testHttpServer() {
