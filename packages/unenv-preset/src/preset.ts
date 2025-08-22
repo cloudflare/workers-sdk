@@ -35,15 +35,17 @@ const nativeModules = [
 	"stream/promises",
 	"stream/web",
 	"string_decoder",
+	"sys",
 	"timers",
 	"timers/promises",
 	"url",
+	"util",
 	"util/types",
 	"zlib",
 ];
 
 // Modules implemented via a mix of workerd APIs and polyfills.
-const hybridModules = ["console", "crypto", "module", "process", "tls", "util"];
+const hybridModules = ["console", "crypto", "module", "process", "tls"];
 
 /**
  * Creates the Cloudflare preset for the given compatibility date and compatibility flags
@@ -98,10 +100,6 @@ export function getCloudflarePreset({
 					[`node:${p}`, `node:${p}`],
 				])
 			),
-
-			// The `node:sys` module is just a deprecated alias for `node:util` which we implemented using a hybrid polyfill
-			sys: "@cloudflare/unenv-preset/node/util",
-			"node:sys": "@cloudflare/unenv-preset/node/util",
 
 			// `hybridNodeCompatModules` are implemented by the cloudflare preset.
 			...Object.fromEntries(
