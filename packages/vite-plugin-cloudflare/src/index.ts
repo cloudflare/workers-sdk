@@ -1094,11 +1094,6 @@ if (import.meta.hot) {
 						// `req.url` is the URL of the request relative to the middleware
 						// mount path. Here we ensure that miniflare receives a request that
 						// reflects the original request url
-						// 🚨🚨🚨 A potential side effect of mutating the original request is
-						// that other middleware functions in the chain will no longer see
-						// the original, relative `req.url`. If a subsequent middleware
-						// depends on the relative path for its logic, this change could
-						// break it
 						req.url = req.originalUrl;
 						requestHandler(req, res, next);
 					});

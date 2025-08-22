@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest";
 import { getTextResponse, viteTestUrl } from "../../__test-utils__";
 
-test("Email triggers", async () => {
+test("Supports sending email via the email binding", async () => {
 	const rootResponse = await getTextResponse("/");
 	expect(rootResponse).toBe("Hello Email Workers playground!");
 
