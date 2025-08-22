@@ -115,6 +115,7 @@ export const WorkerdTests: Record<string, () => void> = {
 			"path/posix",
 			"path/win32",
 			"querystring",
+			"module",
 			"stream",
 			"stream/consumers",
 			"stream/promises",
@@ -328,5 +329,46 @@ export const WorkerdTests: Record<string, () => void> = {
 			return storage.getStore();
 		});
 		assert.deepStrictEqual(result, { test: "require" });
+	},
+
+	async testModule() {
+		const module = await import("node:module");
+		const exportNames = [
+			"createRequire",
+			"enableCompileCache",
+			"findSourceMap",
+			"getCompileCacheDir",
+			"getSourceMapsSupport",
+			"isBuiltin",
+			"register",
+			"runMain",
+			"setSourceMapsSupport",
+			"stripTypeScriptTypes",
+			"syncBuiltinESMExports",
+			"wrap",
+			"flushCompileCache",
+			"findPackageJSON",
+			"_debug",
+			"_findPath",
+			"_initPaths",
+			"_load",
+			"_preloadModules",
+			"_resolveFilename",
+			"_resolveLookupPaths",
+			"_nodeModulePaths",
+			"Module",
+			"SourceMap",
+		];
+
+		for (const name of exportNames) {
+			assert.strictEqual(typeof module[name], "function");
+		}
+
+		assert.ok(Array.isArray(module.globalPaths));
+		assert.ok(Array.isArray(module.builtinModules));
+		assert.strictEqual(typeof module.constants, "object");
+		assert.strictEqual(typeof module._cache, "object");
+		assert.strictEqual(typeof module._extensions, "object");
+		assert.strictEqual(typeof module._pathCache, "object");
 	},
 };
