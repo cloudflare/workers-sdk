@@ -207,7 +207,10 @@ export type WorkerMetadata = WorkerMetadataPut | WorkerMetadataVersionsPost;
 /**
  * Creates a `FormData` upload from a `CfWorkerInit`.
  */
-export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
+export function createWorkerUploadForm(
+	worker: CfWorkerInit,
+	options?: { dryRun: true }
+): FormData {
 	const formData = new FormData();
 	const {
 		main,
@@ -267,6 +270,10 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	});
 
 	bindings.kv_namespaces?.forEach(({ id, binding, raw }) => {
+		if (options?.dryRun) {
+			id = INHERIT_SYMBOL;
+		}
+
 		if (id === undefined) {
 			throw new UserError(`${binding} bindings must have an "id" field`);
 		}
@@ -340,6 +347,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 	bindings.r2_buckets?.forEach(
 		({ binding, bucket_name, jurisdiction, raw }) => {
+			if (options?.dryRun) {
+				bucket_name = INHERIT_SYMBOL;
+			}
 			if (bucket_name === undefined) {
 				throw new UserError(
 					`${binding} bindings must have a "bucket_name" field`
@@ -365,6 +375,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 	bindings.d1_databases?.forEach(
 		({ binding, database_id, database_internal_env, raw }) => {
+			if (options?.dryRun) {
+				database_id = INHERIT_SYMBOL;
+			}
 			if (database_id === undefined) {
 				throw new UserError(
 					`${binding} bindings must have a "database_id" field`

@@ -857,7 +857,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 			}
 
-			workerBundle = createWorkerUploadForm(worker);
+			workerBundle = createWorkerUploadForm(worker, { dryRun: true });
 			printBindings(
 				{ ...withoutStaticAssets, vars: maskedVars },
 				config.tail_consumers,
