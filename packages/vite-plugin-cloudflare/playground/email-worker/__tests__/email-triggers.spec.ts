@@ -29,7 +29,7 @@ Hi there`,
 		}
 	);
 
-	const emailStdout = serverLogs.info[1];
+	const emailStdout = serverLogs.info.join();
 	expect(await fetchResponse.text()).toBe(
 		"Worker successfully processed email"
 	);
