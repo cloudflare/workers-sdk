@@ -41,7 +41,6 @@ describe("findPackageNames()", () => {
 				"solarflare-theme",
 				"turbo-r2-archive",
 				"workers-playground",
-				"workers.new",
 				"wrangler",
 			])
 		);

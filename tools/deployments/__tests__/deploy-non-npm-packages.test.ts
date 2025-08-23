@@ -106,7 +106,6 @@ describe("findDeployablePackageNames()", () => {
 			  "turbo-r2-archive",
 			  "workers-playground",
 			  "@cloudflare/workers-shared",
-			  "workers.new",
 			  "@cloudflare/workflows-shared",
 			}
 		`);

@@ -3431,30 +3431,6 @@ importers:
 
   packages/workers-tsconfig: {}
 
-  packages/workers.new:
-    devDependencies:
-      '@cloudflare/vitest-pool-workers':
-        specifier: workspace:*
-        version: link:../vitest-pool-workers
-      '@cloudflare/workers-types':
-        specifier: catalog:default
-        version: 4.20250816.0
-      '@types/node':
-        specifier: ^20.19.9
-        version: 20.19.9
-      miniflare:
-        specifier: workspace:*
-        version: link:../miniflare
-      typescript:
-        specifier: catalog:default
-        version: 5.8.3
-      vitest:
-        specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)
-      wrangler:
-        specifier: workspace:*
-        version: link:../wrangler
-
   packages/workflows-shared:
     dependencies:
       heap-js:
