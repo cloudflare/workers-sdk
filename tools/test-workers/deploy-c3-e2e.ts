@@ -1,13 +1,9 @@
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
 
-/**
- * Deploy all test workers for CI
- */
-async function deployTestWorkers() {
-	console.log("Deploying test workers...");
+export async function deployC3E2EWorkers() {
+	console.log("Deploying C3 E2E workers...");
 
-	// Check if we have the required environment variables
 	if (!process.env.CLOUDFLARE_API_TOKEN) {
 		console.log("CLOUDFLARE_API_TOKEN not set, skipping worker deployment");
 		return;
@@ -18,14 +14,14 @@ async function deployTestWorkers() {
 		return;
 	}
 
-	// Deploy existing-script-test-do-not-delete worker
-	const workerDir = resolve(__dirname, "existing-script-test-do-not-delete");
-	const workerUrl =
+	const existingScriptDir = resolve(
+		__dirname,
+		"existing-script-test-do-not-delete"
+	);
+	const existingScriptUrl =
 		"https://existing-script-test-do-not-delete.devprod-testing7928.workers.dev";
-
 	try {
-		// Check if worker exists and deploy only if it doesn't
-		const response = await fetch(workerUrl);
+		const response = await fetch(existingScriptUrl);
 		if (response.ok) {
 			console.log(
 				"Worker 'existing-script-test-do-not-delete' already exists and is responding, skipping deployment"
@@ -35,7 +31,7 @@ async function deployTestWorkers() {
 				"Worker 'existing-script-test-do-not-delete' does not exist or is not responding, deploying..."
 			);
 			execSync("pnpx wrangler@latest deploy", {
-				cwd: workerDir,
+				cwd: existingScriptDir,
 				env: process.env,
 				stdio: "inherit",
 			});
@@ -45,18 +41,18 @@ async function deployTestWorkers() {
 			"Worker 'existing-script-test-do-not-delete' does not exist or is not responding, deploying..."
 		);
 		execSync("pnpx wrangler@latest deploy", {
-			cwd: workerDir,
+			cwd: existingScriptDir,
 			env: process.env,
 			stdio: "inherit",
 		});
 	}
 
-	console.log("Test worker deployment complete");
+	console.log("C3 E2E worker deployment complete");
 }
 
 if (require.main === module) {
-	deployTestWorkers().catch((error) => {
-		console.error("Failed to deploy test workers:", error);
+	deployC3E2EWorkers().catch((error) => {
+		console.error("Failed to deploy C3 E2E workers:", error);
 		process.exit(1);
 	});
 }
