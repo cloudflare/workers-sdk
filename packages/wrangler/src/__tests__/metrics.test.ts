@@ -35,7 +35,7 @@ vi.mock("../package-manager");
 vi.mocked(getMetricsConfig).mockReset();
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
-declare module globalThis {
+declare namespace globalThis {
 	let ALGOLIA_APP_ID: string | undefined;
 	let ALGOLIA_PUBLIC_KEY: string | undefined;
 }
