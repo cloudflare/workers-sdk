@@ -158,8 +158,8 @@ describe("getRemoteConfigsDiff", () => {
 			-     \\"enabled\\": true
 			+     \\"enabled\\": false
 			    },
-			-   \\"account_id\\": \\"account-id-123\\",
 			+   \\"account_id\\": \\"account-id-123\\"
+			-   \\"account_id\\": \\"account-id-123\\",
 			-   \\"kv_namespaces\\": [
 			-     {
 			-       \\"binding\\": \\"MY_KV\\",
