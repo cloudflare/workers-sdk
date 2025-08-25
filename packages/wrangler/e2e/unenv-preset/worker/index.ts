@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import assert from "node:assert";
 
 export default {
@@ -349,5 +350,41 @@ export const WorkerdTests: Record<string, () => void> = {
 			return storage.getStore();
 		});
 		assert.deepStrictEqual(result, { test: "require" });
+	},
+
+	async testFs() {
+		const fs = await import("node:fs");
+		const fsp = await import("node:fs/promises");
+
+		const useNativeFs = getRuntimeFlagValue("enable_nodejs_fs_module");
+
+		if (useNativeFs) {
+			fs.writeFileSync("/tmp/sync", "sync");
+			assert.strictEqual(fs.readFileSync("/tmp/sync", "utf-8"), "sync");
+			await fsp.writeFile("/tmp/async", "async");
+			assert.strictEqual(await fsp.readFile("/tmp/async", "utf-8"), "async");
+
+			const blob = await fs.openAsBlob("/tmp/sync");
+			assert.ok(blob instanceof Blob);
+
+			// Old names in fs namespace
+			assert.strictEqual((fs as any).FileReadStream, fs.ReadStream);
+			assert.strictEqual((fs as any).FileWriteStream, fs.WriteStream);
+			assert.equal((fs as any).F_OK, 0);
+			assert.equal((fs as any).R_OK, 4);
+			assert.equal((fs as any).W_OK, 2);
+			assert.equal((fs as any).X_OK, 1);
+		} else {
+			assert.throws(
+				() => fs.readFileSync("/tmp/file", "utf-8"),
+				/not implemented/
+			);
+			await assert.rejects(
+				async () => await fsp.readFile("/tmp/file", "utf-8"),
+				/not implemented/
+			);
+
+			assert.throws(() => fs.openAsBlob("/tmp/sync"), /not implemented/);
+		}
 	},
 };
