@@ -14,6 +14,6 @@ export default {
 	},
 } satisfies ExportedHandler;
 
-addEventListener("unhandledrejection", (event) => {
+addEventListener("unhandledrejection", () => {
 	console.error("__unhandled rejection__");
 });
