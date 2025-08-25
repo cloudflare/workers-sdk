@@ -18,7 +18,7 @@
 		"zod": "^3.22.3"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/cookie": "^0.6.0",
 		"cookie": "^0.7.2",

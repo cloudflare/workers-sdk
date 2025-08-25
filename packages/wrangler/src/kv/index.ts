@@ -15,7 +15,6 @@ import { getValidBindingName } from "../utils/getValidBindingName";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import {
 	BATCH_MAX_ERRORS_WARNINGS,
-	createKVNamespace,
 	deleteKVBulkKeyValue,
 	deleteKVKeyValue,
 	deleteKVNamespace,
@@ -86,7 +85,7 @@ export const kvNamespaceCreateCommand = createCommand({
 	},
 	positionalArgs: ["namespace"],
 
-	async handler(args) {
+	async handler(args, { sdk }) {
 		const config = readConfig(args);
 		const environment = args.env ? `${args.env}-` : "";
 		const preview = args.preview ? "_preview" : "";
@@ -96,7 +95,11 @@ export const kvNamespaceCreateCommand = createCommand({
 		printResourceLocation("remote");
 		// TODO: generate a binding name stripping non alphanumeric chars
 		logger.log(`🌀 Creating namespace with title "${title}"`);
-		const namespaceId = await createKVNamespace(config, accountId, title);
+
+		const { id: namespaceId } = await sdk.kv.namespaces.create({
+			account_id: accountId,
+			title,
+		});
 		metrics.sendMetricsEvent("create kv namespace", {
 			sendMetrics: config.send_metrics,
 		});
@@ -131,16 +134,21 @@ export const kvNamespaceListCommand = createCommand({
 	args: {},
 
 	behaviour: { printBanner: false, printResourceLocation: false },
-	async handler(args) {
-		const config = readConfig(args);
-
+	async handler(_, { config, sdk }) {
 		const accountId = await requireAuth(config);
 
-		// TODO: we should show bindings if they exist for given ids
+		const allNamespaces = [];
 
-		logger.log(
-			JSON.stringify(await listKVNamespaces(config, accountId), null, "  ")
-		);
+		for await (const namespace of sdk.kv.namespaces.list({
+			account_id: accountId,
+			per_page: 1000,
+			order: "title",
+			direction: "asc",
+		})) {
+			allNamespaces.push(namespace);
+		}
+
+		logger.log(JSON.stringify(allNamespaces, null, "  "));
 		metrics.sendMetricsEvent("list kv namespaces", {
 			sendMetrics: config.send_metrics,
 		});

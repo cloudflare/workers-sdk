@@ -1,5 +1,6 @@
 import assert from "node:assert";
-import { fetch, FormData, Headers, Response } from "undici";
+import Cloudflare from "cloudflare";
+import { fetch, FormData, Headers, Request, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -9,7 +10,76 @@ import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
-import type { HeadersInit, RequestInit } from "undici";
+import type { HeadersInit, RequestInfo, RequestInit } from "undici";
+
+async function logRequest(request: Request, init?: RequestInit) {
+	logger.debug(`-- START CF API REQUEST: ${request.method} ${request.url}`);
+	const logRequestHeaders = cloneHeaders(request.headers);
+	logRequestHeaders.delete("Authorization");
+	logger.debugWithSanitization(
+		"HEADERS:",
+		JSON.stringify(logRequestHeaders, null, 2)
+	);
+
+	logger.debugWithSanitization("INIT:", JSON.stringify({ ...init }, null, 2));
+	if (request.body instanceof FormData) {
+		logger.debugWithSanitization(
+			"BODY:",
+			await new Response(request.body).text(),
+			null,
+			2
+		);
+	}
+	logger.debug("-- END CF API REQUEST");
+}
+
+async function logResponse(response: Response) {
+	const jsonText = await response.clone().text();
+	logger.debug(
+		"-- START CF API RESPONSE:",
+		response.statusText,
+		response.status
+	);
+	const logResponseHeaders = cloneHeaders(response.headers);
+	logResponseHeaders.delete("Authorization");
+	logger.debugWithSanitization(
+		"HEADERS:",
+		JSON.stringify(logResponseHeaders, null, 2)
+	);
+	logger.debugWithSanitization("RESPONSE:", jsonText);
+	logger.debug("-- END CF API RESPONSE");
+}
+/**
+ * This function constructs an instance of the `Cloudflare` SDK client,
+ * with a custom fetcher that uses `fetchInternal`.
+ */
+export function createCloudflareClient(complianceConfig: ComplianceConfig) {
+	return new Cloudflare({
+		fetch: async (url: RequestInfo, init?: RequestInit): Promise<Response> => {
+			const request = new Request(url, { ...init, duplex: "half" });
+			await requireLoggedIn(complianceConfig);
+			const apiToken = requireApiToken();
+
+			addAuthorizationHeader(
+				request.headers,
+				apiToken,
+				/* The CF SDK will inject `Bearer dummy` */ true
+			);
+			addUserAgent(request.headers);
+
+			await logRequest(request, init);
+
+			const response = await fetch(request.url, request);
+			await logResponse(response);
+			return response;
+		},
+		// We inject authentication using Wrangler's existing auth setup and a custom fetcher (see above for the custom fetch)
+		// However, `cloudflare` doesn't like not being given an API token, so we provide a dummy one
+		// Otherwise, errors like "Could not resolve authentication method." are thrown.
+		apiToken: "dummy",
+		baseURL: getCloudflareApiBaseUrl(complianceConfig),
+	});
+}
 
 /*
  * performApiFetch does everything required to make a CF API request,
@@ -32,7 +102,7 @@ export async function performApiFetch(
 	await requireLoggedIn(complianceConfig);
 	apiToken ??= requireApiToken();
 	const headers = cloneHeaders(new Headers(init.headers));
-	addAuthorizationHeaderIfUnspecified(headers, apiToken);
+	addAuthorizationHeader(headers, apiToken);
 	addUserAgent(headers);
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
@@ -154,11 +224,12 @@ export async function requireLoggedIn(
 	}
 }
 
-export function addAuthorizationHeaderIfUnspecified(
+export function addAuthorizationHeader(
 	headers: Headers,
-	auth: ApiCredentials
+	auth: ApiCredentials,
+	overrideExisting = false
 ): void {
-	if (!headers.has("Authorization")) {
+	if (!headers.has("Authorization") || overrideExisting) {
 		if ("apiToken" in auth) {
 			headers.set("Authorization", `Bearer ${auth.apiToken}`);
 		} else {
@@ -191,7 +262,7 @@ export async function fetchKVGetValue(
 	await requireLoggedIn(complianceConfig);
 	const auth = requireApiToken();
 	const headers = new Headers();
-	addAuthorizationHeaderIfUnspecified(headers, auth);
+	addAuthorizationHeader(headers, auth);
 	const resource = `${getCloudflareApiBaseUrl(complianceConfig)}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
 	const response = await fetch(resource, {
 		method: "GET",
@@ -223,7 +294,7 @@ export async function fetchR2Objects(
 	await requireLoggedIn(complianceConfig);
 	const auth = requireApiToken();
 	const headers = cloneHeaders(bodyInit.headers);
-	addAuthorizationHeaderIfUnspecified(headers, auth);
+	addAuthorizationHeader(headers, auth);
 	addUserAgent(headers);
 
 	const response = await fetch(
@@ -256,7 +327,7 @@ export async function fetchWorkerDefinitionFromDash(
 	await requireLoggedIn(complianceConfig);
 	const auth = requireApiToken();
 	const headers = cloneHeaders(bodyInit.headers);
-	addAuthorizationHeaderIfUnspecified(headers, auth);
+	addAuthorizationHeader(headers, auth);
 	addUserAgent(headers);
 
 	let response = await fetch(

@@ -31,7 +31,7 @@
 		"react-split-pane": "^0.1.92"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/style-const": "^5.7.2",
 		"@cloudflare/style-container": "7.12.2",
 		"@cloudflare/workers-tsconfig": "workspace:*",
