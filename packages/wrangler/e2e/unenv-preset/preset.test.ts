@@ -224,15 +224,13 @@ describe.each(testConfigs)(
 				"%s",
 				{ timeout: 20_000 },
 				async (testName) => {
-					if (testName === "testFs") {
-						// Retries the callback until it succeeds or times out.
-						// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-						await vi.waitFor(async () => {
-							const response = await fetch(`${url}/${testName}`);
-							const body = await response.text();
-							expect(body).toMatch("passed");
-						});
-					}
+					// Retries the callback until it succeeds or times out.
+					// Useful for the i.e. DNS tests where underlying requests might error/timeout.
+					await vi.waitFor(async () => {
+						const response = await fetch(`${url}/${testName}`);
+						const body = await response.text();
+						expect(body).toMatch("passed");
+					});
 				}
 			);
 		});
