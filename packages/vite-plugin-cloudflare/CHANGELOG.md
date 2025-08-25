@@ -1,5 +1,22 @@
 # @cloudflare/vite-plugin
 
+## 1.12.0
+
+### Minor Changes
+
+- [#10416](https://github.com/cloudflare/workers-sdk/pull/10416) [`7b05c8e`](https://github.com/cloudflare/workers-sdk/commit/7b05c8ef51ec7b41dd17ff2e0b157e06961330de) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Add support for testing [Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally) and [Email Workers](https://developers.cloudflare.com/email-routing/email-workers/local-development/) in `vite dev` and `vite preview`.
+
+### Patch Changes
+
+- [#10422](https://github.com/cloudflare/workers-sdk/pull/10422) [`88fd2f9`](https://github.com/cloudflare/workers-sdk/commit/88fd2f93a60211916e8c228ef63d08bb777c6314) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Statically replace the value of `process.env.NODE_ENV` in development when the `nodejs_compat` compatibility flag is enabled.
+  Previously, this was replaced at build time when `nodejs_compat` was enabled and at dev and build time when `nodejs_compat` was not enabled.
+
+- [#10065](https://github.com/cloudflare/workers-sdk/pull/10065) [`3024ec1`](https://github.com/cloudflare/workers-sdk/commit/3024ec187c974b683b2834c9c467456b586496c0) Thanks [@MichaelDeBoey](https://github.com/MichaelDeBoey)! - Update `@mjackson/node-fetch-server` to `@remix-run/node-fetch-server`
+
+- Updated dependencies [[`c4fd176`](https://github.com/cloudflare/workers-sdk/commit/c4fd176a9caec0b24da258adb48f4a76f37bd9c7), [`19e2aab`](https://github.com/cloudflare/workers-sdk/commit/19e2aab1d68594c7289d0aa16474544919fd5b9b), [`c4fd176`](https://github.com/cloudflare/workers-sdk/commit/c4fd176a9caec0b24da258adb48f4a76f37bd9c7), [`e81c2cf`](https://github.com/cloudflare/workers-sdk/commit/e81c2cf076a87eefd29e238476c0c180ae731a0d)]:
+  - wrangler@4.33.0
+  - @cloudflare/unenv-preset@2.6.3
+
 ## 1.11.7
 
 ### Patch Changes
@@ -9,7 +26,7 @@
   As the dependency optimization may happen before the server code is extracted, we now exclude Cloudflare built-ins from client optimization.
 - Updated dependencies [[`d304055`](https://github.com/cloudflare/workers-sdk/commit/d3040550adaad031f24327fbfbe9fecdeface0b5), [`f534c0d`](https://github.com/cloudflare/workers-sdk/commit/f534c0d9fd8df1c620311c4acffa6d4f0fc12576), [`da40571`](https://github.com/cloudflare/workers-sdk/commit/da40571245f4276c236503ff563a27caadf02ba4), [`0a96e69`](https://github.com/cloudflare/workers-sdk/commit/0a96e6949cf0097a2b315d44a6262017bb4129a3), [`f9f7519`](https://github.com/cloudflare/workers-sdk/commit/f9f75195f8b2aa28bc297cb04e6fd4e4195a1300), [`4728c68`](https://github.com/cloudflare/workers-sdk/commit/4728c684dad6e91748cdd3f40a216664c53ae007)]:
   - wrangler@4.32.0
-  - miniflare@4.20250816.1
+  - miniflare@4.20250823.0
 
 ## 1.11.6
 
