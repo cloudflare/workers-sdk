@@ -157,9 +157,17 @@ export const WorkerdTests: Record<string, () => void> = {
 					reject(error);
 					return;
 				}
-				assert.ok(Array.isArray(results[0]));
-				assert.strictEqual(results.length, 1);
-				assert.ok(results[0][0].startsWith("v=spf1"));
+				assert.ok(Array.isArray(results));
+				assert.ok(results.length >= 1);
+				let foundSpf = false;
+				for (const result of results) {
+					assert.ok(Array.isArray(result));
+					if (result.length >= 1) {
+						assert.strictEqual(typeof result[0], "string");
+						foundSpf ||= result[0].startsWith("v=spf1");
+					}
+				}
+				assert.ok(foundSpf);
 				resolve(null);
 			});
 		});
