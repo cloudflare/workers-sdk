@@ -1118,6 +1118,17 @@ describe.sequential("wrangler dev", () => {
 					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=other-local"
 				`);
 			});
+
+			it("should show reasonable debug output if `.env` does not exist", async () => {
+				fs.rmSync(".env");
+				writeWranglerConfig({
+					main: "index.js",
+				});
+				await runWranglerUntilConfig("dev --log-level debug");
+				expect(std.debug).toContain(
+					'.env file not found at "<cwd>/.env". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/'
+				);
+			});
 		});
 	});
 
