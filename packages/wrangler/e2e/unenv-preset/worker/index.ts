@@ -68,6 +68,16 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert(array.every((v) => v >= 0 && v <= 0xff_ff_ff_ff));
 	},
 
+	async testCrypto() {
+		const crypto = await import("node:crypto");
+
+		assert.strictEqual(typeof crypto.pseudoRandomBytes, "function");
+		assert.strictEqual(typeof crypto.Cipher, "function");
+		assert.strictEqual(typeof crypto.Decipher, "function");
+		assert.strictEqual(typeof crypto.createCipher, "function");
+		assert.strictEqual(typeof crypto.createDecipher, "function");
+	},
+
 	async testImplementsBuffer() {
 		const encoder = new TextEncoder();
 		const buffer = await import("node:buffer");
