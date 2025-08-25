@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createAssetsIgnoreFunction } from "../helpers";
+import { createAssetsIgnoreFunction, getContentType } from "../helpers";
 
 describe("assets", () => {
 	const tmpDir = mkdtempSync(join(tmpdir(), "wrangler-tests"));
@@ -52,5 +52,12 @@ describe("assets", () => {
 			).toBeTruthy();
 			expect(assetsIgnoreFunction(join("child", "nope.svg"))).toBeFalsy();
 		});
+	});
+});
+
+describe("getContentType", () => {
+	it("should return 'text/javascript", () => {
+		const contentType = getContentType("/_astro/sponsors.CIiPz7eJ.js");
+		expect(contentType).toBe("text/javascript; charset=utf-8");
 	});
 });
