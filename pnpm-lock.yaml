@@ -3398,9 +3398,6 @@ importers:
       '@sentry/cli':
         specifier: ^2.37.0
         version: 2.41.1(encoding@0.1.13)
-      '@types/mime':
-        specifier: ^3.0.4
-        version: 3.0.4
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -3411,8 +3408,8 @@ importers:
         specifier: ^5.2.0
         version: 5.3.1
       mime:
-        specifier: ^3.0.0
-        version: 3.0.0
+        specifier: ^4.0.7
+        version: 4.0.7
       rimraf:
         specifier: catalog:default
         version: 6.0.1
@@ -10508,6 +10505,11 @@ packages:
   mime@3.0.0:
     resolution: {integrity: sha512-jSCU7/VB1loIWBZe14aEYHU/+1UMEHoaO7qxCOVJOw9GgH72VAWppxNcjU+x9a2k3GSIBXNKxXQFqRvvZ7vr3A==}
     engines: {node: '>=10.0.0'}
+    hasBin: true
+
+  mime@4.0.7:
+    resolution: {integrity: sha512-2OfDPL+e03E0LrXaGYOtTFIYhiuzep94NSsuhrNULq+stylcJedcHdzHtz0atMUuGwJfFYs0YL5xeC/Ca2x0eQ==}
+    engines: {node: '>=16'}
     hasBin: true
 
   mimetext@3.0.27:
@@ -20877,6 +20879,8 @@ snapshots:
   mime@2.6.0: {}
 
   mime@3.0.0: {}
+
+  mime@4.0.7: {}
 
   mimetext@3.0.27:
     dependencies:
