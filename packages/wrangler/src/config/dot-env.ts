@@ -49,7 +49,7 @@ export function loadDotEnv(
 			override: true,
 		});
 		if (error) {
-			if ('code' in error && error.code === "ENOENT") {
+			if ("code" in error && error.code === "ENOENT") {
 				logger.debug(
 					`.env file not found at "${envPath}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
 				);
