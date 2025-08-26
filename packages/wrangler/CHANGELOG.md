@@ -1,5 +1,23 @@
 # wrangler
 
+## 4.33.0
+
+### Minor Changes
+
+- [#10414](https://github.com/cloudflare/workers-sdk/pull/10414) [`e81c2cf`](https://github.com/cloudflare/workers-sdk/commit/e81c2cf076a87eefd29e238476c0c180ae731a0d) Thanks [@penalosa](https://github.com/penalosa)! - Support automatically updating the user's config file with newly created resources
+
+### Patch Changes
+
+- [#10424](https://github.com/cloudflare/workers-sdk/pull/10424) [`c4fd176`](https://github.com/cloudflare/workers-sdk/commit/c4fd176a9caec0b24da258adb48f4a76f37bd9c7) Thanks [@penalosa](https://github.com/penalosa)! - Remove the `--experimental-json-config`/`-j` flag, which is no longer required.
+
+- [#10432](https://github.com/cloudflare/workers-sdk/pull/10432) [`19e2aab`](https://github.com/cloudflare/workers-sdk/commit/19e2aab1d68594c7289d0aa16474544919fd5b9b) Thanks [@anonrig](https://github.com/anonrig)! - Remove "node:tls" polyfill
+
+- [#10424](https://github.com/cloudflare/workers-sdk/pull/10424) [`c4fd176`](https://github.com/cloudflare/workers-sdk/commit/c4fd176a9caec0b24da258adb48f4a76f37bd9c7) Thanks [@penalosa](https://github.com/penalosa)! - Expose global flags from `experimental_getWranglerCommands()`
+
+- Updated dependencies [[`19e2aab`](https://github.com/cloudflare/workers-sdk/commit/19e2aab1d68594c7289d0aa16474544919fd5b9b)]:
+  - @cloudflare/unenv-preset@2.6.3
+  - miniflare@4.20250823.0
+
 ## 4.32.0
 
 ### Minor Changes

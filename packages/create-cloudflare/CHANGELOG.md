@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.51.1
+
+### Patch Changes
+
+- [#10419](https://github.com/cloudflare/workers-sdk/pull/10419) [`7d314b1`](https://github.com/cloudflare/workers-sdk/commit/7d314b1b1591ef2e1b81093a228148c88dfdbed7) Thanks [@joshthoward](https://github.com/joshthoward)! - Update create-cloudflare hello-world Durable Objects templates to use `getByName()`
+
 ## 2.51.0
 
 ### Minor Changes

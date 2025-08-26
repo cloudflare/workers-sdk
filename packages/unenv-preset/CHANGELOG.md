@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.6.3
+
+### Patch Changes
+
+- [#10432](https://github.com/cloudflare/workers-sdk/pull/10432) [`19e2aab`](https://github.com/cloudflare/workers-sdk/commit/19e2aab1d68594c7289d0aa16474544919fd5b9b) Thanks [@anonrig](https://github.com/anonrig)! - Remove "node:tls" polyfill
+
 ## 2.6.2
 
 ### Patch Changes
