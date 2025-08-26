@@ -16,6 +16,7 @@
 
 - Updated dependencies [[`19e2aab`](https://github.com/cloudflare/workers-sdk/commit/19e2aab1d68594c7289d0aa16474544919fd5b9b)]:
   - @cloudflare/unenv-preset@2.6.3
+  - miniflare@4.20250823.0
 
 ## 4.32.0
 
@@ -48,7 +49,7 @@
   You can also use `wrangler deploy --containers-rollout=immediate` to override rollout settings in Wrangler configuration and update all instances in one step. Note this doesn't override `rollout_active_grace_period` if configured.
 
 - Updated dependencies [[`4728c68`](https://github.com/cloudflare/workers-sdk/commit/4728c684dad6e91748cdd3f40a216664c53ae007)]:
-  - miniflare@4.20250823.0
+  - miniflare@4.20250816.1
 
 ## 4.31.0
 
