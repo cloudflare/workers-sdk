@@ -161,18 +161,20 @@ function getHttpOverrides({
 		return { nativeModules: [], hybridModules: [] };
 	}
 
-	const httpServerEnabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_http_server_modules") &&
-		compatibilityFlags.includes("experimental");
+	const httpServerEnabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_http_server_modules"
+	);
 
 	const httpServerDisabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_http_server_modules"
 	);
 
+	const httpServerEnabledByDate = compatibilityDate >= "2025-09-01";
+
 	// Note that `httpServerEnabled` requires `httpEnabled`
-	// TODO: add `httpServerEnabledByDate` when a default date is set
 	const httpServerEnabled =
-		httpServerEnabledByFlag && !httpServerDisabledByFlag;
+		(httpServerEnabledByFlag || httpServerEnabledByDate) &&
+		!httpServerDisabledByFlag;
 
 	// Override unenv base aliases with native and hybrid modules
 	// `node:https` is fully implemented by workerd if both flags are enabled
