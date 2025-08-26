@@ -45,9 +45,6 @@ catalogs:
     vitest:
       specifier: ~3.2.0
       version: 3.2.3
-    workerd:
-      specifier: 1.20250823.0
-      version: 1.20250823.0
     ws:
       specifier: 8.18.0
       version: 8.18.0
@@ -1790,7 +1787,7 @@ importers:
         specifier: catalog:default
         version: 7.11.0
       workerd:
-        specifier: catalog:default
+        specifier: 1.20250823.0
         version: 1.20250823.0
       ws:
         specifier: catalog:default
@@ -3522,7 +3519,7 @@ importers:
         specifier: 2.0.0-rc.19
         version: 2.0.0-rc.19
       workerd:
-        specifier: catalog:default
+        specifier: 1.20250823.0
         version: 1.20250823.0
     optionalDependencies:
       fsevents:
