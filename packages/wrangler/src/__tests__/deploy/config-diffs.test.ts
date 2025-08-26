@@ -8,6 +8,7 @@ describe("getRemoteConfigsDiff", () => {
 				name: "silent-firefly-dbe3",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
+				preview_urls: false,
 				compatibility_date: "2025-07-08",
 				compatibility_flags: undefined,
 				placement: undefined,
@@ -38,6 +39,7 @@ describe("getRemoteConfigsDiff", () => {
 				name: "silent-firefly-dbe3",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
+				preview_urls: false,
 				compatibility_date: "2025-07-08",
 				compatibility_flags: undefined,
 				placement: undefined,
@@ -75,6 +77,7 @@ describe("getRemoteConfigsDiff", () => {
 				name: "silent-firefly-dbe3",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
+				preview_urls: false,
 				compatibility_date: "2025-07-08",
 				compatibility_flags: undefined,
 				placement: undefined,
@@ -104,20 +107,7 @@ describe("getRemoteConfigsDiff", () => {
 			+       \\"id\\": \\"my-kv-456\\"
 			      }
 			    ],
-			-   \\"workers_dev\\": true,
-			    \\"observability\\": {
-			      \\"enabled\\": false,
-			      \\"head_sampling_rate\\": 1,
-
-			  ...
-
-			        \\"head_sampling_rate\\": 1,
-			        \\"invocation_logs\\": true
-			      }
-			-   }
-			+   },
-			+   \\"workers_dev\\": true
-			  }"
+			    \\"workers_dev\\": true,"
 		`);
 		expect(nonDestructive).toBe(true);
 	});
@@ -128,6 +118,7 @@ describe("getRemoteConfigsDiff", () => {
 				name: "silent-firefly-dbe3",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
+				preview_urls: false,
 				compatibility_date: "2025-07-08",
 				compatibility_flags: undefined,
 				placement: undefined,
@@ -161,11 +152,11 @@ describe("getRemoteConfigsDiff", () => {
 
 			  ...
 
-			      }
 			    },
 			    \\"account_id\\": \\"account-id-123\\",
-			+   \\"workers_dev\\": true
-			-   \\"workers_dev\\": true,
+			    \\"workers_dev\\": true,
+			+   \\"preview_urls\\": false
+			-   \\"preview_urls\\": false,
 			-   \\"kv_namespaces\\": [
 			-     {
 			-       \\"binding\\": \\"MY_KV\\",
@@ -191,6 +182,7 @@ describe("getRemoteConfigsDiff", () => {
 				{
 					observability: remoteObservability,
 					workers_dev: true,
+					preview_urls: false,
 				},
 				{
 					observability: localObservability,

@@ -321,7 +321,7 @@ interface EnvironmentInheritable {
 	 * Whether we use <version>-<name>.<subdomain>.workers.dev to
 	 * serve Preview URLs for your Worker.
 	 *
-	 * @default true
+	 * @default false
 	 * @inheritable
 	 */
 	preview_urls: boolean | undefined;

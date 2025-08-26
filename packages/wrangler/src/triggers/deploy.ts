@@ -32,15 +32,6 @@ type Props = {
 	assetsOptions: AssetsOptions | undefined;
 };
 
-export function getResolvedWorkersDev(
-	configWorkersDev: boolean | undefined,
-	routes: Route[]
-): boolean {
-	// resolvedWorkersDev defaults to true only if there aren't any routes defined
-	const resolvedWorkersDev = configWorkersDev ?? routes.length === 0;
-	return resolvedWorkersDev;
-}
-
 export default async function triggersDeploy(
 	props: Props
 ): Promise<string[] | void> {
@@ -301,6 +292,22 @@ export default async function triggersDeploy(
 	}
 }
 
+export function getSubdomainValues(
+	config_workers_dev: boolean | undefined,
+	config_preview_urls: boolean | undefined,
+	routes: Route[]
+): {
+	workers_dev: boolean;
+	preview_urls: boolean;
+} {
+	const defaultWorkersDev = routes.length === 0; // Default to true only if there aren't any routes defined.
+	const defaultPreviewUrls = false;
+	return {
+		workers_dev: config_workers_dev ?? defaultWorkersDev,
+		preview_urls: config_preview_urls ?? defaultPreviewUrls,
+	};
+}
+
 async function subdomainDeploy(
 	props: Props,
 	accountId: string,
@@ -314,9 +321,8 @@ async function subdomainDeploy(
 
 	// Get desired subdomain enablement status.
 
-	const defaultWorkersDev = routes.length === 0;
-	const wantWorkersDev = config.workers_dev ?? defaultWorkersDev;
-	const wantPreviews = config.preview_urls ?? false;
+	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
+		getSubdomainValues(config.workers_dev, config.preview_urls, routes);
 
 	// Get current subdomain enablement status.
 

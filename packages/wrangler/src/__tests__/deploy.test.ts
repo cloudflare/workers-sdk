@@ -1898,7 +1898,7 @@ Update them to point to this script instead?`,
 				});
 				await mockAUSRequest([]);
 				mockSubDomainRequest();
-				mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: true });
+				mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: false });
 				mockUploadWorkerRequest({
 					expectedAssets: {
 						jwt: "<<aus-completion-token>>",
@@ -1983,7 +1983,7 @@ Update them to point to this script instead?`,
 				});
 				await mockAUSRequest([]);
 				mockSubDomainRequest();
-				mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: true });
+				mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: false });
 				mockUploadWorkerRequest({
 					expectedAssets: {
 						jwt: "<<aus-completion-token>>",
@@ -2046,7 +2046,7 @@ Update them to point to this script instead?`,
 				writeWorkerSource();
 				await mockAUSRequest([]);
 				mockSubDomainRequest();
-				mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: true });
+				mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: false });
 				mockUploadWorkerRequest({
 					expectedAssets: {
 						jwt: "<<aus-completion-token>>",
@@ -2116,7 +2116,7 @@ Update them to point to this script instead?`,
 				});
 				await mockAUSRequest([]);
 				mockSubDomainRequest();
-				mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: true });
+				mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: false });
 				mockUploadWorkerRequest({
 					expectedAssets: {
 						jwt: "<<aus-completion-token>>",
@@ -12987,7 +12987,10 @@ export default{
 			]);
 			mockGetServiceRoutes("test-name", []);
 			mockGetServiceCustomDomainRecords([]);
-			mockGetServiceSubDomainData("test-name", { enabled: true });
+			mockGetServiceSubDomainData("test-name", {
+				enabled: true,
+				previews_enabled: false,
+			});
 			mockGetServiceSchedules("test-name", { schedules: [] });
 			mockGetServiceMetadata("test-name", {
 				created_on: "2025-08-07T09:34:47.846308Z",
@@ -13012,7 +13015,7 @@ export default{
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
 
 				      \\"workers_dev\\": true,
-				      \\"preview_urls\\": true,
+				      \\"preview_urls\\": false,
 				      \\"vars\\": {
 				  -     \\"MY_VAR\\": \\"abc\\"
 				  +     \\"MY_VAR\\": 123
@@ -13049,7 +13052,10 @@ export default{
 			]);
 			mockGetServiceRoutes("test-name", []);
 			mockGetServiceCustomDomainRecords([]);
-			mockGetServiceSubDomainData("test-name", { enabled: true });
+			mockGetServiceSubDomainData("test-name", {
+				enabled: true,
+				previews_enabled: false,
+			});
 			mockGetServiceSchedules("test-name", { schedules: [] });
 			mockGetServiceMetadata("test-name", {
 				created_on: "2025-08-07T09:34:47.846308Z",
@@ -13077,7 +13083,7 @@ export default{
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
 
 				      \\"workers_dev\\": true,
-				      \\"preview_urls\\": true,
+				      \\"preview_urls\\": false,
 				      \\"vars\\": {
 				  -     \\"MY_VAR\\": \\"abc\\"
 				  +     \\"MY_VAR\\": \\"this is a toml file\\"
@@ -13925,6 +13931,7 @@ function mockGetServiceSubDomainData(
 	serviceName: string,
 	data: {
 		enabled: boolean;
+		previews_enabled: boolean;
 	}
 ) {
 	msw.use(
