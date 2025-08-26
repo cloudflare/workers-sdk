@@ -1059,7 +1059,7 @@ function normalizeAndValidateEnvironment(
 		rawEnv,
 		"preview_urls",
 		isBoolean,
-		true
+		undefined
 	);
 
 	const build = normalizeAndValidateBuild(
