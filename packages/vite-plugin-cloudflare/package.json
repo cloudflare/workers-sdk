@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.11.6",
+	"version": "1.12.0",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -43,8 +43,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/unenv-preset": "workspace:*",
-		"@mjackson/node-fetch-server": "^0.6.1",
-		"@rollup/plugin-replace": "^6.0.1",
+		"@remix-run/node-fetch-server": "^0.8.0",
 		"get-port": "^7.1.0",
 		"miniflare": "workspace:*",
 		"picocolors": "^1.1.1",

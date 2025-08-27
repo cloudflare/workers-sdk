@@ -5,9 +5,12 @@ import type { DefinitionTreeNode } from "./core/types";
  * EXPERIMENTAL: Get all registered Wrangler commands for documentation generation.
  * This API is experimental and may change without notice.
  *
- * @returns The complete command tree structure with all metadata
+ * @returns An object containing the command tree structure and global flags
  */
-export function experimental_getWranglerCommands(): DefinitionTreeNode {
-	const { registry } = createCLIParser([]);
-	return registry.getDefinitionTreeRoot();
+export function experimental_getWranglerCommands(): {
+	registry: DefinitionTreeNode;
+	globalFlags: ReturnType<typeof createCLIParser>["globalFlags"];
+} {
+	const { registry, globalFlags } = createCLIParser([]);
+	return { registry: registry.getDefinitionTreeRoot(), globalFlags };
 }

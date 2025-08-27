@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import assert from "node:assert";
 
 export default {
@@ -157,9 +158,17 @@ export const WorkerdTests: Record<string, () => void> = {
 					reject(error);
 					return;
 				}
-				assert.ok(Array.isArray(results[0]));
-				assert.strictEqual(results.length, 1);
-				assert.ok(results[0][0].startsWith("v=spf1"));
+				assert.ok(Array.isArray(results));
+				assert.ok(results.length >= 1);
+				let foundSpf = false;
+				for (const result of results) {
+					assert.ok(Array.isArray(result));
+					if (result.length >= 1) {
+						assert.strictEqual(typeof result[0], "string");
+						foundSpf ||= result[0].startsWith("v=spf1");
+					}
+				}
+				assert.ok(foundSpf);
 				resolve(null);
 			});
 		});
@@ -201,6 +210,19 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof tls, "object");
 		// @ts-expect-error Node types are wrong
 		assert.strictEqual(typeof tls.convertALPNProtocols, "function");
+		assert.strictEqual(typeof tls.createSecureContext, "function");
+		assert.strictEqual(typeof tls.createServer, "function");
+		assert.strictEqual(typeof tls.checkServerIdentity, "function");
+		assert.strictEqual(typeof tls.getCiphers, "function");
+
+		// Test constants
+		assert.strictEqual(typeof tls.CLIENT_RENEG_LIMIT, "number");
+		assert.strictEqual(typeof tls.CLIENT_RENEG_WINDOW, "number");
+		assert.strictEqual(typeof tls.DEFAULT_ECDH_CURVE, "string");
+		assert.strictEqual(typeof tls.DEFAULT_CIPHERS, "string");
+		assert.strictEqual(typeof tls.DEFAULT_MIN_VERSION, "string");
+		assert.strictEqual(typeof tls.DEFAULT_MAX_VERSION, "string");
+		assert.ok(Array.isArray(tls.rootCertificates));
 	},
 
 	async testHttp() {
@@ -328,5 +350,41 @@ export const WorkerdTests: Record<string, () => void> = {
 			return storage.getStore();
 		});
 		assert.deepStrictEqual(result, { test: "require" });
+	},
+
+	async testFs() {
+		const fs = await import("node:fs");
+		const fsp = await import("node:fs/promises");
+
+		const useNativeFs = getRuntimeFlagValue("enable_nodejs_fs_module");
+
+		if (useNativeFs) {
+			fs.writeFileSync("/tmp/sync", "sync");
+			assert.strictEqual(fs.readFileSync("/tmp/sync", "utf-8"), "sync");
+			await fsp.writeFile("/tmp/async", "async");
+			assert.strictEqual(await fsp.readFile("/tmp/async", "utf-8"), "async");
+
+			const blob = await fs.openAsBlob("/tmp/sync");
+			assert.ok(blob instanceof Blob);
+
+			// Old names in fs namespace
+			assert.strictEqual((fs as any).FileReadStream, fs.ReadStream);
+			assert.strictEqual((fs as any).FileWriteStream, fs.WriteStream);
+			assert.equal((fs as any).F_OK, 0);
+			assert.equal((fs as any).R_OK, 4);
+			assert.equal((fs as any).W_OK, 2);
+			assert.equal((fs as any).X_OK, 1);
+		} else {
+			assert.throws(
+				() => fs.readFileSync("/tmp/file", "utf-8"),
+				/not implemented/
+			);
+			await assert.rejects(
+				async () => await fsp.readFile("/tmp/file", "utf-8"),
+				/not implemented/
+			);
+
+			assert.throws(() => fs.openAsBlob("/tmp/sync"), /not implemented/);
+		}
 	},
 };

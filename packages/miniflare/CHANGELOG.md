@@ -1,5 +1,24 @@
 # miniflare
 
+## 4.20250823.0
+
+### Patch Changes
+
+- [#10410](https://github.com/cloudflare/workers-sdk/pull/10410) [`f964895`](https://github.com/cloudflare/workers-sdk/commit/f96489502c1282547b6c97af942000867e72b8e7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250816.0  | 1.20250823.0  |
+  | @cloudflare/workers-types | ^4.20250813.0 | ^4.20250823.0 |
+
+## 4.20250816.1
+
+### Minor Changes
+
+- [#10012](https://github.com/cloudflare/workers-sdk/pull/10012) [`4728c68`](https://github.com/cloudflare/workers-sdk/commit/4728c684dad6e91748cdd3f40a216664c53ae007) Thanks [@penalosa](https://github.com/penalosa)! - Support unsafe dynamic worker loading bindings
+
 ## 4.20250816.0
 
 ### Minor Changes

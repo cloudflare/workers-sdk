@@ -6,6 +6,7 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("create", () => {
 	mockAccountId({ accountId: null });
@@ -40,6 +41,8 @@ describe("create", () => {
 	});
 
 	it("should try send a request to the API for a valid input", async () => {
+		writeWranglerConfig({ name: "worker" }, "wrangler.json");
+
 		setIsTTY(false);
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
@@ -64,15 +67,18 @@ describe("create", () => {
 			"✅ Successfully created DB 'test' in region OC
 			Created your new D1 database.
 
+			To access your new D1 Database in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"d1_databases\\": [
 			    {
-			      \\"binding\\": \\"DB\\",
+			      \\"binding\\": \\"test\\",
 			      \\"database_name\\": \\"test\\",
 			      \\"database_id\\": \\"51e7c314-456e-4167-b6c3-869ad188fc23\\"
 			    }
 			  ]
-			}"
+			}
+			? Would you like Wrangler to add it on your behalf?
+			🤖 Using fallback value in non-interactive context: No"
 		`);
 	});
 });

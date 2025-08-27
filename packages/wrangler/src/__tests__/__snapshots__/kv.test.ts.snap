@@ -4,7 +4,7 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 "Resource location: remote
 🌀 Creating namespace with title \\"UnitTestNamespace\\"
 ✨ Success!
-Add the following to your configuration file in your kv_namespaces array:
+To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 {
   \\"kv_namespaces\\": [
     {
@@ -12,6 +12,19 @@ Add the following to your configuration file in your kv_namespaces array:
       \\"id\\": \\"some-namespace-id\\"
     }
   ]
+}"
+`;
+
+exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace 2`] = `
+"{
+	\\"compatibility_date\\": \\"2022-01-12\\",
+	\\"name\\": \\"worker\\",
+	\\"kv_namespaces\\": [
+		{
+			\\"binding\\": \\"UnitTestNamespace\\",
+			\\"id\\": \\"some-namespace-id\\"
+		}
+	]
 }"
 `;
 
@@ -19,7 +32,7 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 "Resource location: remote
 🌀 Creating namespace with title \\"customEnv-UnitTestNamespace\\"
 ✨ Success!
-Add the following to your configuration file in your kv_namespaces array under [env.customEnv]:
+To access your new KV Namespace in your Worker, add the following snippet to your configuration file in the \\"customEnv\\" environment:
 {
   \\"kv_namespaces\\": [
     {
@@ -27,6 +40,24 @@ Add the following to your configuration file in your kv_namespaces array under [
       \\"id\\": \\"some-namespace-id\\"
     }
   ]
+}"
+`;
+
+exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace in an environment if configured to do so 2`] = `
+"{
+	\\"compatibility_date\\": \\"2022-01-12\\",
+	\\"name\\": \\"worker\\",
+	\\"env\\": {
+		\\"customEnv\\": {
+			\\"name\\": \\"worker\\",
+			\\"kv_namespaces\\": [
+				{
+					\\"binding\\": \\"UnitTestNamespace\\",
+					\\"id\\": \\"some-namespace-id\\"
+				}
+			]
+		}
+	}
 }"
 `;
 
@@ -34,7 +65,7 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 "Resource location: remote
 🌀 Creating namespace with title \\"UnitTestNamespace\\"
 ✨ Success!
-Add the following to your configuration file in your kv_namespaces array:
+To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 {
   \\"kv_namespaces\\": [
     {
@@ -45,11 +76,52 @@ Add the following to your configuration file in your kv_namespaces array:
 }"
 `;
 
+exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace using configured worker name 2`] = `
+"{
+	\\"compatibility_date\\": \\"2022-01-12\\",
+	\\"name\\": \\"other-worker\\",
+	\\"kv_namespaces\\": [
+		{
+			\\"binding\\": \\"UnitTestNamespace\\",
+			\\"id\\": \\"some-namespace-id\\"
+		}
+	]
+}"
+`;
+
+exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace with custom binding name 1`] = `
+"Resource location: remote
+🌀 Creating namespace with title \\"UnitTestNamespace\\"
+✨ Success!
+To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
+{
+  \\"kv_namespaces\\": [
+    {
+      \\"binding\\": \\"UnitTestNamespace\\",
+      \\"id\\": \\"some-namespace-id\\"
+    }
+  ]
+}"
+`;
+
+exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace with custom binding name 2`] = `
+"{
+	\\"compatibility_date\\": \\"2022-01-12\\",
+	\\"name\\": \\"worker\\",
+	\\"kv_namespaces\\": [
+		{
+			\\"binding\\": \\"HELLO\\",
+			\\"id\\": \\"some-namespace-id\\"
+		}
+	]
+}"
+`;
+
 exports[`wrangler > kv namespace > create > wrangler.json > should create a preview namespace if configured to do so 1`] = `
 "Resource location: remote
 🌀 Creating namespace with title \\"UnitTestNamespace_preview\\"
 ✨ Success!
-Add the following to your configuration file in your kv_namespaces array:
+To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 {
   \\"kv_namespaces\\": [
     {
@@ -64,10 +136,16 @@ exports[`wrangler > kv namespace > create > wrangler.toml > should create a name
 "Resource location: remote
 🌀 Creating namespace with title \\"UnitTestNamespace\\"
 ✨ Success!
-Add the following to your configuration file in your kv_namespaces array:
+To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 [[kv_namespaces]]
 binding = \\"UnitTestNamespace\\"
 id = \\"some-namespace-id\\"
+"
+`;
+
+exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace 2`] = `
+"compatibility_date = \\"2022-01-12\\"
+name = \\"worker\\"
 "
 `;
 
@@ -75,10 +153,19 @@ exports[`wrangler > kv namespace > create > wrangler.toml > should create a name
 "Resource location: remote
 🌀 Creating namespace with title \\"customEnv-UnitTestNamespace\\"
 ✨ Success!
-Add the following to your configuration file in your kv_namespaces array under [env.customEnv]:
+To access your new KV Namespace in your Worker, add the following snippet to your configuration file in the \\"customEnv\\" environment:
 [[kv_namespaces]]
 binding = \\"UnitTestNamespace\\"
 id = \\"some-namespace-id\\"
+"
+`;
+
+exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace in an environment if configured to do so 2`] = `
+"compatibility_date = \\"2022-01-12\\"
+name = \\"worker\\"
+
+[env.customEnv]
+name = \\"worker\\"
 "
 `;
 
@@ -86,10 +173,33 @@ exports[`wrangler > kv namespace > create > wrangler.toml > should create a name
 "Resource location: remote
 🌀 Creating namespace with title \\"UnitTestNamespace\\"
 ✨ Success!
-Add the following to your configuration file in your kv_namespaces array:
+To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 [[kv_namespaces]]
 binding = \\"UnitTestNamespace\\"
 id = \\"some-namespace-id\\"
+"
+`;
+
+exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace using configured worker name 2`] = `
+"compatibility_date = \\"2022-01-12\\"
+name = \\"other-worker\\"
+"
+`;
+
+exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace with custom binding name 1`] = `
+"Resource location: remote
+🌀 Creating namespace with title \\"UnitTestNamespace\\"
+✨ Success!
+To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
+[[kv_namespaces]]
+binding = \\"UnitTestNamespace\\"
+id = \\"some-namespace-id\\"
+"
+`;
+
+exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace with custom binding name 2`] = `
+"compatibility_date = \\"2022-01-12\\"
+name = \\"worker\\"
 "
 `;
 
@@ -97,7 +207,7 @@ exports[`wrangler > kv namespace > create > wrangler.toml > should create a prev
 "Resource location: remote
 🌀 Creating namespace with title \\"UnitTestNamespace_preview\\"
 ✨ Success!
-Add the following to your configuration file in your kv_namespaces array:
+To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 [[kv_namespaces]]
 binding = \\"UnitTestNamespace\\"
 preview_id = \\"some-namespace-id\\"

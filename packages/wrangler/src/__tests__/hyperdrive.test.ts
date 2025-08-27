@@ -123,8 +123,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -160,8 +159,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your wrangler.toml file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			[[hyperdrive]]
 			binding = \\"HYPERDRIVE\\"
 			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
@@ -191,8 +189,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -226,8 +223,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -265,8 +261,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -301,8 +296,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -336,8 +330,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -371,8 +364,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -406,8 +398,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -441,8 +432,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -476,8 +466,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -511,8 +500,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -587,8 +575,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -622,8 +609,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -689,8 +675,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {
@@ -727,8 +712,7 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"hyperdrive\\": [
 			    {

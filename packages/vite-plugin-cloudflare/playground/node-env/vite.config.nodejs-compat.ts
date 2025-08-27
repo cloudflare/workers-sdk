@@ -6,7 +6,7 @@ export default defineConfig({
 		cloudflare({
 			inspectorPort: false,
 			persistState: false,
-			configPath: "wrangler.with-nodejs-compat.jsonc",
+			configPath: "wrangler.nodejs-compat.jsonc",
 		}),
 	],
 });

@@ -1,5 +1,13 @@
 # @cloudflare/workers-shared
 
+## 0.18.6
+
+### Patch Changes
+
+- [#10402](https://github.com/cloudflare/workers-sdk/pull/10402) [`8fd6dc0`](https://github.com/cloudflare/workers-sdk/commit/8fd6dc0f4de1c9c215fdbd44aa2644096bee7bd0) Thanks [@danielrs](https://github.com/danielrs)! - Sanitize double-slashes in asset-worker relative redirects.
+
+  Without sanitizing, some relative redirect patterns were being treated as external redirects.
+
 ## 0.18.5
 
 ### Patch Changes

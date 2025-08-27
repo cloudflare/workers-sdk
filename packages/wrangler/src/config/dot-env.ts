@@ -49,7 +49,13 @@ export function loadDotEnv(
 			override: true,
 		});
 		if (error) {
-			logger.debug(`Failed to load .env file "${envPath}":`, error);
+			if ("code" in error && error.code === "ENOENT") {
+				logger.debug(
+					`.env file not found at "${envPath}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
+				);
+			} else {
+				logger.debug(`Failed to load .env file "${envPath}":`, error);
+			}
 		} else if (parsed && !silent) {
 			const relativePath = path.relative(process.cwd(), envPath);
 			logger.log(`Using vars defined in ${relativePath}`);

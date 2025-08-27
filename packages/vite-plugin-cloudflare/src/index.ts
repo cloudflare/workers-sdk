@@ -8,9 +8,8 @@ import {
 	resolveDockerHost,
 } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
-import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
-import { Miniflare } from "miniflare";
+import { CoreHeaders, Miniflare } from "miniflare";
 import colors from "picocolors";
 import * as vite from "vite";
 import {
@@ -155,17 +154,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 											([environmentName, workerConfig]) => {
 												return [
 													environmentName,
-													createCloudflareEnvironmentOptions(
+													createCloudflareEnvironmentOptions({
 														workerConfig,
 														userConfig,
-														{
-															name: environmentName,
-															isEntry:
-																resolvedPluginConfig.type === "workers" &&
-																environmentName ===
-																	resolvedPluginConfig.entryWorkerEnvironmentName,
-														}
-													),
+														mode: env.mode,
+														environmentName,
+														isEntryWorker:
+															resolvedPluginConfig.type === "workers" &&
+															environmentName ===
+																resolvedPluginConfig.entryWorkerEnvironmentName,
+													}),
 												];
 											}
 										)
@@ -788,18 +786,6 @@ if (import.meta.hot) {
 				// Only configure this environment if it is a Worker using Node.js compatibility.
 				if (isNodeCompat(getWorkerConfig(name))) {
 					return {
-						build: {
-							rollupOptions: {
-								plugins: [
-									replace({
-										"process.env.NODE_ENV": JSON.stringify(
-											process.env.NODE_ENV ?? "production"
-										),
-										preventAssignment: true,
-									}),
-								],
-							},
-						},
 						resolve: {
 							builtins: [...nodeCompatExternals],
 						},
@@ -1077,6 +1063,40 @@ if (import.meta.hot) {
 							external: true,
 						};
 					}
+				}
+			},
+		},
+		// Plugin to handle cron/email/etc triggers
+		{
+			name: "vite-plugin-cloudflare:trigger-handlers",
+			enforce: "pre",
+			async configureServer(viteDevServer) {
+				assertIsNotPreview(resolvedPluginConfig);
+
+				if (resolvedPluginConfig.type === "workers") {
+					const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
+					assert(entryWorkerConfig, `No entry Worker config`);
+
+					const entryWorkerName = entryWorkerConfig.name;
+
+					// cron && email triggers
+					viteDevServer.middlewares.use("/cdn-cgi/", (req, res, next) => {
+						const requestHandler = createRequestHandler((request) => {
+							assert(miniflare, `Miniflare not defined`);
+
+							// set the target service that handles these requests
+							// to point to the User Worker (see `getTargetService` fn in
+							// `packages/miniflare/src/workers/core/entry.worker.ts`)
+							request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+							return miniflare.dispatchFetch(request, { redirect: "manual" });
+						});
+
+						// `req.url` is the URL of the request relative to the middleware
+						// mount path. Here we ensure that miniflare receives a request that
+						// reflects the original request url
+						req.url = req.originalUrl;
+						requestHandler(req, res, next);
+					});
 				}
 			},
 		},

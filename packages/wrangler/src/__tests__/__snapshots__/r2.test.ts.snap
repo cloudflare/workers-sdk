@@ -3,9 +3,7 @@
 exports[`r2 > bucket > create > wrangler.json > should create a bucket & check request inputs 1`] = `
 "Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with default storage class of Standard.
-
-Configure your Worker to write objects to this bucket:
-
+To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 {
   \\"r2_buckets\\": [
     {
@@ -13,15 +11,15 @@ Configure your Worker to write objects to this bucket:
       \\"binding\\": \\"test_bucket\\"
     }
   ]
-}"
+}
+? Would you like Wrangler to add it on your behalf?
+🤖 Using fallback value in non-interactive context: No"
 `;
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket with the expected default storage class 1`] = `
 "Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with default storage class of InfrequentAccess.
-
-Configure your Worker to write objects to this bucket:
-
+To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 {
   \\"r2_buckets\\": [
     {
@@ -29,15 +27,15 @@ Configure your Worker to write objects to this bucket:
       \\"binding\\": \\"test_bucket\\"
     }
   ]
-}"
+}
+? Would you like Wrangler to add it on your behalf?
+🤖 Using fallback value in non-interactive context: No"
 `;
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket with the expected jurisdiction 1`] = `
 "Creating bucket 'test-bucket (eu)'...
 ✅ Created bucket 'test-bucket (eu)' with default storage class of Standard.
-
-Configure your Worker to write objects to this bucket:
-
+To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 {
   \\"r2_buckets\\": [
     {
@@ -45,15 +43,15 @@ Configure your Worker to write objects to this bucket:
       \\"binding\\": \\"test_bucket\\"
     }
   ]
-}"
+}
+? Would you like Wrangler to add it on your behalf?
+🤖 Using fallback value in non-interactive context: No"
 `;
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket with the expected location hint 1`] = `
 "Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with location hint weur and default storage class of Standard.
-
-Configure your Worker to write objects to this bucket:
-
+To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 {
   \\"r2_buckets\\": [
     {
@@ -61,15 +59,15 @@ Configure your Worker to write objects to this bucket:
       \\"binding\\": \\"test_bucket\\"
     }
   ]
-}"
+}
+? Would you like Wrangler to add it on your behalf?
+🤖 Using fallback value in non-interactive context: No"
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket & check request inputs 1`] = `
 "Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with default storage class of Standard.
-
-Configure your Worker to write objects to this bucket:
-
+To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
 bucket_name = \\"test-bucket\\"
 binding = \\"test_bucket\\"
@@ -79,9 +77,7 @@ binding = \\"test_bucket\\"
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket with the expected default storage class 1`] = `
 "Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with default storage class of InfrequentAccess.
-
-Configure your Worker to write objects to this bucket:
-
+To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
 bucket_name = \\"test-bucket\\"
 binding = \\"test_bucket\\"
@@ -91,9 +87,7 @@ binding = \\"test_bucket\\"
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket with the expected jurisdiction 1`] = `
 "Creating bucket 'test-bucket (eu)'...
 ✅ Created bucket 'test-bucket (eu)' with default storage class of Standard.
-
-Configure your Worker to write objects to this bucket:
-
+To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
 bucket_name = \\"test-bucket\\"
 binding = \\"test_bucket\\"
@@ -103,9 +97,7 @@ binding = \\"test_bucket\\"
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket with the expected location hint 1`] = `
 "Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with location hint weur and default storage class of Standard.
-
-Configure your Worker to write objects to this bucket:
-
+To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
 bucket_name = \\"test-bucket\\"
 binding = \\"test_bucket\\"

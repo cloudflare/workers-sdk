@@ -547,6 +547,7 @@ async function runProvisioningFlow(
 						{ title: "Create new", value: NEW_OPTION_VALUE },
 					]),
 					defaultOption: options.length,
+					fallbackOption: options.length,
 				}
 			);
 		}

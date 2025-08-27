@@ -201,8 +201,7 @@ describe("vectorize commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating index: 'some-index'
 			✅ Successfully created a new Vectorize index: 'test-index'
-			📋 To start querying from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Vectorize Index in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"vectorize\\": [
 			    {
@@ -222,8 +221,7 @@ describe("vectorize commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating index: 'test-index'
 			✅ Successfully created a new Vectorize index: 'test-index'
-			📋 To start querying from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Vectorize Index in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"vectorize\\": [
 			    {
@@ -244,8 +242,7 @@ describe("vectorize commands", () => {
 			"Configuring index based for the embedding model openai/text-embedding-ada-002.
 			🚧 Creating index: 'test-index'
 			✅ Successfully created a new Vectorize index: 'test-index'
-			📋 To start querying from a Worker, add the following binding configuration to your Wrangler configuration file:
-
+			To access your new Vectorize Index in your Worker, add the following snippet to your configuration file:
 			{
 			  \\"vectorize\\": [
 			    {

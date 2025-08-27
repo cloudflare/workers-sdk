@@ -2,15 +2,67 @@ import { describe, expect, test } from "vitest";
 import { experimental_getWranglerCommands } from "../experimental-commands-api";
 
 describe("experimental_getWranglerCommands", () => {
+	test("returns global flags", () => {
+		const commandTree = experimental_getWranglerCommands().globalFlags;
+
+		expect(commandTree).toMatchInlineSnapshot(`
+			Object {
+			  "config": Object {
+			    "alias": "c",
+			    "describe": "Path to Wrangler configuration file",
+			    "requiresArg": true,
+			    "type": "string",
+			  },
+			  "cwd": Object {
+			    "describe": "Run as if Wrangler was started in the specified directory instead of the current working directory",
+			    "requiresArg": true,
+			    "type": "string",
+			  },
+			  "env": Object {
+			    "alias": "e",
+			    "describe": "Environment to use for operations, and for selecting .env and .dev.vars files",
+			    "requiresArg": true,
+			    "type": "string",
+			  },
+			  "env-file": Object {
+			    "array": true,
+			    "describe": "Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files",
+			    "requiresArg": true,
+			    "type": "string",
+			  },
+			  "experimental-provision": Object {
+			    "alias": Array [
+			      "x-provision",
+			    ],
+			    "describe": "Experimental: Enable automatic resource provisioning",
+			    "hidden": true,
+			    "type": "boolean",
+			  },
+			  "experimental-remote-bindings": Object {
+			    "alias": Array [
+			      "x-remote-bindings",
+			    ],
+			    "describe": "Experimental: Enable Remote Bindings",
+			    "hidden": true,
+			    "type": "boolean",
+			  },
+			  "v": Object {
+			    "alias": "version",
+			    "describe": "Show version number",
+			    "type": "boolean",
+			  },
+			}
+		`);
+	});
 	test("returns command tree structure", () => {
-		const commandTree = experimental_getWranglerCommands();
+		const commandTree = experimental_getWranglerCommands().registry;
 
 		expect(commandTree).toBeDefined();
 		expect(commandTree.subtree).toBeInstanceOf(Map);
 	});
 
 	test("includes expected commands with metadata", () => {
-		const commandTree = experimental_getWranglerCommands();
+		const commandTree = experimental_getWranglerCommands().registry;
 
 		expect(commandTree.subtree.has("docs")).toBe(true);
 		expect(commandTree.subtree.has("init")).toBe(true);
@@ -24,7 +76,7 @@ describe("experimental_getWranglerCommands", () => {
 	});
 
 	test("includes nested commands", () => {
-		const commandTree = experimental_getWranglerCommands();
+		const commandTree = experimental_getWranglerCommands().registry;
 
 		const d1Command = commandTree.subtree.get("d1");
 		expect(d1Command?.subtree).toBeInstanceOf(Map);
@@ -34,7 +86,7 @@ describe("experimental_getWranglerCommands", () => {
 	});
 
 	test("includes command arguments and metadata", () => {
-		const commandTree = experimental_getWranglerCommands();
+		const commandTree = experimental_getWranglerCommands().registry;
 
 		const initCommand = commandTree.subtree.get("init");
 		expect(initCommand?.definition?.type).toBe("command");
@@ -47,7 +99,7 @@ describe("experimental_getWranglerCommands", () => {
 	});
 
 	test("includes namespace commands", () => {
-		const commandTree = experimental_getWranglerCommands();
+		const commandTree = experimental_getWranglerCommands().registry;
 
 		const kvCommand = commandTree.subtree.get("kv");
 		expect(kvCommand?.definition?.type).toBe("namespace");
@@ -57,7 +109,7 @@ describe("experimental_getWranglerCommands", () => {
 	});
 
 	test("preserves command metadata properties", () => {
-		const commandTree = experimental_getWranglerCommands();
+		const commandTree = experimental_getWranglerCommands().registry;
 
 		const deployCommand = commandTree.subtree.get("deploy");
 		if (deployCommand?.definition?.type === "command") {

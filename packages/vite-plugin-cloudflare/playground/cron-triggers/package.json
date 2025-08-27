@@ -1,0 +1,19 @@
+{
+	"name": "@playground/cron-trigger-worker",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vite build",
+		"check:type": "tsc --build",
+		"dev": "vite dev",
+		"preview": "vite preview"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"typescript": "catalog:default",
+		"vite": "catalog:vite-plugin",
+		"wrangler": "workspace:*"
+	}
+}

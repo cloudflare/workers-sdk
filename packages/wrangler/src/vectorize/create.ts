@@ -1,7 +1,8 @@
-import { configFileName, formatConfigSnippet } from "../config";
+import { updateConfigFile } from "../config";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { getValidBindingName } from "../utils/getValidBindingName";
 import { createIndex } from "./client";
 import { deprecatedV1DefaultFlag } from "./common";
 import type { VectorizeDistanceMetric } from "./types";
@@ -112,21 +113,18 @@ export const vectorizeCreateCommand = createCommand({
 		logger.log(
 			`✅ Successfully created a new Vectorize index: '${indexResult.name}'`
 		);
-		logger.log(
-			`📋 To start querying from a Worker, add the following binding configuration to your ${configFileName(config.configPath)} file:\n`
-		);
-		logger.log(
-			formatConfigSnippet(
-				{
-					vectorize: [
-						{
-							binding: bindingName,
-							index_name: indexResult.name,
-						},
-					],
-				},
-				config.configPath
-			)
+
+		await updateConfigFile(
+			(name) => ({
+				vectorize: [
+					{
+						binding: getValidBindingName(name ?? bindingName, bindingName),
+						index_name: indexResult.name,
+					},
+				],
+			}),
+			config.configPath,
+			args.env
 		);
 	},
 });

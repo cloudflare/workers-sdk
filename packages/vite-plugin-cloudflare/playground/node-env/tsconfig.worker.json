@@ -1,0 +1,4 @@
+{
+	"extends": ["@cloudflare/workers-tsconfig/worker-node-compat.json"],
+	"include": ["src"]
+}
