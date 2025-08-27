@@ -419,14 +419,20 @@ export const WorkerdTests: Record<string, () => void> = {
 		];
 
 		for (const name of exportNames) {
+			// @ts-expect-error TS7053
 			assert.strictEqual(typeof module[name], "function");
 		}
 
+		// @ts-expect-error TS2339 Invalid node/types.
 		assert.ok(Array.isArray(module.globalPaths));
 		assert.ok(Array.isArray(module.builtinModules));
+		// @ts-expect-error TS2339 Invalid node/types.
 		assert.strictEqual(typeof module.constants, "object");
+		// @ts-expect-error TS2339 Invalid node/types.
 		assert.strictEqual(typeof module._cache, "object");
+		// @ts-expect-error TS2339 Invalid node/types.
 		assert.strictEqual(typeof module._extensions, "object");
+		// @ts-expect-error TS2339 Invalid node/types.
 		assert.strictEqual(typeof module._pathCache, "object");
 	},
 };
