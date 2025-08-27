@@ -502,6 +502,18 @@ test("multiple workers with DO conflicting useSQLite booleans cause options erro
 				workers: [
 					{
 						modules: true,
+						name: "worker-c",
+						script: "export default {}",
+						durableObjects: {
+							MY_DO: {
+								className: "MyDo",
+								scriptName: "worker-a",
+								useSQLite: false,
+							},
+						},
+					},
+					{
+						modules: true,
 						name: "worker-a",
 						script: `
 							import { DurableObject } from "cloudflare:workers";
