@@ -13,7 +13,7 @@ const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
 		ctx.project.name,
 		"--template",
-		"https://github.com/remix-run/remix/tree/main/templates/cloudflare",
+		"https://github.com/remix-run/remix/tree/main-prev/templates/cloudflare",
 	]);
 
 	logRaw(""); // newline
