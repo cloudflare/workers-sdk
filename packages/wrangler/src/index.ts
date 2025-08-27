@@ -992,7 +992,7 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("d1");
-
+	console.log("hello! this is from a change in a wrangler prerelease!");
 	// vectorize
 	registry.define([
 		{ command: "wrangler vectorize", definition: vectorizeNamespace },

@@ -890,6 +890,8 @@ export class Miniflare {
 
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
+
+		console.log("hello! this is from a miniflare pre-release change!");
 		const [sharedOpts, workerOpts] = validateOptions(opts);
 
 		checkMacOSVersion({ shouldThrow: true });
