@@ -188,6 +188,9 @@ import {
 	r2BucketUpdateStorageClassCommand,
 } from "./r2/bucket";
 import {
+	r2BucketCatalogCompactionDisableCommand,
+	r2BucketCatalogCompactionEnableCommand,
+	r2BucketCatalogCompactionNamespace,
 	r2BucketCatalogDisableCommand,
 	r2BucketCatalogEnableCommand,
 	r2BucketCatalogGetCommand,
@@ -838,6 +841,18 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 bucket catalog get",
 			definition: r2BucketCatalogGetCommand,
+		},
+		{
+			command: "wrangler r2 bucket catalog compaction",
+			definition: r2BucketCatalogCompactionNamespace,
+		},
+		{
+			command: "wrangler r2 bucket catalog compaction enable",
+			definition: r2BucketCatalogCompactionEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket catalog compaction disable",
+			definition: r2BucketCatalogCompactionDisableCommand,
 		},
 		{
 			command: "wrangler r2 bucket notification",
