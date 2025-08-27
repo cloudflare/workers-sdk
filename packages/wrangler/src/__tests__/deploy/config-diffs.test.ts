@@ -80,38 +80,31 @@ describe("getRemoteConfigsDiff", () => {
 				placement: undefined,
 				limits: undefined,
 				tail_consumers: undefined,
-				observability: { enabled: true, head_sampling_rate: 1 },
+				account_id: "account-id-123",
+				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
 			},
 			{
 				name: "silent-firefly-dbe3",
 				main: "src/index.js",
 				compatibility_date: "2025-07-08",
-				observability: {
-					enabled: true,
-					head_sampling_rate: 1,
-					logs: {
-						head_sampling_rate: 0.95,
-						invocation_logs: true,
-					},
-				},
 				account_id: "account-id-123",
-				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
+				kv_namespaces: [
+					{ binding: "MY_KV", id: "my-kv-123" },
+					{ binding: "MY_KV_2", id: "my-kv-456" },
+				],
 			} as unknown as Config
 		);
 		expect(diff.toString()).toMatchInlineSnapshot(`
-			"    \\"compatibility_date\\": \\"2025-07-08\\",
-			    \\"observability\\": {
-			      \\"enabled\\": true,
-			-     \\"head_sampling_rate\\": 1
-			+     \\"head_sampling_rate\\": 1,
-			+     \\"logs\\": {
-			+       \\"head_sampling_rate\\": 0.95,
-			+       \\"invocation_logs\\": true,
-			+       \\"enabled\\": true
-			+     }
-			    },
-			    \\"account_id\\": \\"account-id-123\\",
-			    \\"kv_namespaces\\": ["
+			"      {
+			        \\"binding\\": \\"MY_KV\\",
+			        \\"id\\": \\"my-kv-123\\"
+			+     },
+			+     {
+			+       \\"binding\\": \\"MY_KV_2\\",
+			+       \\"id\\": \\"my-kv-456\\"
+			      }
+			    ],
+			    \\"workers_dev\\": true"
 		`);
 		expect(nonDestructive).toBe(true);
 	});
@@ -146,11 +139,10 @@ describe("getRemoteConfigsDiff", () => {
 			    \\"main\\": \\"src/index.js\\",
 			-   \\"compatibility_date\\": \\"2025-07-08\\",
 			+   \\"compatibility_date\\": \\"2025-07-09\\",
-			    \\"observability\\": {
+			-   \\"observability\\": {
 			-     \\"enabled\\": true,
-			+     \\"enabled\\": false,
-			      \\"head_sampling_rate\\": 1
-			    },
+			-     \\"head_sampling_rate\\": 1
+			-   },
 			    \\"account_id\\": \\"account-id-123\\",
 			-   \\"workers_dev\\": true,
 			+   \\"workers_dev\\": true

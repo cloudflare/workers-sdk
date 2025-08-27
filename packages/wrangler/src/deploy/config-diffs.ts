@@ -130,32 +130,41 @@ function normalizeLocalResolvedConfigAsRemote(
 		),
 	};
 
-	if (!normalizedConfig.observability) {
-		normalizedConfig.observability = {};
+	if (
+		normalizedConfig.observability &&
+		!normalizedConfig?.observability?.enabled &&
+		!normalizedConfig?.observability?.logs?.enabled
+	) {
+		// In the remote config if observability is disabled
+		// (both the basic one and logs config) we don't get an object
+		delete normalizedConfig.observability;
 	}
 
-	if (!("enabled" in normalizedConfig.observability)) {
-		normalizedConfig.observability.enabled = true;
-	}
-
-	if (!("head_sampling_rate" in normalizedConfig.observability)) {
-		normalizedConfig.observability.head_sampling_rate = 1;
-	}
-
-	if (normalizedConfig.observability.logs) {
-		// If the `logs` observability sub-field is present we make
-		// sure to set its default remote values if not present
-
-		if (!("enabled" in normalizedConfig.observability.logs)) {
-			normalizedConfig.observability.logs.enabled = true;
+	if (normalizedConfig.observability) {
+		if (normalizedConfig.observability.head_sampling_rate === undefined) {
+			// Note: remotely head_sampling_rate gets always defaults to 1 even if enabled is false
+			normalizedConfig.observability.head_sampling_rate = 1;
 		}
 
-		if (!("head_sampling_rate" in normalizedConfig.observability.logs)) {
-			normalizedConfig.observability.logs.head_sampling_rate = 1;
+		if (
+			normalizedConfig.observability.logs &&
+			!normalizedConfig.observability.logs.enabled
+		) {
+			// In the remote config if observability.logs is disabled we don't get an object
+			delete normalizedConfig.observability.logs;
 		}
 
-		if (!("invocation_logs" in normalizedConfig.observability.logs)) {
-			normalizedConfig.observability.logs.invocation_logs = true;
+		if (normalizedConfig.observability.logs) {
+			if (
+				normalizedConfig.observability.logs.head_sampling_rate === undefined
+			) {
+				// Note: remotely logs.head_sampling_rate gets always defaults to 1
+				normalizedConfig.observability.logs.head_sampling_rate = 1;
+			}
+			if (normalizedConfig.observability.logs.invocation_logs === undefined) {
+				// Note: remotely logs.invocation_logs gets always defaults to true
+				normalizedConfig.observability.logs.invocation_logs = true;
+			}
 		}
 	}
 
