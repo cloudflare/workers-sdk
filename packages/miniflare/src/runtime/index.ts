@@ -2,6 +2,7 @@ import assert from "assert";
 import childProcess, { spawn } from "child_process";
 import { randomBytes } from "crypto";
 import { Abortable, once } from "events";
+import { writeFileSync } from "fs";
 import path from "path";
 import rl from "readline";
 import { Readable } from "stream";
@@ -158,6 +159,9 @@ export class Runtime {
 		options: Abortable & RuntimeOptions,
 		workerNames: string[]
 	): Promise<SocketPorts | undefined> {
+		// Debug: Write configBuffer to file
+		writeFileSync("debug-config.capnp", configBuffer);
+
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
 		// TODO: what happens if runtime crashes?

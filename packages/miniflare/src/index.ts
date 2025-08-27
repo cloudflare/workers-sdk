@@ -1831,10 +1831,6 @@ export class Miniflare {
 		const proxyAddress = await this.#devRegistry.initializeProxyWorker();
 		const config = await this.#assembleConfig(loopbackPort, proxyAddress);
 		const configBuffer = serializeConfig(config);
-		const debugPath = process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
-		if (debugPath) {
-			fs.writeFileSync(debugPath, configBuffer);
-		}
 
 		// Get all socket names we expect to get ports for
 		assert(config.sockets !== undefined);
