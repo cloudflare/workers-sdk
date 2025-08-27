@@ -343,13 +343,21 @@ function getDurableObjectClassNames(
 						// Fallback to current worker service if name not defined
 						doInfo.serviceName = workerServiceName;
 					}
-					return doInfo;
+					return {
+						doInfo,
+						workerRawName: workerOpts.core.name,
+					};
 				}
 			);
 		})
-		// We sort the list of durable objects because we want the durable objects without a
-		// scriptName (meaning that they are defined within their worker) to be processed first
-		.sort(({ scriptName }) => (scriptName === undefined ? -1 : 0));
+		// We sort the list of durable objects because we want the durable objects without a scriptName or a scriptName
+		// that matches the raw worker's name (meaning that they are defined within their worker) to be processed first
+		.sort(({ doInfo, workerRawName }) =>
+			doInfo.scriptName === undefined || doInfo.scriptName === workerRawName
+				? -1
+				: 0
+		)
+		.map(({ doInfo }) => doInfo);
 
 	for (const doInfo of allDurableObjects) {
 		const { className, serviceName, container, ...doConfigs } = doInfo;
