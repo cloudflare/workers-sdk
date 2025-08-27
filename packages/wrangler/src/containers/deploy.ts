@@ -355,6 +355,7 @@ function formatError(err: ApiError): string {
 			typeof maybeError.details === "object"
 		) {
 			let message = "";
+			message += `${maybeError.error}\n`;
 			for (const key in maybeError.details) {
 				message += `${brandColor(key)} ${maybeError.details[key]}\n`;
 			}
