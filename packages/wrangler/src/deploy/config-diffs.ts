@@ -130,44 +130,6 @@ function normalizeLocalResolvedConfigAsRemote(
 		),
 	};
 
-	if (
-		normalizedConfig.observability &&
-		!normalizedConfig?.observability?.enabled &&
-		!normalizedConfig?.observability?.logs?.enabled
-	) {
-		// In the remote config if observability is disabled
-		// (both the basic one and logs config) we don't get an object
-		delete normalizedConfig.observability;
-	}
-
-	if (normalizedConfig.observability) {
-		if (normalizedConfig.observability.head_sampling_rate === undefined) {
-			// Note: remotely head_sampling_rate gets always defaults to 1 even if enabled is false
-			normalizedConfig.observability.head_sampling_rate = 1;
-		}
-
-		if (
-			normalizedConfig.observability.logs &&
-			!normalizedConfig.observability.logs.enabled
-		) {
-			// In the remote config if observability.logs is disabled we don't get an object
-			delete normalizedConfig.observability.logs;
-		}
-
-		if (normalizedConfig.observability.logs) {
-			if (
-				normalizedConfig.observability.logs.head_sampling_rate === undefined
-			) {
-				// Note: remotely logs.head_sampling_rate gets always defaults to 1
-				normalizedConfig.observability.logs.head_sampling_rate = 1;
-			}
-			if (normalizedConfig.observability.logs.invocation_logs === undefined) {
-				// Note: remotely logs.invocation_logs gets always defaults to true
-				normalizedConfig.observability.logs.invocation_logs = true;
-			}
-		}
-	}
-
 	return normalizedConfig;
 }
 
@@ -191,7 +153,11 @@ function normalizeRemoteConfigAsResolvedLocal(
 	let normalizedRemote = {} as Config;
 
 	Object.entries(localResolvedConfig).forEach(([key, value]) => {
-		(normalizedRemote as unknown as Record<string, unknown>)[key] = value;
+		// We want to skip observability since it has a remote default behavior
+		// different from that or wrangler
+		if (key !== "observability") {
+			(normalizedRemote as unknown as Record<string, unknown>)[key] = value;
+		}
 	});
 
 	Object.entries(remoteConfig).forEach(([key, value]) => {
@@ -199,6 +165,51 @@ function normalizeRemoteConfigAsResolvedLocal(
 			(normalizedRemote as unknown as Record<string, unknown>)[key] = value;
 		}
 	});
+
+	if (normalizedRemote.observability) {
+		if (
+			normalizedRemote.observability.head_sampling_rate === 1 &&
+			localResolvedConfig.observability?.head_sampling_rate === undefined
+		) {
+			// Note: remotely head_sampling_rate always defaults to 1 even if enabled is false
+			delete normalizedRemote.observability.head_sampling_rate;
+		}
+
+		if (normalizedRemote.observability.logs) {
+			if (
+				normalizedRemote.observability.logs.head_sampling_rate === 1 &&
+				localResolvedConfig.observability?.logs?.head_sampling_rate ===
+					undefined
+			) {
+				// Note: remotely logs.head_sampling_rate always defaults to 1 even if enabled is false
+				delete normalizedRemote.observability.logs.head_sampling_rate;
+			}
+
+			if (
+				normalizedRemote.observability.logs.invocation_logs === true &&
+				localResolvedConfig.observability?.logs?.invocation_logs === undefined
+			) {
+				// Note: remotely logs.invocation_logs always defaults to 1 even if enabled is false
+				delete normalizedRemote.observability.logs.invocation_logs;
+			}
+		}
+	}
+
+	if (!normalizedRemote.observability) {
+		if (
+			!localResolvedConfig.observability?.enabled &&
+			!localResolvedConfig.observability?.logs?.enabled
+		) {
+			normalizedRemote.observability = structuredClone(
+				localResolvedConfig.observability
+			);
+		} else {
+			// This matches wrangler's default
+			normalizedRemote.observability = {
+				enabled: false,
+			};
+		}
+	}
 
 	// We reorder the remote config so that its ordering follows that
 	// of the local one (this ensures that the diff users see lists
