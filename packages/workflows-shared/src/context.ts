@@ -29,9 +29,9 @@ const defaultConfig: Required<WorkflowStepConfig> = {
 	retries: {
 		limit: 5,
 		delay: 1000,
-		backoff: "constant",
+		backoff: "exponential",
 	},
-	timeout: "15 minutes",
+	timeout: "10 minutes",
 };
 
 export interface UserErrorField {
@@ -240,20 +240,12 @@ export class Context extends RpcTarget {
 			const { accountId, instance } = instanceMetadata;
 
 			try {
-				const forceStepTimeoutKey = `force-step-timeout-${valueKey}`;
-				const forceStepTimeout =
-					(await this.#state.storage.get(forceStepTimeoutKey)) ||
-					(await this.#state.storage.get(
-						`${forceStepTimeoutKey}-${stepState.attemptedCount}`
-					));
-
 				const timeoutPromise = async () => {
 					const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 					// inserir aqui
 					let timeout = ms(config.timeout);
 					if (forceStepTimeout) {
 						timeout = 0;
-						console.log("[Context] I will timeout");
 					}
 					// @ts-expect-error priorityQueue is initiated in init
 					await this.#engine.priorityQueue.add({
@@ -286,7 +278,7 @@ export class Context extends RpcTarget {
 				await this.#state.storage.put(stepStateKey, stepState);
 				const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 
-				const mockErrorKey = `mock-error-${valueKey}`;
+				const mockErrorKey = `mock-step-error-${valueKey}`;
 				const mockedErrorPayload =
 					(await this.#state.storage.get<{
 						name: string;
@@ -301,24 +293,25 @@ export class Context extends RpcTarget {
 				if (mockedErrorPayload) {
 					const errorToThrow = new Error(mockedErrorPayload.message);
 					errorToThrow.name = mockedErrorPayload.name;
-					console.log("[Context.do()] Will throw an error for step:", name);
 					throw errorToThrow;
 				}
 
 				const replaceResult = await this.#state.storage.get(
 					`replace-result-${valueKey}`
 				);
-				if (replaceResult) {
-					console.log(
-						"[Context.do()] Will replace the result of step:",
-						name,
-						"with:",
-						replaceResult
-					);
-					result = replaceResult;
-					// if there is a timeout to be forced we dont want to race with closure
-				} else if (forceStepTimeout) {
+				const forceStepTimeoutKey = `force-step-timeout-${valueKey}`;
+				const forceStepTimeout =
+					(await this.#state.storage.get(forceStepTimeoutKey)) ||
+					(await this.#state.storage.get(
+						`${forceStepTimeoutKey}-${stepState.attemptedCount}`
+					));
+
+				if (forceStepTimeout) {
 					result = await timeoutPromise();
+				} else if (replaceResult) {
+					result = replaceResult;
+					await this.#state.storage.delete(`replace-result-${valueKey}`);
+					// if there is a timeout to be forced we dont want to race with closure
 				} else {
 					result = await Promise.race([doWrapperClosure(), timeoutPromise()]);
 				}
@@ -440,8 +433,6 @@ export class Context extends RpcTarget {
 				if (stepState.attemptedCount <= config.retries.limit) {
 					// TODO (WOR-71): Think through if every Error should transition
 					const durationMs = calcRetryDuration(config, stepState);
-
-					console.log("Vou esperar", durationMs);
 
 					const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 					// @ts-expect-error priorityQueue is initiated in init
@@ -674,7 +665,7 @@ export class Context extends RpcTarget {
 				})) ||
 			(timeoutEntryPQ !== undefined &&
 				timeoutEntryPQ.targetTimestamp < Date.now()) ||
-			(await this.#state.storage.get(`forceEventTimeout-${waitForEventKey}`))
+			(await this.#state.storage.get(`force-event-timeout-${waitForEventKey}`))
 		) {
 			this.#engine.writeLog(
 				InstanceEvent.WAIT_TIMED_OUT,
@@ -741,7 +732,6 @@ export class Context extends RpcTarget {
 				: timeoutPromise(ms(options.timeout), true),
 		])
 			.then(async (event) => {
-				console.log(event);
 				this.#engine.writeLog(
 					InstanceEvent.WAIT_COMPLETE,
 					cacheKey,
