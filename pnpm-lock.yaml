@@ -323,7 +323,7 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250823.0
+        specifier: catalog:default
         version: 4.20250823.0
       undici:
         specifier: catalog:default
