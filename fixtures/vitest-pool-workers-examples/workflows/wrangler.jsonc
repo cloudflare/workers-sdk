@@ -8,5 +8,10 @@
 			"class_name": "TestWorkflow",
 			"name": "test-workflow",
 		},
+		{
+			"binding": "TEST_LONG_WORKFLOW",
+			"class_name": "TestLongWorkflow",
+			"name": "test-long-workflow",
+		},
 	],
 }
