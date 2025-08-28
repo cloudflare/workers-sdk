@@ -1194,6 +1194,29 @@ export interface Observability {
 		head_sampling_rate?: number;
 		/** Set to false to disable invocation logs */
 		invocation_logs?: boolean;
+		/**
+		 * What destinations logs emitted from the Worker should be sent to,
+		 * use "cloudflare" to send to Cloudflare's observability platform.
+		 *
+		 * For reference, see TODO(zebp)
+		 *
+		 * @default ["cloudflare"]
+		 */
+		destinations?: string[];
+	};
+	traces?: {
+		enabled?: boolean;
+		/** The sampling rate */
+		head_sampling_rate?: number;
+		/**
+		 * What destinations traces emitted from the Worker should be sent to,
+		 * use "cloudflare" to send to Cloudflare's observability platform.
+		 *
+		 * For reference, see TODO(zebp)
+		 *
+		 * @default ["cloudflare"]
+		 */
+		destinations?: string[];
 	};
 }
 
