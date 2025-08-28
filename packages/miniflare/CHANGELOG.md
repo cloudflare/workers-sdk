@@ -1,5 +1,13 @@
 # miniflare
 
+## 4.20250823.1
+
+### Patch Changes
+
+- [#10437](https://github.com/cloudflare/workers-sdk/pull/10437) [`452ad0b`](https://github.com/cloudflare/workers-sdk/commit/452ad0b1ec58c8078084e0946bf1b3e6ab7f307f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Loosen validation around different configurations for Durable Object
+
+  Allow durable objects to have `enableSql`, `unsafeUniqueKey` and `unsafePreventEviction` configurations set to `undefined` even if the same durable objects are defined with those configurations set to different values (this allows workers using external durable objects not to have to duplicate such configurations in their options)
+
 ## 4.20250823.0
 
 ### Patch Changes

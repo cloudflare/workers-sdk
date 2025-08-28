@@ -1,5 +1,15 @@
 # wrangler
 
+## 4.33.1
+
+### Patch Changes
+
+- [#10427](https://github.com/cloudflare/workers-sdk/pull/10427) [`85be2b6`](https://github.com/cloudflare/workers-sdk/commit/85be2b6a690dbe51d54b9de8ec6dfa6a64e03ac4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Simplify ENOENT debug logs for `.env` files
+
+- Updated dependencies [[`76d9aa2`](https://github.com/cloudflare/workers-sdk/commit/76d9aa2335cb52aec3e4a86195b40002ff538022), [`452ad0b`](https://github.com/cloudflare/workers-sdk/commit/452ad0b1ec58c8078084e0946bf1b3e6ab7f307f), [`7c339ae`](https://github.com/cloudflare/workers-sdk/commit/7c339aeb0392e41b9a306c84538950f32c9a0dd4)]:
+  - @cloudflare/unenv-preset@2.7.0
+  - miniflare@4.20250823.1
+
 ## 4.33.0
 
 ### Minor Changes

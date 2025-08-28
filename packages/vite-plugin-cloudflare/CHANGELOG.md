@@ -1,5 +1,16 @@
 # @cloudflare/vite-plugin
 
+## 1.12.1
+
+### Patch Changes
+
+- [#10482](https://github.com/cloudflare/workers-sdk/pull/10482) [`aec77cc`](https://github.com/cloudflare/workers-sdk/commit/aec77ccb1578918804a3b058a1cb676215c6ddc9) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Pass the `compatibility_date` and `compatibility_flags` to the `unenv` preset. This enables support for the `node:http` and `node:https` modules.
+
+- Updated dependencies [[`76d9aa2`](https://github.com/cloudflare/workers-sdk/commit/76d9aa2335cb52aec3e4a86195b40002ff538022), [`85be2b6`](https://github.com/cloudflare/workers-sdk/commit/85be2b6a690dbe51d54b9de8ec6dfa6a64e03ac4), [`452ad0b`](https://github.com/cloudflare/workers-sdk/commit/452ad0b1ec58c8078084e0946bf1b3e6ab7f307f), [`7c339ae`](https://github.com/cloudflare/workers-sdk/commit/7c339aeb0392e41b9a306c84538950f32c9a0dd4)]:
+  - @cloudflare/unenv-preset@2.7.0
+  - wrangler@4.33.1
+  - miniflare@4.20250823.1
+
 ## 1.12.0
 
 ### Minor Changes
