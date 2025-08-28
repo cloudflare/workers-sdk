@@ -82,7 +82,7 @@
 		"capnp-es": "^0.0.11",
 		"chokidar": "^4.0.1",
 		"concurrently": "^8.2.2",
-		"devalue": "^4.3.0",
+		"devalue": "^5.3.2",
 		"devtools-protocol": "^0.0.1182435",
 		"esbuild": "catalog:default",
 		"eslint": "^8.57.1",
