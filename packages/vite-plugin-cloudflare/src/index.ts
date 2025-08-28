@@ -158,10 +158,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 															environmentName ===
 																resolvedPluginConfig.entryWorkerEnvironmentName,
 														hasNodeJsCompat:
-															resolvedPluginConfig.type === "workers" &&
-															resolvedPluginConfig.nodeJsCompatMap.has(
-																environmentName
-															),
+															getNodeJsCompat(environmentName) !== undefined,
 													}),
 												];
 											}
