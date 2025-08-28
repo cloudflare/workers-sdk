@@ -9,6 +9,7 @@ import {
 	Mutex,
 	R2_PLUGIN_NAME,
 	Response,
+	WORKFLOWS_PLUGIN_NAME,
 } from "miniflare";
 import { isFileNotFoundError, WORKER_NAME_PREFIX } from "./helpers";
 import type { Awaitable, Miniflare, Request, WorkerOptions } from "miniflare";
@@ -314,6 +315,7 @@ const PLUGIN_PRODUCT_NAMES: Record<string, string | undefined> = {
 	[DURABLE_OBJECTS_PLUGIN_NAME]: "Durable Objects",
 	[KV_PLUGIN_NAME]: "KV",
 	[R2_PLUGIN_NAME]: "R2",
+	[WORKFLOWS_PLUGIN_NAME]: "Workflows",
 };
 const LIST_FORMAT = new Intl.ListFormat("en-US");
 
