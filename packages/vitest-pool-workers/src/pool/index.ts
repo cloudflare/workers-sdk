@@ -80,10 +80,10 @@ interface SerializedOptions {
 
 // https://github.com/vitest-dev/vitest/blob/v2.1.1/packages/vite-node/src/client.ts#L468
 declare const __vite_ssr_import__: unknown;
-/*assert(
+assert(
 	typeof __vite_ssr_import__ === "undefined",
 	"Expected `@cloudflare/vitest-pool-workers` not to be transformed by Vite"
-);*/
+);
 
 function structuredSerializableStringify(value: unknown): string {
 	// Vitest v2+ sends a sourcemap to it's runner, which we can't serialise currently
@@ -542,8 +542,6 @@ Workflows defined in project: ${workflowClassNames.join(", ")}`);
 			unsafeUniqueKey: `miniflare-workflows-${value.name}`,
 		};
 	}
-
-	// console.log("Runner Worker", runnerWorker);
 
 	// Vite has its own define mechanism, but we can't control it from custom
 	// pools. Our defines come from `wrangler.toml` files which are only parsed
