@@ -7,6 +7,7 @@ test("DevRegistry: fetch to service worker", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		compatibilityFlags: ["experimental"],
 		script: `addEventListener("fetch", (event) => {
 			event.respondWith(new Response("Hello from service worker!"));
@@ -96,6 +97,7 @@ test("DevRegistry: fetch to module worker", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -176,6 +178,7 @@ test("DevRegistry: WebSocket upgrade to module worker", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -256,6 +259,7 @@ test("DevRegistry: RPC to default entrypoint", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -329,6 +333,7 @@ test("DevRegistry: RPC to custom entrypoint", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -399,6 +404,7 @@ test("DevRegistry: fetch to module worker with node bindings", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -477,6 +483,7 @@ test("DevRegistry: RPC to default entrypoint with node bindings", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -519,6 +526,7 @@ test("DevRegistry: fetch to durable object with do proxy disabled", async (t) =>
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		unsafeDevRegistryDurableObjectProxy: false,
 		compatibilityFlags: ["experimental"],
 		durableObjects: {
@@ -582,6 +590,7 @@ test("DevRegistry: RPC to durable object with do proxy disabled", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		unsafeDevRegistryDurableObjectProxy: false,
 		compatibilityFlags: ["experimental"],
 		durableObjects: {
@@ -679,6 +688,7 @@ test("DevRegistry: fetch to durable object", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		unsafeDevRegistryDurableObjectProxy: true,
 		compatibilityFlags: ["experimental"],
 		durableObjects: {
@@ -755,6 +765,7 @@ test("DevRegistry: RPC to durable object", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		unsafeDevRegistryDurableObjectProxy: true,
 		compatibilityFlags: ["experimental"],
 		durableObjects: {
@@ -790,6 +801,7 @@ test("DevRegistry: tail to default entrypoint", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -924,6 +936,7 @@ test("DevRegistry: miniflare with different registry path", async (t) => {
 	};
 	const remoteOptions: MiniflareOptions = {
 		name: "remote-worker",
+		unsafeRegisterWorker: true,
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -1030,6 +1043,7 @@ test("DevRegistry: fetch to module worker with https enabled", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		https: true,
@@ -1092,6 +1106,7 @@ test("DevRegistry: fetch to durable object with https enabled", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		unsafeDevRegistryDurableObjectProxy: true,
 		https: true,
 		compatibilityFlags: ["experimental"],
@@ -1172,6 +1187,7 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 	const unrelated = new Miniflare({
 		name: "unrelated-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -1200,6 +1216,7 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
+		unsafeRegisterWorker: true,
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
