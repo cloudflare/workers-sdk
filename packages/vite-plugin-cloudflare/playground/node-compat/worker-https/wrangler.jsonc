@@ -1,0 +1,7 @@
+{
+	"name": "worker",
+	"main": "./index.ts",
+	// This is the minimum compatibility_date that has http_modules enabled by default
+	"compatibility_date": "2025-08-15",
+	"compatibility_flags": ["nodejs_compat"],
+}
