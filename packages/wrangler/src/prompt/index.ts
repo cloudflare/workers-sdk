@@ -1,4 +1,5 @@
 import { execa } from "execa";
+import { findWranglerConfig } from "../config/config-helpers";
 import { createCommand } from "../core/create-command";
 import { generateOpencodeConfig } from "./config-generator";
 import {
@@ -56,11 +57,14 @@ export const promptCommand = createCommand({
 			opencodeArgs.push("--prompt", args.prompt);
 		}
 
+		const { userConfigPath } = findWranglerConfig(process.cwd());
+
 		await execa("opencode", opencodeArgs, {
 			stdio: "inherit",
 			env: {
 				...process.env,
 				OPENCODE_CONFIG: configPath,
+				...(userConfigPath ? { WRANGLER_CONFIG: userConfigPath } : {}),
 			},
 		});
 	},

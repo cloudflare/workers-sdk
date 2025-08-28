@@ -47,7 +47,8 @@
 		"wrangler-dist",
 		"templates",
 		"kv-asset-handler.js",
-		"config-schema.json"
+		"config-schema.json",
+		"src/prompt/opencode-plugin.js"
 	],
 	"scripts": {
 		"assert-git-version": "node -r esbuild-register scripts/assert-git-version.ts",

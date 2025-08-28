@@ -7,8 +7,10 @@ import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import type { PackageManager } from "../package-manager";
 
+const MIN_OPENCODE_VERSION = "0.5.28";
+
 export function isOpencodeVersionCompatible(version: string): boolean {
-	return semiver(version.replace(/^v/, ""), "0.5.6") >= 0;
+	return semiver(version.replace(/^v/, ""), MIN_OPENCODE_VERSION) >= 0;
 }
 
 export async function detectOpencode(): Promise<string | null> {

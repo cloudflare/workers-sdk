@@ -11,31 +11,32 @@ import {
 import type { Mock } from "vitest";
 
 describe("isOpencodeVersionCompatible()", () => {
-	it("should return true for versions >= 0.5.6", () => {
-		expect(isOpencodeVersionCompatible("0.5.6")).toBe(true);
-		expect(isOpencodeVersionCompatible("0.5.7")).toBe(true);
+	it("should return true for versions >= 0.5.28", () => {
+		expect(isOpencodeVersionCompatible("0.5.28")).toBe(true);
+		expect(isOpencodeVersionCompatible("0.5.29")).toBe(true);
 		expect(isOpencodeVersionCompatible("0.6.0")).toBe(true);
 		expect(isOpencodeVersionCompatible("1.0.0")).toBe(true);
 		expect(isOpencodeVersionCompatible("1.2.3")).toBe(true);
 	});
 
-	it("should return false for versions < 0.5.6", () => {
-		expect(isOpencodeVersionCompatible("0.5.5")).toBe(false);
+	it("should return false for versions < 0.5.28", () => {
+		expect(isOpencodeVersionCompatible("0.5.27")).toBe(false);
+		expect(isOpencodeVersionCompatible("0.5.6")).toBe(false);
 		expect(isOpencodeVersionCompatible("0.5.0")).toBe(false);
 		expect(isOpencodeVersionCompatible("0.4.9")).toBe(false);
 		expect(isOpencodeVersionCompatible("0.1.0")).toBe(false);
 	});
 
 	it("should handle versions with 'v' prefix", () => {
-		expect(isOpencodeVersionCompatible("v0.5.6")).toBe(true);
-		expect(isOpencodeVersionCompatible("v0.5.7")).toBe(true);
-		expect(isOpencodeVersionCompatible("v0.5.5")).toBe(false);
+		expect(isOpencodeVersionCompatible("v0.5.28")).toBe(true);
+		expect(isOpencodeVersionCompatible("v0.5.29")).toBe(true);
+		expect(isOpencodeVersionCompatible("v0.5.27")).toBe(false);
 		expect(isOpencodeVersionCompatible("v1.0.0")).toBe(true);
 	});
 
 	it("should return true for exact minimum version match", () => {
-		expect(isOpencodeVersionCompatible("0.5.6")).toBe(true);
-		expect(isOpencodeVersionCompatible("v0.5.6")).toBe(true);
+		expect(isOpencodeVersionCompatible("0.5.28")).toBe(true);
+		expect(isOpencodeVersionCompatible("v0.5.28")).toBe(true);
 	});
 
 	it("should return false for empty string", () => {

@@ -9,6 +9,7 @@
  */
 export interface OpencodeConfig {
 	$schema: "https://opencode.ai/config.json";
+	plugin: string[];
 	theme?: string;
 	agent?: Record<
 		string,

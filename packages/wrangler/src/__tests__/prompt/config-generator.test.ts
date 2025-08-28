@@ -1,72 +1,16 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { vi } from "vitest";
-import { findWranglerConfig } from "../../config/config-helpers";
-import { getWranglerTmpDir } from "../../paths";
-import {
-	generateOpencodeConfig,
-	generateSystemPrompt,
-} from "../../prompt/config-generator";
+import { getBasePath, getWranglerTmpDir } from "../../paths";
+import { generateOpencodeConfig } from "../../prompt/config-generator";
 import type { Mock } from "vitest";
 
 vi.mock("node:fs/promises");
 vi.mock("../../config/config-helpers");
-vi.mock("../../paths");
-
-describe("generateSystemPrompt()", () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it("should include config file info when config exists", () => {
-		const projectPath = "/project";
-		const configPath = "/project/wrangler.toml";
-
-		vi.mocked(findWranglerConfig as Mock).mockReturnValue({
-			userConfigPath: configPath,
-		});
-
-		const prompt = generateSystemPrompt(projectPath);
-
-		expect(findWranglerConfig).toHaveBeenCalledWith(projectPath);
-		expect(prompt).toMatchInlineSnapshot(`
-			"You are a helpful AI assistant specialized in Cloudflare Workers development.
-			You are an expert in Cloudflare Workers development, deployment, troubleshooting, and following Cloudflare best practices.
-
-			<project-info>
-			- Wrangler config file: /project/wrangler.toml
-			</project-info>
-
-			<rules>
-			- ALWAYS run wrangler using the package manager (e.g. npx wrangler), NEVER use global wrangler.
-			</rules>"
-		`);
-	});
-
-	it("should omit config file info when no config exists", () => {
-		const projectPath = "/project";
-
-		vi.mocked(findWranglerConfig as Mock).mockReturnValue({
-			userConfigPath: null,
-		});
-
-		const prompt = generateSystemPrompt(projectPath);
-
-		expect(findWranglerConfig).toHaveBeenCalledWith(projectPath);
-		expect(prompt).toMatchInlineSnapshot(`
-			"You are a helpful AI assistant specialized in Cloudflare Workers development.
-			You are an expert in Cloudflare Workers development, deployment, troubleshooting, and following Cloudflare best practices.
-
-			<project-info>
-
-			</project-info>
-
-			<rules>
-			- ALWAYS run wrangler using the package manager (e.g. npx wrangler), NEVER use global wrangler.
-			</rules>"
-		`);
-	});
-});
+vi.mock("../../paths", () => ({
+	getWranglerTmpDir: vi.fn(),
+	getBasePath: vi.fn(),
+}));
 
 describe("generateOpencodeConfig()", () => {
 	beforeEach(() => {
@@ -79,6 +23,7 @@ describe("generateOpencodeConfig()", () => {
 		const expectedConfigPath = path.join(mockTmpDir.path, "opencode.json");
 
 		vi.mocked(getWranglerTmpDir as Mock).mockReturnValue(mockTmpDir);
+		vi.mocked(getBasePath as Mock).mockReturnValue("/wrangler/base/path");
 		vi.mocked(fs.writeFile as Mock).mockResolvedValue(undefined);
 
 		const result = await generateOpencodeConfig(projectPath);
@@ -96,28 +41,9 @@ describe("generateOpencodeConfig()", () => {
 		expect(configContent).toMatchInlineSnapshot(`
 			Object {
 			  "$schema": "https://opencode.ai/config.json",
-			  "agent": Object {
-			    "cloudflare": Object {
-			      "description": "Cloudflare Workers development specialist",
-			      "mode": "primary",
-			      "prompt": "You are a helpful AI assistant specialized in Cloudflare Workers development.
-			You are an expert in Cloudflare Workers development, deployment, troubleshooting, and following Cloudflare best practices.
-
-			<project-info>
-
-			</project-info>
-
-			<rules>
-			- ALWAYS run wrangler using the package manager (e.g. npx wrangler), NEVER use global wrangler.
-			</rules>",
-			    },
-			  },
-			  "mcp": Object {
-			    "cloudflare-docs": Object {
-			      "type": "remote",
-			      "url": "https://docs.mcp.cloudflare.com/mcp",
-			    },
-			  },
+			  "plugin": Array [
+			    "/wrangler/base/path/src/prompt/opencode-plugin.js",
+			  ],
 			}
 		`);
 	});
@@ -127,6 +53,7 @@ describe("generateOpencodeConfig()", () => {
 		const projectPath = "/project";
 
 		vi.mocked(getWranglerTmpDir as Mock).mockReturnValue(mockTmpDir);
+		vi.mocked(getBasePath as Mock).mockReturnValue("/wrangler/base/path");
 		vi.mocked(fs.writeFile as Mock).mockRejectedValue(
 			new Error("Permission denied")
 		);
