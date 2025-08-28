@@ -1,5 +1,17 @@
 # @cloudflare/unenv-preset
 
+## 2.7.0
+
+### Minor Changes
+
+- [#10224](https://github.com/cloudflare/workers-sdk/pull/10224) [`7c339ae`](https://github.com/cloudflare/workers-sdk/commit/7c339aeb0392e41b9a306c84538950f32c9a0dd4) Thanks [@vicb](https://github.com/vicb)! - add support for native `node:fs` and `node:fs/promises`.
+
+### Patch Changes
+
+- [#10463](https://github.com/cloudflare/workers-sdk/pull/10463) [`76d9aa2`](https://github.com/cloudflare/workers-sdk/commit/76d9aa2335cb52aec3e4a86195b40002ff538022) Thanks [@vicb](https://github.com/vicb)! - Remove experimental from the `enable_nodejs_http_server_modules` flag
+
+  See [`node:http`](https://developers.cloudflare.com/workers/runtime-apis/nodejs/http/) and [`node:https`](https://developers.cloudflare.com/workers/runtime-apis/nodejs/https/) for details.
+
 ## 2.6.3
 
 ### Patch Changes

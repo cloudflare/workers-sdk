@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.51.2
+
+### Patch Changes
+
+- [#10477](https://github.com/cloudflare/workers-sdk/pull/10477) [`30716ed`](https://github.com/cloudflare/workers-sdk/commit/30716edd572c9a8348c04f9cecf58f3808270120) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix outdated Remix template url being used
+
 ## 2.51.1
 
 ### Patch Changes
