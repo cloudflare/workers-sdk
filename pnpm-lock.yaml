@@ -103,9 +103,6 @@ importers:
       '@changesets/parse':
         specifier: ^0.4.0
         version: 0.4.0
-      '@cloudflare/workers-types':
-        specifier: catalog:default
-        version: 4.20250823.0
       '@ianvs/prettier-plugin-sort-imports':
         specifier: 4.2.1
         version: 4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.2.5)
