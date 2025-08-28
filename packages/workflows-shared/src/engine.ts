@@ -16,7 +16,7 @@ import {
 	startGracePeriod,
 } from "./lib/gracePeriodSemaphore";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
-import { InstanceModifier, WorkflowIntrospectorError } from "./modifier";
+import { WorkflowInstanceModifier } from "./modifier";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
 import type { StepSelector } from "./modifier";
@@ -90,7 +90,6 @@ export class Engine extends DurableObject<Env> {
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
-		console.log("[Engine] I am constructing Engine");
 		void this.ctx.blockConcurrencyWhile(async () => {
 			this.ctx.storage.transactionSync(() => {
 				try {
@@ -124,8 +123,6 @@ export class Engine extends DurableObject<Env> {
 			startGracePeriod,
 			ENGINE_TIMEOUT
 		);
-
-		console.log("[Engine] I am done constructing Engine");
 	}
 
 	writeLog(
@@ -169,8 +166,8 @@ export class Engine extends DurableObject<Env> {
 		] as RawInstanceLog[];
 	}
 
-	async getInstanceModifier(): Promise<InstanceModifier> {
-		return new InstanceModifier(this, this.ctx);
+	getInstanceModifier(): WorkflowInstanceModifier {
+		return new WorkflowInstanceModifier(this, this.ctx);
 	}
 
 	readLogs(): EngineLogs {
@@ -228,8 +225,6 @@ export class Engine extends DurableObject<Env> {
 
 		// check if anyone is waiting for this status
 		this.handleStatusWaiter(status);
-
-		console.log("[Engine] Changed my status to", instanceStatusName(status));
 	}
 
 	private statusWaiters: Map<
@@ -307,8 +302,8 @@ export class Engine extends DurableObject<Env> {
 				const waiter = this.statusWaiters.get(unreachableStatus);
 				if (waiter) {
 					waiter.reject(
-						new WorkflowIntrospectorError(
-							`The Wokflow instance ${this.instanceId} has reached status '${instanceStatusName(reachedStatus)}'. This is a final state that prevents it from ever reaching the expected status of '${instanceStatusName(unreachableStatus)}'.`
+						new Error(
+							`[WorkflowIntrospector] The Wokflow instance ${this.instanceId} has reached status '${instanceStatusName(reachedStatus)}'. This is a finite status that prevents it from ever reaching the expected status of '${instanceStatusName(unreachableStatus)}'.`
 						)
 					);
 					this.statusWaiters.delete(unreachableStatus);
@@ -381,11 +376,10 @@ export class Engine extends DurableObject<Env> {
 		// TODO: Maybe don't actually kill but instead check a flag and return early if true
 	}
 
-	async unsafeAbort(reason?: string) {
-		console.log("[Engine] Will abort because", reason);
-
+	// Called by the cleanup function when introspecting in tests
+	async _unsafeAbort(reason?: string) {
 		await this.ctx.storage.sync();
-		await this.ctx.storage.deleteAll({ noCache: true });
+		await this.ctx.storage.deleteAll();
 
 		this.ctx.abort(reason);
 	}
@@ -460,7 +454,7 @@ export class Engine extends DurableObject<Env> {
 				}
 			}
 		} else {
-			const mockEvent = await this.ctx.storage.get(`mockEvent-${event.type}`);
+			const mockEvent = await this.ctx.storage.get(`mock-event-${event.type}`);
 			if (mockEvent) {
 				return;
 			}
@@ -491,7 +485,6 @@ export class Engine extends DurableObject<Env> {
 		instance: DatabaseInstance,
 		event: WorkflowEvent<unknown>
 	) {
-		console.log("[Engine.init()] I INITED ENGINE");
 		if (this.priorityQueue === undefined) {
 			this.priorityQueue = new TimePriorityQueue(
 				this.ctx,
@@ -558,7 +551,6 @@ export class Engine extends DurableObject<Env> {
 			await this.ctx.storage.transaction(async () => {
 				// manually start the grace period
 				// startGracePeriod(this, this.timeoutHandler.timeoutMs);
-				console.log("[Engine.init()] Set status to running");
 				await this.setStatus(accountId, instance.id, InstanceStatus.Running);
 			});
 		};

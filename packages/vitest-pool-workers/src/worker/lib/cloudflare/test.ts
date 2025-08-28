@@ -19,4 +19,5 @@ export {
 	applyD1Migrations,
 	createPagesEventContext,
 	introspectWorkflowInstance,
+	introspectWorkflow,
 } from "cloudflare:test-internal";
