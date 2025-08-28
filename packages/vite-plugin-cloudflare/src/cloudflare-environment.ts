@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import * as util from "node:util";
 import * as vite from "vite";
-import { isNodeCompat } from "./node-js-compat";
 import { INIT_PATH, UNKNOWN_HOST, WORKER_ENTRY_PATH_HEADER } from "./shared";
 import { getOutputDirectory } from "./utils";
 import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
@@ -130,14 +129,16 @@ export function createCloudflareEnvironmentOptions({
 	mode,
 	environmentName,
 	isEntryWorker,
+	hasNodeJsCompat,
 }: {
 	workerConfig: WorkerConfig;
 	userConfig: vite.UserConfig;
 	mode: vite.ConfigEnv["mode"];
 	environmentName: string;
 	isEntryWorker: boolean;
+	hasNodeJsCompat: boolean;
 }): vite.EnvironmentOptions {
-	const define = getProcessEnvReplacements(workerConfig, mode);
+	const define = getProcessEnvReplacements(hasNodeJsCompat, mode);
 
 	return {
 		resolve: {
@@ -205,12 +206,12 @@ export function createCloudflareEnvironmentOptions({
  * Gets `process.env` replacement values.
  * `process.env.NODE_ENV` is always replaced.
  * `process.env` is replaced with an empty object if `nodejs_compat` is not enabled
- * @param workerConfig - the Worker config (used to determine if `nodejs_compat` is enabled)
+ * @param hasNodeJsCompat - whether `nodejs_compat` is enabled
  * @param mode - the Vite mode
  * @returns replacement values
  */
 function getProcessEnvReplacements(
-	workerConfig: WorkerConfig,
+	hasNodeJsCompat: boolean,
 	mode: vite.ConfigEnv["mode"]
 ): Record<string, string> {
 	const nodeEnv = process.env.NODE_ENV || mode;
@@ -220,7 +221,7 @@ function getProcessEnvReplacements(
 		"globalThis.process.env.NODE_ENV": JSON.stringify(nodeEnv),
 	};
 
-	return isNodeCompat(workerConfig)
+	return hasNodeJsCompat
 		? nodeEnvReplacements
 		: {
 				...nodeEnvReplacements,
