@@ -82,7 +82,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 
 		// this creates one miniflare service per workflow that the user's script has. we should dedupe engine definition later
 		const services = Object.entries(options.workflows ?? {}).map<Service>(
-			([_bindingName, workflow]) => {
+			([bindingName, workflow]) => {
 				// NOTE(lduarte): the engine unique namespace key must be unique per workflow definition
 				// otherwise workerd will crash because there's two equal DO namespaces
 				const uniqueKey = `miniflare-workflows-${workflow.name}`;
@@ -106,7 +106,9 @@ export const WORKFLOWS_PLUGIN: Plugin<
 								className: "Engine",
 								enableSql: true,
 								uniqueKey,
-								preventEviction: true,
+								// Note(osilva): the engine should not be prevented from eviction if we wish
+								// to abort it during tests (vitest-pool-workers)
+								// preventEviction: true,
 							},
 						],
 						durableObjectStorage: {
@@ -127,6 +129,10 @@ export const WORKFLOWS_PLUGIN: Plugin<
 							{
 								name: "WORKFLOW_NAME",
 								json: JSON.stringify(workflow.name),
+							},
+							{
+								name: "BINDING_NAME",
+								json: JSON.stringify(bindingName),
 							},
 						],
 					},
