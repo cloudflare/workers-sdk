@@ -138,9 +138,9 @@ describe("Long Workflow instance creation unit tests", () => {
 					id: INSTANCE_ID,
 				});
 
-				expect(
-					instance.waitForStepResult({ name: STEP_NAME })
-				).resolves.toEqual(mockResult);
+				expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+					mockResult
+				);
 				await instance.waitForStatus("complete");
 				return (await createdInstance.status()).status === "complete";
 			},
@@ -194,9 +194,9 @@ describe("Long Workflow instance creation unit tests", () => {
 					id: INSTANCE_ID,
 				});
 
-				expect(
-					instance.waitForStepResult({ name: STEP_NAME })
-				).resolves.toEqual(mockResult);
+				expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+					mockResult
+				);
 				await instance.waitForStatus("complete");
 				return (await createdInstance.status()).status === "complete";
 			},
@@ -224,9 +224,9 @@ describe("Long Workflow instance creation unit tests", () => {
 					id: INSTANCE_ID,
 				});
 
-				expect(
-					instance.waitForStepResult({ name: STEP_NAME })
-				).resolves.toEqual(mockResult);
+				expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+					mockResult
+				);
 				await instance.waitForStatus("complete");
 				return (await createdInstance.status()).status === "complete";
 			},
@@ -341,7 +341,6 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				]);
 
 				instances = introspector.get();
-				console.log("INSTANCES HELP AAAA", instances);
 				assert(instances.length === 3);
 
 				for (const instance of instances) {
@@ -493,9 +492,9 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				assert(instances.length === 3);
 
 				for (const instance of instances) {
-					expect(
-						instance.waitForStepResult({ name: STEP_NAME })
-					).resolves.toEqual(mockResult);
+					expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+						mockResult
+					);
 					await instance.waitForStatus("complete");
 				}
 
@@ -579,9 +578,9 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				assert(instances.length === 3);
 
 				for (const instance of instances) {
-					expect(
-						instance.waitForStepResult({ name: STEP_NAME })
-					).resolves.toEqual(mockResult);
+					expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+						mockResult
+					);
 					await instance.waitForStatus("complete");
 				}
 
@@ -624,9 +623,9 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				assert(instances.length === 3);
 
 				for (const instance of instances) {
-					expect(
-						instance.waitForStepResult({ name: STEP_NAME })
-					).resolves.toEqual(mockResult);
+					expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+						mockResult
+					);
 					await instance.waitForStatus("complete");
 				}
 
