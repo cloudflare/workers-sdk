@@ -1123,12 +1123,18 @@ if (import.meta.hot) {
 		},
 	];
 
+	/**
+	 * Returns the Worker config for the given environment if it is a Worker environment
+	 */
 	function getWorkerConfig(environmentName: string) {
 		return resolvedPluginConfig.type === "workers"
 			? resolvedPluginConfig.workers[environmentName]
 			: undefined;
 	}
 
+	/**
+	 * Returns the `NodeJsCompat` instance for the given environment if it has `nodejs_compat` enabled
+	 */
 	function getNodeJsCompat(environmentName: string) {
 		return resolvedPluginConfig.type === "workers"
 			? resolvedPluginConfig.nodeJsCompatMap.get(environmentName)
