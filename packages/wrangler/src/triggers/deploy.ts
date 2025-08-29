@@ -362,6 +362,7 @@ async function subdomainDeploy(
 			}),
 			headers: {
 				"Content-Type": "application/json",
+				"Cloudflare-Workers-Subdomain-Compatibility-Date": "2025-08-01",
 			},
 		});
 	}
