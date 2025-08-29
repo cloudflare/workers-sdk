@@ -53,6 +53,8 @@ type Data = {
 	coloRegion?: string;
 	// blob6 - URL for analysis
 	abuseMitigationURLHost?: string;
+	// blob7 - XSS detection href parameter value
+	xssDetectionImageHref?: string;
 };
 
 export class Analytics {
@@ -107,6 +109,7 @@ export class Analytics {
 				this.data.version, // blob4
 				this.data.coloRegion, // blob5
 				this.data.abuseMitigationURLHost, // blob6
+				this.data.xssDetectionImageHref, // blob7
 			],
 		});
 	}
