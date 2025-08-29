@@ -4,5 +4,5 @@
 		"types": ["node"],
 		"esModuleInterop": true
 	},
-	"include": ["**/*.ts", "../../../node-types.d.ts"]
+	"include": ["**/*.ts"]
 }
