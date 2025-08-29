@@ -157,13 +157,14 @@ class ProxyServer {
 			// Errors on either side
 			serverSocket.on("error", (error) => {
 				log.error(error);
-				clientSocket.end();
+				clientSocket.destroy();
 			});
-			clientSocket.on("error", () => serverSocket.end());
+			clientSocket.on("error", () => serverSocket.destroy());
 			// Close the tunnel if the service is updated
-			// This make sure workerd will re-connect to the latest address
+			// This makes sure workerd will re-connect to the latest address
 			this.subscribe(serviceName, () => {
 				log.debug(`Closing tunnel as service "${serviceName}" was updated`);
+				serverSocket.end();
 				clientSocket.end();
 			});
 		} catch (e) {
