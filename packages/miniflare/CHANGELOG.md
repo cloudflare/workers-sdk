@@ -1,5 +1,11 @@
 # miniflare
 
+## 4.20250823.2
+
+### Patch Changes
+
+- [#10471](https://github.com/cloudflare/workers-sdk/pull/10471) [`38bdb78`](https://github.com/cloudflare/workers-sdk/commit/38bdb787c607a0411c92a340d75b842f9d67b485) Thanks [@clintonsteiner](https://github.com/clintonsteiner)! - chore: bump `devalue` version to 5.3.2
+
 ## 4.20250823.1
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # wrangler
 
+## 4.33.2
+
+### Patch Changes
+
+- [#10393](https://github.com/cloudflare/workers-sdk/pull/10393) [`4492eb0`](https://github.com/cloudflare/workers-sdk/commit/4492eb0490588df736c25272ed2b279736462c9a) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use resolved local config for remote deploy config diffing logic
+
+- Updated dependencies [[`f656d1a`](https://github.com/cloudflare/workers-sdk/commit/f656d1a2da772692b09e8f3ae1e0805d1d33f52e), [`38bdb78`](https://github.com/cloudflare/workers-sdk/commit/38bdb787c607a0411c92a340d75b842f9d67b485)]:
+  - @cloudflare/unenv-preset@2.7.1
+  - miniflare@4.20250823.2
+
 ## 4.33.1
 
 ### Patch Changes
