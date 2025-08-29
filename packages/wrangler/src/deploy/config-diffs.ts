@@ -114,6 +114,13 @@ function normalizeLocalResolvedConfigAsRemote(
 	return normalizedConfig;
 }
 
+/**
+ * Normalizes an observability config object (either the remote or resolved local one) to a fully filled form, this
+ * helps us resolve any inconsistencies between the local and remote default values.
+ *
+ * @param obs The observability config object to normalize
+ * @returns The normalized observability object
+ */
 function normalizeObservability(
 	obs: RawConfig["observability"]
 ): Config["observability"] {
