@@ -11,7 +11,10 @@ const StaticRoutingSchema = z.object({
 	asset_worker: z.array(z.string()).optional(),
 });
 
-export type StaticRouting = z.infer<typeof StaticRoutingSchema>;
+export type StaticRouting = Required<
+	Pick<z.infer<typeof StaticRoutingSchema>, "user_worker">
+> &
+	Omit<z.infer<typeof StaticRoutingSchema>, "user_worker">;
 
 export const RouterConfigSchema = z.object({
 	invoke_user_worker_ahead_of_assets: z.boolean().optional(),
