@@ -6014,6 +6014,42 @@ addEventListener('fetch', event => {});`
 			vi.useRealTimers();
 		});
 
+		it("should include Cloudflare-Workers-Script-Api-Date header", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false });
+			mockSubDomainRequest();
+			msw.use(
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.scriptName).toEqual("test-name");
+						expect(
+							request.headers.get("Cloudflare-Workers-Script-Api-Date")
+						).toEqual("2025-08-01");
+						return HttpResponse.json(
+							createFetchResult({ enabled: true, previews_enabled: false })
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
 		it("should deploy to a workers.dev domain if workers_dev is undefined", async () => {
 			writeWranglerConfig();
 			writeWorkerSource();

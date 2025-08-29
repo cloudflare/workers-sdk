@@ -362,6 +362,7 @@ async function subdomainDeploy(
 			}),
 			headers: {
 				"Content-Type": "application/json",
+				"Cloudflare-Workers-Script-Api-Date": "2025-08-01",
 			},
 		});
 	}
