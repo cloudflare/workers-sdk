@@ -70,7 +70,12 @@ export function normaliseDurableObject(
 		isObject && designator.scriptName !== undefined
 			? designator.scriptName
 			: undefined;
-	const serviceName = isObject && designator.unsafeScriptName ? designator.unsafeScriptName : (scriptName ? getUserServiceName(scriptName) : undefined);
+	const serviceName =
+		isObject && designator.unsafeScriptName
+			? designator.unsafeScriptName
+			: scriptName
+				? getUserServiceName(scriptName)
+				: undefined;
 	const enableSql = isObject ? designator.useSQLite : undefined;
 	const unsafeUniqueKey = isObject ? designator.unsafeUniqueKey : undefined;
 	const unsafePreventEviction = isObject
