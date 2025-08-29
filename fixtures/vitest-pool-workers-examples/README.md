@@ -10,6 +10,7 @@ This directory contains example projects tested with `@cloudflare/vitest-pool-wo
 | [📦 kv-r2-caches](kv-r2-caches)                                                    | Isolated tests using KV, R2 and the Cache API             |
 | [📚 d1](d1)                                                                        | Isolated tests using D1 with migrations                   |
 | [📌 durable-objects](durable-objects)                                              | Isolated tests using Durable Objects with direct access   |
+| [🔁 workflows](workflows)                                                          | Tests using Workflows                                     |
 | [🚥 queues](queues)                                                                | Tests using Queue producers and consumers                 |
 | [🚰 pipelines](pipelines)                                                          | Tests using Pipelines                                     |
 | [🚀 hyperdrive](hyperdrive)                                                        | Tests using Hyperdrive with a Vitest managed TCP server   |
