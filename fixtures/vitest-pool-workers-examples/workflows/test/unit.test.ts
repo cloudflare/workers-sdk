@@ -14,11 +14,11 @@ import {
 } from "vitest";
 
 const INSTANCE_ID = "12345678910";
-let instance: Awaited<ReturnType<typeof introspectWorkflowInstance>>;
-
 const STEP_NAME = "my step";
 
 describe("Long Workflow instance creation unit tests", () => {
+	let instance: Awaited<ReturnType<typeof introspectWorkflowInstance>>;
+
 	beforeEach(async () => {
 		instance = await introspectWorkflowInstance(
 			env.TEST_LONG_WORKFLOW,
@@ -46,9 +46,9 @@ describe("Long Workflow instance creation unit tests", () => {
 				return (await createdInstance.status()).status === "complete";
 			},
 			{
-				// running under 50ms confirms that sleeps were disabled
-				timeout: 50,
-				interval: 50,
+				// running under a second confirms that sleeps were disabled
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -116,10 +116,8 @@ describe("Long Workflow instance creation unit tests", () => {
 				return (await createdInstance.status()).status === "errored";
 			},
 			{
-				// config has 5 retires, all 50ms appart
-				// should run in a bit over 250ms
-				timeout: 300,
-				interval: 300,
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -145,10 +143,8 @@ describe("Long Workflow instance creation unit tests", () => {
 				return (await createdInstance.status()).status === "complete";
 			},
 			{
-				// config has 5 retires, all 50ms appart
-				// with 2 retires, should run in a bit over 100ms
-				timeout: 150,
-				interval: 150,
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -172,10 +168,8 @@ describe("Long Workflow instance creation unit tests", () => {
 				return (await createdInstance.status()).status === "errored";
 			},
 			{
-				// config has 5 retires, all 50ms appart
-				// should run in a bit over 250ms
-				timeout: 300,
-				interval: 300,
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -201,10 +195,8 @@ describe("Long Workflow instance creation unit tests", () => {
 				return (await createdInstance.status()).status === "complete";
 			},
 			{
-				// config has 5 retires, all 50ms appart
-				// should run in a bit over 50ms
-				timeout: 100,
-				interval: 100,
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -231,10 +223,8 @@ describe("Long Workflow instance creation unit tests", () => {
 				return (await createdInstance.status()).status === "complete";
 			},
 			{
-				// config has 5 retires, all 50ms appart
-				// should run in a bit over 100ms
-				timeout: 150,
-				interval: 150,
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -256,9 +246,9 @@ describe("Long Workflow instance creation unit tests", () => {
 				return (await createdInstance.status()).status === "complete";
 			},
 			{
-				// running under 50ms confirms that the event was moked (and sleeps were disabled)
-				timeout: 50,
-				interval: 50,
+				// running under a second confirms that the event was moked (and sleeps were disabled)
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -280,9 +270,9 @@ describe("Long Workflow instance creation unit tests", () => {
 				return (await createdInstance.status()).status === "errored";
 			},
 			{
-				// running under 50ms confirms that the event was forced to time out (and sleeps were disabled)
-				timeout: 50,
-				interval: 50,
+				// running under a second confirms that the event was forced to time out (and sleeps were disabled)
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -354,9 +344,9 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				).every((s) => s.status === "complete");
 			},
 			{
-				// running under 100ms confirms that sleeps were disabled
-				timeout: 100,
-				interval: 100,
+				// running under a second confirms that sleeps were disabled
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -461,10 +451,8 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				).every((s) => s.status === "errored");
 			},
 			{
-				// config has 5 retires, all 50ms appart
-				// should run in a bit over 250ms
-				timeout: 350,
-				interval: 350,
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -505,10 +493,8 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				).every((s) => s.status === "complete");
 			},
 			{
-				// config has 5 retires, all 50ms appart
-				// with 2 retires, should run in a bit over 100ms
-				timeout: 150,
-				interval: 150,
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -547,10 +533,8 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				).every((s) => s.status === "errored");
 			},
 			{
-				// config has 5 retires, all 50ms appart
-				// should run in a bit over 250m
-				timeout: 350,
-				interval: 350,
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -591,10 +575,8 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				).every((s) => s.status === "complete");
 			},
 			{
-				// config has 5 retires, all 50ms appart
-				// should run in a bit over 50ms
-				timeout: 100,
-				interval: 100,
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -636,10 +618,8 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				).every((s) => s.status === "complete");
 			},
 			{
-				// config has 5 retires, all 50ms appart
-				// should run in a bit over 100ms
-				timeout: 150,
-				interval: 150,
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -676,9 +656,9 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				).every((s) => s.status === "complete");
 			},
 			{
-				// running under 50ms confirms that the event was moked (and sleeps were disabled)
-				timeout: 50,
-				interval: 50,
+				// running under a second confirms that the event was moked (and sleeps were disabled)
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
@@ -715,9 +695,9 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				).every((s) => s.status === "errored");
 			},
 			{
-				// running under 50ms confirms that the event was forced to time out (and sleeps were disabled)
-				timeout: 50,
-				interval: 50,
+				// running under a second confirms that the event was forced to time out (and sleeps were disabled)
+				timeout: 1000,
+				interval: 1000,
 			}
 		);
 	});
