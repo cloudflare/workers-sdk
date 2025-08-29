@@ -5,9 +5,11 @@ import { SELF } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encodingTestCases } from "./test-cases/encoding-test-cases";
 import { htmlHandlingTestCases } from "./test-cases/html-handling-test-cases";
-import type { AssetMetadata } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
+type AssetMetadata = {
+	contentType: string;
+};
 
 vi.mock("@cloudflare/workers-shared/asset-worker/src/utils/kv.ts");
 vi.mock("@cloudflare/workers-shared/asset-worker/src/configuration");

@@ -1,7 +1,6 @@
 {
 	"name": "@cloudflare/workers-shared",
 	"version": "0.18.7",
-	"private": true,
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
 		"cloudflare",
@@ -19,7 +18,21 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
+	"exports": {
+		".": "./index.ts",
+		"./asset-worker": "./asset-worker/index.ts",
+		"./router-worker": "./router-worker/index.ts",
+		"./*": "./dist/*.js"
+	},
+	"files": [
+		"./index.ts",
+		"./asset-worker",
+		"./dist",
+		"./router-worker",
+		"./utils"
+	],
 	"scripts": {
+		"build": "node -r esbuild-register scripts/build.ts",
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "pnpm run check:type:tests && tsc",
 		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json && tsc -p ./router-worker/tests/tsconfig.json",
