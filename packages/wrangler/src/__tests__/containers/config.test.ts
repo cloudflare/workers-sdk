@@ -400,6 +400,9 @@ describe("getNormalizedContainerOptions", () => {
 						regions: ["us-east-1", "us-west-2"],
 						cities: ["NYC", "SF"],
 					},
+					affinities: {
+						hardware_generation: "highest-overall-performance",
+					},
 				},
 			],
 			durable_objects: {
@@ -428,6 +431,9 @@ describe("getNormalizedContainerOptions", () => {
 				tier: 2,
 				regions: ["US-EAST-1", "US-WEST-2"],
 				cities: ["nyc", "sf"],
+			},
+			affinities: {
+				hardware_generation: "highest-overall-performance",
 			},
 			observability: {
 				logs_enabled: true,

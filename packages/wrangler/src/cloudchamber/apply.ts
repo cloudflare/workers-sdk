@@ -42,6 +42,8 @@ import type {
 } from "../yargs-types";
 import type {
 	Application,
+	ApplicationAffinities,
+	ApplicationAffinityColocation,
 	ApplicationID,
 	ApplicationName,
 	CreateApplicationRequest,
@@ -50,6 +52,7 @@ import type {
 	Observability as ObservabilityConfiguration,
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
+import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
 import type { JsonMap } from "@iarna/toml";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
@@ -220,6 +223,33 @@ function containerAppToInstanceType(
 	return configuration;
 }
 
+/**
+ * Perform type conversion of affinities so that they can be fed to the API.
+ */
+function convertContainerAffinitiesForApi(
+	container: ContainerApp
+): ApplicationAffinities | undefined {
+	let affinities: ApplicationAffinities | undefined = undefined;
+
+	if (container.affinities?.colocation !== undefined) {
+		affinities = {
+			colocation: container.affinities
+				.colocation as ApplicationAffinityColocation,
+		};
+	}
+
+	if (container.affinities?.hardware_generation !== undefined) {
+		if (affinities === undefined) {
+			affinities = {};
+		}
+
+		affinities.hardware_generation = container.affinities
+			.hardware_generation as ApplicationAffinityHardwareGeneration;
+	}
+
+	return affinities;
+}
+
 function containerAppToCreateApplication(
 	accountId: string,
 	containerApp: ContainerApp,
@@ -267,6 +297,7 @@ function containerAppToCreateApplication(
 				region.toUpperCase()
 			),
 		},
+		affinities: convertContainerAffinitiesForApi(containerApp),
 	};
 
 	// delete the fields that should not be sent to API
