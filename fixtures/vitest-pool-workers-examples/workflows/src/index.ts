@@ -19,8 +19,6 @@ export class TestWorkflow extends WorkflowEntrypoint<Env> {
 
 export class TestLongWorkflow extends WorkflowEntrypoint<Env, Params> {
 	async run(event: Readonly<WorkflowEvent<unknown>>, step: WorkflowStep) {
-		console.log("Starting running...");
-
 		await step.sleep("sleep for a while", "10 seconds");
 
 		await step.do(
