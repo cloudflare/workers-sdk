@@ -132,11 +132,12 @@ export function getCloudflarePreset({
  * Returns the overrides for node http modules (unenv or workerd)
  *
  * The native http implementation (excluding server APIs):
- * - is enabled after 2025-08-15
+ * - is enabled starting from 2025-08-15
  * - can be enabled with the "enable_nodejs_http_modules" flag
  * - can be disabled with the "disable_nodejs_http_modules" flag
  *
  * The native http server APIS implementation:
+ * - is enabled starting from 2025-09-15
  * - can be enabled with the "enable_nodejs_http_server_modules" flag
  * - can be disabled with the "disable_nodejs_http_server_modules" flag
  */
@@ -196,12 +197,12 @@ function getHttpOverrides({
 /**
  * Returns the overrides for `node:os` (unenv or workerd)
  *
- * The native http implementation:
+ * The native os implementation:
+ * - is enabled starting from 2025-09-15
  * - can be enabled with the "enable_nodejs_os_module" flag
  * - can be disabled with the "disable_nodejs_os_module" flag
  */
 function getOsOverrides({
-	// eslint-disable-next-line unused-imports/no-unused-vars
 	compatibilityDate,
 	compatibilityFlags,
 }: {
@@ -212,12 +213,10 @@ function getOsOverrides({
 		"disable_nodejs_os_module"
 	);
 
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_os_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes("enable_nodejs_os_module");
+	const enabledByDate = compatibilityDate >= "2025-09-15";
 
-	// TODO: add `enabledByDate` when a default date is set
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	// The native os module implements all the APIs.
 	// It can then be used as a native module.
@@ -236,11 +235,11 @@ function getOsOverrides({
  * Returns the overrides for `node:fs` and `node:fs/promises` (unenv or workerd)
  *
  * The native fs implementation:
+ * - is enabled starting from 2025-09-15
  * - can be enabled with the "enable_nodejs_fs_module" flag
  * - can be disabled with the "disable_nodejs_fs_module" flag
  */
 function getFsOverrides({
-	// eslint-disable-next-line unused-imports/no-unused-vars
 	compatibilityDate,
 	compatibilityFlags,
 }: {
@@ -251,12 +250,10 @@ function getFsOverrides({
 		"disable_nodejs_fs_module"
 	);
 
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_fs_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes("enable_nodejs_fs_module");
+	const enabledByDate = compatibilityDate >= "2025-09-15";
 
-	// TODO: add `enabledByDate` when a default date is set
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	// The native `fs` and `fs/promises` modules implement all the node APIs so we can use them directly
 	return enabled
