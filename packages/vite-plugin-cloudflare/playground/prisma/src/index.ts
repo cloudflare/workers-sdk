@@ -6,7 +6,7 @@ interface Env {
 }
 
 export default {
-	async fetch(request, env) {
+	async fetch(_request, env) {
 		const adapter = new PrismaD1(env.DB);
 		const prisma = new PrismaClient({ adapter });
 		const users = await prisma.user.findMany();

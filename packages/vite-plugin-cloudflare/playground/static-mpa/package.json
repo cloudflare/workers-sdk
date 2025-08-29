@@ -5,7 +5,7 @@
 	"scripts": {
 		"build": "vite build --app",
 		"build:with-worker-configs-warning": "vite build --app -c vite.config.with-worker-configs-warning.ts",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"dev:with-worker-configs-warning": "vite dev -c vite.config.with-worker-configs-warning.ts",
 		"preview": "vite preview",

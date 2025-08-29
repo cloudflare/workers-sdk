@@ -5,7 +5,7 @@
 	"scripts": {
 		"build": "vite build --app",
 		"build:with-api": "vite build --app -c vite.config.with-api.ts",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"dev:with-api": "vite dev -c vite.config.with-api.ts",
 		"preview": "vite preview",
