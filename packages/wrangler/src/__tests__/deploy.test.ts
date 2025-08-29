@@ -21,9 +21,11 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
-import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
+import {
+	mockGetZones,
+	mockGetZonesMulti,
+} from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
 import {
 	mockKeyListRequest,
 	mockListKVNamespacesRequest,
@@ -40,6 +42,10 @@ import {
 	mockSubDomainRequest,
 	mockUpdateWorkerSubdomain,
 } from "./helpers/mock-workers-subdomain";
+import {
+	mockGetZoneWorkerRoutes,
+	mockGetZoneWorkerRoutesMulti,
+} from "./helpers/mock-zone-routes";
 import {
 	createFetchResult,
 	msw,
@@ -1098,6 +1104,11 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUpdateWorkerSubdomain({ enabled: false });
 			mockUploadWorkerRequest({ expectedType: "esm" });
+			// These run during route conflict resolution.
+			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+			mockGetZones("example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes("example-com-id");
+			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 			mockPublishRoutesRequest({ routes: ["example.com/some-route/*"] });
 			await runWrangler("deploy ./index");
 		});
@@ -1136,27 +1147,64 @@ describe("deploy", () => {
 			writeWranglerConfig({
 				routes: [
 					"some-example.com/some-route/*",
-					{ pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+					{ pattern: "*a-boring-website.com", zone_id: "a-boring-website-id" },
 					{
 						pattern: "*another-boring-website.com",
 						zone_name: "some-zone.com",
 					},
-					{ pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
+					{ pattern: "example.com/some-route/*", zone_id: "example-com-id" },
 					"more-examples.com/*",
 				],
 			});
 			writeWorkerSource();
 			mockUpdateWorkerSubdomain({ enabled: false });
 			mockUploadWorkerRequest({ expectedType: "esm" });
+			// These run during route conflict resolution.
+			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+			mockGetZonesMulti({
+				"some-example.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "some-example-com-id" }],
+				},
+				"a-boring-website.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "a-boring-website-id" }],
+				},
+				"another-boring-website.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "another-boring-website-id" }],
+				},
+				"some-zone.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "some-zone-id" }],
+				},
+				"example.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "example-com-id" }],
+				},
+				"more-examples.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "more-examples-id" }],
+				},
+			});
+			mockGetZoneWorkerRoutesMulti({
+				"some-example-com-id": [],
+				"a-boring-website-id": [],
+				"another-boring-website-id": [],
+				"some-zone-id": [],
+				"example-com-id": [],
+				"more-examples-id": [],
+			});
+			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 			mockPublishRoutesRequest({
 				routes: [
 					"some-example.com/some-route/*",
-					{ pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+					{ pattern: "*a-boring-website.com", zone_id: "a-boring-website-id" },
 					{
 						pattern: "*another-boring-website.com",
 						zone_name: "some-zone.com",
 					},
-					{ pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
+					{ pattern: "example.com/some-route/*", zone_id: "example-com-id" },
 					"more-examples.com/*",
 				],
 			});
@@ -1171,9 +1219,9 @@ describe("deploy", () => {
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  some-example.com/some-route/*
-				  *a-boring-website.com (zone id: 54sdf7fsda)
+				  *a-boring-website.com (zone id: a-boring-website-id)
 				  *another-boring-website.com (zone name: some-zone.com)
-				  example.com/some-route/* (zone id: JGHFHG654gjcj)
+				  example.com/some-route/* (zone id: example-com-id)
 				  more-examples.com/*
 				Current Version ID: Galaxy-Class",
 				  "warn": "",
@@ -1195,7 +1243,7 @@ describe("deploy", () => {
 			mockUploadWorkerRequest();
 			mockGetWorkerSubdomain({ enabled: false });
 			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
-			mockGetWorkerRoutes("owned-zone-id-1");
+			mockGetZoneWorkerRoutes("owned-zone-id-1");
 			mockPublishRoutesRequest({
 				routes: [
 					{
@@ -1235,7 +1283,7 @@ describe("deploy", () => {
 			mockUploadWorkerRequest();
 			mockGetWorkerSubdomain({ enabled: false });
 			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
-			mockGetWorkerRoutes("owned-zone-id-1");
+			mockGetZoneWorkerRoutes("owned-zone-id-1");
 			mockPublishRoutesRequest({
 				routes: [
 					{
@@ -1267,12 +1315,18 @@ describe("deploy", () => {
 					staging: {
 						routes: [
 							"some-example.com/some-route/*",
-							{ pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+							{
+								pattern: "*a-boring-website.com",
+								zone_id: "a-boring-website-id",
+							},
 							{
 								pattern: "*another-boring-website.com",
 								zone_name: "some-zone.com",
 							},
-							{ pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
+							{
+								pattern: "example.com/some-route/*",
+								zone_id: "example-com-id",
+							},
 							"more-examples.com/*",
 						],
 					},
@@ -1291,15 +1345,52 @@ describe("deploy", () => {
 				legacyEnv: false,
 				useOldUploadApi: true,
 			});
+			// These run during route conflict resolution.
+			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+			mockGetZonesMulti({
+				"some-example.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "some-example-com-id" }],
+				},
+				"a-boring-website.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "a-boring-website-id" }],
+				},
+				"another-boring-website.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "another-boring-website-id" }],
+				},
+				"some-zone.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "some-zone-id" }],
+				},
+				"example.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "example-com-id" }],
+				},
+				"more-examples.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "more-examples-id" }],
+				},
+			});
+			mockGetZoneWorkerRoutesMulti({
+				"some-example-com-id": [],
+				"a-boring-website-id": [],
+				"another-boring-website-id": [],
+				"some-zone-id": [],
+				"example-com-id": [],
+				"more-examples-id": [],
+			});
+			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 			mockPublishRoutesRequest({
 				routes: [
 					"some-example.com/some-route/*",
-					{ pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+					{ pattern: "*a-boring-website.com", zone_id: "a-boring-website-id" },
 					{
 						pattern: "*another-boring-website.com",
 						zone_name: "some-zone.com",
 					},
-					{ pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
+					{ pattern: "example.com/some-route/*", zone_id: "example-com-id" },
 					"more-examples.com/*",
 				],
 				env: "staging",
@@ -1316,9 +1407,9 @@ describe("deploy", () => {
 				Uploaded test-name (staging) (TIMINGS)
 				Deployed test-name (staging) triggers (TIMINGS)
 				  some-example.com/some-route/*
-				  *a-boring-website.com (zone id: 54sdf7fsda)
+				  *a-boring-website.com (zone id: a-boring-website-id)
 				  *another-boring-website.com (zone name: some-zone.com)
-				  example.com/some-route/* (zone id: JGHFHG654gjcj)
+				  example.com/some-route/* (zone id: example-com-id)
 				  more-examples.com/*
 				Current Version ID: Galaxy-Class",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -1351,6 +1442,23 @@ describe("deploy", () => {
 				legacyEnv: true,
 				env: "dev",
 			});
+			// These run during route conflict resolution.
+			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+			mockGetZonesMulti({
+				"example.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "example-com-id" }],
+				},
+				"dev-example.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "dev-example-com-id" }],
+				},
+			});
+			mockGetZoneWorkerRoutesMulti({
+				"example-com-id": [],
+				"dev-example-com-id": [],
+			});
+			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 			mockPublishRoutesRequest({
 				routes: ["dev-example.com/some-route/*"],
 				legacyEnv: true,
@@ -1374,6 +1482,23 @@ describe("deploy", () => {
 				expectedType: "esm",
 				env: "dev",
 			});
+			// These run during route conflict resolution.
+			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+			mockGetZonesMulti({
+				"example.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "example-com-id" }],
+				},
+				"dev-example.com": {
+					accountId: "some-account-id",
+					zones: [{ id: "dev-example-com-id" }],
+				},
+			});
+			mockGetZoneWorkerRoutesMulti({
+				"example-com-id": [],
+				"dev-example-com-id": [],
+			});
+			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 			mockPublishRoutesRequest({
 				routes: ["dev-example.com/some-route/*"],
 				env: "dev",
@@ -1388,16 +1513,19 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUpdateWorkerSubdomain({ enabled: false });
 			mockUploadWorkerRequest({ expectedType: "esm" });
-			// Simulate the bulk-routes API failing with a not authorized error.
-			mockUnauthorizedPublishRoutesRequest();
-			// Simulate that the worker has already been deployed to another route in this zone.
-			mockCollectKnownRoutesRequest([
+			// These run during route conflict resolution.
+			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+			mockGetZones("example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes("example-com-id", [
+				// Simulate that the worker has already been deployed to another route.
 				{
 					pattern: "foo.example.com/other-route",
 					script: "test-name",
 				},
 			]);
-			mockGetZoneFromHostRequest("example.com", "some-zone-id");
+			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+			// Simulate the bulk-routes API failing with a not authorized error.
+			mockUnauthorizedPublishRoutesRequest();
 			mockPublishRoutesFallbackRequest({
 				pattern: "example.com/some-route/*",
 				script: "test-name",
@@ -1406,22 +1534,22 @@ describe("deploy", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe current authentication token does not have 'All Zones' permissions.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe current authentication token does not have 'All Zones' permissions.[0m
 
-			  Falling back to using the zone-based API endpoint to update each route individually.
-			  Note that there is no access to routes associated with zones that the API token does not have
-			  permission for.
-			  Existing routes for this Worker in such zones will not be deleted.
+				  Falling back to using the zone-based API endpoint to update each route individually.
+				  Note that there is no access to routes associated with zones that the API token does not have
+				  permission for.
+				  Existing routes for this Worker in such zones will not be deleted.
 
 
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
 
-			  The following routes were already associated with this worker, and have not been deleted:
-			   - \\"foo.example.com/other-route\\"
-			  If these routes are not wanted then you can remove them in the dashboard.
+				  The following routes were already associated with this worker, and have not been deleted:
+				   - \\"foo.example.com/other-route\\"
+				  If these routes are not wanted then you can remove them in the dashboard.
 
-			"
-		`);
+				"
+			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -1440,16 +1568,19 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUpdateWorkerSubdomain({ env: "staging", enabled: false });
 			mockUploadWorkerRequest({ env: "staging", expectedType: "esm" });
-			// Simulate the bulk-routes API failing with a not authorized error.
-			mockUnauthorizedPublishRoutesRequest({ env: "staging" });
-			// Simulate that the worker has already been deployed to another route in this zone.
-			mockCollectKnownRoutesRequest([
+			// These run during route conflict resolution.
+			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+			mockGetZones("example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes("example-com-id", [
+				// Simulate that the worker has already been deployed to another route.
 				{
 					pattern: "foo.example.com/other-route",
 					script: "test-name",
 				},
 			]);
-			mockGetZoneFromHostRequest("example.com", "some-zone-id");
+			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+			// Simulate the bulk-routes API failing with a not authorized error.
+			mockUnauthorizedPublishRoutesRequest({ env: "staging" });
 			mockPublishRoutesFallbackRequest({
 				pattern: "example.com/some-route/*",
 				script: "test-name",
@@ -1469,6 +1600,11 @@ describe("deploy", () => {
 				writeWorkerSource();
 				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
+				// These run during route conflict resolution.
+				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({});
 				mockPublishCustomDomainsRequest({
 					publishFlags: {
@@ -1489,6 +1625,11 @@ describe("deploy", () => {
 				writeWorkerSource();
 				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
+				// These run during route conflict resolution.
+				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
 					originConflicts: [
 						{
@@ -1534,6 +1675,11 @@ Update them to point to this script instead?`,
 				writeWorkerSource();
 				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
+				// These run during route conflict resolution.
+				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
 					dnsRecordConflicts: [
 						{
@@ -1571,6 +1717,11 @@ Update them to point to this script instead?`,
 				writeWorkerSource();
 				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
+				// These run during route conflict resolution.
+				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
 					originConflicts: [
 						{
@@ -1663,6 +1814,11 @@ Update them to point to this script instead?`,
 				writeWorkerSource();
 				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
+				// These run during route conflict resolution.
+				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
 					originConflicts: [
 						{
@@ -1748,6 +1904,23 @@ Update them to point to this script instead?`,
 				mockSubDomainRequest();
 				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
+				// These run during route conflict resolution.
+				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+				mockGetZonesMulti({
+					"example.com": {
+						accountId: "some-account-id",
+						zones: [{ id: "example-com-id" }],
+					},
+					"api.example.com": {
+						accountId: "some-account-id",
+						zones: [{ id: "api-example-com-id" }],
+					},
+				});
+				mockGetZoneWorkerRoutesMulti({
+					"example-com-id": [],
+					"api-example-com-id": [],
+				});
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({});
 				mockPublishCustomDomainsRequest({
 					publishFlags: {
@@ -1814,6 +1987,28 @@ Update them to point to this script instead?`,
 				mockSubDomainRequest();
 				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
+				// These run during route conflict resolution.
+				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+				mockGetZonesMulti({
+					"config.com": {
+						accountId: "some-account-id",
+						zones: [{ id: "config-com-id" }],
+					},
+					"api.example.com": {
+						accountId: "some-account-id",
+						zones: [{ id: "api-example-com-id" }],
+					},
+					"cli.com": {
+						accountId: "some-account-id",
+						zones: [{ id: "cli-com-id" }],
+					},
+				});
+				mockGetZoneWorkerRoutesMulti({
+					"config-com-id": [],
+					"api-example-com-id": [],
+					"cli-com-id": [],
+				});
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({});
 				mockPublishCustomDomainsRequest({
 					publishFlags: {
@@ -1891,9 +2086,9 @@ Update them to point to this script instead?`,
 						"simple.co.uk/*",
 						"*/*",
 						"*/blog/*",
-						{ pattern: "example.com/blog/*", zone_id: "asdfadsf" },
-						{ pattern: "example.com/*", zone_id: "asdfadsf" },
-						{ pattern: "example.com/abc/def/*", zone_id: "asdfadsf" },
+						{ pattern: "example.com/blog/*", zone_id: "example-com-id" },
+						{ pattern: "example.com/*", zone_id: "example-com-id" },
+						{ pattern: "example.com/abc/def/*", zone_id: "example-com-id" },
 					],
 				});
 				await mockAUSRequest([]);
@@ -1906,6 +2101,23 @@ Update them to point to this script instead?`,
 					},
 					expectedType: "none",
 				});
+				// These run during route conflict resolution.
+				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+				mockGetZonesMulti({
+					"simple.co.uk": {
+						accountId: "some-account-id",
+						zones: [{ id: "simple-co-uk-id" }],
+					},
+					"example.com": {
+						accountId: "some-account-id",
+						zones: [{ id: "example-com-id" }],
+					},
+				});
+				mockGetZoneWorkerRoutesMulti({
+					"simple-co-uk-id": [],
+					"example-com-id": [],
+				});
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockPublishRoutesRequest({
 					routes: [
 						// @ts-expect-error - this is what is expected
@@ -1926,15 +2138,15 @@ Update them to point to this script instead?`,
 						},
 						{
 							pattern: "example.com/blog/*",
-							zone_id: "asdfadsf",
+							zone_id: "example-com-id",
 						},
 						{
 							pattern: "example.com/*",
-							zone_id: "asdfadsf",
+							zone_id: "example-com-id",
 						},
 						{
 							pattern: "example.com/abc/def/*",
-							zone_id: "asdfadsf",
+							zone_id: "example-com-id",
 						},
 					],
 				});
@@ -1963,9 +2175,9 @@ Update them to point to this script instead?`,
 					  simple.co.uk/*
 					  */*
 					  */blog/*
-					  example.com/blog/* (zone id: asdfadsf)
-					  example.com/* (zone id: asdfadsf)
-					  example.com/abc/def/* (zone id: asdfadsf)
+					  example.com/blog/* (zone id: example-com-id)
+					  example.com/* (zone id: example-com-id)
+					  example.com/abc/def/* (zone id: example-com-id)
 					Current Version ID: Galaxy-Class"
 				`);
 			});
@@ -1973,9 +2185,9 @@ Update them to point to this script instead?`,
 			it("does not mention 404s hit a Worker if it's assets only", async () => {
 				writeWranglerConfig({
 					routes: [
-						{ pattern: "example.com/blog/*", zone_id: "asdfadsf" },
-						{ pattern: "example.com/*", zone_id: "asdfadsf" },
-						{ pattern: "example.com/abc/def/*", zone_id: "asdfadsf" },
+						{ pattern: "example.com/blog/*", zone_id: "example-com-id" },
+						{ pattern: "example.com/*", zone_id: "example-com-id" },
+						{ pattern: "example.com/abc/def/*", zone_id: "example-com-id" },
 					],
 					assets: {
 						directory: "assets",
@@ -1991,19 +2203,24 @@ Update them to point to this script instead?`,
 					},
 					expectedType: "none",
 				});
+				// These run during route conflict resolution.
+				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+				mockGetZones("example.com", [{ id: "example-com-id" }]);
+				mockGetZoneWorkerRoutes("example-com-id", []);
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockPublishRoutesRequest({
 					routes: [
 						{
 							pattern: "example.com/blog/*",
-							zone_id: "asdfadsf",
+							zone_id: "example-com-id",
 						},
 						{
 							pattern: "example.com/*",
-							zone_id: "asdfadsf",
+							zone_id: "example-com-id",
 						},
 						{
 							pattern: "example.com/abc/def/*",
-							zone_id: "asdfadsf",
+							zone_id: "example-com-id",
 						},
 					],
 				});
@@ -2025,9 +2242,9 @@ Update them to point to this script instead?`,
 					Worker Startup Time: 100 ms
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
-					  example.com/blog/* (zone id: asdfadsf)
-					  example.com/* (zone id: asdfadsf)
-					  example.com/abc/def/* (zone id: asdfadsf)
+					  example.com/blog/* (zone id: example-com-id)
+					  example.com/* (zone id: example-com-id)
+					  example.com/abc/def/* (zone id: example-com-id)
 					Current Version ID: Galaxy-Class"
 				`);
 			});
@@ -2035,9 +2252,9 @@ Update them to point to this script instead?`,
 			it("does mention hitting the Worker on 404 if there is one", async () => {
 				writeWranglerConfig({
 					routes: [
-						{ pattern: "example.com/blog/*", zone_id: "asdfadsf" },
-						{ pattern: "example.com/*", zone_id: "asdfadsf" },
-						{ pattern: "example.com/abc/def/*", zone_id: "asdfadsf" },
+						{ pattern: "example.com/blog/*", zone_id: "example-com-id" },
+						{ pattern: "example.com/*", zone_id: "example-com-id" },
+						{ pattern: "example.com/abc/def/*", zone_id: "example-com-id" },
 					],
 					assets: {
 						directory: "assets",
@@ -2055,19 +2272,24 @@ Update them to point to this script instead?`,
 					expectedType: "esm",
 					expectedMainModule: "index.js",
 				});
+				// These run during route conflict resolution.
+				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+				mockGetZones("example.com", [{ id: "example-com-id" }]);
+				mockGetZoneWorkerRoutes("example-com-id", []);
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockPublishRoutesRequest({
 					routes: [
 						{
 							pattern: "example.com/blog/*",
-							zone_id: "asdfadsf",
+							zone_id: "example-com-id",
 						},
 						{
 							pattern: "example.com/*",
-							zone_id: "asdfadsf",
+							zone_id: "example-com-id",
 						},
 						{
 							pattern: "example.com/abc/def/*",
-							zone_id: "asdfadsf",
+							zone_id: "example-com-id",
 						},
 					],
 				});
@@ -2091,9 +2313,9 @@ Update them to point to this script instead?`,
 					Worker Startup Time: 100 ms
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
-					  example.com/blog/* (zone id: asdfadsf)
-					  example.com/* (zone id: asdfadsf)
-					  example.com/abc/def/* (zone id: asdfadsf)
+					  example.com/blog/* (zone id: example-com-id)
+					  example.com/* (zone id: example-com-id)
+					  example.com/abc/def/* (zone id: example-com-id)
 					Current Version ID: Galaxy-Class"
 				`);
 			});
@@ -2105,9 +2327,9 @@ Update them to point to this script instead?`,
 						"simple.co.uk/*",
 						"*/*",
 						"*/blog/*",
-						{ pattern: "example.com/blog/*", zone_id: "asdfadsf" },
-						{ pattern: "example.com/*", zone_id: "asdfadsf" },
-						{ pattern: "example.com/abc/def/*", zone_id: "asdfadsf" },
+						{ pattern: "example.com/blog/*", zone_id: "example-com-id" },
+						{ pattern: "example.com/*", zone_id: "example-com-id" },
+						{ pattern: "example.com/abc/def/*", zone_id: "example-com-id" },
 					],
 					assets: {
 						directory: "assets",
@@ -2126,6 +2348,23 @@ Update them to point to this script instead?`,
 					},
 					expectedType: "none",
 				});
+				// These run during route conflict resolution.
+				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+				mockGetZonesMulti({
+					"simple.co.uk": {
+						accountId: "some-account-id",
+						zones: [{ id: "simple-co-uk-id" }],
+					},
+					"example.com": {
+						accountId: "some-account-id",
+						zones: [{ id: "example-com-id" }],
+					},
+				});
+				mockGetZoneWorkerRoutesMulti({
+					"simple-co-uk-id": [],
+					"example-com-id": [],
+				});
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockPublishRoutesRequest({
 					routes: [
 						// @ts-expect-error - this is what is expected
@@ -2146,15 +2385,15 @@ Update them to point to this script instead?`,
 						},
 						{
 							pattern: "example.com/blog/*",
-							zone_id: "asdfadsf",
+							zone_id: "example-com-id",
 						},
 						{
 							pattern: "example.com/*",
-							zone_id: "asdfadsf",
+							zone_id: "example-com-id",
 						},
 						{
 							pattern: "example.com/abc/def/*",
-							zone_id: "asdfadsf",
+							zone_id: "example-com-id",
 						},
 					],
 				});
@@ -2174,9 +2413,9 @@ Update them to point to this script instead?`,
 					  simple.co.uk/*
 					  */*
 					  */blog/*
-					  example.com/blog/* (zone id: asdfadsf)
-					  example.com/* (zone id: asdfadsf)
-					  example.com/abc/def/* (zone id: asdfadsf)
+					  example.com/blog/* (zone id: example-com-id)
+					  example.com/* (zone id: example-com-id)
+					  example.com/abc/def/* (zone id: example-com-id)
 					Current Version ID: Galaxy-Class"
 				`);
 			});
@@ -6333,7 +6572,7 @@ addEventListener('fetch', event => {});`
 			mockGetWorkerSubdomain({ enabled: false });
 			// no set-subdomain call
 			mockGetZones("example.com", [{ id: "example-id" }]);
-			mockGetWorkerRoutes("example-id");
+			mockGetZoneWorkerRoutes("example-id");
 			mockPublishRoutesRequest({ routes: ["http://example.com/*"] });
 			await runWrangler("deploy index.js");
 
@@ -6366,7 +6605,7 @@ addEventListener('fetch', event => {});`
 				legacyEnv: true,
 			});
 			mockGetZones("production.example.com", [{ id: "example-id" }]);
-			mockGetWorkerRoutes("example-id");
+			mockGetZoneWorkerRoutes("example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
@@ -6403,7 +6642,7 @@ addEventListener('fetch', event => {});`
 				legacyEnv: true,
 			});
 			mockGetZones("production.example.com", [{ id: "example-id" }]);
-			mockGetWorkerRoutes("example-id");
+			mockGetZoneWorkerRoutes("example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
@@ -6557,7 +6796,7 @@ addEventListener('fetch', event => {});`
 				legacyEnv: true,
 			});
 			mockGetZones("production.example.com", [{ id: "example-id" }]);
-			mockGetWorkerRoutes("example-id");
+			mockGetZoneWorkerRoutes("example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
@@ -6595,7 +6834,7 @@ addEventListener('fetch', event => {});`
 				legacyEnv: true,
 			});
 			mockGetZones("production.example.com", [{ id: "example-id" }]);
-			mockGetWorkerRoutes("example-id");
+			mockGetZoneWorkerRoutes("example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
@@ -13231,51 +13470,6 @@ function mockUnauthorizedPublishRoutesRequest({
 			},
 			{ once: true }
 		)
-	);
-}
-
-function mockGetZones(
-	domain: string,
-	zones: { id: string }[] = [],
-	accountId = "some-account-id"
-) {
-	msw.use(
-		http.get("*/zones", ({ request }) => {
-			const url = new URL(request.url);
-
-			expect([...url.searchParams.entries()]).toEqual([
-				["name", domain],
-				["account.id", accountId],
-			]);
-
-			return HttpResponse.json(
-				{
-					success: true,
-					errors: [],
-					messages: [],
-					result: zones,
-				},
-				{ status: 200 }
-			);
-		})
-	);
-}
-
-function mockGetWorkerRoutes(zoneId: string) {
-	msw.use(
-		http.get("*/zones/:zoneId/workers/routes", ({ params }) => {
-			expect(params.zoneId).toEqual(zoneId);
-
-			return HttpResponse.json(
-				{
-					success: true,
-					errors: [],
-					messages: [],
-					result: [],
-				},
-				{ status: 200 }
-			);
-		})
 	);
 }
 
