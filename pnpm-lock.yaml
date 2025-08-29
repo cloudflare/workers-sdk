@@ -103,9 +103,6 @@ importers:
       '@changesets/parse':
         specifier: ^0.4.0
         version: 0.4.0
-      '@cloudflare/workers-types':
-        specifier: catalog:default
-        version: 4.20250823.0
       '@ianvs/prettier-plugin-sort-imports':
         specifier: 4.2.1
         version: 4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.2.5)
@@ -606,6 +603,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250823.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -673,6 +673,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250823.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -709,6 +712,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250823.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -748,6 +754,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250823.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -763,6 +772,9 @@ importers:
 
   fixtures/pages-plugin-example:
     devDependencies:
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250823.0
       is-odd:
         specifier: ^3.0.1
         version: 3.0.1
@@ -860,6 +872,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250823.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1032,9 +1047,17 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/routing-app: {}
+  fixtures/routing-app:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250823.0
 
-  fixtures/rules-app: {}
+  fixtures/rules-app:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250823.0
 
   fixtures/secrets-store:
     devDependencies:
@@ -1641,6 +1664,9 @@ importers:
 
   packages/devprod-status-bot:
     devDependencies:
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250823.0
       '@octokit/types':
         specifier: ^13.8.0
         version: 13.8.0
