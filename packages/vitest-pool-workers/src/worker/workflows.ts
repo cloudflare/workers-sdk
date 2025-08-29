@@ -187,7 +187,11 @@ export async function introspectWorkflow(
 								introspectAndModifyInstance(options.id)
 							)
 						);
-						return target[property](argArray[0]);
+
+						const createPromises = (argArray[0] ?? []).map(
+							(arg: WorkflowInstanceCreateOptions) => target["create"](arg)
+						);
+						return Promise.all(createPromises);
 					},
 				});
 			}
