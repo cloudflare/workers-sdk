@@ -122,9 +122,11 @@ export const WorkerdTests: Record<string, () => void> = {
 			"stream/promises",
 			"stream/web",
 			"string_decoder",
+			"sys",
 			"timers",
 			"timers/promises",
 			"url",
+			"util",
 			"util/types",
 			"zlib",
 		];
@@ -140,6 +142,29 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(types.isAnyArrayBuffer(new ArrayBuffer(0)), true);
 		assert.strictEqual(util.isArray([]), true);
 		assert.strictEqual(util.isDeepStrictEqual(0, 0), true);
+		assert.strictEqual(util.isBoolean(true), true);
+		assert.strictEqual(util.isBuffer(true), false);
+		assert.strictEqual(util.isBuffer(Buffer.from("hello world")), true);
+		assert.strictEqual(util.isDate(new Date()), true);
+		assert.strictEqual(util.isError(new Error()), true);
+		assert.strictEqual(util.isFunction(new Error()), false);
+		assert.strictEqual(util.isNull(null), true);
+		assert.strictEqual(util.isNull(undefined), false);
+		assert.strictEqual(util.isNullOrUndefined(null), true);
+		assert.strictEqual(util.isNullOrUndefined(undefined), true);
+		assert.strictEqual(util.isNumber(undefined), false);
+		assert.strictEqual(util.isNumber(1), true);
+		assert.strictEqual(util.isObject(1), false);
+		assert.strictEqual(util.isObject({}), true);
+		assert.strictEqual(util.isPrimitive(true), true);
+		assert.strictEqual(util.isRegExp(true), false);
+		assert.strictEqual(util.isString(true), false);
+		assert.strictEqual(util.isSymbol(true), false);
+		assert.strictEqual(util.isUndefined(undefined), false);
+
+		// these methods are not implemented, but exist on the runtime
+		assert.strictEqual(typeof util._errnoException, "function");
+		assert.strictEqual(typeof util._exceptionWithHostPort, "function");
 	},
 
 	async testPath() {
