@@ -3149,9 +3149,6 @@ importers:
 
   packages/vitest-pool-workers:
     dependencies:
-      '@cloudflare/workflows-shared':
-        specifier: workspace:*
-        version: link:../workflows-shared
       birpc:
         specifier: 0.2.14
         version: 0.2.14
@@ -3186,6 +3183,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20250823.0
+      '@cloudflare/workflows-shared':
+        specifier: workspace:*
+        version: link:../workflows-shared
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
