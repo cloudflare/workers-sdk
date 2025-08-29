@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import { dirname } from "node:path";
-import { formatConfigSnippet } from "../../config";
+import { formatConfigSnippet, parseRawConfigFile } from "../../config";
 import type { RawConfig } from "../../config";
 
 /** Write a mock wrangler config file to disk. */
@@ -23,4 +23,8 @@ export function writeWranglerConfig(
 		),
 		"utf-8"
 	);
+}
+
+export function readWranglerConfig(path = "./wrangler.toml"): RawConfig {
+	return parseRawConfigFile(path);
 }
