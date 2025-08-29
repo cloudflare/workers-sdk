@@ -85,8 +85,6 @@ const commonOptions = {
 	platform: "node",
 	target: "esnext",
 	bundle: true,
-	//packages: "external",
-	//external: ["cloudflare:*"],
 	external: [
 		// Node.js built-ins (handled automatically by esbuild but listed for completeness)
 		"node:*",
@@ -132,7 +130,6 @@ const esmOptions = {
 		path.join(pkgRoot, "src", "worker", "index.ts"),
 		...libPaths.filter((libPath) => /\.m?ts$/.test(libPath)),
 	],
-	external: [...commonOptions.external],
 };
 
 const cjsOptions = {
