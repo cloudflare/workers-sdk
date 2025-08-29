@@ -6,6 +6,7 @@ import {
 	InstanceType,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
+import { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
 import { http, HttpResponse } from "msw";
 import { clearCachedAccount } from "../../cloudchamber/locations";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
@@ -1496,6 +1497,143 @@ describe("wrangler deploy with containers", () => {
 
 			"
 		`);
+	});
+
+	describe("affinities", () => {
+		it("may be specified on creation", async () => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						affinities: {
+							hardware_generation: "highest-overall-performance",
+						},
+					},
+				],
+			});
+
+			mockGetApplications([]);
+
+			mockCreateApplication();
+
+			await runWrangler("deploy index.js");
+
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ NEW my-container
+				│
+				│   [[containers]]
+				│   name = \\"my-container\\"
+				│   scheduling_policy = \\"default\\"
+				│   instances = 0
+				│   max_instances = 10
+				│   rollout_active_grace_period = 0
+				│
+				│     [containers.configuration]
+				│     image = \\"docker.io/hello:world\\"
+				│     instance_type = \\"dev\\"
+				│
+				│     [containers.constraints]
+				│     tier = 1
+				│
+				│     [containers.affinities]
+				│     hardware_generation = \\"highest-overall-performance\\"
+				│
+				│     [containers.durable_objects]
+				│     namespace_id = \\"1\\"
+				│
+				│
+				│  SUCCESS  Created application my-container (Application ID: undefined)
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+
+		it("may be specified on modification", async () => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						affinities: {
+							hardware_generation: "highest-overall-performance",
+						},
+					},
+				],
+			});
+
+			mockGetApplications([
+				{
+					id: "abc",
+					name: "my-container",
+					instances: 0,
+					max_instances: 10,
+					created_at: new Date().toString(),
+					version: 1,
+					account_id: "1",
+					scheduling_policy: SchedulingPolicy.DEFAULT,
+					rollout_active_grace_period: 0,
+					configuration: {
+						image: "docker.io/hello:world",
+						disk: {
+							size: "2GB",
+							size_mb: 2000,
+						},
+						vcpu: 0.0625,
+						memory: "256MB",
+						memory_mib: 256,
+					},
+					constraints: {
+						tier: 1,
+					},
+					durable_objects: {
+						namespace_id: "1",
+					},
+				},
+			]);
+
+			mockModifyApplication({
+				affinities: {
+					hardware_generation:
+						ApplicationAffinityHardwareGeneration.HIGHEST_OVERALL_PERFORMANCE,
+				},
+			});
+			mockCreateApplicationRollout({
+				description: "Progressive update",
+				strategy: "rolling",
+				kind: "full_auto",
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ EDIT my-container
+				│
+				│     [containers.constraints]
+				│     tier = 1
+				│ +   [containers.affinities]
+				│ +   hardware_generation = \\"highest-overall-performance\\"
+				│
+				│
+				│  SUCCESS  Modified application my-container (Application ID: abc)
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
 	});
 });
 

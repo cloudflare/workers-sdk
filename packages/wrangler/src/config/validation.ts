@@ -2709,6 +2709,7 @@ function validateContainerApp(
 					"instance_type",
 					"configuration",
 					"constraints",
+					"affinities",
 					"rollout_step_percentage",
 					"rollout_kind",
 					"durable_objects",
