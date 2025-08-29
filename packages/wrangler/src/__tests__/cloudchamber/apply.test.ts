@@ -1,4 +1,5 @@
 import {
+	ApplicationAffinityColocation,
 	getCloudflareContainerRegistry,
 	SchedulingPolicy,
 	SecretAccessType,
@@ -2014,5 +2015,83 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		const app = await applicationReqBodyPromise;
 		expect(app.configuration?.instance_type).toEqual("standard");
+	});
+
+	test("updates affinities", async () => {
+		setIsTTY(false);
+		const registry = getCloudflareContainerRegistry();
+		writeWranglerConfig({
+			name: "my-container",
+			containers: [
+				{
+					name: "my-container-app",
+					instances: 3,
+					class_name: "DurableObjectClass",
+					image: `${registry}/hello:1.0`,
+					instance_type: "dev",
+					constraints: {
+						tier: 1,
+					},
+					affinities: {
+						hardware_generation: "highest-overall-performance",
+					},
+				},
+			],
+		});
+
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 3,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: `${registry}/hello:1.0`,
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tier: 1,
+				},
+				affinities: {
+					colocation: ApplicationAffinityColocation.DATACENTER,
+				},
+			},
+		]);
+
+		const applicationReqBodyPromise = mockModifyApplication();
+		await runWrangler("cloudchamber apply");
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   scheduling_policy = \\"regional\\"
+			│     [containers.affinities]
+			│ -   colocation = \\"datacenter\\"
+			│ +   hardware_generation = \\"highest-overall-performance\\"
+			│     [containers.configuration]
+			│     image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		const app = await applicationReqBodyPromise;
+		expect(app.configuration?.instance_type).toEqual("dev");
 	});
 });
