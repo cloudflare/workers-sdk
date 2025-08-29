@@ -49,7 +49,7 @@ async function runViteDev(
 	await vi.waitFor(async () => {
 		const resposne = await fetch(url, { method: "HEAD" });
 		expect(resposne.status).toBe(200);
-	});
+	}, 5000);
 
 	return url;
 }
@@ -81,7 +81,7 @@ async function runWranglerDev(
 	await vi.waitFor(async () => {
 		const resposne = await fetch(url);
 		expect(resposne.status).not.toBeGreaterThan(500);
-	});
+	}, 5000);
 
 	return url;
 }
@@ -127,7 +127,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				status: 503,
 				body: `Couldn't find a local dev session for the "default" entrypoint of service "service-worker" to proxy to`,
 			});
-		});
+		}, 5000);
 
 		await runWranglerDev("wrangler.service-worker.jsonc", devRegistryPath);
 
@@ -141,7 +141,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(await response.text()).toBe("Hello from service worker!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 	});
 
 	it("supports module worker fetch over service binding", async ({
@@ -167,7 +167,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				status: 503,
 				body: `Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`,
 			});
-		});
+		}, 5000);
 
 		const multiWorkers = await runWranglerDev(
 			["wrangler.module-worker.jsonc", "wrangler.worker-entrypoint.jsonc"],
@@ -192,7 +192,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				`${multiWorkers}/example.txt?${searchParams}`
 			);
 			expect(await assetResponse.text()).toBe("This is an example asset file");
-		});
+		}, 5000);
 
 		// Test single worker -> multi workers
 		await vi.waitFor(async () => {
@@ -204,7 +204,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(await response.text()).toEqual("Hello from Module Worker!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		// Test single worker -> named entrypoint
 		await vi.waitFor(async () => {
@@ -216,7 +216,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		// Test multi workers -> named entrypoint with assets
 		await vi.waitFor(async () => {
@@ -228,7 +228,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 	});
 
 	it("supports RPC over service binding", async ({ devRegistryPath }) => {
@@ -251,7 +251,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			expect(await response.text()).toEqual(
 				`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "worker-entrypoint-with-assets" to proxy to.`
 			);
-		});
+		}, 5000);
 
 		const singleWorkerWithAssets = await runWranglerDev(
 			"wrangler.worker-entrypoint-with-assets.jsonc",
@@ -268,7 +268,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong");
-		});
+		}, 5000);
 
 		// Test RPC to default entrypoint with static assets
 		await vi.waitFor(async () => {
@@ -280,7 +280,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong");
-		});
+		}, 5000);
 
 		// Test RPC to named entrypoint
 		await vi.waitFor(async () => {
@@ -292,7 +292,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong from Named Entrypoint");
-		});
+		}, 5000);
 
 		// Test RPC to named entrypoint with static assets
 		await vi.waitFor(async () => {
@@ -304,7 +304,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong from Named Entrypoint");
-		});
+		}, 5000);
 	});
 
 	it("supports fetch over durable object binding", async ({
@@ -325,7 +325,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual("Service Unavailable");
-		});
+		}, 5000);
 
 		await runWranglerDev(
 			[
@@ -344,7 +344,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Hello from Durable Object!");
-		});
+		}, 5000);
 	});
 
 	it("supports RPC over durable object binding", async ({
@@ -373,7 +373,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				status: 500,
 				body: 'Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.',
 			});
-		});
+		}, 5000);
 
 		await runWranglerDev(
 			"wrangler.internal-durable-object.jsonc",
@@ -392,7 +392,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			expect(await response.text()).toEqual(
 				'Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.'
 			);
-		});
+		}, 5000);
 	});
 
 	it("supports tail handler", async ({ devRegistryPath }) => {
@@ -432,7 +432,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 					[["[Module Worker]"], ["some other log"]],
 				]),
 			});
-		});
+		}, 5000);
 
 		await vi.waitFor(async () => {
 			// Trigger tail handler of module-worker via worker-entrypoint
@@ -459,7 +459,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 					],
 				]),
 			});
-		});
+		}, 5000);
 	});
 });
 
@@ -486,7 +486,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			expect(await response.text()).toEqual(
 				`Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`
 			);
-		});
+		}, 5000);
 
 		const moduleWorker = await runViteDev(
 			"vite.module-worker.config.ts",
@@ -511,7 +511,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 				`${moduleWorker}/example.txt?${searchParams}`
 			);
 			expect(await assetResponse.text()).toBe("This is an example asset file");
-		});
+		}, 5000);
 
 		// Test worker-entrypoint -> module-worker
 		await vi.waitFor(async () => {
@@ -525,7 +525,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(await response.text()).toEqual("Hello from Module Worker!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		// Test worker-entrypoint -> named entrypoint
 		await vi.waitFor(async () => {
@@ -539,7 +539,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		// Test module-worker -> named entrypoint with assets
 		await vi.waitFor(async () => {
@@ -551,7 +551,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 	});
 
 	it("supports RPC over service binding", async ({ devRegistryPath }) => {
@@ -571,7 +571,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			expect(await response.text()).toEqual(
 				`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "worker-entrypoint-with-assets" to proxy to.`
 			);
-		});
+		}, 5000);
 
 		const workerEntrypointWithAssets = await runViteDev(
 			"vite.worker-entrypoint-with-assets.config.ts",
@@ -589,7 +589,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong");
-		});
+		}, 5000);
 
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
@@ -600,7 +600,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong");
-		});
+		}, 5000);
 
 		// Test RPC to named entrypoint
 		await vi.waitFor(async () => {
@@ -614,7 +614,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong from Named Entrypoint");
-		});
+		}, 5000);
 
 		// Test RPC to named entrypoint with static assets
 		await vi.waitFor(async () => {
@@ -626,7 +626,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong from Named Entrypoint");
-		});
+		}, 5000);
 	});
 
 	it("supports tail handler", async ({ devRegistryPath }) => {
@@ -687,7 +687,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
 				]),
 			});
-		});
+		}, 5000);
 	});
 });
 
@@ -709,7 +709,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			const response = await fetch(`${moduleWorkerWithAssets}?${searchParams}`);
 			expect(await response.text()).toBe("Hello from Worker Entrypoint!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		// Test vite dev -> wrangler dev
 		await vi.waitFor(async () => {
@@ -720,7 +720,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 			expect(await response.text()).toBe("Hello from Module Worker!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		// Test vite dev -> wrangler dev named entrypoint
 		await vi.waitFor(async () => {
@@ -731,7 +731,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 			expect(await response.text()).toBe("Hello from Named Entrypoint!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		// Test wrangler dev -> vite dev named entrypoint with assets
 		await vi.waitFor(async () => {
@@ -742,7 +742,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			const response = await fetch(`${moduleWorkerWithAssets}?${searchParams}`);
 			expect(await response.text()).toBe("Hello from Named Entrypoint!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 	});
 
 	it("supports module worker fetch over service binding", async ({
@@ -767,7 +767,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				`Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`
 			);
 			expect(response.status).toBe(503);
-		});
+		}, 5000);
 
 		const moduleWorker = await runWranglerDev(
 			"wrangler.module-worker.jsonc",
@@ -783,7 +783,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			const response = await fetch(`${moduleWorker}?${searchParams}`);
 			expect(await response.text()).toBe("Hello from Worker Entrypoint!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		// Test vite dev -> wrangler dev
 		await vi.waitFor(async () => {
@@ -796,7 +796,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			);
 			expect(await response.text()).toBe("Hello from Module Worker!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		// Test vite dev -> wrangler dev named entrypoint
 		await vi.waitFor(async () => {
@@ -809,7 +809,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			);
 			expect(await response.text()).toBe("Hello from Named Entrypoint!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		// Test wrangler dev -> vite dev named entrypoint with assets
 		await vi.waitFor(async () => {
@@ -820,7 +820,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			const response = await fetch(`${moduleWorker}?${searchParams}`);
 			expect(await response.text()).toBe("Hello from Named Entrypoint!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 	});
 
 	it("supports service worker fetch over service binding", async ({
@@ -843,7 +843,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			expect(await response.text()).toEqual(
 				`Couldn't find a local dev session for the "default" entrypoint of service "service-worker" to proxy to`
 			);
-		});
+		}, 5000);
 
 		await runWranglerDev(
 			["wrangler.service-worker.jsonc", "wrangler.worker-entrypoint.jsonc"],
@@ -859,7 +859,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			const response = await fetch(`${viteDevURL}?${searchParams}`);
 			expect(await response.text()).toEqual("Hello from service worker!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 	});
 
 	it("supports RPC over service binding", async ({ devRegistryPath }) => {
@@ -878,7 +878,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			expect(await response.text()).toEqual(
 				`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "worker-entrypoint-with-assets" to proxy to.`
 			);
-		});
+		}, 5000);
 
 		const workerEntrypointWithAssets = await runWranglerDev(
 			"wrangler.worker-entrypoint-with-assets.jsonc",
@@ -895,7 +895,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			);
 			expect(await response.text()).toEqual("Pong");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
@@ -905,7 +905,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 			expect(await response.text()).toEqual("Pong");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		// Test RPC to named entrypoint
 		await vi.waitFor(async () => {
@@ -918,7 +918,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			);
 			expect(await response.text()).toEqual("Pong from Named Entrypoint");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		// Test RPC to named entrypoint with static assets
 		await vi.waitFor(async () => {
@@ -929,7 +929,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 			expect(await response.text()).toEqual("Pong from Named Entrypoint");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 	});
 
 	it("supports tail handler", async ({ devRegistryPath }) => {
@@ -966,7 +966,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 					[["[Module Worker]"], ["some other log"]],
 				]),
 			});
-		});
+		}, 5000);
 
 		await vi.waitFor(async () => {
 			// Trigger tail handler of module-worker via worker-entrypoint
@@ -990,7 +990,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
 				]),
 			});
-		});
+		}, 5000);
 	});
 });
 
@@ -1009,7 +1009,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 			expect(await response.text()).toEqual(
 				`Couldn't find a local dev session for the "default" entrypoint of service "worker-entrypoint-with-assets" to proxy to`
 			);
-		});
+		}, 5000);
 
 		await vi.waitFor(async () => {
 			const response = await env.MODULE_WORKER.fetch("http://localhost");
@@ -1018,7 +1018,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 			expect(await response.text()).toEqual(
 				`Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`
 			);
-		});
+		}, 5000);
 
 		await runViteDev(
 			"vite.worker-entrypoint-with-assets.config.ts",
@@ -1031,7 +1031,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 
 			expect(await response.text()).toEqual("Hello from Worker Entrypoint!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		await vi.waitFor(async () => {
 			const response = await env.MODULE_WORKER.fetch("http://localhost");
@@ -1040,7 +1040,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 			expect(await response.text()).toEqual(
 				`Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`
 			);
-		});
+		}, 5000);
 
 		await runWranglerDev("wrangler.module-worker.jsonc", devRegistryPath);
 
@@ -1049,7 +1049,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 
 			expect(await response.text()).toEqual("Hello from Module Worker!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 
 		await vi.waitFor(async () => {
 			const response =
@@ -1057,7 +1057,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 
 			expect(await response.text()).toEqual("Hello from Worker Entrypoint!");
 			expect(response.status).toBe(200);
-		});
+		}, 5000);
 	});
 
 	it("supports RPC over service binding", async ({ devRegistryPath }) => {
@@ -1083,7 +1083,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		await vi.waitFor(async () => {
 			const result = await env.WORKER_ENTRYPOINT.ping();
 			expect(result).toBe("Pong");
-		});
+		}, 5000);
 
 		await runWranglerDev(
 			[
@@ -1097,7 +1097,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 			const result = await env.WORKER_ENTRYPOINT_WITH_ASSETS.ping();
 
 			expect(result).toBe("Pong");
-		});
+		}, 5000);
 	});
 
 	it("supports fetch over durable object binding", async ({
@@ -1114,7 +1114,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 			const response = await stub.fetch("http://localhost");
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual("Service Unavailable");
-		});
+		}, 5000);
 
 		await runWranglerDev(
 			"wrangler.internal-durable-object.jsonc",
@@ -1126,7 +1126,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Hello from Durable Object!");
-		});
+		}, 5000);
 	});
 
 	it("supports RPC over durable object binding", async ({
