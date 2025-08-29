@@ -200,7 +200,7 @@ declare module "cloudflare:test" {
 		waitForStatus(status: InstanceStatus["status"]): Promise<void>;
 
 		/**
-		 * Cleans up the Workflow instance's state.
+		 * Cleans up the Workflow instance.
 		 * This is crucial for ensuring test isolation by preventing state from
 		 * leaking between tests. It's best practice to call this in an `afterEach`
 		 * hook or at the end of every test.
@@ -386,6 +386,8 @@ declare module "cloudflare:test" {
 	 * await instance.waitForStatus("complete");
 	 * await instance.cleanUp();
 	 * }
+	 *
+	 * introspector.cleanUp();
 	 * });
 	 * ```
 	 */
@@ -411,7 +413,7 @@ declare module "cloudflare:test" {
 		get(): WorkflowInstanceIntrospector[];
 
 		/**
-		 * Cleans up the Workflow introspector state.
+		 * Cleans up the Workflow introspector.
 		 * This is crucial for ensuring that the introspection of a Workflow does
 		 * not get persisted across tests.
 		 * Call this in an `afterEach` hook or at the end of every test.
