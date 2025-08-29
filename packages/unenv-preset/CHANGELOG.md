@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.7.1
+
+### Patch Changes
+
+- [#10431](https://github.com/cloudflare/workers-sdk/pull/10431) [`f656d1a`](https://github.com/cloudflare/workers-sdk/commit/f656d1a2da772692b09e8f3ae1e0805d1d33f52e) Thanks [@anonrig](https://github.com/anonrig)! - Remove node:module polyfills
+
 ## 2.7.0
 
 ### Minor Changes
