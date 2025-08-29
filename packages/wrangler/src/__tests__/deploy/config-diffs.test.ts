@@ -104,7 +104,20 @@ describe("getRemoteConfigsDiff", () => {
 			+       \\"id\\": \\"my-kv-456\\"
 			      }
 			    ],
-			    \\"workers_dev\\": true"
+			-   \\"workers_dev\\": true,
+			    \\"observability\\": {
+			      \\"enabled\\": false,
+			      \\"head_sampling_rate\\": 1,
+
+			  ...
+
+			        \\"head_sampling_rate\\": 1,
+			        \\"invocation_logs\\": true
+			      }
+			-   }
+			+   },
+			+   \\"workers_dev\\": true
+			  }"
 		`);
 		expect(nonDestructive).toBe(true);
 	});
@@ -140,8 +153,15 @@ describe("getRemoteConfigsDiff", () => {
 			-   \\"compatibility_date\\": \\"2025-07-08\\",
 			+   \\"compatibility_date\\": \\"2025-07-09\\",
 			    \\"observability\\": {
-			-     \\"enabled\\": true
-			+     \\"enabled\\": false
+			-     \\"enabled\\": true,
+			+     \\"enabled\\": false,
+			      \\"head_sampling_rate\\": 1,
+			      \\"logs\\": {
+			        \\"enabled\\": false,
+
+			  ...
+
+			      }
 			    },
 			    \\"account_id\\": \\"account-id-123\\",
 			-   \\"workers_dev\\": true,
@@ -205,11 +225,11 @@ describe("getRemoteConfigsDiff", () => {
 			expect(diff.toString()).toMatchInlineSnapshot(`
 				"  {
 				    \\"observability\\": {
-				-     \\"enabled\\": false
-				+     \\"enabled\\": true
-				    },
-				    \\"workers_dev\\": true
-				  }"
+				-     \\"enabled\\": false,
+				+     \\"enabled\\": true,
+				      \\"head_sampling_rate\\": 1,
+				      \\"logs\\": {
+				        \\"enabled\\": false,"
 			`);
 		});
 
@@ -222,13 +242,12 @@ describe("getRemoteConfigsDiff", () => {
 			expect(diff.toString()).toMatchInlineSnapshot(`
 				"  {
 				    \\"observability\\": {
-				-     \\"enabled\\": false
-				+     \\"logs\\": {
-				+       \\"enabled\\": true
-				+     }
-				    },
-				    \\"workers_dev\\": true
-				  }"
+				      \\"logs\\": {
+				-       \\"enabled\\": false,
+				+       \\"enabled\\": true,
+				        \\"head_sampling_rate\\": 1,
+				        \\"invocation_logs\\": true
+				      },"
 			`);
 		});
 
@@ -238,17 +257,7 @@ describe("getRemoteConfigsDiff", () => {
 				{ enabled: false, head_sampling_rate: 1, logs: { enabled: true } },
 				{ enabled: false, logs: { enabled: true, invocation_logs: true } }
 			);
-			expect(diff.toString()).toMatchInlineSnapshot(`
-				"    \\"observability\\": {
-				      \\"enabled\\": false,
-				      \\"logs\\": {
-				-       \\"enabled\\": true
-				+       \\"enabled\\": true,
-				+       \\"invocation_logs\\": true
-				      }
-				    },
-				    \\"workers_dev\\": true"
-			`);
+			expect(diff.toString()).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should correctly not show logs.invocation_logs being added remotely", () => {
@@ -263,11 +272,11 @@ describe("getRemoteConfigsDiff", () => {
 				"    \\"observability\\": {
 				      \\"logs\\": {
 				        \\"enabled\\": true,
-				-       \\"head_sampling_rate\\": 1
-				+       \\"head_sampling_rate\\": 0.9
-				      }
-				    },
-				    \\"workers_dev\\": true"
+				-       \\"head_sampling_rate\\": 1,
+				+       \\"head_sampling_rate\\": 0.9,
+				        \\"invocation_logs\\": true
+				      },
+				      \\"enabled\\": false,"
 			`);
 		});
 	});

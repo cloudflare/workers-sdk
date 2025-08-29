@@ -76,39 +76,19 @@ export function getRemoteConfigDiff(
  */
 function configDiffOnlyHasAdditionsIfAny(diff: Diff): boolean {
 	const diffLines = diff.toString().split("\n");
-	let currentRemovalIdx = 0;
-	while (currentRemovalIdx !== -1) {
-		const nextRemovalIdx = diffLines.findIndex((line, idx) => {
-			// We only consider values after the currentRemovalIdx (which is practically our starting index)
-			if (idx < currentRemovalIdx) {
-				return false;
-			}
-
-			const withoutLeadingSpaces = line.replace(/^\s*/, "");
-			return withoutLeadingSpaces.startsWith(red("-"));
-		});
-		if (nextRemovalIdx === -1) {
-			// We've looked for all the removals none were actually modifications
-			// so we return true, at most the changes in the diff are additions
-			return true;
+	const removalLines = diffLines.filter((line) => {
+		const withoutLeadingSpaces = line.replace(/^\s*/, "");
+		return withoutLeadingSpaces.startsWith(red("-"));
+	});
+	const diffLinesSet = new Set(diffLines);
+	return removalLines.every((line) => {
+		if (line.endsWith(",")) {
+			const removalButAsAdditionAndWithCommaRemoved = `${line.slice(0, -1).replace(red("-"), green("+"))}`;
+			return diffLinesSet.has(removalButAsAdditionAndWithCommaRemoved);
 		}
-		currentRemovalIdx = nextRemovalIdx;
-		const lineAtIdx = diffLines[currentRemovalIdx];
-		const nextLine = diffLines[currentRemovalIdx + 1] ?? "";
-		const lineAtIdxButAdditionAndWithComma = `${lineAtIdx.replace(red("-"), green("+"))},`;
-		// onlyACommaWasAdded indicates that only a single comma was added, so
-		// for example, `lineAtIdx` is `'- "field": "test"'` and `nextLine` is `'+ "field': "test",`
-		const onlyACommaWasAdded = nextLine === lineAtIdxButAdditionAndWithComma;
-		if (!onlyACommaWasAdded) {
-			// if there is a removal and the change wasn't the simple addition of a comma
-			// then we've found a real removal/modification, so let's return false
-			return false;
-		}
-		// otherwise this wasn't a real removal/modification so we continue looking for one
-		currentRemovalIdx++;
-	}
-	// we didn't find any real removal/modification
-	return true;
+		const removalButAsAdditionAndWithComma = `${line.replace(red("-"), green("+"))},`;
+		return diffLinesSet.has(removalButAsAdditionAndWithComma);
+	});
 }
 
 /**
@@ -124,6 +104,7 @@ function normalizeLocalResolvedConfigAsRemote(
 ): Config {
 	const normalizedConfig: Config = {
 		...localResolvedConfig,
+		observability: normalizeObservability(localResolvedConfig.observability),
 		workers_dev: getResolvedWorkersDev(
 			localResolvedConfig.workers_dev,
 			localResolvedConfig.routes ?? []
@@ -131,6 +112,53 @@ function normalizeLocalResolvedConfigAsRemote(
 	};
 
 	return normalizedConfig;
+}
+
+function normalizeObservability(
+	obs: RawConfig["observability"]
+): Config["observability"] {
+	const normalized = structuredClone(obs);
+
+	const fullObservabilityDefaults = {
+		enabled: false,
+		head_sampling_rate: 1,
+		logs: { enabled: false, head_sampling_rate: 1, invocation_logs: true },
+	} as const;
+
+	if (!normalized) {
+		return fullObservabilityDefaults;
+	}
+
+	const fillUndefinedFields = (
+		target: Record<string, unknown>,
+		defaults: Record<string, unknown>
+	) => {
+		Object.entries(defaults).forEach(([key, value]) => {
+			if (target[key] === undefined) {
+				target[key] = value;
+				return;
+			}
+
+			if (
+				typeof value === "object" &&
+				value !== null &&
+				typeof target[key] === "object" &&
+				target[key] !== null
+			) {
+				fillUndefinedFields(
+					target[key] as Record<string, unknown>,
+					value as Record<string, unknown>
+				);
+			}
+		});
+	};
+
+	fillUndefinedFields(
+		normalized as Record<string, unknown>,
+		fullObservabilityDefaults
+	);
+
+	return normalized;
 }
 
 /**
@@ -195,21 +223,9 @@ function normalizeRemoteConfigAsResolvedLocal(
 		}
 	}
 
-	if (!normalizedRemote.observability) {
-		if (
-			!localResolvedConfig.observability?.enabled &&
-			!localResolvedConfig.observability?.logs?.enabled
-		) {
-			normalizedRemote.observability = structuredClone(
-				localResolvedConfig.observability
-			);
-		} else {
-			// This matches wrangler's default
-			normalizedRemote.observability = {
-				enabled: false,
-			};
-		}
-	}
+	normalizedRemote.observability = normalizeObservability(
+		normalizedRemote.observability
+	);
 
 	// We reorder the remote config so that its ordering follows that
 	// of the local one (this ensures that the diff users see lists
