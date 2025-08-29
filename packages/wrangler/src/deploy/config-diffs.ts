@@ -1,7 +1,7 @@
-import assert from "node:assert";
 import { green, red } from "@cloudflare/cli/colors";
 import { Diff } from "../cloudchamber/helpers/diff";
-import type { RawConfig } from "../config";
+import { getResolvedWorkersDev } from "../triggers/deploy";
+import type { Config, RawConfig } from "../config";
 
 /**
  * Object representing the difference of two configuration objects.
@@ -21,20 +21,23 @@ type ConfigDiff = {
  * Computes the difference between a remote representation of a Worker's config and a local configuration.
  *
  * @param remoteConfig The remote representation of a Worker's config
- * @param localConfig The local config
+ * @param localResolvedConfig The local (resolved) config
  * @returns Object containing the diffing information
  */
 export function getRemoteConfigDiff(
 	remoteConfig: RawConfig,
-	localConfig: RawConfig
+	localResolvedConfig: Config
 ): ConfigDiff {
+	const normalizedLocalConfig =
+		normalizeLocalResolvedConfigAsRemote(localResolvedConfig);
+	const normalizedRemoteConfig = normalizeRemoteConfigAsResolvedLocal(
+		remoteConfig,
+		localResolvedConfig
+	);
+
 	const diff = new Diff(
-		JSON.stringify(
-			normalizeRemoteConfigAsLocal(remoteConfig, localConfig),
-			null,
-			2
-		),
-		JSON.stringify(localConfig, null, 2)
+		JSON.stringify(normalizedRemoteConfig, null, 2),
+		JSON.stringify(normalizedLocalConfig, null, 2)
 	);
 
 	return {
@@ -73,39 +76,96 @@ export function getRemoteConfigDiff(
  */
 function configDiffOnlyHasAdditionsIfAny(diff: Diff): boolean {
 	const diffLines = diff.toString().split("\n");
-	let currentRemovalIdx = 0;
-	while (currentRemovalIdx !== -1) {
-		const nextRemovalIdx = diffLines.findIndex((line, idx) => {
-			// We only consider values after the currentRemovalIdx (which is practically our starting index)
-			if (idx < currentRemovalIdx) {
-				return false;
+	const removalLines = diffLines.filter((line) => {
+		const withoutLeadingSpaces = line.replace(/^\s*/, "");
+		return withoutLeadingSpaces.startsWith(red("-"));
+	});
+	const diffLinesSet = new Set(diffLines);
+	return removalLines.every((line) => {
+		if (line.endsWith(",")) {
+			const removalButAsAdditionAndWithCommaRemoved = `${line.slice(0, -1).replace(red("-"), green("+"))}`;
+			return diffLinesSet.has(removalButAsAdditionAndWithCommaRemoved);
+		}
+		const removalButAsAdditionAndWithComma = `${line.replace(red("-"), green("+"))},`;
+		return diffLinesSet.has(removalButAsAdditionAndWithComma);
+	});
+}
+
+/**
+ * Normalized a local (resolved) config object so that it can be compared against
+ * the remote config object. This mainly means resolving and setting defaults to
+ * the local configuration to match the values in the remote one.
+ *
+ * @param localResolvedConfig The local (resolved) config object to normalize
+ * @returns The normalized config
+ */
+function normalizeLocalResolvedConfigAsRemote(
+	localResolvedConfig: Config
+): Config {
+	const normalizedConfig: Config = {
+		...localResolvedConfig,
+		observability: normalizeObservability(localResolvedConfig.observability),
+		workers_dev: getResolvedWorkersDev(
+			localResolvedConfig.workers_dev,
+			localResolvedConfig.routes ?? []
+		),
+	};
+
+	return normalizedConfig;
+}
+
+/**
+ * Normalizes an observability config object (either the remote or resolved local one) to a fully filled form, this
+ * helps us resolve any inconsistencies between the local and remote default values.
+ *
+ * @param obs The observability config object to normalize
+ * @returns The normalized observability object
+ */
+function normalizeObservability(
+	obs: RawConfig["observability"]
+): Config["observability"] {
+	const normalized = structuredClone(obs);
+
+	const fullObservabilityDefaults = {
+		enabled: false,
+		head_sampling_rate: 1,
+		logs: { enabled: false, head_sampling_rate: 1, invocation_logs: true },
+	} as const;
+
+	if (!normalized) {
+		return fullObservabilityDefaults;
+	}
+
+	const fillUndefinedFields = (
+		target: Record<string, unknown>,
+		defaults: Record<string, unknown>
+	) => {
+		Object.entries(defaults).forEach(([key, value]) => {
+			if (target[key] === undefined) {
+				target[key] = value;
+				return;
 			}
 
-			const withoutLeadingSpaces = line.replace(/^\s*/, "");
-			return withoutLeadingSpaces.startsWith(red("-"));
+			if (
+				typeof value === "object" &&
+				value !== null &&
+				typeof target[key] === "object" &&
+				target[key] !== null
+			) {
+				fillUndefinedFields(
+					target[key] as Record<string, unknown>,
+					value as Record<string, unknown>
+				);
+			}
 		});
-		if (nextRemovalIdx === -1) {
-			// We've looked for all the removals none were actually modifications
-			// so we return true, at most the changes in the diff are additions
-			return true;
-		}
-		currentRemovalIdx = nextRemovalIdx;
-		const lineAtIdx = diffLines[currentRemovalIdx];
-		const nextLine = diffLines[currentRemovalIdx + 1] ?? "";
-		const lineAtIdxButAdditionAndWithComma = `${lineAtIdx.replace(red("-"), green("+"))},`;
-		// onlyACommaWasAdded indicates that only a single comma was added, so
-		// for example, `lineAtIdx` is `'- "field": "test"'` and `nextLine` is `'+ "field': "test",`
-		const onlyACommaWasAdded = nextLine === lineAtIdxButAdditionAndWithComma;
-		if (!onlyACommaWasAdded) {
-			// if there is a removal and the change wasn't the simple addition of a comma
-			// then we've found a real removal/modification, so let's return false
-			return false;
-		}
-		// otherwise this wasn't a real removal/modification so we continue looking for one
-		currentRemovalIdx++;
-	}
-	// we didn't find any real removal/modification
-	return true;
+	};
+
+	fillUndefinedFields(
+		normalized as Record<string, unknown>,
+		fullObservabilityDefaults
+	);
+
+	return normalized;
 }
 
 /**
@@ -117,120 +177,72 @@ function configDiffOnlyHasAdditionsIfAny(diff: Diff): boolean {
  *  - adding to the remote config object all the non-remote config keys
  *  - removing from the remote config all the default values that in the local config are either not present or undefined
  *
- * Important: This operation is important to make sure that the diff out presented to the user looks as close as possible
- *            to their real local configuration. For this reason we do not want to change anything in the local config
- *            and all the changes to adapt the two need to be done on the remote one
- *
  * @param remoteConfig The remote config object to normalize
- * @param localConfig The target/local config object
+ * @param localResolvedConfig The target/local (resolved) config object
  * @returns The remote config object normalized and ready to be compared with the local one
  */
-function normalizeRemoteConfigAsLocal(
+function normalizeRemoteConfigAsResolvedLocal(
 	remoteConfig: RawConfig,
-	localConfig: RawConfig
-): RawConfig {
-	let normalizedRemote: RawConfig = structuredClone(remoteConfig);
+	localResolvedConfig: Config
+): Config {
+	let normalizedRemote = {} as Config;
 
-	Object.entries(localConfig).forEach(([key, value]) => {
-		// Note: we want to copy all the non-remote keys in the local config onto
-		//       the remote one, so that in the diffing output those keys will appear
-		//       and without being shown/detected as additions
-		if (
-			!remoteConfigKeys.has(key) ||
-			// We also include `main` here since this field can easily change but
-			// it changing does not really constitute a relevant config change
-			key === "main"
-		) {
-			normalizedRemote[key as keyof RawConfig] = value;
+	Object.entries(localResolvedConfig).forEach(([key, value]) => {
+		// We want to skip observability since it has a remote default behavior
+		// different from that or wrangler
+		if (key !== "observability") {
+			(normalizedRemote as unknown as Record<string, unknown>)[key] = value;
 		}
 	});
 
-	cleanupRemoteDefault({
-		remoteObj: normalizedRemote as Record<string, unknown>,
-		localObj: localConfig as Record<string, unknown>,
-		field: "observability",
-		remoteDefaultValue: {
-			enabled: true,
-			head_sampling_rate: 1,
-		},
+	Object.entries(remoteConfig).forEach(([key, value]) => {
+		if (key !== "main" && value !== undefined) {
+			(normalizedRemote as unknown as Record<string, unknown>)[key] = value;
+		}
 	});
 
-	if (normalizedRemote.observability && localConfig.observability) {
-		cleanupRemoteDefault({
-			remoteObj: normalizedRemote.observability as Record<string, unknown>,
-			localObj: localConfig.observability as Record<string, unknown>,
-			field: "enabled",
-			remoteDefaultValue: true,
-		});
+	if (normalizedRemote.observability) {
+		if (
+			normalizedRemote.observability.head_sampling_rate === 1 &&
+			localResolvedConfig.observability?.head_sampling_rate === undefined
+		) {
+			// Note: remotely head_sampling_rate always defaults to 1 even if enabled is false
+			delete normalizedRemote.observability.head_sampling_rate;
+		}
 
-		cleanupRemoteDefault({
-			remoteObj: normalizedRemote.observability as Record<string, unknown>,
-			localObj: localConfig.observability as Record<string, unknown>,
-			field: "head_sampling_rate",
-			remoteDefaultValue: 1,
-		});
+		if (normalizedRemote.observability.logs) {
+			if (
+				normalizedRemote.observability.logs.head_sampling_rate === 1 &&
+				localResolvedConfig.observability?.logs?.head_sampling_rate ===
+					undefined
+			) {
+				// Note: remotely logs.head_sampling_rate always defaults to 1 even if enabled is false
+				delete normalizedRemote.observability.logs.head_sampling_rate;
+			}
 
-		if (normalizedRemote.observability.logs && localConfig.observability.logs) {
-			cleanupRemoteDefault({
-				remoteObj: normalizedRemote.observability.logs,
-				localObj: localConfig.observability.logs,
-				field: "enabled",
-				remoteDefaultValue: true,
-			});
+			if (
+				normalizedRemote.observability.logs.invocation_logs === true &&
+				localResolvedConfig.observability?.logs?.invocation_logs === undefined
+			) {
+				// Note: remotely logs.invocation_logs always defaults to 1 even if enabled is false
+				delete normalizedRemote.observability.logs.invocation_logs;
+			}
 		}
 	}
 
-	cleanupRemoteDefault({
-		remoteObj: normalizedRemote as Record<string, unknown>,
-		localObj: localConfig as Record<string, unknown>,
-		field: "workers_dev",
-		remoteDefaultValue: true,
-	});
+	normalizedRemote.observability = normalizeObservability(
+		normalizedRemote.observability
+	);
 
 	// We reorder the remote config so that its ordering follows that
 	// of the local one (this ensures that the diff users see lists
 	// the configuration options in the same order as their config file)
 	normalizedRemote = orderObjectFields(
-		normalizedRemote as Record<string, unknown>,
-		localConfig as Record<string, unknown>
-	);
+		normalizedRemote as unknown as Record<string, unknown>,
+		localResolvedConfig as unknown as Record<string, unknown>
+	) as unknown as Config;
 
 	return normalizedRemote;
-}
-
-/**
- * Fields in the remote configuration get some defaults values, in order to perform the diffing against
- * the local configuration such fields need to be cleaned up if they don't appear in locally
- * (for example if field `x` defaults to `true` remotely, but locally it is not set then we do want to
- * remove it from the remote object so that it won't look like the value is being removed from the local one).
- *
- * This function performs such cleanup on a specific field.
- *
- * @param field The target field
- * @param localObj The local object (this can be the local raw config or a nested object of it)
- * @param remoteObj The remote object (this can be the remote config or a nested object of it)
- * @param remoteDefaultValue The remote default value that the field gets.
- */
-function cleanupRemoteDefault({
-	field,
-	localObj,
-	remoteObj,
-	remoteDefaultValue,
-}: {
-	field: string;
-	localObj: Record<string, unknown>;
-	remoteObj: Record<string, unknown>;
-	remoteDefaultValue: unknown;
-}) {
-	if (deepStrictEqual(remoteObj[field], remoteDefaultValue)) {
-		if (!(field in localObj)) {
-			delete remoteObj[field];
-		}
-
-		if (localObj[field] === undefined) {
-			remoteObj[field] = undefined;
-		}
-	}
 }
 
 /**
@@ -310,61 +322,4 @@ function orderObjectFields<T extends Record<string, unknown>>(
 	}
 
 	return orderedSource;
-}
-
-/**
- * Set of config keys that are part of the remote Worker's config representation we construct.
- *
- * Or in other words the following contains all the possible fields that can be present in the
- * object returned from the `downloadWorkerConfig` function
- *
- */
-const remoteConfigKeys = new Set<string>([
-	"name",
-	"main",
-	"workers_dev",
-	"compatibility_date",
-	"compatibility_flags",
-	"routes",
-	"placement",
-	"limits",
-	"migrations",
-	"triggers",
-	"tail_consumers",
-	"observability",
-	"vars",
-	"kv_namespaces",
-	"durable_objects",
-	"d1_databases",
-	"browser",
-	"ai",
-	"images",
-	"r2_buckets",
-	"secrets_store_secrets",
-	"unsafe_hello_world",
-	"services",
-	"analytics_engine_datasets",
-	"dispatch_namespaces",
-	"logfwdr",
-	"wasm_modules",
-	"text_blobs",
-	"data_blobs",
-	"version_metadata",
-	"send_email",
-	"queues",
-	"vectorize",
-	"hyperdrive",
-	"mtls_certificates",
-	"pipelines",
-	"unsafe",
-	"workflows",
-] satisfies (keyof RawConfig)[]);
-
-function deepStrictEqual(source: unknown, target: unknown): boolean {
-	try {
-		assert.deepStrictEqual(source, target);
-		return true;
-	} catch {
-		return false;
-	}
 }
