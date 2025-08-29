@@ -26,6 +26,7 @@ import { createMethodsRPC } from "vitest/node";
 import { experimental_readRawConfig } from "wrangler";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { createChunkingSocket } from "../shared/chunking-socket";
+import { WORKFLOW_ENGINE_BINDING } from "../shared/workflows";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
 import {
@@ -531,6 +532,16 @@ Workflows defined in project: ${workflowClassNames.join(", ")}`);
 		unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
 		unsafePreventEviction: true,
 	};
+
+	// Add Workflows Engines DOs bindings to the Runner Worker
+	for (const value of Object.values(runnerWorker.workflows ?? {})) {
+		const engineName = `${WORKFLOW_ENGINE_BINDING}${value.name.toUpperCase()}`;
+		runnerWorker.durableObjects[engineName] = {
+			className: "Engine",
+			unsafeScriptName: `workflows:${value.name}`,
+			unsafeUniqueKey: `miniflare-workflows-${value.name}`,
+		};
+	}
 
 	// Vite has its own define mechanism, but we can't control it from custom
 	// pools. Our defines come from `wrangler.toml` files which are only parsed

@@ -10,6 +10,8 @@ import type {
 
 type Env = {
 	ENGINE: DurableObjectNamespace<Engine>;
+	WORKFLOW_NAME: string;
+	BINDING_NAME: string;
 };
 
 // this.env.WORKFLOW is WorkflowBinding
@@ -77,6 +79,13 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		}
 
 		return await Promise.all(batch.map((val) => this.create(val)));
+	}
+	public getWorkflowName(): string {
+		return this.env.WORKFLOW_NAME;
+	}
+
+	public getBindingName(): string {
+		return this.env.BINDING_NAME;
 	}
 }
 
