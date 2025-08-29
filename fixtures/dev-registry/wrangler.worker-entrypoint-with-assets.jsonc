@@ -16,12 +16,12 @@
 			"service": "module-worker",
 		},
 		{
-			"binding": "WORKER_ENTRYPOINT",
-			"service": "worker-entrypoint",
+			"binding": "MODULE_WORKER_WITH_ASSETS",
+			"service": "module-worker-with-assets",
 		},
 		{
-			"binding": "WORKER_ENTRYPOINT_WITH_ASSETS",
-			"service": "worker-entrypoint-with-assets",
+			"binding": "WORKER_ENTRYPOINT",
+			"service": "worker-entrypoint",
 		},
 		{
 			"binding": "NAMED_ENTRYPOINT",
@@ -29,7 +29,12 @@
 			"entrypoint": "NamedEntrypoint",
 		},
 		{
-			"binding": "NAMED_ENTRYPOINT_WITH_ASSETS",
+			"binding": "NAMED_MODULE_WORKER",
+			"service": "module-worker",
+			"entrypoint": "NamedEntrypoint",
+		},
+		{
+			"binding": "NAMED_MODULE_WORKER_WITH_ASSETS",
 			"service": "module-worker-with-assets",
 			"entrypoint": "NamedEntrypoint",
 		},

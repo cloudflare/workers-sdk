@@ -15,10 +15,13 @@ export class NamedEntrypoint extends WorkerEntrypoint {
 export default class Worker extends WorkerEntrypoint<{
 	SERVICE_WORKER: Fetcher;
 	MODULE_WORKER: Fetcher;
+	MODULE_WORKER_WITH_ASSETS: Fetcher;
 	WORKER_ENTRYPOINT: Fetcher;
 	WORKER_ENTRYPOINT_WITH_ASSETS: Fetcher;
 	NAMED_ENTRYPOINT: Fetcher;
 	NAMED_ENTRYPOINT_WITH_ASSETS: Fetcher;
+	NAMED_MODULE_WORKER: Fetcher;
+	NAMED_MODULE_WORKER_WITH_ASSETS: Fetcher;
 	DURABLE_OBJECT: DurableObjectNamespace;
 }> {
 	ping() {
@@ -46,6 +49,10 @@ export default class Worker extends WorkerEntrypoint<{
 					service = this.env.MODULE_WORKER;
 					break;
 				}
+				case "module-worker-with-assets": {
+					service = this.env.MODULE_WORKER_WITH_ASSETS;
+					break;
+				}
 				case "worker-entrypoint": {
 					service = this.env.WORKER_ENTRYPOINT;
 					break;
@@ -60,6 +67,14 @@ export default class Worker extends WorkerEntrypoint<{
 				}
 				case "named-entrypoint-with-assets": {
 					service = this.env.NAMED_ENTRYPOINT_WITH_ASSETS;
+					break;
+				}
+				case "named-module-worker": {
+					service = this.env.NAMED_MODULE_WORKER;
+					break;
+				}
+				case "named-module-worker-with-assets": {
+					service = this.env.NAMED_MODULE_WORKER_WITH_ASSETS;
 					break;
 				}
 				case "durable-object": {
