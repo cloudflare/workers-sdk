@@ -128,6 +128,28 @@ export default {
 						}
 					}
 
+					if (url.pathname === "/_image") {
+						const hrefParam = url.searchParams.get("href");
+						if (
+							hrefParam &&
+							hrefParam.length > 2 &&
+							hrefParam.startsWith("//")
+						) {
+							try {
+								const hrefUrl = new URL("https:" + hrefParam);
+								const isImageFetchDest =
+									request.headers.get("sec-fetch-dest") == "image";
+
+								if (hrefUrl.hostname !== url.hostname && !isImageFetchDest) {
+									analytics.setData({ xssDetectionImageHref: hrefParam });
+									return new Response("Blocked", { status: 403 });
+								}
+							} catch {
+								console.log(`Invalid href parameter in /_image: ${hrefParam}`);
+							}
+						}
+					}
+
 					analytics.setData({
 						timeToDispatch: performance.now() - startTimeMs,
 					});
