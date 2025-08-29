@@ -336,6 +336,28 @@ async function subdomainDeploy(
 	const previewsInSync = wantPreviews === currPreviews;
 	const allInSync = [workersDevInSync, previewsInSync].every((v) => v);
 
+	// Warn about mismatching config and current values.
+
+	if (config.workers_dev == undefined && !workersDevInSync) {
+		const currWorkersDevStatus = currWorkersDev ? "enabled" : "disabled";
+		logger.warn(
+			[
+				`Worker has workers.dev ${currWorkersDevStatus}, but 'workers_dev' is not in the config.`,
+				`Using fallback value 'workers_dev = ${wantWorkersDev}'.`,
+			].join("\n")
+		);
+	}
+
+	if (config.preview_urls == undefined && !previewsInSync) {
+		const currPreviewsStatus = currPreviews ? "enabled" : "disabled";
+		logger.warn(
+			[
+				`Worker has preview URLs ${currPreviewsStatus}, but 'preview_urls' is not in the config.`,
+				`Using fallback value 'preview_urls = ${wantPreviews}'.`,
+			].join("\n")
+		);
+	}
+
 	// workers.dev URL is only set if we want to deploy to workers.dev.
 
 	let workersDevURL: string | undefined;
