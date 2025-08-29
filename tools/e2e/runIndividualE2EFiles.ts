@@ -61,8 +61,9 @@ for (const testFile of globIterateSync("e2e/**/*.test.ts", {
 }
 
 if (failed.length > 0) {
-	throw new Error(
+	console.error(
 		"At least one task failed (even on retry):" +
 			failed.map((file) => `\n - ${file}`)
 	);
+	process.exitCode = 1;
 }
