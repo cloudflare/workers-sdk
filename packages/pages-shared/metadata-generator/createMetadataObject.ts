@@ -37,6 +37,7 @@ export function createMetadataObject({
 	failOpen?: boolean;
 	logger?: Logger;
 }): Metadata {
+	// @ts-expect-error This error appeared when fixing type imports, but I didn't want to change actual behavior
 	return {
 		...constructRedirects({ redirects, redirectsFile, logger }),
 		...constructHeaders({ headers, headersFile, logger }),
