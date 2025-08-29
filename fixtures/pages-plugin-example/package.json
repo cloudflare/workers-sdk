@@ -14,6 +14,7 @@
 		"check:type": "tsc"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "catalog:default",
 		"is-odd": "^3.0.1",
 		"wrangler": "workspace:*"
 	},
