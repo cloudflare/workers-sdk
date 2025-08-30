@@ -13112,6 +13112,96 @@ export default{
 			return normalizedLog;
 		}
 	});
+
+	describe("with strict mode enabled", () => {
+		it("should error if there are remote config difference (with --x-remote-diff-check) in non-interactive mode", async () => {
+			setIsTTY(false);
+
+			writeWorkerSource();
+			mockGetServiceByName("test-name", "production", "dash");
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+				},
+				"./wrangler.json"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetServiceBindings("test-name", []);
+			mockGetServiceRoutes("test-name", []);
+			mockGetServiceCustomDomainRecords([]);
+			mockGetServiceSubDomainData("test-name", { enabled: true });
+			mockGetServiceSchedules("test-name", { schedules: [] });
+			mockGetServiceMetadata("test-name", {
+				created_on: "2025-08-07T09:34:47.846308Z",
+				modified_on: "2025-08-08T10:48:12.688997Z",
+				script: {
+					created_on: "2025-08-07T09:34:47.846308Z",
+					modified_on: "2025-08-08T10:48:12.688997Z",
+					id: "silent-firefly-dbe3",
+					observability: { enabled: true, head_sampling_rate: 1 },
+					compatibility_date: "2024-04-24",
+				},
+			} as unknown as ServiceMetadataRes["default_environment"]);
+
+			await runWrangler("deploy --x-remote-diff-check --strict");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
+
+				        \\"bindings\\": []
+				      },
+				      \\"observability\\": {
+				  -     \\"enabled\\": true,
+				  +     \\"enabled\\": false,
+				        \\"head_sampling_rate\\": 1,
+				        \\"logs\\": {
+				          \\"enabled\\": false,
+
+				  Deploying the Worker will override the remote configuration with your local one.
+
+				"
+			`);
+
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation (due to strict mode, to prevent this failure either remove the \`--strict\` flag or add the \`--force\` one)[0m
+
+				"
+			`);
+			// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
+			//       to set a non-zero exit code
+			expect(process.exitCode).not.toBe(0);
+		});
+
+		it("should error when worker was last deployed from api", async () => {
+			setIsTTY(false);
+
+			msw.use(...mswSuccessDeploymentScriptAPI);
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler("deploy ./index --strict");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
+
+			  Edits that have been made via the script API will be overridden by your local code and config.
+
+			"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation (due to strict mode, to prevent this failure either remove the \`--strict\` flag or add the \`--force\` one)[0m
+
+				"
+			`);
+			// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
+			//       to set a non-zero exit code
+			expect(process.exitCode).not.toBe(0);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
