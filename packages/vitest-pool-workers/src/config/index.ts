@@ -10,8 +10,12 @@ import type {
 	WorkersPoolOptions,
 } from "../pool/config";
 import type { Plugin } from "vite";
-import type { Awaitable, inject } from "vitest";
-import type { ConfigEnv, UserConfig, UserWorkspaceConfig } from "vitest/config";
+import type { inject } from "vitest";
+import type {
+	ConfigEnv,
+	UserWorkspaceConfig,
+	ViteUserConfig,
+} from "vitest/config";
 
 const cloudflareTestPath = path.resolve(
 	__dirname,
@@ -33,26 +37,26 @@ globalThis.structuredClone ??= function (value, options) {
 	return message.message;
 };
 
-type ConfigFn<T extends UserConfig> = (env: ConfigEnv) => T | Promise<T>;
+type ConfigFn<T extends ViteUserConfig> = (env: ConfigEnv) => T | Promise<T>;
 
-export type AnyConfigExport<T extends UserConfig> =
+export type AnyConfigExport<T extends ViteUserConfig> =
 	| T
 	| Promise<T>
 	| ConfigFn<T>;
 
-function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
+function mapAnyConfigExport<T extends ViteUserConfig, U extends ViteUserConfig>(
 	f: (t: T) => U,
 	config: T
 ): U;
-function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
+function mapAnyConfigExport<T extends ViteUserConfig, U extends ViteUserConfig>(
 	f: (t: T) => U,
 	config: Promise<T>
 ): Promise<U>;
-function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
+function mapAnyConfigExport<T extends ViteUserConfig, U extends ViteUserConfig>(
 	f: (t: T) => U,
 	config: ConfigFn<T>
 ): ConfigFn<U>;
-function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
+function mapAnyConfigExport<T extends ViteUserConfig, U extends ViteUserConfig>(
 	f: (t: T) => U,
 	config: AnyConfigExport<T>
 ): AnyConfigExport<U> {
@@ -77,19 +81,21 @@ export interface WorkerPoolOptionsContext {
 	// in Miniflare options (e.g. bindings, upstream, hyperdrives, ...)
 	inject: typeof inject;
 }
-export type WorkersUserConfig<T extends UserConfig> = T & {
+export type WorkersUserConfig<T extends ViteUserConfig> = T & {
 	test?: {
 		pool?: "@cloudflare/vitest-pool-workers";
 		poolMatchGlobs?: never;
 		poolOptions?: {
 			workers?:
 				| WorkersPoolOptions
-				| ((ctx: WorkerPoolOptionsContext) => Awaitable<WorkersPoolOptions>);
+				| ((
+						ctx: WorkerPoolOptionsContext
+				  ) => WorkersPoolOptions | PromiseLike<WorkersPoolOptions>);
 		};
 	};
 };
 
-export type WorkersUserConfigExport = WorkersUserConfig<UserConfig>;
+export type WorkersUserConfigExport = WorkersUserConfig<ViteUserConfig>;
 export type WorkersProjectConfigExport = WorkersUserConfig<UserWorkspaceConfig>;
 
 function ensureArrayIncludes<T>(array: T[], items: T[]) {
@@ -190,7 +196,7 @@ function createConfigPlugin(): Plugin<WorkersConfigPluginAPI> {
 	};
 }
 
-function ensureWorkersConfig<T extends UserConfig>(config: T): T {
+function ensureWorkersConfig<T extends ViteUserConfig>(config: T): T {
 	config.plugins ??= [];
 	config.plugins.push(createConfigPlugin());
 	return config;

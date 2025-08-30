@@ -12,7 +12,7 @@ import { z } from "zod";
 import { getProjectPath, getRelativeProjectPath } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
-import type { WorkspaceProject } from "vitest/node";
+import type { TestProject } from "vitest/node";
 import type {
 	Experimental_RemoteProxySession,
 	Unstable_Binding,
@@ -344,7 +344,7 @@ async function parseCustomPoolOptions(
 }
 
 export async function parseProjectOptions(
-	project: WorkspaceProject
+	project: TestProject
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
