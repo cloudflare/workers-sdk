@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { inspect } from "node:util";
 import { vi } from "vitest";
+import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import { getBasePath, getWranglerTmpDir } from "../../paths";
 import { generateOpencodeConfig } from "../../prompt/config-generator";
 import type { Mock } from "vitest";
@@ -38,13 +40,11 @@ describe("generateOpencodeConfig()", () => {
 
 		const writeFileCall = vi.mocked(fs.writeFile as Mock).mock.calls[0];
 		const configContent = JSON.parse(writeFileCall[1]);
-		expect(configContent).toMatchInlineSnapshot(`
-			Object {
-			  "$schema": "https://opencode.ai/config.json",
-			  "plugin": Array [
-			    "/wrangler/base/path/src/prompt/opencode-plugin.js",
-			  ],
-			}
+		expect(normalizeOutput(inspect(configContent))).toMatchInlineSnapshot(`
+			"{
+			  '$schema': 'https://opencode.ai/config.json',
+			  plugin: [ '/wrangler/base/path/src/prompt/opencode-plugin.js' ]
+			}"
 		`);
 	});
 
