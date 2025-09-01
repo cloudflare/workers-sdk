@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { readFile } from "node:fs/promises";
+import { assertNever } from "../../utils/assert-never";
 import type { ConfigBindingOptions } from "../../config";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type {
@@ -39,8 +40,6 @@ export function createDeferred<T>(
 		reject,
 	};
 }
-
-export function assertNever(_value: never) {}
 
 export function urlFromParts(
 	parts: Partial<URL>,
