@@ -40,7 +40,7 @@ jobs:
       - name: Deploy test workers
         if: github.event.pull_request.head.repo.owner.login == 'cloudflare' && steps.changes.outputs.everything_but_markdown == 'true'
         shell: bash
-        run: node -r esbuild-register tools/test-workers/deploy-all.ts
+        run: node -r esbuild-register tools/test-workers/deploy-c3-e2e.ts
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
