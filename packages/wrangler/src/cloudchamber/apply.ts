@@ -356,7 +356,7 @@ export async function apply(
 					`${config.name}-${appConfigNoDefaults.class_name}`
 			];
 
-		const accountId = config.account_id || (await getAccountId(config));
+		const accountId = await getAccountId(config);
 		const appConfig = containerAppToCreateApplication(
 			accountId,
 			appConfigNoDefaults,

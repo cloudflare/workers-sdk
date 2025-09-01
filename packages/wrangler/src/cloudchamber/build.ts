@@ -280,7 +280,7 @@ export async function pushCommand(
 ) {
 	try {
 		await dockerLoginManagedRegistry(args.pathToDocker);
-		const accountId = config.account_id || (await getAccountId(config));
+		const accountId = await getAccountId(config);
 		const newTag = getCloudflareRegistryWithAccountNamespace(
 			accountId,
 			args.TAG
