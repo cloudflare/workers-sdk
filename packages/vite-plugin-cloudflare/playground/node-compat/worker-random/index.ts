@@ -9,10 +9,6 @@ export default {
 
 function testGetRandomValues() {
 	assert(
-		webcrypto.getRandomValues === getRandomValues,
-		"Unexpected identity for webcrypto.getRandomValues"
-	);
-	assert(
 		nodeCrypto.getRandomValues === getRandomValues,
 		"Unexpected identity for nodeCrypto.getRandomValues"
 	);

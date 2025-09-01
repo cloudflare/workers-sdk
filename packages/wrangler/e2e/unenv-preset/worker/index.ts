@@ -69,6 +69,26 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert(array.every((v) => v >= 0 && v <= 0xff_ff_ff_ff));
 	},
 
+	async testCrypto() {
+		const crypto = await import("node:crypto");
+
+		assert.strictEqual(typeof crypto.pseudoRandomBytes, "function");
+
+		const removeEolV22 = getRuntimeFlagValue("remove_nodejs_compat_eol_v22");
+
+		if (removeEolV22) {
+			assert.strictEqual(crypto.Cipher, undefined);
+			assert.strictEqual(crypto.Decipher, undefined);
+			assert.strictEqual(crypto.createCipher, undefined);
+			assert.strictEqual(crypto.createDecipher, undefined);
+		} else {
+			assert.strictEqual(typeof crypto.Cipher, "function");
+			assert.strictEqual(typeof crypto.Decipher, "function");
+			assert.strictEqual(typeof crypto.createCipher, "function");
+			assert.strictEqual(typeof crypto.createDecipher, "function");
+		}
+	},
+
 	async testImplementsBuffer() {
 		const encoder = new TextEncoder();
 		const buffer = await import("node:buffer");
@@ -107,6 +127,8 @@ export const WorkerdTests: Record<string, () => void> = {
 			"assert/strict",
 			"async_hooks",
 			"buffer",
+			"constants",
+			"crypto",
 			"diagnostics_channel",
 			"dns",
 			"dns/promises",
@@ -434,5 +456,13 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof module._extensions, "object");
 		// @ts-expect-error TS2339 Invalid node/types.
 		assert.strictEqual(typeof module._pathCache, "object");
+	},
+
+	async testConstants() {
+		const constants = await import("node:constants");
+
+		assert.deepStrictEqual(constants.O_RDONLY, 0);
+		assert.deepStrictEqual(constants.O_WRONLY, 1);
+		assert.deepStrictEqual(constants.O_RDWR, 2);
 	},
 };

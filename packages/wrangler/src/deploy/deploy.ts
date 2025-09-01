@@ -9,11 +9,7 @@ import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { buildContainer, deployContainers } from "../cloudchamber/deploy";
-import {
-	configFileName,
-	formatConfigSnippet,
-	parseRawConfigFile,
-} from "../config";
+import { configFileName, formatConfigSnippet } from "../config";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -63,7 +59,7 @@ import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
 import { getRemoteConfigDiff } from "./config-diffs";
 import type { AssetsOptions } from "../assets";
-import type { Config, RawConfig } from "../config";
+import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
 	Route,
@@ -363,6 +359,14 @@ export default async function deploy(props: Props): Promise<{
 
 	let workerExists: boolean = true;
 
+	const domainRoutes = (props.domains || []).map((domain) => ({
+		pattern: domain,
+		custom_domain: true,
+	}));
+	const routes =
+		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
+	const allDeploymentRoutes = [...routes, ...domainRoutes];
+
 	if (!props.dispatchNamespace && accountId) {
 		try {
 			const serviceMetaData = await fetchResult<{
@@ -389,18 +393,11 @@ export default async function deploy(props: Props): Promise<{
 						serviceMetaData.default_environment.environment
 					);
 
-					let rawConfig: RawConfig | undefined;
-					if (config.configPath) {
-						try {
-							rawConfig = parseRawConfigFile(config.configPath);
-						} catch {
-							// We were unable to either read the file so the more comprehensive diffing just won't kick in
-							// (but a warning with a confirmation prompt will still be shown to the user)
-						}
-						if (rawConfig) {
-							configDiff = getRemoteConfigDiff(remoteWorkerConfig, rawConfig);
-						}
-					}
+					configDiff = getRemoteConfigDiff(remoteWorkerConfig, {
+						...config,
+						// We also want to include all the routes used for deployment
+						routes: allDeploymentRoutes,
+					});
 				}
 
 				if (configDiff) {
@@ -408,7 +405,7 @@ export default async function deploy(props: Props): Promise<{
 					// just using the local config (and override the remote one) should be totally fine
 					if (!configDiff.nonDestructive) {
 						logger.warn(
-							"Your local configuration differs from the remote configuration of your Worker set via the Cloudflare Dashboard:" +
+							"The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:" +
 								`\n${configDiff.diff}\n\n` +
 								"Deploying the Worker will override the remote configuration with your local one."
 						);
@@ -462,14 +459,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	const domainRoutes = (props.domains || []).map((domain) => ({
-		pattern: domain,
-		custom_domain: true,
-	}));
-	const routes =
-		props.routes ?? config.routes ?? (config.route ? [config.route] : []);
-	const allRoutes = [...routes, ...domainRoutes];
-	validateRoutes(allRoutes, props.assetsOptions);
+	validateRoutes(allDeploymentRoutes, props.assetsOptions);
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
@@ -1108,7 +1098,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// deploy triggers
 	const targets = await triggersDeploy({
 		...props,
-		routes: allRoutes,
+		routes: allDeploymentRoutes,
 	});
 
 	logger.log("Current Version ID:", versionId);
