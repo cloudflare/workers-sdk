@@ -1217,6 +1217,7 @@ export function listScopes(message = "💁 Available scopes:"): void {
 export async function getAccountId(
 	config: ComplianceConfig & { account_id?: string }
 ): Promise<string> {
+	// TODO: v5 we should prioritise the env var instead of the config value here, for consistency
 	if (config.account_id) {
 		return config.account_id;
 	}
