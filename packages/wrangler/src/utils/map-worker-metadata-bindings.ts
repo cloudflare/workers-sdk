@@ -6,6 +6,14 @@ import type { DatabaseInfo } from "../d1/types";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
+/**
+ * Maps a set of bindings defined as worker metadata bindings (straight from the Cloudflare API) to bindings defined in the local format.
+ *
+ * @param bindings The set of worker metadata bindings to convert
+ * @param accountId The ID of the account
+ * @param complianceConfig The compliance region configuration
+ * @returns A RawConfig object with its bindings populated based on the provided bindings
+ */
 export async function mapWorkerMetadataBindings(
 	bindings: WorkerMetadataBinding[],
 	accountId: string,
