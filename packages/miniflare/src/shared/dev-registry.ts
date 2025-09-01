@@ -84,7 +84,9 @@ export class DevRegistry {
 		this.externalServicesByWorker = new Map(servicesByWorker);
 
 		if (!this.watcher) {
-			this.watcher = watch(this.registryPath).on("all", () => this.refresh());
+			this.watcher = watch(this.registryPath, { ignoreInitial: true })
+				.on("ready", () => this.refresh())
+				.on("all", () => this.refresh());
 			this.refresh();
 		}
 	}
