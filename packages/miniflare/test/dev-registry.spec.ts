@@ -1299,12 +1299,14 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 
 	// Wait for callback to be triggered by the update
 	await waitUntil(t, async (t) => {
-		t.true(
-			firstCallbackInvocations.length === 1,
+		t.is(
+			firstCallbackInvocations.length,
+			1,
 			"First callback should not be triggered again after update"
 		);
-		t.true(
-			secondCallbackInvocations.length === 1,
+		t.is(
+			secondCallbackInvocations.length,
+			1,
 			"Second callback should be triggered after update"
 		);
 	});
