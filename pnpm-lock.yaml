@@ -2123,7 +2123,7 @@ importers:
         specifier: 2.0.0-rc.19
         version: 2.0.0-rc.19
       workerd:
-        specifier: ^1.20250827.0
+        specifier: ^1.20250828.1
         version: 1.20250829.0
     devDependencies:
       '@types/node-unenv':

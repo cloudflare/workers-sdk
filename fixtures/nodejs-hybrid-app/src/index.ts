@@ -120,7 +120,6 @@ GzEf4UxiLBbUB6WRBgyVyquGfUMlKl/tnm4q0yeYQloYKSoHpGeHVJuN
 }
 
 function testGetRandomValues() {
-	assert.strictEqual(webcrypto.getRandomValues, getRandomValues);
 	assert.strictEqual(nodeCrypto.getRandomValues, getRandomValues);
 
 	return Response.json([
