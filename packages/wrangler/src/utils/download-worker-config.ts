@@ -1,7 +1,7 @@
 import { fetchResult } from "../cfetch";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { formatCompatibilityDate } from "./compatibility-date";
-import { mapBindings } from "./map-worker-metadata-bindings";
+import { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 import type { RawConfig } from "../config";
 import type {
 	CustomDomainRoute,
@@ -83,10 +83,10 @@ export async function downloadWorkerConfig(
 		);
 	});
 
-	const mappedBindings = await mapBindings(
-		COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	const mappedBindings = await mapWorkerMetadataBindings(
+		bindings,
 		accountId,
-		bindings
+		COMPLIANCE_REGION_CONFIG_UNKNOWN
 	);
 
 	const durableObjectClassNames = bindings

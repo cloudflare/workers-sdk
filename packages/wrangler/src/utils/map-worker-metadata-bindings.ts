@@ -6,10 +6,10 @@ import type { DatabaseInfo } from "../d1/types";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
-export async function mapBindings(
-	complianceConfig: ComplianceConfig,
+export async function mapWorkerMetadataBindings(
+	bindings: WorkerMetadataBinding[],
 	accountId: string,
-	bindings: WorkerMetadataBinding[]
+	complianceConfig: ComplianceConfig
 ): Promise<RawConfig> {
 	//the binding API doesn't provide us with enough information to make a friendly user experience.
 	//lets call D1's API to get more information
