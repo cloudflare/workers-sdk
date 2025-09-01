@@ -25,6 +25,7 @@ export const getNormalizedContainerOptions = async (
 	args: {
 		/** set by args.containersRollout */
 		containersRollout?: "gradual" | "immediate";
+		dryRun?: boolean;
 	}
 ): Promise<ContainerNormalizedConfig[]> => {
 	if (!config.containers || config.containers.length === 0) {
@@ -145,11 +146,12 @@ export const getNormalizedContainerOptions = async (
 				image_vars: container.image_vars,
 			});
 		} else {
-			const accountId = await getAccountId(config);
 			normalizedContainers.push({
 				...shared,
 				...instanceTypeOrLimits,
-				image_uri: resolveImageName(accountId, container.image), // if it is not a dockerfile, it must be an image uri or have thrown an error
+				image_uri: args.dryRun
+					? container.image
+					: resolveImageName(await getAccountId(config), container.image), // if it is not a dockerfile, it must be an image uri or have thrown an error
 			});
 		}
 	}
