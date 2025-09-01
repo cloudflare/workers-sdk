@@ -39,11 +39,21 @@ type CronTriggersRes = {
 	}[];
 };
 
+/**
+ * Downloads all the remote information we can gather for a worker and from them generates a raw configuration object that
+ * approximates what a wrangler config object for the worker was/would have been.
+ *
+ * @param workerName The name of the worker
+ * @param environment The target environment for the worker
+ * @param entrypoint The worker's entrypoint
+ * @param accountId The ID of the account owning the worker
+ * @returns A RawConfig object that bests represents the remote configuration of the worker
+ */
 export async function downloadWorkerConfig(
-	accountId: string,
 	workerName: string,
+	environment: string,
 	entrypoint: string,
-	serviceEnvironment: string
+	accountId: string
 ): Promise<RawConfig> {
 	const [
 		bindings,
@@ -55,23 +65,23 @@ export async function downloadWorkerConfig(
 	] = await Promise.all([
 		fetchResult<WorkerMetadata["bindings"]>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/bindings`
+			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/bindings`
 		),
 		fetchResult<RoutesRes>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/routes?show_zonename=true`
+			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/routes?show_zonename=true`
 		),
 		fetchResult<CustomDomainsRes>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${serviceEnvironment}`
+			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${environment}`
 		),
 		fetchResult<WorkersDevRes>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/subdomain`
+			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/subdomain`
 		),
 		fetchResult<ServiceMetadataRes["default_environment"]>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}`
+			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}`
 		),
 		fetchResult<CronTriggersRes>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,

@@ -197,10 +197,10 @@ export async function downloadWorker(accountId: string, workerName: string) {
 	);
 
 	const config = await downloadWorkerConfig(
-		accountId,
 		workerName,
+		defaultEnvironment,
 		entrypoint,
-		defaultEnvironment
+		accountId
 	);
 
 	return {

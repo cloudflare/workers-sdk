@@ -387,10 +387,10 @@ export default async function deploy(props: Props): Promise<{
 				let configDiff: ReturnType<typeof getRemoteConfigDiff> | undefined;
 				if (getFlag("DEPLOY_REMOTE_DIFF_CHECK")) {
 					const remoteWorkerConfig = await downloadWorkerConfig(
-						accountId,
 						name,
+						serviceMetaData.default_environment.environment,
 						entry.file,
-						serviceMetaData.default_environment.environment
+						accountId
 					);
 
 					configDiff = getRemoteConfigDiff(remoteWorkerConfig, {
