@@ -1,10 +1,13 @@
 import assert from "node:assert";
 import { fetchResult } from "../cfetch";
+import { experimental_patchConfig } from "../cli";
+import { PatchConfigError } from "../config/patch-config";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
 import { getDatabaseInfoFromIdOrName } from "../d1/utils";
 import { prompt, select } from "../dialogs";
 import { UserError } from "../errors";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -12,7 +15,7 @@ import { APIError } from "../parse";
 import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
-import type { Config } from "../config";
+import type { Config, RawConfig } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { WorkerMetadataBinding } from "./create-worker-upload-form";
 import type {
@@ -161,6 +164,13 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 	get name(): string | undefined {
 		return this.binding.bucket_name as string;
 	}
+
+	override inherit(): void {
+		if (!this.binding.bucket_name) {
+			this.binding.bucket_name = INHERIT_SYMBOL;
+		}
+	}
+
 	async create(name: string) {
 		await createR2Bucket(
 			this.complianceConfig,
@@ -183,7 +193,10 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 			(existing) =>
 				existing.type === this.type &&
 				existing.name === this.binding.binding &&
-				existing.jurisdiction === this.binding.jurisdiction
+				existing.jurisdiction === this.binding.jurisdiction &&
+				(this.binding.bucket_name
+					? this.binding.bucket_name === existing.bucket_name
+					: true)
 		);
 	}
 	async isConnectedToExistingResource(): Promise<boolean> {
@@ -423,6 +436,7 @@ async function collectPendingResources(
 		(a, b) => HANDLERS[a.resourceType].sort - HANDLERS[b.resourceType].sort
 	);
 }
+
 export async function provisionBindings(
 	bindings: CfWorkerInit["bindings"],
 	accountId: string,
@@ -438,6 +452,11 @@ export async function provisionBindings(
 	);
 
 	if (pendingResources.length > 0) {
+		if (!config.configPath) {
+			throw new UserError(
+				"Provisioning resources is not supported without a config file"
+			);
+		}
 		if (!isLegacyEnv(config)) {
 			throw new UserError(
 				"Provisioning resources is not supported with a service environment"
@@ -466,6 +485,45 @@ export async function provisionBindings(
 				scriptName,
 				autoCreate
 			);
+		}
+
+		const patch: RawConfig = {};
+
+		for (const resource of pendingResources) {
+			patch[resource.resourceType] = config[resource.resourceType].map(
+				(binding) => {
+					if (binding.binding === resource.binding) {
+						// Using an early return here would be nicer but makes TS blow up
+						binding = resource.handler.binding;
+					}
+
+					return Object.fromEntries(
+						Object.entries(binding).filter(
+							// Make sure all the values are JSON serialisable.
+							// Otherwise we end up with "undefined" in the config
+							([_, value]) => typeof value === "string"
+						)
+					) as typeof binding;
+				}
+			);
+		}
+
+		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
+		// This is not necessary, as future deploys can use inherited resources, but it can help with
+		// portability of the config file, and adds robustness to bindings being renamed.
+		if (!isNonInteractiveOrCI()) {
+			try {
+				await experimental_patchConfig(config.configPath, patch, false);
+				logger.log(
+					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard—either way future deploys will continue to work."
+				);
+			} catch (e) {
+				if (e instanceof PatchConfigError) {
+					// no-op — if the user is using TOML config we can't update it.
+				} else {
+					throw e;
+				}
+			}
 		}
 
 		const resourceCount = pendingResources.reduce(
