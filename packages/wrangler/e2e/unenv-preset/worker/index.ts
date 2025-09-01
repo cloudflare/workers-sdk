@@ -69,6 +69,26 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert(array.every((v) => v >= 0 && v <= 0xff_ff_ff_ff));
 	},
 
+	async testCrypto() {
+		const crypto = await import("node:crypto");
+
+		assert.strictEqual(typeof crypto.pseudoRandomBytes, "function");
+
+		const removeEolV22 = getRuntimeFlagValue("remove_nodejs_compat_eol_v22");
+
+		if (removeEolV22) {
+			assert.strictEqual(crypto.Cipher, undefined);
+			assert.strictEqual(crypto.Decipher, undefined);
+			assert.strictEqual(crypto.createCipher, undefined);
+			assert.strictEqual(crypto.createDecipher, undefined);
+		} else {
+			assert.strictEqual(typeof crypto.Cipher, "function");
+			assert.strictEqual(typeof crypto.Decipher, "function");
+			assert.strictEqual(typeof crypto.createCipher, "function");
+			assert.strictEqual(typeof crypto.createDecipher, "function");
+		}
+	},
+
 	async testImplementsBuffer() {
 		const encoder = new TextEncoder();
 		const buffer = await import("node:buffer");
@@ -108,6 +128,7 @@ export const WorkerdTests: Record<string, () => void> = {
 			"async_hooks",
 			"buffer",
 			"constants",
+			"crypto",
 			"diagnostics_channel",
 			"dns",
 			"dns/promises",
