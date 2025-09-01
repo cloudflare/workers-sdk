@@ -98,26 +98,25 @@ const testConfigs: TestConfig[] = [
 	[
 		{
 			name: "os disabled by date",
-			compatibilityDate: "2025-07-26",
-			compatibilityFlags: ["experimental"],
+			compatibilityDate: "2024-09-23",
 			expectRuntimeFlags: {
 				enable_nodejs_os_module: false,
 			},
 		},
-		// TODO: add a config when os is enabled by default (date no set yet)
+		// TODO: add a config when os is enabled by default (>= 2025-09-15)
 		{
 			name: "os enabled by flag",
-			compatibilityDate: "2025-07-26",
-			compatibilityFlags: ["enable_nodejs_os_module", "experimental"],
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_os_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_os_module: true,
 			},
 		},
-		// TODO: change the date pass the default enabled date (date not set yet)
+		// TODO: change the date pass the default enabled date (>= 2025-09-15)
 		{
 			name: "os disabled by flag",
 			compatibilityDate: "2025-07-26",
-			compatibilityFlags: ["disable_nodejs_os_module", "experimental"],
+			compatibilityFlags: ["disable_nodejs_os_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_os_module: false,
 			},
@@ -127,26 +126,25 @@ const testConfigs: TestConfig[] = [
 	[
 		{
 			name: "fs disabled by date",
-			compatibilityDate: "2025-07-26",
-			compatibilityFlags: ["experimental"],
+			compatibilityDate: "2024-09-23",
 			expectRuntimeFlags: {
 				enable_nodejs_fs_module: false,
 			},
 		},
-		// TODO: add a config when fs is enabled by default (date no set yet)
+		// TODO: add a config when fs is enabled by default (>= 2025-09-15)
 		{
 			name: "fs enabled by flag",
-			compatibilityDate: "2025-07-26",
-			compatibilityFlags: ["enable_nodejs_fs_module", "experimental"],
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_fs_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_fs_module: true,
 			},
 		},
-		// TODO: change the date pass the default enabled date (date not set yet)
+		// TODO: change the date pass the default enabled date (>= 2025-09-15)
 		{
 			name: "fs disabled by flag",
 			compatibilityDate: "2025-07-26",
-			compatibilityFlags: ["disable_nodejs_fs_module", "experimental"],
+			compatibilityFlags: ["disable_nodejs_fs_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_fs_module: false,
 			},
