@@ -20,11 +20,11 @@ import {
 	RolloutsService,
 } from "@cloudflare/containers-shared";
 import { promiseSpinner } from "../cloudchamber/common";
-import { Diff } from "../cloudchamber/helpers/diff";
 import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
 import { formatConfigSnippet } from "../config";
 import { FatalError, UserError } from "../errors";
 import { getAccountId } from "../user";
+import { Diff } from "../utils/diff";
 import {
 	sortObjectRecursive,
 	stripUndefined,
