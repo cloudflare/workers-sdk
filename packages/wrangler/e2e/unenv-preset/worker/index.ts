@@ -107,6 +107,7 @@ export const WorkerdTests: Record<string, () => void> = {
 			"assert/strict",
 			"async_hooks",
 			"buffer",
+			"constants",
 			"diagnostics_channel",
 			"dns",
 			"dns/promises",
@@ -434,5 +435,13 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof module._extensions, "object");
 		// @ts-expect-error TS2339 Invalid node/types.
 		assert.strictEqual(typeof module._pathCache, "object");
+	},
+
+	async testConstants() {
+		const constants = await import("node:constants");
+
+		assert.deepStrictEqual(constants.O_RDONLY, 0);
+		assert.deepStrictEqual(constants.O_WRONLY, 1);
+		assert.deepStrictEqual(constants.O_RDWR, 2);
 	},
 };
