@@ -112,17 +112,33 @@ export const versionsUploadCommand = createCommand({
 			requiresArg: true,
 		},
 		name: {
-			describe: "Name of the worker",
+			describe: "Name of the Worker",
+			type: "string",
+			requiresArg: true,
+		},
+		tag: {
+			describe: "A tag for this Worker Gradual Rollouts Version",
+			type: "string",
+			requiresArg: true,
+		},
+		message: {
+			describe:
+				"A descriptive message for this Worker Gradual Rollouts Version",
+			type: "string",
+			requiresArg: true,
+		},
+		"preview-alias": {
+			describe: "Name of an alias for this Worker version",
 			type: "string",
 			requiresArg: true,
 		},
 		bundle: {
-			describe: "Run wrangler's compilation step before publishing",
+			describe: "Run Wrangler's compilation step before publishing",
 			type: "boolean",
 			hidden: true,
 		},
 		"no-bundle": {
-			describe: "Skip internal build steps and directly deploy Worker",
+			describe: "Skip internal build steps and directly upload Worker",
 			type: "boolean",
 			default: false,
 		},
@@ -232,24 +248,8 @@ export const versionsUploadCommand = createCommand({
 			deprecated: true,
 		},
 		"dry-run": {
-			describe: "Don't actually deploy",
+			describe: "Compile a project without actually uploading the version.",
 			type: "boolean",
-		},
-		tag: {
-			describe: "A tag for this Worker Gradual Rollouts Version",
-			type: "string",
-			requiresArg: true,
-		},
-		message: {
-			describe:
-				"A descriptive message for this Worker Gradual Rollouts Version",
-			type: "string",
-			requiresArg: true,
-		},
-		"preview-alias": {
-			describe: "Name of an alias for this Worker version",
-			type: "string",
-			requiresArg: true,
 		},
 		"experimental-auto-create": {
 			describe: "Automatically provision draft bindings with new resources",
