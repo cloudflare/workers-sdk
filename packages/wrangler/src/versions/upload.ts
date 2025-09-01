@@ -104,6 +104,7 @@ export const versionsUploadCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
+	positionalArgs: ["script"],
 	args: {
 		script: {
 			describe: "The path to an entry point for your Worker",
