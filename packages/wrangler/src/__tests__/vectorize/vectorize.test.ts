@@ -781,8 +781,7 @@ describe("vectorize commands", () => {
 		mockVectorizeV2Request();
 		await runWrangler("vectorize list-vectors test-index --json");
 		expect(std.out).toMatchInlineSnapshot(`
-			"📋 Listing vectors in index 'test-index'...
-			{
+			"{
 			  \\"count\\": 3,
 			  \\"totalCount\\": 5,
 			  \\"isTruncated\\": true,
