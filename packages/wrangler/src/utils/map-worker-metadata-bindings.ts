@@ -11,8 +11,8 @@ export async function mapWorkerMetadataBindings(
 	accountId: string,
 	complianceConfig: ComplianceConfig
 ): Promise<RawConfig> {
-	//the binding API doesn't provide us with enough information to make a friendly user experience.
-	//lets call D1's API to get more information
+	// The binding API doesn't provide us with enough information to make a friendly user experience.
+	// lets call D1's API to get more information
 	const d1BindingsWithInfo: Record<string, DatabaseInfo> = {};
 	await Promise.all(
 		bindings
