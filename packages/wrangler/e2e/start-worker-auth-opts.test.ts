@@ -74,6 +74,9 @@ describe("startWorker - auth options", () => {
 				dev: {
 					experimentalRemoteBindings: true,
 					auth: validAuth,
+					server: {
+						port: 0,
+					},
 				},
 			});
 
@@ -127,6 +130,9 @@ describe("startWorker - auth options", () => {
 				dev: {
 					experimentalRemoteBindings: true,
 					auth: incorrectAuth,
+					server: {
+						port: 0,
+					},
 				},
 			});
 
@@ -224,6 +230,9 @@ describe("startWorker - auth options", () => {
 				dev: {
 					experimentalRemoteBindings: true,
 					auth: someAuth,
+					server: {
+						port: 0,
+					},
 				},
 			});
 

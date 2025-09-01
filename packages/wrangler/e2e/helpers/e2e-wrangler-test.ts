@@ -1,7 +1,13 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import { cp } from "node:fs/promises";
-import { onTestFinished } from "vitest";
+import { setTimeout } from "node:timers/promises";
+import { expect, onTestFinished, vi } from "vitest";
+import {
+	generateLeafCertificate,
+	generateMtlsCertName,
+	generateRootCertificate,
+} from "./cert";
 import { generateResourceName } from "./generate-resource-name";
 import { makeRoot, removeFiles, seed } from "./setup";
 import {
@@ -69,6 +75,7 @@ export class WranglerE2ETestHelper {
 		wranglerCommand: string,
 		{ cwd = this.tmpPath, ...options }: WranglerCommandOptions = {}
 	) {
+		console.log(`Running wrangler command: ${wranglerCommand}`);
 		return runWrangler(wranglerCommand, { cwd, ...options });
 	}
 
@@ -171,5 +178,84 @@ export class WranglerE2ETestHelper {
 		});
 
 		return { id, name };
+	}
+
+	async cert() {
+		// Generate root and leaf certificates
+		const { certificate: rootCert, privateKey: rootKey } =
+			generateRootCertificate();
+		const { certificate: leafCert, privateKey: leafKey } =
+			generateLeafCertificate(rootCert, rootKey);
+
+		// locally generated certs/key
+		await this.seed({ "mtls_client_cert_file.pem": leafCert });
+		await this.seed({ "mtls_client_private_key_file.pem": leafKey });
+
+		const name = generateMtlsCertName();
+		const output = await this.run(
+			`wrangler cert upload mtls-certificate --name ${name} --cert "mtls_client_cert_file.pem" --key "mtls_client_private_key_file.pem"`
+		);
+		const match = output.stdout.match(/ID:\s+(?<certId>.*)$/m);
+		const certificateId = match?.groups?.certId;
+		assert(certificateId, `Cannot find ID in ${JSON.stringify(output)}`);
+		onTestFinished(async () => {
+			await this.run(`wrangler cert delete --name ${name}`);
+		});
+		return certificateId;
+	}
+
+	/**
+	 * Create a worker for the test and attempt to delete it after the test has finished.
+	 *
+	 * If this is called inside a beforeXxx hook the helper cannot call onTestFinished,
+	 * in which case it is the caller's responsibility to call the `cleanup` returned from this helper.
+	 */
+	async worker({
+		workerName,
+		entryPoint = "",
+		configPath,
+		extraFlags = [],
+	}: {
+		workerName: string;
+		entryPoint?: string;
+		configPath?: string;
+		extraFlags?: string[];
+	}) {
+		const configOption = configPath ? `-c ${configPath}` : "";
+		const workerNameOption = `--name ${workerName}`;
+		const { stdout } = await this.run(
+			`wrangler deploy ${entryPoint} ${workerNameOption} ${configOption} --compatibility-date 2025-01-01 ${extraFlags.join(" ")}`
+		);
+
+		const match = stdout.match(
+			/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+		);
+		const deployedUrl = match?.groups?.url;
+		assert(deployedUrl, `Cannot find URL in ${JSON.stringify(stdout)}`);
+
+		// Wait a second before we start blasting the worker with requests
+		// to allow it to complete deployment.
+		await setTimeout(2_000);
+
+		// Wait for the worker to become available
+		await vi.waitFor(
+			async () => {
+				const response = await fetch(deployedUrl);
+				expect(response.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 500 }
+		);
+
+		const cleanup = async () => {
+			await this.run(`wrangler delete --name ${workerName} --force`);
+		};
+
+		try {
+			onTestFinished(cleanup, 15_000);
+		} catch {
+			// We are not inside a test so the caller will need to handle cleanup
+		}
+
+		return { deployedUrl, stdout, cleanup };
 	}
 }

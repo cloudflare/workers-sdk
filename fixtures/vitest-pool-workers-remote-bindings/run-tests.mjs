@@ -5,9 +5,11 @@
  * This script is used to deploy the remote workers and run the fixture using said workers
  * with the appropriate vitest configurations.
  */
-import { execSync } from "child_process";
-import { randomUUID } from "crypto";
-import { cpSync, readFileSync, rmSync, writeFileSync } from "fs";
+import assert from "node:assert";
+import { execSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { setTimeout } from "node:timers/promises";
 
 const env = getAuthenticatedEnv();
 if (!env) {
@@ -58,11 +60,18 @@ const deployOut = execSync(
 		stdio: "pipe",
 		cwd: "./.tmp",
 		env,
+		encoding: "utf8",
 	}
 );
+
 if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(`${deployOut}`)) {
 	throw new Error(`Failed to deploy ${remoteWorkerName}`);
 }
+
+const deployedUrl = deployOut.match(
+	/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+)?.groups?.url;
+assert(deployedUrl, "Failed to find deployed worker URL");
 
 writeFileSync(
 	"./.tmp/remote-wrangler.staging.json",
@@ -84,6 +93,7 @@ const deployStagingOut = execSync(
 		stdio: "pipe",
 		cwd: "./.tmp",
 		env,
+		encoding: "utf8",
 	}
 );
 if (
@@ -93,20 +103,50 @@ if (
 ) {
 	throw new Error(`Failed to deploy ${remoteStagingWorkerName}`);
 }
+const deployedStagingUrl = deployStagingOut.match(
+	/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+)?.groups?.url;
+assert(deployedStagingUrl, "Failed to find deployed staging worker URL");
+
+await setTimeout(2000);
+
+// Wait for the workers to become available
+await Promise.all([
+	waitFor(async () => {
+		const response = await fetch(deployedUrl);
+		assert.equal(response.status, 200);
+	}),
+	waitFor(async () => {
+		const response = await fetch(deployedStagingUrl);
+		assert.equal(response.status, 200);
+	}),
+]);
 
 try {
-	execSync("pnpm test:vitest --config ./.tmp/vitest.workers.config.ts", {
-		env,
-	});
-	execSync(
-		"pnpm test:vitest --config ./.tmp/vitest.workers.config.staging.ts",
-		{
-			env,
+	try {
+		try {
+			console.log("Running vitest-pool-workers remote bindings tests...");
+			execSync("pnpm test:vitest --config ./.tmp/vitest.workers.config.ts", {
+				env,
+				stdio: "inherit",
+			});
+			console.log(
+				"Running vitest-pool-workers remote bindings staging tests..."
+			);
+			execSync(
+				"pnpm test:vitest --config ./.tmp/vitest.workers.config.staging.ts",
+				{
+					env,
+					stdio: "inherit",
+				}
+			);
+		} finally {
+			execSync(`pnpm wrangler delete --name ${remoteWorkerName}`, { env });
 		}
-	);
+	} finally {
+		execSync(`pnpm wrangler delete --name ${remoteStagingWorkerName}`, { env });
+	}
 } finally {
-	execSync(`pnpm wrangler delete --name ${remoteWorkerName}`, { env });
-	execSync(`pnpm wrangler delete --name ${remoteStagingWorkerName}`, { env });
 	rmSync("./.tmp", { recursive: true, force: true });
 }
 
@@ -132,4 +172,23 @@ function getAuthenticatedEnv() {
 	console.warn(
 		"Skipping vitest-pool-workers remote bindings tests because the environment is not authenticated with Cloudflare."
 	);
+}
+
+/**
+ * Wait for the callback to execute successfully.
+ *
+ * If the callback throws an error or returns a rejected promise it will continue to wait until it succeeds or times out.
+ */
+export async function waitFor(callback) {
+	const start = Date.now();
+	while (true) {
+		try {
+			return callback();
+		} catch (error) {
+			if (Date.now() < start + 15_000) {
+				throw error;
+			}
+		}
+		await setTimeout(1_000);
+	}
 }
