@@ -27,12 +27,12 @@ import { formatConfigSnippet } from "../config";
 import { configRolloutStepsToAPI } from "../containers/deploy";
 import { FatalError, UserError } from "../errors";
 import { getAccountId } from "../user";
+import { Diff } from "../utils/diff";
 import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
 import { promiseSpinner } from "./common";
-import { Diff } from "./helpers/diff";
 import { cleanForInstanceType } from "./instance-type/instance-type";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";

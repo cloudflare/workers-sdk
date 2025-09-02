@@ -50,7 +50,6 @@ type BestPath = {
 	lastComponent?: Result;
 };
 
-// TODO: move this Diff Class to a shared location (since it is not Cloudchamber specific)
 export class Diff {
 	#results: Result[] = [];
 

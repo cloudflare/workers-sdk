@@ -28,7 +28,6 @@ import { getMigrationsToUpload } from "../durable";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
-import { downloadWorkerConfig } from "../init";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -48,6 +47,7 @@ import {
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
 import { formatCompatibilityDate } from "../utils/compatibility-date";
+import { downloadWorkerConfig } from "../utils/download-worker-config";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
@@ -387,10 +387,10 @@ export default async function deploy(props: Props): Promise<{
 				let configDiff: ReturnType<typeof getRemoteConfigDiff> | undefined;
 				if (getFlag("DEPLOY_REMOTE_DIFF_CHECK")) {
 					const remoteWorkerConfig = await downloadWorkerConfig(
-						accountId,
 						name,
+						serviceMetaData.default_environment.environment,
 						entry.file,
-						serviceMetaData.default_environment.environment
+						accountId
 					);
 
 					configDiff = getRemoteConfigDiff(remoteWorkerConfig, {

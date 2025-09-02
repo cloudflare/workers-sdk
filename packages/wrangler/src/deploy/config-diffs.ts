@@ -1,6 +1,6 @@
 import { green, red } from "@cloudflare/cli/colors";
-import { Diff } from "../cloudchamber/helpers/diff";
 import { getResolvedWorkersDev } from "../triggers/deploy";
+import { Diff } from "../utils/diff";
 import type { Config, RawConfig } from "../config";
 
 /**
