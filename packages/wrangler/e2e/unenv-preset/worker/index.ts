@@ -144,9 +144,11 @@ export const WorkerdTests: Record<string, () => void> = {
 			"stream/promises",
 			"stream/web",
 			"string_decoder",
+			"sys",
 			"timers",
 			"timers/promises",
 			"url",
+			"util",
 			"util/types",
 			"zlib",
 		];
@@ -162,6 +164,36 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(types.isAnyArrayBuffer(new ArrayBuffer(0)), true);
 		assert.strictEqual(util.isArray([]), true);
 		assert.strictEqual(util.isDeepStrictEqual(0, 0), true);
+
+		// @ts-expect-error `_errnoException` is not part of the public API
+		assert.strictEqual(typeof util._errnoException, "function");
+		// @ts-expect-error `_exceptionWithHostPort` is not part of the public API
+		assert.strictEqual(typeof util._exceptionWithHostPort, "function");
+
+		const removeEolV23 = getRuntimeFlagValue("remove_nodejs_compat_eol_v23");
+
+		if (removeEolV23) {
+			assert.strictEqual(util.isBoolean, undefined);
+			assert.strictEqual(util.isBuffer, undefined);
+			assert.strictEqual(util.isDate, undefined);
+			assert.strictEqual(util.isError, undefined);
+		} else {
+			assert.strictEqual(util.isBoolean(true), true);
+			assert.strictEqual(util.isBuffer(true), false);
+			assert.strictEqual(util.isBuffer(Buffer.from("hello world")), true);
+			assert.strictEqual(util.isDate(new Date()), true);
+			assert.strictEqual(util.isError(new Error()), true);
+			assert.strictEqual(util.isFunction(new Error()), false);
+			assert.strictEqual(util.isNull(null), true);
+			assert.strictEqual(util.isNullOrUndefined(null), true);
+			assert.strictEqual(util.isNumber(1), true);
+			assert.strictEqual(util.isObject({}), true);
+			assert.strictEqual(util.isPrimitive(true), true);
+			assert.strictEqual(util.isRegExp(true), false);
+			assert.strictEqual(util.isString(true), false);
+			assert.strictEqual(util.isSymbol(true), false);
+			assert.strictEqual(util.isUndefined(undefined), true);
+		}
 	},
 
 	async testPath() {
