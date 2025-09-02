@@ -117,7 +117,6 @@ type Props = {
 	metafile: string | boolean | undefined;
 	containersRollout: "immediate" | "gradual" | undefined;
 	strict: boolean | undefined;
-	force: boolean | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -355,7 +354,7 @@ export default async function deploy(props: Props): Promise<{
 	workerTag: string | null;
 	targets?: string[];
 }> {
-	const deployConfirm = getDeployConfirmFunction(props.strict && !props.force);
+	const deployConfirm = getDeployConfirmFunction(props.strict);
 
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name, entry } = props;
@@ -1410,7 +1409,7 @@ function getDeployConfirmFunction(
 	if (nonInteractive && strictMode) {
 		return () => {
 			logger.error(
-				"Aborting the deployment operation (due to strict mode, to prevent this failure either remove the `--strict` flag or add the `--force` one)"
+				"Aborting the deployment operation (due to strict mode, to prevent this failure either remove the `--strict` flag)"
 			);
 			process.exitCode = 1;
 			return Promise.resolve(false);

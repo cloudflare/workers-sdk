@@ -243,13 +243,6 @@ export const deployCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
-		// TODO: check, if `--force` really necessary? users can just provide or not `--strict`, no?
-		force: {
-			describe:
-				"This flag can be used to disable strict mode (if set via `--strict`).",
-			type: "boolean",
-			default: false,
-		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -396,7 +389,6 @@ export const deployCommand = createCommand({
 			experimentalAutoCreate: args.experimentalAutoCreate,
 			containersRollout: args.containersRollout,
 			strict: args.strict,
-			force: args.force,
 		});
 
 		writeOutput({
