@@ -249,6 +249,12 @@ import {
 	r2BucketSippyNamespace,
 } from "./r2/sippy";
 import {
+	r2SqlNamespace,
+	r2SqlEnableCommand,
+	r2SqlDisableCommand,
+	r2SqlQueryCommand,
+} from "./r2/sql";
+import {
 	secretBulkCommand,
 	secretDeleteCommand,
 	secretListCommand,
@@ -956,6 +962,22 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 bucket lock set",
 			definition: r2BucketLockSetCommand,
+		},
+		{
+			command: "wrangler r2 sql",
+			definition: r2SqlNamespace,
+		},
+		{
+			command: "wrangler r2 sql enable",
+			definition: r2SqlEnableCommand,
+		},
+		{
+			command: "wrangler r2 sql disable",
+			definition: r2SqlDisableCommand,
+		},
+		{
+			command: "wrangler r2 sql query",
+			definition: r2SqlQueryCommand,
 		},
 	]);
 	registry.registerNamespace("r2");
