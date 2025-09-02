@@ -379,7 +379,11 @@ export async function convertBindingsToCfWorkerInitBindings(
 			bindings.vars[name] = "value" in binding ? binding.value : binding.json;
 		} else if (binding.type === "kv_namespace") {
 			bindings.kv_namespaces ??= [];
-			bindings.kv_namespaces.push({ ...binding, binding: name });
+			bindings.kv_namespaces.push({
+				...binding,
+				binding: name,
+				id: "namespace_id" in binding ? binding.namespace_id : binding.id,
+			});
 		} else if (binding.type === "send_email") {
 			bindings.send_email ??= [];
 			bindings.send_email.push({ ...binding, name: name });
