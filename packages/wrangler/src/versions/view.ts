@@ -114,6 +114,7 @@ export const versionsViewCommand = createCommand({
 		const bindings = version.resources.bindings.filter(
 			(binding) => binding.type !== "secret_text"
 		);
+		logRaw(JSON.stringify(bindings, null, 2));
 		if (bindings.length > 0) {
 			printBindings(
 				(await convertBindingsToCfWorkerInitBindings(bindings)).bindings
