@@ -9,11 +9,37 @@ import {
 import { UserError } from "../errors";
 import { getAccountId } from "../user";
 import type { Config } from "../config";
+import type { ContainerApp } from "../config/environment";
 import type {
+	ApplicationAffinities,
+	ApplicationAffinityColocation,
 	ContainerNormalizedConfig,
 	InstanceTypeOrLimits,
 	SharedContainerConfig,
 } from "@cloudflare/containers-shared";
+import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
+
+/**
+ * Perform type conversion of affinities so that they can be fed to the API.
+ */
+function convertContainerAffinitiesForApi(
+	container: ContainerApp
+): ApplicationAffinities | undefined {
+	if (container.affinities === undefined) {
+		return undefined;
+	}
+
+	const affinities: ApplicationAffinities = {
+		colocation: container.affinities?.colocation as
+			| ApplicationAffinityColocation
+			| undefined,
+		hardware_generation: container.affinities?.hardware_generation as
+			| ApplicationAffinityHardwareGeneration
+			| undefined,
+	};
+
+	return affinities;
+}
 
 /**
  * This normalises config into an intermediate shape for building or pulling.
@@ -80,6 +106,7 @@ export const getNormalizedContainerOptions = async (
 					city.toLowerCase()
 				),
 			},
+			affinities: convertContainerAffinitiesForApi(container),
 			rollout_step_percentage:
 				args?.containersRollout === "immediate"
 					? 100

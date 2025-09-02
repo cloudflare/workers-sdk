@@ -1,4 +1,9 @@
-import type { InstanceType, SchedulingPolicy } from "./client";
+import type {
+	ApplicationAffinityColocation,
+	InstanceType,
+	SchedulingPolicy,
+} from "./client";
+import type { ApplicationAffinityHardwareGeneration } from "./client/models/ApplicationAffinityHardwareGeneration";
 
 export interface Logger {
 	debug: (...args: unknown[]) => void;
@@ -70,6 +75,10 @@ export type SharedContainerConfig = {
 		regions?: string[];
 		cities?: string[];
 		tier: number | undefined;
+	};
+	affinities?: {
+		colocation?: ApplicationAffinityColocation;
+		hardware_generation?: ApplicationAffinityHardwareGeneration;
 	};
 	observability: { logs_enabled: boolean };
 } & InstanceTypeOrLimits;

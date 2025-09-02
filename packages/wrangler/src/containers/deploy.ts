@@ -185,6 +185,7 @@ function containerConfigToCreateRequest(
 		instances: 0,
 		max_instances: containerApp.max_instances,
 		constraints: containerApp.constraints,
+		affinities: containerApp.affinities,
 		durable_objects: {
 			namespace_id: durableObjectNamespaceId,
 		},

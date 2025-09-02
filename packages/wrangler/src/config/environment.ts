@@ -150,6 +150,15 @@ export type ContainerApp = {
 		tier?: number;
 	};
 
+	/**
+	 * Scheduling affinities
+	 * @hidden
+	 */
+	affinities?: {
+		colocation?: "datacenter";
+		hardware_generation?: "highest-overall-performance";
+	};
+
 	// not used when deploying container with wrangler deploy
 	/**
 	 * @deprecated use the `class_name` field instead.
