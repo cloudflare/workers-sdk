@@ -107,16 +107,16 @@ export async function downloadWorkerConfig(
 		);
 
 	const allRoutes: Route[] = [
-		...routes.map(
-			(r) => ({ pattern: r.pattern, zone_name: r.zone_name }) as ZoneNameRoute
+		...routes.map<ZoneNameRoute>(
+			(r) => ({ pattern: r.pattern, zone_name: r.zone_name })
 		),
-		...customDomains.map(
+		...customDomains.map<CustomDomainRoute>(
 			(c) =>
 				({
 					pattern: c.hostname,
 					zone_name: c.zone_name,
 					custom_domain: true,
-				}) as CustomDomainRoute
+				})
 		),
 	];
 
