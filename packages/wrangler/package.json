@@ -57,7 +57,7 @@
 		"clean": "rimraf wrangler-dist miniflare-dist emitted-types",
 		"dev": "pnpm run clean && concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src --watch ../containers-shared/src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"generate-json-schema": "node -r esbuild-register scripts/generate-json-schema.ts",
-		"start": "pnpm run bundle && cross-env NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
+		"start": "pnpm run build && cross-env NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
 		"test": "dotenv -- pnpm run assert-git-version && dotenv -- vitest",
 		"test:ci": "pnpm run test run",
 		"test:debug": "pnpm run test --silent=false --verbose=true",
