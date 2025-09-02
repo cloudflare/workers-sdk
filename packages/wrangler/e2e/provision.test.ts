@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
@@ -38,7 +38,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			expect(text).toMatchInlineSnapshot(`"Hello World!"`);
 		});
 
-		beforeAll(async () => {
+		beforeEach(async () => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 						name = "${workerName}"
@@ -46,15 +46,19 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						compatibility_date = "2023-01-01"
 						workers_dev = true
 
-						[[kv_namespaces]]
-						binding = "KV"
+					[[kv_namespaces]]
+					binding = "KV"
 
-						[[r2_buckets]]
-						binding = "R2"
+					[[r2_buckets]]
+					binding = "R2"
 
-						[[d1_databases]]
-						binding = "D1"
-						`,
+					[[r2_buckets]]
+					binding = "R2_WITH_NAME"
+					bucket_name = "does-not-exist"
+
+					[[d1_databases]]
+					binding = "D1"
+				`,
 				"src/index.ts": dedent`
 						export default {
 							fetch(request) {
@@ -76,32 +80,33 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await worker.exitCode;
 			const output = await worker.output;
 			expect(normalize(output)).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			The following bindings need to be provisioned:
-			Binding        Resource
-			env.KV         KV Namespace
-			env.D1         D1 Database
-			env.R2         R2 Bucket
-			Provisioning KV (KV Namespace)...
-			🌀 Creating new KV Namespace "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-kv"...
-			✨ KV provisioned 🎉
-			Provisioning D1 (D1 Database)...
-			🌀 Creating new D1 Database "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-d1"...
-			✨ D1 provisioned 🎉
-			Provisioning R2 (R2 Bucket)...
-			🌀 Creating new R2 Bucket "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2"...
-			✨ R2 provisioned 🎉
-			🎉 All resources provisioned, continuing with deployment...
-			Your Worker has access to the following bindings:
-			Binding                                                              Resource
-			env.KV (00000000000000000000000000000000)                            KV Namespace
-			env.D1 (00000000-0000-0000-0000-000000000000)                        D1 Database
-			env.R2 (tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2)      R2 Bucket
-			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-			Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
-			  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
-			Current Version ID: 00000000-0000-0000-0000-000000000000"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				The following bindings need to be provisioned:
+				Binding        Resource
+				env.KV         KV Namespace
+				env.D1         D1 Database
+				env.R2         R2 Bucket
+				Provisioning KV (KV Namespace)...
+				🌀 Creating new KV Namespace "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-kv"...
+				✨ KV provisioned 🎉
+				Provisioning D1 (D1 Database)...
+				🌀 Creating new D1 Database "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-d1"...
+				✨ D1 provisioned 🎉
+				Provisioning R2 (R2 Bucket)...
+				🌀 Creating new R2 Bucket "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2"...
+				✨ R2 provisioned 🎉
+				🎉 All resources provisioned, continuing with deployment...
+				Your Worker has access to the following bindings:
+				Binding                                                                        Resource
+				env.KV (00000000000000000000000000000000)                                      KV Namespace
+				env.D1 (00000000-0000-0000-0000-000000000000)                                  D1 Database
+				env.R2 (tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2)                R2 Bucket
+				env.R2_WITH_NAME (does-not-exist)                                              R2 Bucket
+				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+				Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+				  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+				Current Version ID: 00000000-0000-0000-0000-000000000000"
+			`);
 			const urlMatch = output.match(
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
@@ -130,17 +135,18 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await worker.exitCode;
 			const output = await worker.output;
 			expect(normalize(output)).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Your Worker has access to the following bindings:
-			Binding                 Resource
-			env.KV (inherited)      KV Namespace
-			env.D1 (inherited)      D1 Database
-			env.R2 (inherited)      R2 Bucket
-			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-			Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
-			  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
-			Current Version ID: 00000000-0000-0000-0000-000000000000"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Your Worker has access to the following bindings:
+				Binding                                Resource
+				env.KV (inherited)                     KV Namespace
+				env.D1 (inherited)                     D1 Database
+				env.R2 (inherited)                     R2 Bucket
+				env.R2_WITH_NAME (does-not-exist)      R2 Bucket
+				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+				Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+				  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+				Current Version ID: 00000000-0000-0000-0000-000000000000"
+			`);
 
 			const response = await retry(
 				(resp) => !resp.ok,
@@ -148,7 +154,59 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			);
 			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
+		it("can inspect current bindings", async () => {
+			const versionsRaw = await helper.run(
+				`wrangler versions list --json --x-provision`
+			);
 
+			const versions = JSON.parse(versionsRaw.stdout) as unknown[];
+
+			const latest = versions.at(-1) as { id: string };
+
+			const versionView = await helper.run(
+				`wrangler versions view ${latest.id} --x-provision`
+			);
+
+			expect(normalizeOutput(versionView.output)).toMatchInlineSnapshot(`
+				"Version ID:  00000000-0000-0000-0000-000000000000
+				Created:     TIMESTAMP
+				Author:
+				Source:      Unknown (version_upload)
+				Tag:         -
+				Message:     -
+				Handlers:            fetch
+				Compatibility Date:  2023-01-01
+				[
+				  {
+				    "database_id": "00000000-0000-0000-0000-000000000000",
+				    "id": "00000000-0000-0000-0000-000000000000",
+				    "name": "D1",
+				    "type": "d1"
+				  },
+				  {
+				    "name": "KV",
+				    "namespace_id": "00000000000000000000000000000000",
+				    "type": "kv_namespace"
+				  },
+				  {
+				    "bucket_name": "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2",
+				    "name": "R2",
+				    "type": "r2_bucket"
+				  },
+				  {
+				    "bucket_name": "does-not-exist",
+				    "name": "R2_WITH_NAME",
+				    "type": "r2_bucket"
+				  }
+				]
+				Your Worker has access to the following bindings:
+				Binding                                                                        Resource
+				env.KV (00000000000000000000000000000000)                                      KV Namespace
+				env.D1 (00000000-0000-0000-0000-000000000000)                                  D1 Database
+				env.R2 (tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2)                R2 Bucket
+				env.R2_WITH_NAME (does-not-exist)                                              R2 Bucket"
+			`);
+		});
 		it("can inherit and provision resources on version upload", async () => {
 			await helper.seed({
 				"wrangler.toml": dedent`

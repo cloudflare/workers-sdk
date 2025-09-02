@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -213,6 +214,9 @@ describe("--x-provision", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+
+			// IDs should be written back to the config file
+			expect(await readFile("wrangler.toml", "utf-8")).toMatchInlineSnapshot();
 		});
 
 		it("can provision KV, R2 and D1 bindings with existing resources, and lets you search when there are too many to list", async () => {
