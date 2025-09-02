@@ -543,7 +543,7 @@ export async function provisionBindings(
 	}
 }
 
-function getSettings(
+export function getSettings(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string
