@@ -1,5 +1,15 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.69
+
+### Patch Changes
+
+- [#10471](https://github.com/cloudflare/workers-sdk/pull/10471) [`38bdb78`](https://github.com/cloudflare/workers-sdk/commit/38bdb787c607a0411c92a340d75b842f9d67b485) Thanks [@clintonsteiner](https://github.com/clintonsteiner)! - chore: bump `devalue` version to 5.3.2
+
+- Updated dependencies [[`22c8ae6`](https://github.com/cloudflare/workers-sdk/commit/22c8ae6364e608b918b19547806229bf7ccbc429), [`3c15bbb`](https://github.com/cloudflare/workers-sdk/commit/3c15bbb211b0de279794b1ba4c1c9206b95e2a6f), [`dc81221`](https://github.com/cloudflare/workers-sdk/commit/dc81221710b2d015ebf0c47aac349634be509a8c), [`38bdb78`](https://github.com/cloudflare/workers-sdk/commit/38bdb787c607a0411c92a340d75b842f9d67b485), [`4492eb0`](https://github.com/cloudflare/workers-sdk/commit/4492eb0490588df736c25272ed2b279736462c9a)]:
+  - miniflare@4.20250829.0
+  - wrangler@4.33.2
+
 ## 0.8.68
 
 ### Patch Changes

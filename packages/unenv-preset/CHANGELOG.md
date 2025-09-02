@@ -1,5 +1,24 @@
 # @cloudflare/unenv-preset
 
+## 2.7.1
+
+### Patch Changes
+
+- [#10514](https://github.com/cloudflare/workers-sdk/pull/10514) [`31ecfeb`](https://github.com/cloudflare/workers-sdk/commit/31ecfeb18b3419044474e37a2a6dab9bf35ff574) Thanks [@vicb](https://github.com/vicb)! - Use the native `node:constants` module
+
+  The native `node:constants` module was implemented in [this PR](https://github.com/cloudflare/workerd/pull/4759)
+  It was released as part of workerd [1.20250813.0](https://github.com/cloudflare/workerd/releases/tag/v1.20250813.0)
+
+- [#10431](https://github.com/cloudflare/workers-sdk/pull/10431) [`f656d1a`](https://github.com/cloudflare/workers-sdk/commit/f656d1a2da772692b09e8f3ae1e0805d1d33f52e) Thanks [@anonrig](https://github.com/anonrig)! - Remove node:module polyfills
+
+- [#10443](https://github.com/cloudflare/workers-sdk/pull/10443) [`bd21fc5`](https://github.com/cloudflare/workers-sdk/commit/bd21fc51da3c2174919921b80c378bf294ebc680) Thanks [@anonrig](https://github.com/anonrig)! - Removes node:crypto polyfills
+
+- [#10498](https://github.com/cloudflare/workers-sdk/pull/10498) [`4851955`](https://github.com/cloudflare/workers-sdk/commit/4851955c2b87763004b4eb0353a2b65e590993e4) Thanks [@vicb](https://github.com/vicb)! - enabled native `node:fs` and `node:os` modules.
+
+  native `node:fs` is used when the `enable_nodejs_fs_module` is set or by default starting from 2025-09-15.
+
+  native `node:os` is used when the `enable_nodejs_os_module` is set or by default starting from 2025-09-15
+
 ## 2.7.0
 
 ### Minor Changes

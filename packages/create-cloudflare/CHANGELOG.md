@@ -1,5 +1,25 @@
 # create-cloudflare
 
+## 2.51.3
+
+### Patch Changes
+
+- [#10455](https://github.com/cloudflare/workers-sdk/pull/10455) [`17ee8e6`](https://github.com/cloudflare/workers-sdk/commit/17ee8e6d58056543a099270ba08d79957420aca8) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.15.0 | 1.16.0 |
+
+- [#10456](https://github.com/cloudflare/workers-sdk/pull/10456) [`0df683f`](https://github.com/cloudflare/workers-sdk/commit/0df683fc2a69ae6bc54b162264cff7492e7180e0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.8.1 | 7.8.2 |
+
 ## 2.51.2
 
 ### Patch Changes

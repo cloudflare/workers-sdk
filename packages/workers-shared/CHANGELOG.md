@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.18.8
+
+### Patch Changes
+
+- [#10500](https://github.com/cloudflare/workers-sdk/pull/10500) [`19b1881`](https://github.com/cloudflare/workers-sdk/commit/19b1881edc1428c5b2d3beb905006238c5b33dba) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Block /\_image routes with href query param using double slash.
+
 ## 0.18.7
 
 ### Patch Changes
