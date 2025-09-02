@@ -47,7 +47,7 @@ const nativeModules = [
 ];
 
 // Modules implemented via a mix of workerd APIs and polyfills.
-const hybridModules = ["console", "crypto", "process"];
+const hybridModules = ["console", "process"];
 
 /**
  * Creates the Cloudflare preset for the given compatibility date and compatibility flags

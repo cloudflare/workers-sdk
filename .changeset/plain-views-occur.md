@@ -1,6 +1,5 @@
 ---
 "@cloudflare/unenv-preset": patch
-"wrangler": patch
 ---
 
-Remove node:util and node:sys polyfills
+Remove `node:util` and `node:sys` polyfills which are now fully implemented in workerd
