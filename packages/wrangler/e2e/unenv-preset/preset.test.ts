@@ -67,7 +67,13 @@ const testConfigs: TestConfig[] = [
 				enable_nodejs_http_modules: false,
 			},
 		},
-		// TODO: add a config when http server is enabled by default (>= 2025-09-01)
+		{
+			name: "http server enabled by date",
+			compatibilityDate: "2025-09-01",
+			expectRuntimeFlags: {
+				enable_nodejs_http_modules: true,
+			},
+		},
 		{
 			name: "http server enabled by flag",
 			compatibilityDate: "2024-09-23",
@@ -80,10 +86,9 @@ const testConfigs: TestConfig[] = [
 				enable_nodejs_http_server_modules: true,
 			},
 		},
-		// TODO: change the date pass the default enabled date (>= 2025-09-01)
 		{
 			name: "http server disabled by flag",
-			compatibilityDate: "2024-09-23",
+			compatibilityDate: "2025-09-01",
 			compatibilityFlags: [
 				"enable_nodejs_http_modules",
 				"disable_nodejs_http_server_modules",
