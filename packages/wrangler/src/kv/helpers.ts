@@ -1,13 +1,17 @@
+import assert from "node:assert";
 import { Blob } from "node:buffer";
 import { URLSearchParams } from "node:url";
 import { type KVNamespace } from "@cloudflare/workers-types/experimental";
 import { Miniflare } from "miniflare";
 import { FormData } from "undici";
 import { fetchKVGetValue, fetchListResult, fetchResult } from "../cfetch";
+import { getSettings } from "../deployment-bundle/bindings";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
 import { UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
+import { requireAuth } from "../user";
 import type { Config } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ReplaceWorkersTypes } from "miniflare";
@@ -420,10 +424,38 @@ export async function deleteKVBulkKeyValue(
 	}
 }
 
-export function getKVNamespaceId(
+async function getIdFromSettings(
+	config: Config,
+	binding: string,
+	isLocal: boolean
+) {
+	// Don't do any network stuff when local, instead respect what
+	// Wrangler dev does, which is to use the binding name as a fallback
+	// for the namespace ID
+	if (isLocal) {
+		return binding;
+	}
+	const accountId = await requireAuth(config);
+	if (!config.name) {
+		throw new UserError("No Worker name found in config");
+	}
+	const settings = await getSettings(config, accountId, config.name);
+	const existingKV = settings?.bindings.find(
+		(existing) => existing.type === "kv_namespace" && existing.name === binding
+	);
+	if (!existingKV || !("namespace_id" in existingKV)) {
+		throw new UserError(
+			`No namespace ID found for binding "${binding}". Add one to your wrangler config file or pass it via \`--namespace-id\`.`
+		);
+	}
+	return existingKV.namespace_id as string;
+}
+
+export async function getKVNamespaceId(
 	{ preview, binding, "namespace-id": namespaceId }: KvArgs,
-	config: Config
-): string {
+	config: Config,
+	isLocal: boolean
+): Promise<string> {
 	// nice
 	if (namespaceId) {
 		return namespaceId;
@@ -483,8 +515,12 @@ export function getKVNamespaceId(
 		// We don't want to execute code below if preview is set to true, so we just return. Otherwise we can get error!
 		return namespaceId;
 	} else if (previewIsDefined) {
+		if (getFlag("RESOURCES_PROVISION")) {
+			assert(binding);
+			return getIdFromSettings(config, binding, isLocal);
+		}
 		throw new UserError(
-			`No namespace ID found for ${binding}. Add one to your wrangler config file to use a separate namespace for previewing your worker.`
+			`No namespace ID found for ${binding}. Add one to your wrangler config file or pass it via \`--namespace-id\`.`
 		);
 	}
 
@@ -494,6 +530,13 @@ export function getKVNamespaceId(
 		(!namespace.id && namespace.preview_id);
 	if (bindingHasOnlyOneId) {
 		namespaceId = namespace.id || namespace.preview_id;
+	} else if (
+		getFlag("RESOURCES_PROVISION") &&
+		!namespace.id &&
+		!namespace.preview_id
+	) {
+		assert(binding);
+		return getIdFromSettings(config, binding, isLocal);
 	} else {
 		throw new UserError(
 			`${binding} has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.`
