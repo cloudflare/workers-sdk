@@ -89,7 +89,8 @@ export async function downloadWorkerConfig(
 		),
 	]).catch((e) => {
 		throw new Error(
-			`Error Occurred ${e}: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.`
+			`Error Occurred: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.`,
+			{ cause: e },
 		);
 	});
 
