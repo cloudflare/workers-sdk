@@ -410,6 +410,89 @@ describe("unit tests", async () => {
 		}
 	);
 
+	describe("blocking /_image requests with protocol relative URLs as the image source", () => {
+		it("blocks protocol relative URLs with a different hostname when not fetched as an image", async () => {
+			const request = new Request(
+				"https://example.com/_image?href=//evil.com/ssrf"
+			);
+			const env = {
+				CONFIG: {
+					has_user_worker: true,
+					invoke_user_worker_ahead_of_assets: true,
+				},
+				USER_WORKER: {
+					async fetch(_: Request): Promise<Response> {
+						return new Response("<!DOCTYPE html><html></html>", {
+							headers: { "content-type": "text/html" },
+						});
+					},
+				},
+			} as Env;
+			const ctx = createExecutionContext();
+
+			const response = await worker.fetch(request, env, ctx);
+			expect(response.status).toBe(403);
+			expect(await response.text()).toBe("Blocked");
+		});
+
+		it.each([
+			{
+				description: "allows protocol relative URLs with the same hostname",
+				url: "https://example.com/_image?href=//example.com/image.jpg",
+				userWorkerResponse: {
+					body: "fake image data",
+					headers: { "content-type": "image/jpeg" },
+					status: 200,
+				},
+				expectedStatus: 200,
+				expectedBody: "fake image data",
+			},
+			{
+				description:
+					"allows protocol relative URLs with a different hostname when fetched as an image",
+				url: "https://example.com/_image?href=//another.com/image.jpg",
+				headers: { "sec-fetch-dest": "image" },
+				userWorkerResponse: {
+					body: "fake image data",
+					headers: { "content-type": "image/jpeg" },
+					status: 200,
+				},
+				expectedStatus: 200,
+				expectedBody: "fake image data",
+			},
+		])(
+			"$description",
+			async ({
+				url,
+				headers,
+				userWorkerResponse,
+				expectedStatus,
+				expectedBody,
+			}) => {
+				const request = new Request(url, { headers });
+				const env = {
+					CONFIG: {
+						has_user_worker: true,
+						invoke_user_worker_ahead_of_assets: true,
+					},
+					USER_WORKER: {
+						async fetch(_: Request): Promise<Response> {
+							return new Response(userWorkerResponse.body, {
+								status: userWorkerResponse.status,
+								headers: userWorkerResponse.headers,
+							});
+						},
+					},
+				} as Env;
+				const ctx = createExecutionContext();
+
+				const response = await worker.fetch(request, env, ctx);
+				expect(response.status).toBe(expectedStatus);
+				expect(await response.text()).toBe(expectedBody);
+			}
+		);
+	});
+
 	describe("free tier limiting", () => {
 		it("returns fetch from asset worker for assets", async () => {
 			const request = new Request("https://example.com/asset");
