@@ -90,7 +90,7 @@ export async function downloadWorkerConfig(
 	]).catch((e) => {
 		throw new Error(
 			`Error Occurred: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.`,
-			{ cause: e },
+			{ cause: e }
 		);
 	});
 
@@ -107,17 +107,15 @@ export async function downloadWorkerConfig(
 		);
 
 	const allRoutes: Route[] = [
-		...routes.map<ZoneNameRoute>(
-			(r) => ({ pattern: r.pattern, zone_name: r.zone_name })
-		),
-		...customDomains.map<CustomDomainRoute>(
-			(c) =>
-				({
-					pattern: c.hostname,
-					zone_name: c.zone_name,
-					custom_domain: true,
-				})
-		),
+		...routes.map<ZoneNameRoute>((r) => ({
+			pattern: r.pattern,
+			zone_name: r.zone_name,
+		})),
+		...customDomains.map<CustomDomainRoute>((c) => ({
+			pattern: c.hostname,
+			zone_name: c.zone_name,
+			custom_domain: true,
+		})),
 	];
 
 	return {
