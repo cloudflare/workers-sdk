@@ -1,5 +1,14 @@
 # wrangler
 
+## 3.114.15
+
+### Patch Changes
+
+- [#9991](https://github.com/cloudflare/workers-sdk/pull/9991) [`3d9b3a0`](https://github.com/cloudflare/workers-sdk/commit/3d9b3a042cd5c0b4c795a5b4c112fc98e09eb30c) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Fix startup profiling when sourcemaps are enabled
+
+- Updated dependencies [[`ab47329`](https://github.com/cloudflare/workers-sdk/commit/ab473299f0d2e7d375aeaaf8973f2d2930efb0ce)]:
+  - miniflare@3.20250718.2
+
 ## 3.114.14
 
 ### Patch Changes
