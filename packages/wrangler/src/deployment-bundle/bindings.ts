@@ -1,7 +1,9 @@
 import assert from "node:assert";
 import { fetchResult } from "../cfetch";
-import { experimental_patchConfig } from "../cli";
-import { PatchConfigError } from "../config/patch-config";
+import {
+	experimental_patchConfig,
+	PatchConfigError,
+} from "../config/patch-config";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
 import { getDatabaseInfoFromIdOrName } from "../d1/utils";
