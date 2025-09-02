@@ -69,6 +69,7 @@ export function getCloudflarePreset({
 	};
 
 	const httpOverrides = getHttpOverrides(compat);
+	const http2Overrides = getHttp2Overrides(compat);
 	const osOverrides = getOsOverrides(compat);
 	const fsOverrides = getFsOverrides(compat);
 
@@ -76,6 +77,7 @@ export function getCloudflarePreset({
 	const dynamicNativeModules = [
 		...nativeModules,
 		...httpOverrides.nativeModules,
+		...http2Overrides.nativeModules,
 		...osOverrides.nativeModules,
 		...fsOverrides.nativeModules,
 	];
@@ -84,6 +86,7 @@ export function getCloudflarePreset({
 	const dynamicHybridModules = [
 		...hybridModules,
 		...httpOverrides.hybridModules,
+		...http2Overrides.hybridModules,
 		...osOverrides.hybridModules,
 		...fsOverrides.hybridModules,
 	];
@@ -190,6 +193,42 @@ function getHttpOverrides({
 		],
 		hybridModules: httpServerEnabled ? ["http"] : ["http", "https"],
 	};
+}
+
+/**
+ * Returns the overrides for the `node:http2` module (unenv or workerd)
+ *
+ * The native http2 implementation:
+ * - is enabled starting from 2025-09-01
+ * - can be enabled with the "enable_nodejs_http2_module" flag
+ * - can be disabled with the "disable_nodejs_http2_module" flag
+ */
+function getHttp2Overrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_http2_module"
+	);
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_http2_module"
+	);
+	const enabledByDate = compatibilityDate >= "2025-09-01";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["http2"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
 }
 
 /**

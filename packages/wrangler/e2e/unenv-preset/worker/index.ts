@@ -497,4 +497,12 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.deepStrictEqual(constants.O_WRONLY, 1);
 		assert.deepStrictEqual(constants.O_RDWR, 2);
 	},
+
+	async testHttp2() {
+		const http2 = await import("node:http2");
+
+		assert.strictEqual(typeof http2.createSecureServer, "function");
+		assert.strictEqual(typeof http2.connect, "function");
+		assert.strictEqual(http2.constants.HTTP2_HEADER_STATUS, ":status");
+	},
 };
