@@ -230,6 +230,15 @@ export interface CfHelloWorld {
 	enable_timer?: boolean;
 }
 
+export interface CfRateLimit {
+	name: string;
+	namespace_id: string;
+	simple: {
+		limit: number;
+		period: 10 | 60;
+	};
+}
+
 export interface CfHyperdrive {
 	binding: string;
 	id: string;
@@ -390,6 +399,7 @@ export interface CfWorkerInit {
 		unsafe: CfUnsafe | undefined;
 		assets: CfAssetsBinding | undefined;
 		unsafe_hello_world: CfHelloWorld[] | undefined;
+		ratelimits: CfRateLimit[] | undefined;
 	};
 
 	containers?: { class_name: string }[];

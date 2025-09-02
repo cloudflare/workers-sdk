@@ -1007,6 +1007,7 @@ export function getBindings(
 			? { binding: configParam.assets?.binding }
 			: undefined,
 		unsafe_hello_world: configParam.unsafe_hello_world,
+		ratelimits: configParam.ratelimits,
 	};
 
 	return bindings;

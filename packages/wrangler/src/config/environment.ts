@@ -1119,6 +1119,29 @@ export interface EnvironmentNonInheritable {
 		/** Whether the timer is enabled */
 		enable_timer?: boolean;
 	}[];
+
+	/**
+	 * Specifies rate limit bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	ratelimits: {
+		/** The binding name used to refer to the rate limiter in the Worker. */
+		name: string;
+		/** The namespace ID for this rate limiter. */
+		namespace_id: string;
+		/** Simple rate limiting configuration. */
+		simple: {
+			/** The maximum number of requests allowed in the time period. */
+			limit: number;
+			/** The time period in seconds (10 for ten seconds, 60 for one minute). */
+			period: 10 | 60;
+		};
+	}[];
 }
 
 /**

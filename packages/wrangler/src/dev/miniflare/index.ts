@@ -785,11 +785,15 @@ export function buildMiniflareBindingOptions(
 			)
 		),
 
-		ratelimits: Object.fromEntries(
-			bindings.unsafe?.bindings
+		ratelimits: Object.fromEntries([
+			...(bindings.unsafe?.bindings
 				?.filter((b) => b.type == "ratelimit")
-				.map(ratelimitEntry) ?? []
-		),
+				.map(ratelimitEntry) ?? []),
+			...(bindings.ratelimits?.map((r) => [
+				r.name,
+				{ namespace_id: r.namespace_id, simple: r.simple },
+			]) ?? []),
+		]),
 
 		mtlsCertificates:
 			remoteBindingsEnabled && remoteProxyConnectionString

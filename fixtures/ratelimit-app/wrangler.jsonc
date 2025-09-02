@@ -2,10 +2,20 @@
 	"name": "ratelimit-app",
 	"compatibility_date": "2024-02-23",
 	"main": "src/index.js",
+	"ratelimits": [
+		{
+			"name": "RATE_LIMITER",
+			"namespace_id": "2001",
+			"simple": {
+				"limit": 3,
+				"period": 60,
+			},
+		},
+	],
 	"unsafe": {
 		"bindings": [
 			{
-				"name": "RATE_LIMITER",
+				"name": "UNSAFE_RATE_LIMITER",
 				"type": "ratelimit",
 				"namespace_id": "1001",
 				"simple": {
