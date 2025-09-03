@@ -432,7 +432,11 @@ export async function convertBindingsToCfWorkerInitBindings(
 			bindings.r2_buckets.push({ ...binding, binding: name });
 		} else if (binding.type === "d1") {
 			bindings.d1_databases ??= [];
-			bindings.d1_databases.push({ ...binding, binding: name });
+			bindings.d1_databases.push({
+				...binding,
+				binding: name,
+				database_id: "id" in binding ? binding.id : binding.database_id,
+			});
 		} else if (binding.type === "vectorize") {
 			bindings.vectorize ??= [];
 			bindings.vectorize.push({ ...binding, binding: name });
