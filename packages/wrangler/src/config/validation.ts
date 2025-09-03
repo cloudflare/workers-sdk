@@ -269,6 +269,7 @@ export function normalizeAndValidateConfig(
 		configPath,
 		userConfigPath,
 		topLevelName: rawConfig.name,
+		definedEnvironments,
 		pages_build_output_dir: normalizeAndValidatePagesBuildOutputDir(
 			configPath,
 			rawConfig.pages_build_output_dir

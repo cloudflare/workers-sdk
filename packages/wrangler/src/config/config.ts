@@ -48,6 +48,8 @@ export interface ComputedFields {
 	 * It can be useful to know what the top-level name was before the flattening.
 	 */
 	topLevelName: string | undefined;
+	/** A list of environment names declared in the raw configuration. */
+	definedEnvironments: string[] | undefined;
 }
 
 export interface ConfigFields<Dev extends RawDevConfig> {
@@ -280,6 +282,7 @@ export const defaultWranglerConfig: Config = {
 	configPath: undefined,
 	userConfigPath: undefined,
 	topLevelName: undefined,
+	definedEnvironments: undefined,
 
 	/*====================================================*/
 	/*      Fields supported by both Workers & Pages      */
