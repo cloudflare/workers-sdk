@@ -122,6 +122,31 @@ describe("versions upload", () => {
 		`);
 	});
 
+	test("should accept script as a positional arg", async () => {
+		mockGetScript();
+		mockUploadVersion(false);
+
+		// Setup
+		writeWranglerConfig({
+			name: "test-name",
+			// i.e. would error if the arg wasn't picked up
+			main: "./nope.js",
+		});
+		writeWorkerSource();
+		setIsTTY(false);
+
+		const result = runWrangler("versions upload index.js");
+
+		await expect(result).resolves.toBeUndefined();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			Uploaded test-name (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
+		`);
+	});
+
 	test("should print preview url if version has preview", async () => {
 		mockGetScript();
 		mockUploadVersion(true);
