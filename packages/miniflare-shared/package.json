@@ -29,6 +29,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
 		"@types/node": "catalog:default",
 		"esbuild": "catalog:default",
 		"typescript": "catalog:default"
