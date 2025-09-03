@@ -180,8 +180,6 @@ function getHttpOverrides({
 		(httpServerEnabledByFlag || httpServerEnabledByDate) &&
 		!httpServerDisabledByFlag;
 
-	// Override unenv base aliases with native and hybrid modules
-	// `node:https` is fully implemented by workerd if both flags are enabled
 	return {
 		nativeModules: [
 			"_http_agent",
@@ -189,9 +187,13 @@ function getHttpOverrides({
 			"_http_common",
 			"_http_incoming",
 			"_http_outgoing",
-			...(httpServerEnabled ? ["_http_server", "https"] : []),
+			// `_http_server` can only be imported when the server flag is set
+			// See https://github.com/cloudflare/workerd/blob/56efc04/src/workerd/api/node/node.h#L102-L106
+			...(httpServerEnabled ? ["_http_server"] : []),
+			"http",
+			"https",
 		],
-		hybridModules: httpServerEnabled ? ["http"] : ["http", "https"],
+		hybridModules: [],
 	};
 }
 
