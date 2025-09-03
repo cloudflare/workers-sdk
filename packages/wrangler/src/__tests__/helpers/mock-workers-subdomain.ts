@@ -45,7 +45,7 @@ export function mockGetWorkerSubdomain({
 	previews_enabled?: boolean;
 	env?: string | undefined;
 	legacyEnv?: boolean | undefined;
-	expectedScriptName?: string;
+	expectedScriptName?: string | false;
 }) {
 	const url =
 		env && !legacyEnv
@@ -56,7 +56,9 @@ export function mockGetWorkerSubdomain({
 			url,
 			({ params }) => {
 				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toEqual(expectedScriptName);
+				if (expectedScriptName !== false) {
+					expect(params.scriptName).toEqual(expectedScriptName);
+				}
 				if (!legacyEnv) {
 					expect(params.envName).toEqual(env);
 				}
