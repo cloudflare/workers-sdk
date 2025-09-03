@@ -197,6 +197,41 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
+	it("should default max_instances and rollout_step_percentage accordingly", async () => {
+		writeFileSync("Dockerfile", "FROM scratch");
+
+		const config: Config = {
+			name: "test-worker",
+			configPath: "./wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "TestContainer",
+					image: path.resolve("./Dockerfile"),
+					name: "test-container",
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+
+		expect(result).toHaveLength(1);
+		expect(result[0]).toMatchObject({
+			name: "test-container",
+			class_name: "TestContainer",
+			max_instances: 1,
+			rollout_step_percentage: 100,
+		});
+	});
+
 	it("should handle custom limit configuration", async () => {
 		// deprecated path for setting custom limits
 		const config: Config = {
