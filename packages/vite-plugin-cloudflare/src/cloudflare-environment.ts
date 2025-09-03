@@ -168,6 +168,8 @@ export function createCloudflareEnvironmentOptions({
 			ssr: true,
 			rollupOptions: {
 				input: workerConfig.main,
+				// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
+				preserveEntrySignatures: "strict",
 				// rolldown-only option
 				...("rolldownVersion" in vite ? ({ platform: "neutral" } as any) : {}),
 			},
