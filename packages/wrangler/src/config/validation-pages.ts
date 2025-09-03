@@ -42,6 +42,8 @@ const supportedPagesConfigFields = [
 	"configPath",
 	"userConfigPath",
 	"topLevelName",
+	"definedEnvironments",
+	"targetEnvironment",
 ] as const;
 
 export function validatePagesConfig(

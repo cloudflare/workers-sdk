@@ -5,6 +5,7 @@ import dedent from "ts-dedent";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { formatMessage, ParseError, parseJSONC, readFileSync } from "../parse";
+import type { RawConfig, RedirectedRawConfig } from "./config";
 
 export type ResolveConfigPathOptions = {
 	useRedirectIfAvailable?: boolean;
@@ -135,4 +136,12 @@ function findRedirectedWranglerConfig(
 		`);
 		return redirectedConfigPath;
 	}
+}
+
+export function isRedirectedRawConfig(
+	rawConfig: RawConfig,
+	configPath: string | undefined,
+	userConfigPath: string | undefined
+): rawConfig is RedirectedRawConfig {
+	return configPath !== undefined && configPath !== userConfigPath;
 }
