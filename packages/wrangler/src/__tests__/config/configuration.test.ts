@@ -130,7 +130,7 @@ describe("normalizeAndValidateConfig()", () => {
 			wasm_modules: undefined,
 			data_blobs: undefined,
 			workers_dev: undefined,
-			preview_urls: true,
+			preview_urls: undefined,
 			zone_id: undefined,
 			no_bundle: undefined,
 			minify: undefined,

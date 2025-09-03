@@ -28,8 +28,9 @@ type CustomDomainsRes = {
 	cert_id: string;
 }[];
 
-type WorkersDevRes = {
+type WorkerSubdomainRes = {
 	enabled: boolean;
+	previews_enabled: boolean;
 };
 type CronTriggersRes = {
 	schedules: {
@@ -59,7 +60,7 @@ export async function downloadWorkerConfig(
 		bindings,
 		routes,
 		customDomains,
-		workersDev,
+		subdomainStatus,
 		serviceEnvMetadata,
 		cronTriggers,
 	] = await Promise.all([
@@ -75,7 +76,7 @@ export async function downloadWorkerConfig(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${environment}`
 		),
-		fetchResult<WorkersDevRes>(
+		fetchResult<WorkerSubdomainRes>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/subdomain`
 		),
@@ -121,7 +122,8 @@ export async function downloadWorkerConfig(
 	return {
 		name: workerName,
 		main: entrypoint,
-		workers_dev: workersDev.enabled,
+		workers_dev: subdomainStatus.enabled,
+		preview_urls: subdomainStatus.previews_enabled,
 		compatibility_date:
 			serviceEnvMetadata.script.compatibility_date ??
 			formatCompatibilityDate(new Date()),

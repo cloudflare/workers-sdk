@@ -1,5 +1,5 @@
 import { green, red } from "@cloudflare/cli/colors";
-import { getResolvedWorkersDev } from "../triggers/deploy";
+import { getSubdomainValues } from "../triggers/deploy";
 import { Diff } from "../utils/diff";
 import type { Config, RawConfig } from "../config";
 
@@ -102,15 +102,17 @@ function configDiffOnlyHasAdditionsIfAny(diff: Diff): boolean {
 function normalizeLocalResolvedConfigAsRemote(
 	localResolvedConfig: Config
 ): Config {
+	const subdomainValues = getSubdomainValues(
+		localResolvedConfig.workers_dev,
+		localResolvedConfig.preview_urls,
+		localResolvedConfig.routes ?? []
+	);
 	const normalizedConfig: Config = {
 		...localResolvedConfig,
+		workers_dev: subdomainValues.workers_dev,
+		preview_urls: subdomainValues.preview_urls,
 		observability: normalizeObservability(localResolvedConfig.observability),
-		workers_dev: getResolvedWorkersDev(
-			localResolvedConfig.workers_dev,
-			localResolvedConfig.routes ?? []
-		),
 	};
-
 	return normalizedConfig;
 }
 
