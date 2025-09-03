@@ -99,6 +99,39 @@ const testConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:http2
+	[
+		{
+			name: "http2 disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_http2_module: false,
+			},
+		},
+		{
+			name: "http2 disabled by flag",
+			compatibilityDate: "2025-09-01",
+			compatibilityFlags: ["disable_nodejs_http2_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_http2_module: false,
+			},
+		},
+		{
+			name: "http2 enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_http2_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_http2_module: true,
+			},
+		},
+		{
+			name: "http2 enabled by date",
+			compatibilityDate: "2025-09-01",
+			expectRuntimeFlags: {
+				enable_nodejs_http2_module: true,
+			},
+		},
+	],
 	// node:os
 	[
 		{
