@@ -17,6 +17,10 @@ test("basic hello-world functionality", async () => {
 	);
 });
 
+test("preserves entry signatures", async () => {
+	expect(serverLogs.info.join()).toContain("__preserves-entry-signatures__");
+});
+
 test("basic dev logging", async () => {
 	expect(serverLogs.info.join()).toContain("__console log__");
 	expect(serverLogs.errors.join()).toContain("__console error__");
