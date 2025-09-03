@@ -6,6 +6,7 @@ import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
 import { friendlyBindingNames } from "../utils/print-bindings";
+import { isRedirectedRawConfig } from "./config-helpers";
 import { Diagnostics } from "./diagnostics";
 import {
 	all,
@@ -161,7 +162,11 @@ export function normalizeAndValidateConfig(
 		isDispatchNamespace
 	);
 
-	const isRedirectedConfig = configPath && configPath !== userConfigPath;
+	const isRedirectedConfig = isRedirectedRawConfig(
+		rawConfig,
+		configPath,
+		userConfigPath
+	);
 
 	const definedEnvironments = Object.keys(rawConfig.env ?? {});
 
@@ -269,6 +274,12 @@ export function normalizeAndValidateConfig(
 		configPath,
 		userConfigPath,
 		topLevelName: rawConfig.name,
+		definedEnvironments: isRedirectedConfig
+			? rawConfig.definedEnvironments
+			: definedEnvironments,
+		targetEnvironment: isRedirectedConfig
+			? rawConfig.targetEnvironment
+			: envName,
 		pages_build_output_dir: normalizeAndValidatePagesBuildOutputDir(
 			configPath,
 			rawConfig.pages_build_output_dir

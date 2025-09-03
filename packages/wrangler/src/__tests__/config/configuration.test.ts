@@ -127,6 +127,8 @@ describe("normalizeAndValidateConfig()", () => {
 			usage_model: undefined,
 			vars: {},
 			define: {},
+			definedEnvironments: [],
+			targetEnvironment: undefined,
 			wasm_modules: undefined,
 			data_blobs: undefined,
 			workers_dev: undefined,
