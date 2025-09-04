@@ -155,6 +155,7 @@ export async function createDeployment(
 
 export type NonVersionedScriptSettings = {
 	logpush: boolean;
+	tags: string[] | null;
 	tail_consumers: TailConsumer[];
 	observability: Observability;
 };
