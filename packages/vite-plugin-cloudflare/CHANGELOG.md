@@ -1,5 +1,21 @@
 # @cloudflare/vite-plugin
 
+## 1.12.3
+
+### Patch Changes
+
+- [#10544](https://github.com/cloudflare/workers-sdk/pull/10544) [`4c80c78`](https://github.com/cloudflare/workers-sdk/commit/4c80c784b3a4fb58840f780f632525253a6b51f3) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Set `preserveEntrySignatures: "strict"` for Worker environments. This ensures that no additional exports are added to the entry module.
+
+- [#10527](https://github.com/cloudflare/workers-sdk/pull/10527) [`818ce22`](https://github.com/cloudflare/workers-sdk/commit/818ce225e8038db967b22fbde9e3586d7225fefc) Thanks [@vicb](https://github.com/vicb)! - Bump `unenv` to 2.0.0-rc.20
+
+  The latest release include [a fix for `node:tty` default export](https://github.com/unjs/unenv/pull/513).
+  See [the changelog](https://github.com/unjs/unenv/releases/tag/v2.0.0-rc.20) for full details.
+
+- Updated dependencies [[`6e8dd80`](https://github.com/cloudflare/workers-sdk/commit/6e8dd80c79eb9927567ba290658457fe9b113a68), [`4cb3370`](https://github.com/cloudflare/workers-sdk/commit/4cb337007b2e9dba085da9b421ed214f532eb81f), [`7211609`](https://github.com/cloudflare/workers-sdk/commit/72116094a7410860d89dce383f2361c16c1a55cd), [`818ce22`](https://github.com/cloudflare/workers-sdk/commit/818ce225e8038db967b22fbde9e3586d7225fefc), [`5d69df4`](https://github.com/cloudflare/workers-sdk/commit/5d69df4e441cee5fbae80624ed6cefd2f93c2f4a), [`5d69df4`](https://github.com/cloudflare/workers-sdk/commit/5d69df4e441cee5fbae80624ed6cefd2f93c2f4a), [`c22acc6`](https://github.com/cloudflare/workers-sdk/commit/c22acc6de28cf22f93f0f0a01269d3745d0fcdcf), [`cb22f5f`](https://github.com/cloudflare/workers-sdk/commit/cb22f5faf5220dd4b682eabf320e1d9b6e6daefb), [`cc47b51`](https://github.com/cloudflare/workers-sdk/commit/cc47b5157bbe0d020dc737102cadf4fd77112ad3), [`c0fad5f`](https://github.com/cloudflare/workers-sdk/commit/c0fad5fe06d18f672f14cbf64e0f3f734d5de7c6), [`c6a39f5`](https://github.com/cloudflare/workers-sdk/commit/c6a39f5958614b8dd5e2aeb4d2b4a62e17a601c1), [`a565291`](https://github.com/cloudflare/workers-sdk/commit/a565291a4c19ba0e6f3bdfd336152b5c7a047d2d)]:
+  - wrangler@4.34.0
+  - miniflare@4.20250902.0
+  - @cloudflare/unenv-preset@2.7.2
+
 ## 1.12.2
 
 ### Patch Changes
