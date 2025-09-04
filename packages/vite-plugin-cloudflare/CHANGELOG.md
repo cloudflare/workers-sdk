@@ -1,5 +1,16 @@
 # @cloudflare/vite-plugin
 
+## 1.12.4
+
+### Patch Changes
+
+- [#10534](https://github.com/cloudflare/workers-sdk/pull/10534) [`dceb550`](https://github.com/cloudflare/workers-sdk/commit/dceb550cd817b792b7f7ec04df2b8f1f5147527d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Ensure that preview config values are used for remote bindings
+
+  Ensure that if in some remote binding configuration provides a preview value (e.g. `preview_database_id` for D1 bindings) such value gets used instead of the standard ones
+
+- Updated dependencies [[`dceb550`](https://github.com/cloudflare/workers-sdk/commit/dceb550cd817b792b7f7ec04df2b8f1f5147527d)]:
+  - wrangler@4.34.1
+
 ## 1.12.3
 
 ### Patch Changes
