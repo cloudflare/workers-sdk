@@ -179,7 +179,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 		printResourceLocation("remote");
 		let id;
 		try {
-			id = getKVNamespaceId(args, config);
+			id = await getKVNamespaceId(args, config, false);
 		} catch (e) {
 			throw new CommandLineArgsError(
 				"Not able to delete namespace.\n" + ((e as Error).message ?? e)
@@ -374,7 +374,7 @@ export const kvKeyPutCommand = createCommand({
 	async handler({ key, ttl, expiration, metadata, ...args }) {
 		const localMode = isLocal(args);
 		const config = readConfig(args);
-		const namespaceId = getKVNamespaceId(args, config);
+		const namespaceId = await getKVNamespaceId(args, config, localMode);
 		// One of `args.path` and `args.value` must be defined
 		const value = args.path
 			? readFileSyncToBuffer(args.path)
@@ -486,7 +486,7 @@ export const kvKeyListCommand = createCommand({
 		const localMode = isLocal(args);
 		// TODO: support for limit+cursor (pagination)
 		const config = readConfig(args);
-		const namespaceId = getKVNamespaceId(args, config);
+		const namespaceId = await getKVNamespaceId(args, config, localMode);
 
 		let result: NamespaceKeyInfo[];
 		let metricEvent: EventNames;
@@ -577,7 +577,7 @@ export const kvKeyGetCommand = createCommand({
 	async handler({ key, ...args }) {
 		const localMode = isLocal(args);
 		const config = readConfig(args);
-		const namespaceId = getKVNamespaceId(args, config);
+		const namespaceId = await getKVNamespaceId(args, config, localMode);
 
 		let bufferKVValue;
 		let metricEvent: EventNames;
@@ -669,7 +669,7 @@ export const kvKeyDeleteCommand = createCommand({
 	async handler({ key, ...args }) {
 		const localMode = isLocal(args);
 		const config = readConfig(args);
-		const namespaceId = getKVNamespaceId(args, config);
+		const namespaceId = await getKVNamespaceId(args, config, localMode);
 
 		logger.log(`Deleting the key "${key}" on namespace ${namespaceId}.`);
 
@@ -744,7 +744,7 @@ export const kvBulkGetCommand = createCommand({
 	async handler({ filename, ...args }) {
 		const localMode = isLocal(args);
 		const config = readConfig(args);
-		const namespaceId = getKVNamespaceId(args, config);
+		const namespaceId = await getKVNamespaceId(args, config, localMode);
 
 		const content = parseJSON(readFileSync(filename), filename) as (
 			| string
@@ -886,7 +886,7 @@ export const kvBulkPutCommand = createCommand({
 		// but we'll do that in the future if needed.
 
 		const config = readConfig(args);
-		const namespaceId = getKVNamespaceId(args, config);
+		const namespaceId = await getKVNamespaceId(args, config, localMode);
 		const content = parseJSON(readFileSync(filename), filename);
 
 		if (!Array.isArray(content)) {
@@ -1036,7 +1036,7 @@ export const kvBulkDeleteCommand = createCommand({
 	async handler({ filename, ...args }) {
 		const localMode = isLocal(args);
 		const config = readConfig(args);
-		const namespaceId = getKVNamespaceId(args, config);
+		const namespaceId = await getKVNamespaceId(args, config, localMode);
 
 		if (!args.force) {
 			const result = await confirm(
