@@ -48,7 +48,7 @@
 		"unbuild": "^3.2.0"
 	},
 	"peerDependencies": {
-		"unenv": "2.0.0-rc.20",
+		"unenv": "2.0.0-rc.21",
 		"workerd": "^1.20250828.1"
 	},
 	"peerDependenciesMeta": {
