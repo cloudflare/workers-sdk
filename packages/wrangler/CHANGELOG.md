@@ -1,5 +1,13 @@
 # wrangler
 
+## 4.34.1
+
+### Patch Changes
+
+- [#10534](https://github.com/cloudflare/workers-sdk/pull/10534) [`dceb550`](https://github.com/cloudflare/workers-sdk/commit/dceb550cd817b792b7f7ec04df2b8f1f5147527d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update `unstable_convertConfigBindingsToStartWorkerBindings` to prioritize preview config values
+
+  Ensure that if some bindings include preview values (e.g. `preview_database_id` for D1 bindings) those get used instead of the standard ones (since these are the ones that start worker should be using)
+
 ## 4.34.0
 
 ### Minor Changes
