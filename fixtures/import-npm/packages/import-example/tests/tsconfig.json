@@ -3,5 +3,5 @@
 	"compilerOptions": {
 		"types": ["node"]
 	},
-	"include": ["**/*.ts", "../../../../../node-types.d.ts"]
+	"include": ["**/*.ts"]
 }

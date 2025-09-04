@@ -5,6 +5,7 @@ import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion } from "@cloudflare/cli";
 import { ApiError } from "@cloudflare/containers-shared";
 import chalk from "chalk";
+import Cloudflare from "cloudflare";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
@@ -21,6 +22,7 @@ import {
 	certUploadMtlsCommand,
 	certUploadNamespace,
 } from "./cert/cert";
+import { renderError } from "./cfetch";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
 import { experimental_readRawConfig, readConfig } from "./config";
@@ -1625,6 +1627,15 @@ export async function main(argv: string[]): Promise<void> {
 			mayReport = false;
 			errorType = "BuildFailure";
 			logBuildFailure(e.cause.errors, e.cause.warnings);
+		} else if (e instanceof Cloudflare.APIError) {
+			const error = new APIError({
+				text: `A request to the Cloudflare API failed.`,
+				notes: [...e.errors.map((err) => ({ text: renderError(err) }))],
+			});
+			error.notes.push({
+				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
+			});
+			logger.log(formatMessage(error));
 		} else {
 			if (
 				// Is this a StartDevEnv error event? If so, unwrap the cause, which is usually the user-recognisable error

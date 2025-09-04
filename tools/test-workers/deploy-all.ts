@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
+import { fetch } from "undici";
 
 /**
  * Deploy all test workers for CI
