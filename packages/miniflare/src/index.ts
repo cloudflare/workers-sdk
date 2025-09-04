@@ -449,33 +449,87 @@ function getDurableObjectClassNames(
  * it to point to the dev registry proxy. A fallback service will be created
  * for each of the external service in case the external service is not available.
  */
-function getExternalServiceEntrypoints(
+function getExternalServices(
 	allWorkerOpts: PluginWorkerOptions[],
 	proxyAddress: string
 ) {
-	const externalServices = new Map<
+	const overall = new Map<
 		string,
 		{
 			classNames: Set<string>;
 			entrypoints: Set<string | undefined>;
 		}
 	>();
+	const byWorker = new Map<
+		string,
+		Map<
+			string,
+			{
+				classNames: Set<string>;
+				entrypoints: Set<string | undefined>;
+			}
+		>
+	>();
 	const allWorkerNames = allWorkerOpts.map((opts) => opts.core.name);
-	const getEntrypoints = (name: string) => {
-		let externalService = externalServices.get(name);
+	const update = (
+		workerName: string,
+		serviceName: string,
+		type: "className" | "entrypoint",
+		value: string | undefined
+	) => {
+		const overallService = getService(serviceName);
+		const service = getServiceByWorker(workerName, serviceName);
+		if (type === "className") {
+			assert(value !== undefined);
+			overallService.classNames.add(value);
+			service.classNames.add(value);
+		} else if (type === "entrypoint") {
+			service.entrypoints.add(value);
+			overallService.entrypoints.add(value);
+		}
+	};
+
+	const getService = (serviceName: string) => {
+		let overallService = overall.get(serviceName);
+
+		if (!overallService) {
+			overallService = {
+				classNames: new Set(),
+				entrypoints: new Set(),
+			};
+			overall.set(serviceName, overallService);
+		}
+
+		return overallService;
+	};
+	const getServiceByWorker = (workerName: string, serviceName: string) => {
+		let externalServices = byWorker.get(workerName);
+
+		if (!externalServices) {
+			externalServices = new Map();
+			byWorker.set(workerName, externalServices);
+		}
+
+		let externalService = externalServices.get(serviceName);
 
 		if (!externalService) {
 			externalService = {
 				classNames: new Set(),
 				entrypoints: new Set(),
 			};
-			externalServices.set(name, externalService);
+			externalServices.set(serviceName, externalService);
 		}
 
 		return externalService;
 	};
 
 	for (const workerOpts of allWorkerOpts) {
+		const workerName = workerOpts.core.name;
+
+		if (!workerName) {
+			continue;
+		}
+
 		// Override service bindings if they point to a worker that doesn't exist
 		if (workerOpts.core.serviceBindings) {
 			for (const [name, service] of Object.entries(
@@ -500,8 +554,7 @@ function getExternalServiceEntrypoints(
 						},
 					};
 
-					const entrypoints = getEntrypoints(serviceName);
-					entrypoints.entrypoints.add(entrypoint);
+					update(workerName, serviceName, "entrypoint", entrypoint);
 				}
 			}
 		}
@@ -539,8 +592,7 @@ function getExternalServiceEntrypoints(
 						unsafePreventEviction,
 					};
 
-					const entrypoints = getEntrypoints(scriptName);
-					entrypoints.classNames.add(className);
+					update(workerName, scriptName, "className", className);
 				}
 			}
 		}
@@ -569,14 +621,13 @@ function getExternalServiceEntrypoints(
 						},
 					};
 
-					const entrypoints = getEntrypoints(serviceName);
-					entrypoints.entrypoints.add(entrypoint);
+					update(workerName, serviceName, "entrypoint", entrypoint);
 				}
 			}
 		}
 	}
 
-	return externalServices;
+	return { overall, byWorker };
 }
 
 function invalidWrappedAsBound(name: string, bindingType: string): never {
@@ -1469,7 +1520,7 @@ export class Miniflare {
 
 		const externalServices =
 			proxyAddress !== null
-				? getExternalServiceEntrypoints(allWorkerOpts, proxyAddress)
+				? getExternalServices(allWorkerOpts, proxyAddress)
 				: null;
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const wrappedBindingNames = getWrappedBindingNames(
@@ -1728,9 +1779,9 @@ export class Miniflare {
 		if (
 			this.#devRegistry.isEnabled() &&
 			externalServices &&
-			externalServices.size > 0
+			externalServices.overall.size > 0
 		) {
-			for (const [serviceName, { entrypoints }] of externalServices) {
+			for (const [serviceName, { entrypoints }] of externalServices.overall) {
 				const proxyFallbackService = createProxyFallbackService(
 					serviceName,
 					entrypoints
@@ -1761,7 +1812,7 @@ export class Miniflare {
 				}
 			}
 
-			const externalObjects = Array.from(externalServices).flatMap(
+			const externalObjects = Array.from(externalServices.overall).flatMap(
 				([scriptName, { classNames }]) =>
 					Array.from(classNames).map<[string, string]>((className) => [
 						scriptName,
@@ -1778,7 +1829,7 @@ export class Miniflare {
 			services.set(outboundDoProxyService.name, outboundDoProxyService);
 
 			// Watch the dev registry for changes
-			await this.#devRegistry.watch(externalServices);
+			await this.#devRegistry.watch(externalServices.byWorker);
 		}
 
 		// Expose all internal durable object with a proxy service
