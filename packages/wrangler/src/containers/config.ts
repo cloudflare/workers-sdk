@@ -46,6 +46,81 @@ function convertContainerAffinitiesForApi(
  * We set defaults here too, because we can assume that if the value is undefined,
  * we want to revert to the default rather than inheriting from the prev deployment
  */
+
+
+/**
+ * Auto-generate Durable Object bindings and migrations for containers
+ * This reduces wrangler.toml boilerplate by creating necessary DO config automatically
+ */
+export const autoGenerateContainerDurableObjects = (config: Config): void => {
+	if (!config.containers || config.containers.length === 0) {
+		return;
+	}
+
+	// Initialize durable_objects structure if it doesn't exist
+	if (!config.durable_objects) {
+		config.durable_objects = { bindings: [] };
+	}
+	if (!config.durable_objects.bindings) {
+		config.durable_objects.bindings = [];
+	}
+
+	// Initialize migrations if it doesn't exist
+	if (!config.migrations) {
+		config.migrations = [];
+	}
+
+	for (const container of config.containers) {
+		// Auto-generate class_name if not provided
+		if (!container.class_name) {
+			// Convert container name to PascalCase for class name
+			container.class_name = container.name
+				.split(/[-_]/)
+				.map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+				.join('') + 'Container';
+		}
+
+		// Auto-generate DO binding if it doesn't exist
+		const existingBinding = config.durable_objects.bindings.find(
+			binding => binding.class_name === container.class_name
+		);
+		
+		if (!existingBinding) {
+			// Generate binding name from container name (SCREAMING_SNAKE_CASE)
+			const bindingName = container.name.toUpperCase().replace(/[-]/g, '_');
+			
+			config.durable_objects.bindings.push({
+				class_name: container.class_name,
+				name: bindingName,
+			});
+		}
+
+		// Auto-generate migration if class doesn't exist in migrations
+		const hasExistingMigration = config.migrations.some(migration =>
+			migration.new_sqlite_classes?.includes(container.class_name!)
+		);
+
+		if (!hasExistingMigration) {
+			// Find existing v1 migration or create new one
+			let v1Migration = config.migrations.find(migration => migration.tag === 'v1');
+			
+			if (!v1Migration) {
+				v1Migration = {
+					tag: 'v1',
+					new_sqlite_classes: []
+				};
+				config.migrations.push(v1Migration);
+			}
+
+			if (!v1Migration.new_sqlite_classes) {
+				v1Migration.new_sqlite_classes = [];
+			}
+
+			v1Migration.new_sqlite_classes.push(container.class_name);
+		}
+	}
+};
+
 export const getNormalizedContainerOptions = async (
 	config: Config,
 	args: {
@@ -58,13 +133,20 @@ export const getNormalizedContainerOptions = async (
 		return [];
 	}
 
+	// Auto-generate DO bindings and migrations before processing
+	autoGenerateContainerDurableObjects(config);
+
 	const normalizedContainers: ContainerNormalizedConfig[] = [];
 
 	for (const container of config.containers) {
 		assert(container.name, "container name should have been set by validation");
+		assert(container.class_name, "container class_name should be set by auto-generation");
+		
 		const targetDurableObject = config.durable_objects.bindings.find(
 			(durableObject) => durableObject.class_name === container.class_name
 		);
+		
+		// This should always exist now due to auto-generation, but keep error for safety
 		if (!targetDurableObject) {
 			throw new UserError(
 				`The container class_name ${container.class_name} does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.`,

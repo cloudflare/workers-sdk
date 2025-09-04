@@ -7,21 +7,7 @@
 			"image": "./Dockerfile",
 			"class_name": "FixtureTestContainer",
 			"name": "container",
-			"max_instances": 2,
-		},
-	],
-	"durable_objects": {
-		"bindings": [
-			{
-				"class_name": "FixtureTestContainer",
-				"name": "CONTAINER",
-			},
-		],
-	},
-	"migrations": [
-		{
-			"tag": "v1",
-			"new_sqlite_classes": ["FixtureTestContainer"],
-		},
-	],
+			"max_instances": 2
+		}
+	]
 }
