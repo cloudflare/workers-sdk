@@ -1,16 +1,18 @@
-import Worker from "@cloudflare/workers-shared/asset-worker";
-import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
-import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 import { SELF } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import Worker from "../../packages/workers-shared/asset-worker";
+import { normalizeConfiguration } from "../../packages/workers-shared/asset-worker/src/configuration";
+import { getAssetWithMetadataFromKV } from "../../packages/workers-shared/asset-worker/src/utils/kv";
 import { encodingTestCases } from "./test-cases/encoding-test-cases";
 import { htmlHandlingTestCases } from "./test-cases/html-handling-test-cases";
-import type { AssetMetadata } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
+type AssetMetadata = {
+	contentType: string;
+};
 
-vi.mock("@cloudflare/workers-shared/asset-worker/src/utils/kv.ts");
-vi.mock("@cloudflare/workers-shared/asset-worker/src/configuration");
+vi.mock("../../packages/workers-shared/asset-worker/src/utils/kv");
+vi.mock("../../packages/workers-shared/asset-worker/src/configuration");
 const existsMock = (fileList: Set<string>) => {
 	vi.spyOn(Worker.prototype, "unstable_exists").mockImplementation(
 		async (pathname: string) => {
@@ -63,8 +65,8 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 		beforeEach(async () => {
 			const originalApplyConfigurationDefaults = (
 				await vi.importActual<
-					typeof import("@cloudflare/workers-shared/asset-worker/src/configuration")
-				>("@cloudflare/workers-shared/asset-worker/src/configuration")
+					typeof import("../../packages/workers-shared/asset-worker/src/configuration")
+				>("../../packages/workers-shared/asset-worker/src/configuration")
 			).normalizeConfiguration;
 			vi.mocked(normalizeConfiguration).mockImplementation(() => ({
 				...originalApplyConfigurationDefaults({}),
