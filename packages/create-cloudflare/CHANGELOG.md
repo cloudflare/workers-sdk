@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.51.4
+
+### Patch Changes
+
+- [#10497](https://github.com/cloudflare/workers-sdk/pull/10497) [`3bdf86c`](https://github.com/cloudflare/workers-sdk/commit/3bdf86c655d32faf356163f59d4149800e813b3c) Thanks [@hoodmane](https://github.com/hoodmane)! - Added workers-py to the pyproject.toml dev requirements
+
 ## 2.51.3
 
 ### Patch Changes
