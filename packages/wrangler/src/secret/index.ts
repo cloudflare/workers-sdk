@@ -103,6 +103,7 @@ async function createDraftWorker({
 					mtls_certificates: [],
 					pipelines: [],
 					logfwdr: { bindings: [] },
+					ratelimits: [],
 					assets: undefined,
 					unsafe: {
 						bindings: undefined,
