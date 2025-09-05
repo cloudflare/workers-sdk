@@ -118,8 +118,14 @@ export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 	script?: string;
 };
 
+export interface ExperimentalReadConfigOptions {
+	// Used by the Vite plugin
+	preserveOriginalMain?: boolean;
+}
+
 export type ReadConfigOptions = ResolveConfigPathOptions & {
 	hideWarnings?: boolean;
+	experimental?: ExperimentalReadConfigOptions;
 };
 
 export type ConfigBindingOptions = Pick<
@@ -150,11 +156,12 @@ export function readConfig(
 		options
 	);
 
-	const { diagnostics, config } = normalizeAndValidateConfig(
+	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
 		userConfigPath,
-		args
+		args,
+		options.experimental
 	);
 
 	if (diagnostics.hasWarnings() && !options?.hideWarnings) {
