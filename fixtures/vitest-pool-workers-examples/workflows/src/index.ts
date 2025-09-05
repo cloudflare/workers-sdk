@@ -1,5 +1,4 @@
 import {
-	WorkerEntrypoint,
 	WorkflowEntrypoint,
 	WorkflowEvent,
 	WorkflowStep,
@@ -10,6 +9,7 @@ export class TestWorkflow extends WorkflowEntrypoint<Env> {
 		console.log("Starting running...");
 
 		await step.do("step one", async () => {
+			// some logic
 			return "result of step one";
 		});
 
@@ -32,7 +32,7 @@ export class TestLongWorkflow extends WorkflowEntrypoint<Env, Params> {
 				timeout: "1 second",
 			},
 			async () => {
-				console.log("if my outcome gets mocked, this shouldn't be logging");
+				// some logic
 				return "result of my step";
 			}
 		);
