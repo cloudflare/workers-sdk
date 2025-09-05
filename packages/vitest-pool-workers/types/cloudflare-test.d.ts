@@ -128,19 +128,33 @@ declare module "cloudflare:test" {
 	): Promise<void>;
 
 	/**
-	 * Creates an **introspector** for a specific Workflow instance, used to
-	 * **modify** its behavior, **await** outcomes, and **clean up** its state during tests.
+	 * Creates an introspector for a specific Workflow instance, used to
+	 * modify its behavior, await outcomes, and clean up its state during tests.
 	 * This is the primary entry point for testing individual Workflow instances.
 	 *
 	 * @param workflow - The Workflow binding, e.g., `env.MY_WORKFLOW`.
 	 * @param instanceId - The known ID of the Workflow instance to target.
-	 * @returns A `WorkflowInstanceIntrospector` to control the instance behavior.
+	 * @returns A `WorkflowInstanceIntrospector` to control the instance's behavior.
 	 *
-	 * @example Full test of a Workflow instance with a known ID:
-	 * ```ts
+	 * @remarks
+	 * ### Cleanup
+	 *
+	 * The introspector must be cleaned up after the test to remove mocks and release
+	 * resources. This can be handled in two ways:
+	 *
+	 * 1.  **Implicit Cleanup (Recommended)**: With the `await using` syntax.
+	 * `await using instance = await introspectWorkflowInstance(...)`
+	 *
+	 * 2.  **Explicit Cleanup**: Manually call `await instance.cleanUp()` at the end of the
+	 * test.
+	 *
+	 * @example
+	 * // Full test of a Workflow instance using implicit cleanup (await using).
 	 * it("should disable all sleeps and complete", async () => {
 	 * // 1. CONFIGURATION
-	 * const instance = await introspectWorkflowInstance(env.MY_WORKFLOW, "123456");
+	 * // `await using` ensures .cleanUp() is automatically called at the end of the block.
+	 * await using instance = await introspectWorkflowInstance(env.MY_WORKFLOW, "123456");
+	 *
 	 * await instance.modify(async (m) => {
 	 * await m.disableSleeps();
 	 * });
@@ -151,10 +165,8 @@ declare module "cloudflare:test" {
 	 * // 3. ASSERTION
 	 * await instance.waitForStatus("complete");
 	 *
-	 * // 4. CLEANUP
-	 * await instance.cleanUp();
+	 * // 4. CLEANUP is implicit and automatic here.
 	 * });
-	 * ```
 	 */
 	export function introspectWorkflowInstance(
 		workflow: Workflow,
@@ -384,8 +396,21 @@ declare module "cloudflare:test" {
 	 * @param workflow - The Workflow binding, e.g., `env.MY_WORKFLOW`.
 	 * @returns A `WorkflowIntrospector` to control the instances behavior.
 	 *
-	 * @example Full test of a Workflow instance with a unknown ID:
+	 *  * @remarks
+	 * ### Cleanup
+	 *
+	 * The introspector must be cleaned up after the test to remove mocks and release
+	 * resources. This can be handled in two ways:
+	 *
+	 * 1.  **Implicit Cleanup (Recommended)**: With the `await using` syntax.
+	 * `await using introspector = await introspectWorkflow(...)`
+	 *
+	 * 2.  **Explicit Cleanup**: Manually call `await introspector.cleanUp()` at the end of the
+	 * test.
+	 *
+	 * @example
 	 * ```ts
+	 * // Full test of a Workflow instance using implicit cleanup (await using).
 	 * it("should disable all sleeps and complete", async () => {
 	 * // 1. CONFIGURATION
 	 * const introspector = await introspectWorkflow(env.MY_WORKFLOW);
@@ -396,14 +421,13 @@ declare module "cloudflare:test" {
 	 * // 2. EXECUTION
 	 * await env.MY_WORKFLOW.create();
 	 *
-	 * // 3. ASSERTION & CLEANUP
+	 * // 3. ASSERTION
 	 * const instances = introspector.get();
 	 * for(const instance of instances) {
 	 * await instance.waitForStatus("complete");
-	 * await instance.cleanUp();
 	 * }
 	 *
-	 * introspector.cleanUp();
+	 * // 4. CLEANUP is implicit and automatic here.
 	 * });
 	 * ```
 	 */

@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { WORKFLOW_ENGINE_BINDING } from "../shared/workflows";
 
 // See public facing `cloudflare:test` types for docs
 export let env: Record<string, unknown>;
@@ -14,13 +13,6 @@ export function stripInternalEnv(
 	delete result.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE;
 	delete result.__VITEST_POOL_WORKERS_RUNNER_OBJECT;
 	delete result.__VITEST_POOL_WORKERS_UNSAFE_EVAL;
-
-	for (const key of Object.keys(result)) {
-		if (key.startsWith(WORKFLOW_ENGINE_BINDING)) {
-			delete result[key];
-		}
-	}
-
 	return result;
 }
 

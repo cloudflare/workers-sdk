@@ -3,7 +3,7 @@ import {
 	introspectWorkflow,
 	introspectWorkflowInstance,
 } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 const INSTANCE_ID = "12345678910";
 const STEP_NAME = "my step";
@@ -11,21 +11,11 @@ const STATUS_COMPLETE = "complete";
 const STATUS_ERRORED = "errored";
 
 describe("Long Workflow (single instance)", () => {
-	let instance: Awaited<ReturnType<typeof introspectWorkflowInstance>>;
-
-	beforeEach(async () => {
-		instance = await introspectWorkflowInstance(
+	it("should disable all sleeps and complete instantly", async () => {
+		await using instance = await introspectWorkflowInstance(
 			env.TEST_LONG_WORKFLOW,
 			INSTANCE_ID
 		);
-	});
-
-	afterEach(async () => {
-		// instance introspectors should be clean to prevent persisted state across tests
-		await instance.cleanUp();
-	});
-
-	it("should disable all sleeps and complete instantly", async () => {
 		await instance.modify(async (m) => {
 			await m.disableSleeps();
 		});
@@ -40,6 +30,10 @@ describe("Long Workflow (single instance)", () => {
 	}, 1000); // running under a second confirms that sleeps were disabled
 
 	it("should disable a set of sleeps and complete", async () => {
+		await using instance = await introspectWorkflowInstance(
+			env.TEST_LONG_WORKFLOW,
+			INSTANCE_ID
+		);
 		await instance.modify(async (m) => {
 			// disabling all sleeps either way to make test run fast
 			await m.disableSleeps([
@@ -60,6 +54,11 @@ describe("Long Workflow (single instance)", () => {
 
 	it("should be able to mock step result and complete", async () => {
 		const mockResult = "a mocked result!";
+
+		await using instance = await introspectWorkflowInstance(
+			env.TEST_LONG_WORKFLOW,
+			INSTANCE_ID
+		);
 		await instance.modify(async (m) => {
 			await m.disableSleeps();
 			await m.mockStepResult({ name: STEP_NAME }, mockResult);
@@ -78,6 +77,10 @@ describe("Long Workflow (single instance)", () => {
 	});
 
 	it("should not be able to mock the same step result more than one time", async () => {
+		await using instance = await introspectWorkflowInstance(
+			env.TEST_LONG_WORKFLOW,
+			INSTANCE_ID
+		);
 		await instance.modify(async (m) => {
 			await m.disableSleeps();
 			await m.mockStepResult({ name: STEP_NAME }, "first mocked result");
@@ -90,6 +93,10 @@ describe("Long Workflow (single instance)", () => {
 	});
 
 	it("should be able to mock step error in every retry and error", async () => {
+		await using instance = await introspectWorkflowInstance(
+			env.TEST_LONG_WORKFLOW,
+			INSTANCE_ID
+		);
 		await instance.modify(async (m) => {
 			await m.disableSleeps();
 			await m.mockStepError({ name: STEP_NAME }, new Error("Oops"));
@@ -109,6 +116,11 @@ describe("Long Workflow (single instance)", () => {
 
 	it("should be able to mock step error in the first 2 retries, then mock step result and complete", async () => {
 		const mockResult = { result: "mocked" };
+
+		await using instance = await introspectWorkflowInstance(
+			env.TEST_LONG_WORKFLOW,
+			INSTANCE_ID
+		);
 		await instance.modify(async (m) => {
 			await m.disableSleeps();
 			await m.mockStepError({ name: STEP_NAME }, new Error("Oops"), 2);
@@ -128,6 +140,10 @@ describe("Long Workflow (single instance)", () => {
 	}, 1000);
 
 	it("should be able to mock step timeout in every retry and error", async () => {
+		await using instance = await introspectWorkflowInstance(
+			env.TEST_LONG_WORKFLOW,
+			INSTANCE_ID
+		);
 		await instance.modify(async (m) => {
 			await m.disableSleeps();
 			await m.forceStepTimeout({ name: STEP_NAME });
@@ -147,6 +163,11 @@ describe("Long Workflow (single instance)", () => {
 
 	it("should be able to mock step timeout in first retry, then mock step result and complete", async () => {
 		const mockResult = { result: "mocked result" };
+
+		await using instance = await introspectWorkflowInstance(
+			env.TEST_LONG_WORKFLOW,
+			INSTANCE_ID
+		);
 		await instance.modify(async (m) => {
 			await m.disableSleeps();
 			await m.forceStepTimeout({ name: STEP_NAME }, 1);
@@ -167,6 +188,11 @@ describe("Long Workflow (single instance)", () => {
 
 	it("should be able to mock step timeout in first retry, mock error in the second retry and then mock step result and complete", async () => {
 		const mockResult = { result: "mocked result" };
+
+		await using instance = await introspectWorkflowInstance(
+			env.TEST_LONG_WORKFLOW,
+			INSTANCE_ID
+		);
 		await instance.modify(async (m) => {
 			await m.disableSleeps();
 			await m.forceStepTimeout({ name: STEP_NAME }, 1);
@@ -187,6 +213,10 @@ describe("Long Workflow (single instance)", () => {
 	}, 1000);
 
 	it("should be able to mock an event and complete", async () => {
+		await using instance = await introspectWorkflowInstance(
+			env.TEST_LONG_WORKFLOW,
+			INSTANCE_ID
+		);
 		await instance.modify(async (m) => {
 			await m.disableSleeps();
 			await m.mockEvent({ type: "event", payload: { data: "mocked" } });
@@ -203,6 +233,10 @@ describe("Long Workflow (single instance)", () => {
 	}, 1000);
 
 	it("should be able to force an event to time out and error", async () => {
+		await using instance = await introspectWorkflowInstance(
+			env.TEST_LONG_WORKFLOW,
+			INSTANCE_ID
+		);
 		await instance.modify(async (m) => {
 			await m.disableSleeps();
 			await m.forceEventTimeout({ name: "my event" });
@@ -219,6 +253,10 @@ describe("Long Workflow (single instance)", () => {
 	}, 1000);
 
 	it("should not be able to force an event to time out and complete", async () => {
+		await using instance = await introspectWorkflowInstance(
+			env.TEST_LONG_WORKFLOW,
+			INSTANCE_ID
+		);
 		await instance.modify(async (m) => {
 			await m.disableSleeps();
 			await m.forceEventTimeout({ name: "my event" });
@@ -249,20 +287,11 @@ async function expectAllStatuses(
 }
 
 describe("Long Workflow (batch)", () => {
-	let introspector: Awaited<ReturnType<typeof introspectWorkflow>>;
-	let instances: Awaited<ReturnType<typeof introspectWorkflowInstance>>[];
-
-	beforeEach(async () => {
-		introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
-	});
-
-	afterEach(async () => {
-		// Workflow introspector should be cleaned at the end of/after each test
-		// also cleans up instance introspectors to avoid persisted state across tests
-		await introspector.cleanUp();
-	});
-
 	it("should disable all sleeps and complete instantly", async () => {
+		// Workflow introspector should be cleaned at the end of/after each test
+		// `using` keyword allows disposal that calls cleanUp()
+		// introspector cleanUp() also cleans instance introspectors to avoid persisted state across tests
+		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
 		});
@@ -277,7 +306,7 @@ describe("Long Workflow (batch)", () => {
 		]);
 		expect(createdInstances.length).toBe(3);
 
-		instances = introspector.get();
+		const instances = introspector.get();
 		expect(instances.length).toBe(3);
 
 		await Promise.all(
@@ -287,6 +316,7 @@ describe("Long Workflow (batch)", () => {
 	}, 1000); // running under a second confirms that sleeps were disabled
 
 	it("should disable a set of sleeps and complete", async () => {
+		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			// disabling all sleeps either way to make test run fast
 			await m.disableSleeps([
@@ -306,7 +336,7 @@ describe("Long Workflow (batch)", () => {
 		]);
 		expect(createdInstances.length).toBe(3);
 
-		instances = introspector.get();
+		const instances = introspector.get();
 		expect(instances.length).toBe(3);
 
 		await Promise.all(
@@ -317,6 +347,8 @@ describe("Long Workflow (batch)", () => {
 
 	it("should be able to mock step result and complete", async () => {
 		const mockResult = "a mocked result!";
+
+		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
 			await m.mockStepResult({ name: STEP_NAME }, mockResult);
@@ -332,7 +364,7 @@ describe("Long Workflow (batch)", () => {
 		]);
 		expect(createdInstances.length).toBe(3);
 
-		instances = introspector.get();
+		const instances = introspector.get();
 		expect(instances.length).toBe(3);
 
 		for (const instance of instances) {
@@ -345,6 +377,7 @@ describe("Long Workflow (batch)", () => {
 	});
 
 	it("should not be able to mock the same step result more than one time", async () => {
+		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
 			await m.mockStepResult({ name: STEP_NAME }, "first mocked result");
@@ -357,6 +390,7 @@ describe("Long Workflow (batch)", () => {
 	});
 
 	it("should be able to mock step error in every retry and error", async () => {
+		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
 			await m.mockStepError({ name: STEP_NAME }, new Error("Oops"));
@@ -372,7 +406,7 @@ describe("Long Workflow (batch)", () => {
 		]);
 		expect(createdInstances.length).toBe(3);
 
-		instances = introspector.get();
+		const instances = introspector.get();
 		expect(instances.length).toBe(3);
 
 		for (const instance of instances) {
@@ -386,6 +420,8 @@ describe("Long Workflow (batch)", () => {
 
 	it("should be able to mock step error in the first 2 retries, then mock step result and complete", async () => {
 		const mockResult = { result: "mocked" };
+
+		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
 			await m.mockStepError({ name: STEP_NAME }, new Error("Oops"), 2);
@@ -402,7 +438,7 @@ describe("Long Workflow (batch)", () => {
 		]);
 		expect(createdInstances.length).toBe(3);
 
-		instances = introspector.get();
+		const instances = introspector.get();
 		expect(instances.length).toBe(3);
 
 		for (const instance of instances) {
@@ -415,6 +451,7 @@ describe("Long Workflow (batch)", () => {
 	}, 1000);
 
 	it("should be able to mock step timeout in every retry and error", async () => {
+		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
 			await m.forceStepTimeout({ name: STEP_NAME });
@@ -430,7 +467,7 @@ describe("Long Workflow (batch)", () => {
 		]);
 		expect(createdInstances.length).toBe(3);
 
-		instances = introspector.get();
+		const instances = introspector.get();
 		expect(instances.length).toBe(3);
 
 		for (const instance of instances) {
@@ -444,6 +481,8 @@ describe("Long Workflow (batch)", () => {
 
 	it("should be able to mock step timeout in first retry, then mock step result and complete", async () => {
 		const mockResult = { result: "mocked result" };
+
+		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
 			await m.forceStepTimeout({ name: STEP_NAME }, 1);
@@ -460,7 +499,7 @@ describe("Long Workflow (batch)", () => {
 		]);
 		expect(createdInstances.length).toBe(3);
 
-		instances = introspector.get();
+		const instances = introspector.get();
 		expect(instances.length).toBe(3);
 
 		for (const instance of instances) {
@@ -474,6 +513,8 @@ describe("Long Workflow (batch)", () => {
 
 	it("should be able to mock step timeout in first retry, mock error in the second retry and then mock step result and complete", async () => {
 		const mockResult = { result: "mocked result" };
+
+		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
 			await m.forceStepTimeout({ name: STEP_NAME }, 1);
@@ -491,7 +532,7 @@ describe("Long Workflow (batch)", () => {
 		]);
 		expect(createdInstances.length).toBe(3);
 
-		instances = introspector.get();
+		const instances = introspector.get();
 		expect(instances.length).toBe(3);
 
 		for (const instance of instances) {
@@ -504,6 +545,7 @@ describe("Long Workflow (batch)", () => {
 	}, 1000);
 
 	it("should be able to mock an event and complete", async () => {
+		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
 			await m.mockEvent({ type: "event", payload: { data: "mocked" } });
@@ -520,7 +562,7 @@ describe("Long Workflow (batch)", () => {
 		]);
 		expect(createdInstances.length).toBe(3);
 
-		instances = introspector.get();
+		const instances = introspector.get();
 		expect(instances.length).toBe(3);
 
 		await Promise.all(
@@ -530,6 +572,7 @@ describe("Long Workflow (batch)", () => {
 	}, 1000); // running under a second confirms that the event was moked (and sleeps were disabled)
 
 	it("should be able to force an event to time out and error", async () => {
+		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
 			await m.forceEventTimeout({ name: "my event" });
@@ -546,7 +589,7 @@ describe("Long Workflow (batch)", () => {
 		]);
 		expect(createdInstances.length).toBe(3);
 
-		instances = introspector.get();
+		const instances = introspector.get();
 		expect(instances.length).toBe(3);
 
 		await Promise.all(
@@ -556,6 +599,7 @@ describe("Long Workflow (batch)", () => {
 	}, 1000); // running under a second confirms that the event was forced to time out (and sleeps were disabled)
 
 	it("should not be able to force an event to time out and complete", async () => {
+		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
 			await m.forceEventTimeout({ name: "my event" });
@@ -570,7 +614,7 @@ describe("Long Workflow (batch)", () => {
 		]);
 		expect(createdInstances.length).toBe(1);
 
-		instances = introspector.get();
+		const instances = introspector.get();
 		expect(instances.length).toBe(1);
 
 		await expect(

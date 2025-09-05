@@ -2,7 +2,6 @@ import {
 	instanceStatusName,
 	InstanceStatus as InstanceStatusNumber,
 } from "@cloudflare/workflows-shared/src/instance";
-import { WORKFLOW_ENGINE_BINDING } from "../shared/workflows";
 import { runInRunnerObject } from "./durable-objects";
 import { env, internalEnv } from "./env";
 import type {
@@ -32,31 +31,21 @@ export async function introspectWorkflowInstance(
 			"[WorkflowIntrospector] Workflow binding and instance id are required."
 		);
 	}
-
-	// @ts-expect-error getWorkflowName() not exposed
-	const engineBindingName = `${WORKFLOW_ENGINE_BINDING}${(await workflow.getWorkflowName()).toUpperCase()}`;
-
-	// @ts-expect-error DO binding created in runner worker start
-	const engineStubId = internalEnv[engineBindingName].idFromName(instanceId);
-	// @ts-expect-error DO binding created in runner worker start
-	const engineStub = internalEnv[engineBindingName].get(engineStubId);
-
-	const instanceModifier = engineStub.getInstanceModifier();
-
-	return new WorkflowInstanceIntrospectorHandle(engineStub, instanceModifier);
+	return new WorkflowInstanceIntrospectorHandle(workflow, instanceId);
 }
 
 class WorkflowInstanceIntrospectorHandle
 	implements WorkflowInstanceIntrospector
 {
-	#engineStub: DurableObjectStub;
+	#workflow: Workflow;
+	#instanceId: string;
 	#instanceModifier: WorkflowInstanceModifier;
-	constructor(
-		engineStub: DurableObjectStub,
-		instanceModifier: WorkflowInstanceModifier
-	) {
-		this.#engineStub = engineStub;
-		this.#instanceModifier = instanceModifier;
+
+	constructor(workflow: Workflow, instanceId: string) {
+		this.#workflow = workflow;
+		this.#instanceId = instanceId;
+		// @ts-expect-error not exposed
+		this.#instanceModifier = workflow.unsafeGetInstanceModifier(instanceId);
 	}
 
 	async modify(fn: ModifierCallback): Promise<WorkflowInstanceIntrospector> {
@@ -66,8 +55,9 @@ class WorkflowInstanceIntrospectorHandle
 	}
 
 	async waitForStepResult(step: StepSelector): Promise<unknown> {
-		// @ts-expect-error DO binding created in runner worker start
-		const stepResult = await this.#engineStub.waitForStepResult(
+		// @ts-expect-error not exposed
+		const stepResult = await this.#workflow.unsafeWaitForStepResult(
+			this.#instanceId,
 			step.name,
 			step.index
 		);
@@ -90,18 +80,13 @@ class WorkflowInstanceIntrospectorHandle
 			// starts running, so waiting for it to be queued should always return
 			return;
 		}
-		// @ts-expect-error DO binding created in runner worker start
-		await this.#engineStub.waitForStatus(status);
+		// @ts-expect-error not exposed
+		await this.#workflow.unsafeWaitForStatus(this.#instanceId, status);
 	}
 
 	async cleanUp(): Promise<void> {
-		// this cleans state with isolatedStorage = false
-		try {
-			// @ts-expect-error DO binding created in runner worker start
-			await this.#engineStub._unsafeAbort("Instance clean up");
-		} catch {
-			// do nothing because we want to clean up this instance
-		}
+		// @ts-expect-error not exposed
+		await this.#workflow.unsafeAbort(this.#instanceId, "Instance clean up");
 	}
 
 	async [Symbol.asyncDispose](): Promise<void> {

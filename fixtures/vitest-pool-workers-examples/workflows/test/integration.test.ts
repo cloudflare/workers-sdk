@@ -1,3 +1,4 @@
+import { beforeEach } from "node:test";
 import { env, introspectWorkflow, SELF } from "cloudflare:test";
 import { describe, expect, it, vi } from "vitest";
 
@@ -5,12 +6,16 @@ const STATUS_COMPLETE = "complete";
 
 describe("Test Workflow", () => {
 	it("should be able to trigger a workflow", async () => {
+		// With `using` to ensure cleanup:
+		await using introspector = await introspectWorkflow(env.TEST_WORKFLOW);
 		const res = await SELF.fetch("https://mock-worker.local");
 
 		expect(res.status).toBe(200);
 	});
 
 	it("workflow should reach the end and be successful", async () => {
+		// With `using` to ensure cleanup:
+		await using introspector = await introspectWorkflow(env.TEST_WORKFLOW);
 		const res = await SELF.fetch("https://mock-worker.local");
 
 		const json = await res.json<{ id: string }>();
@@ -68,7 +73,8 @@ describe("Test long Workflow", () => {
 		// CLEANUP: done by Symbol.asyncDispose
 	});
 
-	it("workflow batch should be able to introspect and reach the end and be successful", async () => {
+	it("workflow batch should be able to introspect and reach the end and be successful (explicit cleanup)", async () => {
+		// CONFIG:
 		let introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
@@ -91,6 +97,6 @@ describe("Test long Workflow", () => {
 		// CLEANUP:
 		// Workflow introspector should be cleaned at the end of/after each test, if no `using` keyword is used for the introspector
 		// Cleans up all intercepted instances
-		introspector.cleanUp();
+		await introspector.cleanUp();
 	});
 });
