@@ -59,7 +59,12 @@ import {
 	assertIsPreview,
 	resolvePluginConfig,
 } from "./plugin-config";
-import { additionalModuleGlobalRE, UNKNOWN_HOST } from "./shared";
+import {
+	additionalModuleGlobalRE,
+	UNKNOWN_HOST,
+	VIRTUAL_USER_ENTRY,
+	VIRTUAL_WORKER_ENTRY,
+} from "./shared";
 import { cleanUrl, createRequestHandler, getOutputDirectory } from "./utils";
 import { validateWorkerEnvironmentOptions } from "./vite-config";
 import { handleWebSocket } from "./websockets";
@@ -183,10 +188,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					},
 				};
 			},
-			buildStart() {
-				// This resets the value when the dev server restarts
-				workersConfigsWarningShown = false;
-			},
 			// Vite `configResolved` Hook
 			// see https://vite.dev/guide/api-plugin.html#configresolved
 			configResolved(config) {
@@ -199,28 +200,38 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					);
 				}
 			},
-			async transform(code, id) {
+			buildStart() {
+				// This resets the value when the dev server restarts
+				workersConfigsWarningShown = false;
+			},
+			resolveId(source) {
 				const workerConfig = getWorkerConfig(this.environment.name);
 
 				if (!workerConfig) {
 					return;
 				}
 
-				const resolvedWorkerEntry = await this.resolve(workerConfig.main);
+				if (source === VIRTUAL_WORKER_ENTRY) {
+					return `\0${VIRTUAL_WORKER_ENTRY}`;
+				}
 
-				if (id === resolvedWorkerEntry?.id) {
-					const modified = new MagicString(code);
-					const hmrCode = `
+				if (source === VIRTUAL_USER_ENTRY) {
+					return this.resolve(workerConfig.main);
+				}
+			},
+			load(id) {
+				if (!getWorkerConfig(this.environment.name)) {
+					return;
+				}
+
+				if (id === `\0${VIRTUAL_WORKER_ENTRY}`) {
+					return `
+export { default } from "${VIRTUAL_USER_ENTRY}";
+export * from "${VIRTUAL_USER_ENTRY}";
 if (import.meta.hot) {
-  import.meta.hot.accept();
+	import.meta.hot.accept();
 }
-						`;
-					modified.append(hmrCode);
-
-					return {
-						code: modified.toString(),
-						map: modified.generateMap({ hires: "boundary", source: id }),
-					};
+					`;
 				}
 			},
 			generateBundle(_, bundle) {
