@@ -1,6 +1,6 @@
-import Worker from "@cloudflare/workers-shared/asset-worker";
 import { SELF } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import Worker from "../../packages/workers-shared/asset-worker";
 import { normalizeConfiguration } from "../../packages/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "../../packages/workers-shared/asset-worker/src/utils/kv";
 

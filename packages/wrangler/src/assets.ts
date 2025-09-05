@@ -2,23 +2,23 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
-import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
+import chalk from "chalk";
+import PQueue from "p-queue";
+import prettyBytes from "pretty-bytes";
+import { FormData } from "undici";
+import { parseStaticRouting } from "../../workers-shared/utils/configuration/parseStaticRouting";
 import {
 	CF_ASSETS_IGNORE_FILENAME,
 	HEADERS_FILENAME,
 	MAX_ASSET_SIZE,
 	REDIRECTS_FILENAME,
-} from "@cloudflare/workers-shared/utils/constants";
+} from "../../workers-shared/utils/constants";
 import {
 	createAssetsIgnoreFunction,
 	getContentType,
 	maybeGetFile,
 	normalizeFilePath,
-} from "@cloudflare/workers-shared/utils/helpers";
-import chalk from "chalk";
-import PQueue from "p-queue";
-import prettyBytes from "pretty-bytes";
-import { FormData } from "undici";
+} from "../../workers-shared/utils/helpers";
 import { fetchResult } from "./cfetch";
 import { formatTime } from "./deploy/deploy";
 import { FatalError, UserError } from "./errors";

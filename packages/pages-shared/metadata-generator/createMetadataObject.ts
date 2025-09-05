@@ -1,14 +1,14 @@
 import {
 	constructHeaders,
 	constructRedirects,
-} from "@cloudflare/workers-shared/utils/configuration/constructConfiguration";
+} from "../../workers-shared/utils/configuration/constructConfiguration";
 import { ANALYTICS_VERSION } from "./constants";
-import type { Metadata } from "./types";
 import type {
 	Logger,
 	ParsedHeaders,
 	ParsedRedirects,
-} from "@cloudflare/workers-shared/utils/configuration/types";
+} from "../../workers-shared/utils/configuration/types";
+import type { Metadata } from "./types";
 
 const noopLogger = {
 	debug: (_message: string) => {},

@@ -1,7 +1,7 @@
 import {
 	generateRulesMatcher,
 	replacer,
-} from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
+} from "../../workers-shared/asset-worker/src/utils/rules-engine";
 import {
 	FoundResponse,
 	InternalServerErrorResponse,

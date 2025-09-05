@@ -1,7 +1,7 @@
 import type {
 	ParsedHeaders,
 	ParsedRedirects,
-} from "@cloudflare/workers-shared/utils/configuration/types";
+} from "../../workers-shared/utils/configuration/types";
 
 export type ParsedRedirectsWithFile = {
 	parsedRedirects?: ParsedRedirects;
