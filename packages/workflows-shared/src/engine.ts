@@ -4,8 +4,11 @@ import {
 	INSTANCE_METADATA,
 	InstanceEvent,
 	InstanceStatus,
+	instanceStatusName,
 	InstanceTrigger,
+	toInstanceStatus,
 } from "./instance";
+import { computeHash } from "./lib/cache";
 import { WorkflowFatalError } from "./lib/errors";
 import {
 	ENGINE_TIMEOUT,
@@ -13,8 +16,10 @@ import {
 	startGracePeriod,
 } from "./lib/gracePeriodSemaphore";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
+import { WorkflowInstanceModifier } from "./modifier";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
+import type { StepSelector } from "./modifier";
 import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 
 export interface Env {
@@ -133,10 +138,36 @@ export class Engine extends DurableObject<Env> {
 			target,
 			JSON.stringify(metadata)
 		);
+
+		// Wake any waiters if this is a terminal step event
+		if (group) {
+			this.handleStepResultWaiter(group, event, metadata);
+		}
 	}
 
-	readLogsFromStep(_cacheKey: string): RawInstanceLog[] {
-		return [];
+	async readLogsFromStepSelector(
+		step: StepSelector
+	): Promise<RawInstanceLog[]> {
+		const hash = await computeHash(step.name);
+		let count = 1;
+		if (step.index) {
+			count = step.index;
+		}
+		const cacheKey = `${hash}-${count}`;
+		return this.readLogsFromStep(cacheKey);
+	}
+
+	readLogsFromStep(cacheKey: string): RawInstanceLog[] {
+		return [
+			...this.ctx.storage.sql.exec(
+				"SELECT * FROM states WHERE groupKey = ? ORDER BY id",
+				cacheKey
+			),
+		] as RawInstanceLog[];
+	}
+
+	getInstanceModifier(): WorkflowInstanceModifier {
+		return new WorkflowInstanceModifier(this, this.ctx);
 	}
 
 	readLogs(): EngineLogs {
@@ -191,10 +222,166 @@ export class Engine extends DurableObject<Env> {
 		status: InstanceStatus
 	): Promise<void> {
 		await this.ctx.storage.put(ENGINE_STATUS_KEY, status);
+
+		// check if anyone is waiting for this status
+		this.handleStatusWaiter(status);
+	}
+
+	private statusWaiters: Map<
+		InstanceStatus,
+		{ resolve: () => void; reject: (e: unknown) => void }
+	> = new Map();
+	async waitForStatus(status: string): Promise<void> {
+		const targetStatus = toInstanceStatus(status);
+		const currentStatus =
+			await this.ctx.storage.get<InstanceStatus>(ENGINE_STATUS_KEY);
+
+		// if the workflow has already reached the desired state, resolve immediately
+		if (currentStatus === targetStatus) {
+			return;
+		}
+
+		// if it hasn't reached the desired state, create a new promise and add its resolver to the waiters map
+		return new Promise((resolve, reject) => {
+			this.statusWaiters.set(targetStatus, { resolve, reject });
+		});
+	}
+
+	handleStatusWaiter(status: InstanceStatus): void {
+		const waiter = this.statusWaiters.get(status);
+
+		// resolve if it reached the desired status
+		if (waiter) {
+			waiter.resolve();
+			this.statusWaiters.delete(status);
+			return;
+		}
+
+		switch (status) {
+			case InstanceStatus.Errored: {
+				// if it reaches final status "errored", then it can't be waiting for it to complete or terminate
+				const unreachableStatuses = [
+					InstanceStatus.Complete,
+					InstanceStatus.Terminated,
+				];
+
+				this.rejectUnreachableStatus(status, unreachableStatuses);
+				break;
+			}
+			case InstanceStatus.Terminated: {
+				// if it reaches final status "terminated", then it can't be waiting for it to complete or error
+				const unreachableStatuses = [
+					InstanceStatus.Complete,
+					InstanceStatus.Errored,
+				];
+
+				this.rejectUnreachableStatus(status, unreachableStatuses);
+				break;
+			}
+			case InstanceStatus.Complete: {
+				// if it reaches final status "complete", then it can't be waiting for it to terminate or error
+				const unreachableStatuses = [
+					InstanceStatus.Terminated,
+					InstanceStatus.Errored,
+				];
+
+				this.rejectUnreachableStatus(status, unreachableStatuses);
+				break;
+			}
+			default:
+				break;
+		}
+	}
+
+	rejectUnreachableStatus(
+		reachedStatus: number,
+		unreachableStatuses: number[]
+	): void {
+		if (unreachableStatuses) {
+			for (const unreachableStatus of unreachableStatuses) {
+				const waiter = this.statusWaiters.get(unreachableStatus);
+				if (waiter) {
+					waiter.reject(
+						new Error(
+							`[WorkflowIntrospector] The Wokflow instance ${this.instanceId} has reached status '${instanceStatusName(reachedStatus)}'. This is a finite status that prevents it from ever reaching the expected status of '${instanceStatusName(unreachableStatus)}'.`
+						)
+					);
+					this.statusWaiters.delete(unreachableStatus);
+					return;
+				}
+			}
+		}
+	}
+
+	private stepResultWaiters: Map<
+		string,
+		{ resolve: (v: unknown) => void; reject: (e: unknown) => void }
+	> = new Map();
+	async waitForStepResult(
+		stepName: string,
+		stepCount?: number
+	): Promise<unknown> {
+		const hash = await computeHash(stepName);
+		const count = stepCount ?? 1;
+		const cacheKey = `${hash}-${count}`;
+
+		const rows = [
+			...this.ctx.storage.sql.exec<{
+				event: InstanceEvent;
+				metadata: string;
+			}>(
+				"SELECT event, metadata FROM states WHERE groupKey = ? ORDER BY id DESC LIMIT 1",
+				cacheKey
+			),
+		];
+
+		if (rows.length > 0) {
+			const { event, metadata } = rows[0];
+			const parsed = JSON.parse(metadata);
+			if (event === InstanceEvent.STEP_SUCCESS) {
+				return parsed?.result;
+			}
+			if (event === InstanceEvent.STEP_FAILURE) {
+				throw parsed?.error ?? parsed;
+			}
+		}
+
+		// if it hasn't completed the step, create a new promise to later resolve/reject
+		return new Promise<unknown>((resolve, reject) => {
+			this.stepResultWaiters.set(cacheKey, { resolve, reject });
+		});
+	}
+
+	handleStepResultWaiter(
+		group: string,
+		event: InstanceEvent,
+		metadata: Record<string, unknown>
+	) {
+		const waiter = this.stepResultWaiters.get(group);
+		if (!waiter) {
+			return;
+		}
+		if (event === InstanceEvent.STEP_SUCCESS) {
+			const result = metadata?.result;
+			waiter.resolve(result);
+			this.stepResultWaiters.delete(group);
+		} else if (event === InstanceEvent.STEP_FAILURE) {
+			const error = metadata?.error ?? new Error("Step failed");
+			waiter.reject(error);
+			this.stepResultWaiters.delete(group);
+		}
 	}
 
 	async abort(_reason: string) {
 		// TODO: Maybe don't actually kill but instead check a flag and return early if true
+	}
+
+	// Called by the cleanup function when introspecting in tests
+	async _unsafeAbort(reason?: string) {
+		await this.ctx.storage.sync();
+		await this.ctx.storage.deleteAll();
+
+		this.ctx.abort(reason);
 	}
 
 	async storeEventMap() {
@@ -267,8 +454,14 @@ export class Engine extends DurableObject<Env> {
 				}
 			}
 		} else {
+			const mockEvent = await this.ctx.storage.get(`mock-event-${event.type}`);
+			if (mockEvent) {
+				return;
+			}
+
 			const metadata =
 				await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+
 			if (metadata === undefined) {
 				throw new Error("Engine was never started");
 			}
@@ -354,8 +547,6 @@ export class Engine extends DurableObject<Env> {
 		// restore eventMap so that waitForEvent across lifetimes works correctly
 		await this.restoreEventMap();
 
-		const stubStep = new Context(this, this.ctx);
-
 		const workflowRunningHandler = async () => {
 			await this.ctx.storage.transaction(async () => {
 				// manually start the grace period
@@ -364,6 +555,9 @@ export class Engine extends DurableObject<Env> {
 			});
 		};
 		this.isRunning = true;
+
+		const stubStep = new Context(this, this.ctx);
+
 		void workflowRunningHandler();
 		try {
 			const target = this.env.USER_WORKFLOW;

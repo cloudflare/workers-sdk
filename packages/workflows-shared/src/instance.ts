@@ -83,7 +83,9 @@ export function toInstanceStatus(status: string): InstanceStatus {
 		case "unknown":
 			throw new Error("unknown cannot be parsed into a InstanceStatus");
 		default:
-			throw new Error(`${status} was not handled`);
+			throw new Error(
+				`${status} was not handled because it's not a valid InstanceStatus`
+			);
 	}
 }
 
