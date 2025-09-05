@@ -34,5 +34,6 @@ export type MiniflareCoreErrorCode =
 	| "ERR_MULTIPLE_OUTBOUNDS" // Both `outboundService` and `fetchMock` specified
 	| "ERR_INVALID_WRAPPED" // Worker not allowed to be used as wrapped binding
 	| "ERR_CYCLIC" // Generate cyclic workerd config
-	| "ERR_MISSING_INSPECTOR_PROXY_PORT"; // An inspector proxy has been requested but no inspector port to use has been specified
+	| "ERR_MISSING_INSPECTOR_PROXY_PORT" // An inspector proxy has been requested but no inspector port to use has been specified
+	| "ERR_PLUGIN_LOADING_FAILED"; // Requested external plugins could not be loaded
 export class MiniflareCoreError extends MiniflareError<MiniflareCoreErrorCode> {}

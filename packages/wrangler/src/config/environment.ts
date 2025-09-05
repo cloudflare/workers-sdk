@@ -49,40 +49,24 @@ type UnsafeBinding = {
 	 * The 'type' of the unsafe binding.
 	 */
 	type: string;
-	service?: never;
-	[key: string]: unknown;
-};
-
-type UnsafeServiceBinding = {
-	/**
-	 * The name of the unsafe binding provided to the Worker
-	 */
-	name: string;
-	/**
-	 * The 'type' of the unsafe binding being provided to the Worker. This must be "service" to use
-	 * local development features available exclusively to unsafe service bindings.
-	 */
-	type: "service";
-	/**
-	 * The name of the service to which this unsafe binding refers.
-	 */
-	service: string;
 	dev?: {
-		/**
-		 * Package is the bare specifier of the package that exposes plugins to integrate into Miniflare via a `registerMiniflarePlugins` function.
-		 * @example "@cloudflare/my-external-miniflare-plugin"
-		 */
-		package: string;
-		/**
-		 * Plugin is the name of the plugin exposed by the package.
-		 * @example "MY_UNSAFE_PLUGIN"
-		 */
-		plugin: string;
+		plugin: {
+			/**
+			 * Package is the bare specifier of the package that exposes plugins to integrate into Miniflare via a `registerMiniflarePlugins` function.
+			 * @example "@cloudflare/my-external-miniflare-plugin"
+			 */
+			package: string;
+			/**
+			 * Plugin is the name of the plugin exposed by the package.
+			 * @example "MY_UNSAFE_PLUGIN"
+			 */
+			name: string;
+		};
 
 		/**
 		 * Optional mapping of unsafe bindings names to options provided for the plugin.
 		 */
-		pluginOptions?: Record<string, unknown>;
+		options?: Record<string, unknown>;
 	};
 	[key: string]: unknown;
 };
@@ -1030,7 +1014,7 @@ export interface EnvironmentNonInheritable {
 		 * can be used to implement bindings for features that haven't released and aren't supported
 		 * directly by wrangler or miniflare.
 		 */
-		bindings?: (UnsafeBinding | UnsafeServiceBinding)[];
+		bindings?: UnsafeBinding[];
 
 		/**
 		 * Arbitrary key/value pairs that will be included in the uploaded metadata.  Values specified

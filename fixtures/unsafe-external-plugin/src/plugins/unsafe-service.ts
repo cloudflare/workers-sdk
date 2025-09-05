@@ -20,45 +20,40 @@ export const UNSAFE_PLUGIN_NAME = "unsafe-plugin";
 /**
  * Options for the unsafe plugin. It takes a map of binding names to options for that specific binding
  */
-export const UnsafeServiceBindingOptionSchema = z.record(
-	z.string(),
+export const UnsafeServiceBindingOptionSchema = z.array(
 	z.object({
-		emitLogs: z.boolean(),
+		name: z.string(),
+		type: z.string(),
+		plugin: z.object({
+			package: z.string(),
+			name: z.string(),
+		}),
+		options: z.object({ emitLogs: z.boolean() }),
 	})
 );
-export type UnsafeServiceBindingOption =
-	typeof UnsafeServiceBindingOptionSchema;
-
-export const UnsafeServiceBindingSharedOptions = z.undefined();
-export type UnsafeServiceBindingSharedOption =
-	typeof UnsafeServiceBindingSharedOptions;
 
 export const UNSAFE_SERVICE_PLUGIN: Plugin<
-	typeof UnsafeServiceBindingOptionSchema,
-	typeof UnsafeServiceBindingSharedOptions
+	typeof UnsafeServiceBindingOptionSchema
 > = {
 	options: UnsafeServiceBindingOptionSchema,
-	sharedOptions: UnsafeServiceBindingSharedOptions,
 	/**
 	 * getBindings will add bindings to the user's Workers. Specifically, we add a binding to a service
 	 * that will expose an `UnsafeBindingServiceEntrypoint`
 	 * @param options - A map of bindings names to options provided for that binding.
 	 * @returns
 	 */
-	async getBindings(options: z.infer<typeof UnsafeServiceBindingOptionSchema>) {
-		const configOptions = Object.entries(options);
-
-		return configOptions.map<Worker_Binding>(([bindingName]) => {
+	async getBindings(options) {
+		return options.map<Worker_Binding>((binding) => {
 			return {
-				name: bindingName,
+				name: binding.name,
 				service: {
-					name: `${UNSAFE_PLUGIN_NAME}:${bindingName}`,
+					name: `${UNSAFE_PLUGIN_NAME}:${binding.name}`,
 					entrypoint: "UnsafeBindingServiceEntrypoint",
 				},
 			};
 		});
 	},
-	getNodeBindings(options: z.infer<typeof UnsafeServiceBindingOptionSchema>) {
+	getNodeBindings(options) {
 		return Object.fromEntries(
 			Object.keys(options).map((bindingName) => [
 				bindingName,
@@ -72,8 +67,7 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 		defaultPersistRoot,
 		unsafeStickyBlobs,
 	}) {
-		const configOptions = Object.entries(options);
-		if (configOptions.length === 0) {
+		if (options.length === 0) {
 			return [];
 		}
 
@@ -125,10 +119,10 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 			},
 		} satisfies Service;
 
-		const bindingWorker = configOptions.map<Service>(
-			([bindingName, config]) =>
+		const bindingWorker = options.map<Service>(
+			(binding) =>
 				({
-					name: `${UNSAFE_PLUGIN_NAME}:${bindingName}`,
+					name: `${UNSAFE_PLUGIN_NAME}:${binding.name}`,
 					worker: {
 						compatibilityDate: "2025-01-01",
 						modules: [
@@ -140,7 +134,7 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 						bindings: [
 							{
 								name: "config",
-								json: JSON.stringify(config),
+								json: JSON.stringify(binding.options),
 							},
 							{
 								name: "store",
