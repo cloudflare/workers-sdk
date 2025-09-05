@@ -70,7 +70,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			Worker Startup Time: (TIMINGS)
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
-			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
 			To deploy this version to production traffic use the command wrangler versions deploy
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
@@ -186,7 +185,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			Worker Startup Time: (TIMINGS)
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
-			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
 			To deploy this version to production traffic use the command wrangler versions deploy
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
@@ -590,7 +588,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			Worker Startup Time: (TIMINGS)
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
-			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
 			To deploy this version to production traffic use the command wrangler versions deploy
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
@@ -632,7 +629,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				Worker Startup Time: (TIMINGS)
 				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 				Worker Version ID: 00000000-0000-0000-0000-000000000000
-				Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
 				To deploy this version to production traffic use the command wrangler versions deploy
 				Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 				Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
@@ -650,6 +646,45 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				Message:     Upload via e2e test
 				------------------------------------------------------------
 				Compatibility Date:  2023-01-01"
+			`);
+		});
+
+		it("should upload version of Worker with preview_urls enabled", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+					preview_urls = true
+				`,
+				"src/index.ts": dedent`
+					export default {
+						fetch(request) {
+							return new Response("Hello World!")
+						}
+					}
+				`,
+				"package.json": dedent`
+					{
+						"name": "${workerName}",
+						"version": "0.0.0",
+						"private": true
+					}
+				`,
+			});
+			await helper.run("wrangler triggers deploy --force-subdomain-deploy");
+			const upload = await helper.run(
+				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-version-with-preview"`
+			);
+			expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: (TIMINGS)
+				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+				Worker Version ID: 00000000-0000-0000-0000-000000000000
+				Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
+				To deploy this version to production traffic use the command wrangler versions deploy
+				Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
+				Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
 			`);
 		});
 
@@ -678,10 +713,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const { stdout } = await helper.run(`wrangler delete`);
 
 			expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"? Are you sure you want to delete tmp-e2e-worker-00000000-0000-0000-0000-000000000000? This action cannot be undone.
-			🤖 Using fallback value in non-interactive context: yes
-			Successfully deleted tmp-e2e-worker-00000000-0000-0000-0000-000000000000"
-		`);
+				"? Are you sure you want to delete tmp-e2e-worker-00000000-0000-0000-0000-000000000000? This action cannot be undone.
+				🤖 Using fallback value in non-interactive context: yes
+				Successfully deleted tmp-e2e-worker-00000000-0000-0000-0000-000000000000"
+			`);
 		});
 	}
 );
