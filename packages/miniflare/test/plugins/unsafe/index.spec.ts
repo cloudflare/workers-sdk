@@ -17,21 +17,20 @@ const pluginEntrypoint = `${unsafePluginDirectory}/index.js`;
 const ENTRY_WORKER_CONFIG = {
 	BINDING_NAME: `UNSAFE_BINDING`,
 	pluginConfig(packageName: string, pluginName: string) {
-		return {
-			[this.BINDING_NAME]: {
-				bindingType: "service",
-				service: "my-unsafe-service",
+		return [
+			{
+				name: this.BINDING_NAME,
+				type: "service",
 				plugin: {
-					packageName,
-					pluginName,
-					pluginOptions: {
-						[this.BINDING_NAME]: {
-							foo: "bar",
-						},
-					},
+					package: packageName,
+					name: pluginName,
+				},
+				options: {
+					foo: "bar",
+					service: "my-unsafe-service",
 				},
 			},
-		};
+		];
 	},
 	get script() {
 		return `export default {
@@ -57,13 +56,6 @@ test("A plugin that does not expose `registerMiniflarePlugins` will cause an err
 		name: "unsafe-plugin-worker",
 		// Use a compatability date that supports RPCs
 		compatibilityDate: "2025-08-04",
-		unsafeExternalPlugins: [
-			{
-				packageName,
-				pluginName,
-				resolveWorkingDirectory: badPluginDir,
-			},
-		],
 		modules: true,
 		script: ENTRY_WORKER_CONFIG.script,
 		unsafeBindings: ENTRY_WORKER_CONFIG.pluginConfig(packageName, pluginName),
@@ -95,13 +87,6 @@ test("A plugin that exposes a non-function `registerMiniflarePlugins` export wil
 		name: "unsafe-plugin-worker",
 		// Use a compatability date that supports RPCs
 		compatibilityDate: "2025-08-04",
-		unsafeExternalPlugins: [
-			{
-				packageName,
-				pluginName,
-				resolveWorkingDirectory: badPluginDir,
-			},
-		],
 		modules: true,
 		script: ENTRY_WORKER_CONFIG.script,
 		unsafeBindings: ENTRY_WORKER_CONFIG.pluginConfig(packageName, pluginName),
@@ -128,13 +113,6 @@ test("Supports specifying an unsafe plugin will be loaded into Miniflare and wil
 		name: "unsafe-plugin-worker",
 		// Use a compatability date that supports RPCs
 		compatibilityDate: "2025-08-04",
-		unsafeExternalPlugins: [
-			{
-				packageName,
-				pluginName,
-				resolveWorkingDirectory: unsafePluginDirectory,
-			},
-		],
 		modules: true,
 		script: ENTRY_WORKER_CONFIG.script,
 		unsafeBindings: ENTRY_WORKER_CONFIG.pluginConfig(packageName, pluginName),

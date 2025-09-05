@@ -8,12 +8,12 @@
 			{
 				"name": "UNSAFE_SERVICE_BINDING",
 				"dev": {
-					"package": "@fixture/unsafe-external-plugin",
-					"plugin": "unsafe-plugin",
-					"pluginOptions": {
-						"UNSAFE_SERVICE_BINDING": {
-							"emitLogs": true,
-						},
+					"plugin": {
+						"package": "@fixture/unsafe-external-plugin",
+						"name": "unsafe-plugin",
+					},
+					"options": {
+						"emitLogs": true,
 					},
 				},
 				"type": "service",

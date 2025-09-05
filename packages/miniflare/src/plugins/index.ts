@@ -64,59 +64,6 @@ export const PLUGINS = {
 };
 export type Plugins = typeof PLUGINS;
 
-/**
- * PluginKey is a type union of all the keys of the PLUGINS object.
- */
-export type PluginKey = keyof Plugins;
-
-/**
- * Type guard to check if a string is a valid built-in plugin key.
- * @param key The key to check
- * @returns A type predicate indicating if the key is a built-in plugin key
- */
-export function isBuiltInPluginKey<T extends string>(
-	key: T
-): key is T & PluginKey {
-	return key in PLUGINS;
-}
-
-// Typeguard for determining if a plugin is a built in
-export function isBuiltInPlugin<T extends string>(arg: {
-	key: T;
-	plugin: any;
-}): arg is {
-	key: T & PluginKey;
-	plugin: T extends PluginKey ? Plugins[T] : never;
-} {
-	return isBuiltInPluginKey(arg.key) && PLUGINS[arg.key] != undefined;
-}
-
-/**
- * UnsafeBindingMap is a map of "unsafe" binding names to a configuration
- * for that unsafe binding.
- */
-const UnsafeBindingMap = z.record(
-	z.string(),
-	z.object({
-		bindingType: z.string(),
-		plugin: z
-			.object({
-				packageName: z.string(),
-				pluginName: z.string(),
-				pluginOptions: z.record(z.string(), z.unknown()).optional(),
-			})
-			.optional(),
-		service: z.string().optional(),
-	})
-);
-
-/**
- * UnsafeBindingOptions configures behavior of unsafe bindings
- */
-export const UnsafeBindingOption = z.object({
-	unsafeBindings: UnsafeBindingMap.optional(),
-});
-
 // Note, we used to define these as...
 //
 // ```ts
@@ -174,8 +121,7 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof VECTORIZE_PLUGIN.options> &
 	z.input<typeof MTLS_PLUGIN.options> &
 	z.input<typeof HELLO_WORLD_PLUGIN.options> &
-	z.input<typeof WORKER_LOADER_PLUGIN.options> &
-	z.input<typeof UnsafeBindingOption>;
+	z.input<typeof WORKER_LOADER_PLUGIN.options>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &

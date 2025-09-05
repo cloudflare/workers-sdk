@@ -124,6 +124,11 @@ export const UnsafeDirectSocketSchema = z.object({
 	proxy: z.oboolean(),
 });
 
+export const ExternalPluginSpecifier = z.object({
+	package: z.string(),
+	name: z.string(),
+});
+
 const CoreOptionsSchemaInput = z.intersection(
 	SourceOptionsSchema,
 	z.object({
@@ -179,6 +184,17 @@ const CoreOptionsSchemaInput = z.intersection(
 				}),
 				z.string(),
 			])
+			.optional(),
+
+		unsafeBindings: z
+			.array(
+				z.object({
+					name: z.string(),
+					type: z.string(),
+					plugin: ExternalPluginSpecifier,
+					options: z.record(JsonSchema),
+				})
+			)
 			.optional(),
 	})
 );
