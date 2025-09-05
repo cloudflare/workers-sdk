@@ -338,16 +338,6 @@ async function subdomainDeploy(
 
 	// Warn about mismatching config and current values.
 
-	if (config.workers_dev == undefined && !workersDevInSync) {
-		const currWorkersDevStatus = currWorkersDev ? "enabled" : "disabled";
-		logger.warn(
-			[
-				`Worker has workers.dev ${currWorkersDevStatus}, but 'workers_dev' is not in the config.`,
-				`Using fallback value 'workers_dev = ${wantWorkersDev}'.`,
-			].join("\n")
-		);
-	}
-
 	if (config.preview_urls == undefined && !previewsInSync) {
 		const currPreviewsStatus = currPreviews ? "enabled" : "disabled";
 		logger.warn(
