@@ -3419,8 +3419,14 @@ test("Miniflare: logs are treated as standard stdout/stderr chunks be default", 
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
 
-	t.is(collected.stdout, "__LOG__\n__INFO__\n__DEBUG__\n");
-	t.is(collected.stderr, "__WARN__\n__ERROR__\n");
+	// __DEBUG__ moved to stderr in workerd 09/2025
+	if (collected.stderr.includes("__DEBUG__")) {
+		t.is(collected.stdout, "__LOG__\n__INFO__\n");
+		t.is(collected.stderr, "__WARN__\n__ERROR__\n__DEBUG__\n");
+	} else {
+		t.is(collected.stdout, "__LOG__\n__INFO__\n__DEBUG__\n");
+		t.is(collected.stderr, "__WARN__\n__ERROR__\n");
+	}
 });
 
 test("Miniflare: logs are structured and all sent to stdout when structuredWorkerdLogs is true", async (t) => {
