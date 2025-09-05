@@ -12,7 +12,10 @@ export const additionalModuleGlobalRE = new RegExp(
 
 export const WORKER_ENTRY_PATH_HEADER = "__VITE_WORKER_ENTRY_PATH__";
 
-export const VIRTUAL_WORKER_ENTRY =
-	"virtual:vite-plugin-cloudflare/worker-entry";
+const virtualPrefix = "virtual:vite-plugin-cloudflare/";
 
-export const VIRTUAL_USER_ENTRY = "virtual:vite-plugin-cloudflare/user-entry";
+export const VIRTUAL_WORKER_ENTRY = `${virtualPrefix}worker-entry`;
+
+export const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
+
+export const VIRTUAL_NODEJS_COMPAT_ENTRY = `${virtualPrefix}nodejs-compat-entry`;

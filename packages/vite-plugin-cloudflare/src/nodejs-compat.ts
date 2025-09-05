@@ -2,7 +2,6 @@ import assert from "node:assert";
 import { builtinModules } from "node:module";
 import * as path from "node:path";
 import { getCloudflarePreset } from "@cloudflare/unenv-preset";
-import MagicString from "magic-string";
 import { getNodeCompat } from "miniflare";
 import { resolvePathSync } from "mlly";
 import { defineEnv } from "unenv";
@@ -150,7 +149,7 @@ export class NodeJsCompat {
 	/**
 	 * Gets the necessary global polyfills to inject into the entry-point of the user's code.
 	 */
-	injectGlobalCode(id: string, code: string): vite.Rollup.TransformResult {
+	injectGlobalCode(): string {
 		const injectedCode = Array.from(this.#virtualModulePathToSpecifier.keys())
 			.map((moduleId) => `import "${moduleId}";`)
 			.join("\n");
@@ -159,14 +158,7 @@ export class NodeJsCompat {
 			.map((polyfillPath) => `import "${polyfillPath}";\n`)
 			.join("");
 
-		const modified = new MagicString(code);
-		modified.prepend(injectedCode);
-		modified.prepend(polyfillCode);
-
-		return {
-			code: modified.toString(),
-			map: modified.generateMap({ hires: "boundary", source: id }),
-		};
+		return `${injectedCode}${polyfillCode}`;
 	}
 
 	/**
