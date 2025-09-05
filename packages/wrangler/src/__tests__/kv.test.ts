@@ -1,10 +1,16 @@
 import { writeFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { http, HttpResponse } from "msw";
 import { BATCH_MAX_ERRORS_WARNINGS } from "../kv/helpers";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
+import {
+	clearDialogs,
+	mockConfirm,
+	mockPrompt,
+	mockSelect,
+} from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockProcess } from "./helpers/mock-process";
 import { msw } from "./helpers/msw";
@@ -201,8 +207,33 @@ describe("wrangler", () => {
 				it("should create a namespace", async () => {
 					writeWranglerConfig({ name: "worker" }, configPath);
 					mockCreateRequest("UnitTestNamespace");
+					if (configPath === "wrangler.json") {
+						mockSelect({
+							text: "Would you like Wrangler to add it on your behalf?",
+							result: "yes",
+						});
+					}
 					await runWrangler("kv namespace create UnitTestNamespace");
 					expect(std.out).toMatchSnapshot();
+					expect(await readFile(configPath, "utf8")).toMatchSnapshot();
+				});
+
+				it("should create a namespace with custom binding name", async () => {
+					writeWranglerConfig({ name: "worker" }, configPath);
+					mockCreateRequest("UnitTestNamespace");
+					if (configPath === "wrangler.json") {
+						mockSelect({
+							text: "Would you like Wrangler to add it on your behalf?",
+							result: "yes-but",
+						});
+						mockPrompt({
+							text: "What binding name would you like to use?",
+							result: "HELLO",
+						});
+					}
+					await runWrangler("kv namespace create UnitTestNamespace");
+					expect(std.out).toMatchSnapshot();
+					expect(await readFile(configPath, "utf8")).toMatchSnapshot();
 				});
 
 				it("should create a preview namespace if configured to do so", async () => {
@@ -217,8 +248,15 @@ describe("wrangler", () => {
 					writeWranglerConfig({ name: "other-worker" }, configPath);
 
 					mockCreateRequest("UnitTestNamespace");
+					if (configPath === "wrangler.json") {
+						mockSelect({
+							text: "Would you like Wrangler to add it on your behalf?",
+							result: "yes",
+						});
+					}
 					await runWrangler("kv namespace create UnitTestNamespace");
 					expect(std.out).toMatchSnapshot();
+					expect(await readFile(configPath, "utf8")).toMatchSnapshot();
 				});
 
 				it("should create a namespace in an environment if configured to do so", async () => {
@@ -235,10 +273,17 @@ describe("wrangler", () => {
 					);
 
 					mockCreateRequest("customEnv-UnitTestNamespace");
+					if (configPath === "wrangler.json") {
+						mockSelect({
+							text: "Would you like Wrangler to add it on your behalf?",
+							result: "yes",
+						});
+					}
 					await runWrangler(
 						"kv namespace create UnitTestNamespace --env customEnv"
 					);
 					expect(std.out).toMatchSnapshot();
+					expect(await readFile(configPath, "utf8")).toMatchSnapshot();
 				});
 			});
 		});

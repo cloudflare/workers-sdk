@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { isAbsolute, resolve, sep } from "node:path";
 import ignore from "ignore";
-import { getType } from "mime";
+import mime from "mime";
 import {
 	CF_ASSETS_IGNORE_FILENAME,
 	HEADERS_FILENAME,
@@ -18,7 +18,7 @@ export const normalizeFilePath = (relativeFilepath: string) => {
 };
 
 export const getContentType = (absFilePath: string) => {
-	let contentType = getType(absFilePath);
+	let contentType = mime.getType(absFilePath);
 	if (
 		contentType &&
 		contentType.startsWith("text/") &&

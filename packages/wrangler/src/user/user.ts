@@ -1210,16 +1210,24 @@ export function listScopes(message = "💁 Available scopes:"): void {
 	// TODO: maybe a good idea to show usage here
 }
 
+/**
+ *
+ * Returns account_id preferentially from config.account_id > CLOUDFLARE_ACCOUNT_ID env var > cache > or user selection.
+ */
 export async function getAccountId(
-	complianceConfig: ComplianceConfig
+	config: ComplianceConfig & { account_id?: string }
 ): Promise<string> {
+	// TODO: v5 we should prioritise the env var instead of the config value here, for consistency
+	if (config.account_id) {
+		return config.account_id;
+	}
 	// check if we have a cached value
 	const cachedAccount = getAccountFromCache();
 	if (cachedAccount && !getCloudflareAccountIdFromEnv()) {
 		return cachedAccount.id;
 	}
 
-	const accounts = await getAccountChoices(complianceConfig);
+	const accounts = await getAccountChoices(config);
 	if (accounts.length === 1) {
 		saveAccountToCache({ id: accounts[0].id, name: accounts[0].name });
 		return accounts[0].id;
@@ -1272,7 +1280,7 @@ export async function requireAuth(
 			throw new UserError("Did not login, quitting...");
 		}
 	}
-	const accountId = config.account_id || (await getAccountId(config));
+	const accountId = await getAccountId(config);
 	if (!accountId) {
 		throw new UserError("No account id found, quitting...");
 	}

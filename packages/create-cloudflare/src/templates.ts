@@ -821,6 +821,24 @@ export const downloadRemoteTemplate = async (
 	}
 };
 
+function updatePythonPackageName(path: string, projectName: string) {
+	const pyprojectTomlPath = resolve(path, "pyproject.toml");
+	const uvLockPath = resolve(path, "uv.lock");
+	if (!existsSync(pyprojectTomlPath)) {
+		// Not a python template
+		return;
+	}
+	const s = spinner();
+	s.start("Updating name in `pyproject.toml`");
+	let pyprojectTomlContents = readFile(pyprojectTomlPath);
+	pyprojectTomlContents = pyprojectTomlContents.replace('"TBD"', projectName);
+	writeFile(pyprojectTomlPath, pyprojectTomlContents);
+	let uvLockContents = readFile(uvLockPath);
+	uvLockContents = uvLockContents.replace('"tbd"', projectName.toLowerCase());
+	writeFile(uvLockPath, uvLockContents);
+	s.stop(`${brandColor("updated")} ${dim("`pyproject.toml`")}`);
+}
+
 export const updatePackageName = async (ctx: C3Context) => {
 	// Update package.json with project name
 	const placeholderNames = ["<TBD>", "TBD", ""];
@@ -838,6 +856,7 @@ export const updatePackageName = async (ctx: C3Context) => {
 
 	writeJSON(pkgJsonPath, pkgJson);
 	s.stop(`${brandColor("updated")} ${dim("`package.json`")}`);
+	updatePythonPackageName(ctx.project.path, ctx.project.name);
 };
 
 export const updatePackageScripts = async (ctx: C3Context) => {

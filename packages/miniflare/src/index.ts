@@ -331,63 +331,114 @@ function getDurableObjectClassNames(
 	allWorkerOpts: PluginWorkerOptions[]
 ): DurableObjectClassNames {
 	const serviceClassNames: DurableObjectClassNames = new Map();
-	for (const workerOpts of allWorkerOpts) {
-		const workerServiceName = getUserServiceName(workerOpts.core.name);
-		for (const designator of Object.values(
-			workerOpts.do.durableObjects ?? {}
-		)) {
-			const {
-				className,
-				// Fallback to current worker service if name not defined
-				serviceName = workerServiceName,
-				enableSql,
-				unsafeUniqueKey,
-				unsafePreventEviction,
+
+	const allDurableObjects = allWorkerOpts
+		.flatMap((workerOpts) => {
+			const workerServiceName = getUserServiceName(workerOpts.core.name);
+
+			return Object.values(workerOpts.do.durableObjects ?? {}).map(
+				(workerDODesignator) => {
+					const doInfo = normaliseDurableObject(workerDODesignator);
+					if (doInfo.serviceName === undefined) {
+						// Fallback to current worker service if name not defined
+						doInfo.serviceName = workerServiceName;
+					}
+					return {
+						doInfo,
+						workerRawName: workerOpts.core.name,
+					};
+				}
+			);
+		})
+		// We sort the list of durable objects because we want the durable objects without a scriptName or a scriptName
+		// that matches the raw worker's name (meaning that they are defined within their worker) to be processed first
+		.sort(({ doInfo, workerRawName }) =>
+			doInfo.scriptName === undefined || doInfo.scriptName === workerRawName
+				? -1
+				: 0
+		)
+		.map(({ doInfo }) => doInfo);
+
+	for (const doInfo of allDurableObjects) {
+		const { className, serviceName, container, ...doConfigs } = doInfo;
+		// We know that the service name is always defined (since if it is not we do default it to the current worker service)
+		assert(serviceName);
+		// Get or create `Map` mapping class name to optional unsafe unique key
+		let classNames = serviceClassNames.get(serviceName);
+		if (classNames === undefined) {
+			classNames = new Map();
+			serviceClassNames.set(serviceName, classNames);
+		}
+
+		if (classNames.has(className)) {
+			// If we've already seen this class in this service, make sure the
+			// unsafe unique keys and unsafe prevent eviction values match
+			const existingInfo = classNames.get(className);
+
+			const isDoUnacceptableDiff = (
+				field: Extract<
+					keyof typeof doConfigs,
+					"enableSql" | "unsafeUniqueKey" | "unsafePreventEviction"
+				>
+			) => {
+				if (!existingInfo) {
+					return false;
+				}
+
+				const same = existingInfo[field] === doConfigs[field];
+				if (same) {
+					return false;
+				}
+
+				const oneIsUndefined =
+					existingInfo[field] === undefined || doConfigs[field] === undefined;
+
+				// If one of the configurations is `undefined` (either the current one or the existing one) then there we
+				// want to consider this as an acceptable difference since we might be in a potentially valid situation in
+				// which worker A defines a DO with a config, while worker B simply uses the DO from worker A but without
+				// providing the configuration (thus leaving it `undefined`) (this for example is exactly what Wrangler does
+				// with the implicitly defined `enableSql` flag)
+				if (oneIsUndefined) {
+					return false;
+				}
+
+				return true;
+			};
+
+			if (isDoUnacceptableDiff("enableSql")) {
+				throw new MiniflareCoreError(
+					"ERR_DIFFERENT_STORAGE_BACKEND",
+					`Different storage backends defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
+						doConfigs.enableSql
+					)} and ${JSON.stringify(existingInfo?.enableSql)}`
+				);
+			}
+
+			if (isDoUnacceptableDiff("unsafeUniqueKey")) {
+				throw new MiniflareCoreError(
+					"ERR_DIFFERENT_UNIQUE_KEYS",
+					`Multiple unsafe unique keys defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
+						doConfigs.unsafeUniqueKey
+					)} and ${JSON.stringify(existingInfo?.unsafeUniqueKey)}`
+				);
+			}
+
+			if (isDoUnacceptableDiff("unsafePreventEviction")) {
+				throw new MiniflareCoreError(
+					"ERR_DIFFERENT_PREVENT_EVICTION",
+					`Multiple unsafe prevent eviction values defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
+						doConfigs.unsafePreventEviction
+					)} and ${JSON.stringify(existingInfo?.unsafePreventEviction)}`
+				);
+			}
+		} else {
+			// Otherwise, just add it
+			classNames.set(className, {
+				enableSql: doConfigs.enableSql,
+				unsafeUniqueKey: doConfigs.unsafeUniqueKey,
+				unsafePreventEviction: doConfigs.unsafePreventEviction,
 				container,
-			} = normaliseDurableObject(designator);
-			// Get or create `Map` mapping class name to optional unsafe unique key
-			let classNames = serviceClassNames.get(serviceName);
-			if (classNames === undefined) {
-				classNames = new Map();
-				serviceClassNames.set(serviceName, classNames);
-			}
-			if (classNames.has(className)) {
-				// If we've already seen this class in this service, make sure the
-				// unsafe unique keys and unsafe prevent eviction values match
-				const existingInfo = classNames.get(className);
-				if (existingInfo?.enableSql !== enableSql) {
-					throw new MiniflareCoreError(
-						"ERR_DIFFERENT_STORAGE_BACKEND",
-						`Different storage backends defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
-							enableSql
-						)} and ${JSON.stringify(existingInfo?.enableSql)}`
-					);
-				}
-				if (existingInfo?.unsafeUniqueKey !== unsafeUniqueKey) {
-					throw new MiniflareCoreError(
-						"ERR_DIFFERENT_UNIQUE_KEYS",
-						`Multiple unsafe unique keys defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
-							unsafeUniqueKey
-						)} and ${JSON.stringify(existingInfo?.unsafeUniqueKey)}`
-					);
-				}
-				if (existingInfo?.unsafePreventEviction !== unsafePreventEviction) {
-					throw new MiniflareCoreError(
-						"ERR_DIFFERENT_PREVENT_EVICTION",
-						`Multiple unsafe prevent eviction values defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
-							unsafePreventEviction
-						)} and ${JSON.stringify(existingInfo?.unsafePreventEviction)}`
-					);
-				}
-			} else {
-				// Otherwise, just add it
-				classNames.set(className, {
-					enableSql,
-					unsafeUniqueKey,
-					unsafePreventEviction,
-					container,
-				});
-			}
+			});
 		}
 	}
 	return serviceClassNames;

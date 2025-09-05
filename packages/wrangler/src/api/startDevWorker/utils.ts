@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { readFile } from "node:fs/promises";
+import { assertNever } from "../../utils/assert-never";
 import type { ConfigBindingOptions } from "../../config";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type {
@@ -39,8 +40,6 @@ export function createDeferred<T>(
 		reject,
 	};
 }
-
-export function assertNever(_value: never) {}
 
 export function urlFromParts(
 	parts: Partial<URL>,
@@ -82,6 +81,18 @@ export function convertConfigBindingsToStartWorkerBindings(
 
 	return convertCfWorkerInitBindingsToBindings({
 		...bindings,
+		kv_namespaces: bindings.kv_namespaces.map((kv) => ({
+			...kv,
+			id: kv.preview_id ?? kv.id,
+		})),
+		d1_databases: bindings.d1_databases.map((d1) => ({
+			...d1,
+			database_id: d1.preview_database_id ?? d1.database_id,
+		})),
+		r2_buckets: bindings.r2_buckets.map((r2) => ({
+			...r2,
+			bucket_name: r2.preview_bucket_name ?? r2.bucket_name,
+		})),
 		queues: queues.producers?.map((q) => ({ ...q, queue_name: q.queue })),
 	});
 }

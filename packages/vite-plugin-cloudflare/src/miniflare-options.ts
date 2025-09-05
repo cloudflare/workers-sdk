@@ -533,6 +533,7 @@ export async function getDevMiniflareOptions(config: {
 		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
 		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
+		unsafeTriggerHandlers: true,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
@@ -780,7 +781,7 @@ export async function getPreviewMiniflareOptions(config: {
 							: { modules: true, script: "" }),
 					},
 					...externalWorkers,
-				] as Array<WorkerOptions>;
+				] satisfies Array<WorkerOptions>;
 			})
 		)
 	).flat();
@@ -792,6 +793,7 @@ export async function getPreviewMiniflareOptions(config: {
 		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
 		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
+		unsafeTriggerHandlers: true,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));

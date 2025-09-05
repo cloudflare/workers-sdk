@@ -1,11 +1,15 @@
 import TOML from "@iarna/toml";
+import { prompt, select } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
+import { friendlyBindingNames } from "../utils/print-bindings";
 import { resolveWranglerConfigPath } from "./config-helpers";
+import { experimental_patchConfig } from "./patch-config";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
+import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
 import type { ResolveConfigPathOptions } from "./config-helpers";
@@ -58,6 +62,54 @@ export function formatConfigSnippet(
 		return formatted
 			? JSON.stringify(snippet, null, 2)
 			: JSON.stringify(snippet);
+	}
+}
+
+export async function updateConfigFile(
+	snippet: (
+		bindingName?: string
+	) => Partial<{ [K in keyof CfWorkerInit["bindings"]]: RawConfig[K] }>,
+	configPath: Config["configPath"],
+	env: string | undefined,
+	offerToUpdate: boolean = true
+) {
+	const resource = Object.keys(snippet())[0] as keyof CfWorkerInit["bindings"];
+	const envString = env ? ` in the "${env}" environment` : "";
+	logger.log(
+		`To access your new ${friendlyBindingNames[resource]} in your Worker, add the following snippet to your configuration file${envString}:`
+	);
+
+	logger.log(formatConfigSnippet(snippet(), configPath));
+
+	if (configPath && offerToUpdate && configFormat(configPath) === "jsonc") {
+		const autoAdd = await select(
+			"Would you like Wrangler to add it on your behalf?",
+			{
+				choices: [
+					{ title: "Yes", value: "yes" },
+					{
+						title: "Yes, but let me choose the binding name",
+						value: "yes-but",
+					},
+					{ title: "No", value: "no" },
+				],
+				defaultOption: 0,
+				fallbackOption: 2,
+			}
+		);
+		let bindingName;
+
+		if (autoAdd === "yes-but") {
+			bindingName = await prompt("What binding name would you like to use?");
+		}
+
+		if (autoAdd !== "no") {
+			experimental_patchConfig(
+				configPath,
+				env ? { env: { [env]: snippet(bindingName) } } : snippet(bindingName),
+				true
+			);
+		}
 	}
 }
 

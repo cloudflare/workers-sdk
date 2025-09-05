@@ -1,5 +1,57 @@
 # @cloudflare/unenv-preset
 
+## 2.7.2
+
+### Patch Changes
+
+- [#10527](https://github.com/cloudflare/workers-sdk/pull/10527) [`818ce22`](https://github.com/cloudflare/workers-sdk/commit/818ce225e8038db967b22fbde9e3586d7225fefc) Thanks [@vicb](https://github.com/vicb)! - Bump `unenv` to 2.0.0-rc.20
+
+  The latest release include [a fix for `node:tty` default export](https://github.com/unjs/unenv/pull/513).
+  See [the changelog](https://github.com/unjs/unenv/releases/tag/v2.0.0-rc.20) for full details.
+
+- [#10430](https://github.com/cloudflare/workers-sdk/pull/10430) [`cb22f5f`](https://github.com/cloudflare/workers-sdk/commit/cb22f5faf5220dd4b682eabf320e1d9b6e6daefb) Thanks [@anonrig](https://github.com/anonrig)! - Remove `node:util` and `node:sys` polyfills which are now fully implemented in workerd
+
+- [#10536](https://github.com/cloudflare/workers-sdk/pull/10536) [`a565291`](https://github.com/cloudflare/workers-sdk/commit/a565291a4c19ba0e6f3bdfd336152b5c7a047d2d) Thanks [@vicb](https://github.com/vicb)! - Use the native `node:http2` when available.
+
+  It is enabled starting on 2025-09-01 or when the `enable_nodejs_http2_module` compatibility flag is set.
+
+## 2.7.1
+
+### Patch Changes
+
+- [#10514](https://github.com/cloudflare/workers-sdk/pull/10514) [`31ecfeb`](https://github.com/cloudflare/workers-sdk/commit/31ecfeb18b3419044474e37a2a6dab9bf35ff574) Thanks [@vicb](https://github.com/vicb)! - Use the native `node:constants` module
+
+  The native `node:constants` module was implemented in [this PR](https://github.com/cloudflare/workerd/pull/4759)
+  It was released as part of workerd [1.20250813.0](https://github.com/cloudflare/workerd/releases/tag/v1.20250813.0)
+
+- [#10431](https://github.com/cloudflare/workers-sdk/pull/10431) [`f656d1a`](https://github.com/cloudflare/workers-sdk/commit/f656d1a2da772692b09e8f3ae1e0805d1d33f52e) Thanks [@anonrig](https://github.com/anonrig)! - Remove node:module polyfills
+
+- [#10443](https://github.com/cloudflare/workers-sdk/pull/10443) [`bd21fc5`](https://github.com/cloudflare/workers-sdk/commit/bd21fc51da3c2174919921b80c378bf294ebc680) Thanks [@anonrig](https://github.com/anonrig)! - Removes node:crypto polyfills
+
+- [#10498](https://github.com/cloudflare/workers-sdk/pull/10498) [`4851955`](https://github.com/cloudflare/workers-sdk/commit/4851955c2b87763004b4eb0353a2b65e590993e4) Thanks [@vicb](https://github.com/vicb)! - enabled native `node:fs` and `node:os` modules.
+
+  native `node:fs` is used when the `enable_nodejs_fs_module` is set or by default starting from 2025-09-15.
+
+  native `node:os` is used when the `enable_nodejs_os_module` is set or by default starting from 2025-09-15
+
+## 2.7.0
+
+### Minor Changes
+
+- [#10224](https://github.com/cloudflare/workers-sdk/pull/10224) [`7c339ae`](https://github.com/cloudflare/workers-sdk/commit/7c339aeb0392e41b9a306c84538950f32c9a0dd4) Thanks [@vicb](https://github.com/vicb)! - add support for native `node:fs` and `node:fs/promises`.
+
+### Patch Changes
+
+- [#10463](https://github.com/cloudflare/workers-sdk/pull/10463) [`76d9aa2`](https://github.com/cloudflare/workers-sdk/commit/76d9aa2335cb52aec3e4a86195b40002ff538022) Thanks [@vicb](https://github.com/vicb)! - Remove experimental from the `enable_nodejs_http_server_modules` flag
+
+  See [`node:http`](https://developers.cloudflare.com/workers/runtime-apis/nodejs/http/) and [`node:https`](https://developers.cloudflare.com/workers/runtime-apis/nodejs/https/) for details.
+
+## 2.6.3
+
+### Patch Changes
+
+- [#10432](https://github.com/cloudflare/workers-sdk/pull/10432) [`19e2aab`](https://github.com/cloudflare/workers-sdk/commit/19e2aab1d68594c7289d0aa16474544919fd5b9b) Thanks [@anonrig](https://github.com/anonrig)! - Remove "node:tls" polyfill
+
 ## 2.6.2
 
 ### Patch Changes

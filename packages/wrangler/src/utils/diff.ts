@@ -50,7 +50,6 @@ type BestPath = {
 	lastComponent?: Result;
 };
 
-// TODO: move this Diff Class to a shared location (since it is not Cloudchamber specific)
 export class Diff {
 	#results: Result[] = [];
 
@@ -191,6 +190,93 @@ export class Diff {
 		}
 	}
 
+	/**
+	 * Results but refined to be printed/stringified.
+	 *
+	 * In particular the results returned here are ordered to try to avoid cases
+	 * in which an addition/removal is incorrectly split.
+	 *
+	 * For example, the standard results can produce something like:
+	 * ```
+	 *  ...
+	 * - "vars": {
+	 * + "vars": {},
+	 * -   "MY_VAR": "variable set in the dash"
+	 * - },
+	 *  ...
+	 * ```
+	 * (notice how the first removal is separated from the last two,
+	 * making the diff much less readable).
+	 * Such change in the refined results will instead look like:
+	 * ```
+	 *  ...
+	 * + "vars": {},
+	 * - "vars": {
+	 * -   "MY_VAR": "variable set in the dash"
+	 * - },
+	 *  ...
+	 * ```
+	 */
+	get #resultsForPrint() {
+		const results = [
+			...this.#results.filter((r) => !!r.value && r.value !== "\n"),
+		];
+
+		const swapLines = (i: number, j: number) => {
+			const tmp = results[i];
+			results[i] = results[j];
+			results[j] = tmp;
+		};
+
+		const numOfLines = (str: string) => str.split("\n").length;
+
+		const isLoneResult = (index: number, target: -1 | 1): boolean => {
+			const currentIdx = index;
+			const adjacentIdx = currentIdx + target;
+			const nextIdx = currentIdx + target + target;
+
+			// If any of the results we need to analize is not present we return false
+			if (!results[adjacentIdx] || !results[nextIdx] || !results[nextIdx]) {
+				return false;
+			}
+
+			const previousIdx = index - target;
+
+			const isAlternation = (type: "added" | "removed") =>
+				results[currentIdx][type] === true &&
+				results[previousIdx]?.[type] !== results[currentIdx][type] &&
+				results[adjacentIdx][type === "added" ? "removed" : "added"] === true &&
+				results[nextIdx][type] === true;
+
+			// If there isn't an alternation between added and removed results then we return false
+			if (!isAlternation("added") && !isAlternation("removed")) {
+				return false;
+			}
+
+			// We might have found a lone result but to make sure we need to check that the next index
+			// contains multiple lines while the current and adjacent ones both only contain one
+			return (
+				numOfLines(results[currentIdx].value ?? "") === 1 &&
+				numOfLines(results[adjacentIdx].value ?? "") === 1 &&
+				numOfLines(results[nextIdx].value ?? "") > 1
+			);
+		};
+
+		for (let i = 0; i < results.length; i++) {
+			if (isLoneResult(i, +1)) {
+				swapLines(i, i + 1);
+				continue;
+			}
+
+			if (isLoneResult(i, -1)) {
+				swapLines(i, i - 1);
+				continue;
+			}
+		}
+
+		return results;
+	}
+
 	toString(
 		options: {
 			// Number of lines of context to print before and after each diff segment
@@ -203,7 +289,7 @@ export class Diff {
 		let state: "init" | "diff" = "init";
 		const context: string[] = [];
 
-		for (const result of this.#results) {
+		for (const result of this.#resultsForPrint) {
 			if (result.value === undefined) {
 				continue;
 			}

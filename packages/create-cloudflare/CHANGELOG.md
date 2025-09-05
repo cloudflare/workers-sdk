@@ -1,5 +1,43 @@
 # create-cloudflare
 
+## 2.51.4
+
+### Patch Changes
+
+- [#10497](https://github.com/cloudflare/workers-sdk/pull/10497) [`3bdf86c`](https://github.com/cloudflare/workers-sdk/commit/3bdf86c655d32faf356163f59d4149800e813b3c) Thanks [@hoodmane](https://github.com/hoodmane)! - Added workers-py to the pyproject.toml dev requirements
+
+## 2.51.3
+
+### Patch Changes
+
+- [#10455](https://github.com/cloudflare/workers-sdk/pull/10455) [`17ee8e6`](https://github.com/cloudflare/workers-sdk/commit/17ee8e6d58056543a099270ba08d79957420aca8) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.15.0 | 1.16.0 |
+
+- [#10456](https://github.com/cloudflare/workers-sdk/pull/10456) [`0df683f`](https://github.com/cloudflare/workers-sdk/commit/0df683fc2a69ae6bc54b162264cff7492e7180e0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.8.1 | 7.8.2 |
+
+## 2.51.2
+
+### Patch Changes
+
+- [#10477](https://github.com/cloudflare/workers-sdk/pull/10477) [`30716ed`](https://github.com/cloudflare/workers-sdk/commit/30716edd572c9a8348c04f9cecf58f3808270120) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix outdated Remix template url being used
+
+## 2.51.1
+
+### Patch Changes
+
+- [#10419](https://github.com/cloudflare/workers-sdk/pull/10419) [`7d314b1`](https://github.com/cloudflare/workers-sdk/commit/7d314b1b1591ef2e1b81093a228148c88dfdbed7) Thanks [@joshthoward](https://github.com/joshthoward)! - Update create-cloudflare hello-world Durable Objects templates to use `getByName()`
+
 ## 2.51.0
 
 ### Minor Changes

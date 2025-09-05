@@ -8,12 +8,12 @@ import {
 	serialiseError,
 } from "../../src/api/startDevWorker/events";
 import {
-	assertNever,
 	createDeferred,
 	DeferredPromise,
 	MaybePromise,
 	urlFromParts,
 } from "../../src/api/startDevWorker/utils";
+import { assertNever } from "../../src/utils/assert-never";
 import type {
 	InspectorProxyWorkerIncomingWebSocketMessage,
 	InspectorProxyWorkerOutgoingRequestBody,

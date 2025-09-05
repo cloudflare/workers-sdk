@@ -1136,10 +1136,10 @@ describe("init", () => {
 			).rejects.toThrowError();
 
 			expect(std.err).toMatchInlineSnapshot(`
-"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError Occurred TypeError: Failed to fetch: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError Occurred: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.[0m
 
-"
-`);
+				"
+			`);
 		});
 
 		it("should not include migrations in config file when none are necessary", async () => {

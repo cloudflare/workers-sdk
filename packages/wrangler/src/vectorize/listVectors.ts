@@ -47,7 +47,9 @@ export const vectorizeListVectorsCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
-		logger.log(`📋 Listing vectors in index '${args.name}'...`);
+		if (!args.json) {
+			logger.log(`📋 Listing vectors in index '${args.name}'...`);
+		}
 
 		const options: Parameters<typeof listVectors>[2] = {};
 		if (args.count !== undefined) {

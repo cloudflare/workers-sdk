@@ -8,6 +8,7 @@
 		"deploy": "wrangler deploy"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "catalog:default",
 		"@octokit/types": "^13.8.0",
 		"@octokit/webhooks-types": "^7.6.1",
 		"wrangler": "workspace:*"

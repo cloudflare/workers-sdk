@@ -9,11 +9,37 @@ import {
 import { UserError } from "../errors";
 import { getAccountId } from "../user";
 import type { Config } from "../config";
+import type { ContainerApp } from "../config/environment";
 import type {
+	ApplicationAffinities,
+	ApplicationAffinityColocation,
 	ContainerNormalizedConfig,
 	InstanceTypeOrLimits,
 	SharedContainerConfig,
 } from "@cloudflare/containers-shared";
+import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
+
+/**
+ * Perform type conversion of affinities so that they can be fed to the API.
+ */
+function convertContainerAffinitiesForApi(
+	container: ContainerApp
+): ApplicationAffinities | undefined {
+	if (container.affinities === undefined) {
+		return undefined;
+	}
+
+	const affinities: ApplicationAffinities = {
+		colocation: container.affinities?.colocation as
+			| ApplicationAffinityColocation
+			| undefined,
+		hardware_generation: container.affinities?.hardware_generation as
+			| ApplicationAffinityHardwareGeneration
+			| undefined,
+	};
+
+	return affinities;
+}
 
 /**
  * This normalises config into an intermediate shape for building or pulling.
@@ -25,6 +51,7 @@ export const getNormalizedContainerOptions = async (
 	args: {
 		/** set by args.containersRollout */
 		containersRollout?: "gradual" | "immediate";
+		dryRun?: boolean;
 	}
 ): Promise<ContainerNormalizedConfig[]> => {
 	if (!config.containers || config.containers.length === 0) {
@@ -61,7 +88,7 @@ export const getNormalizedContainerOptions = async (
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
 			class_name: container.class_name,
-			max_instances: container.max_instances ?? 0,
+			max_instances: container.max_instances ?? 1,
 			scheduling_policy: (container.scheduling_policy ??
 				SchedulingPolicy.DEFAULT) as SchedulingPolicy,
 			constraints: {
@@ -79,6 +106,7 @@ export const getNormalizedContainerOptions = async (
 					city.toLowerCase()
 				),
 			},
+			affinities: convertContainerAffinitiesForApi(container),
 			rollout_step_percentage:
 				args?.containersRollout === "immediate"
 					? 100
@@ -145,11 +173,12 @@ export const getNormalizedContainerOptions = async (
 				image_vars: container.image_vars,
 			});
 		} else {
-			const accountId = await getAccountId(config);
 			normalizedContainers.push({
 				...shared,
 				...instanceTypeOrLimits,
-				image_uri: resolveImageName(accountId, container.image), // if it is not a dockerfile, it must be an image uri or have thrown an error
+				image_uri: args.dryRun
+					? container.image
+					: resolveImageName(await getAccountId(config), container.image), // if it is not a dockerfile, it must be an image uri or have thrown an error
 			});
 		}
 	}

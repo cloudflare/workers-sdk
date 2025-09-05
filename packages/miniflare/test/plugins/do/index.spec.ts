@@ -482,3 +482,124 @@ test("colo-local actors", async (t) => {
 	res = await stub.fetch("http://localhost");
 	t.is(await res.text(), "body:thing2");
 });
+
+test("multiple workers with DO conflicting useSQLite booleans cause options error", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				modules: true,
+				name: "worker-a",
+				script: "export default {}",
+			},
+		],
+	});
+
+	t.teardown(() => mf.dispose());
+
+	await t.throwsAsync(
+		async () => {
+			await mf.setOptions({
+				workers: [
+					{
+						modules: true,
+						name: "worker-c",
+						script: "export default {}",
+						durableObjects: {
+							MY_DO: {
+								className: "MyDo",
+								scriptName: "worker-a",
+								useSQLite: false,
+							},
+						},
+					},
+					{
+						modules: true,
+						name: "worker-a",
+						script: `
+							import { DurableObject } from "cloudflare:workers";
+
+							export class MyDo extends DurableObject {}
+
+							export default { }
+						`,
+						durableObjects: {
+							MY_DO: {
+								className: "MyDo",
+								scriptName: undefined,
+								useSQLite: true,
+							},
+						},
+					},
+					{
+						modules: true,
+						name: "worker-b",
+						script: "export default {}",
+						durableObjects: {
+							MY_DO: {
+								className: "MyDo",
+								scriptName: "worker-a",
+								useSQLite: false,
+							},
+						},
+					},
+				],
+			});
+		},
+		{
+			instanceOf: Error,
+			message:
+				'Different storage backends defined for Durable Object "MyDo" in "core:user:worker-a": false and true',
+		}
+	);
+});
+
+test("multiple workers with DO useSQLite true and undefined does not cause options error", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				modules: true,
+				name: "worker-a",
+				script: "export default {}",
+			},
+		],
+	});
+
+	t.teardown(() => mf.dispose());
+
+	await t.notThrowsAsync(async () => {
+		await mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					name: "worker-a",
+					script: `
+							import { DurableObject } from "cloudflare:workers";
+
+							export class MyDo extends DurableObject {}
+
+							export default { }
+						`,
+					durableObjects: {
+						MY_DO: {
+							className: "MyDo",
+							scriptName: undefined,
+							useSQLite: true,
+						},
+					},
+				},
+				{
+					modules: true,
+					name: "worker-b",
+					script: "export default {}",
+					durableObjects: {
+						MY_DO: {
+							className: "MyDo",
+							scriptName: "worker-a",
+							useSQLite: undefined,
+						},
+					},
+				},
+			],
+		});
+	});
+});

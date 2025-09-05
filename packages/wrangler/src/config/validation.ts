@@ -1059,7 +1059,7 @@ function normalizeAndValidateEnvironment(
 		rawEnv,
 		"preview_urls",
 		isBoolean,
-		true
+		undefined
 	);
 
 	const build = normalizeAndValidateBuild(
@@ -2709,6 +2709,7 @@ function validateContainerApp(
 					"instance_type",
 					"configuration",
 					"constraints",
+					"affinities",
 					"rollout_step_percentage",
 					"rollout_kind",
 					"durable_objects",

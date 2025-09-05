@@ -150,6 +150,15 @@ export type ContainerApp = {
 		tier?: number;
 	};
 
+	/**
+	 * Scheduling affinities
+	 * @hidden
+	 */
+	affinities?: {
+		colocation?: "datacenter";
+		hardware_generation?: "highest-overall-performance";
+	};
+
 	// not used when deploying container with wrangler deploy
 	/**
 	 * @deprecated use the `class_name` field instead.
@@ -312,7 +321,7 @@ interface EnvironmentInheritable {
 	 * Whether we use <version>-<name>.<subdomain>.workers.dev to
 	 * serve Preview URLs for your Worker.
 	 *
-	 * @default true
+	 * @default false
 	 * @inheritable
 	 */
 	preview_urls: boolean | undefined;

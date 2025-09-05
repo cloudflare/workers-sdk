@@ -1,6 +1,6 @@
 {
 	"name": "turbo-r2-archive",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"private": true,
 	"description": "TurboRepo API Compliant Remote Caching w/ Cloudflare Workers using R2",
 	"keywords": [
@@ -11,10 +11,10 @@
 		"remote cache"
 	],
 	"scripts": {
-		"build": "wrangler deploy -j --dry-run --outdir=./dist",
+		"build": "wrangler deploy --dry-run --outdir=./dist",
 		"check:lint": "eslint .  --max-warnings=0",
-		"deploy": "wrangler deploy -j",
-		"start": "wrangler dev -j",
+		"deploy": "wrangler deploy",
+		"start": "wrangler dev",
 		"type:check": "tsc"
 	},
 	"dependencies": {

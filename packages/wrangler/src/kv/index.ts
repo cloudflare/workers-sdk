@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
-import { formatConfigSnippet, readConfig } from "../config";
+import { readConfig, updateConfigFile } from "../config";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
@@ -102,24 +102,20 @@ export const kvNamespaceCreateCommand = createCommand({
 		});
 
 		logger.log("✨ Success!");
-		const envString = args.env ? ` under [env.${args.env}]` : "";
 		const previewString = args.preview ? "preview_" : "";
-		logger.log(
-			`Add the following to your configuration file in your kv_namespaces array${envString}:`
-		);
 
-		logger.log(
-			formatConfigSnippet(
-				{
-					kv_namespaces: [
-						{
-							binding: getValidBindingName(args.namespace, "KV"),
-							[`${previewString}id`]: namespaceId,
-						},
-					],
-				},
-				config.configPath
-			)
+		await updateConfigFile(
+			(name) => ({
+				kv_namespaces: [
+					{
+						binding: getValidBindingName(name ?? args.namespace, "KV"),
+						[`${previewString}id`]: namespaceId,
+					},
+				],
+			}),
+			config.configPath,
+			args.env,
+			!args.preview
 		);
 	},
 });

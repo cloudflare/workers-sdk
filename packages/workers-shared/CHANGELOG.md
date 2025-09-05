@@ -1,5 +1,17 @@
 # @cloudflare/workers-shared
 
+## 0.18.8
+
+### Patch Changes
+
+- [#10500](https://github.com/cloudflare/workers-sdk/pull/10500) [`19b1881`](https://github.com/cloudflare/workers-sdk/commit/19b1881edc1428c5b2d3beb905006238c5b33dba) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Block /\_image routes with href query param using double slash.
+
+## 0.18.7
+
+### Patch Changes
+
+- [#10462](https://github.com/cloudflare/workers-sdk/pull/10462) [`c4e164c`](https://github.com/cloudflare/workers-sdk/commit/c4e164c13a830a4c6426c318061a0f13b4281c67) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Update mime dependency to 4.X so that javascript files will have content types of `text/javascript` instead of `application/javascript`. This will affect the content-types computed by Asset Worker within Workers Static Assets.
+
 ## 0.18.6
 
 ### Patch Changes

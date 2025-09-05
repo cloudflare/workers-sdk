@@ -1,6 +1,6 @@
 {
 	"name": "playground-preview-worker",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"private": true,
 	"scripts": {
 		"build-middleware": "pnpm run build-middleware:common && pnpm run build-middleware:loader",
@@ -8,9 +8,9 @@
 		"build-middleware:loader": "pnpm dlx esbuild ../wrangler/templates/middleware/loader-modules.ts --outfile=src/middleware/loader.module.template",
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
-		"deploy": "wrangler -j deploy",
-		"deploy:testing": "wrangler -j deploy -e testing",
-		"start": "wrangler -j dev",
+		"deploy": "wrangler deploy",
+		"deploy:testing": "wrangler deploy -e testing",
+		"start": "wrangler dev",
 		"test:e2e": "vitest run"
 	},
 	"dependencies": {

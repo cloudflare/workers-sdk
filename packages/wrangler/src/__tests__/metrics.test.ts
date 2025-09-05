@@ -197,8 +197,6 @@ describe("metrics", () => {
 				argsCombination: "",
 				command: "wrangler docs",
 				args: {
-					xJsonConfig: true,
-					j: true,
 					search: ["<REDACTED>"],
 				},
 			};
@@ -455,12 +453,10 @@ describe("metrics", () => {
 				await expect(
 					runWrangler("docs arg -j=false")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Wrangler now supports wrangler.json configuration files by default and ignores the value of the \`--experimental-json-config\` flag.]`
+					`[Error: Unknown argument: j]`
 				);
 				expect(requests.count).toBe(2);
-				expect(std.debug).toContain(
-					'"errorMessage":"Wrangler now supports wrangler.json configuration files by default and ignores the value of the `--experimental-json-config` flag."'
-				);
+				expect(std.debug).toContain('"errorMessage":"yargs validation error"');
 			});
 
 			it("should include an error message if the specific error has been allow-listed with a custom telemetry message", async () => {

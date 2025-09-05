@@ -367,9 +367,7 @@ describe("pipelines", () => {
 				    Max records:   10,000,000
 
 				🎉 You can now send data to your pipeline!
-
-				To send data to your pipeline from a Worker, add the following to your wrangler config file:
-
+				To access your new Pipeline in your Worker, add the following snippet to your configuration file:
 				{
 				  \\"pipelines\\": [
 				    {

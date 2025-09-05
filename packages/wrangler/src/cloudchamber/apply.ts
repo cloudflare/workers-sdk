@@ -27,12 +27,12 @@ import { formatConfigSnippet } from "../config";
 import { configRolloutStepsToAPI } from "../containers/deploy";
 import { FatalError, UserError } from "../errors";
 import { getAccountId } from "../user";
+import { Diff } from "../utils/diff";
 import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
 import { promiseSpinner } from "./common";
-import { Diff } from "./helpers/diff";
 import { cleanForInstanceType } from "./instance-type/instance-type";
 import type { Config } from "../config";
 import type { ContainerApp, Observability } from "../config/environment";
@@ -42,6 +42,8 @@ import type {
 } from "../yargs-types";
 import type {
 	Application,
+	ApplicationAffinities,
+	ApplicationAffinityColocation,
 	ApplicationID,
 	ApplicationName,
 	CreateApplicationRequest,
@@ -50,6 +52,7 @@ import type {
 	Observability as ObservabilityConfiguration,
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
+import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
 import type { JsonMap } from "@iarna/toml";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
@@ -220,6 +223,28 @@ function containerAppToInstanceType(
 	return configuration;
 }
 
+/**
+ * Perform type conversion of affinities so that they can be fed to the API.
+ */
+function convertContainerAffinitiesForApi(
+	container: ContainerApp
+): ApplicationAffinities | undefined {
+	if (container.affinities === undefined) {
+		return undefined;
+	}
+
+	const affinities: ApplicationAffinities = {
+		colocation: container.affinities?.colocation as
+			| ApplicationAffinityColocation
+			| undefined,
+		hardware_generation: container.affinities?.hardware_generation as
+			| ApplicationAffinityHardwareGeneration
+			| undefined,
+	};
+
+	return affinities;
+}
+
 function containerAppToCreateApplication(
 	accountId: string,
 	containerApp: ContainerApp,
@@ -267,6 +292,7 @@ function containerAppToCreateApplication(
 				region.toUpperCase()
 			),
 		},
+		affinities: convertContainerAffinitiesForApi(containerApp),
 	};
 
 	// delete the fields that should not be sent to API
@@ -356,7 +382,7 @@ export async function apply(
 					`${config.name}-${appConfigNoDefaults.class_name}`
 			];
 
-		const accountId = config.account_id || (await getAccountId(config));
+		const accountId = await getAccountId(config);
 		const appConfig = containerAppToCreateApplication(
 			accountId,
 			appConfigNoDefaults,

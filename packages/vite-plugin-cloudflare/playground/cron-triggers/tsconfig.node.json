@@ -1,0 +1,4 @@
+{
+	"extends": ["@cloudflare/workers-tsconfig/base.json"],
+	"include": ["vite.config.ts", "__tests__"]
+}

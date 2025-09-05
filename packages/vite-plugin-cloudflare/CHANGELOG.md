@@ -1,5 +1,59 @@
 # @cloudflare/vite-plugin
 
+## 1.12.3
+
+### Patch Changes
+
+- [#10544](https://github.com/cloudflare/workers-sdk/pull/10544) [`4c80c78`](https://github.com/cloudflare/workers-sdk/commit/4c80c784b3a4fb58840f780f632525253a6b51f3) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Set `preserveEntrySignatures: "strict"` for Worker environments. This ensures that no additional exports are added to the entry module.
+
+- [#10527](https://github.com/cloudflare/workers-sdk/pull/10527) [`818ce22`](https://github.com/cloudflare/workers-sdk/commit/818ce225e8038db967b22fbde9e3586d7225fefc) Thanks [@vicb](https://github.com/vicb)! - Bump `unenv` to 2.0.0-rc.20
+
+  The latest release include [a fix for `node:tty` default export](https://github.com/unjs/unenv/pull/513).
+  See [the changelog](https://github.com/unjs/unenv/releases/tag/v2.0.0-rc.20) for full details.
+
+- Updated dependencies [[`6e8dd80`](https://github.com/cloudflare/workers-sdk/commit/6e8dd80c79eb9927567ba290658457fe9b113a68), [`4cb3370`](https://github.com/cloudflare/workers-sdk/commit/4cb337007b2e9dba085da9b421ed214f532eb81f), [`7211609`](https://github.com/cloudflare/workers-sdk/commit/72116094a7410860d89dce383f2361c16c1a55cd), [`818ce22`](https://github.com/cloudflare/workers-sdk/commit/818ce225e8038db967b22fbde9e3586d7225fefc), [`5d69df4`](https://github.com/cloudflare/workers-sdk/commit/5d69df4e441cee5fbae80624ed6cefd2f93c2f4a), [`5d69df4`](https://github.com/cloudflare/workers-sdk/commit/5d69df4e441cee5fbae80624ed6cefd2f93c2f4a), [`c22acc6`](https://github.com/cloudflare/workers-sdk/commit/c22acc6de28cf22f93f0f0a01269d3745d0fcdcf), [`cb22f5f`](https://github.com/cloudflare/workers-sdk/commit/cb22f5faf5220dd4b682eabf320e1d9b6e6daefb), [`cc47b51`](https://github.com/cloudflare/workers-sdk/commit/cc47b5157bbe0d020dc737102cadf4fd77112ad3), [`c0fad5f`](https://github.com/cloudflare/workers-sdk/commit/c0fad5fe06d18f672f14cbf64e0f3f734d5de7c6), [`c6a39f5`](https://github.com/cloudflare/workers-sdk/commit/c6a39f5958614b8dd5e2aeb4d2b4a62e17a601c1), [`a565291`](https://github.com/cloudflare/workers-sdk/commit/a565291a4c19ba0e6f3bdfd336152b5c7a047d2d)]:
+  - wrangler@4.34.0
+  - miniflare@4.20250902.0
+  - @cloudflare/unenv-preset@2.7.2
+
+## 1.12.2
+
+### Patch Changes
+
+- Updated dependencies [[`31ecfeb`](https://github.com/cloudflare/workers-sdk/commit/31ecfeb18b3419044474e37a2a6dab9bf35ff574), [`f656d1a`](https://github.com/cloudflare/workers-sdk/commit/f656d1a2da772692b09e8f3ae1e0805d1d33f52e), [`22c8ae6`](https://github.com/cloudflare/workers-sdk/commit/22c8ae6364e608b918b19547806229bf7ccbc429), [`bd21fc5`](https://github.com/cloudflare/workers-sdk/commit/bd21fc51da3c2174919921b80c378bf294ebc680), [`3c15bbb`](https://github.com/cloudflare/workers-sdk/commit/3c15bbb211b0de279794b1ba4c1c9206b95e2a6f), [`dc81221`](https://github.com/cloudflare/workers-sdk/commit/dc81221710b2d015ebf0c47aac349634be509a8c), [`38bdb78`](https://github.com/cloudflare/workers-sdk/commit/38bdb787c607a0411c92a340d75b842f9d67b485), [`4851955`](https://github.com/cloudflare/workers-sdk/commit/4851955c2b87763004b4eb0353a2b65e590993e4), [`4492eb0`](https://github.com/cloudflare/workers-sdk/commit/4492eb0490588df736c25272ed2b279736462c9a)]:
+  - @cloudflare/unenv-preset@2.7.1
+  - miniflare@4.20250829.0
+  - wrangler@4.33.2
+
+## 1.12.1
+
+### Patch Changes
+
+- [#10482](https://github.com/cloudflare/workers-sdk/pull/10482) [`aec77cc`](https://github.com/cloudflare/workers-sdk/commit/aec77ccb1578918804a3b058a1cb676215c6ddc9) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Pass the `compatibility_date` and `compatibility_flags` to the `unenv` preset. This enables support for the `node:http` and `node:https` modules.
+
+- Updated dependencies [[`76d9aa2`](https://github.com/cloudflare/workers-sdk/commit/76d9aa2335cb52aec3e4a86195b40002ff538022), [`85be2b6`](https://github.com/cloudflare/workers-sdk/commit/85be2b6a690dbe51d54b9de8ec6dfa6a64e03ac4), [`452ad0b`](https://github.com/cloudflare/workers-sdk/commit/452ad0b1ec58c8078084e0946bf1b3e6ab7f307f), [`7c339ae`](https://github.com/cloudflare/workers-sdk/commit/7c339aeb0392e41b9a306c84538950f32c9a0dd4)]:
+  - @cloudflare/unenv-preset@2.7.0
+  - wrangler@4.33.1
+  - miniflare@4.20250823.1
+
+## 1.12.0
+
+### Minor Changes
+
+- [#10416](https://github.com/cloudflare/workers-sdk/pull/10416) [`7b05c8e`](https://github.com/cloudflare/workers-sdk/commit/7b05c8ef51ec7b41dd17ff2e0b157e06961330de) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Add support for testing [Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally) and [Email Workers](https://developers.cloudflare.com/email-routing/email-workers/local-development/) in `vite dev` and `vite preview`.
+
+### Patch Changes
+
+- [#10422](https://github.com/cloudflare/workers-sdk/pull/10422) [`88fd2f9`](https://github.com/cloudflare/workers-sdk/commit/88fd2f93a60211916e8c228ef63d08bb777c6314) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Statically replace the value of `process.env.NODE_ENV` in development when the `nodejs_compat` compatibility flag is enabled.
+  Previously, this was replaced at build time when `nodejs_compat` was enabled and at dev and build time when `nodejs_compat` was not enabled.
+
+- [#10065](https://github.com/cloudflare/workers-sdk/pull/10065) [`3024ec1`](https://github.com/cloudflare/workers-sdk/commit/3024ec187c974b683b2834c9c467456b586496c0) Thanks [@MichaelDeBoey](https://github.com/MichaelDeBoey)! - Update `@mjackson/node-fetch-server` to `@remix-run/node-fetch-server`
+
+- Updated dependencies [[`c4fd176`](https://github.com/cloudflare/workers-sdk/commit/c4fd176a9caec0b24da258adb48f4a76f37bd9c7), [`19e2aab`](https://github.com/cloudflare/workers-sdk/commit/19e2aab1d68594c7289d0aa16474544919fd5b9b), [`c4fd176`](https://github.com/cloudflare/workers-sdk/commit/c4fd176a9caec0b24da258adb48f4a76f37bd9c7), [`e81c2cf`](https://github.com/cloudflare/workers-sdk/commit/e81c2cf076a87eefd29e238476c0c180ae731a0d)]:
+  - wrangler@4.33.0
+  - @cloudflare/unenv-preset@2.6.3
+  - miniflare@4.20250823.0
+
 ## 1.11.7
 
 ### Patch Changes

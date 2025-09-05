@@ -6,11 +6,11 @@ import { fetchResult } from "./cfetch";
 import { configFileName, readConfig } from "./config";
 import { confirm, prompt } from "./dialogs";
 import { UserError } from "./errors";
-import { mapBindings } from "./init";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
+import { mapWorkerMetadataBindings } from "./utils/map-worker-metadata-bindings";
 import { printWranglerBanner } from "./wrangler-banner";
 import type { Config } from "./config";
 import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";
@@ -332,10 +332,10 @@ Handlers:            ${
 ${
 	bindings.length > 0
 		? TOML.stringify(
-				(await mapBindings(
-					complianceConfig,
+				(await mapWorkerMetadataBindings(
+					bindings,
 					accountId,
-					bindings
+					complianceConfig
 				)) as TOML.JsonMap
 			)
 		: `None`

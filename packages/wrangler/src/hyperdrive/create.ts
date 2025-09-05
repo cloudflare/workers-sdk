@@ -1,6 +1,7 @@
-import { configFileName, formatConfigSnippet } from "../config";
+import { updateConfigFile } from "../config";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
+import { getValidBindingName } from "../utils/getValidBindingName";
 import { createConfig } from "./client";
 import { capitalizeScheme } from "./shared";
 import {
@@ -40,16 +41,18 @@ export const hyperdriveCreateCommand = createCommand({
 		logger.log(
 			`✅ Created new Hyperdrive ${capitalizeScheme(database.origin.scheme)} config: ${database.id}`
 		);
-		logger.log(
-			`📋 To start using your config from a Worker, add the following binding configuration to your ${configFileName(config.configPath)} file:\n`
-		);
-		logger.log(
-			formatConfigSnippet(
-				{
-					hyperdrive: [{ binding: "HYPERDRIVE", id: database.id }],
-				},
-				config.configPath
-			)
+
+		await updateConfigFile(
+			(name) => ({
+				hyperdrive: [
+					{
+						binding: getValidBindingName(name ?? "HYPERDRIVE", "HYPERDRIVE"),
+						id: database.id,
+					},
+				],
+			}),
+			config.configPath,
+			args.env
 		);
 	},
 });

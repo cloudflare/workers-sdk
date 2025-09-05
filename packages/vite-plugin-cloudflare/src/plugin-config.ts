@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import * as vite from "vite";
 import { getWorkerConfigs } from "./deploy-config";
+import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import {
 	getValidatedWranglerConfigPath,
 	getWorkerConfig,
@@ -77,6 +78,7 @@ export interface WorkersResolvedConfig extends BaseResolvedConfig {
 	cloudflareEnv: string | undefined;
 	workers: Record<string, WorkerConfig>;
 	entryWorkerEnvironmentName: string;
+	nodeJsCompatMap: Map<string, NodeJsCompat>;
 	staticRouting: StaticRouting | undefined;
 	rawConfigs: {
 		entryWorker: WorkerWithServerLogicResolvedConfig;
@@ -209,6 +211,15 @@ export function resolvePluginConfig(
 		workers[workerEnvironmentName] = workerConfig;
 	}
 
+	const nodeJsCompatMap = new Map(
+		Object.entries(workers)
+			.filter(([_, workerConfig]) => hasNodeJsCompat(workerConfig))
+			.map(([environmentName, workerConfig]) => [
+				environmentName,
+				new NodeJsCompat(workerConfig),
+			])
+	);
+
 	return {
 		...shared,
 		type: "workers",
@@ -216,6 +227,7 @@ export function resolvePluginConfig(
 		configPaths,
 		workers,
 		entryWorkerEnvironmentName,
+		nodeJsCompatMap,
 		staticRouting,
 		rawConfigs: {
 			entryWorker: entryWorkerResolvedConfig,

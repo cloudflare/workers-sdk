@@ -27,7 +27,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
 			"Creating bucket 'tmp-e2e-r2-00000000-0000-0000-0000-000000000000'...
 			✅ Created bucket 'tmp-e2e-r2-00000000-0000-0000-0000-000000000000' with default storage class of Standard.
-			Configure your Worker to write objects to this bucket:
+			To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 			{
 			  "r2_buckets": [
 			    {

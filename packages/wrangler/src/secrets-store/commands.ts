@@ -77,7 +77,7 @@ export const secretsStoreStoreCreateCommand = createCommand({
 		let store: { id: string };
 		logger.log(`🔐 Creating store... (Name: ${args.name})`);
 		if (args.remote) {
-			const accountId = config.account_id || (await getAccountId(config));
+			const accountId = await getAccountId(config);
 			store = await createStore(config, accountId, { name: args.name });
 		} else {
 			throw new UserError(
@@ -112,7 +112,7 @@ export const secretsStoreStoreDeleteCommand = createCommand({
 	async handler(args, { config }) {
 		logger.log(`🔐 Deleting store... (Name: ${args.storeId})`);
 		if (args.remote) {
-			const accountId = config.account_id || (await getAccountId(config));
+			const accountId = await getAccountId(config);
 			await deleteStore(config, accountId, args.storeId);
 		} else {
 			throw new UserError(
@@ -158,7 +158,7 @@ export const secretsStoreStoreListCommand = createCommand({
 
 		let stores: Store[];
 		if (args.remote) {
-			const accountId = config.account_id || (await getAccountId(config));
+			const accountId = await getAccountId(config);
 			stores = await listStores(config, accountId, urlParams);
 		} else {
 			throw new UserError(
@@ -235,7 +235,7 @@ export const secretsStoreSecretListCommand = createCommand({
 
 		let secrets: Secret[];
 		if (args.remote) {
-			const accountId = config.account_id || (await getAccountId(config));
+			const accountId = await getAccountId(config);
 			secrets = await listSecrets(config, accountId, args.storeId, urlParams);
 		} else {
 			secrets = (
@@ -313,7 +313,7 @@ export const secretsStoreSecretGetCommand = createCommand({
 
 		let secret: Secret;
 		if (args.remote) {
-			const accountId = config.account_id || (await getAccountId(config));
+			const accountId = await getAccountId(config);
 			secret = await getSecret(config, accountId, args.storeId, args.secretId);
 		} else {
 			const name = await usingLocalSecretsStoreSecretAPI(
@@ -421,7 +421,7 @@ export const secretsStoreSecretCreateCommand = createCommand({
 
 		let secrets: Secret[];
 		if (args.remote) {
-			const accountId = config.account_id || (await getAccountId(config));
+			const accountId = await getAccountId(config);
 			secrets = await createSecret(config, accountId, args.storeId, {
 				name: args.name,
 				value: secretValue,
@@ -548,7 +548,7 @@ export const secretsStoreSecretUpdateCommand = createCommand({
 
 		let secret: Secret;
 		if (args.remote) {
-			const accountId = config.account_id || (await getAccountId(config));
+			const accountId = await getAccountId(config);
 			secret = await updateSecret(
 				config,
 				accountId,
@@ -632,7 +632,7 @@ export const secretsStoreSecretDeleteCommand = createCommand({
 		logger.log(`🔐 Deleting secret... (ID: ${args.secretId})`);
 
 		if (args.remote) {
-			const accountId = config.account_id || (await getAccountId(config));
+			const accountId = await getAccountId(config);
 			await deleteSecret(config, accountId, args.storeId, args.secretId);
 		} else {
 			await usingLocalSecretsStoreSecretAPI(
@@ -698,7 +698,7 @@ export const secretsStoreSecretDuplicateCommand = createCommand({
 
 		let duplicatedSecret: Secret;
 		if (args.remote) {
-			const accountId = config.account_id || (await getAccountId(config));
+			const accountId = await getAccountId(config);
 			duplicatedSecret = await duplicateSecret(
 				config,
 				accountId,

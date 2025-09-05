@@ -1,11 +1,12 @@
 import dedent from "ts-dedent";
 import { fetchResult } from "../cfetch";
-import { formatConfigSnippet } from "../config";
+import { updateConfigFile } from "../config";
 import { createCommand } from "../core/create-command";
 import { getD1ExtraLocationChoices } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { getValidBindingName } from "../utils/getValidBindingName";
 import { LOCATION_CHOICES } from "./constants";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { DatabaseCreationResult } from "./types";
@@ -71,7 +72,7 @@ export const d1CreateCommand = createCommand({
 		},
 	},
 	positionalArgs: ["name"],
-	async handler({ name, location }, { config }) {
+	async handler({ name, location, env }, { config }) {
 		const accountId = await requireAuth(config);
 
 		const db = await createD1Database(config, accountId, name, location);
@@ -86,15 +87,19 @@ export const d1CreateCommand = createCommand({
 			}`
 		);
 		logger.log("Created your new D1 database.\n");
-		logger.log(
-			formatConfigSnippet(
-				{
-					d1_databases: [
-						{ binding: "DB", database_name: db.name, database_id: db.uuid },
-					],
-				},
-				config.configPath
-			)
+
+		await updateConfigFile(
+			(bindingName) => ({
+				d1_databases: [
+					{
+						binding: getValidBindingName(bindingName ?? db.name, "DB"),
+						database_name: db.name,
+						database_id: db.uuid,
+					},
+				],
+			}),
+			config.configPath,
+			env
 		);
 	},
 });
