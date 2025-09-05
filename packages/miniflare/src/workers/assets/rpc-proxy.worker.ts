@@ -1,5 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
-import type RouterWorker from "@cloudflare/workers-shared/asset-worker";
+import type RouterWorker from "../../../../workers-shared/asset-worker";
 
 interface Env {
 	ROUTER_WORKER: Service<RouterWorker>;

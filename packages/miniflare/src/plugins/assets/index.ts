@@ -1,6 +1,12 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path, { join } from "node:path";
+import prettyBytes from "pretty-bytes";
+import SCRIPT_ASSETS from "worker:assets/assets";
+import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
+import SCRIPT_ROUTER from "worker:assets/router";
+import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
+import { z } from "zod";
 import {
 	CONTENT_HASH_OFFSET,
 	ENTRY_SIZE,
@@ -12,32 +18,26 @@ import {
 	normalizeFilePath,
 	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
-} from "@cloudflare/workers-shared";
+} from "../../../../workers-shared";
 import {
 	constructHeaders,
 	constructRedirects,
-} from "@cloudflare/workers-shared/utils/configuration/constructConfiguration";
-import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
-import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
+} from "../../../../workers-shared/utils/configuration/constructConfiguration";
+import { parseHeaders } from "../../../../workers-shared/utils/configuration/parseHeaders";
+import { parseRedirects } from "../../../../workers-shared/utils/configuration/parseRedirects";
 import {
 	HEADERS_FILENAME,
 	REDIRECTS_FILENAME,
-} from "@cloudflare/workers-shared/utils/constants";
+} from "../../../../workers-shared/utils/constants";
 import {
 	createAssetsIgnoreFunction,
 	maybeGetFile,
-} from "@cloudflare/workers-shared/utils/helpers";
+} from "../../../../workers-shared/utils/helpers";
 import {
 	AssetConfig,
 	HeadersSchema,
 	RedirectsSchema,
-} from "@cloudflare/workers-shared/utils/types";
-import prettyBytes from "pretty-bytes";
-import SCRIPT_ASSETS from "worker:assets/assets";
-import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
-import SCRIPT_ROUTER from "worker:assets/router";
-import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
-import { z } from "zod";
+} from "../../../../workers-shared/utils/types";
 import { Service } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import { getUserServiceName } from "../core";

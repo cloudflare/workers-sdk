@@ -2,19 +2,16 @@ import assert from "node:assert";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
-import { parseHeaders, parseRedirects } from "@cloudflare/workers-shared";
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { fetch, Request, Response } from "miniflare";
 import { Dispatcher, getGlobalDispatcher } from "undici";
+import { parseHeaders, parseRedirects } from "../../../workers-shared";
 import { logger } from "../logger";
 import { hashFile } from "../pages/hash";
+import type { ParsedHeaders, ParsedRedirects } from "../../../workers-shared";
 import type { Logger } from "../logger";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
-import type {
-	ParsedHeaders,
-	ParsedRedirects,
-} from "@cloudflare/workers-shared";
 import type { Request as WorkersRequest } from "@cloudflare/workers-types/experimental";
 import type { RequestInit } from "miniflare";
 import type { IncomingHttpHeaders } from "undici/types/header";

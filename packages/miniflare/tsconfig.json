@@ -16,7 +16,6 @@
 		"declarationMap": true,
 		"noEmit": false,
 		"emitDeclarationOnly": true,
-		"rootDir": ".",
 		"checkJs": true,
 		"allowJs": true,
 		"skipLibCheck": true,
@@ -27,5 +26,10 @@
 		}
 	},
 	"include": ["src/**/*.ts", "test/**/*.ts", "types"],
-	"exclude": ["src/workers/**/*.ts", "src/workers/node.d.ts", "test/fixtures"]
+	"exclude": [
+		"src/workers/**/*.ts",
+		"src/workers/node.d.ts",
+		"test/fixtures",
+		"../workers-shared/**/*"
+	]
 }

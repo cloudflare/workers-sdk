@@ -1,8 +1,8 @@
+import { z } from "zod";
 import {
 	AssetConfigSchema,
 	RouterConfigSchema,
-} from "@cloudflare/workers-shared";
-import { z } from "zod";
+} from "../../../../workers-shared";
 import { PathSchema } from "../../shared";
 
 export const AssetsOptionsSchema = z.object({

@@ -5,9 +5,9 @@ import {
 	isPreservationCacheResponseExpiring,
 } from "../../asset-server/handler";
 import { createMetadataObject } from "../../metadata-generator/createMetadataObject";
+import type { RedirectRule } from "../../../workers-shared/utils/configuration/types";
 import type { HandlerContext } from "../../asset-server/handler";
 import type { Metadata } from "../../asset-server/metadata";
-import type { RedirectRule } from "@cloudflare/workers-shared/utils/configuration/types";
 
 describe("asset-server handler", () => {
 	test("Returns appropriate status codes", async () => {
