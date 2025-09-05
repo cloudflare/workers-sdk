@@ -1,0 +1,21 @@
+{
+	"$schema": "https://unpkg.com/@changesets/config@1.6.2/schema.json",
+	"changelog": [
+		"@changesets/changelog-github",
+		{ "repo": "cloudflare/workers-sdk" }
+	],
+	"commit": false,
+	"linked": [],
+	"access": "public",
+	"baseBranch": "main",
+	"updateInternalDependencies": "patch",
+	"bumpVersionsWithWorkspaceProtocolOnly": true,
+	"___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
+		"onlyUpdatePeerDependentsWhenOutOfRange": true
+	},
+	"ignore": [],
+	"privatePackages": {
+		"tag": true,
+		"version": true
+	}
+}

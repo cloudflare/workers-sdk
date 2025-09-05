@@ -141,4 +141,104 @@ describe("getEntry()", () => {
 			moduleRoot: "/tmp/dir/other-worker/src",
 		});
 	});
+
+	describe("error messages with asset directory suggestions", () => {
+		it("should suggest single detected asset directory", async () => {
+			await seed({
+				"dist/index.html": "<html></html>",
+				"dist/style.css": "body { color: red; }",
+			});
+
+			await expect(
+				getEntry({}, defaultWranglerConfig, "deploy")
+			).rejects.toThrow(
+				/We noticed that there is a directory called `\.\/dist` in your project \(common build output directory\)\. If you are trying to deploy the contents of that directory to Cloudflare, please run:/
+			);
+		});
+
+		it("should suggest multiple detected asset directories", async () => {
+			await seed({
+				"dist/index.html": "<html></html>",
+				"build/app.js": "console.log('hello');",
+				"public/favicon.ico": "fake-ico-content",
+			});
+
+			await expect(
+				getEntry({}, defaultWranglerConfig, "deploy")
+			).rejects.toThrow(
+				/We noticed several directories that might contain static assets:/
+			);
+
+			await expect(
+				getEntry({}, defaultWranglerConfig, "deploy")
+			).rejects.toThrow(
+				/- `\.\/build` \(common build output directory\)/
+			);
+
+			await expect(
+				getEntry({}, defaultWranglerConfig, "deploy")
+			).rejects.toThrow(
+				/- `\.\/dist` \(common build output directory\)/
+			);
+
+			await expect(
+				getEntry({}, defaultWranglerConfig, "deploy")
+			).rejects.toThrow(
+				/- `\.\/public` \(common static assets directory\)/
+			);
+		});
+
+		it("should suggest framework-specific directories", async () => {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "my-astro-project",
+					dependencies: {
+						astro: "^4.0.0",
+					},
+				}),
+				"astro.config.mjs": "export default {};",
+				"dist/index.html": "<html></html>",
+			});
+
+			await expect(
+				getEntry({}, defaultWranglerConfig, "deploy")
+			).rejects.toThrow(
+				/We noticed that there is a directory called `\.\/dist` in your project \(detected astro\.config project\)/
+			);
+		});
+
+		it("should not suggest asset directories when none exist", async () => {
+			await seed({
+				"src/some-file.ts": "export default {};",
+			});
+
+			await expect(
+				getEntry({}, defaultWranglerConfig, "deploy")
+			).rejects.toThrow(
+				/Missing entry-point to Worker script or to assets directory/
+			);
+
+			// Should not contain asset directory suggestions
+			await expect(
+				getEntry({}, defaultWranglerConfig, "deploy")
+			).rejects.not.toThrow(/We noticed/);
+		});
+
+		it("should not suggest empty directories", async () => {
+			await seed({
+				"dist/": "", // Creates empty directory
+			});
+
+			await expect(
+				getEntry({}, defaultWranglerConfig, "deploy")
+			).rejects.toThrow(
+				/Missing entry-point to Worker script or to assets directory/
+			);
+
+			// Should not contain asset directory suggestions
+			await expect(
+				getEntry({}, defaultWranglerConfig, "deploy")
+			).rejects.not.toThrow(/We noticed/);
+		});
+	});
 });
