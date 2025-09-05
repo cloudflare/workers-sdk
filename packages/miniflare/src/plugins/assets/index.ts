@@ -1,6 +1,12 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path, { join } from "node:path";
+import prettyBytes from "pretty-bytes";
+import SCRIPT_ASSETS from "worker:assets/assets";
+import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
+import SCRIPT_ROUTER from "worker:assets/router";
+import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
+import { z } from "zod";
 import {
 	CONTENT_HASH_OFFSET,
 	ENTRY_SIZE,
@@ -12,13 +18,7 @@ import {
 	normalizeFilePath,
 	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
-} from "@cloudflare/workers-shared";
-import prettyBytes from "pretty-bytes";
-import SCRIPT_ASSETS from "worker:assets/assets";
-import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
-import SCRIPT_ROUTER from "worker:assets/router";
-import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
-import { z } from "zod";
+} from "../../../../workers-shared";
 import {
 	constructHeaders,
 	constructRedirects,

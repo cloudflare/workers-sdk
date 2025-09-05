@@ -5,6 +5,7 @@ import { FormData } from "undici";
 import { UserError } from "../errors";
 import { INHERIT_SYMBOL } from "./bindings";
 import { handleUnsafeCapnp } from "./capnp";
+import type { AssetConfig } from "../../../workers-shared";
 import type { Observability } from "../config/environment";
 import type {
 	CfDurableObjectMigrations,
@@ -14,7 +15,6 @@ import type {
 	CfUserLimits,
 	CfWorkerInit,
 } from "./worker.js";
-import type { AssetConfig } from "@cloudflare/workers-shared";
 import type { Json } from "miniflare";
 
 export const moduleTypeMimeType: {

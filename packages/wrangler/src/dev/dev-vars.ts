@@ -1,6 +1,6 @@
 import * as path from "node:path";
-import { maybeGetFile } from "@cloudflare/workers-shared";
 import dotenv from "dotenv";
+import { maybeGetFile } from "../../../workers-shared";
 import { getDefaultEnvFiles, loadDotEnv } from "../config/dot-env";
 import {
 	getCloudflareIncludeProcessEnvFromEnv,
