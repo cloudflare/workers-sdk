@@ -349,6 +349,24 @@ function checkAllStorageOperationsResolved(
 			"\x1b[2m"
 		);
 		lines.push("\x1b[22m" + separator, "");
+
+		if (
+			failedProducts.includes(
+				PLUGIN_PRODUCT_NAMES[WORKFLOWS_PLUGIN_NAME] ?? WORKFLOWS_PLUGIN_NAME
+			)
+		) {
+			console.warn(
+				[
+					"",
+					separator,
+					`Workflows are being created in ${source}.`,
+					"Isolated storage is enabled, requiring all created Workflow instances to be cleaned/disposed at the end of each test.",
+					"Alternatively, if isolated storage is not required and Workflow instance state needs to be preserved across tests, `isolatedStorage` must be set to false in vitest.config.ts.",
+					"See https://developers.cloudflare.com/workers/testing/vitest-integration/test-apis/ for more details.",
+					"",
+				].join("\n")
+			);
+		}
 		console.error(lines.join("\n"));
 		return false;
 	}

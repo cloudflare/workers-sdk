@@ -125,10 +125,6 @@ export const WORKFLOWS_PLUGIN: Plugin<
 								},
 							},
 							{
-								name: "WORKFLOW_NAME",
-								json: JSON.stringify(workflow.name),
-							},
-							{
 								name: "BINDING_NAME",
 								json: JSON.stringify(bindingName),
 							},
