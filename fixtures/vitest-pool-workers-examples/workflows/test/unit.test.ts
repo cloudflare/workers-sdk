@@ -3,20 +3,14 @@ import {
 	introspectWorkflow,
 	introspectWorkflowInstance,
 } from "cloudflare:test";
-import {
-	afterEach,
-	assert,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const INSTANCE_ID = "12345678910";
 const STEP_NAME = "my step";
+const STATUS_COMPLETE = "complete";
+const STATUS_ERRORED = "errored";
 
-describe("Long Workflow instance creation unit tests", () => {
+describe("Long Workflow (single instance)", () => {
 	let instance: Awaited<ReturnType<typeof introspectWorkflowInstance>>;
 
 	beforeEach(async () => {
@@ -27,7 +21,7 @@ describe("Long Workflow instance creation unit tests", () => {
 	});
 
 	afterEach(async () => {
-		// Instance introspectors should be clean to prevent persisted state across tests
+		// instance introspectors should be clean to prevent persisted state across tests
 		await instance.cleanUp();
 	});
 
@@ -36,22 +30,14 @@ describe("Long Workflow instance creation unit tests", () => {
 			await m.disableSleeps();
 		});
 
-		await vi.waitUntil(
-			async () => {
-				const createdInstance = await env.TEST_LONG_WORKFLOW.create({
-					id: INSTANCE_ID,
-				});
+		const createdInstance = await env.TEST_LONG_WORKFLOW.create({
+			id: INSTANCE_ID,
+		});
 
-				await instance.waitForStatus("complete");
-				return (await createdInstance.status()).status === "complete";
-			},
-			{
-				// running under a second confirms that sleeps were disabled
-				timeout: 1000,
-				interval: 1000,
-			}
-		);
-	});
+		await instance.waitForStatus(STATUS_COMPLETE);
+		const instanceStatus = await createdInstance.status();
+		expect(instanceStatus.status).toBe(STATUS_COMPLETE);
+	}, 1000); // running under a second confirms that sleeps were disabled
 
 	it("should disable a set of sleeps and complete", async () => {
 		await instance.modify(async (m) => {
@@ -63,11 +49,13 @@ describe("Long Workflow instance creation unit tests", () => {
 			]);
 		});
 
-		await env.TEST_LONG_WORKFLOW.create({
+		const createdInstance = await env.TEST_LONG_WORKFLOW.create({
 			id: INSTANCE_ID,
 		});
 
-		await instance.waitForStatus("complete");
+		await instance.waitForStatus(STATUS_COMPLETE);
+		const instanceStatus = await createdInstance.status();
+		expect(instanceStatus.status).toBe(STATUS_COMPLETE);
 	});
 
 	it("should be able to mock step result and complete", async () => {
@@ -77,12 +65,16 @@ describe("Long Workflow instance creation unit tests", () => {
 			await m.mockStepResult({ name: STEP_NAME }, mockResult);
 		});
 
-		await env.TEST_LONG_WORKFLOW.create({ id: INSTANCE_ID });
+		const createdInstance = await env.TEST_LONG_WORKFLOW.create({
+			id: INSTANCE_ID,
+		});
 
 		expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
 			mockResult
 		);
-		await instance.waitForStatus("complete");
+		await instance.waitForStatus(STATUS_COMPLETE);
+		const instanceStatus = await createdInstance.status();
+		expect(instanceStatus.status).toBe(STATUS_COMPLETE);
 	});
 
 	it("should not be able to mock the same step result more than one time", async () => {
@@ -103,24 +95,17 @@ describe("Long Workflow instance creation unit tests", () => {
 			await m.mockStepError({ name: STEP_NAME }, new Error("Oops"));
 		});
 
-		await vi.waitUntil(
-			async () => {
-				const createdInstance = await env.TEST_LONG_WORKFLOW.create({
-					id: INSTANCE_ID,
-				});
+		const createdInstance = await env.TEST_LONG_WORKFLOW.create({
+			id: INSTANCE_ID,
+		});
 
-				await expect(
-					instance.waitForStepResult({ name: STEP_NAME })
-				).rejects.toThrow();
-				await instance.waitForStatus("errored");
-				return (await createdInstance.status()).status === "errored";
-			},
-			{
-				timeout: 1000,
-				interval: 1000,
-			}
-		);
-	});
+		await expect(
+			instance.waitForStepResult({ name: STEP_NAME })
+		).rejects.toThrow();
+		await instance.waitForStatus(STATUS_ERRORED);
+		const instanceStatus = await createdInstance.status();
+		expect(instanceStatus.status).toBe(STATUS_ERRORED);
+	}, 1000);
 
 	it("should be able to mock step error in the first 2 retries, then mock step result and complete", async () => {
 		const mockResult = { result: "mocked" };
@@ -130,24 +115,17 @@ describe("Long Workflow instance creation unit tests", () => {
 			await m.mockStepResult({ name: STEP_NAME }, mockResult);
 		});
 
-		await vi.waitUntil(
-			async () => {
-				const createdInstance = await env.TEST_LONG_WORKFLOW.create({
-					id: INSTANCE_ID,
-				});
+		const createdInstance = await env.TEST_LONG_WORKFLOW.create({
+			id: INSTANCE_ID,
+		});
 
-				expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
-					mockResult
-				);
-				await instance.waitForStatus("complete");
-				return (await createdInstance.status()).status === "complete";
-			},
-			{
-				timeout: 1000,
-				interval: 1000,
-			}
+		expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+			mockResult
 		);
-	});
+		await instance.waitForStatus(STATUS_COMPLETE);
+		const instanceStatus = await createdInstance.status();
+		expect(instanceStatus.status).toBe(STATUS_COMPLETE);
+	}, 1000);
 
 	it("should be able to mock step timeout in every retry and error", async () => {
 		await instance.modify(async (m) => {
@@ -155,24 +133,17 @@ describe("Long Workflow instance creation unit tests", () => {
 			await m.forceStepTimeout({ name: STEP_NAME });
 		});
 
-		await vi.waitUntil(
-			async () => {
-				const createdInstance = await env.TEST_LONG_WORKFLOW.create({
-					id: INSTANCE_ID,
-				});
+		const createdInstance = await env.TEST_LONG_WORKFLOW.create({
+			id: INSTANCE_ID,
+		});
 
-				await expect(
-					instance.waitForStepResult({ name: STEP_NAME })
-				).rejects.toThrow();
-				await instance.waitForStatus("errored");
-				return (await createdInstance.status()).status === "errored";
-			},
-			{
-				timeout: 1000,
-				interval: 1000,
-			}
-		);
-	});
+		await expect(
+			instance.waitForStepResult({ name: STEP_NAME })
+		).rejects.toThrow();
+		await instance.waitForStatus(STATUS_ERRORED);
+		const instanceStatus = await createdInstance.status();
+		expect(instanceStatus.status).toBe(STATUS_ERRORED);
+	}, 1000);
 
 	it("should be able to mock step timeout in first retry, then mock step result and complete", async () => {
 		const mockResult = { result: "mocked result" };
@@ -182,24 +153,17 @@ describe("Long Workflow instance creation unit tests", () => {
 			await m.mockStepResult({ name: STEP_NAME }, mockResult);
 		});
 
-		await vi.waitUntil(
-			async () => {
-				const createdInstance = await env.TEST_LONG_WORKFLOW.create({
-					id: INSTANCE_ID,
-				});
+		const createdInstance = await env.TEST_LONG_WORKFLOW.create({
+			id: INSTANCE_ID,
+		});
 
-				expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
-					mockResult
-				);
-				await instance.waitForStatus("complete");
-				return (await createdInstance.status()).status === "complete";
-			},
-			{
-				timeout: 1000,
-				interval: 1000,
-			}
+		expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+			mockResult
 		);
-	});
+		await instance.waitForStatus(STATUS_COMPLETE);
+		const instanceStatus = await createdInstance.status();
+		expect(instanceStatus.status).toBe(STATUS_COMPLETE);
+	}, 1000);
 
 	it("should be able to mock step timeout in first retry, mock error in the second retry and then mock step result and complete", async () => {
 		const mockResult = { result: "mocked result" };
@@ -210,24 +174,17 @@ describe("Long Workflow instance creation unit tests", () => {
 			await m.mockStepResult({ name: STEP_NAME }, mockResult);
 		});
 
-		await vi.waitUntil(
-			async () => {
-				const createdInstance = await env.TEST_LONG_WORKFLOW.create({
-					id: INSTANCE_ID,
-				});
+		const createdInstance = await env.TEST_LONG_WORKFLOW.create({
+			id: INSTANCE_ID,
+		});
 
-				expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
-					mockResult
-				);
-				await instance.waitForStatus("complete");
-				return (await createdInstance.status()).status === "complete";
-			},
-			{
-				timeout: 1000,
-				interval: 1000,
-			}
+		expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+			mockResult
 		);
-	});
+		await instance.waitForStatus(STATUS_COMPLETE);
+		const instanceStatus = await createdInstance.status();
+		expect(instanceStatus.status).toBe(STATUS_COMPLETE);
+	}, 1000);
 
 	it("should be able to mock an event and complete", async () => {
 		await instance.modify(async (m) => {
@@ -235,23 +192,15 @@ describe("Long Workflow instance creation unit tests", () => {
 			await m.mockEvent({ type: "event", payload: { data: "mocked" } });
 		});
 
-		await vi.waitUntil(
-			async () => {
-				const createdInstance = await env.TEST_LONG_WORKFLOW.create({
-					id: INSTANCE_ID,
-					params: "run event",
-				});
+		const createdInstance = await env.TEST_LONG_WORKFLOW.create({
+			id: INSTANCE_ID,
+			params: "run event",
+		});
 
-				await instance.waitForStatus("complete");
-				return (await createdInstance.status()).status === "complete";
-			},
-			{
-				// running under a second confirms that the event was moked (and sleeps were disabled)
-				timeout: 1000,
-				interval: 1000,
-			}
-		);
-	});
+		await instance.waitForStatus(STATUS_COMPLETE);
+		const instanceStatus = await createdInstance.status();
+		expect(instanceStatus.status).toBe(STATUS_COMPLETE);
+	}, 1000);
 
 	it("should be able to force an event to time out and error", async () => {
 		await instance.modify(async (m) => {
@@ -259,23 +208,15 @@ describe("Long Workflow instance creation unit tests", () => {
 			await m.forceEventTimeout({ name: "my event" });
 		});
 
-		await vi.waitUntil(
-			async () => {
-				const createdInstance = await env.TEST_LONG_WORKFLOW.create({
-					id: INSTANCE_ID,
-					params: "run event",
-				});
+		const createdInstance = await env.TEST_LONG_WORKFLOW.create({
+			id: INSTANCE_ID,
+			params: "run event",
+		});
 
-				await instance.waitForStatus("errored");
-				return (await createdInstance.status()).status === "errored";
-			},
-			{
-				// running under a second confirms that the event was forced to time out (and sleeps were disabled)
-				timeout: 1000,
-				interval: 1000,
-			}
-		);
-	});
+		await instance.waitForStatus(STATUS_ERRORED);
+		const instanceStatus = await createdInstance.status();
+		expect(instanceStatus.status).toBe(STATUS_ERRORED);
+	}, 1000);
 
 	it("should not be able to force an event to time out and complete", async () => {
 		await instance.modify(async (m) => {
@@ -283,35 +224,42 @@ describe("Long Workflow instance creation unit tests", () => {
 			await m.forceEventTimeout({ name: "my event" });
 		});
 
-		await env.TEST_LONG_WORKFLOW.create({
+		const createdInstance = await env.TEST_LONG_WORKFLOW.create({
 			id: INSTANCE_ID,
 			params: "run event",
 		});
 
 		await expect(
-			instance.waitForStatus("complete")
+			instance.waitForStatus(STATUS_COMPLETE)
 		).rejects.toMatchInlineSnapshot(
 			`[Error: [WorkflowIntrospector] The Wokflow instance 12345678910 has reached status 'errored'. This is a finite status that prevents it from ever reaching the expected status of 'complete'.]`
 		);
+
+		const instanceStatus = await createdInstance.status();
+		expect(instanceStatus.status).toBe(STATUS_ERRORED);
 	});
 });
 
-let introspector: Awaited<ReturnType<typeof introspectWorkflow>>;
-let instances: Awaited<ReturnType<typeof introspectWorkflowInstance>>[];
+async function expectAllStatuses(
+	handles: Array<{ status: () => Promise<{ status: string }> }>,
+	expected: string
+) {
+	const statuses = await Promise.all(handles.map((h) => h.status()));
+	expect(statuses.every((s) => s.status === expected)).toBe(true);
+}
 
-describe("Long Workflow BATCH creation unit tests", () => {
+describe("Long Workflow (batch)", () => {
+	let introspector: Awaited<ReturnType<typeof introspectWorkflow>>;
+	let instances: Awaited<ReturnType<typeof introspectWorkflowInstance>>[];
+
 	beforeEach(async () => {
 		introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 	});
 
 	afterEach(async () => {
-		// Instance introspectors should be clean to prevent persisted state across tests
-		for (const instance of instances) {
-			instance.cleanUp();
-		}
-
 		// Workflow introspector should be cleaned at the end of/after each test
-		introspector.cleanUp();
+		// also cleans up instance introspectors to avoid persisted state across tests
+		await introspector.cleanUp();
 	});
 
 	it("should disable all sleeps and complete instantly", async () => {
@@ -319,37 +267,24 @@ describe("Long Workflow BATCH creation unit tests", () => {
 			await m.disableSleeps();
 		});
 
-		await vi.waitUntil(
-			async () => {
-				// batch with 3 instances, one with provided id
-				const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
-					{},
-					{},
-					{
-						id: INSTANCE_ID,
-					},
-				]);
-
-				instances = introspector.get();
-				assert(instances.length === 3);
-
-				for (const instance of instances) {
-					await instance.waitForStatus("complete");
-				}
-
-				return (
-					await Promise.all(
-						createdInstances.map((instance) => instance.status())
-					)
-				).every((s) => s.status === "complete");
-			},
+		// batch with 3 instances, one with provided id
+		const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
+			{},
+			{},
 			{
-				// running under a second confirms that sleeps were disabled
-				timeout: 1000,
-				interval: 1000,
-			}
+				id: INSTANCE_ID,
+			},
+		]);
+		expect(createdInstances.length).toBe(3);
+
+		instances = introspector.get();
+		expect(instances.length).toBe(3);
+
+		await Promise.all(
+			instances.map((instance) => instance.waitForStatus(STATUS_COMPLETE))
 		);
-	});
+		expectAllStatuses(createdInstances, STATUS_COMPLETE);
+	}, 1000); // running under a second confirms that sleeps were disabled
 
 	it("should disable a set of sleeps and complete", async () => {
 		introspector.modifyAll(async (m) => {
@@ -362,20 +297,22 @@ describe("Long Workflow BATCH creation unit tests", () => {
 		});
 
 		// batch with 3 instances, one with provided id
-		await env.TEST_LONG_WORKFLOW.createBatch([
+		const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
 			{},
 			{},
 			{
 				id: INSTANCE_ID,
 			},
 		]);
+		expect(createdInstances.length).toBe(3);
 
 		instances = introspector.get();
-		assert(instances.length === 3);
+		expect(instances.length).toBe(3);
 
-		for (const instance of instances) {
-			await instance.waitForStatus("complete");
-		}
+		await Promise.all(
+			instances.map((instance) => instance.waitForStatus(STATUS_COMPLETE))
+		);
+		expectAllStatuses(createdInstances, STATUS_COMPLETE);
 	});
 
 	it("should be able to mock step result and complete", async () => {
@@ -386,23 +323,25 @@ describe("Long Workflow BATCH creation unit tests", () => {
 		});
 
 		// batch with 3 instances, one with provided id
-		await env.TEST_LONG_WORKFLOW.createBatch([
+		const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
 			{},
 			{},
 			{
 				id: INSTANCE_ID,
 			},
 		]);
+		expect(createdInstances.length).toBe(3);
 
 		instances = introspector.get();
-		assert(instances.length === 3);
+		expect(instances.length).toBe(3);
 
 		for (const instance of instances) {
 			expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
 				mockResult
 			);
-			await instance.waitForStatus("complete");
+			await instance.waitForStatus(STATUS_COMPLETE);
 		}
+		expectAllStatuses(createdInstances, STATUS_COMPLETE);
 	});
 
 	it("should not be able to mock the same step result more than one time", async () => {
@@ -423,39 +362,27 @@ describe("Long Workflow BATCH creation unit tests", () => {
 			await m.mockStepError({ name: STEP_NAME }, new Error("Oops"));
 		});
 
-		await vi.waitUntil(
-			async () => {
-				// batch with 3 instances, one with provided id
-				const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
-					{},
-					{},
-					{
-						id: INSTANCE_ID,
-					},
-				]);
-
-				instances = introspector.get();
-				assert(instances.length === 3);
-
-				for (const instance of instances) {
-					await expect(
-						instance.waitForStepResult({ name: STEP_NAME })
-					).rejects.toThrow();
-					await instance.waitForStatus("errored");
-				}
-
-				return (
-					await Promise.all(
-						createdInstances.map((instance) => instance.status())
-					)
-				).every((s) => s.status === "errored");
-			},
+		// batch with 3 instances, one with provided id
+		const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
+			{},
+			{},
 			{
-				timeout: 1000,
-				interval: 1000,
-			}
-		);
-	});
+				id: INSTANCE_ID,
+			},
+		]);
+		expect(createdInstances.length).toBe(3);
+
+		instances = introspector.get();
+		expect(instances.length).toBe(3);
+
+		for (const instance of instances) {
+			await expect(
+				instance.waitForStepResult({ name: STEP_NAME })
+			).rejects.toThrow();
+			await instance.waitForStatus(STATUS_ERRORED);
+		}
+		expectAllStatuses(createdInstances, STATUS_ERRORED);
+	}, 1000);
 
 	it("should be able to mock step error in the first 2 retries, then mock step result and complete", async () => {
 		const mockResult = { result: "mocked" };
@@ -465,39 +392,27 @@ describe("Long Workflow BATCH creation unit tests", () => {
 			await m.mockStepResult({ name: STEP_NAME }, mockResult);
 		});
 
-		await vi.waitUntil(
-			async () => {
-				// batch with 3 instances, one with provided id
-				const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
-					{},
-					{},
-					{
-						id: INSTANCE_ID,
-					},
-				]);
-
-				instances = introspector.get();
-				assert(instances.length === 3);
-
-				for (const instance of instances) {
-					expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
-						mockResult
-					);
-					await instance.waitForStatus("complete");
-				}
-
-				return (
-					await Promise.all(
-						createdInstances.map((instance) => instance.status())
-					)
-				).every((s) => s.status === "complete");
-			},
+		// batch with 3 instances, one with provided id
+		const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
+			{},
+			{},
 			{
-				timeout: 1000,
-				interval: 1000,
-			}
-		);
-	});
+				id: INSTANCE_ID,
+			},
+		]);
+		expect(createdInstances.length).toBe(3);
+
+		instances = introspector.get();
+		expect(instances.length).toBe(3);
+
+		for (const instance of instances) {
+			expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+				mockResult
+			);
+			await instance.waitForStatus(STATUS_COMPLETE);
+		}
+		expectAllStatuses(createdInstances, STATUS_COMPLETE);
+	}, 1000);
 
 	it("should be able to mock step timeout in every retry and error", async () => {
 		introspector.modifyAll(async (m) => {
@@ -505,39 +420,27 @@ describe("Long Workflow BATCH creation unit tests", () => {
 			await m.forceStepTimeout({ name: STEP_NAME });
 		});
 
-		await vi.waitUntil(
-			async () => {
-				// batch with 3 instances, one with provided id
-				const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
-					{},
-					{},
-					{
-						id: INSTANCE_ID,
-					},
-				]);
-
-				instances = introspector.get();
-				assert(instances.length === 3);
-
-				for (const instance of instances) {
-					await expect(
-						instance.waitForStepResult({ name: STEP_NAME })
-					).rejects.toThrow();
-					await instance.waitForStatus("errored");
-				}
-
-				return (
-					await Promise.all(
-						createdInstances.map((instance) => instance.status())
-					)
-				).every((s) => s.status === "errored");
-			},
+		// batch with 3 instances, one with provided id
+		const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
+			{},
+			{},
 			{
-				timeout: 1000,
-				interval: 1000,
-			}
-		);
-	});
+				id: INSTANCE_ID,
+			},
+		]);
+		expect(createdInstances.length).toBe(3);
+
+		instances = introspector.get();
+		expect(instances.length).toBe(3);
+
+		for (const instance of instances) {
+			await expect(
+				instance.waitForStepResult({ name: STEP_NAME })
+			).rejects.toThrow();
+			await instance.waitForStatus(STATUS_ERRORED);
+		}
+		expectAllStatuses(createdInstances, STATUS_ERRORED);
+	}, 1000);
 
 	it("should be able to mock step timeout in first retry, then mock step result and complete", async () => {
 		const mockResult = { result: "mocked result" };
@@ -547,39 +450,27 @@ describe("Long Workflow BATCH creation unit tests", () => {
 			await m.mockStepResult({ name: STEP_NAME }, mockResult);
 		});
 
-		await vi.waitUntil(
-			async () => {
-				// batch with 3 instances, one with provided id
-				const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
-					{},
-					{},
-					{
-						id: INSTANCE_ID,
-					},
-				]);
-
-				instances = introspector.get();
-				assert(instances.length === 3);
-
-				for (const instance of instances) {
-					expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
-						mockResult
-					);
-					await instance.waitForStatus("complete");
-				}
-
-				return (
-					await Promise.all(
-						createdInstances.map((instance) => instance.status())
-					)
-				).every((s) => s.status === "complete");
-			},
+		// batch with 3 instances, one with provided id
+		const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
+			{},
+			{},
 			{
-				timeout: 1000,
-				interval: 1000,
-			}
-		);
-	});
+				id: INSTANCE_ID,
+			},
+		]);
+		expect(createdInstances.length).toBe(3);
+
+		instances = introspector.get();
+		expect(instances.length).toBe(3);
+
+		for (const instance of instances) {
+			expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+				mockResult
+			);
+			await instance.waitForStatus(STATUS_COMPLETE);
+		}
+		expectAllStatuses(createdInstances, STATUS_COMPLETE);
+	}, 1000);
 
 	it("should be able to mock step timeout in first retry, mock error in the second retry and then mock step result and complete", async () => {
 		const mockResult = { result: "mocked result" };
@@ -590,39 +481,27 @@ describe("Long Workflow BATCH creation unit tests", () => {
 			await m.mockStepResult({ name: STEP_NAME }, mockResult);
 		});
 
-		await vi.waitUntil(
-			async () => {
-				// batch with 3 instances, one with provided id
-				const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
-					{},
-					{},
-					{
-						id: INSTANCE_ID,
-					},
-				]);
-
-				instances = introspector.get();
-				assert(instances.length === 3);
-
-				for (const instance of instances) {
-					expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
-						mockResult
-					);
-					await instance.waitForStatus("complete");
-				}
-
-				return (
-					await Promise.all(
-						createdInstances.map((instance) => instance.status())
-					)
-				).every((s) => s.status === "complete");
-			},
+		// batch with 3 instances, one with provided id
+		const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
+			{},
+			{},
 			{
-				timeout: 1000,
-				interval: 1000,
-			}
-		);
-	});
+				id: INSTANCE_ID,
+			},
+		]);
+		expect(createdInstances.length).toBe(3);
+
+		instances = introspector.get();
+		expect(instances.length).toBe(3);
+
+		for (const instance of instances) {
+			expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+				mockResult
+			);
+			await instance.waitForStatus(STATUS_COMPLETE);
+		}
+		expectAllStatuses(createdInstances, STATUS_COMPLETE);
+	}, 1000);
 
 	it("should be able to mock an event and complete", async () => {
 		introspector.modifyAll(async (m) => {
@@ -630,38 +509,25 @@ describe("Long Workflow BATCH creation unit tests", () => {
 			await m.mockEvent({ type: "event", payload: { data: "mocked" } });
 		});
 
-		await vi.waitUntil(
-			async () => {
-				// batch with 3 instances, one with provided id
-				const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
-					{ params: "run event" },
-					{ params: "run event" },
-					{
-						id: INSTANCE_ID,
-						params: "run event",
-					},
-				]);
-
-				instances = introspector.get();
-				assert(instances.length === 3);
-
-				for (const instance of instances) {
-					await instance.waitForStatus("complete");
-				}
-
-				return (
-					await Promise.all(
-						createdInstances.map((instance) => instance.status())
-					)
-				).every((s) => s.status === "complete");
-			},
+		// batch with 3 instances, one with provided id
+		const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
+			{ params: "run event" },
+			{ params: "run event" },
 			{
-				// running under a second confirms that the event was moked (and sleeps were disabled)
-				timeout: 1000,
-				interval: 1000,
-			}
+				id: INSTANCE_ID,
+				params: "run event",
+			},
+		]);
+		expect(createdInstances.length).toBe(3);
+
+		instances = introspector.get();
+		expect(instances.length).toBe(3);
+
+		await Promise.all(
+			instances.map((instance) => instance.waitForStatus(STATUS_COMPLETE))
 		);
-	});
+		expectAllStatuses(createdInstances, STATUS_COMPLETE);
+	}, 1000); // running under a second confirms that the event was moked (and sleeps were disabled)
 
 	it("should be able to force an event to time out and error", async () => {
 		introspector.modifyAll(async (m) => {
@@ -669,38 +535,25 @@ describe("Long Workflow BATCH creation unit tests", () => {
 			await m.forceEventTimeout({ name: "my event" });
 		});
 
-		await vi.waitUntil(
-			async () => {
-				// batch with 3 instances, one with provided id
-				const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
-					{ params: "run event" },
-					{ params: "run event" },
-					{
-						id: INSTANCE_ID,
-						params: "run event",
-					},
-				]);
-
-				instances = introspector.get();
-				assert(instances.length === 3);
-
-				for (const instance of instances) {
-					await instance.waitForStatus("errored");
-				}
-
-				return (
-					await Promise.all(
-						createdInstances.map((instance) => instance.status())
-					)
-				).every((s) => s.status === "errored");
-			},
+		// batch with 3 instances, one with provided id
+		const createdInstances = await env.TEST_LONG_WORKFLOW.createBatch([
+			{ params: "run event" },
+			{ params: "run event" },
 			{
-				// running under a second confirms that the event was forced to time out (and sleeps were disabled)
-				timeout: 1000,
-				interval: 1000,
-			}
+				id: INSTANCE_ID,
+				params: "run event",
+			},
+		]);
+		expect(createdInstances.length).toBe(3);
+
+		instances = introspector.get();
+		expect(instances.length).toBe(3);
+
+		await Promise.all(
+			instances.map((instance) => instance.waitForStatus(STATUS_ERRORED))
 		);
-	});
+		expectAllStatuses(createdInstances, STATUS_ERRORED);
+	}, 1000); // running under a second confirms that the event was forced to time out (and sleeps were disabled)
 
 	it("should not be able to force an event to time out and complete", async () => {
 		introspector.modifyAll(async (m) => {
@@ -715,16 +568,17 @@ describe("Long Workflow BATCH creation unit tests", () => {
 				params: "run event",
 			},
 		]);
+		expect(createdInstances.length).toBe(1);
 
 		instances = introspector.get();
-		assert(instances.length === 1);
+		expect(instances.length).toBe(1);
 
-		for (const instance of instances) {
-			await expect(
-				instance.waitForStatus("complete")
-			).rejects.toMatchInlineSnapshot(
-				`[Error: [WorkflowIntrospector] The Wokflow instance 12345678910 has reached status 'errored'. This is a finite status that prevents it from ever reaching the expected status of 'complete'.]`
-			);
-		}
+		await expect(
+			instances[0].waitForStatus(STATUS_COMPLETE)
+		).rejects.toMatchInlineSnapshot(
+			`[Error: [WorkflowIntrospector] The Wokflow instance 12345678910 has reached status 'errored'. This is a finite status that prevents it from ever reaching the expected status of 'complete'.]`
+		);
+
+		expect((await createdInstances[0].status()).status).toBe(STATUS_ERRORED);
 	});
 });
