@@ -1115,6 +1115,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// deploy triggers
 	const targets = await triggersDeploy({
 		...props,
+		firstDeploy: !workerExists,
 		routes: allDeploymentRoutes,
 	});
 
