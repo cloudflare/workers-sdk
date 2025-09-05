@@ -48,6 +48,11 @@ export const triggersDeployCommand = createCommand({
 			describe: "Use legacy environments",
 			hidden: true,
 		},
+		"force-subdomain-deploy": {
+			type: "boolean",
+			describe:
+				"Force deployment of subdomain triggers, even if the they are in sync.",
+		},
 	},
 	behaviour: {
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
@@ -74,6 +79,7 @@ export const triggersDeployCommand = createCommand({
 			legacyEnv: isLegacyEnv(config),
 			dryRun: args.dryRun,
 			assetsOptions,
+			forceSubdomainDeploy: args.forceSubdomainDeploy,
 		});
 	},
 });

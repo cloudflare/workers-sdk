@@ -30,6 +30,7 @@ type Props = {
 	legacyEnv: boolean | undefined;
 	dryRun: boolean | undefined;
 	assetsOptions: AssetsOptions | undefined;
+	forceSubdomainDeploy?: boolean;
 };
 
 export default async function triggersDeploy(
@@ -90,7 +91,8 @@ export default async function triggersDeploy(
 		envName,
 		workerUrl,
 		routes,
-		deployments
+		deployments,
+		props.forceSubdomainDeploy ?? false
 	);
 
 	if (!wantWorkersDev && workersDevInSync && routes.length !== 0) {
@@ -315,7 +317,8 @@ async function subdomainDeploy(
 	envName: string,
 	workerUrl: string,
 	routes: Route[],
-	deployments: Array<Promise<string[]>>
+	deployments: Array<Promise<string[]>>,
+	forceSubdomainDeploy: boolean
 ) {
 	const { config } = props;
 
@@ -375,7 +378,7 @@ async function subdomainDeploy(
 
 	// Update subdomain enablement status if needed.
 
-	if (!allInSync) {
+	if (!allInSync || forceSubdomainDeploy) {
 		await fetchResult(config, `${workerUrl}/subdomain`, {
 			method: "POST",
 			body: JSON.stringify({
