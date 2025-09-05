@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { ModuleRunner, ssrModuleExportsKey } from "vite/module-runner";
-import { INIT_PATH, UNKNOWN_HOST } from "../shared";
+import { INIT_PATH, UNKNOWN_HOST, VIRTUAL_WORKER_ENTRY } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
 import type {
@@ -187,7 +187,7 @@ async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 					Object.seal(context[ssrModuleExportsKey]);
 				} catch (error) {
 					if (error instanceof Error) {
-						error.message = `Error running module "${module.id}".\n${error.message}.`;
+						error.message = `Error running module "${module.url}".\n${error.message}.`;
 					}
 
 					throw error;
@@ -229,7 +229,7 @@ export async function getWorkerEntryExport(
 		throw new Error(`Module runner not initialized`);
 	}
 
-	const module = await moduleRunner.import(workerEntryPath);
+	const module = await moduleRunner.import(VIRTUAL_WORKER_ENTRY);
 	const exportValue =
 		typeof module === "object" &&
 		module !== null &&
