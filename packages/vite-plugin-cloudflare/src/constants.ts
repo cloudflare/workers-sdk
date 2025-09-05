@@ -25,6 +25,11 @@ export const DEFAULT_INSPECTOR_PORT = 9229;
 
 export const DEBUG_PATH = "/__debug";
 
+// virtual modules
+export const virtualPrefix = "virtual:vite-plugin-cloudflare/";
+export const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
+export const VIRTUAL_NODEJS_COMPAT_ENTRY = `${virtualPrefix}nodejs-compat-entry`;
+
 export const kRequestType = Symbol("kRequestType");
 
 declare module "http" {

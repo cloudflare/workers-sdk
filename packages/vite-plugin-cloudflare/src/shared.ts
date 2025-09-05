@@ -1,4 +1,4 @@
-import { ADDITIONAL_MODULE_TYPES } from "./constants";
+import { ADDITIONAL_MODULE_TYPES, virtualPrefix } from "./constants";
 
 export const UNKNOWN_HOST = "http://localhost";
 export const INIT_PATH = "/__vite_plugin_cloudflare_init__";
@@ -12,7 +12,4 @@ export const additionalModuleGlobalRE = new RegExp(
 
 export const WORKER_ENTRY_PATH_HEADER = "__VITE_WORKER_ENTRY_PATH__";
 
-export const VIRTUAL_WORKER_ENTRY =
-	"virtual:vite-plugin-cloudflare/worker-entry";
-
-export const VIRTUAL_USER_ENTRY = "virtual:vite-plugin-cloudflare/user-entry";
+export const VIRTUAL_WORKER_ENTRY = `${virtualPrefix}worker-entry`;

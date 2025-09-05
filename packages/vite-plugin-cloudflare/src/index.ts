@@ -28,6 +28,8 @@ import {
 	DEBUG_PATH,
 	kRequestType,
 	ROUTER_WORKER_NAME,
+	VIRTUAL_NODEJS_COMPAT_ENTRY,
+	VIRTUAL_USER_ENTRY,
 } from "./constants";
 import { getDockerPath, prepareContainerImages } from "./containers";
 import {
@@ -62,7 +64,6 @@ import {
 import {
 	additionalModuleGlobalRE,
 	UNKNOWN_HOST,
-	VIRTUAL_USER_ENTRY,
 	VIRTUAL_WORKER_ENTRY,
 } from "./shared";
 import { cleanUrl, createRequestHandler, getOutputDirectory } from "./utils";
@@ -225,9 +226,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 
 				if (id === `\0${VIRTUAL_WORKER_ENTRY}`) {
+					const entryModule = getNodeJsCompat(this.environment.name)
+						? VIRTUAL_NODEJS_COMPAT_ENTRY
+						: VIRTUAL_USER_ENTRY;
+
 					return `
-export { default } from "${VIRTUAL_USER_ENTRY}";
-export * from "${VIRTUAL_USER_ENTRY}";
+import * as mod from "${entryModule}";
+export * from "${entryModule}";
+export default mod.default ?? {};
 if (import.meta.hot) {
 	import.meta.hot.accept();
 }
@@ -815,6 +821,10 @@ if (import.meta.hot) {
 			// rather than allowing the resolve hook here to alias them to polyfills.
 			enforce: "pre",
 			async resolveId(source, importer, options) {
+				if (source === VIRTUAL_NODEJS_COMPAT_ENTRY) {
+					return `\0${VIRTUAL_NODEJS_COMPAT_ENTRY}`;
+				}
+
 				const nodeJsCompat = getNodeJsCompat(this.environment.name);
 				assertHasNodeJsCompat(nodeJsCompat);
 
@@ -853,24 +863,16 @@ if (import.meta.hot) {
 				const nodeJsCompat = getNodeJsCompat(this.environment.name);
 				assertHasNodeJsCompat(nodeJsCompat);
 
+				if (id === `\0${VIRTUAL_NODEJS_COMPAT_ENTRY}`) {
+					return `
+${nodeJsCompat.injectGlobalCode()}
+import * as mod from "${VIRTUAL_USER_ENTRY}";
+export * from "${VIRTUAL_USER_ENTRY}";
+export default mod.default ?? {};
+					`;
+				}
+
 				return nodeJsCompat.getGlobalVirtualModule(id);
-			},
-			async transform(code, id) {
-				// Inject the Node.js compat globals into the entry module for Node.js compat environments.
-				const workerConfig = getWorkerConfig(this.environment.name);
-
-				if (!workerConfig) {
-					return;
-				}
-
-				const resolvedId = await this.resolve(workerConfig.main);
-
-				if (id === resolvedId?.id) {
-					const nodeJsCompat = getNodeJsCompat(this.environment.name);
-					assertHasNodeJsCompat(nodeJsCompat);
-
-					return nodeJsCompat.injectGlobalCode(id, code);
-				}
 			},
 			async configureServer(viteDevServer) {
 				// Pre-optimize Node.js compat library entry-points for those environments that need it.
