@@ -424,6 +424,7 @@ type WorkerOptionsBindings = Pick<
 	| "mtlsCertificates"
 	| "helloWorld"
 	| "workerLoaders"
+	| "unsafeBindings"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -577,6 +578,42 @@ export function buildMiniflareBindingOptions(
 		};
 	}
 
+	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
+	/**
+	 * If unsafe service bindings are specified and "mocked" in local development
+	 * via an external plugin, merge them into regular service bindings
+	 */
+	if (bindings.unsafe?.bindings && bindings.unsafe.bindings.length > 0) {
+		const unsafeBindingsWithLocalDev = bindings.unsafe.bindings.filter((b) =>
+			isUnsafeServiceBindingWithDevCfg(b)
+		);
+		for (const unsafeBinding of unsafeBindingsWithLocalDev) {
+			const {
+				name,
+				type,
+				dev: {
+					plugin,
+					options: /* additional options just for dev */ devOptions,
+				},
+				// additional options that are included in the production binding
+				...options
+			} = unsafeBinding;
+
+			logger.debug(
+				`Binding ${name} is a local binding to plugin ${plugin.name} provided by package ${plugin.package}`
+			);
+			unsafeBindings.push({
+				name,
+				type,
+				plugin,
+				options: {
+					...options,
+					...devOptions,
+				},
+			});
+		}
+	}
+
 	if (bindings.vectorize && !remoteBindingsEnabled) {
 		for (const vectorizeBinding of bindings.vectorize) {
 			const bindingName = vectorizeBinding.binding;
@@ -621,6 +658,7 @@ export function buildMiniflareBindingOptions(
 		textBlobBindings,
 		dataBlobBindings,
 		wasmBindings,
+		unsafeBindings,
 
 		ai:
 			bindings.ai && remoteProxyConnectionString
@@ -995,4 +1033,27 @@ export function getImageNameFromDOClassName(options: {
 			),
 		};
 	}
+}
+
+/**
+ * hasUnsafeBindings is a typeguard that checks whether the user has specified unsafe
+ * bindings in their Worker options
+ */
+export function hasUnsafeBindings(
+	bindings: CfWorkerInit["bindings"]
+): bindings is CfWorkerInit["bindings"] & {
+	unsafe: { bindings: CfUnsafeBinding[] };
+} {
+	const { unsafe } = bindings;
+	return !!unsafe && !!unsafe.bindings && unsafe.bindings.length > 0;
+}
+
+/**
+ * isUnsafeServiceBindingWithDevCfg is a typeguard that checks whether the user has specified unsafe
+ * service bindings with a local development configuration in their Worker options
+ */
+export function isUnsafeServiceBindingWithDevCfg(
+	b: CfUnsafeBinding
+): b is Required<CfUnsafeBinding> {
+	return b.dev !== undefined;
 }

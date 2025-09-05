@@ -1,0 +1,24 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "worker-with-unsafe-external-plugin",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-07-30",
+	"unsafe": {
+		"bindings": [
+			{
+				"name": "UNSAFE_SERVICE_BINDING",
+				"dev": {
+					"plugin": {
+						"package": "@fixture/unsafe-external-plugin",
+						"name": "unsafe-plugin",
+					},
+					"options": {
+						"emitLogs": true,
+					},
+				},
+				"type": "service",
+				"service": "some-unsafe-service",
+			},
+		],
+	},
+}
