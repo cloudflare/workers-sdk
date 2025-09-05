@@ -54,30 +54,34 @@ export class TestLongWorkflow extends WorkflowEntrypoint<Env, Params> {
 
 export default {
 	async fetch(request: Request, env: Env) {
-		const maybeId = new URL(request.url).searchParams.get("id");
+		const url = new URL(request.url);
+		const maybeId = url.searchParams.get("id");
 		if (maybeId !== null) {
 			const instance = await env.TEST_WORKFLOW.get(maybeId);
 
 			return Response.json(await instance.status());
 		}
 
-		if (request.url.endsWith("/long-workflow")) {
+		if (url.pathname === "/long-workflow") {
 			const workflow = await env.TEST_LONG_WORKFLOW.create();
-			return new Response(JSON.stringify({ id: workflow.id }));
+			return Response.json({
+				id: workflow.id,
+				details: await workflow.status(),
+			});
 		}
 
-		if (request.url.endsWith("/long-workflow-batch")) {
+		if (url.pathname === "/long-workflow-batch") {
 			const workflows = await env.TEST_LONG_WORKFLOW.createBatch([
 				{},
 				{ id: "321" },
 				{},
 			]);
 			const ids = workflows.map((workflow) => workflow.id);
-			return new Response(JSON.stringify({ ids: ids }));
+			return Response.json({ ids: ids });
 		}
 
 		const workflow = await env.TEST_WORKFLOW.create();
 
-		return new Response(JSON.stringify({ id: workflow.id }));
+		return Response.json({ id: workflow.id });
 	},
 };
