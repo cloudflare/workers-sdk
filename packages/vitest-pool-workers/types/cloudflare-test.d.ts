@@ -200,12 +200,28 @@ declare module "cloudflare:test" {
 		waitForStatus(status: InstanceStatus["status"]): Promise<void>;
 
 		/**
-		 * Cleans up the Workflow instance.
+		 * Cleans the Workflow instance introspector.
+		 *
 		 * This is crucial for ensuring test isolation by preventing state from
-		 * leaking between tests. It's best practice to call this in an `afterEach`
-		 * hook or at the end of every test.
+		 * leaking between tests. It should be called at the end or after each test.
 		 */
 		cleanUp(): Promise<void>;
+
+		/**
+		 * An alias for {@link cleanUp} to support automatic disposal with the `using` keyword.
+		 * This is an alternative to calling `cleanUp()` in an `afterEach` hook.
+		 *
+		 * @see {@link cleanUp}
+		 * @example
+		 * it('my workflow test', async () => {
+		 * await using instance = await introspectWorkflowInstance(env.WORKFLOW, "123456");
+		 *
+		 * // ... your test logic ...
+		 *
+		 * // .cleanUp() is automatically called here at the end of the scope
+		 * });
+		 */
+		[Symbol.asyncDispose](): Promise<void>;
 	}
 
 	/**
@@ -406,19 +422,42 @@ declare module "cloudflare:test" {
 		 * @param fn - An async callback that receives a `WorkflowInstanceModifier` object.
 		 */
 		modifyAll(fn: (m: WorkflowInstanceModifier) => Promise<void>): void;
+
 		/**
-		 * Returns all `WorkflowInstanceIntrospectors` from Workflow instances
+		 * Returns all `WorkflowInstanceIntrospector`s from Workflow instances
 		 * created after calling `introspectWorkflow`.
 		 */
 		get(): WorkflowInstanceIntrospector[];
 
 		/**
-		 * Cleans up the Workflow introspector.
-		 * This is crucial for ensuring that the introspection of a Workflow does
-		 * not get persisted across tests.
-		 * Call this in an `afterEach` hook or at the end of every test.
+		 *
+		 * Cleans the introspector and every `WorkflowInstanceIntrospector` from Workflow
+		 * instances created after calling `introspectWorkflow`.
+		 *
+		 * This function is essential for test isolation, ensuring that results from one
+		 * test do not leak into the next. It should be called at the end or after each test.
+		 *
+		 * **Note:** After cleanup, `introspectWorkflow()` must be called again to begin
+		 * a new introspection.
+		 *
 		 */
-		cleanUp(): void;
+		cleanUp(): Promise<void>;
+
+		/**
+		 * An alias for {@link cleanUp} to support automatic disposal with the `using` keyword.
+		 * This is an alternative to calling `cleanUp()` in an `afterEach` hook.
+		 *
+		 * @see {@link cleanUp}
+		 * @example
+		 * it('my workflow test', async () => {
+		 * await using workflowIntrospector = await introspectWorkflow(env.WORKFLOW);
+		 *
+		 * // ... your test logic ...
+		 *
+		 * // .cleanUp() is automatically called here at the end of the scope
+		 * });
+		 */
+		[Symbol.asyncDispose](): Promise<void>;
 	}
 
 	// Only require `params` and `data` to be specified if they're non-empty

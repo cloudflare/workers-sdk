@@ -538,7 +538,8 @@ Workflows defined in project: ${workflowClassNames.join(", ")}`);
 		const engineName = `${WORKFLOW_ENGINE_BINDING}${value.name.toUpperCase()}`;
 		runnerWorker.durableObjects[engineName] = {
 			className: "Engine",
-			unsafeScriptName: `workflows:${value.name}`,
+			scriptName: `workflows:${value.name}`,
+			unsafeScriptName: true,
 			unsafeUniqueKey: `miniflare-workflows-${value.name}`,
 		};
 	}
