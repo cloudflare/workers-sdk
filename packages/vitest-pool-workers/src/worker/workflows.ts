@@ -103,6 +103,10 @@ class WorkflowInstanceIntrospectorHandle
 			// do nothing because we want to clean up this instance
 		}
 	}
+
+	async [Symbol.asyncDispose](): Promise<void> {
+		await this.cleanUp();
+	}
 }
 
 // See public facing `cloudflare:test` types for docs
@@ -111,7 +115,7 @@ export interface WorkflowIntrospector {
 
 	get(): WorkflowInstanceIntrospector[];
 
-	cleanUp(): void;
+	cleanUp(): Promise<void>;
 }
 
 export async function introspectWorkflow(
@@ -250,9 +254,17 @@ class WorkflowIntrospectorHandle implements WorkflowIntrospector {
 		return this.#instanceIntrospectors;
 	}
 
-	cleanUp(): void {
+	async cleanUp(): Promise<void> {
+		// also cleans all instance introspectors
+		await Promise.all(
+			this.#instanceIntrospectors.map((introspector) => introspector.cleanUp())
+		);
 		this.#modifierCallbacks = [];
 		this.#instanceIntrospectors = [];
 		this.#cleanupCallback();
+	}
+
+	async [Symbol.asyncDispose](): Promise<void> {
+		await this.cleanUp();
 	}
 }

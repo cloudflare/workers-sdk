@@ -106,9 +106,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 								className: "Engine",
 								enableSql: true,
 								uniqueKey,
-								// Note(osilva): the engine should not be prevented from eviction if we wish
-								// to abort it during tests (vitest-pool-workers)
-								// preventEviction: true,
+								preventEviction: true,
 							},
 						],
 						durableObjectStorage: {
