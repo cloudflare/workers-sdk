@@ -12,6 +12,7 @@ import {
 	resolveEntryWithScript,
 } from "./resolve-entry";
 import { runCustomBuild } from "./run-custom-build";
+import { detectStaticAssetDirectories } from "./static-assets-detector";
 import type { Config, RawConfig } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { CfScriptFormat } from "./worker";
@@ -101,8 +102,11 @@ export async function getEntry(
 			`;
 
 		const fullCommand = `${getNpxEquivalent()} wrangler ${command}`;
-		throw new UserError(
-			dedent`
+		
+		// Detect potential static asset directories
+		const assetSuggestions = detectStaticAssetDirectories(config.configPath ? path.dirname(config.configPath) : process.cwd());
+		
+		let errorMessage = dedent`
 			Missing entry-point to Worker script or to assets directory
 
 			If there is code to deploy, you can either:
@@ -111,9 +115,26 @@ export async function getEntry(
 
 			If are uploading a directory of assets, you can either:
 			- Specify the path to the directory of assets via the command line: (ex: \`${fullCommand} --assets=./dist\`)
-			- Or ${updateConfigMessage({ assets: { directory: "./dist" } })}`,
-			{ telemetryMessage: "missing worker entrypoint or assets directory" }
-		);
+			- Or ${updateConfigMessage({ assets: { directory: "./dist" } })}`;
+
+		// Add asset directory suggestions if any were found
+		if (assetSuggestions.length > 0) {
+			errorMessage += "\n\n";
+			if (assetSuggestions.length === 1) {
+				const suggestion = assetSuggestions[0];
+				errorMessage += dedent`
+					We noticed that there is a directory called \`${suggestion.directory}\` in your project (${suggestion.reason}). If you are trying to deploy the contents of that directory to Cloudflare, please run:
+					\`${fullCommand} --assets ${suggestion.directory}\``;
+			} else {
+				errorMessage += "We noticed several directories that might contain static assets:\n";
+				for (const suggestion of assetSuggestions) {
+					errorMessage += `- \`${suggestion.directory}\` (${suggestion.reason})\n`;
+				}
+				errorMessage += `\nIf you want to deploy one of these directories, run: \`${fullCommand} --assets <directory>\``;
+			}
+		}
+
+		throw new UserError(errorMessage, { telemetryMessage: "missing worker entrypoint or assets directory" });
 	}
 	await runCustomBuild(
 		paths.absolutePath,
