@@ -14,12 +14,20 @@ import { makeRoot, seed } from "../helpers/setup";
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"wrangler dev - remote bindings",
 	() => {
-		const remoteWorkerName = generateResourceName();
-		const alternativeRemoteWorkerName = generateResourceName();
+		const workerAFromEnv = process.env.E2E_REMOTE_BINDINGS_WORKER_A;
+		const workerBFromEnv = process.env.E2E_REMOTE_BINDINGS_WORKER_B;
+		const remoteWorkerName = workerAFromEnv ?? generateResourceName();
+		const alternativeRemoteWorkerName =
+			workerBFromEnv ?? generateResourceName();
 		const helper = new WranglerE2ETestHelper();
+
+		const shouldManageWorkers = !(workerAFromEnv && workerBFromEnv);
 
 		beforeAll(async () => {
 			await helper.seed(resolve(__dirname, "./workers"));
+			if (!shouldManageWorkers) {
+				return;
+			}
 			const deploy = helper.run(
 				`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
 			);
@@ -30,6 +38,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		}, 35_000);
 
 		afterAll(async () => {
+			if (!shouldManageWorkers) {
+				return;
+			}
 			const del = helper.run(`wrangler delete --name ${remoteWorkerName}`);
 			const delAlt = helper.run(
 				`wrangler delete --name ${alternativeRemoteWorkerName}`
@@ -59,7 +70,16 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const { url } = await worker.waitForReady();
 
-			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
+			let text: string | undefined;
+			for (let i = 0; i < 3; i++) {
+				try {
+					text = (await fetchText(url)) ?? undefined;
+					break;
+				} catch {
+					await setTimeout(400);
+				}
+			}
+			expect(text).toMatchInlineSnapshot(`
 			"LOCAL<WORKER>: Hello from a local worker!
 			REMOTE<WORKER>: Hello from a remote worker
 			"

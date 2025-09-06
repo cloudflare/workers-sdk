@@ -6,18 +6,44 @@ import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
 
+async function retryFetchText(
+	fn: () => Promise<string>,
+	attempts = 3,
+	delayMs = 400
+): Promise<string> {
+	let lastErr: unknown;
+	for (let i = 0; i < attempts; i++) {
+		try {
+			return await fn();
+		} catch (e) {
+			lastErr = e;
+			await setTimeout(delayMs);
+		}
+	}
+	throw (lastErr as Error) ?? new Error("fetch failed");
+}
+
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
-	const remoteWorkerName = generateResourceName();
+	const workerAFromEnv = process.env.E2E_REMOTE_BINDINGS_WORKER_A;
+	const remoteWorkerName = workerAFromEnv ?? generateResourceName();
 	const helper = new WranglerE2ETestHelper();
+
+	const shouldManageWorkers = !workerAFromEnv;
 
 	beforeAll(async () => {
 		await helper.seed(resolve(__dirname, "./workers"));
+		if (!shouldManageWorkers) {
+			return;
+		}
 		await helper.run(
 			`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
 		);
 	}, 35_000);
 
 	afterAll(async () => {
+		if (!shouldManageWorkers) {
+			return;
+		}
 		await helper.run(`wrangler delete --name ${remoteWorkerName}`);
 	});
 
@@ -58,9 +84,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 
 				await worker.ready;
 
-				await expect(
-					(await worker.fetch("http://example.com")).text()
-				).resolves.toContain("REMOTE<WORKER>: Hello from a remote worker");
+				{
+					const first = await retryFetchText(() =>
+						worker.fetch("http://example.com").then((r) => r.text())
+					);
+					expect(first).toContain("REMOTE<WORKER>: Hello from a remote worker");
+				}
 
 				await worker.dispose();
 			});
@@ -92,9 +121,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 
 				await worker.ready;
 
-				await expect(
-					(await worker.fetch("http://example.com")).text()
-				).resolves.toContain("REMOTE<WORKER>: Hello from a remote worker");
+				{
+					const first = await retryFetchText(() =>
+						worker.fetch("http://example.com").then((r) => r.text())
+					);
+					expect(first).toContain("REMOTE<WORKER>: Hello from a remote worker");
+				}
 
 				const indexContent = await readFile(
 					`${helper.tmpPath}/simple-service-binding.js`,
@@ -125,9 +157,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 
 				await setTimeout(500);
 
-				await expect(
-					(await worker.fetch("http://example.com")).text()
-				).resolves.toContain("REMOTE<WORKER>: Hello from a remote worker");
+				{
+					const first = await retryFetchText(() =>
+						worker.fetch("http://example.com").then((r) => r.text())
+					);
+					expect(first).toContain("REMOTE<WORKER>: Hello from a remote worker");
+				}
 
 				await worker.dispose();
 			});
