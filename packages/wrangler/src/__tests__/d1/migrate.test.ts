@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { http, HttpResponse } from "msw";
 import { reinitialiseAuthTokens } from "../../user";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -188,6 +189,202 @@ Your database may not be available to serve requests during the migration, conti
 			});
 			await runWrangler("d1 migrations apply db --remote");
 			expect(std.out).toBe("");
+		});
+
+		it("applies migrations from a migration directory containing .sql files", async () => {
+			setIsTTY(false);
+			const commands: string[] = [];
+
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/d1/database/:databaseId/query",
+					async (req) => {
+						const { body } = req.request;
+						if (body && typeof body === "object") {
+							commands.push(JSON.stringify(body));
+						} else {
+							commands.push(String(body));
+						}
+
+						return HttpResponse.json(
+							{
+								result: [
+									{
+										results: [],
+										success: true,
+										meta: {},
+									},
+								],
+								success: true,
+								errors: [],
+								messages: [],
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database/:databaseId", async () => {
+					return HttpResponse.json(
+						{
+							result: {
+								file_size: 123,
+								name: "testdb",
+								num_tables: 0,
+								uuid: "uuid",
+								version: "production",
+							},
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				})
+			);
+
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "migrations",
+					},
+				],
+				account_id: "nx01",
+			});
+
+			mockGetMemberships([
+				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+				{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
+			]);
+
+			// Create migration directory with two sql files
+			fs.mkdirSync("migrations/001_complex", { recursive: true });
+			fs.writeFileSync(
+				"migrations/001_complex/01_schema.sql",
+				"CREATE TABLE users (id INTEGER PRIMARY KEY);"
+			);
+			fs.writeFileSync(
+				"migrations/001_complex/02_seed.sql",
+				"INSERT INTO users (id) VALUES (1);"
+			);
+
+			mockConfirm({
+				text: `About to apply 1 migration(s)\nYour database may not be available to serve requests during the migration, continue?`,
+				result: true,
+			});
+
+			await runWrangler("d1 migrations apply db --remote");
+
+			expect(commands.some((c) => c.includes("CREATE TABLE users"))).toBe(true);
+			expect(commands.some((c) => c.includes("INSERT INTO users"))).toBe(true);
+			expect(commands.some((c) => c.includes("INSERT INTO migrations"))).toBe(
+				true
+			);
+		});
+
+		it("applies a mix of top-level .sql and directory migrations", async () => {
+			setIsTTY(false);
+			const commands: string[] = [];
+
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/d1/database/:databaseId/query",
+					async (req) => {
+						const { body } = req.request;
+						if (body && typeof body === "object") {
+							commands.push(JSON.stringify(body));
+						} else {
+							commands.push(String(body));
+						}
+
+						return HttpResponse.json(
+							{
+								result: [
+									{
+										results: [],
+										success: true,
+										meta: {},
+									},
+								],
+								success: true,
+								errors: [],
+								messages: [],
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database/:databaseId", async () => {
+					return HttpResponse.json(
+						{
+							result: {
+								file_size: 123,
+								name: "testdb",
+								num_tables: 0,
+								uuid: "uuid",
+								version: "production",
+							},
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				})
+			);
+
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "migrations",
+					},
+				],
+				account_id: "nx01",
+			});
+
+			mockGetMemberships([
+				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+				{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
+			]);
+
+			// Create top-level migration file and a migration directory
+			fs.mkdirSync("migrations/002_complex", { recursive: true });
+			fs.writeFileSync(
+				"migrations/001_init.sql",
+				"CREATE TABLE top (id INTEGER PRIMARY KEY);"
+			);
+			fs.writeFileSync(
+				"migrations/002_complex/01_schema.sql",
+				"CREATE TABLE users (id INTEGER PRIMARY KEY);"
+			);
+			fs.writeFileSync(
+				"migrations/002_complex/02_seed.sql",
+				"INSERT INTO users (id) VALUES (1);"
+			);
+
+			mockConfirm({
+				text: `About to apply 2 migration(s)\nYour database may not be available to serve requests during the migration, continue?`,
+				result: true,
+			});
+
+			await runWrangler("d1 migrations apply db --remote");
+
+			expect(commands.some((c) => c.includes("CREATE TABLE top"))).toBe(true);
+			expect(commands.some((c) => c.includes("CREATE TABLE users"))).toBe(true);
+			expect(
+				commands.filter((c) => c.includes("INSERT INTO migrations")).length
+			).toBe(2);
 		});
 	});
 
