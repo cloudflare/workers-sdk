@@ -6,14 +6,14 @@
 	"author": "",
 	"main": "dist/index.js",
 	"scripts": {
-		"build": "node tools/build.mjs"
+		"build": "tsx tools/build.ts"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
-		"miniflare-shared": "workspace:*",
-		"tsx": "^3.12.8"
+		"tsx": "^3.12.8",
+		"zod": "3.22.3"
 	}
 }

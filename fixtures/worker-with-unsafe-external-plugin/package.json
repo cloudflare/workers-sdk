@@ -7,7 +7,6 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@fixture/unsafe-external-plugin": "workspace:*",
-		"miniflare-shared": "workspace:*",
 		"turbo": "^2.2.3",
 		"wrangler": "workspace:*"
 	}
