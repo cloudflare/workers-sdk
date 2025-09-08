@@ -59,9 +59,9 @@ function formatSqlResults(data: SqlQueryResult, duration: number): void {
 
 export const r2SqlNamespace = createNamespace({
 	metadata: {
-		description: "Send queries and manage R2 Data Catalog SQL",
+		description: "Send queries and manage R2 SQL",
 		status: "open-beta",
-		owner: "Product: R2 Data Catalog SQL",
+		owner: "Product: R2 SQL",
 	},
 });
 
@@ -70,12 +70,12 @@ export const r2SqlEnableCommand = createCommand({
 		description:
 			"Enable sending SQL queries to R2 Data Catalogs in this account",
 		status: "open-beta",
-		owner: "Product: R2 Data Catalog SQL",
+		owner: "Product: R2 SQL",
 	},
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		logger.log("Enabling R2 Data Catalog SQL for your account...");
+		logger.log("Enabling R2 SQL for your account...");
 
 		try {
 			await fetchResult(config, `/accounts/${accountId}/dqe/enable`, {
@@ -86,10 +86,13 @@ export const r2SqlEnableCommand = createCommand({
 				body: JSON.stringify({}),
 			});
 
-			logger.log("✅ R2 Data Catalog SQL is enabled for your account");
+			logger.log(`✅ R2 SQL is enabled for your account
+
+Try sending a query with \`wrangler r2 sql query <warehouse name> <SQL query>\`
+`);
 		} catch (error) {
 			throw new UserError(
-				`Failed to enable R2 Data Catalog SQL: ${error instanceof Error ? error.message : String(error)}`
+				`Failed to enable R2 SQL: ${error instanceof Error ? error.message : String(error)}`
 			);
 		}
 	},
@@ -100,12 +103,12 @@ export const r2SqlDisableCommand = createCommand({
 		description:
 			"Disable sending SQL queries to R2 Data Catalogs in this account",
 		status: "open-beta",
-		owner: "Product: R2 Data Catalog SQL",
+		owner: "Product: R2 SQL",
 	},
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		logger.log("Disabling R2 Data Catalog SQL for your account...");
+		logger.log("Disabling R2 SQL for your account...");
 
 		try {
 			await fetchResult(config, `/accounts/${accountId}/dqe/disable`, {
@@ -116,10 +119,10 @@ export const r2SqlDisableCommand = createCommand({
 				body: JSON.stringify({}),
 			});
 
-			logger.log("✅ R2 Data Catalog SQL is disabled for your account");
+			logger.log("✅ R2 SQL is disabled for your account");
 		} catch (error) {
 			throw new UserError(
-				`Failed to disable R2 Data Catalog SQL: ${error instanceof Error ? error.message : String(error)}`
+				`Failed to disable R2 SQL: ${error instanceof Error ? error.message : String(error)}`
 			);
 		}
 	},
@@ -152,7 +155,7 @@ export const r2SqlQueryCommand = createCommand({
 			// TODO: provide documentation link.
 			throw new UserError(
 				"CLOUDFLARE_R2_SQL_TOKEN environment variable is not set. " +
-					"Please set it to authenticate with the R2 Data Catalog SQL query service."
+					"Please set it to authenticate with the R2 SQL query service."
 			);
 		}
 
