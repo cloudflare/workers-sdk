@@ -2,7 +2,6 @@ import {
 	getMiniflareObjectBindings,
 	kVoid,
 	Plugin,
-	PluginBase,
 	ProxyNodeBinding,
 	Service,
 	SERVICE_LOOPBACK,

@@ -66,7 +66,7 @@ test("A plugin that does not expose `registerMiniflarePlugins` will cause an err
 	const mf = new Miniflare({ modules: true, script: "" });
 	t.teardown(() => mf.dispose());
 
-	const err = await t.throwsAsync(mf.setOptions(opts), {
+	await t.throwsAsync(mf.setOptions(opts), {
 		instanceOf: MiniflareCoreError,
 		code: "ERR_PLUGIN_LOADING_FAILED",
 	});
@@ -89,7 +89,7 @@ test("A plugin that exposes a non-function `registerMiniflarePlugins` export wil
 	const mf = new Miniflare({ modules: true, script: "" });
 	t.teardown(() => mf.dispose());
 
-	const err = await t.throwsAsync(mf.setOptions(opts), {
+	await t.throwsAsync(mf.setOptions(opts), {
 		instanceOf: MiniflareCoreError,
 		code: "ERR_PLUGIN_LOADING_FAILED",
 	});
