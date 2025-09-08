@@ -3,11 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, Mock, vi } from "vitest";
 import Worker from "../../packages/workers-shared/asset-worker";
 import { normalizeConfiguration } from "../../packages/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "../../packages/workers-shared/asset-worker/src/utils/kv";
+import type { AssetMetadata } from "../../packages/workers-shared/asset-worker/src/utils/kv";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
-type AssetMetadata = {
-	contentType: string;
-};
 
 vi.mock("../../packages/workers-shared/asset-worker/src/utils/kv");
 vi.mock("../../packages/workers-shared/asset-worker/src/configuration");

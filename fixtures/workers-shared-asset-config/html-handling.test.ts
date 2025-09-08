@@ -5,11 +5,9 @@ import { normalizeConfiguration } from "../../packages/workers-shared/asset-work
 import { getAssetWithMetadataFromKV } from "../../packages/workers-shared/asset-worker/src/utils/kv";
 import { encodingTestCases } from "./test-cases/encoding-test-cases";
 import { htmlHandlingTestCases } from "./test-cases/html-handling-test-cases";
+import type { AssetMetadata } from "../../packages/workers-shared/asset-worker/src/utils/kv";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
-type AssetMetadata = {
-	contentType: string;
-};
 
 vi.mock("../../packages/workers-shared/asset-worker/src/utils/kv");
 vi.mock("../../packages/workers-shared/asset-worker/src/configuration");
