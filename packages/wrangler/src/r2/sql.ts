@@ -51,9 +51,10 @@ function formatSqlResults(data: SqlQueryResult, duration: number): void {
 		logger.log(
 			`Read ${prettyBytes(stats.total_r2_bytes_read)} across ${stats.total_files_scanned} files from R2`
 		);
-		logger.log(
-			`On average, ${prettyBytes(stats.total_r2_bytes_read / duration)} / s`
-		);
+		if (duration > 0) {
+			const bytesPerSecond = (stats.total_r2_bytes_read / duration) * 1000;
+			logger.log(`On average, ${prettyBytes(bytesPerSecond)} / s`);
+		}
 	}
 }
 
@@ -194,7 +195,7 @@ export const r2SqlQueryCommand = createCommand({
 		} catch (error) {
 			// TODO: These shouldn't be UserErrors, but API errors.
 			throw new UserError(
-				`Failed to connect to SQL APi: ${error instanceof Error ? error.message : String(error)}`
+				`Failed to connect to R2 SQL API: ${error instanceof Error ? error.message : String(error)}`
 			);
 		}
 
