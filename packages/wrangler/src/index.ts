@@ -249,9 +249,9 @@ import {
 	r2BucketSippyNamespace,
 } from "./r2/sippy";
 import {
-	r2SqlNamespace,
-	r2SqlEnableCommand,
 	r2SqlDisableCommand,
+	r2SqlEnableCommand,
+	r2SqlNamespace,
 	r2SqlQueryCommand,
 } from "./r2/sql";
 import {
