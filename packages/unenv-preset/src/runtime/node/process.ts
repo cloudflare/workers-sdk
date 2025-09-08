@@ -1,7 +1,6 @@
 import { hrtime as UnenvHrTime } from "unenv/node/internal/process/hrtime";
 import { Process as UnenvProcess } from "unenv/node/internal/process/process";
 
-
 // The following is an unusual way to access the original/unpatched globalThis.process.
 // This is needed to get hold of the real process object before any of the unenv polyfills are
 // applied via `inject` or `polyfill` config in presets.
@@ -15,7 +14,6 @@ const globalProcess: NodeJS.Process = (globalThis as any)["pro" + "cess"];
 export const getBuiltinModule: NodeJS.Process["getBuiltinModule"] =
 	globalProcess.getBuiltinModule;
 
-// TODO: exit, platform, nextTick were imported from v1
 const workerdProcess = getBuiltinModule("node:process");
 
 // Workerd has 2 different implementation for `node:process`
@@ -24,9 +22,9 @@ const workerdProcess = getBuiltinModule("node:process");
 // - [workerd `process` v1](https://github.com/cloudflare/workerd/blob/main/src/node/internal/legacy_process.ts)
 // - [workerd `process` v2](https://github.com/cloudflare/workerd/blob/main/src/node/internal/public_process.ts)
 // - [`enable_nodejs_process_v2` flag](https://github.com/cloudflare/workerd/blob/main/src/workerd/io/compatibility-date.capnp)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isWorkerdProcessV2 = (globalThis as any).Cloudflare.compatibilityFlags
 	.enable_nodejs_process_v2;
-
 
 const unenvProcess = new UnenvProcess({
 	env: globalProcess.env,

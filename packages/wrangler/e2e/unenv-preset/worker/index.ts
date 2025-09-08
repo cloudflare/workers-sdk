@@ -507,7 +507,7 @@ export const WorkerdTests: Record<string, () => void> = {
 	},
 
 	async testProcess() {
-		const http2 = await import("node:process");
+		const process = await import("node:process");
 
 		assert.strictEqual(globalThis.process, process);
 
@@ -517,17 +517,13 @@ export const WorkerdTests: Record<string, () => void> = {
 			// workerd implementation only
 			assert.equal(process.arch, "x64");
 			assert.equal(process.title, "workerd");
-
 		} else {
 			// unenv implementation only
 			assert.equal(process.arch, "");
 			assert.equal(process.title, "");
 		}
 
-		assert.doesNotThrow(() => process.chdir('/tmp'));
+		assert.doesNotThrow(() => process.chdir("/tmp"));
 		assert.equal(typeof process.cwd(), "string");
-
-
-
-	}
+	},
 };
