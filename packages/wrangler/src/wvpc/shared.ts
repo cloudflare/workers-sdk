@@ -3,21 +3,18 @@ import type { ConnectivityService } from "./index";
 export function formatServiceForTable(service: ConnectivityService) {
 	// Build port info based on service type
 	let ports = "";
-	if (
-		service.service_config.type === "tcp" &&
-		service.service_config.tcp_port
-	) {
-		ports = `${service.service_config.tcp_port}`;
-		if (service.service_config.app_protocol) {
-			ports += ` (${service.service_config.app_protocol})`;
+	if (service.type === "tcp" && service.tcp_port) {
+		ports = `${service.tcp_port}`;
+		if (service.app_protocol) {
+			ports += ` (${service.app_protocol})`;
 		}
-	} else if (service.service_config.type === "http") {
+	} else if (service.type === "http") {
 		const httpPorts = [];
-		if (service.service_config.http_port) {
-			httpPorts.push(`HTTP:${service.service_config.http_port}`);
+		if (service.http_port) {
+			httpPorts.push(`HTTP:${service.http_port}`);
 		}
-		if (service.service_config.https_port) {
-			httpPorts.push(`HTTPS:${service.service_config.https_port}`);
+		if (service.https_port) {
+			httpPorts.push(`HTTPS:${service.https_port}`);
 		}
 		ports = httpPorts.join(", ");
 	}
@@ -45,8 +42,8 @@ export function formatServiceForTable(service: ConnectivityService) {
 
 	return {
 		id: service.service_id,
-		name: service.service_config.name,
-		type: service.service_config.type,
+		name: service.name,
+		type: service.type,
 		ports,
 		host,
 		tunnel: tunnelId.substring(0, 8) + "...", // Truncate for table display

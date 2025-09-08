@@ -14,6 +14,9 @@ export async function createService(
 		`/accounts/${accountId}/connectivity/directory/services`,
 		{
 			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
 			body: JSON.stringify(body),
 		}
 	);
@@ -72,6 +75,9 @@ export async function updateService(
 		`/accounts/${accountId}/connectivity/directory/services/${serviceId}`,
 		{
 			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+			},
 			body: JSON.stringify(body),
 		}
 	);

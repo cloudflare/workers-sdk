@@ -373,12 +373,10 @@ describe("wvpc service commands", () => {
 // Mock Data
 const mockTcpService: ConnectivityService = {
 	service_id: "tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-	service_config: {
-		type: ServiceType.Tcp,
-		name: "test-tcp-service",
-		tcp_port: 5432,
-		app_protocol: "postgresql",
-	},
+	type: ServiceType.Tcp,
+	name: "test-tcp-service",
+	tcp_port: 5432,
+	app_protocol: "postgresql",
 	host: {
 		ipv4: "10.0.0.1",
 		network: { tunnel_id: "tunnel-xxxx-xxxx-xxxx-xxxxxxxxxxxx" },
@@ -389,12 +387,10 @@ const mockTcpService: ConnectivityService = {
 
 const mockHttpService: ConnectivityService = {
 	service_id: "http-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-	service_config: {
-		type: ServiceType.Http,
-		name: "test-web-service",
-		http_port: 80,
-		https_port: 443,
-	},
+	type: ServiceType.Http,
+	name: "test-web-service",
+	http_port: 80,
+	https_port: 443,
 	host: {
 		hostname: "web.example.com",
 		resolver_network: {
@@ -420,14 +416,12 @@ function mockWvpcServiceCreate(): Promise<ConnectivityServiceRequest> {
 						createFetchResult(
 							{
 								service_id: "tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-								service_config: {
-									type: reqBody.type,
-									name: reqBody.name,
-									tcp_port: reqBody.tcp_port,
-									app_protocol: reqBody.app_protocol,
-									http_port: reqBody.http_port,
-									https_port: reqBody.https_port,
-								},
+								type: reqBody.type,
+								name: reqBody.name,
+								tcp_port: reqBody.tcp_port,
+								app_protocol: reqBody.app_protocol,
+								http_port: reqBody.http_port,
+								https_port: reqBody.https_port,
 								host: reqBody.host,
 								created_at: "2024-01-01T00:00:00Z",
 								updated_at: "2024-01-01T00:00:00Z",
@@ -455,14 +449,12 @@ function mockWvpcServiceUpdate(): Promise<ConnectivityServiceRequest> {
 						createFetchResult(
 							{
 								service_id: "tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-								service_config: {
-									type: reqBody.type,
-									name: reqBody.name,
-									tcp_port: reqBody.tcp_port,
-									app_protocol: reqBody.app_protocol,
-									http_port: reqBody.http_port,
-									https_port: reqBody.https_port,
-								},
+								type: reqBody.type,
+								name: reqBody.name,
+								tcp_port: reqBody.tcp_port,
+								app_protocol: reqBody.app_protocol,
+								http_port: reqBody.http_port,
+								https_port: reqBody.https_port,
 								host: reqBody.host,
 								created_at: "2024-01-01T00:00:00Z",
 								updated_at: "2024-01-01T00:00:00Z",

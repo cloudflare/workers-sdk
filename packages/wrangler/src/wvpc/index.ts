@@ -55,14 +55,12 @@ export interface ServiceHost {
 
 export interface ConnectivityService {
 	service_id: string;
-	service_config: {
-		type: ServiceType;
-		name: string;
-		tcp_port?: number;
-		app_protocol?: string;
-		http_port?: number;
-		https_port?: number;
-	};
+	type: ServiceType;
+	name: string;
+	tcp_port?: number;
+	app_protocol?: string;
+	http_port?: number;
+	https_port?: number;
 	host: ServiceHost;
 	created_at: string;
 	updated_at: string;

@@ -36,23 +36,23 @@ export const wvpcServiceCreateCommand = createCommand({
 		const service = await createService(config, request);
 
 		logger.log(`✅ Created WVPC connectivity service: ${service.service_id}`);
-		logger.log(`   Name: ${service.service_config.name}`);
-		logger.log(`   Type: ${service.service_config.type}`);
+		logger.log(`   Name: ${service.name}`);
+		logger.log(`   Type: ${service.type}`);
 
 		// Display service-specific details
-		if (service.service_config.type === ServiceType.Tcp) {
-			if (service.service_config.tcp_port) {
-				logger.log(`   TCP Port: ${service.service_config.tcp_port}`);
+		if (service.type === ServiceType.Tcp) {
+			if (service.tcp_port) {
+				logger.log(`   TCP Port: ${service.tcp_port}`);
 			}
-			if (service.service_config.app_protocol) {
-				logger.log(`   Protocol: ${service.service_config.app_protocol}`);
+			if (service.app_protocol) {
+				logger.log(`   Protocol: ${service.app_protocol}`);
 			}
-		} else if (service.service_config.type === ServiceType.Http) {
-			if (service.service_config.http_port) {
-				logger.log(`   HTTP Port: ${service.service_config.http_port}`);
+		} else if (service.type === ServiceType.Http) {
+			if (service.http_port) {
+				logger.log(`   HTTP Port: ${service.http_port}`);
 			}
-			if (service.service_config.https_port) {
-				logger.log(`   HTTPS Port: ${service.service_config.https_port}`);
+			if (service.https_port) {
+				logger.log(`   HTTPS Port: ${service.https_port}`);
 			}
 		}
 
