@@ -4,51 +4,54 @@ import {
 	WorkflowStep,
 } from "cloudflare:workers";
 
-export class TestWorkflow extends WorkflowEntrypoint<Env> {
+export class ModeratorWorkflow extends WorkflowEntrypoint<Env> {
 	async run(_event: Readonly<WorkflowEvent<unknown>>, step: WorkflowStep) {
-		console.log("Starting running...");
-
-		await step.do("step one", async () => {
-			// some logic
-			return "result of step one";
-		});
-
-		return "test-workflow";
-	}
-}
-
-export class TestLongWorkflow extends WorkflowEntrypoint<Env, Params> {
-	async run(event: Readonly<WorkflowEvent<unknown>>, step: WorkflowStep) {
 		await step.sleep("sleep for a while", "10 seconds");
 
-		await step.do(
-			"my step",
-			{
-				retries: {
-					limit: 5,
-					delay: 50,
-					backoff: "constant",
-				},
-				timeout: "1 second",
-			},
-			async () => {
-				// some logic
-				return "result of my step";
-			}
-		);
+		// Get an initial analysis from an AI model
+		const aiResult = await step.do("AI content scan", async () => {
+			// Call to an workers-ai to scan the text content and return a violation score
 
-		await step.sleep("sleep for a day", "8 hours");
+			// Simulated score:
+			const violationScore = Math.floor(Math.random() * 100);
 
-		if (event.payload === "run event") {
-			await step.waitForEvent("my event", {
-				type: "event",
-				timeout: "10 seconds",
+			return { violationScore: violationScore };
+		});
+
+		// Triage based on the AI score
+		if (aiResult.violationScore < 10) {
+			await step.do("auto approve content", async () => {
+				// API call to set app content status to "approved"
+				return { status: "auto_approved" };
 			});
+			return { status: "auto_approved" };
+		}
+		if (aiResult.violationScore > 90) {
+			await step.do("auto reject content", async () => {
+				// API call to set app content status to "rejected"
+				return { status: "auto_rejected" };
+			});
+			return { status: "auto_rejected" };
 		}
 
-		await step.sleep("sleep for a while", "5 seconds");
+		// If the score is ambiguous, require human review
+		type EventPayload = {
+			moderatorAction: string;
+		};
+		const eventPayload = await step.waitForEvent<EventPayload>("human review", {
+			type: "moderation-decision",
+			timeout: "1 day",
+		});
 
-		return "test-workflow";
+		if (eventPayload) {
+			// The moderator responded in time.
+			const decision = eventPayload.payload.moderatorAction; // e.g., "approve" or "reject"
+			await step.do("apply moderator decision", async () => {
+				// API call to update content status based on the decision
+				return { status: "moderated", decision: decision };
+			});
+			return { status: "moderated", decision: decision };
+		}
 	}
 }
 
@@ -57,31 +60,30 @@ export default {
 		const url = new URL(request.url);
 		const maybeId = url.searchParams.get("id");
 		if (maybeId !== null) {
-			const instance = await env.TEST_WORKFLOW.get(maybeId);
+			const instance = await env.MODERATOR.get(maybeId);
 
 			return Response.json(await instance.status());
 		}
 
-		if (url.pathname === "/long-workflow") {
-			const workflow = await env.TEST_LONG_WORKFLOW.create();
+		if (url.pathname === "/moderate") {
+			const workflow = await env.MODERATOR.create();
 			return Response.json({
 				id: workflow.id,
 				details: await workflow.status(),
 			});
 		}
 
-		if (url.pathname === "/long-workflow-batch") {
-			const workflows = await env.TEST_LONG_WORKFLOW.createBatch([
+		if (url.pathname === "/moderate-batch") {
+			const workflows = await env.MODERATOR.createBatch([
 				{},
 				{ id: "321" },
 				{},
 			]);
+
 			const ids = workflows.map((workflow) => workflow.id);
 			return Response.json({ ids: ids });
 		}
 
-		const workflow = await env.TEST_WORKFLOW.create();
-
-		return Response.json({ id: workflow.id });
+		return new Response("Not found", { status: 404 });
 	},
 };
