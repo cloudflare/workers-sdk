@@ -1,5 +1,39 @@
 # wrangler
 
+## 4.34.0
+
+### Minor Changes
+
+- [#10478](https://github.com/cloudflare/workers-sdk/pull/10478) [`cc47b51`](https://github.com/cloudflare/workers-sdk/commit/cc47b5157bbe0d020dc737102cadf4fd77112ad3) Thanks [@danielrs](https://github.com/danielrs)! - Beta feature preview_urls is now disabled by default.
+
+  This change makes preview_urls disabled by default when it's not provided, making
+  the feature opt-in instead of opt-out.
+
+### Patch Changes
+
+- [#10489](https://github.com/cloudflare/workers-sdk/pull/10489) [`6e8dd80`](https://github.com/cloudflare/workers-sdk/commit/6e8dd80c79eb9927567ba290658457fe9b113a68) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Allow Wrangler to upload 100,000 assets inline with the newly increased Workers Paid limit.
+
+- [#10517](https://github.com/cloudflare/workers-sdk/pull/10517) [`7211609`](https://github.com/cloudflare/workers-sdk/commit/72116094a7410860d89dce383f2361c16c1a55cd) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: `wrangler vectorize list-vectors --json` now output valid json without an extra log line
+
+- [#10527](https://github.com/cloudflare/workers-sdk/pull/10527) [`818ce22`](https://github.com/cloudflare/workers-sdk/commit/818ce225e8038db967b22fbde9e3586d7225fefc) Thanks [@vicb](https://github.com/vicb)! - Bump `unenv` to 2.0.0-rc.20
+
+  The latest release include [a fix for `node:tty` default export](https://github.com/unjs/unenv/pull/513).
+  See [the changelog](https://github.com/unjs/unenv/releases/tag/v2.0.0-rc.20) for full details.
+
+- [#10519](https://github.com/cloudflare/workers-sdk/pull/10519) [`5d69df4`](https://github.com/cloudflare/workers-sdk/commit/5d69df4e441cee5fbae80624ed6cefd2f93c2f4a) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Slightly improve `wrangler init --from-dash` error message
+
+- [#10519](https://github.com/cloudflare/workers-sdk/pull/10519) [`5d69df4`](https://github.com/cloudflare/workers-sdk/commit/5d69df4e441cee5fbae80624ed6cefd2f93c2f4a) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Internally refactor diffing and `wrangler init --from-dash` logic
+
+- [#10533](https://github.com/cloudflare/workers-sdk/pull/10533) [`c22acc6`](https://github.com/cloudflare/workers-sdk/commit/c22acc6de28cf22f93f0f0a01269d3745d0fcdcf) Thanks [@emily-shen](https://github.com/emily-shen)! - If unset, containers.max_instances should default to 1 instead of 0.
+
+- [#10503](https://github.com/cloudflare/workers-sdk/pull/10503) [`c0fad5f`](https://github.com/cloudflare/workers-sdk/commit/c0fad5fe06d18f672f14cbf64e0f3f734d5de7c6) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - Support setting container affinities
+
+- [#10515](https://github.com/cloudflare/workers-sdk/pull/10515) [`c6a39f5`](https://github.com/cloudflare/workers-sdk/commit/c6a39f5958614b8dd5e2aeb4d2b4a62e17a601c1) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: script should be accepted as a positional arg in the `versions upload` command
+
+- Updated dependencies [[`4cb3370`](https://github.com/cloudflare/workers-sdk/commit/4cb337007b2e9dba085da9b421ed214f532eb81f), [`818ce22`](https://github.com/cloudflare/workers-sdk/commit/818ce225e8038db967b22fbde9e3586d7225fefc), [`cb22f5f`](https://github.com/cloudflare/workers-sdk/commit/cb22f5faf5220dd4b682eabf320e1d9b6e6daefb), [`a565291`](https://github.com/cloudflare/workers-sdk/commit/a565291a4c19ba0e6f3bdfd336152b5c7a047d2d)]:
+  - miniflare@4.20250902.0
+  - @cloudflare/unenv-preset@2.7.2
+
 ## 4.33.2
 
 ### Patch Changes

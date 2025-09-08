@@ -1,5 +1,20 @@
 # @cloudflare/unenv-preset
 
+## 2.7.2
+
+### Patch Changes
+
+- [#10527](https://github.com/cloudflare/workers-sdk/pull/10527) [`818ce22`](https://github.com/cloudflare/workers-sdk/commit/818ce225e8038db967b22fbde9e3586d7225fefc) Thanks [@vicb](https://github.com/vicb)! - Bump `unenv` to 2.0.0-rc.20
+
+  The latest release include [a fix for `node:tty` default export](https://github.com/unjs/unenv/pull/513).
+  See [the changelog](https://github.com/unjs/unenv/releases/tag/v2.0.0-rc.20) for full details.
+
+- [#10430](https://github.com/cloudflare/workers-sdk/pull/10430) [`cb22f5f`](https://github.com/cloudflare/workers-sdk/commit/cb22f5faf5220dd4b682eabf320e1d9b6e6daefb) Thanks [@anonrig](https://github.com/anonrig)! - Remove `node:util` and `node:sys` polyfills which are now fully implemented in workerd
+
+- [#10536](https://github.com/cloudflare/workers-sdk/pull/10536) [`a565291`](https://github.com/cloudflare/workers-sdk/commit/a565291a4c19ba0e6f3bdfd336152b5c7a047d2d) Thanks [@vicb](https://github.com/vicb)! - Use the native `node:http2` when available.
+
+  It is enabled starting on 2025-09-01 or when the `enable_nodejs_http2_module` compatibility flag is set.
+
 ## 2.7.1
 
 ### Patch Changes

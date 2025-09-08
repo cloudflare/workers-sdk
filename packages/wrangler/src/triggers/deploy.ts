@@ -32,15 +32,6 @@ type Props = {
 	assetsOptions: AssetsOptions | undefined;
 };
 
-export function getResolvedWorkersDev(
-	configWorkersDev: boolean | undefined,
-	routes: Route[]
-): boolean {
-	// resolvedWorkersDev defaults to true only if there aren't any routes defined
-	const resolvedWorkersDev = configWorkersDev ?? routes.length === 0;
-	return resolvedWorkersDev;
-}
-
 export default async function triggersDeploy(
 	props: Props
 ): Promise<string[] | void> {
@@ -60,9 +51,6 @@ export default async function triggersDeploy(
 		}
 	}
 
-	// deployToWorkersDev defaults to true only if there aren't any routes defined
-	const deployToWorkersDev = getResolvedWorkersDev(config.workers_dev, routes);
-
 	if (!scriptName) {
 		throw new UserError(
 			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
@@ -78,14 +66,6 @@ export default async function triggersDeploy(
 	const workerUrl = notProd
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
-
-	const {
-		enabled: available_on_subdomain,
-		previews_enabled: previews_available_on_subdomain,
-	} = await fetchResult<{
-		enabled: boolean;
-		previews_enabled: boolean;
-	}>(config, `${workerUrl}/subdomain`);
 
 	if (!props.dryRun) {
 		await ensureQueuesExistByConfig(config);
@@ -103,55 +83,17 @@ export default async function triggersDeploy(
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<string[]>[] = [];
 
-	const deploymentInSync = deployToWorkersDev === available_on_subdomain;
-	const previewsInSync =
-		config.preview_urls === previews_available_on_subdomain;
+	const { wantWorkersDev, workersDevInSync } = await subdomainDeploy(
+		props,
+		accountId,
+		scriptName,
+		envName,
+		workerUrl,
+		routes,
+		deployments
+	);
 
-	if (deployToWorkersDev) {
-		// Deploy to a subdomain of `workers.dev`
-		const userSubdomain = await getWorkersDevSubdomain(
-			config,
-			accountId,
-			config.configPath
-		);
-
-		const deploymentURL =
-			props.legacyEnv || !props.env
-				? `${scriptName}.${userSubdomain}`
-				: `${envName}.${scriptName}.${userSubdomain}`;
-
-		if (deploymentInSync && previewsInSync) {
-			deployments.push(Promise.resolve([deploymentURL]));
-		} else {
-			// Enable the `workers.dev` subdomain.
-			deployments.push(
-				fetchResult(config, `${workerUrl}/subdomain`, {
-					method: "POST",
-					body: JSON.stringify({
-						enabled: true,
-						previews_enabled: config.preview_urls,
-					}),
-					headers: {
-						"Content-Type": "application/json",
-					},
-				}).then(() => [deploymentURL])
-			);
-		}
-	}
-	if (!deployToWorkersDev && (!deploymentInSync || !previewsInSync)) {
-		// Disable the workers.dev deployment
-		await fetchResult(config, `${workerUrl}/subdomain`, {
-			method: "POST",
-			body: JSON.stringify({
-				enabled: false,
-				previews_enabled: config.preview_urls,
-			}),
-			headers: {
-				"Content-Type": "application/json",
-			},
-		});
-	}
-	if (!deployToWorkersDev && deploymentInSync && routes.length !== 0) {
+	if (!wantWorkersDev && workersDevInSync && routes.length !== 0) {
 		// TODO is this true? How does last subdomain status affect route confict??
 		// Why would we only need to validate route conflicts if didn't need to
 		// disable the subdomain deployment?
@@ -348,4 +290,112 @@ export default async function triggersDeploy(
 	} else {
 		logger.log("No deploy targets for", workerName, formatTime(deployMs));
 	}
+}
+
+export function getSubdomainValues(
+	config_workers_dev: boolean | undefined,
+	config_preview_urls: boolean | undefined,
+	routes: Route[]
+): {
+	workers_dev: boolean;
+	preview_urls: boolean;
+} {
+	const defaultWorkersDev = routes.length === 0; // Default to true only if there aren't any routes defined.
+	const defaultPreviewUrls = false;
+	return {
+		workers_dev: config_workers_dev ?? defaultWorkersDev,
+		preview_urls: config_preview_urls ?? defaultPreviewUrls,
+	};
+}
+
+async function subdomainDeploy(
+	props: Props,
+	accountId: string,
+	scriptName: string,
+	envName: string,
+	workerUrl: string,
+	routes: Route[],
+	deployments: Array<Promise<string[]>>
+) {
+	const { config } = props;
+
+	// Get desired subdomain enablement status.
+
+	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
+		getSubdomainValues(config.workers_dev, config.preview_urls, routes);
+
+	// Get current subdomain enablement status.
+
+	const { enabled: currWorkersDev, previews_enabled: currPreviews } =
+		await fetchResult<{
+			enabled: boolean;
+			previews_enabled: boolean;
+		}>(config, `${workerUrl}/subdomain`);
+
+	const workersDevInSync = wantWorkersDev === currWorkersDev;
+	const previewsInSync = wantPreviews === currPreviews;
+	const allInSync = [workersDevInSync, previewsInSync].every((v) => v);
+
+	// Warn about mismatching config and current values.
+
+	if (config.workers_dev == undefined && !workersDevInSync) {
+		const currWorkersDevStatus = currWorkersDev ? "enabled" : "disabled";
+		logger.warn(
+			[
+				`Worker has workers.dev ${currWorkersDevStatus}, but 'workers_dev' is not in the config.`,
+				`Using fallback value 'workers_dev = ${wantWorkersDev}'.`,
+			].join("\n")
+		);
+	}
+
+	if (config.preview_urls == undefined && !previewsInSync) {
+		const currPreviewsStatus = currPreviews ? "enabled" : "disabled";
+		logger.warn(
+			[
+				`Worker has preview URLs ${currPreviewsStatus}, but 'preview_urls' is not in the config.`,
+				`Using fallback value 'preview_urls = ${wantPreviews}'.`,
+			].join("\n")
+		);
+	}
+
+	// workers.dev URL is only set if we want to deploy to workers.dev.
+
+	let workersDevURL: string | undefined;
+	if (wantWorkersDev) {
+		const userSubdomain = await getWorkersDevSubdomain(
+			config,
+			accountId,
+			config.configPath
+		);
+		workersDevURL =
+			props.legacyEnv || !props.env
+				? `${scriptName}.${userSubdomain}`
+				: `${envName}.${scriptName}.${userSubdomain}`;
+	}
+
+	// Update subdomain enablement status if needed.
+
+	if (!allInSync) {
+		await fetchResult(config, `${workerUrl}/subdomain`, {
+			method: "POST",
+			body: JSON.stringify({
+				enabled: wantWorkersDev,
+				previews_enabled: wantPreviews,
+			}),
+			headers: {
+				"Content-Type": "application/json",
+				"Cloudflare-Workers-Script-Api-Date": "2025-08-01",
+			},
+		});
+	}
+
+	if (workersDevURL) {
+		deployments.push(Promise.resolve([workersDevURL]));
+	}
+	return {
+		wantWorkersDev,
+		wantPreviews,
+		workersDevInSync,
+		previewsInSync,
+	};
 }

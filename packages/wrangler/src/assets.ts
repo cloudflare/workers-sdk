@@ -6,7 +6,6 @@ import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configurati
 import {
 	CF_ASSETS_IGNORE_FILENAME,
 	HEADERS_FILENAME,
-	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
 	REDIRECTS_FILENAME,
 } from "@cloudflare/workers-shared/utils/constants";
@@ -263,7 +262,6 @@ const buildAssetManifest = async (dir: string) => {
 	logReadFilesFromDirectory(dir, files);
 
 	const manifest: AssetManifest = {};
-	let counter = 0;
 
 	const { assetsIgnoreFunction, assetsIgnoreFilePresent } =
 		await createAssetsIgnoreFunction(dir);
@@ -287,15 +285,6 @@ const buildAssetManifest = async (dir: string) => {
 					assetsIgnoreFilePresent
 				);
 
-				if (counter >= MAX_ASSET_COUNT) {
-					throw new UserError(
-						`Maximum number of assets exceeded.\n` +
-							`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${dir}".\n` +
-							`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`,
-						{ telemetryMessage: "Maximum number of assets exceeded" }
-					);
-				}
-
 				if (filestat.size > MAX_ASSET_SIZE) {
 					throw new UserError(
 						`Asset too large.\n` +
@@ -318,7 +307,6 @@ const buildAssetManifest = async (dir: string) => {
 					hash: hashFile(filepath),
 					size: filestat.size,
 				};
-				counter++;
 			}
 		})
 	);
@@ -340,7 +328,7 @@ function logAssetUpload(line: string, diffCount: number) {
 			"   (truncating changed assets log, set `WRANGLER_LOG=debug` environment variable to see full diff)";
 		logger.info(chalk.dim(msg));
 	}
-	return diffCount++;
+	return ++diffCount;
 }
 
 /**
