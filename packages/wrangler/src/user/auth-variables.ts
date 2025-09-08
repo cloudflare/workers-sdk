@@ -111,3 +111,7 @@ export const getCloudflareAccessToken = async () => {
 
 	return getAccessToken(getAuthDomainFromEnv());
 };
+
+export const getR2SqlAPITokenFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_R2_SQL_TOKEN",
+});

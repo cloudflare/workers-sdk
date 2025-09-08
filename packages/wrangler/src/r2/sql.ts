@@ -5,6 +5,7 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { getR2SqlAPITokenFromEnv } from "../user/auth-variables";
 
 interface SqlQueryResult {
 	result?: {
@@ -151,7 +152,7 @@ export const r2SqlQueryCommand = createCommand({
 	async handler(args, { config: _config }) {
 		const { warehouse, query } = args;
 
-		const token = process.env.CLOUDFLARE_R2_SQL_TOKEN;
+		const token = getR2SqlAPITokenFromEnv();
 		if (!token) {
 			// TODO: provide documentation link.
 			throw new UserError(
