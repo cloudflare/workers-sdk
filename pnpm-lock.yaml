@@ -1111,7 +1111,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20250902.0
+        version: 4.20250906.0
       esbuild:
         specifier: catalog:default
         version: 0.25.4
@@ -2014,7 +2014,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20250902.0
+        version: 4.20250906.0
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
@@ -4527,24 +4527,8 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   '@cloudflare/workerd-darwin-64@1.20250906.0':
     resolution: {integrity: sha512-E+X/YYH9BmX0ew2j/mAWFif2z05NMNuhCTlNYEGLkqMe99K15UewBqajL9pMcMUKxylnlrEoK3VNxl33DkbnPA==}
-||||||| parent of addfa9672 (chore: Address comments, remove superfluous options checks)
-  '@cloudflare/workerd-darwin-64@1.20250902.0':
-    resolution: {integrity: sha512-mwC/YEtDUGfnjXdbW5Lya+bgODrpJ5RxxqpaTjtMJycqnjR0RZgVpOqISwGfBHIhseykU3ahPugM5t91XkBKTg==}
-=======
-  '@cloudflare/workerd-darwin-64@1.20250813.0':
-    resolution: {integrity: sha512-Pka37/jqLy7ZaQlwpBy79A/BLH+qpRPSEX2h/zWND+qRfoCVCCaZQPdknHZO0pcvHPzK8E2Z4j5QI1IafPA5UA==}
->>>>>>> addfa9672 (chore: Address comments, remove superfluous options checks)
-||||||| parent of e8c3bfd4b (NOJIRA: Fixup lockfile after rebase)
-  '@cloudflare/workerd-darwin-64@1.20250813.0':
-    resolution: {integrity: sha512-Pka37/jqLy7ZaQlwpBy79A/BLH+qpRPSEX2h/zWND+qRfoCVCCaZQPdknHZO0pcvHPzK8E2Z4j5QI1IafPA5UA==}
-=======
-  '@cloudflare/workerd-darwin-64@1.20250902.0':
-    resolution: {integrity: sha512-mwC/YEtDUGfnjXdbW5Lya+bgODrpJ5RxxqpaTjtMJycqnjR0RZgVpOqISwGfBHIhseykU3ahPugM5t91XkBKTg==}
->>>>>>> e8c3bfd4b (NOJIRA: Fixup lockfile after rebase)
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
@@ -4567,24 +4551,8 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   '@cloudflare/workerd-darwin-arm64@1.20250906.0':
     resolution: {integrity: sha512-X5apsZ1SFW4FYTM19ISHf8005FJMPfrcf4U5rO0tdj+TeJgQgXuZ57IG0WeW7SpLVeBo8hM6WC8CovZh41AfnA==}
-||||||| parent of addfa9672 (chore: Address comments, remove superfluous options checks)
-  '@cloudflare/workerd-darwin-arm64@1.20250902.0':
-    resolution: {integrity: sha512-5Wr6a5/ixoXuMPOvbprN8k9HhAHDBh8f7H5V4DN/Xb4ORoGkI9AbC5QPpYV0wa3Ncf+CRSGobdmZNyO24hRccA==}
-=======
-  '@cloudflare/workerd-darwin-arm64@1.20250813.0':
-    resolution: {integrity: sha512-QnaJbmhcA32+4uZ+or1hXZjdxGqrFUuh6Ye+skEGu3iB/xzq9CmyVyoKoshiUOcWGKndQb7KRo56dq0bVvVLFw==}
->>>>>>> addfa9672 (chore: Address comments, remove superfluous options checks)
-||||||| parent of e8c3bfd4b (NOJIRA: Fixup lockfile after rebase)
-  '@cloudflare/workerd-darwin-arm64@1.20250813.0':
-    resolution: {integrity: sha512-QnaJbmhcA32+4uZ+or1hXZjdxGqrFUuh6Ye+skEGu3iB/xzq9CmyVyoKoshiUOcWGKndQb7KRo56dq0bVvVLFw==}
-=======
-  '@cloudflare/workerd-darwin-arm64@1.20250902.0':
-    resolution: {integrity: sha512-5Wr6a5/ixoXuMPOvbprN8k9HhAHDBh8f7H5V4DN/Xb4ORoGkI9AbC5QPpYV0wa3Ncf+CRSGobdmZNyO24hRccA==}
->>>>>>> e8c3bfd4b (NOJIRA: Fixup lockfile after rebase)
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
@@ -4607,24 +4575,8 @@ packages:
     cpu: [x64]
     os: [linux]
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   '@cloudflare/workerd-linux-64@1.20250906.0':
     resolution: {integrity: sha512-rlKzWgsLnlQ5Nt9W69YBJKcmTmZbOGu0edUsenXPmc6wzULUxoQpi7ZE9k3TfTonJx4WoQsQlzCUamRYFsX+0Q==}
-||||||| parent of addfa9672 (chore: Address comments, remove superfluous options checks)
-  '@cloudflare/workerd-linux-64@1.20250902.0':
-    resolution: {integrity: sha512-1yJGt56VQBuG01nrhkRGoa1FGz7xQwJTrgewxt/MRRtigZTf84qJQiPQxyM7PQWCLREKa+JS7G8HFqvOwK7kZA==}
-=======
-  '@cloudflare/workerd-linux-64@1.20250813.0':
-    resolution: {integrity: sha512-6pokgBQmujJsAuqOme2wBX5ol/1YW3d7kV7wp0Y1/tFi46TnmWcEy08B4FD5t2AARQJ68a7XMxIJKWChcaJ9Cg==}
->>>>>>> addfa9672 (chore: Address comments, remove superfluous options checks)
-||||||| parent of e8c3bfd4b (NOJIRA: Fixup lockfile after rebase)
-  '@cloudflare/workerd-linux-64@1.20250813.0':
-    resolution: {integrity: sha512-6pokgBQmujJsAuqOme2wBX5ol/1YW3d7kV7wp0Y1/tFi46TnmWcEy08B4FD5t2AARQJ68a7XMxIJKWChcaJ9Cg==}
-=======
-  '@cloudflare/workerd-linux-64@1.20250902.0':
-    resolution: {integrity: sha512-1yJGt56VQBuG01nrhkRGoa1FGz7xQwJTrgewxt/MRRtigZTf84qJQiPQxyM7PQWCLREKa+JS7G8HFqvOwK7kZA==}
->>>>>>> e8c3bfd4b (NOJIRA: Fixup lockfile after rebase)
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
@@ -4647,24 +4599,8 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   '@cloudflare/workerd-linux-arm64@1.20250906.0':
     resolution: {integrity: sha512-DdedhiQ+SeLzpg7BpcLrIPEZ33QKioJQ1wvL4X7nuLzEB9rWzS37NNNahQzc1+44rhG4fyiHbXBPOeox4B9XVA==}
-||||||| parent of addfa9672 (chore: Address comments, remove superfluous options checks)
-  '@cloudflare/workerd-linux-arm64@1.20250902.0':
-    resolution: {integrity: sha512-ArDodWzfo0BVqMQGUgaOGV5Mzf8wEMUX8TJonExpGbYavoVXVDbp2rTLFRJg1vkFGpmw1teCtSoOjSDisFZQMg==}
-=======
-  '@cloudflare/workerd-linux-arm64@1.20250813.0':
-    resolution: {integrity: sha512-lFwqohi8fkR98OwjHT69sbThx4BJem7vu6N8kqrge7wuKJWrMDNbzOTdyBA8adV9DmE07ELuN2vcbbu8ZjaL2Q==}
->>>>>>> addfa9672 (chore: Address comments, remove superfluous options checks)
-||||||| parent of e8c3bfd4b (NOJIRA: Fixup lockfile after rebase)
-  '@cloudflare/workerd-linux-arm64@1.20250813.0':
-    resolution: {integrity: sha512-lFwqohi8fkR98OwjHT69sbThx4BJem7vu6N8kqrge7wuKJWrMDNbzOTdyBA8adV9DmE07ELuN2vcbbu8ZjaL2Q==}
-=======
-  '@cloudflare/workerd-linux-arm64@1.20250902.0':
-    resolution: {integrity: sha512-ArDodWzfo0BVqMQGUgaOGV5Mzf8wEMUX8TJonExpGbYavoVXVDbp2rTLFRJg1vkFGpmw1teCtSoOjSDisFZQMg==}
->>>>>>> e8c3bfd4b (NOJIRA: Fixup lockfile after rebase)
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
@@ -4687,24 +4623,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   '@cloudflare/workerd-windows-64@1.20250906.0':
     resolution: {integrity: sha512-Q8Qjfs8jGVILnZL6vUpQ90q/8MTCYaGR3d1LGxZMBqte8Vr7xF3KFHPEy7tFs0j0mMjnqCYzlofmPNY+9ZaDRg==}
-||||||| parent of addfa9672 (chore: Address comments, remove superfluous options checks)
-  '@cloudflare/workerd-windows-64@1.20250902.0':
-    resolution: {integrity: sha512-DT/o8ZSkmze1YGI7vgVt4ST+VYGb3tNChiFnOM9Z8YOejqKqbVvATB4gi/xMSnNR9CsKFqH4hHWDDtz+wf4uZg==}
-=======
-  '@cloudflare/workerd-windows-64@1.20250813.0':
-    resolution: {integrity: sha512-Fs62NvUajtoXb+4W8jaRXzw64Nbmb8X+PbRLZbxUFv68sGhxKPw1nB1YEmNNZ215ma47hTlSdF3UQh4FOmz7NA==}
->>>>>>> addfa9672 (chore: Address comments, remove superfluous options checks)
-||||||| parent of e8c3bfd4b (NOJIRA: Fixup lockfile after rebase)
-  '@cloudflare/workerd-windows-64@1.20250813.0':
-    resolution: {integrity: sha512-Fs62NvUajtoXb+4W8jaRXzw64Nbmb8X+PbRLZbxUFv68sGhxKPw1nB1YEmNNZ215ma47hTlSdF3UQh4FOmz7NA==}
-=======
-  '@cloudflare/workerd-windows-64@1.20250902.0':
-    resolution: {integrity: sha512-DT/o8ZSkmze1YGI7vgVt4ST+VYGb3tNChiFnOM9Z8YOejqKqbVvATB4gi/xMSnNR9CsKFqH4hHWDDtz+wf4uZg==}
->>>>>>> e8c3bfd4b (NOJIRA: Fixup lockfile after rebase)
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
