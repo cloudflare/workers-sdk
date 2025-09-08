@@ -270,7 +270,7 @@ describe("Long Workflow (single instance)", () => {
 		await expect(
 			instance.waitForStatus(STATUS_COMPLETE)
 		).rejects.toMatchInlineSnapshot(
-			`[Error: [WorkflowIntrospector] The Wokflow instance 12345678910 has reached status 'errored'. This is a finite status that prevents it from ever reaching the expected status of 'complete'.]`
+			`[Error: [WorkflowIntrospector] The Workflow instance 12345678910 has reached status 'errored'. This is a finite status that prevents it from ever reaching the expected status of 'complete'.]`
 		);
 
 		const instanceStatus = await createdInstance.status();
@@ -620,7 +620,7 @@ describe("Long Workflow (batch)", () => {
 		await expect(
 			instances[0].waitForStatus(STATUS_COMPLETE)
 		).rejects.toMatchInlineSnapshot(
-			`[Error: [WorkflowIntrospector] The Wokflow instance 12345678910 has reached status 'errored'. This is a finite status that prevents it from ever reaching the expected status of 'complete'.]`
+			`[Error: [WorkflowIntrospector] The Workflow instance 12345678910 has reached status 'errored'. This is a finite status that prevents it from ever reaching the expected status of 'complete'.]`
 		);
 
 		expect((await createdInstances[0].status()).status).toBe(STATUS_ERRORED);

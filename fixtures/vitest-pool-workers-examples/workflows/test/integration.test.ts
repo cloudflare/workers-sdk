@@ -6,7 +6,7 @@ const STATUS_COMPLETE = "complete";
 
 describe("Test Workflow", () => {
 	it("should be able to trigger a workflow", async () => {
-		// With `using` to ensure cleanup:
+		// With `using` to ensure Workflow instances cleanup:
 		await using introspector = await introspectWorkflow(env.TEST_WORKFLOW);
 		const res = await SELF.fetch("https://mock-worker.local");
 
@@ -14,7 +14,7 @@ describe("Test Workflow", () => {
 	});
 
 	it("workflow should reach the end and be successful", async () => {
-		// With `using` to ensure cleanup:
+		// With `using` to ensure Workflow instances cleanup:
 		await using introspector = await introspectWorkflow(env.TEST_WORKFLOW);
 		const res = await SELF.fetch("https://mock-worker.local");
 
@@ -30,7 +30,7 @@ describe("Test Workflow", () => {
 	});
 
 	it("workflow should reach the end and be successful with introspector", async () => {
-		// CONFIG with `using` to ensure cleanup:
+		// CONFIG with `using` to ensure Workflow instances cleanup:
 		await using introspector = await introspectWorkflow(env.TEST_WORKFLOW);
 
 		await SELF.fetch("https://mock-worker.local");
@@ -42,7 +42,7 @@ describe("Test Workflow", () => {
 		const instance = instances[0];
 		await instance.waitForStatus(STATUS_COMPLETE);
 
-		// CLEANUP: assured by Symbol.asyncDispose
+		// CLEANUP: ensured by `using`
 	});
 });
 
@@ -51,7 +51,7 @@ describe("Test long Workflow", () => {
 	const mockResult = "mocked result";
 
 	it("workflow should be able to introspect and reach the end and be successful", async () => {
-		// CONFIG with `using` to ensure cleanup:
+		// CONFIG with `using` to ensure Workflow instances cleanup:
 		await using introspector = await introspectWorkflow(env.TEST_LONG_WORKFLOW);
 		introspector.modifyAll(async (m) => {
 			await m.disableSleeps();
@@ -70,7 +70,7 @@ describe("Test long Workflow", () => {
 		);
 		await instance.waitForStatus(STATUS_COMPLETE);
 
-		// CLEANUP: done by Symbol.asyncDispose
+		// CLEANUP: ensured by `using`
 	});
 
 	it("workflow batch should be able to introspect and reach the end and be successful (explicit cleanup)", async () => {

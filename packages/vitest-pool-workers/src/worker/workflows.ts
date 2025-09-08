@@ -113,7 +113,7 @@ export async function introspectWorkflow(
 	const modifierCallbacks: ModifierCallback[] = [];
 	const instanceIntrospectors: WorkflowInstanceIntrospector[] = [];
 	// @ts-expect-error getBindingName not exposed
-	const bindingName = await workflow.getBindingName();
+	const bindingName = await workflow.unsafeGetBindingName();
 	const internalOriginalWorkflow = internalEnv[bindingName] as Workflow;
 	const externalOriginalWorkflow = env[bindingName] as Workflow;
 

@@ -242,7 +242,6 @@ export class Context extends RpcTarget {
 			try {
 				const timeoutPromise = async () => {
 					const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
-					// inserir aqui
 					let timeout = ms(config.timeout);
 					if (forceStepTimeout) {
 						timeout = 0;
@@ -279,32 +278,34 @@ export class Context extends RpcTarget {
 				const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 
 				const mockErrorKey = `mock-step-error-${valueKey}`;
-				const mockedErrorPayload =
-					(await this.#state.storage.get<{
-						name: string;
-						message: string;
-					}>(mockErrorKey)) ||
-					(await this.#state.storage.get<{
-						name: string;
-						message: string;
-					}>(`${mockErrorKey}-${stepState.attemptedCount}`));
+				const persistentMockError = await this.#state.storage.get<{
+					name: string;
+					message: string;
+				}>(mockErrorKey);
+				const transientMockError = await this.#state.storage.get<{
+					name: string;
+					message: string;
+				}>(`${mockErrorKey}-${stepState.attemptedCount}`);
+				const mockErrorPayload = persistentMockError || transientMockError;
 
 				// if a mocked error exists, throw it immediately
-				if (mockedErrorPayload) {
-					const errorToThrow = new Error(mockedErrorPayload.message);
-					errorToThrow.name = mockedErrorPayload.name;
+				if (mockErrorPayload) {
+					const errorToThrow = new Error(mockErrorPayload.message);
+					errorToThrow.name = mockErrorPayload.name;
 					throw errorToThrow;
 				}
 
 				const replaceResult = await this.#state.storage.get(
 					`replace-result-${valueKey}`
 				);
+
 				const forceStepTimeoutKey = `force-step-timeout-${valueKey}`;
-				const forceStepTimeout =
-					(await this.#state.storage.get(forceStepTimeoutKey)) ||
-					(await this.#state.storage.get(
-						`${forceStepTimeoutKey}-${stepState.attemptedCount}`
-					));
+				const persistentStepTimeout =
+					await this.#state.storage.get(forceStepTimeoutKey);
+				const transientStepTimeout = await this.#state.storage.get(
+					`${forceStepTimeoutKey}-${stepState.attemptedCount}`
+				);
+				const forceStepTimeout = persistentStepTimeout || transientStepTimeout;
 
 				if (forceStepTimeout) {
 					result = await timeoutPromise();
@@ -656,6 +657,9 @@ export class Context extends RpcTarget {
 		const timeoutEntryPQ = this.#engine.priorityQueue.getFirst(
 			(a) => a.hash === cacheKey && a.type === "timeout"
 		);
+		const forceEventTimeout = await this.#state.storage.get(
+			`force-event-timeout-${waitForEventKey}`
+		);
 		if (
 			(timeoutEntryPQ === undefined &&
 				this.#engine.priorityQueue !== undefined &&
@@ -665,7 +669,7 @@ export class Context extends RpcTarget {
 				})) ||
 			(timeoutEntryPQ !== undefined &&
 				timeoutEntryPQ.targetTimestamp < Date.now()) ||
-			(await this.#state.storage.get(`force-event-timeout-${waitForEventKey}`))
+			forceEventTimeout
 		) {
 			this.#engine.writeLog(
 				InstanceEvent.WAIT_TIMED_OUT,

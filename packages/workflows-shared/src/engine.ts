@@ -19,7 +19,6 @@ import { TimePriorityQueue } from "./lib/timePriorityQueue";
 import { WorkflowInstanceModifier } from "./modifier";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
-import type { StepSelector } from "./modifier";
 import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 
 export interface Env {
@@ -143,18 +142,6 @@ export class Engine extends DurableObject<Env> {
 		if (group) {
 			this.handleStepResultWaiter(group, event, metadata);
 		}
-	}
-
-	async readLogsFromStepSelector(
-		step: StepSelector
-	): Promise<RawInstanceLog[]> {
-		const hash = await computeHash(step.name);
-		let count = 1;
-		if (step.index) {
-			count = step.index;
-		}
-		const cacheKey = `${hash}-${count}`;
-		return this.readLogsFromStep(cacheKey);
 	}
 
 	readLogsFromStep(cacheKey: string): RawInstanceLog[] {
@@ -303,7 +290,7 @@ export class Engine extends DurableObject<Env> {
 				if (waiter) {
 					waiter.reject(
 						new Error(
-							`[WorkflowIntrospector] The Wokflow instance ${this.instanceId} has reached status '${instanceStatusName(reachedStatus)}'. This is a finite status that prevents it from ever reaching the expected status of '${instanceStatusName(unreachableStatus)}'.`
+							`[WorkflowIntrospector] The Workflow instance ${this.instanceId} has reached status '${instanceStatusName(reachedStatus)}'. This is a finite status that prevents it from ever reaching the expected status of '${instanceStatusName(unreachableStatus)}'.`
 						)
 					);
 					this.statusWaiters.delete(unreachableStatus);
@@ -377,7 +364,7 @@ export class Engine extends DurableObject<Env> {
 	}
 
 	// Called by the cleanup function when introspecting in tests
-	async _unsafeAbort(reason?: string) {
+	async unsafeAbort(reason?: string) {
 		await this.ctx.storage.sync();
 		await this.ctx.storage.deleteAll();
 

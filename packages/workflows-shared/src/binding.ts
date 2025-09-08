@@ -80,7 +80,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		return await Promise.all(batch.map((val) => this.create(val)));
 	}
 
-	public getBindingName(): string {
+	public unsafeGetBindingName(): string {
 		return this.env.BINDING_NAME;
 	}
 
@@ -109,7 +109,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		const stub = this.env.ENGINE.get(stubId);
 
 		try {
-			await stub._unsafeAbort(reason);
+			await stub.unsafeAbort(reason);
 		} catch {
 			// do nothing because we want to clean up this instance
 		}
