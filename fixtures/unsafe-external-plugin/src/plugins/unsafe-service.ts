@@ -17,9 +17,6 @@ import type { Service, Worker_Binding } from "miniflare";
 
 export const UNSAFE_PLUGIN_NAME = "unsafe-plugin";
 
-/**
- * Options for the unsafe plugin. It takes a map of binding names to options for that specific binding
- */
 export const UnsafeServiceBindingOptionSchema = z.array(
 	z.object({
 		name: z.string(),

@@ -1,4 +1,3 @@
-import { PluginLoader } from "miniflare";
 import {
 	UNSAFE_PLUGIN_NAME,
 	UNSAFE_SERVICE_PLUGIN,

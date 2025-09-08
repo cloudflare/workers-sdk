@@ -74,7 +74,6 @@ import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
-	ExternalPluginSpecifier,
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,

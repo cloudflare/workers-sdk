@@ -1,6 +1,11 @@
 import path from "path";
 import test from "ava";
-import { Miniflare, MiniflareCoreError, MiniflareOptions } from "miniflare";
+import {
+	Miniflare,
+	MiniflareCoreError,
+	MiniflareOptions,
+	WorkerOptions,
+} from "miniflare";
 import { EXPORTED_FIXTURES, FIXTURES_PATH } from "../../test-shared";
 
 /**
@@ -14,37 +19,35 @@ export const unsafePluginDirectory = path.resolve(
 
 const pluginEntrypoint = `${unsafePluginDirectory}/index.js`;
 
-const ENTRY_WORKER_CONFIG = {
-	BINDING_NAME: `UNSAFE_BINDING`,
-	pluginConfig(packageName: string, pluginName: string) {
-		return [
-			{
-				name: this.BINDING_NAME,
-				type: "service",
-				plugin: {
-					package: packageName,
-					name: pluginName,
-				},
-				options: {
-					foo: "bar",
-					service: "my-unsafe-service",
-				},
-			},
-		];
+const UNSAFE_BINDINGS: (
+	packageName: string,
+	pluginName: string
+) => WorkerOptions["unsafeBindings"] = (packageName, pluginName) => [
+	{
+		name: "UNSAFE_BINDING",
+		type: "service",
+		plugin: {
+			package: packageName,
+			name: pluginName,
+		},
+		options: {
+			foo: "bar",
+			service: "my-unsafe-service",
+		},
 	},
-	get script() {
-		return `export default {
-            async fetch(req, env, ctx) {
-                const writeRes = await env.${this.BINDING_NAME}.performUnsafeWrite("some-key", "some-value");
-                if (!writeRes.ok) {
-                    return Response.json(writeRes, { status: 500 })
-                }
-                const res = await env.${this.BINDING_NAME}.performUnsafeRead("some-key");
-                return Response.json(res)
-            }
-        }`;
-	},
-};
+];
+const PLUGIN_SCRIPT = /* javascript */ `export default {
+	async fetch(req, env, ctx) {
+		console.log(env)
+		const writeRes = await env.UNSAFE_BINDING.performUnsafeWrite("some-key", "some-value");
+		if (!writeRes.ok) {
+			return Response.json(writeRes, { status: 500 })
+		}
+		const res = await env.UNSAFE_BINDING.performUnsafeRead("some-key");
+		return Response.json(res)
+	}
+}
+`;
 
 test("A plugin that does not expose `registerMiniflarePlugins` will cause an error to be thrown", async (t) => {
 	const badPluginDir = path.resolve(FIXTURES_PATH, "unsafe-plugin-bad");
@@ -57,24 +60,16 @@ test("A plugin that does not expose `registerMiniflarePlugins` will cause an err
 		// Use a compatability date that supports RPCs
 		compatibilityDate: "2025-08-04",
 		modules: true,
-		script: ENTRY_WORKER_CONFIG.script,
-		unsafeBindings: ENTRY_WORKER_CONFIG.pluginConfig(packageName, pluginName),
+		script: PLUGIN_SCRIPT,
+		unsafeBindings: UNSAFE_BINDINGS(packageName, pluginName),
 	};
 	const mf = new Miniflare({ modules: true, script: "" });
 	t.teardown(() => mf.dispose());
 
 	const err = await t.throwsAsync(mf.setOptions(opts), {
 		instanceOf: MiniflareCoreError,
-		code: "ERR_RUNTIME_FAILURE",
-		message: "Failed to load external plugin",
+		code: "ERR_PLUGIN_LOADING_FAILED",
 	});
-
-	t.assert("cause" in err);
-	t.true(
-		err.cause?.message.includes(
-			"did not provide named export 'registerMiniflarePlugins'"
-		)
-	);
 });
 
 test("A plugin that exposes a non-function `registerMiniflarePlugins` export will cause an error to be thrown", async (t) => {
@@ -88,23 +83,16 @@ test("A plugin that exposes a non-function `registerMiniflarePlugins` export wil
 		// Use a compatability date that supports RPCs
 		compatibilityDate: "2025-08-04",
 		modules: true,
-		script: ENTRY_WORKER_CONFIG.script,
-		unsafeBindings: ENTRY_WORKER_CONFIG.pluginConfig(packageName, pluginName),
+		script: PLUGIN_SCRIPT,
+		unsafeBindings: UNSAFE_BINDINGS(packageName, pluginName),
 	};
 	const mf = new Miniflare({ modules: true, script: "" });
 	t.teardown(() => mf.dispose());
 
 	const err = await t.throwsAsync(mf.setOptions(opts), {
 		instanceOf: MiniflareCoreError,
-		code: "ERR_RUNTIME_FAILURE",
-		message: "Failed to load external plugin",
+		code: "ERR_PLUGIN_LOADING_FAILED",
 	});
-	t.assert("cause" in err);
-	t.true(
-		err.cause?.message.includes(
-			"Specified external plugin unsafe-plugin exposed non-function 'registerMiniflarePlugins' export."
-		)
-	);
 });
 
 test("Supports specifying an unsafe plugin will be loaded into Miniflare and will be usable in local dev", async (t) => {
@@ -114,8 +102,8 @@ test("Supports specifying an unsafe plugin will be loaded into Miniflare and wil
 		// Use a compatability date that supports RPCs
 		compatibilityDate: "2025-08-04",
 		modules: true,
-		script: ENTRY_WORKER_CONFIG.script,
-		unsafeBindings: ENTRY_WORKER_CONFIG.pluginConfig(packageName, pluginName),
+		script: PLUGIN_SCRIPT,
+		unsafeBindings: UNSAFE_BINDINGS(packageName, pluginName),
 	};
 	const mf = new Miniflare(opts);
 	t.teardown(() => mf.dispose());

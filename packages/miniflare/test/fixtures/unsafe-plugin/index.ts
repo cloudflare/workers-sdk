@@ -1,6 +1,7 @@
 import {
 	getMiniflareObjectBindings,
 	kVoid,
+	Plugin,
 	PluginBase,
 	ProxyNodeBinding,
 	Service,
@@ -62,126 +63,106 @@ export class UnsafeBindingServiceEntrypoint extends WorkerEntrypoint {
 	},
 };
 
-const PluginOptionSchema = z.record(
-	z.string(),
+export const UnsafeServiceBindingOptionSchema = z.array(
 	z.object({
-		foo: z.string(),
+		name: z.string(),
+		type: z.string(),
+		plugin: z.object({
+			package: z.string(),
+			name: z.string(),
+		}),
+		options: z.object({ emitLogs: z.boolean() }),
 	})
 );
-type PluginOption = typeof PluginOptionSchema;
 
-const SharedOptionsSchema = z.undefined();
-type SharedPluginOption = typeof SharedOptionsSchema;
+export const plugins = {
+	"unsafe-plugin": {
+		options: UnsafeServiceBindingOptionSchema,
+		getBindings(options) {
+			return options.map<Worker_Binding>((binding) => {
+				return {
+					name: binding.name,
+					service: {
+						name: `unsafe-plugin:${binding.name}`,
+						entrypoint: "UnsafeBindingServiceEntrypoint",
+					},
+				};
+			});
+		},
+		getNodeBindings(options) {
+			const configOptions = Object.entries(options);
 
-type PluginCreator = (
-	pluginName: string,
-	bindingName: string
-) => Record<string, PluginBase<PluginOption, SharedPluginOption>>;
+			// If the user hasn't specified pre-determined mappings, we will skip adding any services
+			if (!configOptions.length) {
+				return {};
+			}
 
-const createMiniflarePlugin: PluginCreator = (pluginName, bindingName) => {
-	const objectServiceName = `${pluginName}:object`;
-	const boundServiceName = `${pluginName}:${bindingName}`;
-	return {
-		[pluginName]: {
-			options: PluginOptionSchema,
-			sharedOptions: SharedOptionsSchema,
-			getBindings(options) {
-				const configOptions = Object.keys(options);
+			return Object.fromEntries(
+				Object.keys(options).map((name) => [name, new ProxyNodeBinding()])
+			);
+		},
+		getServices({ options, unsafeStickyBlobs }) {
+			if (options.length === 0) {
+				return [];
+			}
 
-				// If the user hasn't specified pre-determined mappings, we will skip adding any services
-				if (!configOptions.length) {
-					return [];
-				}
-				return configOptions.map<Worker_Binding>((bindingName) => {
-					return {
-						name: bindingName,
-						service: {
-							name: boundServiceName,
-							entrypoint: "UnsafeBindingServiceEntrypoint",
+			const bindingWorkers = options.map<Service>((config) => ({
+				name: `unsafe-plugin:${config.name}`,
+				worker: {
+					compatibilityDate: "2025-07-09",
+					modules: [
+						{
+							name: "binding.worker.js",
+							esModule: MODULE_SCRIPTS.BINDING_WORKER,
 						},
-					};
-				});
-			},
-			getNodeBindings(options) {
-				const configOptions = Object.entries(options);
+					],
+					bindings: [
+						{
+							name: "config",
+							json: JSON.stringify(config),
+						},
+						{
+							name: "store",
+							durableObjectNamespace: {
+								className: MODULE_SCRIPTS.DO_CLASS,
+								serviceName: "unsafe-plugin:object",
+							},
+						},
+					],
+				},
+			}));
 
-				// If the user hasn't specified pre-determined mappings, we will skip adding any services
-				if (!configOptions.length) {
-					return {};
-				}
-
-				return Object.fromEntries(
-					Object.keys(options).map((name) => [name, new ProxyNodeBinding()])
-				);
-			},
-			getServices({ options, unsafeStickyBlobs }) {
-				const configOptions = Object.values(options);
-				if (configOptions.length === 0) {
-					return [];
-				}
-
-				const bindingWorkers = configOptions.map<Service>((config) => ({
-					name: boundServiceName,
+			return [
+				...bindingWorkers,
+				{
+					name: "unsafe-plugin:object",
 					worker: {
 						compatibilityDate: "2025-07-09",
 						modules: [
 							{
-								name: "binding.worker.js",
-								esModule: MODULE_SCRIPTS.BINDING_WORKER,
+								name: "object.worker.js",
+								esModule: MODULE_SCRIPTS.OBJECT_WORKER,
 							},
 						],
+						durableObjectNamespaces: [
+							{
+								className: MODULE_SCRIPTS.DO_CLASS,
+								uniqueKey: `miniflare-unsafe-binding-UnsafeBindingObject`,
+							},
+						],
+						durableObjectStorage: {
+							inMemory: kVoid,
+						},
 						bindings: [
 							{
-								name: "config",
-								json: JSON.stringify(config),
+								name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
+								service: { name: SERVICE_LOOPBACK },
 							},
-							{
-								name: "store",
-								durableObjectNamespace: {
-									className: MODULE_SCRIPTS.DO_CLASS,
-									serviceName: objectServiceName,
-								},
-							},
+							...getMiniflareObjectBindings(unsafeStickyBlobs),
 						],
 					},
-				}));
-
-				return [
-					...bindingWorkers,
-					{
-						name: objectServiceName,
-						worker: {
-							compatibilityDate: "2025-07-09",
-							modules: [
-								{
-									name: "object.worker.js",
-									esModule: MODULE_SCRIPTS.OBJECT_WORKER,
-								},
-							],
-							durableObjectNamespaces: [
-								{
-									className: MODULE_SCRIPTS.DO_CLASS,
-									uniqueKey: `miniflare-unsafe-binding-UnsafeBindingObject`,
-								},
-							],
-							durableObjectStorage: {
-								inMemory: kVoid,
-							},
-							bindings: [
-								{
-									name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
-									service: { name: SERVICE_LOOPBACK },
-								},
-								...getMiniflareObjectBindings(unsafeStickyBlobs),
-							],
-						},
-					},
-				];
-			},
+				},
+			];
 		},
-	};
+	} satisfies Plugin<typeof UnsafeServiceBindingOptionSchema>,
 };
-
-export function registerMiniflarePlugins() {
-	return createMiniflarePlugin("unsafe-plugin", "UNSAFE_BINDING");
-}
