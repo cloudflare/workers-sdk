@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.7.3
+
+### Patch Changes
+
+- [#10552](https://github.com/cloudflare/workers-sdk/pull/10552) [`3b78839`](https://github.com/cloudflare/workers-sdk/commit/3b788390de8a300786ac21e4a351794f8f35e3cf) Thanks [@vicb](https://github.com/vicb)! - Bump `unenv` to 2.0.0-rc.21
+
 ## 2.7.2
 
 ### Patch Changes
