@@ -17,17 +17,19 @@ import type { Service, Worker_Binding } from "miniflare";
 
 export const UNSAFE_PLUGIN_NAME = "unsafe-plugin";
 
-export const UnsafeServiceBindingOptionSchema = z.array(
-	z.object({
-		name: z.string(),
-		type: z.string(),
-		plugin: z.object({
-			package: z.string(),
+export const UnsafeServiceBindingOptionSchema = z
+	.array(
+		z.object({
 			name: z.string(),
-		}),
-		options: z.object({ emitLogs: z.boolean() }),
-	})
-);
+			type: z.string(),
+			plugin: z.object({
+				package: z.string(),
+				name: z.string(),
+			}),
+			options: z.object({ emitLogs: z.boolean() }),
+		})
+	)
+	.or(z.undefined());
 
 export const UNSAFE_SERVICE_PLUGIN: Plugin<
 	typeof UnsafeServiceBindingOptionSchema
@@ -40,7 +42,7 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 	 * @returns
 	 */
 	async getBindings(options) {
-		return options.map<Worker_Binding>((binding) => {
+		return options?.map<Worker_Binding>((binding) => {
 			return {
 				name: binding.name,
 				service: {
@@ -52,10 +54,7 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 	},
 	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.keys(options).map((bindingName) => [
-				bindingName,
-				new ProxyNodeBinding(),
-			])
+			options?.map((binding) => [binding.name, new ProxyNodeBinding()]) ?? []
 		);
 	},
 	async getServices({
@@ -64,7 +63,7 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 		defaultPersistRoot,
 		unsafeStickyBlobs,
 	}) {
-		if (options.length === 0) {
+		if (!options || options.length === 0) {
 			return [];
 		}
 
