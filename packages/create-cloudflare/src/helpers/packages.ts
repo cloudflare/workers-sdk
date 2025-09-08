@@ -69,7 +69,8 @@ export const installPackages = async (
 	);
 
 	if (npm === "npm") {
-		// Npm install will update the package.json with a hat-range rather than the exact version/range we asked for.
+		// Npm install will update the package.json with a caret-range rather than the exact version/range we asked for.
+		// We can't use `npm install --save-exact` because that always pins to an exact version, and we want to allow ranges too.
 		// So let's just fix that up now by rewriting the package.json.
 		const pkgJsonPath = path.join(process.cwd(), "package.json");
 		const pkgJson = readJSON(pkgJsonPath) as PackageJson;
