@@ -137,7 +137,8 @@ export const writeEslintrc = async (ctx: C3Context): Promise<void> => {
 const addDevDependencies = async (installEslintPlugin: boolean) => {
 	const packages = [
 		"@cloudflare/next-on-pages@1",
-		"vercel",
+		"vercel@47.0.4",
+		"next@15.4.6",
 		...(installEslintPlugin ? ["eslint-plugin-next-on-pages"] : []),
 	];
 	await installPackages(packages, {
