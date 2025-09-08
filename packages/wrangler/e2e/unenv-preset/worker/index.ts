@@ -505,4 +505,29 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof http2.connect, "function");
 		assert.strictEqual(http2.constants.HTTP2_HEADER_STATUS, ":status");
 	},
+
+	async testProcess() {
+		const http2 = await import("node:process");
+
+		assert.strictEqual(globalThis.process, process);
+
+		const useV2 = getRuntimeFlagValue("enable_nodejs_process_v2");
+
+		if (useV2) {
+			// workerd implementation only
+			assert.equal(process.arch, "x64");
+			assert.equal(process.title, "workerd");
+
+		} else {
+			// unenv implementation only
+			assert.equal(process.arch, "");
+			assert.equal(process.title, "");
+		}
+
+		assert.doesNotThrow(() => process.chdir('/tmp'));
+		assert.equal(typeof process.cwd(), "string");
+
+
+
+	}
 };
