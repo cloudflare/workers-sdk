@@ -19,6 +19,7 @@
 	"scripts": {
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
+		"deploy": "echo 'no deploy'",
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
