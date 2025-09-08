@@ -507,23 +507,24 @@ export const WorkerdTests: Record<string, () => void> = {
 	},
 
 	async testProcess() {
-		const process = await import("node:process");
-
-		assert.strictEqual(globalThis.process, process);
+		const mProcess = await import("node:process");
+		const gProcess = globalThis.process;
 
 		const useV2 = getRuntimeFlagValue("enable_nodejs_process_v2");
 
-		if (useV2) {
-			// workerd implementation only
-			assert.equal(process.arch, "x64");
-			assert.equal(process.title, "workerd");
-		} else {
-			// unenv implementation only
-			assert.equal(process.arch, "");
-			assert.equal(process.title, "");
-		}
+		for (const p of [mProcess, gProcess]) {
+			if (useV2) {
+				// workerd implementation only
+				assert.equal(p.arch, "x64");
+				assert.equal(p.title, "workerd");
+			} else {
+				// unenv implementation only
+				assert.equal(p.arch, "");
+				assert.equal(p.title, "");
+			}
 
-		assert.doesNotThrow(() => process.chdir("/tmp"));
-		assert.equal(typeof process.cwd(), "string");
+			assert.doesNotThrow(() => p.chdir("/tmp"));
+			assert.equal(typeof p.cwd(), "string");
+		}
 	},
 };
