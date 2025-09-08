@@ -293,7 +293,7 @@ export interface CfUnsafeBinding {
 	dev?: {
 		plugin: {
 			/**
-			 * Package is the bare specifier of the package that exposes plugins to integrate into Miniflare via a `registerMiniflarePlugins` function.
+			 * Package is the bare specifier of the package that exposes plugins to integrate into Miniflare via a named `plugins` export.
 			 * @example "@cloudflare/my-external-miniflare-plugin"
 			 */
 			package: string;

@@ -49,7 +49,7 @@ const PLUGIN_SCRIPT = /* javascript */ `export default {
 }
 `;
 
-test("A plugin that does not expose `registerMiniflarePlugins` will cause an error to be thrown", async (t) => {
+test("A plugin that does not expose `plugins` will cause an error to be thrown", async (t) => {
 	const badPluginDir = path.resolve(FIXTURES_PATH, "unsafe-plugin-bad");
 	const [packageName, pluginName] = [
 		`${badPluginDir}/no-export.cjs`,
@@ -72,7 +72,7 @@ test("A plugin that does not expose `registerMiniflarePlugins` will cause an err
 	});
 });
 
-test("A plugin that exposes a non-function `registerMiniflarePlugins` export will cause an error to be thrown", async (t) => {
+test("A plugin that exposes a non-object `plugins` export will cause an error to be thrown", async (t) => {
 	const badPluginDir = path.resolve(FIXTURES_PATH, "unsafe-plugin-bad");
 	const [packageName, pluginName] = [
 		`${badPluginDir}/not-function.cjs`,
