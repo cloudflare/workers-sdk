@@ -188,6 +188,34 @@ const testConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:process v2
+	[
+		{
+			name: "process v1  by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_process_v2: false,
+			},
+		},
+		// TODO: add a config when v2 is enabled by default (>= 2025-09-15)
+		{
+			name: "process v2 by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_process_v2"],
+			expectRuntimeFlags: {
+				enable_nodejs_process_v2: true,
+			},
+		},
+		// TODO: change the date pass the default enabled date (>= 2025-09-15)
+		{
+			name: "process v1 by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_process_v2"],
+			expectRuntimeFlags: {
+				enable_nodejs_process_v2: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(testConfigs)(
