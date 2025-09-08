@@ -1110,7 +1110,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250709.0
+        specifier: catalog:default
         version: 4.20250902.0
       esbuild:
         specifier: catalog:default

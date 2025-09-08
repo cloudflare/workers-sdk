@@ -10,7 +10,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250709.0",
+		"@cloudflare/workers-types": "catalog:default",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"miniflare-shared": "workspace:*",
