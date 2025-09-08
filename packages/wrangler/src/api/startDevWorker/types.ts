@@ -19,6 +19,7 @@ import type {
 	CfHyperdrive,
 	CfKvNamespace,
 	CfLogfwdrBinding,
+	CfMediaBinding,
 	CfModule,
 	CfMTlsCertificate,
 	CfPipeline,
@@ -302,6 +303,7 @@ export type Binding =
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
+	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
 

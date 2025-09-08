@@ -425,6 +425,7 @@ type WorkerOptionsBindings = Pick<
 	| "helloWorld"
 	| "workerLoaders"
 	| "unsafeBindings"
+	| "media"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -539,6 +540,10 @@ export function buildMiniflareBindingOptions(
 
 	if (bindings.browser && remoteBindingsEnabled) {
 		warnOrError("browser", bindings.browser.experimental_remote, "remote");
+	}
+
+	if (bindings.media && remoteBindingsEnabled) {
+		warnOrError("media", bindings.media.experimental_remote, "remote");
 	}
 
 	if (bindings.mtls_certificates && remoteBindingsEnabled) {
@@ -747,6 +752,16 @@ export function buildMiniflareBindingOptions(
 								: undefined,
 					}
 				: undefined,
+		media:
+			bindings.media &&
+			remoteBindingsEnabled &&
+			remoteProxyConnectionString &&
+			bindings.media.experimental_remote
+				? {
+						binding: bindings.media.binding,
+						remoteProxyConnectionString,
+					}
+				: undefined,
 		browserRendering: bindings.browser?.binding
 			? {
 					binding: bindings.browser.binding,
@@ -929,6 +944,13 @@ export async function buildMiniflareOptions(
 					"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
 				);
 			}
+		}
+
+		if (config.bindings.media) {
+			logger.warn(
+				"Using the Media binding locally is not supported. You may use the `--x-remote-bindings` flag to run the binding remotely in local dev mode."
+			);
+			config.bindings.media = undefined;
 		}
 
 		if (!config.bindVectorizeToProd && config.bindings.vectorize?.length) {
