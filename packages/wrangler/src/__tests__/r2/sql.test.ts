@@ -1,3 +1,4 @@
+import { success } from "@cloudflare/cli";
 import { http, HttpResponse } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -76,7 +77,7 @@ describe("r2 sql", () => {
 			);
 
 			await expect(runWrangler("r2 sql enable")).rejects.toThrow(
-				"Failed to enable R2 SQL"
+				"A request to the Cloudflare API (/accounts/some-account-id/dqe/enable) failed."
 			);
 		});
 	});
@@ -120,7 +121,7 @@ describe("r2 sql", () => {
 			);
 
 			await expect(runWrangler("r2 sql disable")).rejects.toThrow(
-				"Failed to disable R2 SQL"
+				"A request to the Cloudflare API (/accounts/some-account-id/dqe/disable) failed."
 			);
 		});
 	});
@@ -242,9 +243,7 @@ describe("r2 sql", () => {
 			);
 
 			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
-			expect(std.out).toContain(
-				"Query executed successfully with no results"
-			);
+			expect(std.out).toContain("Query executed successfully with no results");
 		});
 
 		it("should handle query failures", async () => {
@@ -262,7 +261,7 @@ describe("r2 sql", () => {
 				http.post(
 					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
 					async () => {
-						return HttpResponse.json(mockResponse);
+						return HttpResponse.json(mockResponse, { status: 500 });
 					},
 					{ once: true }
 				)
@@ -292,22 +291,6 @@ describe("r2 sql", () => {
 			).rejects.toThrow("Failed to connect to R2 SQL API");
 		});
 
-		it("should handle non-200 HTTP responses", async () => {
-			msw.use(
-				http.post(
-					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
-					async () => {
-						return HttpResponse.text("Internal server error", { status: 500 });
-					},
-					{ once: true }
-				)
-			);
-
-			await expect(
-				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
-			).rejects.toThrow("Query failed with HTTP 500: Internal server error");
-		});
-
 		it("should handle invalid JSON responses", async () => {
 			msw.use(
 				http.post(
@@ -321,9 +304,7 @@ describe("r2 sql", () => {
 
 			await expect(
 				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
-			).rejects.toThrow(
-				"Internal error, API response format is invalid: Invalid JSON"
-			);
+			).rejects.toThrow("Received a malformed response from the API");
 		});
 
 		it("should handle null values in query results", async () => {
