@@ -1,3 +1,4 @@
+import { spinner } from "@cloudflare/cli/interactive";
 import CLITable from "cli-table3";
 import prettyBytes from "pretty-bytes";
 import { fetchResult } from "../cfetch";
@@ -151,7 +152,6 @@ export const r2SqlQueryCommand = createCommand({
 			);
 		}
 
-		// TODO: add a spinner.
 		const splitIndex = warehouse.indexOf("_");
 		if (splitIndex === -1) {
 			throw new UserError("Warehouse name has invalid format");
@@ -161,6 +161,8 @@ export const r2SqlQueryCommand = createCommand({
 			warehouse.slice(splitIndex + 1),
 		];
 
+		const s = spinner();
+		s.start("Query in progress");
 		const apiUrl = `https://api.dqe.cloudflarestorage.com/api/v1/accounts/${accountId}/dqe/query/${bucketName}`;
 		let responseStatus = null;
 		let statusText = null;
@@ -207,6 +209,7 @@ export const r2SqlQueryCommand = createCommand({
 			});
 		}
 
+		s.stop();
 		if (parsed.success) {
 			formatSqlResults(parsed, duration);
 		} else {
