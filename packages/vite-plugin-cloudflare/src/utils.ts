@@ -46,6 +46,12 @@ export function createRequestHandler(
 ) => Promise<void> {
 	return async (req, res, next) => {
 		try {
+			// Built in vite middleware trims out the base path when passing in the request
+			// We can restore it by using the `originalUrl` property
+			// This makes sure the worker receives the correct url in both dev using vite and production
+			if (req.originalUrl) {
+				req.url = req.originalUrl;
+			}
 			const request = createRequest(req, res);
 			let response = await handler(toMiniflareRequest(request), req);
 
