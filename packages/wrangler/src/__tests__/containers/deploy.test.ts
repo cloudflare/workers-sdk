@@ -1779,6 +1779,109 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
+
+	it("should enable ssh when provided for new container", async () => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					ssh: {
+						enabled: true,
+						port: 1010,
+					},
+					authorized_keys: [
+						{
+							name: "jeff",
+							public_key:
+								"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+						},
+					],
+				},
+			],
+		});
+
+		mockGetApplications([]);
+
+		mockCreateApplication({
+			name: "my-container",
+			max_instances: 10,
+			scheduling_policy: SchedulingPolicy.DEFAULT,
+			configuration: {
+				image: "docker.io/hello:world",
+				wrangler_ssh: {
+					enabled: true,
+					port: 1010,
+				},
+				authorized_keys: [
+					{
+						name: "jeff",
+						public_key:
+							"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+					},
+				],
+			},
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your Worker has access to the following bindings:
+			Binding                                            Resource
+			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
+		// no deprecation warnings should show up on this run
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ NEW my-container
+			│
+			│   [[containers]]
+			│   name = \\"my-container\\"
+			│   scheduling_policy = \\"default\\"
+			│   instances = 0
+			│   max_instances = 10
+			│   rollout_active_grace_period = 0
+			│
+			│     [containers.configuration]
+			│     image = \\"docker.io/hello:world\\"
+			│     instance_type = \\"dev\\"
+			│
+			│       [containers.configuration.wrangler_ssh]
+			│       enabled = true
+			│       port = 1_010
+			│
+			│       [[containers.configuration.authorized_keys]]
+			│       name = \\"jeff\\"
+			│       public_key = \\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm\\"
+			│
+			│     [containers.constraints]
+			│     tier = 1
+			│
+			│     [containers.durable_objects]
+			│     namespace_id = \\"1\\"
+			│
+			│
+			│  SUCCESS  Created application my-container (Application ID: undefined)
+			│
+			╰ Applied changes
+
+			"
+		`);
+	});
 });
 
 // This is a separate describe block because we intentionally do not mock any

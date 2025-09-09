@@ -747,4 +747,54 @@ describe("getNormalizedContainerOptions", () => {
 			});
 		});
 	});
+
+	it("should handle valid ssh and authorized_keys config", async () => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "TestContainer",
+					image: `${getCloudflareContainerRegistry()}/test:latest`,
+					name: "test-container",
+					max_instances: 3,
+					ssh: {
+						enabled: true,
+						port: 22,
+					},
+					authorized_keys: [
+						{
+							name: "blahaj",
+							public_key:
+								"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+						},
+					],
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+
+		expect(result).toHaveLength(1);
+		expect(result[0].ssh).toMatchObject({
+			enabled: true,
+			port: 22,
+		});
+		expect(result[0].authorized_keys).toStrictEqual([
+			{
+				name: "blahaj",
+				public_key:
+					"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+			},
+		]);
+	});
 });

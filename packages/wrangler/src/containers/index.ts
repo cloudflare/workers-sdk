@@ -13,6 +13,8 @@ import {
 	infoYargs,
 	listCommand,
 	listYargs,
+	sshCommand,
+	sshYargs,
 } from "./containers";
 import { registryCommands } from "./registries";
 import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
@@ -82,6 +84,17 @@ export const containers = (
 				handleFailure(
 					`wrangler containers delete`,
 					deleteCommand,
+					containersScope
+				)(args)
+		)
+		.command(
+			"ssh [ID]",
+			"SSH into a container",
+			(args) => sshYargs(args),
+			(args) =>
+				handleFailure(
+					`wrangler containers ssh`,
+					sshCommand,
 					containersScope
 				)(args)
 		)

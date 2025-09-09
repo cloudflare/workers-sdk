@@ -8,6 +8,8 @@ import type { ApplicationPriorities } from "./ApplicationPriorities";
 import type { ApplicationRolloutActiveGracePeriod } from "./ApplicationRolloutActiveGracePeriod";
 import type { ModifyUserDeploymentConfiguration } from "./ModifyUserDeploymentConfiguration";
 import type { SchedulingPolicy } from "./SchedulingPolicy";
+import type { SSHPublicKeyItemV3 } from "./SSHPublicKeyItemV3";
+import type { WranglerSSHConfig } from "./WranglerSSHConfig";
 
 /**
  * Request body for modifying an application
@@ -32,6 +34,8 @@ export type ModifyApplicationRequestBody = {
 	scheduling_policy?: SchedulingPolicy;
 	constraints?: ApplicationConstraints;
 	rollout_active_grace_period?: ApplicationRolloutActiveGracePeriod;
+	wrangler_ssh?: WranglerSSHConfig;
+	authorized_keys?: Array<SSHPublicKeyItemV3>;
 	/**
 	 * The deployment configuration of all deployments created by this application.
 	 * Right now, if you modify the application configuration, only new deployments
