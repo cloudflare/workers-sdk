@@ -7,11 +7,11 @@ import {
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared/src/utils";
-import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import MagicString from "magic-string";
 import { CoreHeaders, Miniflare } from "miniflare";
 import colors from "picocolors";
 import * as vite from "vite";
+import { generateStaticRoutingRuleMatcher } from "../../workers-shared/asset-worker/src/utils/rules-engine";
 import {
 	createModuleReference,
 	matchAdditionalModule,
@@ -64,12 +64,12 @@ import { cleanUrl, createRequestHandler, getOutputDirectory } from "./utils";
 import { validateWorkerEnvironmentOptions } from "./vite-config";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
+import type { StaticRouting } from "../../workers-shared/utils/types";
 import type {
 	PluginConfig,
 	ResolvedPluginConfig,
 	WorkerConfig,
 } from "./plugin-config";
-import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { Unstable_RawConfig } from "wrangler";
 
 export type { PluginConfig } from "./plugin-config";

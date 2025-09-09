@@ -1,1 +1,1 @@
-export { default } from "@cloudflare/workers-shared/router-worker";
+export { default } from "../../../workers-shared/router-worker";

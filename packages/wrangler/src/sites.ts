@@ -1,9 +1,9 @@
 import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
-import { createPatternMatcher } from "@cloudflare/workers-shared";
 import chalk from "chalk";
 import xxhash from "xxhash-wasm";
+import { createPatternMatcher } from "../../workers-shared";
 import { UserError } from "./errors";
 import {
 	BATCH_KEY_MAX,
