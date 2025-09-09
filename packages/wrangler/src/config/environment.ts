@@ -40,6 +40,37 @@ export type CloudchamberConfig = {
 	ipv4?: boolean;
 };
 
+type UnsafeBinding = {
+	/**
+	 * The name of the binding provided to the Worker
+	 */
+	name: string;
+	/**
+	 * The 'type' of the unsafe binding.
+	 */
+	type: string;
+	dev?: {
+		plugin: {
+			/**
+			 * Package is the bare specifier of the package that exposes plugins to integrate into Miniflare via a named `plugins` export.
+			 * @example "@cloudflare/my-external-miniflare-plugin"
+			 */
+			package: string;
+			/**
+			 * Plugin is the name of the plugin exposed by the package.
+			 * @example "MY_UNSAFE_PLUGIN"
+			 */
+			name: string;
+		};
+
+		/**
+		 * Optional mapping of unsafe bindings names to options provided for the plugin.
+		 */
+		options?: Record<string, unknown>;
+	};
+	[key: string]: unknown;
+};
+
 /**
  * Configuration for a container application
  */
@@ -985,11 +1016,7 @@ export interface EnvironmentNonInheritable {
 		 * can be used to implement bindings for features that haven't released and aren't supported
 		 * directly by wrangler or miniflare.
 		 */
-		bindings?: {
-			name: string;
-			type: string;
-			[key: string]: unknown;
-		}[];
+		bindings?: UnsafeBinding[];
 
 		/**
 		 * Arbitrary key/value pairs that will be included in the uploaded metadata.  Values specified

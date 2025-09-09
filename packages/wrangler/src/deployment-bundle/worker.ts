@@ -289,6 +289,26 @@ export interface CfPipeline {
 export interface CfUnsafeBinding {
 	name: string;
 	type: string;
+
+	dev?: {
+		plugin: {
+			/**
+			 * Package is the bare specifier of the package that exposes plugins to integrate into Miniflare via a named `plugins` export.
+			 * @example "@cloudflare/my-external-miniflare-plugin"
+			 */
+			package: string;
+			/**
+			 * Plugin is the name of the plugin exposed by the package.
+			 * @example "my-unsafe-plugin"
+			 */
+			name: string;
+		};
+
+		/**
+		 * dev-only options to pass to the plugin.
+		 */
+		options?: Record<string, unknown>;
+	};
 }
 
 type CfUnsafeMetadata = Record<string, unknown>;

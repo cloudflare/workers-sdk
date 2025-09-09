@@ -1,0 +1,19 @@
+{
+	"name": "@fixture/unsafe-external-plugin",
+	"private": true,
+	"description": "An example of an unsafe external plugin for Miniflare",
+	"license": "ISC",
+	"author": "",
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "tsx tools/build.ts"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"esbuild": "catalog:default",
+		"miniflare": "workspace:*",
+		"tsx": "^3.12.8",
+		"zod": "3.22.3"
+	}
+}

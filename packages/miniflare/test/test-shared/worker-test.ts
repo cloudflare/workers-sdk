@@ -14,6 +14,19 @@ export const FIXTURES_PATH = path.resolve(
 	"fixtures"
 );
 
+/**
+ * EXPORTED_FIXTURES will point to the fixtures directory in the transpiled
+ * miniflare code (aka the `dist` folder)
+ */
+export const EXPORTED_FIXTURES = path.resolve(
+	// Will look like `dist/src/index.js`
+	require.resolve("miniflare"),
+	"..",
+	"..",
+	"test",
+	"fixtures"
+);
+
 export const workerTestMacro = test.macro(
 	async (t, ...fixturePath: string[]) => {
 		const tmp = await useTmp(t);
