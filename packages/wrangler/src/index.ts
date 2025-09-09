@@ -153,6 +153,17 @@ import { pipelinesCreateCommand } from "./pipelines/cli/create";
 import { pipelinesDeleteCommand } from "./pipelines/cli/delete";
 import { pipelinesGetCommand } from "./pipelines/cli/get";
 import { pipelinesListCommand } from "./pipelines/cli/list";
+import { pipelinesSetupCommand } from "./pipelines/cli/setup";
+import { pipelinesSinksNamespace } from "./pipelines/cli/sinks";
+import { pipelinesSinksCreateCommand } from "./pipelines/cli/sinks/create";
+import { pipelinesSinksDeleteCommand } from "./pipelines/cli/sinks/delete";
+import { pipelinesSinksGetCommand } from "./pipelines/cli/sinks/get";
+import { pipelinesSinksListCommand } from "./pipelines/cli/sinks/list";
+import { pipelinesStreamsNamespace } from "./pipelines/cli/streams";
+import { pipelinesStreamsCreateCommand } from "./pipelines/cli/streams/create";
+import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
+import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
+import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queuesNamespace } from "./queues/cli/commands";
@@ -1384,6 +1395,10 @@ export function createCLIParser(argv: string[]) {
 			definition: pipelinesNamespace,
 		},
 		{
+			command: "wrangler pipelines setup",
+			definition: pipelinesSetupCommand,
+		},
+		{
 			command: "wrangler pipelines create",
 			definition: pipelinesCreateCommand,
 		},
@@ -1402,6 +1417,46 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler pipelines delete",
 			definition: pipelinesDeleteCommand,
+		},
+		{
+			command: "wrangler pipelines streams",
+			definition: pipelinesStreamsNamespace,
+		},
+		{
+			command: "wrangler pipelines streams create",
+			definition: pipelinesStreamsCreateCommand,
+		},
+		{
+			command: "wrangler pipelines streams list",
+			definition: pipelinesStreamsListCommand,
+		},
+		{
+			command: "wrangler pipelines streams get",
+			definition: pipelinesStreamsGetCommand,
+		},
+		{
+			command: "wrangler pipelines streams delete",
+			definition: pipelinesStreamsDeleteCommand,
+		},
+		{
+			command: "wrangler pipelines sinks",
+			definition: pipelinesSinksNamespace,
+		},
+		{
+			command: "wrangler pipelines sinks create",
+			definition: pipelinesSinksCreateCommand,
+		},
+		{
+			command: "wrangler pipelines sinks list",
+			definition: pipelinesSinksListCommand,
+		},
+		{
+			command: "wrangler pipelines sinks get",
+			definition: pipelinesSinksGetCommand,
+		},
+		{
+			command: "wrangler pipelines sinks delete",
+			definition: pipelinesSinksDeleteCommand,
 		},
 	]);
 	registry.registerNamespace("pipelines");

@@ -1,20 +1,12 @@
 import { createCommand } from "../../core/create-command";
-import { FatalError, UserError } from "../../errors";
-import { logger } from "../../logger";
+import { UserError } from "../../errors";
 import { requireAuth } from "../../user";
-import { getPipeline, updatePipeline } from "../client";
-import {
-	authorizeR2Bucket,
-	BYTES_PER_MB,
-	getAccountR2Endpoint,
-	parseTransform,
-} from "../index";
 import { validateCorsOrigins, validateInRange } from "../validate";
-import type { BindingSource, HttpSource, Source } from "../client";
+import { updateLegacyPipeline } from "./legacy-helpers";
 
 export const pipelinesUpdateCommand = createCommand({
 	metadata: {
-		description: "Update a pipeline",
+		description: "Update a pipeline (legacy pipelines only)",
 		owner: "Product: Pipelines",
 		status: "open-beta",
 	},
@@ -73,16 +65,6 @@ export const pipelinesUpdateCommand = createCommand({
 			group: "Batch hints",
 		},
 
-		// Transform options
-		"transform-worker": {
-			type: "string",
-			describe:
-				"Pipeline transform Worker and entrypoint (<worker>.<entrypoint>)",
-			demandOption: false,
-			hidden: true, // TODO: Remove once transformations launch
-			group: "Transformations",
-		},
-
 		"r2-bucket": {
 			type: "string",
 			describe: "Destination R2 bucket name",
@@ -128,147 +110,21 @@ export const pipelinesUpdateCommand = createCommand({
 			demandOption: false,
 			group: "Pipeline settings",
 		},
+		legacy: {
+			type: "boolean",
+			describe: "Use the legacy Pipelines API",
+			default: false,
+		},
 	},
 	async handler(args, { config }) {
-		const name = args.pipeline;
-		// only the fields set will be updated - other fields will use the existing config
 		const accountId = await requireAuth(config);
 
-		const pipelineConfig = await getPipeline(config, accountId, name);
-
-		if (args.compression) {
-			pipelineConfig.destination.compression.type = args.compression;
-		}
-		if (args.batchMaxMb) {
-			pipelineConfig.destination.batch.max_bytes =
-				args.batchMaxMb * BYTES_PER_MB; // convert to bytes for the API
-		}
-		if (args.batchMaxSeconds) {
-			pipelineConfig.destination.batch.max_duration_s = args.batchMaxSeconds;
-		}
-		if (args.batchMaxRows) {
-			pipelineConfig.destination.batch.max_rows = args.batchMaxRows;
+		if (args.legacy) {
+			return await updateLegacyPipeline(config, accountId, args);
 		}
 
-		const bucket = args.r2Bucket;
-		const accessKeyId = args.r2AccessKeyId;
-		const secretAccessKey = args.r2SecretAccessKey;
-		if (bucket || accessKeyId || secretAccessKey) {
-			const destination = pipelineConfig.destination;
-			if (bucket) {
-				pipelineConfig.destination.path.bucket = bucket;
-			}
-			destination.credentials = {
-				endpoint: getAccountR2Endpoint(accountId),
-				access_key_id: accessKeyId || "",
-				secret_access_key: secretAccessKey || "",
-			};
-			if (!accessKeyId && !secretAccessKey) {
-				const auth = await authorizeR2Bucket(
-					config,
-					name,
-					accountId,
-					destination.path.bucket
-				);
-				destination.credentials.access_key_id = auth.accessKeyId;
-				destination.credentials.secret_access_key = auth.secretAccessKey;
-			}
-			if (!destination.credentials.access_key_id) {
-				throw new FatalError("Requires a r2 access key id");
-			}
-
-			if (!destination.credentials.secret_access_key) {
-				throw new FatalError("Requires a r2 secret access key");
-			}
-		}
-
-		if (args.source && args.source.length > 0) {
-			const existingSources = pipelineConfig.source;
-			pipelineConfig.source = []; // Reset the list
-
-			const sourceHandlers: Record<string, () => Source> = {
-				http: (): HttpSource => {
-					const existing = existingSources.find(
-						(s: Source) => s.type === "http"
-					);
-
-					return {
-						...existing, // Copy over existing properties for forwards compatibility
-						type: "http",
-						format: "json",
-						...(args.requireHttpAuth && {
-							authentication: args.requireHttpAuth,
-						}), // Include only if defined
-					};
-				},
-				worker: (): BindingSource => {
-					const existing = existingSources.find(
-						(s: Source) => s.type === "binding"
-					);
-
-					return {
-						...existing, // Copy over existing properties for forwards compatibility
-						type: "binding",
-						format: "json",
-					};
-				},
-			};
-
-			for (const source of args.source) {
-				const handler = sourceHandlers[source];
-				if (handler) {
-					pipelineConfig.source.push(handler());
-				}
-			}
-		}
-
-		if (pipelineConfig.source.length === 0) {
-			throw new UserError(
-				"No sources have been enabled. At least one source (HTTP or Worker Binding) should be enabled"
-			);
-		}
-
-		if (args.transformWorker) {
-			if (args.transformWorker === "none") {
-				// Unset transformations
-				pipelineConfig.transforms = [];
-			} else {
-				pipelineConfig.transforms.push(parseTransform(args.transformWorker));
-			}
-		}
-
-		if (args.r2Prefix) {
-			pipelineConfig.destination.path.prefix = args.r2Prefix;
-		}
-
-		if (args.shardCount) {
-			pipelineConfig.metadata.shards = args.shardCount;
-		}
-
-		// This covers the case where `--source` wasn't passed but `--cors-origins` or
-		// `--require-http-auth` was.
-		const httpSource = pipelineConfig.source.find(
-			(s: Source) => s.type === "http"
-		);
-		if (httpSource) {
-			if (args.requireHttpAuth) {
-				httpSource.authentication = args.requireHttpAuth;
-			}
-			if (args.corsOrigins) {
-				httpSource.cors = { origins: args.corsOrigins };
-			}
-		}
-
-		logger.log(`🌀 Updating pipeline "${name}"`);
-		const pipeline = await updatePipeline(
-			config,
-			accountId,
-			name,
-			pipelineConfig
-		);
-
-		logger.log(
-			`✅ Successfully updated pipeline "${pipeline.name}" with ID ${pipeline.id}\n`
+		throw new UserError(
+			"The update command is not supported for pipelines created with the V1 API. Use the --legacy flag to update legacy pipelines."
 		);
 	},
 });
