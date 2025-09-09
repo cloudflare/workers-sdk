@@ -525,6 +525,21 @@ export const WorkerdTests: Record<string, () => void> = {
 
 			assert.doesNotThrow(() => p.chdir("/tmp"));
 			assert.equal(typeof p.cwd(), "string");
+
+			assert.equal(typeof p.addListener, "function");
+			assert.equal(typeof p.eventNames, "function");
+			assert.equal(typeof p.getMaxListeners, "function");
+			assert.equal(typeof p.listenerCount, "function");
+			assert.equal(typeof p.listeners, "function");
+			assert.equal(typeof p.off, "function");
+			assert.equal(typeof p.on, "function");
+			assert.equal(typeof p.once, "function");
+			assert.equal(typeof p.prependListener, "function");
+			assert.equal(typeof p.prependOnceListener, "function");
+			assert.equal(typeof p.rawListeners, "function");
+			assert.equal(typeof p.removeAllListeners, "function");
+			assert.equal(typeof p.removeListener, "function");
+			assert.equal(typeof p.setMaxListeners, "function");
 		}
 	},
 };
