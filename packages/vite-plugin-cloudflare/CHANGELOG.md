@@ -1,5 +1,20 @@
 # @cloudflare/vite-plugin
 
+## 1.12.4
+
+### Patch Changes
+
+- [#10534](https://github.com/cloudflare/workers-sdk/pull/10534) [`dceb550`](https://github.com/cloudflare/workers-sdk/commit/dceb550cd817b792b7f7ec04df2b8f1f5147527d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Ensure that preview config values are used for remote bindings
+
+  Ensure that if in some remote binding configuration provides a preview value (e.g. `preview_database_id` for D1 bindings) such value gets used instead of the standard ones
+
+- [#10552](https://github.com/cloudflare/workers-sdk/pull/10552) [`3b78839`](https://github.com/cloudflare/workers-sdk/commit/3b788390de8a300786ac21e4a351794f8f35e3cf) Thanks [@vicb](https://github.com/vicb)! - Bump `unenv` to 2.0.0-rc.21
+
+- Updated dependencies [[`dac302c`](https://github.com/cloudflare/workers-sdk/commit/dac302c94b71a9bd84a6d91485f1f914c5e9e866), [`4e49d3e`](https://github.com/cloudflare/workers-sdk/commit/4e49d3e31f952dbd82fcb909c131ea9552a1b0c5), [`dceb550`](https://github.com/cloudflare/workers-sdk/commit/dceb550cd817b792b7f7ec04df2b8f1f5147527d), [`3b78839`](https://github.com/cloudflare/workers-sdk/commit/3b788390de8a300786ac21e4a351794f8f35e3cf), [`5cb806f`](https://github.com/cloudflare/workers-sdk/commit/5cb806f41cc95442b2e4f7047459b1d312da9da6)]:
+  - miniflare@4.20250906.0
+  - wrangler@4.35.0
+  - @cloudflare/unenv-preset@2.7.3
+
 ## 1.12.3
 
 ### Patch Changes
