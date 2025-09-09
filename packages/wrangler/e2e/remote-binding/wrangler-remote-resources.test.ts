@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import dedent from "ts-dedent";
+import { fetch } from "undici";
 import {
 	afterAll,
 	beforeAll,

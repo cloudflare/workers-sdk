@@ -9,5 +9,5 @@
 		"moduleResolution": "node",
 		"noEmit": true
 	},
-	"include": ["tests", "../../node-types.d.ts"]
+	"include": ["tests"]
 }

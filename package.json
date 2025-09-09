@@ -74,7 +74,8 @@
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
 			"@types/node": "$@types/node",
-			"vitest>vite": "^5.0.0"
+			"vitest>vite": "^5.0.0",
+			"@types/node>undici-types": "catalog:default"
 		},
 		"patchedDependencies": {
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",

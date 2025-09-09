@@ -1,6 +1,6 @@
 module.exports = {
 	root: true,
-	extends: ["plugin:turbo/recommended", "@cloudflare/eslint-config-worker"],
+	extends: ["plugin:turbo/recommended", "@cloudflare/eslint-config-shared"],
 	ignorePatterns: [
 		"vendor",
 		"*-dist",

@@ -9,7 +9,7 @@
 		"test:file": "node -r esbuild-register test/run-test-file.ts"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@typescript-eslint/eslint-plugin": "catalog:default",
 		"@typescript-eslint/parser": "catalog:default",
