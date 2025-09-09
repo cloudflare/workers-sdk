@@ -4,6 +4,7 @@ import {
 } from "@cloudflare/workflows-shared/src/instance";
 import { runInRunnerObject } from "./durable-objects";
 import { env, internalEnv } from "./env";
+import type { WorkflowBinding } from "@cloudflare/workflows-shared/src/binding";
 import type {
 	StepSelector,
 	WorkflowInstanceModifier,
@@ -23,7 +24,7 @@ export interface WorkflowInstanceIntrospector {
 }
 
 export async function introspectWorkflowInstance(
-	workflow: Workflow,
+	workflow: WorkflowBinding,
 	instanceId: string
 ): Promise<WorkflowInstanceIntrospector> {
 	if (!workflow || !instanceId) {
@@ -37,15 +38,17 @@ export async function introspectWorkflowInstance(
 class WorkflowInstanceIntrospectorHandle
 	implements WorkflowInstanceIntrospector
 {
-	#workflow: Workflow;
+	#workflow: WorkflowBinding;
 	#instanceId: string;
 	#instanceModifier: WorkflowInstanceModifier;
 
-	constructor(workflow: Workflow, instanceId: string) {
+	constructor(workflow: WorkflowBinding, instanceId: string) {
 		this.#workflow = workflow;
 		this.#instanceId = instanceId;
-		// @ts-expect-error not exposed
-		this.#instanceModifier = workflow.unsafeGetInstanceModifier(instanceId);
+
+		this.#instanceModifier = workflow.unsafeGetInstanceModifier(
+			instanceId
+		) as WorkflowInstanceModifier;
 	}
 
 	async modify(fn: ModifierCallback): Promise<WorkflowInstanceIntrospector> {
@@ -55,7 +58,6 @@ class WorkflowInstanceIntrospectorHandle
 	}
 
 	async waitForStepResult(step: StepSelector): Promise<unknown> {
-		// @ts-expect-error not exposed
 		const stepResult = await this.#workflow.unsafeWaitForStepResult(
 			this.#instanceId,
 			step.name,
@@ -80,12 +82,10 @@ class WorkflowInstanceIntrospectorHandle
 			// starts running, so waiting for it to be queued should always return
 			return;
 		}
-		// @ts-expect-error not exposed
 		await this.#workflow.unsafeWaitForStatus(this.#instanceId, status);
 	}
 
 	async cleanUp(): Promise<void> {
-		// @ts-expect-error not exposed
 		await this.#workflow.unsafeAbort(this.#instanceId, "Instance clean up");
 	}
 
@@ -104,7 +104,7 @@ export interface WorkflowIntrospector {
 }
 
 export async function introspectWorkflow(
-	workflow: Workflow
+	workflow: WorkflowBinding
 ): Promise<WorkflowIntrospectorHandle> {
 	if (!workflow) {
 		throw new Error("[WorkflowIntrospector] Workflow binding is required.");
@@ -112,7 +112,7 @@ export async function introspectWorkflow(
 
 	const modifierCallbacks: ModifierCallback[] = [];
 	const instanceIntrospectors: WorkflowInstanceIntrospector[] = [];
-	// @ts-expect-error getBindingName not exposed
+
 	const bindingName = await workflow.unsafeGetBindingName();
 	const internalOriginalWorkflow = internalEnv[bindingName] as Workflow;
 	const externalOriginalWorkflow = env[bindingName] as Workflow;
@@ -214,13 +214,13 @@ export async function introspectWorkflow(
 }
 
 class WorkflowIntrospectorHandle implements WorkflowIntrospector {
-	workflow: Workflow;
+	workflow: WorkflowBinding;
 	#modifierCallbacks: ModifierCallback[];
 	#instanceIntrospectors: WorkflowInstanceIntrospector[];
 	#cleanupCallback: () => void;
 
 	constructor(
-		workflow: Workflow,
+		workflow: WorkflowBinding,
 		modifierCallbacks: ModifierCallback[],
 		instanceIntrospectors: WorkflowInstanceIntrospector[],
 		cleanupCallback: () => void

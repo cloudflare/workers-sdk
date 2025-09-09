@@ -76,6 +76,12 @@ export class WorkflowInstanceModifier extends RpcTarget {
 		}
 	}
 
+	// step.do() flow: It first checks if a result or error is already in the cache and, if so, returns it immediately.
+	// If nothing is in the cache, it checks for remaining attempts and runs the user's code against the defined timeout.
+	// Since `step.do()` performs this initial cache check, directly changing the `valueKey` would cause it to
+	// assume the value was pre-cached, preventing it from writing any logs about the step's execution state.
+	// Storing the value under a separate key is crucial because it ensures all execution logs for the step are
+	// generated, rather than the step being skipped due to a premature cache hit.
 	async mockStepResult(step: StepSelector, stepResult: unknown): Promise<void> {
 		const valueKey = await this.#getStepCacheKey(step);
 
@@ -88,6 +94,7 @@ export class WorkflowInstanceModifier extends RpcTarget {
 		await this.#state.storage.put(`replace-result-${valueKey}`, stepResult);
 	}
 
+	// Same logic of `mockStepResult` but stores an error instead of a value.
 	async mockStepError(
 		step: StepSelector,
 		error: Error,
