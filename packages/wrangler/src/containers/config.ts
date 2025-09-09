@@ -118,6 +118,10 @@ export const getNormalizedContainerOptions = async (
 					config.observability?.logs?.enabled ??
 					config.observability?.enabled === true,
 			},
+			ssh: container.ssh
+				? { enabled: container.ssh.enabled, port: container.ssh.port }
+				: undefined,
+			authorized_keys: container.authorized_keys,
 		};
 
 		let instanceTypeOrLimits: InstanceTypeOrLimits;
