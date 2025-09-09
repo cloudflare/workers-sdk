@@ -1,9 +1,11 @@
 import CLITable from "cli-table3";
 import prettyBytes from "pretty-bytes";
 import { fetchResult } from "../cfetch";
+import { truncate } from "../cfetch/internal";
 import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { APIError, parseJSON } from "../parse";
 import { requireAuth } from "../user";
 import { getR2SqlAPITokenFromEnv } from "../user/auth-variables";
 
@@ -79,24 +81,18 @@ export const r2SqlEnableCommand = createCommand({
 
 		logger.log("Enabling R2 SQL for your account...");
 
-		try {
-			await fetchResult(config, `/accounts/${accountId}/dqe/enable`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({}),
-			});
+		await fetchResult(config, `/accounts/${accountId}/dqe/enable`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({}),
+		});
 
-			logger.log(`✅ R2 SQL is enabled for your account
+		logger.log(`✅ R2 SQL is enabled for your account
 
 Try sending a query with \`wrangler r2 sql query <warehouse name> <SQL query>\`
 `);
-		} catch (error) {
-			throw new UserError(
-				`Failed to enable R2 SQL: ${error instanceof Error ? error.message : String(error)}`
-			);
-		}
 	},
 });
 
@@ -112,21 +108,15 @@ export const r2SqlDisableCommand = createCommand({
 
 		logger.log("Disabling R2 SQL for your account...");
 
-		try {
-			await fetchResult(config, `/accounts/${accountId}/dqe/disable`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({}),
-			});
+		await fetchResult(config, `/accounts/${accountId}/dqe/disable`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({}),
+		});
 
-			logger.log("✅ R2 SQL is disabled for your account");
-		} catch (error) {
-			throw new UserError(
-				`Failed to disable R2 SQL: ${error instanceof Error ? error.message : String(error)}`
-			);
-		}
+		logger.log("✅ R2 SQL is disabled for your account");
 	},
 });
 
@@ -171,57 +161,60 @@ export const r2SqlQueryCommand = createCommand({
 			warehouse.slice(splitIndex + 1),
 		];
 
+		const apiUrl = `https://api.dqe.cloudflarestorage.com/api/v1/accounts/${accountId}/dqe/query/${bucketName}`;
 		let responseStatus = null;
+		let statusText = null;
 		let text = null;
 		let duration = null;
 		try {
 			const start = Date.now();
-			const response = await fetch(
-				`https://api.dqe.cloudflarestorage.com/api/v1/accounts/${accountId}/dqe/query/${bucketName}`,
-				{
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						warehouse,
-						query,
-					}),
-				}
-			);
+			const response = await fetch(apiUrl, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${token}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					warehouse,
+					query,
+				}),
+			});
 			responseStatus = response.status;
+			statusText = response.statusText;
 			text = await response.text();
 			duration = Date.now() - start;
 		} catch (error) {
-			// TODO: These shouldn't be UserErrors, but API errors.
-			throw new UserError(
-				`Failed to connect to R2 SQL API: ${error instanceof Error ? error.message : String(error)}`
-			);
+			throw new APIError({
+				text: `Failed to connect to R2 SQL API: ${error instanceof Error ? error.message : String(error)}`,
+			});
 		}
 
 		let parsed = null;
 		try {
-			parsed = JSON.parse(text) as SqlQueryResult;
+			parsed = parseJSON(text) as SqlQueryResult;
 		} catch {
-			if (responseStatus === 200) {
-				throw new UserError(
-					`Internal error, API response format is invalid: ${text}`
-				);
-			} else {
-				throw new UserError(
-					`Query failed with HTTP ${responseStatus}: ${text}`
-				);
-			}
+			throw new APIError({
+				text: "Received a malformed response from the API",
+				notes: [
+					{
+						text: truncate(text, 100),
+					},
+					{
+						text: `POST ${apiUrl} -> ${responseStatus} ${statusText}`,
+					},
+				],
+				status: responseStatus,
+			});
 		}
 
 		if (parsed.success) {
 			formatSqlResults(parsed, duration);
 		} else {
-			logger.error("Query failed because of the following errors:");
+			let errors = "";
 			for (const { code, message } of parsed.errors) {
-				logger.error(`* ${code}: ${message}\n`);
+				errors += `\n* ${code}: ${message}`;
 			}
+			logger.error(`Query failed because of the following errors:${errors}`);
 		}
 	},
 });
