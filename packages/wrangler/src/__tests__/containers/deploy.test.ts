@@ -1839,8 +1839,8 @@ describe("wrangler deploy with containers", () => {
 			Current Version ID: Galaxy-Class"
 		`);
 		// no deprecation warnings should show up on this run
-		expect(std.warn).toMatchInlineSnapshot(`""`);
-		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application

@@ -239,7 +239,7 @@ export async function sshCommand(
 				);
 			}
 
-			throw new Error(
+			throw new APIError(
 				`There has been an unknown error when trying to SSH into the container.\n${JSON.stringify(err.body)}`
 			);
 		}
