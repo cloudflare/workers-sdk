@@ -1183,6 +1183,7 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"observability.enabled\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"observability.logs.enabled\\" to be of type boolean but got undefined.
+				  - Expected \\"observability.traces.enabled\\" to be of type boolean but got undefined.
 				  - Expected \\"observability.head_sampling_rate\\" to be of type number but got \\"INVALID\\"."
 			`);
 		});
@@ -6299,7 +6300,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"observability.enabled\\" or \\"observability.logs.enabled\\" is required.
+					  - \\"observability.enabled\\" or \\"observability.logs.enabled\\" or \\"observability.traces.enabled\\" is required.
 					  - Expected \\"observability.head_sampling_rate\\" to be of type number but got true."
 				`);
 			});
@@ -6353,6 +6354,29 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
+			it("should not error on nested [observability.traces] config only", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							traces: {
+								enabled: true,
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					"
+				`);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
 			it("should not error on mixed observability config", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -6360,6 +6384,9 @@ describe("normalizeAndValidateConfig()", () => {
 							enabled: true,
 							logs: {
 								invocation_logs: false,
+							},
+							traces: {
+								destinations: [],
 							},
 						},
 					} as unknown as RawConfig,

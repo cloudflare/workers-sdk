@@ -2162,8 +2162,8 @@ importers:
   packages/unenv-preset:
     dependencies:
       unenv:
-        specifier: 2.0.0-rc.20
-        version: 2.0.0-rc.20
+        specifier: 2.0.0-rc.21
+        version: 2.0.0-rc.21
       workerd:
         specifier: ^1.20250828.1
         version: 1.20250829.0
@@ -2199,8 +2199,8 @@ importers:
         specifier: ^0.2.12
         version: 0.2.12
       unenv:
-        specifier: 2.0.0-rc.20
-        version: 2.0.0-rc.20
+        specifier: 2.0.0-rc.21
+        version: 2.0.0-rc.21
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -3584,8 +3584,8 @@ importers:
         specifier: 6.3.0
         version: 6.3.0
       unenv:
-        specifier: 2.0.0-rc.20
-        version: 2.0.0-rc.20
+        specifier: 2.0.0-rc.21
+        version: 2.0.0-rc.21
       workerd:
         specifier: 1.20250906.0
         version: 1.20250906.0
@@ -12850,8 +12850,8 @@ packages:
   unenv@2.0.0-rc.15:
     resolution: {integrity: sha512-J/rEIZU8w6FOfLNz/hNKsnY+fFHWnu9MH4yRbSZF3xbbGHovcetXPs7sD+9p8L6CeNC//I9bhRYAOsBt2u7/OA==}
 
-  unenv@2.0.0-rc.20:
-    resolution: {integrity: sha512-8tn4tAl9vD5nWoggAAPz28vf0FY8+pQAayhU94qD+ZkIbVKCBAH/E1MWEEmhb9Whn5EgouYVfBJB20RsTLRDdg==}
+  unenv@2.0.0-rc.21:
+    resolution: {integrity: sha512-Wj7/AMtE9MRnAXa6Su3Lk0LNCfqDYgfwVjwRFVum9U7wsto1imuHqk4kTm7Jni+5A0Hn7dttL6O/zjvUvoo+8A==}
 
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
@@ -23418,7 +23418,7 @@ snapshots:
       pathe: 2.0.3
       ufo: 1.6.1
 
-  unenv@2.0.0-rc.20:
+  unenv@2.0.0-rc.21:
     dependencies:
       defu: 6.1.4
       exsolve: 1.0.7

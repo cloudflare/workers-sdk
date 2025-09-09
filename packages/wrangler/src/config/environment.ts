@@ -723,6 +723,8 @@ export interface EnvironmentNonInheritable {
 		destination_address?: string;
 		/** If this binding should be restricted to a set of verified addresses */
 		allowed_destination_addresses?: string[];
+		/** Whether the binding should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -1230,6 +1232,35 @@ export interface Observability {
 		head_sampling_rate?: number;
 		/** Set to false to disable invocation logs */
 		invocation_logs?: boolean;
+		/**
+		 * If logs should be persisted to the Cloudflare observability platform where they can be queried in the dashboard.
+		 *
+		 * @default true
+		 */
+		persist?: boolean;
+		/**
+		 * What destinations logs emitted from the Worker should be sent to.
+		 *
+		 * @default []
+		 */
+		destinations?: string[];
+	};
+	traces?: {
+		enabled?: boolean;
+		/** The sampling rate */
+		head_sampling_rate?: number;
+		/**
+		 * If traces should be persisted to the Cloudflare observability platform where they can be queried in the dashboard.
+		 *
+		 * @default true
+		 */
+		persist?: boolean;
+		/**
+		 * What destinations traces emitted from the Worker should be sent to.
+		 *
+		 * @default []
+		 */
+		destinations?: string[];
 	};
 }
 
