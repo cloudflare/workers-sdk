@@ -8,18 +8,8 @@ import { runWrangler } from "../helpers/run-wrangler";
 
 describe("r2 sql", () => {
 	const std = mockConsoleMethods();
-	const originalEnv = process.env;
 	mockAccountId();
 	mockApiToken();
-
-	beforeEach(() => {
-		process.env = { ...originalEnv };
-	});
-
-	afterEach(() => {
-		process.env = originalEnv;
-	});
-
 	runInTempDir();
 
 	describe("help", () => {
@@ -141,7 +131,7 @@ describe("r2 sql", () => {
 		const mockToken = "test-token-123";
 
 		beforeEach(() => {
-			process.env.CLOUDFLARE_R2_SQL_TOKEN = mockToken;
+			vi.stubEnv("CLOUDFLARE_R2_SQL_TOKEN", mockToken);
 		});
 
 		it("should require warehouse and query arguments", async () => {
@@ -155,7 +145,7 @@ describe("r2 sql", () => {
 		});
 
 		it("should require CLOUDFLARE_R2_SQL_TOKEN environment variable", async () => {
-			delete process.env.CLOUDFLARE_R2_SQL_TOKEN;
+			vi.stubEnv("CLOUDFLARE_R2_SQL_TOKEN", undefined);
 
 			await expect(
 				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
@@ -193,44 +183,41 @@ describe("r2 sql", () => {
 				},
 			};
 
-			// Mock the fetch call to the SQL API.
-			const originalFetch = global.fetch;
-			global.fetch = vi.fn().mockResolvedValue({
-				status: 200,
-				text: async () => JSON.stringify(mockResponse),
-			});
+			msw.use(
+				http.post(
+					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					async ({ request, params }) => {
+						const { accountId, bucketName } = params;
+						expect(accountId).toEqual("account123");
+						expect(bucketName).toEqual("mybucket");
 
-			try {
-				await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+						const body = (await request.json()) as {
+							warehouse: string;
+							query: string;
+						};
+						expect(body.warehouse).toEqual(mockWarehouse);
+						expect(body.query).toEqual(mockQuery);
 
-				// Verify the fetch was called with correct parameters.
-				expect(global.fetch).toHaveBeenCalledWith(
-					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/account123/dqe/query/mybucket",
-					{
-						method: "POST",
-						headers: {
-							Authorization: `Bearer ${mockToken}`,
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify({
-							warehouse: mockWarehouse,
-							query: mockQuery,
-						}),
-					}
-				);
+						const authHeader = request.headers.get("Authorization");
+						expect(authHeader).toEqual(`Bearer ${mockToken}`);
 
-				// Check that results are displayed in a table format.
-				expect(std.out).toContain("id");
-				expect(std.out).toContain("name");
-				expect(std.out).toContain("age");
-				expect(std.out).toContain("Alice");
-				expect(std.out).toContain("Bob");
-				expect(std.out).toContain("Charlie");
-				expect(std.out).toContain("across 2 files from R2");
-				// Not checking MB/s speed as it depends on timing.
-			} finally {
-				global.fetch = originalFetch;
-			}
+						return HttpResponse.json(mockResponse);
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+
+			// Check that results are displayed in a table format.
+			expect(std.out).toContain("id");
+			expect(std.out).toContain("name");
+			expect(std.out).toContain("age");
+			expect(std.out).toContain("Alice");
+			expect(std.out).toContain("Bob");
+			expect(std.out).toContain("Charlie");
+			expect(std.out).toContain("across 2 files from R2");
+			// Not checking MB/s speed as it depends on timing.
 		});
 
 		it("should handle queries with no results", async () => {
@@ -244,20 +231,20 @@ describe("r2 sql", () => {
 				},
 			};
 
-			const originalFetch = global.fetch;
-			global.fetch = vi.fn().mockResolvedValue({
-				status: 200,
-				text: async () => JSON.stringify(mockResponse),
-			});
+			msw.use(
+				http.post(
+					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					async () => {
+						return HttpResponse.json(mockResponse);
+					},
+					{ once: true }
+				)
+			);
 
-			try {
-				await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
-				expect(std.out).toContain(
-					"Query executed successfully with no results"
-				);
-			} finally {
-				global.fetch = originalFetch;
-			}
+			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+			expect(std.out).toContain(
+				"Query executed successfully with no results"
+			);
 		});
 
 		it("should handle query failures", async () => {
@@ -271,69 +258,72 @@ describe("r2 sql", () => {
 				result: null,
 			};
 
-			const originalFetch = global.fetch;
-			global.fetch = vi.fn().mockResolvedValue({
-				status: 200,
-				text: async () => JSON.stringify(mockResponse),
-			});
+			msw.use(
+				http.post(
+					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					async () => {
+						return HttpResponse.json(mockResponse);
+					},
+					{ once: true }
+				)
+			);
 
-			try {
-				await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
-				expect(std.err).toContain(
-					"Query failed because of the following errors:"
-				);
-				expect(std.err).toContain("1001: Syntax error in SQL query");
-				expect(std.err).toContain("1002: Table not found");
-			} finally {
-				global.fetch = originalFetch;
-			}
+			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+			expect(std.err).toContain(
+				"Query failed because of the following errors:"
+			);
+			expect(std.err).toContain("1001: Syntax error in SQL query");
+			expect(std.err).toContain("1002: Table not found");
 		});
 
 		it("should handle API connection errors", async () => {
-			const originalFetch = global.fetch;
-			global.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
+			msw.use(
+				http.post(
+					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					async () => {
+						return HttpResponse.error();
+					},
+					{ once: true }
+				)
+			);
 
-			try {
-				await expect(
-					runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
-				).rejects.toThrow("Failed to connect to R2 SQL API: Network error");
-			} finally {
-				global.fetch = originalFetch;
-			}
+			await expect(
+				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
+			).rejects.toThrow("Failed to connect to R2 SQL API");
 		});
 
 		it("should handle non-200 HTTP responses", async () => {
-			const originalFetch = global.fetch;
-			global.fetch = vi.fn().mockResolvedValue({
-				status: 500,
-				text: async () => "Internal server error",
-			});
+			msw.use(
+				http.post(
+					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					async () => {
+						return HttpResponse.text("Internal server error", { status: 500 });
+					},
+					{ once: true }
+				)
+			);
 
-			try {
-				await expect(
-					runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
-				).rejects.toThrow("Query failed with HTTP 500: Internal server error");
-			} finally {
-				global.fetch = originalFetch;
-			}
+			await expect(
+				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
+			).rejects.toThrow("Query failed with HTTP 500: Internal server error");
 		});
 
 		it("should handle invalid JSON responses", async () => {
-			const originalFetch = global.fetch;
-			global.fetch = vi.fn().mockResolvedValue({
-				status: 200,
-				text: async () => "Invalid JSON",
-			});
+			msw.use(
+				http.post(
+					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					async () => {
+						return HttpResponse.text("Invalid JSON", { status: 200 });
+					},
+					{ once: true }
+				)
+			);
 
-			try {
-				await expect(
-					runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
-				).rejects.toThrow(
-					"Internal error, API response format is invalid: Invalid JSON"
-				);
-			} finally {
-				global.fetch = originalFetch;
-			}
+			await expect(
+				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
+			).rejects.toThrow(
+				"Internal error, API response format is invalid: Invalid JSON"
+			);
 		});
 
 		it("should handle null values in query results", async () => {
@@ -350,20 +340,20 @@ describe("r2 sql", () => {
 				},
 			};
 
-			const originalFetch = global.fetch;
-			global.fetch = vi.fn().mockResolvedValue({
-				status: 200,
-				text: async () => JSON.stringify(mockResponse),
-			});
+			msw.use(
+				http.post(
+					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					async () => {
+						return HttpResponse.json(mockResponse);
+					},
+					{ once: true }
+				)
+			);
 
-			try {
-				await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
-				// The output should handle null values gracefully (displayed as empty strings).
-				expect(std.out).toContain("Alice");
-				expect(std.out).toContain("bob@example.com");
-			} finally {
-				global.fetch = originalFetch;
-			}
+			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+			// The output should handle null values gracefully (displayed as empty strings).
+			expect(std.out).toContain("Alice");
+			expect(std.out).toContain("bob@example.com");
 		});
 	});
 });
