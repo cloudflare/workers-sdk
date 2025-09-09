@@ -7,9 +7,9 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import { APIError } from "../parse";
 import formatLabelledValues from "../utils/render-labelled-values";
-import { generateR2ServiceToken, getR2Bucket } from "./client";
+import { generateR2ServiceToken, getR2Bucket } from "./legacy-client";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { Pipeline } from "./client";
+import type { Pipeline } from "./legacy-client";
 
 export const BYTES_PER_MB = 1000 * 1000;
 
