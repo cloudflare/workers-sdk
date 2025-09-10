@@ -1,5 +1,4 @@
 import { spinner } from "@cloudflare/cli/interactive";
-import CLITable from "cli-table3";
 import prettyBytes from "pretty-bytes";
 import { truncate } from "../cfetch/internal";
 import { createCommand, createNamespace } from "../core/create-command";
@@ -34,19 +33,14 @@ function formatSqlResults(data: SqlQueryResult, duration: number): void {
 
 	const { column_order, rows, stats } = data.result;
 
-	// Create table with cli-table3.
-	const table = new CLITable({
-		head: column_order,
-		wordWrap: true,
-	});
-
-	// Add rows to the table.
-	for (const row of rows) {
-		const rowData = column_order.map((col) => String(row[col] ?? ""));
-		table.push(rowData);
-	}
-
-	logger.log(table.toString());
+	logger.table(
+		rows.map((row) =>
+			Object.fromEntries(
+				column_order.map((column) => [column, String(row[column] ?? "")])
+			)
+		),
+		{ wordWrap: true, head: column_order }
+	);
 
 	// Print stats if available.
 	if (stats) {
@@ -91,10 +85,11 @@ export const r2SqlQueryCommand = createCommand({
 
 		const token = getCloudflareAPITokenFromEnv();
 		if (!token) {
-			// TODO: provide documentation link.
 			throw new UserError(
-				"CLOUDFLARE_API_TOKEN environment variable is not set. " +
-					"Please set it to authenticate with the R2 SQL query service."
+				"Missing CLOUDFLARE_API_TOKEN environment variable. " +
+					"Please follow instructions in https://developers.cloudflare.com/r2/sql/platform/troubleshooting/ to create a token. " +
+					"Once done, you can prefix the command with the variable definition like so: `CLOUDFLARE_API_TOKEN=... wrangler r2 sql query ...`. " +
+					"There also other ways to provide the value of this variable, see https://developers.cloudflare.com/workers/wrangler/system-environment-variables/ for more details."
 			);
 		}
 
