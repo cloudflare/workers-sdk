@@ -127,7 +127,7 @@ function readWorkerConfig(
 		unstable_readConfig(
 			{ config: configPath, env },
 			// Preserve the original `main` value so that Vite can resolve it
-			{ experimental: { preserveOriginalMain: true } }
+			{ preserveOriginalMain: true }
 		);
 	const raw = structuredClone(config) as RawWorkerConfig;
 
