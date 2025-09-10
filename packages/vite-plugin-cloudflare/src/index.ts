@@ -27,6 +27,7 @@ import {
 	ASSET_WORKER_NAME,
 	DEBUG_PATH,
 	kRequestType,
+	MAIN_ENTRY_NAME,
 	ROUTER_WORKER_NAME,
 	VIRTUAL_NODEJS_COMPAT_ENTRY,
 	VIRTUAL_USER_ENTRY,
@@ -240,7 +241,7 @@ if (import.meta.hot) {
 					`;
 				}
 			},
-			generateBundle() {
+			generateBundle(_, bundle) {
 				assertIsNotPreview(resolvedPluginConfig);
 
 				let config: Unstable_RawConfig | undefined;
@@ -253,8 +254,19 @@ if (import.meta.hot) {
 						return;
 					}
 
-					// This file name is determined by `rollupOptions.input` in `cloudflare-environment.ts`
-					workerConfig.main = "index.js";
+					const entryChunk = Object.values(bundle).find(
+						(chunk) =>
+							chunk.type === "chunk" &&
+							chunk.isEntry &&
+							chunk.name === MAIN_ENTRY_NAME
+					);
+
+					assert(
+						entryChunk,
+						`Expected entry chunk with name "${MAIN_ENTRY_NAME}"`
+					);
+
+					workerConfig.main = entryChunk.fileName;
 					workerConfig.no_bundle = true;
 					workerConfig.rules = [
 						{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] },

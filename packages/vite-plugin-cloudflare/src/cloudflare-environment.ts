@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as util from "node:util";
 import * as vite from "vite";
+import { MAIN_ENTRY_NAME } from "./constants";
 import {
 	INIT_PATH,
 	UNKNOWN_HOST,
@@ -173,8 +174,7 @@ export function createCloudflareEnvironmentOptions({
 			ssr: true,
 			rollupOptions: {
 				input: {
-					// Changes to this file name must be reflected when populating `main` in the `generateBundle` hook in `index.ts`
-					index: VIRTUAL_WORKER_ENTRY,
+					[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
 				},
 				// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
 				preserveEntrySignatures: "strict",
