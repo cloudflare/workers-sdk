@@ -33,7 +33,7 @@ function inferServiceType(options: ServicePortOptions): ServiceType {
 	return hasTcpOptions ? ServiceType.Tcp : ServiceType.Http;
 }
 
-export function validateRequest(args: ServiceArgs): boolean {
+export function validateRequest(args: ServiceArgs) {
 	// Validate host configuration - must have either IP addresses or hostname, not both
 	const hasIpAddresses = Boolean(args.ipv4 || args.ipv6);
 	const hasHostname = Boolean(args.hostname);
