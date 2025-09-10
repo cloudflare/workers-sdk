@@ -314,6 +314,12 @@ import { versionsSecretsListCommand } from "./versions/secrets/list";
 import { versionsSecretPutCommand } from "./versions/secrets/put";
 import { versionsUploadCommand } from "./versions/upload";
 import { versionsViewCommand } from "./versions/view";
+import { vpcServiceCreateCommand } from "./vpc/create";
+import { vpcServiceDeleteCommand } from "./vpc/delete";
+import { vpcServiceGetCommand } from "./vpc/get";
+import { vpcNamespace, vpcServiceNamespace } from "./vpc/index";
+import { vpcServiceListCommand } from "./vpc/list";
+import { vpcServiceUpdateCommand } from "./vpc/update";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
@@ -326,12 +332,6 @@ import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/inst
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
-import { wvpcServiceCreateCommand } from "./wvpc/create";
-import { wvpcServiceDeleteCommand } from "./wvpc/delete";
-import { wvpcServiceGetCommand } from "./wvpc/get";
-import { wvpcNamespace, wvpcServiceNamespace } from "./wvpc/index";
-import { wvpcServiceListCommand } from "./wvpc/list";
-import { wvpcServiceUpdateCommand } from "./wvpc/update";
 import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
@@ -1379,32 +1379,31 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("pipelines");
 
-	// wvpc
 	registry.define([
-		{ command: "wrangler wvpc", definition: wvpcNamespace },
-		{ command: "wrangler wvpc service", definition: wvpcServiceNamespace },
+		{ command: "wrangler vpc", definition: vpcNamespace },
+		{ command: "wrangler vpc service", definition: vpcServiceNamespace },
 		{
-			command: "wrangler wvpc service create",
-			definition: wvpcServiceCreateCommand,
+			command: "wrangler vpc service create",
+			definition: vpcServiceCreateCommand,
 		},
 		{
-			command: "wrangler wvpc service delete",
-			definition: wvpcServiceDeleteCommand,
+			command: "wrangler vpc service delete",
+			definition: vpcServiceDeleteCommand,
 		},
 		{
-			command: "wrangler wvpc service get",
-			definition: wvpcServiceGetCommand,
+			command: "wrangler vpc service get",
+			definition: vpcServiceGetCommand,
 		},
 		{
-			command: "wrangler wvpc service list",
-			definition: wvpcServiceListCommand,
+			command: "wrangler vpc service list",
+			definition: vpcServiceListCommand,
 		},
 		{
-			command: "wrangler wvpc service update",
-			definition: wvpcServiceUpdateCommand,
+			command: "wrangler vpc service update",
+			definition: vpcServiceUpdateCommand,
 		},
 	]);
-	registry.registerNamespace("wvpc");
+	registry.registerNamespace("vpc");
 
 	registry.define([
 		{ command: "wrangler hello-world", definition: helloWorldNamespace },

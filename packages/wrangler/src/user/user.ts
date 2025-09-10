@@ -363,6 +363,8 @@ const DefaultScopes = {
 		"See and change secrets + stores within the Secrets Store",
 	"containers:write": "Manage Workers Containers",
 	"cloudchamber:write": "Manage Cloudchamber",
+	"connectivity:admin":
+		" See, change, and bind to Connectivity Directory services, including creating services targeting Cloudflare Tunnel.",
 } as const;
 
 /**

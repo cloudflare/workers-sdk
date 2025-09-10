@@ -1,29 +1,53 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
-import { getService } from "./client";
-import { ServiceType, wvpcBetaWarning } from "./index";
+import { createService } from "./client";
+import { buildRequest, validateRequest } from "./validation";
+import { serviceOptions, ServiceType } from "./index";
 
-export const wvpcServiceGetCommand = createCommand({
+export const vpcServiceCreateCommand = createCommand({
 	metadata: {
-		description: "Get a WVPC connectivity service",
-		status: "private-beta",
+		description: "Create a new VPC connectivity service",
+		status: "stable",
 		owner: "Product: WVPC",
 	},
 	args: {
-		"service-id": {
-			type: "string",
-			demandOption: true,
-			description: "The ID of the connectivity service",
-		},
+		...serviceOptions,
 	},
-	positionalArgs: ["service-id"],
+	positionalArgs: ["name"],
+	validateArgs: (args) => {
+		// Validate arguments - this will throw UserError if validation fails
+		validateRequest({
+			name: args.name,
+			tcpPort: args.tcpPort,
+			appProtocol: args.appProtocol,
+			httpPort: args.httpPort,
+			httpsPort: args.httpsPort,
+			ipv4: args.ipv4,
+			ipv6: args.ipv6,
+			hostname: args.hostname,
+			tunnelId: args.tunnelId,
+			resolverIps: args.resolverIps,
+		});
+	},
 	async handler(args, { config }) {
-		logger.log(wvpcBetaWarning);
-		logger.log(`🔍 Getting WVPC connectivity service '${args.serviceId}'`);
+		logger.log(`🚧 Creating VPC connectivity service '${args.name}'`);
 
-		const service = await getService(config, args.serviceId);
+		const request = buildRequest({
+			name: args.name,
+			tcpPort: args.tcpPort,
+			appProtocol: args.appProtocol,
+			httpPort: args.httpPort,
+			httpsPort: args.httpsPort,
+			ipv4: args.ipv4,
+			ipv6: args.ipv6,
+			hostname: args.hostname,
+			tunnelId: args.tunnelId,
+			resolverIps: args.resolverIps,
+		});
 
-		logger.log(`✅ Retrieved WVPC connectivity service: ${service.service_id}`);
+		const service = await createService(config, request);
+
+		logger.log(`✅ Created VPC connectivity service: ${service.service_id}`);
 		logger.log(`   Name: ${service.name}`);
 		logger.log(`   Type: ${service.type}`);
 
@@ -64,8 +88,5 @@ export const wvpcServiceGetCommand = createCommand({
 				`   Resolver IPs: ${service.host.resolver_network.resolver_ips.join(", ")}`
 			);
 		}
-
-		logger.log(`   Created: ${new Date(service.created_at).toLocaleString()}`);
-		logger.log(`   Modified: ${new Date(service.updated_at).toLocaleString()}`);
 	},
 });

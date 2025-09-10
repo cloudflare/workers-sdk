@@ -1,41 +1,28 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
-import { createService } from "./client";
-import { validateAndBuildRequest } from "./validation";
-import { serviceOptions, ServiceType, wvpcBetaWarning } from "./index";
+import { getService } from "./client";
+import { ServiceType } from "./index";
 
-export const wvpcServiceCreateCommand = createCommand({
+export const vpcServiceGetCommand = createCommand({
 	metadata: {
-		description: "Create a new WVPC connectivity service",
-		status: "private-beta",
+		description: "Get a VPC connectivity service",
+		status: "stable",
 		owner: "Product: WVPC",
 	},
 	args: {
-		...serviceOptions(),
+		"service-id": {
+			type: "string",
+			demandOption: true,
+			description: "The ID of the connectivity service",
+		},
 	},
-	positionalArgs: ["name"],
+	positionalArgs: ["service-id"],
 	async handler(args, { config }) {
-		logger.log(wvpcBetaWarning);
-		logger.log(`🚧 Creating WVPC connectivity service '${args.name}'`);
+		logger.log(`🔍 Getting VPC connectivity service '${args.serviceId}'`);
 
-		// Validate arguments and build request
-		const request = validateAndBuildRequest({
-			name: args.name,
-			type: args.type as ServiceType,
-			tcpPort: args.tcpPort,
-			appProtocol: args.appProtocol,
-			httpPort: args.httpPort,
-			httpsPort: args.httpsPort,
-			ipv4: args.ipv4,
-			ipv6: args.ipv6,
-			hostname: args.hostname,
-			tunnelId: args.tunnelId,
-			resolverIps: args.resolverIps,
-		});
+		const service = await getService(config, args.serviceId);
 
-		const service = await createService(config, request);
-
-		logger.log(`✅ Created WVPC connectivity service: ${service.service_id}`);
+		logger.log(`✅ Retrieved VPC connectivity service: ${service.service_id}`);
 		logger.log(`   Name: ${service.name}`);
 		logger.log(`   Type: ${service.type}`);
 
@@ -76,5 +63,8 @@ export const wvpcServiceCreateCommand = createCommand({
 				`   Resolver IPs: ${service.host.resolver_network.resolver_ips.join(", ")}`
 			);
 		}
+
+		logger.log(`   Created: ${new Date(service.created_at).toLocaleString()}`);
+		logger.log(`   Modified: ${new Date(service.updated_at).toLocaleString()}`);
 	},
 });

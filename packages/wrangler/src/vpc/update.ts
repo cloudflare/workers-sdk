@@ -1,13 +1,13 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { updateService } from "./client";
-import { validateAndBuildRequest } from "./validation";
-import { serviceOptions, ServiceType, wvpcBetaWarning } from "./index";
+import { buildRequest, validateRequest } from "./validation";
+import { serviceOptions, ServiceType } from "./index";
 
-export const wvpcServiceUpdateCommand = createCommand({
+export const vpcServiceUpdateCommand = createCommand({
 	metadata: {
-		description: "Update a WVPC connectivity service",
-		status: "private-beta",
+		description: "Update a VPC connectivity service",
+		status: "stable",
 		owner: "Product: WVPC",
 	},
 	args: {
@@ -16,17 +16,29 @@ export const wvpcServiceUpdateCommand = createCommand({
 			demandOption: true,
 			description: "The ID of the connectivity service to update",
 		},
-		...serviceOptions(),
+		...serviceOptions,
 	},
 	positionalArgs: ["service-id"],
-	async handler(args, { config }) {
-		logger.log(wvpcBetaWarning);
-		logger.log(`🚧 Updating WVPC connectivity service '${args.serviceId}'`);
-
-		// Validate arguments and build request
-		const request = validateAndBuildRequest({
+	validateArgs: (args) => {
+		// Validate arguments - this will throw UserError if validation fails
+		validateRequest({
 			name: args.name,
-			type: args.type as ServiceType,
+			tcpPort: args.tcpPort,
+			appProtocol: args.appProtocol,
+			httpPort: args.httpPort,
+			httpsPort: args.httpsPort,
+			ipv4: args.ipv4,
+			ipv6: args.ipv6,
+			hostname: args.hostname,
+			tunnelId: args.tunnelId,
+			resolverIps: args.resolverIps,
+		});
+	},
+	async handler(args, { config }) {
+		logger.log(`🚧 Updating VPC connectivity service '${args.serviceId}'`);
+
+		const request = buildRequest({
+			name: args.name,
 			tcpPort: args.tcpPort,
 			appProtocol: args.appProtocol,
 			httpPort: args.httpPort,
@@ -40,7 +52,7 @@ export const wvpcServiceUpdateCommand = createCommand({
 
 		const service = await updateService(config, args.serviceId, request);
 
-		logger.log(`✅ Updated WVPC connectivity service: ${service.service_id}`);
+		logger.log(`✅ Updated VPC connectivity service: ${service.service_id}`);
 		logger.log(`   Name: ${service.name}`);
 		logger.log(`   Type: ${service.type}`);
 
