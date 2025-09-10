@@ -158,7 +158,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						MY_SERVICE: {
 							type: "service",
 							service: remoteWorkerName,
-							experimental_remote: true,
+							remote: true,
 						},
 					},
 				});
@@ -189,7 +189,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							MY_SERVICE: {
 								type: "service",
 								service: remoteWorkerName,
-								experimental_remote: true,
+								remote: true,
 							},
 						},
 					},
@@ -222,7 +222,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							MY_SERVICE: {
 								type: "service",
 								service: remoteWorkerName,
-								experimental_remote: true,
+								remote: true,
 							},
 						},
 					},

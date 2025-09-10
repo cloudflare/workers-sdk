@@ -579,7 +579,7 @@ export async function startDev(args: StartDevOptions) {
 			logger.log(
 				bold(
 					dedent`
-						Support for remote bindings in ${green("`wrangler dev`")} is now available in public beta as a replacement for ${green("`wrangler dev --remote`")}. Try it out now by running ${green("`wrangler dev --x-remote-bindings`")} with the ${green("`experimental_remote`")} option enabled on your resources and let us know how it goes!
+						Support for remote bindings in ${green("`wrangler dev`")} is now available as a replacement for ${green("`wrangler dev --remote`")}. Try it out now by running ${green("`wrangler dev`")} with the ${green("`remote`")} option enabled on your resources and let us know how it goes!
 						This gives you access to remote resources in development while retaining all the usual benefits of local dev: fast iteration speed, breakpoint debugging, and more.
 
 						Refer to https://developers.cloudflare.com/workers/development-testing/#remote-bindings for more information.`
@@ -809,7 +809,7 @@ export function getBindings(
 	 */
 	// merge KV bindings
 	const kvConfig = (configParam.kv_namespaces || []).map<CfKvNamespace>(
-		({ binding, preview_id, id, experimental_remote }) => {
+		({ binding, preview_id, id, remote }) => {
 			// In remote `dev`, we make folks use a separate kv namespace called
 			// `preview_id` instead of `id` so that they don't
 			// break production data. So here we check that a `preview_id`
@@ -830,7 +830,7 @@ export function getBindings(
 			return {
 				binding,
 				id: preview_id ?? id,
-				experimental_remote: remoteBindingsEnabled && experimental_remote,
+				remote: remoteBindingsEnabled && remote,
 			} satisfies CfKvNamespace;
 		}
 	);
@@ -851,7 +851,7 @@ export function getBindings(
 		if (local) {
 			return {
 				...d1Db,
-				experimental_remote: remoteBindingsEnabled && d1Db.experimental_remote,
+				remote: remoteBindingsEnabled && d1Db.remote,
 				database_id,
 			} satisfies CfD1Database;
 		}
@@ -869,13 +869,7 @@ export function getBindings(
 	// merge R2 bindings
 	const r2Config: EnvironmentNonInheritable["r2_buckets"] =
 		configParam.r2_buckets?.map(
-			({
-				binding,
-				preview_bucket_name,
-				bucket_name,
-				jurisdiction,
-				experimental_remote,
-			}) => {
+			({ binding, preview_bucket_name, bucket_name, jurisdiction, remote }) => {
 				// same idea as kv namespace preview id,
 				// same copy-on-write TODO
 				if (!preview_bucket_name && !local) {
@@ -890,7 +884,7 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
-					experimental_remote: remoteBindingsEnabled && experimental_remote,
+					remote: remoteBindingsEnabled && remote,
 				} satisfies CfR2Bucket;
 			}
 		) || [];
@@ -908,10 +902,8 @@ export function getBindings(
 		(service) =>
 			({
 				...service,
-				experimental_remote:
-					remoteBindingsEnabled &&
-					"experimental_remote" in service &&
-					!!service.experimental_remote,
+				remote:
+					remoteBindingsEnabled && "remote" in service && !!service.remote,
 			}) satisfies CfService
 	);
 
@@ -952,7 +944,7 @@ export function getBindings(
 				binding: queue.binding,
 				queue_name: queue.queue,
 				delivery_delay: queue.delivery_delay,
-				experimental_remote: remoteBindingsEnabled && queue.experimental_remote,
+				remote: remoteBindingsEnabled && queue.remote,
 			} satisfies CfQueue;
 		}),
 	];

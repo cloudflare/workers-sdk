@@ -71,7 +71,7 @@ export {
 	maybeStartOrUpdateRemoteProxySession as experimental_maybeStartOrUpdateRemoteProxySession,
 	pickRemoteBindings as experimental_pickRemoteBindings,
 	type Binding as Unstable_Binding,
-	type RemoteProxySession as Experimental_RemoteProxySession,
+	type RemoteProxySession as remoteProxySession,
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
 } from "./api";
 

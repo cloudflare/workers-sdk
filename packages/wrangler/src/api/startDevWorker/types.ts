@@ -163,7 +163,7 @@ export interface StartDevWorkerInput {
 		/** Whether a script tag is inserted on text/html responses which will reload the page upon file changes. Defaults to false. */
 		liveReload?: boolean;
 
-		/** The local address to reach your worker. Applies to experimental_remote: true (remote mode) and remote: false (local mode). */
+		/** The local address to reach your worker. Applies to remote: true (remote mode) and remote: false (local mode). */
 		server?: {
 			hostname?: string; // --ip
 			port?: number; // --port

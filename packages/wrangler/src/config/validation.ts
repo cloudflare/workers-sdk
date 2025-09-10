@@ -2055,9 +2055,9 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	if (!isOptionalProperty(value, "experimental_remote", "boolean")) {
+	if (!isOptionalProperty(value, "remote", "boolean")) {
 		diagnostics.errors.push(
-			`"${field}" bindings should, optionally, have a boolean "experimental_remote" field but got ${JSON.stringify(
+			`"${field}" bindings should, optionally, have a boolean "remote" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -2069,7 +2069,7 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		"name",
 		"class_name",
 		"script_name",
-		"experimental_remote",
+		"remote",
 	]);
 
 	return isValid;
@@ -2258,7 +2258,7 @@ const validateNamedSimpleBinding =
 
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"binding",
-			"experimental_remote",
+			"remote",
 		]);
 
 		return isValid;
@@ -2883,7 +2883,7 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		"binding",
 		"id",
 		"preview_id",
-		"experimental_remote",
+		"remote",
 	]);
 
 	return isValid;
@@ -2943,7 +2943,7 @@ const validateSendEmailBinding: ValidatorFn = (diagnostics, field, value) => {
 		"destination_address",
 		"name",
 		"binding",
-		"experimental_remote",
+		"remote",
 	]);
 
 	return isValid;
@@ -2962,7 +2962,7 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"queue",
 			"delivery_delay",
-			"experimental_remote",
+			"remote",
 		])
 	) {
 		return false;
@@ -3094,7 +3094,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		"bucket_name",
 		"preview_bucket_name",
 		"jurisdiction",
-		"experimental_remote",
+		"remote",
 	]);
 
 	return isValid;
@@ -3155,7 +3155,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		"migrations_dir",
 		"migrations_table",
 		"preview_database_id",
-		"experimental_remote",
+		"remote",
 	]);
 
 	return isValid;
@@ -3194,7 +3194,7 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"index_name",
-		"experimental_remote",
+		"remote",
 	]);
 
 	return isValid;
@@ -3558,7 +3558,7 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"certificate_id",
-		"experimental_remote",
+		"remote",
 	]);
 
 	if (!isRemoteValid(value, field, diagnostics)) {
@@ -3739,7 +3739,7 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"pipeline",
-		"experimental_remote",
+		"remote",
 	]);
 
 	return isValid;
@@ -4185,9 +4185,9 @@ function isRemoteValid(
 	fieldPath: string,
 	diagnostics: Diagnostics
 ) {
-	if (!isOptionalProperty(targetObject, "experimental_remote", "boolean")) {
+	if (!isOptionalProperty(targetObject, "remote", "boolean")) {
 		diagnostics.errors.push(
-			`"${fieldPath}" should, optionally, have a boolean "experimental_remote" field but got ${JSON.stringify(
+			`"${fieldPath}" should, optionally, have a boolean "remote" field but got ${JSON.stringify(
 				targetObject
 			)}.`
 		);

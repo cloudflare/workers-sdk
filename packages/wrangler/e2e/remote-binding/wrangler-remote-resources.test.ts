@@ -89,13 +89,13 @@ const testCases: TestCase<Record<string, string>>[] = [
 				{
 					binding: "SERVICE",
 					service: targetWorkerName,
-					experimental_remote: true,
+					remote: true,
 				},
 				{
 					binding: "SERVICE_WITH_ENTRYPOINT",
 					service: targetWorkerName,
 					entrypoint: "CustomEntrypoint",
-					experimental_remote: true,
+					remote: true,
 				},
 			],
 		}),
@@ -115,7 +115,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			compatibility_date: "2025-01-01",
 			ai: {
 				binding: "AI",
-				experimental_remote: true,
+				remote: true,
 			},
 		}),
 		expectedResponseMatch: expect.stringMatching(
@@ -132,7 +132,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			compatibility_date: "2025-01-01",
 			browser: {
 				binding: "BROWSER",
-				experimental_remote: true,
+				remote: true,
 			},
 		}),
 		expectedResponseMatch: expect.stringMatching(/sessionId/),
@@ -146,7 +146,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			compatibility_date: "2025-01-01",
 			images: {
 				binding: "IMAGES",
-				experimental_remote: true,
+				remote: true,
 			},
 		}),
 		expectedResponseMatch: expect.stringMatching("image/avif"),
@@ -171,7 +171,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				{
 					binding: "VECTORIZE_BINDING",
 					index_name: name,
-					experimental_remote: true,
+					remote: true,
 				},
 			],
 		}),
@@ -210,7 +210,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				{
 					binding: "DISPATCH",
 					namespace: namespace,
-					experimental_remote: true,
+					remote: true,
 				},
 			],
 		}),
@@ -238,7 +238,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				{
 					binding: "KV_BINDING",
 					id: namespaceId,
-					experimental_remote: true,
+					remote: true,
 				},
 			],
 		}),
@@ -269,7 +269,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				{
 					binding: "R2_BINDING",
 					bucket_name: bucketName,
-					experimental_remote: true,
+					remote: true,
 				},
 			],
 		}),
@@ -301,7 +301,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 					binding: "DB",
 					database_id: id,
 					database_name: name,
-					experimental_remote: true,
+					remote: true,
 				},
 			],
 		}),
@@ -362,7 +362,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				{
 					binding: "MTLS",
 					certificate_id: certificateId,
-					experimental_remote: true,
+					remote: true,
 				},
 			],
 		}),
@@ -379,7 +379,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				{
 					binding: "PIPELINE",
 					pipeline: "preserve-e2e-pipelines",
-					experimental_remote: true,
+					remote: true,
 				},
 			],
 		}),
@@ -396,7 +396,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			send_email: [
 				{
 					name: "EMAIL",
-					experimental_remote: true,
+					remote: true,
 				},
 			],
 		}),
@@ -427,7 +427,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				await writeWranglerConfig(testCase, helper, workerName);
 
-				const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
+				const worker = helper.runLongLived("wrangler dev");
 
 				const { url } = await worker.waitForReady();
 
@@ -497,7 +497,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							"export default { fetch() { return new Response('Ready to start tests') } }",
 					});
 
-					worker = helper.runLongLived("wrangler dev --x-remote-bindings", {
+					worker = helper.runLongLived("wrangler dev", {
 						stopOnTestFinished: false,
 					});
 
@@ -560,7 +560,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							{
 								binding: "KV_REMOTE_BINDING",
 								id: kvId,
-								experimental_remote: true,
+								remote: true,
 							},
 						],
 					},
@@ -569,7 +569,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				),
 			});
 
-			const worker = helper.runLongLived("wrangler dev --x-remote-bindings", {
+			const worker = helper.runLongLived("wrangler dev", {
 				stopOnTestFinished: false,
 			});
 
@@ -619,13 +619,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							{
 								binding: "REMOTE_WORKER",
 								service: remoteWorkerName,
-								experimental_remote: true,
+								remote: true,
 							},
 						],
 					}),
 				});
 
-				const worker = helper.runLongLived("wrangler dev --x-remote-bindings", {
+				const worker = helper.runLongLived("wrangler dev", {
 					env: {
 						...process.env,
 						CLOUDFLARE_ACCOUNT_ID: undefined,

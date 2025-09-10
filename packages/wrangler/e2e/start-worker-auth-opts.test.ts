@@ -68,11 +68,10 @@ describe("startWorker - auth options", () => {
 				bindings: {
 					AI: {
 						type: "ai",
-						experimental_remote: true,
+						remote: true,
 					},
 				},
 				dev: {
-					experimentalRemoteBindings: true,
 					auth: validAuth,
 				},
 			});
@@ -94,7 +93,6 @@ describe("startWorker - auth options", () => {
 
 			await worker.patchConfig({
 				dev: {
-					experimentalRemoteBindings: true,
 					auth: incorrectAuth,
 				},
 			});
@@ -121,11 +119,10 @@ describe("startWorker - auth options", () => {
 				bindings: {
 					AI: {
 						type: "ai",
-						experimental_remote: true,
+						remote: true,
 					},
 				},
 				dev: {
-					experimentalRemoteBindings: true,
 					auth: incorrectAuth,
 				},
 			});
@@ -149,7 +146,6 @@ describe("startWorker - auth options", () => {
 
 			await worker.patchConfig({
 				dev: {
-					experimentalRemoteBindings: true,
 					auth: validAuth,
 				},
 			});
@@ -222,7 +218,6 @@ describe("startWorker - auth options", () => {
 			const worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
 				dev: {
-					experimentalRemoteBindings: true,
 					auth: someAuth,
 				},
 			});

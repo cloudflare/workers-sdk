@@ -15,7 +15,6 @@ export default defineWorkersConfig({
 		include: ["test/**/*.spec.ts"],
 		poolOptions: {
 			workers: {
-				experimental_remoteBindings: true,
 				wrangler: { configPath: "./wrangler.json" },
 			},
 		},
