@@ -56,7 +56,7 @@ export async function usingLocalSecretsStoreSecretAPI<T>(
 export const secretsStoreStoreCreateCommand = createCommand({
 	metadata: {
 		description: "Create a store within an account",
-		status: "alpha",
+		status: "open-beta",
 		owner: "Product: SSL",
 	},
 	positionalArgs: ["name"],
@@ -92,7 +92,7 @@ export const secretsStoreStoreCreateCommand = createCommand({
 export const secretsStoreStoreDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a store within an account",
-		status: "alpha",
+		status: "open-beta",
 		owner: "Product: SSL",
 	},
 	positionalArgs: ["store-id"],
@@ -127,7 +127,7 @@ export const secretsStoreStoreDeleteCommand = createCommand({
 export const secretsStoreStoreListCommand = createCommand({
 	metadata: {
 		description: "List stores within an account",
-		status: "alpha",
+		status: "open-beta",
 		owner: "Product: SSL",
 	},
 	args: {
@@ -191,7 +191,7 @@ export const secretsStoreStoreListCommand = createCommand({
 export const secretsStoreSecretListCommand = createCommand({
 	metadata: {
 		description: "List secrets within a store",
-		status: "alpha",
+		status: "open-beta",
 		owner: "Product: SSL",
 	},
 	positionalArgs: ["store-id"],
@@ -281,7 +281,7 @@ export const secretsStoreSecretListCommand = createCommand({
 export const secretsStoreSecretGetCommand = createCommand({
 	metadata: {
 		description: "Get a secret within a store",
-		status: "alpha",
+		status: "open-beta",
 		owner: "Product: SSL",
 	},
 	positionalArgs: ["store-id"],
@@ -354,7 +354,7 @@ export const secretsStoreSecretGetCommand = createCommand({
 export const secretsStoreSecretCreateCommand = createCommand({
 	metadata: {
 		description: "Create a secret within a store",
-		status: "alpha",
+		status: "open-beta",
 		owner: "Product: SSL",
 	},
 	positionalArgs: ["store-id"],
@@ -476,7 +476,7 @@ export const secretsStoreSecretCreateCommand = createCommand({
 export const secretsStoreSecretUpdateCommand = createCommand({
 	metadata: {
 		description: "Update a secret within a store",
-		status: "alpha",
+		status: "open-beta",
 		owner: "Product: SSL",
 	},
 	positionalArgs: ["store-id"],
@@ -601,7 +601,7 @@ export const secretsStoreSecretUpdateCommand = createCommand({
 export const secretsStoreSecretDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a secret within a store",
-		status: "alpha",
+		status: "open-beta",
 		owner: "Product: SSL",
 	},
 	positionalArgs: ["store-id"],
@@ -650,7 +650,7 @@ export const secretsStoreSecretDeleteCommand = createCommand({
 export const secretsStoreSecretDuplicateCommand = createCommand({
 	metadata: {
 		description: "Duplicate a secret within a store",
-		status: "alpha",
+		status: "open-beta",
 		owner: "Product: SSL",
 	},
 	positionalArgs: ["store-id"],
