@@ -1,5 +1,6 @@
 import { setTimeout } from "node:timers/promises";
 import { resolve } from "path";
+import stripAnsi from "strip-ansi";
 import { describe, test } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
@@ -7,7 +8,6 @@ async function getWranglerDevOutput(
 	type: "module" | "service",
 	extraArgs: string[] = [],
 	customMessage?: string,
-	requests = 1,
 	env = {}
 ) {
 	const { ip, port, stop, getOutput } = await runWranglerDev(
@@ -26,21 +26,17 @@ async function getWranglerDevOutput(
 		request.headers.set("x-custom-message", customMessage);
 	}
 
-	for (let i = 0; i < requests; i++) {
-		const response = await fetch(request);
-		await response.text();
+	const response = await fetch(request);
+	await response.text();
 
-		// We wait for a bit for the output stream to be completely ready
-		// (this is a bit slow but it's generic to be used by all tests
-		// in this file, it also seems to make the tests very stable)
-		await setTimeout(500);
-	}
+	// We wait for a bit for the output stream to be completely ready
+	// (this is a bit slow but it's generic to be used by all tests
+	// in this file, it also seems to make the tests very stable)
+	await setTimeout(500);
 
 	await stop();
 
-	let output = getOutput();
-
-	output = output
+	const output = stripAnsi(getOutput())
 		// Windows gets a different marker for ✘, so let's normalize it here
 		// so that these tests can be platform independent
 		.replaceAll("✘", "X")
@@ -48,18 +44,12 @@ async function getWranglerDevOutput(
 		.replaceAll("\r\n", "\n");
 
 	// Let's filter out lines we're not interested in
-	output = output
-		.split("\n")
-		.filter((line) =>
-			logLineToIgnoreRegexps.every((regex) => !regex.test(line))
-		)
-		// let's also sort the logs for more stability of the tests, ideally
-		// we would want to test the log's ordering as well but that seems
-		// to cause flakes in the CI runs
-		.sort()
-		.join("\n");
+	const messages = Array.from(output.matchAll(/^.*<<<<<.*>>>>>$/gm)).flat();
 
-	return output;
+	// Let's also sort the logs for more stability of the tests.
+	// Ideally we would want to test the log's ordering as well but that seems
+	// to cause flakes in the CI runs
+	return messages.sort();
 }
 
 describe("'wrangler dev' correctly displays logs", () => {
@@ -67,37 +57,49 @@ describe("'wrangler dev' correctly displays logs", () => {
 		test("default behavior", async ({ expect }) => {
 			const output = await getWranglerDevOutput("module");
 			expect(output).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m<<<<<this is an error>>>>>[0m
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m<<<<<this is a warning>>>>>[0m
-				<<<<<this is a log>>>>>
-				<<<<<this is an info message>>>>>"
+				[
+				  "<<<<< console.info() message >>>>>",
+				  "<<<<< console.log() message >>>>>",
+				  "<<<<< stderr.write() message >>>>>",
+				  "<<<<< stdout.write() message >>>>>",
+				  "X [ERROR] <<<<< console.error() message >>>>>",
+				  "▲ [WARNING] <<<<< console.warning() message >>>>>",
+				]
 			`);
 		});
 
 		test("with --log-level=log", async ({ expect }) => {
 			const output = await getWranglerDevOutput("module", ["--log-level=log"]);
 			expect(output).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m<<<<<this is an error>>>>>[0m
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m<<<<<this is a warning>>>>>[0m
-				<<<<<this is a log>>>>>
-				<<<<<this is an info message>>>>>"
+				[
+				  "<<<<< console.info() message >>>>>",
+				  "<<<<< console.log() message >>>>>",
+				  "<<<<< stderr.write() message >>>>>",
+				  "<<<<< stdout.write() message >>>>>",
+				  "X [ERROR] <<<<< console.error() message >>>>>",
+				  "▲ [WARNING] <<<<< console.warning() message >>>>>",
+				]
 			`);
 		});
 
 		test("with --log-level=info", async ({ expect }) => {
 			const output = await getWranglerDevOutput("module", ["--log-level=info"]);
 			expect(output).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m<<<<<this is an error>>>>>[0m
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m<<<<<this is a warning>>>>>[0m
-				<<<<<this is an info message>>>>>"
+				[
+				  "<<<<< console.info() message >>>>>",
+				  "X [ERROR] <<<<< console.error() message >>>>>",
+				  "▲ [WARNING] <<<<< console.warning() message >>>>>",
+				]
 			`);
 		});
 
 		test("with --log-level=warn", async ({ expect }) => {
 			const output = await getWranglerDevOutput("module", ["--log-level=warn"]);
 			expect(output).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m<<<<<this is an error>>>>>[0m
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m<<<<<this is a warning>>>>>[0m"
+				[
+				  "X [ERROR] <<<<< console.error() message >>>>>",
+				  "▲ [WARNING] <<<<< console.warning() message >>>>>",
+				]
 			`);
 		});
 
@@ -106,38 +108,53 @@ describe("'wrangler dev' correctly displays logs", () => {
 				"--log-level=error",
 			]);
 			expect(output).toMatchInlineSnapshot(
-				`"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m<<<<<this is an error>>>>>[0m"`
+				`
+				[
+				  "X [ERROR] <<<<< console.error() message >>>>>",
+				]
+			`
 			);
 		});
 
 		test("with --log-level=debug", async ({ expect }) => {
-			const output = await getWranglerDevOutput(
-				"module",
-				["--log-level=debug"],
-				undefined,
-				// For some reason in debug mode two requests are
-				// needed to trigger the log here...
-				2
+			const output = await getWranglerDevOutput("module", [
+				"--log-level=debug",
+			]);
+			expect(output).toMatchInlineSnapshot(
+				`
+				[
+				  "<<<<< console.debug() message >>>>>",
+				  "<<<<< console.info() message >>>>>",
+				  "<<<<< console.log() message >>>>>",
+				  "<<<<< stderr.write() message >>>>>",
+				  "<<<<< stdout.write() message >>>>>",
+				  "X [ERROR] <<<<< console.error() message >>>>>",
+				  "▲ [WARNING] <<<<< console.warning() message >>>>>",
+				]
+			`
 			);
-			expect(output).toContain("<<<<<this is a debug message>>>>>");
 		});
 
 		test('with WRANGLER_LOG="debug"', async ({ expect }) => {
-			const output = await getWranglerDevOutput(
-				"module",
-				[],
-				undefined,
-				// For some reason in debug mode two requests are
-				// needed to trigger the log here...
-				2,
-				{ WRANGLER_LOG: "debug" }
-			);
-			expect(output).toContain("<<<<<this is a debug message>>>>>");
+			const output = await getWranglerDevOutput("module", [], undefined, {
+				WRANGLER_LOG: "debug",
+			});
+			expect(output).toMatchInlineSnapshot(`
+				[
+				  "<<<<< console.debug() message >>>>>",
+				  "<<<<< console.info() message >>>>>",
+				  "<<<<< console.log() message >>>>>",
+				  "<<<<< stderr.write() message >>>>>",
+				  "<<<<< stdout.write() message >>>>>",
+				  "X [ERROR] <<<<< console.error() message >>>>>",
+				  "▲ [WARNING] <<<<< console.warning() message >>>>>",
+				]
+			`);
 		});
 
 		test("with --log-level=none", async ({ expect }) => {
 			const output = await getWranglerDevOutput("module", ["--log-level=none"]);
-			expect(output).toMatchInlineSnapshot(`""`);
+			expect(output).toMatchInlineSnapshot(`[]`);
 		});
 
 		// the workerd structured logs follow this structure:
@@ -147,16 +164,28 @@ describe("'wrangler dev' correctly displays logs", () => {
 		describe("edge case scenarios", () => {
 			test("base case", async ({ expect }) => {
 				const output = await getWranglerDevOutput("module", [], "hello");
-				expect(output).toMatchInlineSnapshot(`"hello"`);
+				expect(output).toMatchInlineSnapshot(`
+					[
+					  "<<<<< hello >>>>>",
+					]
+				`);
 			});
 			test("quotes in message", async ({ expect }) => {
 				const output = await getWranglerDevOutput("module", [], 'hel"lo');
-				expect(output).toMatchInlineSnapshot(`"hel"lo"`);
+				expect(output).toMatchInlineSnapshot(`
+					[
+					  "<<<<< hel"lo >>>>>",
+					]
+				`);
 			});
 
 			test("braces in message", async ({ expect }) => {
 				const output = await getWranglerDevOutput("module", [], "hel{}lo");
-				expect(output).toMatchInlineSnapshot(`"hel{}lo"`);
+				expect(output).toMatchInlineSnapshot(`
+					[
+					  "<<<<< hel{}lo >>>>>",
+					]
+				`);
 			});
 
 			test("a workerd structured message in the message", async ({
@@ -168,7 +197,11 @@ describe("'wrangler dev' correctly displays logs", () => {
 					'This is an example of a Workerd structured log: {"timestamp":1234567890,"level":"log","message":"Hello World!"}'
 				);
 				expect(output).toMatchInlineSnapshot(
-					`"This is an example of a Workerd structured log: {"timestamp":1234567890,"level":"log","message":"Hello World!"}"`
+					`
+					[
+					  "<<<<< This is an example of a Workerd structured log: {"timestamp":1234567890,"level":"log","message":"Hello World!"} >>>>>",
+					]
+				`
 				);
 			});
 
@@ -180,7 +213,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 					[],
 					"%__VERY_VERY_LONG_MESSAGE_%"
 				);
-				expect(output).toMatch(new RegExp(`^z{${2 ** 20}}$`));
+				expect(output).toContain("<<<<< " + "z".repeat(2 ** 20) + " >>>>>");
 			});
 		});
 	});
@@ -194,21 +227,25 @@ describe("'wrangler dev' correctly displays logs", () => {
 		test("default behavior", async ({ expect }) => {
 			const output = await getWranglerDevOutput("service");
 			expect(output).toMatchInlineSnapshot(`
-				"<<<<<this is a log>>>>>
-				<<<<<this is a warning>>>>>
-				<<<<<this is an error>>>>>
-				<<<<<this is an info message>>>>>"
+				[
+				  "<<<<< console.error() message >>>>>",
+				  "<<<<< console.info() message >>>>>",
+				  "<<<<< console.log() message >>>>>",
+				  "<<<<< console.warning() message >>>>>",
+				]
 			`);
 		});
 
 		test("with --log-level=log", async ({ expect }) => {
 			const output = await getWranglerDevOutput("service", ["--log-level=log"]);
 			expect(output).toMatchInlineSnapshot(`
-				"<<<<<this is a log>>>>>
-				<<<<<this is a warning>>>>>
-				<<<<<this is an error>>>>>
-				<<<<<this is an info message>>>>>"
-			`);
+					[
+					  "<<<<< console.error() message >>>>>",
+					  "<<<<< console.info() message >>>>>",
+					  "<<<<< console.log() message >>>>>",
+					  "<<<<< console.warning() message >>>>>",
+					]
+				`);
 		});
 
 		test("with --log-level=info", async ({ expect }) => {
@@ -216,9 +253,11 @@ describe("'wrangler dev' correctly displays logs", () => {
 				"--log-level=info",
 			]);
 			expect(output).toMatchInlineSnapshot(`
-				"<<<<<this is a warning>>>>>
-				<<<<<this is an error>>>>>
-				<<<<<this is an info message>>>>>"
+				[
+				  "<<<<< console.error() message >>>>>",
+				  "<<<<< console.info() message >>>>>",
+				  "<<<<< console.warning() message >>>>>",
+				]
 			`);
 		});
 
@@ -227,8 +266,10 @@ describe("'wrangler dev' correctly displays logs", () => {
 				"--log-level=warn",
 			]);
 			expect(output).toMatchInlineSnapshot(`
-				"<<<<<this is a warning>>>>>
-				<<<<<this is an error>>>>>"
+				[
+				  "<<<<< console.error() message >>>>>",
+				  "<<<<< console.warning() message >>>>>",
+				]
 			`);
 		});
 
@@ -236,38 +277,33 @@ describe("'wrangler dev' correctly displays logs", () => {
 			const output = await getWranglerDevOutput("service", [
 				"--log-level=error",
 			]);
-			expect(output).toMatchInlineSnapshot(`"<<<<<this is an error>>>>>"`);
+			expect(output).toMatchInlineSnapshot(`
+				[
+				  "<<<<< console.error() message >>>>>",
+				]
+			`);
 		});
 
 		test("with --log-level=debug", async ({ expect }) => {
 			const output = await getWranglerDevOutput("service", [
 				"--log-level=debug",
 			]);
-			expect(output).toContain("<<<<<this is a debug message>>>>>");
+			expect(output).toMatchInlineSnapshot(`
+				[
+				  "<<<<< console.debug() message >>>>>",
+				  "<<<<< console.error() message >>>>>",
+				  "<<<<< console.info() message >>>>>",
+				  "<<<<< console.log() message >>>>>",
+				  "<<<<< console.warning() message >>>>>",
+				]
+			`);
 		});
 
 		test("with --log-level=none", async ({ expect }) => {
 			const output = await getWranglerDevOutput("service", [
 				"--log-level=none",
 			]);
-			expect(output).toMatchInlineSnapshot(`""`);
+			expect(output).toMatchInlineSnapshot(`[]`);
 		});
 	});
 });
-
-const logLineToIgnoreRegexps = [
-	// let's skip empty lines
-	/^\s*$/,
-	// part of the wrangler banner
-	/⛅️ wrangler/,
-	// divisor after the wrangler banner
-	/^─+$/,
-	// wrangler logs such as ` ⎔ Starting local server...`
-	/^\s*⎔/,
-	// wrangler's ready on log
-	/^\[wrangler:info\] Ready on http:\/\/[^:]+:\d+$/,
-	// positive response to get request
-	/^\[wrangler:info\] GET \/ 200 OK \(\d+ms\)$/,
-	// let's skip the telemetry messages
-	/^Cloudflare collects anonymous telemetry about your usage of Wrangler\. Learn more at https:\/\/.*$/,
-];

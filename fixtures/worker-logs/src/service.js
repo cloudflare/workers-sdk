@@ -1,9 +1,9 @@
 async function handler(request) {
-	console.log("<<<<<this is a log>>>>>");
-	console.warn("<<<<<this is a warning>>>>>");
-	console.error("<<<<<this is an error>>>>>");
-	console.debug("<<<<<this is a debug message>>>>>");
-	console.info("<<<<<this is an info message>>>>>");
+	console.log("<<<<< console.log() message >>>>>");
+	console.warn("<<<<< console.warning() message >>>>>");
+	console.error("<<<<< console.error() message >>>>>");
+	console.debug("<<<<< console.debug() message >>>>>");
+	console.info("<<<<< console.info() message >>>>>");
 	return new Response("Hello");
 }
 
