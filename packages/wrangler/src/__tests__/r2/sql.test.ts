@@ -1,9 +1,8 @@
-import { success } from "@cloudflare/cli";
 import { http, HttpResponse } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { createFetchResult, msw } from "../helpers/msw";
+import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
@@ -19,8 +18,6 @@ describe("r2 sql", () => {
 			await endEventLoop();
 			expect(std.out).toContain("wrangler r2 sql");
 			expect(std.out).toContain("Send queries and manage R2 SQL");
-			expect(std.out).toContain("wrangler r2 sql enable");
-			expect(std.out).toContain("wrangler r2 sql disable");
 			expect(std.out).toContain("wrangler r2 sql query <warehouse> <query>");
 		});
 
@@ -35,104 +32,13 @@ describe("r2 sql", () => {
 		});
 	});
 
-	describe("enable", () => {
-		it("should enable R2 SQL for an account", async () => {
-			msw.use(
-				http.post(
-					"*/accounts/:accountId/dqe/enable",
-					async ({ params }) => {
-						const { accountId } = params;
-						expect(accountId).toEqual("some-account-id");
-						return HttpResponse.json(createFetchResult({}));
-					},
-					{ once: true }
-				)
-			);
-
-			await runWrangler("r2 sql enable");
-			expect(std.out).toContain("Enabling R2 SQL for your account...");
-			expect(std.out).toContain("✅ R2 SQL is enabled for your account");
-			expect(std.out).toContain(
-				"Try sending a query with `wrangler r2 sql query <warehouse name> <SQL query>`"
-			);
-		});
-
-		it("should handle enable errors", async () => {
-			msw.use(
-				http.post(
-					"*/accounts/:accountId/dqe/enable",
-					async () => {
-						return HttpResponse.json(
-							{
-								success: false,
-								errors: [{ code: 10001, message: "Authorization error" }],
-								messages: [],
-								result: null,
-							},
-							{ status: 403 }
-						);
-					},
-					{ once: true }
-				)
-			);
-
-			await expect(runWrangler("r2 sql enable")).rejects.toThrow(
-				"A request to the Cloudflare API (/accounts/some-account-id/dqe/enable) failed."
-			);
-		});
-	});
-
-	describe("disable", () => {
-		it("should disable R2 SQL for an account", async () => {
-			msw.use(
-				http.post(
-					"*/accounts/:accountId/dqe/disable",
-					async ({ params }) => {
-						const { accountId } = params;
-						expect(accountId).toEqual("some-account-id");
-						return HttpResponse.json(createFetchResult({}));
-					},
-					{ once: true }
-				)
-			);
-
-			await runWrangler("r2 sql disable");
-			expect(std.out).toContain("Disabling R2 SQL for your account...");
-			expect(std.out).toContain("✅ R2 SQL is disabled for your account");
-		});
-
-		it("should handle disable errors", async () => {
-			msw.use(
-				http.post(
-					"*/accounts/:accountId/dqe/disable",
-					async () => {
-						return HttpResponse.json(
-							{
-								success: false,
-								errors: [{ code: 10001, message: "Authorization error" }],
-								messages: [],
-								result: null,
-							},
-							{ status: 403 }
-						);
-					},
-					{ once: true }
-				)
-			);
-
-			await expect(runWrangler("r2 sql disable")).rejects.toThrow(
-				"A request to the Cloudflare API (/accounts/some-account-id/dqe/disable) failed."
-			);
-		});
-	});
-
 	describe("query", () => {
 		const mockWarehouse = "account123_mybucket";
 		const mockQuery = "SELECT * FROM data";
 		const mockToken = "test-token-123";
 
 		beforeEach(() => {
-			vi.stubEnv("CLOUDFLARE_R2_SQL_TOKEN", mockToken);
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", mockToken);
 		});
 
 		it("should require warehouse and query arguments", async () => {
@@ -145,14 +51,12 @@ describe("r2 sql", () => {
 			);
 		});
 
-		it("should require CLOUDFLARE_R2_SQL_TOKEN environment variable", async () => {
-			vi.stubEnv("CLOUDFLARE_R2_SQL_TOKEN", undefined);
+		it("should require CLOUDFLARE_API_TOKEN environment variable", async () => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
 
 			await expect(
 				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
-			).rejects.toThrow(
-				"CLOUDFLARE_R2_SQL_TOKEN environment variable is not set"
-			);
+			).rejects.toThrow("CLOUDFLARE_API_TOKEN environment variable is not set");
 		});
 
 		it("should validate warehouse name format", async () => {

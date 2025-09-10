@@ -248,12 +248,7 @@ import {
 	r2BucketSippyGetCommand,
 	r2BucketSippyNamespace,
 } from "./r2/sippy";
-import {
-	r2SqlDisableCommand,
-	r2SqlEnableCommand,
-	r2SqlNamespace,
-	r2SqlQueryCommand,
-} from "./r2/sql";
+import { r2SqlNamespace, r2SqlQueryCommand } from "./r2/sql";
 import {
 	secretBulkCommand,
 	secretDeleteCommand,
@@ -966,14 +961,6 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 sql",
 			definition: r2SqlNamespace,
-		},
-		{
-			command: "wrangler r2 sql enable",
-			definition: r2SqlEnableCommand,
-		},
-		{
-			command: "wrangler r2 sql disable",
-			definition: r2SqlDisableCommand,
 		},
 		{
 			command: "wrangler r2 sql query",

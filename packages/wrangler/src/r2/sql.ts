@@ -1,14 +1,12 @@
 import { spinner } from "@cloudflare/cli/interactive";
 import CLITable from "cli-table3";
 import prettyBytes from "pretty-bytes";
-import { fetchResult } from "../cfetch";
 import { truncate } from "../cfetch/internal";
 import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError, parseJSON } from "../parse";
-import { requireAuth } from "../user";
-import { getR2SqlAPITokenFromEnv } from "../user/auth-variables";
+import { getCloudflareAPITokenFromEnv } from "../user/auth-variables";
 
 interface SqlQueryResult {
 	result?: {
@@ -70,57 +68,6 @@ export const r2SqlNamespace = createNamespace({
 	},
 });
 
-export const r2SqlEnableCommand = createCommand({
-	metadata: {
-		description:
-			"Enable sending SQL queries to R2 Data Catalogs in this account",
-		status: "open-beta",
-		owner: "Product: R2 SQL",
-	},
-	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-
-		logger.log("Enabling R2 SQL for your account...");
-
-		await fetchResult(config, `/accounts/${accountId}/dqe/enable`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({}),
-		});
-
-		logger.log(`✅ R2 SQL is enabled for your account
-
-Try sending a query with \`wrangler r2 sql query <warehouse name> <SQL query>\`
-`);
-	},
-});
-
-export const r2SqlDisableCommand = createCommand({
-	metadata: {
-		description:
-			"Disable sending SQL queries to R2 Data Catalogs in this account",
-		status: "open-beta",
-		owner: "Product: R2 SQL",
-	},
-	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-
-		logger.log("Disabling R2 SQL for your account...");
-
-		await fetchResult(config, `/accounts/${accountId}/dqe/disable`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({}),
-		});
-
-		logger.log("✅ R2 SQL is disabled for your account");
-	},
-});
-
 export const r2SqlQueryCommand = createCommand({
 	metadata: {
 		description: "Execute SQL query against R2 Data Catalog",
@@ -143,11 +90,11 @@ export const r2SqlQueryCommand = createCommand({
 	async handler(args, { config: _config }) {
 		const { warehouse, query } = args;
 
-		const token = getR2SqlAPITokenFromEnv();
+		const token = getCloudflareAPITokenFromEnv();
 		if (!token) {
 			// TODO: provide documentation link.
 			throw new UserError(
-				"CLOUDFLARE_R2_SQL_TOKEN environment variable is not set. " +
+				"CLOUDFLARE_API_TOKEN environment variable is not set. " +
 					"Please set it to authenticate with the R2 SQL query service."
 			);
 		}

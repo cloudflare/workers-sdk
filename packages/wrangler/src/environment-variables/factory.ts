@@ -19,8 +19,6 @@ type VariableNames =
 	| "CLOUDFLARE_API_BASE_URL"
 	/** Set to "fedramp_high" for FedRAMP High compliance region. This will update the API/AUTH URLs used to make requests to Cloudflare. */
 	| "CLOUDFLARE_COMPLIANCE_REGION"
-	/** API token for sending queries to R2 SQL. */
-	| "CLOUDFLARE_R2_SQL_TOKEN"
 
 	// ## Development & Local Testing
 
