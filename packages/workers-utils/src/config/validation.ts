@@ -3086,9 +3086,7 @@ function validateContainerApp(
 					diagnostics.errors.push(`${field}.authorized_keys must be an array`);
 				} else {
 					for (
-						let i = 0;
-						i < containerAppOptional.authorized_keys.length;
-						i++
+						const item of containerAppOptional.authorized_keys
 					) {
 						validateAdditionalProperties(
 							diagnostics,
