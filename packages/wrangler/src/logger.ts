@@ -126,19 +126,21 @@ export class Logger {
 		data: TableRow<Keys>[],
 		options?: { wordWrap: boolean; head?: Keys[] }
 	) {
+		const derivedHead =
+			data.length === 0 ? [] : (Object.keys(data[0]) as Keys[]);
+		const wordWrap = options?.wordWrap ?? false;
+		const head = options?.head ?? derivedHead;
+
 		const tableOptions = {
 			style: {
 				head: chalk.level ? ["blue"] : [],
 				border: chalk.level ? ["gray"] : [],
 			},
-			...options,
+			wordWrap,
+			head,
 		};
-		if (!tableOptions.head) {
-			tableOptions.head =
-				data.length === 0 ? [] : (Object.keys(data[0]) as Keys[]);
-		}
 		const t = new CLITable(tableOptions);
-		t.push(...data.map((row) => tableOptions.head!.map((k) => row[k])));
+		t.push(...data.map((row) => head.map((k) => row[k])));
 		return this.doLog("log", [t.toString()]);
 	}
 	console<M extends Exclude<keyof Console, "Console">>(
