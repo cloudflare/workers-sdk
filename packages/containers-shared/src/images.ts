@@ -1,9 +1,5 @@
 import { buildImage } from "./build";
-import { UserError } from "./error";
-import {
-	getCloudflareContainerRegistry,
-	isCloudflareRegistryLink,
-} from "./knobs";
+import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginManagedRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
 import {
@@ -162,4 +158,64 @@ export function resolveImageName(accountId: string, image: string): string {
 
 	// is managed registry and doesn't have the account id,add it to the path
 	return `${url.hostname}/${accountId}${url.pathname}`;
+}
+
+/**
+ * get type of container registry, and validate
+ * currently we support cloudflare managed registries and AWS ECR
+ * when using cloudflare mananged registries we expect CLOUDFLARE_CONTAINER_REGISTRY to be set
+ */
+export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
+	if (domain.includes("://")) {
+		throw new Error(
+			`${domain} is invalid:\nImage reference should not include the protocol part (e.g: docker.io rather than https://docker.io)`
+		);
+	}
+	let url: URL;
+	try {
+		url = new URL(`http://${domain}`);
+	} catch (e) {
+		if (e instanceof Error) {
+			throw new Error(`${domain} is invalid:\n${e.message}`);
+		}
+		throw e;
+	}
+
+	const acceptedRegistries: RegistryPattern[] = [
+		{
+			type: "aws-ecr",
+			pattern: /^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com$/,
+			name: "AWS ECR",
+		},
+		{
+			type: "cloudflare",
+			// Make a regex based on the env var CLOUDFLARE_CONTAINER_REGISTRY
+			pattern: new RegExp(
+				`^${getCloudflareContainerRegistry().replace(/[\\.]/g, "\\$&")}$`
+			),
+			name: "Cloudflare Containers Managed Registry",
+		},
+	];
+
+	const match = acceptedRegistries.find((registry) =>
+		registry.pattern.test(url.hostname)
+	);
+
+	if (!match) {
+		const supportedRegistries = acceptedRegistries
+			.filter((r) => r.type !== "cloudflare")
+			.map((r) => r.name)
+			.join(", ");
+		throw new Error(
+			`${url.hostname} is not a supported image registry.\nCurrently we support the following non-Cloudflare registries: ${supportedRegistries}.`
+		);
+	}
+
+	return match;
+};
+
+interface RegistryPattern {
+	type: "aws-ecr" | "cloudflare";
+	pattern: RegExp;
+	name: string;
 }
