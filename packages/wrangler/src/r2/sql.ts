@@ -82,7 +82,6 @@ export const r2SqlQueryCommand = createCommand({
 		},
 	},
 	async handler({ warehouse, query }) {
-
 		const token = getCloudflareAPITokenFromEnv();
 		if (!token) {
 			throw new UserError(
