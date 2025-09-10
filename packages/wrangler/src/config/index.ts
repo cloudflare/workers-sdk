@@ -120,6 +120,9 @@ export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 
 export type ReadConfigOptions = ResolveConfigPathOptions & {
 	hideWarnings?: boolean;
+	// Used by the Vite plugin
+	// If set to `true`, the `main` field is not converted to an absolute path
+	preserveOriginalMain?: boolean;
 };
 
 export type ConfigBindingOptions = Pick<
@@ -150,11 +153,12 @@ export function readConfig(
 		options
 	);
 
-	const { diagnostics, config } = normalizeAndValidateConfig(
+	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
 		userConfigPath,
-		args
+		args,
+		options.preserveOriginalMain
 	);
 
 	if (diagnostics.hasWarnings() && !options?.hideWarnings) {

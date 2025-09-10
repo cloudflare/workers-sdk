@@ -2702,6 +2702,30 @@ importers:
         specifier: workspace:*
         version: link:../../../wrangler
 
+  packages/vite-plugin-cloudflare/playground/main-resolution:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20250906.0
+      '@playground/main-resolution-package':
+        specifier: file:./package
+        version: file:packages/vite-plugin-cloudflare/playground/main-resolution/package
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 7.0.0(@types/node@20.19.9)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
   packages/vite-plugin-cloudflare/playground/middleware-mode:
     devDependencies:
       '@cloudflare/vite-plugin':
@@ -6092,6 +6116,9 @@ packages:
   '@pkgr/utils@2.4.1':
     resolution: {integrity: sha512-JOqwkgFEyi+OROIyq7l4Jy28h/WwhDnG/cPkXG2Z1iFbubB6jsHW1NDvmyOzTBxHr3yg68YGirmh1JUgMqa+9w==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
+
+  '@playground/main-resolution-package@file:packages/vite-plugin-cloudflare/playground/main-resolution/package':
+    resolution: {directory: packages/vite-plugin-cloudflare/playground/main-resolution/package, type: directory}
 
   '@playground/module-resolution-excludes@file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/excludes':
     resolution: {directory: packages/vite-plugin-cloudflare/playground/module-resolution/packages/excludes, type: directory}
@@ -15888,6 +15915,8 @@ snapshots:
       open: 9.1.0
       picocolors: 1.1.1
       tslib: 2.8.1
+
+  '@playground/main-resolution-package@file:packages/vite-plugin-cloudflare/playground/main-resolution/package': {}
 
   '@playground/module-resolution-excludes@file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/excludes': {}
 

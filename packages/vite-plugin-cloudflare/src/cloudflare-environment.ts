@@ -1,7 +1,13 @@
 import assert from "node:assert";
 import * as util from "node:util";
 import * as vite from "vite";
-import { INIT_PATH, UNKNOWN_HOST, WORKER_ENTRY_PATH_HEADER } from "./shared";
+import { MAIN_ENTRY_NAME } from "./constants";
+import {
+	INIT_PATH,
+	UNKNOWN_HOST,
+	VIRTUAL_WORKER_ENTRY,
+	WORKER_ENTRY_PATH_HEADER,
+} from "./shared";
 import { getOutputDirectory } from "./utils";
 import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
@@ -167,7 +173,9 @@ export function createCloudflareEnvironmentOptions({
 			copyPublicDir: false,
 			ssr: true,
 			rollupOptions: {
-				input: workerConfig.main,
+				input: {
+					[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
+				},
 				// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
 				preserveEntrySignatures: "strict",
 				// rolldown-only option
