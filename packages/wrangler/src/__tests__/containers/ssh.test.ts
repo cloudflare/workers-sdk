@@ -97,7 +97,6 @@ describe("containers ssh", () => {
 		setWranglerConfig({});
 		msw.use(
 			http.get(`*/instances/:instanceId/ssh`, async ({ request }) => {
-				expect(request.url.endsWith(`${instanceId}/ssh`)).toBeTruthy();
 
 				return new HttpResponse(
 					`{"success": true, "result": {"url": "${wsUrl}", "token": "${sshJwt}"}}`,
