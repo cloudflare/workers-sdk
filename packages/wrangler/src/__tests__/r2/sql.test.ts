@@ -56,7 +56,7 @@ describe("r2 sql", () => {
 
 			await expect(
 				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
-			).rejects.toThrow("CLOUDFLARE_API_TOKEN environment variable is not set");
+			).rejects.toThrow("Missing CLOUDFLARE_API_TOKEN environment variable");
 		});
 
 		it("should validate warehouse name format", async () => {

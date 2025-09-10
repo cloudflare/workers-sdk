@@ -1,5 +1,6 @@
 import { spinner } from "@cloudflare/cli/interactive";
 import prettyBytes from "pretty-bytes";
+import { fetch } from "undici";
 import { truncate } from "../cfetch/internal";
 import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
