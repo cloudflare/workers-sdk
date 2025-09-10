@@ -31,23 +31,25 @@ describe("containers ssh", () => {
 			  ID  id of the container instance  [string]
 
 			GLOBAL FLAGS
-			  -c, --config    cipher_spec  [string]
+			  -c, --config    Path to Wrangler configuration file  [string]
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       escape_char  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
 			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
-			  -E  log_file  [string]
-			  -F  configfile  [string]
-			  -I  pkcs11  [string]
-			  -i  identity_file  [string]
-			  -m  mac_spec  [string]
-			  -O  ctl_cmd  [string]
-			  -o  option  [string]
-			  -P  tag  [string]
-			  -S  ctl_path  [string]"
+			      --cipher         SSH option for cipher_spec (-c)  [string]
+			      --log-file       SSH option for log_file (-c)  [string]
+			      --escape-char    SSH option for escape_char (-e)  [string]
+			      --config-file    SSH option for config-file (-F)  [string]
+			      --pkcs11         SSH option for pkcs11 (-I)  [string]
+			      --identity-file  SSH option for identity_file (-i)  [string]
+			      --mac-spec       SSH option for mac_spec (-m)  [string]
+			      --ctl-cmd        SSH option for ctl_cmd (-O)  [string]
+			      --option         SSH option for option (-o)  [string]
+			      --tag            SSH option for tag (-P)  [string]
+			      --ctl-path       SSH option for ctl_path (-S)  [string]"
 		`);
 	});
 
@@ -77,6 +79,11 @@ describe("containers ssh", () => {
 				);
 			})
 		);
+
+		await expect(runWrangler(`containers ssh ${instanceId}`)).rejects.toMatchInlineSnapshot(`
+			[Error: There has been an unknown error when trying to SSH into the container.
+			{"error":"something happened"}]
+		`);
 	});
 
 	// This covers up to trying to connect to the container with ssh. The

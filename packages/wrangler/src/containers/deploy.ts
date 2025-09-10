@@ -75,8 +75,6 @@ function isObject(value: unknown): value is Record<string, unknown> {
 function createApplicationToModifyApplication(
 	req: CreateApplicationRequest
 ): ModifyApplicationRequestBody {
-	const { wrangler_ssh } = req.configuration;
-
 	return {
 		configuration: req.configuration,
 		max_instances: req.max_instances,
@@ -84,10 +82,6 @@ function createApplicationToModifyApplication(
 		affinities: req.affinities,
 		scheduling_policy: req.scheduling_policy,
 		rollout_active_grace_period: req.rollout_active_grace_period,
-		wrangler_ssh: wrangler_ssh
-			? { enabled: wrangler_ssh.enabled, port: wrangler_ssh.port }
-			: undefined,
-		authorized_keys: req.configuration.authorized_keys ?? undefined,
 	};
 }
 

@@ -157,6 +157,7 @@ export type ContainerApp = {
 	ssh?: {
 		/**
 		 * If enabled, those with write access to a container will be able to SSH into it through Wrangler.
+		 * @default false
 		 */
 		enabled: boolean;
 		/**

@@ -1738,6 +1738,120 @@ describe("wrangler deploy with containers", () => {
 			"
 		`);
 	});
+
+	it("should enable ssh when provided for an existing container", async () => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					ssh: {
+						enabled: true,
+					},
+					authorized_keys: [
+						{
+							name: "jeff",
+							public_key:
+								"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+						},
+					],
+				},
+			],
+		});
+
+		mockGetApplications([
+			{
+
+				id: "abc",
+				instances: 0,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				name: "my-container",
+				max_instances: 10,
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				configuration: {
+					image: "docker.io/hello:world",
+				},
+				durable_objects: {
+					namespace_id: "1",
+				},
+			}
+		]);
+
+		mockModifyApplication({
+			configuration: {
+				image: "docker.io/hello:world",
+				wrangler_ssh: {
+					enabled: true,
+				},
+				authorized_keys: [
+					{
+						name: "jeff",
+						public_key:
+							"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+					},
+				],
+			}
+		});
+
+		mockCreateApplicationRollout({
+			description: "Progressive update",
+			strategy: "rolling",
+			kind: "full_auto",
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your Worker has access to the following bindings:
+			Binding                                            Resource
+			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
+		// no deprecation warnings should show up on this run
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container
+			│
+			│   name = \\"my-container\\"
+			│   scheduling_policy = \\"default\\"
+			│   version = 1
+			│ + rollout_active_grace_period = 0
+			│     [containers.configuration]
+			│     image = \\"docker.io/hello:world\\"
+			│ +   instance_type = \\"dev\\"
+			│ +     [[containers.configuration.authorized_keys]]
+			│ +     name = \\"jeff\\"
+			│ +     public_key = \\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm\\"
+			│ +     [containers.configuration.wrangler_ssh]
+			│ +     enabled = true
+			│     [containers.durable_objects]
+			│     namespace_id = \\"1\\"
+			│ +   [containers.constraints]
+			│ +   tier = 1
+			│
+			│
+			│  SUCCESS  Modified application my-container (Application ID: abc)
+			│
+			╰ Applied changes
+
+			"
+		`);
+	});
 });
 
 // This is a separate describe block because we intentionally do not mock any
