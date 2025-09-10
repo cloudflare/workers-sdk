@@ -110,7 +110,7 @@ export const r2SqlQueryCommand = createCommand({
 
 		const s = spinner();
 		s.start("Query in progress");
-		const apiUrl = `https://api.dqe.cloudflarestorage.com/api/v1/accounts/${accountId}/dqe/query/${bucketName}`;
+		const apiUrl = `https://api.sql.cloudflarestorage.com/api/v1/accounts/${accountId}/r2-sql/query/${bucketName}`;
 		let responseStatus = null;
 		let statusText = null;
 		let text = null;

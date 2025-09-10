@@ -90,7 +90,7 @@ describe("r2 sql", () => {
 
 			msw.use(
 				http.post(
-					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
 					async ({ request, params }) => {
 						const { accountId, bucketName } = params;
 						expect(accountId).toEqual("account123");
@@ -138,7 +138,7 @@ describe("r2 sql", () => {
 
 			msw.use(
 				http.post(
-					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
 					async () => {
 						return HttpResponse.json(mockResponse);
 					},
@@ -163,7 +163,7 @@ describe("r2 sql", () => {
 
 			msw.use(
 				http.post(
-					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
 					async () => {
 						return HttpResponse.json(mockResponse, { status: 500 });
 					},
@@ -182,7 +182,7 @@ describe("r2 sql", () => {
 		it("should handle API connection errors", async () => {
 			msw.use(
 				http.post(
-					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
 					async () => {
 						return HttpResponse.error();
 					},
@@ -198,7 +198,7 @@ describe("r2 sql", () => {
 		it("should handle invalid JSON responses", async () => {
 			msw.use(
 				http.post(
-					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
 					async () => {
 						return HttpResponse.text("Invalid JSON", { status: 200 });
 					},
@@ -227,7 +227,7 @@ describe("r2 sql", () => {
 
 			msw.use(
 				http.post(
-					"https://api.dqe.cloudflarestorage.com/api/v1/accounts/:accountId/dqe/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
 					async () => {
 						return HttpResponse.json(mockResponse);
 					},
