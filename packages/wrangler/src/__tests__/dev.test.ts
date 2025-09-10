@@ -1392,7 +1392,7 @@ describe.sequential("wrangler dev", () => {
 					name: "my-container",
 					max_instances: 10,
 					class_name: "ExampleDurableObject",
-					image: "docker.io/hello:world",
+					image: "registry.cloudflare.com/hello:world",
 				},
 			],
 		};
