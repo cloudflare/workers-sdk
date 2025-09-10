@@ -15,6 +15,8 @@ type TestConfig = {
 	compatibilityFlags?: string[];
 	// Assert runtime compatibility flag values
 	expectRuntimeFlags?: Record<string, boolean>;
+	// Subset of tests to run, by default all tests are run
+	testsToRun?: (keyof typeof WorkerdTests)[];
 };
 
 const testConfigs: TestConfig[] = [
@@ -140,6 +142,7 @@ const testConfigs: TestConfig[] = [
 			expectRuntimeFlags: {
 				enable_nodejs_os_module: false,
 			},
+			testsToRun: ["testNodeCompatModules", "testOs"],
 		},
 		// TODO: add a config when os is enabled by default (>= 2025-09-15)
 		{
@@ -149,15 +152,17 @@ const testConfigs: TestConfig[] = [
 			expectRuntimeFlags: {
 				enable_nodejs_os_module: true,
 			},
+			testsToRun: ["testNodeCompatModules", "testOs"],
 		},
-		// TODO: change the date pass the default enabled date (>= 2025-09-15)
 		{
 			name: "os disabled by flag",
+			// TODO: change the date passed the default enabled date (>= 2025-09-15)
 			compatibilityDate: "2025-07-26",
 			compatibilityFlags: ["disable_nodejs_os_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_os_module: false,
 			},
+			testsToRun: ["testNodeCompatModules", "testOs"],
 		},
 	],
 	// node:fs and node:fs/promises
@@ -168,6 +173,7 @@ const testConfigs: TestConfig[] = [
 			expectRuntimeFlags: {
 				enable_nodejs_fs_module: false,
 			},
+			testsToRun: ["testNodeCompatModules", "testFs"],
 		},
 		// TODO: add a config when fs is enabled by default (>= 2025-09-15)
 		{
@@ -177,22 +183,60 @@ const testConfigs: TestConfig[] = [
 			expectRuntimeFlags: {
 				enable_nodejs_fs_module: true,
 			},
+			testsToRun: ["testNodeCompatModules", "testFs"],
 		},
-		// TODO: change the date pass the default enabled date (>= 2025-09-15)
 		{
 			name: "fs disabled by flag",
+			// TODO: change the date passed the default enabled date (>= 2025-09-15)
 			compatibilityDate: "2025-07-26",
 			compatibilityFlags: ["disable_nodejs_fs_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_fs_module: false,
 			},
+			testsToRun: ["testNodeCompatModules", "testFs"],
+		},
+	],
+	// node:console
+	[
+		{
+			name: "console disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_console_module: false,
+			},
+			testsToRun: ["testNodeCompatModules", "testConsole"],
+		},
+		// TODO: add a config when console is enabled by default (>= 2025-09-21)
+		{
+			name: "console enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_console_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_console_module: true,
+			},
+			testsToRun: ["testNodeCompatModules", "testConsole"],
+		},
+		// TODO: change the date passed the default enabled date (>= 2025-09-21)
+		{
+			name: "console disabled by flag",
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["disable_nodejs_console_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_console_module: false,
+			},
+			testsToRun: ["testNodeCompatModules", "testConsole"],
 		},
 	],
 ].flat() as TestConfig[];
 
 describe.each(testConfigs)(
 	`Preset test: $name`,
-	({ compatibilityDate, compatibilityFlags = [], expectRuntimeFlags = {} }) => {
+	({
+		compatibilityDate,
+		compatibilityFlags = [],
+		expectRuntimeFlags = {},
+		testsToRun = Object.keys(WorkerdTests),
+	}) => {
 		let helper: WranglerE2ETestHelper;
 
 		beforeAll(async () => {
@@ -256,19 +300,15 @@ describe.each(testConfigs)(
 				await wrangler.stop();
 			});
 
-			test.for(Object.keys(WorkerdTests))(
-				"%s",
-				{ timeout: 20_000 },
-				async (testName) => {
-					// Retries the callback until it succeeds or times out.
-					// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-					await vi.waitFor(async () => {
-						const response = await fetch(`${url}/${testName}`);
-						const body = await response.text();
-						expect(body).toMatch("passed");
-					});
-				}
-			);
+			test.for(testsToRun)("%s", { timeout: 20_000 }, async (testName) => {
+				// Retries the callback until it succeeds or times out.
+				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
+				await vi.waitFor(async () => {
+					const response = await fetch(`${url}/${testName}`);
+					const body = await response.text();
+					expect(body).toMatch("passed");
+				});
+			});
 		});
 	}
 );
