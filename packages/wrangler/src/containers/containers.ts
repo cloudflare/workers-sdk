@@ -165,48 +165,48 @@ export function sshYargs(args: CommonYargsArgv) {
 				demandOption: true,
 			})
 			// Following are SSH flags that should be directly passed in
-			.option("c", {
-				describe: "cipher_spec",
+			.option("cipher", {
+				describe: "SSH option for cipher_spec (-c)",
 				type: "string",
 			})
-			.option("E", {
-				describe: "log_file",
+			.option("log-file", {
+				describe: "SSH option for log_file (-c)",
 				type: "string",
 			})
-			.option("e", {
-				describe: "escape_char",
+			.option("escape-char", {
+				describe: "SSH option for escape_char (-e)",
 				type: "string",
 			})
-			.option("F", {
-				describe: "configfile",
+			.option("config-file", {
+				describe: "SSH option for config-file (-F)",
 				type: "string",
 			})
-			.option("I", {
-				describe: "pkcs11",
+			.option("pkcs11", {
+				describe: "SSH option for pkcs11 (-I)",
 				type: "string",
 			})
-			.option("i", {
-				describe: "identity_file",
+			.option("identity-file", {
+				describe: "SSH option for identity_file (-i)",
 				type: "string",
 			})
-			.option("m", {
-				describe: "mac_spec",
+			.option("mac-spec", {
+				describe: "SSH option for mac_spec (-m)",
 				type: "string",
 			})
-			.option("O", {
-				describe: "ctl_cmd",
+			.option("ctl-cmd", {
+				describe: "SSH option for ctl_cmd (-O)",
 				type: "string",
 			})
-			.option("o", {
-				describe: "option",
+			.option("option", {
+				describe: "SSH option for option (-o)",
 				type: "string",
 			})
-			.option("P", {
-				describe: "tag",
+			.option("tag", {
+				describe: "SSH option for tag (-P)",
 				type: "string",
 			})
-			.option("S", {
-				describe: "ctl_path",
+			.option("ctl-path", {
+				describe: "SSH option for ctl_path (-S)",
 				type: "string",
 			})
 	);
@@ -403,48 +403,48 @@ function buildSshArgs(
 ): string[] {
 	const flags: string[] = [];
 
-	if (sshArgs.c !== undefined) {
-		flags.push("-c", sshArgs.c);
+	if (sshArgs.cipher !== undefined) {
+		flags.push("-c", sshArgs.cipher);
 	}
 
-	if (sshArgs.E !== undefined) {
-		flags.push("-E", sshArgs.E);
+	if (sshArgs.logFile !== undefined) {
+		flags.push("-E", sshArgs.logFile);
 	}
 
-	if (sshArgs.e !== undefined) {
-		flags.push("-e", sshArgs.e);
+	if (sshArgs.escapeChar !== undefined) {
+		flags.push("-e", sshArgs.escapeChar);
 	}
 
-	if (sshArgs.F !== undefined) {
-		flags.push("-F", sshArgs.F);
+	if (sshArgs.configFile !== undefined) {
+		flags.push("-F", sshArgs.configFile);
 	}
 
-	if (sshArgs.I !== undefined) {
-		flags.push("-I", sshArgs.I);
+	if (sshArgs.pkcs11 !== undefined) {
+		flags.push("-I", sshArgs.pkcs11);
 	}
 
-	if (sshArgs.i !== undefined) {
-		flags.push("-i", sshArgs.i);
+	if (sshArgs.identityFile !== undefined) {
+		flags.push("-i", sshArgs.identityFile);
 	}
 
-	if (sshArgs.m !== undefined) {
-		flags.push("-m", sshArgs.m);
+	if (sshArgs.macSpec !== undefined) {
+		flags.push("-m", sshArgs.macSpec);
 	}
 
-	if (sshArgs.O !== undefined) {
-		flags.push("-O", sshArgs.O);
+	if (sshArgs.ctlCmd !== undefined) {
+		flags.push("-O", sshArgs.ctlCmd);
 	}
 
-	if (sshArgs.o !== undefined) {
-		flags.push("-o", sshArgs.o);
+	if (sshArgs.option !== undefined) {
+		flags.push("-o", sshArgs.option);
 	}
 
-	if (sshArgs.P !== undefined) {
-		flags.push("-P", sshArgs.P);
+	if (sshArgs.tag!== undefined) {
+		flags.push("-P", sshArgs.tag);
 	}
 
-	if (sshArgs.S !== undefined) {
-		flags.push("-S", sshArgs.S);
+	if (sshArgs.ctlPath !== undefined) {
+		flags.push("-S", sshArgs.ctlPath);
 	}
 
 	return flags;
