@@ -87,8 +87,7 @@ export const r2SqlQueryCommand = createCommand({
 			demandOption: true,
 		},
 	},
-	async handler(args, { config: _config }) {
-		const { warehouse, query } = args;
+	async handler({ warehouse, query }) {
 
 		const token = getCloudflareAPITokenFromEnv();
 		if (!token) {
