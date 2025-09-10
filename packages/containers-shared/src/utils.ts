@@ -130,13 +130,6 @@ export const isDockerfile = (
 		);
 	}
 
-	// validate URL
-	if (image.includes("://")) {
-		throw new UserError(
-			errorPrefix +
-				`Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
-		);
-	}
 	return false;
 };
 
