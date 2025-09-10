@@ -20,9 +20,14 @@ export interface WorkflowInstanceIntrospector {
 
 	waitForStatus(status: string): Promise<void>;
 
-	cleanUp(): Promise<void>;
+	dispose(): Promise<void>;
 }
 
+// Note(osilva): `introspectWorkflowInstance()` doesn’t need to be async, but we keep it that way
+// to avoid potential breaking changes later and to stay consistent with `introspectWorkflow`.
+
+// In the "cloudflare:test" module, the exposed type is `Workflow`. Here we use `WorkflowBinding`
+// (which implements `Workflow`) to access unsafe functions.
 export async function introspectWorkflowInstance(
 	workflow: WorkflowBinding,
 	instanceId: string
@@ -85,24 +90,29 @@ class WorkflowInstanceIntrospectorHandle
 		await this.#workflow.unsafeWaitForStatus(this.#instanceId, status);
 	}
 
-	async cleanUp(): Promise<void> {
-		await this.#workflow.unsafeAbort(this.#instanceId, "Instance clean up");
+	async dispose(): Promise<void> {
+		await this.#workflow.unsafeAbort(this.#instanceId, "Instance dispose");
 	}
 
 	async [Symbol.asyncDispose](): Promise<void> {
-		await this.cleanUp();
+		await this.dispose();
 	}
 }
 
 // See public facing `cloudflare:test` types for docs
 export interface WorkflowIntrospector {
-	modifyAll(fn: ModifierCallback): void;
+	modifyAll(fn: ModifierCallback): Promise<void>;
 
 	get(): WorkflowInstanceIntrospector[];
 
-	cleanUp(): Promise<void>;
+	dispose(): Promise<void>;
 }
 
+// Note(osilva): `introspectWorkflow` could be sync with some changes, but we keep it async
+// to avoid potential breaking changes later.
+
+// In the "cloudflare:test" module, the exposed type is `Workflow`. Here we use `WorkflowBinding`
+// (which implements `Workflow`) to access unsafe functions.
 export async function introspectWorkflow(
 	workflow: WorkflowBinding
 ): Promise<WorkflowIntrospectorHandle> {
@@ -189,7 +199,7 @@ export async function introspectWorkflow(
 		};
 	};
 
-	const cleanup = () => {
+	const dispose = () => {
 		internalEnv[bindingName] = internalOriginalWorkflow;
 		env[bindingName] = externalOriginalWorkflow;
 	};
@@ -209,7 +219,7 @@ export async function introspectWorkflow(
 		workflow,
 		modifierCallbacks,
 		instanceIntrospectors,
-		cleanup
+		dispose
 	);
 }
 
@@ -217,21 +227,21 @@ class WorkflowIntrospectorHandle implements WorkflowIntrospector {
 	workflow: WorkflowBinding;
 	#modifierCallbacks: ModifierCallback[];
 	#instanceIntrospectors: WorkflowInstanceIntrospector[];
-	#cleanupCallback: () => void;
+	#disposeCallback: () => void;
 
 	constructor(
 		workflow: WorkflowBinding,
 		modifierCallbacks: ModifierCallback[],
 		instanceIntrospectors: WorkflowInstanceIntrospector[],
-		cleanupCallback: () => void
+		disposeCallback: () => void
 	) {
 		this.workflow = workflow;
 		this.#modifierCallbacks = modifierCallbacks;
 		this.#instanceIntrospectors = instanceIntrospectors;
-		this.#cleanupCallback = cleanupCallback;
+		this.#disposeCallback = disposeCallback;
 	}
 
-	modifyAll(fn: ModifierCallback): void {
+	async modifyAll(fn: ModifierCallback): Promise<void> {
 		this.#modifierCallbacks.push(fn);
 	}
 
@@ -239,17 +249,17 @@ class WorkflowIntrospectorHandle implements WorkflowIntrospector {
 		return this.#instanceIntrospectors;
 	}
 
-	async cleanUp(): Promise<void> {
-		// also cleans all instance introspectors
+	async dispose(): Promise<void> {
+		// also disposes all instance introspectors
 		await Promise.all(
-			this.#instanceIntrospectors.map((introspector) => introspector.cleanUp())
+			this.#instanceIntrospectors.map((introspector) => introspector.dispose())
 		);
 		this.#modifierCallbacks = [];
 		this.#instanceIntrospectors = [];
-		this.#cleanupCallback();
+		this.#disposeCallback();
 	}
 
 	async [Symbol.asyncDispose](): Promise<void> {
-		await this.cleanUp();
+		await this.dispose();
 	}
 }

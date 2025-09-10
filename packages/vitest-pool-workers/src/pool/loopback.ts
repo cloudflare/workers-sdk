@@ -360,8 +360,7 @@ function checkAllStorageOperationsResolved(
 					"",
 					separator,
 					`Workflows are being created in ${source}.`,
-					"Isolated storage is enabled, requiring all created Workflow instances to be cleaned/disposed at the end of each test.",
-					"Alternatively, if isolated storage is not required and Workflow instance state needs to be preserved across tests, `isolatedStorage` must be set to false in vitest.config.ts.",
+					"Even with isolated storage, Workflows are required to be manually disposed at the end of each test.",
 					"See https://developers.cloudflare.com/workers/testing/vitest-integration/test-apis/ for more details.",
 					"",
 				].join("\n")

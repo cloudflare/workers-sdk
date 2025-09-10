@@ -144,17 +144,8 @@ export class Engine extends DurableObject<Env> {
 		}
 	}
 
-	readLogsFromStep(cacheKey: string): RawInstanceLog[] {
-		return [
-			...this.ctx.storage.sql.exec(
-				"SELECT * FROM states WHERE groupKey = ? ORDER BY id",
-				cacheKey
-			),
-		] as RawInstanceLog[];
-	}
-
-	getInstanceModifier(): WorkflowInstanceModifier {
-		return new WorkflowInstanceModifier(this, this.ctx);
+	readLogsFromStep(_cacheKey: string): RawInstanceLog[] {
+		return [];
 	}
 
 	readLogs(): EngineLogs {
@@ -231,6 +222,8 @@ export class Engine extends DurableObject<Env> {
 		// if it hasn't reached the desired state, create a new promise and add its resolver to the waiters map
 		return new Promise((resolve, reject) => {
 			this.statusWaiters.set(targetStatus, { resolve, reject });
+			// immediately reconcile against current status in case it's already finite
+			this.handleStatusWaiter(currentStatus as InstanceStatus);
 		});
 	}
 
@@ -312,6 +305,7 @@ export class Engine extends DurableObject<Env> {
 		const count = stepCount ?? 1;
 		const cacheKey = `${hash}-${count}`;
 
+		// read latest log from step
 		const rows = [
 			...this.ctx.storage.sql.exec<{
 				event: InstanceEvent;
@@ -363,7 +357,8 @@ export class Engine extends DurableObject<Env> {
 		// TODO: Maybe don't actually kill but instead check a flag and return early if true
 	}
 
-	// Called by the cleanup function when introspecting in tests
+	// Called by the dispose function when introspecting the instance in tests
+	// TODO: Ideally this abort should be done by `abortAllDurableObjects` from worked called by vitest-pool-workers
 	async unsafeAbort(reason?: string) {
 		await this.ctx.storage.sync();
 		await this.ctx.storage.deleteAll();
@@ -463,6 +458,10 @@ export class Engine extends DurableObject<Env> {
 		}
 	}
 
+	getInstanceModifier(): WorkflowInstanceModifier {
+		return new WorkflowInstanceModifier(this, this.ctx);
+	}
+
 	async userTriggeredTerminate() {}
 
 	async init(
@@ -534,6 +533,8 @@ export class Engine extends DurableObject<Env> {
 		// restore eventMap so that waitForEvent across lifetimes works correctly
 		await this.restoreEventMap();
 
+		const stubStep = new Context(this, this.ctx);
+
 		const workflowRunningHandler = async () => {
 			await this.ctx.storage.transaction(async () => {
 				// manually start the grace period
@@ -542,8 +543,6 @@ export class Engine extends DurableObject<Env> {
 			});
 		};
 		this.isRunning = true;
-
-		const stubStep = new Context(this, this.ctx);
 
 		void workflowRunningHandler();
 		try {

@@ -129,7 +129,7 @@ declare module "cloudflare:test" {
 
 	/**
 	 * Creates an introspector for a specific Workflow instance, used to
-	 * modify its behavior, await outcomes, and clean up its state during tests.
+	 * modify its behavior and await outcomes.
 	 * This is the primary entry point for testing individual Workflow instances.
 	 *
 	 * @param workflow - The Workflow binding, e.g., `env.MY_WORKFLOW`.
@@ -137,35 +137,35 @@ declare module "cloudflare:test" {
 	 * @returns A `WorkflowInstanceIntrospector` to control the instance's behavior.
 	 *
 	 * @remarks
-	 * ### Cleanup
+	 * ### Dispose
 	 *
-	 * The introspector must be cleaned up after the test to remove mocks and release
+	 * The introspector must be disposed after the test to remove mocks and release
 	 * resources. This can be handled in two ways:
 	 *
-	 * 1.  **Implicit Cleanup (Recommended)**: With the `await using` syntax.
+	 * 1.  **Implicit dispose**: With the `await using` syntax.
 	 * `await using instance = await introspectWorkflowInstance(...)`
 	 *
-	 * 2.  **Explicit Cleanup**: Manually call `await instance.cleanUp()` at the end of the
+	 * 2.  **Explicit dispose**: Manually call `await instance.dispose()` at the end of the
 	 * test.
 	 *
 	 * @example
-	 * // Full test of a Workflow instance using implicit cleanup (await using).
+	 * // Full test of a Workflow instance using implicit dispose
 	 * it("should disable all sleeps and complete", async () => {
-	 * // 1. CONFIGURATION
-	 * // `await using` ensures .cleanUp() is automatically called at the end of the block.
-	 * await using instance = await introspectWorkflowInstance(env.MY_WORKFLOW, "123456");
+	 *   // 1. CONFIGURATION
+	 *   // `await using` ensures .dispose() is automatically called at the end of the block.
+	 *   await using instance = await introspectWorkflowInstance(env.MY_WORKFLOW, "123456");
 	 *
-	 * await instance.modify(async (m) => {
-	 * await m.disableSleeps();
-	 * });
+	 *   await instance.modify(async (m) => {
+	 *     await m.disableSleeps();
+	 *   });
 	 *
-	 * // 2. EXECUTION
-	 * await env.MY_WORKFLOW.create({ id: "123456" });
+	 *   // 2. EXECUTION
+	 *   await env.MY_WORKFLOW.create({ id: "123456" });
 	 *
-	 * // 3. ASSERTION
-	 * await instance.waitForStatus("complete");
+	 *   // 3. ASSERTION
+	 *   await instance.waitForStatus("complete");
 	 *
-	 * // 4. CLEANUP is implicit and automatic here.
+	 *   // 4. DISPOSE is implicit and automatic here.
 	 * });
 	 */
 	export function introspectWorkflowInstance(
@@ -212,26 +212,27 @@ declare module "cloudflare:test" {
 		waitForStatus(status: InstanceStatus["status"]): Promise<void>;
 
 		/**
-		 * Cleans the Workflow instance introspector.
+		 * Disposes the Workflow instance introspector.
 		 *
 		 * This is crucial for ensuring test isolation by preventing state from
-		 * leaking between tests. It should be called at the end or after each test.
+		 * leaking between tests. It should be called at the end of each test.
 		 */
-		cleanUp(): Promise<void>;
+		dispose(): Promise<void>;
 
 		/**
-		 * An alias for {@link cleanUp} to support automatic disposal with the `using` keyword.
-		 * This is an alternative to calling `cleanUp()` in an `afterEach` hook.
+		 * An alias for {@link dispose} to support automatic disposal with the `using` keyword.
 		 *
-		 * @see {@link cleanUp}
+		 * @see {@link dispose}
 		 * @example
+		 * ```ts
 		 * it('my workflow test', async () => {
-		 * await using instance = await introspectWorkflowInstance(env.WORKFLOW, "123456");
+		 *   await using instance = await introspectWorkflowInstance(env.WORKFLOW, "123456");
 		 *
-		 * // ... your test logic ...
+		 *   // ... your test logic ...
 		 *
-		 * // .cleanUp() is automatically called here at the end of the scope
+		 *   // .dispose() is automatically called here at the end of the scope
 		 * });
+		 * ```
 		 */
 		[Symbol.asyncDispose](): Promise<void>;
 	}
@@ -248,14 +249,16 @@ declare module "cloudflare:test" {
 		 * @example Disable all sleeps:
 		 * ```ts
 		 * await instance.modify(m => {
-		 * m.disableSleeps();
+		 *   m.disableSleeps();
 		 * });
+		 * ```
 		 *
 		 * @example Disable a specific set of sleeps by their step names:
 		 * ```ts
 		 * await instance.modify(m => {
-		 * m.disableSleeps([{ name: "sleep1" }, { name: "sleep5" }, { name: "sleep7" }]);
+		 *   m.disableSleeps([{ name: "sleep1" }, { name: "sleep5" }, { name: "sleep7" }]);
 		 * });
+		 * ```
 		 *
 		 * @param steps - Optional array of specific steps to disable sleeps for.
 		 * If omitted, **all sleeps** in the Workflow will be disabled.
@@ -279,10 +282,10 @@ declare module "cloudflare:test" {
 		 * @example Mock the result of the third step named "fetch-data":
 		 * ```ts
 		 * await instance.modify(m => {
-		 * m.mockStepResult(
-		 * { name: "fetch-data", index: 3 },
-		 * { success: true, data: [1, 2, 3] }
-		 * );
+		 *   m.mockStepResult(
+		 *     { name: "fetch-data", index: 3 },
+		 *     { success: true, data: [1, 2, 3] }
+		 *   );
 		 * });
 		 * ```
 		 */
@@ -300,16 +303,17 @@ declare module "cloudflare:test" {
 		 * ```ts
 		 * // This example assumes the "fetch-data" step is configured with at least 3 retries.
 		 * await instance.modify(m => {
-		 * m.mockStepError(
-		 * { name: "fetch-data" },
-		 * new Error("Failed!"),
-		 * 3
-		 * );
-		 * m.mockStepResult(
-		 * { name: "fetch-data" },
-		 * { success: true, data: [1, 2, 3] }
-		 * );
+		 *   m.mockStepError(
+		 *     { name: "fetch-data" },
+		 *     new Error("Failed!"),
+		 *     3
+		 *   );
+		 *   m.mockStepResult(
+		 *     { name: "fetch-data" },
+		 *     { success: true, data: [1, 2, 3] }
+		 *   );
 		 * });
+		 * ```
 		 *
 		 * @param step - An object specifying the step `name` and optional `index` (1-based).
 		 * If multiple steps share the same name, `index` targets a specific one.
@@ -333,15 +337,16 @@ declare module "cloudflare:test" {
 		 * ```ts
 		 * // This example assumes the "fetch-data" step is configured with at least 3 retries.
 		 * await instance.modify(m => {
-		 * m.forceStepTimeout(
-		 * { name: "fetch-data" },
-		 * 3
-		 * );
-		 * m.mockStepResult(
-		 * { name: "fetch-data" },
-		 * { success: true, data: [1, 2, 3] }
-		 * );
+		 *   m.forceStepTimeout(
+		 *     { name: "fetch-data" },
+		 *     3
+		 *   );
+		 *   m.mockStepResult(
+		 *     { name: "fetch-data" },
+		 *     { success: true, data: [1, 2, 3] }
+		 *   );
 		 * });
+		 * ```
 		 *
 		 * @param step - An object specifying the step `name` and optional `index` (1-based).
 		 * If multiple steps share the same name, `index` targets a specific one.
@@ -359,9 +364,10 @@ declare module "cloudflare:test" {
 		 * @example Mock a step event:
 		 * ```ts
 		 * await instance.modify(m => {
-		 * m.mockEvent(
-		 * { type: "user-approval", payload: { approved: true } },
-		 * );
+		 *   m.mockEvent(
+		 *     { type: "user-approval", payload: { approved: true } },
+		 *   );
+		 * ```
 		 *
 		 * @param event - The event to send, including its `type` and `payload`.
 		 */
@@ -375,9 +381,10 @@ declare module "cloudflare:test" {
 		 * @example Mock a step to time out:
 		 * ```ts
 		 * await instance.modify(m => {
-		 * m.forceEventTimeout(
-		 * { name: "user-approval" },
-		 * );
+		 *   m.forceEventTimeout(
+		 *     { name: "user-approval" },
+		 *   );
+		 * ```
 		 *
 		 * @param step - An object specifying the step `name` and optional `index` (1-based).
 		 * If multiple steps share the same name, `index` targets a specific one.
@@ -391,43 +398,44 @@ declare module "cloudflare:test" {
 	 * beforehand. This allows for defining modifications that will apply to
 	 * **all subsequently created instances**.
 	 *
-	 * This is the primary entry point for testing Workflow instances where the id is unknown before their creation.
+	 * This is the primary entry point for testing Workflow instances where the id
+	 * is unknown before their creation.
 	 *
 	 * @param workflow - The Workflow binding, e.g., `env.MY_WORKFLOW`.
 	 * @returns A `WorkflowIntrospector` to control the instances behavior.
 	 *
-	 *  * @remarks
-	 * ### Cleanup
+	 * @remarks
+	 * ### Dispose
 	 *
-	 * The introspector must be cleaned up after the test to remove mocks and release
+	 * The introspector must be disposed after the test to remove mocks and release
 	 * resources. This can be handled in two ways:
 	 *
-	 * 1.  **Implicit Cleanup (Recommended)**: With the `await using` syntax.
+	 * 1.  **Implicit dispose**: With the `await using` syntax.
 	 * `await using introspector = await introspectWorkflow(...)`
 	 *
-	 * 2.  **Explicit Cleanup**: Manually call `await introspector.cleanUp()` at the end of the
+	 * 2.  **Explicit dispose**: Manually call `await introspector.dispose()` at the end of the
 	 * test.
 	 *
 	 * @example
 	 * ```ts
-	 * // Full test of a Workflow instance using implicit cleanup (await using).
+	 * // Full test of a Workflow instance using implicit dispose
 	 * it("should disable all sleeps and complete", async () => {
-	 * // 1. CONFIGURATION
-	 * const introspector = await introspectWorkflow(env.MY_WORKFLOW);
-	 * await introspector.modifyAll(async (m) => {
-	 * await m.disableSleeps();
-	 * });
+	 *   // 1. CONFIGURATION
+	 *   await using introspector = await introspectWorkflow(env.MY_WORKFLOW);
+	 *   await introspector.modifyAll(async (m) => {
+	 *     await m.disableSleeps();
+	 *   });
 	 *
-	 * // 2. EXECUTION
-	 * await env.MY_WORKFLOW.create();
+	 *   // 2. EXECUTION
+	 *   await env.MY_WORKFLOW.create();
 	 *
-	 * // 3. ASSERTION
-	 * const instances = introspector.get();
-	 * for(const instance of instances) {
-	 * await instance.waitForStatus("complete");
-	 * }
+	 *   // 3. ASSERTION
+	 *   const instances = introspector.get();
+	 *   for(const instance of instances) {
+	 *     await instance.waitForStatus("complete");
+	 *   }
 	 *
-	 * // 4. CLEANUP is implicit and automatic here.
+	 * // 4. DISPOSE is implicit and automatic here.
 	 * });
 	 * ```
 	 */
@@ -445,7 +453,9 @@ declare module "cloudflare:test" {
 		 *
 		 * @param fn - An async callback that receives a `WorkflowInstanceModifier` object.
 		 */
-		modifyAll(fn: (m: WorkflowInstanceModifier) => Promise<void>): void;
+		modifyAll(
+			fn: (m: WorkflowInstanceModifier) => Promise<void>
+		): Promise<void>;
 
 		/**
 		 * Returns all `WorkflowInstanceIntrospector`s from Workflow instances
@@ -455,30 +465,30 @@ declare module "cloudflare:test" {
 
 		/**
 		 *
-		 * Cleans the introspector and every `WorkflowInstanceIntrospector` from Workflow
+		 * Disposes the introspector and every `WorkflowInstanceIntrospector` from Workflow
 		 * instances created after calling `introspectWorkflow`.
 		 *
 		 * This function is essential for test isolation, ensuring that results from one
 		 * test do not leak into the next. It should be called at the end or after each test.
 		 *
-		 * **Note:** After cleanup, `introspectWorkflow()` must be called again to begin
+		 * **Note:** After dispose, `introspectWorkflow()` must be called again to begin
 		 * a new introspection.
 		 *
 		 */
-		cleanUp(): Promise<void>;
+		dispose(): Promise<void>;
 
 		/**
-		 * An alias for {@link cleanUp} to support automatic disposal with the `using` keyword.
-		 * This is an alternative to calling `cleanUp()` in an `afterEach` hook.
+		 * An alias for {@link dispose} to support automatic disposal with the `using` keyword.
+		 * This is an alternative to calling `dispose()` in an `afterEach` hook.
 		 *
-		 * @see {@link cleanUp}
+		 * @see {@link dispose}
 		 * @example
 		 * it('my workflow test', async () => {
 		 * await using workflowIntrospector = await introspectWorkflow(env.WORKFLOW);
 		 *
 		 * // ... your test logic ...
 		 *
-		 * // .cleanUp() is automatically called here at the end of the scope
+		 * // .dispose() is automatically called here at the end of the scope
 		 * });
 		 */
 		[Symbol.asyncDispose](): Promise<void>;

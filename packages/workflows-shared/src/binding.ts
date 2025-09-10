@@ -84,8 +84,8 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		return this.env.BINDING_NAME;
 	}
 
-	public unsafeGetInstanceModifier(id: string): unknown {
-		const stubId = this.env.ENGINE.idFromName(id);
+	public unsafeGetInstanceModifier(instanceId: string): unknown {
+		const stubId = this.env.ENGINE.idFromName(instanceId);
 		const stub = this.env.ENGINE.get(stubId);
 
 		const instanceModifier = stub.getInstanceModifier();
@@ -94,29 +94,32 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 	}
 
 	public async unsafeWaitForStepResult(
-		id: string,
+		instanceId: string,
 		name: string,
 		index?: number
 	): Promise<unknown> {
-		const stubId = this.env.ENGINE.idFromName(id);
+		const stubId = this.env.ENGINE.idFromName(instanceId);
 		const stub = this.env.ENGINE.get(stubId);
 
 		return await stub.waitForStepResult(name, index);
 	}
 
-	public async unsafeAbort(id: string, reason?: string): Promise<void> {
-		const stubId = this.env.ENGINE.idFromName(id);
+	public async unsafeAbort(instanceId: string, reason?: string): Promise<void> {
+		const stubId = this.env.ENGINE.idFromName(instanceId);
 		const stub = this.env.ENGINE.get(stubId);
 
 		try {
 			await stub.unsafeAbort(reason);
 		} catch {
-			// do nothing because we want to clean up this instance
+			// do nothing because we want to dispose this instance
 		}
 	}
 
-	public async unsafeWaitForStatus(id: string, status: string): Promise<void> {
-		const stubId = this.env.ENGINE.idFromName(id);
+	public async unsafeWaitForStatus(
+		instanceId: string,
+		status: string
+	): Promise<void> {
+		const stubId = this.env.ENGINE.idFromName(instanceId);
 		const stub = this.env.ENGINE.get(stubId);
 		return await stub.waitForStatus(status);
 	}

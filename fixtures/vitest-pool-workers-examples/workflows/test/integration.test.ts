@@ -5,12 +5,11 @@ const STATUS_COMPLETE = "complete";
 const STEP_NAME = "AI content scan";
 const mockResult = { violationScore: 0 };
 
+// This example implicitly disposes the Workflow instance
 it("workflow should be able to reach the end and be successful", async () => {
-	// This example shows how to implicitly cleanUp Workflow instances
-
-	// CONFIG with `using` to ensure Workflow instances cleanup:
+	// CONFIG with `await using` to ensure Workflow instances cleanup:
 	await using introspector = await introspectWorkflow(env.MODERATOR);
-	introspector.modifyAll(async (m) => {
+	await introspector.modifyAll(async (m) => {
 		await m.disableSleeps();
 		await m.mockStepResult({ name: STEP_NAME }, mockResult);
 	});
@@ -25,36 +24,39 @@ it("workflow should be able to reach the end and be successful", async () => {
 	expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
 		mockResult
 	);
-	await instance.waitForStatus(STATUS_COMPLETE);
+	await expect(instance.waitForStatus(STATUS_COMPLETE)).resolves.not.toThrow();
 
-	// CLEANUP: ensured by `using`
+	// DISPOSE: ensured by `await using`
 });
 
+// This example explicitly disposes the Workflow instances
 it("workflow batch should be able to reach the end and be successful", async () => {
-	// This example shows how to explicitly cleanUp Workflow instances
-
 	// CONFIG:
 	let introspector = await introspectWorkflow(env.MODERATOR);
-	introspector.modifyAll(async (m) => {
-		await m.disableSleeps();
-		await m.mockStepResult({ name: STEP_NAME }, mockResult);
-	});
+	try {
+		await introspector.modifyAll(async (m) => {
+			await m.disableSleeps();
+			await m.mockStepResult({ name: STEP_NAME }, mockResult);
+		});
 
-	await SELF.fetch(`https://mock-worker.local/moderate-batch`);
+		await SELF.fetch(`https://mock-worker.local/moderate-batch`);
 
-	const instances = introspector.get();
-	expect(instances.length).toBe(3);
+		const instances = introspector.get();
+		expect(instances.length).toBe(3);
 
-	// ASSERTIONS:
-	for (const instance of instances) {
-		expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
-			mockResult
-		);
-		await instance.waitForStatus(STATUS_COMPLETE);
+		// ASSERTIONS:
+		for (const instance of instances) {
+			expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+				mockResult
+			);
+			await expect(
+				instance.waitForStatus(STATUS_COMPLETE)
+			).resolves.not.toThrow();
+		}
+	} finally {
+		// DISPOSE:
+		// Workflow introspector should be disposed the end of each test, if no `await using` dyntax is used
+		// Also disposes all intercepted instances
+		await introspector.dispose();
 	}
-
-	// CLEANUP:
-	// Workflow introspector should be cleaned at the end of/after each test, if no `using` keyword is used for the introspector
-	// Cleans up all intercepted instances
-	await introspector.cleanUp();
 });
