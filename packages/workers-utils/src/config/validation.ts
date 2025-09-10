@@ -3090,8 +3090,8 @@ function validateContainerApp(
 					) {
 						validateAdditionalProperties(
 							diagnostics,
-							`${field}.authorized_keys[${i}]`,
-							Object.keys(containerAppOptional.authorized_keys[i]),
+							`${field}.authorized_keys[${item}]`,
+							Object.keys(containerAppOptional.authorized_keys[item]),
 							["name", "public_key"]
 						);
 					}
