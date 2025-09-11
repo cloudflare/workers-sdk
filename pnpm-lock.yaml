@@ -1520,7 +1520,7 @@ importers:
     dependencies:
       undici:
         specifier: catalog:default
-        version: 7.11.0
+        version: 7.14.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
