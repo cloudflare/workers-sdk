@@ -280,11 +280,9 @@ export async function pushCommand(
 ) {
 	try {
 		await dockerLoginManagedRegistry(args.pathToDocker);
+
 		const accountId = await getAccountId(config);
-		const newTag = getCloudflareRegistryWithAccountNamespace(
-			accountId,
-			args.TAG
-		);
+		const newTag = resolveImageName(accountId, args.TAG);
 		const dockerPath = args.pathToDocker ?? getDockerPath();
 		await checkImagePlatform(dockerPath, args.TAG);
 		await runDockerCmd(dockerPath, ["tag", args.TAG, newTag]);
