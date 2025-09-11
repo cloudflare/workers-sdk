@@ -588,6 +588,62 @@ export async function disableR2Catalog(
 	);
 }
 
+type R2CatalogCompactionResponse = {
+	success: boolean;
+};
+
+/**
+ * Enable compaction maintenance configuration for a table in the R2 catalog
+ */
+export async function enableR2CatalogCompaction(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	namespace: string,
+	tableName: string
+): Promise<R2CatalogCompactionResponse> {
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/namespaces/${namespace}/tables/${tableName}/maintenance-configs`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				configuration_type: "compaction",
+				configuration: {},
+				state: "enabled",
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+}
+
+/**
+ * Disable compaction maintenance configuration for a table in the R2 catalog
+ */
+export async function disableR2CatalogCompaction(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	namespace: string,
+	tableName: string
+): Promise<R2CatalogCompactionResponse> {
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/namespaces/${namespace}/tables/${tableName}/maintenance-configs/compaction`,
+		{
+			method: "PUT",
+			body: JSON.stringify({
+				state: "disabled",
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+}
+
 export type R2EventableOperation =
 	| "PutObject"
 	| "DeleteObject"
