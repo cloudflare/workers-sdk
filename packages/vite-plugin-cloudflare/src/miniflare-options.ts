@@ -42,7 +42,7 @@ import type { MiniflareOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
 	Binding,
-	remoteProxySession,
+	RemoteProxySession,
 	SourcelessWorkerOptions,
 } from "wrangler";
 
@@ -230,7 +230,7 @@ function logUnknownTails(
 const remoteProxySessionsDataMap = new Map<
 	string,
 	{
-		session: remoteProxySession;
+		session: RemoteProxySession;
 		remoteBindings: Record<string, Binding>;
 	} | null
 >();
