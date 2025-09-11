@@ -6,7 +6,6 @@ import {
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
 	getCloudflareContainerRegistry,
-	getCloudflareRegistryWithAccountNamespace,
 	isDir,
 	resolveImageName,
 	runDockerCmd,
@@ -220,7 +219,7 @@ export async function buildAndMaybePush(
 				}
 			}
 			// Re-tag the image to include the account ID
-			const namespacedImageTag = getCloudflareRegistryWithAccountNamespace(
+			const namespacedImageTag = resolveImageName(
 				account.external_account_id,
 				args.tag
 			);

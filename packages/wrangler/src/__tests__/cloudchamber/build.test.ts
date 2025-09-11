@@ -31,7 +31,6 @@ describe("buildAndMaybePush", () => {
 	runInTempDir();
 	mockApiToken();
 	mockAccountId();
-
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(dockerImageInspect)
@@ -50,6 +49,150 @@ describe("buildAndMaybePush", () => {
 	});
 	afterEach(() => {
 		vi.clearAllMocks();
+	});
+
+	it("should be able to build image and push with test-app:tag", async () => {
+		await runWrangler(
+			"containers build ./container-context -t test-app:tag -p"
+		);
+		expect(dockerBuild).toHaveBeenCalledWith("docker", {
+			buildCmd: [
+				"build",
+				"-t",
+				`${getCloudflareContainerRegistry()}/test-app:tag`,
+				"--platform",
+				"linux/amd64",
+				"--provenance=false",
+				"-f",
+				"-",
+				// turn this into a relative path so that this works across different OSes
+				"./container-context",
+			],
+			dockerfile,
+		});
+
+		// 3 calls: docker tag + docker push + docker rm
+		expect(runDockerCmd).toHaveBeenCalledTimes(3);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
+			"tag",
+			`${getCloudflareContainerRegistry()}/test-app:tag`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(3, "docker", [
+			"image",
+			"rm",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(dockerImageInspect).toHaveBeenCalledTimes(2);
+		expect(dockerImageInspect).toHaveBeenNthCalledWith(1, "docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/test-app:tag`,
+			formatString: "{{ json .RepoDigests }} {{ .Id }}",
+		});
+		expect(dockerImageInspect).toHaveBeenNthCalledWith(2, "docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/test-app:tag`,
+			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+		});
+		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
+	});
+
+	it("should be able to build image and push with registry.cloudflare.com/test-app:tag", async () => {
+		await runWrangler(
+			"containers build ./container-context -t test-app:tag -p"
+		);
+		expect(dockerBuild).toHaveBeenCalledWith("docker", {
+			buildCmd: [
+				"build",
+				"-t",
+				`${getCloudflareContainerRegistry()}/test-app:tag`,
+				"--platform",
+				"linux/amd64",
+				"--provenance=false",
+				"-f",
+				"-",
+				// turn this into a relative path so that this works across different OSes
+				"./container-context",
+			],
+			dockerfile,
+		});
+
+		// 3 calls: docker tag + docker push + docker rm
+		expect(runDockerCmd).toHaveBeenCalledTimes(3);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
+			"tag",
+			`${getCloudflareContainerRegistry()}/test-app:tag`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(3, "docker", [
+			"image",
+			"rm",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(dockerImageInspect).toHaveBeenCalledTimes(2);
+		expect(dockerImageInspect).toHaveBeenNthCalledWith(1, "docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/test-app:tag`,
+			formatString: "{{ json .RepoDigests }} {{ .Id }}",
+		});
+		expect(dockerImageInspect).toHaveBeenNthCalledWith(2, "docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/test-app:tag`,
+			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+		});
+		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
+	});
+
+	it("should be able to build image and push with registry.cloudflare.com/some-account-id/test-app:tag", async () => {
+		await runWrangler(
+			"containers build ./container-context -t test-app:tag -p"
+		);
+		expect(dockerBuild).toHaveBeenCalledWith("docker", {
+			buildCmd: [
+				"build",
+				"-t",
+				`${getCloudflareContainerRegistry()}/test-app:tag`,
+				"--platform",
+				"linux/amd64",
+				"--provenance=false",
+				"-f",
+				"-",
+				// turn this into a relative path so that this works across different OSes
+				"./container-context",
+			],
+			dockerfile,
+		});
+
+		// 3 calls: docker tag + docker push + docker rm
+		expect(runDockerCmd).toHaveBeenCalledTimes(3);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
+			"tag",
+			`${getCloudflareContainerRegistry()}/test-app:tag`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(3, "docker", [
+			"image",
+			"rm",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(dockerImageInspect).toHaveBeenCalledTimes(2);
+		expect(dockerImageInspect).toHaveBeenNthCalledWith(1, "docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/test-app:tag`,
+			formatString: "{{ json .RepoDigests }} {{ .Id }}",
+		});
+		expect(dockerImageInspect).toHaveBeenNthCalledWith(2, "docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/test-app:tag`,
+			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+		});
+		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
 	});
 
 	it("should use a custom docker path if provided", async () => {
