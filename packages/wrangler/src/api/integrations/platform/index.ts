@@ -133,7 +133,8 @@ export async function getPlatformProxy<
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
-	const experimentalRemoteBindings = !!options.experimental?.remoteBindings;
+	const experimentalRemoteBindings =
+		options.experimental?.remoteBindings ?? true;
 
 	const env = options.environment;
 
