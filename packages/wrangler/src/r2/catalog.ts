@@ -1,9 +1,11 @@
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError } from "../parse";
 import { requireAuth } from "../user";
+import { getCloudflareAPITokenFromEnv } from "../user/auth-variables";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	disableR2Catalog,
@@ -11,6 +13,7 @@ import {
 	enableR2Catalog,
 	enableR2CatalogCompaction,
 	getR2Catalog,
+	upsertR2DataCatalogCredential,
 } from "./helpers";
 
 export const r2BucketCatalogNamespace = createNamespace({
@@ -189,7 +192,19 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 		},
 	},
 	async handler(args, { config }) {
+		const token = getCloudflareAPITokenFromEnv();
+		if (!token) {
+			throw new UserError(
+				"Missing CLOUDFLARE_API_TOKEN environment variable. " +
+					"Please follow instructions in https://developers.cloudflare.com/r2/data-catalog/get-started/#3-create-an-api-token to create a token. " +
+					"Once done, you can prefix the command with the variable definition like so: `CLOUDFLARE_API_TOKEN=... wrangler r2 catalog compaction enable ...`. " +
+					"There also other ways to provide the value of this variable, see https://developers.cloudflare.com/workers/wrangler/system-environment-variables/ for more details."
+			);
+		}
+
 		const accountId = await requireAuth(config);
+
+		await upsertR2DataCatalogCredential(config, accountId, args.bucket, token);
 
 		await enableR2CatalogCompaction(
 			config,

@@ -655,6 +655,35 @@ export async function disableR2CatalogCompaction(
 	);
 }
 
+type R2CatalogCredentialResponse = {
+	success: boolean;
+};
+
+/**
+ * Sets a Cloudflare token which R2 Data Catalog uses for async table maintenance
+ * jobs (such as file compaction), where it needs direct access to the customer's R2 bucket.
+ */
+export async function upsertR2DataCatalogCredential(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	token: string
+): Promise<R2CatalogCredentialResponse> {
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/credential`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				token,
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+}
+
 export type R2EventableOperation =
 	| "PutObject"
 	| "DeleteObject"

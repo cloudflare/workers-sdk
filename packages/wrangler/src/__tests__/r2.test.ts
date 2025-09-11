@@ -1266,8 +1266,28 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				});
 
 				describe("enable", () => {
+					const mockToken = "test-token-123";
+
+					beforeEach(() => {
+						vi.stubEnv("CLOUDFLARE_API_TOKEN", mockToken);
+					});
+
 					it("should enable compaction for the catalog", async () => {
 						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/credential",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										token: mockToken,
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							),
 							http.post(
 								"*/accounts/some-account-id/r2-catalog/testBucket/maintenance-configs",
 								async ({ request }) => {
@@ -1325,6 +1345,18 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 
 					"
 				`);
+					});
+
+					it("should require CLOUDFLARE_API_TOKEN environment variable", async () => {
+						vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
+
+						await expect(
+							runWrangler(
+								"r2 bucket catalog compaction enable testBucket --targetSizeMb 512"
+							)
+						).rejects.toThrow(
+							"Missing CLOUDFLARE_API_TOKEN environment variable"
+						);
 					});
 				});
 
