@@ -82,7 +82,7 @@ describe("containers ssh", () => {
 
 		await expect(runWrangler(`containers ssh ${instanceId}`)).rejects
 			.toMatchInlineSnapshot(`
-			[Error: There has been an unknown error when trying to SSH into the container.
+			[APIError: There has been an unknown error when trying to SSH into the container.
 			{"error":"something happened"}]
 		`);
 	});

@@ -16,7 +16,7 @@ import {
 	DeploymentsService,
 	verifySshInstalled,
 } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import YAML from "yaml";
 import { promiseSpinner } from "../cloudchamber/common";
 import { wrap } from "../cloudchamber/helpers/wrap";
@@ -239,9 +239,9 @@ export async function sshCommand(
 				);
 			}
 
-			throw new APIError(
-				`There has been an unknown error when trying to SSH into the container.\n${JSON.stringify(err.body)}`
-			);
+			throw new APIError({
+				text: `There has been an unknown error when trying to SSH into the container.\n${JSON.stringify(err.body)}`,
+			});
 		}
 
 		throw new Error(
