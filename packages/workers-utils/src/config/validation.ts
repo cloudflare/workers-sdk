@@ -3063,17 +3063,43 @@ function validateContainerApp(
 				);
 			}
 
-			if ("ssh" in containerAppOptional) {
+			if ("wrangler_ssh" in containerAppOptional) {
 				validateAdditionalProperties(
 					diagnostics,
-					`${field}.ssh`,
-					Object.keys(containerAppOptional.ssh),
+					`${field}.wrangler_ssh`,
+					Object.keys(containerAppOptional.wrangler_ssh),
 					["enabled", "port"]
 				);
 
 				if (
+					!isRequiredProperty(
+						containerAppOptional.wrangler_ssh.enabled,
+						"enabled",
+						"boolean"
+					)
+				) {
+					diagnostics.errors.push(
+						`${field}.wrangler_ssh.enabled must be a boolean`
+					);
+				}
+
+				if (
+					!isOptionalProperty(
+						containerAppOptional.wrangler_ssh.port,
+						"port",
+						"number"
+					) ||
+					containerAppOptional.wrangler_ssh.port < 1 ||
+					containerAppOptional.wrangler_ssh.port > 65535
+				) {
+					diagnostics.errors.push(
+						`${field}.wrangler_ssh.port must be a number between 1 and 65535 inclusive`
+					);
+				}
+
+				if (
 					!("authorized_keys" in containerAppOptional) &&
-					containerAppOptional.ssh.enabled
+					containerAppOptional.wrangler_ssh.enabled
 				) {
 					diagnostics.errors.push(
 						`${field}.authorized_keys must be provided if wrangler ssh is enabled`
@@ -3085,15 +3111,32 @@ function validateContainerApp(
 				if (!Array.isArray(containerAppOptional.authorized_keys)) {
 					diagnostics.errors.push(`${field}.authorized_keys must be an array`);
 				} else {
-					for (
-						const item of containerAppOptional.authorized_keys
-					) {
+					for (const item of containerAppOptional.authorized_keys) {
+						const fieldPath = `${field}.authorized_keys[${item}]`;
+						const key = containerAppOptional.authorized_keys[item];
+
 						validateAdditionalProperties(
 							diagnostics,
-							`${field}.authorized_keys[${item}]`,
-							Object.keys(containerAppOptional.authorized_keys[item]),
+							fieldPath,
+							Object.keys(key),
 							["name", "public_key"]
 						);
+
+						if (!isRequiredProperty(key, "name", "string")) {
+							diagnostics.errors.push(`${fieldPath}.name must be a string`);
+						}
+
+						if (!isRequiredProperty(key, "public_key", "string")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key must be a string`
+							);
+						}
+
+						if (key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key is a unsupported key type. Please provide a ED25519 public key.`
+							);
+						}
 					}
 				}
 			}

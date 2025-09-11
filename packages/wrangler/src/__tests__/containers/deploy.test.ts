@@ -1906,7 +1906,6 @@ describe("wrangler deploy with containers", () => {
 
 		mockGetApplications([
 			{
-
 				id: "abc",
 				instances: 0,
 				created_at: new Date().toString(),
@@ -1921,7 +1920,7 @@ describe("wrangler deploy with containers", () => {
 				durable_objects: {
 					namespace_id: "1",
 				},
-			}
+			},
 		]);
 
 		mockModifyApplication({
@@ -1937,7 +1936,7 @@ describe("wrangler deploy with containers", () => {
 							"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
 					},
 				],
-			}
+			},
 		});
 
 		mockCreateApplicationRollout({

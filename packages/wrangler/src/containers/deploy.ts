@@ -185,8 +185,11 @@ function containerConfigToCreateRequest(
 				containerApp.observability.logs_enabled,
 				prevApp?.configuration.observability
 			),
-			wrangler_ssh: containerApp.ssh
-				? { enabled: containerApp.ssh.enabled, port: containerApp.ssh.port }
+			wrangler_ssh: containerApp.wrangler_ssh
+				? {
+						enabled: containerApp.wrangler_ssh.enabled,
+						port: containerApp.wrangler_ssh.port,
+					}
 				: undefined,
 			authorized_keys: containerApp.authorized_keys ?? undefined,
 		},

@@ -439,7 +439,7 @@ function buildSshArgs(
 		flags.push("-o", sshArgs.option);
 	}
 
-	if (sshArgs.tag!== undefined) {
+	if (sshArgs.tag !== undefined) {
 		flags.push("-P", sshArgs.tag);
 	}
 
