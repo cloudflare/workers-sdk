@@ -318,6 +318,21 @@ export async function mapWorkerMetadataBindings(
 							];
 						}
 						break;
+					case "ratelimit":
+						{
+							configObj.ratelimits = [
+								...(configObj.ratelimits ?? []),
+								{
+									name: binding.name,
+									namespace_id: binding.namespace_id,
+									simple: {
+										limit: binding.simple.limit,
+										period: binding.simple.period,
+									},
+								},
+							];
+						}
+						break;
 					default: {
 						configObj.unsafe = {
 							bindings: [...(configObj.unsafe?.bindings ?? []), binding],

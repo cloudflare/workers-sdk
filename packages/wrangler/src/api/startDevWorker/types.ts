@@ -24,6 +24,7 @@ import type {
 	CfPipeline,
 	CfQueue,
 	CfR2Bucket,
+	CfRateLimit,
 	CfScriptFormat,
 	CfSecretsStoreSecrets,
 	CfSendEmailBindings,
@@ -302,6 +303,7 @@ export type Binding =
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
+	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
 

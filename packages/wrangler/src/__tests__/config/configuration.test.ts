@@ -105,6 +105,7 @@ describe("normalizeAndValidateConfig()", () => {
 			r2_buckets: [],
 			secrets_store_secrets: [],
 			unsafe_hello_world: [],
+			ratelimits: [],
 			services: [],
 			analytics_engine_datasets: [],
 			route: undefined,
@@ -4061,6 +4062,121 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"unsafe_hello_world[0]\\" bindings must have a string \\"binding\\" field but got {}.
 					  - \\"unsafe_hello_world[1]\\" bindings must have a boolean \\"enable_timer\\" field but got {\\"binding\\":\\"VALID\\",\\"enable_timer\\":\\"yes\\"}.
 					  - \\"unsafe_hello_world[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"enable_timer\\":false}."
+				`);
+			});
+		});
+
+		describe("[ratelimit]", () => {
+			it("should error if ratelimit is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ ratelimits: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field \\"ratelimits\\" should be an array but got {}."
+				`);
+			});
+
+			it("should error if ratelimit is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ ratelimits: null },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field \\"ratelimits\\" should be an array but got null."
+				`);
+			});
+
+			it("should accept valid bindings", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ratelimits: [
+							{
+								name: "RATE_LIMITER",
+								namespace_id: "1001",
+								simple: {
+									limit: 5,
+									period: 60,
+								},
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if ratelimit bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ratelimits: [
+							// @ts-expect-error Test if empty object is caught
+							{},
+							// @ts-expect-error Test if simple is missing
+							{
+								name: "VALID",
+								namespace_id: "1001",
+							},
+							{
+								// @ts-expect-error Test if name is not a string
+								name: null,
+								// @ts-expect-error Test if namespace_id is not a string
+								namespace_id: 123,
+								simple: {
+									// @ts-expect-error Test if limit is not a number
+									limit: "not a number",
+									// @ts-expect-error Test if period is invalid
+									period: 90,
+								},
+								invalid: true,
+							},
+							{
+								name: "MISSING_PERIOD",
+								namespace_id: "1002",
+								// @ts-expect-error Test if period is missing
+								simple: {
+									limit: 10,
+								},
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in ratelimits[2] field: \\"invalid\\""
+				`);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"ratelimits[0]\\" bindings must have a string \\"name\\" field but got {}.
+					  - \\"ratelimits[0]\\" bindings must have a string \\"namespace_id\\" field but got {}.
+					  - \\"ratelimits[0]\\" bindings must have a \\"simple\\" configuration object but got {}.
+					  - \\"ratelimits[1]\\" bindings must have a \\"simple\\" configuration object but got {\\"name\\":\\"VALID\\",\\"namespace_id\\":\\"1001\\"}.
+					  - \\"ratelimits[2]\\" bindings must have a string \\"name\\" field but got {\\"name\\":null,\\"namespace_id\\":123,\\"simple\\":{\\"limit\\":\\"not a number\\",\\"period\\":90},\\"invalid\\":true}.
+					  - \\"ratelimits[2]\\" bindings must have a string \\"namespace_id\\" field but got {\\"name\\":null,\\"namespace_id\\":123,\\"simple\\":{\\"limit\\":\\"not a number\\",\\"period\\":90},\\"invalid\\":true}.
+					  - \\"ratelimits[2]\\" bindings \\"simple.limit\\" must be a number but got {\\"limit\\":\\"not a number\\",\\"period\\":90}.
+					  - \\"ratelimits[2]\\" bindings \\"simple.period\\" must be either 10 or 60 but got 90.
+					  - \\"ratelimits[3]\\" bindings \\"simple.period\\" is required and must be a number but got {\\"limit\\":10}."
 				`);
 			});
 		});

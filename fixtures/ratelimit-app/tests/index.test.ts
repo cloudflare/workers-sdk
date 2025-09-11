@@ -4,7 +4,7 @@ import { unstable_startWorker } from "wrangler";
 
 const basePath = resolve(__dirname, "..");
 
-describe("'wrangler dev' correctly renders pages", () => {
+describe("Rate limiting bindings", () => {
 	let worker: Awaited<ReturnType<typeof unstable_startWorker>>;
 
 	beforeAll(async () => {
@@ -28,6 +28,24 @@ describe("'wrangler dev' correctly renders pages", () => {
 
 		response = await worker.fetch(`http://example.com`);
 		content = await response.text();
+		expect(content).toEqual("Success");
+
+		response = await worker.fetch(`http://example.com`);
+		content = await response.text();
 		expect(content).toEqual("Slow down");
+	});
+
+	it("ratelimit unsafe binding is defined ", async ({ expect }) => {
+		let response = await worker.fetch(`http://example.com/unsafe`);
+		let content = await response.text();
+		expect(content).toEqual("unsafe: Success");
+
+		response = await worker.fetch(`http://example.com/unsafe`);
+		content = await response.text();
+		expect(content).toEqual("unsafe: Success");
+
+		response = await worker.fetch(`http://example.com/unsafe`);
+		content = await response.text();
+		expect(content).toEqual("unsafe: Slow down");
 	});
 });

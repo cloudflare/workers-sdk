@@ -36,6 +36,7 @@ export const friendlyBindingNames: Record<
 	workflows: "Workflow",
 	pipelines: "Pipeline",
 	secrets_store_secrets: "Secrets Store Secret",
+	ratelimits: "Rate Limit",
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
 } as const;
@@ -103,6 +104,7 @@ export function printBindings(
 		dispatch_namespaces,
 		mtls_certificates,
 		pipelines,
+		ratelimits,
 		assets,
 		unsafe_hello_world,
 	} = bindings;
@@ -485,6 +487,18 @@ export function printBindings(
 						? !experimental_remote
 						: true,
 				}),
+			}))
+		);
+	}
+
+	if (ratelimits !== undefined && ratelimits.length > 0) {
+		output.push(
+			...ratelimits.map(({ name, namespace_id, simple }) => ({
+				name: name,
+				namespace_id: namespace_id,
+				type: friendlyBindingNames.ratelimits,
+				value: `${simple.limit} requests/${simple.period}s`,
+				mode: getMode({ isSimulatedLocally: true }),
 			}))
 		);
 	}
