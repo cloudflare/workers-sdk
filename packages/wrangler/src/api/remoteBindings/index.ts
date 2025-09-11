@@ -152,10 +152,8 @@ export async function maybeStartOrUpdateRemoteProxySession(
 			env: wranglerConfigObject.environment,
 		});
 
-		assert(config.name, "Make sure your Worker's config has a `name` property");
-
 		wranglerOrWorkerConfigObject = {
-			name: config.name,
+			name: config.name ?? "worker",
 			complianceRegion: getCloudflareComplianceRegion(config),
 			bindings: convertConfigBindingsToStartWorkerBindings(config) ?? {},
 		};

@@ -6,6 +6,7 @@ export default defineWorkersProject({
 		poolOptions: {
 			workers: {
 				singleWorker: true,
+				remoteBindings: false,
 				wrangler: { configPath: "./wrangler.jsonc" },
 			},
 		},
