@@ -393,7 +393,31 @@ export async function convertBindingsToCfWorkerInitBindings(
 			bindings.hyperdrive.push({ ...binding, binding: name });
 		} else if (binding.type === "service") {
 			bindings.services ??= [];
-			bindings.services.push({ ...binding, binding: name });
+			// Transform service_id bindings to use service_id as the service name
+			if (binding.service_id) {
+				bindings.services.push({
+					binding: name,
+					service: binding.service_id,
+					experimental_remote: binding.experimental_remote,
+				});
+			} else {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const serviceBinding: any = {
+					binding: name,
+					service: binding.service,
+					experimental_remote: binding.experimental_remote,
+				};
+				if ("environment" in binding && binding.environment) {
+					serviceBinding.environment = binding.environment;
+				}
+				if ("entrypoint" in binding && binding.entrypoint) {
+					serviceBinding.entrypoint = binding.entrypoint;
+				}
+				if ("props" in binding && binding.props) {
+					serviceBinding.props = binding.props;
+				}
+				bindings.services.push(serviceBinding);
+			}
 		} else if (binding.type === "fetcher") {
 			fetchers[name] = binding.fetcher;
 		} else if (binding.type === "analytics_engine") {

@@ -198,7 +198,29 @@ async function resolveBindings(
 				input.bindings
 			),
 			r2: extractBindingsOfType("r2_bucket", input.bindings),
-			services: extractBindingsOfType("service", input.bindings),
+			services: extractBindingsOfType("service", input.bindings).map(
+				(binding) => {
+					if (binding.service_id) {
+						return {
+							binding: binding.binding,
+							service_id: binding.service_id,
+						};
+					} else {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						const serviceBinding: any = {
+							binding: binding.binding,
+							service: binding.service,
+						};
+						if ("environment" in binding && binding.environment) {
+							serviceBinding.environment = binding.environment;
+						}
+						if ("entrypoint" in binding && binding.entrypoint) {
+							serviceBinding.entrypoint = binding.entrypoint;
+						}
+						return serviceBinding;
+					}
+				}
+			),
 			d1Databases: extractBindingsOfType("d1", input.bindings),
 			ai: extractBindingsOfType("ai", input.bindings)?.[0],
 			version_metadata: extractBindingsOfType(
@@ -402,12 +424,18 @@ async function resolveConfig(
 	if (services && services.length > 0 && resolved.dev?.remote) {
 		logger.warn(
 			`This worker is bound to live services: ${services
-				.map(
-					(service) =>
-						`${service.name} (${service.service}${
-							service.environment ? `@${service.environment}` : ""
-						}${service.entrypoint ? `#${service.entrypoint}` : ""})`
-				)
+				.map((service) => {
+					const serviceName = service.service || service.service_id;
+					const envSuffix =
+						"environment" in service && service.environment
+							? `@${service.environment}`
+							: "";
+					const entrypointSuffix =
+						"entrypoint" in service && service.entrypoint
+							? `#${service.entrypoint}`
+							: "";
+					return `${service.name} (${serviceName}${envSuffix}${entrypointSuffix})`;
+				})
 				.join(", ")}`
 		);
 	}

@@ -367,8 +367,23 @@ export function printBindings(
 
 	if (services !== undefined && services.length > 0) {
 		output.push(
-			...services.map(
-				({ binding, service, entrypoint, experimental_remote }) => {
+			...services.map((serviceBinding) => {
+				if ("service_id" in serviceBinding) {
+					const { binding, service_id, experimental_remote } = serviceBinding;
+
+					const mode = experimental_remote
+						? getMode({ isSimulatedLocally: false })
+						: getMode({ isSimulatedLocally: true });
+					return {
+						name: binding,
+						type: "VPC Service",
+						value: service_id,
+						mode,
+					};
+				} else {
+					const { binding, service, entrypoint, experimental_remote } =
+						serviceBinding;
+
 					let value = service;
 					let mode = undefined;
 
@@ -400,7 +415,7 @@ export function printBindings(
 						mode,
 					};
 				}
-			)
+			})
 		);
 	}
 

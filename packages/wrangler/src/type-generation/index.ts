@@ -463,30 +463,37 @@ export async function generateEnvTypes(
 
 	if (configToDTS.services) {
 		for (const service of configToDTS.services) {
-			const serviceEntry =
-				service.service !== entrypoint?.name
-					? serviceEntries?.get(service.service)
-					: entrypoint;
+			if ("service_id" in service) {
+				envTypeStructure.push([
+					constructTypeKey(service.binding),
+					`Fetcher /* VPC Service (${service.service_id}) */`,
+				]);
+			} else if ("service" in service) {
+				const serviceEntry =
+					service.service !== entrypoint?.name
+						? serviceEntries?.get(service.service)
+						: entrypoint;
 
-			const importPath = serviceEntry
-				? generateImportSpecifier(fullOutputPath, serviceEntry.file)
-				: undefined;
+				const importPath = serviceEntry
+					? generateImportSpecifier(fullOutputPath, serviceEntry.file)
+					: undefined;
 
-			const exportExists = serviceEntry?.exports?.some(
-				(e) => e === (service.entrypoint ?? "default")
-			);
+				const exportExists = serviceEntry?.exports?.some(
+					(e) => e === (service.entrypoint ?? "default")
+				);
 
-			let typeName: string;
+				let typeName: string;
 
-			if (importPath && exportExists) {
-				typeName = `Service<typeof import("${importPath}").${service.entrypoint ?? "default"}>`;
-			} else if (service.entrypoint) {
-				typeName = `Service /* entrypoint ${service.entrypoint} from ${service.service} */`;
-			} else {
-				typeName = `Fetcher /* ${service.service} */`;
+				if (importPath && exportExists) {
+					typeName = `Service<typeof import("${importPath}").${service.entrypoint ?? "default"}>`;
+				} else if (service.entrypoint) {
+					typeName = `Service /* entrypoint ${service.entrypoint} from ${service.service} */`;
+				} else {
+					typeName = `Fetcher /* ${service.service} */`;
+				}
+
+				envTypeStructure.push([constructTypeKey(service.binding), typeName]);
 			}
-
-			envTypeStructure.push([constructTypeKey(service.binding), typeName]);
 		}
 	}
 

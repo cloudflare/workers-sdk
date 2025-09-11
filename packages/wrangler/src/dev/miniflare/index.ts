@@ -482,20 +482,26 @@ export function buildMiniflareBindingOptions(
 	};
 
 	for (const service of config.services ?? []) {
+		const serviceName = service.service || service.service_id;
+		if (!serviceName) {
+			throw new Error("Service binding must have either service or service_id");
+		}
 		if (remoteProxyConnectionString && service.experimental_remote) {
 			serviceBindings[service.binding] = {
-				name: service.service,
-				props: service.props,
-				entrypoint: service.entrypoint,
+				name: serviceName,
+				...("props" in service && service.props && { props: service.props }),
+				...("entrypoint" in service &&
+					service.entrypoint && { entrypoint: service.entrypoint }),
 				remoteProxyConnectionString,
 			};
 			continue;
 		}
 
 		serviceBindings[service.binding] = {
-			name: service.service,
-			entrypoint: service.entrypoint,
-			props: service.props,
+			name: serviceName,
+			...("entrypoint" in service &&
+				service.entrypoint && { entrypoint: service.entrypoint }),
+			...("props" in service && service.props && { props: service.props }),
 		};
 	}
 

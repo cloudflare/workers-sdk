@@ -1312,7 +1312,11 @@ function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 			})
 			.filter(Boolean) as NonNullable<AdditionalDevProps["services"]>;
 
-		if (services.find(({ environment }) => !!environment)) {
+		if (
+			services.find(
+				(service) => "environment" in service && !!service.environment
+			)
+		) {
 			// We haven't yet properly defined how environments of service bindings should
 			// work, so if the user is using an environment for any of their service
 			// bindings we warn them that they are experimental
