@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Add support for WVPC services CRUD via `wrangler wvpc service`
+Add support for VPC services CRUD via `wrangler vpc service`
