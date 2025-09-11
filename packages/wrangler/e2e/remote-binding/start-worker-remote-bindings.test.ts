@@ -15,6 +15,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 		const { cleanup } = await helper.worker({
 			entryPoint: "remote-worker.js",
 			workerName: remoteWorkerName,
+			cleanOnTestFinished: false,
 		});
 		return cleanup;
 	}, 35_000);

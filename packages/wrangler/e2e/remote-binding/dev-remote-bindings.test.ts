@@ -25,12 +25,14 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					.worker({
 						entryPoint: "remote-worker.js",
 						workerName: remoteWorkerName,
+						cleanOnTestFinished: false,
 					})
 					.then(({ cleanup }) => cleanup),
 				helper
 					.worker({
 						entryPoint: "alt-remote-worker.js",
 						workerName: alternativeRemoteWorkerName,
+						cleanOnTestFinished: false,
 					})
 					.then(({ cleanup }) => cleanup),
 			]);

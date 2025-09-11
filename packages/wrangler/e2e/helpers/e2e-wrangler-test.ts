@@ -2,7 +2,7 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import { cp } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
-import { afterEach, beforeEach, expect, vi } from "vitest";
+import { expect, onTestFinished, vi } from "vitest";
 import {
 	generateLeafCertificate,
 	generateMtlsCertName,
@@ -17,13 +17,6 @@ import {
 	WranglerLongLivedCommand,
 } from "./wrangler";
 import type { WranglerCommandOptions } from "./wrangler";
-
-let onTestFinished:
-	| undefined
-	| ((callback: () => void | Promise<void>, timeout?: number) => void) =
-	undefined;
-beforeEach((ctx) => (onTestFinished = ctx.onTestFinished));
-afterEach(() => (onTestFinished = undefined));
 
 /**
  * Use this class in your e2e tests to create a temp directory, seed it with files
@@ -71,7 +64,7 @@ export class WranglerE2ETestHelper {
 			...options,
 		});
 		if (stopOnTestFinished) {
-			onTestFinished?.(async () => {
+			onTestFinished(async () => {
 				await wrangler.stop();
 			});
 		}
@@ -97,7 +90,7 @@ export class WranglerE2ETestHelper {
 		const match = jsonMatch ?? tomlMatch;
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
-		onTestFinished?.(async () => {
+		onTestFinished(async () => {
 			await this.run(`wrangler kv namespace delete --namespace-id ${id}`);
 		});
 		return id;
@@ -111,7 +104,7 @@ export class WranglerE2ETestHelper {
 			);
 		}
 		await this.run(`wrangler dispatch-namespace create ${name}`);
-		onTestFinished?.(async () => {
+		onTestFinished(async () => {
 			await this.run(`wrangler dispatch-namespace delete ${name}`);
 		});
 		return name;
@@ -123,7 +116,7 @@ export class WranglerE2ETestHelper {
 			return name;
 		}
 		await this.run(`wrangler r2 bucket create ${name}`);
-		onTestFinished?.(async () => {
+		onTestFinished(async () => {
 			await this.run(`wrangler r2 bucket delete ${name}`);
 		});
 		return name;
@@ -140,7 +133,7 @@ export class WranglerE2ETestHelper {
 		const match = jsonMatch ?? tomlMatch;
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
-		onTestFinished?.(async () => {
+		onTestFinished(async () => {
 			await this.run(`wrangler d1 delete -y ${name}`);
 		}, 15_000);
 
@@ -155,7 +148,7 @@ export class WranglerE2ETestHelper {
 				`wrangler vectorize create ${name} --dimensions ${dimensions} --metric ${metric}`
 			);
 		}
-		onTestFinished?.(async () => {
+		onTestFinished(async () => {
 			if (!resourceName) {
 				await this.run(`wrangler vectorize delete ${name}`);
 			}
@@ -180,7 +173,7 @@ export class WranglerE2ETestHelper {
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
 
-		onTestFinished?.(async () => {
+		onTestFinished(async () => {
 			await this.run(`wrangler hyperdrive delete ${id}`);
 		});
 
@@ -205,7 +198,7 @@ export class WranglerE2ETestHelper {
 		const match = output.stdout.match(/ID:\s+(?<certId>.*)$/m);
 		const certificateId = match?.groups?.certId;
 		assert(certificateId, `Cannot find ID in ${JSON.stringify(output)}`);
-		onTestFinished?.(async () => {
+		onTestFinished(async () => {
 			await this.run(`wrangler cert delete --name ${name}`);
 		});
 		return certificateId;
@@ -215,18 +208,42 @@ export class WranglerE2ETestHelper {
 	 * Create a worker for the test and attempt to delete it after the test has finished.
 	 *
 	 * If this is called inside a beforeXxx hook the helper cannot call onTestFinished,
-	 * in which case it is the caller's responsibility to call the `cleanup` returned from this helper.
+	 * in which case it is the caller's responsibility to set `cleanOnTestFinished` to false
+	 * and then call `cleanup` returned from this helper.
 	 */
+	async worker(options: {
+		workerName: string;
+		entryPoint?: string;
+		configPath?: string;
+		extraFlags?: string[];
+		cleanOnTestFinished: false;
+	}): Promise<{
+		deployedUrl: string;
+		stdout: string;
+		cleanup: () => Promise<void>;
+	}>;
+	async worker(options: {
+		workerName: string;
+		entryPoint?: string;
+		configPath?: string;
+		extraFlags?: string[];
+		cleanOnTestFinished?: boolean;
+	}): Promise<{
+		deployedUrl: string;
+		stdout: string;
+	}>;
 	async worker({
 		workerName,
 		entryPoint = "",
 		configPath,
 		extraFlags = [],
+		cleanOnTestFinished = true,
 	}: {
 		workerName: string;
 		entryPoint?: string;
 		configPath?: string;
 		extraFlags?: string[];
+		cleanOnTestFinished?: boolean;
 	}) {
 		const configOption = configPath ? `-c ${configPath}` : "";
 		const workerNameOption = `--name ${workerName}`;
@@ -258,8 +275,11 @@ export class WranglerE2ETestHelper {
 			await this.run(`wrangler delete --name ${workerName} --force`);
 		};
 
-		onTestFinished?.(cleanup, 15_000);
-
-		return { deployedUrl, stdout, cleanup };
+		if (cleanOnTestFinished) {
+			onTestFinished(cleanup, 15_000);
+			return { deployedUrl, stdout };
+		} else {
+			return { deployedUrl, stdout, cleanup };
+		}
 	}
 }

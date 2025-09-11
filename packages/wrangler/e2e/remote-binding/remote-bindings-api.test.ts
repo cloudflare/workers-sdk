@@ -34,6 +34,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const { cleanup } = await helper.worker({
 				workerName: remoteWorkerName,
 				entryPoint: "remote-worker.js",
+				cleanOnTestFinished: false,
 			});
 			return cleanup;
 		}, 35_000);
