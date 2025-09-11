@@ -1266,12 +1266,6 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				});
 
 				describe("enable", () => {
-					const mockToken = "test-token-123";
-
-					beforeEach(() => {
-						vi.stubEnv("CLOUDFLARE_API_TOKEN", mockToken);
-					});
-
 					it("should enable compaction for the catalog", async () => {
 						msw.use(
 							http.post(
@@ -1280,7 +1274,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 									const body = await request.json();
 									expect(request.method).toEqual("POST");
 									expect(body).toEqual({
-										token: mockToken,
+										token: "fakecloudflaretoken",
 									});
 									return HttpResponse.json(
 										createFetchResult({ success: true }, true)
@@ -1307,7 +1301,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							)
 						);
 						await runWrangler(
-							"r2 bucket catalog compaction enable testBucket --targetSizeMb 512"
+							"r2 bucket catalog compaction enable testBucket --token fakecloudflaretoken --targetSizeMb 512"
 						);
 						expect(std.out).toMatchInlineSnapshot(
 							`"✨ Successfully enabled file compaction for the data catalog for bucket 'testBucket'."`
@@ -1338,7 +1332,8 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							  -v, --version   Show version number  [boolean]
 
 							OPTIONS
-							      --targetSizeMb  The target size for compacted files (allowed values: 64, 128, 256, 512)  [number] [default: 128]"
+							      --targetSizeMb  The target size for compacted files (allowed values: 64, 128, 256, 512)  [number] [default: 128]
+							      --token         A cloudflare api token with access to R2 and R2 Data Catalog which will be used to read/write files for compaction.  [string] [required]"
 						`);
 						expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1347,15 +1342,13 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				`);
 					});
 
-					it("should require CLOUDFLARE_API_TOKEN environment variable", async () => {
-						vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
-
+					it("should error if --token is not provided", async () => {
 						await expect(
 							runWrangler(
 								"r2 bucket catalog compaction enable testBucket --targetSizeMb 512"
 							)
-						).rejects.toThrow(
-							"Missing CLOUDFLARE_API_TOKEN environment variable"
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing required argument: token]`
 						);
 					});
 				});
