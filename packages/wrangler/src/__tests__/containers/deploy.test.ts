@@ -1643,7 +1643,7 @@ describe("wrangler deploy with containers", () => {
 			containers: [
 				{
 					...DEFAULT_CONTAINER_FROM_REGISTRY,
-					ssh: {
+					wrangler_ssh: {
 						enabled: true,
 						port: 1010,
 					},
@@ -1746,7 +1746,7 @@ describe("wrangler deploy with containers", () => {
 			containers: [
 				{
 					...DEFAULT_CONTAINER_FROM_REGISTRY,
-					ssh: {
+					wrangler_ssh: {
 						enabled: true,
 					},
 					authorized_keys: [

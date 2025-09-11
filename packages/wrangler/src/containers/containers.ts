@@ -21,6 +21,7 @@ import { wrap } from "../cloudchamber/helpers/wrap";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
+import { APIError } from "../parse";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
@@ -239,9 +240,9 @@ export async function sshCommand(
 				);
 			}
 
-			throw new APIError(
-				`There has been an unknown error when trying to SSH into the container.\n${JSON.stringify(err.body)}`
-			);
+			throw new APIError({
+				text: `There has been an unknown error when trying to SSH into the container.\n${JSON.stringify(err.body)}`,
+			});
 		}
 
 		throw new Error(

@@ -2728,7 +2728,7 @@ function validateContainerApp(
 					"class_name",
 					"scheduling_policy",
 					"instance_type",
-					"ssh",
+					"wrangler_ssh",
 					"authorized_keys",
 					"configuration",
 					"constraints",
@@ -2758,7 +2758,7 @@ function validateContainerApp(
 
 				if (
 					!isRequiredProperty(
-						containerAppOptional.wrangler_ssh.enabled,
+						containerAppOptional.wrangler_ssh,
 						"enabled",
 						"boolean"
 					)
@@ -2770,7 +2770,7 @@ function validateContainerApp(
 
 				if (
 					!isOptionalProperty(
-						containerAppOptional.wrangler_ssh.port,
+						containerAppOptional.wrangler_ssh,
 						"port",
 						"number"
 					) ||
@@ -2796,7 +2796,7 @@ function validateContainerApp(
 				if (!Array.isArray(containerAppOptional.authorized_keys)) {
 					diagnostics.errors.push(`${field}.authorized_keys must be an array`);
 				} else {
-					for (const item of containerAppOptional.authorized_keys) {
+					for (const item in containerAppOptional.authorized_keys) {
 						const fieldPath = `${field}.authorized_keys[${item}]`;
 						const key = containerAppOptional.authorized_keys[item];
 
@@ -2817,7 +2817,7 @@ function validateContainerApp(
 							);
 						}
 
-						if (key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
+						if (!key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
 							diagnostics.errors.push(
 								`${fieldPath}.public_key is a unsupported key type. Please provide a ED25519 public key.`
 							);

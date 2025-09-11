@@ -662,7 +662,7 @@ describe("getNormalizedContainerOptions", () => {
 					image: `${getCloudflareContainerRegistry()}/test:latest`,
 					name: "test-container",
 					max_instances: 3,
-					ssh: {
+					wrangler_ssh: {
 						enabled: true,
 						port: 22,
 					},
@@ -688,7 +688,7 @@ describe("getNormalizedContainerOptions", () => {
 		const result = await getNormalizedContainerOptions(config, {});
 
 		expect(result).toHaveLength(1);
-		expect(result[0].ssh).toMatchObject({
+		expect(result[0].wrangler_ssh).toMatchObject({
 			enabled: true,
 			port: 22,
 		});
