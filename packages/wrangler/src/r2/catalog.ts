@@ -5,7 +5,13 @@ import { logger } from "../logger";
 import { APIError } from "../parse";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
-import { disableR2Catalog, enableR2Catalog, getR2Catalog } from "./helpers";
+import {
+	disableR2Catalog,
+	disableR2CatalogCompaction,
+	enableR2Catalog,
+	enableR2CatalogCompaction,
+	getR2Catalog,
+} from "./helpers";
 
 export const r2BucketCatalogNamespace = createNamespace({
 	metadata: {
@@ -150,5 +156,106 @@ export const r2BucketCatalogGetCommand = createCommand({
 				throw e;
 			}
 		}
+	},
+});
+
+export const r2BucketCatalogCompactionNamespace = createNamespace({
+	metadata: {
+		description:
+			"Manage compaction maintenance for tables in your R2 data catalog",
+		status: "private-beta",
+		owner: "Product: R2 Data Catalog",
+	},
+});
+
+export const r2BucketCatalogCompactionEnableCommand = createCommand({
+	metadata: {
+		description:
+			"Enable compaction maintenance for a table in the R2 data catalog",
+		status: "private-beta",
+		owner: "Product: R2 Data Catalog",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
+			describe: "The name of the bucket",
+			type: "string",
+			demandOption: true,
+		},
+		table: {
+			describe: "The name of the table to enable compaction for",
+			type: "string",
+			demandOption: true,
+		},
+		namespace: {
+			describe: "The namespace containing the table",
+			type: "string",
+			demandOption: true,
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
+
+		await enableR2CatalogCompaction(
+			config,
+			accountId,
+			args.bucket,
+			args.namespace,
+			args.table
+		);
+
+		logger.log(
+			`✨ Successfully enabled compaction maintenance for table '${args.table}' in namespace '${args.namespace}' of bucket '${args.bucket}'.`
+		);
+	},
+});
+
+export const r2BucketCatalogCompactionDisableCommand = createCommand({
+	metadata: {
+		description:
+			"Disable compaction maintenance for a table in the R2 data catalog",
+		status: "private-beta",
+		owner: "Product: R2 Data Catalog",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
+			describe: "The name of the bucket",
+			type: "string",
+			demandOption: true,
+		},
+		table: {
+			describe: "The name of the table to disable compaction for",
+			type: "string",
+			demandOption: true,
+		},
+		namespace: {
+			describe: "The namespace containing the table",
+			type: "string",
+			demandOption: true,
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
+
+		const confirmedDisable = await confirm(
+			`Are you sure you want to disable compaction maintenance for table '${args.table}' in namespace '${args.namespace}' of bucket '${args.bucket}'?`
+		);
+		if (!confirmedDisable) {
+			logger.log("Disable cancelled.");
+			return;
+		}
+
+		await disableR2CatalogCompaction(
+			config,
+			accountId,
+			args.bucket,
+			args.namespace,
+			args.table
+		);
+
+		logger.log(
+			`Successfully disabled compaction maintenance for table '${args.table}' in namespace '${args.namespace}' of bucket '${args.bucket}'.`
+		);
 	},
 });
