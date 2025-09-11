@@ -2077,50 +2077,6 @@ describe.sequential("wrangler dev", () => {
 		);
 	});
 
-	describe("remote bindings", () => {
-		const wranglerConfigWithRemoteBindings = {
-			services: [{ binding: "WorkerA", service: "A", remote: true }],
-			kv_namespaces: [
-				{
-					binding: "KV",
-					id: "xxxx-xxxx-xxxx-xxxx",
-					remote: true,
-				},
-			],
-			r2_buckets: [
-				{
-					binding: "MY_R2",
-					bucket_name: "my-bucket",
-					remote: true,
-				},
-			],
-			queues: {
-				producers: [
-					{
-						binding: "MY_QUEUE_PRODUCES",
-						queue: "my-queue",
-						remote: true,
-					},
-				],
-			},
-			d1_databases: [
-				{
-					binding: "MY_D1",
-					database_id: "xxx",
-					remote: true,
-				},
-			],
-			workflows: [
-				{
-					binding: "MY_WORKFLOW",
-					name: "workflow-name",
-					class_name: "myClass",
-					remote: true,
-				},
-			],
-		};
-	});
-
 	describe("containers", () => {
 		const containerConfig = {
 			main: "index.js",
