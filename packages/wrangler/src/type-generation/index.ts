@@ -347,6 +347,7 @@ export async function generateEnvTypes(
 		pipelines: config.pipelines,
 		secrets_store_secrets: config.secrets_store_secrets,
 		unsafe_hello_world: config.unsafe_hello_world,
+		ratelimits: config.ratelimits,
 	};
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
@@ -451,6 +452,12 @@ export async function generateEnvTypes(
 				constructTypeKey(helloWorld.binding),
 				"HelloWorldBinding",
 			]);
+		}
+	}
+
+	if (configToDTS.ratelimits) {
+		for (const ratelimit of configToDTS.ratelimits) {
+			envTypeStructure.push([constructTypeKey(ratelimit.name), "RateLimit"]);
 		}
 	}
 

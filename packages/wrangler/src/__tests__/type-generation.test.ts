@@ -237,6 +237,16 @@ const bindingsConfigMock: Omit<
 		binding: "ASSETS_BINDING",
 		directory: "/assets",
 	},
+	ratelimits: [
+		{
+			name: "RATE_LIMITER",
+			namespace_id: "1001",
+			simple: {
+				limit: 5,
+				period: 60,
+			},
+		},
+	],
 };
 
 describe("generate types", () => {
@@ -449,6 +459,7 @@ describe("generate types", () => {
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
+					RATE_LIMITER: RateLimit;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
@@ -543,6 +554,7 @@ describe("generate types", () => {
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
+					RATE_LIMITER: RateLimit;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
@@ -701,6 +713,7 @@ describe("generate types", () => {
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
+					RATE_LIMITER: RateLimit;
 					SERVICE_BINDING: Service<typeof import(\\"../b/index\\").default>;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<typeof import(\\"../c/index\\").RealEntrypoint>;
