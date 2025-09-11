@@ -132,7 +132,7 @@ async function setupStreamConfiguration(
 		});
 	}
 
-	let corsOrigins = ["*"];
+	let corsOrigins: string[] | undefined;
 	if (httpEnabled) {
 		const customCors = await confirm("Configure custom CORS origins?", {
 			defaultValue: false,
@@ -153,7 +153,7 @@ async function setupStreamConfiguration(
 		http: {
 			enabled: httpEnabled,
 			authentication: httpAuth,
-			...(httpEnabled && { cors: { origins: corsOrigins } }),
+			...(httpEnabled && corsOrigins && { cors: { origins: corsOrigins } }),
 		},
 		worker_binding: { enabled: true },
 		...(schema && { schema: { fields: schema } }),
