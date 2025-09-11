@@ -66,12 +66,11 @@ export {
 export { experimental_patchConfig } from "./config/patch-config";
 
 export {
-	startRemoteProxySession as experimental_startRemoteProxySession,
-	type StartRemoteProxySessionOptions as experimental_StartRemoteProxySessionOptions,
-	maybeStartOrUpdateRemoteProxySession as experimental_maybeStartOrUpdateRemoteProxySession,
-	pickRemoteBindings as experimental_pickRemoteBindings,
-	type Binding as Unstable_Binding,
-	type RemoteProxySession as Experimental_RemoteProxySession,
+	startRemoteProxySession,
+	type StartRemoteProxySessionOptions,
+	maybeStartOrUpdateRemoteProxySession,
+	type Binding,
+	type RemoteProxySession,
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
 } from "./api";
 

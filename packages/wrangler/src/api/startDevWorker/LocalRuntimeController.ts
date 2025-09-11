@@ -204,7 +204,7 @@ export class LocalRuntimeController extends RuntimeController {
 			const configBundle = await convertToConfigBundle(data);
 
 			const experimentalRemoteBindings =
-				data.config.dev.experimentalRemoteBindings ?? false;
+				data.config.dev.experimentalRemoteBindings ?? true;
 
 			if (experimentalRemoteBindings && !data.config.dev?.remote) {
 				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import

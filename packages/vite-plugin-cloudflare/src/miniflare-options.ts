@@ -15,7 +15,7 @@ import colors from "picocolors";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
 import {
-	experimental_maybeStartOrUpdateRemoteProxySession,
+	maybeStartOrUpdateRemoteProxySession,
 	unstable_convertConfigBindingsToStartWorkerBindings,
 	unstable_getMiniflareWorkerOptions,
 } from "wrangler";
@@ -41,9 +41,9 @@ import type {
 import type { MiniflareOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
-	Experimental_RemoteProxySession,
+	Binding,
+	RemoteProxySession,
 	SourcelessWorkerOptions,
-	Unstable_Binding,
 } from "wrangler";
 
 function getPersistenceRoot(
@@ -230,8 +230,8 @@ function logUnknownTails(
 const remoteProxySessionsDataMap = new Map<
 	string,
 	{
-		session: Experimental_RemoteProxySession;
-		remoteBindings: Record<string, Unstable_Binding>;
+		session: RemoteProxySession;
+		remoteBindings: Record<string, Binding>;
 	} | null
 >();
 
@@ -396,16 +396,16 @@ export async function getDevMiniflareOptions(config: {
 								? remoteProxySessionsDataMap.get(workerConfig.configPath)
 								: undefined;
 
-							const remoteProxySessionData = resolvedPluginConfig.experimental
-								.remoteBindings
-								? await experimental_maybeStartOrUpdateRemoteProxySession(
-										{
-											name: workerConfig.name,
-											bindings: bindings ?? {},
-										},
-										preExistingRemoteProxySession ?? null
-									)
-								: undefined;
+							const remoteProxySessionData =
+								resolvedPluginConfig.experimental.remoteBindings ?? true
+									? await maybeStartOrUpdateRemoteProxySession(
+											{
+												name: workerConfig.name,
+												bindings: bindings ?? {},
+											},
+											preExistingRemoteProxySession ?? null
+										)
+									: undefined;
 
 							if (workerConfig.configPath && remoteProxySessionData) {
 								remoteProxySessionsDataMap.set(
@@ -425,7 +425,7 @@ export async function getDevMiniflareOptions(config: {
 										remoteProxySessionData?.session
 											?.remoteProxyConnectionString,
 									remoteBindingsEnabled:
-										resolvedPluginConfig.experimental.remoteBindings,
+										resolvedPluginConfig.experimental.remoteBindings ?? true,
 									containerBuildId,
 								}
 							);
@@ -726,16 +726,16 @@ export async function getPreviewMiniflareOptions(config: {
 					? remoteProxySessionsDataMap.get(workerConfig.configPath)
 					: undefined;
 
-				const remoteProxySessionData = resolvedPluginConfig.experimental
-					.remoteBindings
-					? await experimental_maybeStartOrUpdateRemoteProxySession(
-							{
-								name: workerConfig.name,
-								bindings: bindings ?? {},
-							},
-							preExistingRemoteProxySessionData ?? null
-						)
-					: undefined;
+				const remoteProxySessionData =
+					resolvedPluginConfig.experimental.remoteBindings ?? true
+						? await maybeStartOrUpdateRemoteProxySession(
+								{
+									name: workerConfig.name,
+									bindings: bindings ?? {},
+								},
+								preExistingRemoteProxySessionData ?? null
+							)
+						: undefined;
 
 				if (workerConfig.configPath && remoteProxySessionData) {
 					remoteProxySessionsDataMap.set(
@@ -751,7 +751,7 @@ export async function getPreviewMiniflareOptions(config: {
 						remoteProxyConnectionString:
 							remoteProxySessionData?.session?.remoteProxyConnectionString,
 						remoteBindingsEnabled:
-							resolvedPluginConfig.experimental.remoteBindings,
+							resolvedPluginConfig.experimental.remoteBindings ?? true,
 						containerBuildId,
 					}
 				);

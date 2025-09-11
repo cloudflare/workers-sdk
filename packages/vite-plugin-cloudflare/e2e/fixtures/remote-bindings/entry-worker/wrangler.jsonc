@@ -7,12 +7,12 @@
 		{
 			"binding": "LOCAL_WORKER",
 			"service": "cloudflare-vite-e2e-remote-bindings-auxiliary-worker",
-			"experimental_remote": false,
+			"remote": false,
 		},
 		{
 			"binding": "REMOTE_WORKER",
 			"service": "<<REMOTE_WORKER_PLACEHOLDER>>",
-			"experimental_remote": true,
+			"remote": true,
 		},
 	],
 }

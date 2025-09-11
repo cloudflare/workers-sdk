@@ -42,7 +42,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 							{
 								binding: "REMOTE_WORKER",
 								service: remoteWorkerName,
-								experimental_remote: true,
+								remote: true,
 							},
 						],
 					}),
@@ -75,7 +75,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 							{
 								binding: "REMOTE_WORKER",
 								service: remoteWorkerName,
-								experimental_remote: true,
+								remote: true,
 							},
 						],
 					}),

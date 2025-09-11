@@ -49,13 +49,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						{
 							binding: "REMOTE_WORKER",
 							service: remoteWorkerName,
-							experimental_remote: true,
+							remote: true,
 						},
 					],
 				}),
 			});
 
-			const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
+			const worker = helper.runLongLived("wrangler dev");
 
 			const { url } = await worker.waitForReady();
 
@@ -77,13 +77,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						{
 							binding: "REMOTE_WORKER",
 							service: remoteWorkerName,
-							experimental_remote: true,
+							remote: true,
 						},
 					],
 				}),
 			});
 
-			const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
+			const worker = helper.runLongLived("wrangler dev");
 
 			const { url } = await worker.waitForReady();
 
@@ -139,7 +139,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				}),
 			});
 
-			const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
+			const worker = helper.runLongLived("wrangler dev");
 
 			const { url } = await worker.waitForReady();
 
@@ -163,7 +163,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				}),
 			});
 
-			const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
+			const worker = helper.runLongLived("wrangler dev");
 
 			const { url } = await worker.waitForReady();
 
@@ -177,7 +177,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			Your Worker has access to the following bindings:
 			Binding        Resource      Mode
 			env.AI         AI            remote
-			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`experimental_remote: true\` for the binding definition in your configuration file.
+			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.
 			⎔ Starting local server...
 			[wrangler:info] Ready on http://<HOST>:<PORT>
 			[wrangler:info] GET / 200 OK (TIMINGS)`;
@@ -186,7 +186,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			Your Worker has access to the following bindings:
 			Binding        Resource      Mode
 			env.AI         AI            remote
-			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`experimental_remote: true\` for the binding definition in your configuration file.
+			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.
 			⎔ Starting local server...
 			[wrangler:info] Ready on http://<HOST>:<PORT>
 			[wrangler:info] GET / 200 OK (TIMINGS)`;
@@ -209,13 +209,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							{
 								binding: "REMOTE_WORKER",
 								service: "non-existent-service-binding",
-								experimental_remote: true,
+								remote: true,
 							},
 						],
 					}),
 				});
 
-				const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
+				const worker = helper.runLongLived("wrangler dev");
 
 				await worker.waitForReady();
 
@@ -238,13 +238,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							{
 								binding: "KV_BINDING",
 								id: "non-existent-kv",
-								experimental_remote: true,
+								remote: true,
 							},
 						],
 					}),
 				});
 
-				const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
+				const worker = helper.runLongLived("wrangler dev");
 
 				await worker.waitForReady();
 
@@ -274,7 +274,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							{
 								binding: "REMOTE_WORKER",
 								service: remoteWorkerName,
-								experimental_remote: true,
+								remote: true,
 							},
 						],
 					}),
@@ -290,7 +290,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 								// Note: we use the same binding name but bound to a difference service
 								binding: "REMOTE_WORKER",
 								service: alternativeRemoteWorkerName,
-								experimental_remote: true,
+								remote: true,
 							},
 						],
 					}),
@@ -304,7 +304,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				});
 
 				const worker = helper.runLongLived(
-					`wrangler dev --x-remote-bindings -c wrangler.json -c ${localTest}/wrangler.json`
+					`wrangler dev -c wrangler.json -c ${localTest}/wrangler.json`
 				);
 
 				const { url } = await worker.waitForReady();

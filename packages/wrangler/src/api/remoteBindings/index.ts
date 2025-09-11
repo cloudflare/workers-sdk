@@ -100,7 +100,7 @@ export function pickRemoteBindings(
 				return true;
 			}
 
-			return "experimental_remote" in binding && binding["experimental_remote"];
+			return "remote" in binding && binding["remote"];
 		})
 	);
 }
@@ -152,10 +152,8 @@ export async function maybeStartOrUpdateRemoteProxySession(
 			env: wranglerConfigObject.environment,
 		});
 
-		assert(config.name);
-
 		wranglerOrWorkerConfigObject = {
-			name: config.name,
+			name: config.name ?? "worker",
 			complianceRegion: getCloudflareComplianceRegion(config),
 			bindings: convertConfigBindingsToStartWorkerBindings(config) ?? {},
 		};

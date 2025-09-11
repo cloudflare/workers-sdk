@@ -7,7 +7,7 @@
 		{
 			"binding": "REMOTE_WORKER",
 			"service": "<<REMOTE_WORKER_PLACEHOLDER_ALT>>",
-			"experimental_remote": true,
+			"remote": true,
 		},
 	],
 }

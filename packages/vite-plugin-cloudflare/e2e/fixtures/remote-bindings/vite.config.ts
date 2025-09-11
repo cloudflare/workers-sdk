@@ -12,7 +12,6 @@ export default defineConfig({
 			],
 			inspectorPort: false,
 			persistState: false,
-			experimental: { remoteBindings: true },
 		}),
 	],
 });
