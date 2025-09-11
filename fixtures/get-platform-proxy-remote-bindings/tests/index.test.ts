@@ -181,6 +181,9 @@ if (auth) {
 					MY_KV: KVNamespace;
 				}>({
 					configPath: "./.tmp/normal-usage/wrangler.json",
+					experimental: {
+						remoteBindings: false,
+					},
 				});
 
 				const response = await fetchFromWorker(

@@ -15,7 +15,7 @@ import colors from "picocolors";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
 import {
-	experimental_maybeStartOrUpdateRemoteProxySession,
+	maybeStartOrUpdateRemoteProxySession,
 	unstable_convertConfigBindingsToStartWorkerBindings,
 	unstable_getMiniflareWorkerOptions,
 } from "wrangler";
@@ -41,9 +41,9 @@ import type {
 import type { MiniflareOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
+	Binding,
 	remoteProxySession,
 	SourcelessWorkerOptions,
-	Unstable_Binding,
 } from "wrangler";
 
 function getPersistenceRoot(
@@ -231,7 +231,7 @@ const remoteProxySessionsDataMap = new Map<
 	string,
 	{
 		session: remoteProxySession;
-		remoteBindings: Record<string, Unstable_Binding>;
+		remoteBindings: Record<string, Binding>;
 	} | null
 >();
 
@@ -398,7 +398,7 @@ export async function getDevMiniflareOptions(config: {
 
 							const remoteProxySessionData =
 								resolvedPluginConfig.experimental.remoteBindings ?? true
-									? await experimental_maybeStartOrUpdateRemoteProxySession(
+									? await maybeStartOrUpdateRemoteProxySession(
 											{
 												name: workerConfig.name,
 												bindings: bindings ?? {},
@@ -728,7 +728,7 @@ export async function getPreviewMiniflareOptions(config: {
 
 				const remoteProxySessionData =
 					resolvedPluginConfig.experimental.remoteBindings ?? true
-						? await experimental_maybeStartOrUpdateRemoteProxySession(
+						? await maybeStartOrUpdateRemoteProxySession(
 								{
 									name: workerConfig.name,
 									bindings: bindings ?? {},

@@ -13,7 +13,7 @@ import { getProjectPath, getRelativeProjectPath } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
-import type { remoteProxySession, Unstable_Binding } from "wrangler";
+import type { Binding, RemoteProxySession } from "wrangler";
 import type { ParseParams, ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
@@ -181,8 +181,8 @@ function filterTails(
 const remoteProxySessionsDataMap = new Map<
 	string,
 	{
-		session: remoteProxySession;
-		remoteBindings: Record<string, Unstable_Binding>;
+		session: RemoteProxySession;
+		remoteBindings: Record<string, Binding>;
 	} | null
 >();
 
@@ -255,7 +255,7 @@ async function parseCustomPoolOptions(
 			: undefined;
 
 		const remoteProxySessionData = options.remoteBindings
-			? await wrangler.experimental_maybeStartOrUpdateRemoteProxySession(
+			? await wrangler.maybeStartOrUpdateRemoteProxySession(
 					{
 						path: options.wrangler.configPath,
 						environment: options.wrangler.environment,

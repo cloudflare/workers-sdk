@@ -24,8 +24,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		const { Miniflare } = await helper.importMiniflare();
 
 		const {
-			experimental_startRemoteProxySession: startRemoteProxySession,
-			experimental_maybeStartOrUpdateRemoteProxySession:
+			startRemoteProxySession: startRemoteProxySession,
+			maybeStartOrUpdateRemoteProxySession:
 				maybeStartOrUpdateRemoteProxySession,
 		} = await helper.importWrangler();
 

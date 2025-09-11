@@ -498,8 +498,7 @@ async function runTestCase<T>(
 	helper: WranglerE2ETestHelper,
 	{ disableRemoteBindings } = { disableRemoteBindings: false }
 ) {
-	const { experimental_startRemoteProxySession } =
-		await helper.importWrangler();
+	const { startRemoteProxySession } = await helper.importWrangler();
 	const { Miniflare } = await helper.importMiniflare();
 	await helper.seed(path.resolve(__dirname, "./workers"));
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -510,7 +509,7 @@ async function runTestCase<T>(
 			? testCase.remoteProxySessionConfig(setupResult)
 			: testCase.remoteProxySessionConfig;
 
-	const remoteProxySession = await experimental_startRemoteProxySession(
+	const remoteProxySession = await startRemoteProxySession(
 		...remoteProxySessionConfig
 	);
 
