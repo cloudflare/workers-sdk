@@ -29,9 +29,9 @@ const defaultConfig: Required<WorkflowStepConfig> = {
 	retries: {
 		limit: 5,
 		delay: 1000,
-		backoff: "constant",
+		backoff: "exponential",
 	},
-	timeout: "15 minutes",
+	timeout: "10 minutes",
 };
 
 export interface UserErrorField {
@@ -242,7 +242,10 @@ export class Context extends RpcTarget {
 			try {
 				const timeoutPromise = async () => {
 					const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
-					const timeout = ms(config.timeout);
+					let timeout = ms(config.timeout);
+					if (forceStepTimeout) {
+						timeout = 0;
+					}
 					// @ts-expect-error priorityQueue is initiated in init
 					await this.#engine.priorityQueue.add({
 						hash: priorityQueueHash,
@@ -274,7 +277,45 @@ export class Context extends RpcTarget {
 				await this.#state.storage.put(stepStateKey, stepState);
 				const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 
-				result = await Promise.race([doWrapperClosure(), timeoutPromise()]);
+				const mockErrorKey = `mock-step-error-${valueKey}`;
+				const persistentMockError = await this.#state.storage.get<{
+					name: string;
+					message: string;
+				}>(mockErrorKey);
+				const transientMockError = await this.#state.storage.get<{
+					name: string;
+					message: string;
+				}>(`${mockErrorKey}-${stepState.attemptedCount}`);
+				const mockErrorPayload = persistentMockError || transientMockError;
+
+				// if a mocked error exists, throw it immediately
+				if (mockErrorPayload) {
+					const errorToThrow = new Error(mockErrorPayload.message);
+					errorToThrow.name = mockErrorPayload.name;
+					throw errorToThrow;
+				}
+
+				const replaceResult = await this.#state.storage.get(
+					`replace-result-${valueKey}`
+				);
+
+				const forceStepTimeoutKey = `force-step-timeout-${valueKey}`;
+				const persistentStepTimeout =
+					await this.#state.storage.get(forceStepTimeoutKey);
+				const transientStepTimeout = await this.#state.storage.get(
+					`${forceStepTimeoutKey}-${stepState.attemptedCount}`
+				);
+				const forceStepTimeout = persistentStepTimeout || transientStepTimeout;
+
+				if (forceStepTimeout) {
+					result = await timeoutPromise();
+				} else if (replaceResult) {
+					result = replaceResult;
+					await this.#state.storage.delete(`replace-result-${valueKey}`);
+					// if there is a timeout to be forced we dont want to race with closure
+				} else {
+					result = await Promise.race([doWrapperClosure(), timeoutPromise()]);
+				}
 
 				// if we reach here, means that the clouse ran successfully and we can remove the timeout from the PQ
 				// @ts-expect-error priorityQueue is initiated in init
@@ -457,6 +498,14 @@ export class Context extends RpcTarget {
 		const sleepLogWrittenKey = `${cacheKey}-log-written`;
 		const maybeResult = await this.#state.storage.get(sleepKey);
 
+		const sleepNameCountHash = await computeHash(
+			name + this.#getCount("sleep-" + name)
+		);
+		const disableThisSleep = await this.#state.storage.get(sleepNameCountHash);
+		const disableAllSleeps = await this.#state.storage.get("disableAllSleeps");
+
+		const disableSleep = disableAllSleeps || disableThisSleep;
+
 		if (maybeResult != undefined) {
 			// @ts-expect-error priorityQueue is initiated in init
 			const entryPQ = this.#engine.priorityQueue.getFirst(
@@ -464,7 +513,9 @@ export class Context extends RpcTarget {
 			);
 			// in case the engine dies while sleeping and wakes up before the retry period
 			if (entryPQ !== undefined) {
-				await scheduler.wait(entryPQ.targetTimestamp - Date.now());
+				await scheduler.wait(
+					disableSleep ? 0 : entryPQ.targetTimestamp - Date.now()
+				);
 				// @ts-expect-error priorityQueue is initiated in init
 				this.#engine.priorityQueue.remove({ hash: cacheKey, type: "sleep" });
 			}
@@ -502,11 +553,12 @@ export class Context extends RpcTarget {
 		// @ts-expect-error priorityQueue is initiated in init
 		await this.#engine.priorityQueue.add({
 			hash: cacheKey,
-			targetTimestamp: Date.now() + duration,
+			targetTimestamp: Date.now() + (disableSleep ? 0 : duration),
 			type: "sleep",
 		});
+
 		// this probably will never finish except if sleep is less than the grace period
-		await scheduler.wait(duration);
+		await scheduler.wait(disableSleep ? 0 : duration);
 
 		this.#engine.writeLog(
 			InstanceEvent.SLEEP_COMPLETE,
@@ -605,6 +657,9 @@ export class Context extends RpcTarget {
 		const timeoutEntryPQ = this.#engine.priorityQueue.getFirst(
 			(a) => a.hash === cacheKey && a.type === "timeout"
 		);
+		const forceEventTimeout = await this.#state.storage.get(
+			`force-event-timeout-${waitForEventKey}`
+		);
 		if (
 			(timeoutEntryPQ === undefined &&
 				this.#engine.priorityQueue !== undefined &&
@@ -613,7 +668,8 @@ export class Context extends RpcTarget {
 					type: "timeout",
 				})) ||
 			(timeoutEntryPQ !== undefined &&
-				timeoutEntryPQ.targetTimestamp < Date.now())
+				timeoutEntryPQ.targetTimestamp < Date.now()) ||
+			forceEventTimeout
 		) {
 			this.#engine.writeLog(
 				InstanceEvent.WAIT_TIMED_OUT,
@@ -680,7 +736,6 @@ export class Context extends RpcTarget {
 				: timeoutPromise(ms(options.timeout), true),
 		])
 			.then(async (event) => {
-				console.log(event);
 				this.#engine.writeLog(
 					InstanceEvent.WAIT_COMPLETE,
 					cacheKey,

@@ -10,6 +10,7 @@ import type {
 
 type Env = {
 	ENGINE: DurableObjectNamespace<Engine>;
+	BINDING_NAME: string;
 };
 
 // this.env.WORKFLOW is WorkflowBinding
@@ -77,6 +78,50 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		}
 
 		return await Promise.all(batch.map((val) => this.create(val)));
+	}
+
+	public unsafeGetBindingName(): string {
+		return this.env.BINDING_NAME;
+	}
+
+	public unsafeGetInstanceModifier(instanceId: string): unknown {
+		const stubId = this.env.ENGINE.idFromName(instanceId);
+		const stub = this.env.ENGINE.get(stubId);
+
+		const instanceModifier = stub.getInstanceModifier();
+
+		return instanceModifier;
+	}
+
+	public async unsafeWaitForStepResult(
+		instanceId: string,
+		name: string,
+		index?: number
+	): Promise<unknown> {
+		const stubId = this.env.ENGINE.idFromName(instanceId);
+		const stub = this.env.ENGINE.get(stubId);
+
+		return await stub.waitForStepResult(name, index);
+	}
+
+	public async unsafeAbort(instanceId: string, reason?: string): Promise<void> {
+		const stubId = this.env.ENGINE.idFromName(instanceId);
+		const stub = this.env.ENGINE.get(stubId);
+
+		try {
+			await stub.unsafeAbort(reason);
+		} catch {
+			// do nothing because we want to dispose this instance
+		}
+	}
+
+	public async unsafeWaitForStatus(
+		instanceId: string,
+		status: string
+	): Promise<void> {
+		const stubId = this.env.ENGINE.idFromName(instanceId);
+		const stub = this.env.ENGINE.get(stubId);
+		return await stub.waitForStatus(status);
 	}
 }
 

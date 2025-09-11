@@ -127,6 +127,373 @@ declare module "cloudflare:test" {
 		migrationsTableName?: string
 	): Promise<void>;
 
+	/**
+	 * Creates an introspector for a specific Workflow instance, used to
+	 * modify its behavior and await outcomes.
+	 * This is the primary entry point for testing individual Workflow instances.
+	 *
+	 * @param workflow - The Workflow binding, e.g., `env.MY_WORKFLOW`.
+	 * @param instanceId - The known ID of the Workflow instance to target.
+	 * @returns A `WorkflowInstanceIntrospector` to control the instance's behavior.
+	 *
+	 * @remarks
+	 * ### Dispose
+	 *
+	 * The introspector must be disposed after the test to remove mocks and release
+	 * resources. This can be handled in two ways:
+	 *
+	 * 1.  **Implicit dispose**: With the `await using` syntax.
+	 * `await using instance = await introspectWorkflowInstance(...)`
+	 *
+	 * 2.  **Explicit dispose**: Manually call `await instance.dispose()` at the end of the
+	 * test.
+	 *
+	 * @example
+	 * // Full test of a Workflow instance using implicit dispose
+	 * it("should disable all sleeps and complete", async () => {
+	 *   // 1. CONFIGURATION
+	 *   // `await using` ensures .dispose() is automatically called at the end of the block.
+	 *   await using instance = await introspectWorkflowInstance(env.MY_WORKFLOW, "123456");
+	 *
+	 *   await instance.modify(async (m) => {
+	 *     await m.disableSleeps();
+	 *   });
+	 *
+	 *   // 2. EXECUTION
+	 *   await env.MY_WORKFLOW.create({ id: "123456" });
+	 *
+	 *   // 3. ASSERTION
+	 *   await instance.waitForStatus("complete");
+	 *
+	 *   // 4. DISPOSE is implicit and automatic here.
+	 * });
+	 */
+	export function introspectWorkflowInstance(
+		workflow: Workflow,
+		instanceId: string
+	): Promise<WorkflowInstanceIntrospector>;
+
+	/**
+	 * Provides methods to control a single Workflow instance.
+	 */
+	export interface WorkflowInstanceIntrospector {
+		/**
+		 * Applies modifications to the Workflow instance's behavior.
+		 * Takes a callback function to apply modifications.
+		 *
+		 * @param fn - An async callback that receives a `WorkflowInstanceModifier` object.
+		 * @returns The `WorkflowInstanceIntrospector` instance for chaining.
+		 */
+		modify(
+			fn: (m: WorkflowInstanceModifier) => Promise<void>
+		): Promise<WorkflowInstanceIntrospector>;
+
+		/**
+		 * Waits for a specific step to complete and return a result.
+		 * If the step has already completed, this promise resolves immediately.
+		 *
+		 * @param step - An object specifying the step `name` and optional `index` (1-based).
+		 * If multiple steps share the same name, `index` targets a specific one.
+		 * Defaults to the first step found (`index: 1`).
+		 * @returns A promise that resolves with the step's result,
+		 * or rejects with an error if the step fails.
+		 */
+		waitForStepResult(step: { name: string; index?: number }): Promise<unknown>;
+
+		/**
+		 * Waits for the Workflow instance to reach a specific InstanceStatus status
+		 * (e.g., 'running', 'complete').
+		 * If the instance is already in the target status, this promise resolves immediately.
+		 * Throws an error if the Workflow instance reaches a finite state
+		 * (e.g., complete, errored) that is different from the target status.
+		 *
+		 * @param status - The target `InstanceStatus` to wait for.
+		 */
+		waitForStatus(status: InstanceStatus["status"]): Promise<void>;
+
+		/**
+		 * Disposes the Workflow instance introspector.
+		 *
+		 * This is crucial for ensuring test isolation by preventing state from
+		 * leaking between tests. It should be called at the end of each test.
+		 */
+		dispose(): Promise<void>;
+
+		/**
+		 * An alias for {@link dispose} to support automatic disposal with the `using` keyword.
+		 *
+		 * @see {@link dispose}
+		 * @example
+		 * ```ts
+		 * it('my workflow test', async () => {
+		 *   await using instance = await introspectWorkflowInstance(env.WORKFLOW, "123456");
+		 *
+		 *   // ... your test logic ...
+		 *
+		 *   // .dispose() is automatically called here at the end of the scope
+		 * });
+		 * ```
+		 */
+		[Symbol.asyncDispose](): Promise<void>;
+	}
+
+	/**
+	 * Provides methods to mock or alter the behavior of a Workflow instance's
+	 * steps, events, and sleeps.
+	 */
+	interface WorkflowInstanceModifier {
+		/**
+		 * Disables sleeps, causing `step.sleep()` and `step.sleepUntil()` to
+		 * resolve immediately.
+		 *
+		 * @example Disable all sleeps:
+		 * ```ts
+		 * await instance.modify(m => {
+		 *   m.disableSleeps();
+		 * });
+		 * ```
+		 *
+		 * @example Disable a specific set of sleeps by their step names:
+		 * ```ts
+		 * await instance.modify(m => {
+		 *   m.disableSleeps([{ name: "sleep1" }, { name: "sleep5" }, { name: "sleep7" }]);
+		 * });
+		 * ```
+		 *
+		 * @param steps - Optional array of specific steps to disable sleeps for.
+		 * If omitted, **all sleeps** in the Workflow will be disabled.
+		 * A step is an object specifying the step `name` and optional `index` (1-based).
+		 * If multiple steps share the same name, `index` targets a specific one.
+		 * Defaults to the first step found (`index: 1`).
+		 */
+		disableSleeps(steps?: { name: string; index?: number }[]): Promise<void>;
+
+		/**
+		 * Mocks the result of a `step.do()`, causing it to return a specified
+		 * value instantly without executing the step's actual implementation.
+		 *
+		 * If called multiple times for the same step, an error will be thrown.
+		 *
+		 * @param step - An object specifying the step `name` and optional `index` (1-based).
+		 * If multiple steps share the same name, `index` targets a specific one.
+		 * Defaults to the first step found (`index: 1`).
+		 * @param stepResult - The mock value to be returned by the step.
+		 *
+		 * @example Mock the result of the third step named "fetch-data":
+		 * ```ts
+		 * await instance.modify(m => {
+		 *   m.mockStepResult(
+		 *     { name: "fetch-data", index: 3 },
+		 *     { success: true, data: [1, 2, 3] }
+		 *   );
+		 * });
+		 * ```
+		 */
+		mockStepResult(
+			step: { name: string; index?: number },
+			stepResult: unknown
+		): Promise<void>;
+
+		/**
+		 * Forces a `step.do()` to throw an error, simulating a failure without
+		 * executing the step's actual implementation. Useful for testing retry logic
+		 * and error handling.
+		 *
+		 * @example Mock a step that errors 3 times before succeeding:
+		 * ```ts
+		 * // This example assumes the "fetch-data" step is configured with at least 3 retries.
+		 * await instance.modify(m => {
+		 *   m.mockStepError(
+		 *     { name: "fetch-data" },
+		 *     new Error("Failed!"),
+		 *     3
+		 *   );
+		 *   m.mockStepResult(
+		 *     { name: "fetch-data" },
+		 *     { success: true, data: [1, 2, 3] }
+		 *   );
+		 * });
+		 * ```
+		 *
+		 * @param step - An object specifying the step `name` and optional `index` (1-based).
+		 * If multiple steps share the same name, `index` targets a specific one.
+		 * Defaults to the first step found (`index: 1`).
+		 * @param error - The `Error` object to be thrown.
+		 * @param times - Optional number of times to throw the error. If a step has
+		 * retries configured, it will fail this many times before potentially
+		 * succeeding on a subsequent attempt. If omitted, it will throw on **every attempt**.
+		 */
+		mockStepError(
+			step: { name: string; index?: number },
+			error: Error,
+			times?: number
+		): Promise<void>;
+
+		/**
+		 * Forces a `step.do()` to fail by timing out immediately, without executing
+		 * the step's actual implementation. Default step timeout is 10 minutes.
+		 *
+		 * @example Mock a step that times out 3 times before succeeding:
+		 * ```ts
+		 * // This example assumes the "fetch-data" step is configured with at least 3 retries.
+		 * await instance.modify(m => {
+		 *   m.forceStepTimeout(
+		 *     { name: "fetch-data" },
+		 *     3
+		 *   );
+		 *   m.mockStepResult(
+		 *     { name: "fetch-data" },
+		 *     { success: true, data: [1, 2, 3] }
+		 *   );
+		 * });
+		 * ```
+		 *
+		 * @param step - An object specifying the step `name` and optional `index` (1-based).
+		 * If multiple steps share the same name, `index` targets a specific one.
+		 * Defaults to the first step found (`index: 1`).
+		 * @param times - Optional number of times the step will time out. Useful for
+		 * testing retry logic. If omitted, it will time out on **every attempt**.
+		 */
+		forceStepTimeout(step: { name: string; index?: number }, times?: number);
+
+		/**
+		 * Sends a mock event to the Workflow instance. This causes a `step.waitForEvent()`
+		 * to resolve with the provided payload, as long as the step's timeout has not
+		 * yet expired. Default event timeout is 24 hours.
+		 *
+		 * @example Mock a step event:
+		 * ```ts
+		 * await instance.modify(m => {
+		 *   m.mockEvent(
+		 *     { type: "user-approval", payload: { approved: true } },
+		 *   );
+		 * ```
+		 *
+		 * @param event - The event to send, including its `type` and `payload`.
+		 */
+		mockEvent(event: { type: string; payload: unknown }): Promise<void>;
+
+		/**
+		 * Forces a `step.waitForEvent()` to time out instantly, causing the step to fail.
+		 * This simulates a scenario where an expected event never arrives.
+		 * Default event timeout is 24 hours.
+		 *
+		 * @example Mock a step to time out:
+		 * ```ts
+		 * await instance.modify(m => {
+		 *   m.forceEventTimeout(
+		 *     { name: "user-approval" },
+		 *   );
+		 * ```
+		 *
+		 * @param step - An object specifying the step `name` and optional `index` (1-based).
+		 * If multiple steps share the same name, `index` targets a specific one.
+		 * Defaults to the first step found (`index: 1`).
+		 */
+		forceEventTimeout(step: { name: string; index?: number }): Promise<void>;
+	}
+
+	/**
+	 * Creates an **introspector** for a Workflow, where instance IDs are unknown
+	 * beforehand. This allows for defining modifications that will apply to
+	 * **all subsequently created instances**.
+	 *
+	 * This is the primary entry point for testing Workflow instances where the id
+	 * is unknown before their creation.
+	 *
+	 * @param workflow - The Workflow binding, e.g., `env.MY_WORKFLOW`.
+	 * @returns A `WorkflowIntrospector` to control the instances behavior.
+	 *
+	 * @remarks
+	 * ### Dispose
+	 *
+	 * The introspector must be disposed after the test to remove mocks and release
+	 * resources. This can be handled in two ways:
+	 *
+	 * 1.  **Implicit dispose**: With the `await using` syntax.
+	 * `await using introspector = await introspectWorkflow(...)`
+	 *
+	 * 2.  **Explicit dispose**: Manually call `await introspector.dispose()` at the end of the
+	 * test.
+	 *
+	 * @example
+	 * ```ts
+	 * // Full test of a Workflow instance using implicit dispose
+	 * it("should disable all sleeps and complete", async () => {
+	 *   // 1. CONFIGURATION
+	 *   await using introspector = await introspectWorkflow(env.MY_WORKFLOW);
+	 *   await introspector.modifyAll(async (m) => {
+	 *     await m.disableSleeps();
+	 *   });
+	 *
+	 *   // 2. EXECUTION
+	 *   await env.MY_WORKFLOW.create();
+	 *
+	 *   // 3. ASSERTION
+	 *   const instances = introspector.get();
+	 *   for(const instance of instances) {
+	 *     await instance.waitForStatus("complete");
+	 *   }
+	 *
+	 * // 4. DISPOSE is implicit and automatic here.
+	 * });
+	 * ```
+	 */
+	export function introspectWorkflow(
+		workflow: Workflow
+	): Promise<WorkflowIntrospector>;
+
+	/**
+	 * Provides methods to control all instances created by a Worflow.
+	 */
+	export interface WorkflowIntrospector {
+		/**
+		 * Applies modifications to all Workflow instances created after calling
+		 * `introspectWorkflow`. Takes a callback function to apply modifications.
+		 *
+		 * @param fn - An async callback that receives a `WorkflowInstanceModifier` object.
+		 */
+		modifyAll(
+			fn: (m: WorkflowInstanceModifier) => Promise<void>
+		): Promise<void>;
+
+		/**
+		 * Returns all `WorkflowInstanceIntrospector`s from Workflow instances
+		 * created after calling `introspectWorkflow`.
+		 */
+		get(): WorkflowInstanceIntrospector[];
+
+		/**
+		 *
+		 * Disposes the introspector and every `WorkflowInstanceIntrospector` from Workflow
+		 * instances created after calling `introspectWorkflow`.
+		 *
+		 * This function is essential for test isolation, ensuring that results from one
+		 * test do not leak into the next. It should be called at the end or after each test.
+		 *
+		 * **Note:** After dispose, `introspectWorkflow()` must be called again to begin
+		 * a new introspection.
+		 *
+		 */
+		dispose(): Promise<void>;
+
+		/**
+		 * An alias for {@link dispose} to support automatic disposal with the `using` keyword.
+		 * This is an alternative to calling `dispose()` in an `afterEach` hook.
+		 *
+		 * @see {@link dispose}
+		 * @example
+		 * it('my workflow test', async () => {
+		 * await using workflowIntrospector = await introspectWorkflow(env.WORKFLOW);
+		 *
+		 * // ... your test logic ...
+		 *
+		 * // .dispose() is automatically called here at the end of the scope
+		 * });
+		 */
+		[Symbol.asyncDispose](): Promise<void>;
+	}
+
 	// Only require `params` and `data` to be specified if they're non-empty
 	interface EventContextInitBase {
 		request: Request<unknown, IncomingRequestCfProperties>;
