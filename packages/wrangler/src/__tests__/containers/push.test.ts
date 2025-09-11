@@ -79,4 +79,66 @@ describe("containers push", () => {
 			"Unsupported platform"
 		);
 	});
+
+	it("should tag image with the correct uri if given an <image>:<tag> argument", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		vi.mocked(dockerImageInspect).mockResolvedValue("linux/amd64");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+
+		await runWrangler("containers push test-app:tag");
+
+		expect(runDockerCmd).toHaveBeenCalledTimes(2);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
+			"tag",
+			`test-app:tag`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+	});
+
+	it("should tag image with the correct uri if given an registry.cloudflare.com/<image>:<tag> argument", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		vi.mocked(dockerImageInspect).mockResolvedValue("linux/amd64");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+
+		await runWrangler("containers push registry.cloudflare.com/test-app:tag");
+
+		expect(runDockerCmd).toHaveBeenCalledTimes(2);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
+			"tag",
+			`registry.cloudflare.com/test-app:tag`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+	});
+
+	it("should tag image with the correct uri if given an registry.cloudflare.com/some-account-id/<image>:<tag> argument", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		vi.mocked(dockerImageInspect).mockResolvedValue("linux/amd64");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+
+		await runWrangler(
+			"containers push registry.cloudflare.com/some-account-id/test-app:tag"
+		);
+
+		expect(runDockerCmd).toHaveBeenCalledTimes(2);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
+			"tag",
+			`registry.cloudflare.com/some-account-id/test-app:tag`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+	});
 });

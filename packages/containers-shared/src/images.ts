@@ -4,6 +4,7 @@ import {
 	isCloudflareRegistryLink,
 } from "./knobs";
 import { dockerLoginManagedRegistry } from "./login";
+import { getCloudflareRegistryWithAccountNamespace } from "./registry";
 import {
 	checkExposedPorts,
 	cleanupDuplicateImageTags,
@@ -124,24 +125,29 @@ export async function prepareContainerImagesForDev(args: {
 /**
  * Resolve an image name to the full unambiguous name.
  *
- * For now, this only converts images stored in the managed registry to contain
- * the user's account ID in the path.
+ * image:tag -> prepend registry.cloudflare.com/accountid/
+ * registry.cloudflare.com/image:tag -> registry.cloudlfare.com/accountid/image:tag
+ * registry.cloudflare.com/accountid/image:tag -> no change
+ * anyother-registry.com/anything -> no change
  */
 export function resolveImageName(accountId: string, image: string): string {
 	let url: URL;
 	try {
 		url = new URL(`http://${image}`);
 	} catch {
-		return image;
+		// not a valid url so assume it is in the format image:tag and pre-pend the registry
+		return getCloudflareRegistryWithAccountNamespace(accountId, image);
 	}
-
+	// hostname not the managed registry, passthrough
 	if (url.hostname !== getCloudflareContainerRegistry()) {
 		return image;
 	}
 
+	// is managed registry and has the account id, passthrough
 	if (url.pathname.startsWith(`/${accountId}`)) {
 		return image;
 	}
 
+	// is managed registry and doesn't have the account id,add it to the path
 	return `${url.hostname}/${accountId}${url.pathname}`;
 }
