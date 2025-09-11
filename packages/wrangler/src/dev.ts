@@ -336,12 +336,20 @@ export type AdditionalDevProps = {
 		script_name?: string | undefined;
 		environment?: string | undefined;
 	}[];
-	services?: {
-		binding: string;
-		service: string;
-		environment?: string;
-		entrypoint?: string;
-	}[];
+	services?: (
+		| {
+				binding: string;
+				service: string;
+				service_id?: never;
+				environment?: string;
+				entrypoint?: string;
+		  }
+		| {
+				binding: string;
+				service?: never;
+				service_id: string;
+		  }
+	)[];
 	r2?: {
 		binding: string;
 		bucket_name?: string | typeof INHERIT_SYMBOL;

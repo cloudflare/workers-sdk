@@ -2081,6 +2081,11 @@ describe.sequential("wrangler dev", () => {
 		const wranglerConfigWithRemoteBindings = {
 			services: [
 				{ binding: "WorkerA", service: "A", experimental_remote: true },
+				{
+					binding: "SERVICE",
+					service_id: "123e4567-e89b-12d3-a456-426614174000",
+					experimental_remote: true,
+				},
 			],
 			kv_namespaces: [
 				{
@@ -2128,13 +2133,14 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker has access to the following bindings:
-				Binding                                          Resource          Mode
-				env.MY_WORKFLOW (myClass)                        Workflow          local
-				env.KV (xxxx-xxxx-xxxx-xxxx)                     KV Namespace      local
-				env.MY_QUEUE_PRODUCES (my-queue)                 Queue             local
-				env.MY_D1 (xxx)                                  D1 Database       local
-				env.MY_R2 (my-bucket)                            R2 Bucket         local
-				env.WorkerA (A)                                  Worker            local [not connected]
+				Binding                                                           Resource          Mode
+				env.MY_WORKFLOW (myClass)                                         Workflow          local
+				env.KV (xxxx-xxxx-xxxx-xxxx)                                      KV Namespace      local
+				env.MY_QUEUE_PRODUCES (my-queue)                                  Queue             local
+				env.MY_D1 (xxx)                                                   D1 Database       local
+				env.MY_R2 (my-bucket)                                             R2 Bucket         local
+				env.WorkerA (A)                                                   Worker            local [not connected]
+				env.SERVICE (123e4567-e89b-12d3-a456-426614174000)                VPC Service       local
 
 				"
 			`);
@@ -2146,13 +2152,14 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev --x-remote-bindings index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker has access to the following bindings:
-				Binding                                          Resource          Mode
-				env.MY_WORKFLOW (myClass)                        Workflow          local
-				env.KV (xxxx-xxxx-xxxx-xxxx)                     KV Namespace      remote
-				env.MY_QUEUE_PRODUCES (my-queue)                 Queue             remote
-				env.MY_D1 (xxx)                                  D1 Database       remote
-				env.MY_R2 (my-bucket)                            R2 Bucket         remote
-				env.WorkerA (A)                                  Worker            remote
+				Binding                                                           Resource          Mode
+				env.MY_WORKFLOW (myClass)                                         Workflow          local
+				env.KV (xxxx-xxxx-xxxx-xxxx)                                      KV Namespace      remote
+				env.MY_QUEUE_PRODUCES (my-queue)                                  Queue             remote
+				env.MY_D1 (xxx)                                                   D1 Database       remote
+				env.MY_R2 (my-bucket)                                             R2 Bucket         remote
+				env.WorkerA (A)                                                   Worker            remote
+				env.SERVICE (123e4567-e89b-12d3-a456-426614174000)                VPC Service       remote
 
 				"
 			`);

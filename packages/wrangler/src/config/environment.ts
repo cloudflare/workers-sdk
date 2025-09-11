@@ -880,7 +880,7 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
-	 * Specifies service bindings (Worker-to-Worker) that are bound to this Worker environment.
+	 * Specifies service bindings (Worker-to-Worker or Worker-to-Service) that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
@@ -891,29 +891,46 @@ export interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	services:
-		| {
-				/** The binding name used to refer to the bound service. */
-				binding: string;
-				/**
-				 * The name of the service.
-				 * To bind to a worker in a specific environment,
-				 * you should use the format `<worker_name>-<environment_name>`.
-				 */
-				service: string;
-				/**
-				 * @hidden
-				 * @deprecated you should use `service: <worker_name>-<environment_name>` instead.
-				 * This refers to the deprecated concept of 'service environments'.
-				 * The environment of the service (e.g. production, staging, etc).
-				 */
-				environment?: string;
-				/** Optionally, the entrypoint (named export) of the service to bind to. */
-				entrypoint?: string;
-				/** Optional properties that will be made available to the service via ctx.props. */
-				props?: Record<string, unknown>;
-				/** Whether the service binding should be remote or not (only available under `--x-remote-bindings`) */
-				experimental_remote?: boolean;
-		  }[]
+		| (
+				| {
+						/** The binding name used to refer to the bound service. */
+						binding: string;
+						/**
+						 * The name of the service.
+						 * To bind to a worker in a specific environment,
+						 * you should use the format `<worker_name>-<environment_name>`.
+						 */
+						service: string;
+						/** The service_id cannot be specified when using service name. */
+						service_id?: never;
+						/**
+						 * @hidden
+						 * @deprecated you should use `service: <worker_name>-<environment_name>` instead.
+						 * This refers to the deprecated concept of 'service environments'.
+						 * The environment of the service (e.g. production, staging, etc).
+						 */
+						environment?: string;
+						/** Optionally, the entrypoint (named export) of the service to bind to. */
+						entrypoint?: string;
+						/** Optional properties that will be made available to the service via ctx.props. */
+						props?: Record<string, unknown>;
+						/** Whether the service binding should be remote or not (only available under `--x-remote-bindings`) */
+						experimental_remote?: boolean;
+				  }
+				| {
+						/** The binding name used to refer to the bound service. */
+						binding: string;
+						/** The service name cannot be specified when using service_id. */
+						service?: never;
+						/**
+						 * The UUID of the WVPC connectivity service.
+						 * Use this to bind to a service created via `wrangler wvpc service create`.
+						 */
+						service_id: string;
+						/** Whether the service binding should be remote or not (only available under `--x-remote-bindings`) */
+						experimental_remote?: boolean;
+				  }
+		  )[]
 		| undefined;
 
 	/**

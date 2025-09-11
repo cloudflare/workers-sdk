@@ -3366,7 +3366,6 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 	let isValid = true;
-	// Service bindings must have a binding, a service, optionally an environment, and, optionally an entrypoint.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
@@ -3375,14 +3374,45 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "service", "string")) {
+
+	// Service bindings must have either a service OR service_id, but not both
+	const hasService =
+		isOptionalProperty(value, "service", "string") &&
+		value.service !== undefined;
+	const hasServiceId =
+		isOptionalProperty(value, "service_id", "string") &&
+		value.service_id !== undefined;
+
+	if (!hasService && !hasServiceId) {
 		diagnostics.errors.push(
-			`"${field}" bindings should have a string "service" field but got ${JSON.stringify(
+			`"${field}" bindings should have either a string "service" field or a string "service_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	} else if (hasService && hasServiceId) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have either a "service" field or a "service_id" field but not both, got ${JSON.stringify(
 				value
 			)}.`
 		);
 		isValid = false;
 	}
+
+	// Validate service_id format if provided
+	if (hasServiceId && value.service_id) {
+		const uuidRegex =
+			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+		if (!uuidRegex.test(value.service_id)) {
+			diagnostics.errors.push(
+				`"${field}" bindings should have a valid UUID "service_id" field but got ${JSON.stringify(
+					value.service_id
+				)}.`
+			);
+			isValid = false;
+		}
+	}
+
 	if (!isOptionalProperty(value, "environment", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "environment" field but got ${JSON.stringify(

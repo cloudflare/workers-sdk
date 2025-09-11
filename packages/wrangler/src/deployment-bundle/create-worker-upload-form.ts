@@ -125,6 +125,11 @@ export type WorkerMetadataBinding =
 			environment?: string;
 			entrypoint?: string;
 	  }
+	| {
+			type: "connectivity_service_binding";
+			name: string;
+			service_id: string;
+	  }
 	| { type: "analytics_engine"; name: string; dataset?: string }
 	| {
 			type: "dispatch_namespace";
@@ -439,8 +444,16 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
-	bindings.services?.forEach(
-		({ binding, service, environment, entrypoint, props }) => {
+	bindings.services?.forEach((serviceBinding) => {
+		if ("service_id" in serviceBinding && serviceBinding.service_id) {
+			metadataBindings.push({
+				name: serviceBinding.binding,
+				type: "connectivity_service_binding",
+				service_id: serviceBinding.service_id,
+			});
+		} else if ("service" in serviceBinding && serviceBinding.service) {
+			const { binding, service, environment, entrypoint, props } =
+				serviceBinding;
 			metadataBindings.push({
 				name: binding,
 				type: "service",
@@ -450,7 +463,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 				...(props && { props }),
 			});
 		}
-	);
+	});
 
 	bindings.analytics_engine_datasets?.forEach(({ binding, dataset }) => {
 		metadataBindings.push({

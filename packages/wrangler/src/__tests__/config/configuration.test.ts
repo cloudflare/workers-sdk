@@ -3360,6 +3360,95 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
+			it("should accept valid service_id bindings", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						services: [
+							{
+								binding: "SERVICE_BINDING_1",
+								service_id: "123e4567-e89b-12d3-a456-426614174000",
+							},
+							{
+								binding: "SERVICE_BINDING_2",
+								service_id: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.services).toEqual([
+					{
+						binding: "SERVICE_BINDING_1",
+						service_id: "123e4567-e89b-12d3-a456-426614174000",
+					},
+					{
+						binding: "SERVICE_BINDING_2",
+						service_id: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+					},
+				]);
+			});
+
+			it("should error if service_id bindings have invalid format", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						services: [
+							{
+								binding: "SERVICE_BINDING_1",
+								service_id: "invalid-uuid",
+							},
+							{
+								binding: "SERVICE_BINDING_2",
+								service_id: "123e4567-e89b-12d3-a456",
+							},
+							{
+								binding: "SERVICE_BINDING_3",
+								service_id: "not-a-uuid-at-all",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"services[0]\\" bindings should have a valid UUID \\"service_id\\" field but got \\"invalid-uuid\\".
+			  - \\"services[1]\\" bindings should have a valid UUID \\"service_id\\" field but got \\"123e4567-e89b-12d3-a456\\".
+			  - \\"services[2]\\" bindings should have a valid UUID \\"service_id\\" field but got \\"not-a-uuid-at-all\\"."
+		`);
+			});
+
+			it("should error if neither service nor service_id are provided", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						services: [
+							{
+								binding: "SERVICE_BINDING_1",
+								environment: "production",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"services[0]\\" bindings should have either a string \\"service\\" field or a string \\"service_id\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"environment\\":\\"production\\"}."
+		`);
+			});
+
 			it("should error if services bindings are not valid", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -3406,19 +3495,19 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 			  - \\"services[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			  - \\"services[0]\\" bindings should have a string \\"service\\" field but got {}.
-			  - \\"services[1]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\"}.
+			  - \\"services[0]\\" bindings should have either a string \\"service\\" field or a string \\"service_id\\" field but got {}.
+			  - \\"services[1]\\" bindings should have either a string \\"service\\" field or a string \\"service_id\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\"}.
 			  - \\"services[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
-			  - \\"services[2]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456}.
+			  - \\"services[2]\\" bindings should have either a string \\"service\\" field or a string \\"service_id\\" field but got {\\"binding\\":123,\\"service\\":456}.
 			  - \\"services[3]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
-			  - \\"services[3]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+			  - \\"services[3]\\" bindings should have either a string \\"service\\" field or a string \\"service_id\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
 			  - \\"services[3]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
-			  - \\"services[4]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
+			  - \\"services[4]\\" bindings should have either a string \\"service\\" field or a string \\"service_id\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
 			  - \\"services[4]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
 			  - \\"services[5]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
 			  - \\"services[5]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
 			  - \\"services[6]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
-			  - \\"services[6]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
+			  - \\"services[6]\\" bindings should have either a string \\"service\\" field or a string \\"service_id\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
 			  - \\"services[7]\\" bindings should have a string \\"entrypoint\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\",\\"entrypoint\\":123}.
 			  - \\"services[8]\\" bindings should have a string \\"entrypoint\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"entrypoint\\":123}."
 		`);

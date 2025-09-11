@@ -164,6 +164,17 @@ export async function mapWorkerMetadataBindings(
 							];
 						}
 						break;
+					case "connectivity_service_binding":
+						{
+							configObj.services = [
+								...(configObj.services ?? []),
+								{
+									binding: binding.name,
+									service_id: binding.service_id,
+								},
+							];
+						}
+						break;
 					case "analytics_engine":
 						{
 							configObj.analytics_engine_datasets = [

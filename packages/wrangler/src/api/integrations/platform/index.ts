@@ -427,8 +427,13 @@ export function unstable_getMiniflareWorkerOptions(
 	if (bindings.services !== undefined) {
 		bindingOptions.serviceBindings = Object.fromEntries(
 			bindings.services.map((binding) => {
-				const name =
-					binding.service === config.name ? kCurrentWorker : binding.service;
+				const serviceName = binding.service || binding.service_id;
+				if (!serviceName) {
+					throw new Error(
+						"Service binding must have either service or service_id"
+					);
+				}
+				const name = serviceName === config.name ? kCurrentWorker : serviceName;
 				if (
 					options?.remoteProxyConnectionString &&
 					binding.experimental_remote
@@ -437,12 +442,15 @@ export function unstable_getMiniflareWorkerOptions(
 						binding.binding,
 						{
 							name,
-							entrypoint: binding.entrypoint,
+							...("entrypoint" in binding &&
+								binding.entrypoint && { entrypoint: binding.entrypoint }),
 							remoteProxyConnectionString: options.remoteProxyConnectionString,
 						},
 					];
 				}
-				return [binding.binding, { name, entrypoint: binding.entrypoint }];
+				const entrypoint =
+					"entrypoint" in binding ? binding.entrypoint : undefined;
+				return [binding.binding, { name, ...(entrypoint && { entrypoint }) }];
 			})
 		);
 	}

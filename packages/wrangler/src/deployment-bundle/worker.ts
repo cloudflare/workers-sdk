@@ -245,14 +245,22 @@ export interface CfHyperdrive {
 	localConnectionString?: string;
 }
 
-export interface CfService {
-	binding: string;
-	service: string;
-	environment?: string;
-	entrypoint?: string;
-	props?: Record<string, unknown>;
-	experimental_remote?: boolean;
-}
+export type CfService =
+	| {
+			binding: string;
+			service: string;
+			service_id?: never;
+			environment?: string;
+			entrypoint?: string;
+			props?: Record<string, unknown>;
+			experimental_remote?: boolean;
+	  }
+	| {
+			binding: string;
+			service?: never;
+			service_id: string;
+			experimental_remote?: boolean;
+	  };
 
 export interface CfAnalyticsEngineDataset {
 	binding: string;
