@@ -2,6 +2,7 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import { cp } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
+import { fetch } from "undici";
 import { expect, onTestFinished, vi } from "vitest";
 import {
 	generateLeafCertificate,
