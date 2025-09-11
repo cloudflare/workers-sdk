@@ -45,8 +45,8 @@ const WorkersPoolOptionsSchema = z.object({
 	 */
 	isolatedStorage: z.boolean().default(true),
 	/**
-	 * Enables experimental remote bindings to access remote resources configured
-	 * with `experimental_remote: true` in the wrangler configuration file.
+	 * Enables remote bindings to access remote resources configured
+	 * with `remote: true` in the wrangler configuration file.
 	 */
 	remoteBindings: z.boolean().default(true).optional(),
 	/**

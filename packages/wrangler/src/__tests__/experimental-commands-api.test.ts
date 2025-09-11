@@ -42,6 +42,7 @@ describe("experimental_getWranglerCommands", () => {
 			    "alias": Array [
 			      "x-remote-bindings",
 			    ],
+			    "default": true,
 			    "describe": "Experimental: Enable Remote Bindings",
 			    "hidden": true,
 			    "type": "boolean",
