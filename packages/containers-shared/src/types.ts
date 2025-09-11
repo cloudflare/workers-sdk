@@ -73,7 +73,7 @@ export type SharedContainerConfig = {
 	/** if undefined in config, defaults to "full_auto" */
 	rollout_kind: "full_auto" | "full_manual" | "none";
 	rollout_active_grace_period: number;
-	ssh?: WranglerSSHConfig;
+	wrangler_ssh?: WranglerSSHConfig;
 	authorized_keys?: Array<SSHPublicKeyItemV3>;
 	constraints: {
 		regions?: string[];

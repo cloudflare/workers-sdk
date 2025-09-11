@@ -154,7 +154,7 @@ export type ContainerApp = {
 				disk_mb?: number;
 		  };
 
-	ssh?: {
+	wrangler_ssh?: {
 		/**
 		 * If enabled, those with write access to a container will be able to SSH into it through Wrangler.
 		 * @default false

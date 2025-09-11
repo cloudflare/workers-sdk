@@ -80,7 +80,8 @@ describe("containers ssh", () => {
 			})
 		);
 
-		await expect(runWrangler(`containers ssh ${instanceId}`)).rejects.toMatchInlineSnapshot(`
+		await expect(runWrangler(`containers ssh ${instanceId}`)).rejects
+			.toMatchInlineSnapshot(`
 			[Error: There has been an unknown error when trying to SSH into the container.
 			{"error":"something happened"}]
 		`);
@@ -97,7 +98,6 @@ describe("containers ssh", () => {
 		setWranglerConfig({});
 		msw.use(
 			http.get(`*/instances/:instanceId/ssh`, async ({ request }) => {
-
 				return new HttpResponse(
 					`{"success": true, "result": {"url": "${wsUrl}", "token": "${sshJwt}"}}`,
 					{

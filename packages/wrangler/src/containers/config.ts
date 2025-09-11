@@ -118,8 +118,11 @@ export const getNormalizedContainerOptions = async (
 					config.observability?.logs?.enabled ??
 					config.observability?.enabled === true,
 			},
-			ssh: container.ssh
-				? { enabled: container.ssh.enabled, port: container.ssh.port }
+			wrangler_ssh: container.wrangler_ssh
+				? {
+						enabled: container.wrangler_ssh.enabled,
+						port: container.wrangler_ssh.port,
+					}
 				: undefined,
 			authorized_keys: container.authorized_keys,
 		};
