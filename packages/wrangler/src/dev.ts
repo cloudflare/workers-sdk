@@ -57,7 +57,7 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
+			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? true,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
 		}),
 	},
@@ -281,12 +281,14 @@ export const dev = createCommand({
 			describe:
 				"Bind to production Vectorize indexes in local development mode",
 			default: false,
+			hidden: true,
 		},
 		"experimental-images-local-mode": {
 			type: "boolean",
 			describe:
 				"Use a local lower-fidelity implementation of the Images binding",
 			default: false,
+			hidden: true,
 		},
 	},
 	async validateArgs(args) {
@@ -508,8 +510,6 @@ async function setupDevEnv(
 				testScheduled: args.testScheduled,
 				logLevel: args.logLevel,
 				registry: args.disableDevRegistry ? undefined : getRegistryPath(),
-				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
-				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
 				enableContainers: args.enableContainers,
 				dockerPath: args.dockerPath,

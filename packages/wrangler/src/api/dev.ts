@@ -222,7 +222,7 @@ export async function unstable_dev(
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
-		experimentalRemoteBindings: false,
+		experimentalRemoteBindings: true,
 		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,
 		experimentalImagesLocalMode: imagesLocalMode ?? false,
 		enableIpc: options?.experimental?.enableIpc,

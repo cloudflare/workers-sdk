@@ -440,33 +440,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					);
 				}
 			});
-
-			it.skipIf(testCase.worksWithoutRemoteBindings)(
-				"fails when remote bindings is disabled",
-				// Turn off retries because this test is expected to fail
-				{ retry: 0, fails: true },
-				async () => {
-					await helper.seed(path.resolve(__dirname, "./workers"));
-
-					await writeWranglerConfig(testCase, helper, workerName);
-
-					const worker = helper.runLongLived("wrangler dev");
-
-					const { url } = await worker.waitForReady();
-
-					const response = await fetchText(url);
-					expect(response).toEqual(testCase.expectedResponseMatch);
-
-					// Wait for async logging (e.g. pipeline messages received)
-					await setTimeout(1_000);
-
-					if (testCase.expectedOutputMatch) {
-						expect(await worker.currentOutput).toEqual(
-							testCase.expectedOutputMatch
-						);
-					}
-				}
-			);
 		});
 
 		describe.sequential(
