@@ -10,6 +10,7 @@ export type Teams =
 	| "Product: KV"
 	| "Product: R2"
 	| "Product: R2 Data Catalog"
+	| "Product: R2 SQL"
 	| "Product: D1"
 	| "Product: Queues"
 	| "Product: AI"
