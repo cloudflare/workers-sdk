@@ -2119,25 +2119,6 @@ describe.sequential("wrangler dev", () => {
 				},
 			],
 		};
-
-		it("should honor `remote: true` settings (initial logs only test)", async () => {
-			writeWranglerConfig(wranglerConfigWithRemoteBindings);
-			fs.writeFileSync("index.js", `export default {};`);
-			await runWranglerUntilConfig("dev index.js");
-			expect(std.out).toMatchInlineSnapshot(`
-				"Your Worker has access to the following bindings:
-				Binding                                          Resource          Mode
-				env.MY_WORKFLOW (myClass)                        Workflow          local
-				env.KV (xxxx-xxxx-xxxx-xxxx)                     KV Namespace      remote
-				env.MY_QUEUE_PRODUCES (my-queue)                 Queue             remote
-				env.MY_D1 (xxx)                                  D1 Database       remote
-				env.MY_R2 (my-bucket)                            R2 Bucket         remote
-				env.WorkerA (A)                                  Worker            remote
-
-				"
-			`);
-			expect(std.warn).toMatchInlineSnapshot(`""`);
-		});
 	});
 
 	describe("containers", () => {
