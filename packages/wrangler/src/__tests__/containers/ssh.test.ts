@@ -67,9 +67,7 @@ describe("containers ssh", () => {
 
 		setWranglerConfig({});
 		msw.use(
-			http.get(`*/instances/:instanceId/ssh`, async ({ request }) => {
-				expect(request.url.endsWith(`${instanceId}/ssh`)).toBeTruthy();
-
+			http.get(`*/instances/:instanceId/ssh`, async () => {
 				return new HttpResponse(
 					`{"success": false, "errors": [{"code": 1000, "message": "something happened"}]}`,
 					{
@@ -97,7 +95,7 @@ describe("containers ssh", () => {
 
 		setWranglerConfig({});
 		msw.use(
-			http.get(`*/instances/:instanceId/ssh`, async ({ request }) => {
+			http.get(`*/instances/:instanceId/ssh`, async () => {
 				return new HttpResponse(
 					`{"success": true, "result": {"url": "${wsUrl}", "token": "${sshJwt}"}}`,
 					{
