@@ -533,10 +533,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 		beforeAll(async () => {
 			await helper.seed(path.resolve(__dirname, "./workers"));
-			await helper.worker({
+			const { cleanup } = await helper.worker({
 				workerName: remoteWorkerName,
 				entryPoint: "remote-worker.js",
+				cleanOnTestFinished: false,
 			});
+			return cleanup;
 		}, 35_000);
 
 		afterAll(async () => {

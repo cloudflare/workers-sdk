@@ -277,7 +277,14 @@ export class WranglerE2ETestHelper {
 		};
 
 		if (cleanOnTestFinished) {
-			onTestFinished(cleanup, 15_000);
+			try {
+				onTestFinished(cleanup, 15_000);
+			} catch (e) {
+				throw new Error(
+					`Failed to register cleanup for worker.\nPerhaps you called this outside an \`it\` block?\nIf so, pass \`cleanOnTestFinished: false\` and then use the returned \`cleanup\` helper yourself`,
+					{ cause: e }
+				);
+			}
 			return { deployedUrl, stdout };
 		} else {
 			return { deployedUrl, stdout, cleanup };
