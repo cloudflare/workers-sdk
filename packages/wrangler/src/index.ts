@@ -320,6 +320,12 @@ import { versionsSecretsListCommand } from "./versions/secrets/list";
 import { versionsSecretPutCommand } from "./versions/secrets/put";
 import { versionsUploadCommand } from "./versions/upload";
 import { versionsViewCommand } from "./versions/view";
+import { vpcServiceCreateCommand } from "./vpc/create";
+import { vpcServiceDeleteCommand } from "./vpc/delete";
+import { vpcServiceGetCommand } from "./vpc/get";
+import { vpcNamespace, vpcServiceNamespace } from "./vpc/index";
+import { vpcServiceListCommand } from "./vpc/list";
+import { vpcServiceUpdateCommand } from "./vpc/update";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
@@ -1398,6 +1404,32 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("pipelines");
+
+	registry.define([
+		{ command: "wrangler vpc", definition: vpcNamespace },
+		{ command: "wrangler vpc service", definition: vpcServiceNamespace },
+		{
+			command: "wrangler vpc service create",
+			definition: vpcServiceCreateCommand,
+		},
+		{
+			command: "wrangler vpc service delete",
+			definition: vpcServiceDeleteCommand,
+		},
+		{
+			command: "wrangler vpc service get",
+			definition: vpcServiceGetCommand,
+		},
+		{
+			command: "wrangler vpc service list",
+			definition: vpcServiceListCommand,
+		},
+		{
+			command: "wrangler vpc service update",
+			definition: vpcServiceUpdateCommand,
+		},
+	]);
+	registry.registerNamespace("vpc");
 
 	registry.define([
 		{ command: "wrangler hello-world", definition: helloWorldNamespace },

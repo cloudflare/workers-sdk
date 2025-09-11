@@ -19,4 +19,5 @@ export type Teams =
 	| "Product: Vectorize"
 	| "Product: Workflows"
 	| "Product: Cloudchamber"
-	| "Product: SSL";
+	| "Product: SSL"
+	| "Product: WVPC";
