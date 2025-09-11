@@ -493,15 +493,6 @@ function buildProjectWorkerOptions(
 		fixupWorkflowBindingsToSelf(runnerWorker, relativeWranglerConfigPath)
 	).sort();
 
-	if (
-		workflowClassNames.length !== 0 &&
-		project.options.isolatedStorage === true
-	) {
-		throw new Error(`Project ${project.relativePath} has Workflows defined and \`isolatedStorage\` set to true.
-Please set \`isolatedStorage\` to false in order to run projects with Workflows.
-Workflows defined in project: ${workflowClassNames.join(", ")}`);
-	}
-
 	const wrappers = [
 		'import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from "cloudflare:test-internal";',
 	];

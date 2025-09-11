@@ -9,8 +9,6 @@ export default defineWorkersProject({
 		poolOptions: {
 			workers: {
 				singleWorker: true,
-				// FIXME(lduarte): currently for the workflow binding to work, isolateStorage must be disabled.
-				isolatedStorage: false,
 				wrangler: {
 					configPath: "./wrangler.jsonc",
 				},

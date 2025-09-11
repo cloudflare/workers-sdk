@@ -9,6 +9,7 @@ import {
 	Mutex,
 	R2_PLUGIN_NAME,
 	Response,
+	WORKFLOWS_PLUGIN_NAME,
 } from "miniflare";
 import { isFileNotFoundError, WORKER_NAME_PREFIX } from "./helpers";
 import type { Awaitable, Miniflare, Request, WorkerOptions } from "miniflare";
@@ -314,6 +315,7 @@ const PLUGIN_PRODUCT_NAMES: Record<string, string | undefined> = {
 	[DURABLE_OBJECTS_PLUGIN_NAME]: "Durable Objects",
 	[KV_PLUGIN_NAME]: "KV",
 	[R2_PLUGIN_NAME]: "R2",
+	[WORKFLOWS_PLUGIN_NAME]: "Workflows",
 };
 const LIST_FORMAT = new Intl.ListFormat("en-US");
 
@@ -347,6 +349,23 @@ function checkAllStorageOperationsResolved(
 			"\x1b[2m"
 		);
 		lines.push("\x1b[22m" + separator, "");
+
+		if (
+			failedProducts.includes(
+				PLUGIN_PRODUCT_NAMES[WORKFLOWS_PLUGIN_NAME] ?? WORKFLOWS_PLUGIN_NAME
+			)
+		) {
+			console.warn(
+				[
+					"",
+					separator,
+					`Workflows are being created in ${source}.`,
+					"Even with isolated storage, Workflows are required to be manually disposed at the end of each test.",
+					"See https://developers.cloudflare.com/workers/testing/vitest-integration/test-apis/ for more details.",
+					"",
+				].join("\n")
+			);
+		}
 		console.error(lines.join("\n"));
 		return false;
 	}

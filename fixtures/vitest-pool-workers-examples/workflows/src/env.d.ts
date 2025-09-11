@@ -1,3 +1,6 @@
-interface Env {
-	TEST_WORKFLOW: Workflow;
+declare namespace Cloudflare {
+	interface Env {
+		MODERATOR: Workflow;
+	}
 }
+interface Env extends Cloudflare.Env {}
