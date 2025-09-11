@@ -61,6 +61,10 @@ export function createSshTcpProxy(sshResponse: WranglerSSHResponse): Server {
 				ws.send(data);
 			});
 
+			inbound.on('error', (err) => {
+				console.error("Proxy error: ", err);
+			})
+
 			inbound.on("close", () => {
 				ws.close();
 				proxy.close();
