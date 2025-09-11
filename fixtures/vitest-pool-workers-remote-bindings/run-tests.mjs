@@ -68,9 +68,11 @@ if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(`${deployOut}`)) {
 	throw new Error(`Failed to deploy ${remoteWorkerName}`);
 }
 
-const deployedUrl = deployOut.match(
-	/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-)?.groups?.url;
+const urlMatcher = new RegExp(
+	`(?<url>https:\\/\\/${remoteWorkerName}\\..+?\\.workers\\.dev)`
+);
+
+const deployedUrl = deployOut.match(urlMatcher)?.groups?.url;
 assert(deployedUrl, "Failed to find deployed worker URL");
 
 writeFileSync(
