@@ -2,4 +2,4 @@
 "miniflare": patch
 ---
 
-Include workflow bining name in workflow plugin.
+Include workflow binding name in workflow plugin.
