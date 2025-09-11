@@ -1,0 +1,17 @@
+{
+	"name": "@fixture/worker-with-unsafe-external-plugin",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler dev",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@fixture/unsafe-external-plugin": "workspace:*",
+		"turbo": "^2.2.3",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	}
+}

@@ -1,15 +1,23 @@
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { runCommand } from "helpers/command";
 import { installPackages, installWrangler, npmInstall } from "helpers/packages";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import { createTestContext } from "../../__tests__/helpers";
+import * as files from "../files";
 import { mockPackageManager } from "./mocks";
 
 vi.mock("fs");
 vi.mock("which-pm-runs");
 vi.mock("which-pm-runs");
 vi.mock("helpers/command");
+vi.mock("../files", () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+}));
+const mockReadJSON = vi.mocked(files.readJSON);
+const mockWriteJSON = vi.mocked(files.writeJSON);
 
 describe("Package Helpers", () => {
 	beforeEach(() => {
@@ -17,7 +25,9 @@ describe("Package Helpers", () => {
 		vi.mocked(existsSync).mockImplementation(() => false);
 	});
 
-	afterEach(() => {});
+	afterEach(() => {
+		vi.clearAllMocks();
+	});
 
 	describe("npmInstall", () => {
 		test("npm", async () => {
@@ -62,13 +72,37 @@ describe("Package Helpers", () => {
 			"with $pm",
 			async ({ pm, initialArgs, additionalArgs }) => {
 				mockPackageManager(pm);
-				const packages = ["foo", "bar", "baz"];
+				mockReadJSON.mockReturnValue({
+					["dependencies"]: {
+						foo: "^1.0.0",
+						bar: "^2.0.0",
+						baz: "^1.2.3",
+					},
+				});
+				const packages = ["foo", "bar@latest", "baz@1.2.3"];
 				await installPackages(packages);
 
 				expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 					[...initialArgs, ...packages, ...(additionalArgs ?? [])],
 					expect.anything(),
 				);
+
+				if (pm === "npm") {
+					// Check that package.json was updated for npm
+					expect(mockReadJSON).toHaveBeenCalledWith(
+						resolve(process.cwd(), "package.json"),
+					);
+					expect(mockWriteJSON).toHaveBeenCalledWith(
+						resolve(process.cwd(), "package.json"),
+						expect.objectContaining({
+							["dependencies"]: {
+								foo: "^1.0.0",
+								bar: "^2.0.0",
+								baz: "1.2.3",
+							},
+						}),
+					);
+				}
 			},
 		);
 
@@ -87,18 +121,47 @@ describe("Package Helpers", () => {
 			"with $pm (dev = true)",
 			async ({ pm, initialArgs, additionalArgs }) => {
 				mockPackageManager(pm);
-				const packages = ["foo", "bar", "baz"];
+				mockReadJSON.mockReturnValue({
+					["devDependencies"]: {
+						foo: "^1.0.0",
+						bar: "^2.0.0",
+						baz: "^1.2.3",
+					},
+				});
+				const packages = ["foo", "bar@latest", "baz@1.2.3"];
 				await installPackages(packages, { dev: true });
 
 				expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 					[...initialArgs, ...packages, ...(additionalArgs ?? [])],
 					expect.anything(),
 				);
+
+				if (pm === "npm") {
+					// Check that package.json was updated for npm
+					expect(mockReadJSON).toHaveBeenCalledWith(
+						resolve(process.cwd(), "package.json"),
+					);
+					expect(mockWriteJSON).toHaveBeenCalledWith(
+						resolve(process.cwd(), "package.json"),
+						expect.objectContaining({
+							["devDependencies"]: {
+								foo: "^1.0.0",
+								bar: "^2.0.0",
+								baz: "1.2.3",
+							},
+						}),
+					);
+				}
 			},
 		);
 	});
 
 	test("installWrangler", async () => {
+		mockReadJSON.mockReturnValue({
+			["devDependencies"]: {
+				wrangler: "^4.0.0",
+			},
+		});
 		await installWrangler();
 
 		expect(vi.mocked(runCommand)).toHaveBeenCalledWith(

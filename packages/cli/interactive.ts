@@ -301,11 +301,14 @@ const getTextRenderers = (config: TextPromptConfig) => {
 	const helpText = config.helpText ?? "";
 	const format = config.format ?? ((val: Arg) => String(val));
 	const defaultValue = config.defaultValue?.toString() ?? "";
-	const activeRenderer = ({ value }: { value: Arg }) => [
-		`${blCorner} ${bold(question)} ${dim(helpText)}`,
-		`${space(2)}${format(value || dim(defaultValue))}`,
-		``, // extra line for readability
-	];
+	const activeRenderer = (props: RenderProps) => {
+		const { valueWithCursor } = props as TextPrompt;
+		return [
+			`${blCorner} ${bold(question)} ${dim(helpText)}`,
+			`${space(2)}${format(valueWithCursor || dim(defaultValue))}`,
+			``, // extra line for readability
+		];
+	};
 
 	return {
 		initial: () => [

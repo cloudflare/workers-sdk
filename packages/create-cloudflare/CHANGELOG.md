@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.51.5
+
+### Patch Changes
+
+- [#10575](https://github.com/cloudflare/workers-sdk/pull/10575) [`443d1f1`](https://github.com/cloudflare/workers-sdk/commit/443d1f1e625226595d901d91bc930ffb464f100d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that pinned versions are not converted to ranges when using npm
+
+- [#10554](https://github.com/cloudflare/workers-sdk/pull/10554) [`75d737d`](https://github.com/cloudflare/workers-sdk/commit/75d737db401881354d9f6940bd7a09ebbced46f0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Pin the `vercel` and `next` dependencies to their latest supported for next-on-pages applications
+
 ## 2.51.4
 
 ### Patch Changes

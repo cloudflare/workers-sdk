@@ -1,5 +1,11 @@
 # @cloudflare/cli
 
+## 1.1.2
+
+### Patch Changes
+
+- [#10492](https://github.com/cloudflare/workers-sdk/pull/10492) [`8ae9323`](https://github.com/cloudflare/workers-sdk/commit/8ae9323a5c45f3efe3685e36b1536cc25d39fbfb) Thanks [@gpanders](https://github.com/gpanders)! - Include cursor in text prompts
+
 ## 1.1.1
 
 ### Patch Changes

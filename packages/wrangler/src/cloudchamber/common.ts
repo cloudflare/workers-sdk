@@ -6,10 +6,7 @@ import {
 	DeploymentMutationError,
 	OpenAPI,
 } from "@cloudflare/containers-shared";
-import {
-	addAuthorizationHeaderIfUnspecified,
-	addUserAgent,
-} from "../cfetch/internal";
+import { addAuthorizationHeader, addUserAgent } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { constructStatusMessage } from "../core/CommandRegistry";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
@@ -177,7 +174,7 @@ export async function fillOpenAPIConfiguration(
 		);
 	}
 
-	addAuthorizationHeaderIfUnspecified(headers, auth);
+	addAuthorizationHeader(headers, auth);
 	addUserAgent(headers);
 
 	OpenAPI.CREDENTIALS = "omit";

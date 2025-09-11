@@ -6,6 +6,7 @@ import type { ExperimentalFlags } from "../experimental-flags";
 import type { Logger } from "../logger";
 import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
 import type { Teams } from "./teams";
+import type Cloudflare from "cloudflare";
 import type {
 	Alias,
 	ArgumentsCamelCase,
@@ -73,9 +74,12 @@ export type HandlerContext = {
 
 		// TODO: extend with other categories of error
 	};
+	/**
+	 * API SDK
+	 */
+	sdk: Cloudflare;
 
 	// TODO: experiments
-	// TODO(future): API SDK
 
 	// TODO: prompt (cli package)
 	// TODO: accountId

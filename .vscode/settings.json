@@ -68,7 +68,6 @@
 		"webcontainer",
 		"yxxx"
 	],
-	"eslint.runtime": "node",
 	"files.trimTrailingWhitespace": true,
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"files.associations": {

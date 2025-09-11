@@ -1,10 +1,12 @@
+import assert from "assert";
 import { existsSync } from "fs";
 import path from "path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { fetch } from "undici";
 import { runCommand } from "./command";
+import { readJSON, writeJSON } from "./files";
 import { detectPackageManager } from "./packageManagers";
-import type { C3Context } from "types";
+import type { C3Context, PackageJson } from "types";
 
 type InstallConfig = {
 	startText?: string;
@@ -24,6 +26,10 @@ export const installPackages = async (
 	packages: string[],
 	config: InstallConfig = {},
 ) => {
+	if (packages.length === 0) {
+		return;
+	}
+
 	const { npm } = detectPackageManager();
 
 	let saveFlag;
@@ -61,6 +67,28 @@ export const installPackages = async (
 			silent: true,
 		},
 	);
+
+	if (npm === "npm") {
+		// Npm install will update the package.json with a caret-range rather than the exact version/range we asked for.
+		// We can't use `npm install --save-exact` because that always pins to an exact version, and we want to allow ranges too.
+		// So let's just fix that up now by rewriting the package.json.
+		const pkgJsonPath = path.join(process.cwd(), "package.json");
+		const pkgJson = readJSON(pkgJsonPath) as PackageJson;
+		const deps = config.dev ? pkgJson.devDependencies : pkgJson.dependencies;
+		assert(deps, "dependencies should be defined");
+		for (const pkg of packages) {
+			const versionMarker = pkg.lastIndexOf("@");
+			if (versionMarker > 0) {
+				// (if versionMarker was 0 then this would indicate a scoped package with no version)
+				const pkgName = pkg.slice(0, versionMarker);
+				const pkgVersion = pkg.slice(versionMarker + 1);
+				if (pkgVersion !== "latest") {
+					deps[pkgName] = pkgVersion;
+				}
+			}
+		}
+		writeJSON(pkgJsonPath, pkgJson);
+	}
 };
 
 /**

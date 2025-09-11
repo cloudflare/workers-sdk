@@ -40,7 +40,7 @@
 		"zod": "^3.22.3"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "^0.8.19",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",

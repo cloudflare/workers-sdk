@@ -24,9 +24,9 @@ type ArrayRecordKeys<O extends object, K extends keyof O> = K extends unknown
 			: K
 	: never;
 // "kvNamespaces" | "r2Buckets" | "queueProducers" | "queueConsumers" | ...
-type WorkerOptionsArrayRecordKeys = ArrayRecordKeys<
-	WorkerOptions,
-	keyof WorkerOptions
+type WorkerOptionsArrayRecordKeys = Exclude<
+	ArrayRecordKeys<WorkerOptions, keyof WorkerOptions>,
+	"unsafeBindings"
 >;
 // Get the record type that can be used for key `K` in `WorkerOptions`
 type WorkerOptionsRecord<K extends WorkerOptionsArrayRecordKeys> = Extract<

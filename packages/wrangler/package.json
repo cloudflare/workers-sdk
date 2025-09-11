@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.34.0",
+	"version": "4.35.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -72,14 +72,14 @@
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
-		"unenv": "2.0.0-rc.20",
-		"workerd": "1.20250902.0"
+		"unenv": "2.0.0-rc.21",
+		"workerd": "1.20250906.0"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
-		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/jsrpc": "link:../../vendor/jsrpc",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
@@ -111,6 +111,7 @@
 		"chalk": "^5.2.0",
 		"chokidar": "^4.0.1",
 		"cli-table3": "^0.6.3",
+		"cloudflare": "^4.5.0",
 		"cmd-shim": "^4.1.0",
 		"command-exists": "^1.2.9",
 		"concurrently": "^8.2.2",

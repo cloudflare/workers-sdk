@@ -40,6 +40,37 @@ export type CloudchamberConfig = {
 	ipv4?: boolean;
 };
 
+type UnsafeBinding = {
+	/**
+	 * The name of the binding provided to the Worker
+	 */
+	name: string;
+	/**
+	 * The 'type' of the unsafe binding.
+	 */
+	type: string;
+	dev?: {
+		plugin: {
+			/**
+			 * Package is the bare specifier of the package that exposes plugins to integrate into Miniflare via a named `plugins` export.
+			 * @example "@cloudflare/my-external-miniflare-plugin"
+			 */
+			package: string;
+			/**
+			 * Plugin is the name of the plugin exposed by the package.
+			 * @example "MY_UNSAFE_PLUGIN"
+			 */
+			name: string;
+		};
+
+		/**
+		 * Optional mapping of unsafe bindings names to options provided for the plugin.
+		 */
+		options?: Record<string, unknown>;
+	};
+	[key: string]: unknown;
+};
+
 /**
  * Configuration for a container application
  */
@@ -692,6 +723,8 @@ export interface EnvironmentNonInheritable {
 		destination_address?: string;
 		/** If this binding should be restricted to a set of verified addresses */
 		allowed_destination_addresses?: string[];
+		/** Whether the binding should be remote or not (only available under `--x-remote-bindings`) */
+		experimental_remote?: boolean;
 	}[];
 
 	/**
@@ -983,11 +1016,7 @@ export interface EnvironmentNonInheritable {
 		 * can be used to implement bindings for features that haven't released and aren't supported
 		 * directly by wrangler or miniflare.
 		 */
-		bindings?: {
-			name: string;
-			type: string;
-			[key: string]: unknown;
-		}[];
+		bindings?: UnsafeBinding[];
 
 		/**
 		 * Arbitrary key/value pairs that will be included in the uploaded metadata.  Values specified
@@ -1226,6 +1255,35 @@ export interface Observability {
 		head_sampling_rate?: number;
 		/** Set to false to disable invocation logs */
 		invocation_logs?: boolean;
+		/**
+		 * If logs should be persisted to the Cloudflare observability platform where they can be queried in the dashboard.
+		 *
+		 * @default true
+		 */
+		persist?: boolean;
+		/**
+		 * What destinations logs emitted from the Worker should be sent to.
+		 *
+		 * @default []
+		 */
+		destinations?: string[];
+	};
+	traces?: {
+		enabled?: boolean;
+		/** The sampling rate */
+		head_sampling_rate?: number;
+		/**
+		 * If traces should be persisted to the Cloudflare observability platform where they can be queried in the dashboard.
+		 *
+		 * @default true
+		 */
+		persist?: boolean;
+		/**
+		 * What destinations traces emitted from the Worker should be sent to.
+		 *
+		 * @default []
+		 */
+		destinations?: string[];
 	};
 }
 

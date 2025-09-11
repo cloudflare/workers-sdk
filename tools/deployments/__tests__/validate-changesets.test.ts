@@ -22,6 +22,7 @@ describe("findPackageNames()", () => {
 		expect(findPackageNames()).toEqual(
 			new Set([
 				"@cloudflare/chrome-devtools-patches",
+				"@cloudflare/cli",
 				"@cloudflare/kv-asset-handler",
 				"@cloudflare/pages-shared",
 				"@cloudflare/quick-edit",
@@ -41,7 +42,6 @@ describe("findPackageNames()", () => {
 				"solarflare-theme",
 				"turbo-r2-archive",
 				"workers-playground",
-				"workers.new",
 				"wrangler",
 			])
 		);

@@ -9,5 +9,5 @@
 		"noEmit": true,
 		"skipLibCheck": true
 	},
-	"include": ["tests", "../../node-types.d.ts"]
+	"include": ["tests"]
 }

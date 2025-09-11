@@ -1,7 +1,0 @@
-{
-	"name": "workers-dot-new",
-	"compatibility_date": "2024-01-01",
-	"compatibility_flags": ["nodejs_compat"],
-	"main": "src/index.ts",
-	"workers_dev": false,
-}

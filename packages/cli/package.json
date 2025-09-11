@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/cli",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"private": true,
 	"description": "An SDK to build workers-sdk CLIs",
 	"keywords": [
@@ -19,12 +19,13 @@
 	"scripts": {
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
+		"deploy": "echo 'no deploy'",
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
 		"@clack/core": "^0.3.2",
 		"@clack/prompts": "^0.6.3",
-		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@typescript-eslint/eslint-plugin": "catalog:default",
 		"@typescript-eslint/parser": "catalog:default",

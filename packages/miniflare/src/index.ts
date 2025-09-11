@@ -48,7 +48,9 @@ import {
 	HOST_CAPNP_CONNECT,
 	KV_PLUGIN_NAME,
 	launchBrowser,
+	loadExternalPlugins,
 	normaliseDurableObject,
+	Plugin,
 	PLUGIN_ENTRIES,
 	Plugins,
 	PluginServicesOptions,
@@ -899,6 +901,12 @@ export class Miniflare {
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
 
+	/**
+	 * externalPlugins is a list of external plugins that have been loaded
+	 * after being referenced by an unsafe binding
+	 */
+	#externalPlugins: Map<string, Plugin<z.ZodTypeAny>> = new Map();
+
 	// key is the browser session ID, value is the browser process
 	#browserProcesses: Map<string, Process> = new Map();
 
@@ -1456,6 +1464,61 @@ export class Miniflare {
 		return `${getURLSafeHost(host)}:${requestedPort ?? 0}`;
 	}
 
+	/**
+	 * Load all external plugins referenced by any unsafe bindings, and store them on the class
+	 * Loaded plugins are preserved across runtime reloads, and so should only be loaded once per binding
+	 */
+	async #loadExternalPlugins(workers: PluginWorkerOptions[]): Promise<void> {
+		const requestedExternalPlugins = new Map<
+			/* plugin name */ string,
+			/* package name */ string
+		>();
+
+		// De-duplicate requested external plugins across all Worker bindings
+		for (const worker of workers) {
+			for (const unsafeBinding of worker.core.unsafeBindings ?? []) {
+				requestedExternalPlugins.set(
+					unsafeBinding.plugin.name,
+					unsafeBinding.plugin.package
+				);
+			}
+		}
+
+		for (const [pluginName, packageName] of requestedExternalPlugins) {
+			// Only load "new" plugins. They'll be cached across Worker reloads
+			if (!this.#externalPlugins.has(pluginName)) {
+				const providedPlugins = await loadExternalPlugins(packageName);
+
+				// While this package can provide multiple plugins, make sure it at least provides the requested one
+				if (!providedPlugins[pluginName]) {
+					throw new MiniflareCoreError(
+						"ERR_PLUGIN_LOADING_FAILED",
+						`Package ${packageName} did not provide the plugin '${pluginName}'.`
+					);
+				}
+
+				// Load all plugins provided by this package, even if not requested, as they might be requested by a different Worker/binding.
+				for (const [name, plugin] of Object.entries(providedPlugins)) {
+					this.#externalPlugins.set(name, plugin);
+				}
+			}
+		}
+	}
+
+	/**
+	 * External plugins take an array of unsafe bindings that match the plugin name,
+	 * while internal plugins have more structured config.
+	 */
+	#getWorkerOptsForPlugin(pluginName: string, workerOpts: PluginWorkerOptions) {
+		if (this.#externalPlugins.has(pluginName)) {
+			return workerOpts.core.unsafeBindings?.filter(
+				(b) => b.plugin.name === pluginName
+			);
+		} else {
+			return workerOpts[pluginName as keyof PluginWorkerOptions];
+		}
+	}
+
 	async #assembleConfig(
 		loopbackPort: number,
 		proxyAddress: string | null
@@ -1463,6 +1526,8 @@ export class Miniflare {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
+
+		await this.#loadExternalPlugins(allWorkerOpts);
 
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 		this.#cfObject = sharedOpts.core.cf;
@@ -1520,11 +1585,11 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
-		for (const [key, plugin] of PLUGIN_ENTRIES) {
+		for (const [key, plugin] of this.#mergedPluginEntries) {
 			const pluginExtensions = await plugin.getExtensions?.({
 				// @ts-expect-error `CoreOptionsSchema` has required options which are
 				//  missing in other plugins' options.
-				options: allWorkerOpts.map((o) => o[key]),
+				options: allWorkerOpts.map((o) => this.#getWorkerOptsForPlugin(key, o)),
 			});
 			if (pluginExtensions) {
 				extensions.push(...pluginExtensions);
@@ -1555,10 +1620,12 @@ export class Miniflare {
 			const workerBindings: Worker_Binding[] = [];
 			allWorkerBindings.set(workerName, workerBindings);
 			const additionalModules: Worker_Module[] = [];
-			for (const [key, plugin] of PLUGIN_ENTRIES) {
-				// @ts-expect-error `CoreOptionsSchema` has required options which are
-				//  missing in other plugins' options.
-				const pluginBindings = await plugin.getBindings(workerOpts[key], i);
+
+			for (const [key, plugin] of this.#mergedPluginEntries) {
+				const pluginBindings = await plugin.getBindings(
+					this.#getWorkerOptsForPlugin(key, workerOpts),
+					i
+				);
 				if (pluginBindings !== undefined) {
 					for (const binding of pluginBindings) {
 						// If this is the Workers Sites manifest, we need to add it as a
@@ -1648,12 +1715,14 @@ export class Miniflare {
 				queueProducers,
 				queueConsumers,
 			};
-			for (const [key, plugin] of PLUGIN_ENTRIES) {
+			for (const [key, plugin] of this.#mergedPluginEntries) {
+				const workerOptions = this.#getWorkerOptsForPlugin(key, workerOpts);
+
 				const pluginServicesExtensions = await plugin.getServices({
 					...pluginServicesOptionsBase,
 					// @ts-expect-error `CoreOptionsSchema` has required options which are
 					//  missing in other plugins' options.
-					options: workerOpts[key],
+					options: workerOptions,
 					// @ts-expect-error `QueuesPlugin` doesn't define shared options
 					sharedOptions: sharedOpts[key],
 				});
@@ -2416,10 +2485,10 @@ export class Miniflare {
 		workerName = workerOpts.core.name ?? "";
 
 		// Populate bindings from each plugin
-		for (const [key, plugin] of PLUGIN_ENTRIES) {
-			// @ts-expect-error `CoreOptionsSchema` has required options which are
-			//  missing in other plugins' options.
-			const pluginBindings = await plugin.getNodeBindings(workerOpts[key]);
+		for (const [key, plugin] of this.#mergedPluginEntries) {
+			const pluginBindings = await plugin.getNodeBindings(
+				this.#getWorkerOptsForPlugin(key, workerOpts)
+			);
 			for (const [name, binding] of Object.entries(pluginBindings)) {
 				if (binding instanceof ProxyNodeBinding) {
 					const proxyBindingName = getProxyBindingName(key, workerName, name);
@@ -2578,6 +2647,10 @@ export class Miniflare {
 			if (maybePath !== undefined) result.set(key, maybePath);
 		}
 		return result;
+	}
+
+	get #mergedPluginEntries() {
+		return [...PLUGIN_ENTRIES, ...this.#externalPlugins.entries()];
 	}
 
 	async dispose(): Promise<void> {

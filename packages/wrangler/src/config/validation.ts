@@ -79,13 +79,15 @@ export function isPagesConfig(rawConfig: RawConfig): boolean {
  * @param configPath The path to the config file
  * @param userConfigPath
  * @param args
+ * @param preserveOriginalMain
  * @returns The normalized `config` and `diagnostics` message
  */
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
 	userConfigPath: string | undefined,
-	args: NormalizeAndValidateConfigArgs
+	args: NormalizeAndValidateConfigArgs,
+	preserveOriginalMain = false
 ): {
 	config: Config;
 	diagnostics: Diagnostics;
@@ -158,7 +160,8 @@ export function normalizeAndValidateConfig(
 		diagnostics,
 		configPath,
 		rawConfig,
-		isDispatchNamespace
+		isDispatchNamespace,
+		preserveOriginalMain
 	);
 
 	const isRedirectedConfig = configPath && configPath !== userConfigPath;
@@ -223,6 +226,7 @@ export function normalizeAndValidateConfig(
 					configPath,
 					rawEnv,
 					isDispatchNamespace,
+					preserveOriginalMain,
 					envName,
 					topLevelEnv,
 					isLegacyEnv,
@@ -235,6 +239,7 @@ export function normalizeAndValidateConfig(
 					configPath,
 					topLevelEnv, // in this case reuse the topLevelEnv to ensure that nonInherited fields are not removed
 					isDispatchNamespace,
+					preserveOriginalMain,
 					envName,
 					topLevelEnv,
 					isLegacyEnv,
@@ -978,7 +983,8 @@ function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	topLevelEnv: RawEnvironment,
-	isDispatchNamespace: boolean
+	isDispatchNamespace: boolean,
+	preserveOriginalMain: boolean
 ): Environment;
 /**
  * Validate the named environment configuration and return the normalized values.
@@ -988,29 +994,18 @@ function normalizeAndValidateEnvironment(
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
 	isDispatchNamespace: boolean,
+	preserveOriginalMain: boolean,
 	envName: string,
 	topLevelEnv: Environment,
 	isLegacyEnv: boolean,
 	rawConfig: RawConfig
 ): Environment;
-/**
- * Validate the named environment configuration and return the normalized values.
- */
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
 	isDispatchNamespace: boolean,
-	envName?: string,
-	topLevelEnv?: Environment,
-	isLegacyEnv?: boolean,
-	rawConfig?: RawConfig
-): Environment;
-function normalizeAndValidateEnvironment(
-	diagnostics: Diagnostics,
-	configPath: string | undefined,
-	rawEnv: RawEnvironment,
-	isDispatchNamespace: boolean,
+	preserveOriginalMain: boolean,
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
 	isLegacyEnv?: boolean,
@@ -1121,10 +1116,26 @@ function normalizeAndValidateEnvironment(
 			appendEnvName(envName),
 			undefined
 		),
-		main: normalizeAndValidateMainField(
-			configPath,
-			inheritable(diagnostics, topLevelEnv, rawEnv, "main", isString, undefined)
-		),
+		main: preserveOriginalMain
+			? inheritable(
+					diagnostics,
+					topLevelEnv,
+					rawEnv,
+					"main",
+					isString,
+					undefined
+				)
+			: normalizeAndValidateMainField(
+					configPath,
+					inheritable(
+						diagnostics,
+						topLevelEnv,
+						rawEnv,
+						"main",
+						isString,
+						undefined
+					)
+				),
 		find_additional_modules: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -4076,7 +4087,7 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	let isValid = true;
 
 	/**
-	 * One of observability.enabled or observability.logs.enabled must be defined
+	 * One of observability.enabled, observability.logs.enabled, observability.traces.enabled must be defined
 	 */
 	isValid =
 		validateAtLeastOnePropertyRequired(diagnostics, field, [
@@ -4088,6 +4099,11 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			{
 				key: "logs.enabled",
 				value: val.logs?.enabled,
+				type: "boolean",
+			},
+			{
+				key: "traces.enabled",
+				value: val.traces?.enabled,
 				type: "boolean",
 			},
 		]) && isValid;
@@ -4106,10 +4122,20 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 		isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"traces",
+			val.traces,
+			"object"
+		) && isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
 			"enabled",
 			"head_sampling_rate",
 			"logs",
+			"traces",
 		]) && isValid;
 
 	/**
@@ -4144,11 +4170,59 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			) && isValid;
 
 		isValid =
+			validateOptionalTypedArray(
+				diagnostics,
+				"logs.destinations",
+				val.logs?.destinations,
+				"string"
+			) && isValid;
+
+		isValid =
 			validateAdditionalProperties(diagnostics, field, Object.keys(val.logs), [
 				"enabled",
 				"head_sampling_rate",
 				"invocation_logs",
+				"destinations",
 			]) && isValid;
+	}
+
+	/**
+	 * Validate the optional nested traces configuration
+	 */
+	if (typeof val.traces === "object") {
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"traces.enabled",
+				val.traces.enabled,
+				"boolean"
+			) && isValid;
+
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"traces.head_sampling_rate",
+				val.traces.head_sampling_rate,
+				"number"
+			) && isValid;
+
+		isValid =
+			validateOptionalTypedArray(
+				diagnostics,
+				"traces.destinations",
+				val.traces?.destinations,
+				"string"
+			) && isValid;
+
+		isValid =
+			validateAdditionalProperties(
+				diagnostics,
+				field,
+				Object.keys(val.traces),
+				["enabled", "head_sampling_rate", "destinations"]
+			) && isValid;
 	}
 
 	const samplingRate = val?.head_sampling_rate;
