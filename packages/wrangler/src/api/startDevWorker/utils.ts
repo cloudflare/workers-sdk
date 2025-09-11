@@ -281,6 +281,11 @@ export function convertCfWorkerInitBindingsToBindings(
 				}
 				break;
 			}
+			case "media": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "media", ...x };
+				break;
+			}
 			default: {
 				assertNever(type);
 			}
@@ -324,6 +329,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		assets: undefined,
 		pipelines: undefined,
 		unsafe_hello_world: undefined,
+		media: undefined,
 	};
 
 	const fetchers: Record<string, ServiceFetch> = {};
@@ -413,6 +419,8 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "unsafe_hello_world") {
 			bindings.unsafe_hello_world ??= [];
 			bindings.unsafe_hello_world.push({ ...binding, binding: name });
+		} else if (binding.type === "media") {
+			bindings.media = { ...binding, binding: name };
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],

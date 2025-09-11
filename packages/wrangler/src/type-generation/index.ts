@@ -347,6 +347,7 @@ export async function generateEnvTypes(
 		pipelines: config.pipelines,
 		secrets_store_secrets: config.secrets_store_secrets,
 		unsafe_hello_world: config.unsafe_hello_world,
+		media: config.media,
 	};
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
@@ -586,6 +587,13 @@ export async function generateEnvTypes(
 		envTypeStructure.push([
 			constructTypeKey(configToDTS.images.binding),
 			"ImagesBinding",
+		]);
+	}
+
+	if (configToDTS.media) {
+		envTypeStructure.push([
+			constructTypeKey(configToDTS.media.binding),
+			"MediaBinding",
 		]);
 	}
 

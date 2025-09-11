@@ -117,6 +117,13 @@ export async function mapWorkerMetadataBindings(
 							};
 						}
 						break;
+					case "media":
+						{
+							configObj.media = {
+								binding: binding.name,
+							};
+						}
+						break;
 					case "r2_bucket":
 						{
 							configObj.r2_buckets = [

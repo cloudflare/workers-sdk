@@ -1413,6 +1413,16 @@ function normalizeAndValidateEnvironment(
 			validateNamedSimpleBinding(envName),
 			undefined
 		),
+		media: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"media",
+			validateNamedSimpleBinding(envName),
+			undefined
+		),
 		pipelines: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2364,6 +2374,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"logfwdr",
 			"mtls_certificate",
 			"pipeline",
+			"media",
 		];
 
 		if (safeBindings.includes(value.type)) {
