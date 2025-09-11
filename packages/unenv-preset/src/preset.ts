@@ -78,6 +78,7 @@ export function getCloudflarePreset({
 	const domainOverrides = getDomainOverrides(compat);
 	const wasiOverrides = getWasiOverrides(compat);
 	const consoleOverrides = getConsoleOverrides(compat);
+	const vmOverrides = getVmOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -92,6 +93,7 @@ export function getCloudflarePreset({
 		...domainOverrides.nativeModules,
 		...wasiOverrides.nativeModules,
 		...consoleOverrides.nativeModules,
+		...vmOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -107,6 +109,7 @@ export function getCloudflarePreset({
 		...domainOverrides.hybridModules,
 		...wasiOverrides.hybridModules,
 		...consoleOverrides.hybridModules,
+		...vmOverrides.hybridModules,
 	];
 
 	return {
@@ -555,5 +558,41 @@ function getConsoleOverrides({
 				nativeModules: [],
 				hybridModules: ["console"],
 				inject: { console: "@cloudflare/unenv-preset/node/console" },
+			};
+}
+
+/**
+ * Returns the overrides for `node:vm` (unenv or workerd)
+ *
+ * The native vm implementation:
+ * - is enabled starting from 2025-10-01
+ * - can be enabled with the "enable_nodejs_vm_module" flag
+ * - can be disabled with the "disable_nodejs_vm_module" flag
+ */
+function getVmOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_vm_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes("enable_nodejs_vm_module");
+	const enabledByDate = compatibilityDate >= "2025-10-01";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	// The native `vm` module implements all the node APIs so we can use it directly
+	return enabled
+		? {
+				nativeModules: ["vm"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
 			};
 }
