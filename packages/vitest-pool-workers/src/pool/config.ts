@@ -48,7 +48,7 @@ const WorkersPoolOptionsSchema = z.object({
 	 * Enables remote bindings to access remote resources configured
 	 * with `remote: true` in the wrangler configuration file.
 	 */
-	remoteBindings: z.boolean().default(true).optional(),
+	remoteBindings: z.boolean().default(true),
 	/**
 	 * Runs all tests in this project serially in the same worker, using the same
 	 * module cache. This can significantly speed up tests if you've got lots of
@@ -254,15 +254,16 @@ async function parseCustomPoolOptions(
 			? remoteProxySessionsDataMap.get(options.wrangler.configPath)
 			: undefined;
 
-		const remoteProxySessionData = options.remoteBindings
-			? await wrangler.maybeStartOrUpdateRemoteProxySession(
-					{
-						path: options.wrangler.configPath,
-						environment: options.wrangler.environment,
-					},
-					preExistingRemoteProxySessionData ?? null
-				)
-			: null;
+		const remoteProxySessionData =
+			options.remoteBindings ?? true
+				? await wrangler.maybeStartOrUpdateRemoteProxySession(
+						{
+							path: options.wrangler.configPath,
+							environment: options.wrangler.environment,
+						},
+						preExistingRemoteProxySessionData ?? null
+					)
+				: null;
 
 		if (options.wrangler?.configPath && remoteProxySessionData) {
 			remoteProxySessionsDataMap.set(
@@ -282,7 +283,7 @@ async function parseCustomPoolOptions(
 						// doesn't work with containers yet so let's just disable it
 						enableContainers: false,
 					},
-					remoteBindingsEnabled: options.remoteBindings,
+					remoteBindingsEnabled: options.remoteBindings ?? true,
 					remoteProxyConnectionString:
 						remoteProxySessionData?.session?.remoteProxyConnectionString,
 				}
