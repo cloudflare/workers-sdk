@@ -1,8 +1,0 @@
-{
-	"name": "ai-app",
-	"compatibility_date": "2023-11-21",
-	"main": "src/index.js",
-	"ai": {
-		"binding": "AI",
-	},
-}
