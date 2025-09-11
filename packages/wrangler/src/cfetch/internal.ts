@@ -203,7 +203,7 @@ export async function fetchInternal<ResponseType>(
 	}
 }
 
-export function truncate(text: string, maxLength: number): string {
+function truncate(text: string, maxLength: number): string {
 	const { length } = text;
 	if (length <= maxLength) {
 		return text;

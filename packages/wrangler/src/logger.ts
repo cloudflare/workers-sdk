@@ -122,25 +122,17 @@ export class Logger {
 	log = (...args: unknown[]) => this.doLog("log", args);
 	warn = (...args: unknown[]) => this.doLog("warn", args);
 	error = (...args: unknown[]) => this.doLog("error", args);
-	table<Keys extends string>(
-		data: TableRow<Keys>[],
-		options?: { wordWrap: boolean; head?: Keys[] }
-	) {
-		const derivedHead =
+	table<Keys extends string>(data: TableRow<Keys>[]) {
+		const keys: Keys[] =
 			data.length === 0 ? [] : (Object.keys(data[0]) as Keys[]);
-		const wordWrap = options?.wordWrap ?? false;
-		const head = options?.head ?? derivedHead;
-
-		const tableOptions = {
+		const t = new CLITable({
+			head: keys,
 			style: {
 				head: chalk.level ? ["blue"] : [],
 				border: chalk.level ? ["gray"] : [],
 			},
-			wordWrap,
-			head,
-		};
-		const t = new CLITable(tableOptions);
-		t.push(...data.map((row) => head.map((k) => row[k])));
+		});
+		t.push(...data.map((row) => keys.map((k) => row[k])));
 		return this.doLog("log", [t.toString()]);
 	}
 	console<M extends Exclude<keyof Console, "Console">>(
