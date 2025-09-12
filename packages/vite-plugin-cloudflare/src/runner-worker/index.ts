@@ -107,7 +107,7 @@ function getRpcPropertyCallableThenable(
  */
 function getRpcProperty(
 	ctor: WorkerEntrypointConstructor | DurableObjectConstructor,
-	instance: WorkerEntrypoint | DurableObject,
+	instance: WorkerEntrypoint<unknown> | DurableObject<unknown>,
 	key: string
 ): unknown {
 	const prototypeHasKey = Reflect.has(ctor.prototype, key);
@@ -147,7 +147,7 @@ async function getWorkerEntrypointRpcProperty(
 	const ctor = (await getWorkerEntryExport(
 		workerEntryPath,
 		exportName
-	)) as WorkerEntrypointConstructor;
+	)) as WorkerEntrypointConstructor<unknown>;
 	const userEnv = stripInternalEnv(this.env);
 	const expectedWorkerEntrypointMessage = `Expected "${exportName}" export of "${workerEntryPath}" to be a subclass of \`WorkerEntrypoint\` for RPC.`;
 
@@ -298,7 +298,7 @@ const kEnsureInstance = Symbol("kEnsureInstance");
  */
 interface DurableObjectInstance {
 	ctor: DurableObjectConstructor;
-	instance: DurableObject;
+	instance: DurableObject<unknown>;
 }
 
 /**
@@ -385,7 +385,7 @@ export function createDurableObjectWrapper(
 			});
 		}
 
-		async [kEnsureInstance]() {
+		async [kEnsureInstance](): Promise<DurableObjectInstance> {
 			const ctor = (await getWorkerEntryExport(
 				workerEntryPath,
 				exportName
@@ -446,7 +446,7 @@ export function createWorkflowEntrypointWrapper(
 			const ctor = (await getWorkerEntryExport(
 				workerEntryPath,
 				exportName
-			)) as WorkflowEntrypointConstructor;
+			)) as WorkflowEntrypointConstructor<unknown>;
 			const userEnv = stripInternalEnv(this.env);
 			const instance = new ctor(this.ctx, userEnv);
 
