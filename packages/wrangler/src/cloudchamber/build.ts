@@ -97,7 +97,7 @@ export async function buildAndMaybePush(
 	containerConfig?: Exclude<ContainerNormalizedConfig, ImageURIConfig>
 ): Promise<ImageRef> {
 	try {
-		const imageTag = `${getCloudflareContainerRegistry()}/${args.tag}`;
+		const imageTag = args.tag;
 		const { buildCmd, dockerfile } = await constructBuildCommand(
 			{
 				tag: imageTag,
