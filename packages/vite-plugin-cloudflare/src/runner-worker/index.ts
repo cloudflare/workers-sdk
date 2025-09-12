@@ -244,88 +244,86 @@ export function createWorkerEntrypointWrapper(
 
 	for (const key of WORKER_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (arg) {
-			if (key === "fetch") {
-				const request = arg as Request;
-				const url = new URL(request.url);
+			return maybeCaptureError(async () => {
+				if (key === "fetch") {
+					const request = arg as Request;
+					const url = new URL(request.url);
 
-				// Initialize the module runner
-				if (url.pathname === INIT_PATH) {
-					const workerEntryPathHeader = request.headers.get(
-						WORKER_ENTRY_PATH_HEADER
-					);
+					// Initialize the module runner
+					if (url.pathname === INIT_PATH) {
+						const workerEntryPathHeader = request.headers.get(
+							WORKER_ENTRY_PATH_HEADER
+						);
 
-					if (!workerEntryPathHeader) {
-						throw new Error(
-							`Unexpected error: "${WORKER_ENTRY_PATH_HEADER}" header not set.`
+						if (!workerEntryPathHeader) {
+							throw new Error(
+								`Unexpected error: "${WORKER_ENTRY_PATH_HEADER}" header not set.`
+							);
+						}
+
+						const isEntryWorkerHeader = request.headers.get(
+							IS_ENTRY_WORKER_HEADER
+						);
+
+						if (!isEntryWorkerHeader) {
+							throw new Error(
+								`Unexpected error: "${IS_ENTRY_WORKER_HEADER}" header not set.`
+							);
+						}
+
+						// Set the Worker entry path
+						workerEntryPath = workerEntryPathHeader;
+						isEntryWorker = isEntryWorkerHeader === "true";
+						const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
+
+						// Forward the request to the Durable Object to initialize the module runner and return the WebSocket
+						return stub.fetch(request);
+					}
+				}
+
+				const exportValue = await getWorkerEntryExport(
+					workerEntryPath,
+					exportName
+				);
+				const userEnv = stripInternalEnv(this.env);
+
+				if (typeof exportValue === "object" && exportValue !== null) {
+					// The export is an `ExportedHandler`
+					const maybeFn = (exportValue as Record<string, unknown>)[key];
+
+					if (typeof maybeFn !== "function") {
+						throw new TypeError(
+							`Expected "${exportName}" export of "${workerEntryPath}" to define a \`${key}()\` function.`
 						);
 					}
 
-					const isEntryWorkerHeader = request.headers.get(
-						IS_ENTRY_WORKER_HEADER
-					);
+					return maybeFn.call(exportValue, arg, userEnv, this.ctx);
+				} else if (typeof exportValue === "function") {
+					// The export is a `WorkerEntrypoint`
+					const ctor = exportValue as WorkerEntrypointConstructor;
+					const instance = new ctor(this.ctx, userEnv);
 
-					if (!isEntryWorkerHeader) {
-						throw new Error(
-							`Unexpected error: "${IS_ENTRY_WORKER_HEADER}" header not set.`
+					if (!(instance instanceof WorkerEntrypoint)) {
+						throw new TypeError(
+							`Expected "${exportName}" export of "${workerEntryPath}" to be a subclass of \`WorkerEntrypoint\`.`
 						);
 					}
 
-					// Set the Worker entry path
-					workerEntryPath = workerEntryPathHeader;
-					isEntryWorker = isEntryWorkerHeader === "true";
-					const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
+					const maybeFn = instance[key];
 
-					// Forward the request to the Durable Object to initialize the module runner and return the WebSocket
-					return stub.fetch(request);
-				}
-			}
+					if (typeof maybeFn !== "function") {
+						throw new TypeError(
+							`Expected "${exportName}" export of "${workerEntryPath}" to define a \`${key}()\` method.`
+						);
+					}
 
-			const exportValue = await getWorkerEntryExport(
-				workerEntryPath,
-				exportName
-			);
-			const userEnv = stripInternalEnv(this.env);
-
-			if (typeof exportValue === "object" && exportValue !== null) {
-				// The export is an `ExportedHandler`
-				const maybeFn = (exportValue as Record<string, unknown>)[key];
-
-				if (typeof maybeFn !== "function") {
-					throw new TypeError(
-						`Expected "${exportName}" export of "${workerEntryPath}" to define a \`${key}()\` function.`
+					return (maybeFn as (arg: unknown) => unknown).call(instance, arg);
+				} else {
+					return new TypeError(
+						`Expected "${exportName}" export of "${workerEntryPath}" to be an object or a class.`
 					);
 				}
-
-				return maybeCaptureError(() =>
-					maybeFn.call(exportValue, arg, userEnv, this.ctx)
-				);
-			} else if (typeof exportValue === "function") {
-				// The export is a `WorkerEntrypoint`
-				const ctor = exportValue as WorkerEntrypointConstructor;
-				const instance = new ctor(this.ctx, userEnv);
-
-				if (!(instance instanceof WorkerEntrypoint)) {
-					throw new TypeError(
-						`Expected "${exportName}" export of "${workerEntryPath}" to be a subclass of \`WorkerEntrypoint\`.`
-					);
-				}
-
-				const maybeFn = instance[key];
-
-				if (typeof maybeFn !== "function") {
-					throw new TypeError(
-						`Expected "${exportName}" export of "${workerEntryPath}" to define a \`${key}()\` method.`
-					);
-				}
-
-				return maybeCaptureError(() =>
-					(maybeFn as (arg: unknown) => unknown).call(instance, arg)
-				);
-			} else {
-				return new TypeError(
-					`Expected "${exportName}" export of "${workerEntryPath}" to be an object or a class.`
-				);
-			}
+			});
 		};
 	}
 
