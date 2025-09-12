@@ -3,7 +3,7 @@ import { vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs } from "./helpers/mock-dialogs";
+import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -101,6 +101,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should handle creating a hyperdrive config", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb'"
@@ -136,6 +142,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should handle creating a hyperdrive and printing a TOML snipped", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		writeWranglerConfig();
 		await runWrangler(
@@ -168,6 +180,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should handle creating a hyperdrive config for postgres without a port specified", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/neondb'"
@@ -202,6 +220,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should handle creating a hyperdrive config for postgres without a port specified", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='mysql://test:password@example.com/neondb'"
@@ -274,6 +298,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should handle creating a hyperdrive config with origin_connection_limit", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb' --origin-connection-limit=50"
@@ -309,6 +339,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should handle creating a hyperdrive config if the user is URL encoded", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://user%3Aname:password@example.com/neondb'"
@@ -343,6 +379,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should handle creating a hyperdrive config if the password is URL encoded", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:a%23%3F81n%287@example.com/neondb'"
@@ -377,6 +419,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should handle creating a hyperdrive config if the database name is URL encoded", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/%22weird%22%20dbname'"
@@ -411,6 +459,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should create a hyperdrive config given individual params instead of a connection string without a scheme set", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=5432"
@@ -445,6 +499,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should create a hyperdrive config given individual params instead of a connection string", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234"
@@ -479,6 +539,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should create a hyperdrive config given individual params instead of a connection string", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --origin-scheme=mysql"
@@ -554,6 +620,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should create a hyperdrive over access config given the right params", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --access-client-id=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access --access-client-secret=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -588,6 +660,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should create a hyperdrive over access config with a path in the host", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com/database --database=neondb --user=test --password=password --access-client-id=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access --access-client-secret=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -650,6 +728,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should successfully create a hyperdrive with mtls config and sslmode=verify-full", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --ca-certificate-id=12345 --mtls-certificate-id=1234 --sslmode=verify-full"
@@ -688,6 +772,12 @@ describe("hyperdrive commands", () => {
 	});
 
 	it("should successfully create a hyperdrive with mtls config and sslmode=require", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=require"
@@ -1168,6 +1258,332 @@ describe("hyperdrive commands", () => {
 			  \\"origin_connection_limit\\": 25
 			}"
 		`);
+	});
+
+	it("should prompt for caching when no caching options are provided and user selects yes", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: true,
+		});
+
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb'"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			Object {
+			  "name": "test123",
+			  "origin": Object {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 12345,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should prompt for caching when no caching options are provided and user selects no", async () => {
+		mockConfirm({
+			text: "Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+			options: { defaultValue: true },
+			result: false,
+		});
+
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb'"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			Object {
+			  "caching": Object {
+			    "disabled": true,
+			  },
+			  "name": "test123",
+			  "origin": Object {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 12345,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should not prompt for caching when caching options are already provided", async () => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb' --caching-disabled"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			Object {
+			  "caching": Object {
+			    "disabled": true,
+			  },
+			  "name": "test123",
+			  "origin": Object {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 12345,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should not prompt for caching when max-age option is provided", async () => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb' --max-age=30"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			Object {
+			  "caching": Object {
+			    "max_age": 30,
+			  },
+			  "name": "test123",
+			  "origin": Object {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 12345,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should error when creating hyperdrive with conflicting caching options", async () => {
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb' --caching-disabled --max-age=30"
+			)
+		).rejects.toThrow("Cannot set --max-age or --swr when caching is disabled with --caching-disabled");
+	});
+
+	it("should not prompt for caching in non-interactive environment and use default behavior", async () => {
+		// Simulate non-interactive environment
+		setIsTTY(false);
+
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb'"
+		);
+
+		// Should create without prompting and use default caching behavior (enabled)
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			Object {
+			  "name": "test123",
+			  "origin": Object {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 12345,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
+		`);
+	});
+});
+
+describe("getCacheOptionsFromArgs", () => {
+	it("should return undefined when no caching options are provided", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		const result = getCacheOptionsFromArgs({
+			cachingDisabled: undefined,
+			maxAge: undefined,
+			swr: undefined,
+		} as any);
+		expect(result).toBeUndefined();
+	});
+
+	it("should return caching options when cachingDisabled is true", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		const result = getCacheOptionsFromArgs({
+			cachingDisabled: true,
+			maxAge: undefined,
+			swr: undefined,
+		} as any);
+		expect(result).toEqual({ disabled: true });
+	});
+
+	it("should return caching options when cachingDisabled is false", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		const result = getCacheOptionsFromArgs({
+			cachingDisabled: false,
+			maxAge: undefined,
+			swr: undefined,
+		} as any);
+		expect(result).toEqual({ disabled: false });
+	});
+
+	it("should return caching options when max-age is provided", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		const result = getCacheOptionsFromArgs({
+			cachingDisabled: undefined,
+			maxAge: 30,
+			swr: undefined,
+		} as any);
+		expect(result).toEqual({ max_age: 30 });
+	});
+
+	it("should return caching options when swr is provided", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		const result = getCacheOptionsFromArgs({
+			cachingDisabled: undefined,
+			maxAge: undefined,
+			swr: 15,
+		} as any);
+		expect(result).toEqual({ stale_while_revalidate: 15 });
+	});
+
+	it("should return combined caching options when multiple options are provided", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		const result = getCacheOptionsFromArgs({
+			cachingDisabled: false,
+			maxAge: 30,
+			swr: 15,
+		} as any);
+		expect(result).toEqual({
+			disabled: false,
+			max_age: 30,
+			stale_while_revalidate: 15,
+		});
+	});
+
+	it("should throw error when caching is disabled but max-age is provided", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		expect(() => {
+			getCacheOptionsFromArgs({
+				cachingDisabled: true,
+				maxAge: 30,
+				swr: undefined,
+			} as any);
+		}).toThrow("Cannot set --max-age or --swr when caching is disabled with --caching-disabled");
+	});
+
+	it("should throw error when caching is disabled but swr is provided", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		expect(() => {
+			getCacheOptionsFromArgs({
+				cachingDisabled: true,
+				maxAge: undefined,
+				swr: 15,
+			} as any);
+		}).toThrow("Cannot set --max-age or --swr when caching is disabled with --caching-disabled");
+	});
+
+	it("should throw error when caching is disabled but both max-age and swr are provided", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		expect(() => {
+			getCacheOptionsFromArgs({
+				cachingDisabled: true,
+				maxAge: 30,
+				swr: 15,
+			} as any);
+		}).toThrow("Cannot set --max-age or --swr when caching is disabled with --caching-disabled");
+	});
+
+	it("should not throw error when caching is explicitly enabled with max-age and swr", async () => {
+		const { getCacheOptionsFromArgs } = await import("../hyperdrive");
+		const result = getCacheOptionsFromArgs({
+			cachingDisabled: false,
+			maxAge: 30,
+			swr: 15,
+		} as any);
+		expect(result).toEqual({
+			disabled: false,
+			max_age: 30,
+			stale_while_revalidate: 15,
+		});
 	});
 });
 
