@@ -95,12 +95,8 @@ export type CfSendEmailBindings = {
 } & (
 	| { destination_address?: string }
 	| { allowed_destination_addresses?: string[] }
+	| { allowed_sender_addresses?: string[] }
 );
-// export interface CfSendEmailBindings {
-// 	name: string;
-// 	destination_address?: string | undefined;
-// 	allowed_destination_addresses?: string[] | undefined;
-// }
 
 /**
  * A binding to a wasm module (in service-worker format)

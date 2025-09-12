@@ -10,6 +10,7 @@ interface SendEmailEnv {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	destination_address: string | undefined;
 	allowed_destination_addresses: string[] | undefined;
+	allowed_sender_addresses: string[] | undefined;
 }
 
 export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
@@ -28,8 +29,17 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			throw new Error(`email to ${to} not allowed`);
 		}
 	}
+	private checkSenderAllowed(from: string) {
+		if (
+			this.env.allowed_sender_addresses !== undefined &&
+			!this.env.allowed_sender_addresses.includes(from)
+		) {
+			throw new Error(`email from ${from} not allowed`);
+		}
+	}
 	async send(emailMessage: EmailMessage): Promise<void> {
 		this.checkDestinationAllowed(emailMessage.to);
+		this.checkSenderAllowed(emailMessage.from);
 
 		const rawEmail: ReadableStream<Uint8Array> = emailMessage[RAW_EMAIL];
 

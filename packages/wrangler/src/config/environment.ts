@@ -723,6 +723,8 @@ export interface EnvironmentNonInheritable {
 		destination_address?: string;
 		/** If this binding should be restricted to a set of verified addresses */
 		allowed_destination_addresses?: string[];
+		/** If this binding should be restricted to a set of sender addresses */
+		allowed_sender_addresses?: string[];
 		/** Whether the binding should be remote or not */
 		remote?: boolean;
 	}[];
