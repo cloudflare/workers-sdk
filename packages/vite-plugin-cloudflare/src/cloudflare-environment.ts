@@ -4,6 +4,7 @@ import * as vite from "vite";
 import { MAIN_ENTRY_NAME } from "./constants";
 import {
 	INIT_PATH,
+	IS_ENTRY_WORKER_HEADER,
 	UNKNOWN_HOST,
 	VIRTUAL_WORKER_ENTRY,
 	WORKER_ENTRY_PATH_HEADER,
@@ -95,7 +96,8 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 	async initRunner(
 		worker: ReplaceWorkersTypes<Fetcher>,
-		workerConfig: WorkerConfig
+		workerConfig: WorkerConfig,
+		isEntryWorker: boolean
 	) {
 		this.#worker = worker;
 
@@ -104,6 +106,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			{
 				headers: {
 					[WORKER_ENTRY_PATH_HEADER]: workerConfig.main,
+					[IS_ENTRY_WORKER_HEADER]: String(isEntryWorker),
 					upgrade: "websocket",
 				},
 			}
@@ -251,12 +254,14 @@ export function initRunners(
 			async ([environmentName, workerConfig]) => {
 				debuglog("Initializing worker:", workerConfig.name);
 				const worker = await miniflare.getWorker(workerConfig.name);
+				const isEntryWorker =
+					environmentName === resolvedPluginConfig.entryWorkerEnvironmentName;
 
 				return (
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(worker, workerConfig);
+				).initRunner(worker, workerConfig, isEntryWorker);
 			}
 		)
 	);

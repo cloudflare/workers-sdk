@@ -2,6 +2,7 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 
 export default class extends WorkerEntrypoint {
 	override fetch() {
+		console.log(x);
 		return Response.json({
 			name: "Worker B",
 		});
