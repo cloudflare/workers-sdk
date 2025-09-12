@@ -588,6 +588,13 @@ export async function disableR2Catalog(
 	);
 }
 
+type R2CatalogCompactionConfig = {
+	state: "enabled" | "disabled";
+
+	// If undefined, the service will set the default value
+	targetSizeMb?: number;
+};
+
 type R2CatalogCompactionResponse = {
 	success: boolean;
 };
@@ -599,18 +606,20 @@ export async function enableR2CatalogCompaction(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
-	namespace: string,
-	tableName: string
+	targetSizeMb: number | undefined
 ): Promise<R2CatalogCompactionResponse> {
+	const config: R2CatalogCompactionConfig = {
+		state: "enabled",
+		targetSizeMb,
+	};
+
 	return await fetchResult(
 		complianceConfig,
-		`/accounts/${accountId}/r2-catalog/${bucketName}/namespaces/${namespace}/tables/${tableName}/maintenance-configs`,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/maintenance-configs`,
 		{
 			method: "POST",
 			body: JSON.stringify({
-				configuration_type: "compaction",
-				configuration: {},
-				state: "enabled",
+				compaction: config,
 			}),
 			headers: {
 				"Content-Type": "application/json",
@@ -625,17 +634,48 @@ export async function enableR2CatalogCompaction(
 export async function disableR2CatalogCompaction(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	bucketName: string,
-	namespace: string,
-	tableName: string
+	bucketName: string
 ): Promise<R2CatalogCompactionResponse> {
+	const config: R2CatalogCompactionConfig = {
+		state: "disabled",
+	};
+
 	return await fetchResult(
 		complianceConfig,
-		`/accounts/${accountId}/r2-catalog/${bucketName}/namespaces/${namespace}/tables/${tableName}/maintenance-configs/compaction`,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/maintenance-configs`,
 		{
-			method: "PUT",
+			method: "POST",
 			body: JSON.stringify({
-				state: "disabled",
+				compaction: config,
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+}
+
+type R2CatalogCredentialResponse = {
+	success: boolean;
+};
+
+/**
+ * Sets a Cloudflare token which R2 Data Catalog uses for async table maintenance
+ * jobs (such as file compaction), where it needs direct access to the customer's R2 bucket.
+ */
+export async function upsertR2DataCatalogCredential(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	token: string
+): Promise<R2CatalogCredentialResponse> {
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/credential`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				token,
 			}),
 			headers: {
 				"Content-Type": "application/json",

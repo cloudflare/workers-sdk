@@ -969,7 +969,7 @@ describe("r2", () => {
 					  wrangler r2 bucket catalog enable <bucket>   Enable the data catalog on an R2 bucket [open-beta]
 					  wrangler r2 bucket catalog disable <bucket>  Disable the data catalog for an R2 bucket [open-beta]
 					  wrangler r2 bucket catalog get <bucket>      Get the status of the data catalog for an R2 bucket [open-beta]
-					  wrangler r2 bucket catalog compaction        Manage compaction maintenance for tables in your R2 data catalog [private-beta]
+					  wrangler r2 bucket catalog compaction        Control settings for automatic file compaction maintenance jobs for your R2 data catalog [open-beta]
 
 					GLOBAL FLAGS
 					  -c, --config    Path to Wrangler configuration file  [string]
@@ -1249,11 +1249,11 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						"
 						wrangler r2 bucket catalog compaction
 
-						Manage compaction maintenance for tables in your R2 data catalog [private-beta]
+						Control settings for automatic file compaction maintenance jobs for your R2 data catalog [open-beta]
 
 						COMMANDS
-						  wrangler r2 bucket catalog compaction enable <bucket>   Enable compaction maintenance for a table in the R2 data catalog [private-beta]
-						  wrangler r2 bucket catalog compaction disable <bucket>  Disable compaction maintenance for a table in the R2 data catalog [private-beta]
+						  wrangler r2 bucket catalog compaction enable <bucket>   Enable automatic file compaction for your R2 data catalog [open-beta]
+						  wrangler r2 bucket catalog compaction disable <bucket>  Disable automatic file compaction for your R2 data catalog [open-beta]
 
 						GLOBAL FLAGS
 						  -c, --config    Path to Wrangler configuration file  [string]
@@ -1266,16 +1266,32 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				});
 
 				describe("enable", () => {
-					it("should enable compaction for the given table", async () => {
+					it("should enable compaction for the catalog", async () => {
 						msw.use(
 							http.post(
-								"*/accounts/some-account-id/r2-catalog/testBucket/namespaces/testNamespace/tables/testTable/maintenance-configs",
+								"*/accounts/some-account-id/r2-catalog/testBucket/credential",
 								async ({ request }) => {
 									const body = await request.json();
+									expect(request.method).toEqual("POST");
 									expect(body).toEqual({
-										configuration_type: "compaction",
-										configuration: {},
-										state: "enabled",
+										token: "fakecloudflaretoken",
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							),
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										compaction: {
+											state: "enabled",
+											targetSizeMb: 512,
+										},
 									});
 									return HttpResponse.json(
 										createFetchResult({ success: true }, true)
@@ -1285,10 +1301,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							)
 						);
 						await runWrangler(
-							"r2 bucket catalog compaction enable testBucket --table testTable --namespace testNamespace"
+							"r2 bucket catalog compaction enable testBucket --token fakecloudflaretoken --targetSizeMb 512"
 						);
 						expect(std.out).toMatchInlineSnapshot(
-							`"✨ Successfully enabled compaction maintenance for table 'testTable' in namespace 'testNamespace' of bucket 'testBucket'."`
+							`"✨ Successfully enabled file compaction for the data catalog for bucket 'testBucket'."`
 						);
 					});
 
@@ -1302,10 +1318,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							"
 							wrangler r2 bucket catalog compaction enable <bucket>
 
-							Enable compaction maintenance for a table in the R2 data catalog [private-beta]
+							Enable automatic file compaction for your R2 data catalog [open-beta]
 
 							POSITIONALS
-							  bucket  The name of the bucket  [string] [required]
+							  bucket  The name of the bucket which contains the catalog  [string] [required]
 
 							GLOBAL FLAGS
 							  -c, --config    Path to Wrangler configuration file  [string]
@@ -1316,8 +1332,8 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							  -v, --version   Show version number  [boolean]
 
 							OPTIONS
-							      --table      The name of the table to enable compaction for  [string] [required]
-							      --namespace  The namespace containing the table  [string] [required]"
+							      --targetSizeMb  The target size for compacted files (allowed values: 64, 128, 256, 512)  [number] [default: 128]
+							      --token         A cloudflare api token with access to R2 and R2 Data Catalog which will be used to read/write files for compaction.  [string] [required]"
 						`);
 						expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1326,23 +1342,13 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				`);
 					});
 
-					it("should error if --table is not provided", async () => {
+					it("should error if --token is not provided", async () => {
 						await expect(
 							runWrangler(
-								"r2 bucket catalog compaction enable testBucket --namespace testNamespace"
+								"r2 bucket catalog compaction enable testBucket --targetSizeMb 512"
 							)
 						).rejects.toThrowErrorMatchingInlineSnapshot(
-							`[Error: Missing required argument: table]`
-						);
-					});
-
-					it("should error if --namespace is not provided", async () => {
-						await expect(
-							runWrangler(
-								"r2 bucket catalog compaction enable testBucket --table testTable"
-							)
-						).rejects.toThrowErrorMatchingInlineSnapshot(
-							`[Error: Missing required argument: namespace]`
+							`[Error: Missing required argument: token]`
 						);
 					});
 				});
@@ -1360,10 +1366,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							"
 							wrangler r2 bucket catalog compaction disable <bucket>
 
-							Disable compaction maintenance for a table in the R2 data catalog [private-beta]
+							Disable automatic file compaction for your R2 data catalog [open-beta]
 
 							POSITIONALS
-							  bucket  The name of the bucket  [string] [required]
+							  bucket  The name of the bucket which contains the catalog  [string] [required]
 
 							GLOBAL FLAGS
 							  -c, --config    Path to Wrangler configuration file  [string]
@@ -1371,11 +1377,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 							      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 							  -h, --help      Show help  [boolean]
-							  -v, --version   Show version number  [boolean]
-
-							OPTIONS
-							      --table      The name of the table to disable compaction for  [string] [required]
-							      --namespace  The namespace containing the table  [string] [required]"
+							  -v, --version   Show version number  [boolean]"
 						`);
 						expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1384,19 +1386,21 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				`);
 					});
 
-					it("should disable compaction for the given table with confirmation", async () => {
+					it("should disable compaction with confirmation", async () => {
 						setIsTTY(true);
 						mockConfirm({
-							text: "Are you sure you want to disable compaction maintenance for table 'testTable' in namespace 'testNamespace' of bucket 'testBucket'?",
+							text: "Are you sure you want to disable file compaction for the data catalog for bucket 'testBucket'?",
 							result: true,
 						});
 						msw.use(
-							http.put(
-								"*/accounts/some-account-id/r2-catalog/testBucket/namespaces/testNamespace/tables/testTable/maintenance-configs/compaction",
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/maintenance-configs",
 								async ({ request }) => {
 									const body = await request.json();
 									expect(body).toEqual({
-										state: "disabled",
+										compaction: {
+											state: "disabled",
+										},
 									});
 									return HttpResponse.json(
 										createFetchResult({ success: true }, true)
@@ -1406,43 +1410,23 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							)
 						);
 						await runWrangler(
-							"r2 bucket catalog compaction disable testBucket --table testTable --namespace testNamespace"
+							"r2 bucket catalog compaction disable testBucket"
 						);
 						expect(std.out).toMatchInlineSnapshot(
-							`"Successfully disabled compaction maintenance for table 'testTable' in namespace 'testNamespace' of bucket 'testBucket'."`
+							`"Successfully disabled file compaction for the data catalog for bucket 'testBucket'."`
 						);
 					});
 
 					it("should cancel disable when confirmation is rejected", async () => {
 						setIsTTY(true);
 						mockConfirm({
-							text: "Are you sure you want to disable compaction maintenance for table 'testTable' in namespace 'testNamespace' of bucket 'testBucket'?",
+							text: "Are you sure you want to disable file compaction for the data catalog for bucket 'testBucket'?",
 							result: false,
 						});
 						await runWrangler(
-							"r2 bucket catalog compaction disable testBucket --table testTable --namespace testNamespace"
+							"r2 bucket catalog compaction disable testBucket"
 						);
 						expect(std.out).toMatchInlineSnapshot(`"Disable cancelled."`);
-					});
-
-					it("should error if --table is not provided", async () => {
-						await expect(
-							runWrangler(
-								"r2 bucket catalog compaction disable testBucket --namespace testNamespace"
-							)
-						).rejects.toThrowErrorMatchingInlineSnapshot(
-							`[Error: Missing required argument: table]`
-						);
-					});
-
-					it("should error if --namespace is not provided", async () => {
-						await expect(
-							runWrangler(
-								"r2 bucket catalog compaction disable testBucket --table testTable"
-							)
-						).rejects.toThrowErrorMatchingInlineSnapshot(
-							`[Error: Missing required argument: namespace]`
-						);
 					});
 				});
 			});
