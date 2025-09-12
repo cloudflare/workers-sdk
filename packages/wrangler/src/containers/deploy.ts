@@ -180,12 +180,7 @@ function containerConfigToCreateRequest(
 				containerApp.observability.logs_enabled,
 				prevApp?.configuration.observability
 			),
-			wrangler_ssh: containerApp.wrangler_ssh
-				? {
-						enabled: containerApp.wrangler_ssh.enabled,
-						port: containerApp.wrangler_ssh.port,
-					}
-				: undefined,
+			wrangler_ssh: containerApp.wrangler_ssh,
 			authorized_keys: containerApp.authorized_keys ?? undefined,
 		},
 		// deprecated in favour of max_instances
