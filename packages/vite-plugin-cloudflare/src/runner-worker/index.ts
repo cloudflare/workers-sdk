@@ -3,7 +3,11 @@ import {
 	WorkerEntrypoint,
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
-import { INIT_PATH, WORKER_ENTRY_PATH_HEADER } from "../shared";
+import {
+	INIT_PATH,
+	IS_ENTRY_WORKER_HEADER,
+	WORKER_ENTRY_PATH_HEADER,
+} from "../shared";
 import { stripInternalEnv } from "./env";
 import { getWorkerEntryExport } from "./module-runner";
 import type { WrapperEnv } from "./env";
@@ -67,6 +71,7 @@ const WORKFLOW_ENTRYPOINT_KEYS = ["run"] as const;
 
 /** The path to the Worker entry file. We store it in the module scope so that it is easily accessible in error messages etc.. */
 let workerEntryPath = "";
+let isEntryWorker = false;
 
 /**
  * Creates a callable thenable that is used to access the properties of an RPC target.
@@ -170,6 +175,15 @@ async function getWorkerEntrypointRpcProperty(
 	return value;
 }
 
+function reduceError(e: any): any {
+	return {
+		name: e?.name,
+		message: e?.message ?? String(e),
+		stack: e?.stack,
+		cause: e?.cause === undefined ? undefined : reduceError(e.cause),
+	};
+}
+
 /**
  * Creates a proxy wrapper for `WorkerEntrypoint` classes that enables RPC functionality.
  * The wrapper intercepts property access and delegates to the user code, handling both direct method calls and RPC property access.
@@ -213,6 +227,21 @@ export function createWorkerEntrypointWrapper(
 		}
 	}
 
+	async function maybeCaptureError<T>(fn: () => T) {
+		if (!isEntryWorker || exportName !== "default") {
+			return fn();
+		}
+
+		try {
+			return await fn();
+		} catch (error) {
+			return Response.json(reduceError(error), {
+				status: 500,
+				headers: { "MF-Experimental-Error-Stack": "true" },
+			});
+		}
+	}
+
 	for (const key of WORKER_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (arg) {
 			if (key === "fetch") {
@@ -231,8 +260,19 @@ export function createWorkerEntrypointWrapper(
 						);
 					}
 
+					const isEntryWorkerHeader = request.headers.get(
+						IS_ENTRY_WORKER_HEADER
+					);
+
+					if (!isEntryWorkerHeader) {
+						throw new Error(
+							`Unexpected error: "${IS_ENTRY_WORKER_HEADER}" header not set.`
+						);
+					}
+
 					// Set the Worker entry path
 					workerEntryPath = workerEntryPathHeader;
+					isEntryWorker = isEntryWorkerHeader === "true";
 					const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
 
 					// Forward the request to the Durable Object to initialize the module runner and return the WebSocket
@@ -256,7 +296,9 @@ export function createWorkerEntrypointWrapper(
 					);
 				}
 
-				return maybeFn.call(exportValue, arg, userEnv, this.ctx);
+				return maybeCaptureError(() =>
+					maybeFn.call(exportValue, arg, userEnv, this.ctx)
+				);
 			} else if (typeof exportValue === "function") {
 				// The export is a `WorkerEntrypoint`
 				const ctor = exportValue as WorkerEntrypointConstructor;
@@ -276,7 +318,9 @@ export function createWorkerEntrypointWrapper(
 					);
 				}
 
-				return (maybeFn as (arg: unknown) => unknown).call(instance, arg);
+				return maybeCaptureError(() =>
+					(maybeFn as (arg: unknown) => unknown).call(instance, arg)
+				);
 			} else {
 				return new TypeError(
 					`Expected "${exportName}" export of "${workerEntryPath}" to be an object or a class.`
