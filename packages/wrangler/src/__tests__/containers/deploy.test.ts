@@ -1959,7 +1959,7 @@ function mockDockerBuild(
 		expect(args).toEqual([
 			"build",
 			"-t",
-			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
+			`${containerName}:${tag}`,
 			"--platform",
 			"linux/amd64",
 			"--provenance=false",
