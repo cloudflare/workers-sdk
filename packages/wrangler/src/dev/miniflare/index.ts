@@ -644,7 +644,7 @@ export function buildMiniflareBindingOptions(
 	 * may not represent all DOs defined in the app, because DOs can be defined
 	 * without being bound (accessible via ctx.exports).
 	 * To get a list of all configured DOS, we need all DOs provisioned via migrations,
-	 * wich we already have in the form of `classNameToUseSQLite`
+	 * which we already have in the form of `classNameToUseSQLite`
 	 * As such, this code extends the list of bound DOs with configured DOs that
 	 * aren't already referenced. The outcome is that `additionalUnboundDurableObjects` will
 	 * contain DOs configured via migrations that are not bound.
