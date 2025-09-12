@@ -1,5 +1,25 @@
 # create-cloudflare
 
+## 2.51.6
+
+### Patch Changes
+
+- [#10458](https://github.com/cloudflare/workers-sdk/pull/10458) [`7aa31dc`](https://github.com/cloudflare/workers-sdk/commit/7aa31dc0c32bc1aaa5e1ca7cdb85a1604472cd22) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 20.1.6 | 20.3.0 |
+
+- [#10510](https://github.com/cloudflare/workers-sdk/pull/10510) [`3657383`](https://github.com/cloudflare/workers-sdk/commit/3657383e184754b602eb7e45176c7954b82d4b5c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.14.6 | 5.15.0 |
+
 ## 2.51.5
 
 ### Patch Changes

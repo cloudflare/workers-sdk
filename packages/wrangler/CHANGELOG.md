@@ -1,5 +1,32 @@
 # wrangler
 
+## 4.36.0
+
+### Minor Changes
+
+- [#10604](https://github.com/cloudflare/workers-sdk/pull/10604) [`135e066`](https://github.com/cloudflare/workers-sdk/commit/135e06658ad3e3bd1d255c412597ce761ea412cb) Thanks [@penalosa](https://github.com/penalosa)! - Enable Remote Bindings without the need for the `--x-remote-bindings` flag
+
+- [#10558](https://github.com/cloudflare/workers-sdk/pull/10558) [`30f558e`](https://github.com/cloudflare/workers-sdk/commit/30f558eb4a02dcc5125f216d6fbe1d0be3b6d08f) Thanks [@laplab](https://github.com/laplab)! - Add commands to send queries and manage R2 SQL product.
+
+- [#10574](https://github.com/cloudflare/workers-sdk/pull/10574) [`d8860ac`](https://github.com/cloudflare/workers-sdk/commit/d8860ac17b20be71e1069d90861e3c49a6d5247b) Thanks [@efalcao](https://github.com/efalcao)! - Add support for VPC services CRUD via `wrangler vpc service`
+
+- [#10119](https://github.com/cloudflare/workers-sdk/pull/10119) [`336a75d`](https://github.com/cloudflare/workers-sdk/commit/336a75d8d7c52cc24e08de62dd4306201b879932) Thanks [@dxh9845](https://github.com/dxh9845)! - Add support for dynamically loading 'external' Miniflare plugins for unsafe Worker bindings (developed outside of the workers-sdk repo)
+
+### Patch Changes
+
+- [#10212](https://github.com/cloudflare/workers-sdk/pull/10212) [`0837a8d`](https://github.com/cloudflare/workers-sdk/commit/0837a8d4e406809e388dc06ad0b26a77b350f7b4) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add `preserveOriginalMain` option to `unstable_readConfig`. This will pass the original `main` value through, without converting it to an absolute path.
+
+- [#10541](https://github.com/cloudflare/workers-sdk/pull/10541) [`da24079`](https://github.com/cloudflare/workers-sdk/commit/da24079b370ad2af4e97b41ab20ad474ab148ead) Thanks [@qjex](https://github.com/qjex)! - stable `ratelimit` binding
+
+  [Rate Limiting in Workers](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) is now generally available, `ratelimit` can be removed from unsafe bindings.
+
+- [#10479](https://github.com/cloudflare/workers-sdk/pull/10479) [`ffa2600`](https://github.com/cloudflare/workers-sdk/commit/ffa2600a656b7a07cab622ea67338e770fd33bc3) Thanks [@nagraham](https://github.com/nagraham)! - feat: Add wrangler commands for the R2 Data Catalog compaction feature
+
+- [#9955](https://github.com/cloudflare/workers-sdk/pull/9955) [`51553ef`](https://github.com/cloudflare/workers-sdk/commit/51553efa5bd7f07aa20d38fe6db62aa61e2b1999) Thanks [@penalosa](https://github.com/penalosa)! - Integrate the Cloudflare SDK into Wrangler (internal refactor)
+
+- Updated dependencies [[`e2b838f`](https://github.com/cloudflare/workers-sdk/commit/e2b838ff56572d581661143d56f2485d7bcf1e0e), [`336a75d`](https://github.com/cloudflare/workers-sdk/commit/336a75d8d7c52cc24e08de62dd4306201b879932)]:
+  - miniflare@4.20250906.1
+
 ## 4.35.0
 
 ### Minor Changes
