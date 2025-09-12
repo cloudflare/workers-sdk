@@ -33,6 +33,10 @@ import {
 	getCIOverrideName,
 	getWorkersCIBranchName,
 } from "../environment-variables/misc-variables";
+import {
+	applyServiceAndEnvironmentTags,
+	hasDefinedEnvironments,
+} from "../environments";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
@@ -410,6 +414,7 @@ export default async function versionsUpload(props: Props): Promise<{
 	const { config, accountId, name } = props;
 	let versionId: string | null = null;
 	let workerTag: string | null = null;
+	let tags: string[] | null = null; // arbitrary metadata tags, not to be confused with script tag or annotations
 
 	if (accountId && name) {
 		try {
@@ -419,6 +424,7 @@ export default async function versionsUpload(props: Props): Promise<{
 				default_environment: {
 					script: {
 						tag: string;
+						tags: string[] | null;
 						last_deployed_from: "dash" | "wrangler" | "api";
 					};
 				};
@@ -428,6 +434,7 @@ export default async function versionsUpload(props: Props): Promise<{
 			);
 
 			workerTag = script.tag;
+			tags = script.tags;
 
 			if (script.last_deployed_from === "dash") {
 				logger.warn(
@@ -827,6 +834,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 
 				throw err;
+			}
+
+			// Update service and environment tags when using environments
+			if (hasDefinedEnvironments(config)) {
+				await applyServiceAndEnvironmentTags(
+					config,
+					accountId,
+					scriptName,
+					tags
+				);
 			}
 		}
 		if (props.outFile) {
