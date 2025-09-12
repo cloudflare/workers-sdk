@@ -15,6 +15,7 @@ type Env = {
 
 // this.env.WORKFLOW is WorkflowBinding
 export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
+	public readonly __workflow_entrypoint = true;
 	public async create({
 		id = crypto.randomUUID(),
 		params = {},
