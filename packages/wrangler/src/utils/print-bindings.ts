@@ -206,13 +206,22 @@ export function printBindings(
 					"allowed_destination_addresses" in emailBinding
 						? emailBinding.allowed_destination_addresses
 						: undefined;
+				const allowed_sender_addresses =
+					"allowed_sender_addresses" in emailBinding
+						? emailBinding.allowed_sender_addresses
+						: undefined;
+				let value =
+					destination_address ||
+					allowed_destination_addresses?.join(", ") ||
+					"unrestricted";
+
+				if (allowed_sender_addresses) {
+					value += ` - senders: ${allowed_sender_addresses.join(", ")}`;
+				}
 				return {
 					name: emailBinding.name,
 					type: friendlyBindingNames.send_email,
-					value:
-						destination_address ||
-						allowed_destination_addresses?.join(", ") ||
-						"unrestricted",
+					value,
 					mode: getMode({
 						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
 							? !emailBinding.remote
