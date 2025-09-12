@@ -17,7 +17,7 @@ describe("Unbound DO is available through `ctx.exports`", () => {
 		await worker.dispose();
 	});
 
-	it("storage operations don't throw", async ({ expect }) => {
+	it("can execute storage operations", async ({ expect }) => {
 		const doName = crypto.randomUUID();
 		let response = await worker.fetch(`http://example.com?name=${doName}`);
 		let content = await response.text();
