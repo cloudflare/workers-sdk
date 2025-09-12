@@ -89,31 +89,38 @@ describe("containers ssh", () => {
 	// actual ssh attempt will fail since we don't have an ssh instance to test
 	// against, but everything up until that point is covered.
 	it("should try ssh'ing into a container", async () => {
-		const instanceId = "a".repeat(64);
-		const wsUrl = "ws://localhost:1234";
-		const sshJwt = "asd";
+		try {
+			const instanceId = "a".repeat(64);
+			const wsUrl = "ws://localhost:1234";
+			const sshJwt = "asd";
 
-		setWranglerConfig({});
-		msw.use(
-			http.get(`*/instances/:instanceId/ssh`, async () => {
-				return new HttpResponse(
-					`{"success": true, "result": {"url": "${wsUrl}", "token": "${sshJwt}"}}`,
-					{
-						type: "applicaton/json",
-						status: 200,
-					}
-				);
-			})
-		);
+			setWranglerConfig({});
+			msw.use(
+				http.get(`*/instances/:instanceId/ssh`, async () => {
+					return new HttpResponse(
+						`{"success": true, "result": {"url": "${wsUrl}", "token": "${sshJwt}"}}`,
+						{
+							type: "applicaton/json",
+							status: 200,
+						}
+					);
+				})
+			);
 
-		const mockWebSocket = new MockWebSocketServer(wsUrl);
+			const mockWebSocket = new MockWebSocketServer(wsUrl);
 
-		await expect(runWrangler(`containers ssh ${instanceId}`)).rejects
-			.toMatchInlineSnapshot(`
+			await expect(runWrangler(`containers ssh ${instanceId}`)).rejects
+				.toMatchInlineSnapshot(`
 			[Error: ssh exited unsuccessfully. Is the container running?]
 		`);
 
-		// We got a connection
-		expect(mockWebSocket.connected).toBeTruthy();
+			// We got a connection
+			expect(mockWebSocket.connected).toBeTruthy();
+		} catch (err) {
+			if (err instanceof Error) {
+				console.error(err.stack);
+			}
+			throw err;
+		}
 	});
 });
