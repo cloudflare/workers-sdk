@@ -505,4 +505,64 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof http2.connect, "function");
 		assert.strictEqual(http2.constants.HTTP2_HEADER_STATUS, ":status");
 	},
+
+	async testVm() {
+		const vm = await import("node:vm");
+
+		assertType(vm.Script, "function", "vm.Script");
+		assertType(vm.constants, "object", "vm.constants");
+		assertType(vm.compileFunction, "function", "vm.compileFunction");
+		assertType(vm.createContext, "function", "vm.createContext");
+		// @ts-expect-error undocumented API
+		assertType(vm.createScript, "function", "vm.createScript");
+		assertType(vm.isContext, "function", "vm.isContext");
+		assertType(vm.measureMemory, "function", "vm.measureMemory");
+		assertType(vm.runInContext, "function", "vm.runInContext");
+		assertType(vm.runInThisContext, "function", "vm.runInThisContext");
+		assertType(vm.runInNewContext, "function", "vm.runInNewContext");
+
+		assertType(vm.default.Script, "function", "vm.default.Script");
+		assertType(
+			vm.default.compileFunction,
+			"function",
+			"vm.default.compileFunction"
+		);
+		assertType(vm.default.constants, "object", "vm.default.constants");
+		assertType(
+			vm.default.createContext,
+			"function",
+			"vm.default.createContext"
+		);
+		assertType(vm.default.isContext, "function", "vm.default.isContext");
+		assertType(
+			vm.default.measureMemory,
+			"function",
+			"vm.default.measureMemory"
+		);
+		assertType(vm.default.runInContext, "function", "vm.default.runInContext");
+		assertType(
+			vm.default.runInNewContext,
+			"function",
+			"vm.default.runInNewContext"
+		);
+		assertType(
+			vm.default.runInThisContext,
+			"function",
+			"vm.default.runInThisContext"
+		);
+		assertType(
+			// @ts-expect-error undocumented API
+			vm.default.createScript,
+			"function",
+			"vm.default.createScript"
+		);
+	},
 };
+
+function assertType(value: unknown, type: string, name: string) {
+	assert.strictEqual(
+		typeof value,
+		type,
+		`Expected ${name} to be of type ${type}, but got ${typeof value}`
+	);
+}

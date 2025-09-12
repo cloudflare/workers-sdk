@@ -188,6 +188,34 @@ const testConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:vm
+	[
+		{
+			name: "vm disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_vm_module: false,
+			},
+		},
+		// TODO: add a config when vm is enabled by default (>= 2025-10-01)
+		{
+			name: "vm enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_vm_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_vm_module: true,
+			},
+		},
+		{
+			name: "vm disabled by flag",
+			// TODO: change the date passed the default enabled date (>= 2025-10-01)
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["disable_nodejs_vm_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_vm_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(testConfigs)(
