@@ -193,14 +193,15 @@ async function updateVitePluginVersion(projectPath: string) {
  * If `timeout` is set, each attempt will be killed after the specified time in milliseconds.
  */
 export function runCommand(
-	command: string,
-	cwd: string,
+	file: string,
+	args: string[] = [],
+	cwd?: string,
 	{ attempts = 1, canFail = false, timeout = 0 } = {}
 ) {
 	while (attempts > 0) {
-		debuglog("Running command:", command);
+		debuglog("Running command:", file, args.join(" "));
 		try {
-			childProcess.execSync(command, {
+			childProcess.execFileSync(file, args, {
 				cwd,
 				stdio: debuglog.enabled ? "inherit" : "ignore",
 				env: testEnv,
@@ -220,7 +221,7 @@ export function runCommand(
 	}
 }
 
-function getWranglerCommand(command: string) {
+function getWranglerCommand(command: string): { file: string, args: string[] } {
 	// Enforce a `wrangler` prefix to make commands clearer to read
 	assert(
 		command.startsWith("wrangler "),
@@ -230,14 +231,17 @@ function getWranglerCommand(command: string) {
 	const wranglerBin = path.resolve(
 		`${__dirname}/../../../packages/wrangler/bin/wrangler.js`
 	);
-	return `node ${wranglerBin} ${command.slice("wrangler ".length)}`;
+	// remove 'wrangler ' prefix and split remaining command safely
+	const args = [wranglerBin, ...command.slice("wrangler ".length).split(" ")];
+	return { file: "node", args };
 }
 
 export async function runWrangler(
 	wranglerCommand: string,
 	{ cwd }: { cwd?: string } = {}
 ) {
-	return runCommand(getWranglerCommand(wranglerCommand), cwd);
+	const { file, args } = getWranglerCommand(wranglerCommand);
+	return runCommand(file, args, cwd);
 }
 
 /**

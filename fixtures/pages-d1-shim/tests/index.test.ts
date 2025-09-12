@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync, execFileSync } from "child_process";
 import { mkdtempSync, readFileSync, realpathSync } from "fs";
 import { tmpdir } from "os";
 import * as path from "path";
@@ -14,8 +14,18 @@ describe("Pages D1 shim", () => {
 		);
 		const file = join(tempDir, "./d1-pages.js");
 
-		execSync(
-			`npx wrangler pages functions build --outfile ${file} --bindings="{\\"d1_databases\\":{\\"FOO\\":{}}}"`,
+		execFileSync(
+			"npx",
+			[
+				"wrangler",
+				"pages",
+				"functions",
+				"build",
+				"--outfile",
+				file,
+				"--bindings",
+				'{"d1_databases":{"FOO":{}}}'
+			],
 			{
 				cwd: path.resolve(__dirname, ".."),
 			}

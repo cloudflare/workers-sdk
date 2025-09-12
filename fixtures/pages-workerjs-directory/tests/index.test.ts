@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execSync, execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path, { join, resolve } from "node:path";
@@ -74,10 +74,22 @@ describe("Pages _worker.js/ directory", () => {
 		);
 		const file = join(tempDir, "_worker.bundle");
 
-		execSync(
-			`npx wrangler pages functions build --build-output-directory public --outfile ${file} --bindings="{\\"d1_databases\\":{\\"D1\\":{}}}"`,
+		execFileSync(
+			"npx",
+			[
+				"wrangler",
+				"pages",
+				"functions",
+				"build",
+				"--build-output-directory",
+				"public",
+				"--outfile",
+				file,
+				'--bindings={"d1_databases":{"D1":{}}}'
+			],
 			{
 				cwd: path.resolve(__dirname, ".."),
+				stdio: "inherit",
 			}
 		);
 
