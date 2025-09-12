@@ -3064,13 +3064,6 @@ function validateContainerApp(
 			}
 
 			if ("wrangler_ssh" in containerAppOptional) {
-				validateAdditionalProperties(
-					diagnostics,
-					`${field}.wrangler_ssh`,
-					Object.keys(containerAppOptional.wrangler_ssh),
-					["enabled", "port"]
-				);
-
 				if (
 					!isRequiredProperty(
 						containerAppOptional.wrangler_ssh,
@@ -3114,13 +3107,6 @@ function validateContainerApp(
 					for (const index in containerAppOptional.authorized_keys) {
 						const fieldPath = `${field}.authorized_keys[${index}]`;
 						const key = containerAppOptional.authorized_keys[index];
-
-						validateAdditionalProperties(
-							diagnostics,
-							fieldPath,
-							Object.keys(key),
-							["name", "public_key"]
-						);
 
 						if (!isRequiredProperty(key, "name", "string")) {
 							diagnostics.errors.push(`${fieldPath}.name must be a string`);

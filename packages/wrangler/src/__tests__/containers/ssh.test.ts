@@ -39,17 +39,15 @@ describe("containers ssh", () => {
 			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
-			      --cipher         SSH option for cipher_spec (-c)  [string]
-			      --log-file       SSH option for log_file (-c)  [string]
-			      --escape-char    SSH option for escape_char (-e)  [string]
-			      --config-file    SSH option for config-file (-F)  [string]
-			      --pkcs11         SSH option for pkcs11 (-I)  [string]
-			      --identity-file  SSH option for identity_file (-i)  [string]
-			      --mac-spec       SSH option for mac_spec (-m)  [string]
-			      --ctl-cmd        SSH option for ctl_cmd (-O)  [string]
-			      --option         SSH option for option (-o)  [string]
-			      --tag            SSH option for tag (-P)  [string]
-			      --ctl-path       SSH option for ctl_path (-S)  [string]"
+			      --cipher         SSH option: Selects the cipher specification for encrypting the session  [string]
+			      --log-file       SSH option: Append debug logs to log_file instead of standard error  [string]
+			      --escape-char    SSH option: Sets the escape character for sessions with a pty (default: ‘~’)  [string]
+			      --config-file    SSH option: Specifies an alternative per-user configuration file  [string]
+			      --pkcs11         SSH option: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication  [string]
+			      --identity-file  SSH option: Selects a file from which the identity (private key) for public key authentication is read  [string]
+			      --mac-spec       SSH option: A comma-separated list of MAC (message authentication code) algorithms, specified in order of preference  [string]
+			      --option         SSH option: Can be used to give options in the format used in the configuration file  [string]
+			      --tag            SSH option: Specify a tag name that may be used to select configuration in ssh_config(5)  [string]"
 		`);
 	});
 
@@ -89,38 +87,30 @@ describe("containers ssh", () => {
 	// actual ssh attempt will fail since we don't have an ssh instance to test
 	// against, but everything up until that point is covered.
 	it("should try ssh'ing into a container", async () => {
-		try {
-			const instanceId = "a".repeat(64);
-			const wsUrl = "ws://localhost:1234";
-			const sshJwt = "asd";
+		const instanceId = "a".repeat(64);
+		const wsUrl = "ws://localhost:1234";
+		const sshJwt = "asd";
 
-			setWranglerConfig({});
-			msw.use(
-				http.get(`*/instances/:instanceId/ssh`, async () => {
-					return new HttpResponse(
-						`{"success": true, "result": {"url": "${wsUrl}", "token": "${sshJwt}"}}`,
-						{
-							type: "applicaton/json",
-							status: 200,
-						}
-					);
-				})
-			);
+		setWranglerConfig({});
+		msw.use(
+			http.get(`*/instances/:instanceId/ssh`, async () => {
+				return new HttpResponse(
+					`{"success": true, "result": {"url": "${wsUrl}", "token": "${sshJwt}"}}`,
+					{
+						type: "applicaton/json",
+						status: 200,
+					}
+				);
+			})
+		);
 
-			const mockWebSocket = new MockWebSocketServer(wsUrl);
-
-			await expect(runWrangler(`containers ssh ${instanceId}`)).rejects
-				.toMatchInlineSnapshot(`
+		const mockWebSocket = new MockWebSocketServer(wsUrl);
+		await expect(runWrangler(`containers ssh ${instanceId}`)).rejects
+			.toMatchInlineSnapshot(`
 			[Error: ssh exited unsuccessfully. Is the container running?]
 		`);
 
-			// We got a connection
-			expect(mockWebSocket.connected).toBeTruthy();
-		} catch (err) {
-			if (err instanceof Error) {
-				console.error(err.stack);
-			}
-			throw err;
-		}
+		// We got a connection
+		expect(mockWebSocket.connected).toBeTruthy();
 	});
 });
