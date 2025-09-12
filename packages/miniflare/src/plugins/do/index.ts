@@ -40,7 +40,7 @@ const DurableObject = z.object({
 export const DurableObjectsOptionsSchema = z.object({
 	durableObjects: z.record(z.union([z.string(), DurableObject])).optional(),
 	// Not all DOs are configured as bindings! Include these in a different key
-	// These might just be configured via migrations, but should still be allocated storage for e..g ctx.exports support
+	// These might just be configured via migrations, but should still be allocated storage for e.g. ctx.exports support
 	additionalUnboundDurableObjects: z.array(DurableObject).optional(),
 });
 export const DurableObjectsSharedOptionsSchema = z.object({
