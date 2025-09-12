@@ -17,6 +17,7 @@ const EmailBindingOptionsSchema = z
 		remoteProxyConnectionString: z
 			.custom<RemoteProxyConnectionString>()
 			.optional(),
+		allowed_sender_addresses: z.array(z.string()).optional(),
 	})
 	.and(
 		z.union([

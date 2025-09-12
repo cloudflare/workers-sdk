@@ -244,6 +244,9 @@ function printBindingAsToml(binding: WorkerMetadataBinding) {
 					: "") +
 				(binding.allowed_destination_addresses
 					? `\nallowed_destination_addresses = [${binding.allowed_destination_addresses.map((addr) => `"${addr}"`).join(", ")}]`
+					: "") +
+				(binding.allowed_sender_addresses
+					? `\nallowed_sender_addresses = [${binding.allowed_sender_addresses.map((addr) => `"${addr}"`).join(", ")}]`
 					: "")
 			);
 
