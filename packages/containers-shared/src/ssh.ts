@@ -43,6 +43,10 @@ export function createSshTcpProxy(sshResponse: WranglerSSHResponse): Server {
 
 		hasConnection = true;
 
+		inbound.on("error", (err) => {
+			console.error("Proxy error: ", err);
+		});
+
 		const ws = new WebSocket(sshResponse.url, {
 			headers: {
 				authorization: `Bearer ${sshResponse.token}`,
@@ -59,10 +63,6 @@ export function createSshTcpProxy(sshResponse: WranglerSSHResponse): Server {
 		ws.addEventListener("open", () => {
 			inbound.on("data", (data) => {
 				ws.send(data);
-			});
-
-			inbound.on("error", (err) => {
-				console.error("Proxy error: ", err);
 			});
 
 			inbound.on("close", () => {
