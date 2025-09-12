@@ -1,0 +1,21 @@
+{
+	"name": "unbound-durable-object",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-01-01",
+	"compatibility_flags": ["experimental"],
+	// This DO intentionally doesn't have a binding
+	// "durable_objects": {
+	// 	"bindings": [
+	// 		{
+	// 			"name": "COUNTER",
+	// 			"class_name": "Counter",
+	// 		},
+	// 	],
+	// },
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["Counter"],
+		},
+	],
+}

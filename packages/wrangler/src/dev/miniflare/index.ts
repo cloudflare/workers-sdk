@@ -420,6 +420,7 @@ type WorkerOptionsBindings = Pick<
 	| "helloWorld"
 	| "workerLoaders"
 	| "unsafeBindings"
+	| "additionalUnboundDurableObjects"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -638,6 +639,37 @@ export function buildMiniflareBindingOptions(
 		}
 	}
 
+	/**
+	 * The `durableObjects` variable contains all DO bindings. However, this
+	 * may not represent all DOs defined in the app, because DOs can be defined
+	 * without being bound (accessible via ctx.exports).
+	 * To get a list of all configured DOS, we need all DOs provisioned via migrations,
+	 * which we already have in the form of `classNameToUseSQLite`
+	 * As such, this code extends the list of bound DOs with configured DOs that
+	 * aren't already referenced. The outcome is that `additionalUnboundDurableObjects` will
+	 * contain DOs configured via migrations that are not bound.
+	 */
+	const additionalUnboundDurableObjects: WorkerOptionsBindings["additionalUnboundDurableObjects"] =
+		[];
+
+	for (const [className, useSQLite] of classNameToUseSQLite) {
+		if (!durableObjects.find((d) => d.class_name === className)) {
+			additionalUnboundDurableObjects.push({
+				className,
+				scriptName: undefined,
+				useSQLite,
+				container:
+					config.containerDOClassNames?.size && config.enableContainers
+						? getImageNameFromDOClassName({
+								doClassName: className,
+								containerDOClassNames: config.containerDOClassNames,
+								containerBuildId: config.containerBuildId,
+							})
+						: undefined,
+			});
+		}
+	}
+
 	const bindingOptions: WorkerOptionsBindings = {
 		bindings: {
 			...bindings.vars,
@@ -809,6 +841,7 @@ export function buildMiniflareBindingOptions(
 				}
 			)
 		),
+		additionalUnboundDurableObjects,
 
 		ratelimits: Object.fromEntries([
 			...(bindings.unsafe?.bindings

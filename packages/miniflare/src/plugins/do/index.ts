@@ -18,32 +18,30 @@ export const DOContainerOptionsSchema = z.object({
 });
 export type DOContainerOptions = z.infer<typeof DOContainerOptionsSchema>;
 
-export const DurableObjectsOptionsSchema = z.object({
-	durableObjects: z
-		.record(
-			z.union([
-				z.string(),
-				z.object({
-					className: z.string(),
-					scriptName: z.string().optional(),
-					useSQLite: z.boolean().optional(),
-					// Allow `uniqueKey` to be customised. We use in Wrangler when setting
-					// up stub Durable Objects that proxy requests to Durable Objects in
-					// another `workerd` process, to ensure the IDs created by the stub
-					// object can be used by the real object too.
-					unsafeUniqueKey: z
-						.union([z.string(), z.literal(kUnsafeEphemeralUniqueKey)])
-						.optional(),
-					// Prevents the Durable Object being evicted.
-					unsafePreventEviction: z.boolean().optional(),
-					remoteProxyConnectionString: z
-						.custom<RemoteProxyConnectionString>()
-						.optional(),
-					container: z.custom<DOContainerOptions>().optional(),
-				}),
-			])
-		)
+const DurableObject = z.object({
+	className: z.string(),
+	scriptName: z.string().optional(),
+	useSQLite: z.boolean().optional(),
+	// Allow `uniqueKey` to be customised. We use in Wrangler when setting
+	// up stub Durable Objects that proxy requests to Durable Objects in
+	// another `workerd` process, to ensure the IDs created by the stub
+	// object can be used by the real object too.
+	unsafeUniqueKey: z
+		.union([z.string(), z.literal(kUnsafeEphemeralUniqueKey)])
 		.optional(),
+	// Prevents the Durable Object being evicted.
+	unsafePreventEviction: z.boolean().optional(),
+	remoteProxyConnectionString: z
+		.custom<RemoteProxyConnectionString>()
+		.optional(),
+	container: z.custom<DOContainerOptions>().optional(),
+});
+
+export const DurableObjectsOptionsSchema = z.object({
+	durableObjects: z.record(z.union([z.string(), DurableObject])).optional(),
+	// Not all DOs are configured as bindings! Include these in a different key
+	// These might just be configured via migrations, but should still be allocated storage for e.g. ctx.exports support
+	additionalUnboundDurableObjects: z.array(DurableObject).optional(),
 });
 export const DurableObjectsSharedOptionsSchema = z.object({
 	durableObjectsPersist: PersistenceSchema,

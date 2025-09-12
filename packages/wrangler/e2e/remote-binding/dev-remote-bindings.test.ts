@@ -35,7 +35,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				`wrangler delete --name ${alternativeRemoteWorkerName}`
 			);
 			await Promise.all([del, delAlt]);
-		});
+		}, 35_000);
 
 		it("handles both remote and local service bindings at the same time", async () => {
 			await spawnLocalWorker(helper);
