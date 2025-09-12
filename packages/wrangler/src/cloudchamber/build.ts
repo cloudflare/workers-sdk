@@ -5,7 +5,6 @@ import {
 	dockerBuild,
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
-	getCloudflareContainerRegistry,
 	isDir,
 	resolveImageName,
 	runDockerCmd,
