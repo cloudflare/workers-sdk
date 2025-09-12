@@ -1,5 +1,11 @@
 # wrangler
 
+## 4.37.0
+
+### Minor Changes
+
+- [#10622](https://github.com/cloudflare/workers-sdk/pull/10622) [`15c34e2`](https://github.com/cloudflare/workers-sdk/commit/15c34e23d6bcd225a3ebea08cba25d3c62b77729) Thanks [@nagraham](https://github.com/nagraham)! - Modify R2 Data Catalog compaction commands to enable/disable for Catalog (remove table/namespace args), and require Cloudflare API token on enable.
+
 ## 4.36.0
 
 ### Minor Changes
