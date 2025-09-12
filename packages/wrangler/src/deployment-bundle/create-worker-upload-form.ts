@@ -72,6 +72,7 @@ export type WorkerMetadataBinding =
 			name: string;
 			destination_address?: string;
 			allowed_destination_addresses?: string[];
+			allowed_sender_addresses?: string[];
 	  }
 	| {
 			type: "durable_object_namespace";
@@ -301,11 +302,16 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			"allowed_destination_addresses" in emailBinding
 				? emailBinding.allowed_destination_addresses
 				: undefined;
+		const allowed_sender_addresses =
+			"allowed_sender_addresses" in emailBinding
+				? emailBinding.allowed_sender_addresses
+				: undefined;
 		metadataBindings.push({
 			name: emailBinding.name,
 			type: "send_email",
 			destination_address,
 			allowed_destination_addresses,
+			allowed_sender_addresses,
 		});
 	});
 

@@ -618,6 +618,7 @@ describe("versions view", () => {
 								name: "MAIL_3",
 								destination_address: "dest@example.com",
 								allowed_destination_addresses: ["1@a.com", "2@a.com"],
+								allowed_sender_addresses: ["3@a.com", "4@a.com"],
 							},
 							{ type: "service", name: "SERVICE", service: "worker" },
 							{
@@ -740,6 +741,7 @@ describe("versions view", () => {
 				name = \\"MAIL_3\\"
 				destination_address = \\"dest@example.com\\"
 				allowed_destination_addresses = [\\"1@a.com\\", \\"2@a.com\\"]
+				allowed_sender_addresses = [\\"3@a.com\\", \\"4@a.com\\"]
 
 				[[services]]
 				binding = \\"SERVICE\\"
