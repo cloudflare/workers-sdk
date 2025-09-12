@@ -2,24 +2,24 @@ import * as path from "node:path";
 import {
 	constructHeaders,
 	constructRedirects,
-} from "@cloudflare/workers-shared/utils/configuration/constructConfiguration";
-import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
-import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
+} from "../../workers-shared/utils/configuration/constructConfiguration";
+import { parseHeaders } from "../../workers-shared/utils/configuration/parseHeaders";
+import { parseRedirects } from "../../workers-shared/utils/configuration/parseRedirects";
 import {
 	HEADERS_FILENAME,
 	REDIRECTS_FILENAME,
-} from "@cloudflare/workers-shared/utils/constants";
-import { maybeGetFile } from "@cloudflare/workers-shared/utils/helpers";
+} from "../../workers-shared/utils/constants";
+import { maybeGetFile } from "../../workers-shared/utils/helpers";
 import {
 	HeadersSchema,
 	RedirectsSchema,
-} from "@cloudflare/workers-shared/utils/types";
+} from "../../workers-shared/utils/types";
+import type { Logger } from "../../workers-shared/utils/configuration/types";
+import type { AssetConfig } from "../../workers-shared/utils/types";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
-import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types";
-import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
 import type * as vite from "vite";
 import type { Unstable_Config } from "wrangler";
 
