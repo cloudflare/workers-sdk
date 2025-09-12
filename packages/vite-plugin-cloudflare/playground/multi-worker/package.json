@@ -6,7 +6,7 @@
 		"build": "vite build --app",
 		"build:custom-output-directories": "vite build --app -c ./vite.config.custom-output-directories.ts",
 		"build:with-worker-configs-warning": "vite build --app -c vite.config.with-worker-configs-warning.ts",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"deploy-a": "wrangler deploy -c ./dist/worker_a/wrangler.json",
 		"deploy-b": "wrangler deploy -c ./dist/worker_b/wrangler.json",
 		"dev": "vite dev",
