@@ -1,5 +1,15 @@
 # miniflare
 
+## 4.20250906.1
+
+### Minor Changes
+
+- [#10119](https://github.com/cloudflare/workers-sdk/pull/10119) [`336a75d`](https://github.com/cloudflare/workers-sdk/commit/336a75d8d7c52cc24e08de62dd4306201b879932) Thanks [@dxh9845](https://github.com/dxh9845)! - Add support for dynamically loading 'external' Miniflare plugins for unsafe Worker bindings (developed outside of the workers-sdk repo)
+
+### Patch Changes
+
+- [#10494](https://github.com/cloudflare/workers-sdk/pull/10494) [`e2b838f`](https://github.com/cloudflare/workers-sdk/commit/e2b838ff56572d581661143d56f2485d7bcf1e0e) Thanks [@pombosilva](https://github.com/pombosilva)! - Include workflow binding name in workflow plugin.
+
 ## 4.20250906.0
 
 ### Patch Changes

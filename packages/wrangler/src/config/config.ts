@@ -326,6 +326,7 @@ export const defaultWranglerConfig: Config = {
 	images: undefined,
 	version_metadata: undefined,
 	unsafe_hello_world: [],
+	ratelimits: [],
 
 	/*====================================================*/
 	/*           Fields supported by Workers only         */

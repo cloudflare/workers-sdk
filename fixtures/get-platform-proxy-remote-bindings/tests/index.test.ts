@@ -92,14 +92,14 @@ if (auth) {
 								{
 									binding: "MY_WORKER",
 									service: remoteWorkerName,
-									experimental_remote: true,
+									remote: true,
 								},
 							],
 							kv_namespaces: [
 								{
 									binding: "MY_KV",
 									id: remoteKvId,
-									experimental_remote: true,
+									remote: true,
 								},
 							],
 							env: {
@@ -108,14 +108,14 @@ if (auth) {
 										{
 											binding: "MY_WORKER",
 											service: remoteStagingWorkerName,
-											experimental_remote: true,
+											remote: true,
 										},
 									],
 									kv_namespaces: [
 										{
 											binding: "MY_KV",
 											id: remoteKvId,
-											experimental_remote: true,
+											remote: true,
 										},
 									],
 								},
@@ -137,7 +137,6 @@ if (auth) {
 					MY_KV: KVNamespace;
 				}>({
 					configPath: "./.tmp/normal-usage/wrangler.json",
-					experimental: { remoteBindings: true },
 				});
 
 				const response = await fetchFromWorker(env.MY_WORKER, "OK");
@@ -160,7 +159,6 @@ if (auth) {
 					MY_KV: KVNamespace;
 				}>({
 					configPath: "./.tmp/normal-usage/wrangler.json",
-					experimental: { remoteBindings: true },
 					environment: "staging",
 				});
 
@@ -183,6 +181,9 @@ if (auth) {
 					MY_KV: KVNamespace;
 				}>({
 					configPath: "./.tmp/normal-usage/wrangler.json",
+					experimental: {
+						remoteBindings: false,
+					},
 				});
 
 				const response = await fetchFromWorker(
@@ -219,7 +220,7 @@ if (auth) {
 								{
 									binding: "MY_WORKER",
 									service: remoteWorkerName,
-									experimental_remote: true,
+									remote: true,
 								},
 							],
 						},
@@ -233,7 +234,6 @@ if (auth) {
 					MY_WORKER: Fetcher;
 				}>({
 					configPath: "./.tmp/config-with-invalid-account-id/wrangler.json",
-					experimental: { remoteBindings: true },
 				});
 
 				const response = await fetchFromWorker(env.MY_WORKER, "OK", 10_000);
@@ -257,7 +257,7 @@ if (auth) {
 								{
 									binding: "MY_WORKER",
 									service: remoteWorkerName,
-									experimental_remote: true,
+									remote: true,
 								},
 							],
 						},
@@ -271,7 +271,6 @@ if (auth) {
 					MY_WORKER: Fetcher;
 				}>({
 					configPath: "./.tmp/config-with-no-account-id/wrangler.json",
-					experimental: { remoteBindings: true },
 				});
 
 				const response = await fetchFromWorker(env.MY_WORKER, "OK");

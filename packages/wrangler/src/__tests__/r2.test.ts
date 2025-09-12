@@ -99,6 +99,7 @@ describe("r2", () => {
 			COMMANDS
 			  wrangler r2 object  Manage R2 objects
 			  wrangler r2 bucket  Manage R2 buckets
+			  wrangler r2 sql     Send queries and manage R2 SQL [open-beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -129,6 +130,7 @@ describe("r2", () => {
 			COMMANDS
 			  wrangler r2 object  Manage R2 objects
 			  wrangler r2 bucket  Manage R2 buckets
+			  wrangler r2 sql     Send queries and manage R2 SQL [open-beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -967,6 +969,7 @@ describe("r2", () => {
 					  wrangler r2 bucket catalog enable <bucket>   Enable the data catalog on an R2 bucket [open-beta]
 					  wrangler r2 bucket catalog disable <bucket>  Disable the data catalog for an R2 bucket [open-beta]
 					  wrangler r2 bucket catalog get <bucket>      Get the status of the data catalog for an R2 bucket [open-beta]
+					  wrangler r2 bucket catalog compaction        Control settings for automatic file compaction maintenance jobs for your R2 data catalog [open-beta]
 
 					GLOBAL FLAGS
 					  -c, --config    Path to Wrangler configuration file  [string]
@@ -1227,6 +1230,204 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 
 					Data catalog is not enabled for bucket 'test-bucket'. Please use 'wrangler r2 bucket catalog enable test-bucket' to first enable the data catalog on this bucket."
 				`);
+				});
+			});
+
+			describe("compaction", () => {
+				it("should show the correct help when an invalid command is passed", async () => {
+					await expect(() =>
+						runWrangler("r2 bucket catalog compaction foo")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Unknown argument: foo]`
+					);
+					expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
+
+				"
+			`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						wrangler r2 bucket catalog compaction
+
+						Control settings for automatic file compaction maintenance jobs for your R2 data catalog [open-beta]
+
+						COMMANDS
+						  wrangler r2 bucket catalog compaction enable <bucket>   Enable automatic file compaction for your R2 data catalog [open-beta]
+						  wrangler r2 bucket catalog compaction disable <bucket>  Disable automatic file compaction for your R2 data catalog [open-beta]
+
+						GLOBAL FLAGS
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]"
+					`);
+				});
+
+				describe("enable", () => {
+					it("should enable compaction for the catalog", async () => {
+						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/credential",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										token: "fakecloudflaretoken",
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							),
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										compaction: {
+											state: "enabled",
+											targetSizeMb: 512,
+										},
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							)
+						);
+						await runWrangler(
+							"r2 bucket catalog compaction enable testBucket --token fakecloudflaretoken --targetSizeMb 512"
+						);
+						expect(std.out).toMatchInlineSnapshot(
+							`"✨ Successfully enabled file compaction for the data catalog for bucket 'testBucket'."`
+						);
+					});
+
+					it("should error if no bucket name is given", async () => {
+						await expect(
+							runWrangler("r2 bucket catalog compaction enable")
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Not enough non-option arguments: got 0, need at least 1]`
+						);
+						expect(std.out).toMatchInlineSnapshot(`
+							"
+							wrangler r2 bucket catalog compaction enable <bucket>
+
+							Enable automatic file compaction for your R2 data catalog [open-beta]
+
+							POSITIONALS
+							  bucket  The name of the bucket which contains the catalog  [string] [required]
+
+							GLOBAL FLAGS
+							  -c, --config    Path to Wrangler configuration file  [string]
+							      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+							  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+							      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+							  -h, --help      Show help  [boolean]
+							  -v, --version   Show version number  [boolean]
+
+							OPTIONS
+							      --targetSizeMb  The target size for compacted files (allowed values: 64, 128, 256, 512)  [number] [default: 128]
+							      --token         A cloudflare api token with access to R2 and R2 Data Catalog which will be used to read/write files for compaction.  [string] [required]"
+						`);
+						expect(std.err).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+					"
+				`);
+					});
+
+					it("should error if --token is not provided", async () => {
+						await expect(
+							runWrangler(
+								"r2 bucket catalog compaction enable testBucket --targetSizeMb 512"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing required argument: token]`
+						);
+					});
+				});
+
+				describe("disable", () => {
+					const { setIsTTY } = useMockIsTTY();
+
+					it("should error if no bucket name is given", async () => {
+						await expect(
+							runWrangler("r2 bucket catalog compaction disable")
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Not enough non-option arguments: got 0, need at least 1]`
+						);
+						expect(std.out).toMatchInlineSnapshot(`
+							"
+							wrangler r2 bucket catalog compaction disable <bucket>
+
+							Disable automatic file compaction for your R2 data catalog [open-beta]
+
+							POSITIONALS
+							  bucket  The name of the bucket which contains the catalog  [string] [required]
+
+							GLOBAL FLAGS
+							  -c, --config    Path to Wrangler configuration file  [string]
+							      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+							  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+							      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+							  -h, --help      Show help  [boolean]
+							  -v, --version   Show version number  [boolean]"
+						`);
+						expect(std.err).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+					"
+				`);
+					});
+
+					it("should disable compaction with confirmation", async () => {
+						setIsTTY(true);
+						mockConfirm({
+							text: "Are you sure you want to disable file compaction for the data catalog for bucket 'testBucket'?",
+							result: true,
+						});
+						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(body).toEqual({
+										compaction: {
+											state: "disabled",
+										},
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							)
+						);
+						await runWrangler(
+							"r2 bucket catalog compaction disable testBucket"
+						);
+						expect(std.out).toMatchInlineSnapshot(
+							`"Successfully disabled file compaction for the data catalog for bucket 'testBucket'."`
+						);
+					});
+
+					it("should cancel disable when confirmation is rejected", async () => {
+						setIsTTY(true);
+						mockConfirm({
+							text: "Are you sure you want to disable file compaction for the data catalog for bucket 'testBucket'?",
+							result: false,
+						});
+						await runWrangler(
+							"r2 bucket catalog compaction disable testBucket"
+						);
+						expect(std.out).toMatchInlineSnapshot(`"Disable cancelled."`);
+					});
 				});
 			});
 		});

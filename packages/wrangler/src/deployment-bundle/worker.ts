@@ -82,7 +82,7 @@ export interface CfVars {
 export interface CfKvNamespace {
 	binding: string;
 	id?: string | typeof INHERIT_SYMBOL;
-	experimental_remote?: boolean;
+	remote?: boolean;
 	raw?: boolean;
 }
 
@@ -91,7 +91,7 @@ export interface CfKvNamespace {
  */
 export type CfSendEmailBindings = {
 	name: string;
-	experimental_remote?: boolean;
+	remote?: boolean;
 } & (
 	| { destination_address?: string }
 	| { allowed_destination_addresses?: string[] }
@@ -125,7 +125,7 @@ export interface CfTextBlobBindings {
 export interface CfBrowserBinding {
 	binding: string;
 	raw?: boolean;
-	experimental_remote?: boolean;
+	remote?: boolean;
 }
 
 /**
@@ -135,7 +135,7 @@ export interface CfBrowserBinding {
 export interface CfAIBinding {
 	binding: string;
 	staging?: boolean;
-	experimental_remote?: boolean;
+	remote?: boolean;
 	raw?: boolean;
 }
 
@@ -145,7 +145,7 @@ export interface CfAIBinding {
 export interface CfImagesBinding {
 	binding: string;
 	raw?: boolean;
-	experimental_remote?: boolean;
+	remote?: boolean;
 }
 
 /**
@@ -179,7 +179,7 @@ export interface CfWorkflow {
 	class_name: string;
 	binding: string;
 	script_name?: string;
-	experimental_remote?: boolean;
+	remote?: boolean;
 	raw?: boolean;
 }
 
@@ -187,7 +187,7 @@ export interface CfQueue {
 	binding: string;
 	queue_name: string;
 	delivery_delay?: number;
-	experimental_remote?: boolean;
+	remote?: boolean;
 	raw?: boolean;
 }
 
@@ -195,7 +195,7 @@ export interface CfR2Bucket {
 	binding: string;
 	bucket_name?: string | typeof INHERIT_SYMBOL;
 	jurisdiction?: string;
-	experimental_remote?: boolean;
+	remote?: boolean;
 	raw?: boolean;
 }
 
@@ -208,7 +208,7 @@ export interface CfD1Database {
 	database_internal_env?: string;
 	migrations_table?: string;
 	migrations_dir?: string;
-	experimental_remote?: boolean;
+	remote?: boolean;
 	raw?: boolean;
 }
 
@@ -216,7 +216,7 @@ export interface CfVectorize {
 	binding: string;
 	index_name: string;
 	raw?: boolean;
-	experimental_remote?: boolean;
+	remote?: boolean;
 }
 
 export interface CfSecretsStoreSecrets {
@@ -228,6 +228,15 @@ export interface CfSecretsStoreSecrets {
 export interface CfHelloWorld {
 	binding: string;
 	enable_timer?: boolean;
+}
+
+export interface CfRateLimit {
+	name: string;
+	namespace_id: string;
+	simple: {
+		limit: number;
+		period: 10 | 60;
+	};
 }
 
 export interface CfHyperdrive {
@@ -242,7 +251,7 @@ export interface CfService {
 	environment?: string;
 	entrypoint?: string;
 	props?: Record<string, unknown>;
-	experimental_remote?: boolean;
+	remote?: boolean;
 }
 
 export interface CfAnalyticsEngineDataset {
@@ -258,13 +267,13 @@ export interface CfDispatchNamespace {
 		environment?: string;
 		parameters?: string[];
 	};
-	experimental_remote?: boolean;
+	remote?: boolean;
 }
 
 export interface CfMTlsCertificate {
 	binding: string;
 	certificate_id: string;
-	experimental_remote?: boolean;
+	remote?: boolean;
 }
 
 export interface CfLogfwdr {
@@ -283,7 +292,7 @@ export interface CfAssetsBinding {
 export interface CfPipeline {
 	binding: string;
 	pipeline: string;
-	experimental_remote?: boolean;
+	remote?: boolean;
 }
 
 export interface CfUnsafeBinding {
@@ -410,6 +419,7 @@ export interface CfWorkerInit {
 		unsafe: CfUnsafe | undefined;
 		assets: CfAssetsBinding | undefined;
 		unsafe_hello_world: CfHelloWorld[] | undefined;
+		ratelimits: CfRateLimit[] | undefined;
 	};
 
 	containers?: { class_name: string }[];

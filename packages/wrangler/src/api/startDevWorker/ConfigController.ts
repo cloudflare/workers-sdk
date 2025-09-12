@@ -159,7 +159,9 @@ async function resolveDevConfig(
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
 		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
 		experimentalRemoteBindings:
-			input.dev?.experimentalRemoteBindings ?? getFlag("REMOTE_BINDINGS"),
+			input.dev?.experimentalRemoteBindings ??
+			getFlag("REMOTE_BINDINGS") ??
+			true,
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
@@ -206,7 +208,7 @@ async function resolveBindings(
 				input.bindings
 			)?.[0],
 		},
-		input.dev?.experimentalRemoteBindings
+		input.dev?.experimentalRemoteBindings ?? true
 	);
 
 	// Create a print function that captures the current bindings context

@@ -1,5 +1,19 @@
 # @cloudflare/vite-plugin
 
+## 1.13.0
+
+### Minor Changes
+
+- [#10212](https://github.com/cloudflare/workers-sdk/pull/10212) [`0837a8d`](https://github.com/cloudflare/workers-sdk/commit/0837a8d4e406809e388dc06ad0b26a77b350f7b4) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support packages and virtual modules in the `main` field of the Worker config. The primary use case is to enable users to directly provide a file exported by a framework as the Worker entry module.
+
+- [#10604](https://github.com/cloudflare/workers-sdk/pull/10604) [`135e066`](https://github.com/cloudflare/workers-sdk/commit/135e06658ad3e3bd1d255c412597ce761ea412cb) Thanks [@penalosa](https://github.com/penalosa)! - Enable Remote Bindings without the need for the `experimental: { remoteBindings: true }` property
+
+### Patch Changes
+
+- Updated dependencies [[`0837a8d`](https://github.com/cloudflare/workers-sdk/commit/0837a8d4e406809e388dc06ad0b26a77b350f7b4), [`da24079`](https://github.com/cloudflare/workers-sdk/commit/da24079b370ad2af4e97b41ab20ad474ab148ead), [`ffa2600`](https://github.com/cloudflare/workers-sdk/commit/ffa2600a656b7a07cab622ea67338e770fd33bc3), [`135e066`](https://github.com/cloudflare/workers-sdk/commit/135e06658ad3e3bd1d255c412597ce761ea412cb), [`e2b838f`](https://github.com/cloudflare/workers-sdk/commit/e2b838ff56572d581661143d56f2485d7bcf1e0e), [`30f558e`](https://github.com/cloudflare/workers-sdk/commit/30f558eb4a02dcc5125f216d6fbe1d0be3b6d08f), [`d8860ac`](https://github.com/cloudflare/workers-sdk/commit/d8860ac17b20be71e1069d90861e3c49a6d5247b), [`336a75d`](https://github.com/cloudflare/workers-sdk/commit/336a75d8d7c52cc24e08de62dd4306201b879932), [`51553ef`](https://github.com/cloudflare/workers-sdk/commit/51553efa5bd7f07aa20d38fe6db62aa61e2b1999)]:
+  - wrangler@4.36.0
+  - miniflare@4.20250906.1
+
 ## 1.12.4
 
 ### Patch Changes

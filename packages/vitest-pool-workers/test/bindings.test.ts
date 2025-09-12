@@ -18,6 +18,7 @@ test("hello_world support", async ({ expect, seed, vitestRun }) => {
 		`,
 		"wrangler.jsonc": dedent`
 			{
+				"name": "test-worker",
 				"compatibility_date": "2025-01-01",
 				"unsafe_hello_world": [
 					{
@@ -56,5 +57,6 @@ test("hello_world support", async ({ expect, seed, vitestRun }) => {
 	});
 
 	const result = await vitestRun();
+
 	await expect(result.exitCode).resolves.toBe(0);
 });

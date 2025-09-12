@@ -622,7 +622,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 
 	// Refer to https://github.com/cloudflare/workers-sdk/pull/8492 for full context on why this test does different things to the others.
 	// In particular, it uses a shared resource across test runs
-	it.skipIf(!CLOUDFLARE_ACCOUNT_ID)("exposes Vectorize bindings", async () => {
+	it.skipIf(isLocal)("exposes Vectorize bindings", async () => {
 		const name = await helper.vectorize(
 			32,
 			"euclidean",
@@ -675,7 +675,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		});
 
 		const worker = helper.runLongLived(
-			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort} --experimental-vectorize-bind-to-prod`
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
 		);
 		const { url } = await worker.waitForReady();
 		await fetch(`${url}/insert`);

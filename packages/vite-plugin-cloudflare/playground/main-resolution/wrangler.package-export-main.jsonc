@@ -1,0 +1,7 @@
+{
+	"name": "worker",
+	"main": "@playground/main-resolution-package/entry",
+	"compatibility_date": "2024-12-30",
+	// Enable `nodejs_compat` to ensure there are no errors adding the polyfills
+	"compatibility_flags": ["nodejs_compat"],
+}

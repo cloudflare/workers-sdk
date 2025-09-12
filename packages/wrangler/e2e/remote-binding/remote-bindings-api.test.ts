@@ -24,8 +24,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		const { Miniflare } = await helper.importMiniflare();
 
 		const {
-			experimental_startRemoteProxySession: startRemoteProxySession,
-			experimental_maybeStartOrUpdateRemoteProxySession:
+			startRemoteProxySession: startRemoteProxySession,
+			maybeStartOrUpdateRemoteProxySession:
 				maybeStartOrUpdateRemoteProxySession,
 		} = await helper.importWrangler();
 
@@ -158,7 +158,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						MY_SERVICE: {
 							type: "service",
 							service: remoteWorkerName,
-							experimental_remote: true,
+							remote: true,
 						},
 					},
 				});
@@ -189,7 +189,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							MY_SERVICE: {
 								type: "service",
 								service: remoteWorkerName,
-								experimental_remote: true,
+								remote: true,
 							},
 						},
 					},
@@ -222,7 +222,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							MY_SERVICE: {
 								type: "service",
 								service: remoteWorkerName,
-								experimental_remote: true,
+								remote: true,
 							},
 						},
 					},

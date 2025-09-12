@@ -152,6 +152,12 @@ export type WorkerMetadataBinding =
 			enable_timer?: boolean;
 	  }
 	| {
+			type: "ratelimit";
+			name: string;
+			namespace_id: string;
+			simple: { limit: number; period: 10 | 60 };
+	  }
+	| {
 			type: "logfwdr";
 			name: string;
 			destination: string;
@@ -421,6 +427,15 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			name: binding,
 			type: "unsafe_hello_world",
 			enable_timer,
+		});
+	});
+
+	bindings.ratelimits?.forEach(({ name, namespace_id, simple }) => {
+		metadataBindings.push({
+			name,
+			type: "ratelimit",
+			namespace_id,
+			simple,
 		});
 	});
 

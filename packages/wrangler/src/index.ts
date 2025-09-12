@@ -190,6 +190,9 @@ import {
 	r2BucketUpdateStorageClassCommand,
 } from "./r2/bucket";
 import {
+	r2BucketCatalogCompactionDisableCommand,
+	r2BucketCatalogCompactionEnableCommand,
+	r2BucketCatalogCompactionNamespace,
 	r2BucketCatalogDisableCommand,
 	r2BucketCatalogEnableCommand,
 	r2BucketCatalogGetCommand,
@@ -248,6 +251,7 @@ import {
 	r2BucketSippyGetCommand,
 	r2BucketSippyNamespace,
 } from "./r2/sippy";
+import { r2SqlNamespace, r2SqlQueryCommand } from "./r2/sql";
 import {
 	secretBulkCommand,
 	secretDeleteCommand,
@@ -316,6 +320,12 @@ import { versionsSecretsListCommand } from "./versions/secrets/list";
 import { versionsSecretPutCommand } from "./versions/secrets/put";
 import { versionsUploadCommand } from "./versions/upload";
 import { versionsViewCommand } from "./versions/view";
+import { vpcServiceCreateCommand } from "./vpc/create";
+import { vpcServiceDeleteCommand } from "./vpc/delete";
+import { vpcServiceGetCommand } from "./vpc/get";
+import { vpcNamespace, vpcServiceNamespace } from "./vpc/index";
+import { vpcServiceListCommand } from "./vpc/list";
+import { vpcServiceUpdateCommand } from "./vpc/update";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
@@ -376,6 +386,7 @@ export function createCLIParser(argv: string[]) {
 			describe: `Experimental: Enable Remote Bindings`,
 			type: "boolean",
 			hidden: true,
+			default: true,
 			alias: ["x-remote-bindings"],
 		},
 		"experimental-provision": {
@@ -842,6 +853,18 @@ export function createCLIParser(argv: string[]) {
 			definition: r2BucketCatalogGetCommand,
 		},
 		{
+			command: "wrangler r2 bucket catalog compaction",
+			definition: r2BucketCatalogCompactionNamespace,
+		},
+		{
+			command: "wrangler r2 bucket catalog compaction enable",
+			definition: r2BucketCatalogCompactionEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket catalog compaction disable",
+			definition: r2BucketCatalogCompactionDisableCommand,
+		},
+		{
 			command: "wrangler r2 bucket notification",
 			definition: r2BucketNotificationNamespace,
 		},
@@ -956,6 +979,14 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 bucket lock set",
 			definition: r2BucketLockSetCommand,
+		},
+		{
+			command: "wrangler r2 sql",
+			definition: r2SqlNamespace,
+		},
+		{
+			command: "wrangler r2 sql query",
+			definition: r2SqlQueryCommand,
 		},
 	]);
 	registry.registerNamespace("r2");
@@ -1374,6 +1405,32 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("pipelines");
+
+	registry.define([
+		{ command: "wrangler vpc", definition: vpcNamespace },
+		{ command: "wrangler vpc service", definition: vpcServiceNamespace },
+		{
+			command: "wrangler vpc service create",
+			definition: vpcServiceCreateCommand,
+		},
+		{
+			command: "wrangler vpc service delete",
+			definition: vpcServiceDeleteCommand,
+		},
+		{
+			command: "wrangler vpc service get",
+			definition: vpcServiceGetCommand,
+		},
+		{
+			command: "wrangler vpc service list",
+			definition: vpcServiceListCommand,
+		},
+		{
+			command: "wrangler vpc service update",
+			definition: vpcServiceUpdateCommand,
+		},
+	]);
+	registry.registerNamespace("vpc");
 
 	registry.define([
 		{ command: "wrangler hello-world", definition: helloWorldNamespace },

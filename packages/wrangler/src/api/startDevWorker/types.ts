@@ -24,6 +24,7 @@ import type {
 	CfPipeline,
 	CfQueue,
 	CfR2Bucket,
+	CfRateLimit,
 	CfScriptFormat,
 	CfSecretsStoreSecrets,
 	CfSendEmailBindings,
@@ -163,7 +164,7 @@ export interface StartDevWorkerInput {
 		/** Whether a script tag is inserted on text/html responses which will reload the page upon file changes. Defaults to false. */
 		liveReload?: boolean;
 
-		/** The local address to reach your worker. Applies to experimental_remote: true (remote mode) and remote: false (local mode). */
+		/** The local address to reach your worker. Applies to remote: true (remote mode) and remote: false (local mode). */
 		server?: {
 			hostname?: string; // --ip
 			port?: number; // --port
@@ -302,6 +303,7 @@ export type Binding =
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
+	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
 

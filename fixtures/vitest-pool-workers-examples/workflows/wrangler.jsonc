@@ -4,9 +4,9 @@
 	"compatibility_date": "2025-02-04",
 	"workflows": [
 		{
-			"binding": "TEST_WORKFLOW",
-			"class_name": "TestWorkflow",
-			"name": "test-workflow",
+			"binding": "MODERATOR",
+			"class_name": "ModeratorWorkflow",
+			"name": "moderator-workflow",
 		},
 	],
 }

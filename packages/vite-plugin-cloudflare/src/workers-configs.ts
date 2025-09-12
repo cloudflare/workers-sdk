@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { unstable_readConfig } from "wrangler";
+import { ENTRY_MODULE_EXTENSIONS } from "./constants";
 import type { AssetsOnlyConfig, WorkerConfig } from "./plugin-config";
 import type { Optional } from "./utils";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
@@ -123,7 +124,11 @@ function readWorkerConfig(
 		notRelevant: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
-		unstable_readConfig({ config: configPath, env });
+		unstable_readConfig(
+			{ config: configPath, env },
+			// Preserve the original `main` value so that Vite can resolve it
+			{ preserveOriginalMain: true }
+		);
 	const raw = structuredClone(config) as RawWorkerConfig;
 
 	nullableNonApplicable.forEach((prop) => {
@@ -326,28 +331,38 @@ export function getWorkerConfig(
 		throw new Error(missingFieldErrorMessage(`'main'`, configPath, env));
 	}
 
-	const mainStat = fs.statSync(config.main, { throwIfNoEntry: false });
-	if (!mainStat) {
-		throw new Error(
-			`The provided Wrangler config main field (${config.main}) doesn't point to an existing file`
-		);
-	}
-	if (mainStat.isDirectory()) {
-		throw new Error(
-			`The provided Wrangler config main field (${config.main}) points to a directory, it needs to point to a file instead`
-		);
-	}
-
 	return {
 		type: "worker",
 		raw,
 		config: {
 			...config,
 			...requiredFields,
-			main: config.main,
+			main: maybeResolveMain(config.main, configPath),
 		},
 		nonApplicable,
 	};
+}
+
+/**
+ * If `main` ends with a valid file extension it is resolved to an absolute path.
+ * Else `main` is returned as is so that it can be resolved by Vite.
+ * This enables resolving entry modules relative to the Worker config while also supporting virtual modules and package exports.
+ */
+function maybeResolveMain(main: string, configPath: string): string {
+	if (!ENTRY_MODULE_EXTENSIONS.some((extension) => main.endsWith(extension))) {
+		return main;
+	}
+
+	// Resolve `main` to an absolute path
+	const resolvedMain = path.resolve(path.dirname(configPath), main);
+
+	if (!fs.existsSync(resolvedMain)) {
+		throw new Error(
+			`The provided Wrangler config main field (${resolvedMain}) doesn't point to an existing file`
+		);
+	}
+
+	return resolvedMain;
 }
 
 /**

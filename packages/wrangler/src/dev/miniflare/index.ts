@@ -223,45 +223,40 @@ function getRemoteId(id: string | symbol | undefined): string | null {
 }
 
 function kvNamespaceEntry(
-	{ binding, id: originalId, experimental_remote }: CfKvNamespace,
+	{ binding, id: originalId, remote }: CfKvNamespace,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
 	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 ] {
 	const id = getRemoteId(originalId) ?? binding;
-	if (!remoteProxyConnectionString || !experimental_remote) {
+	if (!remoteProxyConnectionString || !remote) {
 		return [binding, { id }];
 	}
 	return [binding, { id, remoteProxyConnectionString }];
 }
 function r2BucketEntry(
-	{ binding, bucket_name, experimental_remote }: CfR2Bucket,
+	{ binding, bucket_name, remote }: CfR2Bucket,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
 	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 ] {
 	const id = getRemoteId(bucket_name) ?? binding;
-	if (!remoteProxyConnectionString || !experimental_remote) {
+	if (!remoteProxyConnectionString || !remote) {
 		return [binding, { id }];
 	}
 	return [binding, { id, remoteProxyConnectionString }];
 }
 function d1DatabaseEntry(
-	{
-		binding,
-		database_id,
-		preview_database_id,
-		experimental_remote,
-	}: CfD1Database,
+	{ binding, database_id, preview_database_id, remote }: CfD1Database,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
 	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 ] {
 	const id = getRemoteId(preview_database_id ?? database_id) ?? binding;
-	if (!remoteProxyConnectionString || !experimental_remote) {
+	if (!remoteProxyConnectionString || !remote) {
 		return [binding, { id }];
 	}
 	return [binding, { id, remoteProxyConnectionString }];
@@ -271,7 +266,7 @@ function queueProducerEntry(
 		binding,
 		queue_name: queueName,
 		delivery_delay: deliveryDelay,
-		experimental_remote,
+		remote,
 	}: CfQueue,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
@@ -282,7 +277,7 @@ function queueProducerEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
-	if (!remoteProxyConnectionString || !experimental_remote) {
+	if (!remoteProxyConnectionString || !remote) {
 		return [binding, { queueName, deliveryDelay }];
 	}
 
@@ -298,7 +293,7 @@ function pipelineEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
-	if (!remoteProxyConnectionString || !pipeline.experimental_remote) {
+	if (!remoteProxyConnectionString || !pipeline.remote) {
 		return [pipeline.binding, { pipeline: pipeline.pipeline }];
 	}
 	return [
@@ -315,7 +310,7 @@ function workflowEntry(
 		name,
 		class_name: className,
 		script_name: scriptName,
-		experimental_remote,
+		remote,
 	}: CfWorkflow,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
@@ -327,7 +322,7 @@ function workflowEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
-	if (!remoteProxyConnectionString || !experimental_remote) {
+	if (!remoteProxyConnectionString || !remote) {
 		return [
 			binding,
 			{
@@ -351,10 +346,10 @@ function workflowEntry(
 function dispatchNamespaceEntry({
 	binding,
 	namespace,
-	experimental_remote,
+	remote,
 }: CfDispatchNamespace): [string, { namespace: string }];
 function dispatchNamespaceEntry(
-	{ binding, namespace, experimental_remote }: CfDispatchNamespace,
+	{ binding, namespace, remote }: CfDispatchNamespace,
 	remoteProxyConnectionString: RemoteProxyConnectionString
 ): [
 	string,
@@ -364,7 +359,7 @@ function dispatchNamespaceEntry(
 	},
 ];
 function dispatchNamespaceEntry(
-	{ binding, namespace, experimental_remote }: CfDispatchNamespace,
+	{ binding, namespace, remote }: CfDispatchNamespace,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
@@ -373,7 +368,7 @@ function dispatchNamespaceEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
-	if (!remoteProxyConnectionString || !experimental_remote) {
+	if (!remoteProxyConnectionString || !remote) {
 		return [binding, { namespace }];
 	}
 	return [binding, { namespace, remoteProxyConnectionString }];
@@ -482,7 +477,7 @@ export function buildMiniflareBindingOptions(
 	};
 
 	for (const service of config.services ?? []) {
-		if (remoteProxyConnectionString && service.experimental_remote) {
+		if (remoteProxyConnectionString && service.remote) {
 			serviceBindings[service.binding] = {
 				name: service.service,
 				props: service.props,
@@ -534,20 +529,16 @@ export function buildMiniflareBindingOptions(
 	}
 
 	if (bindings.ai && remoteBindingsEnabled) {
-		warnOrError("ai", bindings.ai.experimental_remote, "always-remote");
+		warnOrError("ai", bindings.ai.remote, "always-remote");
 	}
 
 	if (bindings.browser && remoteBindingsEnabled) {
-		warnOrError("browser", bindings.browser.experimental_remote, "remote");
+		warnOrError("browser", bindings.browser.remote, "remote");
 	}
 
 	if (bindings.mtls_certificates && remoteBindingsEnabled) {
 		for (const mtls of bindings.mtls_certificates) {
-			warnOrError(
-				"mtls_certificates",
-				mtls.experimental_remote,
-				"always-remote"
-			);
+			warnOrError("mtls_certificates", mtls.remote, "always-remote");
 		}
 	}
 
@@ -732,7 +723,7 @@ export function buildMiniflareBindingOptions(
 			send_email: bindings.send_email?.map((b) => ({
 				...b,
 				remoteProxyConnectionString:
-					b.experimental_remote && remoteProxyConnectionString
+					b.remote && remoteProxyConnectionString
 						? remoteProxyConnectionString
 						: undefined,
 			})),
@@ -742,7 +733,7 @@ export function buildMiniflareBindingOptions(
 				? {
 						binding: bindings.images.binding,
 						remoteProxyConnectionString:
-							bindings.images.experimental_remote && remoteProxyConnectionString
+							bindings.images.remote && remoteProxyConnectionString
 								? remoteProxyConnectionString
 								: undefined,
 					}
@@ -753,7 +744,7 @@ export function buildMiniflareBindingOptions(
 					remoteProxyConnectionString:
 						remoteBindingsEnabled &&
 						remoteProxyConnectionString &&
-						bindings.browser?.experimental_remote
+						bindings.browser?.remote
 							? remoteProxyConnectionString
 							: undefined,
 				}
@@ -764,8 +755,8 @@ export function buildMiniflareBindingOptions(
 				? Object.fromEntries(
 						bindings.vectorize
 							?.filter((v) => {
-								warnOrError("vectorize", v.experimental_remote, "remote");
-								return v.experimental_remote;
+								warnOrError("vectorize", v.remote, "remote");
+								return v.remote;
 							})
 							.map((vectorize) => {
 								return [
@@ -784,12 +775,8 @@ export function buildMiniflareBindingOptions(
 				? Object.fromEntries(
 						bindings.dispatch_namespaces
 							?.filter((d) => {
-								warnOrError(
-									"dispatch_namespaces",
-									d.experimental_remote,
-									"remote"
-								);
-								return d.experimental_remote;
+								warnOrError("dispatch_namespaces", d.remote, "remote");
+								return d.remote;
 							})
 							.map((dispatchNamespace) =>
 								dispatchNamespaceEntry(
@@ -823,23 +810,23 @@ export function buildMiniflareBindingOptions(
 			)
 		),
 
-		ratelimits: Object.fromEntries(
-			bindings.unsafe?.bindings
+		ratelimits: Object.fromEntries([
+			...(bindings.unsafe?.bindings
 				?.filter((b) => b.type == "ratelimit")
-				.map(ratelimitEntry) ?? []
-		),
+				.map(ratelimitEntry) ?? []),
+			...(bindings.ratelimits?.map((r) => [
+				r.name,
+				{ namespace_id: r.namespace_id, simple: r.simple },
+			]) ?? []),
+		]),
 
 		mtlsCertificates:
 			remoteBindingsEnabled && remoteProxyConnectionString
 				? Object.fromEntries(
 						bindings.mtls_certificates
 							?.filter((d) => {
-								warnOrError(
-									"mtls_certificates",
-									d.experimental_remote,
-									"remote"
-								);
-								return d.experimental_remote;
+								warnOrError("mtls_certificates", d.remote, "remote");
+								return d.remote;
 							})
 							.map((mtlsCertificate) => [
 								mtlsCertificate.binding,

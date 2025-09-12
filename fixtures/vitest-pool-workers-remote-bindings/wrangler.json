@@ -6,7 +6,7 @@
 		{
 			"binding": "MY_WORKER",
 			"service": "my-worker-test",
-			"experimental_remote": true
+			"remote": true
 		}
 	],
 	"env": {
@@ -15,7 +15,7 @@
 				{
 					"binding": "MY_WORKER",
 					"service": "my-staging-worker-test",
-					"experimental_remote": true
+					"remote": true
 				}
 			]
 		}
