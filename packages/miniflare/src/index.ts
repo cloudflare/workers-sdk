@@ -1938,6 +1938,7 @@ export class Miniflare {
 	}
 
 	async #assembleAndUpdateConfig() {
+		console.log("blah! is the prerelease working at all???");
 		await this.#closeBrowserProcesses();
 
 		// This function must be run with `#runtimeMutex` held
