@@ -180,18 +180,9 @@ async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 		{
 			async runInlinedModule(context, transformed, module) {
 				const code = `"use strict";async (${Object.keys(context).join(",")})=>{${transformed}}`;
-
-				try {
-					const fn = env.__VITE_UNSAFE_EVAL__.eval(code, module.id);
-					await fn(...Object.values(context));
-					Object.seal(context[ssrModuleExportsKey]);
-				} catch (error) {
-					if (error instanceof Error) {
-						error.message = `Error running module "${module.url}".\n${error.message}.`;
-					}
-
-					throw error;
-				}
+				const fn = env.__VITE_UNSAFE_EVAL__.eval(code, module.id);
+				await fn(...Object.values(context));
+				Object.seal(context[ssrModuleExportsKey]);
 			},
 			async runExternalModule(filepath) {
 				if (filepath === "cloudflare:workers") {
