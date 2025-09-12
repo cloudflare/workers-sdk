@@ -505,4 +505,22 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof http2.connect, "function");
 		assert.strictEqual(http2.constants.HTTP2_HEADER_STATUS, ":status");
 	},
+
+	async testPerfHooks() {
+		assert.strictEqual(typeof globalThis.performance, "object");
+		assert.strictEqual(typeof globalThis.PerformanceObserver, "function");
+
+		assert.doesNotThrow(() => globalThis.performance.now());
+		assert.doesNotThrow(() => globalThis.performance.mark("test"));
+		assert.doesNotThrow(() => globalThis.performance.measure("test"));
+
+		const perfHooks = await import("node:perf_hooks");
+
+		assert.strictEqual(typeof perfHooks.performance, "object");
+		assert.strictEqual(typeof perfHooks.PerformanceObserver, "function");
+
+		assert.doesNotThrow(() => perfHooks.performance.now());
+		assert.doesNotThrow(() => perfHooks.performance.mark("test"));
+		assert.doesNotThrow(() => perfHooks.performance.measure("test"));
+	},
 };
