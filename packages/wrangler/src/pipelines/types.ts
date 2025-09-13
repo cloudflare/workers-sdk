@@ -137,8 +137,6 @@ export type SchemaField = {
 		| "bool"
 		| "int32"
 		| "int64"
-		| "u_int32"
-		| "u_int64"
 		| "f32"
 		| "f64"
 		| "string"

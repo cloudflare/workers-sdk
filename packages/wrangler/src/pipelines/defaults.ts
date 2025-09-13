@@ -3,8 +3,8 @@ import type { ParquetFormat, Sink } from "./types";
 export const SINK_DEFAULTS = {
 	format: {
 		type: "parquet",
-		compression: "uncompressed",
-		row_group_bytes: 128 * 1024 * 1024,
+		compression: "zstd",
+		row_group_bytes: 1024 * 1024 * 1024,
 	} as ParquetFormat,
 	rolling_policy: {
 		file_size_bytes: 0,

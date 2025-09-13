@@ -912,6 +912,7 @@ describe("wrangler pipelines", () => {
 	});
 
 	describe("pipelines streams create", () => {
+		const { setIsTTY } = useMockIsTTY();
 		function mockCreateStreamRequest(expectedRequest: {
 			name: string;
 			hasSchema?: boolean;
@@ -982,6 +983,12 @@ describe("wrangler pipelines", () => {
 		});
 
 		it("should create stream with default settings", async () => {
+			setIsTTY(true);
+			mockConfirm({
+				text: "No schema file provided. Create stream without a schema (unstructured JSON)?",
+				result: true,
+			});
+
 			const createRequest = mockCreateStreamRequest({
 				name: "my_stream",
 			});

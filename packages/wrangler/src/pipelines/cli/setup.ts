@@ -150,6 +150,7 @@ async function setupStreamConfiguration(
 
 	setupConfig.streamConfig = {
 		name: setupConfig.streamName,
+		format: { type: "json" as const, ...(!schema && { unstructured: true }) },
 		http: {
 			enabled: httpEnabled,
 			authentication: httpAuth,
@@ -321,9 +322,19 @@ async function loadSchemaFromFile(): Promise<SchemaField[]> {
 
 		return parsedSchema.fields;
 	} catch (error) {
-		throw new UserError(
+		logger.error(
 			`Failed to read schema file: ${error instanceof Error ? error.message : String(error)}`
 		);
+
+		const retry = await confirm("Would you like to try again?", {
+			defaultValue: true,
+		});
+
+		if (retry) {
+			return loadSchemaFromFile();
+		} else {
+			throw new UserError("Schema file loading cancelled");
+		}
 	}
 }
 
@@ -370,9 +381,12 @@ async function setupR2Sink(
 		);
 	}
 
-	const path = await prompt("File prefix (optional):", {
-		defaultValue: "",
-	});
+	const path = await prompt(
+		"The base prefix in your bucket where data will be written (optional):",
+		{
+			defaultValue: "",
+		}
+	);
 
 	const timePartitionPattern = await prompt(
 		"Time partition pattern (optional):",
@@ -391,7 +405,6 @@ async function setupR2Sink(
 	});
 
 	let compression;
-	let targetRowGroupSize;
 	if (format === "parquet") {
 		compression = await select("Compression:", {
 			choices: [
@@ -401,21 +414,20 @@ async function setupR2Sink(
 				{ title: "zstd", value: "zstd" },
 				{ title: "lz4", value: "lz4" },
 			],
-			defaultOption: 0,
-			fallbackOption: 0,
-		});
-
-		targetRowGroupSize = await prompt("Target row group size (MB):", {
-			defaultValue: "128",
+			defaultOption: 3,
+			fallbackOption: 3,
 		});
 	}
 
-	const fileSizeMB = await prompt("Maximum file size (MB):", {
+	const fileSizeMB = await prompt("Roll file when size reaches (MB):", {
 		defaultValue: "100",
 	});
-	const intervalSeconds = await prompt("Maximum time interval (seconds):", {
-		defaultValue: "300",
-	});
+	const intervalSeconds = await prompt(
+		"Roll file when time reaches (seconds):",
+		{
+			defaultValue: "300",
+		}
+	);
 
 	const useOAuth = await confirm(
 		"Automatically generate credentials needed to write to your R2 bucket?",
@@ -456,9 +468,6 @@ async function setupR2Sink(
 			type: "parquet",
 			...(compression && {
 				compression: compression as ParquetFormat["compression"],
-			}),
-			...(targetRowGroupSize && {
-				row_group_bytes: parseInt(targetRowGroupSize) * 1024 * 1024,
 			}),
 		};
 	}
@@ -506,16 +515,15 @@ async function setupDataCatalogSink(setupConfig: SetupConfig): Promise<void> {
 		fallbackOption: 0,
 	});
 
-	const targetRowGroupSize = await prompt("Target row group size (MB):", {
-		defaultValue: "128",
-	});
-
-	const fileSizeMB = await prompt("Maximum file size (MB):", {
+	const fileSizeMB = await prompt("Roll file when size reaches (MB):", {
 		defaultValue: "100",
 	});
-	const intervalSeconds = await prompt("Maximum time interval (seconds):", {
-		defaultValue: "300",
-	});
+	const intervalSeconds = await prompt(
+		"Roll file when time reaches (seconds):",
+		{
+			defaultValue: "300",
+		}
+	);
 
 	setupConfig.sinkConfig = {
 		name: setupConfig.sinkName,
@@ -523,7 +531,6 @@ async function setupDataCatalogSink(setupConfig: SetupConfig): Promise<void> {
 		format: {
 			type: "parquet",
 			compression: compression as ParquetFormat["compression"],
-			row_group_bytes: parseInt(targetRowGroupSize) * 1024 * 1024,
 		},
 		config: {
 			bucket,

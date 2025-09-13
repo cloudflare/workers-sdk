@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { createCommand } from "../../../core/create-command";
+import { confirm } from "../../../dialogs";
 import { UserError } from "../../../errors";
 import { logger } from "../../../logger";
 import { parseJSON } from "../../../parse";
@@ -70,11 +71,23 @@ export const pipelinesStreamsCreateCommand = createCommand({
 					`Failed to read or parse schema file '${args.schemaFile}': ${error instanceof Error ? error.message : String(error)}`
 				);
 			}
+		} else {
+			// No schema file provided - confirm with user
+			const confirmNoSchema = await confirm(
+				"No schema file provided. Create stream without a schema (unstructured JSON)?",
+				{ defaultValue: false }
+			);
+
+			if (!confirmNoSchema) {
+				throw new UserError(
+					"Stream creation cancelled. Please provide a schema file using --schema-file"
+				);
+			}
 		}
 
 		const streamConfig: CreateStreamRequest = {
 			name: streamName,
-			...(!schema && { format: { type: "json" as const, unstructured: true } }),
+			format: { type: "json" as const, ...(!schema && { unstructured: true }) },
 			http: {
 				enabled: args.httpEnabled,
 				authentication: args.httpAuth,
