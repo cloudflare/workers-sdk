@@ -2,7 +2,7 @@ import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { listPipelines } from "../client";
-import { listLegacyPipelines } from "./legacy-helpers";
+import { tryListLegacyPipelines } from "./legacy-helpers";
 
 export const pipelinesListCommand = createCommand({
 	metadata: {
@@ -11,11 +11,6 @@ export const pipelinesListCommand = createCommand({
 		status: "open-beta",
 	},
 	args: {
-		legacy: {
-			type: "boolean",
-			describe: "Use the legacy Pipelines API",
-			default: false,
-		},
 		page: {
 			describe: "Page number for pagination",
 			type: "number",
@@ -35,33 +30,66 @@ export const pipelinesListCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		// Handle legacy API if flag is provided
-		if (args.legacy) {
-			return await listLegacyPipelines(config, accountId);
-		}
-
-		const pipelines = await listPipelines(config, {
-			page: args.page,
-			per_page: args.perPage,
-		});
+		const [newPipelines, legacyPipelines] = await Promise.all([
+			listPipelines(config, {
+				page: args.page,
+				per_page: args.perPage,
+			}),
+			tryListLegacyPipelines(config, accountId),
+		]);
 
 		if (args.json) {
-			logger.log(JSON.stringify(pipelines, null, 2));
+			const hasLegacyPipelines = legacyPipelines && legacyPipelines.length > 0;
+			const result = hasLegacyPipelines
+				? {
+						pipelines: newPipelines || [],
+						legacyPipelines: legacyPipelines,
+					}
+				: newPipelines || [];
+			logger.log(JSON.stringify(result, null, 2));
 			return;
 		}
 
-		if (!pipelines || pipelines.length === 0) {
+		const hasLegacyPipelines = legacyPipelines && legacyPipelines.length > 0;
+		const hasNewPipelines = newPipelines && newPipelines.length > 0;
+
+		if (!hasNewPipelines && !hasLegacyPipelines) {
 			logger.log("No pipelines found.");
 			return;
 		}
 
-		logger.table(
-			pipelines.map((pipeline) => ({
+		if (hasLegacyPipelines) {
+			const tableData = [
+				...(newPipelines || []).map((pipeline) => ({
+					Name: pipeline.name,
+					ID: pipeline.id,
+					Created: new Date(pipeline.created_at).toLocaleDateString(),
+					Modified: new Date(pipeline.modified_at).toLocaleDateString(),
+					Type: "",
+				})),
+				...legacyPipelines.map((pipeline) => ({
+					Name: pipeline.name,
+					ID: pipeline.id,
+					Created: "N/A",
+					Modified: "N/A",
+					Type: "Legacy",
+				})),
+			];
+			logger.table(tableData);
+		} else {
+			const tableData = (newPipelines || []).map((pipeline) => ({
 				Name: pipeline.name,
 				ID: pipeline.id,
 				Created: new Date(pipeline.created_at).toLocaleDateString(),
 				Modified: new Date(pipeline.modified_at).toLocaleDateString(),
-			}))
-		);
+			}));
+			logger.table(tableData);
+		}
+
+		if (hasLegacyPipelines) {
+			logger.warn(
+				"⚠️  You have legacy pipelines. Consider creating new pipelines by running 'wrangler pipelines setup'."
+			);
+		}
 	},
 });

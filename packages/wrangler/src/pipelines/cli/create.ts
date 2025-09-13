@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { createCommand } from "../../core/create-command";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
+import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
 import { createPipeline, getPipeline, getStream, validateSql } from "../client";
 import { displayUsageExamples } from "./streams/utils";
@@ -27,23 +28,12 @@ export const pipelinesCreateCommand = createCommand({
 			describe: "Path to file containing SQL query for the pipeline",
 			type: "string",
 		},
-		legacy: {
-			type: "boolean",
-			describe: "Use the legacy Pipelines API",
-			default: false,
-		},
 	},
 	positionalArgs: ["pipeline"],
 
 	async handler(args, { config }) {
 		await requireAuth(config);
 		const pipelineName = args.pipeline;
-
-		if (args.legacy) {
-			throw new UserError(
-				"Creating legacy pipelines is not supported. Please use the v1 Pipelines API without the --legacy flag."
-			);
-		}
 
 		if (!args.sql && !args.sqlFile) {
 			throw new UserError("Either --sql or --sql-file must be provided");
@@ -115,7 +105,18 @@ export const pipelinesCreateCommand = createCommand({
 
 		logger.log(`🌀 Creating pipeline '${pipelineName}'...`);
 
-		const pipeline = await createPipeline(config, pipelineConfig);
+		let pipeline;
+		try {
+			pipeline = await createPipeline(config, pipelineConfig);
+		} catch (error) {
+			if (error instanceof APIError && error.code === 10000) {
+				// Show error when no access to v1 Pipelines API
+				throw new UserError(
+					`An authentication error has occurred creating a pipeline with this version of Wrangler. Please try: npm install wrangler@4.36.0`
+				);
+			}
+			throw error;
+		}
 
 		logger.log(
 			`✨ Successfully created pipeline '${pipeline.name}' with id '${pipeline.id}'.`

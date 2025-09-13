@@ -1,19 +1,21 @@
 import { createCommand } from "../../core/create-command";
 import { UserError } from "../../errors";
+import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
+import { getPipeline } from "../client";
 import { validateCorsOrigins, validateInRange } from "../validate";
 import { updateLegacyPipeline } from "./legacy-helpers";
 
 export const pipelinesUpdateCommand = createCommand({
 	metadata: {
-		description: "Update a pipeline (legacy pipelines only)",
+		description: "Update a pipeline configuration (legacy pipelines only)",
 		owner: "Product: Pipelines",
 		status: "open-beta",
 	},
 	positionalArgs: ["pipeline"],
 	args: {
 		pipeline: {
-			describe: "The name of the new pipeline",
+			describe: "The name of the legacy pipeline to update",
 			type: "string",
 			demandOption: true,
 		},
@@ -110,21 +112,36 @@ export const pipelinesUpdateCommand = createCommand({
 			demandOption: false,
 			group: "Pipeline settings",
 		},
-		legacy: {
-			type: "boolean",
-			describe: "Use the legacy Pipelines API",
-			default: false,
-		},
 	},
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
+		const pipelineId = args.pipeline;
 
-		if (args.legacy) {
-			return await updateLegacyPipeline(config, accountId, args);
+		try {
+			await getPipeline(config, pipelineId);
+			throw new UserError(
+				"Pipelines created with the V1 API cannot be updated. To modify your pipeline, delete and recreate it with your new SQL."
+			);
+		} catch (error) {
+			if (
+				error instanceof APIError &&
+				(error.code === 1000 || error.code === 2)
+			) {
+				try {
+					return await updateLegacyPipeline(config, accountId, args);
+				} catch (legacyError) {
+					if (legacyError instanceof APIError && legacyError.code === 1000) {
+						throw new UserError(
+							`Pipeline "${pipelineId}" not found. The update command only works with legacy pipelines. Pipelines created with the V1 API cannot be updated and must be recreated to modify.`
+						);
+					}
+					throw legacyError;
+				}
+			}
+			if (!(error instanceof UserError)) {
+				throw error;
+			}
+			throw error;
 		}
-
-		throw new UserError(
-			"The update command is not supported for pipelines created with the V1 API. Use the --legacy flag to update legacy pipelines."
-		);
 	},
 });
