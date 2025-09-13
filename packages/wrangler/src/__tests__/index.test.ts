@@ -65,6 +65,7 @@ describe("wrangler", () => {
 				  wrangler secrets-store          🔐 Manage the Secrets Store [alpha]
 				  wrangler workflows              🔁 Manage Workflows
 				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open-beta]
+				  wrangler vpc                    🌐 Manage VPC connectivity [private-beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
@@ -126,6 +127,7 @@ describe("wrangler", () => {
 				  wrangler secrets-store          🔐 Manage the Secrets Store [alpha]
 				  wrangler workflows              🔁 Manage Workflows
 				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open-beta]
+				  wrangler vpc                    🌐 Manage VPC connectivity [private-beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
@@ -294,6 +296,7 @@ describe("wrangler", () => {
 				COMMANDS
 				  wrangler r2 object  Manage R2 objects
 				  wrangler r2 bucket  Manage R2 buckets
+				  wrangler r2 sql     Send queries and manage R2 SQL [open-beta]
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]

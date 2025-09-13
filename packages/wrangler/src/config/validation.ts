@@ -1443,6 +1443,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateHelloWorldBinding),
 			[]
 		),
+		ratelimits: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"ratelimits",
+			validateBindingArray(envName, validateRateLimitBinding),
+			[]
+		),
 		version_metadata: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3832,6 +3842,84 @@ const validateHelloWorldBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"enable_timer",
+	]);
+
+	return isValid;
+};
+
+const validateRateLimitBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"ratelimits" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "namespace_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "namespace_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (
+		!hasProperty(value, "simple") ||
+		typeof value.simple !== "object" ||
+		value.simple === null
+	) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "simple" configuration object but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	} else {
+		if (!isRequiredProperty(value.simple, "limit", "number")) {
+			diagnostics.errors.push(
+				`"${field}" bindings "simple.limit" must be a number but got ${JSON.stringify(
+					value.simple
+				)}.`
+			);
+			isValid = false;
+		}
+		if (!isRequiredProperty(value.simple, "period", "number")) {
+			diagnostics.errors.push(
+				`"${field}" bindings "simple.period" is required and must be a number but got ${JSON.stringify(
+					value.simple
+				)}.`
+			);
+			isValid = false;
+		} else if (![10, 60].includes(value.simple.period)) {
+			diagnostics.errors.push(
+				`"${field}" bindings "simple.period" must be either 10 or 60 but got ${JSON.stringify(
+					value.simple.period
+				)}.`
+			);
+			isValid = false;
+		}
+
+		validateAdditionalProperties(
+			diagnostics,
+			`${field}.simple`,
+			Object.keys(value.simple),
+			["limit", "period"]
+		);
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"name",
+		"namespace_id",
+		"simple",
 	]);
 
 	return isValid;
