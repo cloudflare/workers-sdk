@@ -130,10 +130,8 @@ function generateSampleValue(field: SchemaField): SampleValue {
 		case "bool":
 			return true;
 		case "int32":
-		case "u_int32":
 			return 42;
 		case "int64":
-		case "u_int64":
 			return "9223372036854775807"; // Large numbers as strings to avoid JS precision issues
 		case "f32":
 		case "f64":

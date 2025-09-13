@@ -59,23 +59,23 @@ export const pipelinesSinksCreateCommand = createCommand({
 			type: "string",
 		},
 		path: {
-			describe: "Subpath within the bucket",
+			describe: "The base prefix in your bucket where data will be written",
 			type: "string",
 		},
 		partitioning: {
 			describe: "Time partition pattern (r2 sinks only)",
 			type: "string",
 		},
-		"batch-file-size": {
-			describe: "Maximum file size before rolling (e.g., 100MB, 1GB)",
+		"roll-size": {
+			describe: "Roll file when size reaches (e.g., 100MB, 1GB)",
 			type: "string",
 			default:
 				SINK_DEFAULTS.rolling_policy.file_size_bytes === 0
 					? undefined
 					: `${SINK_DEFAULTS.rolling_policy.file_size_bytes}`,
 		},
-		"batch-interval": {
-			describe: "Time interval before rolling (e.g., 5m, 1h)",
+		"roll-interval": {
+			describe: "Roll file when time reaches (e.g., 5m, 1h)",
 			type: "string",
 			default: `${SINK_DEFAULTS.rolling_policy.interval_seconds}s`,
 		},
@@ -175,15 +175,15 @@ export const pipelinesSinksCreateCommand = createCommand({
 			};
 		}
 
-		if (args.batchFileSize || args.batchInterval) {
+		if (args.rollSize || args.rollInterval) {
 			let file_size_bytes: number =
 				SINK_DEFAULTS.rolling_policy.file_size_bytes;
 			let interval_seconds: number =
 				SINK_DEFAULTS.rolling_policy.interval_seconds;
 
-			if (args.batchFileSize) {
+			if (args.rollSize) {
 				// Parse file size (e.g., "100MB" -> bytes)
-				const sizeMatch = args.batchFileSize.match(/^(\d+)(MB|GB)?$/i);
+				const sizeMatch = args.rollSize.match(/^(\d+)(MB|GB)?$/i);
 				if (sizeMatch) {
 					const size = parseInt(sizeMatch[1]);
 					const unit = sizeMatch[2]?.toUpperCase() || "MB";
@@ -191,9 +191,9 @@ export const pipelinesSinksCreateCommand = createCommand({
 						unit === "GB" ? size * 1024 * 1024 * 1024 : size * 1024 * 1024;
 				}
 			}
-			if (args.batchInterval) {
+			if (args.rollInterval) {
 				// Parse interval (e.g., "300s" or "5m" -> seconds)
-				const intervalMatch = args.batchInterval.match(/^(\d+)([sm])?$/i);
+				const intervalMatch = args.rollInterval.match(/^(\d+)([sm])?$/i);
 				if (intervalMatch) {
 					const interval = parseInt(intervalMatch[1]);
 					const unit = intervalMatch[2]?.toLowerCase() || "s";
