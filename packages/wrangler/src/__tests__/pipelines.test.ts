@@ -354,6 +354,38 @@ describe("wrangler pipelines", () => {
 
 			expect(validateRequest.count).toBe(1);
 		});
+
+		it("should show wrangler version message on authentication error", async () => {
+			const sql = "INSERT INTO test_sink SELECT * FROM test_stream;";
+			const validateRequest = mockValidateSqlRequest(sql);
+
+			// Mock create returns auth error (code 10000)
+			msw.use(
+				http.post(
+					`*/accounts/${accountId}/pipelines/v1/pipelines`,
+					() => {
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 10000, message: "Authentication error" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 403 }
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(
+				runWrangler(`pipelines create my_pipeline --sql "${sql}"`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: An authentication error has occurred creating a pipeline with this version of Wrangler. Please try: npm install wrangler@4.36.0]`
+			);
+
+			expect(validateRequest.count).toBe(1);
+		});
 	});
 
 	describe("pipelines list", () => {
@@ -402,6 +434,84 @@ describe("wrangler pipelines", () => {
 			expect(listRequest.count).toBe(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`"No pipelines found."`);
+		});
+
+		it("should merge new and legacy pipelines with Type column for legacy", async () => {
+			const mockNewPipelines: Pipeline[] = [
+				{
+					id: "pipeline_1",
+					name: "new_pipeline",
+					sql: "INSERT INTO sink1 SELECT * FROM stream1;",
+					status: "active",
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+			];
+
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/v1/pipelines`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockNewPipelines,
+							result_info: {
+								page: 1,
+								per_page: 20,
+								count: mockNewPipelines.length,
+								total_count: mockNewPipelines.length,
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			const mockLegacyPipelines = [
+				{
+					id: "legacy_123",
+					name: "legacy_pipeline",
+					endpoint: "https://pipelines.cloudflare.com/legacy",
+				},
+			];
+
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockLegacyPipelines,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler("pipelines list");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines list\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️  You have legacy pipelines. Consider creating new pipelines by running 'wrangler pipelines setup'.[0m
+
+				"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"┌─┬─┬─┬─┬─┐
+				│ Name │ ID │ Created │ Modified │ Type │
+				├─┼─┼─┼─┼─┤
+				│ new_pipeline │ pipeline_1 │ 1/1/2024 │ 1/1/2024 │ │
+				├─┼─┼─┼─┼─┤
+				│ legacy_pipeline │ legacy_123 │ N/A │ N/A │ Legacy │
+				└─┴─┴─┴─┴─┘"
+			`);
 		});
 	});
 
@@ -473,6 +583,93 @@ describe("wrangler pipelines", () => {
 				└─┴─┘"
 			`);
 		});
+
+		it("should fall back to legacy API when pipeline not found in new API", async () => {
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/v1/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 1000, message: "Pipeline not found" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 404 }
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			const mockLegacyPipeline = {
+				id: "legacy_123",
+				name: "my-legacy-pipeline",
+				endpoint: "https://pipelines.cloudflare.com/legacy",
+				source: [{ type: "http", format: "json" }],
+				destination: {
+					type: "r2",
+					format: "json",
+					path: { bucket: "my-bucket", prefix: "data/" },
+					batch: {
+						max_duration_s: 300,
+						max_bytes: 100000000,
+						max_rows: 10000000,
+					},
+					compression: { type: "gzip" },
+				},
+				transforms: [],
+				metadata: { shards: 2 },
+			};
+
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockLegacyPipeline,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler("pipelines get my-legacy-pipeline");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines get\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️  This is a legacy pipeline. Consider creating a new pipeline by running 'wrangler pipelines setup'.[0m
+
+				"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Id:    legacy_123
+				Name:  my-legacy-pipeline
+				Sources:
+				  HTTP:
+				    Endpoint:        https://pipelines.cloudflare.com/legacy
+				    Authentication:  off
+				    Format:          JSON
+				Destination:
+				  Type:         R2
+				  Bucket:       my-bucket
+				  Format:       newline-delimited JSON
+				  Prefix:       data/
+				  Compression:  GZIP
+				  Batch hints:
+				    Max bytes:     100 MB
+				    Max duration:  300 seconds
+				    Max records:   10,000,000
+				"
+			`);
+		});
 	});
 
 	describe("pipelines delete", () => {
@@ -513,15 +710,204 @@ describe("wrangler pipelines", () => {
 				"✨ Successfully deleted pipeline 'my_pipeline' with id 'pipeline_123'."
 			`);
 		});
+
+		it("should fall back to legacy API when deleting pipeline not in new API", async () => {
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/v1/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 1000, message: "Pipeline not found" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 404 }
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "legacy_123",
+								name: "my-legacy-pipeline",
+								endpoint: "https://pipelines.cloudflare.com/legacy",
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			msw.use(
+				http.delete(
+					`*/accounts/${accountId}/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			setIsTTY(true);
+			mockConfirm({
+				text: "Are you sure you want to delete the legacy pipeline 'my-legacy-pipeline'?",
+				result: true,
+			});
+
+			await runWrangler("pipelines delete my-legacy-pipeline");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"✨ Successfully deleted legacy pipeline 'my-legacy-pipeline'."
+			`);
+		});
 	});
 
 	describe("pipelines update", () => {
-		it("should error when not using --legacy flag", async () => {
-			await expect(
-				runWrangler("pipelines update my_pipeline")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The update command is not supported for pipelines created with the V1 API. Use the --legacy flag to update legacy pipelines.]`
+		it("should error when trying to update V1 pipeline", async () => {
+			const mockPipeline: Pipeline = {
+				id: "pipeline_123",
+				name: "my_pipeline",
+				sql: "INSERT INTO test_sink SELECT * FROM test_stream;",
+				status: "active",
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/v1/pipelines/pipeline_123`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockPipeline,
+						});
+					},
+					{ once: true }
+				)
 			);
+
+			await expect(
+				runWrangler("pipelines update pipeline_123 --batch-max-mb 50")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Pipelines created with the V1 API cannot be updated. To modify your pipeline, delete and recreate it with your new SQL.]`
+			);
+		});
+
+		it("should update legacy pipeline with warning", async () => {
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/v1/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 1000, message: "Pipeline not found" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 404 }
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			const mockLegacyPipeline = {
+				id: "legacy_123",
+				name: "my-legacy-pipeline",
+				endpoint: "https://pipelines.cloudflare.com/legacy",
+				source: [{ type: "http", format: "json" }],
+				destination: {
+					type: "r2",
+					format: "json",
+					path: { bucket: "my-bucket", prefix: "data/" },
+					batch: {
+						max_duration_s: 300,
+						max_bytes: 100000000,
+						max_rows: 10000000,
+					},
+					compression: { type: "gzip" },
+				},
+				transforms: [],
+				metadata: { shards: 2 },
+			};
+
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockLegacyPipeline,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			msw.use(
+				http.put(
+					`*/accounts/${accountId}/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								...mockLegacyPipeline,
+								destination: {
+									...mockLegacyPipeline.destination,
+									batch: {
+										...mockLegacyPipeline.destination.batch,
+										max_bytes: 50000000,
+									},
+								},
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler(
+				"pipelines update my-legacy-pipeline --batch-max-mb 50"
+			);
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines update\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️  Updating legacy pipeline. Consider recreating with 'wrangler pipelines setup'.[0m
+
+				"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Updating pipeline \\"my-legacy-pipeline\\"
+				✨ Successfully updated pipeline \\"my-legacy-pipeline\\" with ID legacy_123
+				"
+			`);
 		});
 	});
 
