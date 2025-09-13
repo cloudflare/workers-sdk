@@ -1,6 +1,7 @@
 import { confirm } from "../../dialogs";
 import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";
+import { APIError } from "../../parse";
 import {
 	authorizeR2Bucket,
 	BYTES_PER_MB,
@@ -47,32 +48,12 @@ export async function getLegacyPipeline(
 			logger.log(JSON.stringify(pipeline, null, 2));
 			break;
 		case "pretty":
+			logger.warn(
+				"⚠️  This is a legacy pipeline. Consider creating a new pipeline by running 'wrangler pipelines setup'."
+			);
 			logger.log(formatPipelinePretty(pipeline));
 			break;
 	}
-}
-
-export async function deleteLegacyPipeline(
-	config: Config,
-	accountId: string,
-	name: string,
-	force: boolean = false
-): Promise<void> {
-	validateName("pipeline name", name);
-
-	if (!force) {
-		const confirmedDelete = await confirm(
-			`Are you sure you want to delete the pipeline '${name}'?`
-		);
-		if (!confirmedDelete) {
-			logger.log("Delete cancelled.");
-			return;
-		}
-	}
-
-	await deletePipeline(config, accountId, name);
-
-	logger.log(`✨ Successfully deleted pipeline '${name}'.`);
 }
 
 interface LegacyUpdateArgs {
@@ -91,6 +72,69 @@ interface LegacyUpdateArgs {
 	corsOrigins?: string[];
 }
 
+export async function tryGetLegacyPipeline(
+	config: Config,
+	accountId: string,
+	name: string,
+	format: "pretty" | "json"
+): Promise<boolean> {
+	try {
+		await getLegacyPipeline(config, accountId, name, format);
+		return true;
+	} catch (error) {
+		if (error instanceof APIError && error.code === 1000) {
+			return false;
+		}
+		throw error;
+	}
+}
+
+export async function tryListLegacyPipelines(
+	config: Config,
+	accountId: string
+): Promise<Array<{ name: string; id: string; endpoint?: string }> | null> {
+	try {
+		const pipelines = await listPipelines(config, accountId);
+		return pipelines;
+	} catch {
+		return [];
+	}
+}
+
+export async function tryDeleteLegacyPipeline(
+	config: Config,
+	accountId: string,
+	name: string,
+	force: boolean = false
+): Promise<boolean> {
+	try {
+		await getPipeline(config, accountId, name);
+
+		if (!force) {
+			const confirmedDelete = await confirm(
+				`Are you sure you want to delete the legacy pipeline '${name}'?`
+			);
+			if (!confirmedDelete) {
+				logger.log("Delete cancelled.");
+				return true;
+			}
+		}
+
+		await deletePipeline(config, accountId, name);
+		logger.log(`✨ Successfully deleted legacy pipeline '${name}'.`);
+		return true;
+	} catch (error) {
+		if (
+			error instanceof APIError &&
+			(error.code === 1000 || error.code === 2)
+		) {
+			// Not found in legacy API
+			return false;
+		}
+		throw error;
+	}
+}
+
 export async function updateLegacyPipeline(
 	config: Config,
 	accountId: string,
@@ -99,6 +143,10 @@ export async function updateLegacyPipeline(
 	const name = args.pipeline;
 
 	const pipelineConfig = await getPipeline(config, accountId, name);
+
+	logger.warn(
+		"⚠️  Updating legacy pipeline. Consider recreating with 'wrangler pipelines setup'."
+	);
 
 	if (args.compression) {
 		pipelineConfig.destination.compression.type = args.compression;

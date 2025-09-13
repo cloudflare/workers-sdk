@@ -1,9 +1,10 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
+import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
 import { getPipeline } from "../client";
-import { getLegacyPipeline } from "./legacy-helpers";
+import { tryGetLegacyPipeline } from "./legacy-helpers";
 
 export const pipelinesGetCommand = createCommand({
 	metadata: {
@@ -14,7 +15,7 @@ export const pipelinesGetCommand = createCommand({
 	args: {
 		pipeline: {
 			type: "string",
-			describe: "The ID of the pipeline to retrieve (or name for --legacy)",
+			describe: "The ID of the pipeline to retrieve",
 			demandOption: true,
 		},
 		format: {
@@ -22,28 +23,34 @@ export const pipelinesGetCommand = createCommand({
 			describe: "The output format for pipeline",
 			default: "pretty",
 		},
-		legacy: {
-			type: "boolean",
-			describe: "Use the legacy Pipelines API",
-			default: false,
-		},
 	},
 	positionalArgs: ["pipeline"],
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 		const pipelineId = args.pipeline;
 
-		// Handle legacy API if flag is provided
-		if (args.legacy) {
-			return await getLegacyPipeline(
-				config,
-				accountId,
-				pipelineId,
-				args.format as "pretty" | "json"
-			);
-		}
+		let pipeline;
 
-		const pipeline = await getPipeline(config, pipelineId);
+		try {
+			pipeline = await getPipeline(config, pipelineId);
+		} catch (error) {
+			if (
+				error instanceof APIError &&
+				(error.code === 1000 || error.code === 2)
+			) {
+				const foundInLegacy = await tryGetLegacyPipeline(
+					config,
+					accountId,
+					pipelineId,
+					args.format as "pretty" | "json"
+				);
+
+				if (foundInLegacy) {
+					return;
+				}
+			}
+			throw error;
+		}
 
 		if (args.format === "json") {
 			logger.log(JSON.stringify(pipeline, null, 2));
