@@ -36,6 +36,8 @@ export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	RawEnvironment &
 	EnvironmentMap & { $schema?: string };
 
+export type RedirectedRawConfig = RawConfig & Partial<ComputedFields>;
+
 export interface ComputedFields {
 	/** The path to the Wrangler configuration file (if any, and possibly redirected from the user Wrangler configuration) used to create this configuration. */
 	configPath: string | undefined;
@@ -48,6 +50,10 @@ export interface ComputedFields {
 	 * It can be useful to know what the top-level name was before the flattening.
 	 */
 	topLevelName: string | undefined;
+	/** A list of environment names declared in the raw configuration. */
+	definedEnvironments: string[] | undefined;
+	/** The name of the environment being targeted. */
+	targetEnvironment: string | undefined;
 }
 
 export interface ConfigFields<Dev extends RawDevConfig> {
@@ -280,6 +286,8 @@ export const defaultWranglerConfig: Config = {
 	configPath: undefined,
 	userConfigPath: undefined,
 	topLevelName: undefined,
+	definedEnvironments: undefined,
+	targetEnvironment: undefined,
 
 	/*====================================================*/
 	/*      Fields supported by both Workers & Pages      */
