@@ -338,19 +338,20 @@ function getDurableObjectClassNames(
 		.flatMap((workerOpts) => {
 			const workerServiceName = getUserServiceName(workerOpts.core.name);
 
-			return Object.values(workerOpts.do.durableObjects ?? {}).map(
-				(workerDODesignator) => {
-					const doInfo = normaliseDurableObject(workerDODesignator);
-					if (doInfo.serviceName === undefined) {
-						// Fallback to current worker service if name not defined
-						doInfo.serviceName = workerServiceName;
-					}
-					return {
-						doInfo,
-						workerRawName: workerOpts.core.name,
-					};
+			return [
+				...Object.values(workerOpts.do.durableObjects ?? {}),
+				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
+			].map((workerDODesignator) => {
+				const doInfo = normaliseDurableObject(workerDODesignator);
+				if (doInfo.serviceName === undefined) {
+					// Fallback to current worker service if name not defined
+					doInfo.serviceName = workerServiceName;
 				}
-			);
+				return {
+					doInfo,
+					workerRawName: workerOpts.core.name,
+				};
+			});
 		})
 		// We sort the list of durable objects because we want the durable objects without a scriptName or a scriptName
 		// that matches the raw worker's name (meaning that they are defined within their worker) to be processed first
