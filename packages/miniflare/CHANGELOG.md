@@ -1,5 +1,11 @@
 # miniflare
 
+## 4.20250906.2
+
+### Minor Changes
+
+- [#10596](https://github.com/cloudflare/workers-sdk/pull/10596) [`735785e`](https://github.com/cloudflare/workers-sdk/commit/735785e7948da06411b738c70efcd95626efb3eb) Thanks [@penalosa](https://github.com/penalosa)! - Add Miniflare & Wrangler support for unbound Durable Objects
+
 ## 4.20250906.1
 
 ### Minor Changes

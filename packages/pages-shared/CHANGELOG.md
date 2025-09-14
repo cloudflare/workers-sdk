@@ -1,5 +1,12 @@
 # @cloudflare/pages-shared
 
+## 0.13.71
+
+### Patch Changes
+
+- Updated dependencies [[`735785e`](https://github.com/cloudflare/workers-sdk/commit/735785e7948da06411b738c70efcd95626efb3eb)]:
+  - miniflare@4.20250906.2
+
 ## 0.13.70
 
 ### Patch Changes

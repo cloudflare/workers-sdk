@@ -1,5 +1,20 @@
 # wrangler
 
+## 4.37.0
+
+### Minor Changes
+
+- [#10546](https://github.com/cloudflare/workers-sdk/pull/10546) [`d53a0bc`](https://github.com/cloudflare/workers-sdk/commit/d53a0bc3afee011cc9edbb61d1583f61a986831f) Thanks [@1000hz](https://github.com/1000hz)! - On deploy or version upload, Workers with multiple environments are tagged with metadata that groups them together in the Cloudflare Dashboard.
+
+- [#10596](https://github.com/cloudflare/workers-sdk/pull/10596) [`735785e`](https://github.com/cloudflare/workers-sdk/commit/735785e7948da06411b738c70efcd95626efb3eb) Thanks [@penalosa](https://github.com/penalosa)! - Add Miniflare & Wrangler support for unbound Durable Objects
+
+- [#10622](https://github.com/cloudflare/workers-sdk/pull/10622) [`15c34e2`](https://github.com/cloudflare/workers-sdk/commit/15c34e23d6bcd225a3ebea08cba25d3c62b77729) Thanks [@nagraham](https://github.com/nagraham)! - Modify R2 Data Catalog compaction commands to enable/disable for Catalog (remove table/namespace args), and require Cloudflare API token on enable.
+
+### Patch Changes
+
+- Updated dependencies [[`735785e`](https://github.com/cloudflare/workers-sdk/commit/735785e7948da06411b738c70efcd95626efb3eb)]:
+  - miniflare@4.20250906.2
+
 ## 4.36.0
 
 ### Minor Changes
