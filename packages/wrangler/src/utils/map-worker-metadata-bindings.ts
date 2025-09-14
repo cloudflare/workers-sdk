@@ -334,6 +334,17 @@ export async function mapWorkerMetadataBindings(
 							];
 						}
 						break;
+					case "connectivity_service_binding":
+						{
+							configObj.vpc_services = [
+								...(configObj.vpc_services ?? []),
+								{
+									binding: binding.name,
+									service_id: binding.service_id,
+								},
+							];
+						}
+						break;
 					default: {
 						configObj.unsafe = {
 							bindings: [...(configObj.unsafe?.bindings ?? []), binding],

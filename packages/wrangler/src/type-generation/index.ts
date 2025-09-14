@@ -349,6 +349,7 @@ export async function generateEnvTypes(
 		secrets_store_secrets: config.secrets_store_secrets,
 		unsafe_hello_world: config.unsafe_hello_world,
 		ratelimits: config.ratelimits,
+		vpc_services: config.vpc_services,
 	};
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
@@ -564,6 +565,12 @@ export async function generateEnvTypes(
 				constructTypeKey(hyperdrive.binding),
 				"Hyperdrive",
 			]);
+		}
+	}
+
+	if (configToDTS.vpc_services) {
+		for (const vpcService of configToDTS.vpc_services) {
+			envTypeStructure.push([constructTypeKey(vpcService.binding), "Fetcher"]);
 		}
 	}
 
