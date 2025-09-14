@@ -53,6 +53,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 					config: `${helper.tmpPath}/wrangler.json`,
 					dev: {
 						experimentalRemoteBindings,
+						inspector: false,
 					},
 				});
 
@@ -87,6 +88,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 					config: `${helper.tmpPath}/wrangler.json`,
 					dev: {
 						experimentalRemoteBindings,
+						inspector: false,
 					},
 				});
 
