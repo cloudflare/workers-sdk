@@ -91,6 +91,7 @@ async function createDraftWorker({
 					hyperdrive: [],
 					secrets_store_secrets: [],
 					services: [],
+					vpc_services: [],
 					analytics_engine_datasets: [],
 					wasm_modules: {},
 					browser: undefined,

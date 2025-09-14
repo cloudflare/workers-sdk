@@ -666,6 +666,7 @@ export function getBindings(
 		hyperdrive: hyperdriveBindings,
 		secrets_store_secrets: configParam.secrets_store_secrets,
 		services: mergedServiceBindings,
+		vpc_services: configParam.vpc_services,
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		browser: configParam.browser,
 		ai: args.ai || configParam.ai,

@@ -293,6 +293,12 @@ export function convertCfWorkerInitBindingsToBindings(
 				}
 				break;
 			}
+			case "vpc_services": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "connectivity_service_binding", ...x };
+				}
+				break;
+			}
 			default: {
 				assertNever(type);
 			}
@@ -328,6 +334,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		hyperdrive: undefined,
 		secrets_store_secrets: undefined,
 		services: undefined,
+		vpc_services: undefined,
 		analytics_engine_datasets: undefined,
 		dispatch_namespaces: undefined,
 		mtls_certificates: undefined,

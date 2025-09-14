@@ -254,6 +254,11 @@ export interface CfService {
 	remote?: boolean;
 }
 
+export interface CfVpcService {
+	binding: string;
+	service_id: string;
+}
+
 export interface CfAnalyticsEngineDataset {
 	binding: string;
 	dataset?: string;
@@ -411,6 +416,7 @@ export interface CfWorkerInit {
 		hyperdrive: CfHyperdrive[] | undefined;
 		secrets_store_secrets: CfSecretsStoreSecrets[] | undefined;
 		services: CfService[] | undefined;
+		vpc_services: CfVpcService[] | undefined;
 		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;
 		mtls_certificates: CfMTlsCertificate[] | undefined;
