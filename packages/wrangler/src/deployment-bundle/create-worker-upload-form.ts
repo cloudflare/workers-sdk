@@ -157,6 +157,7 @@ export type WorkerMetadataBinding =
 			namespace_id: string;
 			simple: { limit: number; period: 10 | 60 };
 	  }
+	| { type: "connectivity_service_binding"; name: string; service_id: string }
 	| {
 			type: "logfwdr";
 			name: string;
@@ -436,6 +437,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			type: "ratelimit",
 			namespace_id,
 			simple,
+		});
+	});
+
+	bindings.vpc_services?.forEach(({ binding, service_id }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "connectivity_service_binding",
+			service_id,
 		});
 	});
 

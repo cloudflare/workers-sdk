@@ -247,6 +247,12 @@ const bindingsConfigMock: Omit<
 			},
 		},
 	],
+	vpc_services: [
+		{
+			binding: "VPC_SERVICE_BINDING",
+			service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+		},
+	],
 };
 
 describe("generate types", () => {
@@ -476,6 +482,7 @@ describe("generate types", () => {
 					SEND_EMAIL_BINDING: SendEmail;
 					VECTORIZE_BINDING: VectorizeIndex;
 					HYPERDRIVE_BINDING: Hyperdrive;
+					VPC_SERVICE_BINDING: Fetcher;
 					MTLS_BINDING: Fetcher;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -571,6 +578,7 @@ describe("generate types", () => {
 					SEND_EMAIL_BINDING: SendEmail;
 					VECTORIZE_BINDING: VectorizeIndex;
 					HYPERDRIVE_BINDING: Hyperdrive;
+					VPC_SERVICE_BINDING: Fetcher;
 					MTLS_BINDING: Fetcher;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -730,6 +738,7 @@ describe("generate types", () => {
 					SEND_EMAIL_BINDING: SendEmail;
 					VECTORIZE_BINDING: VectorizeIndex;
 					HYPERDRIVE_BINDING: Hyperdrive;
+					VPC_SERVICE_BINDING: Fetcher;
 					MTLS_BINDING: Fetcher;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -1618,5 +1627,50 @@ describe("generate types", () => {
 				"
 			`);
 		});
+	});
+
+	it("should generate types for VPC services bindings", async () => {
+		fs.writeFileSync(
+			"./index.ts",
+			`export default { async fetch(request, env) { return await env.VPC_API.fetch(request); } };`
+		);
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-vpc-services",
+				main: "./index.ts",
+				vpc_services: [
+					{
+						binding: "VPC_API",
+						service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+					{
+						binding: "VPC_DATABASE",
+						service_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Generating project types...
+
+			declare namespace Cloudflare {
+				interface Env {
+					VPC_API: Fetcher;
+					VPC_DATABASE: Fetcher;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
 	});
 });
