@@ -188,6 +188,36 @@ const testConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:perf_hooks
+	[
+		{
+			name: "perf_hooks disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_perf_hooks_module: false,
+			},
+		},
+		// TODO: add a config when perf_hooks is enabled by default (>= 2025-09-21)
+
+		// TODO: re-enable this test case when native workerd implements all the APIs
+		// {
+		// 	name: "perf_hooks enabled by flag",
+		// 	compatibilityDate: "2024-09-23",
+		// 	compatibilityFlags: ["enable_nodejs_perf_hooks_module"],
+		// 	expectRuntimeFlags: {
+		// 		enable_nodejs_perf_hooks_module: true,
+		// 	},
+		// },
+		{
+			name: "perf_hooks disabled by flag",
+			// TODO: change the date passed the default enabled date (>= 2025-09-21)
+			compatibilityDate: "2025-07-26",
+			compatibilityFlags: ["disable_nodejs_perf_hooks_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_perf_hooks_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(testConfigs)(
