@@ -13,6 +13,8 @@ export default defineConfig({
 
 			builder.config.logger.info("__before-build__");
 			await builder.build(workerEnvironment);
+			// Some plugins build the Worker environment twice so we do that here to test this scenario
+			await builder.build(workerEnvironment);
 			builder.config.logger.info("__after-build__");
 
 			await builder.build(clientEnvironment);
