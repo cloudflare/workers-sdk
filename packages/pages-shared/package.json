@@ -7,14 +7,17 @@
 		"directory": "packages/pages-shared"
 	},
 	"files": [
+		"./dist/",
 		"tsconfig.json",
 		"asset-server/**/*",
 		"environment-polyfills/**/*",
 		"metadata-generator/**/*"
 	],
 	"scripts": {
+		"build": "node -r esbuild-register ./scripts/build.ts",
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
+		"prepack": "npm run build",
 		"test": "vitest run",
 		"test:ci": "vitest run"
 	},
@@ -27,8 +30,11 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"concurrently": "^8.2.2",
+		"esbuild": "catalog:default",
 		"glob": "^10.4.5",
 		"html-rewriter-wasm": "^0.4.1",
+		"rimraf": "catalog:default",
+		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},
 	"volta": {
