@@ -18,7 +18,29 @@ export async function applyServiceAndEnvironmentTags(
 ) {
 	tags ??= [];
 	const env = config.targetEnvironment;
-	const serviceTag = `${SERVICE_TAG_PREFIX}${config.topLevelName}`;
+	const serviceName = config.topLevelName;
+
+	if (!serviceName) {
+		logger.warn(
+			"No top-level `name` has been defined in Wrangler configuration. Add a top-level `name` to group this Worker together with its sibling environments in the Cloudflare dashboard."
+		);
+
+		if (tags.some((tag) => tag.startsWith(SERVICE_TAG_PREFIX))) {
+			try {
+				return await patchNonVersionedScriptSettings(
+					config,
+					accountId,
+					scriptName,
+					{
+						tags: tags.filter((tag) => !tag.startsWith(SERVICE_TAG_PREFIX)),
+					}
+				);
+			} catch {}
+		}
+		return;
+	}
+
+	const serviceTag = `${SERVICE_TAG_PREFIX}${serviceName}`;
 	const environmentTag = env ? `${ENVIRONMENT_TAG_PREFIX}${env}` : null;
 
 	const hasMissingServiceTag = !tags.includes(serviceTag);
