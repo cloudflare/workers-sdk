@@ -6,7 +6,10 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError, parseJSON } from "../parse";
-import { getCloudflareAPITokenFromEnv } from "../user/auth-variables";
+import {
+	getCloudflareAPITokenFromEnv,
+	getWranglerR2SqlAuthToken,
+} from "../user/auth-variables";
 
 interface SqlQueryResponse {
 	result?: {
@@ -78,14 +81,22 @@ export const r2SqlQueryCommand = createCommand({
 		},
 	},
 	async handler({ warehouse, query }) {
-		const token = getCloudflareAPITokenFromEnv();
+		let token = getWranglerR2SqlAuthToken();
 		if (!token) {
-			throw new UserError(
-				"Missing CLOUDFLARE_API_TOKEN environment variable. " +
-					"Please follow instructions in https://developers.cloudflare.com/r2/sql/platform/troubleshooting/ to create a token. " +
-					"Once done, you can prefix the command with the variable definition like so: `CLOUDFLARE_API_TOKEN=... wrangler r2 sql query ...`. " +
-					"There also other ways to provide the value of this variable, see https://developers.cloudflare.com/workers/wrangler/system-environment-variables/ for more details."
-			);
+			token = getCloudflareAPITokenFromEnv();
+			if (!token) {
+				throw new UserError(
+					"Missing WRANGLER_R2_SQL_AUTH_TOKEN environment variable. " +
+						"Tried to fallback to CLOUDFLARE_API_TOKEN, didn't find it either. " +
+						"Please follow instructions in https://developers.cloudflare.com/r2/sql/platform/troubleshooting/ to create a token. " +
+						"Once done, you can prefix the command with the variable definition like so: `WRANGLER_R2_SQL_AUTH_TOKEN=... wrangler r2 sql query ...`. " +
+						"There also other ways to provide the value of this variable, see https://developers.cloudflare.com/workers/wrangler/system-environment-variables/ for more details."
+				);
+			} else {
+				logger.warn(
+					"Missing WRANGLER_R2_SQL_AUTH_TOKEN environment variable, falling back to CLOUDFLARE_API_TOKEN"
+				);
+			}
 		}
 
 		const splitIndex = warehouse.indexOf("_");
@@ -125,6 +136,13 @@ export const r2SqlQueryCommand = createCommand({
 			throw new APIError({
 				text: `Failed to connect to R2 SQL API: ${error instanceof Error ? error.message : String(error)}`,
 			});
+		}
+
+		if (responseStatus === 403) {
+			logger.error(
+				"Please check that token in WRANGLER_R2_SQL_AUTH_TOKEN or CLOUDFLARE_API_TOKEN has the correct permissions. " +
+					"See https://developers.cloudflare.com/r2/sql/platform/troubleshooting/ for more details."
+			);
 		}
 
 		let parsed = null;

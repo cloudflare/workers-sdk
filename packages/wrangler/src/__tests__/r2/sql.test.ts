@@ -38,7 +38,7 @@ describe("r2 sql", () => {
 		const mockToken = "test-token-123";
 
 		beforeEach(() => {
-			vi.stubEnv("CLOUDFLARE_API_TOKEN", mockToken);
+			vi.stubEnv("WRANGLER_R2_SQL_AUTH_TOKEN", mockToken);
 		});
 
 		it("should require warehouse and query arguments", async () => {
@@ -51,12 +51,15 @@ describe("r2 sql", () => {
 			);
 		});
 
-		it("should require CLOUDFLARE_API_TOKEN environment variable", async () => {
+		it("should require WRANGLER_R2_SQL_AUTH_TOKEN environment variable", async () => {
+			vi.stubEnv("WRANGLER_R2_SQL_AUTH_TOKEN", undefined);
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
 
 			await expect(
 				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
-			).rejects.toThrow("Missing CLOUDFLARE_API_TOKEN environment variable");
+			).rejects.toThrow(
+				"Missing WRANGLER_R2_SQL_AUTH_TOKEN environment variable"
+			);
 		});
 
 		it("should validate warehouse name format", async () => {
