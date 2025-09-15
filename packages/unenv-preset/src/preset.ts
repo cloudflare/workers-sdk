@@ -72,6 +72,7 @@ export function getCloudflarePreset({
 	const http2Overrides = getHttp2Overrides(compat);
 	const osOverrides = getOsOverrides(compat);
 	const fsOverrides = getFsOverrides(compat);
+	const vmOverrides = getVmOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -80,6 +81,7 @@ export function getCloudflarePreset({
 		...http2Overrides.nativeModules,
 		...osOverrides.nativeModules,
 		...fsOverrides.nativeModules,
+		...vmOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -89,6 +91,7 @@ export function getCloudflarePreset({
 		...http2Overrides.hybridModules,
 		...osOverrides.hybridModules,
 		...fsOverrides.hybridModules,
+		...vmOverrides.hybridModules,
 	];
 
 	return {
@@ -298,6 +301,42 @@ function getFsOverrides({
 	return enabled
 		? {
 				nativeModules: ["fs/promises", "fs"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:vm` (unenv or workerd)
+ *
+ * The native vm implementation:
+ * - is enabled starting from 2025-10-01
+ * - can be enabled with the "enable_nodejs_vm_module" flag
+ * - can be disabled with the "disable_nodejs_vm_module" flag
+ */
+function getVmOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_vm_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes("enable_nodejs_vm_module");
+	const enabledByDate = compatibilityDate >= "2025-10-01";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	// The native `vm` module implements all the node APIs so we can use it directly
+	return enabled
+		? {
+				nativeModules: ["vm"],
 				hybridModules: [],
 			}
 		: {
