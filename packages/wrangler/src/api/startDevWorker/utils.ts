@@ -440,6 +440,9 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "worker_loader") {
 			bindings.worker_loaders ??= [];
 			bindings.worker_loaders.push({ ...binding, binding: name });
+		} else if (binding.type === "connectivity_service_binding") {
+			bindings.vpc_services ??= [];
+			bindings.vpc_services.push({ ...binding, binding: name });
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],
