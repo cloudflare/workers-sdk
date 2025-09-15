@@ -111,6 +111,7 @@ async function createDraftWorker({
 						capnp: undefined,
 					},
 					unsafe_hello_world: [],
+					media: undefined,
 				},
 				modules: [],
 				migrations: undefined,

@@ -27,6 +27,7 @@ export const friendlyBindingNames: Record<
 	browser: "Browser",
 	ai: "AI",
 	images: "Images",
+	media: "Media",
 	version_metadata: "Worker Version Metadata",
 	unsafe: "Unsafe Metadata",
 	vars: "Environment Variable",
@@ -107,6 +108,7 @@ export function printBindings(
 		ratelimits,
 		assets,
 		unsafe_hello_world,
+		media,
 	} = bindings;
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
@@ -451,6 +453,18 @@ export function printBindings(
 		});
 	}
 
+	if (media !== undefined) {
+		output.push({
+			name: media.binding,
+			type: friendlyBindingNames.media,
+			value: undefined,
+			mode: getMode({
+				isSimulatedLocally:
+					getFlag("REMOTE_BINDINGS") && media.remote ? false : undefined,
+			}),
+		});
+	}
+
 	if (ai !== undefined) {
 		output.push({
 			name: ai.binding,
@@ -790,7 +804,10 @@ export function warnOrError(
 			}
 		);
 	}
-	if (remote === false && supports === "remote") {
+	if (
+		remote === false &&
+		(supports === "remote" || supports === "always-remote")
+	) {
 		throw new UserError(
 			`${friendlyBindingNames[type]} bindings do not support local development. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
 			{
