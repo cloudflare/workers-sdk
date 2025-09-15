@@ -13658,6 +13658,40 @@ export default{
 			await runWrangler("deploy");
 		});
 
+		test("no top-level name", async ({ expect }) => {
+			mockUploadWorkerRequest({ expectedScriptName: "test-name-production" });
+			mockGetScriptWithTags(["some-tag", "cf:service=undefined"]);
+
+			writeWranglerConfig({
+				name: undefined,
+				main: "./index.js",
+				env: {
+					production: {
+						name: "test-name-production",
+					},
+				},
+			});
+
+			expect.assertions(2);
+			let requestCount = 0;
+			mockPatchScriptSettings(async ({ request }) => {
+				requestCount++;
+				if (requestCount === 2) {
+					await expect(request.json()).resolves.toEqual({
+						tags: ["some-tag"],
+					});
+				}
+			});
+
+			await runWrangler("deploy --env production");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in Wrangler configuration. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
+
+				"
+			`);
+		});
+
 		test("displays warning when error updating tags", async ({ expect }) => {
 			mockUploadWorkerRequest({ expectedScriptName: "test-name-production" });
 			mockGetScriptWithTags([
