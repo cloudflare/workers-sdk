@@ -68,31 +68,31 @@ export const {
 // API that are only implemented starting from v2 of workerd process
 // They are retrieved from unenv when process v1 is used
 export const {
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_debugEnd` is missing typings
 	_debugEnd,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_debugProcess` is missing typings
 	_debugProcess,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_exiting` is missing typings
 	_exiting,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_fatalException` is missing typings
 	_fatalException,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_getActiveHandles` is missing typings
 	_getActiveHandles,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_getActiveRequests` is missing typings
 	_getActiveRequests,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_kill` is missing typings
 	_kill,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_linkedBinding` is missing typings
 	_linkedBinding,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_preload_modules` is missing typings
 	_preload_modules,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_rawDebug` is missing typings
 	_rawDebug,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_startProfilerIdleNotifier` is missing typings
 	_startProfilerIdleNotifier,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_stopProfilerIdleNotifier` is missing typings
 	_stopProfilerIdleNotifier,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `_tickCallback` is missing typings
 	_tickCallback,
 	abort,
 	addListener,
@@ -101,7 +101,7 @@ export const {
 	argv,
 	argv0,
 	availableMemory,
-	// @ts-expect-error `domain` is missing typings
+	// @ts-expect-error `binding` is missing typings
 	binding,
 	channel,
 	chdir,
