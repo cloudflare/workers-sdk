@@ -1,5 +1,14 @@
 # @cloudflare/pages-shared
 
+## 0.13.72
+
+### Patch Changes
+
+- [#10648](https://github.com/cloudflare/workers-sdk/pull/10648) [`6619feb`](https://github.com/cloudflare/workers-sdk/commit/6619feb7a169623fb19e98aa2cbd66f30b7cbfb3) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Build `@cloudflare/pages-shared`. `@cloudflare/pages-shared/dist` now contains a build and bundled copy of `asset-server` and `metadata-generator`.
+
+- Updated dependencies [[`783afeb`](https://github.com/cloudflare/workers-sdk/commit/783afeb90f32c9e2c0a96f83ccff30ad7155e419)]:
+  - miniflare@4.20250913.0
+
 ## 0.13.71
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # wrangler
 
+## 4.37.1
+
+### Patch Changes
+
+- [#10658](https://github.com/cloudflare/workers-sdk/pull/10658) [`3029b9a`](https://github.com/cloudflare/workers-sdk/commit/3029b9a9734edd52b7d83f91d56abbbd8ad9ae81) Thanks [@1000hz](https://github.com/1000hz)! - Fixed an issue with service tags not being applied properly to Workers when the Wrangler configuration file did not include a top-level `name` property.
+
+- [#10657](https://github.com/cloudflare/workers-sdk/pull/10657) [`31ec996`](https://github.com/cloudflare/workers-sdk/commit/31ec996d39713c9d25da60122edc9e41aec1a90b) Thanks [@penalosa](https://github.com/penalosa)! - Disable remote bindings with the `--local` flag
+
+- Updated dependencies [[`783afeb`](https://github.com/cloudflare/workers-sdk/commit/783afeb90f32c9e2c0a96f83ccff30ad7155e419)]:
+  - miniflare@4.20250913.0
+
 ## 4.37.0
 
 ### Minor Changes
