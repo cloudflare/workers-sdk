@@ -8,17 +8,15 @@ import { logger } from "../logger";
 import { APIError, parseJSON } from "../parse";
 import { getCloudflareAPITokenFromEnv } from "../user/auth-variables";
 
-interface SqlQueryResult {
+interface SqlQueryResponse {
 	result?: {
-		column_order: string[];
+		request_id?: string;
+		schema: { name: string; type: string }[];
 		rows: Record<string, unknown>[];
-		stats?: {
-			total_r2_requests: number;
-			total_r2_bytes_read: number;
-			total_r2_bytes_written: number;
-			total_bytes_matched: number;
-			total_rows_skipped: number;
-			total_files_scanned: number;
+		metrics: {
+			r2_requests_count: number;
+			files_scanned: number;
+			bytes_scanned: number;
 		};
 	};
 	success: boolean;
@@ -26,14 +24,14 @@ interface SqlQueryResult {
 	messages: string[];
 }
 
-function formatSqlResults(data: SqlQueryResult, duration: number): void {
+function formatSqlResults(data: SqlQueryResponse, duration: number): void {
 	if (!data?.result?.rows || data.result.rows.length === 0) {
 		logger.log("Query executed successfully with no results");
 		return;
 	}
 
-	const { column_order, rows, stats } = data.result;
-
+	const { schema, rows, metrics } = data.result;
+	const column_order = schema.map((field) => field.name);
 	logger.table(
 		rows.map((row) =>
 			Object.fromEntries(
@@ -43,15 +41,12 @@ function formatSqlResults(data: SqlQueryResult, duration: number): void {
 		{ wordWrap: true, head: column_order }
 	);
 
-	// Print stats if available.
-	if (stats) {
-		logger.log(
-			`Read ${prettyBytes(stats.total_r2_bytes_read)} across ${stats.total_files_scanned} files from R2`
-		);
-		if (duration > 0) {
-			const bytesPerSecond = (stats.total_r2_bytes_read / duration) * 1000;
-			logger.log(`On average, ${prettyBytes(bytesPerSecond)} / s`);
-		}
+	logger.log(
+		`Read ${prettyBytes(metrics.bytes_scanned)} across ${metrics.files_scanned} files from R2`
+	);
+	if (duration > 0) {
+		const bytesPerSecond = (metrics.bytes_scanned / duration) * 1000;
+		logger.log(`On average, ${prettyBytes(bytesPerSecond)} / s`);
 	}
 }
 
@@ -134,7 +129,7 @@ export const r2SqlQueryCommand = createCommand({
 
 		let parsed = null;
 		try {
-			parsed = parseJSON(text) as SqlQueryResult;
+			parsed = parseJSON(text) as SqlQueryResponse;
 		} catch {
 			throw new APIError({
 				text: "Received a malformed response from the API",

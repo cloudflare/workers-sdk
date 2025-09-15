@@ -71,19 +71,20 @@ describe("r2 sql", () => {
 				errors: [],
 				messages: [],
 				result: {
-					column_order: ["id", "name", "age"],
+					schema: [
+						{ name: "id", type: "Int64" },
+						{ name: "name", type: "Utf8" },
+						{ name: "age", type: "Int64" },
+					],
 					rows: [
 						{ id: 1, name: "Alice", age: 30 },
 						{ id: 2, name: "Bob", age: 25 },
 						{ id: 3, name: "Charlie", age: 35 },
 					],
-					stats: {
-						total_r2_requests: 5,
-						total_r2_bytes_read: 1024 * 1024,
-						total_r2_bytes_written: 0,
-						total_bytes_matched: 512,
-						total_rows_skipped: 0,
-						total_files_scanned: 2,
+					metrics: {
+						r2_requests_count: 5,
+						files_scanned: 2,
+						bytes_scanned: 1024 * 1024,
 					},
 				},
 			};
@@ -131,8 +132,13 @@ describe("r2 sql", () => {
 				errors: [],
 				messages: [],
 				result: {
-					column_order: [],
+					schema: [],
 					rows: [],
+				},
+				metrics: {
+					r2_requests_count: 0,
+					files_scanned: 0,
+					bytes_scanned: 0,
 				},
 			};
 
@@ -217,11 +223,20 @@ describe("r2 sql", () => {
 				errors: [],
 				messages: [],
 				result: {
-					column_order: ["id", "name", "email"],
+					schema: [
+						{ name: "id", type: "Int64" },
+						{ name: "name", type: "Utf8" },
+						{ name: "email", type: "Utf8" },
+					],
 					rows: [
 						{ id: 1, name: "Alice", email: null },
 						{ id: 2, name: null, email: "bob@example.com" },
 					],
+					metrics: {
+						r2_requests_count: 5,
+						files_scanned: 2,
+						bytes_scanned: 1024 * 1024,
+					},
 				},
 			};
 
