@@ -2049,12 +2049,21 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      esbuild:
+        specifier: catalog:default
+        version: 0.25.4
       glob:
         specifier: ^10.4.5
         version: 10.4.5
       html-rewriter-wasm:
         specifier: ^0.4.1
         version: 0.4.1
+      rimraf:
+        specifier: catalog:default
+        version: 6.0.1
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)
