@@ -14,7 +14,7 @@ export { __VITE_RUNNER_OBJECT__ } from "./module-runner";
  * Constructor interface for `WorkerEntrypoint` class.
  * @template T - The `env` type
  */
-interface WorkerEntrypointConstructor<T = unknown> {
+interface WorkerEntrypointConstructor<T = Cloudflare.Env> {
 	new (
 		...args: ConstructorParameters<typeof WorkerEntrypoint<T>>
 	): WorkerEntrypoint<T>;
@@ -24,7 +24,7 @@ interface WorkerEntrypointConstructor<T = unknown> {
  * Constructor interface for `DurableObject` class.
  * @template T - The `env` type
  */
-interface DurableObjectConstructor<T = unknown> {
+interface DurableObjectConstructor<T = Cloudflare.Env> {
 	new (
 		...args: ConstructorParameters<typeof DurableObject<T>>
 	): DurableObject<T>;
@@ -34,7 +34,7 @@ interface DurableObjectConstructor<T = unknown> {
  * Constructor interface for `WorkflowEntrypoint` class.
  * @template T - The `env` type
  */
-interface WorkflowEntrypointConstructor<T = unknown> {
+interface WorkflowEntrypointConstructor<T = Cloudflare.Env> {
 	new (
 		...args: ConstructorParameters<typeof WorkflowEntrypoint<T>>
 	): WorkflowEntrypoint<T>;
