@@ -911,10 +911,17 @@ export function getBindings(
 
 	// Hyperdrive bindings
 	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {
-		const connectionStringFromEnv =
-			process.env[
-				`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
-			];
+		const desiredPrefix = `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
+		const deprecatedPrefix = `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
+
+		let varName = `${deprecatedPrefix}${hyperdrive.binding}`;
+		let connectionStringFromEnv = process.env[varName];
+
+		if (!connectionStringFromEnv) {
+			varName = `${desiredPrefix}${hyperdrive.binding}`;
+			connectionStringFromEnv = process.env[varName];
+		}
+
 		// only require a local connection string in the wrangler file or the env if not using dev --remote
 		if (
 			local &&
@@ -922,7 +929,7 @@ export function getBindings(
 			hyperdrive.localConnectionString === undefined
 		) {
 			throw new UserError(
-				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`,
+				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the '${desiredPrefix}${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`,
 				{ telemetryMessage: "no local hyperdrive connection string" }
 			);
 		}
@@ -930,8 +937,13 @@ export function getBindings(
 		// If there is a non-empty connection string specified in the environment,
 		// use that as our local connection string configuration.
 		if (connectionStringFromEnv) {
+			if (varName.startsWith(deprecatedPrefix)) {
+				logger.once.warn(
+					`Using "${deprecatedPrefix}<BINDING_NAME>" environment variable. This is deprecated. Please use "${desiredPrefix}<BINDING_NAME>", instead.`
+				);
+			}
 			logger.log(
-				`Found a non-empty WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING variable for binding. Hyperdrive will connect to this database during local development.`
+				`Found a non-empty ${varName} variable for binding. Hyperdrive will connect to this database during local development.`
 			);
 			hyperdrive.localConnectionString = connectionStringFromEnv;
 		}
