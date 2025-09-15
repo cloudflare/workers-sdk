@@ -34,6 +34,10 @@ export default {
 					service = env.MODULE_WORKER;
 					break;
 				}
+				case "module-worker-with-assets": {
+					service = env.MODULE_WORKER_WITH_ASSETS;
+					break;
+				}
 				case "worker-entrypoint": {
 					service = env.WORKER_ENTRYPOINT;
 					break;
@@ -48,6 +52,14 @@ export default {
 				}
 				case "named-entrypoint-with-assets": {
 					service = env.NAMED_ENTRYPOINT_WITH_ASSETS;
+					break;
+				}
+				case "named-module-worker": {
+					service = env.NAMED_MODULE_WORKER;
+					break;
+				}
+				case "named-module-worker-with-assets": {
+					service = env.NAMED_MODULE_WORKER_WITH_ASSETS;
 					break;
 				}
 			}
@@ -104,8 +116,11 @@ export default {
 } satisfies ExportedHandler<{
 	SERVICE_WORKER: Fetcher;
 	MODULE_WORKER: Fetcher;
+	MODULE_WORKER_WITH_ASSETS: Fetcher;
 	WORKER_ENTRYPOINT: Fetcher;
 	WORKER_ENTRYPOINT_WITH_ASSETS: Fetcher;
 	NAMED_ENTRYPOINT: Fetcher;
 	NAMED_ENTRYPOINT_WITH_ASSETS: Fetcher;
+	NAMED_MODULE_WORKER: Fetcher;
+	NAMED_MODULE_WORKER_WITH_ASSETS: Fetcher;
 }>;

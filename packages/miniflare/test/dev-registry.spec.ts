@@ -1164,11 +1164,13 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 	});
 	t.teardown(() => local.dispose());
 
+	await local.ready;
+
 	// Callback should not be triggered initially since no external services exist
 	t.is(firstCallbackInvocations.length, 0);
 	t.is(secondCallbackInvocations.length, 0);
 
-	// Create an unrelated Worker - callback should NOT be triggered
+	// Create an unrelated Worker - callback should be triggered
 	const unrelated = new Miniflare({
 		name: "unrelated-worker",
 		unsafeDevRegistryPath,
@@ -1192,9 +1194,11 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 
 	await unrelated.ready;
 
-	// Callback should not be triggered since we're not bound to unrelated-worker
-	t.is(firstCallbackInvocations.length, 0);
-	t.is(secondCallbackInvocations.length, 0);
+	// Callback will be triggered regardless of it is a dependency or not
+	await waitUntil(t, async (t) => {
+		t.is(firstCallbackInvocations.length, 1);
+		t.is(secondCallbackInvocations.length, 0);
+	});
 
 	// Create remote worker (one we're actually bound to) - this should trigger the callback
 	const remote = new Miniflare({
@@ -1227,12 +1231,14 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 
 	// Wait for the callback to be triggered
 	await waitUntil(t, async (t) => {
-		t.true(
-			firstCallbackInvocations.length >= 1,
+		t.is(
+			firstCallbackInvocations.length,
+			2,
 			"Callback should be triggered when bound Worker starts"
 		);
-		t.true(
-			secondCallbackInvocations.length === 0,
+		t.is(
+			secondCallbackInvocations.length,
+			0,
 			"Second callback should not be triggered yet"
 		);
 	});
@@ -1282,12 +1288,14 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 
 	// Wait for callback to be triggered by the update
 	await waitUntil(t, async (t) => {
-		t.true(
-			firstCallbackInvocations.length === 1,
+		t.is(
+			firstCallbackInvocations.length,
+			3,
 			"First callback should not be triggered again after update"
 		);
-		t.true(
-			secondCallbackInvocations.length === 1,
+		t.is(
+			secondCallbackInvocations.length,
+			1,
 			"Second callback should be triggered after update"
 		);
 	});
@@ -1296,8 +1304,8 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 	await waitUntil(t, async (t) => {
 		const latestInvocation = secondCallbackInvocations.at(-1);
 
-		t.false(
-			!latestInvocation || "remote-worker" in latestInvocation.registry,
+		t.true(
+			latestInvocation && !("remote-worker" in latestInvocation.registry),
 			"Registry should not contain remote-worker"
 		);
 	});
