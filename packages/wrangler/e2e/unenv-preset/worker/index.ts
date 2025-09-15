@@ -540,6 +540,8 @@ export const WorkerdTests: Record<string, () => void> = {
 			assert.equal(typeof p.removeAllListeners, "function");
 			assert.equal(typeof p.removeListener, "function");
 			assert.equal(typeof p.setMaxListeners, "function");
+			assert.equal(typeof (p as any).binding, "function");
+			assert.equal(typeof p.permission, "object");
 		}
 	},
 };

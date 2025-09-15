@@ -38,7 +38,7 @@ const unenvProcess = new UnenvProcess({
 // Note that `env`, `hrtime` and `nextTick` are always retrieved from `unenv`
 export const { exit, features, platform } = workerdProcess;
 
-// APIs that can be implemented by either by `unenv` or `workerd`.
+// APIs that can be implemented by either `unenv` or `workerd`.
 // They are always retrieved from `unenv` which might use their `workerd` implementation.
 export const {
 	// Always implemented by workerd
@@ -53,102 +53,111 @@ export const {
 // They are retrieved from `unenv`.
 export const {
 	_channel,
-	_debugEnd,
-	_debugProcess,
 	_disconnect,
 	_events,
 	_eventsCount,
-	_exiting,
-	_fatalException,
-	_getActiveHandles,
-	_getActiveRequests,
 	_handleQueue,
-	_kill,
-	_linkedBinding,
 	_maxListeners,
 	_pendingMessage,
-	_preload_modules,
-	_rawDebug,
 	_send,
-	_startProfilerIdleNotifier,
-	_stopProfilerIdleNotifier,
-	_tickCallback,
 	assert,
-	availableMemory,
-	constrainedMemory,
-	cpuUsage,
 	disconnect,
-	domain,
-	emit, // not exported from workerd but used internally
-	execPath,
 	mainModule,
-	moduleLoadList,
-	openStdin,
-	reallyExit,
-} = unenvProcess;
-
-// APIs that are not implemented in `workerd` v1 and `undefined` in v2.
-// They are retrieved from `unenv`.
-export const {
-	binding,
-	channel,
-	connected,
-	debugPort,
-	dlopen,
-	exitCode,
-	finalization,
-	getActiveResourcesInfo,
-	hasUncaughtExceptionCaptureCallback,
-	kill,
-	memoryUsage,
-	permission,
-	ref,
-	release,
-	report,
-	resourceUsage,
-	send,
-	setUncaughtExceptionCaptureCallback,
-	sourceMapsEnabled,
-	throwDeprecation,
-	traceDeprecation,
-	unref,
 } = unenvProcess;
 
 // API that are only implemented starting from v2 of workerd process
+// They are retrieved from unenv when process v1 is used
 export const {
+	// @ts-expect-error `domain` is missing typings
+	_debugEnd,
+	// @ts-expect-error `domain` is missing typings
+	_debugProcess,
+	// @ts-expect-error `domain` is missing typings
+	_exiting,
+	// @ts-expect-error `domain` is missing typings
+	_fatalException,
+	// @ts-expect-error `domain` is missing typings
+	_getActiveHandles,
+	// @ts-expect-error `domain` is missing typings
+	_getActiveRequests,
+	// @ts-expect-error `domain` is missing typings
+	_kill,
+	// @ts-expect-error `domain` is missing typings
+	_linkedBinding,
+	// @ts-expect-error `domain` is missing typings
+	_preload_modules,
+	// @ts-expect-error `domain` is missing typings
+	_rawDebug,
+	// @ts-expect-error `domain` is missing typings
+	_startProfilerIdleNotifier,
+	// @ts-expect-error `domain` is missing typings
+	_stopProfilerIdleNotifier,
+	// @ts-expect-error `domain` is missing typings
+	_tickCallback,
 	abort,
 	addListener,
 	allowedNodeEnvironmentFlags,
 	arch,
 	argv,
 	argv0,
+	availableMemory,
+	// @ts-expect-error `domain` is missing typings
+	binding,
+	channel,
 	chdir,
 	config,
+	connected,
+	constrainedMemory,
+	cpuUsage,
 	cwd,
+	debugPort,
+	dlopen,
+	// @ts-expect-error `domain` is missing typings
+	domain,
+	emit,
 	emitWarning,
 	eventNames,
 	execArgv,
+	execPath,
+	exitCode,
+	finalization,
+	getActiveResourcesInfo,
 	getegid,
 	geteuid,
 	getgid,
 	getgroups,
 	getMaxListeners,
 	getuid,
+	hasUncaughtExceptionCaptureCallback,
 	// @ts-expect-error `initgroups` is missing typings
 	initgroups,
+	kill,
 	listenerCount,
 	listeners,
 	loadEnvFile,
+	memoryUsage,
+	// @ts-expect-error `moduleLoadList` is missing typings
+	moduleLoadList,
 	off,
 	on,
 	once,
+	// @ts-expect-error `openStdin` is missing typings
+	openStdin,
+	permission,
 	pid,
 	ppid,
 	prependListener,
 	prependOnceListener,
 	rawListeners,
+	// @ts-expect-error `reallyExit` is missing typings
+	reallyExit,
+	ref,
+	release,
 	removeAllListeners,
 	removeListener,
+	report,
+	resourceUsage,
+	send,
 	setegid,
 	seteuid,
 	setgid,
@@ -156,11 +165,16 @@ export const {
 	setMaxListeners,
 	setSourceMapsEnabled,
 	setuid,
+	setUncaughtExceptionCaptureCallback,
+	sourceMapsEnabled,
 	stderr,
 	stdin,
 	stdout,
+	throwDeprecation,
 	title,
+	traceDeprecation,
 	umask,
+	unref,
 	uptime,
 	version,
 	versions,
