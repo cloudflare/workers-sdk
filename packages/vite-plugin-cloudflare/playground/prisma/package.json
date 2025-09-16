@@ -17,9 +17,9 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"@prisma/adapter-d1": "^6.3.0",
-		"@prisma/client": "^6.3.0",
-		"prisma": "^6.3.0",
+		"@prisma/adapter-d1": "^6.16.1",
+		"@prisma/client": "^6.16.1",
+		"prisma": "^6.16.1",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:*"
