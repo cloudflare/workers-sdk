@@ -563,16 +563,15 @@ describe("wrangler secret", () => {
 			msw.use(
 				http.delete(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets/:secretName`,
-					({ params }) => {
+					({ request, params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						expect(params.scriptName).toEqual(
 							legacyEnv && env ? `script-name-${env}` : "script-name"
 						);
-						if (!legacyEnv) {
-							if (env) {
-								expect(params.secretName).toEqual(input.secretName);
-							}
-						}
+						expect(params.secretName).toEqual(input.secretName);
+						expect(
+							new URL(request.url).searchParams.get("url_encoded")
+						).toEqual("true");
 						return HttpResponse.json(createFetchResult(null));
 					},
 					{ once: true }
@@ -612,6 +611,23 @@ describe("wrangler secret", () => {
 				──────────────────
 				🌀 Deleting the secret the-key on the Worker script-name
 				✨ Success! Deleted secret the-key"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should delete a secret which name includes special characters", async () => {
+			mockDeleteRequest({ scriptName: "script-name", secretName: "the/key" });
+			mockConfirm({
+				text: "Are you sure you want to permanently delete the secret the/key on the Worker script-name?",
+				result: true,
+			});
+			await runWrangler("secret delete the/key --name script-name");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Deleting the secret the/key on the Worker script-name
+				✨ Success! Deleted secret the/key"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
