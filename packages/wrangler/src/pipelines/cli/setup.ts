@@ -48,7 +48,7 @@ export const pipelinesSetupCommand = createCommand({
 	},
 	args: {
 		name: {
-			describe: "Pipeline name (optional - will prompt if not provided)",
+			describe: "Pipeline name",
 			type: "string",
 		},
 	},
@@ -792,7 +792,7 @@ async function createPipelineIfNeeded(
 		logger.log("\n✨ Setup complete!");
 
 		if (created.stream) {
-			displayUsageExamples(created.stream);
+			displayUsageExamples(created.stream, config);
 		}
 	} catch (error) {
 		logger.error(

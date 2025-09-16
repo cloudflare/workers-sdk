@@ -1,5 +1,7 @@
+import { formatConfigSnippet } from "../../../config";
 import { logger } from "../../../logger";
 import formatLabelledValues from "../../../utils/render-labelled-values";
+import type { Config } from "../../../config";
 import type { SchemaField, Stream } from "../../types";
 
 export function formatSchemaFieldsForTable(
@@ -203,7 +205,7 @@ function generateExampleData(stream: Stream): string {
 	}
 }
 
-export function displayUsageExamples(stream: Stream) {
+export function displayUsageExamples(stream: Stream, config: Config) {
 	const bindingName = generateStreamBindingName(stream.name);
 	const exampleData = generateExampleData(stream);
 
@@ -211,15 +213,18 @@ export function displayUsageExamples(stream: Stream) {
 
 	// Worker binding example (always shown since worker_binding is always enabled)
 	logger.log("\nWorker Integration:");
-	logger.log("Add to wrangler.json:");
-	logger.log(`{
-  "pipelines": {
-    "streams": [{
-      "stream": "${stream.name}",
-      "binding": "${bindingName}"
-    }]
-  }
-}`);
+
+	const configSnippet = {
+		pipelines: [
+			{
+				pipeline: stream.name,
+				binding: bindingName,
+			},
+		],
+	};
+
+	logger.log("Add to your configuration file:");
+	logger.log(formatConfigSnippet(configSnippet, config.configPath));
 
 	logger.log("\nIn your Worker:");
 	logger.log(`await env.${bindingName}.send([${exampleData}]);`);

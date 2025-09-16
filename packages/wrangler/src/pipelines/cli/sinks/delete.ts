@@ -31,7 +31,8 @@ export const pipelinesSinksDeleteCommand = createCommand({
 
 		if (!args.force) {
 			const confirmedDelete = await confirm(
-				`Are you sure you want to delete the sink '${sink.name}' (${args.sink})?`
+				`Are you sure you want to delete the sink '${sink.name}' (${args.sink})?`,
+				{ fallbackValue: false }
 			);
 			if (!confirmedDelete) {
 				logger.log("Delete cancelled.");

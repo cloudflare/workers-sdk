@@ -5,11 +5,11 @@ import { APIError } from "../../parse";
 import {
 	authorizeR2Bucket,
 	BYTES_PER_MB,
-	formatPipelinePretty,
 	getAccountR2Endpoint,
 } from "../index";
 import {
 	deletePipeline,
+	formatPipelinePretty,
 	getPipeline,
 	listPipelines,
 	updatePipeline,

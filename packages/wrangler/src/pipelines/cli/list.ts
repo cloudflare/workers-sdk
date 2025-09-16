@@ -46,7 +46,7 @@ export const pipelinesListCommand = createCommand({
 						legacyPipelines: legacyPipelines,
 					}
 				: newPipelines || [];
-			logger.log(JSON.stringify(result, null, 2));
+			logger.json(result);
 			return;
 		}
 

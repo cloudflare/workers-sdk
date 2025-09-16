@@ -1,5 +1,5 @@
 import { createCommand } from "../../../core/create-command";
-import { UserError } from "../../../errors";
+import { CommandLineArgsError, UserError } from "../../../errors";
 import { logger } from "../../../logger";
 import { bucketFormatMessage, isValidR2BucketName } from "../../../r2/helpers";
 import { requireAuth } from "../../../user";
@@ -67,17 +67,14 @@ export const pipelinesSinksCreateCommand = createCommand({
 			type: "string",
 		},
 		"roll-size": {
-			describe: "Roll file when size reaches (e.g., 100MB, 1GB)",
-			type: "string",
-			default:
-				SINK_DEFAULTS.rolling_policy.file_size_bytes === 0
-					? undefined
-					: `${SINK_DEFAULTS.rolling_policy.file_size_bytes}`,
+			describe: "Roll file size in MB",
+			type: "number",
+			default: SINK_DEFAULTS.rolling_policy.file_size_bytes / (1024 * 1024),
 		},
 		"roll-interval": {
-			describe: "Roll file when time reaches (e.g., 5m, 1h)",
-			type: "string",
-			default: `${SINK_DEFAULTS.rolling_policy.interval_seconds}s`,
+			describe: "Roll file interval in seconds",
+			type: "number",
+			default: SINK_DEFAULTS.rolling_policy.interval_seconds,
 		},
 		"access-key-id": {
 			describe:
@@ -105,32 +102,37 @@ export const pipelinesSinksCreateCommand = createCommand({
 			type: "string",
 		},
 	},
-	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-		const sinkName = args.sink;
+	validateArgs: (args) => {
 		const sinkType = parseSinkType(args.type);
 
 		if (!isValidR2BucketName(args.bucket)) {
-			throw new UserError(
+			throw new CommandLineArgsError(
 				`The bucket name "${args.bucket}" is invalid. ${bucketFormatMessage}`
 			);
 		}
 
 		if (sinkType === "r2_data_catalog") {
 			if (!args.namespace) {
-				throw new UserError(
+				throw new CommandLineArgsError(
 					"--namespace is required for r2-data-catalog sinks"
 				);
 			}
 			if (!args.table) {
-				throw new UserError("--table is required for r2-data-catalog sinks");
+				throw new CommandLineArgsError(
+					"--table is required for r2-data-catalog sinks"
+				);
 			}
 			if (!args.catalogToken) {
-				throw new UserError(
+				throw new CommandLineArgsError(
 					"--catalog-token is required for r2-data-catalog sinks"
 				);
 			}
 		}
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
+		const sinkName = args.sink;
+		const sinkType = parseSinkType(args.type);
 
 		const sinkConfig: CreateSinkRequest = {
 			name: sinkName,
@@ -182,23 +184,10 @@ export const pipelinesSinksCreateCommand = createCommand({
 				SINK_DEFAULTS.rolling_policy.interval_seconds;
 
 			if (args.rollSize) {
-				// Parse file size (e.g., "100MB" -> bytes)
-				const sizeMatch = args.rollSize.match(/^(\d+)(MB|GB)?$/i);
-				if (sizeMatch) {
-					const size = parseInt(sizeMatch[1]);
-					const unit = sizeMatch[2]?.toUpperCase() || "MB";
-					file_size_bytes =
-						unit === "GB" ? size * 1024 * 1024 * 1024 : size * 1024 * 1024;
-				}
+				file_size_bytes = args.rollSize * 1024 * 1024;
 			}
 			if (args.rollInterval) {
-				// Parse interval (e.g., "300s" or "5m" -> seconds)
-				const intervalMatch = args.rollInterval.match(/^(\d+)([sm])?$/i);
-				if (intervalMatch) {
-					const interval = parseInt(intervalMatch[1]);
-					const unit = intervalMatch[2]?.toLowerCase() || "s";
-					interval_seconds = unit === "m" ? interval * 60 : interval;
-				}
+				interval_seconds = args.rollInterval;
 			}
 
 			sinkConfig.config.rolling_policy = {

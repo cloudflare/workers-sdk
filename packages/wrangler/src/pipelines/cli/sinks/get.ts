@@ -31,7 +31,7 @@ export const pipelinesSinksGetCommand = createCommand({
 		const rawSink = await getSink(config, args.sink);
 
 		if (args.json) {
-			logger.log(JSON.stringify(rawSink, null, 2));
+			logger.json(rawSink);
 			return;
 		}
 

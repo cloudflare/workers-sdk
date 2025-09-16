@@ -381,7 +381,13 @@ describe("wrangler pipelines", () => {
 			await expect(
 				runWrangler(`pipelines create my_pipeline --sql "${sql}"`)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: An authentication error has occurred creating a pipeline with this version of Wrangler. Please try: npm install wrangler@4.36.0]`
+				`
+				[Error: Your account does not have access to the new Pipelines API. To use the legacy Pipelines API, please run:
+
+				npx wrangler@4.36.0 pipelines create my_pipeline
+
+				This will use an older version of Wrangler that supports the legacy API.]
+			`
 			);
 
 			expect(validateRequest.count).toBe(1);
@@ -985,7 +991,7 @@ describe("wrangler pipelines", () => {
 		it("should create stream with default settings", async () => {
 			setIsTTY(true);
 			mockConfirm({
-				text: "No schema file provided. Create stream without a schema (unstructured JSON)?",
+				text: "No schema file provided. Do you want to create stream without a schema (unstructured JSON)?",
 				result: true,
 			});
 
