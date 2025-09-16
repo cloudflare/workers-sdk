@@ -3734,8 +3734,8 @@ importers:
         specifier: ^0.6.3
         version: 0.6.3
       cloudflare:
-        specifier: ^4.5.0
-        version: 4.5.0(encoding@0.1.13)
+        specifier: ^5.1.0
+        version: 5.1.0(encoding@0.1.13)
       cmd-shim:
         specifier: ^4.1.0
         version: 4.1.0
@@ -8324,8 +8324,8 @@ packages:
     resolution: {integrity: sha512-3Pe/CF1Nn94hyhIYpjtiLhdCoEoz0DqQ+988E9gmeEdQZlojxnOb74wctFyuwWQHzqyf9X7C7MG8juUpqBJT8w==}
     engines: {node: '>=0.8'}
 
-  cloudflare@4.5.0:
-    resolution: {integrity: sha512-fPcbPKx4zF45jBvQ0z7PCdgejVAPBBCZxwqk1k7krQNfpM07Cfj97/Q6wBzvYqlWXx/zt1S9+m8vnfCe06umbQ==}
+  cloudflare@5.1.0:
+    resolution: {integrity: sha512-J2vT90WHio8VSbGUmuHckJr9pabH6N+nQKQsgjfwydgV2bgyQoV/KqWw1Df+YKZ5T/QqP7KadKr4bxh+WiRafg==}
 
   clsx@1.2.1:
     resolution: {integrity: sha512-EcR6r5a8bj6pu3ycsa/E/cKVGuTgZJZdsyUYHOksG/UHIiKfjxzRxYJpyVBwYaQeOvghal9fcc4PidlgzugAQg==}
@@ -18562,7 +18562,7 @@ snapshots:
 
   clone@2.1.2: {}
 
-  cloudflare@4.5.0(encoding@0.1.13):
+  cloudflare@5.1.0(encoding@0.1.13):
     dependencies:
       '@types/node': 20.19.9
       '@types/node-fetch': 2.6.11
