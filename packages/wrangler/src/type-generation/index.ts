@@ -11,6 +11,7 @@ import {
 } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
+import { getClassNamesWhichUseSQLite } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
 import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
@@ -658,7 +659,11 @@ export async function generateEnvTypes(
 			modulesTypeStructure,
 			stringKeys,
 			config.compatibility_date,
-			config.compatibility_flags
+			config.compatibility_flags,
+			entrypoint
+				? generateImportSpecifier(fullOutputPath, entrypoint.file)
+				: undefined,
+			[...getClassNamesWhichUseSQLite(config.migrations).keys()]
 		);
 		const hash = createHash("sha256")
 			.update(consoleOutput)
@@ -713,7 +718,9 @@ function generateTypeStrings(
 	modulesTypeStructure: string[],
 	stringKeys: string[],
 	compatibilityDate: string | undefined,
-	compatibilityFlags: string[] | undefined
+	compatibilityFlags: string[] | undefined,
+	entrypointModule: string | undefined,
+	configuredDurableObjects: string[]
 ): { fileContent: string; consoleOutput: string } {
 	let baseContent = "";
 	let processEnv = "";
@@ -726,7 +733,7 @@ function generateTypeStrings(
 			// StringifyValues ensures that json vars are correctly types as strings, not objects on process.env
 			processEnv = `\ntype StringifyValues<EnvType extends Record<string, unknown>> = {\n\t[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;\n};\ndeclare namespace NodeJS {\n\tinterface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, ${stringKeys.map((k) => `"${k}"`).join(" | ")}>> {}\n}`;
 		}
-		baseContent = `declare namespace Cloudflare {\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+		baseContent = `declare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
 	} else {
 		baseContent = `export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
 	}
