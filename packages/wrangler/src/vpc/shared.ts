@@ -3,12 +3,7 @@ import type { ConnectivityService } from "./index";
 export function formatServiceForTable(service: ConnectivityService) {
 	// Build port info based on service type
 	let ports = "";
-	if (service.type === "tcp" && service.tcp_port) {
-		ports = `${service.tcp_port}`;
-		if (service.app_protocol) {
-			ports += ` (${service.app_protocol})`;
-		}
-	} else if (service.type === "http") {
+	if (service.type === "http") {
 		const httpPorts = [];
 		if (service.http_port) {
 			httpPorts.push(`HTTP:${service.http_port}`);

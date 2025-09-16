@@ -26,10 +26,10 @@ describe("vpc help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler vpc
 
-			🌐 Manage VPC connectivity [private-beta]
+			🌐 Manage VPC [open-beta]
 
 			COMMANDS
-			  wrangler vpc service  🔗 Manage VPC connectivity services
+			  wrangler vpc service  🔗 Manage VPC services
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -49,14 +49,14 @@ describe("vpc help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler vpc service
 
-			🔗 Manage VPC connectivity services
+			🔗 Manage VPC services
 
 			COMMANDS
-			  wrangler vpc service create <name>        Create a new VPC connectivity service
-			  wrangler vpc service delete <service-id>  Delete a VPC connectivity service
-			  wrangler vpc service get <service-id>     Get a VPC connectivity service
-			  wrangler vpc service list                 List VPC connectivity services
-			  wrangler vpc service update <service-id>  Update a VPC connectivity service
+			  wrangler vpc service create <name>        Create a new VPC service
+			  wrangler vpc service delete <service-id>  Delete a VPC service
+			  wrangler vpc service get <service-id>     Get a VPC service
+			  wrangler vpc service list                 List VPC services
+			  wrangler vpc service update <service-id>  Update a VPC service
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -89,66 +89,43 @@ describe("vpc service commands", () => {
 		clearDialogs();
 	});
 
-	// TCP Service Creation Tests
-	it("should handle creating a TCP service with IPv4", async () => {
+	it("should handle creating an HTTP service with IPv4", async () => {
 		const reqProm = mockWvpcServiceCreate();
 		await runWrangler(
-			"vpc service create test-tcp --tcp-port 5432 --app-protocol postgresql --ipv4 10.0.0.1 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+			"vpc service create test-http-ipv4 --type http --ipv4 10.0.0.1 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
 			Object {
-			  "app_protocol": "postgresql",
 			  "host": Object {
 			    "ipv4": "10.0.0.1",
 			    "network": Object {
 			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
 			    },
 			  },
-			  "name": "test-tcp",
-			  "tcp_port": 5432,
-			  "type": "tcp",
+			  "http_port": 80,
+			  "https_port": 443,
+			  "name": "test-http-ipv4",
+			  "type": "http",
 			}
 		`);
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating VPC connectivity service 'test-tcp'
-			✅ Created VPC connectivity service: tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			   Name: test-tcp
-			   Type: tcp
-			   TCP Port: 5432
-			   Protocol: postgresql
+			"🚧 Creating VPC service 'test-http-ipv4'
+			✅ Created VPC service: service-uuid
+			   Name: test-http-ipv4
+			   Type: http
+			   HTTP Port: 80
+			   HTTPS Port: 443
 			   IPv4: 10.0.0.1
 			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440000"
-		`);
-	});
-
-	it("should handle creating a TCP service with IPv6", async () => {
-		const reqProm = mockWvpcServiceCreate();
-		await runWrangler(
-			"vpc service create test-tcp-v6 --tcp-port 3306 --app-protocol mysql --ipv6 2001:db8::1 --tunnel-id 550e8400-e29b-41d4-a716-446655440001"
-		);
-
-		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "app_protocol": "mysql",
-			  "host": Object {
-			    "ipv6": "2001:db8::1",
-			    "network": Object {
-			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440001",
-			    },
-			  },
-			  "name": "test-tcp-v6",
-			  "tcp_port": 3306,
-			  "type": "tcp",
-			}
 		`);
 	});
 
 	it("should handle creating a service with hostname and resolver network", async () => {
 		const reqProm = mockWvpcServiceCreate();
 		await runWrangler(
-			"vpc service create test-hostname --http-port 80 --hostname db.example.com --tunnel-id 550e8400-e29b-41d4-a716-446655440002 --resolver-ips 8.8.8.8,8.8.4.4"
+			"vpc service create test-hostname --type http --http-port 80 --hostname db.example.com --tunnel-id 550e8400-e29b-41d4-a716-446655440002 --resolver-ips 8.8.8.8,8.8.4.4"
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
@@ -164,106 +141,21 @@ describe("vpc service commands", () => {
 			    },
 			  },
 			  "http_port": 80,
+			  "https_port": 443,
 			  "name": "test-hostname",
 			  "type": "http",
 			}
 		`);
 	});
 
-	// HTTP Service Creation Tests
-	it("should handle creating an HTTP service with dual ports", async () => {
-		const reqProm = mockWvpcServiceCreate();
-		await runWrangler(
-			"vpc service create test-web --http-port 80 --https-port 443 --ipv4 10.0.0.2 --tunnel-id 550e8400-e29b-41d4-a716-446655440003"
-		);
-
-		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "host": Object {
-			    "ipv4": "10.0.0.2",
-			    "network": Object {
-			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440003",
-			    },
-			  },
-			  "http_port": 80,
-			  "https_port": 443,
-			  "name": "test-web",
-			  "type": "http",
-			}
-		`);
-	});
-
-	it("should handle creating an HTTP service with only HTTPS port", async () => {
-		const reqProm = mockWvpcServiceCreate();
-		await runWrangler(
-			"vpc service create test-https --https-port 8443 --ipv4 10.0.0.3 --tunnel-id 550e8400-e29b-41d4-a716-446655440004"
-		);
-
-		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "host": Object {
-			    "ipv4": "10.0.0.3",
-			    "network": Object {
-			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440004",
-			    },
-			  },
-			  "https_port": 8443,
-			  "name": "test-https",
-			  "type": "http",
-			}
-		`);
-	});
-
-	// Validation Error Tests
-	it("should reject service creation with out either tcp-port or http-port/https-port", async () => {
-		await expect(() =>
-			runWrangler(
-				"vpc service create test-tcp --ipv4 10.0.0.1 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMust specify either TCP options (--tcp-port/--app-protocol) or HTTP options (--http-port/--https-port)[0m
-
-			"
-		`);
-	});
-
 	it("should reject service creation with both IP addresses and hostname", async () => {
 		await expect(() =>
 			runWrangler(
-				"vpc service create test-invalid --http-port 80 --ipv4 10.0.0.1 --hostname example.com --resolver-ips=1.1.1.1 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+				"vpc service create test-invalid --type http --http-port 80 --ipv4 10.0.0.1 --hostname example.com --resolver-ips=1.1.1.1 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
 			)
 		).rejects.toThrow();
 		expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments ipv4 and hostname are mutually exclusive[0m
-
-			"
-		`);
-	});
-
-	it("should reject service creation with hostname but no resolver IPs", async () => {
-		await expect(() =>
-			runWrangler(
-				"vpc service create test-no-resolvers --http-port 80 --hostname example.com --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing dependent arguments:[0m
-
-			   hostname -> resolver-ips
-
-			"
-		`);
-	});
-
-	it("should reject TCP service creation with HTTP-specific arguments", async () => {
-		await expect(() =>
-			runWrangler(
-				"vpc service create test-mixed --tcp-port 5432 --app-protocol=postgresql --https-port 443 --http-port 80 --ipv4 10.0.0.1 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments tcp-port and http-port are mutually exclusive[0m
 
 			"
 		`);
@@ -274,30 +166,29 @@ describe("vpc service commands", () => {
 		await runWrangler("vpc service list");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"📋 Listing VPC connectivity services
+			"📋 Listing VPC services
 			┌─┬─┬─┬─┬─┬─┬─┬─┐
 			│ id │ name │ type │ ports │ host │ tunnel │ created │ modified │
 			├─┼─┼─┼─┼─┼─┼─┼─┤
-			│ tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx │ test-tcp-service │ tcp │ 5432 (postgresql) │ 10.0.0.1 │ tunnel-x... │ 1/1/2024, 12:00:00 AM │ 1/1/2024, 12:00:00 AM │
-			├─┼─┼─┼─┼─┼─┼─┼─┤
-			│ http-xxxx-xxxx-xxxx-xxxxxxxxxxxx │ test-web-service │ http │ HTTP:80, HTTPS:443 │ web.example.com │ tunnel-y... │ 1/1/2024, 12:00:00 AM │ 1/1/2024, 12:00:00 AM │
+			│ service-uuid │ test-web-service │ http │ HTTP:80, HTTPS:443 │ web.example.com │ tunnel-y... │ 1/1/2024, 12:00:00 AM │ 1/1/2024, 12:00:00 AM │
 			└─┴─┴─┴─┴─┴─┴─┴─┘"
 		`);
 	});
 
 	it("should handle getting a service", async () => {
 		mockWvpcServiceGetUpdateDelete();
-		await runWrangler("vpc service get tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
+		await runWrangler("vpc service get service-uuid");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"🔍 Getting VPC connectivity service 'tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-			✅ Retrieved VPC connectivity service: tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-			   Name: test-tcp-service
-			   Type: tcp
-			   TCP Port: 5432
-			   Protocol: postgresql
-			   IPv4: 10.0.0.1
-			   Tunnel ID: tunnel-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			"🔍 Getting VPC service 'service-uuid'
+			✅ Retrieved VPC service: service-uuid
+			   Name: test-web-service
+			   Type: http
+			   HTTP Port: 80
+			   HTTPS Port: 443
+			   Hostname: web.example.com
+			   Tunnel ID: tunnel-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+			   Resolver IPs: 8.8.8.8, 8.8.4.4
 			   Created: 1/1/2024, 12:00:00 AM
 			   Modified: 1/1/2024, 12:00:00 AM"
 		`);
@@ -305,18 +196,18 @@ describe("vpc service commands", () => {
 
 	it("should handle deleting a service", async () => {
 		mockWvpcServiceGetUpdateDelete();
-		await runWrangler("vpc service delete tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
+		await runWrangler("vpc service delete service-uuid");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"🗑️  Deleting VPC connectivity service 'tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-			✅ Deleted VPC connectivity service: tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+			"🗑️  Deleting VPC service 'service-uuid'
+			✅ Deleted VPC service: service-uuid"
 		`);
 	});
 
 	it("should handle updating a service", async () => {
 		const reqProm = mockWvpcServiceUpdate();
 		await runWrangler(
-			"vpc service update tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx --name test-updated --http-port 80 --ipv4 10.0.0.2 --tunnel-id 550e8400-e29b-41d4-a716-446655440001"
+			"vpc service update service-uuid --name test-updated --type http --http-port 80 --ipv4 10.0.0.2 --tunnel-id 550e8400-e29b-41d4-a716-446655440001"
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
@@ -328,6 +219,7 @@ describe("vpc service commands", () => {
 			    },
 			  },
 			  "http_port": 80,
+			  "https_port": 443,
 			  "name": "test-updated",
 			  "type": "http",
 			}
@@ -335,23 +227,8 @@ describe("vpc service commands", () => {
 	});
 });
 
-// Mock Data
-const mockTcpService: ConnectivityService = {
-	service_id: "tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-	type: ServiceType.Tcp,
-	name: "test-tcp-service",
-	tcp_port: 5432,
-	app_protocol: "postgresql",
-	host: {
-		ipv4: "10.0.0.1",
-		network: { tunnel_id: "tunnel-xxxx-xxxx-xxxx-xxxxxxxxxxxx" },
-	},
-	created_at: "2024-01-01T00:00:00Z",
-	updated_at: "2024-01-01T00:00:00Z",
-};
-
-const mockHttpService: ConnectivityService = {
-	service_id: "http-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+const mockService: ConnectivityService = {
+	service_id: "service-uuid",
 	type: ServiceType.Http,
 	name: "test-web-service",
 	http_port: 80,
@@ -380,7 +257,7 @@ function mockWvpcServiceCreate(): Promise<ConnectivityServiceRequest> {
 					return HttpResponse.json(
 						createFetchResult(
 							{
-								service_id: "tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+								service_id: "service-uuid",
 								type: reqBody.type,
 								name: reqBody.name,
 								tcp_port: reqBody.tcp_port,
@@ -413,7 +290,7 @@ function mockWvpcServiceUpdate(): Promise<ConnectivityServiceRequest> {
 					return HttpResponse.json(
 						createFetchResult(
 							{
-								service_id: "tcp-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+								service_id: "service-uuid",
 								type: reqBody.type,
 								name: reqBody.name,
 								tcp_port: reqBody.tcp_port,
@@ -439,7 +316,7 @@ function mockWvpcServiceGetUpdateDelete() {
 		http.get(
 			"*/accounts/:accountId/connectivity/directory/services/:serviceId",
 			() => {
-				return HttpResponse.json(createFetchResult(mockTcpService, true));
+				return HttpResponse.json(createFetchResult(mockService, true));
 			},
 			{ once: true }
 		),
@@ -458,9 +335,7 @@ function mockWvpcServiceList() {
 		http.get(
 			"*/accounts/:accountId/connectivity/directory/services",
 			() => {
-				return HttpResponse.json(
-					createFetchResult([mockTcpService, mockHttpService], true)
-				);
+				return HttpResponse.json(createFetchResult([mockService], true));
 			},
 			{ once: true }
 		)
