@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import events from "node:events";
-import path from "node:path";
+import path, { resolve } from "node:path";
 import { bold, green } from "@cloudflare/cli/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { isWebContainer } from "@webcontainer/env";
@@ -11,6 +11,7 @@ import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
 import { convertCfWorkerInitBindingsToBindings } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { configFileName, formatConfigSnippet } from "./config";
+import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
@@ -909,35 +910,50 @@ export function getBindings(
 			}) satisfies CfService
 	);
 
-	// Hyperdrive bindings
-	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {
-		const connectionStringFromEnv =
-			process.env[
-				`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
-			];
-		// only require a local connection string in the wrangler file or the env if not using dev --remote
-		if (
-			local &&
-			connectionStringFromEnv === undefined &&
-			hyperdrive.localConnectionString === undefined
-		) {
-			throw new UserError(
-				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`,
-				{ telemetryMessage: "no local hyperdrive connection string" }
-			);
-		}
+	let hyperdriveBindings = configParam.hyperdrive;
 
-		// If there is a non-empty connection string specified in the environment,
-		// use that as our local connection string configuration.
-		if (connectionStringFromEnv) {
-			logger.log(
-				`Found a non-empty WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING variable for binding. Hyperdrive will connect to this database during local development.`
-			);
-			hyperdrive.localConnectionString = connectionStringFromEnv;
-		}
+	if (hyperdriveBindings.length > 0) {
+		// Load environment variables from .env files
+		// in order to get any hyperdrive local connection strings
+		// that might be specified there
+		const resolvedEnvFilePaths = (envFiles ?? getDefaultEnvFiles(env)).map(
+			(p) => resolve(p)
+		);
+		const processEnv = loadDotEnv(resolvedEnvFilePaths, {
+			includeProcessEnv: true,
+			silent: true,
+		});
 
-		return hyperdrive;
-	});
+		// Hyperdrive bindings
+		hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {
+			const connectionStringFromEnv =
+				processEnv[
+					`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
+				];
+			// only require a local connection string in the wrangler file or the env if not using dev --remote
+			if (
+				local &&
+				connectionStringFromEnv === undefined &&
+				hyperdrive.localConnectionString === undefined
+			) {
+				throw new UserError(
+					`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`,
+					{ telemetryMessage: "no local hyperdrive connection string" }
+				);
+			}
+
+			// If there is a non-empty connection string specified in the environment,
+			// use that as our local connection string configuration.
+			if (connectionStringFromEnv) {
+				logger.log(
+					`Found a non-empty WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING variable for binding. Hyperdrive will connect to this database during local development.`
+				);
+				hyperdrive.localConnectionString = connectionStringFromEnv;
+			}
+
+			return hyperdrive;
+		});
+	}
 
 	// Queues bindings
 	const queuesBindings = [
