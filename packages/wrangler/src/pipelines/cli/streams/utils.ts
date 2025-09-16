@@ -1,4 +1,4 @@
-import { formatConfigSnippet } from "../../../config";
+import { updateConfigFile } from "../../../config";
 import { logger } from "../../../logger";
 import formatLabelledValues from "../../../utils/render-labelled-values";
 import type { Config } from "../../../config";
@@ -205,7 +205,11 @@ function generateExampleData(stream: Stream): string {
 	}
 }
 
-export function displayUsageExamples(stream: Stream, config: Config) {
+export async function displayUsageExamples(
+	stream: Stream,
+	config: Config,
+	args: { env?: string }
+) {
 	const bindingName = generateStreamBindingName(stream.name);
 	const exampleData = generateExampleData(stream);
 
@@ -214,17 +218,19 @@ export function displayUsageExamples(stream: Stream, config: Config) {
 	// Worker binding example (always shown since worker_binding is always enabled)
 	logger.log("\nWorker Integration:");
 
-	const configSnippet = {
-		pipelines: [
-			{
-				pipeline: stream.name,
-				binding: bindingName,
-			},
-		],
-	};
-
-	logger.log("Add to your configuration file:");
-	logger.log(formatConfigSnippet(configSnippet, config.configPath));
+	await updateConfigFile(
+		(customBindingName) => ({
+			pipelines: [
+				{
+					pipeline: stream.name,
+					binding: customBindingName ?? bindingName,
+				},
+			],
+		}),
+		config.configPath,
+		args.env,
+		false // Don't offer to update automatically
+	);
 
 	logger.log("\nIn your Worker:");
 	logger.log(`await env.${bindingName}.send([${exampleData}]);`);

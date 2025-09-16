@@ -125,7 +125,7 @@ export const pipelinesCreateCommand = createCommand({
 
 			if (streamTable) {
 				const stream = await getStream(config, streamTable.id);
-				displayUsageExamples(stream, config);
+				await displayUsageExamples(stream, config, args);
 			} else {
 				logger.log(
 					`\nRun 'wrangler pipelines get ${pipeline.id}' to view full details.`

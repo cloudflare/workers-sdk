@@ -67,7 +67,7 @@ export const pipelinesSetupCommand = createCommand({
 			await setupSinkConfiguration(config, setupConfig);
 			const created = await reviewAndCreateStreamSink(config, setupConfig);
 			await setupSQLTransformationWithValidation(config, setupConfig, created);
-			await createPipelineIfNeeded(config, setupConfig, created);
+			await createPipelineIfNeeded(config, setupConfig, created, args);
 		} catch (error) {
 			if (error instanceof UserError) {
 				throw error;
@@ -778,7 +778,8 @@ async function reviewAndCreateStreamSink(
 async function createPipelineIfNeeded(
 	config: Config,
 	setupConfig: SetupConfig,
-	created: { stream?: Stream; sink?: Sink }
+	created: { stream?: Stream; sink?: Sink },
+	args: { env?: string }
 ): Promise<void> {
 	if (!setupConfig.pipelineConfig) {
 		throw new UserError("Pipeline configuration is missing");
@@ -792,7 +793,7 @@ async function createPipelineIfNeeded(
 		logger.log("\n✨ Setup complete!");
 
 		if (created.stream) {
-			displayUsageExamples(created.stream, config);
+			await displayUsageExamples(created.stream, config, args);
 		}
 	} catch (error) {
 		logger.error(
