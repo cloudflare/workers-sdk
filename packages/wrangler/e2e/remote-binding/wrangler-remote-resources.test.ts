@@ -397,14 +397,19 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				const { url } = await worker.waitForReady();
 
-				const response = await fetchText(url);
+				await vi.waitFor(
+					async () => {
+						const response = await fetchText(url);
 
-				expect(response).toEqual(testCase.expectedResponseMatch);
-				if (testCase.expectedOutputMatch) {
-					expect(await worker.currentOutput).toEqual(
-						testCase.expectedOutputMatch
-					);
-				}
+						expect(response).toEqual(testCase.expectedResponseMatch);
+						if (testCase.expectedOutputMatch) {
+							expect(await worker.currentOutput).toEqual(
+								testCase.expectedOutputMatch
+							);
+						}
+					},
+					{ interval: 500, timeout: 5_000 }
+				);
 			});
 		});
 
