@@ -23,6 +23,12 @@
 			"binding": "WAE",
 		},
 	],
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "test-hyperdrive-id",
+		},
+	],
 	"unsafe": {
 		"bindings": [
 			{
