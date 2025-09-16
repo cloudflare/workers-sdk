@@ -122,12 +122,16 @@ export function resolvePluginConfig(
 	}
 
 	const configPaths = new Set<string>();
-	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
-		viteEnv.mode,
-		root,
-		/* prefixes */ ""
-	);
+	const buildTimeEnv = vite.loadEnv(viteEnv.mode, root, [
+		"CLOUDFLARE_",
+		"WRANGLER_",
+	]);
 
+	// Merge the loaded env variables into process.env so that they are available to
+	// wrangler when it loads the worker configuration files.
+	Object.assign(process.env, buildTimeEnv);
+
+	const cloudflareEnv = buildTimeEnv.CLOUDFLARE_ENV;
 	const entryWorkerConfigPath = getValidatedWranglerConfigPath(
 		root,
 		pluginConfig.configPath
