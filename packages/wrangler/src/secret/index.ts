@@ -310,7 +310,13 @@ export const secretDeleteCommand = createCommand({
 					? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
 					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
-			await fetchResult(`${url}/${args.key}`, { method: "DELETE" });
+			await fetchResult(
+				`${url}/${encodeURIComponent(args.key)}`,
+				{ method: "DELETE" },
+				new URLSearchParams({
+					url_encoded: "true",
+				})
+			);
 			metrics.sendMetricsEvent("delete encrypted variable", {
 				sendMetrics: config.send_metrics,
 			});
