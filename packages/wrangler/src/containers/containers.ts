@@ -179,10 +179,9 @@ async function listCommandHandle(
 		}
 
 		const applicationDetails = (a: Application) => {
-			const details = YAML.stringify(a).split("\n");
 			return {
 				label: `${a.name} (${a.created_at})`,
-				details: details,
+				details: YAML.stringify(a).split("\n"),
 				value: a.id,
 			};
 		};
