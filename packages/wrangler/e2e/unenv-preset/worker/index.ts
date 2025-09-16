@@ -505,4 +505,43 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(typeof http2.connect, "function");
 		assert.strictEqual(http2.constants.HTTP2_HEADER_STATUS, ":status");
 	},
+
+	async testProcess() {
+		const mProcess = await import("node:process");
+		const gProcess = globalThis.process;
+
+		const useV2 = getRuntimeFlagValue("enable_nodejs_process_v2");
+
+		for (const p of [mProcess, gProcess]) {
+			if (useV2) {
+				// workerd implementation only
+				assert.equal(p.arch, "x64");
+				assert.equal(p.title, "workerd");
+			} else {
+				// unenv implementation only
+				assert.equal(p.arch, "");
+				assert.equal(p.title, "");
+			}
+
+			assert.doesNotThrow(() => p.chdir("/tmp"));
+			assert.equal(typeof p.cwd(), "string");
+
+			assert.equal(typeof p.addListener, "function");
+			assert.equal(typeof p.eventNames, "function");
+			assert.equal(typeof p.getMaxListeners, "function");
+			assert.equal(typeof p.listenerCount, "function");
+			assert.equal(typeof p.listeners, "function");
+			assert.equal(typeof p.off, "function");
+			assert.equal(typeof p.on, "function");
+			assert.equal(typeof p.once, "function");
+			assert.equal(typeof p.prependListener, "function");
+			assert.equal(typeof p.prependOnceListener, "function");
+			assert.equal(typeof p.rawListeners, "function");
+			assert.equal(typeof p.removeAllListeners, "function");
+			assert.equal(typeof p.removeListener, "function");
+			assert.equal(typeof p.setMaxListeners, "function");
+			assert.equal(typeof (p as any).binding, "function");
+			assert.equal(typeof p.permission, "object");
+		}
+	},
 };
