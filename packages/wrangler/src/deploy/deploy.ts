@@ -23,7 +23,7 @@ import {
 import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
-import { confirm } from "../dialogs";
+import { confirm as genericConfirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import {
@@ -32,6 +32,7 @@ import {
 } from "../environments";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -119,6 +120,7 @@ type Props = {
 	experimentalAutoCreate: boolean;
 	metafile: string | boolean | undefined;
 	containersRollout: "immediate" | "gradual" | undefined;
+	strict: boolean | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -318,7 +320,7 @@ export async function publishCustomDomains(
 			const message = `Custom Domains already exist for these domains:
 ${existingRendered}
 Update them to point to this script instead?`;
-			if (!(await confirm(message))) {
+			if (!(await genericConfirm(message))) {
 				return fail();
 			}
 			options.override_existing_origin = true;
@@ -331,7 +333,7 @@ Update them to point to this script instead?`;
 			const message = `You already have DNS records that conflict for these Custom Domains:
 ${conflicitingRendered}
 Update them to point to this script instead?`;
-			if (!(await confirm(message))) {
+			if (!(await genericConfirm(message))) {
 				return fail();
 			}
 			options.override_existing_dns_record = true;
@@ -356,6 +358,8 @@ export default async function deploy(props: Props): Promise<{
 	workerTag: string | null;
 	targets?: string[];
 }> {
+	const deployConfirm = getDeployConfirmFunction(props.strict);
+
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name, entry } = props;
 	let workerTag: string | null = null;
@@ -416,7 +420,7 @@ export default async function deploy(props: Props): Promise<{
 								`\n${configDiff.diff}\n\n` +
 								"Deploying the Worker will override the remote configuration with your local one."
 						);
-						if (!(await confirm("Would you like to continue?"))) {
+						if (!(await deployConfirm("Would you like to continue?"))) {
 							return { versionId, workerTag };
 						}
 					}
@@ -424,7 +428,7 @@ export default async function deploy(props: Props): Promise<{
 					logger.warn(
 						`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
 					);
-					if (!(await confirm("Would you like to continue?"))) {
+					if (!(await deployConfirm("Would you like to continue?"))) {
 						return { versionId, workerTag };
 					}
 				}
@@ -432,7 +436,7 @@ export default async function deploy(props: Props): Promise<{
 				logger.warn(
 					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
 				);
-				if (!(await confirm("Would you like to continue?"))) {
+				if (!(await deployConfirm("Would you like to continue?"))) {
 					return { versionId, workerTag };
 				}
 			}
@@ -1412,4 +1416,22 @@ export async function updateQueueConsumers(
 	}
 
 	return updateConsumers;
+}
+
+function getDeployConfirmFunction(
+	strictMode = false
+): (text: string) => Promise<boolean> {
+	const nonInteractive = isNonInteractiveOrCI();
+
+	if (nonInteractive && strictMode) {
+		return () => {
+			logger.error(
+				"Aborting the deployment operation (due to strict mode, to prevent this failure either remove the `--strict` flag)"
+			);
+			process.exitCode = 1;
+			return Promise.resolve(false);
+		};
+	}
+
+	return genericConfirm;
 }
