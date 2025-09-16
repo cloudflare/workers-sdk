@@ -53,7 +53,7 @@ export const pipelinesGetCommand = createCommand({
 		}
 
 		if (args.format === "json") {
-			logger.log(JSON.stringify(pipeline, null, 2));
+			logger.json(pipeline);
 			return;
 		}
 

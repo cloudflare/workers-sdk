@@ -29,7 +29,7 @@ export const pipelinesStreamsGetCommand = createCommand({
 		const stream = await getStream(config, args.stream);
 
 		if (args.json) {
-			logger.log(JSON.stringify(stream, null, 2));
+			logger.json(stream);
 			return;
 		}
 

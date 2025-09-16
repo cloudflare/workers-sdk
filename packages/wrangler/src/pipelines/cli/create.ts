@@ -23,10 +23,12 @@ export const pipelinesCreateCommand = createCommand({
 		sql: {
 			describe: "Inline SQL query for the pipeline",
 			type: "string",
+			conflicts: "sql-file",
 		},
 		"sql-file": {
 			describe: "Path to file containing SQL query for the pipeline",
 			type: "string",
+			conflicts: "sql",
 		},
 	},
 	positionalArgs: ["pipeline"],
@@ -34,13 +36,6 @@ export const pipelinesCreateCommand = createCommand({
 	async handler(args, { config }) {
 		await requireAuth(config);
 		const pipelineName = args.pipeline;
-
-		if (!args.sql && !args.sqlFile) {
-			throw new UserError("Either --sql or --sql-file must be provided");
-		}
-		if (args.sql && args.sqlFile) {
-			throw new UserError("Cannot specify both --sql and --sql-file");
-		}
 
 		let sql: string;
 		if (args.sql) {
@@ -54,7 +49,6 @@ export const pipelinesCreateCommand = createCommand({
 				);
 			}
 		} else {
-			// This should never happen due to earlier validation
 			throw new UserError("Either --sql or --sql-file must be provided");
 		}
 
@@ -112,7 +106,7 @@ export const pipelinesCreateCommand = createCommand({
 			if (error instanceof APIError && error.code === 10000) {
 				// Show error when no access to v1 Pipelines API
 				throw new UserError(
-					`An authentication error has occurred creating a pipeline with this version of Wrangler. Please try: npm install wrangler@4.36.0`
+					`Your account does not have access to the new Pipelines API. To use the legacy Pipelines API, please run:\n\nnpx wrangler@4.36.0 pipelines create ${pipelineName}\n\nThis will use an older version of Wrangler that supports the legacy API.`
 				);
 			}
 			throw error;
@@ -131,7 +125,7 @@ export const pipelinesCreateCommand = createCommand({
 
 			if (streamTable) {
 				const stream = await getStream(config, streamTable.id);
-				displayUsageExamples(stream);
+				displayUsageExamples(stream, config);
 			} else {
 				logger.log(
 					`\nRun 'wrangler pipelines get ${pipeline.id}' to view full details.`

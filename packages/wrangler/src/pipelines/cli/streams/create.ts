@@ -36,45 +36,50 @@ export const pipelinesStreamsCreateCommand = createCommand({
 			type: "boolean",
 			default: true,
 		},
-		"cors-origins": {
-			describe: "Comma-separated CORS origins",
+		"cors-origin": {
+			describe: "CORS origin",
 			type: "string",
+			array: true,
 		},
 	},
 	async handler(args, { config }) {
 		await requireAuth(config);
 		const streamName = args.stream;
 
-		let corsOrigins: string[] | undefined;
-		if (args.corsOrigins) {
-			corsOrigins =
-				args.corsOrigins === "*"
-					? ["*"]
-					: args.corsOrigins.split(",").map((origin) => origin.trim());
-		}
+		const corsOrigins = args.corsOrigin;
 
 		let schema: { fields: SchemaField[] } | undefined;
 		if (args.schemaFile) {
+			let schemaContent: string;
+			let parsedSchema: { fields: SchemaField[] };
+
 			try {
-				const schemaContent = readFileSync(args.schemaFile, "utf-8");
-				const parsedSchema = parseJSON(schemaContent, args.schemaFile) as {
-					fields: SchemaField[];
-				};
-
-				if (!parsedSchema || !Array.isArray(parsedSchema.fields)) {
-					throw new UserError("Schema file must contain a 'fields' array");
-				}
-
-				schema = parsedSchema;
+				schemaContent = readFileSync(args.schemaFile, "utf-8");
 			} catch (error) {
 				throw new UserError(
-					`Failed to read or parse schema file '${args.schemaFile}': ${error instanceof Error ? error.message : String(error)}`
+					`Failed to read schema file '${args.schemaFile}': ${error instanceof Error ? error.message : String(error)}`
 				);
 			}
+
+			try {
+				parsedSchema = parseJSON(schemaContent, args.schemaFile) as {
+					fields: SchemaField[];
+				};
+			} catch (error) {
+				throw new UserError(
+					`Failed to parse schema file '${args.schemaFile}': ${error instanceof Error ? error.message : String(error)}`
+				);
+			}
+
+			if (!parsedSchema || !Array.isArray(parsedSchema.fields)) {
+				throw new UserError("Schema file must contain a 'fields' array");
+			}
+
+			schema = parsedSchema;
 		} else {
 			// No schema file provided - confirm with user
 			const confirmNoSchema = await confirm(
-				"No schema file provided. Create stream without a schema (unstructured JSON)?",
+				"No schema file provided. Do you want to create stream without a schema (unstructured JSON)?",
 				{ defaultValue: false }
 			);
 
@@ -92,7 +97,8 @@ export const pipelinesStreamsCreateCommand = createCommand({
 				enabled: args.httpEnabled,
 				authentication: args.httpAuth,
 				...(args.httpEnabled &&
-					corsOrigins && { cors: { origins: corsOrigins } }),
+					corsOrigins &&
+					corsOrigins.length > 0 && { cors: { origins: corsOrigins } }),
 			},
 			worker_binding: {
 				enabled: true,
