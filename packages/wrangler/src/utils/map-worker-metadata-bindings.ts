@@ -244,6 +244,7 @@ export async function mapWorkerMetadataBindings(
 								destination_address: binding.destination_address,
 								allowed_destination_addresses:
 									binding.allowed_destination_addresses,
+								allowed_sender_addresses: binding.allowed_sender_addresses,
 							},
 						];
 						break;
