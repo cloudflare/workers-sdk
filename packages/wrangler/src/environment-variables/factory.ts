@@ -100,7 +100,8 @@ type VariableNames =
 	/** Docker host configuration (handled separately from environment variable factory). */
 	| "WRANGLER_DOCKER_HOST"
 	/** Docker host configuration (handled separately from environment variable factory). */
-	| "DOCKER_HOST";
+	| "DOCKER_HOST"
+	| "WRANGLER_TRACE_ID";
 
 type DeprecatedNames =
 	| "CF_ACCOUNT_ID"

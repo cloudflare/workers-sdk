@@ -290,3 +290,7 @@ export const getCloudflareIncludeProcessEnvFromEnv =
 		variableName: "CLOUDFLARE_INCLUDE_PROCESS_ENV",
 		defaultValue: false,
 	});
+
+export const getTraceHeader = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_TRACE_ID",
+});
