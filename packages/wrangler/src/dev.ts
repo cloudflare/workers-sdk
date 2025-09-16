@@ -57,7 +57,9 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? true,
+			REMOTE_BINDINGS: args.local
+				? false
+				: args.experimentalRemoteBindings ?? true,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
 		}),
 	},
