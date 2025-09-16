@@ -330,10 +330,7 @@ if (import.meta.hot) {
 					outputConfig.unsafe &&
 					Object.keys(outputConfig.unsafe).length === 0
 				) {
-					outputConfig = {
-						...outputConfig,
-						unsafe: undefined,
-					};
+					outputConfig.unsafe = undefined;
 				}
 
 				this.emitFile({
