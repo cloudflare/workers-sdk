@@ -774,13 +774,18 @@ export function buildMiniflareBindingOptions(
 		vpcServices:
 			remoteBindingsEnabled && remoteProxyConnectionString
 				? Object.fromEntries(
-						bindings.vpc_services?.map((vpc) => [
-							vpc.binding,
-							{
-								service_id: vpc.service_id,
-								remoteProxyConnectionString,
-							},
-						]) ?? []
+						bindings.vpc_services
+							?.filter((vpc) => {
+								warnOrError("vpc_services", vpc.remote, "remote");
+								return vpc.remote;
+							})
+							.map((vpc) => [
+								vpc.binding,
+								{
+									service_id: vpc.service_id,
+									remoteProxyConnectionString,
+								},
+							]) ?? []
 					)
 				: undefined,
 
