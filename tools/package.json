@@ -1,5 +1,5 @@
 {
-	"name": "tools",
+	"name": "@cloudflare/tools",
 	"private": true,
 	"description": "Tooling for this monorepo CI",
 	"scripts": {

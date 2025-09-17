@@ -98,13 +98,13 @@ describe("findDeployablePackageNames()", () => {
 		expect(findDeployablePackageNames()).toMatchInlineSnapshot(`
 			Set {
 			  "@cloudflare/chrome-devtools-patches",
-			  "devprod-status-bot",
-			  "edge-preview-authenticated-proxy",
-			  "format-errors",
-			  "playground-preview-worker",
+			  "@cloudflare/devprod-status-bot",
+			  "@cloudflare/edge-preview-authenticated-proxy",
+			  "@cloudflare/format-errors",
+			  "@cloudflare/playground-preview-worker",
 			  "@cloudflare/quick-edit",
-			  "turbo-r2-archive",
-			  "workers-playground",
+			  "@cloudflare/turbo-r2-archive",
+			  "@cloudflare/workers-playground",
 			  "@cloudflare/workers-shared",
 			  "@cloudflare/workflows-shared",
 			}

@@ -1,5 +1,5 @@
 {
-	"name": "edge-preview-authenticated-proxy",
+	"name": "@cloudflare/edge-preview-authenticated-proxy",
 	"version": "0.2.4",
 	"private": true,
 	"scripts": {
