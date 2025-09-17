@@ -257,6 +257,7 @@ export interface CfService {
 export interface CfVpcService {
 	binding: string;
 	service_id: string;
+	remote?: boolean;
 }
 
 export interface CfAnalyticsEngineDataset {

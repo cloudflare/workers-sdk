@@ -1,4 +1,5 @@
 ---
+"miniflare": minor
 "wrangler": minor
 ---
 
