@@ -263,6 +263,96 @@ This is a random email body.
 	t.is(res.status, 200);
 });
 
+test("Multiple allowed senders send_email binding works", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: SEND_EMAIL_WORKER,
+		email: {
+			send_email: [
+				{
+					name: "SEND_EMAIL",
+					allowed_sender_addresses: [
+						"milchick@example.com",
+						"miss-huang@example.com",
+					],
+				},
+			],
+		},
+		compatibilityDate: "2025-03-17",
+	});
+
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/?" +
+			new URLSearchParams({
+				to: "someone@example.com",
+				from: "milchick@example.com",
+			}).toString(),
+		{
+			body: `To: someone <someone@example.com>
+From: someone else <milchick@example.com>
+Message-ID: <im-a-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+`,
+			method: "POST",
+		}
+	);
+
+	t.is(await res.text(), "ok");
+	t.is(res.status, 200);
+});
+
+test("Sending email from a sender not in the allowed list does not work", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: SEND_EMAIL_WORKER,
+		email: {
+			send_email: [
+				{
+					name: "SEND_EMAIL",
+					allowed_sender_addresses: [
+						"milchick@example.com",
+						"miss-huang@example.com",
+					],
+				},
+			],
+		},
+		compatibilityDate: "2025-03-17",
+	});
+
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/?" +
+			new URLSearchParams({
+				to: "someone@example.com",
+				from: "notallowed@example.com",
+			}).toString(),
+		{
+			body: `To: someone <someone@example.com>
+From: someone else <milchick@example.com>
+Message-ID: <im-a-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+`,
+			method: "POST",
+		}
+	);
+
+	t.true(
+		(await res.text()).startsWith(
+			"Error: email from notallowed@example.com not allowed"
+		)
+	);
+	t.is(res.status, 500);
+});
+
 test("Multiple allowed send_email binding throws if destination is not equal", async (t) => {
 	const mf = new Miniflare({
 		modules: true,

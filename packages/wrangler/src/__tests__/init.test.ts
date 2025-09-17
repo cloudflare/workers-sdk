@@ -300,6 +300,7 @@ describe("init", () => {
 					name: "EMAIL_BINDING",
 					destination_address: "some@address.com",
 					allowed_destination_addresses: ["some2@address.com"],
+					allowed_sender_addresses: ["some2@address.com"],
 				},
 				{
 					type: "version_metadata",
@@ -474,6 +475,7 @@ describe("init", () => {
 			],
 			send_email: [
 				{
+					allowed_sender_addresses: ["some2@address.com"],
 					allowed_destination_addresses: ["some2@address.com"],
 					destination_address: "some@address.com",
 					name: "EMAIL_BINDING",
@@ -1004,6 +1006,7 @@ describe("init", () => {
 					name = \\"EMAIL_BINDING\\"
 					destination_address = \\"some@address.com\\"
 					allowed_destination_addresses = [ \\"some2@address.com\\" ]
+					allowed_sender_addresses = [ \\"some2@address.com\\" ]
 
 					[version_metadata]
 					binding = \\"Version_BINDING\\"

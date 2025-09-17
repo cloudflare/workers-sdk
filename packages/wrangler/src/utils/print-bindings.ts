@@ -188,7 +188,7 @@ export function printBindings(
 					type: friendlyBindingNames.kv_namespaces,
 					value: id,
 					mode: getMode({
-						isSimulatedLocally: !remote,
+						isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
 					}),
 				};
 			})
@@ -206,13 +206,22 @@ export function printBindings(
 					"allowed_destination_addresses" in emailBinding
 						? emailBinding.allowed_destination_addresses
 						: undefined;
+				const allowed_sender_addresses =
+					"allowed_sender_addresses" in emailBinding
+						? emailBinding.allowed_sender_addresses
+						: undefined;
+				let value =
+					destination_address ||
+					allowed_destination_addresses?.join(", ") ||
+					"unrestricted";
+
+				if (allowed_sender_addresses) {
+					value += ` - senders: ${allowed_sender_addresses.join(", ")}`;
+				}
 				return {
 					name: emailBinding.name,
 					type: friendlyBindingNames.send_email,
-					value:
-						destination_address ||
-						allowed_destination_addresses?.join(", ") ||
-						"unrestricted",
+					value,
 					mode: getMode({
 						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
 							? !emailBinding.remote
@@ -231,7 +240,7 @@ export function printBindings(
 					type: friendlyBindingNames.queues,
 					value: queue_name,
 					mode: getMode({
-						isSimulatedLocally: !remote,
+						isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
 					}),
 				};
 			})
@@ -257,7 +266,7 @@ export function printBindings(
 						name: binding,
 						type: friendlyBindingNames.d1_databases,
 						mode: getMode({
-							isSimulatedLocally: !remote,
+							isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
 						}),
 						value,
 					};
@@ -315,7 +324,7 @@ export function printBindings(
 					type: friendlyBindingNames.r2_buckets,
 					value: value,
 					mode: getMode({
-						isSimulatedLocally: !remote,
+						isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
 					}),
 				};
 			})
@@ -371,7 +380,7 @@ export function printBindings(
 					value += `#${entrypoint}`;
 				}
 
-				if (remote) {
+				if (remote && getFlag("REMOTE_BINDINGS")) {
 					mode = getMode({ isSimulatedLocally: false });
 				} else if (context.local && context.registry !== null) {
 					const registryDefinition = context.registry?.[service];

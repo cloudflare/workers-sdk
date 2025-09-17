@@ -6,19 +6,20 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError, parseJSON } from "../parse";
-import { getCloudflareAPITokenFromEnv } from "../user/auth-variables";
+import {
+	getCloudflareAPITokenFromEnv,
+	getWranglerR2SqlAuthToken,
+} from "../user/auth-variables";
 
-interface SqlQueryResult {
+interface SqlQueryResponse {
 	result?: {
-		column_order: string[];
+		request_id?: string;
+		schema: { name: string; type: string }[];
 		rows: Record<string, unknown>[];
-		stats?: {
-			total_r2_requests: number;
-			total_r2_bytes_read: number;
-			total_r2_bytes_written: number;
-			total_bytes_matched: number;
-			total_rows_skipped: number;
-			total_files_scanned: number;
+		metrics: {
+			r2_requests_count: number;
+			files_scanned: number;
+			bytes_scanned: number;
 		};
 	};
 	success: boolean;
@@ -26,14 +27,14 @@ interface SqlQueryResult {
 	messages: string[];
 }
 
-function formatSqlResults(data: SqlQueryResult, duration: number): void {
+function formatSqlResults(data: SqlQueryResponse, duration: number): void {
 	if (!data?.result?.rows || data.result.rows.length === 0) {
 		logger.log("Query executed successfully with no results");
 		return;
 	}
 
-	const { column_order, rows, stats } = data.result;
-
+	const { schema, rows, metrics } = data.result;
+	const column_order = schema.map((field) => field.name);
 	logger.table(
 		rows.map((row) =>
 			Object.fromEntries(
@@ -43,15 +44,12 @@ function formatSqlResults(data: SqlQueryResult, duration: number): void {
 		{ wordWrap: true, head: column_order }
 	);
 
-	// Print stats if available.
-	if (stats) {
-		logger.log(
-			`Read ${prettyBytes(stats.total_r2_bytes_read)} across ${stats.total_files_scanned} files from R2`
-		);
-		if (duration > 0) {
-			const bytesPerSecond = (stats.total_r2_bytes_read / duration) * 1000;
-			logger.log(`On average, ${prettyBytes(bytesPerSecond)} / s`);
-		}
+	logger.log(
+		`Read ${prettyBytes(metrics.bytes_scanned)} across ${metrics.files_scanned} files from R2`
+	);
+	if (duration > 0) {
+		const bytesPerSecond = (metrics.bytes_scanned / duration) * 1000;
+		logger.log(`On average, ${prettyBytes(bytesPerSecond)} / s`);
 	}
 }
 
@@ -83,14 +81,22 @@ export const r2SqlQueryCommand = createCommand({
 		},
 	},
 	async handler({ warehouse, query }) {
-		const token = getCloudflareAPITokenFromEnv();
+		let token = getWranglerR2SqlAuthToken();
 		if (!token) {
-			throw new UserError(
-				"Missing CLOUDFLARE_API_TOKEN environment variable. " +
-					"Please follow instructions in https://developers.cloudflare.com/r2/sql/platform/troubleshooting/ to create a token. " +
-					"Once done, you can prefix the command with the variable definition like so: `CLOUDFLARE_API_TOKEN=... wrangler r2 sql query ...`. " +
-					"There also other ways to provide the value of this variable, see https://developers.cloudflare.com/workers/wrangler/system-environment-variables/ for more details."
-			);
+			token = getCloudflareAPITokenFromEnv();
+			if (!token) {
+				throw new UserError(
+					"Missing WRANGLER_R2_SQL_AUTH_TOKEN environment variable. " +
+						"Tried to fallback to CLOUDFLARE_API_TOKEN, didn't find it either. " +
+						"Please follow instructions in https://developers.cloudflare.com/r2/sql/platform/troubleshooting/ to create a token. " +
+						"Once done, you can prefix the command with the variable definition like so: `WRANGLER_R2_SQL_AUTH_TOKEN=... wrangler r2 sql query ...`. " +
+						"There also other ways to provide the value of this variable, see https://developers.cloudflare.com/workers/wrangler/system-environment-variables/ for more details."
+				);
+			} else {
+				logger.warn(
+					"Missing WRANGLER_R2_SQL_AUTH_TOKEN environment variable, falling back to CLOUDFLARE_API_TOKEN"
+				);
+			}
 		}
 
 		const splitIndex = warehouse.indexOf("_");
@@ -132,9 +138,16 @@ export const r2SqlQueryCommand = createCommand({
 			});
 		}
 
+		if (responseStatus === 403) {
+			logger.error(
+				"Please check that token in WRANGLER_R2_SQL_AUTH_TOKEN or CLOUDFLARE_API_TOKEN has the correct permissions. " +
+					"See https://developers.cloudflare.com/r2/sql/platform/troubleshooting/ for more details."
+			);
+		}
+
 		let parsed = null;
 		try {
-			parsed = parseJSON(text) as SqlQueryResult;
+			parsed = parseJSON(text) as SqlQueryResponse;
 		} catch {
 			throw new APIError({
 				text: "Received a malformed response from the API",

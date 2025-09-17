@@ -2956,6 +2956,14 @@ const validateSendEmailBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (!isOptionalProperty(value, "allowed_sender_addresses", "object")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a []string "allowed_sender_addresses" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
 	if (
 		"destination_address" in value &&
 		"allowed_destination_addresses" in value
@@ -2971,6 +2979,7 @@ const validateSendEmailBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"allowed_sender_addresses",
 		"allowed_destination_addresses",
 		"destination_address",
 		"name",

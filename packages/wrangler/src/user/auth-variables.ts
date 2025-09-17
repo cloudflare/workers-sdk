@@ -95,6 +95,10 @@ export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
 	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/revoke`,
 });
 
+export const getWranglerR2SqlAuthToken = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_R2_SQL_AUTH_TOKEN",
+});
+
 /**
  * Set the `WRANGLER_CF_AUTHORIZATION_TOKEN` to the CF_Authorization token found at https://dash.staging.cloudflare.com/bypass-limits
  * if you want to access the staging environment, triggered by `WRANGLER_API_ENVIRONMENT=staging`.

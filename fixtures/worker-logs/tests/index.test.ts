@@ -306,4 +306,23 @@ describe("'wrangler dev' correctly displays logs", () => {
 			expect(output).toMatchInlineSnapshot(`[]`);
 		});
 	});
+
+	describe("nodejs compat process v2", () => {
+		test("default behavior", async ({ expect }) => {
+			const output = await getWranglerDevOutput("module", [
+				"--compatibility-flags=enable_nodejs_process_v2",
+				"--compatibility-flags=nodejs_compat",
+			]);
+			expect(output).toMatchInlineSnapshot(`
+				[
+				  "<<<<< console.info() message >>>>>",
+				  "<<<<< console.log() message >>>>>",
+				  "X [ERROR] <<<<< console.error() message >>>>>",
+				  "stderr: <<<<< stderr.write() message >>>>>",
+				  "stdout: <<<<< stdout.write() message >>>>>",
+				  "▲ [WARNING] <<<<< console.warning() message >>>>>",
+				]
+			`);
+		});
+	});
 });
