@@ -299,6 +299,11 @@ export function convertCfWorkerInitBindingsToBindings(
 				}
 				break;
 			}
+			case "media": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "media", ...x };
+				break;
+			}
 			default: {
 				assertNever(type);
 			}
@@ -345,6 +350,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		unsafe_hello_world: undefined,
 		ratelimits: undefined,
 		worker_loaders: undefined,
+		media: undefined,
 	};
 
 	const fetchers: Record<string, ServiceFetch> = {};
@@ -443,6 +449,8 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "vpc_service") {
 			bindings.vpc_services ??= [];
 			bindings.vpc_services.push({ ...binding, binding: name });
+		} else if (binding.type === "media") {
+			bindings.media = { ...binding, binding: name };
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],
