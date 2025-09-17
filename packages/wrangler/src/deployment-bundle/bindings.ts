@@ -78,6 +78,7 @@ export function getBindings(
 		ratelimits: config?.ratelimits,
 		worker_loaders: config?.worker_loaders,
 		vpc_services: config?.vpc_services,
+		media: config?.media,
 	};
 }
 

@@ -1437,6 +1437,16 @@ function normalizeAndValidateEnvironment(
 			validateNamedSimpleBinding(envName),
 			undefined
 		),
+		media: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"media",
+			validateNamedSimpleBinding(envName),
+			undefined
+		),
 		pipelines: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2420,6 +2430,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"pipeline",
 			"worker_loader",
 			"vpc_service",
+			"media",
 		];
 
 		if (safeBindings.includes(value.type)) {
