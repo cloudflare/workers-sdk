@@ -3,8 +3,13 @@ import {
 	WorkerEntrypoint,
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
-import { INIT_PATH, WORKER_ENTRY_PATH_HEADER } from "../shared";
+import {
+	INIT_PATH,
+	IS_ENTRY_WORKER_HEADER,
+	WORKER_ENTRY_PATH_HEADER,
+} from "../shared";
 import { stripInternalEnv } from "./env";
+import { maybeCaptureError } from "./errors";
 import { getWorkerEntryExport } from "./module-runner";
 import type { WrapperEnv } from "./env";
 
@@ -14,7 +19,7 @@ export { __VITE_RUNNER_OBJECT__ } from "./module-runner";
  * Constructor interface for `WorkerEntrypoint` class.
  * @template T - The `env` type
  */
-interface WorkerEntrypointConstructor<T = unknown> {
+interface WorkerEntrypointConstructor<T = Cloudflare.Env> {
 	new (
 		...args: ConstructorParameters<typeof WorkerEntrypoint<T>>
 	): WorkerEntrypoint<T>;
@@ -24,7 +29,7 @@ interface WorkerEntrypointConstructor<T = unknown> {
  * Constructor interface for `DurableObject` class.
  * @template T - The `env` type
  */
-interface DurableObjectConstructor<T = unknown> {
+interface DurableObjectConstructor<T = Cloudflare.Env> {
 	new (
 		...args: ConstructorParameters<typeof DurableObject<T>>
 	): DurableObject<T>;
@@ -34,7 +39,7 @@ interface DurableObjectConstructor<T = unknown> {
  * Constructor interface for `WorkflowEntrypoint` class.
  * @template T - The `env` type
  */
-interface WorkflowEntrypointConstructor<T = unknown> {
+interface WorkflowEntrypointConstructor<T = Cloudflare.Env> {
 	new (
 		...args: ConstructorParameters<typeof WorkflowEntrypoint<T>>
 	): WorkflowEntrypoint<T>;
@@ -67,6 +72,7 @@ const WORKFLOW_ENTRYPOINT_KEYS = ["run"] as const;
 
 /** The path to the Worker entry file. We store it in the module scope so that it is easily accessible in error messages etc.. */
 let workerEntryPath = "";
+let isEntryWorker = false;
 
 /**
  * Creates a callable thenable that is used to access the properties of an RPC target.
@@ -215,73 +221,86 @@ export function createWorkerEntrypointWrapper(
 
 	for (const key of WORKER_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (arg) {
-			if (key === "fetch") {
-				const request = arg as Request;
-				const url = new URL(request.url);
+			return maybeCaptureError({ isEntryWorker, exportName, key }, async () => {
+				if (key === "fetch") {
+					const request = arg as Request;
+					const url = new URL(request.url);
 
-				// Initialize the module runner
-				if (url.pathname === INIT_PATH) {
-					const workerEntryPathHeader = request.headers.get(
-						WORKER_ENTRY_PATH_HEADER
-					);
+					// Initialize the module runner
+					if (url.pathname === INIT_PATH) {
+						const workerEntryPathHeader = request.headers.get(
+							WORKER_ENTRY_PATH_HEADER
+						);
 
-					if (!workerEntryPathHeader) {
-						throw new Error(
-							`Unexpected error: "${WORKER_ENTRY_PATH_HEADER}" header not set.`
+						if (!workerEntryPathHeader) {
+							throw new Error(
+								`Unexpected error: "${WORKER_ENTRY_PATH_HEADER}" header not set.`
+							);
+						}
+
+						const isEntryWorkerHeader = request.headers.get(
+							IS_ENTRY_WORKER_HEADER
+						);
+
+						if (!isEntryWorkerHeader) {
+							throw new Error(
+								`Unexpected error: "${IS_ENTRY_WORKER_HEADER}" header not set.`
+							);
+						}
+
+						// Set the Worker entry path
+						workerEntryPath = workerEntryPathHeader;
+						isEntryWorker = isEntryWorkerHeader === "true";
+						const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
+
+						// Forward the request to the Durable Object to initialize the module runner and return the WebSocket
+						return stub.fetch(request);
+					}
+				}
+
+				const exportValue = await getWorkerEntryExport(
+					workerEntryPath,
+					exportName
+				);
+				const userEnv = stripInternalEnv(this.env);
+
+				if (typeof exportValue === "object" && exportValue !== null) {
+					// The export is an `ExportedHandler`
+					const maybeFn = (exportValue as Record<string, unknown>)[key];
+
+					if (typeof maybeFn !== "function") {
+						throw new TypeError(
+							`Expected "${exportName}" export of "${workerEntryPath}" to define a \`${key}()\` function.`
 						);
 					}
 
-					// Set the Worker entry path
-					workerEntryPath = workerEntryPathHeader;
-					const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
+					return maybeFn.call(exportValue, arg, userEnv, this.ctx);
+				} else if (typeof exportValue === "function") {
+					// The export is a `WorkerEntrypoint`
+					const ctor = exportValue as WorkerEntrypointConstructor;
+					const instance = new ctor(this.ctx, userEnv);
 
-					// Forward the request to the Durable Object to initialize the module runner and return the WebSocket
-					return stub.fetch(request);
-				}
-			}
+					if (!(instance instanceof WorkerEntrypoint)) {
+						throw new TypeError(
+							`Expected "${exportName}" export of "${workerEntryPath}" to be a subclass of \`WorkerEntrypoint\`.`
+						);
+					}
 
-			const exportValue = await getWorkerEntryExport(
-				workerEntryPath,
-				exportName
-			);
-			const userEnv = stripInternalEnv(this.env);
+					const maybeFn = instance[key];
 
-			if (typeof exportValue === "object" && exportValue !== null) {
-				// The export is an `ExportedHandler`
-				const maybeFn = (exportValue as Record<string, unknown>)[key];
+					if (typeof maybeFn !== "function") {
+						throw new TypeError(
+							`Expected "${exportName}" export of "${workerEntryPath}" to define a \`${key}()\` method.`
+						);
+					}
 
-				if (typeof maybeFn !== "function") {
-					throw new TypeError(
-						`Expected "${exportName}" export of "${workerEntryPath}" to define a \`${key}()\` function.`
+					return (maybeFn as (arg: unknown) => unknown).call(instance, arg);
+				} else {
+					return new TypeError(
+						`Expected "${exportName}" export of "${workerEntryPath}" to be an object or a class.`
 					);
 				}
-
-				return maybeFn.call(exportValue, arg, userEnv, this.ctx);
-			} else if (typeof exportValue === "function") {
-				// The export is a `WorkerEntrypoint`
-				const ctor = exportValue as WorkerEntrypointConstructor;
-				const instance = new ctor(this.ctx, userEnv);
-
-				if (!(instance instanceof WorkerEntrypoint)) {
-					throw new TypeError(
-						`Expected "${exportName}" export of "${workerEntryPath}" to be a subclass of \`WorkerEntrypoint\`.`
-					);
-				}
-
-				const maybeFn = instance[key];
-
-				if (typeof maybeFn !== "function") {
-					throw new TypeError(
-						`Expected "${exportName}" export of "${workerEntryPath}" to define a \`${key}()\` method.`
-					);
-				}
-
-				return (maybeFn as (arg: unknown) => unknown).call(instance, arg);
-			} else {
-				return new TypeError(
-					`Expected "${exportName}" export of "${workerEntryPath}" to be an object or a class.`
-				);
-			}
+			});
 		};
 	}
 

@@ -1,5 +1,23 @@
 # miniflare
 
+## 4.20250913.0
+
+### Patch Changes
+
+- [#10653](https://github.com/cloudflare/workers-sdk/pull/10653) [`783afeb`](https://github.com/cloudflare/workers-sdk/commit/783afeb90f32c9e2c0a96f83ccff30ad7155e419) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20250906.0 | 1.20250913.0 |
+
+## 4.20250906.2
+
+### Minor Changes
+
+- [#10596](https://github.com/cloudflare/workers-sdk/pull/10596) [`735785e`](https://github.com/cloudflare/workers-sdk/commit/735785e7948da06411b738c70efcd95626efb3eb) Thanks [@penalosa](https://github.com/penalosa)! - Add Miniflare & Wrangler support for unbound Durable Objects
+
 ## 4.20250906.1
 
 ### Minor Changes

@@ -26,6 +26,10 @@ import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { getDockerPath } from "../environment-variables/misc-variables";
+import {
+	applyServiceAndEnvironmentTags,
+	hasDefinedEnvironments,
+} from "../environments";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
@@ -356,6 +360,7 @@ export default async function deploy(props: Props): Promise<{
 	const { config, accountId, name, entry } = props;
 	let workerTag: string | null = null;
 	let versionId: string | null = null;
+	let tags: string[] | null = null; // arbitrary metadata tags, not to be confused with script tag or annotations
 
 	let workerExists: boolean = true;
 
@@ -374,6 +379,7 @@ export default async function deploy(props: Props): Promise<{
 					environment: string;
 					script: {
 						tag: string;
+						tags: string[] | null;
 						last_deployed_from: "dash" | "wrangler" | "api";
 					};
 				};
@@ -382,6 +388,7 @@ export default async function deploy(props: Props): Promise<{
 				default_environment: { script },
 			} = serviceMetaData;
 			workerTag = script.tag;
+			tags = script.tags;
 
 			if (script.last_deployed_from === "dash") {
 				let configDiff: ReturnType<typeof getRemoteConfigDiff> | undefined;
@@ -953,6 +960,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 								excludeScript: "true",
 							})
 						)
+					);
+				}
+
+				// Update service and environment tags when using environments
+				if (hasDefinedEnvironments(config)) {
+					await applyServiceAndEnvironmentTags(
+						config,
+						accountId,
+						scriptName,
+						tags
 					);
 				}
 

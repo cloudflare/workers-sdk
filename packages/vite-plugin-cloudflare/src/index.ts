@@ -57,6 +57,7 @@ import {
 	nodeJsBuiltins,
 	NodeJsCompatWarnings,
 } from "./nodejs-compat";
+import { getAssetsDirectory } from "./output-config";
 import {
 	assertIsNotPreview,
 	assertIsPreview,
@@ -244,13 +245,13 @@ if (import.meta.hot) {
 			generateBundle(_, bundle) {
 				assertIsNotPreview(resolvedPluginConfig);
 
-				let config: Unstable_RawConfig | undefined;
+				let outputConfig: Unstable_RawConfig | undefined;
 
 				if (resolvedPluginConfig.type === "workers") {
-					const workerConfig =
+					const inputConfig =
 						resolvedPluginConfig.workers[this.environment.name];
 
-					if (!workerConfig) {
+					if (!inputConfig) {
 						return;
 					}
 
@@ -266,42 +267,29 @@ if (import.meta.hot) {
 						`Expected entry chunk with name "${MAIN_ENTRY_NAME}"`
 					);
 
-					workerConfig.main = entryChunk.fileName;
-					workerConfig.no_bundle = true;
-					workerConfig.rules = [
-						{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] },
-					];
-
 					const isEntryWorker =
 						this.environment.name ===
 						resolvedPluginConfig.entryWorkerEnvironmentName;
 
-					if (isEntryWorker) {
-						const workerOutputDirectory = this.environment.config.build.outDir;
-						const clientOutputDirectory =
-							resolvedViteConfig.environments.client?.build.outDir;
+					outputConfig = {
+						...inputConfig,
+						main: entryChunk.fileName,
+						no_bundle: true,
+						rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
+						assets: isEntryWorker
+							? {
+									...inputConfig.assets,
+									directory: getAssetsDirectory(
+										this.environment.config.build.outDir,
+										resolvedViteConfig
+									),
+								}
+							: undefined,
+					};
 
-						assert(
-							clientOutputDirectory,
-							"Unexpected error: client output directory is undefined"
-						);
-
-						workerConfig.assets = {
-							...workerConfig.assets,
-							directory: path.relative(
-								path.resolve(resolvedViteConfig.root, workerOutputDirectory),
-								path.resolve(resolvedViteConfig.root, clientOutputDirectory)
-							),
-						};
-					} else {
-						workerConfig.assets = undefined;
-					}
-
-					config = workerConfig;
-
-					if (workerConfig.configPath) {
+					if (inputConfig.configPath) {
 						const localDevVars = getLocalDevVarsForPreview(
-							workerConfig.configPath,
+							inputConfig.configPath,
 							resolvedPluginConfig.cloudflareEnv
 						);
 						// Save a .dev.vars file to the worker's build output directory if there are local dev vars, so that it will be then detected by `vite preview`.
@@ -314,11 +302,14 @@ if (import.meta.hot) {
 						}
 					}
 				} else if (this.environment.name === "client") {
-					const assetsOnlyConfig = resolvedPluginConfig.config;
+					const inputConfig = resolvedPluginConfig.config;
 
-					assetsOnlyConfig.assets = {
-						...assetsOnlyConfig.assets,
-						directory: ".",
+					outputConfig = {
+						...inputConfig,
+						assets: {
+							...inputConfig.assets,
+							directory: ".",
+						},
 					};
 
 					const filesToAssetsIgnore = ["wrangler.json", ".dev.vars"];
@@ -328,23 +319,24 @@ if (import.meta.hot) {
 						fileName: ".assetsignore",
 						source: `${filesToAssetsIgnore.join("\n")}\n`,
 					});
-
-					config = assetsOnlyConfig;
 				}
 
-				if (!config) {
+				if (!outputConfig) {
 					return;
 				}
 
 				// Set to `undefined` if it's an empty object so that the user doesn't see a warning about using `unsafe` fields when deploying their Worker.
-				if (config.unsafe && Object.keys(config.unsafe).length === 0) {
-					config.unsafe = undefined;
+				if (
+					outputConfig.unsafe &&
+					Object.keys(outputConfig.unsafe).length === 0
+				) {
+					outputConfig.unsafe = undefined;
 				}
 
 				this.emitFile({
 					type: "asset",
 					fileName: "wrangler.json",
-					source: JSON.stringify(config),
+					source: JSON.stringify(outputConfig),
 				});
 			},
 			writeBundle() {

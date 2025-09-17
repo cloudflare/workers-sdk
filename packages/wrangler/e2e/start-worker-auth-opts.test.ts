@@ -73,6 +73,7 @@ describe("startWorker - auth options", () => {
 				},
 				dev: {
 					auth: validAuth,
+					inspector: false,
 				},
 			});
 
@@ -124,6 +125,7 @@ describe("startWorker - auth options", () => {
 				},
 				dev: {
 					auth: incorrectAuth,
+					inspector: false,
 				},
 			});
 

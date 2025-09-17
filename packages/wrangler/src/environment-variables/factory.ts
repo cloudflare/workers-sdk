@@ -19,6 +19,8 @@ type VariableNames =
 	| "CLOUDFLARE_API_BASE_URL"
 	/** Set to "fedramp_high" for FedRAMP High compliance region. This will update the API/AUTH URLs used to make requests to Cloudflare. */
 	| "CLOUDFLARE_COMPLIANCE_REGION"
+	/** API token for R2 SQL service. */
+	| "WRANGLER_R2_SQL_AUTH_TOKEN"
 
 	// ## Development & Local Testing
 
@@ -34,6 +36,8 @@ type VariableNames =
 	| "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV"
 	/** Include process.env in development variables (default: false). */
 	| "CLOUDFLARE_INCLUDE_PROCESS_ENV"
+	/** Include a trace header in all API requests that Wrangler makes (for internal use only) */
+	| "WRANGLER_TRACE_ID"
 
 	// ## Logging & Output
 

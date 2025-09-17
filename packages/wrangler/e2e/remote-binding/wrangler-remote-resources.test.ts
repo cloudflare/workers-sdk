@@ -558,6 +558,57 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	}
 );
 
+test.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
+	"`wrangler dev --local` disables remote bindings",
+	async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(path.resolve(__dirname, "./workers"));
+
+		const kvId = await helper.kv(false);
+		await helper.run(
+			`wrangler kv key put --remote --namespace-id=${kvId} test-key remote-value`
+		);
+		await helper.run(
+			`wrangler kv key put --namespace-id=${kvId} test-key local-value`
+		);
+
+		await helper.seed({
+			"wrangler.json": JSON.stringify(
+				{
+					name: "mixed-remote-bindings-test",
+					main: "mixed-kvs.js",
+					compatibility_date: "2025-01-01",
+					kv_namespaces: [
+						{
+							binding: "KV_LOCAL_BINDING",
+							id: kvId,
+						},
+						{
+							binding: "KV_REMOTE_BINDING",
+							id: kvId,
+							remote: true,
+						},
+					],
+				},
+				null,
+				2
+			),
+		});
+
+		const worker = helper.runLongLived("wrangler dev --local");
+
+		const { url } = await worker.waitForReady();
+
+		const response = await fetchText(url);
+
+		// We expect both "local" and "remote" KVs to return the local value, since remote bindings are disabled
+		expect(response).toMatchInlineSnapshot(`
+				"The kv local value is: local-value
+				The kv remote value is local-value"
+			`);
+	}
+);
+
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"Wrangler dev uses a provided account_id from the wrangler config file",
 	() => {
