@@ -188,7 +188,7 @@ export function printBindings(
 					type: friendlyBindingNames.kv_namespaces,
 					value: id,
 					mode: getMode({
-						isSimulatedLocally: !remote,
+						isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
 					}),
 				};
 			})
@@ -240,7 +240,7 @@ export function printBindings(
 					type: friendlyBindingNames.queues,
 					value: queue_name,
 					mode: getMode({
-						isSimulatedLocally: !remote,
+						isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
 					}),
 				};
 			})
@@ -266,7 +266,7 @@ export function printBindings(
 						name: binding,
 						type: friendlyBindingNames.d1_databases,
 						mode: getMode({
-							isSimulatedLocally: !remote,
+							isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
 						}),
 						value,
 					};
@@ -324,7 +324,7 @@ export function printBindings(
 					type: friendlyBindingNames.r2_buckets,
 					value: value,
 					mode: getMode({
-						isSimulatedLocally: !remote,
+						isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
 					}),
 				};
 			})
@@ -380,7 +380,7 @@ export function printBindings(
 					value += `#${entrypoint}`;
 				}
 
-				if (remote) {
+				if (remote && getFlag("REMOTE_BINDINGS")) {
 					mode = getMode({ isSimulatedLocally: false });
 				} else if (context.local && context.registry !== null) {
 					const registryDefinition = context.registry?.[service];
