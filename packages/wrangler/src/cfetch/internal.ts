@@ -2,7 +2,10 @@ import assert from "node:assert";
 import Cloudflare from "cloudflare";
 import { fetch, FormData, Headers, Request, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
-import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
+import {
+	getCloudflareApiBaseUrl,
+	getTraceHeader,
+} from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError, parseJSON } from "../parse";
@@ -73,10 +76,6 @@ export function createCloudflareClient(complianceConfig: ComplianceConfig) {
 			await logResponse(response);
 			return response;
 		},
-		// We inject authentication using Wrangler's existing auth setup and a custom fetcher (see above for the custom fetch)
-		// However, `cloudflare` doesn't like not being given an API token, so we provide a dummy one
-		// Otherwise, errors like "Could not resolve authentication method." are thrown.
-		apiToken: "dummy",
 		baseURL: getCloudflareApiBaseUrl(complianceConfig),
 	});
 }
@@ -104,6 +103,7 @@ export async function performApiFetch(
 	const headers = cloneHeaders(new Headers(init.headers));
 	addAuthorizationHeader(headers, apiToken);
 	addUserAgent(headers);
+	maybeAddTraceHeader(headers);
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	logger.debug(
@@ -241,6 +241,13 @@ export function addAuthorizationHeader(
 
 export function addUserAgent(headers: Headers): void {
 	headers.set("User-Agent", `wrangler/${wranglerVersion}`);
+}
+
+export function maybeAddTraceHeader(headers: Headers): void {
+	const traceHeader = getTraceHeader();
+	if (traceHeader) {
+		headers.set("Cf-Trace-Id", traceHeader);
+	}
 }
 
 /**

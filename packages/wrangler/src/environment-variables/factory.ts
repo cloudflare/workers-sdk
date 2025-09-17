@@ -36,6 +36,8 @@ type VariableNames =
 	| "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV"
 	/** Include process.env in development variables (default: false). */
 	| "CLOUDFLARE_INCLUDE_PROCESS_ENV"
+	/** Include a trace header in all API requests that Wrangler makes (for internal use only) */
+	| "WRANGLER_TRACE_ID"
 
 	// ## Logging & Output
 
