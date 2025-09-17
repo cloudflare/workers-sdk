@@ -100,6 +100,11 @@ export function pickRemoteBindings(
 				return true;
 			}
 
+			if (binding.type === "connectivity_service_binding") {
+				// VPC Service is always remote
+				return true;
+			}
+
 			return "remote" in binding && binding["remote"];
 		})
 	);
