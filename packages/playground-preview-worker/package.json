@@ -1,5 +1,5 @@
 {
-	"name": "playground-preview-worker",
+	"name": "@cloudflare/playground-preview-worker",
 	"version": "0.1.6",
 	"private": true,
 	"scripts": {
