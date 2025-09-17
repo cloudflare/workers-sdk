@@ -60,7 +60,10 @@ import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
+import {
+	writeRedirectedWranglerConfig,
+	writeWranglerConfig,
+} from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
@@ -13774,6 +13777,59 @@ export default{
 
 				"
 			`);
+		});
+
+		test("environments with redirected config", async ({ expect }) => {
+			mockUploadWorkerRequest({ expectedScriptName: "test-name-production" });
+			mockGetScriptWithTags(["some-tag"]);
+
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					env: {
+						production: {
+							name: "test-name-production",
+						},
+					},
+				},
+				"./wrangler.toml"
+			);
+
+			writeRedirectedWranglerConfig(
+				{
+					name: "test-name-production",
+					main: "../index.js",
+					userConfigPath: "./wrangler.toml",
+					topLevelName: "test-name",
+					targetEnvironment: "production",
+					definedEnvironments: ["production"],
+				},
+				"./dist/wrangler.json"
+			);
+
+			expect.assertions(2);
+			let requestCount = 0;
+			mockPatchScriptSettings(async ({ request }) => {
+				requestCount++;
+				if (requestCount === 2) {
+					await expect(request.json()).resolves.toEqual({
+						tags: [
+							"some-tag",
+							"cf:service=test-name",
+							"cf:environment=production",
+						],
+					});
+				}
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.info).toContain(dedent`
+				Using redirected Wrangler configuration.
+				 - Configuration being used: "dist/wrangler.json"
+				 - Original user's configuration: "wrangler.toml"
+				 - Deploy configuration file: ".wrangler/deploy/config.json"`);
 		});
 
 		test("displays warning when error updating tags", async ({ expect }) => {

@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -13,7 +14,10 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
+import {
+	writeRedirectedWranglerConfig,
+	writeWranglerConfig,
+} from "../helpers/write-wrangler-config";
 import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
 import type { ResponseResolver } from "msw";
 
@@ -655,6 +659,54 @@ describe("versions upload", () => {
 
 				"
 			`);
+		});
+
+		test("environments with redirected config", async ({ expect }) => {
+			mockGetScriptWithTags(["some-tag"]);
+
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					env: {
+						production: {
+							name: "test-name-production",
+						},
+					},
+				},
+				"./wrangler.toml"
+			);
+
+			writeRedirectedWranglerConfig(
+				{
+					name: "test-name-production",
+					main: "../index.js",
+					userConfigPath: "./wrangler.toml",
+					topLevelName: "test-name",
+					targetEnvironment: "production",
+					definedEnvironments: ["production"],
+				},
+				"./dist/wrangler.json"
+			);
+
+			expect.assertions(2);
+			mockPatchScriptSettings(async ({ request }) => {
+				await expect(request.json()).resolves.toEqual({
+					tags: [
+						"some-tag",
+						"cf:service=test-name",
+						"cf:environment=production",
+					],
+				});
+			});
+
+			await runWrangler("versions upload");
+
+			expect(std.info).toContain(dedent`
+				Using redirected Wrangler configuration.
+				 - Configuration being used: "dist/wrangler.json"
+				 - Original user's configuration: "wrangler.toml"
+				 - Deploy configuration file: ".wrangler/deploy/config.json"`);
 		});
 
 		test("displays warning when error updating tags", async ({ expect }) => {
