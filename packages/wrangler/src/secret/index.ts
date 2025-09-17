@@ -113,6 +113,7 @@ async function createDraftWorker({
 					},
 					unsafe_hello_world: [],
 					worker_loaders: [],
+					media: undefined,
 				},
 				modules: [],
 				migrations: undefined,

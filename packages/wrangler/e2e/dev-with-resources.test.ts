@@ -870,6 +870,36 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		});
 	});
 
+	it.skipIf(!CLOUDFLARE_ACCOUNT_ID)("exposes Media bindings", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "my-media-demo"
+					main = "src/index.ts"
+					compatibility_date = "2025-09-06"
+
+					[media]
+					binding = "MEDIA"
+					remote = true
+				`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request, env, ctx) {
+							if (env.MEDIA === undefined) {
+								return new Response("env.MEDIA is undefined");
+							}
+
+							return new Response("env.MEDIA is available");
+						}
+					}
+				`,
+		});
+		const worker = helper.runLongLived(`wrangler dev`);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url);
+
+		await expect(res.text()).resolves.toBe("env.MEDIA is available");
+	});
+
 	// TODO(soon): implement E2E tests for other bindings
 	it.skipIf(isLocal).todo("exposes send email bindings");
 	it.skipIf(isLocal).todo("exposes browser bindings");
