@@ -1,3 +1,6 @@
+// NOTE: this file is duplicated between miniflare and d1-workers, and should be kept in sync by hand.
+// Please tag someone from the D1 team as a reviewer and they will do this for you.
+//
 // NOTE: this function duplicates the logic inside SQLite's shell.c.in as close
 // as possible, with any deviations noted.
 import { SqlStorage } from "@cloudflare/workers-types/experimental";
@@ -8,8 +11,11 @@ export function* dumpSql(
 		noSchema?: boolean;
 		noData?: boolean;
 		tables?: string[];
-	}
+	},
+	/** Optional stats tracking. Will be mutated in place if provided */
+	stats?: { rows_read: number; rows_written: number }
 ) {
+	// WARNING: the caller in D1 assumes non-empty exports, so think carefully before removing this initial yield.
 	yield `PRAGMA defer_foreign_keys=TRUE;`;
 
 	// Empty set means include all tables
@@ -27,6 +33,10 @@ export function* dumpSql(
   `)();
 	const tables: { name: string; type: string; sql: string }[] =
 		Array.from(tables_cursor);
+	if (stats) {
+		stats.rows_read += tables_cursor.rowsRead;
+		stats.rows_written += tables_cursor.rowsWritten;
+	}
 
 	for (const { name: table, sql } of tables) {
 		if (filterTables.size > 0 && !filterTables.has(table)) continue;
@@ -65,6 +75,10 @@ export function* dumpSql(
 			dflt_val: string | null;
 			pk: number;
 		}[];
+		if (stats) {
+			stats.rows_read += columns_cursor.rowsRead;
+			stats.rows_written += columns_cursor.rowsWritten;
+		}
 
 		const select = `SELECT ${columns.map((c) => escapeId(c.name)).join(", ")} FROM ${escapeId(table)};`;
 		const rows_cursor = db.exec(select);
@@ -83,24 +97,44 @@ export function* dumpSql(
 						.call(new Uint8Array(cell), (b) => b.toString(16).padStart(2, "0"))
 						.join("")}'`;
 				} else {
-					console.log({ colType, cellType, cell, column: columns[i] });
+					console.error({
+						message: "dumpSql: unexpected cell type",
+						colType,
+						cellType,
+						cell,
+						column: columns[i],
+					});
 					return "ERROR";
 				}
 			});
 
 			yield `INSERT INTO ${escapeId(table)} VALUES(${formattedCells.join(",")});`;
 		}
+		if (stats) {
+			stats.rows_read += rows_cursor.rowsRead;
+			stats.rows_written += rows_cursor.rowsWritten;
+		}
 	}
 
 	if (!noSchema) {
 		// Taken from SQLite shell.c.in https://github.com/sqlite/sqlite/blob/105c20648e1b05839fd0638686b95f2e3998abcb/src/shell.c.in#L8473-L8478
 		const rest_of_schema = db.exec(
-			`SELECT name, sql FROM sqlite_schema AS o WHERE (true) AND sql NOT NULL AND type IN ('index', 'trigger', 'view') ORDER BY type COLLATE NOCASE /* DESC */;`
+			[
+				"SELECT name, sql",
+				"FROM sqlite_schema AS o",
+				"WHERE (true) AND sql NOT NULL",
+				"  AND type IN ('index', 'trigger', 'view')",
+				// 'DESC' appears in the code linked above but the observed behaviour of SQLite appears otherwise
+				"ORDER BY type COLLATE NOCASE",
+			].join(" ")
 		);
-		// 'DESC' appears in the code linked above but the observed behaviour of SQLite appears otherwise
 		for (const { name, sql } of rest_of_schema) {
 			if (filterTables.size > 0 && !filterTables.has(name as string)) continue;
 			yield `${sql};`;
+		}
+		if (stats) {
+			stats.rows_read += rest_of_schema.rowsRead;
+			stats.rows_written += rest_of_schema.rowsWritten;
 		}
 	}
 }
