@@ -24,6 +24,7 @@ import { HELLO_WORLD_PLUGIN, HELLO_WORLD_PLUGIN_NAME } from "./hello-world";
 import { HYPERDRIVE_PLUGIN, HYPERDRIVE_PLUGIN_NAME } from "./hyperdrive";
 import { IMAGES_PLUGIN, IMAGES_PLUGIN_NAME } from "./images";
 import { KV_PLUGIN, KV_PLUGIN_NAME } from "./kv";
+import { MEDIA_PLUGIN, MEDIA_PLUGIN_NAME } from "./media";
 import { MTLS_PLUGIN, MTLS_PLUGIN_NAME } from "./mtls";
 import { PIPELINE_PLUGIN, PIPELINES_PLUGIN_NAME } from "./pipelines";
 import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
@@ -63,6 +64,7 @@ export const PLUGINS = {
 	[MTLS_PLUGIN_NAME]: MTLS_PLUGIN,
 	[HELLO_WORLD_PLUGIN_NAME]: HELLO_WORLD_PLUGIN,
 	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
+	[MEDIA_PLUGIN_NAME]: MEDIA_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -124,7 +126,8 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof VPC_SERVICES_PLUGIN.options> &
 	z.input<typeof MTLS_PLUGIN.options> &
 	z.input<typeof HELLO_WORLD_PLUGIN.options> &
-	z.input<typeof WORKER_LOADER_PLUGIN.options>;
+	z.input<typeof WORKER_LOADER_PLUGIN.options> &
+	z.input<typeof MEDIA_PLUGIN.options>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &
@@ -197,3 +200,4 @@ export * from "./vpc-services";
 export * from "./mtls";
 export * from "./hello-world";
 export * from "./worker-loader";
+export * from "./media";
