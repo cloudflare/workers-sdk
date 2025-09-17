@@ -75,9 +75,11 @@ export const vpcServiceCreateCommand = createCommand({
 			logger.log(`   Tunnel ID: ${service.host.network.tunnel_id}`);
 		} else if (service.host.resolver_network) {
 			logger.log(`   Tunnel ID: ${service.host.resolver_network.tunnel_id}`);
-			logger.log(
-				`   Resolver IPs: ${service.host.resolver_network.resolver_ips.join(", ")}`
-			);
+			if (service.host.resolver_network.resolver_ips) {
+				logger.log(
+					`   Resolver IPs: ${service.host.resolver_network.resolver_ips.join(", ")}`
+				);
+			}
 		}
 	},
 });
