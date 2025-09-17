@@ -1188,6 +1188,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The service ID of the VPC connectivity service. */
 		service_id: string;
+		/** Whether the VPC service is remote or not */
+		remote?: boolean;
 	}[];
 }
 

@@ -3320,6 +3320,7 @@ const validateVpcServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"service_id",
+		"remote",
 	]);
 
 	return isValid;
