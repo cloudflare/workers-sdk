@@ -415,6 +415,7 @@ type WorkerOptionsBindings = Pick<
 	| "tails"
 	| "browserRendering"
 	| "vectorize"
+	| "vpcServices"
 	| "dispatchNamespaces"
 	| "mtlsCertificates"
 	| "helloWorld"
@@ -795,6 +796,19 @@ export function buildMiniflareBindingOptions(
 									},
 								];
 							}) ?? []
+					)
+				: undefined,
+
+		vpcServices:
+			remoteBindingsEnabled && remoteProxyConnectionString
+				? Object.fromEntries(
+						bindings.vpc_services?.map((vpc) => [
+							vpc.binding,
+							{
+								service_id: vpc.service_id,
+								remoteProxyConnectionString,
+							},
+						]) ?? []
 					)
 				: undefined,
 
