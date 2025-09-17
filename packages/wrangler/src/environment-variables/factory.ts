@@ -34,6 +34,8 @@ type VariableNames =
 	| "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV"
 	/** Include process.env in development variables (default: false). */
 	| "CLOUDFLARE_INCLUDE_PROCESS_ENV"
+	/** Include a trace header in all API requests that Wrangler makes (for internal use only) */
+	| "WRANGLER_TRACE_ID"
 
 	// ## Logging & Output
 
@@ -100,8 +102,7 @@ type VariableNames =
 	/** Docker host configuration (handled separately from environment variable factory). */
 	| "WRANGLER_DOCKER_HOST"
 	/** Docker host configuration (handled separately from environment variable factory). */
-	| "DOCKER_HOST"
-	| "WRANGLER_TRACE_ID";
+	| "DOCKER_HOST";
 
 type DeprecatedNames =
 	| "CF_ACCOUNT_ID"

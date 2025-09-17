@@ -103,7 +103,7 @@ export async function performApiFetch(
 	const headers = cloneHeaders(new Headers(init.headers));
 	addAuthorizationHeader(headers, apiToken);
 	addUserAgent(headers);
-	addTraceHeader(headers);
+	maybeAddTraceHeader(headers);
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	logger.debug(
@@ -243,9 +243,10 @@ export function addUserAgent(headers: Headers): void {
 	headers.set("User-Agent", `wrangler/${wranglerVersion}`);
 }
 
-export function addTraceHeader(headers: Headers): void {
-	if (getTraceHeader()) {
-		headers.set("Cf-Trace-Id", getTraceHeader() as string);
+export function maybeAddTraceHeader(headers: Headers): void {
+	const traceHeader = getTraceHeader();
+	if (traceHeader) {
+		headers.set("Cf-Trace-Id", traceHeader);
 	}
 }
 
