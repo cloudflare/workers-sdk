@@ -4,6 +4,7 @@ declare namespace Cloudflare {
 	interface Env {
 		KV: KVNamespace;
 		HELLO_WORLD: HelloWorldBinding;
+		IMAGES: ImagesBinding;
 		WAE: AnalyticsEngineDataset;
 		RATE_LIMITER: RateLimit;
 	}

@@ -9,6 +9,9 @@
 			"id": "test-kv-id",
 		},
 	],
+	"images": {
+		"binding": "IMAGES",
+	},
 	"unsafe_hello_world": [
 		{
 			"binding": "HELLO_WORLD",
