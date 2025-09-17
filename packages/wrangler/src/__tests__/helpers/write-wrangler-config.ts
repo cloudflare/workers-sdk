@@ -10,7 +10,7 @@ export function writeWranglerConfig(
 	config: RawConfig = {},
 	path = "./wrangler.toml"
 ) {
-	const json = /\.json(c)$/.test(path);
+	const json = /\.jsonc?$/.test(path);
 	fs.mkdirSync(dirname(path), { recursive: true });
 	fs.writeFileSync(
 		path,
