@@ -45,7 +45,7 @@ export interface Network {
 
 export interface ResolverNetwork {
 	tunnel_id: string;
-	resolver_ips: string[];
+	resolver_ips?: string[];
 }
 
 export interface ServiceHost {

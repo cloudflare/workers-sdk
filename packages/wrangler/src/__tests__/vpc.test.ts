@@ -225,6 +225,90 @@ describe("vpc service commands", () => {
 			}
 		`);
 	});
+
+	it("should handle getting a service without resolver_ips", async () => {
+		const serviceWithoutResolverIps: ConnectivityService = {
+			...mockService,
+			host: {
+				hostname: "web.example.com",
+				resolver_network: {
+					tunnel_id: "tunnel-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+					// No resolver_ips property
+				},
+			},
+		};
+
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/connectivity/directory/services/:serviceId",
+				() => {
+					return HttpResponse.json(
+						createFetchResult(serviceWithoutResolverIps, true)
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler("vpc service get service-uuid");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"🔍 Getting VPC service 'service-uuid'
+			✅ Retrieved VPC service: service-uuid
+			   Name: test-web-service
+			   Type: http
+			   HTTP Port: 80
+			   HTTPS Port: 443
+			   Hostname: web.example.com
+			   Tunnel ID: tunnel-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+			   Created: 1/1/2024, 12:00:00 AM
+			   Modified: 1/1/2024, 12:00:00 AM"
+		`);
+	});
+
+	it("should handle creating a service and display without resolver_ips", async () => {
+		const serviceResponse = {
+			service_id: "service-uuid",
+			type: "http",
+			name: "test-no-resolver",
+			http_port: 80,
+			https_port: 443,
+			host: {
+				hostname: "db.example.com",
+				resolver_network: {
+					tunnel_id: "550e8400-e29b-41d4-a716-446655440002",
+					// No resolver_ips
+				},
+			},
+			created_at: "2024-01-01T00:00:00Z",
+			updated_at: "2024-01-01T00:00:00Z",
+		};
+
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/connectivity/directory/services",
+				() => {
+					return HttpResponse.json(createFetchResult(serviceResponse, true));
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler(
+			"vpc service create test-no-resolver --type http --hostname db.example.com --tunnel-id 550e8400-e29b-41d4-a716-446655440002"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating VPC service 'test-no-resolver'
+			✅ Created VPC service: service-uuid
+			   Name: test-no-resolver
+			   Type: http
+			   HTTP Port: 80
+			   HTTPS Port: 443
+			   Hostname: db.example.com
+			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440002"
+		`);
+	});
 });
 
 const mockService: ConnectivityService = {
