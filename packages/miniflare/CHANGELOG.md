@@ -1,5 +1,23 @@
 # miniflare
 
+## 4.20250917.0
+
+### Minor Changes
+
+- [#10651](https://github.com/cloudflare/workers-sdk/pull/10651) [`6caf938`](https://github.com/cloudflare/workers-sdk/commit/6caf938fe989ee7c261b330560982311b93e0438) Thanks [@edevil](https://github.com/edevil)! - Added new attribute "allowed_sender_addresses" to send email binding.
+
+### Patch Changes
+
+- [#10684](https://github.com/cloudflare/workers-sdk/pull/10684) [`b59e3e1`](https://github.com/cloudflare/workers-sdk/commit/b59e3e165d2a349399a6658c89419cb6aa89c713) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20250913.0 | 1.20250917.0 |
+
+- [#10656](https://github.com/cloudflare/workers-sdk/pull/10656) [`88132bc`](https://github.com/cloudflare/workers-sdk/commit/88132bc25c45257d8a38c25bef3b9c4761a2903e) Thanks [@edmundhung](https://github.com/edmundhung)! - Improve tunnel cleanup in dev registry to reduce connection errors
+
 ## 4.20250913.0
 
 ### Patch Changes
