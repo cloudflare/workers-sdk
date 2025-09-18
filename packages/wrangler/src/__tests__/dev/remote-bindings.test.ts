@@ -94,406 +94,514 @@ vi.mock("../../dev/miniflare/index.ts", async () => {
 	};
 });
 
-describe.sequential("dev with remote bindings", () => {
-	mockAccountId();
-	mockApiToken();
-	runInTempDir();
-	const std = mockConsoleMethods();
+describe(
+	"dev with remote bindings",
+	{
+		sequential: true,
+		retry: 1,
+	},
+	() => {
+		mockAccountId();
+		mockApiToken();
+		runInTempDir();
+		const std = mockConsoleMethods();
 
-	beforeEach(() => {
-		msw.use(
-			...mswZoneHandlers,
-			...mswSuccessOauthHandlers,
-			...mswSuccessUserHandlers
-		);
+		beforeEach(() => {
+			msw.use(
+				...mswZoneHandlers,
+				...mswSuccessOauthHandlers,
+				...mswSuccessUserHandlers
+			);
 
-		return () => {
-			// Reset the module level state between tests
-			stopWrangler = async () => {
-				throw new Error("Stop worker not set");
+			return () => {
+				// Reset the module level state between tests
+				stopWrangler = async () => {
+					throw new Error("Stop worker not set");
+				};
+				sessionOptions = undefined;
+				proxyWorkerBindings = undefined;
+				workerOptions = [];
 			};
-			sessionOptions = undefined;
-			proxyWorkerBindings = undefined;
-			workerOptions = [];
-		};
-	});
+		});
 
-	// These test cases cover all the different types of remote bindings we support
-	// Each one defines the Wrangler config to setup the remote binding,
-	// and then the expected values for setting up the remote proxy session and Miniflare.
-	const testCases: {
-		name: string;
-		config: RawConfig;
-		expectedProxyWorkerBindings: Record<string, Binding>;
-		expectedWorkerOptions: Omit<WorkerOptions, "modules">[];
-	}[] = [
-		{
-			name: "service",
-			config: {
-				services: [
-					{
-						binding: "SERVICE",
-						service: "remote-service-binding-worker",
+		// These test cases cover all the different types of remote bindings we support
+		// Each one defines the Wrangler config to setup the remote binding,
+		// and then the expected values for setting up the remote proxy session and Miniflare.
+		const testCases: {
+			name: string;
+			config: RawConfig;
+			expectedProxyWorkerBindings: Record<string, Binding>;
+			expectedWorkerOptions: Omit<WorkerOptions, "modules">[];
+		}[] = [
+			{
+				name: "service",
+				config: {
+					services: [
+						{
+							binding: "SERVICE",
+							service: "remote-service-binding-worker",
+							remote: true,
+						},
+						{
+							binding: "SERVICE_WITH_ENTRYPOINT",
+							service: "remote-service-binding-worker",
+							entrypoint: "CustomEntrypoint",
+							remote: true,
+						},
+					],
+				},
+				expectedProxyWorkerBindings: {
+					SERVICE: {
 						remote: true,
-					},
-					{
-						binding: "SERVICE_WITH_ENTRYPOINT",
 						service: "remote-service-binding-worker",
+						type: "service",
+					},
+					SERVICE_WITH_ENTRYPOINT: {
 						entrypoint: "CustomEntrypoint",
 						remote: true,
+						service: "remote-service-binding-worker",
+						type: "service",
 					},
+				},
+				expectedWorkerOptions: [
+					expect.objectContaining({
+						serviceBindings: {
+							SERVICE: {
+								entrypoint: undefined,
+								name: "remote-service-binding-worker",
+								props: undefined,
+								remoteProxyConnectionString,
+							},
+							SERVICE_WITH_ENTRYPOINT: {
+								entrypoint: "CustomEntrypoint",
+								name: "remote-service-binding-worker",
+								props: undefined,
+								remoteProxyConnectionString,
+							},
+						},
+					}),
 				],
 			},
-			expectedProxyWorkerBindings: {
-				SERVICE: {
-					remote: true,
-					service: "remote-service-binding-worker",
-					type: "service",
-				},
-				SERVICE_WITH_ENTRYPOINT: {
-					entrypoint: "CustomEntrypoint",
-					remote: true,
-					service: "remote-service-binding-worker",
-					type: "service",
-				},
-			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
-					serviceBindings: {
-						SERVICE: {
-							entrypoint: undefined,
-							name: "remote-service-binding-worker",
-							props: undefined,
-							remoteProxyConnectionString,
-						},
-						SERVICE_WITH_ENTRYPOINT: {
-							entrypoint: "CustomEntrypoint",
-							name: "remote-service-binding-worker",
-							props: undefined,
-							remoteProxyConnectionString,
-						},
-					},
-				}),
-			],
-		},
-		{
-			name: "ai",
-			config: {
-				ai: {
-					binding: "AI",
-					remote: true,
-				},
-			},
-			expectedProxyWorkerBindings: {
-				AI: {
-					remote: true,
-					type: "ai",
-				},
-			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
+			{
+				name: "ai",
+				config: {
 					ai: {
 						binding: "AI",
-						remoteProxyConnectionString,
+						remote: true,
 					},
-				}),
-			],
-		},
-		{
-			name: "browser render",
-			config: {
-				browser: {
-					binding: "BROWSER",
-					remote: true,
 				},
-			},
-			expectedProxyWorkerBindings: {
-				BROWSER: {
-					remote: true,
-					type: "browser",
+				expectedProxyWorkerBindings: {
+					AI: {
+						remote: true,
+						type: "ai",
+					},
 				},
+				expectedWorkerOptions: [
+					expect.objectContaining({
+						ai: {
+							binding: "AI",
+							remoteProxyConnectionString,
+						},
+					}),
+				],
 			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
-					browserRendering: {
+			{
+				name: "browser render",
+				config: {
+					browser: {
 						binding: "BROWSER",
-						remoteProxyConnectionString,
+						remote: true,
 					},
-				}),
-			],
-		},
-		{
-			name: "images",
-			config: {
-				images: {
-					binding: "IMAGES",
-					remote: true,
 				},
-			},
-			expectedProxyWorkerBindings: {
-				IMAGES: {
-					remote: true,
-					type: "images",
+				expectedProxyWorkerBindings: {
+					BROWSER: {
+						remote: true,
+						type: "browser",
+					},
 				},
+				expectedWorkerOptions: [
+					expect.objectContaining({
+						browserRendering: {
+							binding: "BROWSER",
+							remoteProxyConnectionString,
+						},
+					}),
+				],
 			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
+			{
+				name: "images",
+				config: {
 					images: {
 						binding: "IMAGES",
-						remoteProxyConnectionString,
+						remote: true,
 					},
-				}),
-			],
-		},
-		{
-			name: "vectorize",
-			config: {
-				vectorize: [
-					{
-						binding: "VECTORIZE_BINDING",
+				},
+				expectedProxyWorkerBindings: {
+					IMAGES: {
+						remote: true,
+						type: "images",
+					},
+				},
+				expectedWorkerOptions: [
+					expect.objectContaining({
+						images: {
+							binding: "IMAGES",
+							remoteProxyConnectionString,
+						},
+					}),
+				],
+			},
+			{
+				name: "vectorize",
+				config: {
+					vectorize: [
+						{
+							binding: "VECTORIZE_BINDING",
+							index_name: "mock-vectorize-index",
+							remote: true,
+						},
+					],
+				},
+				expectedProxyWorkerBindings: {
+					VECTORIZE_BINDING: {
 						index_name: "mock-vectorize-index",
 						remote: true,
+						type: "vectorize",
 					},
+				},
+				expectedWorkerOptions: [
+					expect.objectContaining({
+						vectorize: {
+							VECTORIZE_BINDING: {
+								index_name: "mock-vectorize-index",
+								remoteProxyConnectionString,
+							},
+						},
+					}),
 				],
 			},
-			expectedProxyWorkerBindings: {
-				VECTORIZE_BINDING: {
-					index_name: "mock-vectorize-index",
-					remote: true,
-					type: "vectorize",
-				},
-			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
-					vectorize: {
-						VECTORIZE_BINDING: {
-							index_name: "mock-vectorize-index",
-							remoteProxyConnectionString,
+			{
+				name: "dispatch namespace",
+				config: {
+					dispatch_namespaces: [
+						{
+							binding: "DISPATCH",
+							namespace: "mock-dispatch-namespace",
+							remote: true,
 						},
-					},
-				}),
-			],
-		},
-		{
-			name: "dispatch namespace",
-			config: {
-				dispatch_namespaces: [
-					{
-						binding: "DISPATCH",
+					],
+				},
+				expectedProxyWorkerBindings: {
+					DISPATCH: {
 						namespace: "mock-dispatch-namespace",
 						remote: true,
+						type: "dispatch_namespace",
 					},
+				},
+				expectedWorkerOptions: [
+					expect.objectContaining({
+						dispatchNamespaces: {
+							DISPATCH: {
+								namespace: "mock-dispatch-namespace",
+								remoteProxyConnectionString,
+							},
+						},
+					}),
 				],
 			},
-			expectedProxyWorkerBindings: {
-				DISPATCH: {
-					namespace: "mock-dispatch-namespace",
-					remote: true,
-					type: "dispatch_namespace",
-				},
-			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
-					dispatchNamespaces: {
-						DISPATCH: {
-							namespace: "mock-dispatch-namespace",
-							remoteProxyConnectionString,
+			{
+				name: "kv namespace",
+				config: {
+					kv_namespaces: [
+						{
+							binding: "KV_BINDING",
+							id: "mock-kv-namespace",
+							remote: true,
 						},
-					},
-				}),
-			],
-		},
-		{
-			name: "kv namespace",
-			config: {
-				kv_namespaces: [
-					{
-						binding: "KV_BINDING",
+					],
+				},
+				expectedProxyWorkerBindings: {
+					KV_BINDING: {
 						id: "mock-kv-namespace",
 						remote: true,
+						type: "kv_namespace",
 					},
+				},
+				expectedWorkerOptions: [
+					expect.objectContaining({
+						kvNamespaces: {
+							KV_BINDING: {
+								id: "mock-kv-namespace",
+								remoteProxyConnectionString,
+							},
+						},
+					}),
 				],
 			},
-			expectedProxyWorkerBindings: {
-				KV_BINDING: {
-					id: "mock-kv-namespace",
-					remote: true,
-					type: "kv_namespace",
-				},
-			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
-					kvNamespaces: {
-						KV_BINDING: {
-							id: "mock-kv-namespace",
-							remoteProxyConnectionString,
+			{
+				name: "r2 bucket",
+				config: {
+					r2_buckets: [
+						{
+							binding: "R2_BINDING",
+							bucket_name: "mock-r2-bucket",
+							remote: true,
 						},
-					},
-				}),
-			],
-		},
-		{
-			name: "r2 bucket",
-			config: {
-				r2_buckets: [
-					{
-						binding: "R2_BINDING",
+					],
+				},
+				expectedProxyWorkerBindings: {
+					R2_BINDING: {
 						bucket_name: "mock-r2-bucket",
+						jurisdiction: undefined,
 						remote: true,
+						type: "r2_bucket",
 					},
+				},
+				expectedWorkerOptions: [
+					expect.objectContaining({
+						r2Buckets: {
+							R2_BINDING: {
+								id: "mock-r2-bucket",
+								remoteProxyConnectionString,
+							},
+						},
+					}),
 				],
 			},
-			expectedProxyWorkerBindings: {
-				R2_BINDING: {
-					bucket_name: "mock-r2-bucket",
-					jurisdiction: undefined,
-					remote: true,
-					type: "r2_bucket",
-				},
-			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
-					r2Buckets: {
-						R2_BINDING: {
-							id: "mock-r2-bucket",
-							remoteProxyConnectionString,
+			{
+				name: "d1",
+				config: {
+					d1_databases: [
+						{
+							binding: "DB",
+							database_id: "mock-d1-database-id",
+							database_name: "mock-d1-database-name",
+							remote: true,
 						},
-					},
-				}),
-			],
-		},
-		{
-			name: "d1",
-			config: {
-				d1_databases: [
-					{
-						binding: "DB",
+					],
+				},
+				expectedProxyWorkerBindings: {
+					DB: {
 						database_id: "mock-d1-database-id",
 						database_name: "mock-d1-database-name",
 						remote: true,
+						type: "d1",
 					},
+				},
+				expectedWorkerOptions: [
+					expect.objectContaining({
+						d1Databases: {
+							DB: {
+								id: "mock-d1-database-id",
+								remoteProxyConnectionString,
+							},
+						},
+					}),
 				],
 			},
-			expectedProxyWorkerBindings: {
-				DB: {
-					database_id: "mock-d1-database-id",
-					database_name: "mock-d1-database-name",
-					remote: true,
-					type: "d1",
-				},
-			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
-					d1Databases: {
-						DB: {
-							id: "mock-d1-database-id",
-							remoteProxyConnectionString,
+			{
+				name: "mtls",
+				config: {
+					mtls_certificates: [
+						{
+							binding: "MTLS",
+							certificate_id: "mock-mtls-certificate-id",
+							remote: true,
 						},
-					},
-				}),
-			],
-		},
-		{
-			name: "mtls",
-			config: {
-				mtls_certificates: [
-					{
-						binding: "MTLS",
+					],
+				},
+				expectedProxyWorkerBindings: {
+					MTLS: {
 						certificate_id: "mock-mtls-certificate-id",
 						remote: true,
+						type: "mtls_certificate",
 					},
+				},
+				expectedWorkerOptions: [
+					expect.objectContaining({
+						mtlsCertificates: {
+							MTLS: {
+								certificate_id: "mock-mtls-certificate-id",
+								remoteProxyConnectionString,
+							},
+						},
+					}),
 				],
 			},
-			expectedProxyWorkerBindings: {
-				MTLS: {
-					certificate_id: "mock-mtls-certificate-id",
-					remote: true,
-					type: "mtls_certificate",
-				},
-			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
-					mtlsCertificates: {
-						MTLS: {
-							certificate_id: "mock-mtls-certificate-id",
-							remoteProxyConnectionString,
+			{
+				name: "pipeline",
+				config: {
+					pipelines: [
+						{
+							binding: "PIPELINE",
+							pipeline: "preserve-e2e-pipelines",
+							remote: true,
 						},
-					},
-				}),
-			],
-		},
-		{
-			name: "pipeline",
-			config: {
-				pipelines: [
-					{
-						binding: "PIPELINE",
+					],
+				},
+				expectedProxyWorkerBindings: {
+					PIPELINE: {
 						pipeline: "preserve-e2e-pipelines",
 						remote: true,
+						type: "pipeline",
 					},
-				],
-			},
-			expectedProxyWorkerBindings: {
-				PIPELINE: {
-					pipeline: "preserve-e2e-pipelines",
-					remote: true,
-					type: "pipeline",
 				},
-			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
-					pipelines: {
-						PIPELINE: {
-							pipeline: "preserve-e2e-pipelines",
-							remoteProxyConnectionString,
-						},
-					},
-				}),
-			],
-		},
-		{
-			name: "email",
-			config: {
-				send_email: [
-					{
-						name: "EMAIL",
-						remote: true,
-					},
-				],
-			},
-			expectedProxyWorkerBindings: {
-				EMAIL: {
-					remote: true,
-					type: "send_email",
-				},
-			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
-					email: {
-						send_email: [
-							{
-								name: "EMAIL",
-								remote: true,
+				expectedWorkerOptions: [
+					expect.objectContaining({
+						pipelines: {
+							PIPELINE: {
+								pipeline: "preserve-e2e-pipelines",
 								remoteProxyConnectionString,
-								type: "send_email",
 							},
-						],
+						},
+					}),
+				],
+			},
+			{
+				name: "email",
+				config: {
+					send_email: [
+						{
+							name: "EMAIL",
+							remote: true,
+						},
+					],
+				},
+				expectedProxyWorkerBindings: {
+					EMAIL: {
+						remote: true,
+						type: "send_email",
 					},
-				}),
-			],
-		},
-	];
+				},
+				expectedWorkerOptions: [
+					expect.objectContaining({
+						email: {
+							send_email: [
+								{
+									name: "EMAIL",
+									remote: true,
+									remoteProxyConnectionString,
+									type: "send_email",
+								},
+							],
+						},
+					}),
+				],
+			},
+		];
 
-	it.each(testCases)(
-		"should attempt to setup remote $name bindings when starting `wrangler dev`",
-		async ({ config, expectedProxyWorkerBindings, expectedWorkerOptions }) => {
+		it.each(testCases)(
+			"should attempt to setup remote $name bindings when starting `wrangler dev`",
+			async ({
+				config,
+				expectedProxyWorkerBindings,
+				expectedWorkerOptions,
+			}) => {
+				await seed({
+					"wrangler.jsonc": JSON.stringify(
+						{
+							name: "worker",
+							main: "index.js",
+							compatibility_date: "2025-01-01",
+							...config,
+						},
+						null,
+						2
+					),
+					"index.js": `export default { fetch() { return new Response("hello") } }`,
+				});
+				const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+				await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
+					timeout: 2_000,
+				});
+				expect(proxyWorkerBindings).toEqual(expectedProxyWorkerBindings);
+				expect(workerOptions).toEqual(expectedWorkerOptions);
+				await stopWrangler();
+				await wranglerStopped;
+			}
+		);
+
+		it.each(testCases)(
+			"should attempt to setup remote $name bindings when updating config during a running `wrangler dev` session",
+			async ({
+				config,
+				expectedProxyWorkerBindings,
+				expectedWorkerOptions,
+			}) => {
+				await seed({
+					// Start with an empty config
+					"wrangler.jsonc": JSON.stringify(
+						{
+							name: "worker",
+							main: "index.js",
+							compatibility_date: "2025-01-01",
+						},
+						null,
+						2
+					),
+					"index.js": `export default { fetch() { return new Response("hello") } }`,
+				});
+				const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+				const match = await vi.waitUntil(
+					() => std.out.match(/Ready on (?<url>http:\/\/localhost:\d{4}.+)/),
+					{ timeout: 2_000 }
+				);
+
+				// Check that there is initially no remote bindings proxy setup
+				expect(proxyWorkerBindings).toEqual(undefined);
+
+				// Let's make a fetch to the worker to prove it's running before we update the config to add the bindings
+				// This also should give the config file watching time to settle.
+				const url = match?.groups?.url;
+				if (url === undefined) {
+					throw new Error("No URL found in output");
+				}
+				expect((await fetch(url)).ok).toBe(true);
+
+				// Now update the config to include the bindings
+				await seed({
+					"wrangler.jsonc": JSON.stringify(
+						{
+							name: "worker",
+							main: "index.js",
+							compatibility_date: "2025-01-01",
+							...config,
+						},
+						null,
+						2
+					),
+				});
+
+				// Once we see the reloading message we know it has processed the config change
+				await vi.waitFor(() => expect(std.out).toMatch(/Reloading/), {
+					timeout: 2_000,
+				});
+				expect(proxyWorkerBindings).toEqual(expectedProxyWorkerBindings);
+				expect(workerOptions).toEqual(expectedWorkerOptions);
+
+				await stopWrangler();
+				await wranglerStopped;
+			}
+		);
+
+		it("should allow both local and remote KV bindings to the same namespace in a single dev session", async () => {
 			await seed({
 				"wrangler.jsonc": JSON.stringify(
 					{
 						name: "worker",
 						main: "index.js",
 						compatibility_date: "2025-01-01",
-						...config,
+						kv_namespaces: [
+							{
+								binding: "KV_LOCAL_BINDING",
+								id: "mock-kv-namespace",
+							},
+							{
+								binding: "KV_REMOTE_BINDING",
+								id: "mock-kv-namespace",
+								remote: true,
+							},
+						],
 					},
 					null,
 					2
@@ -504,23 +612,89 @@ describe.sequential("dev with remote bindings", () => {
 			await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 				timeout: 2_000,
 			});
-			expect(proxyWorkerBindings).toEqual(expectedProxyWorkerBindings);
-			expect(workerOptions).toEqual(expectedWorkerOptions);
+			expect(proxyWorkerBindings).toEqual({
+				KV_REMOTE_BINDING: {
+					id: "mock-kv-namespace",
+					remote: true,
+					type: "kv_namespace",
+				},
+			});
+			expect(workerOptions).toEqual([
+				expect.objectContaining({
+					kvNamespaces: {
+						KV_LOCAL_BINDING: {
+							id: "mock-kv-namespace",
+						},
+						KV_REMOTE_BINDING: {
+							id: "mock-kv-namespace",
+							remoteProxyConnectionString,
+						},
+					},
+				}),
+			]);
 			await stopWrangler();
 			await wranglerStopped;
-		}
-	);
+		});
 
-	it.each(testCases)(
-		"should attempt to setup remote $name bindings when updating config during a running `wrangler dev` session",
-		async ({ config, expectedProxyWorkerBindings, expectedWorkerOptions }) => {
+		it("does not create remote bindings when `--local` is passed", async () => {
 			await seed({
-				// Start with an empty config
 				"wrangler.jsonc": JSON.stringify(
 					{
 						name: "worker",
 						main: "index.js",
 						compatibility_date: "2025-01-01",
+						kv_namespaces: [
+							{
+								binding: "KV_LOCAL_BINDING",
+								id: "mock-kv-namespace",
+							},
+							{
+								binding: "KV_REMOTE_BINDING",
+								id: "mock-kv-namespace",
+								remote: true,
+							},
+						],
+					},
+					null,
+					2
+				),
+				"index.js": `export default { fetch() { return new Response("hello") } }`,
+			});
+			const wranglerStopped = runWrangler("dev --local");
+			await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
+				timeout: 2_000,
+			});
+			expect(proxyWorkerBindings).toEqual(undefined);
+			expect(workerOptions).toEqual([
+				expect.objectContaining({
+					kvNamespaces: {
+						KV_LOCAL_BINDING: {
+							id: "mock-kv-namespace",
+						},
+						KV_REMOTE_BINDING: {
+							id: "mock-kv-namespace",
+						},
+					},
+				}),
+			]);
+			await stopWrangler();
+			await wranglerStopped;
+		});
+
+		it("uses the provided api token and account id when starting the remote proxy session", async () => {
+			await seed({
+				"wrangler.jsonc": JSON.stringify(
+					{
+						name: "worker",
+						main: "index.js",
+						compatibility_date: "2025-01-01",
+						services: [
+							{
+								binding: "REMOTE_WORKER",
+								service: "remote-service-binding-worker",
+								remote: true,
+							},
+						],
 					},
 					null,
 					2
@@ -528,219 +702,60 @@ describe.sequential("dev with remote bindings", () => {
 				"index.js": `export default { fetch() { return new Response("hello") } }`,
 			});
 			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
-			const match = await vi.waitUntil(
-				() => std.out.match(/Ready on (?<url>http:\/\/localhost:\d{4}.+)/),
-				{ timeout: 2_000 }
-			);
+			await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
+				timeout: 2_000,
+			});
+			expect(sessionOptions).toEqual({
+				auth: {
+					accountId: "some-account-id",
+					apiToken: {
+						apiToken: "some-api-token",
+					},
+				},
+				complianceRegion: undefined,
+				workerName: "worker",
+			});
+			await stopWrangler();
+			await wranglerStopped;
+		});
 
-			// Check that there is initially no remote bindings proxy setup
-			expect(proxyWorkerBindings).toEqual(undefined);
-
-			// Let's make a fetch to the worker to prove it's running before we update the config to add the bindings
-			// This also should give the config file watching time to settle.
-			const url = match?.groups?.url;
-			if (url === undefined) {
-				throw new Error("No URL found in output");
-			}
-			expect((await fetch(url)).ok).toBe(true);
-
-			// Now update the config to include the bindings
+		it("uses the account_id in the config when starting the remote proxy session", async () => {
 			await seed({
 				"wrangler.jsonc": JSON.stringify(
 					{
 						name: "worker",
 						main: "index.js",
 						compatibility_date: "2025-01-01",
-						...config,
+						account_id: "mock-account-id",
+						services: [
+							{
+								binding: "REMOTE_WORKER",
+								service: "remote-service-binding-worker",
+								remote: true,
+							},
+						],
 					},
 					null,
 					2
 				),
+				"index.js": `export default { fetch() { return new Response("hello") } }`,
 			});
-
-			// Once we see the reloading message we know it has processed the config change
-			await vi.waitFor(() => expect(std.out).toMatch(/Reloading/), {
+			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+			await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 				timeout: 2_000,
 			});
-			expect(proxyWorkerBindings).toEqual(expectedProxyWorkerBindings);
-			expect(workerOptions).toEqual(expectedWorkerOptions);
-
+			expect(sessionOptions).toEqual({
+				auth: {
+					accountId: "mock-account-id",
+					apiToken: {
+						apiToken: "some-api-token",
+					},
+				},
+				complianceRegion: undefined,
+				workerName: "worker",
+			});
 			await stopWrangler();
 			await wranglerStopped;
-		}
-	);
-
-	it("should allow both local and remote KV bindings to the same namespace in a single dev session", async () => {
-		await seed({
-			"wrangler.jsonc": JSON.stringify(
-				{
-					name: "worker",
-					main: "index.js",
-					compatibility_date: "2025-01-01",
-					kv_namespaces: [
-						{
-							binding: "KV_LOCAL_BINDING",
-							id: "mock-kv-namespace",
-						},
-						{
-							binding: "KV_REMOTE_BINDING",
-							id: "mock-kv-namespace",
-							remote: true,
-						},
-					],
-				},
-				null,
-				2
-			),
-			"index.js": `export default { fetch() { return new Response("hello") } }`,
 		});
-		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
-		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-			timeout: 2_000,
-		});
-		expect(proxyWorkerBindings).toEqual({
-			KV_REMOTE_BINDING: {
-				id: "mock-kv-namespace",
-				remote: true,
-				type: "kv_namespace",
-			},
-		});
-		expect(workerOptions).toEqual([
-			expect.objectContaining({
-				kvNamespaces: {
-					KV_LOCAL_BINDING: {
-						id: "mock-kv-namespace",
-					},
-					KV_REMOTE_BINDING: {
-						id: "mock-kv-namespace",
-						remoteProxyConnectionString,
-					},
-				},
-			}),
-		]);
-		await stopWrangler();
-		await wranglerStopped;
-	});
-
-	it("does not create remote bindings when `--local` is passed", async () => {
-		await seed({
-			"wrangler.jsonc": JSON.stringify(
-				{
-					name: "worker",
-					main: "index.js",
-					compatibility_date: "2025-01-01",
-					kv_namespaces: [
-						{
-							binding: "KV_LOCAL_BINDING",
-							id: "mock-kv-namespace",
-						},
-						{
-							binding: "KV_REMOTE_BINDING",
-							id: "mock-kv-namespace",
-							remote: true,
-						},
-					],
-				},
-				null,
-				2
-			),
-			"index.js": `export default { fetch() { return new Response("hello") } }`,
-		});
-		const wranglerStopped = runWrangler("dev --local");
-		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-			timeout: 2_000,
-		});
-		expect(proxyWorkerBindings).toEqual(undefined);
-		expect(workerOptions).toEqual([
-			expect.objectContaining({
-				kvNamespaces: {
-					KV_LOCAL_BINDING: {
-						id: "mock-kv-namespace",
-					},
-					KV_REMOTE_BINDING: {
-						id: "mock-kv-namespace",
-					},
-				},
-			}),
-		]);
-		await stopWrangler();
-		await wranglerStopped;
-	});
-
-	it("uses the provided api token and account id when starting the remote proxy session", async () => {
-		await seed({
-			"wrangler.jsonc": JSON.stringify(
-				{
-					name: "worker",
-					main: "index.js",
-					compatibility_date: "2025-01-01",
-					services: [
-						{
-							binding: "REMOTE_WORKER",
-							service: "remote-service-binding-worker",
-							remote: true,
-						},
-					],
-				},
-				null,
-				2
-			),
-			"index.js": `export default { fetch() { return new Response("hello") } }`,
-		});
-		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
-		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-			timeout: 2_000,
-		});
-		expect(sessionOptions).toEqual({
-			auth: {
-				accountId: "some-account-id",
-				apiToken: {
-					apiToken: "some-api-token",
-				},
-			},
-			complianceRegion: undefined,
-			workerName: "worker",
-		});
-		await stopWrangler();
-		await wranglerStopped;
-	});
-
-	it("uses the account_id in the config when starting the remote proxy session", async () => {
-		await seed({
-			"wrangler.jsonc": JSON.stringify(
-				{
-					name: "worker",
-					main: "index.js",
-					compatibility_date: "2025-01-01",
-					account_id: "mock-account-id",
-					services: [
-						{
-							binding: "REMOTE_WORKER",
-							service: "remote-service-binding-worker",
-							remote: true,
-						},
-					],
-				},
-				null,
-				2
-			),
-			"index.js": `export default { fetch() { return new Response("hello") } }`,
-		});
-		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
-		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-			timeout: 2_000,
-		});
-		expect(sessionOptions).toEqual({
-			auth: {
-				accountId: "mock-account-id",
-				apiToken: {
-					apiToken: "some-api-token",
-				},
-			},
-			complianceRegion: undefined,
-			workerName: "worker",
-		});
-		await stopWrangler();
-		await wranglerStopped;
-	});
-});
+	}
+);
