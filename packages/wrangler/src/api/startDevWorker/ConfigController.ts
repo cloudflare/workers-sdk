@@ -554,9 +554,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				{ useRedirectIfAvailable: true }
 			);
 
-			if (typeof vitest === "undefined") {
-				void this.#ensureWatchingConfig(fileConfig.configPath);
-			}
+			void this.#ensureWatchingConfig(fileConfig.configPath);
 
 			const { config: resolvedConfig, printCurrentBindings } =
 				await resolveConfig(fileConfig, input);
