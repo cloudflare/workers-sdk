@@ -1,3 +1,5 @@
+import image from "./image.png?inline";
+
 export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
@@ -15,6 +17,25 @@ export default {
 				}
 
 				return new Response("KV binding works", {
+					status: 200,
+				});
+			}
+			case "/images": {
+				const request = await fetch(image);
+
+				if (!request.body) {
+					return new Response("Failed to fetch image", { status: 500 });
+				}
+
+				const info = await env.IMAGES.info(request.body);
+
+				if (info.format !== "image/png") {
+					return new Response("Images binding returns an incorrect format", {
+						status: 500,
+					});
+				}
+
+				return new Response("Images binding works", {
 					status: 200,
 				});
 			}
