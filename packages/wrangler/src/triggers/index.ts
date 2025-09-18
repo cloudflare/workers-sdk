@@ -74,6 +74,7 @@ export const triggersDeployCommand = createCommand({
 			legacyEnv: isLegacyEnv(config),
 			dryRun: args.dryRun,
 			assetsOptions,
+			firstDeploy: false, // at this point the Worker should already exist.
 		});
 	},
 });

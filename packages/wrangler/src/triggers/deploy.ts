@@ -30,6 +30,7 @@ type Props = {
 	legacyEnv: boolean | undefined;
 	dryRun: boolean | undefined;
 	assetsOptions: AssetsOptions | undefined;
+	firstDeploy: boolean;
 };
 
 export default async function triggersDeploy(
@@ -90,7 +91,8 @@ export default async function triggersDeploy(
 		envName,
 		workerUrl,
 		routes,
-		deployments
+		deployments,
+		props.firstDeploy
 	);
 
 	if (!wantWorkersDev && workersDevInSync && routes.length !== 0) {
@@ -315,7 +317,8 @@ async function subdomainDeploy(
 	envName: string,
 	workerUrl: string,
 	routes: Route[],
-	deployments: Array<Promise<string[]>>
+	deployments: Array<Promise<string[]>>,
+	firstDeploy: boolean
 ) {
 	const { config } = props;
 
@@ -338,22 +341,22 @@ async function subdomainDeploy(
 
 	// Warn about mismatching config and current values.
 
-	if (config.workers_dev == undefined && !workersDevInSync) {
+	if (!firstDeploy && config.workers_dev == undefined && !workersDevInSync) {
 		const currWorkersDevStatus = currWorkersDev ? "enabled" : "disabled";
 		logger.warn(
 			[
 				`Worker has workers.dev ${currWorkersDevStatus}, but 'workers_dev' is not in the config.`,
-				`Using fallback value 'workers_dev = ${wantWorkersDev}'.`,
+				`Using default config 'workers_dev = ${wantWorkersDev}', current status will be overwritten.`,
 			].join("\n")
 		);
 	}
 
-	if (config.preview_urls == undefined && !previewsInSync) {
+	if (!firstDeploy && config.preview_urls == undefined && !previewsInSync) {
 		const currPreviewsStatus = currPreviews ? "enabled" : "disabled";
 		logger.warn(
 			[
 				`Worker has preview URLs ${currPreviewsStatus}, but 'preview_urls' is not in the config.`,
-				`Using fallback value 'preview_urls = ${wantPreviews}'.`,
+				`Using default config 'preview_urls = ${wantPreviews}', current status will be overwritten.`,
 			].join("\n")
 		);
 	}

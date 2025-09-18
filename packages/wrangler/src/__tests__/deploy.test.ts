@@ -6912,7 +6912,7 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorker has workers.dev disabled, but 'workers_dev' is not in the config.[0m
 
-				  Using fallback value 'workers_dev = true'.
+				  Using default config 'workers_dev = true', current status will be overwritten.
 
 				"
 			`);
@@ -6939,7 +6939,7 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorker has preview URLs enabled, but 'preview_urls' is not in the config.[0m
 
-				  Using fallback value 'preview_urls = false'.
+				  Using default config 'preview_urls = false', current status will be overwritten.
 
 				"
 			`);
