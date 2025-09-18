@@ -530,7 +530,7 @@ export const createContext = async (
 
 			frameworkConfig = frameworkConfig.platformVariants[platform];
 		} else {
-			if (frameworkConfig.platform !== args.platform) {
+			if (args.platform && args.platform !== frameworkConfig.platform) {
 				throw new Error(
 					`The ${frameworkConfig.displayName} framework doesn't support the "${args.platform}" platform`,
 				);
