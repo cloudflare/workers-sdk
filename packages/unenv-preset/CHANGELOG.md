@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.7.4
+
+### Patch Changes
+
+- [#10577](https://github.com/cloudflare/workers-sdk/pull/10577) [`e9b0c66`](https://github.com/cloudflare/workers-sdk/commit/e9b0c665aea3c12103ebc2d1070d7e05ff0bfe46) Thanks [@vicb](https://github.com/vicb)! - Use workerd `node:process` v2 when available
+
 ## 2.7.3
 
 ### Patch Changes
