@@ -9,108 +9,53 @@ import {
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import { Worker } from "node:worker_threads";
 import { FSWatcher, watch } from "chokidar";
-import { SocketPorts } from "../runtime";
-import { getProxyFallbackServiceSocketName } from "./external-service";
+import { Worker_Binding } from "../runtime";
 import { Log } from "./log";
 import { getGlobalWranglerConfigPath } from "./wrangler";
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
 export type WorkerDefinition = {
-	protocol: "http" | "https";
 	host: string;
 	port: number;
-	entrypointAddresses: Record<
-		"default" | string,
-		{ host: string; port: number } | undefined
-	>;
-	durableObjects: { name: string; className: string }[];
+	durableObjects: { className: string }[];
+	entrypoints: string[];
 };
 
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registry: WorkerRegistry = {};
 	private registeredWorkers: Set<string> = new Set();
-	private externalServices: Map<
-		string,
-		{
-			classNames: Set<string>;
-			entrypoints: Set<string | undefined>;
-		}
-	> = new Map();
+	private externalServices: Set<string> = new Set();
 	private watcher: FSWatcher | undefined;
-	private proxyWorker: Worker | undefined;
-	private proxyAddress: string | undefined;
 
 	constructor(
 		private registryPath: string | undefined,
-		private enableDurableObjectProxy: boolean,
 		private onUpdate: ((registry: WorkerRegistry) => void) | undefined,
 		private log: Log
-	) {}
+	) {
+		if (registryPath) {
+			// Make sure the registry path exists
+			mkdirSync(registryPath, { recursive: true });
+		}
+	}
 
 	/**
 	 * Watch files inside the registry directory for changes.
 	 */
-	public watch(
-		services: Map<
-			string,
-			{
-				classNames: Set<string>;
-				entrypoints: Set<string | undefined>;
-			}
-		>
-	): void {
+	public watch(services: Set<string>): void {
 		if (services.size === 0 || !this.registryPath) {
 			return;
 		}
 
 		// Keep track of external services we are depending on
-		// To pre-populate the proxy server with the fallback service addresses
-		this.externalServices = new Map(services);
+		this.externalServices = services;
 
 		if (!this.watcher) {
 			this.watcher = watch(this.registryPath).on("all", () => this.refresh());
 			this.refresh();
 		}
-	}
-
-	/**
-	 * Initialize the worker thread proxy server
-	 */
-	public async initializeProxyWorker(): Promise<string | null> {
-		if (!this.isEnabled()) {
-			return null;
-		}
-
-		if (this.proxyAddress !== undefined) {
-			this.log.debug("Dev registry proxy is already running");
-			return this.proxyAddress;
-		}
-
-		const worker = new Worker(
-			path.join(__dirname, "shared", "dev-registry.worker.js")
-		);
-
-		// Wait for the worker to signal it's ready and provide the port
-		const address = await new Promise<string>((resolve, reject) => {
-			worker.once("message", (message) => {
-				if (message.type === "ready") {
-					resolve(message.address);
-				} else if (message.type === "error") {
-					reject(new Error(message.error));
-				}
-			});
-			worker.once("error", reject);
-		});
-
-		this.proxyWorker = worker;
-		this.proxyAddress = address;
-		this.log.debug(`Dev registry proxy started on http://${address}`);
-
-		return address;
 	}
 
 	/**
@@ -123,7 +68,7 @@ export class DevRegistry {
 		this.registry = {};
 
 		// Only this step is async and could be awaited
-		return Promise.all([this.watcher?.close(), this.proxyWorker?.terminate()])
+		return Promise.all([this.watcher?.close()])
 			.then(() => {
 				// Typescript complains that the return type is
 				// not compatible with `Promise<void>` without this.
@@ -131,8 +76,6 @@ export class DevRegistry {
 			})
 			.finally(() => {
 				this.watcher = undefined;
-				this.proxyWorker = undefined;
-				this.proxyAddress = undefined;
 			});
 	}
 
@@ -169,18 +112,12 @@ export class DevRegistry {
 		return this.registryPath !== undefined && this.registryPath !== "";
 	}
 
-	public isDurableObjectProxyEnabled(): boolean {
-		return this.isEnabled() && this.enableDurableObjectProxy;
-	}
-
 	public async updateRegistryPath(
 		registryPath: string | undefined,
-		enableDurableObjectProxy: boolean,
 		onUpdate?: (registry: WorkerRegistry) => void
 	): Promise<void> {
 		// Unregister all registered workers
 		this.unregisterWorkers();
-		this.enableDurableObjectProxy = enableDurableObjectProxy;
 		this.onUpdate = onUpdate;
 
 		if (registryPath !== this.registryPath) {
@@ -193,59 +130,26 @@ export class DevRegistry {
 		}
 	}
 
-	public configureProxyWorker(
-		runtimeEntryURL: string,
-		socketPorts: SocketPorts
+	public register(
+		exposeOverRegistry: Map<string, Partial<WorkerDefinition>>,
+		host: string,
+		port: number
 	) {
-		if (!this.proxyWorker) {
-			return;
-		}
-
-		const fallbackServicePorts: Record<string, Record<string, number>> = {};
-
-		for (const [service, { entrypoints }] of this.externalServices) {
-			for (const entrypoint of entrypoints) {
-				const port = socketPorts.get(
-					getProxyFallbackServiceSocketName(service, entrypoint)
-				);
-
-				if (!port) {
-					throw new Error(
-						`There is no socket opened for "${service}" with the "${entrypoint ?? "default"}" entrypoint`
-					);
-				}
-
-				fallbackServicePorts[service] ??= {};
-				fallbackServicePorts[service][entrypoint ?? "default"] = port;
-			}
-		}
-
-		// Send updated config to the proxy worker
-		this.proxyWorker.postMessage({
-			type: "setup",
-			runtimeEntryURL,
-			fallbackServicePorts,
-		});
-	}
-
-	public register(workers: Record<string, WorkerDefinition>) {
 		if (!this.registryPath) {
 			return;
 		}
 
-		// Make sure the registry path exists
-		mkdirSync(this.registryPath, { recursive: true });
+		for (const [name, partialDefinition] of exposeOverRegistry) {
+			const definition = {
+				host,
+				port,
+				...partialDefinition,
+			};
 
-		for (const [name, definition] of Object.entries(workers)) {
 			const definitionPath = path.join(this.registryPath, name);
 			const existingHeartbeat = this.heartbeats.get(name);
 			if (existingHeartbeat) {
 				clearInterval(existingHeartbeat);
-			}
-
-			// Skip the durable objects in the definition if the proxy is not enabled
-			if (!this.enableDurableObjectProxy) {
-				definition.durableObjects = [];
 			}
 
 			writeFileSync(definitionPath, JSON.stringify(definition, null, 2));
@@ -274,7 +178,7 @@ export class DevRegistry {
 		if (this.onUpdate) {
 			// Check only external services (ones we're bound to) for changes
 			// This prevents unnecessary callback triggers for unrelated registry updates
-			for (const [service] of this.externalServices) {
+			for (const service of this.externalServices) {
 				if (
 					JSON.stringify(registry[service]) !==
 					JSON.stringify(this.registry[service])
@@ -285,14 +189,6 @@ export class DevRegistry {
 					break;
 				}
 			}
-		}
-
-		// Send updated workers to the proxy worker
-		if (this.proxyWorker) {
-			this.proxyWorker.postMessage({
-				type: "update",
-				workers: registry,
-			});
 		}
 
 		// Update our cached registry state

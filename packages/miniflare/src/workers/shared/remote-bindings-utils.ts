@@ -22,6 +22,6 @@ export function makeFetch(
 			headers: proxiedHeaders,
 		});
 
-		return fetch(remoteProxyConnectionString, req);
+		return fetch(remoteProxyConnectionString ?? "http://example.com", req);
 	};
 }

@@ -246,8 +246,7 @@ export const CoreSharedOptionsSchema = z.object({
 
 	// Enable auto service / durable objects discovery with the dev registry
 	unsafeDevRegistryPath: z.string().optional(),
-	// Enable External Durable Objects Proxy / Internal DOs registration
-	unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
+
 	// Called when external workers this instance depends on are updated in the dev registry
 	unsafeHandleDevRegistryUpdate: z
 		.function(z.tuple([z.custom<WorkerRegistry>()]))

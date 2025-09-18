@@ -111,7 +111,12 @@ const embedWorkersPlugin = {
 					bundle: true,
 					sourcemap: true,
 					sourcesContent: false,
-					external: ["miniflare:shared", "miniflare:zod", "cloudflare:workers"],
+					external: [
+						"miniflare:shared",
+						"miniflare:zod",
+						"cloudflare:workers",
+						"cloudflare:email",
+					],
 					metafile: true,
 					entryPoints: [args.path],
 					minifySyntax: true,
@@ -162,14 +167,7 @@ async function buildPackage() {
 	const pkg = getPackage(pkgRoot);
 
 	const indexPath = path.join(pkgRoot, "src", "index.ts");
-	// The dev registry proxy runs in a Node.js worker thread (instead of workerd) and
-	// requires a separate entry file
-	const devRegistryProxyPath = path.join(
-		pkgRoot,
-		"src",
-		"shared",
-		"dev-registry.worker.ts"
-	);
+
 	// Look for test files ending with .spec.ts in the test directory, default to
 	// empty array if not found
 	let testPaths = [];
@@ -209,7 +207,7 @@ async function buildPackage() {
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,
-		entryPoints: [indexPath, devRegistryProxyPath, ...testPaths],
+		entryPoints: [indexPath, ...testPaths],
 	};
 	if (watch) {
 		const ctx = await esbuild.context(buildOptions);

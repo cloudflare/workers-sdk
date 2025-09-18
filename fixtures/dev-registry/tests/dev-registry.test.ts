@@ -325,7 +325,9 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			const response = await fetch(`${externalDurableObject}?${searchParams}`);
 
 			expect(response.status).toBe(503);
-			expect(await response.text()).toEqual("Service Unavailable");
+			expect(await response.text()).toEqual(
+				'Couldn\'t find a local dev session for the "TestObject" entrypoint of service "internal-durable-object" to proxy to'
+			);
 		}, waitForTimeout);
 
 		await runWranglerDev(
@@ -372,7 +374,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				body: await response.text(),
 			}).toEqual({
 				status: 500,
-				body: 'Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.',
+				body: 'Cannot access "ping" as we couldn\'t find a local dev session for the "TestObject" entrypoint of service "internal-durable-object" to proxy to.',
 			});
 		}, waitForTimeout);
 
@@ -389,10 +391,8 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			});
 			const response = await fetch(`${externalDurableObject}?${searchParams}`);
 
-			expect(response.status).toBe(500);
-			expect(await response.text()).toEqual(
-				'Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.'
-			);
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong");
 		}, waitForTimeout);
 	});
 
@@ -986,7 +986,9 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		await vi.waitFor(async () => {
 			const response = await stub.fetch("http://localhost");
 			expect(response.status).toBe(503);
-			expect(await response.text()).toEqual("Service Unavailable");
+			expect(await response.text()).toEqual(
+				'Couldn\'t find a local dev session for the "TestObject" entrypoint of service "internal-durable-object" to proxy to'
+			);
 		}, waitForTimeout);
 
 		await runWranglerDev(
@@ -1013,7 +1015,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		const stub = env.DURABLE_OBJECT.get(id);
 
 		expect(() => stub.ping()).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
+			`[Error: Cannot access "ping" as we couldn't find a local dev session for the "TestObject" entrypoint of service "internal-durable-object" to proxy to.]`
 		);
 		await runWranglerDev(
 			"wrangler.internal-durable-object.jsonc",
@@ -1021,7 +1023,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		);
 
 		expect(() => stub.ping()).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
+			`[Error: Cannot access "ping" as we couldn't find a local dev session for the "TestObject" entrypoint of service "internal-durable-object" to proxy to.]`
 		);
 	});
 });
