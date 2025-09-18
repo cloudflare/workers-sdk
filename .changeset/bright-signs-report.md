@@ -2,4 +2,4 @@
 "create-cloudflare": patch
 ---
 
-Remove the Remix option since the framework is no longer recommended for new applications
+Remove the Remix option since the framework is no longer recommended by the Remix team for new applications
