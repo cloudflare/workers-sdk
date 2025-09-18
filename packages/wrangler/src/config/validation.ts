@@ -2395,7 +2395,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"logfwdr",
 			"mtls_certificate",
 			"pipeline",
-			"connectivity_service_binding",
+			"vpc_service",
 		];
 
 		if (safeBindings.includes(value.type)) {
