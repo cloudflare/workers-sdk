@@ -295,7 +295,7 @@ export function convertCfWorkerInitBindingsToBindings(
 			}
 			case "vpc_services": {
 				for (const { binding, ...x } of info) {
-					output[binding] = { type: "connectivity_service_binding", ...x };
+					output[binding] = { type: "vpc_service", ...x };
 				}
 				break;
 			}
@@ -440,7 +440,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "worker_loader") {
 			bindings.worker_loaders ??= [];
 			bindings.worker_loaders.push({ ...binding, binding: name });
-		} else if (binding.type === "connectivity_service_binding") {
+		} else if (binding.type === "vpc_service") {
 			bindings.vpc_services ??= [];
 			bindings.vpc_services.push({ ...binding, binding: name });
 		} else if (isUnsafeBindingType(binding.type)) {

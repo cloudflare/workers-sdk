@@ -309,7 +309,7 @@ export type Binding =
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
 	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
 	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
-	| ({ type: "connectivity_service_binding" } & BindingOmit<CfVpcService>)
+	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
 

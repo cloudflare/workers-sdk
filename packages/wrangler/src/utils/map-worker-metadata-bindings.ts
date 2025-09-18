@@ -344,7 +344,7 @@ export async function mapWorkerMetadataBindings(
 							];
 						}
 						break;
-					case "connectivity_service_binding":
+					case "vpc_service":
 						{
 							configObj.vpc_services = [
 								...(configObj.vpc_services ?? []),
