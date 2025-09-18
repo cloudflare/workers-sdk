@@ -493,6 +493,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("change", async (_event) => {
+				if (this.#configWatcher?.closed) {
+					return;
+				}
 				logger.debug(`${path.basename(configPath)} changed...`);
 				assert(
 					this.latestInput,
