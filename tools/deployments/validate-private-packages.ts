@@ -4,9 +4,9 @@ import { glob } from "glob";
 import type { PackageJSON } from "./validate-fixtures";
 
 if (require.main === module) {
-	console.log("::group::Checking package names");
 	checkPrivatePackageScopes()
 		.then((errors) => {
+			console.log("::group::Checking package names");
 			if (errors.length > 0) {
 				console.error(
 					"::error::Package names checks:" + errors.map((e) => `\n- ${e}`)
