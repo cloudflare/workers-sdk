@@ -149,7 +149,7 @@ jobs:
 
       - name: Run tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }} --log-order=stream -- remote-bindings
+        run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }} --log-order=stream
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
