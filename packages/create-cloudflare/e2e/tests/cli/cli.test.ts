@@ -635,15 +635,10 @@ describe("Create Cloudflare CLI", () => {
 		});
 	});
 
-	test("E2E: Incorrect platform specified for framework", async ({
+	test("error when trying to create a solid app on Pages", async ({
 		logStream,
 	}) => {
 		const { errors } = await runC3(
-			// The solid framework template doesn't support the pages platform that's why solid
-			// is being selected here, there isn't anything specific/special about solid being used
-			// here, if in the future the solid template is removed or updated to support the pages
-			// platform a different framework template not supporting pages can be used here
-			// (and if no such framework template will exist we can remove the check altogether?)
 			["--platform=pages", "--framework=solid", "my-app"],
 			[],
 			logStream,
