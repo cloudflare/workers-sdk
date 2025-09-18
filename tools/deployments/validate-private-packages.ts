@@ -22,13 +22,14 @@ if (require.main === module) {
 }
 
 async function getPrivatePackageJsons() {
-	// TODO: we only check package.jsons in packages and tools, in fixtures we use the `@fixture/` scope,
-	//       consider if we should use the `@cloudflare/` scope instead
-	const packageJsonPaths = await glob("{packages,tools}/**/package.json", {
+	const packageJsonPaths = await glob("**/package.json", {
 		cwd: resolve(__dirname, "../../"),
 		ignore: [
 			// We are not interested in dependencies
 			"**/node_modules/**",
+			// The package.jsons in the fixtures directory use the `@fixture/` scope
+			// TODO: consider if we should use the `@cloudflare/` scope instead
+			"fixtures/**",
 			// C3 template package.jsons have <TBD> names that are populated by C3 during the app creation
 			"packages/create-cloudflare/templates/**",
 			// The package.jsons in the vite-plugin playground use the `@playground/` scope
