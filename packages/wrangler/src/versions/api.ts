@@ -157,6 +157,7 @@ export type NonVersionedScriptSettings = {
 	logpush: boolean;
 	tags: string[] | null;
 	tail_consumers: TailConsumer[];
+	streaming_tail_consumers?: StreamingTailConsumer[];
 	observability: Observability;
 };
 

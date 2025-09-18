@@ -171,6 +171,7 @@ const CoreOptionsSchemaInput = z.intersection(
 		hasAssetsAndIsVitest: z.boolean().optional(),
 
 		tails: z.array(ServiceDesignatorSchema).optional(),
+		streamingTails: z.array(ServiceDesignatorSchema).optional(),
 
 		// Strip the CF-Connecting-IP header from outbound fetches
 		stripCfConnectingIp: z.boolean().default(true),
@@ -860,8 +861,21 @@ export const CORE_PLUGIN: Plugin<
 										options.hasAssetsAndIsVitest
 									);
 								}),
+					streamingTails:
+						options.streamingTails === undefined
+							? undefined
+							: options.streamingTails.map<ServiceDesignator>((service) => {
+									return getCustomServiceDesignator(
+										/* referrer */ options.name,
+										workerIndex,
+										CustomServiceKind.UNKNOWN,
+										name,
+										service,
+										options.hasAssetsAndIsVitest
+									);
+								}),
 					containerEngine: getContainerEngine(options.containerEngine),
-				},
+				} as any,
 			});
 		}
 
@@ -880,6 +894,18 @@ export const CORE_PLUGIN: Plugin<
 
 		if (options.tails !== undefined) {
 			for (const service of options.tails) {
+				const maybeService = maybeGetCustomServiceService(
+					workerIndex,
+					CustomServiceKind.UNKNOWN,
+					name,
+					service
+				);
+				if (maybeService !== undefined) services.push(maybeService);
+			}
+		}
+
+		if (options.streamingTails !== undefined) {
+			for (const service of options.streamingTails) {
 				const maybeService = maybeGetCustomServiceService(
 					workerIndex,
 					CustomServiceKind.UNKNOWN,

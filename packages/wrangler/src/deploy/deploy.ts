@@ -815,6 +815,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
 			placement,
 			tail_consumers: config.tail_consumers,
+			streaming_tail_consumers: config.streaming_tail_consumers,
 			limits: config.limits,
 			assets:
 				props.assetsOptions && assetsJwt
@@ -909,6 +910,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			printBindings(
 				{ ...withoutStaticAssets, vars: maskedVars },
 				config.tail_consumers,
+				config.streaming_tail_consumers,
 				{ warnIfNoBindings: true }
 			);
 		} else {
@@ -1046,7 +1048,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				printBindings(
 					{ ...withoutStaticAssets, vars: maskedVars },
-					config.tail_consumers
+					config.tail_consumers,
+					config.streaming_tail_consumers
 				);
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);
@@ -1075,7 +1078,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				if (!bindingsPrinted) {
 					printBindings(
 						{ ...withoutStaticAssets, vars: maskedVars },
-						config.tail_consumers
+						config.tail_consumers,
+						config.streaming_tail_consumers
 					);
 				}
 				const message = await helpIfErrorIsSizeOrScriptStartup(

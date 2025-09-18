@@ -561,6 +561,7 @@ async function maybePatchSettings(
 	const maybeUndefinedSettings = {
 		logpush: config.logpush,
 		tail_consumers: config.tail_consumers,
+		streaming_tail_consumers: config.streaming_tail_consumers,
 		observability: config.observability, // TODO reconcile with how regular deploy handles empty state
 	};
 	const definedSettings = Object.fromEntries(
@@ -607,6 +608,14 @@ async function maybePatchSettings(
 				patchedSettings.tail_consumers
 					?.map((tc) =>
 						tc.environment ? `${tc.service} (${tc.environment})` : tc.service
+					)
+					.join("\n") ?? "<skipped>",
+			streaming_tail_consumers:
+				patchedSettings.streaming_tail_consumers
+					?.map((stc) =>
+						stc.environment
+							? `${stc.service} (${stc.environment})`
+							: stc.service
 					)
 					.join("\n") ?? "<skipped>",
 		},

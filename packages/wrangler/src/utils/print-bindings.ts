@@ -13,6 +13,7 @@ import type { WorkerRegistry } from "miniflare";
 export function printBindings(
 	bindings: Partial<CfWorkerInit["bindings"]>,
 	tailConsumers: CfTailConsumer[] = [],
+	streamingTailConsumers: CfTailConsumer[] = [],
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
@@ -708,6 +709,38 @@ export function printBindings(
 	if (tailConsumers !== undefined && tailConsumers.length > 0) {
 		logger.log(
 			`${title}\n${tailConsumers
+				.map(({ service }) => {
+					if (context.local && context.registry !== null) {
+						const registryDefinition = context.registry?.[service];
+						hasConnectionStatus = true;
+
+						if (registryDefinition) {
+							return `- ${service} ${chalk.green("[connected]")}`;
+						} else {
+							return `- ${service} ${chalk.red("[not connected]")}`;
+						}
+					} else {
+						return `- ${service}`;
+					}
+				})
+				.join("\n")}`
+		);
+	}
+
+	// Print streaming tail consumers
+	let streamingTitle: string;
+	if (context.name && getFlag("MULTIWORKER")) {
+		streamingTitle = `${chalk.blue(context.name)} is sending Streaming Tail events to the following Workers:`;
+	} else {
+		streamingTitle =
+			"Your Worker is sending Streaming Tail events to the following Workers:";
+	}
+	if (
+		streamingTailConsumers !== undefined &&
+		streamingTailConsumers.length > 0
+	) {
+		logger.log(
+			`${streamingTitle}\n${streamingTailConsumers
 				.map(({ service }) => {
 					if (context.local && context.registry !== null) {
 						const registryDefinition = context.registry?.[service];

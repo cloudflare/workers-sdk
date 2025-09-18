@@ -43,6 +43,7 @@ import type {
 	Observability,
 	RawEnvironment,
 	Rule,
+	StreamingTailConsumer,
 	TailConsumer,
 } from "./environment";
 import type { TypeofType, ValidatorFn } from "./validation-helpers";
@@ -1056,6 +1057,67 @@ const validateTailConsumers: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+function validateStreamingTailConsumer(
+	diagnostics: Diagnostics,
+	field: string,
+	value: StreamingTailConsumer
+) {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+
+	isValid =
+		isValid &&
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"service",
+			value.service,
+			"string"
+		);
+	isValid =
+		isValid &&
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"environment",
+			value.environment,
+			"string"
+		);
+
+	return isValid;
+}
+
+const validateStreamingTailConsumers: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (!value) {
+		return true;
+	}
+	if (!Array.isArray(value)) {
+		diagnostics.errors.push(
+			`Expected "${field}" to be an array but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	for (let i = 0; i < value.length; i++) {
+		isValid =
+			validateStreamingTailConsumer(diagnostics, `${field}[${i}]`, value[i]) &&
+			isValid;
+	}
+
+	return isValid;
+};
+
 /**
  * Validate top-level environment configuration and return the normalized values.
  */
@@ -1451,6 +1513,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"tail_consumers",
 			validateTailConsumers,
+			undefined
+		),
+		streaming_tail_consumers: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"streaming_tail_consumers",
+			validateStreamingTailConsumers,
 			undefined
 		),
 		unsafe: notInheritable(
