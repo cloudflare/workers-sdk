@@ -58,11 +58,10 @@ export function buildRequest(args: ServiceArgs): ConnectivityServiceRequest {
 		host,
 	};
 
-	// Add service-specific fields with defaults
+	// Add service-specific fields
 	if (args.type === ServiceType.Http) {
-		// Set default ports if not specified
-		request.http_port = args.httpPort ?? 80;
-		request.https_port = args.httpsPort ?? 443;
+		request.http_port = args.httpPort;
+		request.https_port = args.httpsPort;
 	}
 
 	return request;

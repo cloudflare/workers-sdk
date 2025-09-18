@@ -103,8 +103,6 @@ describe("vpc service commands", () => {
 			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
 			    },
 			  },
-			  "http_port": 80,
-			  "https_port": 443,
 			  "name": "test-http-ipv4",
 			  "type": "http",
 			}
@@ -115,8 +113,6 @@ describe("vpc service commands", () => {
 			✅ Created VPC service: service-uuid
 			   Name: test-http-ipv4
 			   Type: http
-			   HTTP Port: 80
-			   HTTPS Port: 443
 			   IPv4: 10.0.0.1
 			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440000"
 		`);
@@ -141,7 +137,6 @@ describe("vpc service commands", () => {
 			    },
 			  },
 			  "http_port": 80,
-			  "https_port": 443,
 			  "name": "test-hostname",
 			  "type": "http",
 			}
@@ -219,7 +214,6 @@ describe("vpc service commands", () => {
 			    },
 			  },
 			  "http_port": 80,
-			  "https_port": 443,
 			  "name": "test-updated",
 			  "type": "http",
 			}
