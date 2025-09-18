@@ -47,7 +47,7 @@ vi.mock("../../dev/start-dev", async () => {
 // Mock the `startRemoteProxySession` function to prevent it from trying to hit the Cloudflare APIs
 // The `proxyWorkerBindings` and `sessionOptions` will be assigned in the mock implementation.
 const remoteProxyConnectionString = new URL(
-	"http://localhost:52222/"
+	"http://localhost:5222/"
 ) as RemoteProxyConnectionString;
 let proxyWorkerBindings: Record<string, Binding> | undefined;
 let sessionOptions: StartRemoteProxySessionOptions | undefined;
