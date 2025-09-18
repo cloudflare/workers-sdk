@@ -170,7 +170,7 @@ export async function updateTsConfig(
 }
 
 /**
- * TODO: delete if/when qwik and remix move to wrangler v4
+ * TODO: delete if/when qwik move to wrangler v4
  * Installs the latest version of the `@cloudflare/workers-types` package
  * and updates the .tsconfig file to use the latest entrypoint version.
  */
