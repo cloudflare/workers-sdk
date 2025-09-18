@@ -392,6 +392,7 @@ export const defaultWranglerConfig: Config = {
 	unsafe: {},
 	mtls_certificates: [],
 	tail_consumers: undefined,
+	streaming_tail_consumers: undefined,
 	pipelines: [],
 	vpc_services: [],
 };

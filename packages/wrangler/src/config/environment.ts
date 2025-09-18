@@ -1127,6 +1127,17 @@ export interface EnvironmentNonInheritable {
 	tail_consumers?: TailConsumer[];
 
 	/**
+	 * Specifies a list of Streaming Tail Workers that are bound to this Worker environment
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	streaming_tail_consumers?: StreamingTailConsumer[];
+
+	/**
 	 * Specifies namespace bindings that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -1290,6 +1301,13 @@ export type ConfigModuleRuleType =
 
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */
+	service: string;
+	/** (Optional) The environment of the service. */
+	environment?: string;
+};
+
+export type StreamingTailConsumer = {
+	/** The name of the service streaming tail events will be forwarded to. */
 	service: string;
 	/** (Optional) The environment of the service. */
 	environment?: string;
