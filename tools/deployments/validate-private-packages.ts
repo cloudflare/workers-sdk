@@ -4,9 +4,9 @@ import { glob } from "glob";
 import type { PackageJSON } from "./validate-fixtures";
 
 if (require.main === module) {
+	console.log("::group::Checking package names");
 	checkPrivatePackageScopes()
 		.then((errors) => {
-			console.log("::group::Checking package names");
 			if (errors.length > 0) {
 				console.error(
 					"::error::Package names checks:" + errors.map((e) => `\n- ${e}`)
@@ -16,6 +16,7 @@ if (require.main === module) {
 			process.exit(errors.length > 0 ? 1 : 0);
 		})
 		.catch((error) => {
+			console.log("::endgroup::");
 			console.error("An unexpected error occurred", error);
 			process.exit(1);
 		});
