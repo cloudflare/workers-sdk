@@ -634,6 +634,19 @@ describe("Create Cloudflare CLI", () => {
 			}
 		});
 	});
+
+	test("E2E: Incorrect platform specified for framework", async ({
+		logStream,
+	}) => {
+		const { errors } = await runC3(
+			["--platform=pages", "--framework=solid", "my-app"],
+			[],
+			logStream,
+		);
+		expect(errors).toMatch(
+			/Error: The .*? framework doesn't support the "pages" platform/,
+		);
+	});
 });
 
 function normalizeOutput(output: string): string {
