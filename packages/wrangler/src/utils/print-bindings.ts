@@ -388,8 +388,7 @@ export function printBindings(
 
 					if (
 						registryDefinition &&
-						(!entrypoint ||
-							registryDefinition.entrypointAddresses?.[entrypoint])
+						(!entrypoint || registryDefinition.entrypoints.includes(entrypoint))
 					) {
 						mode = getMode({ isSimulatedLocally: true, connected: true });
 					} else {
