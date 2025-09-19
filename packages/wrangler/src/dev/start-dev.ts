@@ -25,6 +25,9 @@ import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/ty
 import type { CfAccount } from "./create-worker-preview";
 import type { watch } from "chokidar";
 
+/**
+ * Starts one (primary) or more (secondary) DevEnv environments given the `args`.
+ */
 export async function startDev(args: StartDevOptions) {
 	let configFileWatcher: ReturnType<typeof watch> | undefined;
 	let assetsWatcher: ReturnType<typeof watch> | undefined;
