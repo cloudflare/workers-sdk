@@ -617,11 +617,21 @@ export async function generateEnvTypes(
 	}
 
 	if (configToDTS.pipelines) {
-		for (const pipeline of configToDTS.pipelines) {
-			envTypeStructure.push([
-				constructTypeKey(pipeline.binding),
-				`import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>`,
-			]);
+		if (Array.isArray(configToDTS.pipelines)) {
+			// legacy pipelines
+			for (const pipeline of configToDTS.pipelines) {
+				envTypeStructure.push([
+					constructTypeKey(pipeline.binding),
+					`import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>`,
+				]);
+			}
+		} else {
+			for (const pipeline of configToDTS.pipelines.streams) {
+				envTypeStructure.push([
+					constructTypeKey(pipeline.binding),
+					`import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>`,
+				]);
+			}
 		}
 	}
 

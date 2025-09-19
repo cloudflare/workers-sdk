@@ -133,6 +133,7 @@ export type ConfigBindingOptions = Pick<
 	| "dispatch_namespaces"
 	| "durable_objects"
 	| "queues"
+	| "pipelines"
 	| "r2_buckets"
 	| "services"
 	| "kv_namespaces"

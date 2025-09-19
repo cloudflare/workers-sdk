@@ -16,7 +16,8 @@ export const PipelineOptionsSchema = z.object({
 			z.string().array(),
 			z.record(
 				z.object({
-					pipeline: z.string(),
+					pipeline: z.string().optional(),
+					stream: z.string().optional(),
 					remoteProxyConnectionString: z
 						.custom<RemoteProxyConnectionString>()
 						.optional(),
@@ -77,7 +78,8 @@ function bindingEntries(
 		| Record<
 				string,
 				{
-					pipeline: string;
+					pipeline?: string;
+					stream?: string;
 					remoteProxyConnectionString?: RemoteProxyConnectionString;
 				}
 		  >
@@ -88,6 +90,7 @@ function bindingEntries(
 	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 ][] {
 	if (Array.isArray(namespaces)) {
+		// old style pipeline bindings (by pipeline name)
 		return namespaces.map((bindingName) => [bindingName, { id: bindingName }]);
 	} else if (namespaces !== undefined) {
 		return (
@@ -96,7 +99,8 @@ function bindingEntries(
 				(
 					| string
 					| {
-							pipeline: string;
+							pipeline?: string;
+							stream?: string;
 							remoteProxyConnectionString?: RemoteProxyConnectionString;
 					  }
 				),
@@ -106,7 +110,7 @@ function bindingEntries(
 			typeof opts === "string"
 				? { id: opts }
 				: {
-						id: opts.pipeline,
+						id: opts.stream || opts.pipeline || "<invalid>", // last one should be impossible
 						remoteProxyConnectionString: opts.remoteProxyConnectionString,
 					},
 		]);

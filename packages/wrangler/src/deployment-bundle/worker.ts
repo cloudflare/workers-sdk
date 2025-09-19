@@ -291,8 +291,9 @@ export interface CfAssetsBinding {
 
 export interface CfPipeline {
 	binding: string;
-	pipeline: string;
 	remote?: boolean;
+	pipeline?: string;
+	stream?: string;
 }
 
 export interface CfUnsafeBinding {

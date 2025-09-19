@@ -77,7 +77,7 @@ async function getBinaryFileContents(file: File<string | Uint8Array>) {
 export function convertConfigBindingsToStartWorkerBindings(
 	configBindings: ConfigBindingOptions
 ): StartDevWorkerOptions["bindings"] {
-	const { queues, ...bindings } = configBindings;
+	const { queues, pipelines, ...bindings } = configBindings;
 
 	return convertCfWorkerInitBindingsToBindings({
 		...bindings,
@@ -94,6 +94,7 @@ export function convertConfigBindingsToStartWorkerBindings(
 			bucket_name: r2.preview_bucket_name ?? r2.bucket_name,
 		})),
 		queues: queues.producers?.map((q) => ({ ...q, queue_name: q.queue })),
+		pipelines: Array.isArray(pipelines) ? pipelines : pipelines?.streams,
 	});
 }
 

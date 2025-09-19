@@ -951,6 +951,11 @@ export function getBindings(
 		}),
 	];
 
+	const pipelines = configParam.pipelines;
+	const pipelineBindings = Array.isArray(pipelines)
+		? pipelines
+		: pipelines.streams;
+
 	const bindings: CfWorkerInit["bindings"] = {
 		// top-level fields
 		wasm_modules: configParam.wasm_modules,
@@ -995,7 +1000,7 @@ export function getBindings(
 			capnp: configParam.unsafe.capnp,
 		},
 		mtls_certificates: configParam.mtls_certificates,
-		pipelines: configParam.pipelines,
+		pipelines: pipelineBindings,
 		send_email: configParam.send_email,
 		assets: configParam.assets?.binding
 			? { binding: configParam.assets?.binding }

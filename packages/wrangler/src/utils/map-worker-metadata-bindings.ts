@@ -287,13 +287,31 @@ export async function mapWorkerMetadataBindings(
 						];
 						break;
 					case "pipelines":
-						configObj.pipelines = [
-							...(configObj.pipelines ?? []),
-							{
-								binding: binding.name,
-								pipeline: binding.pipeline,
-							},
-						];
+						configObj.pipelines ??= { streams: [] };
+						if (binding.stream) {
+							if (Array.isArray(configObj.pipelines)) {
+								configObj.pipelines = { streams: [] };
+							}
+							configObj.pipelines.streams = [
+								...configObj.pipelines.streams,
+								{
+									binding: binding.name,
+									stream: binding.stream,
+								},
+							];
+						} else if (binding.pipeline) {
+							// Legacy Pipelines (remove once deprecated)
+							if (!Array.isArray(configObj.pipelines)) {
+								configObj.pipelines = [];
+							}
+							configObj.pipelines = [
+								...configObj.pipelines,
+								{
+									binding: binding.name,
+									pipeline: binding.pipeline,
+								},
+							];
+						}
 						break;
 					case "assets":
 						throw new FatalError(

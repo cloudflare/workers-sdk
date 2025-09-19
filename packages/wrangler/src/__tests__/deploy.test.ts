@@ -12739,8 +12739,9 @@ export default{
 	});
 
 	describe("pipelines", () => {
-		it("should upload pipelines bindings", async () => {
+		it("should upload pipelines bindings (legacy format)", async () => {
 			writeWranglerConfig({
+				compatibility_date: "2025-10-20",
 				pipelines: [
 					{
 						binding: "MY_PIPELINE",
@@ -12767,6 +12768,45 @@ export default{
 				Your Worker has access to the following bindings:
 				Binding                            Resource
 				env.MY_PIPELINE (my-pipeline)      Pipeline
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
+		it("should upload pipelines bindings (new format)", async () => {
+			writeWranglerConfig({
+				compatibility_date: "2025-10-22",
+				pipelines: {
+					streams: [
+						{
+							binding: "MY_STREAM",
+							stream: "0123456789ABCDEF0123456789ABCDEF",
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "pipelines",
+						name: "MY_STREAM",
+						stream: "0123456789ABCDEF0123456789ABCDEF",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding               Resource
+				env.MY_STREAM         Pipeline
 
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)

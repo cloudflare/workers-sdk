@@ -289,16 +289,24 @@ function pipelineEntry(
 ): [
 	string,
 	{
-		pipeline: string;
+		pipeline?: string;
+		stream?: string;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
 	if (!remoteProxyConnectionString || !pipeline.remote) {
-		return [pipeline.binding, { pipeline: pipeline.pipeline }];
+		return [
+			pipeline.binding,
+			{ pipeline: pipeline.pipeline, stream: pipeline.stream },
+		];
 	}
 	return [
 		pipeline.binding,
-		{ pipeline: pipeline.pipeline, remoteProxyConnectionString },
+		{
+			pipeline: pipeline.pipeline,
+			stream: pipeline.stream,
+			remoteProxyConnectionString,
+		},
 	];
 }
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
