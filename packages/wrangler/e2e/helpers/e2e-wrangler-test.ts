@@ -290,4 +290,45 @@ export class WranglerE2ETestHelper {
 			return { deployedUrl, stdout, cleanup };
 		}
 	}
+
+	async tunnel(): Promise<string> {
+		const Cloudflare = (await import("cloudflare")).default;
+
+		const name = generateResourceName("tunnel");
+		const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+		if (!accountId) {
+			throw new Error("CLOUDFLARE_ACCOUNT_ID environment variable is required");
+		}
+
+		// Create Cloudflare client directly
+		const client = new Cloudflare({
+			apiToken: process.env.CLOUDFLARE_API_TOKEN,
+		});
+
+		// Create tunnel via Cloudflare SDK
+		const tunnel = await client.zeroTrust.tunnels.cloudflared.create({
+			account_id: accountId,
+			name,
+			config_src: "cloudflare",
+		});
+
+		if (!tunnel.id) {
+			throw new Error("Failed to create tunnel: tunnel ID is undefined");
+		}
+
+		const tunnelId = tunnel.id;
+
+		onTestFinished(async () => {
+			try {
+				await client.zeroTrust.tunnels.cloudflared.delete(tunnelId, {
+					account_id: accountId,
+				});
+			} catch (error) {
+				// Ignore deletion errors in cleanup
+				console.warn(`Failed to delete tunnel ${tunnelId}:`, error);
+			}
+		});
+
+		return tunnelId;
+	}
 }
