@@ -43,13 +43,10 @@ export const hyperdriveCreateCommand = createCommand({
 		);
 
 		await updateConfigFile(
+			"hyperdrive",
 			(name) => ({
-				hyperdrive: [
-					{
-						binding: getValidBindingName(name ?? "HYPERDRIVE", "HYPERDRIVE"),
-						id: database.id,
-					},
-				],
+				binding: getValidBindingName(name ?? "HYPERDRIVE", "HYPERDRIVE"),
+				id: database.id,
 			}),
 			config.configPath,
 			args.env
