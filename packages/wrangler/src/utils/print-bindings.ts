@@ -39,6 +39,7 @@ export const friendlyBindingNames: Record<
 	ratelimits: "Rate Limit",
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
+	vpc_services: "VPC Service",
 } as const;
 
 /**
@@ -92,6 +93,7 @@ export function printBindings(
 		logfwdr,
 		secrets_store_secrets,
 		services,
+		vpc_services,
 		analytics_engine_datasets,
 		text_blobs,
 		browser,
@@ -304,6 +306,19 @@ export function printBindings(
 					type: friendlyBindingNames.hyperdrive,
 					value: id,
 					mode: getMode({ isSimulatedLocally: true }),
+				};
+			})
+		);
+	}
+
+	if (vpc_services !== undefined && vpc_services.length > 0) {
+		output.push(
+			...vpc_services.map(({ binding, service_id }) => {
+				return {
+					name: binding,
+					type: friendlyBindingNames.vpc_services,
+					value: service_id,
+					mode: getMode({ isSimulatedLocally: false }),
 				};
 			})
 		);

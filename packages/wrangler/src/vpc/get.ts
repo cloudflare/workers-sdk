@@ -5,7 +5,7 @@ import { ServiceType } from "./index";
 
 export const vpcServiceGetCommand = createCommand({
 	metadata: {
-		description: "Get a VPC connectivity service",
+		description: "Get a VPC service",
 		status: "stable",
 		owner: "Product: WVPC",
 	},
@@ -13,28 +13,21 @@ export const vpcServiceGetCommand = createCommand({
 		"service-id": {
 			type: "string",
 			demandOption: true,
-			description: "The ID of the connectivity service",
+			description: "The ID of the VPC service",
 		},
 	},
 	positionalArgs: ["service-id"],
 	async handler(args, { config }) {
-		logger.log(`🔍 Getting VPC connectivity service '${args.serviceId}'`);
+		logger.log(`🔍 Getting VPC service '${args.serviceId}'`);
 
 		const service = await getService(config, args.serviceId);
 
-		logger.log(`✅ Retrieved VPC connectivity service: ${service.service_id}`);
+		logger.log(`✅ Retrieved VPC service: ${service.service_id}`);
 		logger.log(`   Name: ${service.name}`);
 		logger.log(`   Type: ${service.type}`);
 
 		// Display service-specific details
-		if (service.type === ServiceType.Tcp) {
-			if (service.tcp_port) {
-				logger.log(`   TCP Port: ${service.tcp_port}`);
-			}
-			if (service.app_protocol) {
-				logger.log(`   Protocol: ${service.app_protocol}`);
-			}
-		} else if (service.type === ServiceType.Http) {
+		if (service.type === ServiceType.Http) {
 			if (service.http_port) {
 				logger.log(`   HTTP Port: ${service.http_port}`);
 			}
@@ -59,9 +52,11 @@ export const vpcServiceGetCommand = createCommand({
 			logger.log(`   Tunnel ID: ${service.host.network.tunnel_id}`);
 		} else if (service.host.resolver_network) {
 			logger.log(`   Tunnel ID: ${service.host.resolver_network.tunnel_id}`);
-			logger.log(
-				`   Resolver IPs: ${service.host.resolver_network.resolver_ips.join(", ")}`
-			);
+			if (service.host.resolver_network.resolver_ips) {
+				logger.log(
+					`   Resolver IPs: ${service.host.resolver_network.resolver_ips.join(", ")}`
+				);
+			}
 		}
 
 		logger.log(`   Created: ${new Date(service.created_at).toLocaleString()}`);

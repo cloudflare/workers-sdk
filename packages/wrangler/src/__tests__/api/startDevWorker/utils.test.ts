@@ -74,6 +74,12 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 					class_name: "MyWorkflow",
 				},
 			],
+			vpc_services: [
+				{
+					binding: "MY_VPC_SERVICE",
+					service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+				},
+			],
 		});
 		expect(result).toEqual({
 			AI: {
@@ -125,6 +131,10 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 				name: "workflow",
 				type: "workflow",
 			},
+			MY_VPC_SERVICE: {
+				service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+				type: "vpc_service",
+			},
 		});
 	});
 
@@ -165,6 +175,7 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 			],
 			mtls_certificates: [],
 			workflows: [],
+			vpc_services: [],
 		});
 
 		assert(result);

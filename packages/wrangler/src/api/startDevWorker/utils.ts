@@ -287,6 +287,12 @@ export function convertCfWorkerInitBindingsToBindings(
 				}
 				break;
 			}
+			case "vpc_services": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "vpc_service", ...x };
+				}
+				break;
+			}
 			default: {
 				assertNever(type);
 			}
@@ -322,6 +328,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		hyperdrive: undefined,
 		secrets_store_secrets: undefined,
 		services: undefined,
+		vpc_services: undefined,
 		analytics_engine_datasets: undefined,
 		dispatch_namespaces: undefined,
 		mtls_certificates: undefined,
@@ -423,6 +430,9 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "ratelimit") {
 			bindings.ratelimits ??= [];
 			bindings.ratelimits.push({ ...binding, name: name });
+		} else if (binding.type === "vpc_service") {
+			bindings.vpc_services ??= [];
+			bindings.vpc_services.push({ ...binding, binding: name });
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],

@@ -6,7 +6,7 @@ import { serviceOptions, ServiceType } from "./index";
 
 export const vpcServiceCreateCommand = createCommand({
 	metadata: {
-		description: "Create a new VPC connectivity service",
+		description: "Create a new VPC service",
 		status: "stable",
 		owner: "Product: WVPC",
 	},
@@ -18,8 +18,7 @@ export const vpcServiceCreateCommand = createCommand({
 		// Validate arguments - this will throw UserError if validation fails
 		validateRequest({
 			name: args.name,
-			tcpPort: args.tcpPort,
-			appProtocol: args.appProtocol,
+			type: args.type as ServiceType,
 			httpPort: args.httpPort,
 			httpsPort: args.httpsPort,
 			ipv4: args.ipv4,
@@ -30,12 +29,11 @@ export const vpcServiceCreateCommand = createCommand({
 		});
 	},
 	async handler(args, { config }) {
-		logger.log(`🚧 Creating VPC connectivity service '${args.name}'`);
+		logger.log(`🚧 Creating VPC service '${args.name}'`);
 
 		const request = buildRequest({
 			name: args.name,
-			tcpPort: args.tcpPort,
-			appProtocol: args.appProtocol,
+			type: args.type as ServiceType,
 			httpPort: args.httpPort,
 			httpsPort: args.httpsPort,
 			ipv4: args.ipv4,
@@ -47,19 +45,12 @@ export const vpcServiceCreateCommand = createCommand({
 
 		const service = await createService(config, request);
 
-		logger.log(`✅ Created VPC connectivity service: ${service.service_id}`);
+		logger.log(`✅ Created VPC service: ${service.service_id}`);
 		logger.log(`   Name: ${service.name}`);
 		logger.log(`   Type: ${service.type}`);
 
 		// Display service-specific details
-		if (service.type === ServiceType.Tcp) {
-			if (service.tcp_port) {
-				logger.log(`   TCP Port: ${service.tcp_port}`);
-			}
-			if (service.app_protocol) {
-				logger.log(`   Protocol: ${service.app_protocol}`);
-			}
-		} else if (service.type === ServiceType.Http) {
+		if (service.type === ServiceType.Http) {
 			if (service.http_port) {
 				logger.log(`   HTTP Port: ${service.http_port}`);
 			}
@@ -84,9 +75,11 @@ export const vpcServiceCreateCommand = createCommand({
 			logger.log(`   Tunnel ID: ${service.host.network.tunnel_id}`);
 		} else if (service.host.resolver_network) {
 			logger.log(`   Tunnel ID: ${service.host.resolver_network.tunnel_id}`);
-			logger.log(
-				`   Resolver IPs: ${service.host.resolver_network.resolver_ips.join(", ")}`
-			);
+			if (service.host.resolver_network.resolver_ips) {
+				logger.log(
+					`   Resolver IPs: ${service.host.resolver_network.resolver_ips.join(", ")}`
+				);
+			}
 		}
 	},
 });

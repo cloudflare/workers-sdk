@@ -6,7 +6,7 @@ import { serviceOptions, ServiceType } from "./index";
 
 export const vpcServiceUpdateCommand = createCommand({
 	metadata: {
-		description: "Update a VPC connectivity service",
+		description: "Update a VPC service",
 		status: "stable",
 		owner: "Product: WVPC",
 	},
@@ -14,7 +14,7 @@ export const vpcServiceUpdateCommand = createCommand({
 		"service-id": {
 			type: "string",
 			demandOption: true,
-			description: "The ID of the connectivity service to update",
+			description: "The ID of the VPC service to update",
 		},
 		...serviceOptions,
 	},
@@ -23,8 +23,7 @@ export const vpcServiceUpdateCommand = createCommand({
 		// Validate arguments - this will throw UserError if validation fails
 		validateRequest({
 			name: args.name,
-			tcpPort: args.tcpPort,
-			appProtocol: args.appProtocol,
+			type: args.type as ServiceType,
 			httpPort: args.httpPort,
 			httpsPort: args.httpsPort,
 			ipv4: args.ipv4,
@@ -35,12 +34,11 @@ export const vpcServiceUpdateCommand = createCommand({
 		});
 	},
 	async handler(args, { config }) {
-		logger.log(`🚧 Updating VPC connectivity service '${args.serviceId}'`);
+		logger.log(`🚧 Updating VPC service '${args.serviceId}'`);
 
 		const request = buildRequest({
 			name: args.name,
-			tcpPort: args.tcpPort,
-			appProtocol: args.appProtocol,
+			type: args.type as ServiceType,
 			httpPort: args.httpPort,
 			httpsPort: args.httpsPort,
 			ipv4: args.ipv4,
@@ -52,19 +50,12 @@ export const vpcServiceUpdateCommand = createCommand({
 
 		const service = await updateService(config, args.serviceId, request);
 
-		logger.log(`✅ Updated VPC connectivity service: ${service.service_id}`);
+		logger.log(`✅ Updated VPC service: ${service.service_id}`);
 		logger.log(`   Name: ${service.name}`);
 		logger.log(`   Type: ${service.type}`);
 
 		// Display service-specific details
-		if (service.type === ServiceType.Tcp) {
-			if (service.tcp_port) {
-				logger.log(`   TCP Port: ${service.tcp_port}`);
-			}
-			if (service.app_protocol) {
-				logger.log(`   Protocol: ${service.app_protocol}`);
-			}
-		} else if (service.type === ServiceType.Http) {
+		if (service.type === ServiceType.Http) {
 			if (service.http_port) {
 				logger.log(`   HTTP Port: ${service.http_port}`);
 			}
@@ -89,9 +80,11 @@ export const vpcServiceUpdateCommand = createCommand({
 			logger.log(`   Tunnel ID: ${service.host.network.tunnel_id}`);
 		} else if (service.host.resolver_network) {
 			logger.log(`   Tunnel ID: ${service.host.resolver_network.tunnel_id}`);
-			logger.log(
-				`   Resolver IPs: ${service.host.resolver_network.resolver_ips.join(", ")}`
-			);
+			if (service.host.resolver_network.resolver_ips) {
+				logger.log(
+					`   Resolver IPs: ${service.host.resolver_network.resolver_ips.join(", ")}`
+				);
+			}
 		}
 	},
 });

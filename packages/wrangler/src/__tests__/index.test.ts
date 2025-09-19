@@ -65,7 +65,7 @@ describe("wrangler", () => {
 				  wrangler secrets-store          🔐 Manage the Secrets Store [alpha]
 				  wrangler workflows              🔁 Manage Workflows
 				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open-beta]
-				  wrangler vpc                    🌐 Manage VPC connectivity [private-beta]
+				  wrangler vpc                    🌐 Manage VPC [open-beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
@@ -127,7 +127,7 @@ describe("wrangler", () => {
 				  wrangler secrets-store          🔐 Manage the Secrets Store [alpha]
 				  wrangler workflows              🔁 Manage Workflows
 				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open-beta]
-				  wrangler vpc                    🌐 Manage VPC connectivity [private-beta]
+				  wrangler vpc                    🌐 Manage VPC [open-beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information

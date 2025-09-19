@@ -139,6 +139,7 @@ export type ConfigBindingOptions = Pick<
 	| "mtls_certificates"
 	| "vectorize"
 	| "workflows"
+	| "vpc_services"
 >;
 
 /**

@@ -31,6 +31,7 @@ import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
 import { SECRET_STORE_PLUGIN, SECRET_STORE_PLUGIN_NAME } from "./secret-store";
 import { VECTORIZE_PLUGIN, VECTORIZE_PLUGIN_NAME } from "./vectorize";
+import { VPC_SERVICES_PLUGIN, VPC_SERVICES_PLUGIN_NAME } from "./vpc-services";
 import {
 	WORKER_LOADER_PLUGIN,
 	WORKER_LOADER_PLUGIN_NAME,
@@ -58,6 +59,7 @@ export const PLUGINS = {
 	[DISPATCH_NAMESPACE_PLUGIN_NAME]: DISPATCH_NAMESPACE_PLUGIN,
 	[IMAGES_PLUGIN_NAME]: IMAGES_PLUGIN,
 	[VECTORIZE_PLUGIN_NAME]: VECTORIZE_PLUGIN,
+	[VPC_SERVICES_PLUGIN_NAME]: VPC_SERVICES_PLUGIN,
 	[MTLS_PLUGIN_NAME]: MTLS_PLUGIN,
 	[HELLO_WORLD_PLUGIN_NAME]: HELLO_WORLD_PLUGIN,
 	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
@@ -119,6 +121,7 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof DISPATCH_NAMESPACE_PLUGIN.options> &
 	z.input<typeof IMAGES_PLUGIN.options> &
 	z.input<typeof VECTORIZE_PLUGIN.options> &
+	z.input<typeof VPC_SERVICES_PLUGIN.options> &
 	z.input<typeof MTLS_PLUGIN.options> &
 	z.input<typeof HELLO_WORLD_PLUGIN.options> &
 	z.input<typeof WORKER_LOADER_PLUGIN.options>;
@@ -190,6 +193,7 @@ export * from "./browser-rendering";
 export * from "./dispatch-namespace";
 export * from "./images";
 export * from "./vectorize";
+export * from "./vpc-services";
 export * from "./mtls";
 export * from "./hello-world";
 export * from "./worker-loader";
