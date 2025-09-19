@@ -26,17 +26,21 @@ describe("updateConfigFile()", () => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		await updateConfigFile(
-			(name) => ({ ai: { binding: name ?? "AI" } }),
+			"kv_namespaces",
+			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
 			undefined,
 			true
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"To access your new AI in your Worker, add the following snippet to your configuration file:
+			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"ai\\": {
-			    \\"binding\\": \\"AI\\"
-			  }
+			  \\"kv_namespaces\\": [
+			    {
+			      \\"binding\\": \\"KV\\",
+			      \\"id\\": \\"random-id\\"
+			    }
+			  ]
 			}
 			? Would you like Wrangler to add it on your behalf?
 			🤖 Using fallback value in non-interactive context: No"
@@ -56,17 +60,21 @@ describe("updateConfigFile()", () => {
 		});
 
 		await updateConfigFile(
-			(name) => ({ ai: { binding: name ?? "AI" } }),
+			"kv_namespaces",
+			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
 			undefined,
 			true
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"To access your new AI in your Worker, add the following snippet to your configuration file:
+			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"ai\\": {
-			    \\"binding\\": \\"AI\\"
-			  }
+			  \\"kv_namespaces\\": [
+			    {
+			      \\"binding\\": \\"KV\\",
+			      \\"id\\": \\"random-id\\"
+			    }
+			  ]
 			}"
 		`);
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
@@ -84,17 +92,21 @@ describe("updateConfigFile()", () => {
 		});
 
 		await updateConfigFile(
-			(name) => ({ ai: { binding: name ?? "AI" } }),
+			"kv_namespaces",
+			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
 			undefined,
 			true
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"To access your new AI in your Worker, add the following snippet to your configuration file:
+			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"ai\\": {
-			    \\"binding\\": \\"AI\\"
-			  }
+			  \\"kv_namespaces\\": [
+			    {
+			      \\"binding\\": \\"KV\\",
+			      \\"id\\": \\"random-id\\"
+			    }
+			  ]
 			}"
 		`);
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
@@ -102,9 +114,13 @@ describe("updateConfigFile()", () => {
 			"{
 				\\"compatibility_date\\": \\"2022-01-12\\",
 				\\"name\\": \\"worker\\",
-				\\"ai\\": {
-					\\"binding\\": \\"AI\\"
-				}
+				\\"kv_namespaces\\": [
+					{
+						\\"binding\\": \\"KV\\",
+						\\"id\\": \\"random-id\\",
+						// \\"remote\\" : true // proxy requests to remote resource during local dev, defaults to \`false\`
+					}
+				]
 			}"
 		`
 		);
@@ -120,17 +136,21 @@ describe("updateConfigFile()", () => {
 		});
 
 		await updateConfigFile(
-			(name) => ({ ai: { binding: name ?? "AI" } }),
+			"kv_namespaces",
+			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
 			"testEnv",
 			true
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"To access your new AI in your Worker, add the following snippet to your configuration file in the \\"testEnv\\" environment:
+			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file in the \\"testEnv\\" environment:
 			{
-			  \\"ai\\": {
-			    \\"binding\\": \\"AI\\"
-			  }
+			  \\"kv_namespaces\\": [
+			    {
+			      \\"binding\\": \\"KV\\",
+			      \\"id\\": \\"random-id\\"
+			    }
+			  ]
 			}"
 		`);
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
@@ -140,9 +160,13 @@ describe("updateConfigFile()", () => {
 				\\"name\\": \\"worker\\",
 				\\"env\\": {
 					\\"testEnv\\": {
-						\\"ai\\": {
-							\\"binding\\": \\"AI\\"
-						}
+						\\"kv_namespaces\\": [
+							{
+								\\"binding\\": \\"KV\\",
+								\\"id\\": \\"random-id\\",
+								// \\"remote\\" : true // proxy requests to remote resource during local dev, defaults to \`false\`
+							}
+						]
 					}
 				}
 			}"
@@ -165,17 +189,21 @@ describe("updateConfigFile()", () => {
 		});
 
 		await updateConfigFile(
-			(name) => ({ ai: { binding: name ?? "AI" } }),
+			"kv_namespaces",
+			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
 			undefined,
 			true
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"To access your new AI in your Worker, add the following snippet to your configuration file:
+			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"ai\\": {
-			    \\"binding\\": \\"AI\\"
-			  }
+			  \\"kv_namespaces\\": [
+			    {
+			      \\"binding\\": \\"KV\\",
+			      \\"id\\": \\"random-id\\"
+			    }
+			  ]
 			}"
 		`);
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
@@ -183,9 +211,13 @@ describe("updateConfigFile()", () => {
 			"{
 				\\"compatibility_date\\": \\"2022-01-12\\",
 				\\"name\\": \\"worker\\",
-				\\"ai\\": {
-					\\"binding\\": \\"HELLO\\"
-				}
+				\\"kv_namespaces\\": [
+					{
+						\\"binding\\": \\"KV\\",
+						\\"id\\": \\"random-id\\",
+						// \\"remote\\" : true // proxy requests to remote resource during local dev, defaults to \`false\`
+					}
+				]
 			}"
 		`
 		);
@@ -197,15 +229,17 @@ describe("updateConfigFile()", () => {
 		setIsTTY(true);
 
 		await updateConfigFile(
-			(name) => ({ ai: { binding: name ?? "AI" } }),
+			"kv_namespaces",
+			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.toml",
 			undefined,
 			true
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"To access your new AI in your Worker, add the following snippet to your configuration file:
-			[ai]
-			binding = \\"AI\\"
+			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
+			[[kv_namespaces]]
+			binding = \\"KV\\"
+			id = \\"random-id\\"
 			"
 		`);
 		expect(await readFile("wrangler.toml", "utf8")).toMatchInlineSnapshot(
@@ -221,17 +255,21 @@ describe("updateConfigFile()", () => {
 		setIsTTY(true);
 
 		await updateConfigFile(
-			(name) => ({ ai: { binding: name ?? "AI" } }),
+			"kv_namespaces",
+			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			undefined,
 			undefined,
 			true
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"To access your new AI in your Worker, add the following snippet to your configuration file:
+			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"ai\\": {
-			    \\"binding\\": \\"AI\\"
-			  }
+			  \\"kv_namespaces\\": [
+			    {
+			      \\"binding\\": \\"KV\\",
+			      \\"id\\": \\"random-id\\"
+			    }
+			  ]
 			}"
 		`);
 		await expect(readFile("wrangler.json", "utf8")).rejects.toThrowError(
@@ -243,25 +281,22 @@ describe("updateConfigFile()", () => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		await updateConfigFile(
+			"d1_databases",
 			() => ({
-				kv_namespaces: [
-					{
-						binding: "KV",
-						id: "id",
-					},
-				],
+				binding: "D1",
+				database_id: "database_id",
 			}),
 			"wrangler.json",
 			undefined,
 			true
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
+			"To access your new D1 Database in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"kv_namespaces\\": [
+			  \\"d1_databases\\": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"id\\"
+			      \\"binding\\": \\"D1\\",
+			      \\"database_id\\": \\"database_id\\"
 			    }
 			  ]
 			}

@@ -115,13 +115,10 @@ export const vectorizeCreateCommand = createCommand({
 		);
 
 		await updateConfigFile(
+			"vectorize",
 			(name) => ({
-				vectorize: [
-					{
-						binding: getValidBindingName(name ?? bindingName, bindingName),
-						index_name: indexResult.name,
-					},
-				],
+				binding: getValidBindingName(name ?? bindingName, bindingName),
+				index_name: indexResult.name,
 			}),
 			config.configPath,
 			args.env

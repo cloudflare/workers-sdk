@@ -17,7 +17,8 @@ export const experimental_patchConfig = (
 	 * and set isArrayInsertion = false
 	 */
 	patch: RawConfig,
-	isArrayInsertion: boolean = true
+	isArrayInsertion: boolean = true,
+	replacers: [string, string][] = []
 ) => {
 	let configString = readFileSync(configPath);
 
@@ -48,6 +49,9 @@ export const experimental_patchConfig = (
 
 	if (configPath.endsWith(".toml")) {
 		configString = TOML.stringify(parseJSONC(configString) as JsonMap);
+	}
+	for (const [from, to] of replacers) {
+		configString = configString.replace(from, to);
 	}
 	writeFileSync(configPath, configString);
 	return configString;
