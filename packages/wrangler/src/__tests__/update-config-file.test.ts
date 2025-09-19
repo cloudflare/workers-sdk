@@ -42,7 +42,12 @@ describe("updateConfigFile()", () => {
 			🤖 Using fallback value in non-interactive context: No"
 		`);
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
-			`"{\\"compatibility_date\\":\\"2022-01-12\\",\\"name\\":\\"worker\\"}"`
+			`
+			"{
+			  \\"compatibility_date\\": \\"2022-01-12\\",
+			  \\"name\\": \\"worker\\"
+			}"
+		`
 		);
 	});
 
@@ -70,7 +75,12 @@ describe("updateConfigFile()", () => {
 			}"
 		`);
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
-			`"{\\"compatibility_date\\":\\"2022-01-12\\",\\"name\\":\\"worker\\"}"`
+			`
+			"{
+			  \\"compatibility_date\\": \\"2022-01-12\\",
+			  \\"name\\": \\"worker\\"
+			}"
+		`
 		);
 	});
 
