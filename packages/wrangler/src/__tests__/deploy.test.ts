@@ -64,13 +64,13 @@ import {
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
+import { yieldRequestsFrom } from "./helpers/yield-requests-from";
 import type { AssetManifest } from "../assets";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 import type { ServiceMetadataRes } from "../init";
 import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
-import type { ResponseResolver } from "msw";
 import type { FormData } from "undici";
 import type { Mock } from "vitest";
 
@@ -103,6 +103,7 @@ describe("deploy", () => {
 		setIsTTY(true);
 		mockLastDeploymentRequest();
 		mockDeploymentsListRequest();
+		mockPatchScriptSettings();
 		msw.use(...mswListNewDeploymentsLatestFull);
 	});
 
@@ -13287,20 +13288,15 @@ export default{
 			mockLastDeploymentRequest();
 			mockDeploymentsListRequest();
 			msw.use(...mswListNewDeploymentsLatestFull);
-			mockGetWorkerSubdomain({
-				enabled: true,
-			});
 
 			mockSubDomainRequest();
 			writeWorkerSource();
 			setIsTTY(false);
 		});
 
-		test("has environments, no existing tags, top-level env", async ({
-			expect,
-		}) => {
-			mockUploadWorkerRequest();
+		test("has environments, no existing tags, top-level env", async () => {
 			mockGetScriptWithTags(null);
+			mockUploadWorkerRequest();
 
 			writeWranglerConfig({
 				name: "test-name",
@@ -13310,25 +13306,25 @@ export default{
 				},
 			});
 
-			expect.assertions(1);
-			let requestCount = 0;
-			mockPatchScriptSettings(async ({ request }) => {
-				requestCount++;
-				if (requestCount === 2) {
-					await expect(request.json()).resolves.toEqual({
-						tags: ["cf:service=test-name"],
-					});
-				}
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy");
+			const done = runWrangler("deploy");
+
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.toHaveProperty("tags", [
+				"cf:service=test-name",
+			]);
+
+			await done;
 		});
 
-		test("has environments, no existing tags, named env", async ({
-			expect,
-		}) => {
-			mockUploadWorkerRequest({ expectedScriptName: "test-name-production" });
+		test("has environments, no existing tags, named env", async () => {
 			mockGetScriptWithTags(null);
+			mockUploadWorkerRequest({
+				env: "production",
+				legacyEnv: true,
+			});
 
 			writeWranglerConfig({
 				name: "test-name",
@@ -13338,25 +13334,23 @@ export default{
 				},
 			});
 
-			expect.assertions(1);
-			let requestCount = 0;
-			mockPatchScriptSettings(async ({ request }) => {
-				requestCount++;
-				if (requestCount === 2) {
-					await expect(request.json()).resolves.toEqual({
-						tags: ["cf:service=test-name", "cf:environment=production"],
-					});
-				}
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy --env production");
+			const done = runWrangler("deploy --env production");
+
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.toHaveProperty("tags", [
+				"cf:service=test-name",
+				"cf:environment=production",
+			]);
+
+			await done;
 		});
 
-		test("has environments, missing tags, top-level env", async ({
-			expect,
-		}) => {
-			mockUploadWorkerRequest();
+		test("has environments, missing tags, top-level env", async () => {
 			mockGetScriptWithTags(["some-tag"]);
+			mockUploadWorkerRequest();
 
 			writeWranglerConfig({
 				name: "test-name",
@@ -13366,23 +13360,26 @@ export default{
 				},
 			});
 
-			expect.assertions(1);
-			let requestCount = 0;
-			mockPatchScriptSettings(async ({ request }) => {
-				requestCount++;
-				if (requestCount === 2) {
-					await expect(request.json()).resolves.toEqual({
-						tags: ["some-tag", "cf:service=test-name"],
-					});
-				}
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy");
+			const done = runWrangler("deploy");
+
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.toHaveProperty("tags", [
+				"some-tag",
+				"cf:service=test-name",
+			]);
+
+			await done;
 		});
 
-		test("has environments, missing tags, named env", async ({ expect }) => {
-			mockUploadWorkerRequest({ expectedScriptName: "test-name-production" });
+		test("has environments, missing tags, named env", async () => {
 			mockGetScriptWithTags(["some-tag"]);
+			mockUploadWorkerRequest({
+				env: "production",
+				legacyEnv: true,
+			});
 
 			writeWranglerConfig({
 				name: "test-name",
@@ -13392,29 +13389,27 @@ export default{
 				},
 			});
 
-			expect.assertions(1);
-			let requestCount = 0;
-			mockPatchScriptSettings(async ({ request }) => {
-				requestCount++;
-				if (requestCount === 2) {
-					await expect(request.json()).resolves.toEqual({
-						tags: [
-							"some-tag",
-							"cf:service=test-name",
-							"cf:environment=production",
-						],
-					});
-				}
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy --env production");
+			const done = runWrangler("deploy --env production");
+
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.toHaveProperty("tags", [
+				"some-tag",
+				"cf:service=test-name",
+				"cf:environment=production",
+			]);
+
+			await done;
 		});
 
-		test("has environments, missing environment tag, top-level env", async ({
-			expect,
-		}) => {
-			mockUploadWorkerRequest();
+		test("has environments, missing environment tag, named env", async () => {
 			mockGetScriptWithTags(["some-tag", "cf:service=test-name"]);
+			mockUploadWorkerRequest({
+				env: "production",
+				legacyEnv: true,
+			});
 
 			writeWranglerConfig({
 				name: "test-name",
@@ -13424,50 +13419,24 @@ export default{
 				},
 			});
 
-			mockPatchScriptSettings(async ({ request }) => {
-				await expect(request.json()).resolves.not.toHaveProperty("tags");
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy");
+			const done = runWrangler("deploy --env production");
+
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.toHaveProperty("tags", [
+				"some-tag",
+				"cf:service=test-name",
+				"cf:environment=production",
+			]);
+
+			await done;
 		});
 
-		test("has environments, missing environment tag, named env", async ({
-			expect,
-		}) => {
-			mockUploadWorkerRequest({ expectedScriptName: "test-name-production" });
-			mockGetScriptWithTags(["some-tag", "cf:service=test-name"]);
-
-			writeWranglerConfig({
-				name: "test-name",
-				main: "./index.js",
-				env: {
-					production: {},
-				},
-			});
-
-			expect.assertions(1);
-			let requestCount = 0;
-			mockPatchScriptSettings(async ({ request }) => {
-				requestCount++;
-				if (requestCount === 2) {
-					await expect(request.json()).resolves.toEqual({
-						tags: [
-							"some-tag",
-							"cf:service=test-name",
-							"cf:environment=production",
-						],
-					});
-				}
-			});
-
-			await runWrangler("deploy --env production");
-		});
-
-		test("has environments, stale service tag, top-level env", async ({
-			expect,
-		}) => {
-			mockUploadWorkerRequest();
+		test("has environments, stale service tag, top-level env", async () => {
 			mockGetScriptWithTags(["some-tag", "cf:service=some-other-service"]);
+			mockUploadWorkerRequest();
 
 			writeWranglerConfig({
 				name: "test-name",
@@ -13477,29 +13446,30 @@ export default{
 				},
 			});
 
-			expect.assertions(1);
-			let requestCount = 0;
-			mockPatchScriptSettings(async ({ request }) => {
-				requestCount++;
-				if (requestCount === 2) {
-					await expect(request.json()).resolves.toEqual({
-						tags: ["some-tag", "cf:service=test-name"],
-					});
-				}
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy");
+			const done = runWrangler("deploy");
+
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.toHaveProperty("tags", [
+				"some-tag",
+				"cf:service=test-name",
+			]);
+
+			await done;
 		});
 
-		test("has environments, stale service tag, named env", async ({
-			expect,
-		}) => {
-			mockUploadWorkerRequest({ expectedScriptName: "test-name-production" });
+		test("has environments, stale service tag, named env", async () => {
 			mockGetScriptWithTags([
 				"some-tag",
 				"cf:service=some-other-service",
 				"cf:environment=production",
 			]);
+			mockUploadWorkerRequest({
+				env: "production",
+				legacyEnv: true,
+			});
 
 			writeWranglerConfig({
 				name: "test-name",
@@ -13509,33 +13479,28 @@ export default{
 				},
 			});
 
-			expect.assertions(1);
-			let requestCount = 0;
-			mockPatchScriptSettings(async ({ request }) => {
-				requestCount++;
-				if (requestCount === 2) {
-					await expect(request.json()).resolves.toEqual({
-						tags: [
-							"some-tag",
-							"cf:service=test-name",
-							"cf:environment=production",
-						],
-					});
-				}
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy --env production");
+			const done = runWrangler("deploy --env production");
+
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.toHaveProperty("tags", [
+				"some-tag",
+				"cf:service=test-name",
+				"cf:environment=production",
+			]);
+
+			await done;
 		});
 
-		test("has environments, stale environment tag, top-level env", async ({
-			expect,
-		}) => {
-			mockUploadWorkerRequest();
+		test("has environments, stale environment tag, top-level env", async () => {
 			mockGetScriptWithTags([
 				"some-tag",
 				"cf:service=test-name",
 				"cf:environment=some-other-env",
 			]);
+			mockUploadWorkerRequest();
 
 			writeWranglerConfig({
 				name: "test-name",
@@ -13545,29 +13510,30 @@ export default{
 				},
 			});
 
-			expect.assertions(1);
-			let requestCount = 0;
-			mockPatchScriptSettings(async ({ request }) => {
-				requestCount++;
-				if (requestCount === 2) {
-					await expect(request.json()).resolves.toEqual({
-						tags: ["some-tag", "cf:service=test-name"],
-					});
-				}
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy");
+			const done = runWrangler("deploy");
+
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.toHaveProperty("tags", [
+				"some-tag",
+				"cf:service=test-name",
+			]);
+
+			await done;
 		});
 
-		test("has environments, stale environment tag, named env", async ({
-			expect,
-		}) => {
-			mockUploadWorkerRequest({ expectedScriptName: "test-name-production" });
+		test("has environments, stale environment tag, named env", async () => {
 			mockGetScriptWithTags([
 				"some-tag",
 				"cf:service=test-name",
 				"cf:environment=some-other-env",
 			]);
+			mockUploadWorkerRequest({
+				env: "production",
+				legacyEnv: true,
+			});
 
 			writeWranglerConfig({
 				name: "test-name",
@@ -13577,29 +13543,24 @@ export default{
 				},
 			});
 
-			expect.assertions(1);
-			let requestCount = 0;
-			mockPatchScriptSettings(async ({ request }) => {
-				requestCount++;
-				if (requestCount === 2) {
-					await expect(request.json()).resolves.toEqual({
-						tags: [
-							"some-tag",
-							"cf:service=test-name",
-							"cf:environment=production",
-						],
-					});
-				}
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy --env production");
+			const done = runWrangler("deploy --env production");
+
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.toHaveProperty("tags", [
+				"some-tag",
+				"cf:service=test-name",
+				"cf:environment=production",
+			]);
+
+			await done;
 		});
 
-		test("has environments, has expected tags, top-level env", async ({
-			expect,
-		}) => {
-			mockUploadWorkerRequest();
+		test("has environments, has expected tags, top-level env", async () => {
 			mockGetScriptWithTags(["some-tag", "cf:service=test-name"]);
+			mockUploadWorkerRequest();
 
 			writeWranglerConfig({
 				name: "test-name",
@@ -13609,22 +13570,27 @@ export default{
 				},
 			});
 
-			mockPatchScriptSettings(async ({ request }) => {
-				await expect(request.json()).resolves.not.toHaveProperty("tags");
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy");
+			const done = runWrangler("deploy");
+
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.not.toHaveProperty("tags");
+
+			await done;
 		});
 
-		test("has environments, has expected tags, named env", async ({
-			expect,
-		}) => {
-			mockUploadWorkerRequest({ expectedScriptName: "test-name-production" });
+		test("has environments, has expected tags, named env", async () => {
 			mockGetScriptWithTags([
 				"some-tag",
 				"cf:service=test-name",
 				"cf:environment=production",
 			]);
+			mockUploadWorkerRequest({
+				env: "production",
+				legacyEnv: true,
+			});
 
 			writeWranglerConfig({
 				name: "test-name",
@@ -13634,36 +13600,49 @@ export default{
 				},
 			});
 
-			mockPatchScriptSettings(async ({ request }) => {
-				await expect(request.json()).resolves.not.toHaveProperty("tags");
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy --env production");
+			const done = runWrangler("deploy --env production");
+
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.not.toHaveProperty("tags");
+
+			await done;
 		});
 
-		test("no environments", async ({ expect }) => {
-			mockUploadWorkerRequest();
+		test("no environments", async () => {
 			mockGetScriptWithTags([
 				"some-tag",
 				"cf:service=some-other-service",
 				"cf:environment=some-other-env",
 			]);
+			mockUploadWorkerRequest();
 
 			writeWranglerConfig({
 				name: "test-name",
 				main: "./index.js",
 			});
 
-			mockPatchScriptSettings(async ({ request }) => {
-				await expect(request.json()).resolves.not.toHaveProperty("tags");
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy");
+			const done = runWrangler("deploy");
+
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.toHaveProperty("tags", [
+				"some-tag",
+			]);
+
+			await done;
 		});
 
-		test("no top-level name", async ({ expect }) => {
-			mockUploadWorkerRequest({ expectedScriptName: "test-name-production" });
+		test("no top-level name", async () => {
 			mockGetScriptWithTags(["some-tag", "cf:service=undefined"]);
+			mockUploadWorkerRequest({
+				env: "production",
+				legacyEnv: true,
+			});
 
 			writeWranglerConfig({
 				name: undefined,
@@ -13675,19 +13654,17 @@ export default{
 				},
 			});
 
-			expect.assertions(2);
-			let requestCount = 0;
-			mockPatchScriptSettings(async ({ request }) => {
-				requestCount++;
-				if (requestCount === 2) {
-					await expect(request.json()).resolves.toEqual({
-						tags: ["some-tag"],
-					});
-				}
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy --env production");
+			const done = runWrangler("deploy --env production");
 
+			const { value: request } = await patchScriptSettings.next();
+
+			await expect(request.json()).resolves.toHaveProperty("tags", [
+				"some-tag",
+			]);
+
+			await done;
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in Wrangler configuration. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
 
@@ -13695,9 +13672,46 @@ export default{
 			`);
 		});
 
+		test("displays warning when error updating tags", async () => {
+			mockGetScriptWithTags([
+				"some-tag",
+				"cf:service=some-other-service",
+				"cf:environment=some-other-env",
+			]);
+			mockUploadWorkerRequest({
+				env: "production",
+				legacyEnv: true,
+			});
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				env: {
+					production: {},
+				},
+			});
+
+			msw.use(
+				http.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/script-settings`,
+					() => HttpResponse.error()
+				)
+			);
+
+			await runWrangler("deploy --env production");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mCould not apply service and environment tags. This Worker will not appear grouped together with its sibling environments in the Cloudflare dashboard.[0m
+
+				"
+			`);
+		});
+
 		test("environments with redirected config", async ({ expect }) => {
-			mockUploadWorkerRequest({ expectedScriptName: "test-name-production" });
 			mockGetScriptWithTags(["some-tag"]);
+			mockUploadWorkerRequest({
+				expectedScriptName: "test-name-production",
+			});
 
 			writeWranglerConfig(
 				{
@@ -13724,67 +13738,24 @@ export default{
 				"./dist/wrangler.json"
 			);
 
-			expect.assertions(2);
-			let requestCount = 0;
-			mockPatchScriptSettings(async ({ request }) => {
-				requestCount++;
-				if (requestCount === 2) {
-					await expect(request.json()).resolves.toEqual({
-						tags: [
-							"some-tag",
-							"cf:service=test-name",
-							"cf:environment=production",
-						],
-					});
-				}
-			});
+			const patchScriptSettings = mockPatchScriptSettings();
 
-			await runWrangler("deploy");
+			const done = runWrangler("deploy");
 
-			expect(std.info).toContain(dedent`
-				Using redirected Wrangler configuration.
-				 - Configuration being used: "dist/wrangler.json"
-				 - Original user's configuration: "wrangler.toml"
-				 - Deploy configuration file: ".wrangler/deploy/config.json"`);
-		});
+			const { value: request } = await patchScriptSettings.next();
 
-		test("displays warning when error updating tags", async ({ expect }) => {
-			mockUploadWorkerRequest({ expectedScriptName: "test-name-production" });
-			mockGetScriptWithTags([
+			await expect(request.json()).resolves.toHaveProperty("tags", [
 				"some-tag",
-				"cf:service=some-other-service",
-				"cf:environment=some-other-env",
+				"cf:service=test-name",
+				"cf:environment=production",
 			]);
 
-			writeWranglerConfig({
-				name: "test-name",
-				main: "./index.js",
-				env: {
-					production: {},
-				},
-			});
-
-			let requestCount = 0;
-			msw.use(
-				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/script-settings`,
-					() => {
-						requestCount++;
-						if (requestCount === 2) {
-							return HttpResponse.error();
-						}
-
-						return HttpResponse.json(createFetchResult({}));
-					}
-				)
-			);
-
-			await runWrangler("deploy --env production");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mCould not apply service and environment tags. This Worker will not appear grouped together with its sibling environments in the Cloudflare dashboard.[0m
-
-				"
+			await done;
+			expect(std.info).toMatchInlineSnapshot(`
+				"Using redirected Wrangler configuration.
+				 - Configuration being used: \\"dist/wrangler.json\\"
+				 - Original user's configuration: \\"wrangler.toml\\"
+				 - Deploy configuration file: \\".wrangler/deploy/config.json\\""
 			`);
 		});
 	});
@@ -14562,19 +14533,14 @@ function mockGetScriptWithTags(tags: string[] | null) {
 	);
 }
 
-function mockPatchScriptSettings(callback?: ResponseResolver) {
-	const handler = http.patch(
+const mockPatchScriptSettings = yieldRequestsFrom(
+	http.patch(
 		`*/accounts/:accountId/workers/scripts/:scriptName/script-settings`,
-		async (ctx) => {
-			await callback?.(ctx);
-			return HttpResponse.json(createFetchResult({}));
+		async ({ request }) => {
+			return HttpResponse.json(createFetchResult(await request.clone().json()));
 		}
-	);
-
-	msw.use(handler);
-
-	return handler;
-}
+	)
+);
 
 function mockPutQueueConsumerById(
 	expectedQueueId: string,
