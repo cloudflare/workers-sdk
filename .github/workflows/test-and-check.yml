@@ -161,7 +161,7 @@ jobs:
         # We are running Wrangler separately because we were getting flakes in the remote-bindings.test.ts tests
         # when running all tests together.
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --log-order=stream --filter=wrangler --force -- remote-bindings
+        run: pnpm run test:ci --log-order=stream --filter=wrangler --force
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
