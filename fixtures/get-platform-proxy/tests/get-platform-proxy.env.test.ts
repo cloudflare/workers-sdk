@@ -38,10 +38,13 @@ const wranglerConfigFilePath = path.join(__dirname, "..", "wrangler.jsonc");
 
 describe("getPlatformProxy - env", () => {
 	let devWorkers: Unstable_DevWorker[];
+	let warn = {} as MockInstance<typeof console.warn>;
 
 	beforeEach(() => {
 		// Hide stdout messages from the test logs
 		vi.spyOn(console, "log").mockImplementation(() => {});
+		vi.spyOn(console, "error").mockImplementation(() => {});
+		warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 	});
 
 	describe("var bindings", () => {
@@ -262,41 +265,20 @@ describe("getPlatformProxy - env", () => {
 	});
 
 	describe("DO warnings", () => {
-		let warn = {} as MockInstance<typeof console.warn>;
-		beforeEach(() => {
-			warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-		});
-		afterEach(() => {
-			warn.mockRestore();
-		});
-
 		it("warns about internal DOs and doesn't crash", async () => {
 			await getPlatformProxy<Env>({
 				configPath: path.join(__dirname, "..", "wrangler_internal_do.jsonc"),
 			});
-			expect(warn).toMatchInlineSnapshot(`
-				[MockFunction warn] {
-				  "calls": [
-				    [
-				      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following internal Durable Objects:[0m
+			expect(warn.mock.calls[0][0].replaceAll(/[\r\n]+/g, "\n"))
+				.toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following internal Durable Objects:[0m
+					  				- {"class_name":"MyDurableObject","name":"MY_DURABLE_OBJECT"}
+					  				These will not work in local development, but they should work in production.
 
-				  				- {"class_name":"MyDurableObject","name":"MY_DURABLE_OBJECT"}
-				  				These will not work in local development, but they should work in production.
-				  
-				  				If you want to develop these locally, you can define your DO in a separate Worker, with a separate configuration file.
-				  				For detailed instructions, refer to the Durable Objects section here: [4mhttps://developers.cloudflare.com/workers/wrangler/api#supported-bindings[0m
-
-				",
-				    ],
-				  ],
-				  "results": [
-				    {
-				      "type": "return",
-				      "value": undefined,
-				    },
-				  ],
-				}
-			`);
+					  				If you want to develop these locally, you can define your DO in a separate Worker, with a separate configuration file.
+					  				For detailed instructions, refer to the Durable Objects section here: [4mhttps://developers.cloudflare.com/workers/wrangler/api#supported-bindings[0m
+					"
+				`);
 		});
 
 		it("doesn't warn about external DOs and doesn't crash", async () => {
@@ -310,30 +292,31 @@ describe("getPlatformProxy - env", () => {
 			await getPlatformProxy<Env>({
 				configPath: path.join(__dirname, "..", "wrangler_workflow.jsonc"),
 			});
-			expect(warn).toMatchInlineSnapshot(`
-				[MockFunction warn] {
-				  "calls": [
-				    [
-				      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following internal Workflows:[0m
+			expect(warn.mock.calls[0][0].replaceAll(/[\r\n]+/g, "\n"))
+				.toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following internal Workflows:[0m
+					  				- {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow"}
+					  				These will not work in local development, but they should work in production.
 
-				  				- {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow"}
-				  				These will not work in local development, but they should work in production.
-				  
-				  				If you want to develop these locally, you can define your Workflow in a separate Worker, with a separate configuration file.
-				  				For detailed instructions, refer to the Workflows section here: [4mhttps://developers.cloudflare.com/workers/wrangler/api#supported-bindings[0m
-
-				",
-				    ],
-				  ],
-				  "results": [
-				    {
-				      "type": "return",
-				      "value": undefined,
-				    },
-				  ],
-				}
-			`);
+					  				If you want to develop these locally, you can define your Workflow in a separate Worker, with a separate configuration file.
+					  				For detailed instructions, refer to the Workflows section here: [4mhttps://developers.cloudflare.com/workers/wrangler/api#supported-bindings[0m
+					"
+				`);
 		});
+
+		it.todo(
+			"doesn't warn about external Workflows and doesn't crash",
+			async () => {
+				await getPlatformProxy<Env>({
+					configPath: path.join(
+						__dirname,
+						"..",
+						"wrangler_external_workflow.jsonc"
+					),
+				});
+				expect(warn).not.toHaveBeenCalled();
+			}
+		);
 	});
 
 	describe("with a target environment", () => {

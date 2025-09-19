@@ -230,7 +230,7 @@ async function getMiniflareOptionsFromConfig(args: {
 	}
 
 	if (config.workflows && config.workflows.length > 0) {
-		const { localBindings } = partitionWorkflowBindings(config);
+		const { localBindings, remoteBindings } = partitionWorkflowBindings(config);
 		if (localBindings.length > 0) {
 			logger.warn(dedent`
 				You have defined bindings to the following internal Workflows:
@@ -240,6 +240,9 @@ async function getMiniflareOptionsFromConfig(args: {
 				If you want to develop these locally, you can define your Workflow in a separate Worker, with a separate configuration file.
 				For detailed instructions, refer to the Workflows section here: https://developers.cloudflare.com/workers/wrangler/api#supported-bindings
 				`);
+
+			// Only keep the remote bound Workflows
+			bindings.workflows = remoteBindings;
 		}
 	}
 
