@@ -109,7 +109,7 @@ export const cliDefinition: ArgumentsDefinition = {
 			requiresArg: true,
 			description: `The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
 
-      When using the --framework option, C3 will dispatch to the official creation tool used by the framework (ex. "create-remix" is used for Remix).
+      When using the --framework option, C3 will dispatch to the official creation tool used by the framework (e.g. "create-astro" is used for Astro).
 
       You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
 
@@ -204,9 +204,9 @@ export const cliDefinition: ArgumentsDefinition = {
 			type: "string",
 			requiresArg: true,
 			description: `The mechanism to use when fetching the template.
-				
-        Can be either "git" or "tar". "tar" does not support fetching from private 
-				repositories. By default, degit will use "tar" if the template is hosted on GitHub, BitBucket, GitLab, or git.sr.ht. 
+
+        Can be either "git" or "tar". "tar" does not support fetching from private
+				repositories. By default, degit will use "tar" if the template is hosted on GitHub, BitBucket, GitLab, or git.sr.ht.
 				Otherwise, it will use "git".
         `,
 			values: [
