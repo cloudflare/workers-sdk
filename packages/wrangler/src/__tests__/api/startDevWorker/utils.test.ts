@@ -133,7 +133,7 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 			},
 			MY_VPC_SERVICE: {
 				service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
-				type: "connectivity_service_binding",
+				type: "vpc_service",
 			},
 		});
 	});

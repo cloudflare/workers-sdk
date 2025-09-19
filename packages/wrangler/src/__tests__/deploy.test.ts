@@ -12720,7 +12720,7 @@ export default{
 			mockUploadWorkerRequest({
 				expectedBindings: [
 					{
-						type: "connectivity_service_binding",
+						type: "vpc_service",
 						name: "VPC_SERVICE",
 						service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
 					},
@@ -12760,12 +12760,12 @@ export default{
 			mockUploadWorkerRequest({
 				expectedBindings: [
 					{
-						type: "connectivity_service_binding",
+						type: "vpc_service",
 						name: "VPC_API",
 						service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
 					},
 					{
-						type: "connectivity_service_binding",
+						type: "vpc_service",
 						name: "VPC_DATABASE",
 						service_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
 					},
