@@ -89,14 +89,11 @@ export const d1CreateCommand = createCommand({
 		logger.log("Created your new D1 database.\n");
 
 		await updateConfigFile(
+			"d1_databases",
 			(bindingName) => ({
-				d1_databases: [
-					{
-						binding: getValidBindingName(bindingName ?? db.name, "DB"),
-						database_name: db.name,
-						database_id: db.uuid,
-					},
-				],
+				binding: getValidBindingName(bindingName ?? db.name, "DB"),
+				database_name: db.name,
+				database_id: db.uuid,
 			}),
 			config.configPath,
 			env
