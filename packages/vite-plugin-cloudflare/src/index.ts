@@ -15,12 +15,11 @@ import {
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
 	initRunners,
+	MAIN_ENTRY_NAME,
 } from "./cloudflare-environment";
 import {
 	ASSET_WORKER_NAME,
-	DEBUG_PATH,
 	kRequestType,
-	MAIN_ENTRY_NAME,
 	ROUTER_WORKER_NAME,
 	VIRTUAL_NODEJS_COMPAT_ENTRY,
 	VIRTUAL_USER_ENTRY,
@@ -28,6 +27,7 @@ import {
 import { getDockerPath, prepareContainerImages } from "./containers";
 import {
 	addDebugToVitePrintUrls,
+	DEBUG_PATH,
 	getDebugPathHtml,
 	getInputInspectorPortOption,
 	getResolvedInspectorPort,

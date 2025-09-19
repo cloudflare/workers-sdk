@@ -2,7 +2,6 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { unstable_readConfig } from "wrangler";
-import { ENTRY_MODULE_EXTENSIONS } from "./constants";
 import type { AssetsOnlyConfig, WorkerConfig } from "./plugin-config";
 import type { Optional } from "./utils";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
@@ -342,6 +341,8 @@ export function getWorkerConfig(
 		nonApplicable,
 	};
 }
+
+const ENTRY_MODULE_EXTENSIONS = [".js", ".mjs", ".ts", ".mts", ".jsx", ".tsx"];
 
 /**
  * If `main` ends with a valid file extension it is resolved to an absolute path.

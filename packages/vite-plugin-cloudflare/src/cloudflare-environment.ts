@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import * as util from "node:util";
 import * as vite from "vite";
-import { MAIN_ENTRY_NAME } from "./constants";
 import {
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
@@ -18,6 +17,8 @@ import type {
 	ReplaceWorkersTypes,
 	WebSocket,
 } from "miniflare";
+
+export const MAIN_ENTRY_NAME = "index";
 
 interface WebSocketContainer {
 	webSocket?: WebSocket;
