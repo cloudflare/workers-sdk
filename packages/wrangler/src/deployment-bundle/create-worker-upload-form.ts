@@ -139,7 +139,7 @@ export type WorkerMetadataBinding =
 			};
 	  }
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
-	| { type: "pipelines"; name: string; pipeline: string }
+	| { type: "pipelines"; name: string; pipeline?: string; stream?: string }
 	| {
 			type: "secrets_store_secret";
 			name: string;
@@ -485,12 +485,20 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
-	bindings.pipelines?.forEach(({ binding, pipeline }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "pipelines",
-			pipeline: pipeline,
-		});
+	bindings.pipelines?.forEach((b) => {
+		metadataBindings.push(
+			Object.hasOwn(b, "pipeline")
+				? {
+						name: b.binding,
+						type: "pipelines",
+						pipeline: b.pipeline,
+					}
+				: {
+						name: b.binding,
+						type: "pipelines",
+						stream: b.stream,
+					}
+		);
 	});
 
 	bindings.logfwdr?.bindings.forEach(({ name, destination }) => {

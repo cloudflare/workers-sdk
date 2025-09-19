@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { stream } from "undici";
 import { describe, it } from "vitest";
 import { convertConfigBindingsToStartWorkerBindings } from "../../../api/startDevWorker/utils";
 
@@ -42,6 +43,14 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 					},
 				],
 				consumers: undefined,
+			},
+			pipelines: {
+				streams: [
+					{
+						binding: "MY_PIPELINE",
+						stream: "my-stream",
+					},
+				],
 			},
 			r2_buckets: [
 				{
@@ -103,6 +112,10 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 				id: "<kv_id>",
 				type: "kv_namespace",
 			},
+			MY_PIPELINE: {
+				stream: "my-stream",
+				type: "pipeline",
+			},
 			MY_QUEUE_PRODUCER: {
 				queue: "my-queue",
 				queue_name: "my-queue",
@@ -147,6 +160,9 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 			queues: {
 				producers: undefined,
 				consumers: undefined,
+			},
+			pipelines: {
+				streams: [],
 			},
 			r2_buckets: [
 				{

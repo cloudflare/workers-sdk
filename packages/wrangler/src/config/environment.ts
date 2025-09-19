@@ -1104,13 +1104,24 @@ export interface EnvironmentNonInheritable {
 	 * @default []
 	 * @nonInheritable
 	 */
-	pipelines: {
-		/** The binding name used to refer to the bound service. */
-		binding: string;
+	pipelines:
+		| {
+				/** The binding name used to refer to the bound service. */
+				binding: string;
 
-		/** Name of the Pipeline to bind */
-		pipeline: string;
-	}[];
+				/** Name of the Pipeline to bind */
+				pipeline: string;
+		  }[]
+		| {
+				/** List of stream bindings */
+				streams: {
+					/** The binding name used to refer to the bound service. */
+					binding: string;
+
+					/** Name of the stream to bind */
+					stream: string;
+				}[];
+		  };
 
 	/**
 	 * Specifies Secret Store bindings that are bound to this Worker environment.

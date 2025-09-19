@@ -60,7 +60,9 @@ export function getBindings(
 			? undefined
 			: config?.dispatch_namespaces,
 		mtls_certificates: config?.mtls_certificates,
-		pipelines: options?.pages ? undefined : config?.pipelines,
+		pipelines: Array.isArray(config?.pipelines)
+			? config?.pipelines
+			: config?.pipelines?.streams,
 		logfwdr: options?.pages ? undefined : config?.logfwdr,
 		assets: options?.pages
 			? undefined

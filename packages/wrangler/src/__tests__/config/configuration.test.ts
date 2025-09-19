@@ -143,7 +143,7 @@ describe("normalizeAndValidateConfig()", () => {
 			upload_source_maps: undefined,
 			placement: undefined,
 			tail_consumers: undefined,
-			pipelines: [],
+			pipelines: { streams: [] },
 			workflows: [],
 		});
 		expect(diagnostics.hasErrors()).toBe(false);
@@ -3783,9 +3783,9 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"pipelines\\" should be an array but got {}."
-		`);
+					"Processing wrangler configuration:
+					  - \\"pipelines\\" must have a \\"streams\\" array but got {}"
+				`);
 			});
 
 			it("should error if pipelines is a string", () => {
@@ -3799,9 +3799,9 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"pipelines\\" should be an array but got \\"BAD\\"."
-		`);
+					"Processing wrangler configuration:
+					  - \\"pipelines\\" should be an object with \\"streams\\" array but got \\"BAD\\""
+				`);
 			});
 
 			it("should error if pipelines is a number", () => {
@@ -3815,9 +3815,9 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"pipelines\\" should be an array but got 999."
-		`);
+					"Processing wrangler configuration:
+					  - \\"pipelines\\" should be an object with \\"streams\\" array but got 999"
+				`);
 			});
 
 			it("should error if pipelines is null", () => {
@@ -3831,14 +3831,15 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"pipelines\\" should be an array but got null."
-		`);
+					"Processing wrangler configuration:
+					  - \\"pipelines\\" should be an object with \\"streams\\" array but got null"
+				`);
 			});
 
-			it("should accept valid bindings", () => {
+			it("should accept valid legacy bindings", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
+						compatibility_date: "2025-10-15",
 						pipelines: [
 							{
 								binding: "VALID",
@@ -3854,9 +3855,10 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if pipelines.bindings are not valid", () => {
+			it("should error if legacy pipelines.bindings are not valid", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
+						compatibility_date: "2025-10-15",
 						pipelines: [
 							{},
 							{
@@ -3881,6 +3883,124 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"pipelines[0]\\" bindings must have a string \\"pipeline\\" field but got {}.
 					  - \\"pipelines[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":2000,\\"project\\":2111}.
 					  - \\"pipelines[2]\\" bindings must have a string \\"pipeline\\" field but got {\\"binding\\":2000,\\"project\\":2111}."
+				`);
+			});
+
+			// New format tests with compatibility date
+			it("should accept new format with compatibility_date >= 2025-10-22", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						compatibility_date: "2025-10-22",
+						pipelines: {
+							streams: [
+								{
+									binding: "MY_STREAM",
+									stream: "343cd4f1d58c42fbb5bd082592fd7143",
+								},
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should reject new format with older compatibility_date", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						compatibility_date: "2024-12-01",
+						pipelines: {
+							streams: [
+								{
+									binding: "MY_STREAM",
+									stream: "343cd4f1d58c42fbb5bd082592fd7143",
+								},
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"pipelines\\" uses new format but compatibility_date is < \\"2025-10-22\\". Either update your compatibility_date to >= \\"2025-10-22\\" or use the legacy array format: [{binding: \\"...\\", pipeline: \\"...\\"}]"
+				`);
+			});
+
+			it("should reject legacy format with compatibility_date >= 2025-10-22", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						compatibility_date: "2025-10-22",
+						pipelines: [
+							{
+								binding: "MY_PIPELINE",
+								pipeline: "343cd4f1d58c42fbb5bd082592fd7143",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"pipelines\\" should be an object with \\"streams\\" array for compatibility_date >= \\"2025-10-22\\", but got an array. Use the new format: { streams: [...] }"
+				`);
+			});
+
+			it("should error on invalid new format structure", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						pipelines: {
+							invalid: "structure",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"pipelines\\" must have a \\"streams\\" array but got {\\"invalid\\":\\"structure\\"}"
+				`);
+			});
+
+			it("should error on invalid stream bindings in new format", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						pipelines: {
+							streams: [
+								{},
+								{
+									binding: "VALID",
+									stream: "343cd4f1d58c42fbb5bd082592fd7143",
+								},
+								{ binding: 2000, invalid: 2111 },
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"pipelines.streams[0]\\" bindings must have a string \\"binding\\" field but got {}.
+					  - \\"pipelines.streams[0]\\" bindings must have a string \\"stream\\" field but got {}.
+					  - \\"pipelines.streams[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":2000,\\"invalid\\":2111}.
+					  - \\"pipelines.streams[2]\\" bindings must have a string \\"stream\\" field but got {\\"binding\\":2000,\\"invalid\\":2111}."
 				`);
 			});
 		});

@@ -1075,17 +1075,19 @@ function normalizeAndValidateEnvironment(
 		configPath
 	);
 
+	const compatibility_date = inheritable(
+		diagnostics,
+		topLevelEnv,
+		rawEnv,
+		"compatibility_date",
+		validateCompatibilityDate,
+		undefined
+	);
+
 	const environment: Environment = {
 		// Inherited fields
 		account_id,
-		compatibility_date: inheritable(
-			diagnostics,
-			topLevelEnv,
-			rawEnv,
-			"compatibility_date",
-			validateCompatibilityDate,
-			undefined
-		),
+		compatibility_date,
 		compatibility_flags: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1431,8 +1433,10 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"pipelines",
-			validateBindingArray(envName, validatePipelineBinding),
-			[]
+			!compatibility_date || compatibility_date >= PipelinesV1CompabilityDate
+				? validatePipelinesBinding
+				: validateLegacyPipelinesBinding,
+			{ streams: [] }
 		),
 		secrets_store_secrets: notInheritable(
 			diagnostics,
@@ -3774,6 +3778,138 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 		"remote",
 	]);
 
+	return isValid;
+};
+
+const validateStreamBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"stream" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// Stream bindings must have a binding and a stream.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "stream", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "stream" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"stream",
+	]);
+
+	return isValid;
+};
+
+const PipelinesV1CompabilityDate = "2025-10-22";
+
+const validatePipelinesBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value,
+	env
+) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	// New format: { streams: [...] }
+	if (Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" should be an object with "streams" array for compatibility_date >= "${PipelinesV1CompabilityDate}", but got an array. Use the new format: { streams: [...] }`
+		);
+		return false;
+	}
+
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object with "streams" array but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	if (!isRequiredProperty(value, "streams", "object")) {
+		diagnostics.errors.push(
+			`"${field}" must have a "streams" array but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	if (!Array.isArray(value.streams)) {
+		diagnostics.errors.push(
+			`"${field}.streams" should be an array but got ${JSON.stringify(value.streams)}`
+		);
+		return false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"streams",
+	]);
+
+	// Validate each stream binding
+	let isValid = true;
+	for (let i = 0; i < value.streams.length; i++) {
+		if (
+			!validateStreamBinding(
+				diagnostics,
+				`${field}.streams[${i}]`,
+				value.streams[i],
+				env
+			)
+		) {
+			isValid = false;
+		}
+	}
+	return isValid;
+};
+
+const validateLegacyPipelinesBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value,
+	env
+) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	// Legacy format: [{...}]
+	if (!Array.isArray(value)) {
+		if (typeof value === "object" && value !== null && "streams" in value) {
+			diagnostics.errors.push(
+				`"${field}" uses new format but compatibility_date is < "${PipelinesV1CompabilityDate}". Either update your compatibility_date to >= "${PipelinesV1CompabilityDate}" or use the legacy array format: [{binding: "...", pipeline: "..."}]`
+			);
+		} else {
+			diagnostics.errors.push(
+				`"${field}" should be an array but got ${JSON.stringify(value)}`
+			);
+		}
+		return false;
+	}
+
+	// Validate each pipeline binding
+	let isValid = true;
+	for (let i = 0; i < value.length; i++) {
+		if (
+			!validatePipelineBinding(diagnostics, `${field}[${i}]`, value[i], env)
+		) {
+			isValid = false;
+		}
+	}
 	return isValid;
 };
 
