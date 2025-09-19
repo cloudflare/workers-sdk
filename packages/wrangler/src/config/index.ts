@@ -65,21 +65,47 @@ export function formatConfigSnippet(
 	}
 }
 
-export async function updateConfigFile(
-	snippet: (
-		bindingName?: string
-	) => Partial<{ [K in keyof CfWorkerInit["bindings"]]: RawConfig[K] }>,
+// All config keys that follow a "regular" binding shape (Binding[]) and so can be modified using `updateConfigFile`.
+type ValidKeys = Exclude<
+	keyof CfWorkerInit["bindings"],
+	| "ai"
+	| "browser"
+	| "vars"
+	| "wasm_modules"
+	| "text_blobs"
+	| "data_blobs"
+	| "logfwdr"
+	| "queues"
+	| "assets"
+	| "durable_objects"
+	| "version_metadata"
+	| "images"
+	| "unsafe"
+>;
+
+export async function updateConfigFile<K extends ValidKeys>(
+	resource: K,
+	snippet: (bindingName?: string) => Partial<NonNullable<RawConfig[K]>[number]>,
 	configPath: Config["configPath"],
 	env: string | undefined,
 	offerToUpdate: boolean = true
 ) {
-	const resource = Object.keys(snippet())[0] as keyof CfWorkerInit["bindings"];
 	const envString = env ? ` in the "${env}" environment` : "";
 	logger.log(
 		`To access your new ${friendlyBindingNames[resource]} in your Worker, add the following snippet to your configuration file${envString}:`
 	);
 
-	logger.log(formatConfigSnippet(snippet(), configPath));
+	logger.log(formatConfigSnippet({ [resource]: [snippet()] }, configPath));
+
+	/**
+	 * What's this `unique` value doing? Well, as it turns out, jsonc-parser doesn't support _writing_ comments.
+	 * We want to write a commented out version of the remote bindings config to the file, and so the only way I could think
+	 * of to do this was to write a unique key and then replace it in the config file before writing to disk (see `replacers` in `patchConfig()`).
+	 * If a future reader of this comment finds a better way to do this, by all means go ahead!
+	 */
+	const unique = crypto.randomUUID();
+
+	const configFilePatch = { [resource]: [{ ...snippet(), [unique]: true }] };
 
 	if (configPath && offerToUpdate && configFormat(configPath) === "jsonc") {
 		const autoAdd = await select(
@@ -106,8 +132,14 @@ export async function updateConfigFile(
 		if (autoAdd !== "no") {
 			experimental_patchConfig(
 				configPath,
-				env ? { env: { [env]: snippet(bindingName) } } : snippet(bindingName),
-				true
+				env ? { env: { [env]: configFilePatch } } : configFilePatch,
+				true,
+				[
+					[
+						`"${unique}": true`,
+						`// "remote" : true // proxy requests to remote resource during local dev, defaults to \`false\``,
+					],
+				]
 			);
 		}
 	}
