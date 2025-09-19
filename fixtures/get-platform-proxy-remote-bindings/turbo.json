@@ -2,7 +2,7 @@
 	"$schema": "http://turbo.build/schema.json",
 	"extends": ["//"],
 	"tasks": {
-		"test:ci": {
+		"test:e2e": {
 			"env": [
 				"VITEST",
 				"NODE_DEBUG",

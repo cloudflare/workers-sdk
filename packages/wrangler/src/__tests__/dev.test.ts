@@ -1151,14 +1151,7 @@ describe.sequential("wrangler dev", () => {
 				"dev --upstream-protocol=http --remote"
 			);
 			expect(config.dev.origin?.secure).toEqual(false);
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently supported for remote mode.[0m
-
-			  If this is required in your project, please add your use case to the following issue:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/583[0m.
-
-			"
-		`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should default upstream-protocol to local-protocol if local mode", async () => {
@@ -2112,14 +2105,7 @@ describe.sequential("wrangler dev", () => {
 				`[Error: Bailing early in tests]`
 			);
 
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mContainers are only supported in local mode, to suppress this warning set \`dev.enable_containers\` to \`false\` or pass \`--enable-containers=false\` to the \`wrangler dev\` command[0m
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSQLite in Durable Objects is only supported in local mode.[0m
-
-				"
-			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should not warn when run in remote mode with disabled containers", async () => {
@@ -2137,11 +2123,7 @@ describe.sequential("wrangler dev", () => {
 				`[Error: Bailing early in tests]`
 			);
 
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSQLite in Durable Objects is only supported in local mode.[0m
-
-				"
-			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 	});
 });

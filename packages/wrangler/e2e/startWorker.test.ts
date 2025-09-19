@@ -73,7 +73,11 @@ describe("DevEnv", () => {
 			const worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
-				dev: { remote, inspector: false },
+				dev: {
+					remote,
+					server: { port: 0 },
+					inspector: false,
+				},
 			});
 
 			let res = await worker.fetch("http://dummy");
@@ -109,7 +113,11 @@ describe("DevEnv", () => {
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
-				dev: { remote },
+				dev: {
+					remote,
+					server: { port: 0 },
+					inspector: { port: 0 },
+				},
 			});
 
 			const inspectorUrl = await worker.inspectorUrl;
@@ -180,7 +188,11 @@ describe("DevEnv", () => {
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
-				dev: { remote },
+				dev: {
+					remote,
+					server: { port: 0 },
+					inspector: { port: 0 },
+				},
 			});
 
 			const inspectorUrl = await worker.inspectorUrl;
@@ -244,7 +256,11 @@ describe("DevEnv", () => {
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
-				dev: { remote },
+				dev: {
+					remote,
+					server: { port: 0 },
+					inspector: { port: 0 },
+				},
 			});
 
 			const inspectorUrl = await worker.inspectorUrl;
@@ -304,7 +320,7 @@ describe("DevEnv", () => {
 				dev: {
 					...worker.config.dev,
 					remote,
-					server: { port: await getPort() },
+					server: { port: await getPort() /* new port */ },
 					inspector: false,
 				},
 			});
@@ -343,6 +359,7 @@ describe("DevEnv", () => {
 				dev: {
 					remote,
 					liveReload: true,
+					server: { port: 0 },
 					inspector: false,
 				},
 			});
@@ -437,7 +454,10 @@ describe("DevEnv", () => {
 			const worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
-				dev: { inspector: false },
+				dev: {
+					server: { port: 0 },
+					inspector: false,
+				},
 			});
 
 			await expect(worker.fetch("http://dummy")).rejects.toThrowError("Boom!");
@@ -523,6 +543,7 @@ describe("DevEnv", () => {
 					origin: {
 						hostname: "www.google.com",
 					},
+					server: { port: 0 },
 					inspector: false,
 				},
 			});
@@ -578,6 +599,7 @@ describe("DevEnv", () => {
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 				dev: {
+					server: { port: 0 },
 					inspector: false,
 				},
 			});
@@ -647,7 +669,10 @@ describe("DevEnv", () => {
 				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
-				dev: { inspector: false },
+				dev: {
+					server: { port: 0 },
+					inspector: false,
+				},
 			});
 
 			const res = await worker.fetch("http://dummy/test/path/1");
@@ -693,7 +718,10 @@ describe("DevEnv", () => {
 				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
-				dev: { inspector: false },
+				dev: {
+					server: { port: 0 },
+					inspector: false,
+				},
 			});
 
 			const res = await worker.fetch("http://dummy/test/path/1");
@@ -751,7 +779,10 @@ describe("DevEnv", () => {
 					WRANGLER_ENV_VAR_3: { type: "plain_text", value: "inline-3" },
 					WRANGLER_ENV_VAR_4: { type: "plain_text", value: "inline-4" },
 				},
-				dev: { inspector: false },
+				dev: {
+					server: { port: 0 },
+					inspector: false,
+				},
 			});
 
 			const res = await worker.fetch("http://dummy/test/path/1");
@@ -807,7 +838,10 @@ describe("DevEnv", () => {
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 				envFiles: ["other/.env", "other/.env.local"],
-				dev: { inspector: false },
+				dev: {
+					server: { port: 0 },
+					inspector: false,
+				},
 			});
 
 			const res = await worker.fetch("http://dummy/test/path/1");

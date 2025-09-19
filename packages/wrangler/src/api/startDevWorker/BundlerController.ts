@@ -317,7 +317,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				ignoreInitial: true,
 			}).on("all", async (eventName, filePath) => {
 				const message = getAssetChangeMessage(eventName, filePath);
-				logger.debug(`🌀 ${message}...`);
+				console.dir(`🌀 ${message}...`);
 				debouncedRefreshBundle();
 			});
 		}
@@ -348,7 +348,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	}
 
 	async teardown() {
-		logger.debug("BundlerController teardown beginning...");
+		console.dir("BundlerController teardown beginning...");
 		this.#customBuildAborter?.abort();
 		this.#tmpDir?.remove();
 		await Promise.all([
@@ -356,7 +356,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			this.#customBuildWatcher?.close(),
 			this.#assetsWatcher?.close(),
 		]);
-		logger.debug("BundlerController teardown complete");
+		console.dir("BundlerController teardown complete");
 	}
 
 	emitBundleStartEvent(config: StartDevWorkerOptions) {

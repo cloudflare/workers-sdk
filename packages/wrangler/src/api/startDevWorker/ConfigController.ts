@@ -393,7 +393,7 @@ async function resolveConfig(
 		!resolved.dev.remote &&
 		resolved.build.format === "service-worker"
 	) {
-		logger.warn(
+		console.dir(
 			"Analytics Engine is not supported locally when using the service-worker format. Please migrate to the module worker format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/"
 		);
 	}
@@ -402,7 +402,7 @@ async function resolveConfig(
 
 	const services = extractBindingsOfType("service", resolved.bindings);
 	if (services && services.length > 0 && resolved.dev?.remote) {
-		logger.warn(
+		console.dir(
 			`This worker is bound to live services: ${services
 				.map(
 					(service) =>
@@ -415,7 +415,7 @@ async function resolveConfig(
 	}
 
 	if (!resolved.dev?.origin?.secure && resolved.dev?.remote) {
-		logger.warn(
+		console.dir(
 			"Setting upstream-protocol to http is not currently supported for remote mode.\n" +
 				"If this is required in your project, please add your use case to the following issue:\n" +
 				"https://github.com/cloudflare/workers-sdk/issues/583."
@@ -439,7 +439,7 @@ async function resolveConfig(
 		(queues?.length ||
 			resolved.triggers?.some((t) => t.type === "queue-consumer"))
 	) {
-		logger.warn("Queues are not yet supported in wrangler dev remote mode.");
+		console.dir("Queues are not yet supported in wrangler dev remote mode.");
 	}
 
 	if (resolved.dev.remote) {
@@ -450,7 +450,7 @@ async function resolveConfig(
 			resolved.containers &&
 			resolved.containers.length > 0
 		) {
-			logger.warn(
+			console.dir(
 				"Containers are only supported in local mode, to suppress this warning set `dev.enable_containers` to `false` or pass `--enable-containers=false` to the `wrangler dev` command"
 			);
 		}
@@ -463,14 +463,14 @@ async function resolveConfig(
 			resolved.dev.remote &&
 			Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
 		) {
-			logger.warn("SQLite in Durable Objects is only supported in local mode.");
+			console.dir("SQLite in Durable Objects is only supported in local mode.");
 		}
 	}
 
 	// prompt user to update their types if we detect that it is out of date
 	const typesChanged = await checkTypesDiff(config, entry);
 	if (typesChanged) {
-		logger.log(
+		console.dir(
 			"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
 		);
 	}
@@ -485,15 +485,26 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 	#configWatcher?: ReturnType<typeof watch>;
 	#abortController?: AbortController;
+	#tearingDown = false;
 
 	async #ensureWatchingConfig(configPath: string | undefined) {
+		console.dir(
+			"#ensureWatchingConfig" +
+				"\ntearingDown: " +
+				this.#tearingDown +
+				"\nwatcherClosed: " +
+				this.#configWatcher?.closed
+		);
 		await this.#configWatcher?.close();
 		if (configPath) {
 			this.#configWatcher = watch(configPath, {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("change", async (_event) => {
-				logger.debug(`${path.basename(configPath)} changed...`);
+				if (this.#configWatcher?.closed) {
+					return;
+				}
+				console.dir(`${path.basename(configPath)} changed...`);
 				assert(
 					this.latestInput,
 					"Cannot be watching config without having first set an input"
@@ -504,6 +515,14 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	}
 
 	public set(input: StartDevWorkerInput, throwErrors = false) {
+		console.dir(
+			"#set " +
+				input.config +
+				"\ntearingDown: " +
+				this.#tearingDown +
+				"\nwatcherClosed: " +
+				this.#configWatcher?.closed
+		);
 		return runWithLogLevel(input.dev?.logLevel, () =>
 			this.#updateConfig(input, throwErrors)
 		);
@@ -525,6 +544,17 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	}
 
 	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
+		console.dir(
+			"#updateConfig " +
+				input.config +
+				"\ntearingDown: " +
+				this.#tearingDown +
+				"\nwatcherClosed: " +
+				this.#configWatcher?.closed
+		);
+		if (this.#tearingDown) {
+			return;
+		}
 		this.#abortController?.abort();
 		this.#abortController = new AbortController();
 		const signal = this.#abortController.signal;
@@ -554,13 +584,11 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				{ useRedirectIfAvailable: true }
 			);
 
-			if (typeof vitest === "undefined") {
-				void this.#ensureWatchingConfig(fileConfig.configPath);
-			}
+			void this.#ensureWatchingConfig(fileConfig.configPath);
 
 			const { config: resolvedConfig, printCurrentBindings } =
 				await resolveConfig(fileConfig, input);
-			if (signal.aborted) {
+			if (this.#tearingDown || signal.aborted) {
 				return;
 			}
 			this.latestConfig = resolvedConfig;
@@ -592,9 +620,12 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	}
 
 	async teardown() {
-		logger.debug("ConfigController teardown beginning...");
+		console.dir("ConfigController teardown beginning...");
+		console.dir("tearDown()");
+		this.#tearingDown = true;
+		this.#abortController?.abort();
 		await this.#configWatcher?.close();
-		logger.debug("ConfigController teardown complete");
+		console.dir("ConfigController teardown complete");
 	}
 
 	// *********************
