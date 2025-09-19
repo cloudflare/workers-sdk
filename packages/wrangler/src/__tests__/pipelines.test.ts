@@ -1,134 +1,51 @@
+import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { normalizeOutput } from "../../e2e/helpers/normalize";
-import { __testSkipDelays } from "../pipelines";
-import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConfirm } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { HttpSource, Pipeline, PipelineEntry } from "../pipelines/client";
+import type { Pipeline, SchemaField, Sink, Stream } from "../pipelines/types";
 
-describe("pipelines", () => {
+describe("wrangler pipelines", () => {
 	const std = mockConsoleMethods();
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
 
-	const samplePipeline = {
-		id: "0001",
-		version: 1,
-		name: "my-pipeline",
-		metadata: {},
-		source: [
-			{
-				type: "binding",
-				format: "json",
-			},
-			{
-				type: "http",
-				format: "json",
-				authentication: false,
-				cors: {
-					origins: ["*"],
-				},
-			},
-		],
-		transforms: [],
-		destination: {
-			type: "r2",
-			format: "json",
-			batch: {
-				max_bytes: 100000000,
-				max_duration_s: 300,
-				max_rows: 100000,
-			},
-			compression: {
-				type: "none",
-			},
-			path: {
-				bucket: "bucket",
-			},
-		},
-		endpoint: "https://0001.pipelines.cloudflarestorage.com",
-	} satisfies Pipeline;
+	const accountId = "some-account-id";
 
-	function mockCreateR2TokenFailure(bucket: string) {
+	function mockValidateSqlRequest(sql: string, isValid = true) {
 		const requests = { count: 0 };
-		msw.use(
-			http.get(
-				"*/accounts/:accountId/r2/buckets/:bucket",
-				async ({ params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.bucket).toEqual(bucket);
-					requests.count++;
-					return HttpResponse.json(
-						{
-							success: false,
-							errors: [
-								{
-									code: 10006,
-									message: "The specified bucket does not exist.",
-								},
-							],
-							messages: [],
-							result: null,
-						},
-						{ status: 404 }
-					);
-				},
-				{ once: true }
-			)
-		);
-		return requests;
-	}
-
-	function mockCreateRequest(
-		name: string,
-		status: number = 200,
-		error?: object
-	) {
-		const requests: { count: number; body: Pipeline | null } = {
-			count: 0,
-			body: null,
-		};
 		msw.use(
 			http.post(
-				"*/accounts/:accountId/pipelines",
-				async ({ request, params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					const config = (await request.json()) as Pipeline;
-					expect(config.name).toEqual(name);
-					requests.body = config;
+				`*/accounts/${accountId}/pipelines/v1/validate_sql`,
+				async ({ request }) => {
 					requests.count++;
-					const pipeline: Pipeline = {
-						...config,
-						id: "0001",
-						name: name,
-						endpoint: "foo",
-					};
+					const body = (await request.json()) as { sql: string };
+					expect(body.sql).toBe(sql);
 
-					// API will set defaults if not provided
-					if (!pipeline.destination.batch.max_rows) {
-						pipeline.destination.batch.max_rows = 10_000_000;
-					}
-					if (!pipeline.destination.batch.max_bytes) {
-						pipeline.destination.batch.max_bytes = 100_000_000;
-					}
-					if (!pipeline.destination.batch.max_duration_s) {
-						pipeline.destination.batch.max_duration_s = 300;
+					if (!isValid) {
+						const error = {
+							notes: [{ text: "Invalid SQL syntax near 'INVALID'" }],
+						};
+						throw error;
 					}
 
-					return HttpResponse.json(
-						{
-							success: !error,
-							errors: error ? [error] : [],
-							messages: [],
-							result: pipeline,
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							tables: {
+								test_stream: { type: "stream" },
+								test_sink: { type: "sink" },
+							},
 						},
-						{ status }
-					);
+					});
 				},
 				{ once: true }
 			)
@@ -136,24 +53,70 @@ describe("pipelines", () => {
 		return requests;
 	}
 
-	function mockListRequest(entries: PipelineEntry[]) {
+	function mockCreatePipelineRequest(expectedRequest: {
+		name: string;
+		sql: string;
+	}) {
+		const requests = { count: 0 };
+		msw.use(
+			http.post(
+				`*/accounts/${accountId}/pipelines/v1/pipelines`,
+				async ({ request }) => {
+					requests.count++;
+					const body = (await request.json()) as { name: string; sql: string };
+					expect(body.name).toBe(expectedRequest.name);
+					expect(body.sql).toBe(expectedRequest.sql);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							id: "pipeline_123",
+							name: expectedRequest.name,
+							sql: expectedRequest.sql,
+							status: "active",
+							created_at: "2024-01-01T00:00:00Z",
+							modified_at: "2024-01-01T00:00:00Z",
+							tables: [
+								{
+									id: "stream_456",
+									name: "test_stream",
+									type: "stream",
+									version: 1,
+									latest: 1,
+									href: "/accounts/some-account-id/pipelines/v1/streams/stream_456",
+								},
+								{
+									id: "sink_789",
+									name: "test_sink",
+									type: "sink",
+									version: 1,
+									latest: 1,
+									href: "/accounts/some-account-id/pipelines/v1/sinks/sink_789",
+								},
+							],
+						},
+					});
+				},
+				{ once: true }
+			)
+		);
+		return requests;
+	}
+
+	function mockGetPipelineRequest(pipelineId: string, pipeline: Pipeline) {
 		const requests = { count: 0 };
 		msw.use(
 			http.get(
-				"*/accounts/:accountId/pipelines",
-				async ({ params }) => {
+				`*/accounts/${accountId}/pipelines/v1/pipelines/${pipelineId}`,
+				() => {
 					requests.count++;
-					expect(params.accountId).toEqual("some-account-id");
-
-					return HttpResponse.json(
-						{
-							success: true,
-							errors: [],
-							messages: [],
-							result: entries,
-						},
-						{ status: 200 }
-					);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: pipeline,
+					});
 				},
 				{ once: true }
 			)
@@ -161,30 +124,19 @@ describe("pipelines", () => {
 		return requests;
 	}
 
-	function mockGetRequest(
-		name: string,
-		pipeline: Pipeline | null,
-		status: number = 200,
-		error?: object
-	) {
+	function mockGetStreamRequest(streamId: string, stream: Stream) {
 		const requests = { count: 0 };
 		msw.use(
 			http.get(
-				"*/accounts/:accountId/pipelines/:name",
-				async ({ params }) => {
+				`*/accounts/${accountId}/pipelines/v1/streams/${streamId}`,
+				() => {
 					requests.count++;
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.name).toEqual(name);
-
-					return HttpResponse.json(
-						{
-							success: !error,
-							errors: error ? [error] : [],
-							messages: [],
-							result: pipeline,
-						},
-						{ status }
-					);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: stream,
+					});
 				},
 				{ once: true }
 			)
@@ -192,39 +144,29 @@ describe("pipelines", () => {
 		return requests;
 	}
 
-	function mockUpdateRequest(
-		name: string,
-		pipeline: Pipeline | null,
-		status: number = 200,
-		error?: object
-	) {
-		const requests: { count: number; body: Pipeline | null } = {
-			count: 0,
-			body: null,
-		};
+	function mockListPipelinesRequest(pipelines: Pipeline[]) {
+		const requests = { count: 0 };
 		msw.use(
-			http.put(
-				"*/accounts/:accountId/pipelines/:name",
-				async ({ params, request }) => {
+			http.get(
+				`*/accounts/${accountId}/pipelines/v1/pipelines`,
+				({ request }) => {
 					requests.count++;
-					requests.body = (await request.json()) as Pipeline;
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.name).toEqual(name);
+					const url = new URL(request.url);
+					const page = Number(url.searchParams.get("page") || 1);
+					const perPage = Number(url.searchParams.get("per_page") || 20);
 
-					// update strips creds, so enforce this
-					if (pipeline?.destination) {
-						pipeline.destination.credentials = undefined;
-					}
-
-					return HttpResponse.json(
-						{
-							success: !error,
-							errors: error ? [error] : [],
-							messages: [],
-							result: pipeline,
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: pipelines,
+						result_info: {
+							page,
+							per_page: perPage,
+							count: pipelines.length,
+							total_count: pipelines.length,
 						},
-						{ status }
-					);
+					});
 				},
 				{ once: true }
 			)
@@ -232,29 +174,19 @@ describe("pipelines", () => {
 		return requests;
 	}
 
-	function mockDeleteRequest(
-		name: string,
-		status: number = 200,
-		error?: object
-	) {
+	function mockDeletePipelineRequest(pipelineId: string) {
 		const requests = { count: 0 };
 		msw.use(
 			http.delete(
-				"*/accounts/:accountId/pipelines/:name",
-				async ({ params }) => {
+				`*/accounts/${accountId}/pipelines/v1/pipelines/${pipelineId}`,
+				() => {
 					requests.count++;
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.name).toEqual(name);
-
-					return HttpResponse.json(
-						{
-							success: !error,
-							errors: error ? [error] : [],
-							messages: [],
-							result: null,
-						},
-						{ status }
-					);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					});
 				},
 				{ once: true }
 			)
@@ -262,510 +194,1435 @@ describe("pipelines", () => {
 		return requests;
 	}
 
-	beforeAll(() => {
-		__testSkipDelays();
-	});
+	describe("pipelines create", () => {
+		it("should error when neither --sql nor --sql-file is provided", async () => {
+			await expect(
+				runWrangler("pipelines create my_pipeline")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Either --sql or --sql-file must be provided]`
+			);
+		});
 
-	it("shows usage details", async () => {
-		await runWrangler("pipelines");
-		await endEventLoop();
+		it("should create pipeline with inline SQL", async () => {
+			const sql = "INSERT INTO test_sink SELECT * FROM test_stream;";
+			const validateRequest = mockValidateSqlRequest(sql);
+			const createRequest = mockCreatePipelineRequest({
+				name: "my_pipeline",
+				sql,
+			});
+			const getPipelineRequest = mockGetPipelineRequest("pipeline_123", {
+				id: "pipeline_123",
+				name: "my_pipeline",
+				sql,
+				status: "active",
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+				tables: [
+					{
+						id: "stream_456",
+						name: "test_stream",
+						type: "stream",
+						version: 1,
+						latest: 1,
+						href: "/accounts/some-account-id/pipelines/v1/streams/stream_456",
+					},
+					{
+						id: "sink_789",
+						name: "test_sink",
+						type: "sink",
+						version: 1,
+						latest: 1,
+						href: "/accounts/some-account-id/pipelines/v1/sinks/sink_789",
+					},
+				],
+			});
+			const getStreamRequest = mockGetStreamRequest("stream_456", {
+				id: "stream_456",
+				name: "test_stream",
+				version: 1,
+				endpoint: "https://pipelines.cloudflare.com/stream_456",
+				format: { type: "json", unstructured: true },
+				schema: null,
+				http: {
+					enabled: true,
+					authentication: false,
+				},
+				worker_binding: { enabled: true },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			});
 
-		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler pipelines
+			await runWrangler(`pipelines create my_pipeline --sql "${sql}"`);
 
-			🚰 Manage Cloudflare Pipelines [open-beta]
-
-			COMMANDS
-			  wrangler pipelines create <pipeline>  Create a new pipeline [open-beta]
-			  wrangler pipelines list               List all pipelines [open-beta]
-			  wrangler pipelines get <pipeline>     Get a pipeline's configuration [open-beta]
-			  wrangler pipelines update <pipeline>  Update a pipeline [open-beta]
-			  wrangler pipelines delete <pipeline>  Delete a pipeline [open-beta]
-
-			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
-		`);
-	});
-
-	describe("create", () => {
-		it("should show usage details", async () => {
-			await runWrangler("pipelines create -h");
-			await endEventLoop();
+			expect(validateRequest.count).toBe(1);
+			expect(createRequest.count).toBe(1);
+			expect(getPipelineRequest.count).toBe(1);
+			expect(getStreamRequest.count).toBe(1);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("🌀 Validating SQL...");
+			expect(std.out).toContain(
+				"✅ SQL validated successfully. References tables: test_stream, test_sink"
+			);
+			expect(std.out).toContain("🌀 Creating pipeline 'my_pipeline'...");
+			expect(std.out).toContain(
+				"✨ Successfully created pipeline 'my_pipeline' with id 'pipeline_123'."
+			);
+			expect(std.out).toContain(
+				"Send your first event to stream 'test_stream':"
+			);
+			expect(std.out).toContain("Worker Integration:");
+			expect(std.out).toContain("HTTP Endpoint:");
+		});
+
+		it("should create pipeline from SQL file", async () => {
+			const sql = "INSERT INTO test_sink SELECT * FROM test_stream;";
+			const sqlFile = "pipeline.sql";
+			writeFileSync(sqlFile, sql);
+
+			const validateRequest = mockValidateSqlRequest(sql);
+			const createRequest = mockCreatePipelineRequest({
+				name: "my_pipeline",
+				sql,
+			});
+			const getPipelineRequest = mockGetPipelineRequest("pipeline_123", {
+				id: "pipeline_123",
+				name: "my_pipeline",
+				sql,
+				status: "active",
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+				tables: [
+					{
+						id: "stream_456",
+						name: "test_stream",
+						type: "stream",
+						version: 1,
+						latest: 1,
+						href: "/accounts/some-account-id/pipelines/v1/streams/stream_456",
+					},
+					{
+						id: "sink_789",
+						name: "test_sink",
+						type: "sink",
+						version: 1,
+						latest: 1,
+						href: "/accounts/some-account-id/pipelines/v1/sinks/sink_789",
+					},
+				],
+			});
+			const getStreamRequest = mockGetStreamRequest("stream_456", {
+				id: "stream_456",
+				name: "test_stream",
+				version: 1,
+				endpoint: "https://pipelines.cloudflare.com/stream_456",
+				format: { type: "json", unstructured: true },
+				schema: null,
+				http: {
+					enabled: true,
+					authentication: false,
+				},
+				worker_binding: { enabled: true },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			});
+
+			await runWrangler(`pipelines create my_pipeline --sql-file ${sqlFile}`);
+
+			expect(validateRequest.count).toBe(1);
+			expect(createRequest.count).toBe(1);
+			expect(getPipelineRequest.count).toBe(1);
+			expect(getStreamRequest.count).toBe(1);
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("🌀 Validating SQL...");
+			expect(std.out).toContain("✅ SQL validated successfully.");
+			expect(std.out).toContain(
+				"✨ Successfully created pipeline 'my_pipeline' with id 'pipeline_123'."
+			);
+		});
+
+		it("should error when SQL validation fails", async () => {
+			const sql = "INVALID SQL QUERY";
+			const validateRequest = mockValidateSqlRequest(sql, false);
+
+			await expect(
+				runWrangler(`pipelines create my_pipeline --sql "${sql}"`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: SQL validation failed: Invalid SQL syntax near 'INVALID']`
+			);
+
+			expect(validateRequest.count).toBe(1);
+		});
+
+		it("should show wrangler version message on authentication error", async () => {
+			const sql = "INSERT INTO test_sink SELECT * FROM test_stream;";
+			const validateRequest = mockValidateSqlRequest(sql);
+
+			// Mock create returns auth error (code 10000)
+			msw.use(
+				http.post(
+					`*/accounts/${accountId}/pipelines/v1/pipelines`,
+					() => {
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 10000, message: "Authentication error" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 403 }
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(
+				runWrangler(`pipelines create my_pipeline --sql "${sql}"`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: Your account does not have access to the new Pipelines API. To use the legacy Pipelines API, please run:
+
+				npx wrangler@4.36.0 pipelines create my_pipeline
+
+				This will use an older version of Wrangler that supports the legacy API.]
+			`
+			);
+
+			expect(validateRequest.count).toBe(1);
+		});
+	});
+
+	describe("pipelines list", () => {
+		it("should list pipelines", async () => {
+			const mockPipelines: Pipeline[] = [
+				{
+					id: "pipeline_1",
+					name: "pipeline_one",
+					sql: "INSERT INTO sink1 SELECT * FROM stream1;",
+					status: "active",
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+				{
+					id: "pipeline_2",
+					name: "pipeline_two",
+					sql: "INSERT INTO sink2 SELECT * FROM stream2;",
+					status: "active",
+					created_at: "2024-01-02T00:00:00Z",
+					modified_at: "2024-01-02T00:00:00Z",
+				},
+			];
+
+			const listRequest = mockListPipelinesRequest(mockPipelines);
+
+			await runWrangler("pipelines list");
+
+			expect(listRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"wrangler pipelines create <pipeline>
-
-				Create a new pipeline [open-beta]
-
-				Source settings
-				      --source             Space separated list of allowed sources. Options are 'http' or 'worker'  [array] [default: [\\"http\\",\\"worker\\"]]
-				      --require-http-auth  Require Cloudflare API Token for HTTPS endpoint authentication  [boolean] [default: false]
-				      --cors-origins       CORS origin allowlist for HTTP endpoint (use * for any origin). Defaults to an empty array  [array]
-
-				Batch hints
-				      --batch-max-mb       Maximum batch size in megabytes before flushing. Defaults to 100 MB if unset. Minimum: 1, Maximum: 100  [number]
-				      --batch-max-rows     Maximum number of rows per batch before flushing. Defaults to 10,000,000 if unset. Minimum: 100, Maximum: 10,000,000  [number]
-				      --batch-max-seconds  Maximum age of batch in seconds before flushing. Defaults to 300 if unset. Minimum: 1, Maximum: 300  [number]
-
-				Destination settings
-				      --r2-bucket             Destination R2 bucket name  [string] [required]
-				      --r2-access-key-id      R2 service Access Key ID for authentication. Leave empty for OAuth confirmation.  [string]
-				      --r2-secret-access-key  R2 service Secret Access Key for authentication. Leave empty for OAuth confirmation.  [string]
-				      --r2-prefix             Prefix for storing files in the destination bucket. Default is no prefix  [string] [default: \\"\\"]
-				      --compression           Compression format for output files  [string] [choices: \\"none\\", \\"gzip\\", \\"deflate\\"] [default: \\"gzip\\"]
-
-				Pipeline settings
-				      --shard-count  Number of shards for the pipeline. More shards handle higher request volume; fewer shards produce larger output files. Defaults to 2 if unset. Minimum: 1, Maximum: 15  [number]
-
-				POSITIONALS
-				  pipeline  The name of the new pipeline  [string] [required]
-
-				GLOBAL FLAGS
-				  -c, --config    Path to Wrangler configuration file  [string]
-				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help      Show help  [boolean]
-				  -v, --version   Show version number  [boolean]"
+				"┌─┬─┬─┬─┐
+				│ Name │ ID │ Created │ Modified │
+				├─┼─┼─┼─┤
+				│ pipeline_one │ pipeline_1 │ 1/1/2024 │ 1/1/2024 │
+				├─┼─┼─┼─┤
+				│ pipeline_two │ pipeline_2 │ 1/2/2024 │ 1/2/2024 │
+				└─┴─┴─┴─┘"
 			`);
 		});
 
-		it("should create a pipeline with explicit credentials", async () => {
-			const requests = mockCreateRequest("my-pipeline");
-			await runWrangler(
-				"pipelines create my-pipeline --r2-bucket test-bucket --r2-access-key-id my-key --r2-secret-access-key my-secret"
-			);
-			expect(requests.count).toEqual(1);
-			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating pipeline named \\"my-pipeline\\"
-				✅ Successfully created pipeline \\"my-pipeline\\" with ID 0001
+		it("should handle empty pipelines list", async () => {
+			const listRequest = mockListPipelinesRequest([]);
 
-				Id:    0001
-				Name:  my-pipeline
+			await runWrangler("pipelines list");
+
+			expect(listRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`"No pipelines found."`);
+		});
+
+		it("should merge new and legacy pipelines with Type column for legacy", async () => {
+			const mockNewPipelines: Pipeline[] = [
+				{
+					id: "pipeline_1",
+					name: "new_pipeline",
+					sql: "INSERT INTO sink1 SELECT * FROM stream1;",
+					status: "active",
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+			];
+
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/v1/pipelines`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockNewPipelines,
+							result_info: {
+								page: 1,
+								per_page: 20,
+								count: mockNewPipelines.length,
+								total_count: mockNewPipelines.length,
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			const mockLegacyPipelines = [
+				{
+					id: "legacy_123",
+					name: "legacy_pipeline",
+					endpoint: "https://pipelines.cloudflare.com/legacy",
+				},
+			];
+
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockLegacyPipelines,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler("pipelines list");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines list\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️  You have legacy pipelines. Consider creating new pipelines by running 'wrangler pipelines setup'.[0m
+
+				"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"┌─┬─┬─┬─┬─┐
+				│ Name │ ID │ Created │ Modified │ Type │
+				├─┼─┼─┼─┼─┤
+				│ new_pipeline │ pipeline_1 │ 1/1/2024 │ 1/1/2024 │ │
+				├─┼─┼─┼─┼─┤
+				│ legacy_pipeline │ legacy_123 │ N/A │ N/A │ Legacy │
+				└─┴─┴─┴─┴─┘"
+			`);
+		});
+	});
+
+	describe("pipelines get", () => {
+		it("should error when no pipeline ID provided", async () => {
+			await expect(
+				runWrangler("pipelines get")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
+			);
+		});
+
+		it("should get pipeline details", async () => {
+			const mockPipeline: Pipeline = {
+				id: "pipeline_123",
+				name: "my_pipeline",
+				sql: "INSERT INTO test_sink SELECT * FROM test_stream;",
+				status: "active",
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+				tables: [
+					{
+						id: "stream_456",
+						name: "test_stream",
+						type: "stream",
+						version: 1,
+						latest: 1,
+						href: "/accounts/some-account-id/pipelines/v1/streams/stream_456",
+					},
+					{
+						id: "sink_789",
+						name: "test_sink",
+						type: "sink",
+						version: 1,
+						latest: 1,
+						href: "/accounts/some-account-id/pipelines/v1/sinks/sink_789",
+					},
+				],
+			};
+
+			const getRequest = mockGetPipelineRequest("pipeline_123", mockPipeline);
+
+			await runWrangler("pipelines get pipeline_123");
+
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"General:
+				  ID:           pipeline_123
+				  Name:         my_pipeline
+				  Created At:   1/1/2024, 12:00:00 AM
+				  Modified At:  1/1/2024, 12:00:00 AM
+
+				Pipeline SQL:
+				INSERT INTO test_sink SELECT * FROM test_stream;
+
+				Connected Streams:
+				┌─┬─┐
+				│ Name │ ID │
+				├─┼─┤
+				│ test_stream │ stream_456 │
+				└─┴─┘
+
+				Connected Sinks:
+				┌─┬─┐
+				│ Name │ ID │
+				├─┼─┤
+				│ test_sink │ sink_789 │
+				└─┴─┘"
+			`);
+		});
+
+		it("should fall back to legacy API when pipeline not found in new API", async () => {
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/v1/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 1000, message: "Pipeline not found" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 404 }
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			const mockLegacyPipeline = {
+				id: "legacy_123",
+				name: "my-legacy-pipeline",
+				endpoint: "https://pipelines.cloudflare.com/legacy",
+				source: [{ type: "http", format: "json" }],
+				destination: {
+					type: "r2",
+					format: "json",
+					path: { bucket: "my-bucket", prefix: "data/" },
+					batch: {
+						max_duration_s: 300,
+						max_bytes: 100000000,
+						max_rows: 10000000,
+					},
+					compression: { type: "gzip" },
+				},
+				transforms: [],
+				metadata: { shards: 2 },
+			};
+
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockLegacyPipeline,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler("pipelines get my-legacy-pipeline");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines get\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️  This is a legacy pipeline. Consider creating a new pipeline by running 'wrangler pipelines setup'.[0m
+
+				"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Id:    legacy_123
+				Name:  my-legacy-pipeline
 				Sources:
 				  HTTP:
-				    Endpoint:        foo
+				    Endpoint:        https://pipelines.cloudflare.com/legacy
 				    Authentication:  off
 				    Format:          JSON
-				  Worker:
-				    Format:  JSON
 				Destination:
 				  Type:         R2
-				  Bucket:       test-bucket
+				  Bucket:       my-bucket
 				  Format:       newline-delimited JSON
+				  Prefix:       data/
 				  Compression:  GZIP
 				  Batch hints:
 				    Max bytes:     100 MB
 				    Max duration:  300 seconds
 				    Max records:   10,000,000
-
-				🎉 You can now send data to your pipeline!
-				To access your new Pipeline in your Worker, add the following snippet to your configuration file:
-				{
-				  \\"pipelines\\": [
-				    {
-				      \\"pipeline\\": \\"my-pipeline\\",
-				      \\"binding\\": \\"PIPELINE\\"
-				    }
-				  ]
-				}
-
-				Send data to your pipeline's HTTP endpoint:
-
-				curl \\"foo\\" -d '[{\\"foo\\": \\"bar\\"}]'
 				"
 			`);
 		});
+	});
 
-		it("should fail a missing bucket", async () => {
-			const requests = mockCreateR2TokenFailure("bad-bucket");
+	describe("pipelines delete", () => {
+		const { setIsTTY } = useMockIsTTY();
+		it("should error when no pipeline ID provided", async () => {
 			await expect(
-				runWrangler("pipelines create bad-pipeline --r2-bucket bad-bucket")
-			).rejects.toThrowError();
+				runWrangler("pipelines delete")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
+			);
+		});
 
-			await endEventLoop();
+		it("should prompt for confirmation before delete", async () => {
+			const mockPipeline: Pipeline = {
+				id: "pipeline_123",
+				name: "my_pipeline",
+				sql: "INSERT INTO test_sink SELECT * FROM test_stream;",
+				status: "active",
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
 
-			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`
-				"X [ERROR] The R2 bucket [bad-bucket] doesn't exist"
+			const getRequest = mockGetPipelineRequest("pipeline_123", mockPipeline);
+			const deleteRequest = mockDeletePipelineRequest("pipeline_123");
+
+			setIsTTY(true);
+			mockConfirm({
+				text: "Are you sure you want to delete the pipeline 'my_pipeline' (pipeline_123)?",
+				result: true,
+			});
+
+			await runWrangler("pipelines delete pipeline_123");
+
+			expect(getRequest.count).toBe(1);
+			expect(deleteRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"✨ Successfully deleted pipeline 'my_pipeline' with id 'pipeline_123'."
 			`);
-			expect(std.out).toMatchInlineSnapshot(`""`);
-			expect(requests.count).toEqual(1);
 		});
 
-		it("should create a pipeline with auth", async () => {
-			const requests = mockCreateRequest("my-pipeline");
-			await runWrangler(
-				"pipelines create my-pipeline --require-http-auth --r2-bucket test-bucket --r2-access-key-id my-key --r2-secret-access-key my-secret"
+		it("should fall back to legacy API when deleting pipeline not in new API", async () => {
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/v1/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 1000, message: "Pipeline not found" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 404 }
+						);
+					},
+					{ once: true }
+				)
 			);
-			expect(requests.count).toEqual(1);
 
-			// contain http source and include auth
-			expect(requests.body?.source[0].type).toEqual("http");
-			expect((requests.body?.source[0] as HttpSource).authentication).toEqual(
-				true
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "legacy_123",
+								name: "my-legacy-pipeline",
+								endpoint: "https://pipelines.cloudflare.com/legacy",
+							},
+						});
+					},
+					{ once: true }
+				)
 			);
-		});
 
-		it("should create a pipeline without http", async () => {
-			const requests = mockCreateRequest("my-pipeline");
-			await runWrangler(
-				"pipelines create my-pipeline --source worker --r2-bucket test-bucket --r2-access-key-id my-key --r2-secret-access-key my-secret"
+			msw.use(
+				http.delete(
+					`*/accounts/${accountId}/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
 			);
-			expect(requests.count).toEqual(1);
 
-			// only contains binding source
-			expect(requests.body?.source.length).toEqual(1);
-			expect(requests.body?.source[0].type).toEqual("binding");
-		});
-	});
+			setIsTTY(true);
+			mockConfirm({
+				text: "Are you sure you want to delete the legacy pipeline 'my-legacy-pipeline'?",
+				result: true,
+			});
 
-	it("list - should list pipelines", async () => {
-		const requests = mockListRequest([
-			{
-				name: "foo",
-				id: "0001",
-				endpoint: "https://0001.pipelines.cloudflarestorage.com",
-			},
-		]);
-		await runWrangler("pipelines list");
-
-		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"┌─┬─┬─┐
-			│ name │ id │ endpoint │
-			├─┼─┼─┤
-			│ foo │ 0001 │ https://0001.pipelines.cloudflarestorage.com │
-			└─┴─┴─┘"
-		`);
-		expect(requests.count).toEqual(1);
-	});
-
-	describe("get", () => {
-		it("should get pipeline pretty", async () => {
-			const requests = mockGetRequest("foo", samplePipeline);
-			await runWrangler("pipelines get foo");
+			await runWrangler("pipelines delete my-legacy-pipeline");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Id:    0001
-				Name:  my-pipeline
-				Sources:
-				  HTTP:
-				    Endpoint:        https://0001.pipelines.cloudflarestorage.com
-				    Authentication:  off
-				    CORS Origins:    *
-				    Format:          JSON
-				  Worker:
-				    Format:  JSON
-				Destination:
-				  Type:         R2
-				  Bucket:       bucket
-				  Format:       newline-delimited JSON
-				  Compression:  NONE
-				  Batch hints:
-				    Max bytes:     100 MB
-				    Max duration:  300 seconds
-				    Max records:   100,000
+				"✨ Successfully deleted legacy pipeline 'my-legacy-pipeline'."
+			`);
+		});
+	});
+
+	describe("pipelines update", () => {
+		it("should error when trying to update V1 pipeline", async () => {
+			const mockPipeline: Pipeline = {
+				id: "pipeline_123",
+				name: "my_pipeline",
+				sql: "INSERT INTO test_sink SELECT * FROM test_stream;",
+				status: "active",
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/v1/pipelines/pipeline_123`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockPipeline,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(
+				runWrangler("pipelines update pipeline_123 --batch-max-mb 50")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Pipelines created with the V1 API cannot be updated. To modify your pipeline, delete and recreate it with your new SQL.]`
+			);
+		});
+
+		it("should update legacy pipeline with warning", async () => {
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/v1/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 1000, message: "Pipeline not found" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 404 }
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			const mockLegacyPipeline = {
+				id: "legacy_123",
+				name: "my-legacy-pipeline",
+				endpoint: "https://pipelines.cloudflare.com/legacy",
+				source: [{ type: "http", format: "json" }],
+				destination: {
+					type: "r2",
+					format: "json",
+					path: { bucket: "my-bucket", prefix: "data/" },
+					batch: {
+						max_duration_s: 300,
+						max_bytes: 100000000,
+						max_rows: 10000000,
+					},
+					compression: { type: "gzip" },
+				},
+				transforms: [],
+				metadata: { shards: 2 },
+			};
+
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockLegacyPipeline,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			msw.use(
+				http.put(
+					`*/accounts/${accountId}/pipelines/my-legacy-pipeline`,
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								...mockLegacyPipeline,
+								destination: {
+									...mockLegacyPipeline.destination,
+									batch: {
+										...mockLegacyPipeline.destination.batch,
+										max_bytes: 50000000,
+									},
+								},
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler(
+				"pipelines update my-legacy-pipeline --batch-max-mb 50"
+			);
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines update\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️  Updating legacy pipeline. Consider recreating with 'wrangler pipelines setup'.[0m
+
 				"
 			`);
-			expect(requests.count).toEqual(1);
-		});
-
-		it("should get pipeline json", async () => {
-			const requests = mockGetRequest("foo", samplePipeline);
-			await runWrangler("pipelines get foo --format=json");
-
-			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"{
-				  \\"id\\": \\"0001\\",
-				  \\"version\\": 1,
-				  \\"name\\": \\"my-pipeline\\",
-				  \\"metadata\\": {},
-				  \\"source\\": [
-				    {
-				      \\"type\\": \\"binding\\",
-				      \\"format\\": \\"json\\"
-				    },
-				    {
-				      \\"type\\": \\"http\\",
-				      \\"format\\": \\"json\\",
-				      \\"authentication\\": false,
-				      \\"cors\\": {
-				        \\"origins\\": [
-				          \\"*\\"
-				        ]
-				      }
-				    }
-				  ],
-				  \\"transforms\\": [],
-				  \\"destination\\": {
-				    \\"type\\": \\"r2\\",
-				    \\"format\\": \\"json\\",
-				    \\"batch\\": {
-				      \\"max_bytes\\": 100000000,
-				      \\"max_duration_s\\": 300,
-				      \\"max_rows\\": 100000
-				    },
-				    \\"compression\\": {
-				      \\"type\\": \\"none\\"
-				    },
-				    \\"path\\": {
-				      \\"bucket\\": \\"bucket\\"
-				    }
-				  },
-				  \\"endpoint\\": \\"https://0001.pipelines.cloudflarestorage.com\\"
-				}"
+				"🌀 Updating pipeline \\"my-legacy-pipeline\\"
+				✨ Successfully updated pipeline \\"my-legacy-pipeline\\" with ID legacy_123
+				"
 			`);
-			expect(requests.count).toEqual(1);
-		});
-
-		it("should fail on missing pipeline", async () => {
-			const requests = mockGetRequest("bad-pipeline", null, 404, {
-				code: 1000,
-				message: "Pipeline does not exist",
-			});
-			await expect(
-				runWrangler("pipelines get bad-pipeline")
-			).rejects.toThrowError();
-
-			await endEventLoop();
-
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-				"X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
-				  Pipeline does not exist [code: 1000]
-				  If you think this is a bug, please open an issue at:
-				  https://github.com/cloudflare/workers-sdk/issues/new/choose"
-			`);
-			expect(requests.count).toEqual(1);
 		});
 	});
 
-	describe("update", () => {
-		it("should update a pipeline", async () => {
-			const pipeline: Pipeline = samplePipeline;
-			mockGetRequest(pipeline.name, pipeline);
+	describe("pipelines streams create", () => {
+		const { setIsTTY } = useMockIsTTY();
+		function mockCreateStreamRequest(expectedRequest: {
+			name: string;
+			hasSchema?: boolean;
+		}) {
+			const requests = { count: 0 };
+			msw.use(
+				http.post(
+					`*/accounts/${accountId}/pipelines/v1/streams`,
+					async ({ request }) => {
+						requests.count++;
+						const body = (await request.json()) as {
+							name: string;
+							schema?: { fields: SchemaField[] };
+						};
+						expect(body.name).toBe(expectedRequest.name);
 
-			const update = JSON.parse(JSON.stringify(pipeline));
-			update.destination.compression.type = "gzip";
-			const updateReq = mockUpdateRequest(update.name, update);
+						const schema = expectedRequest.hasSchema
+							? {
+									fields: [
+										{ name: "id", type: "string", required: true },
+										{
+											name: "timestamp",
+											type: "timestamp",
+											required: true,
+											unit: "millisecond",
+										},
+									],
+								}
+							: null;
 
-			await runWrangler("pipelines update my-pipeline --compression gzip");
-			expect(updateReq.count).toEqual(1);
-		});
+						const format = expectedRequest.hasSchema
+							? { type: "json" }
+							: { type: "json", unstructured: true };
 
-		it("should update a pipeline with new bucket", async () => {
-			const pipeline: Pipeline = samplePipeline;
-			mockGetRequest(pipeline.name, pipeline);
-
-			const update = JSON.parse(JSON.stringify(pipeline));
-			update.destination.path.bucket = "new_bucket";
-			update.destination.credentials = {
-				endpoint: "https://some-account-id.r2.cloudflarestorage.com",
-				access_key_id: "service-token-id",
-				secret_access_key: "my-secret-access-key",
-			};
-			const updateReq = mockUpdateRequest(update.name, update);
-
-			await runWrangler(
-				"pipelines update my-pipeline --r2-bucket new-bucket --r2-access-key-id service-token-id --r2-secret-access-key my-secret-access-key"
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "stream_123",
+								name: expectedRequest.name,
+								version: 1,
+								endpoint: `https://pipelines.cloudflare.com/${expectedRequest.name}`,
+								format,
+								schema,
+								http: {
+									enabled: true,
+									authentication: true,
+								},
+								worker_binding: { enabled: true },
+								created_at: "2024-01-01T00:00:00Z",
+								modified_at: "2024-01-01T00:00:00Z",
+							},
+						});
+					},
+					{ once: true }
+				)
 			);
+			return requests;
+		}
 
-			expect(updateReq.count).toEqual(1);
-		});
-
-		it("should update a pipeline with new credential", async () => {
-			const pipeline: Pipeline = samplePipeline;
-			mockGetRequest(pipeline.name, pipeline);
-
-			const update = JSON.parse(JSON.stringify(pipeline));
-			update.destination.path.bucket = "new-bucket";
-			update.destination.credentials = {
-				endpoint: "https://some-account-id.r2.cloudflarestorage.com",
-				access_key_id: "new-key",
-				secret_access_key: "new-secret",
-			};
-			const updateReq = mockUpdateRequest(update.name, update);
-
-			await runWrangler(
-				"pipelines update my-pipeline --r2-bucket new-bucket --r2-access-key-id new-key --r2-secret-access-key new-secret"
-			);
-
-			expect(updateReq.count).toEqual(1);
-		});
-
-		it("should update a pipeline with source changes http auth", async () => {
-			const pipeline: Pipeline = samplePipeline;
-			mockGetRequest(pipeline.name, pipeline);
-
-			const update = JSON.parse(JSON.stringify(pipeline));
-			update.source = [
-				{
-					type: "http",
-					format: "json",
-					authenticated: true,
-				},
-			];
-			const updateReq = mockUpdateRequest(update.name, update);
-
-			await runWrangler(
-				"pipelines update my-pipeline --source http --require-http-auth"
-			);
-
-			expect(updateReq.count).toEqual(1);
-			expect(updateReq.body?.source.length).toEqual(1);
-			expect(updateReq.body?.source[0].type).toEqual("http");
-			expect((updateReq.body?.source[0] as HttpSource).authentication).toEqual(
-				true
+		it("should error when no stream name provided", async () => {
+			await expect(
+				runWrangler("pipelines streams create")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 		});
 
-		it("should update a pipeline cors headers", async () => {
-			const pipeline: Pipeline = samplePipeline;
-			mockGetRequest(pipeline.name, pipeline);
-
-			const update = JSON.parse(JSON.stringify(pipeline));
-			update.source = [
-				{
-					type: "http",
-					format: "json",
-					authenticated: true,
-				},
-			];
-			const updateReq = mockUpdateRequest(update.name, update);
-
-			await runWrangler(
-				"pipelines update my-pipeline --cors-origins http://localhost:8787"
-			);
-
-			expect(updateReq.count).toEqual(1);
-			expect(updateReq.body?.source.length).toEqual(2);
-			expect(updateReq.body?.source[1].type).toEqual("http");
-			expect((updateReq.body?.source[1] as HttpSource).cors?.origins).toEqual([
-				"http://localhost:8787",
-			]);
-		});
-
-		it("should update remove cors headers", async () => {
-			const pipeline: Pipeline = samplePipeline;
-			mockGetRequest(pipeline.name, pipeline);
-
-			const update = JSON.parse(JSON.stringify(pipeline));
-			update.source = [
-				{
-					type: "http",
-					format: "json",
-					authenticated: true,
-				},
-			];
-			const updateReq = mockUpdateRequest(update.name, update);
-
-			await runWrangler(
-				"pipelines update my-pipeline --cors-origins http://localhost:8787"
-			);
-
-			expect(updateReq.count).toEqual(1);
-			expect(updateReq.body?.source.length).toEqual(2);
-			expect(updateReq.body?.source[1].type).toEqual("http");
-			expect((updateReq.body?.source[1] as HttpSource).cors?.origins).toEqual([
-				"http://localhost:8787",
-			]);
-
-			mockGetRequest(pipeline.name, pipeline);
-			const secondUpdateReq = mockUpdateRequest(update.name, update);
-			await runWrangler("pipelines update my-pipeline --cors-origins none");
-			expect(secondUpdateReq.count).toEqual(1);
-			expect(secondUpdateReq.body?.source.length).toEqual(2);
-			expect(secondUpdateReq.body?.source[1].type).toEqual("http");
-			expect(
-				(secondUpdateReq.body?.source[1] as HttpSource).cors?.origins
-			).toEqual([]);
-		});
-
-		it("should fail a missing pipeline", async () => {
-			const requests = mockGetRequest("bad-pipeline", null, 404, {
-				code: 1000,
-				message: "Pipeline does not exist",
+		it("should create stream with default settings", async () => {
+			setIsTTY(true);
+			mockConfirm({
+				text: "No schema file provided. Do you want to create stream without a schema (unstructured JSON)?",
+				result: true,
 			});
+
+			const createRequest = mockCreateStreamRequest({
+				name: "my_stream",
+			});
+
+			await runWrangler("pipelines streams create my_stream");
+
+			expect(createRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating stream 'my_stream'...
+				✨ Successfully created stream 'my_stream' with id 'stream_123'.
+
+				Creation Summary:
+				General:
+				  Name:  my_stream
+
+				HTTP Ingest:
+				  Enabled:         Yes
+				  Authentication:  Yes
+				  Endpoint:        https://pipelines.cloudflare.com/my_stream
+				  CORS Origins:    None
+
+				Input Schema: Unstructured JSON (single 'value' column)"
+			`);
+		});
+
+		it("should create stream with schema from file", async () => {
+			const schemaFile = "schema.json";
+			const schema = {
+				fields: [
+					{ name: "id", type: "string", required: true },
+					{
+						name: "timestamp",
+						type: "timestamp",
+						required: true,
+						unit: "millisecond",
+					},
+				],
+			};
+			writeFileSync(schemaFile, JSON.stringify(schema));
+
+			const createRequest = mockCreateStreamRequest({
+				name: "my_stream",
+				hasSchema: true,
+			});
+
+			await runWrangler(
+				`pipelines streams create my_stream --schema-file ${schemaFile}`
+			);
+
+			expect(createRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating stream 'my_stream'...
+				✨ Successfully created stream 'my_stream' with id 'stream_123'.
+
+				Creation Summary:
+				General:
+				  Name:  my_stream
+
+				HTTP Ingest:
+				  Enabled:         Yes
+				  Authentication:  Yes
+				  Endpoint:        https://pipelines.cloudflare.com/my_stream
+				  CORS Origins:    None
+
+				Input Schema:
+				┌─┬─┬─┬─┐
+				│ Field Name │ Type │ Unit/Items │ Required │
+				├─┼─┼─┼─┤
+				│ id │ string │ │ Yes │
+				├─┼─┼─┼─┤
+				│ timestamp │ timestamp │ millisecond │ Yes │
+				└─┴─┴─┴─┘"
+			`);
+		});
+	});
+
+	describe("pipelines streams list", () => {
+		function mockListStreamsRequest(streams: Stream[], pipelineId?: string) {
+			const requests = { count: 0 };
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/v1/streams`,
+					({ request }) => {
+						requests.count++;
+						const url = new URL(request.url);
+						if (pipelineId) {
+							expect(url.searchParams.get("pipeline_id")).toBe(pipelineId);
+						}
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: streams,
+							result_info: {
+								page: 1,
+								per_page: 20,
+								count: streams.length,
+								total_count: streams.length,
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		it("should list streams", async () => {
+			const mockStreams: Stream[] = [
+				{
+					id: "stream_1",
+					name: "stream_one",
+					version: 1,
+					endpoint: "https://pipelines.cloudflare.com/stream_1",
+					format: { type: "json", unstructured: true },
+					schema: null,
+					http: { enabled: true, authentication: false },
+					worker_binding: { enabled: true },
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+			];
+
+			const listRequest = mockListStreamsRequest(mockStreams);
+
+			await runWrangler("pipelines streams list");
+
+			expect(listRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"┌─┬─┬─┬─┐
+				│ Name │ ID │ HTTP │ Created │
+				├─┼─┼─┼─┤
+				│ stream_one │ stream_1 │ Yes (unauthenticated) │ 1/1/2024 │
+				└─┴─┴─┴─┘"
+			`);
+		});
+
+		it("should filter by pipeline ID", async () => {
+			const mockStreams: Stream[] = [
+				{
+					id: "stream_1",
+					name: "filtered_stream",
+					version: 1,
+					endpoint: "https://pipelines.cloudflare.com/stream_1",
+					format: { type: "json", unstructured: true },
+					schema: null,
+					http: { enabled: true, authentication: false },
+					worker_binding: { enabled: true },
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+			];
+
+			const listRequest = mockListStreamsRequest(mockStreams, "pipeline_123");
+
+			await runWrangler("pipelines streams list --pipeline-id pipeline_123");
+
+			expect(listRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"┌─┬─┬─┬─┐
+				│ Name │ ID │ HTTP │ Created │
+				├─┼─┼─┼─┤
+				│ filtered_stream │ stream_1 │ Yes (unauthenticated) │ 1/1/2024 │
+				└─┴─┴─┴─┘"
+			`);
+		});
+	});
+
+	describe("pipelines streams get", () => {
+		it("should get stream details", async () => {
+			const mockStream: Stream = {
+				id: "stream_123",
+				name: "my_stream",
+				version: 1,
+				endpoint: "https://pipelines.cloudflare.com/stream_123",
+				format: { type: "json", unstructured: true },
+				schema: null,
+				http: { enabled: true, authentication: true },
+				worker_binding: { enabled: true },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			const getRequest = mockGetStreamRequest("stream_123", mockStream);
+
+			await runWrangler("pipelines streams get stream_123");
+
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Stream ID: stream_123
+
+				Configuration:
+				General:
+				  Name:         my_stream
+				  Created At:   1/1/2024, 12:00:00 AM
+				  Modified At:  1/1/2024, 12:00:00 AM
+
+				HTTP Ingest:
+				  Enabled:         Yes
+				  Authentication:  Yes
+				  Endpoint:        https://pipelines.cloudflare.com/stream_123
+				  CORS Origins:    None
+
+				Input Schema: Unstructured JSON (single 'value' column)"
+			`);
+		});
+	});
+
+	describe("pipelines streams delete", () => {
+		const { setIsTTY } = useMockIsTTY();
+		function mockDeleteStreamRequest(streamId: string) {
+			const requests = { count: 0 };
+			msw.use(
+				http.delete(
+					`*/accounts/${accountId}/pipelines/v1/streams/${streamId}`,
+					() => {
+						requests.count++;
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		it("should prompt for confirmation", async () => {
+			const mockStream: Stream = {
+				id: "stream_123",
+				name: "my_stream",
+				version: 1,
+				endpoint: "https://pipelines.cloudflare.com/stream_123",
+				format: { type: "json", unstructured: true },
+				schema: null,
+				http: { enabled: true, authentication: false },
+				worker_binding: { enabled: true },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			const getRequest = mockGetStreamRequest("stream_123", mockStream);
+			const deleteRequest = mockDeleteStreamRequest("stream_123");
+
+			setIsTTY(true);
+			mockConfirm({
+				text: "Are you sure you want to delete the stream 'my_stream' (stream_123)?",
+				result: true,
+			});
+
+			await runWrangler("pipelines streams delete stream_123");
+
+			expect(getRequest.count).toBe(1);
+			expect(deleteRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"✨ Successfully deleted stream 'my_stream' with id 'stream_123'."
+			`);
+		});
+	});
+
+	describe("pipelines sinks create", () => {
+		function mockCreateSinkRequest(expectedRequest: {
+			name: string;
+			type: string;
+			isDataCatalog?: boolean;
+		}) {
+			const requests = { count: 0 };
+			msw.use(
+				http.post(
+					`*/accounts/${accountId}/pipelines/v1/sinks`,
+					async ({ request }) => {
+						requests.count++;
+						const body = (await request.json()) as {
+							name: string;
+							type: string;
+							config?: Record<string, unknown>;
+						};
+						expect(body.name).toBe(expectedRequest.name);
+						expect(body.type).toBe(expectedRequest.type);
+
+						const config = expectedRequest.isDataCatalog
+							? {
+									bucket: "catalog-bucket",
+									namespace: "default",
+									table_name: "my-table",
+									token: "token123",
+								}
+							: {
+									bucket: "my-bucket",
+									credentials: {
+										access_key_id: "key123",
+										secret_access_key: "secret123",
+									},
+								};
+
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "sink_123",
+								name: expectedRequest.name,
+								type: expectedRequest.type,
+								format: { type: "json" },
+								schema: null,
+								config,
+								created_at: "2024-01-01T00:00:00Z",
+								modified_at: "2024-01-01T00:00:00Z",
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		it("should error when type is missing", async () => {
+			await expect(
+				runWrangler("pipelines sinks create my_sink --bucket my-bucket")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Missing required argument: type]`
+			);
+		});
+
+		it("should error with invalid bucket name", async () => {
 			await expect(
 				runWrangler(
-					"pipelines update bad-pipeline --r2-bucket new-bucket --r2-access-key-id new-key --r2-secret-access-key new-secret"
+					"pipelines sinks create my_sink --type r2 --bucket invalid_bucket_name"
 				)
-			).rejects.toThrowError();
-
-			await endEventLoop();
-
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-				"X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
-				  Pipeline does not exist [code: 1000]
-				  If you think this is a bug, please open an issue at:
-				  https://github.com/cloudflare/workers-sdk/issues/new/choose"
-			`);
-			expect(requests.count).toEqual(1);
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The bucket name "invalid_bucket_name" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.]`
+			);
 		});
 
-		it("should remove transformations", async () => {
-			const pipeline: Pipeline = samplePipeline;
-			mockGetRequest(pipeline.name, pipeline);
+		it("should create R2 sink with explicit credentials", async () => {
+			const createRequest = mockCreateSinkRequest({
+				name: "my_sink",
+				type: "r2",
+			});
 
-			const update = JSON.parse(JSON.stringify(pipeline));
-			update.transforms = [
-				{
-					script: "hello",
-					entrypoint: "MyTransform",
-				},
-			];
-			const updateReq = mockUpdateRequest(update.name, update);
+			await runWrangler(
+				"pipelines sinks create my_sink --type r2 --bucket my-bucket --access-key-id mykey --secret-access-key mysecret"
+			);
 
-			await runWrangler("pipelines update my-pipeline --transform-worker none");
+			expect(createRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating sink 'my_sink'...
+				✨ Successfully created sink 'my_sink' with id 'sink_123'.
 
-			expect(updateReq.count).toEqual(1);
-			expect(updateReq.body?.transforms.length).toEqual(0);
+				Creation Summary:
+				General:
+				  Type:  R2
+
+				Destination:
+				  Bucket:        my-bucket
+				  Path:          (root)
+				  Partitioning:  year=%Y/month=%m/day=%d
+
+				Batching:
+				  File Size:      none
+				  Time Interval:  30s
+
+				Format:
+				  Type:  json"
+			`);
+		});
+
+		it("should create R2 Data Catalog sink", async () => {
+			const createRequest = mockCreateSinkRequest({
+				name: "my_sink",
+				type: "r2_data_catalog",
+				isDataCatalog: true,
+			});
+
+			await runWrangler(
+				"pipelines sinks create my_sink --type r2-data-catalog --bucket catalog-bucket --namespace default --table my-table --catalog-token token123"
+			);
+
+			expect(createRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating sink 'my_sink'...
+				✨ Successfully created sink 'my_sink' with id 'sink_123'.
+
+				Creation Summary:
+				General:
+				  Type:  R2 Data Catalog
+
+				Destination:
+				  Bucket:  catalog-bucket
+				  Table:   default.my-table
+
+				Batching:
+				  File Size:      none
+				  Time Interval:  30s
+
+				Format:
+				  Type:  json"
+			`);
+		});
+
+		it("should error when r2-data-catalog missing required fields", async () => {
+			await expect(
+				runWrangler(
+					"pipelines sinks create my_sink --type r2-data-catalog --bucket catalog-bucket"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --namespace is required for r2-data-catalog sinks]`
+			);
 		});
 	});
 
-	describe("delete", () => {
-		it("should delete pipeline", async () => {
-			const requests = mockDeleteRequest("foo");
-			await runWrangler("pipelines delete foo");
+	describe("pipelines sinks list", () => {
+		function mockListSinksRequest(sinks: Sink[], pipelineId?: string) {
+			const requests = { count: 0 };
+			msw.use(
+				http.get(
+					`*/accounts/${accountId}/pipelines/v1/sinks`,
+					({ request }) => {
+						requests.count++;
+						const url = new URL(request.url);
+						if (pipelineId) {
+							expect(url.searchParams.get("pipeline_id")).toBe(pipelineId);
+						}
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: sinks,
+							result_info: {
+								page: 1,
+								per_page: 20,
+								count: sinks.length,
+								total_count: sinks.length,
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
 
+		it("should list sinks", async () => {
+			const mockSinks: Sink[] = [
+				{
+					id: "sink_1",
+					name: "sink_one",
+					type: "r2",
+					format: { type: "json" },
+					schema: null,
+					config: { bucket: "bucket1" },
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+			];
+
+			const listRequest = mockListSinksRequest(mockSinks);
+
+			await runWrangler("pipelines sinks list");
+
+			expect(listRequest.count).toBe(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Deleting pipeline foo.
-				Deleted pipeline foo."
+				"┌─┬─┬─┬─┬─┐
+				│ Name │ ID │ Type │ Destination │ Created │
+				├─┼─┼─┼─┼─┤
+				│ sink_one │ sink_1 │ R2 │ bucket1 │ 1/1/2024 │
+				└─┴─┴─┴─┴─┘"
 			`);
-			expect(requests.count).toEqual(1);
 		});
 
-		it("should fail a missing pipeline", async () => {
-			const requests = mockDeleteRequest("bad-pipeline", 404, {
-				code: 1000,
-				message: "Pipeline does not exist",
-			});
-			await expect(
-				runWrangler("pipelines delete bad-pipeline")
-			).rejects.toThrowError();
+		it("should filter by pipeline ID", async () => {
+			const mockSinks: Sink[] = [
+				{
+					id: "sink_1",
+					name: "filtered_sink",
+					type: "r2",
+					format: { type: "json" },
+					schema: null,
+					config: { bucket: "bucket1" },
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+			];
 
-			await endEventLoop();
+			const listRequest = mockListSinksRequest(mockSinks, "pipeline_123");
 
+			await runWrangler("pipelines sinks list --pipeline-id pipeline_123");
+
+			expect(listRequest.count).toBe(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-				"Deleting pipeline bad-pipeline.
-				X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
-				  Pipeline does not exist [code: 1000]
-				  If you think this is a bug, please open an issue at:
-				  https://github.com/cloudflare/workers-sdk/issues/new/choose"
+			expect(std.out).toMatchInlineSnapshot(`
+				"┌─┬─┬─┬─┬─┐
+				│ Name │ ID │ Type │ Destination │ Created │
+				├─┼─┼─┼─┼─┤
+				│ filtered_sink │ sink_1 │ R2 │ bucket1 │ 1/1/2024 │
+				└─┴─┴─┴─┴─┘"
 			`);
-			expect(requests.count).toEqual(1);
+		});
+	});
+
+	function mockGetSinkRequest(sinkId: string, sink: Sink) {
+		const requests = { count: 0 };
+		msw.use(
+			http.get(
+				`*/accounts/${accountId}/pipelines/v1/sinks/${sinkId}`,
+				() => {
+					requests.count++;
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: sink,
+					});
+				},
+				{ once: true }
+			)
+		);
+		return requests;
+	}
+
+	describe("pipelines sinks get", () => {
+		it("should get sink details", async () => {
+			const mockSink: Sink = {
+				id: "sink_123",
+				name: "my_sink",
+				type: "r2",
+				format: { type: "json" },
+				schema: null,
+				config: {
+					bucket: "my-bucket",
+				},
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			const getRequest = mockGetSinkRequest("sink_123", mockSink);
+
+			await runWrangler("pipelines sinks get sink_123");
+
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"ID:    sink_123
+				Name:  my_sink
+				General:
+				  Type:         R2
+				  Created At:   1/1/2024, 12:00:00 AM
+				  Modified At:  1/1/2024, 12:00:00 AM
+
+				Destination:
+				  Bucket:        my-bucket
+				  Path:          (root)
+				  Partitioning:  year=%Y/month=%m/day=%d
+
+				Batching:
+				  File Size:      none
+				  Time Interval:  30s
+
+				Format:
+				  Type:  json"
+			`);
+		});
+	});
+
+	describe("pipelines sinks delete", () => {
+		const { setIsTTY } = useMockIsTTY();
+		function mockDeleteSinkRequest(sinkId: string) {
+			const requests = { count: 0 };
+			msw.use(
+				http.delete(
+					`*/accounts/${accountId}/pipelines/v1/sinks/${sinkId}`,
+					() => {
+						requests.count++;
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		it("should prompt for confirmation", async () => {
+			const mockSink: Sink = {
+				id: "sink_123",
+				name: "my_sink",
+				type: "r2",
+				format: { type: "json" },
+				schema: null,
+				config: { bucket: "my-bucket" },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			const getSinkRequest = mockGetSinkRequest("sink_123", mockSink);
+			const deleteRequest = mockDeleteSinkRequest("sink_123");
+
+			setIsTTY(true);
+			mockConfirm({
+				text: "Are you sure you want to delete the sink 'my_sink' (sink_123)?",
+				result: true,
+			});
+
+			await runWrangler("pipelines sinks delete sink_123");
+
+			expect(getSinkRequest.count).toBe(1);
+			expect(deleteRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"✨ Successfully deleted sink 'my_sink' with id 'sink_123'."
+			`);
 		});
 	});
 });
