@@ -531,6 +531,9 @@ describe(
 				expectedWorkerOptions,
 			}) => {
 				onTestFailed(() => {
+					console.dir(
+						"test failed " + JSON.stringify(expectedProxyWorkerBindings)
+					);
 					console.dir("STDOUT: " + std.out);
 					console.dir("STDERR: " + std.err);
 				});
@@ -555,6 +558,8 @@ describe(
 					{ timeout: 2_000 }
 				);
 
+				console.dir("wrangler started: " + match?.groups?.url);
+
 				// Check that there is initially no remote bindings proxy setup
 				expect(proxyWorkerBindings).toEqual(undefined);
 
@@ -565,6 +570,8 @@ describe(
 					throw new Error("No URL found in output");
 				}
 				expect((await fetch(url)).ok).toBe(true);
+
+				console.dir("fetch OK: ");
 
 				// Now update the config to include the bindings
 				await seed({
@@ -579,6 +586,8 @@ describe(
 						2
 					),
 				});
+
+				console.dir("config file updated: " + std.out);
 
 				// Once we see the reloading message we know it has processed the config change
 				await vi.waitFor(() => expect(std.out).toMatch(/Reloading/), {

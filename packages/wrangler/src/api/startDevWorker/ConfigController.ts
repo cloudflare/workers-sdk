@@ -393,7 +393,7 @@ async function resolveConfig(
 		!resolved.dev.remote &&
 		resolved.build.format === "service-worker"
 	) {
-		logger.warn(
+		console.dir(
 			"Analytics Engine is not supported locally when using the service-worker format. Please migrate to the module worker format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/"
 		);
 	}
@@ -402,7 +402,7 @@ async function resolveConfig(
 
 	const services = extractBindingsOfType("service", resolved.bindings);
 	if (services && services.length > 0 && resolved.dev?.remote) {
-		logger.warn(
+		console.dir(
 			`This worker is bound to live services: ${services
 				.map(
 					(service) =>
@@ -415,7 +415,7 @@ async function resolveConfig(
 	}
 
 	if (!resolved.dev?.origin?.secure && resolved.dev?.remote) {
-		logger.warn(
+		console.dir(
 			"Setting upstream-protocol to http is not currently supported for remote mode.\n" +
 				"If this is required in your project, please add your use case to the following issue:\n" +
 				"https://github.com/cloudflare/workers-sdk/issues/583."
@@ -439,7 +439,7 @@ async function resolveConfig(
 		(queues?.length ||
 			resolved.triggers?.some((t) => t.type === "queue-consumer"))
 	) {
-		logger.warn("Queues are not yet supported in wrangler dev remote mode.");
+		console.dir("Queues are not yet supported in wrangler dev remote mode.");
 	}
 
 	if (resolved.dev.remote) {
@@ -450,7 +450,7 @@ async function resolveConfig(
 			resolved.containers &&
 			resolved.containers.length > 0
 		) {
-			logger.warn(
+			console.dir(
 				"Containers are only supported in local mode, to suppress this warning set `dev.enable_containers` to `false` or pass `--enable-containers=false` to the `wrangler dev` command"
 			);
 		}
@@ -463,14 +463,14 @@ async function resolveConfig(
 			resolved.dev.remote &&
 			Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
 		) {
-			logger.warn("SQLite in Durable Objects is only supported in local mode.");
+			console.dir("SQLite in Durable Objects is only supported in local mode.");
 		}
 	}
 
 	// prompt user to update their types if we detect that it is out of date
 	const typesChanged = await checkTypesDiff(config, entry);
 	if (typesChanged) {
-		logger.log(
+		console.dir(
 			"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
 		);
 	}
@@ -504,7 +504,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				if (this.#configWatcher?.closed) {
 					return;
 				}
-				logger.debug(`${path.basename(configPath)} changed...`);
+				console.dir(`${path.basename(configPath)} changed...`);
 				assert(
 					this.latestInput,
 					"Cannot be watching config without having first set an input"
@@ -620,12 +620,12 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	}
 
 	async teardown() {
-		logger.debug("ConfigController teardown beginning...");
+		console.dir("ConfigController teardown beginning...");
 		console.dir("tearDown()");
 		this.#tearingDown = true;
 		this.#abortController?.abort();
 		await this.#configWatcher?.close();
-		logger.debug("ConfigController teardown complete");
+		console.dir("ConfigController teardown complete");
 	}
 
 	// *********************
