@@ -45,8 +45,9 @@ export function createRequestHandler(
 	next: vite.Connect.NextFunction
 ) => Promise<void> {
 	return async (req, res, next) => {
+		const request = createRequest(req, res);
+
 		try {
-			const request = createRequest(req, res);
 			let response = await handler(toMiniflareRequest(request), req);
 
 			// Vite uses HTTP/2 when `server.https` or `preview.https` is enabled
@@ -58,6 +59,11 @@ export function createRequestHandler(
 
 			await sendResponse(res, response as unknown as Response);
 		} catch (error) {
+			if (request.signal.aborted) {
+				// If the request was aborted, ignore the error
+				return;
+			}
+
 			next(error);
 		}
 	};

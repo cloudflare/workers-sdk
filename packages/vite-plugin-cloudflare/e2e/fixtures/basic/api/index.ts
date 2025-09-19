@@ -7,9 +7,42 @@ interface Env {
 	AI: Ai;
 }
 
+let lastRequestAborted = false;
+
 export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
+
+		if (url.pathname === "/wait") {
+			if (lastRequestAborted) {
+				lastRequestAborted = false;
+				return new Response(
+					"Last request aborted. Make a new request if you wanna wait again."
+				);
+			}
+
+			request.signal.addEventListener("abort", () => {
+				console.log("The request was aborted!");
+				lastRequestAborted = true;
+			});
+
+			async function sendPing(writable: WritableStream) {
+				const writer = writable.getWriter();
+				const enc = new TextEncoder();
+
+				for (let i = 0; i < 5; i++) {
+					// Send 'ping' every second to keep the connection alive
+					await writer.write(enc.encode("ping\r\n"));
+					await scheduler.wait(1000);
+				}
+			}
+
+			const { readable, writable } = new IdentityTransformStream();
+			sendPing(writable);
+			return new Response(readable, {
+				headers: { "Content-Type": "text/plain" },
+			});
+		}
 
 		if (url.pathname.startsWith("/api/")) {
 			return Response.json({
