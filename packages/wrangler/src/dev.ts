@@ -911,14 +911,14 @@ export function getBindings(
 
 	// Hyperdrive bindings
 	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {
-		const desiredPrefix = `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
+		const prefix = `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
 		const deprecatedPrefix = `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
 
-		let varName = `${deprecatedPrefix}${hyperdrive.binding}`;
+		let varName = `${prefix}${hyperdrive.binding}`;
 		let connectionStringFromEnv = process.env[varName];
 
 		if (!connectionStringFromEnv) {
-			varName = `${desiredPrefix}${hyperdrive.binding}`;
+			varName = `${deprecatedPrefix}${hyperdrive.binding}`;
 			connectionStringFromEnv = process.env[varName];
 		}
 
@@ -929,7 +929,7 @@ export function getBindings(
 			hyperdrive.localConnectionString === undefined
 		) {
 			throw new UserError(
-				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the '${desiredPrefix}${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`,
+				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the '${prefix}${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`,
 				{ telemetryMessage: "no local hyperdrive connection string" }
 			);
 		}
@@ -939,7 +939,7 @@ export function getBindings(
 		if (connectionStringFromEnv) {
 			if (varName.startsWith(deprecatedPrefix)) {
 				logger.once.warn(
-					`Using "${deprecatedPrefix}<BINDING_NAME>" environment variable. This is deprecated. Please use "${desiredPrefix}<BINDING_NAME>", instead.`
+					`Using "${deprecatedPrefix}<BINDING_NAME>" environment variable. This is deprecated. Please use "${prefix}<BINDING_NAME>" instead.`
 				);
 			}
 			logger.log(
