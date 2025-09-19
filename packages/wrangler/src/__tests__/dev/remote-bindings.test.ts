@@ -555,7 +555,7 @@ describe(
 				});
 				const match = await vi.waitUntil(
 					() =>
-						std.out.match(/Ready on (?<url>http:\/\/localhost:\d{4}.+)/) ||
+						std.out.match(/Ready on (?<url>http:\/\/[^:]+:\d{4}.+)/) ||
 						console.dir(std.out),
 
 					{ timeout: 2_000 }
