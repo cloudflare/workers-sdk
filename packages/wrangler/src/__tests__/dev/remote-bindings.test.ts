@@ -560,7 +560,9 @@ describe("dev with remote bindings", { sequential: true }, () => {
 			});
 
 			// Once we see the reloading message we know it has processed the config change
-			await vi.waitUntil(() => std.out.match(/Reloading/), { timeout: 2_000 });
+			await vi.waitUntil(() => std.out.match(/wrangler.jsonc changed/), {
+				timeout: 5_000,
+			});
 			expect(proxyWorkerBindings).toEqual(expectedProxyWorkerBindings);
 			expect(workerOptions).toEqual(expectedWorkerOptions);
 
