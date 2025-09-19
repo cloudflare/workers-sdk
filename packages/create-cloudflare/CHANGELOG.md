@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.51.7
+
+### Patch Changes
+
+- [#10695](https://github.com/cloudflare/workers-sdk/pull/10695) [`bde8ef2`](https://github.com/cloudflare/workers-sdk/commit/bde8ef250836d923b9c14b23ba4fb5c176a2b11c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Error when an unsupported platform is specified for a framework
+
 ## 2.51.6
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # wrangler
 
+## 4.39.0
+
+### Minor Changes
+
+- [#10652](https://github.com/cloudflare/workers-sdk/pull/10652) [`acd48ed`](https://github.com/cloudflare/workers-sdk/commit/acd48ed01739e32d179f98e210fba8c602860891) Thanks [@edmundhung](https://github.com/edmundhung)! - Rename Hyperdrive local connection string environment variable from `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_<BINDING_NAME>` to `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_<BINDING_NAME>`. The old variable name is still supported but will now show a deprecation warning.
+
+### Patch Changes
+
+- [#10701](https://github.com/cloudflare/workers-sdk/pull/10701) [`dc1d0d6`](https://github.com/cloudflare/workers-sdk/commit/dc1d0d6f9c8ccb0714f4b3143f0d0caa8b43f753) Thanks [@penalosa](https://github.com/penalosa)! - Fix hotkeys double render
+
+- Updated dependencies [[`262393a`](https://github.com/cloudflare/workers-sdk/commit/262393aded9a1a8133e61f3438ffca7853cb8fcb), [`3ec1f65`](https://github.com/cloudflare/workers-sdk/commit/3ec1f6578170f1716951a36fa6af2aee29a92030)]:
+  - miniflare@4.20250919.0
+
 ## 4.38.0
 
 ### Minor Changes
