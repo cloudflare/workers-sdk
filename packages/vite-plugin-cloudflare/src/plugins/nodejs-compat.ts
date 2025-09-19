@@ -5,7 +5,10 @@ import { getCloudflarePreset } from "@cloudflare/unenv-preset";
 import { getNodeCompat } from "miniflare";
 import { resolvePathSync } from "mlly";
 import { defineEnv } from "unenv";
-import { VIRTUAL_NODEJS_COMPAT_ENTRY, VIRTUAL_USER_ENTRY } from "../constants";
+import {
+	VIRTUAL_NODEJS_COMPAT_ENTRY,
+	VIRTUAL_USER_ENTRY,
+} from "./virtual-modules";
 import type { Context } from "../context";
 import type { WorkerConfig } from "../plugin-config";
 import type { ResolvedEnvironment } from "unenv";

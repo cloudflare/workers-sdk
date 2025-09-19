@@ -1,11 +1,11 @@
 import assert from "node:assert";
 import * as util from "node:util";
 import * as vite from "vite";
+import { VIRTUAL_WORKER_ENTRY } from "./plugins/virtual-modules";
 import {
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
 	UNKNOWN_HOST,
-	VIRTUAL_WORKER_ENTRY,
 	WORKER_ENTRY_PATH_HEADER,
 } from "./shared";
 import { getOutputDirectory } from "./utils";

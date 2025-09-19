@@ -3,7 +3,7 @@ import type { Context } from "../context";
 import type * as vite from "vite";
 
 /**
- * Plugin to support `.wasm?init` extension
+ * Plugin to support the `.wasm?init` extension
  */
 export function wasmHelper(ctx: Context): vite.Plugin {
 	return {

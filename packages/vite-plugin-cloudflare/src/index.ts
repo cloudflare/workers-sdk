@@ -21,8 +21,6 @@ import {
 	ASSET_WORKER_NAME,
 	kRequestType,
 	ROUTER_WORKER_NAME,
-	VIRTUAL_NODEJS_COMPAT_ENTRY,
-	VIRTUAL_USER_ENTRY,
 } from "./constants";
 import { getDockerPath, prepareContainerImages } from "./containers";
 import {
@@ -54,8 +52,12 @@ import {
 	nodeJsCompat,
 	nodeJsCompatWarnings,
 } from "./plugins/nodejs-compat";
+import {
+	virtualClientFallback,
+	virtualModules,
+} from "./plugins/virtual-modules";
 import { wasmHelper } from "./plugins/wasm";
-import { UNKNOWN_HOST, VIRTUAL_WORKER_ENTRY } from "./shared";
+import { UNKNOWN_HOST } from "./shared";
 import { createRequestHandler, getOutputDirectory } from "./utils";
 import { validateWorkerEnvironmentOptions } from "./vite-config";
 import { handleWebSocket } from "./websockets";
@@ -207,41 +209,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			buildStart() {
 				// This resets the value when the dev server restarts
 				workersConfigsWarningShown = false;
-			},
-			resolveId(source) {
-				const workerConfig = getWorkerConfig(this.environment.name);
-
-				if (!workerConfig) {
-					return;
-				}
-
-				if (source === VIRTUAL_WORKER_ENTRY) {
-					return `\0${VIRTUAL_WORKER_ENTRY}`;
-				}
-
-				if (source === VIRTUAL_USER_ENTRY) {
-					return this.resolve(workerConfig.main);
-				}
-			},
-			load(id) {
-				if (!getWorkerConfig(this.environment.name)) {
-					return;
-				}
-
-				if (id === `\0${VIRTUAL_WORKER_ENTRY}`) {
-					const entryModule = getNodeJsCompat(this.environment.name)
-						? VIRTUAL_NODEJS_COMPAT_ENTRY
-						: VIRTUAL_USER_ENTRY;
-
-					return `
-import * as mod from "${entryModule}";
-export * from "${entryModule}";
-export default mod.default ?? {};
-if (import.meta.hot) {
-	import.meta.hot.accept();
-}
-					`;
-				}
 			},
 			generateBundle(_, bundle) {
 				assertIsNotPreview(resolvedPluginConfig);
@@ -663,20 +630,6 @@ if (import.meta.hot) {
 				}
 			},
 		},
-		// Plugin to provide a fallback entry file
-		{
-			name: "vite-plugin-cloudflare:fallback-entry",
-			resolveId(source) {
-				if (source === "virtual:__cloudflare_fallback_entry__") {
-					return `\0virtual:__cloudflare_fallback_entry__`;
-				}
-			},
-			load(id) {
-				if (id === "\0virtual:__cloudflare_fallback_entry__") {
-					return ``;
-				}
-			},
-		},
 		// Plugin that provides a `__debug` path for debugging the Workers
 		{
 			name: "vite-plugin-cloudflare:debug",
@@ -793,6 +746,8 @@ if (import.meta.hot) {
 				}
 			},
 		},
+		virtualModules(ctx),
+		virtualClientFallback(),
 		wasmHelper(ctx),
 		additionalModules(ctx),
 		nodeJsAls(ctx),
