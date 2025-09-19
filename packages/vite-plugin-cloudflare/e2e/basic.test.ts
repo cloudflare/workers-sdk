@@ -27,6 +27,28 @@ describe("basic e2e tests", () => {
 				}
 			);
 
+			test.skipIf(isBuildAndPreviewOnWindows(command))(
+				"can listen to abort signals on the request",
+				async ({ expect }) => {
+					const proc = await runLongLived(pm, command, projectPath);
+					const url = await waitForReady(proc);
+					const controller = new AbortController();
+					// Do not wait for this request to finish, we will abort it.
+					const firstResponse = fetch(url + "/wait", {
+						signal: controller.signal,
+					});
+					controller.abort("Test aborting the request");
+
+					await expect(firstResponse).rejects.toEqual(
+						"Test aborting the request"
+					);
+					const secondResponse = await fetch(url + "/wait");
+					await expect(secondResponse.text()).resolves.toEqual(
+						"Last request aborted. Make a new request if you wanna wait again."
+					);
+				}
+			);
+
 			describe.skipIf(isBuildAndPreviewOnWindows(command))(
 				"environment variables",
 				() => {
