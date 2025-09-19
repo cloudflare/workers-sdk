@@ -2,9 +2,8 @@ import type { Context } from "../context";
 import type * as vite from "vite";
 
 // virtual modules
-export const virtualPrefix = "virtual:cloudflare/";
-export const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
-export const VIRTUAL_NODEJS_COMPAT_ENTRY = `${virtualPrefix}nodejs-compat-entry`;
+const virtualPrefix = "virtual:cloudflare/";
+const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
 export const VIRTUAL_WORKER_ENTRY = `${virtualPrefix}worker-entry`;
 export const VIRTUAL_CLIENT_FALLBACK_ENTRY = `${virtualPrefix}client-fallback-entry`;
 
@@ -38,13 +37,12 @@ export function virtualModules(ctx: Context): vite.Plugin {
 			}
 
 			if (id === `\0${VIRTUAL_WORKER_ENTRY}`) {
-				const entryModule = ctx.getNodeJsCompat(this.environment.name)
-					? VIRTUAL_NODEJS_COMPAT_ENTRY
-					: VIRTUAL_USER_ENTRY;
+				const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
 
 				return `
-import * as mod from "${entryModule}";
-export * from "${entryModule}";
+${nodeJsCompat ? nodeJsCompat.injectGlobalCode() : ""}
+import * as mod from "${VIRTUAL_USER_ENTRY}";
+export * from "${VIRTUAL_USER_ENTRY}";
 export default mod.default ?? {};
 if (import.meta.hot) {
 	import.meta.hot.accept();

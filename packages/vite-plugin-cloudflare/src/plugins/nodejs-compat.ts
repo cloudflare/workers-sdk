@@ -5,10 +5,6 @@ import { getCloudflarePreset } from "@cloudflare/unenv-preset";
 import { getNodeCompat } from "miniflare";
 import { resolvePathSync } from "mlly";
 import { defineEnv } from "unenv";
-import {
-	VIRTUAL_NODEJS_COMPAT_ENTRY,
-	VIRTUAL_USER_ENTRY,
-} from "./virtual-modules";
 import type { Context } from "../context";
 import type { WorkerConfig } from "../plugin-config";
 import type { ResolvedEnvironment } from "unenv";
@@ -70,10 +66,6 @@ export function nodeJsCompat(ctx: Context): vite.Plugin {
 		// rather than allowing the resolve hook here to alias them to polyfills.
 		enforce: "pre",
 		async resolveId(source, importer, options) {
-			if (source === VIRTUAL_NODEJS_COMPAT_ENTRY) {
-				return `\0${VIRTUAL_NODEJS_COMPAT_ENTRY}`;
-			}
-
 			const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
 			assertHasNodeJsCompat(nodeJsCompat);
 
@@ -111,15 +103,6 @@ export function nodeJsCompat(ctx: Context): vite.Plugin {
 		load(id) {
 			const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
 			assertHasNodeJsCompat(nodeJsCompat);
-
-			if (id === `\0${VIRTUAL_NODEJS_COMPAT_ENTRY}`) {
-				return `
-${nodeJsCompat.injectGlobalCode()}
-import * as mod from "${VIRTUAL_USER_ENTRY}";
-export * from "${VIRTUAL_USER_ENTRY}";
-export default mod.default ?? {};
-					`;
-			}
 
 			return nodeJsCompat.getGlobalVirtualModule(id);
 		},
