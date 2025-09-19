@@ -684,7 +684,7 @@ describe("hyperdrive dev tests", () => {
 		const worker = helper.runLongLived("wrangler dev", {
 			env: {
 				...process.env,
-				WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: `postgresql://user:pass@127.0.0.1:${port}/some_db`,
+				CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: `postgresql://user:pass@127.0.0.1:${port}/some_db`,
 			},
 		});
 

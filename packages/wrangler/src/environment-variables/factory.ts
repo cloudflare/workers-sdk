@@ -25,7 +25,7 @@ type VariableNames =
 	// ## Development & Local Testing
 
 	/** Local database connection strings for Hyperdrive development. The * should be replaced with the Hyperdrive binding name in the Worker. */
-	| `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${string}`
+	| `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${string}`
 	/** Suppress Hyperdrive-related warnings during development. */
 	| "NO_HYPERDRIVE_WARNING"
 	/** Path to HTTPS private key file for running the local development server in HTTPS mode. Without this Wrangler will generate keys automatically. */
