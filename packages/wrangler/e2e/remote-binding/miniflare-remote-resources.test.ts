@@ -384,7 +384,8 @@ const testCases: TestCase<string>[] = [
 			),
 		],
 	},
-	{
+/* 	{
+		// Enable post announcement
 		name: "VPC Service",
 		scriptPath: "vpc-service.js",
 		setup: async (helper) => {
@@ -416,7 +417,7 @@ const testCases: TestCase<string>[] = [
 		remoteProxySessionConfig: (serviceId) => [
 			{
 				VPC_SERVICE: {
-					type: "connectivity_service_binding",
+					type: "vpc_service",
 					service_id: serviceId,
 				},
 			},
@@ -434,7 +435,7 @@ const testCases: TestCase<string>[] = [
 			// but this is considered an effective test for wrangler and vpc service bindings
 			expect.stringMatching(/CONNECT failed: 503 Service Unavailable/),
 		],
-	},
+	}, */
 ];
 
 const mtlsTest: TestCase<{ certificateId: string; workerName: string }> = {
