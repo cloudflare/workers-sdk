@@ -237,6 +237,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			migrations: config.migrations,
 			imagesLocalMode: true,
 			tails: [],
+			streamingTails: [],
 			containerDOClassNames: new Set(
 				config.containers?.map((c) => c.class_name)
 			),
@@ -411,6 +412,7 @@ export function unstable_getMiniflareWorkerOptions(
 			migrations: config.migrations,
 			imagesLocalMode: !!options?.imagesLocalMode,
 			tails: config.tail_consumers,
+			streamingTails: config.streaming_tail_consumers,
 			containerDOClassNames,
 			containerBuildId: options?.containerBuildId,
 			enableContainers,
