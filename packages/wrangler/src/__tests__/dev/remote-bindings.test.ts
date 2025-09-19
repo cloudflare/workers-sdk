@@ -593,9 +593,12 @@ describe(
 				console.dir("config file updated: " + std.out);
 
 				// Once we see the reloading message we know it has processed the config change
-				await vi.waitFor(() => expect(std.out).toMatch(/Reloading/), {
-					timeout: 2_000,
-				});
+				await vi.waitUntil(
+					() => std.out.match(/Reloading/) || console.dir(std.out),
+					{
+						timeout: 2_000,
+					}
+				);
 				expect(proxyWorkerBindings).toEqual(expectedProxyWorkerBindings);
 				expect(workerOptions).toEqual(expectedWorkerOptions);
 
