@@ -567,7 +567,8 @@ export async function startDev(args: StartDevOptions) {
 					assert(devEnv !== undefined);
 					unregisterHotKeys = registerDevHotKeys(
 						Array.isArray(devEnv) ? devEnv : [devEnv],
-						args
+						args,
+						false
 					);
 				}
 			}

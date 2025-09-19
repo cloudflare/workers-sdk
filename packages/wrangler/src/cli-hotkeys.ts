@@ -11,7 +11,8 @@ export default function (
 		disabled?: Hook<boolean>;
 		label?: Hook<string>;
 		handler: () => void | Promise<void>;
-	}>
+	}>,
+	render = true
 ) {
 	/**
 	 * Formats all options, comma-separated, prefixed by the first key in square brackets.
@@ -108,7 +109,9 @@ export default function (
 		}
 	}
 
-	printInstructions();
+	if (render) {
+		printInstructions();
+	}
 
 	return () => {
 		unregisterKeyPress();
