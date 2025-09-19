@@ -45,6 +45,8 @@ export function createRequestHandler(
 	next: vite.Connect.NextFunction
 ) => Promise<void> {
 	return async (req, res, next) => {
+		const request = createRequest(req, res);
+
 		try {
 			// Built in vite middleware trims out the base path when passing in the request
 			// We can restore it by using the `originalUrl` property
@@ -64,6 +66,11 @@ export function createRequestHandler(
 
 			await sendResponse(res, response as unknown as Response);
 		} catch (error) {
+			if (request.signal.aborted) {
+				// If the request was aborted, ignore the error
+				return;
+			}
+
 			next(error);
 		}
 	};
