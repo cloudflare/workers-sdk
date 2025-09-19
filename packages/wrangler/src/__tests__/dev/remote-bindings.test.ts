@@ -510,7 +510,9 @@ describe(
 					),
 					"index.js": `export default { fetch() { return new Response("hello") } }`,
 				});
-				const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+				const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0", {
+					WRANGLER_LOG: "debug",
+				});
 				await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 					timeout: 2_000,
 				});
@@ -528,6 +530,10 @@ describe(
 				expectedProxyWorkerBindings,
 				expectedWorkerOptions,
 			}) => {
+				onTestFailed(() => {
+					console.dir("STDOUT: " + std.out);
+					console.dir("STDERR: " + std.err);
+				});
 				await seed({
 					// Start with an empty config
 					"wrangler.jsonc": JSON.stringify(
@@ -541,7 +547,9 @@ describe(
 					),
 					"index.js": `export default { fetch() { return new Response("hello") } }`,
 				});
-				const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+				const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0", {
+					WRANGLER_LOG: "debug",
+				});
 				const match = await vi.waitUntil(
 					() => std.out.match(/Ready on (?<url>http:\/\/localhost:\d{4}.+)/),
 					{ timeout: 2_000 }
@@ -608,7 +616,9 @@ describe(
 				),
 				"index.js": `export default { fetch() { return new Response("hello") } }`,
 			});
-			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0", {
+				WRANGLER_LOG: "debug",
+			});
 			await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 				timeout: 2_000,
 			});
@@ -660,7 +670,9 @@ describe(
 				),
 				"index.js": `export default { fetch() { return new Response("hello") } }`,
 			});
-			const wranglerStopped = runWrangler("dev --local");
+			const wranglerStopped = runWrangler("dev --local", {
+				WRANGLER_LOG: "debug",
+			});
 			await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 				timeout: 2_000,
 			});
@@ -701,7 +713,9 @@ describe(
 				),
 				"index.js": `export default { fetch() { return new Response("hello") } }`,
 			});
-			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0", {
+				WRANGLER_LOG: "debug",
+			});
 			await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 				timeout: 2_000,
 			});
@@ -740,7 +754,9 @@ describe(
 				),
 				"index.js": `export default { fetch() { return new Response("hello") } }`,
 			});
-			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0", {
+				WRANGLER_LOG: "debug",
+			});
 			await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 				timeout: 2_000,
 			});

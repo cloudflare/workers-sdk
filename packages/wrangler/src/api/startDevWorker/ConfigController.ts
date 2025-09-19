@@ -485,8 +485,16 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 	#configWatcher?: ReturnType<typeof watch>;
 	#abortController?: AbortController;
+	#tearingDown = false;
 
 	async #ensureWatchingConfig(configPath: string | undefined) {
+		console.dir(
+			"#ensureWatchingConfig" +
+				"\ntearingDown: " +
+				this.#tearingDown +
+				"\nwatcherClosed: " +
+				this.#configWatcher?.closed
+		);
 		await this.#configWatcher?.close();
 		if (configPath) {
 			this.#configWatcher = watch(configPath, {
@@ -507,6 +515,14 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	}
 
 	public set(input: StartDevWorkerInput, throwErrors = false) {
+		console.dir(
+			"#set " +
+				input.config +
+				"\ntearingDown: " +
+				this.#tearingDown +
+				"\nwatcherClosed: " +
+				this.#configWatcher?.closed
+		);
 		return runWithLogLevel(input.dev?.logLevel, () =>
 			this.#updateConfig(input, throwErrors)
 		);
@@ -528,6 +544,17 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	}
 
 	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
+		console.dir(
+			"#updateConfig " +
+				input.config +
+				"\ntearingDown: " +
+				this.#tearingDown +
+				"\nwatcherClosed: " +
+				this.#configWatcher?.closed
+		);
+		if (this.#tearingDown) {
+			return;
+		}
 		this.#abortController?.abort();
 		this.#abortController = new AbortController();
 		const signal = this.#abortController.signal;
@@ -561,7 +588,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 			const { config: resolvedConfig, printCurrentBindings } =
 				await resolveConfig(fileConfig, input);
-			if (signal.aborted) {
+			if (this.#tearingDown || signal.aborted) {
 				return;
 			}
 			this.latestConfig = resolvedConfig;
@@ -594,6 +621,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 	async teardown() {
 		logger.debug("ConfigController teardown beginning...");
+		console.dir("tearDown()");
+		this.#tearingDown = true;
+		this.#abortController?.abort();
 		await this.#configWatcher?.close();
 		logger.debug("ConfigController teardown complete");
 	}
