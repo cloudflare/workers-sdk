@@ -12,12 +12,6 @@ export const ENTRY_MODULE_EXTENSIONS = [
 	".tsx",
 ];
 
-export const ADDITIONAL_MODULE_TYPES = [
-	"CompiledWasm",
-	"Data",
-	"Text",
-] as const;
-
 // Used to mark HTML assets as being in the public directory so that they can be resolved from their root relative paths
 export const PUBLIC_DIR_PREFIX = "/__vite_public_dir__";
 
