@@ -1,3 +1,6 @@
+// NOTE: this file is duplicated between miniflare and d1-workers, and should be kept in sync by hand.
+// Please tag someone from the D1 team as a reviewer and they will do this for you.
+//
 // NOTE: this function duplicates the logic inside SQLite's shell.c.in as close
 // as possible, with any deviations noted.
 import { SqlStorage } from "@cloudflare/workers-types/experimental";
@@ -8,7 +11,9 @@ export function* dumpSql(
 		noSchema?: boolean;
 		noData?: boolean;
 		tables?: string[];
-	}
+	},
+	/** Optional stats tracking. Will be mutated in place if provided */
+	stats?: { rows_read: number; rows_written: number }
 ) {
 	yield `PRAGMA defer_foreign_keys=TRUE;`;
 
@@ -101,6 +106,10 @@ export function* dumpSql(
 		for (const { name, sql } of rest_of_schema) {
 			if (filterTables.size > 0 && !filterTables.has(name as string)) continue;
 			yield `${sql};`;
+		}
+		if (stats) {
+			stats.rows_read += rest_of_schema.rowsRead;
+			stats.rows_written += rest_of_schema.rowsWritten;
 		}
 	}
 }
