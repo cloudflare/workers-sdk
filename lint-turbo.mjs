@@ -8,7 +8,7 @@ function readJson(filePath) {
 }
 
 const listResult = execSync(
-	"pnpm --filter=!wrangler-root list --recursive --depth -1 --parseable"
+	"pnpm --filter=!@cloudflare/workers-sdk list --recursive --depth -1 --parseable"
 );
 const paths = listResult.toString().trim().split("\n");
 for (const p of paths) {

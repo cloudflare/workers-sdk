@@ -1,5 +1,5 @@
 {
-	"name": "cloudflare-vite-e2e-remote-bindings",
+	"name": "@cloudflare/vite-plugin-e2e-remote-bindings",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
