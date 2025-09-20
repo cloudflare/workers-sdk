@@ -76,6 +76,7 @@ export function getBindings(
 				},
 		unsafe_hello_world: options?.pages ? undefined : config?.unsafe_hello_world,
 		ratelimits: config?.ratelimits,
+		media: config?.media,
 	};
 }
 

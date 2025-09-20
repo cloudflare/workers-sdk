@@ -145,6 +145,14 @@ export interface CfImagesBinding {
 }
 
 /**
+ * A binding to Cloudflare Media Transformations
+ */
+export interface CfMediaBinding {
+	binding: string;
+	remote?: boolean;
+}
+
+/**
  * A binding to the Worker Version's metadata
  */
 
@@ -416,6 +424,7 @@ export interface CfWorkerInit {
 		assets: CfAssetsBinding | undefined;
 		unsafe_hello_world: CfHelloWorld[] | undefined;
 		ratelimits: CfRateLimit[] | undefined;
+		media: CfMediaBinding | undefined;
 	};
 
 	containers?: { class_name: string }[];

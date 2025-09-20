@@ -421,6 +421,7 @@ type WorkerOptionsBindings = Pick<
 	| "workerLoaders"
 	| "unsafeBindings"
 	| "additionalUnboundDurableObjects"
+	| "media"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -531,6 +532,10 @@ export function buildMiniflareBindingOptions(
 
 	if (bindings.ai && remoteBindingsEnabled) {
 		warnOrError("ai", bindings.ai.remote, "always-remote");
+	}
+
+	if (bindings.media && remoteBindingsEnabled) {
+		warnOrError("media", bindings.media.remote, "always-remote");
 	}
 
 	if (bindings.mtls_certificates && remoteBindingsEnabled) {
@@ -764,6 +769,13 @@ export function buildMiniflareBindingOptions(
 							bindings.images.remote && remoteProxyConnectionString
 								? remoteProxyConnectionString
 								: undefined,
+					}
+				: undefined,
+		media:
+			bindings.media && remoteBindingsEnabled && remoteProxyConnectionString
+				? {
+						binding: bindings.media.binding,
+						remoteProxyConnectionString,
 					}
 				: undefined,
 		browserRendering: bindings.browser?.binding

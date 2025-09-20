@@ -213,6 +213,9 @@ const bindingsConfigMock: Omit<
 	images: {
 		binding: "IMAGES_BINDING",
 	},
+	media: {
+		binding: "MEDIA_BINDING",
+	},
 	version_metadata: {
 		binding: "VERSION_METADATA_BINDING",
 	},
@@ -500,6 +503,7 @@ describe("generate types", () => {
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
+					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
 					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
@@ -599,6 +603,7 @@ describe("generate types", () => {
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
+					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
 					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
@@ -762,6 +767,7 @@ describe("generate types", () => {
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
+					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
 					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
