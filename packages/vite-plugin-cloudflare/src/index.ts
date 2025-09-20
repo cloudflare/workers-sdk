@@ -1123,10 +1123,6 @@ export default mod.default ?? {};
 							return miniflare.dispatchFetch(request, { redirect: "manual" });
 						});
 
-						// `req.url` is the URL of the request relative to the middleware
-						// mount path. Here we ensure that miniflare receives a request that
-						// reflects the original request url
-						req.url = req.originalUrl;
 						requestHandler(req, res, next);
 					});
 				}
