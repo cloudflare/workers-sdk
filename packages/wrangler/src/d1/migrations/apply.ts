@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import path from "path";
+import path from "node:path";
 import { configFileName } from "../../config";
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
@@ -132,13 +132,19 @@ Your database may not be available to serve requests during the migration, conti
 		}
 
 		for (const migration of unappliedMigrations) {
-			let query = fs.readFileSync(
-				`${migrationsPath}/${migration.name}`,
-				"utf8"
+			const migrationFiles = resolveMigrationFiles(
+				migrationsPath,
+				migration.name
 			);
+			let query = migrationFiles
+				.map((file) => fs.readFileSync(file, "utf8"))
+				.join("\n\n");
+
+			const safeMigrationName = migration.name.replace(/'/g, "''");
+
 			query += `
 								INSERT INTO ${migrationsTableName} (name)
-								values ('${migration.name}');
+								values ('${safeMigrationName}');
 						`;
 
 			let success = true;
@@ -209,3 +215,22 @@ Your database may not be available to serve requests during the migration, conti
 		}
 	},
 });
+
+function resolveMigrationFiles(migrationsPath: string, migrationName: string) {
+	const fullPath = path.join(migrationsPath, migrationName);
+
+	if (fs.existsSync(fullPath)) {
+		if (fs.statSync(fullPath).isFile()) {
+			return [fullPath];
+		} else if (fs.statSync(fullPath).isDirectory()) {
+			const files = fs.readdirSync(fullPath);
+			return files
+				.filter((f) => f.endsWith(".sql"))
+				.map((f) => path.join(fullPath, f));
+		}
+	}
+
+	throw new UserError(
+		`Migration path ${fullPath} is neither a file nor a directory.`
+	);
+}
