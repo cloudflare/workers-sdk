@@ -13,7 +13,10 @@ import {
 } from "./resolve-entry";
 import { runCustomBuild } from "./run-custom-build";
 import type { Config, RawConfig } from "../config";
-import type { DurableObjectBindings } from "../config/environment";
+import type {
+	DurableObjectBindings,
+	WorkflowBinding,
+} from "../config/environment";
 import type { CfScriptFormat } from "./worker";
 
 /**
@@ -169,6 +172,29 @@ export function partitionDurableObjectBindings(config: Config): {
 	const localBindings: DurableObjectBindings = [];
 	const remoteBindings: DurableObjectBindings = [];
 	for (const binding of config.durable_objects.bindings) {
+		if (
+			binding.script_name === undefined ||
+			binding.script_name === config.name
+		) {
+			localBindings.push(binding);
+		} else {
+			remoteBindings.push(binding);
+		}
+	}
+	return { localBindings, remoteBindings };
+}
+
+/**
+ * Groups the workflow bindings into two lists:
+ * those that are defined locally and those that refer to a workflow defined in another script.
+ */
+export function partitionWorkflowBindings(config: Config): {
+	localBindings: WorkflowBinding[];
+	remoteBindings: WorkflowBinding[];
+} {
+	const localBindings: WorkflowBinding[] = [];
+	const remoteBindings: WorkflowBinding[] = [];
+	for (const binding of config.workflows ?? []) {
 		if (
 			binding.script_name === undefined ||
 			binding.script_name === config.name
