@@ -61,6 +61,18 @@ export default {
 					}
 				);
 			}
+			case "/hyperdrive": {
+				if (
+					typeof env.HYPERDRIVE.connect !== "function" ||
+					typeof env.HYPERDRIVE.connectionString !== "string"
+				) {
+					return new Response("Hyperdrive binding is not configured properly", {
+						status: 500,
+					});
+				}
+
+				return new Response("Hyperdrive binding works");
+			}
 			case "/hello-world": {
 				const value = Math.floor(Date.now() * Math.random()).toString(36);
 				await env.HELLO_WORLD.set(value);

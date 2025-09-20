@@ -112,6 +112,15 @@ export function resolvePluginConfig(
 		experimental: pluginConfig.experimental ?? {},
 	};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
+	const prefixedEnv = vite.loadEnv(viteEnv.mode, root, [
+		"CLOUDFLARE_",
+		// TODO: Remove deprecated WRANGLER prefix support in next major version
+		"WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_",
+	]);
+
+	// Merge the loaded env variables into process.env so that they are available to
+	// wrangler when it loads the worker configuration files.
+	Object.assign(process.env, prefixedEnv);
 
 	if (viteEnv.isPreview) {
 		return {
@@ -122,12 +131,7 @@ export function resolvePluginConfig(
 	}
 
 	const configPaths = new Set<string>();
-	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
-		viteEnv.mode,
-		root,
-		/* prefixes */ ""
-	);
-
+	const cloudflareEnv = prefixedEnv.CLOUDFLARE_ENV;
 	const entryWorkerConfigPath = getValidatedWranglerConfigPath(
 		root,
 		pluginConfig.configPath
