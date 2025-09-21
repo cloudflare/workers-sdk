@@ -554,7 +554,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				{ useRedirectIfAvailable: true }
 			);
 
-			void this.#ensureWatchingConfig(fileConfig.configPath);
+			await this.#ensureWatchingConfig(fileConfig.configPath);
 
 			const { config: resolvedConfig, printCurrentBindings } =
 				await resolveConfig(fileConfig, input);
