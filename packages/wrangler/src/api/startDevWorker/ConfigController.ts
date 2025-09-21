@@ -563,8 +563,13 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 			await this.#ensureWatchingConfig(fileConfig.configPath);
 
+			if (this.#tearingDown || signal.aborted) {
+				return;
+			}
+
 			const { config: resolvedConfig, printCurrentBindings } =
 				await resolveConfig(fileConfig, input);
+
 			if (this.#tearingDown || signal.aborted) {
 				return;
 			}
