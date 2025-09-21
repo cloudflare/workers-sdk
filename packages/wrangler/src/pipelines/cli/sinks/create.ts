@@ -127,6 +127,11 @@ export const pipelinesSinksCreateCommand = createCommand({
 					"--catalog-token is required for r2-data-catalog sinks"
 				);
 			}
+			if (args.format === "json") {
+				throw new CommandLineArgsError(
+					"r2-data-catalog sinks only support parquet format, not JSON"
+				);
+			}
 		}
 	},
 	async handler(args, { config }) {

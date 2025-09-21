@@ -222,7 +222,7 @@ export async function displayUsageExamples(
 		(customBindingName) => ({
 			pipelines: [
 				{
-					pipeline: stream.name,
+					pipeline: stream.id,
 					binding: customBindingName ?? bindingName,
 				},
 			],
