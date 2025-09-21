@@ -54,6 +54,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			path.relative(config.projectRoot, config.entrypoint) || ".";
 		logger.log(`The file ${filePath} changed, restarting build...`);
 		this.emitBundleStartEvent(config);
+
 		try {
 			await runCustomBuild(
 				config.entrypoint,
@@ -107,7 +108,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						entry,
 						config.build.moduleRules,
 						this.#tmpDir.path
-					)
+				  )
 				: await bundleWorker(entry, this.#tmpDir.path, {
 						bundle: true,
 						additionalModules: [],
@@ -115,7 +116,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						workflowBindings: bindings?.workflows ?? [],
 						doBindings: bindings?.durable_objects?.bindings ?? [],
 						jsxFactory: config.build.jsxFactory,
-						jsxFragment: config.build.jsxFactory,
+						jsxFragment: config.build.jsxFragment,
 						tsconfig: config.build.tsconfig,
 						minify: config.build.minify,
 						keepNames: config.build.keepNames ?? true,
@@ -129,7 +130,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						),
 						alias: config.build.alias,
 						// We want to know if the build is for development or publishing
-						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "dev",
 						local: !config.dev?.remote,
 						projectRoot: config.projectRoot,
@@ -153,14 +153,18 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						sourcemap: undefined,
 
 						metafile: undefined,
-					});
+				  });
+
 			if (buildAborter.signal.aborted) {
 				return;
 			}
+
+			// Resolve real path for entrypoint (falls back to config.entrypoint)
 			const entrypointPath = realpathSync(
 				bundleResult?.resolvedEntryPointPath ?? config.entrypoint
 			);
 
+			// Emit bundle complete with safe defaults for optional fields
 			this.emitBundleCompleteEvent(config, {
 				id: 0,
 				entry,
@@ -168,14 +172,18 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				type:
 					bundleResult?.bundleType ??
 					getBundleType(config.build.format, config.entrypoint),
-				modules: bundleResult.modules,
+				modules: bundleResult?.modules ?? [],
 				dependencies: bundleResult?.dependencies ?? {},
 				sourceMapPath: bundleResult?.sourceMapPath,
 				sourceMapMetadata: bundleResult?.sourceMapMetadata,
 				entrypointSource: readFileSync(entrypointPath, "utf8"),
 			});
 		} catch (err) {
+			// Log and emit consistent error event
 			logger.error("Custom build failed:", err);
+			logger.log(
+				"Development server will continue running. Fix the build error and save a file to retry."
+			);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Custom build failed",
@@ -185,6 +193,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			});
 		}
 	}
+
 
 	async #startCustomBuild(config: StartDevWorkerOptions) {
 		await this.#customBuildWatcher?.close();

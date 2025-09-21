@@ -315,9 +315,20 @@ export const dev = createCommand({
 		}
 	},
 	async handler(args) {
-		const devInstance = await startDev(args);
-		assert(devInstance.devEnv !== undefined);
-		await events.once(devInstance.devEnv, "teardown");
+        const devInstance = await startDev(args);
+        assert(devInstance.devEnv !== undefined);
+
+        // Handle error events from DevEnv to prevent crashes on build failures
+        devInstance.devEnv.on("error", (errorEvent) => {
+            // Log the error but don't crash the process
+            // This allows development to continue after build failures
+            logger.error(`Error in ${errorEvent.source}: ${errorEvent.reason}`);
+            if (errorEvent.cause) {
+                logger.debug("Error details:", errorEvent.cause);
+            }
+        });
+
+        await events.once(devInstance.devEnv, "teardown");
 		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
 		if (devInstance.teardownRegistryPromise) {
 			const teardownRegistry = await devInstance.teardownRegistryPromise;
