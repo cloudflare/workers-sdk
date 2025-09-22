@@ -30,12 +30,10 @@ vi.mock("../../dev/start-dev", async () => {
 		...actual,
 		async startDev(args: StartDevOptions) {
 			const result = await actual.startDev(args);
-			console.dir("setting up stopWrangler");
 			stopWrangler = () => {
 				try {
 					return result.devEnv.teardown();
 				} finally {
-					console.dir("cleaning up stopWrangler");
 					stopWrangler = async () => {
 						throw new Error("Stop worker already called");
 					};
@@ -112,7 +110,6 @@ describe("dev with remote bindings", { sequential: true }, () => {
 
 	afterEach(() => {
 		// Reset the module level state between tests
-		console.dir("reset stopWrangler between tests");
 		stopWrangler = async () => {
 			throw new Error("Stop worker not set");
 		};
