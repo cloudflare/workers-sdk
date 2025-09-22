@@ -21,6 +21,7 @@ export const virtualModules = createPlugin("virtual-modules", (ctx) => {
 			if (source === VIRTUAL_USER_ENTRY) {
 				const workerConfig = ctx.getWorkerConfig(this.environment.name);
 
+				// TODO: replace with `assert` once we have migrated to tsdown
 				if (!workerConfig) {
 					return;
 				}
