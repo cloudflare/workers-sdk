@@ -15,7 +15,6 @@ import {
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
 	initRunners,
-	MAIN_ENTRY_NAME,
 } from "./cloudflare-environment";
 import {
 	ASSET_WORKER_NAME,
@@ -30,17 +29,12 @@ import {
 	getInputInspectorPortOption,
 	getResolvedInspectorPort,
 } from "./debugging";
-import { writeDeployConfig } from "./deploy-config";
-import {
-	getLocalDevVarsForPreview,
-	hasLocalDevVarsFileChanged,
-} from "./dev-vars";
+import { hasLocalDevVarsFileChanged } from "./dev-vars";
 import {
 	getDevMiniflareOptions,
 	getEntryWorkerConfig,
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
-import { getAssetsDirectory } from "./output-config";
 import {
 	assertIsNotPreview,
 	assertIsPreview,
@@ -52,6 +46,7 @@ import {
 	nodeJsCompat,
 	nodeJsCompatWarnings,
 } from "./plugins/nodejs-compat";
+import { outputConfig } from "./plugins/output-config";
 import { PluginContext } from "./plugins/utils";
 import {
 	virtualClientFallback,
@@ -65,7 +60,6 @@ import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
 import type { PluginConfig } from "./plugin-config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
-import type { Unstable_RawConfig } from "wrangler";
 
 export type { PluginConfig } from "./plugin-config";
 
@@ -83,12 +77,10 @@ let miniflare: Miniflare | undefined;
  * @param pluginConfig An optional {@link PluginConfig} object.
  */
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
-	let resolvedViteConfig: vite.ResolvedConfig;
+	const ctx = new PluginContext();
 	let containerImageTagsSeen = new Set<string>();
 	/** Used to track whether hooks are being called because of a server restart or a server close event. */
 	let restartingServer = false;
-
-	const ctx = new PluginContext();
 
 	return [
 		{
@@ -177,130 +169,19 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			// Vite `configResolved` Hook
 			// see https://vite.dev/guide/api-plugin.html#configresolved
-			configResolved(config) {
-				resolvedViteConfig = config;
+			configResolved(resolvedViteConfig) {
+				ctx.setResolvedViteConfig(resolvedViteConfig);
 
 				if (ctx.resolvedPluginConfig.type === "workers") {
 					validateWorkerEnvironmentOptions(
 						ctx.resolvedPluginConfig,
-						resolvedViteConfig
+						ctx.resolvedViteConfig
 					);
 				}
 			},
 			buildStart() {
 				// This resets the value when the dev server restarts
 				workersConfigsWarningShown = false;
-			},
-			generateBundle(_, bundle) {
-				assertIsNotPreview(ctx.resolvedPluginConfig);
-
-				let outputConfig: Unstable_RawConfig | undefined;
-
-				if (ctx.resolvedPluginConfig.type === "workers") {
-					const inputConfig =
-						ctx.resolvedPluginConfig.workers[this.environment.name];
-
-					if (!inputConfig) {
-						return;
-					}
-
-					const entryChunk = Object.values(bundle).find(
-						(chunk) =>
-							chunk.type === "chunk" &&
-							chunk.isEntry &&
-							chunk.name === MAIN_ENTRY_NAME
-					);
-
-					assert(
-						entryChunk,
-						`Expected entry chunk with name "${MAIN_ENTRY_NAME}"`
-					);
-
-					const isEntryWorker =
-						this.environment.name ===
-						ctx.resolvedPluginConfig.entryWorkerEnvironmentName;
-
-					outputConfig = {
-						...inputConfig,
-						main: entryChunk.fileName,
-						no_bundle: true,
-						rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
-						assets: isEntryWorker
-							? {
-									...inputConfig.assets,
-									directory: getAssetsDirectory(
-										this.environment.config.build.outDir,
-										resolvedViteConfig
-									),
-								}
-							: undefined,
-					};
-
-					if (inputConfig.configPath) {
-						const localDevVars = getLocalDevVarsForPreview(
-							inputConfig.configPath,
-							ctx.resolvedPluginConfig.cloudflareEnv
-						);
-						// Save a .dev.vars file to the worker's build output directory if there are local dev vars, so that it will be then detected by `vite preview`.
-						if (localDevVars) {
-							this.emitFile({
-								type: "asset",
-								fileName: ".dev.vars",
-								source: localDevVars,
-							});
-						}
-					}
-				} else if (this.environment.name === "client") {
-					const inputConfig = ctx.resolvedPluginConfig.config;
-
-					outputConfig = {
-						...inputConfig,
-						assets: {
-							...inputConfig.assets,
-							directory: ".",
-						},
-					};
-
-					const filesToAssetsIgnore = ["wrangler.json", ".dev.vars"];
-
-					this.emitFile({
-						type: "asset",
-						fileName: ".assetsignore",
-						source: `${filesToAssetsIgnore.join("\n")}\n`,
-					});
-				}
-
-				if (!outputConfig) {
-					return;
-				}
-
-				// Set to `undefined` if it's an empty object so that the user doesn't see a warning about using `unsafe` fields when deploying their Worker.
-				if (
-					outputConfig.unsafe &&
-					Object.keys(outputConfig.unsafe).length === 0
-				) {
-					outputConfig.unsafe = undefined;
-				}
-
-				this.emitFile({
-					type: "asset",
-					fileName: "wrangler.json",
-					source: JSON.stringify(outputConfig),
-				});
-			},
-			writeBundle() {
-				assertIsNotPreview(ctx.resolvedPluginConfig);
-
-				// These conditions ensure the deploy config is emitted once per application build as `writeBundle` is called for each environment.
-				// If Vite introduces an additional hook that runs after the application has built then we could use that instead.
-				if (
-					this.environment.name ===
-					(ctx.resolvedPluginConfig.type === "workers"
-						? ctx.resolvedPluginConfig.entryWorkerEnvironmentName
-						: "client")
-				) {
-					writeDeployConfig(ctx.resolvedPluginConfig, resolvedViteConfig);
-				}
 			},
 			// Vite `configureServer` Hook
 			// see https://vite.dev/guide/api-plugin.html#configureserver
@@ -337,7 +218,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						) ||
 						hasAssetsConfigChanged(
 							ctx.resolvedPluginConfig,
-							resolvedViteConfig,
+							ctx.resolvedViteConfig,
 							changedFilePath
 						)
 					) {
@@ -599,7 +480,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			async buildEnd() {
 				if (
-					resolvedViteConfig.command === "serve" &&
+					ctx.resolvedViteConfig.command === "serve" &&
 					containerImageTagsSeen?.size
 				) {
 					const dockerPath = getDockerPath();
@@ -736,6 +617,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		},
 		virtualModules(ctx),
 		virtualClientFallback(ctx),
+		outputConfig(ctx),
 		wasmHelper(ctx),
 		additionalModules(ctx),
 		nodeJsAls(ctx),

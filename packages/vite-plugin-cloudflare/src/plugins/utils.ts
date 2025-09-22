@@ -3,6 +3,15 @@ import type * as vite from "vite";
 
 export class PluginContext {
 	#resolvedPluginConfig?: ResolvedPluginConfig;
+	#resolvedViteConfig?: vite.ResolvedConfig;
+
+	setResolvedPluginConfig(resolvedPluginConfig: ResolvedPluginConfig): void {
+		this.#resolvedPluginConfig = resolvedPluginConfig;
+	}
+
+	setResolvedViteConfig(resolvedViteConfig: vite.ResolvedConfig): void {
+		this.#resolvedViteConfig = resolvedViteConfig;
+	}
 
 	get resolvedPluginConfig(): ResolvedPluginConfig {
 		// TODO: replace with `assert` once we have migrated to tsdown
@@ -13,8 +22,13 @@ export class PluginContext {
 		return this.#resolvedPluginConfig;
 	}
 
-	setResolvedPluginConfig(resolvedPluginConfig: ResolvedPluginConfig): void {
-		this.#resolvedPluginConfig = resolvedPluginConfig;
+	get resolvedViteConfig(): vite.ResolvedConfig {
+		// TODO: replace with `assert` once we have migrated to tsdown
+		if (!this.#resolvedViteConfig) {
+			throw new Error("Expected resolvedViteConfig to be defined");
+		}
+
+		return this.#resolvedViteConfig;
 	}
 
 	getWorkerConfig(environmentName: string) {

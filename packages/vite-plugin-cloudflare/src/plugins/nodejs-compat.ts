@@ -142,7 +142,7 @@ export const nodeJsCompat = createPlugin("nodejs-compat", (ctx) => {
 });
 
 /**
- * Plugin to warn if Node.js APIs are being used without enabling the `nodejs_compat` compatibility flag
+ * Plugin to warn if Node.js APIs are used without enabling the `nodejs_compat` compatibility flag
  */
 export const nodeJsCompatWarnings = createPlugin(
 	"nodejs-compat-warnings",
