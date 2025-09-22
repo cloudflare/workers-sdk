@@ -5,7 +5,7 @@ import { getCloudflarePreset } from "@cloudflare/unenv-preset";
 import { getNodeCompat } from "miniflare";
 import { resolvePathSync } from "mlly";
 import { defineEnv } from "unenv";
-import type { Context } from "../context";
+import { createPlugin } from "./utils";
 import type { WorkerConfig } from "../plugin-config";
 import type { ResolvedEnvironment } from "unenv";
 import type * as vite from "vite";
@@ -13,9 +13,8 @@ import type * as vite from "vite";
 /**
  * Plugin to support the `nodejs_als` compatibility flag
  */
-export function nodeJsAls(ctx: Context): vite.Plugin {
+export const nodeJsAls = createPlugin("nodejs-als", (ctx) => {
 	return {
-		name: "vite-plugin-cloudflare:nodejs-als",
 		configEnvironment(name) {
 			if (hasNodeJsAls(ctx.getWorkerConfig(name))) {
 				return {
@@ -29,14 +28,13 @@ export function nodeJsAls(ctx: Context): vite.Plugin {
 			}
 		},
 	};
-}
+});
 
 /**
  * Plugin to support the `nodejs_compat` compatibility flag
  */
-export function nodeJsCompat(ctx: Context): vite.Plugin {
+export const nodeJsCompat = createPlugin("nodejs-compat", (ctx) => {
 	return {
-		name: "vite-plugin-cloudflare:nodejs-compat",
 		configEnvironment(name) {
 			const nodeJsCompat = ctx.getNodeJsCompat(name);
 
@@ -141,99 +139,105 @@ export function nodeJsCompat(ctx: Context): vite.Plugin {
 			);
 		},
 	};
-}
+});
 
 /**
  * Plugin to warn if Node.js APIs are being used without enabling the `nodejs_compat` compatibility flag
  */
-export function nodeJsCompatWarnings(ctx: Context): vite.Plugin {
-	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
+export const nodeJsCompatWarnings = createPlugin(
+	"nodejs-compat-warnings",
+	(ctx) => {
+		const nodeJsCompatWarningsMap = new Map<
+			WorkerConfig,
+			NodeJsCompatWarnings
+		>();
 
-	return {
-		name: "vite-plugin-cloudflare:nodejs-compat-warnings",
-		// We must ensure that the `resolveId` hook runs before the built-in ones.
-		// Otherwise we never see the Node.js built-in imports since they get handled by default Vite behavior.
-		enforce: "pre",
-		configEnvironment(environmentName) {
-			const workerConfig = ctx.getWorkerConfig(environmentName);
-			const nodeJsCompat = ctx.getNodeJsCompat(environmentName);
-
-			if (workerConfig && !nodeJsCompat) {
-				return {
-					optimizeDeps: {
-						esbuildOptions: {
-							plugins: [
-								{
-									name: "vite-plugin-cloudflare:nodejs-compat-warnings-resolver",
-									setup(build) {
-										build.onResolve(
-											{ filter: NODEJS_MODULES_RE },
-											({ path, importer }) => {
-												if (
-													hasNodeJsAls(workerConfig) &&
-													isNodeAlsModule(path)
-												) {
-													// Skip if this is just async_hooks and Node.js ALS support is on.
-													return;
-												}
-
-												const nodeJsCompatWarnings =
-													nodeJsCompatWarningsMap.get(workerConfig);
-												nodeJsCompatWarnings?.registerImport(path, importer);
-												// Mark this path as external to avoid messy unwanted resolve errors.
-												// It will fail at runtime but we will log warnings to the user.
-												return { path, external: true };
-											}
-										);
-									},
-								},
-							],
-						},
-					},
-				};
-			}
-		},
-		configResolved(resolvedViteConfig) {
-			for (const environmentName of Object.keys(
-				resolvedViteConfig.environments
-			)) {
+		return {
+			// We must ensure that the `resolveId` hook runs before the built-in ones.
+			// Otherwise we never see the Node.js built-in imports since they get handled by default Vite behavior.
+			enforce: "pre",
+			configEnvironment(environmentName) {
 				const workerConfig = ctx.getWorkerConfig(environmentName);
 				const nodeJsCompat = ctx.getNodeJsCompat(environmentName);
 
 				if (workerConfig && !nodeJsCompat) {
-					nodeJsCompatWarningsMap.set(
-						workerConfig,
-						new NodeJsCompatWarnings(environmentName, resolvedViteConfig)
-					);
-				}
-			}
-		},
-		async resolveId(source, importer) {
-			const workerConfig = ctx.getWorkerConfig(this.environment.name);
-			const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
-
-			if (workerConfig && !nodeJsCompat) {
-				if (hasNodeJsAls(workerConfig) && isNodeAlsModule(source)) {
-					// Skip if this is just async_hooks and Node.js ALS support is on.
-					return;
-				}
-
-				const nodeJsCompatWarnings = nodeJsCompatWarningsMap.get(workerConfig);
-
-				if (nodeJsBuiltins.has(source)) {
-					nodeJsCompatWarnings?.registerImport(source, importer);
-
-					// Mark this path as external to avoid messy unwanted resolve errors.
-					// It will fail at runtime but we will log warnings to the user.
 					return {
-						id: source,
-						external: true,
+						optimizeDeps: {
+							esbuildOptions: {
+								plugins: [
+									{
+										name: "vite-plugin-cloudflare:nodejs-compat-warnings-resolver",
+										setup(build) {
+											build.onResolve(
+												{ filter: NODEJS_MODULES_RE },
+												({ path, importer }) => {
+													if (
+														hasNodeJsAls(workerConfig) &&
+														isNodeAlsModule(path)
+													) {
+														// Skip if this is just async_hooks and Node.js ALS support is on.
+														return;
+													}
+
+													const nodeJsCompatWarnings =
+														nodeJsCompatWarningsMap.get(workerConfig);
+													nodeJsCompatWarnings?.registerImport(path, importer);
+													// Mark this path as external to avoid messy unwanted resolve errors.
+													// It will fail at runtime but we will log warnings to the user.
+													return { path, external: true };
+												}
+											);
+										},
+									},
+								],
+							},
+						},
 					};
 				}
-			}
-		},
-	};
-}
+			},
+			configResolved(resolvedViteConfig) {
+				for (const environmentName of Object.keys(
+					resolvedViteConfig.environments
+				)) {
+					const workerConfig = ctx.getWorkerConfig(environmentName);
+					const nodeJsCompat = ctx.getNodeJsCompat(environmentName);
+
+					if (workerConfig && !nodeJsCompat) {
+						nodeJsCompatWarningsMap.set(
+							workerConfig,
+							new NodeJsCompatWarnings(environmentName, resolvedViteConfig)
+						);
+					}
+				}
+			},
+			async resolveId(source, importer) {
+				const workerConfig = ctx.getWorkerConfig(this.environment.name);
+				const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
+
+				if (workerConfig && !nodeJsCompat) {
+					if (hasNodeJsAls(workerConfig) && isNodeAlsModule(source)) {
+						// Skip if this is just async_hooks and Node.js ALS support is on.
+						return;
+					}
+
+					const nodeJsCompatWarnings =
+						nodeJsCompatWarningsMap.get(workerConfig);
+
+					if (nodeJsBuiltins.has(source)) {
+						nodeJsCompatWarnings?.registerImport(source, importer);
+
+						// Mark this path as external to avoid messy unwanted resolve errors.
+						// It will fail at runtime but we will log warnings to the user.
+						return {
+							id: source,
+							external: true,
+						};
+					}
+				}
+			},
+		};
+	}
+);
 
 type InjectsByModule = Map<
 	string,

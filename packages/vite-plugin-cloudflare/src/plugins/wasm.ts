@@ -1,13 +1,11 @@
 import { cleanUrl } from "../utils";
-import type { Context } from "../context";
-import type * as vite from "vite";
+import { createPlugin } from "./utils";
 
 /**
  * Plugin to support the `.wasm?init` extension
  */
-export function wasmHelper(ctx: Context): vite.Plugin {
+export const wasmHelper = createPlugin("wasm-helper", (ctx) => {
 	return {
-		name: "vite-plugin-cloudflare:wasm-helper",
 		enforce: "pre",
 		applyToEnvironment(environment) {
 			return ctx.getWorkerConfig(environment.name) !== undefined;
@@ -25,4 +23,4 @@ export function wasmHelper(ctx: Context): vite.Plugin {
 				`;
 		},
 	};
-}
+});

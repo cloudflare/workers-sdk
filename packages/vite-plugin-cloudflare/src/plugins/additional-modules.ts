@@ -4,7 +4,7 @@ import * as path from "node:path";
 import MagicString from "magic-string";
 import * as vite from "vite";
 import { cleanUrl } from "../utils";
-import type { Context } from "../context";
+import { createPlugin } from "./utils";
 
 const ADDITIONAL_MODULE_TYPES = ["CompiledWasm", "Data", "Text"] as const;
 type AdditionalModuleType = (typeof ADDITIONAL_MODULE_TYPES)[number];
@@ -41,13 +41,12 @@ function createModuleReference(type: AdditionalModuleType, id: string) {
 }
 
 /**
- * Plugin to support additional modules
+ * Plugin to support additional module types (`CompiledWasm`, `Data` and `Text`)
  */
-export function additionalModules(ctx: Context): vite.Plugin {
+export const additionalModules = createPlugin("additional-modules", (ctx) => {
 	const additionalModulePaths = new Set<string>();
 
 	return {
-		name: "vite-plugin-cloudflare:additional-modules",
 		// We set `enforce: "pre"` so that this plugin runs before the Vite core plugins.
 		// Otherwise the `vite:wasm-fallback` plugin prevents the `.wasm` extension being used for module imports.
 		enforce: "pre",
@@ -134,4 +133,4 @@ export function additionalModules(ctx: Context): vite.Plugin {
 			}
 		},
 	};
-}
+});

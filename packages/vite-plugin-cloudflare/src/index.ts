@@ -62,7 +62,6 @@ import { createRequestHandler, getOutputDirectory } from "./utils";
 import { validateWorkerEnvironmentOptions } from "./vite-config";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
-import type { Context } from "./context";
 import type { PluginConfig, ResolvedPluginConfig } from "./plugin-config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { Unstable_RawConfig } from "wrangler";
@@ -107,7 +106,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			: undefined;
 	}
 
-	const ctx: Context = { getWorkerConfig, getNodeJsCompat };
+	const ctx = { getWorkerConfig, getNodeJsCompat };
 
 	return [
 		{
@@ -747,7 +746,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 		},
 		virtualModules(ctx),
-		virtualClientFallback(),
+		virtualClientFallback(ctx),
 		wasmHelper(ctx),
 		additionalModules(ctx),
 		nodeJsAls(ctx),
