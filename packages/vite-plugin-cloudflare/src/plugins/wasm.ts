@@ -4,7 +4,7 @@ import { createPlugin } from "./utils";
 /**
  * Plugin to support the `.wasm?init` extension
  */
-export const wasmHelper = createPlugin("wasm-helper", (ctx) => {
+export const wasmHelperPlugin = createPlugin("wasm-helper", (ctx) => {
 	return {
 		enforce: "pre",
 		applyToEnvironment(environment) {

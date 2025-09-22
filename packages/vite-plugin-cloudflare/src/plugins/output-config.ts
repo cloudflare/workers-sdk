@@ -12,7 +12,7 @@ import type { Unstable_RawConfig } from "wrangler";
  * Plugin to generate additional output files as part of the build.
  * These include the output `wrangler.json` configuration.
  */
-export const outputConfig = createPlugin("output-config", (ctx) => {
+export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 	return {
 		generateBundle(_, bundle) {
 			assertIsNotPreview(ctx.resolvedPluginConfig);

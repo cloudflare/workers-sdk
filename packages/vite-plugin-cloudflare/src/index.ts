@@ -40,19 +40,19 @@ import {
 	assertIsPreview,
 	resolvePluginConfig,
 } from "./plugin-config";
-import { additionalModules } from "./plugins/additional-modules";
+import { additionalModulesPlugin } from "./plugins/additional-modules";
 import {
-	nodeJsAls,
-	nodeJsCompat,
-	nodeJsCompatWarnings,
+	nodeJsAlsPlugin,
+	nodeJsCompatPlugin,
+	nodeJsCompatWarningsPlugin,
 } from "./plugins/nodejs-compat";
-import { outputConfig } from "./plugins/output-config";
+import { outputConfigPlugin } from "./plugins/output-config";
 import { PluginContext } from "./plugins/utils";
 import {
-	virtualClientFallback,
-	virtualModules,
+	virtualClientFallbackPlugin,
+	virtualModulesPlugin,
 } from "./plugins/virtual-modules";
-import { wasmHelper } from "./plugins/wasm";
+import { wasmHelperPlugin } from "./plugins/wasm";
 import { UNKNOWN_HOST } from "./shared";
 import { createRequestHandler, getOutputDirectory } from "./utils";
 import { validateWorkerEnvironmentOptions } from "./vite-config";
@@ -615,13 +615,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 		},
-		virtualModules(ctx),
-		virtualClientFallback(ctx),
-		outputConfig(ctx),
-		wasmHelper(ctx),
-		additionalModules(ctx),
-		nodeJsAls(ctx),
-		nodeJsCompat(ctx),
-		nodeJsCompatWarnings(ctx),
+		virtualModulesPlugin(ctx),
+		virtualClientFallbackPlugin(ctx),
+		outputConfigPlugin(ctx),
+		wasmHelperPlugin(ctx),
+		additionalModulesPlugin(ctx),
+		nodeJsAlsPlugin(ctx),
+		nodeJsCompatPlugin(ctx),
+		nodeJsCompatWarningsPlugin(ctx),
 	];
 }

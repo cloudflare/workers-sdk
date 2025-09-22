@@ -43,94 +43,105 @@ function createModuleReference(type: AdditionalModuleType, id: string) {
 /**
  * Plugin to support additional module types (`CompiledWasm`, `Data` and `Text`)
  */
-export const additionalModules = createPlugin("additional-modules", (ctx) => {
-	const additionalModulePaths = new Set<string>();
+export const additionalModulesPlugin = createPlugin(
+	"additional-modules",
+	(ctx) => {
+		const additionalModulePaths = new Set<string>();
 
-	return {
-		// We set `enforce: "pre"` so that this plugin runs before the Vite core plugins.
-		// Otherwise the `vite:wasm-fallback` plugin prevents the `.wasm` extension being used for module imports.
-		enforce: "pre",
-		applyToEnvironment(environment) {
-			return ctx.getWorkerConfig(environment.name) !== undefined;
-		},
-		async resolveId(source, importer, options) {
-			const additionalModuleType = matchAdditionalModule(source);
+		return {
+			// We set `enforce: "pre"` so that this plugin runs before the Vite core plugins.
+			// Otherwise the `vite:wasm-fallback` plugin prevents the `.wasm` extension being used for module imports.
+			enforce: "pre",
+			applyToEnvironment(environment) {
+				return ctx.getWorkerConfig(environment.name) !== undefined;
+			},
+			async resolveId(source, importer, options) {
+				const additionalModuleType = matchAdditionalModule(source);
 
-			if (!additionalModuleType) {
-				return;
-			}
+				if (!additionalModuleType) {
+					return;
+				}
 
-			// We clean the module URL here as the default rules include `.wasm?module`.
-			// We therefore need the match to include the query param but remove it before resolving the ID.
-			const resolved = await this.resolve(cleanUrl(source), importer, options);
-
-			if (!resolved) {
-				throw new Error(`Import "${source}" not found. Does the file exist?`);
-			}
-
-			// Add the path to the additional module so that we can identify the module in the `hotUpdate` hook
-			additionalModulePaths.add(resolved.id);
-
-			return {
-				external: true,
-				id: createModuleReference(additionalModuleType, resolved.id),
-			};
-		},
-		hotUpdate(options) {
-			if (additionalModulePaths.has(options.file)) {
-				options.server.restart();
-				return [];
-			}
-		},
-		async renderChunk(code, chunk) {
-			const matches = code.matchAll(additionalModuleGlobalRE);
-			let magicString: MagicString | undefined;
-
-			for (const match of matches) {
-				magicString ??= new MagicString(code);
-				const [full, _, modulePath] = match;
-
-				assert(
-					modulePath,
-					`Unexpected error: module path not found in reference ${full}.`
+				// We clean the module URL here as the default rules include `.wasm?module`.
+				// We therefore need the match to include the query param but remove it before resolving the ID.
+				const resolved = await this.resolve(
+					cleanUrl(source),
+					importer,
+					options
 				);
 
-				let source: Buffer;
+				if (!resolved) {
+					throw new Error(`Import "${source}" not found. Does the file exist?`);
+				}
 
-				try {
-					source = await fsp.readFile(modulePath);
-				} catch (error) {
-					throw new Error(
-						`Import "${modulePath}" not found. Does the file exist?`
+				// Add the path to the additional module so that we can identify the module in the `hotUpdate` hook
+				additionalModulePaths.add(resolved.id);
+
+				return {
+					external: true,
+					id: createModuleReference(additionalModuleType, resolved.id),
+				};
+			},
+			hotUpdate(options) {
+				if (additionalModulePaths.has(options.file)) {
+					options.server.restart();
+					return [];
+				}
+			},
+			async renderChunk(code, chunk) {
+				const matches = code.matchAll(additionalModuleGlobalRE);
+				let magicString: MagicString | undefined;
+
+				for (const match of matches) {
+					magicString ??= new MagicString(code);
+					const [full, _, modulePath] = match;
+
+					assert(
+						modulePath,
+						`Unexpected error: module path not found in reference ${full}.`
+					);
+
+					let source: Buffer;
+
+					try {
+						source = await fsp.readFile(modulePath);
+					} catch (error) {
+						throw new Error(
+							`Import "${modulePath}" not found. Does the file exist?`
+						);
+					}
+
+					const referenceId = this.emitFile({
+						type: "asset",
+						name: path.basename(modulePath),
+						originalFileName: modulePath,
+						source,
+					});
+
+					const emittedFileName = this.getFileName(referenceId);
+					const relativePath = vite.normalizePath(
+						path.relative(path.dirname(chunk.fileName), emittedFileName)
+					);
+					const importPath = relativePath.startsWith(".")
+						? relativePath
+						: `./${relativePath}`;
+
+					magicString.update(
+						match.index,
+						match.index + full.length,
+						importPath
 					);
 				}
 
-				const referenceId = this.emitFile({
-					type: "asset",
-					name: path.basename(modulePath),
-					originalFileName: modulePath,
-					source,
-				});
-
-				const emittedFileName = this.getFileName(referenceId);
-				const relativePath = vite.normalizePath(
-					path.relative(path.dirname(chunk.fileName), emittedFileName)
-				);
-				const importPath = relativePath.startsWith(".")
-					? relativePath
-					: `./${relativePath}`;
-
-				magicString.update(match.index, match.index + full.length, importPath);
-			}
-
-			if (magicString) {
-				return {
-					code: magicString.toString(),
-					map: this.environment.config.build.sourcemap
-						? magicString.generateMap({ hires: "boundary" })
-						: null,
-				};
-			}
-		},
-	};
-});
+				if (magicString) {
+					return {
+						code: magicString.toString(),
+						map: this.environment.config.build.sourcemap
+							? magicString.generateMap({ hires: "boundary" })
+							: null,
+					};
+				}
+			},
+		};
+	}
+);

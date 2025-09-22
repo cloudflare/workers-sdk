@@ -13,7 +13,7 @@ import type * as vite from "vite";
 /**
  * Plugin to support the `nodejs_als` compatibility flag
  */
-export const nodeJsAls = createPlugin("nodejs-als", (ctx) => {
+export const nodeJsAlsPlugin = createPlugin("nodejs-als", (ctx) => {
 	return {
 		configEnvironment(name) {
 			if (hasNodeJsAls(ctx.getWorkerConfig(name))) {
@@ -33,7 +33,7 @@ export const nodeJsAls = createPlugin("nodejs-als", (ctx) => {
 /**
  * Plugin to support the `nodejs_compat` compatibility flag
  */
-export const nodeJsCompat = createPlugin("nodejs-compat", (ctx) => {
+export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 	return {
 		configEnvironment(name) {
 			const nodeJsCompat = ctx.getNodeJsCompat(name);
@@ -144,7 +144,7 @@ export const nodeJsCompat = createPlugin("nodejs-compat", (ctx) => {
 /**
  * Plugin to warn if Node.js APIs are used without enabling the `nodejs_compat` compatibility flag
  */
-export const nodeJsCompatWarnings = createPlugin(
+export const nodeJsCompatWarningsPlugin = createPlugin(
 	"nodejs-compat-warnings",
 	(ctx) => {
 		const nodeJsCompatWarningsMap = new Map<

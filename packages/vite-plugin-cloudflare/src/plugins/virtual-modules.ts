@@ -8,7 +8,7 @@ export const VIRTUAL_CLIENT_FALLBACK_ENTRY = `${virtualPrefix}client-fallback-en
 /**
  * Plugin to provide virtual modules
  */
-export const virtualModules = createPlugin("virtual-modules", (ctx) => {
+export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 	return {
 		applyToEnvironment(environment) {
 			return ctx.getWorkerConfig(environment.name) !== undefined;
@@ -51,7 +51,7 @@ if (import.meta.hot) {
  * Plugin to provide a virtual fallback entry file for the `client` environment.
  * This is used as the entry file for the client build when only the `public` directory is present.
  */
-export const virtualClientFallback = createPlugin(
+export const virtualClientFallbackPlugin = createPlugin(
 	"virtual-client-fallback",
 	() => {
 		return {
