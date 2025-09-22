@@ -384,7 +384,7 @@ const testCases: TestCase<string>[] = [
 			),
 		],
 	},
-/* 	{
+	/* 	{
 		// Enable post announcement
 		name: "VPC Service",
 		scriptPath: "vpc-service.js",
