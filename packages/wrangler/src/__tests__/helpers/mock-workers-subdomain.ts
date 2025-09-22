@@ -62,7 +62,6 @@ export function mockGetWorkerSubdomain({
 				if (!legacyEnv) {
 					expect(params.envName).toEqual(env);
 				}
-
 				return HttpResponse.json(
 					createFetchResult({ enabled, previews_enabled })
 				);

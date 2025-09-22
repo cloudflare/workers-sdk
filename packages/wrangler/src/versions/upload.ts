@@ -880,12 +880,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	let versionPreviewAliasUrl: string | undefined = undefined;
 
 	if (versionId && hasPreview) {
-		const { previews_enabled: previews_available_on_subdomain } =
-			await fetchResult<{
-				previews_enabled: boolean;
-			}>(config, `${workerUrl}/subdomain`);
-
-		if (previews_available_on_subdomain) {
+		const { previews_enabled } = await fetchResult<{
+			previews_enabled: boolean;
+		}>(
+			config,
+			`${workerUrl}/subdomain`,
+			{},
+			new URLSearchParams({ show_requested: "true" })
+		);
+		if (config.preview_urls || previews_enabled) {
 			const userSubdomain = await getWorkersDevSubdomain(
 				config,
 				accountId,

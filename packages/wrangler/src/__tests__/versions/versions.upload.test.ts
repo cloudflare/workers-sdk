@@ -177,7 +177,41 @@ describe("versions upload", () => {
 		`);
 	});
 
-	test("should print preview url if version has preview", async () => {
+	it("should not print preview url when config.preview_urls=<missing> AND api.preview_enabled=false", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+
+		// Setup
+		writeWranglerConfig({
+			name: "test-name",
+			main: "./index.js",
+			vars: {
+				TEST: "test-string",
+			},
+		});
+		writeWorkerSource();
+		setIsTTY(false);
+
+		const result = runWrangler("versions upload");
+
+		await expect(result).resolves.toBeUndefined();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			Your Worker has access to the following bindings:
+			Binding                       Resource
+			env.TEST (\\"test-string\\")      Environment Variable
+
+			Uploaded test-name (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
+		`);
+
+		expect(std.info).toContain("Retrying API call after error...");
+	});
+
+	test("should print preview url when config.preview_urls=<missing> AND api.preview_enabled=true", async () => {
 		mockGetScript();
 		mockUploadVersion(true);
 		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
@@ -211,6 +245,43 @@ describe("versions upload", () => {
 		`);
 	});
 
+	it("should print preview url when config.preview_urls=true AND api.preview_enabled=false", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+		mockSubDomainRequest();
+
+		// Setup
+		writeWranglerConfig({
+			name: "test-name",
+			main: "./index.js",
+			preview_urls: true,
+			vars: {
+				TEST: "test-string",
+			},
+		});
+		writeWorkerSource();
+		setIsTTY(false);
+
+		const result = runWrangler("versions upload");
+
+		await expect(result).resolves.toBeUndefined();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			Your Worker has access to the following bindings:
+			Binding                       Resource
+			env.TEST (\\"test-string\\")      Environment Variable
+
+			Uploaded test-name (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
+			Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev"
+		`);
+
+		expect(std.info).toContain("Retrying API call after error...");
+	});
+
 	test("should allow specifying --preview-alias", async () => {
 		mockGetScript();
 		mockUploadVersion(true, 1, { "workers/alias": "abcd1234" });
@@ -232,40 +303,6 @@ describe("versions upload", () => {
 			Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev
 			Version Preview Alias URL: https://abcd1234-test-name.test-sub-domain.workers.dev"
 		`);
-	});
-
-	it("should not print preview url when preview_urls is false", async () => {
-		mockGetScript();
-		mockUploadVersion(true);
-		mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
-
-		// Setup
-		writeWranglerConfig({
-			name: "test-name",
-			main: "./index.js",
-			vars: {
-				TEST: "test-string",
-			},
-		});
-		writeWorkerSource();
-		setIsTTY(false);
-
-		const result = runWrangler("versions upload");
-
-		await expect(result).resolves.toBeUndefined();
-
-		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 500 ms
-			Your Worker has access to the following bindings:
-			Binding                       Resource
-			env.TEST (\\"test-string\\")      Environment Variable
-
-			Uploaded test-name (TIMINGS)
-			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
-		`);
-
-		expect(std.info).toContain("Retrying API call after error...");
 	});
 
 	test("correctly detects python workers", async () => {
