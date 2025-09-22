@@ -18,10 +18,10 @@ export const pipelinesGetCommand = createCommand({
 			describe: "The ID of the pipeline to retrieve",
 			demandOption: true,
 		},
-		format: {
-			choices: ["pretty", "json"],
-			describe: "The output format for pipeline",
-			default: "pretty",
+		json: {
+			describe: "Output in JSON format",
+			type: "boolean",
+			default: false,
 		},
 	},
 	positionalArgs: ["pipeline"],
@@ -42,7 +42,7 @@ export const pipelinesGetCommand = createCommand({
 					config,
 					accountId,
 					pipelineId,
-					args.format as "pretty" | "json"
+					args.json ? "json" : "pretty"
 				);
 
 				if (foundInLegacy) {
@@ -52,7 +52,7 @@ export const pipelinesGetCommand = createCommand({
 			throw error;
 		}
 
-		if (args.format === "json") {
+		if (args.json) {
 			logger.json(pipeline);
 			return;
 		}
