@@ -1,5 +1,5 @@
 {
-	"name": "@vite-plugin-cloudflare-e2e/no-wrangler-config",
+	"name": "@cloudflare/vite-plugin-e2e-no-wrangler-config",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",

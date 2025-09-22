@@ -7,6 +7,7 @@ declare namespace Cloudflare {
 		IMAGES: ImagesBinding;
 		WAE: AnalyticsEngineDataset;
 		RATE_LIMITER: RateLimit;
+		HYPERDRIVE: Hyperdrive;
 	}
 }
 interface Env extends Cloudflare.Env {}

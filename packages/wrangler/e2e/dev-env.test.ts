@@ -56,6 +56,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("switching runtimes", () => {
                                     apiToken: process.env.CLOUDFLARE_API_TOKEN,
                                 }
                             },
+                            server: {
+                                port: 0,
+                            },
                         },
                     });
 

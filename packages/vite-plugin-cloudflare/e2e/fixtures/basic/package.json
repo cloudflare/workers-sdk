@@ -1,5 +1,5 @@
 {
-	"name": "cloudflare-vite-e2e-basic",
+	"name": "@cloudflare/vite-plugin-e2e-basic",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",

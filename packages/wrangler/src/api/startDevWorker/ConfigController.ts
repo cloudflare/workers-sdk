@@ -485,6 +485,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 	#configWatcher?: ReturnType<typeof watch>;
 	#abortController?: AbortController;
+	#tearingDown = false;
 
 	async #ensureWatchingConfig(configPath: string | undefined) {
 		await this.#configWatcher?.close();
@@ -493,6 +494,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("change", async (_event) => {
+				if (this.#configWatcher?.closed) {
+					return;
+				}
 				logger.debug(`${path.basename(configPath)} changed...`);
 				assert(
 					this.latestInput,
@@ -525,6 +529,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	}
 
 	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
+		if (this.#tearingDown) {
+			return;
+		}
 		this.#abortController?.abort();
 		this.#abortController = new AbortController();
 		const signal = this.#abortController.signal;
@@ -554,13 +561,16 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				{ useRedirectIfAvailable: true }
 			);
 
-			if (typeof vitest === "undefined") {
-				void this.#ensureWatchingConfig(fileConfig.configPath);
+			await this.#ensureWatchingConfig(fileConfig.configPath);
+
+			if (this.#tearingDown || signal.aborted) {
+				return;
 			}
 
 			const { config: resolvedConfig, printCurrentBindings } =
 				await resolveConfig(fileConfig, input);
-			if (signal.aborted) {
+
+			if (this.#tearingDown || signal.aborted) {
 				return;
 			}
 			this.latestConfig = resolvedConfig;
@@ -593,6 +603,8 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 	async teardown() {
 		logger.debug("ConfigController teardown beginning...");
+		this.#tearingDown = true;
+		this.#abortController?.abort();
 		await this.#configWatcher?.close();
 		logger.debug("ConfigController teardown complete");
 	}

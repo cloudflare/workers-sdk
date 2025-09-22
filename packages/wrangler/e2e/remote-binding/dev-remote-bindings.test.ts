@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { fetchText } from "../helpers/fetch-text";
@@ -20,21 +20,23 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 		beforeAll(async () => {
 			await helper.seed(resolve(__dirname, "./workers"));
-			const deploy = helper.run(
-				`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
-			);
-			const deployAlt = helper.run(
-				`wrangler deploy alt-remote-worker.js --name ${alternativeRemoteWorkerName} --compatibility-date 2025-01-01`
-			);
-			await Promise.all([deploy, deployAlt]);
-		}, 35_000);
-
-		afterAll(async () => {
-			const del = helper.run(`wrangler delete --name ${remoteWorkerName}`);
-			const delAlt = helper.run(
-				`wrangler delete --name ${alternativeRemoteWorkerName}`
-			);
-			await Promise.all([del, delAlt]);
+			const cleanups = await Promise.all([
+				helper
+					.worker({
+						entryPoint: "remote-worker.js",
+						workerName: remoteWorkerName,
+						cleanOnTestFinished: false,
+					})
+					.then(({ cleanup }) => cleanup),
+				helper
+					.worker({
+						entryPoint: "alt-remote-worker.js",
+						workerName: alternativeRemoteWorkerName,
+						cleanOnTestFinished: false,
+					})
+					.then(({ cleanup }) => cleanup),
+			]);
+			return () => Promise.allSettled(cleanups.map((cleanup) => cleanup()));
 		}, 35_000);
 
 		it("handles both remote and local service bindings at the same time", async () => {

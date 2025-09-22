@@ -1152,13 +1152,13 @@ describe.sequential("wrangler dev", () => {
 			);
 			expect(config.dev.origin?.secure).toEqual(false);
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently supported for remote mode.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently supported for remote mode.[0m
 
-			  If this is required in your project, please add your use case to the following issue:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/583[0m.
+				  If this is required in your project, please add your use case to the following issue:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/583[0m.
 
-			"
-		`);
+				"
+			`);
 		});
 
 		it("should default upstream-protocol to local-protocol if local mode", async () => {

@@ -23,8 +23,13 @@ describe("ConfigController", () => {
 	mockAccountId();
 	mockApiToken();
 
+	let controller: ConfigController;
+	beforeEach(() => {
+		controller = new ConfigController();
+	});
+	afterEach(() => controller.teardown());
+
 	it("should emit configUpdate events with defaults applied", async () => {
-		const controller = new ConfigController();
 		const event = waitForConfigUpdate(controller);
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
@@ -58,7 +63,6 @@ describe("ConfigController", () => {
 	});
 
 	it("should apply module root to parent if main is nested from base_dir", async () => {
-		const controller = new ConfigController();
 		const event = waitForConfigUpdate(controller);
 		await seed({
 			"some/base_dir/nested/index.js": dedent/* javascript */ `
@@ -93,7 +97,6 @@ base_dir = \"./some/base_dir\"`,
 		});
 	});
 	it("should shallow merge patched config", async () => {
-		const controller = new ConfigController();
 		const event1 = waitForConfigUpdate(controller);
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
@@ -187,7 +190,6 @@ base_dir = \"./some/base_dir\"`,
 	});
 
 	it("should use account_id from config file before env var", async () => {
-		const controller = new ConfigController();
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
                 export default {}
@@ -215,7 +217,7 @@ base_dir = \"./some/base_dir\"`,
                 account_id = "1234567890"
             `,
 		});
-		await controller.set({ config: "./wrangler.toml" }); // no file watching during tests
+		await controller.set({ config: "./wrangler.toml" });
 
 		const { config: config2 } = await event2;
 		await expect(unwrapHook(config2.dev.auth)).resolves.toMatchObject({

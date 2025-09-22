@@ -1880,7 +1880,6 @@ describe("pages deploy", () => {
 					const body = (await request.json()) as Record<string, unknown>;
 
 					expect(params.accountId).toEqual("some-account-id");
-					console.dir(body);
 					expect(body).toEqual({
 						name: "foo",
 						production_branch: "main",
