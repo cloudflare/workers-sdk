@@ -1,8 +1,10 @@
 import { createCommand } from "../../core/create-command";
+import { confirm } from "../../dialogs";
 import { logger } from "../../logger";
+import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
-import { deletePipeline } from "../client";
-import { validateName } from "../validate";
+import { deletePipeline, getPipeline } from "../client";
+import { tryDeleteLegacyPipeline } from "./legacy-helpers";
 
 export const pipelinesDeleteCommand = createCommand({
 	metadata: {
@@ -13,20 +15,57 @@ export const pipelinesDeleteCommand = createCommand({
 	args: {
 		pipeline: {
 			type: "string",
-			describe: "The name of the pipeline to delete",
+			describe: "The ID or name of the pipeline to delete",
 			demandOption: true,
+		},
+		force: {
+			describe: "Skip confirmation",
+			type: "boolean",
+			alias: "y",
+			default: false,
 		},
 	},
 	positionalArgs: ["pipeline"],
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
-		const name = args.pipeline;
+		const pipelineId = args.pipeline;
 
-		validateName("pipeline name", name);
+		try {
+			const pipeline = await getPipeline(config, pipelineId);
 
-		logger.log(`Deleting pipeline ${name}.`);
-		await deletePipeline(config, accountId, name);
+			if (!args.force) {
+				const confirmedDelete = await confirm(
+					`Are you sure you want to delete the pipeline '${pipeline.name}' (${pipelineId})?`,
+					{ fallbackValue: false }
+				);
+				if (!confirmedDelete) {
+					logger.log("Delete cancelled.");
+					return;
+				}
+			}
 
-		logger.log(`Deleted pipeline ${name}.`);
+			await deletePipeline(config, pipelineId);
+
+			logger.log(
+				`✨ Successfully deleted pipeline '${pipeline.name}' with id '${pipeline.id}'.`
+			);
+		} catch (error) {
+			if (
+				error instanceof APIError &&
+				(error.code === 1000 || error.code === 2)
+			) {
+				const deletedFromLegacy = await tryDeleteLegacyPipeline(
+					config,
+					accountId,
+					pipelineId,
+					args.force
+				);
+
+				if (deletedFromLegacy) {
+					return;
+				}
+			}
+			throw error;
+		}
 	},
 });

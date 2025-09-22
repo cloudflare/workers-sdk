@@ -1,44 +1,103 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
+import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
+import formatLabelledValues from "../../utils/render-labelled-values";
 import { getPipeline } from "../client";
-import { formatPipelinePretty } from "../index";
-import { validateName } from "../validate";
+import { tryGetLegacyPipeline } from "./legacy-helpers";
 
 export const pipelinesGetCommand = createCommand({
 	metadata: {
-		description: "Get a pipeline's configuration",
+		description: "Get details about a specific pipeline",
 		owner: "Product: Pipelines",
 		status: "open-beta",
 	},
 	args: {
 		pipeline: {
 			type: "string",
-			describe: "The name of the pipeline to inspect",
+			describe: "The ID of the pipeline to retrieve",
 			demandOption: true,
 		},
-		format: {
-			choices: ["pretty", "json"],
-			describe: "The output format for pipeline",
-			default: "pretty",
+		json: {
+			describe: "Output in JSON format",
+			type: "boolean",
+			default: false,
 		},
 	},
 	positionalArgs: ["pipeline"],
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
-		const name = args.pipeline;
+		const pipelineId = args.pipeline;
 
-		validateName("pipeline name", name);
+		let pipeline;
 
-		const pipeline = await getPipeline(config, accountId, name);
+		try {
+			pipeline = await getPipeline(config, pipelineId);
+		} catch (error) {
+			if (
+				error instanceof APIError &&
+				(error.code === 1000 || error.code === 2)
+			) {
+				const foundInLegacy = await tryGetLegacyPipeline(
+					config,
+					accountId,
+					pipelineId,
+					args.json ? "json" : "pretty"
+				);
 
-		switch (args.format) {
-			case "json":
-				logger.log(JSON.stringify(pipeline, null, 2));
-				break;
-			case "pretty":
-				logger.log(formatPipelinePretty(pipeline));
-				break;
+				if (foundInLegacy) {
+					return;
+				}
+			}
+			throw error;
+		}
+
+		if (args.json) {
+			logger.json(pipeline);
+			return;
+		}
+
+		const general: Record<string, string> = {
+			ID: pipeline.id,
+			Name: pipeline.name,
+			"Created At": new Date(pipeline.created_at).toLocaleString(),
+			"Modified At": new Date(pipeline.modified_at).toLocaleString(),
+		};
+
+		logger.log("General:");
+		logger.log(formatLabelledValues(general, { indentationCount: 2 }));
+
+		logger.log("\nPipeline SQL:");
+		logger.log(pipeline.sql);
+
+		if (pipeline.tables && pipeline.tables.length > 0) {
+			const streams = pipeline.tables.filter(
+				(table) => table.type === "stream"
+			);
+			const sinks = pipeline.tables.filter((table) => table.type === "sink");
+
+			if (streams.length > 0) {
+				logger.log("\nConnected Streams:");
+				logger.table(
+					streams.map((stream) => ({
+						Name: stream.name,
+						ID: stream.id,
+					}))
+				);
+			}
+
+			if (sinks.length > 0) {
+				logger.log("\nConnected Sinks:");
+				logger.table(
+					sinks.map((sink) => ({
+						Name: sink.name,
+						ID: sink.id,
+					}))
+				);
+			}
+		} else {
+			logger.log("\nConnected Streams: None");
+			logger.log("Connected Sinks: None");
 		}
 	},
 });

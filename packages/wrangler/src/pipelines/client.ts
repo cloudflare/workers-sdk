@@ -1,115 +1,289 @@
 import assert from "node:assert";
-import { createHash } from "node:crypto";
 import http from "node:http";
 import { setTimeout as setTimeoutPromise } from "node:timers/promises";
+import { URLSearchParams } from "node:url";
 import { fetchResult } from "../cfetch";
 import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
+import { requireAuth } from "../user";
+import type { Config } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { R2BucketInfo } from "../r2/helpers";
+import type {
+	CreatePipelineRequest,
+	CreateSinkRequest,
+	CreateStreamRequest,
+	ListPipelinesParams,
+	ListSinksParams,
+	ListStreamsParams,
+	Pipeline,
+	Sink,
+	Stream,
+	ValidateSqlRequest,
+	ValidateSqlResponse,
+} from "./types";
 
-// ensure this is in sync with:
-//   https://bitbucket.cfdata.org/projects/PIPE/repos/superpipe/browse/src/coordinator/types.ts#6
-type RecursivePartial<T> = T extends object
-	? {
-			[P in keyof T]?: RecursivePartial<T[P]>;
+export async function listPipelines(
+	config: Config,
+	params?: ListPipelinesParams
+): Promise<Pipeline[]> {
+	const accountId = await requireAuth(config);
+	const searchParams = new URLSearchParams();
+
+	if (params?.page) {
+		searchParams.set("page", params.page.toString());
+	}
+	if (params?.per_page) {
+		searchParams.set("per_page", params.per_page.toString());
+	}
+
+	const response = await fetchResult<Pipeline[]>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/pipelines`,
+		{
+			method: "GET",
+		},
+		searchParams
+	);
+
+	return response;
+}
+
+export async function listStreams(
+	config: Config,
+	params?: ListStreamsParams
+): Promise<Stream[]> {
+	const accountId = await requireAuth(config);
+	const searchParams = new URLSearchParams();
+
+	if (params?.page) {
+		searchParams.set("page", params.page.toString());
+	}
+	if (params?.per_page) {
+		searchParams.set("per_page", params.per_page.toString());
+	}
+	if (params?.pipeline_id) {
+		searchParams.set("pipeline_id", params.pipeline_id);
+	}
+
+	const response = await fetchResult<Stream[]>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/streams`,
+		{
+			method: "GET",
+		},
+		searchParams
+	);
+
+	return response;
+}
+
+export async function listSinks(
+	config: Config,
+	params?: ListSinksParams
+): Promise<Sink[]> {
+	const accountId = await requireAuth(config);
+	const searchParams = new URLSearchParams();
+
+	if (params?.page) {
+		searchParams.set("page", params.page.toString());
+	}
+	if (params?.per_page) {
+		searchParams.set("per_page", params.per_page.toString());
+	}
+	if (params?.pipeline_id) {
+		searchParams.set("pipeline_id", params.pipeline_id);
+	}
+
+	const response = await fetchResult<Sink[]>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/sinks`,
+		{
+			method: "GET",
+		},
+		searchParams
+	);
+
+	return response;
+}
+
+export async function createStream(
+	config: Config,
+	streamConfig: CreateStreamRequest
+): Promise<Stream> {
+	const accountId = await requireAuth(config);
+
+	const response = await fetchResult<Stream>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/streams`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(streamConfig),
 		}
-	: T;
+	);
 
-export type PartialExcept<T, K extends keyof T> = RecursivePartial<T> &
-	Pick<T, K>;
+	return response;
+}
 
-export type TransformConfig = {
-	script: string;
-	entrypoint: string;
-};
+export async function getStream(
+	config: Config,
+	streamId: string
+): Promise<Stream> {
+	const accountId = await requireAuth(config);
 
-export type HttpSource = {
-	type: "http";
-	format: string;
-	schema?: string;
-	authentication?: boolean;
-	cors?: {
-		origins: ["*"] | string[];
-	};
-};
+	const response = await fetchResult<Stream>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/streams/${streamId}`,
+		{
+			method: "GET",
+		}
+	);
 
-export type BindingSource = {
-	type: "binding";
-	format: string;
-	schema?: string;
-};
+	return response;
+}
 
-export type Metadata = {
-	shards?: number;
-	[x: string]: unknown;
-};
+export async function deleteStream(
+	config: Config,
+	streamId: string
+): Promise<void> {
+	const accountId = await requireAuth(config);
 
-export type Source = HttpSource | BindingSource;
+	await fetchResult<void>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/streams/${streamId}`,
+		{
+			method: "DELETE",
+		}
+	);
+}
 
-export type PipelineUserConfig = {
-	name: string;
-	metadata: Metadata;
-	source: Source[];
-	transforms: TransformConfig[];
-	destination: {
-		type: string;
-		format: string;
-		compression: {
-			type: string;
-		};
-		batch: {
-			max_duration_s?: number;
-			max_bytes?: number;
-			max_rows?: number;
-		};
-		path: {
-			bucket: string;
-			prefix?: string;
-			filepath?: string;
-			filename?: string;
-		};
-		credentials: {
-			endpoint: string;
-			secret_access_key: string;
-			access_key_id: string;
-		};
-	};
-};
+export async function getSink(config: Config, sinkId: string): Promise<Sink> {
+	const accountId = await requireAuth(config);
 
-// Pipeline from v4 API
-export type Pipeline = Omit<PipelineUserConfig, "destination"> & {
-	id: string;
-	version: number;
-	endpoint: string;
-	destination: Omit<PipelineUserConfig["destination"], "credentials"> & {
-		credentials?: PipelineUserConfig["destination"]["credentials"];
-	};
-};
+	const response = await fetchResult<Sink>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/sinks/${sinkId}`,
+		{
+			method: "GET",
+		}
+	);
 
-// abbreviated Pipeline from Pipeline list call
-export type PipelineEntry = {
-	id: string;
-	name: string;
-	endpoint: string;
-};
+	return response;
+}
 
-// Payload for Service Tokens
-export type ServiceToken = {
-	id: string;
-	name: string;
-	value: string;
-};
+export async function deleteSink(
+	config: Config,
+	sinkId: string
+): Promise<void> {
+	const accountId = await requireAuth(config);
 
-// standard headers for update calls to v4 API
-const API_HEADERS = {
-	"Content-Type": "application/json",
-};
+	await fetchResult<void>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/sinks/${sinkId}`,
+		{
+			method: "DELETE",
+		}
+	);
+}
 
-export function sha256(s: string): string {
-	return createHash("sha256").update(s).digest("hex");
+export async function createSink(
+	config: Config,
+	sinkConfig: CreateSinkRequest
+): Promise<Sink> {
+	const accountId = await requireAuth(config);
+
+	const response = await fetchResult<Sink>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/sinks`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(sinkConfig),
+		}
+	);
+
+	return response;
+}
+
+export async function getPipeline(
+	config: Config,
+	pipelineId: string
+): Promise<Pipeline> {
+	const accountId = await requireAuth(config);
+
+	const response = await fetchResult<Pipeline>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/pipelines/${pipelineId}`,
+		{
+			method: "GET",
+		}
+	);
+
+	return response;
+}
+
+export async function deletePipeline(
+	config: Config,
+	pipelineId: string
+): Promise<void> {
+	const accountId = await requireAuth(config);
+
+	await fetchResult<void>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/pipelines/${pipelineId}`,
+		{
+			method: "DELETE",
+		}
+	);
+}
+
+export async function createPipeline(
+	config: Config,
+	pipelineConfig: CreatePipelineRequest
+): Promise<Pipeline> {
+	const accountId = await requireAuth(config);
+
+	const response = await fetchResult<Pipeline>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/pipelines`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(pipelineConfig),
+		}
+	);
+
+	return response;
+}
+
+export async function validateSql(
+	config: Config,
+	sqlRequest: ValidateSqlRequest
+): Promise<ValidateSqlResponse["result"]> {
+	const accountId = await requireAuth(config);
+
+	const response = await fetchResult<ValidateSqlResponse["result"]>(
+		config,
+		`/accounts/${accountId}/pipelines/v1/validate_sql`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(sqlRequest),
+		}
+	);
+
+	return response;
 }
 
 export interface S3AccessKey {
@@ -219,85 +393,5 @@ export async function getR2Bucket(
 	return await fetchResult<R2BucketInfo>(
 		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${name}`
-	);
-}
-
-// v4 API to Create new Pipeline
-export async function createPipeline(
-	complianceConfig: ComplianceConfig,
-	accountId: string,
-	pipelineConfig: PipelineUserConfig
-): Promise<Pipeline> {
-	return await fetchResult<Pipeline>(
-		complianceConfig,
-		`/accounts/${accountId}/pipelines`,
-		{
-			method: "POST",
-			headers: API_HEADERS,
-			body: JSON.stringify(pipelineConfig),
-		}
-	);
-}
-
-// v4 API to Get Pipeline Details
-export async function getPipeline(
-	complianceConfig: ComplianceConfig,
-	accountId: string,
-	name: string
-): Promise<Pipeline> {
-	return await fetchResult<Pipeline>(
-		complianceConfig,
-		`/accounts/${accountId}/pipelines/${name}`,
-		{
-			method: "GET",
-		}
-	);
-}
-
-// v4 API to Update Pipeline Configuration
-export async function updatePipeline(
-	complianceConfig: ComplianceConfig,
-	accountId: string,
-	name: string,
-	pipelineConfig: PartialExcept<PipelineUserConfig, "name">
-): Promise<Pipeline> {
-	return await fetchResult<Pipeline>(
-		complianceConfig,
-		`/accounts/${accountId}/pipelines/${name}`,
-		{
-			method: "PUT",
-			headers: API_HEADERS,
-			body: JSON.stringify(pipelineConfig),
-		}
-	);
-}
-
-// v4 API to List Available Pipelines
-export async function listPipelines(
-	complianceConfig: ComplianceConfig,
-	accountId: string
-): Promise<PipelineEntry[]> {
-	return await fetchResult<PipelineEntry[]>(
-		complianceConfig,
-		`/accounts/${accountId}/pipelines`,
-		{
-			method: "GET",
-		}
-	);
-}
-
-// v4 API to Delete Pipeline
-export async function deletePipeline(
-	complianceConfig: ComplianceConfig,
-	accountId: string,
-	name: string
-): Promise<void> {
-	return await fetchResult<void>(
-		complianceConfig,
-		`/accounts/${accountId}/pipelines/${name}`,
-		{
-			method: "DELETE",
-			headers: API_HEADERS,
-		}
 	);
 }

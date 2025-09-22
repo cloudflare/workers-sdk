@@ -1,25 +1,12 @@
-import { updateConfigFile } from "../../config";
+import { readFileSync } from "node:fs";
 import { createCommand } from "../../core/create-command";
-import { FatalError, UserError } from "../../errors";
+import { UserError } from "../../errors";
 import { logger } from "../../logger";
-import { bucketFormatMessage, isValidR2BucketName } from "../../r2/helpers";
+import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
-import { getValidBindingName } from "../../utils/getValidBindingName";
-import { createPipeline } from "../client";
-import {
-	authorizeR2Bucket,
-	BYTES_PER_MB,
-	formatPipelinePretty,
-	getAccountR2Endpoint,
-	parseTransform,
-} from "../index";
-import { validateCorsOrigins, validateInRange } from "../validate";
-import type {
-	BindingSource,
-	HttpSource,
-	PipelineUserConfig,
-	Source,
-} from "../client";
+import { createPipeline, getPipeline, getStream, validateSql } from "../client";
+import { displayUsageExamples } from "./streams/utils";
+import type { CreatePipelineRequest } from "../types";
 
 export const pipelinesCreateCommand = createCommand({
 	metadata: {
@@ -29,274 +16,126 @@ export const pipelinesCreateCommand = createCommand({
 	},
 	args: {
 		pipeline: {
-			describe: "The name of the new pipeline",
+			describe: "The name of the pipeline to create",
 			type: "string",
 			demandOption: true,
 		},
-
-		source: {
-			type: "array",
-			describe:
-				"Space separated list of allowed sources. Options are 'http' or 'worker'",
-			default: ["http", "worker"],
-			demandOption: false,
-			group: "Source settings",
-		},
-		"require-http-auth": {
-			type: "boolean",
-			describe:
-				"Require Cloudflare API Token for HTTPS endpoint authentication",
-			default: false,
-			demandOption: false,
-			group: "Source settings",
-		},
-		"cors-origins": {
-			type: "array",
-			describe:
-				"CORS origin allowlist for HTTP endpoint (use * for any origin). Defaults to an empty array",
-			demandOption: false,
-			coerce: validateCorsOrigins,
-			group: "Source settings",
-		},
-
-		"batch-max-mb": {
-			type: "number",
-			describe:
-				"Maximum batch size in megabytes before flushing. Defaults to 100 MB if unset. Minimum: 1, Maximum: 100",
-			demandOption: false,
-			coerce: validateInRange("batch-max-mb", 1, 100),
-			group: "Batch hints",
-		},
-		"batch-max-rows": {
-			type: "number",
-			describe:
-				"Maximum number of rows per batch before flushing. Defaults to 10,000,000 if unset. Minimum: 100, Maximum: 10,000,000",
-			demandOption: false,
-			coerce: validateInRange("batch-max-rows", 100, 10_000_000),
-			group: "Batch hints",
-		},
-		"batch-max-seconds": {
-			type: "number",
-			describe:
-				"Maximum age of batch in seconds before flushing. Defaults to 300 if unset. Minimum: 1, Maximum: 300",
-
-			demandOption: false,
-			coerce: validateInRange("batch-max-seconds", 1, 300),
-			group: "Batch hints",
-		},
-
-		// Transform options
-		"transform-worker": {
+		sql: {
+			describe: "Inline SQL query for the pipeline",
 			type: "string",
-			describe:
-				"Pipeline transform Worker and entrypoint (<worker>.<entrypoint>)",
-			demandOption: false,
-			hidden: true, // TODO: Remove once transformations launch
-			group: "Transformations",
+			conflicts: "sql-file",
 		},
-
-		"r2-bucket": {
+		"sql-file": {
+			describe: "Path to file containing SQL query for the pipeline",
 			type: "string",
-			describe: "Destination R2 bucket name",
-			demandOption: true,
-			group: "Destination settings",
-		},
-		"r2-access-key-id": {
-			type: "string",
-			describe:
-				"R2 service Access Key ID for authentication. Leave empty for OAuth confirmation.",
-			demandOption: false,
-			group: "Destination settings",
-			implies: "r2-secret-access-key",
-		},
-		"r2-secret-access-key": {
-			type: "string",
-			describe:
-				"R2 service Secret Access Key for authentication. Leave empty for OAuth confirmation.",
-			demandOption: false,
-			group: "Destination settings",
-			implies: "r2-access-key-id",
-		},
-
-		"r2-prefix": {
-			type: "string",
-			describe:
-				"Prefix for storing files in the destination bucket. Default is no prefix",
-			default: "",
-			demandOption: false,
-			group: "Destination settings",
-		},
-		compression: {
-			type: "string",
-			describe: "Compression format for output files",
-			choices: ["none", "gzip", "deflate"],
-			default: "gzip",
-			demandOption: false,
-			group: "Destination settings",
-		},
-
-		// Pipeline settings
-		"shard-count": {
-			type: "number",
-			describe:
-				"Number of shards for the pipeline. More shards handle higher request volume; fewer shards produce larger output files. Defaults to 2 if unset. Minimum: 1, Maximum: 15",
-			demandOption: false,
-			group: "Pipeline settings",
+			conflicts: "sql",
 		},
 	},
 	positionalArgs: ["pipeline"],
-	validateArgs(args) {
-		if (
-			(args.r2AccessKeyId && !args.r2SecretAccessKey) ||
-			(!args.r2AccessKeyId && args.r2SecretAccessKey)
-		) {
-			throw new UserError(
-				"--r2-access-key-id and --r2-secret-access-key must be provided together"
-			);
-		}
-	},
 
 	async handler(args, { config }) {
-		const bucket = args.r2Bucket;
-		if (!isValidR2BucketName(bucket)) {
-			throw new UserError(
-				`The bucket name "${bucket}" is invalid. ${bucketFormatMessage}`
-			);
-		}
-		const name = args.pipeline;
-		const compression = args.compression;
+		await requireAuth(config);
+		const pipelineName = args.pipeline;
 
-		const batch = {
-			max_bytes: args.batchMaxMb
-				? args.batchMaxMb * BYTES_PER_MB // convert to bytes for the API
-				: undefined,
-			max_duration_s: args.batchMaxSeconds,
-			max_rows: args.batchMaxRows,
-		};
-
-		const accountId = await requireAuth(config);
-		const pipelineConfig: PipelineUserConfig = {
-			name: name,
-			metadata: {},
-			source: [],
-			transforms: [],
-			destination: {
-				type: "r2",
-				format: "json",
-				compression: {
-					type: compression,
-				},
-				batch: batch,
-				path: {
-					bucket,
-				},
-				credentials: {
-					endpoint: getAccountR2Endpoint(accountId),
-					access_key_id: args.r2AccessKeyId || "",
-					secret_access_key: args.r2SecretAccessKey || "",
-				},
-			},
-		};
-		const destination = pipelineConfig.destination;
-		if (
-			!destination.credentials.access_key_id &&
-			!destination.credentials.secret_access_key
-		) {
-			// auto-generate a service token
-			const auth = await authorizeR2Bucket(
-				config,
-				name,
-				accountId,
-				pipelineConfig.destination.path.bucket
-			);
-			destination.credentials.access_key_id = auth.accessKeyId;
-			destination.credentials.secret_access_key = auth.secretAccessKey;
+		let sql: string;
+		if (args.sql) {
+			sql = args.sql;
+		} else if (args.sqlFile) {
+			try {
+				sql = readFileSync(args.sqlFile, "utf-8").trim();
+			} catch (error) {
+				throw new UserError(
+					`Failed to read SQL file '${args.sqlFile}': ${error instanceof Error ? error.message : String(error)}`
+				);
+			}
+		} else {
+			throw new UserError("Either --sql or --sql-file must be provided");
 		}
 
-		if (!destination.credentials.access_key_id) {
-			throw new FatalError("Requires a r2 access key id");
+		if (!sql) {
+			throw new UserError("SQL query cannot be empty");
 		}
 
-		if (!destination.credentials.secret_access_key) {
-			throw new FatalError("Requires a r2 secret access key");
-		}
+		// Validate SQL before creating pipeline
+		logger.log("🌀 Validating SQL...");
+		try {
+			const validationResult = await validateSql(config, { sql });
 
-		if (args.source.length > 0) {
-			const sourceHandlers: Record<string, () => Source> = {
-				http: (): HttpSource => {
-					const http: HttpSource = {
-						type: "http",
-						format: "json",
-						authentication: args.requireHttpAuth,
-					};
-
-					if (args.corsOrigins && args.corsOrigins.length > 0) {
-						http.cors = { origins: args.corsOrigins };
-					}
-
-					return http;
-				},
-				worker: (): BindingSource => ({
-					type: "binding",
-					format: "json",
-				}),
-			};
-
-			for (const source of args.source) {
-				const handler = sourceHandlers[source];
-				if (handler) {
-					pipelineConfig.source.push(handler());
+			if (
+				validationResult.tables &&
+				Object.keys(validationResult.tables).length > 0
+			) {
+				const tableNames = Object.keys(validationResult.tables);
+				logger.log(
+					`✅ SQL validated successfully. References tables: ${tableNames.join(", ")}`
+				);
+			} else {
+				logger.log("✅ SQL validated successfully.");
+			}
+		} catch (error) {
+			let errorMessage = "Unknown validation error";
+			if (error && typeof error === "object") {
+				const errorObj = error as {
+					notes?: Array<{ text?: string }>;
+					message?: string;
+				};
+				if (
+					errorObj.notes &&
+					Array.isArray(errorObj.notes) &&
+					errorObj.notes[0]?.text
+				) {
+					errorMessage = errorObj.notes[0].text;
+				} else if (error instanceof Error) {
+					errorMessage = error.message;
 				}
 			}
+			throw new UserError(`SQL validation failed: ${errorMessage}`);
 		}
 
-		if (pipelineConfig.source.length === 0) {
-			throw new UserError(
-				"No sources have been enabled. At least one source (HTTP or Worker Binding) should be enabled"
-			);
-		}
+		const pipelineConfig: CreatePipelineRequest = {
+			name: pipelineName,
+			sql,
+		};
 
-		if (args.transformWorker) {
-			pipelineConfig.transforms.push(parseTransform(args.transformWorker));
-		}
+		logger.log(`🌀 Creating pipeline '${pipelineName}'...`);
 
-		if (args.r2Prefix) {
-			pipelineConfig.destination.path.prefix = args.r2Prefix;
+		let pipeline;
+		try {
+			pipeline = await createPipeline(config, pipelineConfig);
+		} catch (error) {
+			if (error instanceof APIError && error.code === 10000) {
+				// Show error when no access to v1 Pipelines API
+				throw new UserError(
+					`Your account does not have access to the new Pipelines API. To use the legacy Pipelines API, please run:\n\nnpx wrangler@4.36.0 pipelines create ${pipelineName}\n\nThis will use an older version of Wrangler that supports the legacy API.`
+				);
+			}
+			throw error;
 		}
-		if (args.shardCount) {
-			pipelineConfig.metadata.shards = args.shardCount;
-		}
-
-		logger.log(`🌀 Creating pipeline named "${name}"`);
-		const pipeline = await createPipeline(config, accountId, pipelineConfig);
 
 		logger.log(
-			`✅ Successfully created pipeline "${pipeline.name}" with ID ${pipeline.id}\n`
+			`✨ Successfully created pipeline '${pipeline.name}' with id '${pipeline.id}'.`
 		);
-		logger.log(formatPipelinePretty(pipeline));
-		logger.log("🎉 You can now send data to your pipeline!");
 
-		if (args.source.includes("worker")) {
-			await updateConfigFile(
-				(bindingName) => ({
-					pipelines: [
-						{
-							pipeline: pipeline.name,
-							binding: getValidBindingName(
-								bindingName ?? "PIPELINE",
-								"PIPELINE"
-							),
-						},
-					],
-				}),
-				config.configPath,
-				args.env
+		try {
+			const fullPipeline = await getPipeline(config, pipeline.id);
+
+			const streamTable = fullPipeline.tables?.find(
+				(table) => table.type === "stream"
 			);
-		}
 
-		if (args.source.includes("http")) {
-			logger.log(`\nSend data to your pipeline's HTTP endpoint:\n`);
-			logger.log(`curl "${pipeline.endpoint}" -d '[{"foo": "bar"}]'\n`);
+			if (streamTable) {
+				const stream = await getStream(config, streamTable.id);
+				await displayUsageExamples(stream, config, args);
+			} else {
+				logger.log(
+					`\nRun 'wrangler pipelines get ${pipeline.id}' to view full details.`
+				);
+			}
+		} catch {
+			logger.warn("Could not fetch pipeline details for usage examples.");
+			logger.log(
+				`\nRun 'wrangler pipelines get ${pipeline.id}' to view full details.`
+			);
 		}
 	},
 });
