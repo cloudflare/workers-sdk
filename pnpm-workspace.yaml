@@ -34,8 +34,8 @@ catalog:
   "ws": "8.18.0"
   esbuild: "0.25.4"
   playwright-chromium: "^1.49.1"
-  "@cloudflare/workers-types": "^4.20250919.0"
-  workerd: "1.20250919.0"
+  "@cloudflare/workers-types": "^4.20250922.0"
+  workerd: "1.20250922.0"
 
 catalogs:
   vite-plugin:
