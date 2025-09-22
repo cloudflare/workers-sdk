@@ -14,6 +14,7 @@ export function createPlugin(
 	return (ctx) => {
 		return {
 			name: `vite-plugin-cloudflare:${name}`,
+			sharedDuringBuild: true,
 			...pluginFactory(ctx),
 		};
 	};
