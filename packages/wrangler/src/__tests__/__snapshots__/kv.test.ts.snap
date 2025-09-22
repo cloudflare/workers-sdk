@@ -22,8 +22,7 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 	\\"kv_namespaces\\": [
 		{
 			\\"binding\\": \\"UnitTestNamespace\\",
-			\\"id\\": \\"some-namespace-id\\",
-			// \\"remote\\" : true // proxy requests to remote resource during local dev, defaults to \`false\`
+			\\"id\\": \\"some-namespace-id\\"
 		}
 	]
 }"
@@ -55,7 +54,7 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 				{
 					\\"binding\\": \\"UnitTestNamespace\\",
 					\\"id\\": \\"some-namespace-id\\",
-					// \\"remote\\" : true // proxy requests to remote resource during local dev, defaults to \`false\`
+					\\"remote\\": true
 				}
 			]
 		}
@@ -85,8 +84,7 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 	\\"kv_namespaces\\": [
 		{
 			\\"binding\\": \\"UnitTestNamespace\\",
-			\\"id\\": \\"some-namespace-id\\",
-			// \\"remote\\" : true // proxy requests to remote resource during local dev, defaults to \`false\`
+			\\"id\\": \\"some-namespace-id\\"
 		}
 	]
 }"
@@ -113,9 +111,9 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 	\\"name\\": \\"worker\\",
 	\\"kv_namespaces\\": [
 		{
-			\\"binding\\": \\"UnitTestNamespace\\",
+			\\"binding\\": \\"HELLO\\",
 			\\"id\\": \\"some-namespace-id\\",
-			// \\"remote\\" : true // proxy requests to remote resource during local dev, defaults to \`false\`
+			\\"remote\\": true
 		}
 	]
 }"

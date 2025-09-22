@@ -2,7 +2,12 @@ import { readFile } from "node:fs/promises";
 import { updateConfigFile } from "../config";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs, mockPrompt, mockSelect } from "./helpers/mock-dialogs";
+import {
+	clearDialogs,
+	mockConfirm,
+	mockPrompt,
+	mockSelect,
+} from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
@@ -100,6 +105,10 @@ describe("updateConfigFile()", () => {
 			text: "Would you like Wrangler to add it on your behalf?",
 			result: "yes",
 		});
+		mockConfirm({
+			text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
+			result: false,
+		});
 
 		await updateConfigFile(
 			"kv_namespaces",
@@ -127,8 +136,7 @@ describe("updateConfigFile()", () => {
 				\\"kv_namespaces\\": [
 					{
 						\\"binding\\": \\"KV\\",
-						\\"id\\": \\"random-id\\",
-						// \\"remote\\" : true // proxy requests to remote resource during local dev, defaults to \`false\`
+						\\"id\\": \\"random-id\\"
 					}
 				]
 			}"
@@ -143,6 +151,10 @@ describe("updateConfigFile()", () => {
 		mockSelect({
 			text: "Would you like Wrangler to add it on your behalf?",
 			result: "yes",
+		});
+		mockConfirm({
+			text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
+			result: true,
 		});
 
 		await updateConfigFile(
@@ -174,7 +186,7 @@ describe("updateConfigFile()", () => {
 							{
 								\\"binding\\": \\"KV\\",
 								\\"id\\": \\"random-id\\",
-								// \\"remote\\" : true // proxy requests to remote resource during local dev, defaults to \`false\`
+								\\"remote\\": true
 							}
 						]
 					}
@@ -196,6 +208,10 @@ describe("updateConfigFile()", () => {
 		mockPrompt({
 			text: "What binding name would you like to use?",
 			result: "HELLO",
+		});
+		mockConfirm({
+			text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
+			result: false,
 		});
 
 		await updateConfigFile(
@@ -223,9 +239,8 @@ describe("updateConfigFile()", () => {
 				\\"name\\": \\"worker\\",
 				\\"kv_namespaces\\": [
 					{
-						\\"binding\\": \\"KV\\",
-						\\"id\\": \\"random-id\\",
-						// \\"remote\\" : true // proxy requests to remote resource during local dev, defaults to \`false\`
+						\\"binding\\": \\"HELLO\\",
+						\\"id\\": \\"random-id\\"
 					}
 				]
 			}"

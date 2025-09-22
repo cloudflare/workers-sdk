@@ -212,6 +212,10 @@ describe("wrangler", () => {
 							text: "Would you like Wrangler to add it on your behalf?",
 							result: "yes",
 						});
+						mockConfirm({
+							text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
+							result: false,
+						});
 					}
 					await runWrangler("kv namespace create UnitTestNamespace");
 					expect(std.out).toMatchSnapshot();
@@ -229,6 +233,10 @@ describe("wrangler", () => {
 						mockPrompt({
 							text: "What binding name would you like to use?",
 							result: "HELLO",
+						});
+						mockConfirm({
+							text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
+							result: true,
 						});
 					}
 					await runWrangler("kv namespace create UnitTestNamespace");
@@ -252,6 +260,10 @@ describe("wrangler", () => {
 						mockSelect({
 							text: "Would you like Wrangler to add it on your behalf?",
 							result: "yes",
+						});
+						mockConfirm({
+							text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
+							result: false,
 						});
 					}
 					await runWrangler("kv namespace create UnitTestNamespace");
@@ -277,6 +289,10 @@ describe("wrangler", () => {
 						mockSelect({
 							text: "Would you like Wrangler to add it on your behalf?",
 							result: "yes",
+						});
+						mockConfirm({
+							text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
+							result: true,
 						});
 					}
 					await runWrangler(
