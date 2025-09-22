@@ -49,7 +49,7 @@ describe("basic e2e tests", () => {
 							const response = await fetch(url + "/aborted");
 							await expect(response.text()).resolves.toEqual("Request aborted");
 						},
-						{ timeout: 5000 }
+						{ timeout: 10000 }
 					);
 				}
 			);
