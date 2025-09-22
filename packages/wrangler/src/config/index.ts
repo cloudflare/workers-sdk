@@ -1,5 +1,5 @@
 import TOML from "@iarna/toml";
-import { prompt, select } from "../dialogs";
+import { confirm, prompt, select } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
@@ -97,16 +97,6 @@ export async function updateConfigFile<K extends ValidKeys>(
 
 	logger.log(formatConfigSnippet({ [resource]: [snippet()] }, configPath));
 
-	/**
-	 * What's this `unique` value doing? Well, as it turns out, jsonc-parser doesn't support _writing_ comments.
-	 * We want to write a commented out version of the remote bindings config to the file, and so the only way I could think
-	 * of to do this was to write a unique key and then replace it in the config file before writing to disk (see `replacers` in `patchConfig()`).
-	 * If a future reader of this comment finds a better way to do this, by all means go ahead!
-	 */
-	const unique = crypto.randomUUID();
-
-	const configFilePatch = { [resource]: [{ ...snippet(), [unique]: true }] };
-
 	if (configPath && offerToUpdate && configFormat(configPath) === "jsonc") {
 		const autoAdd = await select(
 			"Would you like Wrangler to add it on your behalf?",
@@ -130,16 +120,20 @@ export async function updateConfigFile<K extends ValidKeys>(
 		}
 
 		if (autoAdd !== "no") {
+			const remote = await confirm(
+				"For local dev, do you want to connect to the remote resource instead of a local resource?",
+				{ defaultValue: false }
+			);
+			const configFilePatch = {
+				[resource]: [
+					{ ...snippet(bindingName), ...(remote ? { remote: true } : {}) },
+				],
+			};
+
 			experimental_patchConfig(
 				configPath,
 				env ? { env: { [env]: configFilePatch } } : configFilePatch,
-				true,
-				[
-					[
-						`"${unique}": true`,
-						`// "remote" : true // proxy requests to remote resource during local dev, defaults to \`false\``,
-					],
-				]
+				true
 			);
 		}
 	}
