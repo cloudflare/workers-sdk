@@ -219,13 +219,10 @@ export async function displayUsageExamples(
 	logger.log("\nWorker Integration:");
 
 	await updateConfigFile(
+		"pipelines",
 		(customBindingName) => ({
-			pipelines: [
-				{
-					pipeline: stream.id,
-					binding: customBindingName ?? bindingName,
-				},
-			],
+			pipeline: stream.id,
+			binding: customBindingName ?? bindingName,
 		}),
 		config.configPath,
 		args.env,
