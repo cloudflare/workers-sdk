@@ -27,7 +27,7 @@ export class Timers {
 		...args: Args
 	): TimerHandle {
 		if (this.#fakeTimestamp === undefined) {
-			return setTimeout(closure, delay, ...args);
+			return setTimeout(closure, delay, ...args) as unknown as TimerHandle;
 		}
 
 		const handle = this.#fakeNextTimerHandle++;
