@@ -1,9 +1,11 @@
 import SCRIPT_OBJECT_ENTRY from "worker:shared/object-entry";
 import SCRIPT_REMOTE_PROXY_CLIENT from "worker:shared/remote-proxy-client";
 import {
+	kVoid,
 	Worker,
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
+	Worker_DurableObjectNamespace,
 } from "../../runtime";
 import { CoreBindings, SharedBindings } from "../../workers";
 import { RemoteProxyConnectionString } from ".";
@@ -74,9 +76,11 @@ export function objectEntryWorker(
 }
 
 export function remoteProxyClientWorker(
-	remoteProxyConnectionString: RemoteProxyConnectionString,
-	binding: string
-) {
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
+	binding: string,
+	outboundService?: string,
+	durableObjectSettings?: Worker_DurableObjectNamespace
+): Worker {
 	return {
 		compatibilityDate: "2025-01-01",
 		modules: [
@@ -86,15 +90,32 @@ export function remoteProxyClientWorker(
 			},
 		],
 		bindings: [
-			{
-				name: "remoteProxyConnectionString",
-				text: remoteProxyConnectionString.href,
-			},
+			...(remoteProxyConnectionString
+				? [
+						{
+							name: "remoteProxyConnectionString",
+							text: remoteProxyConnectionString.href,
+						},
+					]
+				: []),
 			{
 				name: "binding",
 				text: binding,
 			},
 		],
+		globalOutbound: { name: outboundService },
+		...(durableObjectSettings
+			? {
+					durableObjectStorage: { inMemory: kVoid },
+
+					durableObjectNamespaces: [
+						{
+							className: "DurableObjectProxy",
+							...durableObjectSettings,
+						},
+					],
+				}
+			: {}),
 	};
 }
 
