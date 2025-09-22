@@ -17,14 +17,20 @@ export function isAllowedSourcePath(
 	filePath: string
 ): boolean {
 	const allowed = getBundleReferencedPaths(bundle);
-	return allowed.sourcePaths.has(filePath);
+	return (
+		allowed.sourcePaths.has(filePath) ||
+		allowed.sourcePaths.has(decodeURIComponent(filePath))
+	);
 }
 export function isAllowedSourceMapPath(
 	bundle: EsbuildBundle,
 	filePath: string
 ): boolean {
 	const allowed = getBundleReferencedPaths(bundle);
-	return allowed.sourceMapPaths.has(filePath);
+	return (
+		allowed.sourceMapPaths.has(filePath) ||
+		allowed.sourceMapPaths.has(decodeURIComponent(filePath))
+	);
 }
 
 interface BundleReferencedPaths {
