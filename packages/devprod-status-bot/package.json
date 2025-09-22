@@ -1,5 +1,5 @@
 {
-	"name": "devprod-status-bot",
+	"name": "@cloudflare/devprod-status-bot",
 	"version": "1.2.1",
 	"private": true,
 	"scripts": {

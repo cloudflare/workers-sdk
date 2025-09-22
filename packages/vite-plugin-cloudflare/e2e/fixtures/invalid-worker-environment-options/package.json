@@ -1,5 +1,5 @@
 {
-	"name": "@vite-plugin-cloudflare-e2e/invalid-worker-environment-options",
+	"name": "@cloudflare/vite-plugin-e2e-invalid-worker-environment-options",
 	"private": true,
 	"type": "module",
 	"scripts": {
