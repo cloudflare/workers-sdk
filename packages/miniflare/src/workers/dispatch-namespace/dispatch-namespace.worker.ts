@@ -1,4 +1,4 @@
-import { newWebSocketRpcSession } from "@cloudflare/jsrpc";
+import { newWebSocketRpcSession } from "capnweb";
 import { makeFetch } from "../shared/remote-bindings-utils";
 
 interface Env {
@@ -20,9 +20,14 @@ export default function (env: Env) {
 				"MF-Dispatch-Namespace-Options",
 				JSON.stringify({ name, args, options })
 			);
-			const stub = newWebSocketRpcSession(url.href);
 
-			return new Proxy(stub, {
+			type ProxiedService = Omit<Service, "connect" | "fetch"> & {
+				fetch: typeof fetch;
+				connect: never;
+			};
+			const stub = newWebSocketRpcSession<ProxiedService>(url.href);
+
+			return new Proxy<ProxiedService>(stub, {
 				get(_, p) {
 					// We don't want to wrap direct .fetch() calls on a customer worker in a JSRPC layer
 					// Instead, intercept accesses to the specific `fetch` key, and send them directly
@@ -42,7 +47,7 @@ export default function (env: Env) {
 
 					return Reflect.get(stub, p);
 				},
-			}) as Service;
+			});
 		},
 	} satisfies DispatchNamespace;
 }

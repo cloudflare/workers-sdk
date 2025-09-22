@@ -1,4 +1,4 @@
-import { newWebSocketRpcSession } from "@cloudflare/jsrpc";
+import { newWebSocketRpcSession } from "capnweb";
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { makeFetch } from "./remote-bindings-utils";
 

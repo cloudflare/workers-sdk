@@ -1,4 +1,4 @@
-import { newWorkersRpcResponse } from "@cloudflare/jsrpc";
+import { newWorkersRpcResponse } from "capnweb";
 import { EmailMessage } from "cloudflare:email";
 
 interface Env extends Record<string, unknown> {}
@@ -11,7 +11,7 @@ class BindingNotFoundError extends Error {
 
 /**
  * For most bindings, we expose them as
- *  - RPC stubs directly to @cloudflare/jsrpc, or
+ *  - RPC stubs directly to capnweb, or
  *  - HTTP based fetchers
  * However, there are some special cases:
  *  - SendEmail bindings need to take EmailMessage as their first parameter,
@@ -86,7 +86,7 @@ function getExposedFetcher(request: Request, env: Env) {
  * This Worker can proxy two types of remote binding:
  *  1. "raw" bindings, where this Worker has been configured to pass through the raw
  *     fetch from a local workerd instance to the relevant binding
- *  2. JSRPC bindings, where this Worker uses @cloudflare/jsrpc to proxy RPC
+ *  2. JSRPC bindings, where this Worker uses capnweb to proxy RPC
  *     communication in userland. This is always over a WebSocket connection
  */
 function isJSRPCBinding(request: Request): boolean {
