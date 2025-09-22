@@ -25,7 +25,7 @@ jobs:
             description: v20, Windows
             node: 20.19.1
             # we need to use an amd image to run the containers tests, since we build for linux/amd64
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             description: v20, Linux
             node: 20.19.1
 
@@ -91,7 +91,8 @@ jobs:
           - os: windows-2022
             description: v20, Windows
             node: 20.19.1
-          - os: ubuntu-22.04-arm
+            # we need to use an amd image to run the containers tests, since we build for linux/amd64
+          - os: ubuntu-22.04
             description: v20, Linux
             node: 20.19.1
     runs-on: ${{ matrix.os }}

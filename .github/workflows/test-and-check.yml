@@ -112,7 +112,7 @@ jobs:
             # Browser rendering is disabled here because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/browser-rendering"'
           # Skipped until we upgrade to undici v7, because of https://github.com/nodejs/undici/issues/4285
-          # - os: ubuntu-24.04-arm
+          # - os: ubuntu-24.04
           #   label: v24, Linux
           #   node_version: 24
           #   filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/interactive-dev-tests"'
