@@ -54,7 +54,8 @@ export function mockGetWorkerSubdomain({
 	msw.use(
 		http.get(
 			url,
-			({ params }) => {
+			({ request, params }) => {
+				const requestUrl = new URL(request.url);
 				expect(params.accountId).toEqual("some-account-id");
 				if (expectedScriptName !== false) {
 					expect(params.scriptName).toEqual(expectedScriptName);
@@ -62,10 +63,24 @@ export function mockGetWorkerSubdomain({
 				if (!legacyEnv) {
 					expect(params.envName).toEqual(env);
 				}
-
-				return HttpResponse.json(
-					createFetchResult({ enabled, previews_enabled })
-				);
+				const result: {
+					enabled: boolean;
+					previews_enabled: boolean;
+					requested?: {
+						enabled: boolean;
+						previews_enabled: boolean;
+					};
+				} = {
+					enabled,
+					previews_enabled,
+				};
+				if (requestUrl.searchParams.get("show_requested") === "true") {
+					result.requested = {
+						enabled,
+						previews_enabled,
+					};
+				}
+				return HttpResponse.json(createFetchResult(result));
 			},
 			{ once: true }
 		)
