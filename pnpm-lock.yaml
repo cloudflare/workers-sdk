@@ -1877,9 +1877,6 @@ importers:
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared
-      '@cloudflare/jsrpc':
-        specifier: link:../../vendor/jsrpc
-        version: link:../../vendor/jsrpc
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler
@@ -1937,6 +1934,9 @@ importers:
       capnp-es:
         specifier: ^0.0.11
         version: 0.0.11(typescript@5.8.3)
+      capnweb:
+        specifier: ^0.1.0
+        version: 0.1.0
       chokidar:
         specifier: ^4.0.1
         version: 4.0.1
@@ -3640,9 +3640,6 @@ importers:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
         version: link:../eslint-config-shared
-      '@cloudflare/jsrpc':
-        specifier: link:../../vendor/jsrpc
-        version: link:../../vendor/jsrpc
       '@cloudflare/pages-shared':
         specifier: workspace:^
         version: link:../pages-shared
@@ -3724,6 +3721,9 @@ importers:
       '@webcontainer/env':
         specifier: ^1.1.0
         version: 1.1.0
+      capnweb:
+        specifier: ^0.1.0
+        version: 0.1.0
       chalk:
         specifier: ^5.2.0
         version: 5.3.0
@@ -8249,6 +8249,9 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  capnweb@0.1.0:
+    resolution: {integrity: sha512-+pygKx1JFTZTRdd1hHgaBRg5BwULEDZq8ZoHXkYP2GXNV3lrjXLj5qzlGz+SgBCJjWUmNBtlh7JPWdr0wIbY8w==}
 
   caseless@0.12.0:
     resolution: {integrity: sha512-4tYFyifaFfGacoiObjJegolkwSU4xQNGbVgUiNYVUxbQ2x2lUsFvY4hVgVzGiIe6WLOPqycWXA40l+PWsxthUw==}
@@ -18504,6 +18507,8 @@ snapshots:
   capnp-es@0.0.11(typescript@5.8.3):
     optionalDependencies:
       typescript: 5.8.3
+
+  capnweb@0.1.0: {}
 
   caseless@0.12.0: {}
 

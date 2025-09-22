@@ -7,8 +7,9 @@
 		"moduleResolution": "bundler",
 		"isolatedModules": true,
 		"noEmit": true,
-		"types": ["@cloudflare/workers-types/experimental"],
+		"types": ["@cloudflare/workers-types/experimental", "@types/node"],
 		"experimentalDecorators": true,
+		"skipLibCheck": true,
 		"paths": {
 			"miniflare:shared": ["./shared/index.worker.ts"],
 			"miniflare:zod": ["./shared/zod.worker.ts"]

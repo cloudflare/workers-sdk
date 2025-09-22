@@ -230,4 +230,3 @@ dist/**
 .env*
 !.env.example
 .node-cache/
-!vendor/jsrpc/dist
