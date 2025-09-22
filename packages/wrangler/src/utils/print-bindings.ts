@@ -39,6 +39,7 @@ export const friendlyBindingNames: Record<
 	ratelimits: "Rate Limit",
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
+	worker_loaders: "Worker Loader",
 } as const;
 
 /**

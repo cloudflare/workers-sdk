@@ -349,6 +349,7 @@ export async function generateEnvTypes(
 		secrets_store_secrets: config.secrets_store_secrets,
 		unsafe_hello_world: config.unsafe_hello_world,
 		ratelimits: config.ratelimits,
+		worker_loaders: config.worker_loaders,
 	};
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
@@ -459,6 +460,15 @@ export async function generateEnvTypes(
 	if (configToDTS.ratelimits) {
 		for (const ratelimit of configToDTS.ratelimits) {
 			envTypeStructure.push([constructTypeKey(ratelimit.name), "RateLimit"]);
+		}
+	}
+
+	if (configToDTS.worker_loaders) {
+		for (const workerLoader of configToDTS.worker_loaders) {
+			envTypeStructure.push([
+				constructTypeKey(workerLoader.binding),
+				"WorkerLoader",
+			]);
 		}
 	}
 

@@ -1454,6 +1454,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateHelloWorldBinding),
 			[]
 		),
+		worker_loaders: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"worker_loaders",
+			validateBindingArray(envName, validateWorkerLoaderBinding),
+			[]
+		),
 		ratelimits: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2385,6 +2395,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"logfwdr",
 			"mtls_certificate",
 			"pipeline",
+			"worker-loader",
 		];
 
 		if (safeBindings.includes(value.type)) {
@@ -3862,6 +3873,34 @@ const validateHelloWorldBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"enable_timer",
+	]);
+
+	return isValid;
+};
+
+const validateWorkerLoaderBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"worker_loader" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
 	]);
 
 	return isValid;

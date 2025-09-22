@@ -7,6 +7,7 @@ import { normalizeString } from "../helpers/normalize";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type {
+	Config,
 	ConfigFields,
 	RawConfig,
 	RawDevConfig,
@@ -78,6 +79,8 @@ describe("normalizeAndValidateConfig()", () => {
 				upstream_protocol: "http",
 				host: undefined,
 				enable_containers: true,
+				inspector_port: undefined,
+				container_engine: undefined,
 			},
 			containers: undefined,
 			cloudchamber: {},
@@ -92,7 +95,6 @@ describe("normalizeAndValidateConfig()", () => {
 			legacy_env: true,
 			logfwdr: {
 				bindings: [],
-				schema: undefined,
 			},
 			send_metrics: undefined,
 			main: undefined,
@@ -125,7 +127,6 @@ describe("normalizeAndValidateConfig()", () => {
 			},
 			dispatch_namespaces: [],
 			mtls_certificates: [],
-			usage_model: undefined,
 			vars: {},
 			define: {},
 			definedEnvironments: [],
@@ -134,7 +135,6 @@ describe("normalizeAndValidateConfig()", () => {
 			data_blobs: undefined,
 			workers_dev: undefined,
 			preview_urls: undefined,
-			zone_id: undefined,
 			no_bundle: undefined,
 			minify: undefined,
 			first_party_worker: undefined,
@@ -142,10 +142,23 @@ describe("normalizeAndValidateConfig()", () => {
 			logpush: undefined,
 			upload_source_maps: undefined,
 			placement: undefined,
+			worker_loaders: [],
 			tail_consumers: undefined,
 			pipelines: [],
 			workflows: [],
-		});
+			userConfigPath: undefined,
+			topLevelName: undefined,
+			alias: undefined,
+			find_additional_modules: undefined,
+			preserve_file_names: undefined,
+			base_dir: undefined,
+			limits: undefined,
+			keep_names: undefined,
+			assets: undefined,
+			observability: undefined,
+			compliance_region: undefined,
+			images: undefined,
+		} satisfies Config);
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);
 	});
@@ -3974,6 +3987,91 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}.
 					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"store_id\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}.
 					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"secret_name\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}."
+				`);
+			});
+		});
+
+		describe("[worker_loaders]", () => {
+			it("should error if worker_loaders is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ worker_loaders: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"worker_loaders\\" should be an array but got {}."
+		`);
+			});
+
+			it("should error if worker_loaders is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ worker_loaders: null },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"worker_loaders\\" should be an array but got null."
+		`);
+			});
+
+			it("should accept valid bindings", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						worker_loaders: [
+							{
+								binding: "VALID",
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if worker_loaders bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						worker_loaders: [
+							// @ts-expect-error Test if empty object is caught
+							{},
+							{
+								binding: "VALID",
+							},
+							{
+								// @ts-expect-error Test if binding is not a string
+								binding: null,
+								invalid: true,
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in worker_loaders[2] field: \\"invalid\\""
+				`);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"worker_loaders[0]\\" bindings must have a string \\"binding\\" field but got {}.
+					  - \\"worker_loaders[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true}."
 				`);
 			});
 		});

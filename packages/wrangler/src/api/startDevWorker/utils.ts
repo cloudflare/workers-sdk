@@ -287,6 +287,12 @@ export function convertCfWorkerInitBindingsToBindings(
 				}
 				break;
 			}
+			case "worker_loaders": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "worker_loader", ...x };
+				}
+				break;
+			}
 			default: {
 				assertNever(type);
 			}
@@ -331,6 +337,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		pipelines: undefined,
 		unsafe_hello_world: undefined,
 		ratelimits: undefined,
+		worker_loaders: undefined,
 	};
 
 	const fetchers: Record<string, ServiceFetch> = {};
@@ -423,6 +430,9 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "ratelimit") {
 			bindings.ratelimits ??= [];
 			bindings.ratelimits.push({ ...binding, name: name });
+		} else if (binding.type === "worker_loader") {
+			bindings.worker_loaders ??= [];
+			bindings.worker_loaders.push({ ...binding, binding: name });
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],

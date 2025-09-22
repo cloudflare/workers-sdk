@@ -743,9 +743,7 @@ export function buildMiniflareBindingOptions(
 			]) ?? []
 		),
 		workerLoaders: Object.fromEntries(
-			bindings.unsafe?.bindings
-				?.filter((b) => b.type == "worker-loader")
-				.map((binding) => [binding.name, {}]) ?? []
+			bindings.worker_loaders?.map(({ binding }) => [binding, {}]) ?? []
 		),
 		email: {
 			send_email: bindings.send_email?.map((b) => ({
