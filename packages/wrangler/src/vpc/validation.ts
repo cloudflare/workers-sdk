@@ -28,7 +28,7 @@ export function validateRequest(args: ServiceArgs) {
 
 export function buildRequest(args: ServiceArgs): ConnectivityServiceRequest {
 	// Parse resolver IPs if provided
-	let resolverIpsList: string[] = [];
+	let resolverIpsList: string[] | undefined = undefined;
 	if (args.resolverIps) {
 		resolverIpsList = args.resolverIps.split(",").map((ip) => ip.trim());
 	}
@@ -43,7 +43,7 @@ export function buildRequest(args: ServiceArgs): ConnectivityServiceRequest {
 	if (args.hostname) {
 		host.resolver_network = {
 			tunnel_id: args.tunnelId,
-			resolver_ips: resolverIpsList,
+			...(resolverIpsList && { resolver_ips: resolverIpsList }),
 		};
 	} else {
 		host.network = {
