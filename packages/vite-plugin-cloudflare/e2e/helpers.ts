@@ -200,13 +200,17 @@ export function runCommand(
 	while (attempts > 0) {
 		debuglog("Running command:", command);
 		try {
-			childProcess.execSync(command, {
+			const output = childProcess.execSync(command, {
 				cwd,
-				stdio: debuglog.enabled ? "inherit" : "ignore",
+				stdio: "pipe",
 				env: testEnv,
 				timeout,
+				encoding: "utf8",
 			});
-			break;
+			if (debuglog.enabled) {
+				process.stdout.write(output);
+			}
+			return output;
 		} catch (e) {
 			attempts--;
 			if (attempts > 0) {

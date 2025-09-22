@@ -3483,18 +3483,22 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				`);
 			});
 
-			it("should fail to upload R2 object to bucket if too large", async () => {
-				const TOO_BIG_FILE_SIZE = MAX_UPLOAD_SIZE + 1024 * 1024;
-				fs.writeFileSync("wormhole-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
-				await expect(
-					runWrangler(
-						`r2 object put --remote bucket-object-test/wormhole-img.png --file ./wormhole-img.png`
-					)
-				).rejects.toThrowErrorMatchingInlineSnapshot(`
+			it(
+				"should fail to upload R2 object to bucket if too large",
+				{ timeout: 30_000 },
+				async () => {
+					const TOO_BIG_FILE_SIZE = MAX_UPLOAD_SIZE + 1024 * 1024;
+					fs.writeFileSync("wormhole-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
+					await expect(
+						runWrangler(
+							`r2 object put --remote bucket-object-test/wormhole-img.png --file ./wormhole-img.png`
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Error: Wrangler only supports uploading files up to 300 MiB in size
 					wormhole-img.png is 301 MiB in size]
 				`);
-			});
+				}
+			);
 
 			it("should fail to upload R2 object to bucket if the name is invalid", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");

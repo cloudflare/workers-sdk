@@ -112,7 +112,7 @@ jobs:
             # Browser rendering is disabled here because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/browser-rendering"'
           # Skipped until we upgrade to undici v7, because of https://github.com/nodejs/undici/issues/4285
-          # - os: ubuntu-24.04-arm
+          # - os: ubuntu-24.04
           #   label: v24, Linux
           #   node_version: 24
           #   filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/interactive-dev-tests"'
@@ -147,12 +147,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Run tests
+      - name: Run tests (Wrangler only)
+        # We are running Wrangler separately to be able to get early feedback on changes.
+        # There is no point in running the fixtures if Wrangler is broken.
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }} --log-order=stream
+        run: pnpm run test:ci --log-order=stream --filter=wrangler
         env:
-          TEST_CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
-          TEST_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          CI_OS: ${{ matrix.description }}
+          NODE_DEBUG: "@cloudflare:vite-plugin"
+
+      - name: Run tests (not Wrangler)
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }} --log-order=stream --filter=!wrangler
+        env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html

@@ -1892,8 +1892,6 @@ function mockCreateApplicationRollout(expected?: Record<string, unknown>) {
 	msw.use(
 		http.post("*/applications/:id/rollouts", async ({ request }) => {
 			const json = await request.json();
-			console.dir(json);
-			console.dir(expected);
 			if (expected !== undefined) {
 				expect(json).toMatchObject(expected);
 			}

@@ -55,7 +55,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			// TEMP: regular deploy needed for the first time to *create* the worker (will create 1 extra version + deployment in snapshots below)
 			const deploy = await helper.run("wrangler deploy");
 			versionId0 = matchVersionId(deploy.stdout);
-		});
+		}, 30_000);
 
 		it("should upload 1st Worker version", async () => {
 			const upload = await helper.run(

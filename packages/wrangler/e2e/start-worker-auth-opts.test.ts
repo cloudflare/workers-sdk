@@ -74,6 +74,9 @@ describe("startWorker - auth options", () => {
 				dev: {
 					auth: validAuth,
 					inspector: false,
+					server: {
+						port: 0,
+					},
 				},
 			});
 
@@ -126,6 +129,9 @@ describe("startWorker - auth options", () => {
 				dev: {
 					auth: incorrectAuth,
 					inspector: false,
+					server: {
+						port: 0,
+					},
 				},
 			});
 
@@ -221,6 +227,9 @@ describe("startWorker - auth options", () => {
 				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
 				dev: {
 					auth: someAuth,
+					server: {
+						port: 0,
+					},
 				},
 			});
 

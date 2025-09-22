@@ -27,23 +27,37 @@ if (auth) {
 				`pnpm wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-06-19`,
 				execOptions
 			);
-
-			if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(deployOut)) {
-				throw new Error(`Failed to deploy ${remoteWorkerName}`);
-			}
+			const deployedUrl = deployOut.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			)?.groups?.url;
+			assert(deployedUrl, "Failed to find deployed worker URL");
 
 			const stagingDeployOut = execSync(
 				`pnpm wrangler deploy remote-worker.staging.js --name ${remoteStagingWorkerName} --compatibility-date 2025-06-19`,
 				execOptions
 			);
+			const stagingDeployedUrl = stagingDeployOut.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			)?.groups?.url;
+			assert(stagingDeployedUrl, "Failed to find deployed staging worker URL");
 
-			if (
-				!new RegExp(`Deployed\\s+${remoteStagingWorkerName}\\b`).test(
-					stagingDeployOut
-				)
-			) {
-				throw new Error(`Failed to deploy ${remoteStagingWorkerName}`);
-			}
+			// Wait for the deployed workers to be available
+			await Promise.all([
+				vi.waitFor(
+					async () => {
+						const response = await fetch(deployedUrl);
+						expect(response.status).toBe(200);
+					},
+					{ timeout: 5000, interval: 500 }
+				),
+				vi.waitFor(
+					async () => {
+						const response = await fetch(stagingDeployedUrl);
+						expect(response.status).toBe(200);
+					},
+					{ timeout: 5000, interval: 500 }
+				),
+			]);
 
 			const kvAddOut = execSync(
 				`pnpm wrangler kv namespace create ${remoteKvName}`,
@@ -65,17 +79,31 @@ if (auth) {
 		}, 35_000);
 
 		afterAll(() => {
-			execSync(`pnpm wrangler delete --name ${remoteWorkerName}`, execOptions);
-			execSync(
-				`pnpm wrangler delete --name ${remoteStagingWorkerName}`,
-				execOptions
-			);
-			execSync(
-				`pnpm wrangler kv namespace delete --namespace-id=${remoteKvId}`,
-				execOptions
-			);
+			try {
+				execSync(
+					`pnpm wrangler delete --name ${remoteWorkerName}`,
+					execOptions
+				);
+			} catch {}
+			try {
+				execSync(
+					`pnpm wrangler delete --name ${remoteStagingWorkerName}`,
+					execOptions
+				);
+			} catch {}
+			try {
+				execSync(
+					`pnpm wrangler kv namespace delete --namespace-id=${remoteKvId}`,
+					execOptions
+				);
+			} catch {}
 
-			rmSync("./.tmp", { recursive: true, force: true });
+			rmSync("./.tmp", {
+				recursive: true,
+				force: true,
+				maxRetries: 10,
+				retryDelay: 100,
+			});
 		}, 35_000);
 
 		describe("normal usage", () => {

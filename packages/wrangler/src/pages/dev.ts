@@ -10,7 +10,7 @@ import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
-import { startDev } from "../dev";
+import { startDev } from "../dev/start-dev";
 import { FatalError, UserError } from "../errors";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
