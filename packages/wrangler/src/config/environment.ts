@@ -1173,6 +1173,20 @@ export interface EnvironmentNonInheritable {
 			period: 10 | 60;
 		};
 	}[];
+
+	/**
+	 * Specifies Worker Loader bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	worker_loaders: {
+		/** The binding name used to refer to the Worker Loader in the Worker. */
+		binding: string;
+	}[];
 }
 
 /**
