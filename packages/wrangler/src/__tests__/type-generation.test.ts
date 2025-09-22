@@ -263,6 +263,7 @@ const bindingsConfigMock: Omit<
 			},
 		},
 	],
+	worker_loaders: [],
 };
 
 describe("generate types", () => {
