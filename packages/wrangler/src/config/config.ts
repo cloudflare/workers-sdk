@@ -391,4 +391,5 @@ export const defaultWranglerConfig: Config = {
 	mtls_certificates: [],
 	tail_consumers: undefined,
 	pipelines: [],
+	vpc_services: [],
 };

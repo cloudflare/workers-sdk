@@ -12705,6 +12705,90 @@ export default{
 		});
 	});
 
+	describe("vpc_services", () => {
+		it("should upload VPC services bindings", async () => {
+			writeWranglerConfig({
+				vpc_services: [
+					{
+						binding: "VPC_SERVICE",
+						service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "vpc_service",
+						name: "VPC_SERVICE",
+						service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                                                     Resource
+				env.VPC_SERVICE (0199295b-b3ac-7760-8246-bca40877b3e9)      VPC Service
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
+		it("should upload multiple VPC services bindings", async () => {
+			writeWranglerConfig({
+				vpc_services: [
+					{
+						binding: "VPC_API",
+						service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+					{
+						binding: "VPC_DATABASE",
+						service_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "vpc_service",
+						name: "VPC_API",
+						service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+					{
+						type: "vpc_service",
+						name: "VPC_DATABASE",
+						service_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                                                      Resource
+				env.VPC_API (0199295b-b3ac-7760-8246-bca40877b3e9)           VPC Service
+				env.VPC_DATABASE (0299295b-b3ac-7760-8246-bca40877b3e0)      VPC Service
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+	});
+
 	describe("mtls_certificates", () => {
 		it("should upload mtls_certificate bindings", async () => {
 			writeWranglerConfig({

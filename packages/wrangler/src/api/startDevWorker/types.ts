@@ -34,6 +34,7 @@ import type {
 	CfTailConsumer,
 	CfUnsafe,
 	CfVectorize,
+	CfVpcService,
 	CfWorkerLoader,
 	CfWorkflow,
 } from "../../deployment-bundle/worker";
@@ -308,6 +309,7 @@ export type Binding =
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
 	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
 	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
+	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
 

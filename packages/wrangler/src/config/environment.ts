@@ -1188,6 +1188,24 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the Worker Loader in the Worker. */
 		binding: string;
 	}[];
+
+	/**
+	 * Specifies VPC services that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	vpc_services: {
+		/** The binding name used to refer to the VPC service in the Worker. */
+		binding: string;
+		/** The service ID of the VPC connectivity service. */
+		service_id: string;
+		/** Whether the VPC service is remote or not */
+		remote?: boolean;
+	}[];
 }
 
 /**

@@ -2,22 +2,21 @@ import { createNamespace } from "../core/create-command";
 
 export const vpcNamespace = createNamespace({
 	metadata: {
-		description: "🌐 Manage VPC connectivity",
-		status: "private-beta",
+		description: "🌐 Manage VPC",
+		status: "open-beta",
 		owner: "Product: WVPC",
 	},
 });
 
 export const vpcServiceNamespace = createNamespace({
 	metadata: {
-		description: "🔗 Manage VPC connectivity services",
+		description: "🔗 Manage VPC services",
 		status: "stable",
 		owner: "Product: WVPC",
 	},
 });
 
 export enum ServiceType {
-	Tcp = "tcp",
 	Http = "http",
 }
 
@@ -46,7 +45,7 @@ export interface Network {
 
 export interface ResolverNetwork {
 	tunnel_id: string;
-	resolver_ips: string[];
+	resolver_ips?: string[];
 }
 
 export interface ServiceHost {
@@ -88,32 +87,25 @@ export const serviceOptions = {
 	name: {
 		type: "string",
 		demandOption: true,
-		description: "The name of the connectivity service",
+		group: "Required Configuration",
+		description: "The name of the VPC service",
+	},
+	type: {
+		type: "string",
+		demandOption: true,
+		choices: ["http"],
+		group: "Required Configuration",
+		description: "The type of the VPC service",
 	},
 	"http-port": {
 		type: "number",
-		description: "HTTP port",
-		conflicts: ["tcp-port", "app-protocol"],
-		group: "HTTP Options",
+		description: "HTTP port (default: 80)",
+		group: "Port Configuration",
 	},
 	"https-port": {
 		type: "number",
-		description: "HTTPS port number",
-		conflicts: ["tcp-port", "app-protocol"],
-		group: "HTTP Options",
-	},
-	"tcp-port": {
-		type: "number",
-		conflicts: ["http-port", "https-port"],
-		description: "TCP port number",
-		group: "TCP Options",
-	},
-	"app-protocol": {
-		type: "string",
-		implies: ["tcp-port"],
-		conflicts: ["http-port", "https-port"],
-		description: "Application protocol (e.g., postgresql, mysql)",
-		group: "TCP Options",
+		description: "HTTPS port number (default: 443)",
+		group: "Port Configuration",
 	},
 	ipv4: {
 		type: "string",
@@ -130,7 +122,6 @@ export const serviceOptions = {
 	hostname: {
 		type: "string",
 		description: "Hostname for the host",
-		implies: ["resolver-ips"],
 		conflicts: ["ipv4", "ipv6"],
 		group: "Hostname Configuration [conflicts with --ipv4, --ipv6]",
 	},
@@ -144,6 +135,7 @@ export const serviceOptions = {
 	"tunnel-id": {
 		type: "string",
 		demandOption: true,
+		group: "Required Configuration",
 		description: "UUID of the Cloudflare tunnel",
 	},
 } as const;

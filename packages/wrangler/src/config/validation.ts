@@ -1474,6 +1474,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateRateLimitBinding),
 			[]
 		),
+		vpc_services: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"vpc_services",
+			validateBindingArray(envName, validateVpcServiceBinding),
+			[]
+		),
 		version_metadata: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2396,6 +2406,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"mtls_certificate",
 			"pipeline",
 			"worker-loader",
+			"vpc_service",
 		];
 
 		if (safeBindings.includes(value.type)) {
@@ -3284,6 +3295,43 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		"binding",
 		"id",
 		"localConnectionString",
+	]);
+
+	return isValid;
+};
+
+const validateVpcServiceBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"vpc_services" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// VPC service bindings must have a binding and a service_id.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "service_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "service_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"service_id",
+		"remote",
 	]);
 
 	return isValid;

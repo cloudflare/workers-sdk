@@ -108,6 +108,7 @@ describe("normalizeAndValidateConfig()", () => {
 			secrets_store_secrets: [],
 			unsafe_hello_world: [],
 			ratelimits: [],
+			vpc_services: [],
 			services: [],
 			analytics_engine_datasets: [],
 			route: undefined,
@@ -4277,6 +4278,69 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"ratelimits[2]\\" bindings \\"simple.limit\\" must be a number but got {\\"limit\\":\\"not a number\\",\\"period\\":90}.
 					  - \\"ratelimits[2]\\" bindings \\"simple.period\\" must be either 10 or 60 but got 90.
 					  - \\"ratelimits[3]\\" bindings \\"simple.period\\" is required and must be a number but got {\\"limit\\":10}."
+				`);
+			});
+		});
+
+		describe("[vpc_services]", () => {
+			it("should accept valid bindings", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						vpc_services: [
+							{
+								binding: "MYAPI",
+								service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+							},
+							{
+								binding: "DATABASE",
+								service_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.vpc_services).toEqual([
+					{
+						binding: "MYAPI",
+						service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+					{
+						binding: "DATABASE",
+						service_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+					},
+				]);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if vpc_services bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						vpc_services: [
+							{},
+							{
+								binding: "VALID",
+								service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+							},
+							{ binding: null, service_id: 123, invalid: true },
+							{ binding: "MISSING_SERVICE_ID" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					  "Processing wrangler configuration:
+					    - \\"vpc_services[0]\\" bindings should have a string \\"binding\\" field but got {}.
+					    - \\"vpc_services[0]\\" bindings must have a \\"service_id\\" field but got {}.
+					    - \\"vpc_services[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":null,\\"service_id\\":123,\\"invalid\\":true}.
+					    - \\"vpc_services[2]\\" bindings must have a \\"service_id\\" field but got {\\"binding\\":null,\\"service_id\\":123,\\"invalid\\":true}.
+					    - \\"vpc_services[3]\\" bindings must have a \\"service_id\\" field but got {\\"binding\\":\\"MISSING_SERVICE_ID\\"}."
 				`);
 			});
 		});
