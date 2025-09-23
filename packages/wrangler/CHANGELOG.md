@@ -1,5 +1,26 @@
 # wrangler
 
+## 4.39.0
+
+### Minor Changes
+
+- [#10647](https://github.com/cloudflare/workers-sdk/pull/10647) [`555a6da`](https://github.com/cloudflare/workers-sdk/commit/555a6da0fbda6e792264b59984687e336c179619) Thanks [@efalcao](https://github.com/efalcao)! - VPC service binding support
+
+- [#10612](https://github.com/cloudflare/workers-sdk/pull/10612) [`97a72cc`](https://github.com/cloudflare/workers-sdk/commit/97a72ccd6ccf57b0c6c62566e638666ea1f0cf71) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Added new pipelines commands (pipelines, streams, sinks, setup), moved old pipelines commands behind --legacy
+
+- [#10652](https://github.com/cloudflare/workers-sdk/pull/10652) [`acd48ed`](https://github.com/cloudflare/workers-sdk/commit/acd48ed01739e32d179f98e210fba8c602860891) Thanks [@edmundhung](https://github.com/edmundhung)! - Rename Hyperdrive local connection string environment variable from `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_<BINDING_NAME>` to `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_<BINDING_NAME>`. The old variable name is still supported but will now show a deprecation warning.
+
+- [#10721](https://github.com/cloudflare/workers-sdk/pull/10721) [`55a10a3`](https://github.com/cloudflare/workers-sdk/commit/55a10a3a6e032748e84f823600eb586f8d48e161) Thanks [@penalosa](https://github.com/penalosa)! - Stabilise Worker Loader bindings
+
+### Patch Changes
+
+- [#10724](https://github.com/cloudflare/workers-sdk/pull/10724) [`b4a4311`](https://github.com/cloudflare/workers-sdk/commit/b4a4311295f8bb29e72e1c3c622cd91fb382e0ab) Thanks [@penalosa](https://github.com/penalosa)! - Use Cap'n Web in `workers-sdk`
+
+- [#10701](https://github.com/cloudflare/workers-sdk/pull/10701) [`dc1d0d6`](https://github.com/cloudflare/workers-sdk/commit/dc1d0d6f9c8ccb0714f4b3143f0d0caa8b43f753) Thanks [@penalosa](https://github.com/penalosa)! - Fix hotkeys double render
+
+- Updated dependencies [[`555a6da`](https://github.com/cloudflare/workers-sdk/commit/555a6da0fbda6e792264b59984687e336c179619), [`262393a`](https://github.com/cloudflare/workers-sdk/commit/262393aded9a1a8133e61f3438ffca7853cb8fcb), [`3ec1f65`](https://github.com/cloudflare/workers-sdk/commit/3ec1f6578170f1716951a36fa6af2aee29a92030), [`a434352`](https://github.com/cloudflare/workers-sdk/commit/a434352c61ebd178b41651b505bbbc56a4578ce9), [`328e687`](https://github.com/cloudflare/workers-sdk/commit/328e68729f6bfadee5db12cc04cf8607d83a42ec), [`b4a4311`](https://github.com/cloudflare/workers-sdk/commit/b4a4311295f8bb29e72e1c3c622cd91fb382e0ab)]:
+  - miniflare@4.20250923.0
+
 ## 4.38.0
 
 ### Minor Changes

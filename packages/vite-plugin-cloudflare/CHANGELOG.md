@@ -1,5 +1,21 @@
 # @cloudflare/vite-plugin
 
+## 1.13.4
+
+### Patch Changes
+
+- [#10677](https://github.com/cloudflare/workers-sdk/pull/10677) [`d7aa0ae`](https://github.com/cloudflare/workers-sdk/commit/d7aa0ae2f13d3ee8a0d4a4418db707473af8e592) Thanks [@edmundhung](https://github.com/edmundhung)! - Support Hyperdrive local connection strings from `.env` files
+
+  You can now define your Hyperdrive local connection string in a `.env` file using the `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_<BINDING_NAME>` variable.
+
+  ```sh
+  CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_PROD_DB="postgres://user:password@127.0.0.1:5432/testdb"
+  ```
+
+- Updated dependencies [[`555a6da`](https://github.com/cloudflare/workers-sdk/commit/555a6da0fbda6e792264b59984687e336c179619), [`262393a`](https://github.com/cloudflare/workers-sdk/commit/262393aded9a1a8133e61f3438ffca7853cb8fcb), [`3ec1f65`](https://github.com/cloudflare/workers-sdk/commit/3ec1f6578170f1716951a36fa6af2aee29a92030), [`a434352`](https://github.com/cloudflare/workers-sdk/commit/a434352c61ebd178b41651b505bbbc56a4578ce9), [`328e687`](https://github.com/cloudflare/workers-sdk/commit/328e68729f6bfadee5db12cc04cf8607d83a42ec), [`97a72cc`](https://github.com/cloudflare/workers-sdk/commit/97a72ccd6ccf57b0c6c62566e638666ea1f0cf71), [`b4a4311`](https://github.com/cloudflare/workers-sdk/commit/b4a4311295f8bb29e72e1c3c622cd91fb382e0ab), [`dc1d0d6`](https://github.com/cloudflare/workers-sdk/commit/dc1d0d6f9c8ccb0714f4b3143f0d0caa8b43f753), [`acd48ed`](https://github.com/cloudflare/workers-sdk/commit/acd48ed01739e32d179f98e210fba8c602860891), [`55a10a3`](https://github.com/cloudflare/workers-sdk/commit/55a10a3a6e032748e84f823600eb586f8d48e161)]:
+  - miniflare@4.20250923.0
+  - wrangler@4.39.0
+
 ## 1.13.3
 
 ### Patch Changes
