@@ -226,10 +226,6 @@ export interface CfHelloWorld {
 	enable_timer?: boolean;
 }
 
-export interface CfWorkerLoader {
-	binding: string;
-}
-
 export interface CfRateLimit {
 	name: string;
 	namespace_id: string;
@@ -420,7 +416,6 @@ export interface CfWorkerInit {
 		assets: CfAssetsBinding | undefined;
 		unsafe_hello_world: CfHelloWorld[] | undefined;
 		ratelimits: CfRateLimit[] | undefined;
-		worker_loaders: CfWorkerLoader[] | undefined;
 	};
 
 	containers?: { class_name: string }[];

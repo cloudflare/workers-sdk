@@ -34,7 +34,6 @@ import type {
 	CfTailConsumer,
 	CfUnsafe,
 	CfVectorize,
-	CfWorkerLoader,
 	CfWorkflow,
 } from "../../deployment-bundle/worker";
 import type { CfAccount } from "../../dev/create-worker-preview";
@@ -307,7 +306,6 @@ export type Binding =
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
 	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
-	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
 

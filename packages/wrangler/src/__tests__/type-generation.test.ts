@@ -263,11 +263,6 @@ const bindingsConfigMock: Omit<
 			},
 		},
 	],
-	worker_loaders: [
-		{
-			binding: "WORKER_LOADER_BINDING",
-		},
-	],
 };
 
 describe("generate types", () => {
@@ -485,7 +480,6 @@ describe("generate types", () => {
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
 					RATE_LIMITER: RateLimit;
-					WORKER_LOADER_BINDING: WorkerLoader;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
@@ -585,7 +579,6 @@ describe("generate types", () => {
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
 					RATE_LIMITER: RateLimit;
-					WORKER_LOADER_BINDING: WorkerLoader;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
@@ -749,7 +742,6 @@ describe("generate types", () => {
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
 					RATE_LIMITER: RateLimit;
-					WORKER_LOADER_BINDING: WorkerLoader;
 					SERVICE_BINDING: Service<typeof import(\\"../b/index\\").default>;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<typeof import(\\"../c/index\\").RealEntrypoint>;

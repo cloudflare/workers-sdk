@@ -319,16 +319,6 @@ export async function mapWorkerMetadataBindings(
 							];
 						}
 						break;
-					case "worker-loader":
-						{
-							configObj.worker_loaders = [
-								...(configObj.worker_loaders ?? []),
-								{
-									binding: binding.name,
-								},
-							];
-						}
-						break;
 					case "ratelimit":
 						{
 							configObj.ratelimits = [

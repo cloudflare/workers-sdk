@@ -159,10 +159,6 @@ export type WorkerMetadataBinding =
 			simple: { limit: number; period: 10 | 60 };
 	  }
 	| {
-			type: "worker-loader";
-			name: string;
-	  }
-	| {
 			type: "logfwdr";
 			name: string;
 			destination: string;
@@ -500,13 +496,6 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			name: binding,
 			type: "pipelines",
 			pipeline: pipeline,
-		});
-	});
-
-	bindings.worker_loaders?.forEach(({ binding }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "worker-loader",
 		});
 	});
 
