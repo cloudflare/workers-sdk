@@ -1,31 +1,32 @@
 import assert from "node:assert";
 import path from "node:path";
 import dedent from "ts-dedent";
-import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
-import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
+import {
+	importWrangler,
+	WranglerE2ETestHelper,
+} from "./helpers/e2e-wrangler-test";
 import type { Worker } from "../src/api/startDevWorker";
 import type { MockInstance } from "vitest";
 
-type Wrangler = Awaited<ReturnType<WranglerE2ETestHelper["importWrangler"]>>;
+const { unstable_startWorker: startWorker } = await importWrangler();
 
-describe("startWorker - auth options", () => {
-	let consoleErrorMock: MockInstance<typeof console.error>;
-
-	beforeAll(() => {
-		consoleErrorMock = vi
-			.spyOn(console, "error")
-			.mockImplementation((...args) => {
-				console.log("STDERR: ", ...args);
-			});
-	});
-
+describe("startWorker - auth options", { sequential: true }, () => {
+	let worker: Worker | undefined;
 	describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("with remote bindings", () => {
 		let helper: WranglerE2ETestHelper;
-		let wrangler: Wrangler;
-		let startWorker: Wrangler["unstable_startWorker"];
+
+		let consoleErrorMock: MockInstance<typeof console.error>;
 
 		beforeEach(async () => {
+			console.log("start of beforeEach");
+			consoleErrorMock = vi
+				.spyOn(console, "error")
+				.mockImplementation((...args) => {
+					console.log("STDERR: ", ...args);
+				});
+
 			helper = new WranglerE2ETestHelper();
 			const aiWorkerScript = dedent`
 			export default {
@@ -49,14 +50,12 @@ describe("startWorker - auth options", () => {
 			await helper.seed({
 				"src/index.js": aiWorkerScript,
 			});
-			wrangler = await helper.importWrangler();
-			startWorker = wrangler.unstable_startWorker;
 			console.log("end of beforeEach");
 		});
 
-		test("starting a worker with startWorker with the valid auth information and updating it with invalid information", async (t) => {
-			t.onTestFinished(() => worker?.dispose());
+		afterEach(() => worker?.dispose());
 
+		test("starting a worker with startWorker with the valid auth information and updating it with invalid information", async () => {
 			const validAuth = vi.fn(() => {
 				assert(process.env.CLOUDFLARE_API_TOKEN);
 
@@ -69,7 +68,7 @@ describe("startWorker - auth options", () => {
 			});
 
 			console.log("about to start worker");
-			const worker = await startWorker({
+			worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
 				bindings: {
 					AI: {
@@ -88,7 +87,7 @@ describe("startWorker - auth options", () => {
 
 			console.log("worker started");
 
-			await assertValidWorkerAiResponse(worker);
+			await assertValidWorkerAiResponse();
 
 			console.log("validated AI response");
 
@@ -105,20 +104,20 @@ describe("startWorker - auth options", () => {
 				};
 			});
 
+			console.log("about to patchConfig with invalid auth");
 			await worker.patchConfig({
 				dev: {
 					auth: incorrectAuth,
 				},
 			});
+			console.log("patchedConfig with invalid auth");
 
-			await assertInvalidWorkerAiResponse(worker);
+			await assertInvalidWorkerAiResponse();
 
 			expect(incorrectAuth).toHaveBeenCalledOnce();
 		});
 
-		test("starting a worker with startWorker with invalid auth information and updating it with valid auth information", async (t) => {
-			t.onTestFinished(async () => await worker?.dispose());
-
+		test("starting a worker with startWorker with invalid auth information and updating it with valid auth information", async () => {
 			const incorrectAuth = vi.fn(() => {
 				return {
 					accountId: CLOUDFLARE_ACCOUNT_ID,
@@ -128,7 +127,7 @@ describe("startWorker - auth options", () => {
 				};
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
 				bindings: {
 					AI: {
@@ -145,7 +144,7 @@ describe("startWorker - auth options", () => {
 				},
 			});
 
-			await assertInvalidWorkerAiResponse(worker);
+			await assertInvalidWorkerAiResponse();
 
 			expect(incorrectAuth).toHaveBeenCalledOnce();
 
@@ -168,12 +167,13 @@ describe("startWorker - auth options", () => {
 				},
 			});
 
-			await assertValidWorkerAiResponse(worker);
+			await assertValidWorkerAiResponse();
 
 			expect(validAuth).toHaveBeenCalledOnce();
 		});
 
-		async function assertValidWorkerAiResponse(worker: Worker) {
+		async function assertValidWorkerAiResponse() {
+			assert(worker, "Worker is not defined");
 			const responseText = await fetchTimedTextFromWorker(worker);
 
 			// We've fixed the auth information so now we can indeed get
@@ -189,7 +189,8 @@ describe("startWorker - auth options", () => {
 			);
 		}
 
-		async function assertInvalidWorkerAiResponse(worker: Worker) {
+		async function assertInvalidWorkerAiResponse() {
+			assert(worker, "Worker is not defined");
 			const responseText = await fetchTimedTextFromWorker(worker);
 
 			// The remote connection is not established so we can't successfully
@@ -206,12 +207,8 @@ describe("startWorker - auth options", () => {
 	});
 
 	describe("without remote bindings (no auth is needed)", () => {
-		test("starting a worker via startWorker without any remote bindings (doesn't cause wrangler to try to get the auth information)", async (t) => {
-			t.onTestFinished(async () => await worker?.dispose());
-
+		test("starting a worker via startWorker without any remote bindings (doesn't cause wrangler to try to get the auth information)", async () => {
 			const helper = new WranglerE2ETestHelper();
-			const wrangler = await helper.importWrangler();
-			const startWorker = wrangler.unstable_startWorker;
 
 			const simpleWorkerScript = dedent`
 			export default {
@@ -233,7 +230,7 @@ describe("startWorker - auth options", () => {
 				};
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
 				dev: {
 					auth: someAuth,
@@ -265,6 +262,7 @@ async function fetchTimedTextFromWorker(
 	let responseText: string | null = null;
 
 	try {
+		assert(worker, "Worker is not defined");
 		await vi.waitFor(
 			async () => {
 				responseText = await (

@@ -2,14 +2,24 @@ import assert from "node:assert";
 import { resolve } from "node:path";
 import { beforeAll, describe, expect, test } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
-import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
+import {
+	importMiniflare,
+	importWrangler,
+	WranglerE2ETestHelper,
+} from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import type {
-	Miniflare,
 	MiniflareOptions,
+	Miniflare as MiniflareType,
 	RemoteProxyConnectionString,
 	Response,
 } from "miniflare";
+
+const { Miniflare } = await importMiniflare();
+const {
+	startRemoteProxySession: startRemoteProxySession,
+	maybeStartOrUpdateRemoteProxySession: maybeStartOrUpdateRemoteProxySession,
+} = await importWrangler();
 
 // Note: the tests in this file are simple ones that check basic functionalities of the remote bindings programmatic APIs
 //       various other aspects of these APIs (e.g. different bindings, reloading capabilities) are indirectly tested when
@@ -20,14 +30,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	async () => {
 		const remoteWorkerName = generateResourceName();
 		const helper = new WranglerE2ETestHelper();
-
-		const { Miniflare } = await helper.importMiniflare();
-
-		const {
-			startRemoteProxySession: startRemoteProxySession,
-			maybeStartOrUpdateRemoteProxySession:
-				maybeStartOrUpdateRemoteProxySession,
-		} = await helper.importWrangler();
 
 		beforeAll(async () => {
 			await helper.seed(resolve(__dirname, "./workers"));
@@ -254,7 +256,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	}
 );
 
-async function timedDispatchFetch(mf: Miniflare): Promise<Response | null> {
+async function timedDispatchFetch(mf: MiniflareType): Promise<Response | null> {
 	try {
 		return await mf.dispatchFetch("http://localhost/", {
 			signal: AbortSignal.timeout(5000),
