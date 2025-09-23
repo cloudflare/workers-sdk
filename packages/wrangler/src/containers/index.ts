@@ -14,6 +14,7 @@ import {
 	listCommand,
 	listYargs,
 } from "./containers";
+import { registryCommands } from "./registries";
 import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
 
@@ -83,5 +84,11 @@ export const containers = (
 					deleteCommand,
 					containersScope
 				)(args)
+		)
+		.command(
+			"registry",
+			// "Configure and manage non-Cloudflare registries",
+			false,
+			(args) => registryCommands(args).command(subHelp)
 		);
 };
