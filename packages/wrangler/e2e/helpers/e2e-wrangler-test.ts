@@ -19,6 +19,16 @@ import {
 } from "./wrangler";
 import type { WranglerCommandOptions } from "./wrangler";
 
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+export function importWrangler(): Promise<typeof import("../../src/cli")> {
+	return import(WRANGLER_IMPORT.href);
+}
+
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+export function importMiniflare(): Promise<typeof import("miniflare")> {
+	return import(MINIFLARE_IMPORT.href);
+}
+
 /**
  * Use this class in your e2e tests to create a temp directory, seed it with files
  * and then run various Wrangler commands.
@@ -40,16 +50,6 @@ export class WranglerE2ETestHelper {
 
 	async removeFiles(files: string[]) {
 		await removeFiles(this.tmpPath, files);
-	}
-
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-	importWrangler(): Promise<typeof import("../../src/cli")> {
-		return import(WRANGLER_IMPORT.href);
-	}
-
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-	importMiniflare(): Promise<typeof import("miniflare")> {
-		return import(MINIFLARE_IMPORT.href);
 	}
 
 	runLongLived(
@@ -76,7 +76,6 @@ export class WranglerE2ETestHelper {
 		wranglerCommand: string,
 		{ cwd = this.tmpPath, ...options }: WranglerCommandOptions = {}
 	) {
-		console.log(`Running wrangler command: ${wranglerCommand}`);
 		return runWrangler(wranglerCommand, { cwd, ...options });
 	}
 

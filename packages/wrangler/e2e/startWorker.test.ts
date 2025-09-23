@@ -5,18 +5,21 @@ import { setTimeout } from "timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import undici from "undici";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
-import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
-import type { DevToolsEvent } from "../src/api";
+import {
+	importWrangler,
+	WranglerE2ETestHelper,
+} from "./helpers/e2e-wrangler-test";
+import type { DevToolsEvent, Worker } from "../src/api";
 
 const OPTIONS = [
 	{ remote: false },
 	...(CLOUDFLARE_ACCOUNT_ID ? [{ remote: true }] : []),
 ];
 
-type Wrangler = Awaited<ReturnType<WranglerE2ETestHelper["importWrangler"]>>;
+const { unstable_startWorker: startWorker } = await importWrangler();
 
 function waitForMessageContaining<T>(ws: WebSocket, value: string): Promise<T> {
 	return new Promise((resolve) => {
@@ -44,20 +47,17 @@ function collectMessagesContaining<T>(
 	return collection;
 }
 
-describe("DevEnv", () => {
+describe("DevEnv", { sequential: true }, () => {
 	let helper: WranglerE2ETestHelper;
-	let wrangler: Wrangler;
-	let startWorker: Wrangler["unstable_startWorker"];
-	beforeEach(async () => {
+	let worker: Worker | undefined;
+
+	beforeEach(() => {
 		helper = new WranglerE2ETestHelper();
-		wrangler = await helper.importWrangler();
-		startWorker = wrangler.unstable_startWorker;
 	});
+	afterEach(() => worker?.dispose());
 
 	describe.each(OPTIONS)("(remote: $remote)", ({ remote }) => {
-		it("ProxyWorker buffers requests while runtime reloads", async (t) => {
-			t.onTestFinished(() => worker?.dispose());
-
+		it("ProxyWorker buffers requests while runtime reloads", async () => {
 			const script = dedent`
 			export default {
 				fetch() {
@@ -70,7 +70,7 @@ describe("DevEnv", () => {
 				"src/index.ts": script,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
 				dev: {
@@ -92,9 +92,7 @@ describe("DevEnv", () => {
 			await expect(res.text()).resolves.toBe("body:2");
 		});
 
-		it("InspectorProxyWorker discovery endpoints + devtools websocket connection", async (t) => {
-			t.onTestFinished(() => worker?.dispose());
-
+		it("InspectorProxyWorker discovery endpoints + devtools websocket connection", async () => {
 			const script = dedent`
 			export default {
 				fetch() {
@@ -109,7 +107,7 @@ describe("DevEnv", () => {
 				"src/index.ts": script,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -171,9 +169,7 @@ describe("DevEnv", () => {
 			await executionContextClearedPromise;
 		});
 
-		it("InspectorProxyWorker rejects unauthorised requests", async (t) => {
-			t.onTestFinished(() => worker?.dispose());
-
+		it("InspectorProxyWorker rejects unauthorised requests", async () => {
 			await helper.seed({
 				"src/index.ts": dedent`
 				export default {
@@ -184,7 +180,7 @@ describe("DevEnv", () => {
 			`,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -222,19 +218,9 @@ describe("DevEnv", () => {
 		// Connecting devtools directly to the inspector would work fine, but we proxy the inspector messages
 		// through a worker (InspectorProxyWorker) which hits the limit (without the fix, compatibilityFlags:["increase_websocket_message_size"])
 		// By logging a large string we can verify that the inspector messages are being proxied successfully.
-		it("InspectorProxyWorker can proxy messages > 1MB", async (t) => {
-			const consoleInfoSpy = vi
-				.spyOn(console, "info")
-				.mockImplementation(() => {});
-			const consoleLogSpy = vi
-				.spyOn(console, "log")
-				.mockImplementation(() => {});
-
-			t.onTestFinished(() => {
-				consoleInfoSpy.mockRestore();
-				consoleLogSpy.mockRestore();
-				return worker?.dispose();
-			});
+		it("InspectorProxyWorker can proxy messages > 1MB", async () => {
+			vi.spyOn(console, "info").mockImplementation(() => {});
+			vi.spyOn(console, "log").mockImplementation(() => {});
 
 			const LARGE_STRING = "This is a large string" + "z".repeat(2 ** 20);
 
@@ -252,7 +238,7 @@ describe("DevEnv", () => {
 				"src/index.ts": script,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -285,9 +271,7 @@ describe("DevEnv", () => {
 			);
 		});
 
-		it("config.dev.{server,inspector} changes, restart the server instance", async (t) => {
-			t.onTestFinished(() => worker?.dispose());
-
+		it("config.dev.{server,inspector} changes, restart the server instance", async () => {
 			await helper.seed({
 				"src/index.ts": dedent`
 				export default {
@@ -298,7 +282,7 @@ describe("DevEnv", () => {
 			`,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -337,9 +321,7 @@ describe("DevEnv", () => {
 			).rejects.toThrowError("fetch failed");
 		});
 
-		it("liveReload", async (t) => {
-			t.onTestFinished(() => worker?.dispose());
-
+		it("liveReload", async () => {
 			await helper.seed({
 				"src/index.ts": dedent`
 				export default {
@@ -352,7 +334,7 @@ describe("DevEnv", () => {
 			`,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -438,9 +420,7 @@ describe("DevEnv", () => {
 	});
 
 	describe("DevEnv (local-only)", () => {
-		it("User worker exception", async (t) => {
-			t.onTestFinished(() => worker?.dispose());
-
+		it("User worker exception", async () => {
 			await helper.seed({
 				"src/index.ts": dedent`
 					export default {
@@ -451,7 +431,7 @@ describe("DevEnv", () => {
 				`,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 				dev: {
@@ -522,9 +502,7 @@ describe("DevEnv", () => {
 			await expect(res.text()).resolves.toBe("body:3");
 		});
 
-		it("origin override takes effect in the UserWorker", async (t) => {
-			t.onTestFinished(() => worker?.dispose());
-
+		it("origin override takes effect in the UserWorker", async () => {
 			await helper.seed({
 				"src/index.ts": dedent`
 					export default {
@@ -535,7 +513,7 @@ describe("DevEnv", () => {
 				`,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -569,13 +547,11 @@ describe("DevEnv", () => {
 			);
 		});
 
-		it("inflight requests are retried during UserWorker reloads", async (t) => {
+		it("inflight requests are retried during UserWorker reloads", async () => {
 			// to simulate inflight requests failing during UserWorker reloads,
 			// we will use a UserWorker with a longish `await setTimeout(...)`
 			// so that we can guarantee the race condition is hit when workerd is eventually terminated
 			// this does not apply to remote workers as they are not terminated during reloads
-
-			t.onTestFinished(() => worker?.dispose());
 
 			const script = dedent`
 				export default {
@@ -595,7 +571,7 @@ describe("DevEnv", () => {
 				"src/index.ts": script,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 				dev: {
@@ -629,8 +605,7 @@ describe("DevEnv", () => {
 			await expect(res.text()).resolves.toBe("UserWorker:3");
 		});
 
-		it("vars from .env (next to config file) override vars from Wrangler config file", async (t) => {
-			t.onTestFinished(() => worker?.dispose());
+		it("vars from .env (next to config file) override vars from Wrangler config file", async () => {
 			await helper.seed({
 				"src/index.ts": dedent`
 					export default {
@@ -665,7 +640,7 @@ describe("DevEnv", () => {
 				`,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
@@ -686,8 +661,7 @@ describe("DevEnv", () => {
 			`);
 		});
 
-		it("vars are not loaded from .env if there is a .dev.vars file (next to config file)", async (t) => {
-			t.onTestFinished(() => worker?.dispose());
+		it("vars are not loaded from .env if there is a .dev.vars file (next to config file)", async () => {
 			await helper.seed({
 				"src/index.ts": dedent`
 					export default {
@@ -714,7 +688,7 @@ describe("DevEnv", () => {
 				`,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
@@ -735,8 +709,7 @@ describe("DevEnv", () => {
 			`);
 		});
 
-		it("vars from inline config override vars from both .env and config file", async (t) => {
-			t.onTestFinished(() => worker?.dispose());
+		it("vars from inline config override vars from both .env and config file", async () => {
 			await helper.seed({
 				"src/index.ts": dedent`
 					export default {
@@ -771,7 +744,7 @@ describe("DevEnv", () => {
 				`,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
@@ -797,8 +770,7 @@ describe("DevEnv", () => {
 			`);
 		});
 
-		it("vars from .env pointed at by `envFile` override vars from Wrangler config file and .env files local to the config file", async (t) => {
-			t.onTestFinished(() => worker?.dispose());
+		it("vars from .env pointed at by `envFile` override vars from Wrangler config file and .env files local to the config file", async () => {
 			await helper.seed({
 				"src/index.ts": dedent`
 					export default {
@@ -833,7 +805,7 @@ describe("DevEnv", () => {
 				`,
 			});
 
-			const worker = await startWorker({
+			worker = await startWorker({
 				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),

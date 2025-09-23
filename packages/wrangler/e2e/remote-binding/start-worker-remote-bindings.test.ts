@@ -3,8 +3,13 @@ import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
-import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
+import {
+	importWrangler,
+	WranglerE2ETestHelper,
+} from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
+
+const { unstable_startWorker: startWorker } = await importWrangler();
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 	const remoteWorkerName = generateResourceName();
@@ -47,8 +52,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 					}),
 				});
 
-				const { unstable_startWorker } = await helper.importWrangler();
-				const worker = await unstable_startWorker({
+				const worker = await startWorker({
 					config: `${helper.tmpPath}/wrangler.json`,
 					dev: {
 						experimentalRemoteBindings,
@@ -82,9 +86,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 					}),
 				});
 
-				const { unstable_startWorker } = await helper.importWrangler();
-
-				const worker = await unstable_startWorker({
+				const worker = await startWorker({
 					config: `${helper.tmpPath}/wrangler.json`,
 					dev: {
 						experimentalRemoteBindings,
