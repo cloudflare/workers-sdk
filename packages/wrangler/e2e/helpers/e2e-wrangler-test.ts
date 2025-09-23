@@ -47,6 +47,11 @@ export class WranglerE2ETestHelper {
 		try {
 			console.log(`Importing wrangler from ${WRANGLER_IMPORT.href}`);
 			return import(WRANGLER_IMPORT.href);
+		} catch (e) {
+			console.log(`Failed to import wrangler from ${WRANGLER_IMPORT.href}`, {
+				cause: e,
+			});
+			throw e;
 		} finally {
 			console.log(`Finished importing wrangler from ${WRANGLER_IMPORT.href}`);
 		}

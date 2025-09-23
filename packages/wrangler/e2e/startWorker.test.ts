@@ -52,6 +52,7 @@ describe("DevEnv", () => {
 		helper = new WranglerE2ETestHelper();
 		wrangler = await helper.importWrangler();
 		startWorker = wrangler.unstable_startWorker;
+		console.log("end of beforeEach");
 	});
 
 	describe.each(OPTIONS)("(remote: $remote)", ({ remote }) => {
@@ -70,6 +71,7 @@ describe("DevEnv", () => {
 				"src/index.ts": script,
 			});
 
+			console.log("about to start worker");
 			const worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -79,6 +81,7 @@ describe("DevEnv", () => {
 					inspector: false,
 				},
 			});
+			console.log("worker started");
 
 			let res = await worker.fetch("http://dummy");
 			await expect(res.text()).resolves.toBe("body:1");

@@ -13,7 +13,11 @@ describe("startWorker - auth options", () => {
 	let consoleErrorMock: MockInstance<typeof console.error>;
 
 	beforeAll(() => {
-		consoleErrorMock = vi.spyOn(console, "error").mockImplementation(() => {});
+		consoleErrorMock = vi
+			.spyOn(console, "error")
+			.mockImplementation((...args) => {
+				console.log("STDERR: ", ...args);
+			});
 	});
 
 	describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("with remote bindings", () => {
@@ -47,10 +51,11 @@ describe("startWorker - auth options", () => {
 			});
 			wrangler = await helper.importWrangler();
 			startWorker = wrangler.unstable_startWorker;
+			console.log("end of beforeEach");
 		});
 
 		test("starting a worker with startWorker with the valid auth information and updating it with invalid information", async (t) => {
-			t.onTestFinished(async () => await worker?.dispose());
+			t.onTestFinished(() => worker?.dispose());
 
 			const validAuth = vi.fn(() => {
 				assert(process.env.CLOUDFLARE_API_TOKEN);
@@ -63,6 +68,7 @@ describe("startWorker - auth options", () => {
 				};
 			});
 
+			console.log("about to start worker");
 			const worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
 				bindings: {
@@ -80,7 +86,11 @@ describe("startWorker - auth options", () => {
 				},
 			});
 
+			console.log("worker started");
+
 			await assertValidWorkerAiResponse(worker);
+
+			console.log("validated AI response");
 
 			expect(validAuth).toHaveBeenCalledOnce();
 
