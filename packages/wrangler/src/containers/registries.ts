@@ -1,23 +1,68 @@
-import { endSection, log, startSection } from "@cloudflare/cli";
+import {
+	cancel,
+	endSection,
+	log,
+	startSection,
+	updateStatus,
+} from "@cloudflare/cli";
 import {
 	ApiError,
 	getAndValidateRegistryType,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
 import { ExternalRegistryKind } from "@cloudflare/containers-shared/src/client/models/ExternalRegistryKind";
-import { promiseSpinner } from "../cloudchamber/common";
-import { prompt } from "../dialogs";
+import { handleFailure, promiseSpinner } from "../cloudchamber/common";
+import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
+import { logger } from "../logger";
 import { parseJSON } from "../parse";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
-import type { Config } from "../config";
+import { containersScope } from ".";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 
-export function registryYargs(args: CommonYargsArgv) {
+export const registryCommands = (yargs: CommonYargsArgv) => {
+	return yargs
+		.command(
+			"put <DOMAIN>",
+			// Hide from help by setting description to false
+			// "Add or update credentials for a non-Cloudflare container registry",
+			false,
+			(args) => registryPutYargs(args),
+			(args) =>
+				handleFailure(
+					`wrangler containers registry put`,
+					registryPutCommand,
+					containersScope
+				)(args)
+		)
+		.command(
+			"list",
+			false,
+			(args) => registryListYargs(args),
+			(args) =>
+				handleFailure(
+					`wrangler containers registry list`,
+					registryListCommand,
+					containersScope
+				)(args)
+		)
+		.command(
+			"delete <DOMAIN>",
+			false,
+			(args) => registryDeleteYargs(args),
+			(args) =>
+				handleFailure(
+					`wrangler containers registry delete`,
+					registryDeleteCommand,
+					containersScope
+				)(args)
+		);
+};
+function registryPutYargs(args: CommonYargsArgv) {
 	return args.positional("DOMAIN", {
 		describe: "domain to configure for the registry",
 		type: "string",
@@ -25,9 +70,8 @@ export function registryYargs(args: CommonYargsArgv) {
 	});
 }
 
-export async function registryCommand(
-	configureArgs: StrictYargsOptionsToInterface<typeof registryYargs>,
-	_config: Config
+async function registryPutCommand(
+	configureArgs: StrictYargsOptionsToInterface<typeof registryPutYargs>
 ) {
 	startSection("Configure container registry");
 
@@ -68,7 +112,6 @@ export async function registryCommand(
 
 	endSection("Registry configuration completed");
 }
-
 async function configureAwsEcrRegistry(domain: string) {
 	let credentials: {
 		AWS_ACCESS_KEY_ID?: string;
@@ -119,4 +162,92 @@ async function configureAwsEcrRegistry(domain: string) {
 		);
 	}
 	return credentials;
+}
+
+function registryListYargs(args: CommonYargsArgv) {
+	return args.option("json", {
+		type: "boolean",
+		description: "Format output as JSON",
+		default: false,
+	});
+}
+
+async function registryListCommand(
+	listArgs: StrictYargsOptionsToInterface<typeof registryListYargs>
+) {
+	if (!listArgs.json && !isNonInteractiveOrCI()) {
+		startSection("List configured container registries");
+	}
+
+	try {
+		const res = await promiseSpinner(
+			ImageRegistriesService.listImageRegistries()
+		);
+		if (listArgs.json || isNonInteractiveOrCI()) {
+			logger.json(res);
+		} else if (res.length === 0) {
+			endSection("No external registries configured for this account");
+		} else {
+			let counter = 0;
+			for (const registry of res) {
+				if (counter < res.length - 1) {
+					updateStatus(registry.domain);
+				} else {
+					endSection(registry.domain);
+				}
+				counter++;
+				// do we want any other info?
+			}
+		}
+	} catch (e) {
+		if (e instanceof ApiError) {
+			throw new FatalError(e.body.error ?? "Unknown API error");
+		} else {
+			throw e;
+		}
+	}
+}
+
+const registryDeleteYargs = (yargs: CommonYargsArgv) => {
+	return yargs
+		.positional("DOMAIN", {
+			describe: "domain of the registry to delete",
+			type: "string",
+			demandOption: true,
+		})
+		.option("skip-confirmation", {
+			type: "boolean",
+			description: "Skip confirmation prompt",
+			alias: "y",
+			default: false,
+		});
+};
+async function registryDeleteCommand(
+	deleteArgs: StrictYargsOptionsToInterface<typeof registryDeleteYargs>
+) {
+	startSection(`Delete registry ${deleteArgs.DOMAIN}`);
+
+	if (!deleteArgs.skipConfirmation) {
+		const yes = await confirm(
+			`Are you sure you want to delete the registry ${deleteArgs.DOMAIN}? This action cannot be undone.`
+		);
+		if (!yes) {
+			cancel("The operation has been cancelled");
+			return;
+		}
+	}
+
+	try {
+		await promiseSpinner(
+			ImageRegistriesService.deleteImageRegistry(deleteArgs.DOMAIN)
+		);
+	} catch (e) {
+		if (e instanceof ApiError) {
+			throw new FatalError(e.body.error ?? "Unknown API error");
+		} else {
+			throw e;
+		}
+	}
+
+	endSection(`Deleted registry ${deleteArgs.DOMAIN}\n`);
 }

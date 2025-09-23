@@ -14,7 +14,7 @@ import {
 	listCommand,
 	listYargs,
 } from "./containers";
-import { registryCommand, registryYargs } from "./registries";
+import { registryCommands } from "./registries";
 import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
 
@@ -86,16 +86,9 @@ export const containers = (
 				)(args)
 		)
 		.command(
-			"registry put <DOMAIN>",
-			// Hide from help by setting description to false
-			// "Add or update credentials for a non-Cloudflare container registry",
+			"registry",
+			// "Configure and manage non-Cloudflare registries",
 			false,
-			(args) => registryYargs(args),
-			(args) =>
-				handleFailure(
-					`wrangler containers registry put`,
-					registryCommand,
-					containersScope
-				)(args)
+			(args) => registryCommands(args).command(subHelp)
 		);
 };
