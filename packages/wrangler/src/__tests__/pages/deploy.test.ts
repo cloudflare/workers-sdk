@@ -1,3 +1,4 @@
+import { isUtf8 } from "node:buffer";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
 import TOML from "@iarna/toml";
@@ -5168,13 +5169,19 @@ and that at least one include rule is provided.
 		}
 	);
 
-	const simulateServer = (
-		generatedWorkerBundleCheck: (
+	const simulateServer = ({
+		uploadFormCheck,
+		generatedWorkerBundleCheck,
+		compatibility_flags,
+		aliases,
+	}: {
+		uploadFormCheck?: (form: FormData) => Promise<void>;
+		generatedWorkerBundleCheck?: (
 			workerJsContent: FormDataEntryValue | null
-		) => Promise<void>,
-		compatibility_flags?: string[],
-		aliases?: string[]
-	) => {
+		) => Promise<void>;
+		compatibility_flags?: string[];
+		aliases?: string[];
+	}) => {
 		mockGetUploadTokenRequest(
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
@@ -5216,7 +5223,8 @@ and that at least one include rule is provided.
 					const body = await request.formData();
 					const generatedWorkerBundle = body.get("_worker.bundle");
 
-					await generatedWorkerBundleCheck(generatedWorkerBundle);
+					await generatedWorkerBundleCheck?.(generatedWorkerBundle);
+					await uploadFormCheck?.(body);
 
 					return HttpResponse.json(
 						{
@@ -5283,17 +5291,19 @@ and that at least one include rule is provided.
 			(await toString(contents)).includes("worker_default as default");
 
 		it("should bundle the _worker.js when both `--bundle` and `--no-bundle` are omitted", async () => {
-			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeTruthy()
-			);
+			simulateServer({
+				generatedWorkerBundleCheck: (generatedWorkerJS) =>
+					expect(workerIsBundled(generatedWorkerJS)).resolves.toBeTruthy(),
+			});
 			await runWrangler("pages deploy public --project-name=foo");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 
 		it("should not bundle the _worker.js when `--no-bundle` is set", async () => {
-			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
-			);
+			simulateServer({
+				generatedWorkerBundleCheck: (generatedWorkerJS) =>
+					expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy(),
+			});
 			await runWrangler("pages deploy public --project-name=foo --no-bundle");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
@@ -5313,9 +5323,10 @@ and that at least one include rule is provided.
 				};`
 			);
 
-			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
-			);
+			simulateServer({
+				generatedWorkerBundleCheck: (generatedWorkerJS) =>
+					expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy(),
+			});
 			let error = "Code did not throw!";
 			try {
 				await runWrangler("pages deploy public --project-name=foo --no-bundle");
@@ -5342,9 +5353,10 @@ and that at least one include rule is provided.
 				};`
 			);
 
-			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
-			);
+			simulateServer({
+				generatedWorkerBundleCheck: (generatedWorkerJS) =>
+					expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy(),
+			});
 			await runWrangler("pages deploy public --project-name=foo --no-bundle");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
@@ -5363,11 +5375,11 @@ and that at least one include rule is provided.
 				};`
 			);
 
-			simulateServer(
-				(generatedWorkerJS) =>
+			simulateServer({
+				generatedWorkerBundleCheck: (generatedWorkerJS) =>
 					expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy(),
-				["nodejs_compat"]
-			);
+				compatibility_flags: ["nodejs_compat"],
+			});
 			await runWrangler("pages deploy public --project-name=foo --no-bundle");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
@@ -5386,9 +5398,10 @@ and that at least one include rule is provided.
 				};`
 			);
 
-			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
-			);
+			simulateServer({
+				generatedWorkerBundleCheck: (generatedWorkerJS) =>
+					expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy(),
+			});
 			let error = "Code did not throw!";
 			try {
 				await runWrangler("pages deploy public --project-name=foo --no-bundle");
@@ -5401,9 +5414,10 @@ and that at least one include rule is provided.
 		});
 
 		it("should not bundle the _worker.js when `--bundle` is set to false", async () => {
-			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
-			);
+			simulateServer({
+				generatedWorkerBundleCheck: (generatedWorkerJS) =>
+					expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy(),
+			});
 			await runWrangler(
 				"pages deploy public --project-name=foo --bundle=false"
 			);
@@ -5411,9 +5425,10 @@ and that at least one include rule is provided.
 		});
 
 		it("should bundle the _worker.js when the `--no-bundle` is set to false", async () => {
-			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeTruthy()
-			);
+			simulateServer({
+				generatedWorkerBundleCheck: (generatedWorkerJS) =>
+					expect(workerIsBundled(generatedWorkerJS)).resolves.toBeTruthy(),
+			});
 			await runWrangler(
 				"pages deploy public --no-bundle=false --project-name=foo"
 			);
@@ -5421,9 +5436,10 @@ and that at least one include rule is provided.
 		});
 
 		it("should bundle the _worker.js when the `--bundle` is set to true", async () => {
-			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeTruthy()
-			);
+			simulateServer({
+				generatedWorkerBundleCheck: (generatedWorkerJS) =>
+					expect(workerIsBundled(generatedWorkerJS)).resolves.toBeTruthy(),
+			});
 			await runWrangler("pages deploy public --bundle=true --project-name=foo");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
@@ -5462,9 +5478,10 @@ and that at least one include rule is provided.
 							: TOML.stringify(config)
 					);
 
-					simulateServer((generatedWorkerJS) =>
-						expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
-					);
+					simulateServer({
+						generatedWorkerBundleCheck: (generatedWorkerJS) =>
+							expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy(),
+					});
 
 					await runWrangler("pages deploy");
 
@@ -5507,15 +5524,17 @@ and that at least one include rule is provided.
 				`
 			);
 
-			simulateServer(async (entry) => {
-				const contents = await bundleString(entry);
-				// Ensure we get a sourcemap containing our functions file
-				expect(contents).toContain(
-					'Content-Disposition: form-data; name="functionsWorker-0.test.js.map"'
-				);
-				expect(contents).toContain(
-					`"sources":["${encodeURIComponent("[[path]].ts")}"`
-				);
+			simulateServer({
+				generatedWorkerBundleCheck: async (entry) => {
+					const contents = await bundleString(entry);
+					// Ensure we get a sourcemap containing our functions file
+					expect(contents).toContain(
+						'Content-Disposition: form-data; name="functionsWorker-0.test.js.map"'
+					);
+					expect(contents).toContain(
+						`"sources":["${encodeURIComponent("[[path]].ts")}"`
+					);
+				},
 			});
 
 			await runWrangler("pages deploy");
@@ -5533,13 +5552,15 @@ and that at least one include rule is provided.
 				`
 			);
 
-			simulateServer(async (entry) => {
-				const contents = await bundleString(entry);
-				// Ensure we get a sourcemap containing our _worker.js file
-				expect(contents).toContain(
-					'Content-Disposition: form-data; name="bundledWorker-0.test.mjs.map"'
-				);
-				expect(contents).toContain('"sources":["_worker.js"');
+			simulateServer({
+				generatedWorkerBundleCheck: async (entry) => {
+					const contents = await bundleString(entry);
+					// Ensure we get a sourcemap containing our _worker.js file
+					expect(contents).toContain(
+						'Content-Disposition: form-data; name="bundledWorker-0.test.mjs.map"'
+					);
+					expect(contents).toContain('"sources":["_worker.js"');
+				},
 			});
 
 			await runWrangler("pages deploy");
@@ -5572,23 +5593,25 @@ and that at least one include rule is provided.
 				})
 			);
 
-			simulateServer(async (entry) => {
-				const contents = await bundleString(entry);
+			simulateServer({
+				generatedWorkerBundleCheck: async (entry) => {
+					const contents = await bundleString(entry);
 
-				// Ensure we get a sourcemap containing our main worker file
-				expect(contents).toContain(
-					'Content-Disposition: form-data; name="bundledWorker-0.test.mjs.map"'
-				);
-				expect(contents).toContain('"sources":["dist/_worker.js/index.js"');
+					// Ensure we get a sourcemap containing our main worker file
+					expect(contents).toContain(
+						'Content-Disposition: form-data; name="bundledWorker-0.test.mjs.map"'
+					);
+					expect(contents).toContain('"sources":["dist/_worker.js/index.js"');
 
-				// Ensure our runtime file that wrangler doesn't bundle into the main output still
-				// get uploaded alongside their sourcemaps
-				expect(contents).toContain(
-					'Content-Disposition: form-data; name="chunks/runtime.mjs"; filename="chunks/runtime.mjs"'
-				);
-				expect(contents).toContain(
-					'Content-Disposition: form-data; name="chunks/runtime.mjs.map"; filename="chunks/runtime.mjs.map"'
-				);
+					// Ensure our runtime file that wrangler doesn't bundle into the main output still
+					// get uploaded alongside their sourcemaps
+					expect(contents).toContain(
+						'Content-Disposition: form-data; name="chunks/runtime.mjs"; filename="chunks/runtime.mjs"'
+					);
+					expect(contents).toContain(
+						'Content-Disposition: form-data; name="chunks/runtime.mjs.map"; filename="chunks/runtime.mjs.map"'
+					);
+				},
 			});
 
 			await runWrangler("pages deploy");
@@ -5601,7 +5624,7 @@ and that at least one include rule is provided.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
 
-			simulateServer(async () => {}, [], ["https://staging.foo.pages.dev"]);
+			simulateServer({ aliases: ["https://staging.foo.pages.dev"] });
 
 			await runWrangler("pages deploy public --project-name=foo");
 
@@ -5621,7 +5644,7 @@ and that at least one include rule is provided.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
 
-			simulateServer(async () => {}, [], ["https://example.com"]);
+			simulateServer({ aliases: ["https://example.com"] });
 
 			await runWrangler("pages deploy public --project-name=foo");
 
@@ -5640,7 +5663,7 @@ and that at least one include rule is provided.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
 
-			simulateServer(async () => {}, [], []);
+			simulateServer({});
 
 			await runWrangler("pages deploy public --project-name=foo");
 
@@ -5676,7 +5699,7 @@ and that at least one include rule is provided.
 				})
 			);
 
-			simulateServer(async () => {});
+			simulateServer({});
 
 			msw.use(
 				http.get(
@@ -5730,6 +5753,46 @@ and that at least one include rule is provided.
 		it("should work with any branch (i.e. the preview environment)", async () => {
 			await runWrangler("pages deploy --branch my-branch");
 			expect(std.info).toContain(expectedInfo);
+		});
+	});
+
+	describe("commit messages", () => {
+		it("should include the commit message when provided", async () => {
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			simulateServer({
+				uploadFormCheck: async (form) => {
+					const commitMessage = form.get("commit_message");
+					expect(commitMessage).toEqual(
+						"feat(pages): deploy from wrangler with commit message"
+					);
+				},
+			});
+
+			await runWrangler(
+				"pages deploy public --project-name=foo --commit-message 'feat(pages): deploy from wrangler with commit message'"
+			);
+		});
+
+		it("should support non-ascii chars in commit message", async () => {
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			simulateServer({
+				uploadFormCheck: async (form) => {
+					const commitMessage = form.get("commit_message");
+					expect(commitMessage).toEqual(
+						"fix: ESLint 경고 및 DOM 중첩 문제 해결"
+					);
+
+					expect(isUtf8(Buffer.from(commitMessage as string))).toBe(true);
+				},
+			});
+
+			await runWrangler(
+				"pages deploy public --project-name=foo --commit-message 'fix: ESLint 경고 및 DOM 중첩 문제 해결'"
+			);
 		});
 	});
 });
