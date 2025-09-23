@@ -1,7 +1,13 @@
 import { endSection, log, startSection } from "@cloudflare/cli";
-import { getAndValidateRegistryType } from "@cloudflare/containers-shared";
+import {
+	ApiError,
+	getAndValidateRegistryType,
+	ImageRegistriesService,
+} from "@cloudflare/containers-shared";
+import { ExternalRegistryKind } from "@cloudflare/containers-shared/src/client/models/ExternalRegistryKind";
+import { promiseSpinner } from "../cloudchamber/common";
 import { prompt } from "../dialogs";
-import { UserError } from "../errors";
+import { FatalError, UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { parseJSON } from "../parse";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
@@ -37,13 +43,28 @@ export async function registryCommand(
 			);
 			endSection("No configuration required");
 			return;
-		case "aws-ecr":
+		case ExternalRegistryKind.ECR:
 			credentials = await configureAwsEcrRegistry(configureArgs.DOMAIN);
 			break;
 		default:
 			throw new Error(`Unhandled registry type: ${registryType.type}`);
 	}
-	// do something with the credentials
+	try {
+		await promiseSpinner(
+			ImageRegistriesService.createImageRegistry({
+				domain: configureArgs.DOMAIN,
+				is_public: false,
+				auth: JSON.stringify(credentials),
+				kind: registryType.type,
+			})
+		);
+	} catch (e) {
+		if (e instanceof ApiError) {
+			throw new FatalError(e.body.error ?? "Unknown API error");
+		} else {
+			throw e;
+		}
+	}
 
 	endSection("Registry configuration completed");
 }
@@ -79,7 +100,7 @@ async function configureAwsEcrRegistry(domain: string) {
 		}
 	} else {
 		log(
-			"You will need an AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to configure this ECR registry.\n"
+			"Please provide an AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to configure this ECR registry.\n"
 		);
 		credentials["AWS_ACCESS_KEY_ID"] = await prompt("AWS_ACCESS_KEY_ID:", {
 			isSecret: false,
