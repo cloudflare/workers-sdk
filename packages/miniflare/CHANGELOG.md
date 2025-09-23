@@ -1,5 +1,47 @@
 # miniflare
 
+## 4.20250923.0
+
+### Minor Changes
+
+- [#10647](https://github.com/cloudflare/workers-sdk/pull/10647) [`555a6da`](https://github.com/cloudflare/workers-sdk/commit/555a6da0fbda6e792264b59984687e336c179619) Thanks [@efalcao](https://github.com/efalcao)! - VPC service binding support
+
+### Patch Changes
+
+- [#10692](https://github.com/cloudflare/workers-sdk/pull/10692) [`262393a`](https://github.com/cloudflare/workers-sdk/commit/262393aded9a1a8133e61f3438ffca7853cb8fcb) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20250917.0 | 1.20250918.0 |
+
+- [#10705](https://github.com/cloudflare/workers-sdk/pull/10705) [`3ec1f65`](https://github.com/cloudflare/workers-sdk/commit/3ec1f6578170f1716951a36fa6af2aee29a92030) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20250918.0 | 1.20250919.0 |
+
+- [#10718](https://github.com/cloudflare/workers-sdk/pull/10718) [`a434352`](https://github.com/cloudflare/workers-sdk/commit/a434352c61ebd178b41651b505bbbc56a4578ce9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20250919.0 | 1.20250922.0 |
+
+- [#10729](https://github.com/cloudflare/workers-sdk/pull/10729) [`328e687`](https://github.com/cloudflare/workers-sdk/commit/328e68729f6bfadee5db12cc04cf8607d83a42ec) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20250922.0 | 1.20250923.0 |
+
+- [#10724](https://github.com/cloudflare/workers-sdk/pull/10724) [`b4a4311`](https://github.com/cloudflare/workers-sdk/commit/b4a4311295f8bb29e72e1c3c622cd91fb382e0ab) Thanks [@penalosa](https://github.com/penalosa)! - Use Cap'n Web in `workers-sdk`
+
 ## 4.20250917.0
 
 ### Minor Changes
