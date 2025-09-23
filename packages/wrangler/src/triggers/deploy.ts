@@ -295,18 +295,24 @@ export default async function triggersDeploy(
 }
 
 export function getSubdomainValues(
-	config_workers_dev: boolean | undefined,
-	config_preview_urls: boolean | undefined,
+	config: {
+		workers_dev?: boolean;
+		preview_urls?: boolean;
+	},
+	current: {
+		workers_dev?: boolean;
+		preview_urls?: boolean;
+	},
 	routes: Route[]
 ): {
 	workers_dev: boolean;
 	preview_urls: boolean;
 } {
 	const defaultWorkersDev = routes.length === 0; // Default to true only if there aren't any routes defined.
-	const defaultPreviewUrls = false;
+	const defaultPreviewUrls = current.preview_urls ?? false; // Default to current state, to avoid changing it.
 	return {
-		workers_dev: config_workers_dev ?? defaultWorkersDev,
-		preview_urls: config_preview_urls ?? defaultPreviewUrls,
+		workers_dev: config.workers_dev ?? defaultWorkersDev,
+		preview_urls: config.preview_urls ?? defaultPreviewUrls,
 	};
 }
 
@@ -322,11 +328,6 @@ async function subdomainDeploy(
 ) {
 	const { config } = props;
 
-	// Get desired subdomain enablement status.
-
-	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
-		getSubdomainValues(config.workers_dev, config.preview_urls, routes);
-
 	// Get current subdomain enablement status.
 
 	const { enabled: currWorkersDev, previews_enabled: currPreviews } =
@@ -334,6 +335,15 @@ async function subdomainDeploy(
 			enabled: boolean;
 			previews_enabled: boolean;
 		}>(config, `${workerUrl}/subdomain`);
+
+	// Get desired subdomain enablement status.
+
+	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
+		getSubdomainValues(
+			config,
+			{ workers_dev: currWorkersDev, preview_urls: currPreviews },
+			routes
+		);
 
 	const workersDevInSync = wantWorkersDev === currWorkersDev;
 	const previewsInSync = wantPreviews === currPreviews;

@@ -6922,7 +6922,8 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should warn the user if preview_urls default is different from remote", async () => {
+		// Skip because Preview URLs will now default to remote state.
+		it.skip("should warn the user if preview_urls default is different from remote", async () => {
 			writeWranglerConfig({}); // Default preview_urls should be false.
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -6947,6 +6948,27 @@ addEventListener('fetch', event => {});`
 
 				"
 			`);
+		});
+
+		it("should preserve preview_urls status when not in config", async () => {
+			writeWranglerConfig({});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+			mockUpdateWorkerSubdomain({ enabled: true, previews_enabled: true });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 	});
 

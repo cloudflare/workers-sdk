@@ -257,8 +257,8 @@ export function mockUploadWorkerRequest(
 		envConfig = config.env?.[env] ?? {};
 	}
 	const { workers_dev, preview_urls } = getSubdomainValues(
-		envConfig.workers_dev,
-		envConfig.preview_urls,
+		envConfig,
+		{},
 		envConfig.routes ?? []
 	);
 	mockGetWorkerSubdomain({
