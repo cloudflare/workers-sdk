@@ -863,18 +863,25 @@ describe("pages download config", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[APIError: A request to the Cloudflare API (/accounts/MOCK_ACCOUNT_ID/pages/projects/NOT_REAL) failed.]`
 		);
-		expect(std.out).toMatchInlineSnapshot(`
-		"
-		[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/MOCK_ACCOUNT_ID/pages/projects/NOT_REAL) failed.[0m
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/MOCK_ACCOUNT_ID/pages/projects/NOT_REAL) failed.[0m
 
-		  Project not found. The specified project name does not match any of your existing projects. [code:
-		  8000007]
+			  Project not found. The specified project name does not match any of your existing projects. [code:
+			  8000007]
 
-		  If you think this is a bug, please open an issue at:
-		  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+			  If you think this is a bug, please open an issue at:
+			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-		"
-	`);
+			",
+			  "info": "",
+			  "out": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pages download config\` is an experimental command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+			",
+			}
+		`);
 	});
 	describe("overwrite existing file", () => {
 		it("should overwrite existing file w/ --force", async () => {

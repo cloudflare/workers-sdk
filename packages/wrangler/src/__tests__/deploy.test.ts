@@ -456,29 +456,29 @@ describe("deploy", () => {
 			`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.]`
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
+			"
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
 
 		  Authentication error [code: 10000]
 
 
-		📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
-		Please ensure it has the correct permissions for this operation.
+			📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+			Please ensure it has the correct permissions for this operation.
 
-		Getting User settings...
-		ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN environment variable.
-		👋 You are logged in with an User API Token, associated with the email user@example.com.
-		┌───────────────┬────────────┐
-		│ Account Name  │ Account ID │
-		├───────────────┼────────────┤
-		│ Account One   │ account-1  │
-		├───────────────┼────────────┤
-		│ Account Two   │ account-2  │
-		├───────────────┼────────────┤
-		│ Account Three │ account-3  │
-		└───────────────┴────────────┘
-		🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens."
-	`);
+			Getting User settings...
+			👋 You are logged in with an User API Token, associated with the email user@example.com.
+			ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN environment variable.
+			┌─┬─┐
+			│ Account Name │ Account ID │
+			├─┼─┤
+			│ Account One │ account-1 │
+			├─┼─┤
+			│ Account Two │ account-2 │
+			├─┼─┤
+			│ Account Three │ account-3 │
+			└─┴─┘
+			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens."
+		`);
 	});
 
 	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async () => {
@@ -11563,7 +11563,6 @@ export default{
 				  "err": "",
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				No bindings found.
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
@@ -11573,6 +11572,9 @@ export default{
 				  If you think this is a bug, please open an issue at:
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				",
 				  "warn": "",
 				}
@@ -11633,10 +11635,25 @@ export default{
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
-				  "err": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYour Worker failed validation because it exceeded size limits.[0m
+
+
+				  A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions)
+				  failed.
+				   - workers.api.error.script_too_large [code: 10027]
+				  Here are the 4 largest dependencies included in your script:
+
+				  - index.js - xx KiB
+				  - add.wasm - xx KiB
+				  - dependency.js - xx KiB
+				  - message.txt - xx KiB
+
+				  If these are unnecessary, consider removing them
+
+
+				",
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				No bindings found.
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
@@ -11645,6 +11662,9 @@ export default{
 				  If you think this is a bug, please open an issue at:
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 4 largest dependencies included in your script:[0m
 
@@ -11695,9 +11715,43 @@ export default{
 				main: "index.js",
 			});
 
-			await expect(runWrangler("deploy")).rejects.toThrowError(
-				`Your Worker failed validation because it exceeded startup limits.`
-			);
+			await expect(runWrangler("deploy")).rejects.toThrowError();
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYour Worker failed validation because it exceeded startup limits.[0m
+
+
+				  A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions)
+				  failed.
+				   - Error: Script startup exceeded CPU time limit. [code: 10021]
+
+				  To ensure fast responses, there are constraints on Worker startup, such as how much CPU it can
+				  use, or how long it can take. Your Worker has hit one of these startup limits. Try reducing the
+				  amount of work done during startup (outside the event handler), either by removing code or
+				  relocating it inside the event handler.
+
+				  Refer to [4mhttps://developers.cloudflare.com/workers/platform/limits/#worker-startup-time[0m for more
+				  details
+				  A CPU Profile of your Worker's startup phase has been written to
+				  .wrangler/tmp/startup-profile-<HASH>/worker.cpuprofile - load it into the Chrome DevTools profiler
+				  (or directly in VSCode) to view a flamegraph.
+
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
+
+				  Error: Script startup exceeded CPU time limit. [code: 10021]
+
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+				",
+				  "warn": "",
+				}
+			`);
 		});
 
 		describe("unit tests", () => {
