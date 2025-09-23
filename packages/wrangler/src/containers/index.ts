@@ -86,7 +86,7 @@ export const containers = (
 				)(args)
 		)
 		.command(
-			"registry put [DOMAIN]",
+			"registry put <DOMAIN>",
 			// Hide from help by setting description to false
 			// "Add or update credentials for a non-Cloudflare container registry",
 			false,

@@ -1,9 +1,11 @@
+import { http, HttpResponse } from "msw";
 import { mockAccount } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput, mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { useMockStdin } from "../helpers/mock-stdin";
+import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
 describe("containers registry put", () => {
@@ -81,7 +83,7 @@ describe("containers registry put", () => {
 				options: { isSecret: true },
 				result: "test-secret-access-key",
 			});
-
+			mockPutRegistry();
 			await expect(
 				runWrangler(`containers registry put ${awsEcrDomain}`)
 			).resolves.not.toThrow();
@@ -101,6 +103,7 @@ describe("containers registry put", () => {
 				});
 
 				mockStdIn.send(validJson);
+				mockPutRegistry();
 				await runWrangler(`containers registry put ${awsEcrDomain}`);
 			});
 
@@ -140,3 +143,11 @@ describe("containers registry put", () => {
 		});
 	});
 });
+
+const mockPutRegistry = () => {
+	msw.use(
+		http.post("*/accounts/:accountId/containers/registries", async () => {
+			return HttpResponse.json({ success: true });
+		})
+	);
+};
