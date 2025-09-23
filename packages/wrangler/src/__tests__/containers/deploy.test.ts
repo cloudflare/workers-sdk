@@ -81,9 +81,8 @@ describe("wrangler deploy with containers", () => {
 				},
 			],
 		});
-		await expect(
-			runWrangler("deploy index.js")
-		).rejects.toThrowErrorMatchingInlineSnapshot(`
+		await expect(runWrangler("deploy index.js")).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: Image "registry.cloudflare.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/hello:world" does not belong to your account
 			Image belongs to account: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 			Current account: "some-account-id"]
