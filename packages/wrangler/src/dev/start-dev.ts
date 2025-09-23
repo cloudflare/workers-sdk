@@ -247,7 +247,8 @@ async function setupDevEnv(
 			},
 			dev: {
 				auth,
-				remote: !args.forceLocal && args.remote,
+				remote:
+					args.remote || (args.forceLocal || args.local ? false : undefined),
 				server: {
 					hostname: args.ip,
 					port: args.port,
