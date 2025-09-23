@@ -309,7 +309,7 @@ async function resolveConfig(
 			script: input.entrypoint,
 			moduleRoot: input.build?.moduleRoot,
 			// getEntry only needs to know if assets was specified.
-			// The actualy value is not relevant here, which is why not passing
+			// The actual value is not relevant here, which is why not passing
 			// the entire Assets object is fine.
 			assets: input?.assets,
 		},
