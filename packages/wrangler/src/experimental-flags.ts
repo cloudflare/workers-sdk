@@ -4,7 +4,6 @@ import { logger } from "./logger";
 export type ExperimentalFlags = {
 	MULTIWORKER: boolean;
 	RESOURCES_PROVISION: boolean;
-	REMOTE_BINDINGS: boolean;
 	DEPLOY_REMOTE_DIFF_CHECK: boolean;
 	AUTOCREATE_RESOURCES: boolean;
 };

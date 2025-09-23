@@ -242,7 +242,6 @@ export const deployCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? true,
 			DEPLOY_REMOTE_DIFF_CHECK: args.experimentalDeployRemoteDiffCheck ?? false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
