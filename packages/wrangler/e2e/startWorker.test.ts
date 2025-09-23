@@ -70,7 +70,6 @@ describe("DevEnv", { sequential: true }, () => {
 				"src/index.ts": script,
 			});
 
-			console.log("about to start worker");
 			worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -80,7 +79,6 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
-			console.log("worker started");
 
 			let res = await worker.fetch("http://dummy");
 			await expect(res.text()).resolves.toBe("body:1");

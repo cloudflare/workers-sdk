@@ -21,17 +21,7 @@ import type { WranglerCommandOptions } from "./wrangler";
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 export function importWrangler(): Promise<typeof import("../../src/cli")> {
-	try {
-		console.log(`Importing wrangler from ${WRANGLER_IMPORT.href}`);
-		return import(WRANGLER_IMPORT.href);
-	} catch (e) {
-		console.log(`Failed to import wrangler from ${WRANGLER_IMPORT.href}`, {
-			cause: e,
-		});
-		throw e;
-	} finally {
-		console.log(`Finished importing wrangler from ${WRANGLER_IMPORT.href}`);
-	}
+	return import(WRANGLER_IMPORT.href);
 }
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -86,7 +76,6 @@ export class WranglerE2ETestHelper {
 		wranglerCommand: string,
 		{ cwd = this.tmpPath, ...options }: WranglerCommandOptions = {}
 	) {
-		console.log(`Running wrangler command: ${wranglerCommand}`);
 		return runWrangler(wranglerCommand, { cwd, ...options });
 	}
 

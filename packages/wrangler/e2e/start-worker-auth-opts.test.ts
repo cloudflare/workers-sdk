@@ -20,12 +20,9 @@ describe("startWorker - auth options", { sequential: true }, () => {
 		let consoleErrorMock: MockInstance<typeof console.error>;
 
 		beforeEach(async () => {
-			console.log("start of beforeEach");
-			consoleErrorMock = vi
-				.spyOn(console, "error")
-				.mockImplementation((...args) => {
-					console.log("STDERR: ", ...args);
-				});
+			consoleErrorMock = vi.spyOn(console, "error").mockImplementation(() => {
+				// suppress error output during tests - we are going to check for specific error messages in the tests themselves
+			});
 
 			helper = new WranglerE2ETestHelper();
 			const aiWorkerScript = dedent`
@@ -50,7 +47,6 @@ describe("startWorker - auth options", { sequential: true }, () => {
 			await helper.seed({
 				"src/index.js": aiWorkerScript,
 			});
-			console.log("end of beforeEach");
 		});
 
 		afterEach(() => worker?.dispose());
@@ -67,7 +63,6 @@ describe("startWorker - auth options", { sequential: true }, () => {
 				};
 			});
 
-			console.log("about to start worker");
 			worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
 				bindings: {
@@ -85,11 +80,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 				},
 			});
 
-			console.log("worker started");
-
 			await assertValidWorkerAiResponse();
-
-			console.log("validated AI response");
 
 			expect(validAuth).toHaveBeenCalledOnce();
 
@@ -104,13 +95,11 @@ describe("startWorker - auth options", { sequential: true }, () => {
 				};
 			});
 
-			console.log("about to patchConfig with invalid auth");
 			await worker.patchConfig({
 				dev: {
 					auth: incorrectAuth,
 				},
 			});
-			console.log("patchedConfig with invalid auth");
 
 			await assertInvalidWorkerAiResponse();
 
