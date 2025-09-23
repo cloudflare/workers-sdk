@@ -1,4 +1,5 @@
 import { buildImage } from "./build";
+import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginManagedRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
@@ -193,7 +194,7 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 
 	const acceptedRegistries: RegistryPattern[] = [
 		{
-			type: "aws-ecr",
+			type: ExternalRegistryKind.ECR,
 			pattern: /^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com$/,
 			name: "AWS ECR",
 		},
@@ -225,7 +226,7 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 };
 
 interface RegistryPattern {
-	type: "aws-ecr" | "cloudflare";
+	type: ExternalRegistryKind | "cloudflare";
 	pattern: RegExp;
 	name: string;
 }
