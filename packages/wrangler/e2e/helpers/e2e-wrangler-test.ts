@@ -44,7 +44,12 @@ export class WranglerE2ETestHelper {
 
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	importWrangler(): Promise<typeof import("../../src/cli")> {
-		return import(WRANGLER_IMPORT.href);
+		try {
+			console.log(`Importing wrangler from ${WRANGLER_IMPORT.href}`);
+			return import(WRANGLER_IMPORT.href);
+		} finally {
+			console.log(`Finished importing wrangler from ${WRANGLER_IMPORT.href}`);
+		}
 	}
 
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
