@@ -2,10 +2,10 @@ import { http, HttpResponse } from "msw";
 import { mockAccount } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput, mockConsoleMethods } from "../helpers/mock-console";
-import { clearDialogs, mockPrompt } from "../helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { useMockStdin } from "../helpers/mock-stdin";
-import { msw } from "../helpers/msw";
+import { createFetchResult, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
 describe("containers registry put", () => {
@@ -144,10 +144,167 @@ describe("containers registry put", () => {
 	});
 });
 
+describe("containers registry list", () => {
+	const std = mockConsoleMethods();
+	const cliStd = mockCLIOutput();
+	mockAccountId();
+	mockApiToken();
+	const { setIsTTY } = useMockIsTTY();
+	beforeEach(() => {
+		setIsTTY(true);
+		mockAccount();
+	});
+
+	it("should list empty registries", async () => {
+		mockListRegistries([]);
+		await runWrangler("containers registry list");
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ List configured container registries
+			│
+			╰ No external registries configured for this account
+
+			"
+		`);
+	});
+
+	it("should list configured registries", async () => {
+		const mockRegistries = [
+			{ domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com" },
+			{ domain: "987654321098.dkr.ecr.eu-west-1.amazonaws.com" },
+		];
+		mockListRegistries(mockRegistries);
+		await runWrangler("containers registry list");
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ List configured container registries
+			│
+			├ 123456789012.dkr.ecr.us-west-2.amazonaws.com
+			│
+			╰ 987654321098.dkr.ecr.eu-west-1.amazonaws.com
+
+			"
+		`);
+	});
+
+	it("should output JSON when --json flag is used", async () => {
+		const mockRegistries = [
+			{ domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com" },
+		];
+		mockListRegistries(mockRegistries);
+		await runWrangler("containers registry list --json");
+		expect(std.out).toMatchInlineSnapshot(`
+			"[
+			    {
+			        \\"domain\\": \\"123456789012.dkr.ecr.us-west-2.amazonaws.com\\"
+			    }
+			]"
+		`);
+	});
+});
+
+describe("containers registry delete", () => {
+	const cliStd = mockCLIOutput();
+	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
+	mockAccountId();
+	mockApiToken();
+	beforeEach(() => {
+		mockAccount();
+	});
+
+	afterEach(() => {
+		clearDialogs();
+	});
+
+	it("should delete a registry with confirmation", async () => {
+		setIsTTY(true);
+		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
+		mockConfirm({
+			text: `Are you sure you want to delete the registry ${domain}? This action cannot be undone.`,
+			result: true,
+		});
+		mockDeleteRegistry(domain);
+		await runWrangler(`containers registry delete ${domain}`);
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Delete registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
+			│
+			╰ Deleted registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
+
+
+			"
+		`);
+	});
+
+	it("should cancel deletion when user says no", async () => {
+		setIsTTY(true);
+		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
+		mockConfirm({
+			text: `Are you sure you want to delete the registry ${domain}? This action cannot be undone.`,
+			result: false,
+		});
+		await runWrangler(`containers registry delete ${domain}`);
+		expect(cliStd.stdout).toContain("The operation has been cancelled");
+	});
+
+	it("should delete a registry in non-interactive mode without skip confirmation flag", async () => {
+		setIsTTY(false);
+		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
+		mockDeleteRegistry(domain);
+		await runWrangler(`containers registry delete ${domain}`);
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Delete registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
+			│
+			╰ Deleted registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
+
+
+			"
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"? Are you sure you want to delete the registry 123456789012.dkr.ecr.us-west-2.amazonaws.com? This action cannot be undone.
+			🤖 Using fallback value in non-interactive context: yes"
+		`);
+	});
+
+	it("should delete a registry with --skip-confirmation flag", async () => {
+		setIsTTY(true);
+		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
+		mockDeleteRegistry(domain);
+		await runWrangler(
+			`containers registry delete ${domain} --skip-confirmation`
+		);
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Delete registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
+			│
+			╰ Deleted registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
+
+
+			"
+		`);
+	});
+});
+
 const mockPutRegistry = () => {
 	msw.use(
 		http.post("*/accounts/:accountId/containers/registries", async () => {
 			return HttpResponse.json({ success: true });
 		})
+	);
+};
+
+const mockListRegistries = (registries: { domain: string }[]) => {
+	msw.use(
+		http.get("*/accounts/:accountId/containers/registries", async () => {
+			return HttpResponse.json(createFetchResult(registries));
+		})
+	);
+};
+
+const mockDeleteRegistry = (domain: string) => {
+	msw.use(
+		http.delete(
+			`*/accounts/:accountId/containers/registries/${domain}`,
+			async () => {
+				return HttpResponse.json({ success: true });
+			}
+		)
 	);
 };
