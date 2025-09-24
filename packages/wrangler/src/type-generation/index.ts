@@ -549,7 +549,7 @@ export async function generateEnvTypes(
 	if (configToDTS.queues) {
 		if (configToDTS.queues.producers) {
 			for (const queue of configToDTS.queues.producers) {
-				envTypeStructure.push([constructTypeKey(queue.binding), "Queue"]);
+				envTypeStructure.push([constructTypeKey(queue.binding), "Queue<unknown>"]);
 			}
 		}
 	}
