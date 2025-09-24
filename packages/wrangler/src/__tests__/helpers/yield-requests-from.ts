@@ -19,19 +19,15 @@ import type { HttpHandler } from "msw";
  *   // -- inside a test case --
  *   const getScripts = mockGetScripts();
  *
- *   // don't await this yet or you'll miss all the requests!
- *   const done = runWrangler(...);
+ *   await runWrangler(...);
  *
- *   // wait for the first request...
+ *   // make an assertion on the first request...
  *   const {value: request} = await getScripts.next();
  *   await expect(ctx.request.json()).resolves.toEqual(...);
  *
  *   // and the next one too!
  *   const {value: nextRequest} = await getScripts.next();
  *   await expect(nextRequest.json()).resolves.toHaveProperty(...);
- *
- *   // finally, be sure to wait for the run command to finish.
- *   await done;
  */
 export function yieldRequestsFrom(handler: HttpHandler) {
 	return () => {
