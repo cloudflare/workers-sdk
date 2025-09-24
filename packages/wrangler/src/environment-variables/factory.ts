@@ -60,6 +60,8 @@ type VariableNames =
 	| "WRANGLER_BUILD_CONDITIONS"
 	/** Build platform for esbuild (e.g., "node", "browser"). */
 	| "WRANGLER_BUILD_PLATFORM"
+	/** Enable or disable fetch checking. Set to "true" to enable, "false" to disable. */
+	| "WRANGLER_CF_FETCH"
 	/** Path to file-based dev registry folder. */
 	| "WRANGLER_REGISTRY_PATH"
 	/** Additional D1 location choices (internal use). */
