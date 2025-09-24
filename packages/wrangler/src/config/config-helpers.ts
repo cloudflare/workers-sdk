@@ -18,6 +18,8 @@ export type ConfigPaths = {
 	userConfigPath: string | undefined;
 };
 
+export const PATH_TO_DEPLOY_CONFIG = ".wrangler/deploy/config.json";
+
 /**
  * Resolve the path to the configuration file, given the `config` and `script` optional command line arguments.
  * `config` takes precedence, then `script`, then we just use the cwd.
@@ -74,7 +76,6 @@ function findRedirectedWranglerConfig(
 	cwd: string,
 	userConfigPath: string | undefined
 ) {
-	const PATH_TO_DEPLOY_CONFIG = ".wrangler/deploy/config.json";
 	const deployConfigPath = findUpSync(PATH_TO_DEPLOY_CONFIG, { cwd });
 	if (deployConfigPath === undefined) {
 		return userConfigPath;

@@ -28,7 +28,8 @@ import { getMigrationsToUpload } from "../durable";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import {
 	applyServiceAndEnvironmentTags,
-	hasDefinedEnvironments,
+	tagsAreEqual,
+	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "../environments";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
@@ -360,7 +361,7 @@ export default async function deploy(props: Props): Promise<{
 	const { config, accountId, name, entry } = props;
 	let workerTag: string | null = null;
 	let versionId: string | null = null;
-	let tags: string[] | null = null; // arbitrary metadata tags, not to be confused with script tag or annotations
+	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
 
 	let workerExists: boolean = true;
 
@@ -388,7 +389,7 @@ export default async function deploy(props: Props): Promise<{
 				default_environment: { script },
 			} = serviceMetaData;
 			workerTag = script.tag;
-			tags = script.tags;
+			tags = script.tags ?? tags;
 
 			if (script.last_deployed_from === "dash") {
 				let configDiff: ReturnType<typeof getRemoteConfigDiff> | undefined;
@@ -914,20 +915,28 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						undefined
 					);
 
-					// Update tail consumers, logpush, and observability settings
-					await patchNonVersionedScriptSettings(
-						props.config,
-						accountId,
-						scriptName,
-						{
-							tail_consumers: worker.tail_consumers,
-							logpush: worker.logpush,
-							// If the user hasn't specified observability assume that they want it disabled if they have it on.
-							// This is a no-op in the event that they don't have observability enabled, but will remove observability
-							// if it has been removed from their Wrangler configuration file
-							observability: worker.observability ?? { enabled: false },
-						}
-					);
+					// Update service and environment tags when using environments
+					const nextTags = applyServiceAndEnvironmentTags(config, tags);
+
+					try {
+						// Update tail consumers, logpush, and observability settings
+						await patchNonVersionedScriptSettings(
+							props.config,
+							accountId,
+							scriptName,
+							{
+								tail_consumers: worker.tail_consumers,
+								logpush: worker.logpush,
+								// If the user hasn't specified observability assume that they want it disabled if they have it on.
+								// This is a no-op in the event that they don't have observability enabled, but will remove observability
+								// if it has been removed from their Wrangler configuration file
+								observability: worker.observability ?? { enabled: false },
+								tags: nextTags,
+							}
+						);
+					} catch {
+						warnOnErrorUpdatingServiceAndEnvironmentTags();
+					}
 
 					result = {
 						id: null, // fpw - ignore
@@ -961,16 +970,23 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							})
 						)
 					);
-				}
 
-				// Update service and environment tags when using environments
-				if (hasDefinedEnvironments(config)) {
-					await applyServiceAndEnvironmentTags(
-						config,
-						accountId,
-						scriptName,
-						tags
-					);
+					// Update service and environment tags when using environments
+					const nextTags = applyServiceAndEnvironmentTags(config, tags);
+					if (!tagsAreEqual(tags, nextTags)) {
+						try {
+							await patchNonVersionedScriptSettings(
+								props.config,
+								accountId,
+								scriptName,
+								{
+									tags: nextTags,
+								}
+							);
+						} catch {
+							warnOnErrorUpdatingServiceAndEnvironmentTags();
+						}
+					}
 				}
 
 				if (result.startup_time_ms) {

@@ -278,7 +278,7 @@ export function normalizeAndValidateConfig(
 	const config: Config = {
 		configPath,
 		userConfigPath,
-		topLevelName: rawConfig.name,
+		topLevelName: isRedirectedConfig ? rawConfig.topLevelName : rawConfig.name,
 		definedEnvironments: isRedirectedConfig
 			? rawConfig.definedEnvironments
 			: definedEnvironments,

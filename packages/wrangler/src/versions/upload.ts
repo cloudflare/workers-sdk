@@ -35,7 +35,8 @@ import {
 } from "../environment-variables/misc-variables";
 import {
 	applyServiceAndEnvironmentTags,
-	hasDefinedEnvironments,
+	tagsAreEqual,
+	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "../environments";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
@@ -62,6 +63,7 @@ import { getScriptName } from "../utils/getScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
+import { patchNonVersionedScriptSettings } from "./api";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
@@ -414,7 +416,7 @@ export default async function versionsUpload(props: Props): Promise<{
 	const { config, accountId, name } = props;
 	let versionId: string | null = null;
 	let workerTag: string | null = null;
-	let tags: string[] | null = null; // arbitrary metadata tags, not to be confused with script tag or annotations
+	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
 
 	if (accountId && name) {
 		try {
@@ -434,7 +436,7 @@ export default async function versionsUpload(props: Props): Promise<{
 			);
 
 			workerTag = script.tag;
-			tags = script.tags;
+			tags = script.tags ?? tags;
 
 			if (script.last_deployed_from === "dash") {
 				logger.warn(
@@ -837,13 +839,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}
 
 			// Update service and environment tags when using environments
-			if (hasDefinedEnvironments(config)) {
-				await applyServiceAndEnvironmentTags(
-					config,
-					accountId,
-					scriptName,
-					tags
-				);
+
+			const nextTags = applyServiceAndEnvironmentTags(config, tags);
+			if (!tagsAreEqual(tags, nextTags)) {
+				try {
+					await patchNonVersionedScriptSettings(config, accountId, scriptName, {
+						tags: nextTags,
+					});
+				} catch {
+					warnOnErrorUpdatingServiceAndEnvironmentTags();
+				}
 			}
 		}
 		if (props.outFile) {
