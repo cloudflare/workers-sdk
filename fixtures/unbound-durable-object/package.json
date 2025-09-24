@@ -4,7 +4,7 @@
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
-		"test:ci": "vitest"
+		"test:ci": "vitest run"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
