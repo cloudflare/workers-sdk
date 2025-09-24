@@ -39,6 +39,8 @@ export async function confirm(
 		name: "value",
 		message: text,
 		initial: defaultValue,
+		stdin: process.stdin,
+		stdout: process.stdout,
 		onState: (state) => {
 			if (state.aborted) {
 				process.nextTick(() => {
@@ -77,6 +79,8 @@ export async function prompt(
 		message: text,
 		initial: options?.defaultValue,
 		style: options?.isSecret ? "password" : "default",
+		stdin: process.stdin,
+		stdout: process.stdout,
 		onState: (state) => {
 			if (state.aborted) {
 				process.nextTick(() => {
@@ -123,6 +127,8 @@ export async function select<Values extends string>(
 		message: text,
 		choices: options.choices,
 		initial: options.defaultOption,
+		stdin: process.stdin,
+		stdout: process.stdout,
 		onState: (state) => {
 			if (state.aborted) {
 				process.nextTick(() => {
@@ -167,6 +173,8 @@ export async function multiselect<Values extends string>(
 		choices: options.choices,
 		instructions: false,
 		hint: "- Space to select. Return to submit",
+		stdin: process.stdin,
+		stdout: process.stdout,
 		onState: (state) => {
 			if (state.aborted) {
 				process.nextTick(() => {
