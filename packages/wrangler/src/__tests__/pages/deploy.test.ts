@@ -5758,3 +5758,277 @@ function mockGetProjectHandler(
 		{ once: true }
 	);
 }
+describe("git branch detection debug logs", () => {
+	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
+	runInTempDir();
+	mockAccountId();
+	mockApiToken();
+
+	beforeEach(() => {
+		vi.stubEnv("CI", "false");
+		vi.stubEnv("WRANGLER_LOG", "debug");
+		vi.stubEnv("WRANGLER_LOG_SANITIZE", "false");
+		setIsTTY(false);
+	});
+
+	it("should log debug information when detecting git branch automatically", async () => {
+		await execa("git", ["init"]);
+		await execa("git", ["config", "user.email", "test@example.com"]);
+		await execa("git", ["config", "user.name", "Test User"]);
+		writeFileSync("index.html", "<h1>Hello</h1>");
+		await execa("git", ["add", "."]);
+		await execa("git", ["commit", "-m", "Initial commit"]);
+		await execa("git", ["checkout", "-b", "feature-branch"]);
+
+		mockGetUploadTokenRequest("test-token", "some-account-id", "test-project");
+
+		msw.use(
+			http.get("*/accounts/:accountId/pages/projects/test-project", () =>
+				HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {
+						name: "test-project",
+						id: "test-project-id",
+						subdomain: "test-project.pages.dev",
+						domains: ["test-project.pages.dev"],
+						source: {
+							type: "github",
+							config: {
+								owner: "test-owner",
+								repo_name: "test-repo",
+								production_branch: "main",
+							},
+						},
+						build_config: {
+							build_command: "",
+							destination_dir: "dist",
+							root_dir: "",
+						},
+						deployment_configs: {
+							preview: {},
+							production: {},
+						},
+					},
+				})
+			),
+			http.post("*/pages/assets/check-missing", () =>
+				HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: [],
+				})
+			),
+			http.post("*/pages/assets/upsert-hashes", () =>
+				HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: true,
+				})
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/test-project/deployments",
+				() =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { id: "test-id", url: "https://test.pages.dev" },
+					})
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/test-project/deployments/:deploymentId",
+				() =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { latest_stage: { name: "deploy", status: "success" } },
+					})
+			)
+		);
+
+		await runWrangler("pages deploy . --project-name=test-project");
+
+		expect(std.debug).toContain("Git working directory is clean");
+		expect(std.debug).toContain("Detected git branch: feature-branch");
+		expect(std.debug).toContain("Detected commit hash:");
+		expect(std.debug).toContain("Detected commit message: Initial commit");
+	});
+
+	it("should log debug information when using provided branch and commit values", async () => {
+		await execa("git", ["init"]);
+		await execa("git", ["config", "user.email", "test@example.com"]);
+		await execa("git", ["config", "user.name", "Test User"]);
+		writeFileSync("index.html", "<h1>Hello</h1>");
+		await execa("git", ["add", "."]);
+		await execa("git", ["commit", "-m", "Test commit"]);
+
+		mockGetUploadTokenRequest("test-token", "some-account-id", "test-project");
+
+		msw.use(
+			http.get("*/accounts/:accountId/pages/projects/test-project", () =>
+				HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {
+						name: "test-project",
+						id: "test-project-id",
+						subdomain: "test-project.pages.dev",
+						domains: ["test-project.pages.dev"],
+						source: {
+							type: "github",
+							config: {
+								owner: "test-owner",
+								repo_name: "test-repo",
+								production_branch: "main",
+							},
+						},
+						build_config: {
+							build_command: "",
+							destination_dir: "dist",
+							root_dir: "",
+						},
+						deployment_configs: {
+							preview: {},
+							production: {},
+						},
+					},
+				})
+			),
+			http.post("*/pages/assets/check-missing", () =>
+				HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: [],
+				})
+			),
+			http.post("*/pages/assets/upsert-hashes", () =>
+				HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: true,
+				})
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/test-project/deployments",
+				() =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { id: "test-id", url: "https://test.pages.dev" },
+					})
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/test-project/deployments/:deploymentId",
+				() =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { latest_stage: { name: "deploy", status: "success" } },
+					})
+			)
+		);
+
+		await runWrangler(
+			"pages deploy . --project-name=test-project --branch=custom-branch --commit-hash=abc123 --commit-message='Custom message'"
+		);
+
+		expect(std.debug).toContain("Using provided branch: custom-branch");
+		expect(std.debug).toContain("Using provided commit hash: abc123");
+		expect(std.debug).toContain(
+			"Using provided commit message: Custom message"
+		);
+	});
+
+	it("should log debug information when git commands fail", async () => {
+		await execa("git", ["init"]);
+		await execa("git", ["config", "user.email", "test@example.com"]);
+		await execa("git", ["config", "user.name", "Test User"]);
+		writeFileSync("index.html", "<h1>Hello</h1>");
+
+		mockGetUploadTokenRequest("test-token", "some-account-id", "test-project");
+
+		msw.use(
+			http.get("*/accounts/:accountId/pages/projects/test-project", () =>
+				HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {
+						name: "test-project",
+						id: "test-project-id",
+						subdomain: "test-project.pages.dev",
+						domains: ["test-project.pages.dev"],
+						source: {
+							type: "github",
+							config: {
+								owner: "test-owner",
+								repo_name: "test-repo",
+								production_branch: "main",
+							},
+						},
+						build_config: {
+							build_command: "",
+							destination_dir: "dist",
+							root_dir: "",
+						},
+						deployment_configs: {
+							preview: {},
+							production: {},
+						},
+					},
+				})
+			),
+			http.post("*/pages/assets/check-missing", () =>
+				HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: [],
+				})
+			),
+			http.post("*/pages/assets/upsert-hashes", () =>
+				HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: true,
+				})
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/test-project/deployments",
+				() =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { id: "test-id", url: "https://test.pages.dev" },
+					})
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/test-project/deployments/:deploymentId",
+				() =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { latest_stage: { name: "deploy", status: "success" } },
+					})
+			)
+		);
+
+		await runWrangler("pages deploy . --project-name=test-project");
+
+		expect(std.debug).toContain("Failed to retrieve git information:");
+	});
+});

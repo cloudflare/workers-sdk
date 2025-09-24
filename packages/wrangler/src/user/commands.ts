@@ -1,4 +1,4 @@
-import { createCommand } from "../core/create-command";
+import { createCommand, createNamespace } from "../core/create-command";
 import { CommandLineArgsError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -10,6 +10,14 @@ import {
 	validateScopeKeys,
 } from "./user";
 import { whoami } from "./whoami";
+
+export const authNamespace = createNamespace({
+	metadata: {
+		description: "🔐 Commands for authentication",
+		owner: "Workers: Authoring and Testing",
+		status: "stable",
+	},
+});
 
 export const loginCommand = createCommand({
 	metadata: {
@@ -138,7 +146,7 @@ export const authTokenCommand = createCommand({
 	behaviour: {
 		printConfigWarnings: false,
 	},
-	async handler(_, { config }) {
+	async handler() {
 		const credentials = getAPIToken();
 		if (!credentials) {
 			throw new Error("No API token found. Please run 'wrangler login' first.");
@@ -147,11 +155,7 @@ export const authTokenCommand = createCommand({
 		if ("apiToken" in credentials) {
 			logger.log(credentials.apiToken);
 		} else {
-			logger.log(credentials.authKey);
+			throw new Error("No API token found. Please run 'wrangler login' first.");
 		}
-
-		metrics.sendMetricsEvent("auth token", {
-			sendMetrics: config.send_metrics,
-		});
 	},
 });
