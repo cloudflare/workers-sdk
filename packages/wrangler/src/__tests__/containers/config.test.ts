@@ -679,7 +679,8 @@ describe("getNormalizedContainerOptions", () => {
 			await expect(getNormalizedContainerOptions(config, {})).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
 				[Error: docker.io is not a supported image registry.
-				Currently we support the following non-Cloudflare registries: AWS ECR.]
+				Currently we support the following non-Cloudflare registries: AWS ECR.
+				To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images]
 			`);
 		});
 		it("should not try and add an account id to non containers registry uris", async () => {
