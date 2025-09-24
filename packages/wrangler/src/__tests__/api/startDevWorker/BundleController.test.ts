@@ -55,9 +55,7 @@ describe("BundleController", () => {
 	beforeEach(() => {
 		controller = new BundlerController();
 	});
-	afterEach(async () => {
-		await controller.teardown();
-	});
+	afterEach(() => controller.teardown());
 
 	describe("happy path bundle + watch", () => {
 		test("single ts source file", async () => {

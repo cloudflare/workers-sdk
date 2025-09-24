@@ -23,6 +23,14 @@ describe("ConfigController", () => {
 	mockAccountId();
 	mockApiToken();
 
+	// We are not using `test.extend` or `onTestFinished` helpers here to create and tear down
+	// the controller because these run the teardown after all the `afterEach()` blocks have run.
+	// This means that the controller doesn't get torn down until after the temporary directory has been
+	// removed.
+	// And so the file watchers that the controller creates can randomly fail because they are trying to
+	// watch files in a directory that no longer exists.
+	// By doing it ourselves in `beforeEach()` and `afterEach()` we can ensure the controller
+	// is torn down before the temporary directory is removed.
 	let controller: ConfigController;
 	beforeEach(() => {
 		controller = new ConfigController();
