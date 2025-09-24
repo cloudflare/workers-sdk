@@ -232,7 +232,5 @@ base_dir = \"./some/base_dir\"`,
 			accountId: "1234567890",
 			apiToken: { apiToken: "some-api-token" },
 		});
-
-		await controller.teardown();
 	});
 });
