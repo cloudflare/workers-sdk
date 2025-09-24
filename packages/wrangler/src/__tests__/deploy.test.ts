@@ -17,6 +17,7 @@ import { sniffUserAgent } from "../package-manager";
 import { ParseError } from "../parse";
 import { writeAuthConfigFile } from "../user";
 import { diagnoseScriptSizeError } from "../utils/friendly-validator-errors";
+import { captureRequestsFrom } from "./helpers/capture-requests-from";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -64,7 +65,6 @@ import {
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
-import { yieldRequestsFrom } from "./helpers/yield-requests-from";
 import type { AssetManifest } from "../assets";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
@@ -13394,11 +13394,9 @@ export default{
 
 			await runWrangler("deploy");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
-				"cf:service=test-name",
-			]);
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", ["cf:service=test-name"]);
 		});
 
 		test("has environments, no existing tags, named env", async () => {
@@ -13420,9 +13418,9 @@ export default{
 
 			await runWrangler("deploy --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", [
 				"cf:service=test-name",
 				"cf:environment=production",
 			]);
@@ -13444,12 +13442,9 @@ export default{
 
 			await runWrangler("deploy");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
-				"some-tag",
-				"cf:service=test-name",
-			]);
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", ["some-tag", "cf:service=test-name"]);
 		});
 
 		test("has environments, missing tags, named env", async () => {
@@ -13471,9 +13466,9 @@ export default{
 
 			await runWrangler("deploy --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", [
 				"some-tag",
 				"cf:service=test-name",
 				"cf:environment=production",
@@ -13499,9 +13494,9 @@ export default{
 
 			await runWrangler("deploy --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", [
 				"some-tag",
 				"cf:service=test-name",
 				"cf:environment=production",
@@ -13524,12 +13519,9 @@ export default{
 
 			await runWrangler("deploy");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
-				"some-tag",
-				"cf:service=test-name",
-			]);
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", ["some-tag", "cf:service=test-name"]);
 		});
 
 		test("has environments, stale service tag, named env", async () => {
@@ -13555,9 +13547,9 @@ export default{
 
 			await runWrangler("deploy --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", [
 				"some-tag",
 				"cf:service=test-name",
 				"cf:environment=production",
@@ -13584,12 +13576,9 @@ export default{
 
 			await runWrangler("deploy");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
-				"some-tag",
-				"cf:service=test-name",
-			]);
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", ["some-tag", "cf:service=test-name"]);
 		});
 
 		test("has environments, stale environment tag, named env", async () => {
@@ -13615,9 +13604,9 @@ export default{
 
 			await runWrangler("deploy --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", [
 				"some-tag",
 				"cf:service=test-name",
 				"cf:environment=production",
@@ -13640,12 +13629,9 @@ export default{
 
 			await runWrangler("deploy");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
-				"some-tag",
-				"cf:service=test-name",
-			]);
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", ["some-tag", "cf:service=test-name"]);
 		});
 
 		test("has environments, has expected tags, named env", async () => {
@@ -13671,9 +13657,9 @@ export default{
 
 			await runWrangler("deploy --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", [
 				"some-tag",
 				"cf:service=test-name",
 				"cf:environment=production",
@@ -13697,11 +13683,9 @@ export default{
 
 			await runWrangler("deploy");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
-				"some-tag",
-			]);
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", ["some-tag"]);
 		});
 
 		test("no top-level name", async () => {
@@ -13725,11 +13709,9 @@ export default{
 
 			await runWrangler("deploy --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
-				"some-tag",
-			]);
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", ["some-tag"]);
 
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in Wrangler configuration. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
@@ -13808,9 +13790,9 @@ export default{
 
 			await runWrangler("deploy");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toHaveProperty("tags", [
+			await expect(
+				patchScriptSettings.requests[0].json()
+			).resolves.toHaveProperty("tags", [
 				"some-tag",
 				"cf:service=test-name",
 				"cf:environment=production",
@@ -14598,7 +14580,7 @@ function mockGetScriptWithTags(tags: string[] | null) {
 	);
 }
 
-const mockPatchScriptSettings = yieldRequestsFrom(
+const mockPatchScriptSettings = captureRequestsFrom(
 	http.patch(
 		`*/accounts/:accountId/workers/scripts/:scriptName/script-settings`,
 		async ({ request }) => {

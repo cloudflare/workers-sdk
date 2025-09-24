@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
+import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -18,7 +19,6 @@ import {
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "../helpers/write-wrangler-config";
-import { yieldRequestsFrom } from "../helpers/yield-requests-from";
 import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
 
 describe("versions upload", () => {
@@ -64,7 +64,7 @@ describe("versions upload", () => {
 		});
 	}
 
-	const mockPatchScriptSettings = yieldRequestsFrom(
+	const mockPatchScriptSettings = captureRequestsFrom(
 		http.patch(
 			`*/accounts/:accountId/workers/scripts/:scriptName/script-settings`,
 			async ({ request }) => {
@@ -337,9 +337,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["cf:service=test-name"],
 			});
 		});
@@ -359,9 +357,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["cf:service=test-name", "cf:environment=production"],
 			});
 		});
@@ -381,9 +377,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["some-tag", "cf:service=test-name"],
 			});
 		});
@@ -403,9 +397,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["some-tag", "cf:service=test-name", "cf:environment=production"],
 			});
 		});
@@ -425,9 +417,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["some-tag", "cf:service=test-name", "cf:environment=production"],
 			});
 		});
@@ -447,9 +437,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["some-tag", "cf:service=test-name"],
 			});
 		});
@@ -473,9 +461,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["some-tag", "cf:service=test-name", "cf:environment=production"],
 			});
 		});
@@ -499,9 +485,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["some-tag", "cf:service=test-name"],
 			});
 		});
@@ -525,9 +509,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["some-tag", "cf:service=test-name", "cf:environment=production"],
 			});
 		});
@@ -547,9 +529,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload");
 
-			const resolve = vi.fn();
-			patchScriptSettings.next().then(resolve);
-			expect(resolve).not.toHaveBeenCalled();
+			expect(patchScriptSettings.requests.length).toBe(0);
 		});
 
 		test("has environments, has expected tags, named env", async () => {
@@ -571,9 +551,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --env production");
 
-			const resolve = vi.fn();
-			patchScriptSettings.next().then(resolve);
-			expect(resolve).not.toHaveBeenCalled();
+			expect(patchScriptSettings.requests.length).toBe(0);
 		});
 
 		test("no environments", async () => {
@@ -592,9 +570,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["some-tag"],
 			});
 		});
@@ -616,9 +592,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["some-tag"],
 			});
 
@@ -661,9 +635,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["some-tag", "cf:service=test-name", "cf:environment=production"],
 			});
 
@@ -689,7 +661,7 @@ describe("versions upload", () => {
 				},
 			});
 
-			const patchScriptSettings = yieldRequestsFrom(
+			const patchScriptSettings = captureRequestsFrom(
 				http.patch(
 					`*/accounts/:accountId/workers/scripts/:scriptName/script-settings`,
 					() => HttpResponse.error()
@@ -698,9 +670,7 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --env production");
 
-			const { value: request } = await patchScriptSettings.next();
-
-			await expect(request.json()).resolves.toEqual({
+			await expect(patchScriptSettings.requests[0].json()).resolves.toEqual({
 				tags: ["some-tag", "cf:service=test-name", "cf:environment=production"],
 			});
 
