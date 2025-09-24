@@ -104,7 +104,7 @@ export function getWranglerTmpDir(
 	cleanup = true
 ): EphemeralDirectory {
 	const customTmpDir = process.env.WRANGLER_TMP_DIR;
-	const tmpRoot = customTmpDir 
+	const tmpRoot = customTmpDir
 		? path.resolve(customTmpDir)
 		: path.join(getWranglerHiddenDirPath(projectRoot), "tmp");
 	fs.mkdirSync(tmpRoot, { recursive: true });

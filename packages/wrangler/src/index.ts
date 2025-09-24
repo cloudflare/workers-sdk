@@ -298,6 +298,7 @@ import { triggersDeployCommand, triggersNamespace } from "./triggers";
 import { typesCommand } from "./type-generation";
 import { getAuthFromEnv } from "./user";
 import {
+	authNamespace,
 	authTokenCommand,
 	loginCommand,
 	logoutCommand,
@@ -1536,6 +1537,10 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("whoami");
 
 	registry.define([
+		{
+			command: "wrangler auth",
+			definition: authNamespace,
+		},
 		{
 			command: "wrangler auth token",
 			definition: authTokenCommand,
