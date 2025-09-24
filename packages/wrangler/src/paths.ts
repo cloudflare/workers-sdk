@@ -87,6 +87,9 @@ export interface EphemeralDirectory {
 export function getWranglerHiddenDirPath(
 	projectRoot: string | undefined
 ): string {
+	if (process.env.WRANGLER_HIDDEN_DIR) {
+		return process.env.WRANGLER_HIDDEN_DIR;
+	}
 	projectRoot ??= process.cwd();
 	return path.join(projectRoot, ".wrangler");
 }

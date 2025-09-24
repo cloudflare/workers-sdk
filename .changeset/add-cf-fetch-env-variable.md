@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Fetch checking can now be controlled via the `WRANGLER_CF_FETCH` environment variable. Set to "true" to enable fetch checking or "false" to disable it, overriding the default behavior based on compatibility date and flags. This provides a convenient way to control fetch validation without modifying configuration files.
+The `CLOUDFLARE_CF` environment variable can now be used to provide a custom path for caching CF objects during local development. When set to a string, this path will be passed to miniflare's `cf` option for fetching and caching real CF objects, providing more control over CF object handling in local development.

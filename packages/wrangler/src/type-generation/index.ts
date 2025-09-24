@@ -549,10 +549,29 @@ export async function generateEnvTypes(
 	if (configToDTS.queues) {
 		if (configToDTS.queues.producers) {
 			for (const queue of configToDTS.queues.producers) {
-				envTypeStructure.push([
-					constructTypeKey(queue.binding),
-					"Queue<unknown>",
-				]);
+				const queueConsumerEntry = serviceEntries?.get(queue.queue);
+
+				let typeName: string;
+
+				if (queueConsumerEntry) {
+					const importPath = generateImportSpecifier(
+						fullOutputPath,
+						queueConsumerEntry.file
+					);
+					const hasQueueHandler = queueConsumerEntry.exports?.some(
+						(e) => e === "default" || e.includes("queue") || e.includes("Queue")
+					);
+
+					if (importPath && hasQueueHandler) {
+						typeName = `Queue<any> /* inferred from ${queue.queue} consumer */`;
+					} else {
+						typeName = `Queue<unknown> /* ${queue.queue} */`;
+					}
+				} else {
+					typeName = "Queue<unknown>";
+				}
+
+				envTypeStructure.push([constructTypeKey(queue.binding), typeName]);
 			}
 		}
 	}

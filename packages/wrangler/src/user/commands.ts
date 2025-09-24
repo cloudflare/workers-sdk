@@ -1,5 +1,5 @@
 import { createCommand, createNamespace } from "../core/create-command";
-import { CommandLineArgsError } from "../errors";
+import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import {
@@ -149,13 +149,17 @@ export const authTokenCommand = createCommand({
 	async handler() {
 		const credentials = getAPIToken();
 		if (!credentials) {
-			throw new Error("No API token found. Please run 'wrangler login' first.");
+			throw new UserError(
+				"No API token found. Please run 'wrangler login' first."
+			);
 		}
 
 		if ("apiToken" in credentials) {
 			logger.log(credentials.apiToken);
 		} else {
-			throw new Error("No API token found. Please run 'wrangler login' first.");
+			throw new UserError(
+				"No API token found. Please run 'wrangler login' first."
+			);
 		}
 	},
 });

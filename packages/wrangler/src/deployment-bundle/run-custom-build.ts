@@ -28,8 +28,6 @@ export async function runCustomBuild(
 				...process.env,
 				...(targetConsumer && {
 					WRANGLER_BUILD_TARGET: targetConsumer,
-					WRANGLER_IS_DEV: targetConsumer === "dev" ? "true" : "false",
-					WRANGLER_IS_DEPLOY: targetConsumer === "deploy" ? "true" : "false",
 				}),
 			};
 			const res = execaCommand(build.command, {
