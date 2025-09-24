@@ -15,7 +15,8 @@ export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>
 ): Promise<{ abort: () => void; ready: Promise<void> }> {
-	await dockerLoginManagedRegistry(dockerPath);
+	const domain = new URL(`http://${options.image_uri}`).hostname;
+	await dockerLoginManagedRegistry(dockerPath, domain);
 	const pull = runDockerCmd(dockerPath, [
 		"pull",
 		options.image_uri,

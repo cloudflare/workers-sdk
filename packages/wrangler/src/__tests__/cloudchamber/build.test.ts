@@ -236,7 +236,8 @@ describe("buildAndMaybePush", () => {
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 		expect(dockerLoginManagedRegistry).toHaveBeenCalledWith(
-			"/custom/docker/path"
+			"/custom/docker/path",
+			"registry.cloudflare.com"
 		);
 	});
 
