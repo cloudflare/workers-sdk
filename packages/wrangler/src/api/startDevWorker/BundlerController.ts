@@ -342,9 +342,36 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			});
 		}
 
-		void this.#startCustomBuild(event.config);
-		void this.#startBundle(event.config);
-		void this.#ensureWatchingAssets(event.config);
+		void this.#startCustomBuild(event.config).catch((err) => {
+			logger.error("Failed to run custom build:", err);
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Failed to run custom build",
+				cause: castErrorCause(err),
+				source: "BundlerController",
+				data: { config: event.config },
+			});
+		});
+		void this.#startBundle(event.config).catch((err) => {
+			logger.error("Failed to start bundler:", err);
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Failed to start bundler",
+				cause: castErrorCause(err),
+				source: "BundlerController",
+				data: { config: event.config },
+			});
+		});
+		void this.#ensureWatchingAssets(event.config).catch((err) => {
+			logger.error("Failed to watch assets:", err);
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Failed to watch assets",
+				cause: castErrorCause(err),
+				source: "BundlerController",
+				data: { config: event.config },
+			});
+		});
 	}
 
 	async teardown() {

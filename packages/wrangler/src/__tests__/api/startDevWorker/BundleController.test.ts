@@ -19,7 +19,9 @@ function findSourceFile(source: string, name: string): string {
 async function waitForBundleComplete(
 	controller: BundlerController
 ): Promise<BundleCompleteEvent> {
+	console.dir("Setting up wait for bundle complete");
 	const [event] = await once(controller, "bundleComplete");
+	console.dir("Bundle complete event received");
 	return event;
 }
 
@@ -54,6 +56,9 @@ describe("BundleController", () => {
 	let controller: BundlerController;
 	beforeEach(() => {
 		controller = new BundlerController();
+		controller.on("error", (err) => {
+			console.dir("Controller error: " + err);
+		});
 	});
 	afterEach(() => controller.teardown());
 
