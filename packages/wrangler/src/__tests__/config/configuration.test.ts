@@ -2497,7 +2497,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						containers: [
 							{
-								image: "docker.io/something:hello",
+								image: "registry.cloudflare.com/something:hello",
 							},
 						],
 					} as unknown as RawConfig,
@@ -2519,7 +2519,7 @@ describe("normalizeAndValidateConfig()", () => {
 						name: "test-worker-name",
 						containers: [
 							{
-								image: "docker.io/something:hello",
+								image: "registry.cloudflare.com/something:hello",
 								class_name: "test-class",
 							},
 						],
@@ -2535,7 +2535,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						class_name: "test-class",
 						name: "test-worker-name-test-class",
-						image: "docker.io/something:hello",
+						image: "registry.cloudflare.com/something:hello",
 						image_build_context: undefined,
 					},
 				]);
@@ -2689,7 +2689,7 @@ describe("normalizeAndValidateConfig()", () => {
 							containers: [
 								{
 									class_name: "test-class",
-									image: "docker.io/test:latest",
+									image: "registry.cloudflare.com/test:latest",
 									rollout_step_percentage: value.value,
 								},
 							],
@@ -2711,7 +2711,7 @@ describe("normalizeAndValidateConfig()", () => {
 						containers: [
 							{
 								class_name: "test-class",
-								image: "docker.io/test:latest",
+								image: "registry.cloudflare.com/test:latest",
 								rollout_step_percentage: 15,
 							},
 						],
@@ -2735,7 +2735,7 @@ describe("normalizeAndValidateConfig()", () => {
 						containers: [
 							{
 								class_name: "test-class",
-								image: "docker.io/test:latest",
+								image: "registry.cloudflare.com/test:latest",
 								rollout_step_percentage: [20, 30, 1, 101],
 							},
 						],

@@ -22,7 +22,7 @@ describe("containers registry put", () => {
 		clearDialogs();
 	});
 
-	it("should not show in help", async () => {
+	it("should not show in top level help (remove this when ready for public)", async () => {
 		await runWrangler("containers --help");
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers
@@ -49,7 +49,8 @@ describe("containers registry put", () => {
 		await expect(runWrangler(`containers registry put docker.io`)).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: docker.io is not a supported image registry.
-			Currently we support the following non-Cloudflare registries: AWS ECR.]
+			Currently we support the following non-Cloudflare registries: AWS ECR.
+			To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images]
 		`);
 	});
 

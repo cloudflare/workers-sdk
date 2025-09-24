@@ -1,7 +1,8 @@
 import { buildImage } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
+import { UserError } from "./error";
 import { getCloudflareContainerRegistry } from "./knobs";
-import { dockerLoginManagedRegistry } from "./login";
+import { dockerLoginImageRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
 import {
 	checkExposedPorts,
@@ -15,7 +16,8 @@ export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>
 ): Promise<{ abort: () => void; ready: Promise<void> }> {
-	await dockerLoginManagedRegistry(dockerPath);
+	const domain = new URL(`http://${options.image_uri}`).hostname;
+	await dockerLoginImageRegistry(dockerPath, domain);
 	const pull = runDockerCmd(dockerPath, [
 		"pull",
 		options.image_uri,
@@ -92,12 +94,6 @@ export async function prepareContainerImagesForDev(args: {
 				containerOptions: options,
 			});
 		} else {
-			if (!isCloudflareRegistryLink(options.image_uri)) {
-				throw new UserError(
-					`Image "${options.image_uri}" is a registry link but does not point to the Cloudflare container registry.\n` +
-						`To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images`
-				);
-			}
 			const pull = await pullImage(dockerPath, options);
 			onContainerImagePreparationStart({
 				containerOptions: options,
@@ -179,7 +175,7 @@ export function resolveImageName(accountId: string, image: string): string {
 export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 	if (domain.includes("://")) {
 		throw new Error(
-			`${domain} is invalid:\nImage reference should not include the protocol part (e.g: docker.io rather than https://docker.io)`
+			`${domain} is invalid:\nImage reference should not include the protocol part (e.g: registry.cloudflare.com rather than https://registry.cloudflare.com)`
 		);
 	}
 	let url: URL;
@@ -217,8 +213,8 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 			.filter((r) => r.type !== "cloudflare")
 			.map((r) => r.name)
 			.join(", ");
-		throw new Error(
-			`${url.hostname} is not a supported image registry.\nCurrently we support the following non-Cloudflare registries: ${supportedRegistries}.`
+		throw new UserError(
+			`${url.hostname} is not a supported image registry.\nCurrently we support the following non-Cloudflare registries: ${supportedRegistries}.\nTo use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images`
 		);
 	}
 

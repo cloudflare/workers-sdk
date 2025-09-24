@@ -16,7 +16,7 @@ import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { parseJSON } from "../parse";
+import { APIError, parseJSON } from "../parse";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { containersScope } from ".";
 import type {
@@ -28,9 +28,7 @@ export const registryCommands = (yargs: CommonYargsArgv) => {
 	return yargs
 		.command(
 			"put <DOMAIN>",
-			// Hide from help by setting description to false
-			// "Add or update credentials for a non-Cloudflare container registry",
-			false,
+			"Add or update credentials for a non-Cloudflare container registry",
 			(args) => registryPutYargs(args),
 			(args) =>
 				handleFailure(
@@ -41,7 +39,7 @@ export const registryCommands = (yargs: CommonYargsArgv) => {
 		)
 		.command(
 			"list",
-			false,
+			"List all configured container registries",
 			(args) => registryListYargs(args),
 			(args) =>
 				handleFailure(
@@ -52,7 +50,7 @@ export const registryCommands = (yargs: CommonYargsArgv) => {
 		)
 		.command(
 			"delete <DOMAIN>",
-			false,
+			"Delete a configured container registry",
 			(args) => registryDeleteYargs(args),
 			(args) =>
 				handleFailure(
@@ -104,6 +102,11 @@ async function registryPutCommand(
 		);
 	} catch (e) {
 		if (e instanceof ApiError) {
+			if (e.status === 409) {
+				throw new UserError(
+					`A registry with the domain ${configureArgs.DOMAIN} already exists. Use "wrangler containers registry delete ${configureArgs.DOMAIN}" to delete it first if you want to reconfigure it.`
+				);
+			}
 			throw new FatalError(e.body.error ?? "Unknown API error");
 		} else {
 			throw e;
@@ -243,7 +246,12 @@ async function registryDeleteCommand(
 		);
 	} catch (e) {
 		if (e instanceof ApiError) {
-			throw new FatalError(e.body.error ?? "Unknown API error");
+			if (e.status === 404) {
+				throw new UserError(
+					`The registry ${deleteArgs.DOMAIN} does not exist.`
+				);
+			}
+			throw new APIError(e.body.error ?? "Unknown API error");
 		} else {
 			throw e;
 		}

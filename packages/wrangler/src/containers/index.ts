@@ -87,6 +87,7 @@ export const containers = (
 		)
 		.command(
 			"registry",
+			// hide for now so it doesn't show up in help while we test
 			// "Configure and manage non-Cloudflare registries",
 			false,
 			(args) => registryCommands(args).command(subHelp)
