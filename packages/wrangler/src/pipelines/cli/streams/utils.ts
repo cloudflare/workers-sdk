@@ -135,8 +135,8 @@ function generateSampleValue(field: SchemaField): SampleValue {
 			return 42;
 		case "int64":
 			return "9223372036854775807"; // Large numbers as strings to avoid JS precision issues
-		case "f32":
-		case "f64":
+		case "float32":
+		case "float64":
 			return 3.14;
 		case "json":
 			return { example: "json_value" };

@@ -137,8 +137,8 @@ export type SchemaField = {
 		| "bool"
 		| "int32"
 		| "int64"
-		| "f32"
-		| "f64"
+		| "float32"
+		| "float64"
 		| "string"
 		| "timestamp"
 		| "json"
@@ -169,7 +169,7 @@ export type Sink = {
 			time_pattern: string;
 		};
 		rolling_policy?: {
-			file_size_bytes: number;
+			file_size_bytes?: number;
 			interval_seconds: number;
 		};
 		// r2_data_catalog specific fields
@@ -207,7 +207,7 @@ export interface CreateSinkRequest {
 			time_pattern: string;
 		};
 		rolling_policy?: {
-			file_size_bytes: number;
+			file_size_bytes?: number;
 			interval_seconds: number;
 		};
 		// R2 credentials (for r2 type)

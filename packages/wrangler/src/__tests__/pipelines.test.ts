@@ -1366,7 +1366,7 @@ describe("wrangler pipelines", () => {
 
 				Batching:
 				  File Size:      none
-				  Time Interval:  30s
+				  Time Interval:  300s
 
 				Format:
 				  Type:  json"
@@ -1400,7 +1400,7 @@ describe("wrangler pipelines", () => {
 
 				Batching:
 				  File Size:      none
-				  Time Interval:  30s
+				  Time Interval:  300s
 
 				Format:
 				  Type:  json"
@@ -1564,7 +1564,7 @@ describe("wrangler pipelines", () => {
 
 				Batching:
 				  File Size:      none
-				  Time Interval:  30s
+				  Time Interval:  300s
 
 				Format:
 				  Type:  json"
