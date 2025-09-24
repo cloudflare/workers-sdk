@@ -209,7 +209,7 @@ export const dev = createCommand({
 		remote: {
 			alias: "r",
 			describe:
-				"Run on the global Cloudflare network with access to production resources",
+				"Run on the global Cloudflare network with access to production resources (when false, runs locally and supports --persist-to for local persistence)",
 			type: "boolean",
 			default: false,
 		},
