@@ -2,7 +2,7 @@
 	"name": "unbound-durable-object",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-01-01",
-	"compatibility_flags": ["experimental"],
+	"compatibility_flags": ["enable_ctx_exports"],
 	// This DO intentionally doesn't have a binding
 	// "durable_objects": {
 	// 	"bindings": [
