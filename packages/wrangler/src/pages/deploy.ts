@@ -345,23 +345,37 @@ export const pagesDeployCommand = createCommand({
 				isGitDirty = Boolean(
 					execSync(`git status --porcelain`).toString().length
 				);
+				logger.debug(
+					`Git working directory is ${isGitDirty ? "dirty" : "clean"}`
+				);
 
 				if (!branch) {
 					branch = execSync(`git rev-parse --abbrev-ref HEAD`)
 						.toString()
 						.trim();
+					logger.debug(`Detected git branch: ${branch}`);
+				} else {
+					logger.debug(`Using provided branch: ${branch}`);
 				}
 
 				if (!commitHash) {
 					commitHash = execSync(`git rev-parse HEAD`).toString().trim();
+					logger.debug(`Detected commit hash: ${commitHash}`);
+				} else {
+					logger.debug(`Using provided commit hash: ${commitHash}`);
 				}
 
 				if (!commitMessage) {
 					commitMessage = execSync(`git show -s --format=%B ${commitHash}`)
 						.toString()
 						.trim();
+					logger.debug(`Detected commit message: ${commitMessage}`);
+				} else {
+					logger.debug(`Using provided commit message: ${commitMessage}`);
 				}
-			} catch {}
+			} catch (error) {
+				logger.debug(`Failed to retrieve git information: ${error}`);
+			}
 
 			if (isGitDirty && !commitDirty) {
 				logger.warn(
