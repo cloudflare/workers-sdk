@@ -1,5 +1,19 @@
 # wrangler
 
+## 4.40.0
+
+### Minor Changes
+
+- [#10743](https://github.com/cloudflare/workers-sdk/pull/10743) [`a7ac751`](https://github.com/cloudflare/workers-sdk/commit/a7ac751f82ba844d0a37cdcdead7600c05def810) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Changes `--fileSizeMB` to `--file-size` for `wrangler r2 bucket catalog` compaction command.
+  Small fixes for pipelines commands.
+
+### Patch Changes
+
+- [#10706](https://github.com/cloudflare/workers-sdk/pull/10706) [`81fd733`](https://github.com/cloudflare/workers-sdk/commit/81fd7336c0e9f14fd848777492475a579968cc5e) Thanks [@1000hz](https://github.com/1000hz)! - Fixed an issue that caused some Workers to have an incorrect service tag applied when using a redirected configuration file (as used by the Cloudflare Vite plugin). This resulted in these Workers not being correctly grouped with their sibling environments in the Cloudflare dashboard.
+
+- Updated dependencies [[`06e9a48`](https://github.com/cloudflare/workers-sdk/commit/06e9a484cf1f91857c867fd0c43ebd7378e324b7)]:
+  - miniflare@4.20250924.0
+
 ## 4.39.0
 
 ### Minor Changes
