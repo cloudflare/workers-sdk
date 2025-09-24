@@ -46,11 +46,12 @@ describe("isDockerfile", () => {
 	});
 
 	it("should error if image registry reference contains the protocol part", async () => {
-		expect(() => isDockerfile("http://example.com/image:tag", undefined))
-			.toThrowErrorMatchingInlineSnapshot(`
-				[Error: The image "http://example.com/image:tag" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
-				Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)]
-			`);
+		expect(() =>
+			isDockerfile("http://registry.cloudflare.com/image:tag", undefined)
+		).toThrowErrorMatchingInlineSnapshot(`
+			[Error: The image "http://registry.cloudflare.com/image:tag" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
+			Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)]
+		`);
 	});
 
 	it("should error if image registry reference does not contain a tag", async () => {
