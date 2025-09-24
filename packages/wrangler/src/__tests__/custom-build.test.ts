@@ -14,6 +14,7 @@ describe("Custom Builds", () => {
 				"/",
 				"/",
 				{ command: `node -e "process.exit(1)"` },
+				undefined,
 				undefined
 			);
 			assert(false, "Unreachable");

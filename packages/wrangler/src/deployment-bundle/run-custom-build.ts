@@ -18,13 +18,23 @@ export async function runCustomBuild(
 	expectedEntryAbsolute: string,
 	expectedEntryRelative: string,
 	build: Pick<Config["build"], "command" | "cwd">,
-	configPath: string | undefined
+	configPath: string | undefined,
+	targetConsumer?: "dev" | "deploy"
 ) {
 	if (build.command) {
 		logger.log(chalk.blue("[custom build]"), "Running:", build.command);
 		try {
+			const env = {
+				...process.env,
+				...(targetConsumer && {
+					WRANGLER_BUILD_TARGET: targetConsumer,
+					WRANGLER_IS_DEV: targetConsumer === "dev" ? "true" : "false",
+					WRANGLER_IS_DEPLOY: targetConsumer === "deploy" ? "true" : "false",
+				}),
+			};
 			const res = execaCommand(build.command, {
 				shell: true,
+				env,
 				...(build.cwd && { cwd: build.cwd }),
 			});
 			res.stdout?.pipe(
