@@ -7,8 +7,8 @@ export const SINK_DEFAULTS = {
 		row_group_bytes: 1024 * 1024 * 1024,
 	} as ParquetFormat,
 	rolling_policy: {
-		file_size_bytes: 0,
-		interval_seconds: 30,
+		file_size_bytes: undefined,
+		interval_seconds: 300,
 	},
 	r2: {
 		path: "",
@@ -38,11 +38,18 @@ export function applyDefaultsToSink(sink: Sink): Sink {
 
 	if (!withDefaults.config.rolling_policy) {
 		withDefaults.config.rolling_policy = {
-			file_size_bytes: SINK_DEFAULTS.rolling_policy.file_size_bytes,
 			interval_seconds: SINK_DEFAULTS.rolling_policy.interval_seconds,
 		};
+		// Only add file_size_bytes if it has a value
+		if (SINK_DEFAULTS.rolling_policy.file_size_bytes !== undefined) {
+			withDefaults.config.rolling_policy.file_size_bytes =
+				SINK_DEFAULTS.rolling_policy.file_size_bytes;
+		}
 	} else {
-		if (!withDefaults.config.rolling_policy.file_size_bytes) {
+		if (
+			!withDefaults.config.rolling_policy.file_size_bytes &&
+			SINK_DEFAULTS.rolling_policy.file_size_bytes !== undefined
+		) {
 			withDefaults.config.rolling_policy.file_size_bytes =
 				SINK_DEFAULTS.rolling_policy.file_size_bytes;
 		}

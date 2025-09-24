@@ -181,9 +181,9 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 			type: "string",
 			demandOption: true,
 		},
-		targetSizeMb: {
+		"target-size": {
 			describe:
-				"The target size for compacted files (allowed values: 64, 128, 256, 512)",
+				"The target size for compacted files in MB (allowed values: 64, 128, 256, 512)",
 			type: "number",
 			demandOption: false,
 			default: 128,
@@ -209,7 +209,7 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 			config,
 			accountId,
 			args.bucket,
-			args.targetSizeMb
+			args.targetSize
 		);
 
 		logger.log(

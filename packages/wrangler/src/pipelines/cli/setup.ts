@@ -14,6 +14,7 @@ import {
 	deleteStream,
 	validateSql,
 } from "../client";
+import { SINK_DEFAULTS } from "../defaults";
 import { authorizeR2Bucket } from "../index";
 import {
 	displayUsageExamples,
@@ -231,10 +232,8 @@ async function buildField(
 		{ title: "string", value: "string" },
 		{ title: "int32", value: "int32" },
 		{ title: "int64", value: "int64" },
-		{ title: "u_int32", value: "u_int32" },
-		{ title: "u_int64", value: "u_int64" },
-		{ title: "f32", value: "f32" },
-		{ title: "f64", value: "f64" },
+		{ title: "float32", value: "float32" },
+		{ title: "float64", value: "float64" },
 		{ title: "bool", value: "bool" },
 		{ title: "timestamp", value: "timestamp" },
 		{ title: "json", value: "json" },
@@ -419,13 +418,16 @@ async function setupR2Sink(
 		});
 	}
 
-	const fileSizeMB = await prompt("Roll file when size reaches (MB):", {
-		defaultValue: "100",
-	});
-	const intervalSeconds = await prompt(
-		"Roll file when time reaches (seconds):",
+	const fileSizeMB = await prompt(
+		"Roll file when size reaches (MB, minimum 5):",
 		{
-			defaultValue: "300",
+			defaultValue: "100",
+		}
+	);
+	const intervalSeconds = await prompt(
+		"Roll file when time reaches (seconds, minimum 10):",
+		{
+			defaultValue: String(SINK_DEFAULTS.rolling_policy.interval_seconds),
 		}
 	);
 
@@ -511,17 +513,20 @@ async function setupDataCatalogSink(setupConfig: SetupConfig): Promise<void> {
 			{ title: "zstd", value: "zstd" },
 			{ title: "lz4", value: "lz4" },
 		],
-		defaultOption: 0,
-		fallbackOption: 0,
+		defaultOption: 3,
+		fallbackOption: 3,
 	});
 
-	const fileSizeMB = await prompt("Roll file when size reaches (MB):", {
-		defaultValue: "100",
-	});
-	const intervalSeconds = await prompt(
-		"Roll file when time reaches (seconds):",
+	const fileSizeMB = await prompt(
+		"Roll file when size reaches (MB, minimum 5):",
 		{
-			defaultValue: "300",
+			defaultValue: "100",
+		}
+	);
+	const intervalSeconds = await prompt(
+		"Roll file when time reaches (seconds, minimum 10):",
+		{
+			defaultValue: String(SINK_DEFAULTS.rolling_policy.interval_seconds),
 		}
 	);
 

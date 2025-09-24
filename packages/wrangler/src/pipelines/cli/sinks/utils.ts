@@ -55,7 +55,7 @@ export function displaySinkConfiguration(
 
 	const batching: Record<string, string> = {
 		"File Size":
-			fileSizeBytes === 0
+			fileSizeBytes === undefined || fileSizeBytes === 0
 				? "none"
 				: `${Math.round(fileSizeBytes / (1024 * 1024))}MB`,
 		"Time Interval": `${intervalSeconds}s`,

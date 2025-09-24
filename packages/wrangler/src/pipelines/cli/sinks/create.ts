@@ -69,7 +69,6 @@ export const pipelinesSinksCreateCommand = createCommand({
 		"roll-size": {
 			describe: "Roll file size in MB",
 			type: "number",
-			default: SINK_DEFAULTS.rolling_policy.file_size_bytes / (1024 * 1024),
 		},
 		"roll-interval": {
 			describe: "Roll file interval in seconds",
@@ -183,7 +182,7 @@ export const pipelinesSinksCreateCommand = createCommand({
 		}
 
 		if (args.rollSize || args.rollInterval) {
-			let file_size_bytes: number =
+			let file_size_bytes: number | undefined =
 				SINK_DEFAULTS.rolling_policy.file_size_bytes;
 			let interval_seconds: number =
 				SINK_DEFAULTS.rolling_policy.interval_seconds;
@@ -196,7 +195,7 @@ export const pipelinesSinksCreateCommand = createCommand({
 			}
 
 			sinkConfig.config.rolling_policy = {
-				file_size_bytes,
+				...(file_size_bytes !== undefined && { file_size_bytes }),
 				interval_seconds,
 			};
 		}
