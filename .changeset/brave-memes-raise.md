@@ -1,5 +1,6 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
-Changes fileSizeMB->file-size for compaction arg. Small fixes for pipelines commands
+Changes `--fileSizeMB` to `--file-size` for `wrangler r2 bucket catalog` compaction command.
+Small fixes for pipelines commands.
