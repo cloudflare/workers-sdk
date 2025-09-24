@@ -73,6 +73,7 @@ export type EventNames =
 	| "view worker version"
 	| "list worker versions"
 	| "list workers"
+	| "auth token"
 	| "view versioned deployment"
 	| "view latest versioned deployment"
 	| "list versioned deployments"

@@ -1,7 +1,14 @@
 import { createCommand } from "../core/create-command";
 import { CommandLineArgsError } from "../errors";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { listScopes, login, logout, validateScopeKeys } from "./user";
+import {
+	getAPIToken,
+	listScopes,
+	login,
+	logout,
+	validateScopeKeys,
+} from "./user";
 import { whoami } from "./whoami";
 
 export const loginCommand = createCommand({
@@ -117,6 +124,33 @@ export const whoamiCommand = createCommand({
 	async handler(args, { config }) {
 		await whoami(config, args.account);
 		metrics.sendMetricsEvent("view accounts", {
+			sendMetrics: config.send_metrics,
+		});
+	},
+});
+
+export const authTokenCommand = createCommand({
+	metadata: {
+		description: "🔑 Retrieve your current Cloudflare API token",
+		owner: "Workers: Authoring and Testing",
+		status: "stable",
+	},
+	behaviour: {
+		printConfigWarnings: false,
+	},
+	async handler(_, { config }) {
+		const credentials = getAPIToken();
+		if (!credentials) {
+			throw new Error("No API token found. Please run 'wrangler login' first.");
+		}
+
+		if ("apiToken" in credentials) {
+			logger.log(credentials.apiToken);
+		} else {
+			logger.log(credentials.authKey);
+		}
+
+		metrics.sendMetricsEvent("auth token", {
 			sendMetrics: config.send_metrics,
 		});
 	},
