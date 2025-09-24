@@ -49,6 +49,8 @@ type VariableNames =
 	| "WRANGLER_LOG_SANITIZE"
 	/** Directory for ND-JSON output files. */
 	| "WRANGLER_OUTPUT_FILE_DIRECTORY"
+	/** Custom directory for temporary files. Defaults to .wrangler/tmp in project root. */
+	| "WRANGLER_TMP_DIR"
 
 	// ## Build & Deployment Configuration
 
