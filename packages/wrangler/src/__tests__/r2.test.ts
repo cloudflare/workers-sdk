@@ -1301,7 +1301,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							)
 						);
 						await runWrangler(
-							"r2 bucket catalog compaction enable testBucket --token fakecloudflaretoken --targetSizeMb 512"
+							"r2 bucket catalog compaction enable testBucket --token fakecloudflaretoken --target-size 512"
 						);
 						expect(std.out).toMatchInlineSnapshot(
 							`"✨ Successfully enabled file compaction for the data catalog for bucket 'testBucket'."`
@@ -1332,8 +1332,8 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							  -v, --version   Show version number  [boolean]
 
 							OPTIONS
-							      --targetSizeMb  The target size for compacted files (allowed values: 64, 128, 256, 512)  [number] [default: 128]
-							      --token         A cloudflare api token with access to R2 and R2 Data Catalog which will be used to read/write files for compaction.  [string] [required]"
+							      --target-size  The target size for compacted files in MB (allowed values: 64, 128, 256, 512)  [number] [default: 128]
+							      --token        A cloudflare api token with access to R2 and R2 Data Catalog which will be used to read/write files for compaction.  [string] [required]"
 						`);
 						expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1345,7 +1345,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					it("should error if --token is not provided", async () => {
 						await expect(
 							runWrangler(
-								"r2 bucket catalog compaction enable testBucket --targetSizeMb 512"
+								"r2 bucket catalog compaction enable testBucket --target-size 512"
 							)
 						).rejects.toThrowErrorMatchingInlineSnapshot(
 							`[Error: Missing required argument: token]`
