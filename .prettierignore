@@ -28,6 +28,8 @@ packages/chrome-devtools-patches/devtools-frontend
 
 packages/vitest-pool-workers/scripts/rtti/rtti.js
 
+packages/vite-plugin-cloudflare/playground/prisma/src/generated
+
 # dist-functions are generated in the fixtures/vitest-pool-workers-examples/pages-functions-unit-integration-self folder
 dist-functions
 
