@@ -72,6 +72,7 @@ export type EventNames =
 	| "deploy worker versions"
 	| "view worker version"
 	| "list worker versions"
+	| "list workers"
 	| "view versioned deployment"
 	| "view latest versioned deployment"
 	| "list versioned deployments"
