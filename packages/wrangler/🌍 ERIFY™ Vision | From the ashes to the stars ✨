@@ -1,0 +1,19 @@
+# ERIFY™ Wrangler Extension
+
+Welcome to the **ERIFY™ Workers SDK**, built on Cloudflare Wrangler.
+
+## 🚀 Purpose
+- Deploy ERIFY™ services globally with speed and scale.
+- Manage worker scripts, environments, and bindings with luxury precision.
+- Integrate secure Auth0 identity + ERIVOX AI features.
+
+## ⚡ Quick Start
+```bash
+# Install Wrangler
+npm install -g wrangler
+
+# Authenticate
+wrangler login
+
+# Publish your worker
+wrangler publish
