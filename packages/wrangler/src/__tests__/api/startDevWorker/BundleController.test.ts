@@ -1,7 +1,7 @@
 import { once } from "events";
 import path from "path";
 import dedent from "ts-dedent";
-import { test as base, describe } from "vitest";
+import { describe, test } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
@@ -15,17 +15,6 @@ function findSourceFile(source: string, name: string): string {
 	const endIndex = source.indexOf("\n//", startIndex);
 	return source.slice(startIndex, endIndex);
 }
-
-const test = base.extend<{ controller: BundlerController }>({
-	// eslint-disable-next-line no-empty-pattern
-	controller: async ({}, use) => {
-		const controller = new BundlerController();
-
-		await use(controller);
-
-		await controller.teardown();
-	},
-});
 
 async function waitForBundleComplete(
 	controller: BundlerController
@@ -54,8 +43,22 @@ describe("BundleController", () => {
 	mockConsoleMethods();
 	runInTempDir();
 
+	// We are not using `test.extend` or `onTestFinished` helpers here to create and tear down
+	// the controller because these run the teardown after all the `afterEach()` blocks have run.
+	// This means that the controller doesn't get torn down until after the temporary directory has been
+	// removed.
+	// And so the file watchers that the controller creates can randomly fail because they are trying to
+	// watch files in a directory that no longer exists.
+	// By doing it ourselves in `beforeEach()` and `afterEach()` we can ensure the controller
+	// is torn down before the temporary directory is removed.
+	let controller: BundlerController;
+	beforeEach(() => {
+		controller = new BundlerController();
+	});
+	afterEach(() => controller.teardown());
+
 	describe("happy path bundle + watch", () => {
-		test("single ts source file", async ({ controller }) => {
+		test("single ts source file", async () => {
 			await seed({
 				"src/index.ts": dedent/* javascript */ `
 				export default {
@@ -132,7 +135,7 @@ describe("BundleController", () => {
 				`);
 		});
 
-		test("multiple ts source files", async ({ controller }) => {
+		test("multiple ts source files", async () => {
 			await seed({
 				"src/index.ts": dedent/* javascript */ `
 				import name from "./other"
@@ -201,7 +204,7 @@ describe("BundleController", () => {
 			`);
 		});
 
-		test("custom build", async ({ controller }) => {
+		test("custom build", async () => {
 			await seed({
 				"random_dir/index.ts": dedent/* javascript */ `
 				export default {
@@ -286,7 +289,7 @@ describe("BundleController", () => {
 		});
 	});
 
-	test("module aliasing", async ({ controller }) => {
+	test("module aliasing", async () => {
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
 				import name from "foo"
@@ -351,7 +354,7 @@ describe("BundleController", () => {
 	});
 
 	describe("switching", () => {
-		test("esbuild -> custom builds", async ({ controller }) => {
+		test("esbuild -> custom builds", async () => {
 			await seed({
 				"src/index.ts": dedent/* javascript */ `
 				export default {
@@ -486,7 +489,7 @@ describe("BundleController", () => {
 				`);
 		});
 
-		test("custom builds -> esbuild", async ({ controller }) => {
+		test("custom builds -> esbuild", async () => {
 			await seed({
 				"random_dir/index.ts": dedent/* javascript */ `
 					export default {
