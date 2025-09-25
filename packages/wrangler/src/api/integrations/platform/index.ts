@@ -226,6 +226,17 @@ async function getMiniflareOptionsFromConfig(args: {
 		}
 	}
 
+	if (config.workflows?.length > 0) {
+		logger.warn(dedent`
+				You have defined bindings to the following Workflows:
+				${config.workflows.map((b) => `- ${JSON.stringify(b)}`).join("\n")}
+				These are not available in local development, so you will not be able to bind to them when testing locally, but they should work in production.
+				`);
+
+		// Remove workflows from bindings to prevent Miniflare from complaining
+		bindings.workflows = [];
+	}
+
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		{
 			name: config.name,
