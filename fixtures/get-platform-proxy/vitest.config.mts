@@ -6,5 +6,6 @@ export default defineConfig({
 		hookTimeout: 25_000,
 		teardownTimeout: 25_000,
 		useAtomics: true,
+		restoreMocks: true,
 	},
 });
