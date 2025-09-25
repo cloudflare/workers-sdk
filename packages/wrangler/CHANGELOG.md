@@ -1,5 +1,11 @@
 # wrangler
 
+## 4.40.1
+
+### Patch Changes
+
+- [#10668](https://github.com/cloudflare/workers-sdk/pull/10668) [`a57149f`](https://github.com/cloudflare/workers-sdk/commit/a57149fc6b44bdc956637b67d1d26b42f7f9d6dd) Thanks [@danielrs](https://github.com/danielrs)! - Support the deletion of secrets with complex names
+
 ## 4.40.0
 
 ### Minor Changes
