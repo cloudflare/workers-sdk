@@ -2405,7 +2405,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"logfwdr",
 			"mtls_certificate",
 			"pipeline",
-			"worker-loader",
+			"worker_loader",
 			"vpc_service",
 		];
 
