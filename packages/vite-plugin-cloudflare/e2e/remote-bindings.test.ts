@@ -66,6 +66,19 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 						});
 					}
 				);
+
+				// This test checks that wrapped bindings (e.g. AI) which rely on additional workers with an authed connection to the CF API work
+				test.skipIf(isBuildAndPreviewOnWindows(command))(
+					"Wrapped bindings (e.g. Workers AI) can serve a request",
+					async ({ expect }) => {
+						const proc = await runLongLived("pnpm", command, projectPath);
+						const url = await waitForReady(proc);
+
+						expect(await fetchJson(url + "/ai/")).toEqual({
+							response: expect.stringContaining("Workers AI"),
+						});
+					}
+				);
 			});
 
 			test("reflects changes applied during dev", async ({ expect }) => {

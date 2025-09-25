@@ -109,7 +109,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
-        if: github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -122,7 +121,7 @@ jobs:
               - '!**/*.md'
 
       - name: Install Dependencies
-        if: (github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group') && steps.changes.outputs.everything_but_markdown == 'true'
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
           node-version: ${{ matrix.node }}
@@ -132,18 +131,18 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Bump package versions
-        if: (github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group') && steps.changes.outputs.everything_but_markdown == 'true'
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         run: node .github/changeset-version.js
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Run Vite E2E tests
-        if: (github.event.pull_request.head.repo.owner.login == 'cloudflare' || github.event_name == 'merge_group') && steps.changes.outputs.everything_but_markdown == 'true'
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
         timeout-minutes: 15
         env:
           NODE_DEBUG: "vite-plugin:test"
-          # The AI tests need to connect to Cloudflare
+          # The remote-binding tests need to connect to Cloudflare
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
           NODE_OPTIONS: "--max_old_space_size=8192"
