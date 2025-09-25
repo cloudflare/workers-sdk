@@ -189,10 +189,6 @@ function logStructuredLog(
 		// were introduced developers were used to call `console.debug` and get their logs in the terminal
 		// during local development and we don't want to break such workflow in a non-major release
 		// (For more context see: https://github.com/cloudflare/workers-sdk/issues/10690)
-		//
-		// TODO: for the next major release we do want the debug logs to be logged at the debug level instead,
-		//       we should also introduce some mechanism to allows users to get their worker debug logs without
-		//       also getting all the wrangler debug logs
 		return logger.info(message);
 	}
 
