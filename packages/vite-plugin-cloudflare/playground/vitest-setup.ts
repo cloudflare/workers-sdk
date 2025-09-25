@@ -16,6 +16,7 @@ import type {
 	ConfigEnv,
 	InlineConfig,
 	Logger,
+	LogLevel,
 	PluginOption,
 	PreviewServer,
 	ResolvedConfig,
@@ -243,7 +244,8 @@ export async function loadConfig(configEnv: ConfigEnv) {
 		customLogger: createInMemoryLogger(
 			serverLogs.info,
 			serverLogs.warns,
-			serverLogs.errors
+			serverLogs.errors,
+			config?.logLevel
 		),
 	};
 	return mergeConfig(options, config || {});
@@ -325,11 +327,22 @@ export async function notifyRebuildComplete(
 	return watcher.off("event", callback);
 }
 
+// logLevel values taken from the vite source code: https://github.com/vitejs/vite/blob/302f8091b/packages/vite/src/node/logger.ts#L30-L35
+const logLevels: Record<LogLevel, number> = {
+	silent: 0,
+	error: 1,
+	warn: 2,
+	info: 3,
+};
+
 export function createInMemoryLogger(
 	info: string[],
 	warns: string[],
-	errors: string[]
+	errors: string[],
+	logLevel: LogLevel = "info"
 ): Logger {
+	const thresholdLogLevel = logLevels[logLevel];
+
 	const loggedErrors = new WeakSet<Error | Rollup.RollupError>();
 	const warnedMessages = new Set<string>();
 
@@ -338,22 +351,30 @@ export function createInMemoryLogger(
 		hasErrorLogged: (err) => loggedErrors.has(err),
 		clearScreen: () => {},
 		info(msg) {
-			info.push(msg);
+			if (thresholdLogLevel >= logLevels.info) {
+				info.push(msg);
+			}
 		},
 		warn(msg) {
-			warns.push(msg);
-			logger.hasWarned = true;
+			if (thresholdLogLevel >= logLevels.warn) {
+				warns.push(msg);
+				logger.hasWarned = true;
+			}
 		},
 		warnOnce(msg) {
-			if (warnedMessages.has(msg)) return;
-			warns.push(msg);
-			logger.hasWarned = true;
-			warnedMessages.add(msg);
+			if (thresholdLogLevel >= logLevels.warn) {
+				if (warnedMessages.has(msg)) return;
+				warns.push(msg);
+				logger.hasWarned = true;
+				warnedMessages.add(msg);
+			}
 		},
 		error(msg, opts) {
-			errors.push(msg);
-			if (opts?.error) {
-				loggedErrors.add(opts.error);
+			if (thresholdLogLevel >= logLevels.error) {
+				errors.push(msg);
+				if (opts?.error) {
+					loggedErrors.add(opts.error);
+				}
 			}
 		},
 	};
