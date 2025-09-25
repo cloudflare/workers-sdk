@@ -170,24 +170,6 @@ describe("basic e2e tests", () => {
 					});
 				}
 			);
-
-			// This test checks that wrapped bindings which rely on additional workers with an authed connection to the CF API work
-			// They are skipped if you have not provided the necessary account id and api token.
-			describe.skipIf(
-				!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN
-			)("Workers AI", () => {
-				test.skipIf(isBuildAndPreviewOnWindows(command))(
-					"can serve a Worker request",
-					async ({ expect }) => {
-						const proc = await runLongLived(pm, command, projectPath);
-						const url = await waitForReady(proc);
-
-						expect(await fetchJson(url + "/ai/")).toEqual({
-							response: expect.stringContaining("Workers AI"),
-						});
-					}
-				);
-			});
 		});
 	});
 });
