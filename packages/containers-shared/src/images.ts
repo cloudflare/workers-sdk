@@ -154,7 +154,7 @@ export function resolveImageName(accountId: string, image: string): string {
 		const foundAccountId = match[1];
 		if (foundAccountId !== accountId) {
 			throw new Error(
-				`Image "${image}" does not belong to your account\nImage belongs to account: "${foundAccountId}"\nCurrent account: "${accountId}"`
+				`Image "${image}" does not belong to your account\nImage appears to belong to account: "${foundAccountId}"\nCurrent account: "${accountId}"`
 			);
 		}
 		return image;
