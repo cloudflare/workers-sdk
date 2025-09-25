@@ -1,5 +1,6 @@
+import { error, logRaw, setLogLevel } from "@cloudflare/cli";
 import { Logger } from "../logger";
-import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockCLIOutput, mockConsoleMethods } from "./helpers/mock-console";
 
 describe("logger", () => {
 	const std = mockConsoleMethods();
@@ -236,6 +237,86 @@ describe("logger", () => {
 				"
 			`);
 			expect(std.info).toMatchInlineSnapshot(`"This is a once message"`);
+		});
+	});
+
+	describe("@cloudflare/cli logRaw", () => {
+		const cliOut = mockCLIOutput();
+
+		it("should output at log level", () => {
+			setLogLevel("log");
+			logRaw("This is a logRaw message");
+			expect(cliOut.stdout).toMatchInlineSnapshot(
+				`"This is a logRaw message\n"`
+			);
+		});
+
+		it("should not output when log level is set to warn", () => {
+			setLogLevel("warn");
+			logRaw("This is a logRaw message");
+			expect(cliOut.stdout).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not output when log level is set to error", () => {
+			setLogLevel("error");
+			logRaw("This is a logRaw message");
+			expect(cliOut.stdout).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not output when log level is set to none", () => {
+			setLogLevel("none");
+			logRaw("This is a logRaw message");
+			expect(cliOut.stdout).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should output when log level is set to debug", () => {
+			setLogLevel("debug");
+			logRaw("This is a logRaw message");
+			expect(cliOut.stdout).toMatchInlineSnapshot(
+				`"This is a logRaw message\n"`
+			);
+		});
+	});
+
+	describe("@cloudflare/cli error", () => {
+		const cliOut = mockCLIOutput();
+
+		it("should output at error level", () => {
+			setLogLevel("error");
+			error("This is an error message");
+			expect(cliOut.stderr).toMatchInlineSnapshot(
+				`"╰  ERROR  This is an error message\n"`
+			);
+		});
+
+		it("should not output when log level is set to none", () => {
+			setLogLevel("none");
+			error("This is an error message");
+			expect(cliOut.stderr).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should output when log level is set to warn", () => {
+			setLogLevel("warn");
+			error("This is an error message");
+			expect(cliOut.stderr).toMatchInlineSnapshot(
+				`"╰  ERROR  This is an error message\n"`
+			);
+		});
+
+		it("should output when log level is set to log", () => {
+			setLogLevel("log");
+			error("This is an error message");
+			expect(cliOut.stderr).toMatchInlineSnapshot(
+				`"╰  ERROR  This is an error message\n"`
+			);
+		});
+
+		it("should output when log level is set to debug", () => {
+			setLogLevel("debug");
+			error("This is an error message");
+			expect(cliOut.stderr).toMatchInlineSnapshot(
+				`"╰  ERROR  This is an error message\n"`
+			);
 		});
 	});
 });
