@@ -958,7 +958,9 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 		wranglerGitIgnoreFilesToAdd.push("!.dev.vars.example");
 	}
 
-	const hasDotEnv = existingGitIgnoreContent.match(/^\/?\.env\*(\s|$)/m);
+	const hasDotEnv = existingGitIgnoreContent.match(
+		/^\/?\.env\*?(\..*?)?(\s|$)/m,
+	);
 	if (!hasDotEnv) {
 		wranglerGitIgnoreFilesToAdd.push(".env*");
 	}
