@@ -21,6 +21,7 @@ export default {
 		const { fn } = await import("./b");
 		fn();
 
+		console.debug("__console debug__");
 		console.log("__console log__");
 		console.warn("__console warn__");
 		console.error("__console error__");
