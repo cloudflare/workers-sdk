@@ -88,7 +88,7 @@ export const getNormalizedContainerOptions = async (
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
 			class_name: container.class_name,
-			max_instances: container.max_instances ?? 1,
+			max_instances: container.max_instances ?? 20,
 			scheduling_policy: (container.scheduling_policy ??
 				SchedulingPolicy.DEFAULT) as SchedulingPolicy,
 			constraints: {
