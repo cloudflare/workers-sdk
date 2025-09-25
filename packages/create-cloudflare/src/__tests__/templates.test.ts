@@ -320,6 +320,32 @@ describe("addWranglerToGitIgnore", () => {
 		`);
 	});
 
+	test("should not add the .env entries if some form of .env entries are already included", () => {
+		mockGitIgnore(
+			"my-project/.gitignore",
+			`
+			.env
+			.env.*
+			!.env.example
+			`,
+		);
+		addWranglerToGitIgnore({
+			project: { path: "my-project" },
+		} as unknown as C3Context);
+
+		expect(appendFileResults.file).toMatchInlineSnapshot(
+			`"my-project/.gitignore"`,
+		);
+		expect(appendFileResults.content).toMatchInlineSnapshot(`
+			"
+			# wrangler files
+			.wrangler
+			.dev.vars*
+			!.dev.vars.example
+			"
+		`);
+	});
+
 	test("should not add the .wrangler entry if a .wrangler/ is already included)", () => {
 		mockGitIgnore(
 			"my-project/.gitignore",
