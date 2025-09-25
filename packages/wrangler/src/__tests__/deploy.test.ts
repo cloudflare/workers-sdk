@@ -6950,6 +6950,154 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
+	describe("workers_dev mixed state warnings", () => {
+		beforeEach(() => {
+			vi.stubEnv("WRANGLER_DISABLE_SUBDOMAIN_MIXED_STATE_CHECK", "false");
+		});
+
+		afterEach(() => {
+			vi.unstubAllEnvs();
+		});
+
+		it("should not warn when config is the same as remote", async () => {
+			writeWranglerConfig({
+				workers_dev: false,
+				preview_urls: true,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false, previews_enabled: true });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				No deploy targets for test-name (TIMINGS)
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn when workers_dev=false,preview_urls=false", async () => {
+			writeWranglerConfig({
+				workers_dev: false,
+				preview_urls: false,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+			mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: false });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				No deploy targets for test-name (TIMINGS)
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn when workers_dev=true,preview_urls=true", async () => {
+			writeWranglerConfig({
+				workers_dev: true,
+				preview_urls: true,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false, previews_enabled: false });
+			mockUpdateWorkerSubdomain({ enabled: true, previews_enabled: true });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should warn when workers_dev=false,preview_urls=true", async () => {
+			writeWranglerConfig({
+				workers_dev: false,
+				preview_urls: true,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+			mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: true });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				No deploy targets for test-name (TIMINGS)
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are disabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still enabled.[0m
+
+				  Preview URLs will automatically generate a unique, shareable link for each new version which will
+				  be accessible at:
+				    [4mhttps://<VERSION_PREFIX>-test-name.test-sub-domain.workers.dev[0m
+
+				  To prevent this Worker from being unintentionally public, you may want to disable the Preview URLs
+				  as well by setting \`preview_urls = false\` in your Wrangler config file.
+
+				"
+			`);
+		});
+
+		it("should warn when workers_dev=true,preview_urls=false", async () => {
+			writeWranglerConfig({
+				workers_dev: true,
+				preview_urls: false,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false, previews_enabled: false });
+			mockUpdateWorkerSubdomain({ enabled: true, previews_enabled: false });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are enabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still disabled.[0m
+
+				  Preview URLs will automatically generate a unique, shareable link for each new version which will
+				  be accessible at:
+				    [4mhttps://<VERSION_PREFIX>-test-name.test-sub-domain.workers.dev[0m
+
+				  You may want to enable the Preview URLs as well by setting \`preview_urls = true\` in your Wrangler
+				  config file.
+
+				"
+			`);
+		});
+	});
+
 	describe("[define]", () => {
 		it("should be able to define values that will be substituted into top-level identifiers", async () => {
 			writeWranglerConfig({

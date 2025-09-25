@@ -222,3 +222,8 @@ vi.mock("../../package.json", () => {
 		version: "x.x.x",
 	};
 });
+
+// Disable subdomain mixed state check for tests (specific test will enable it).
+beforeEach(() => {
+	vi.stubEnv("WRANGLER_DISABLE_SUBDOMAIN_MIXED_STATE_CHECK", "true");
+});
