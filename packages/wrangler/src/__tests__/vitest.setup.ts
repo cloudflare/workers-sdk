@@ -9,6 +9,10 @@ import { msw } from "./helpers/msw";
 //turn off chalk for tests due to inconsistencies between operating systems
 chalk.level = 0;
 
+// In general we don't want the ConfigController to watch the config files
+// as this tends to make the tests flaky.
+vi.stubEnv("WRANGLER_CI_DISABLE_CONFIG_WATCHING", "true");
+
 /**
  * The relative path between the bundled code and the Wrangler package.
  * This is used as a reliable way to compute paths relative to the Wrangler package
