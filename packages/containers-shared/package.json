@@ -23,6 +23,9 @@
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
+	"dependencies": {
+		"undici": "catalog:default"
+	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",

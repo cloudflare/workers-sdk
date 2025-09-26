@@ -1529,6 +1529,10 @@ importers:
         version: 7.14.0
 
   packages/containers-shared:
+    dependencies:
+      undici:
+        specifier: catalog:default
+        version: 7.14.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
