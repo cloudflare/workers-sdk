@@ -7,7 +7,8 @@ import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getInferredHost } from "../dev";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import { syncWorkersSite } from "../sites";
+import { APIError } from "../parse";
+import { syncLegacyAssets } from "../sites";
 import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
@@ -19,8 +20,6 @@ import type {
 	CfWorkerContext,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { ParseError } from "../parse";
 import type { LegacyAssetPaths } from "../sites";
 import type { CfAccount } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";

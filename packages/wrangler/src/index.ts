@@ -80,7 +80,7 @@ import {
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
 import { pages } from "./pages";
-import { APIError, formatMessage, ParseError } from "./parse";
+import { APIError, ParseError } from "./parse";
 import { pipelines } from "./pipelines";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
