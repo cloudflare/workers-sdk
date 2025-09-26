@@ -833,10 +833,16 @@ function updatePythonPackageName(path: string, projectName: string) {
 	const s = spinner();
 	s.start("Updating name in `pyproject.toml`");
 	let pyprojectTomlContents = readFile(pyprojectTomlPath);
-	pyprojectTomlContents = pyprojectTomlContents.replace('"TBD"', projectName);
+	pyprojectTomlContents = pyprojectTomlContents.replace(
+		'"TBD"',
+		`"${projectName}"`,
+	);
 	writeFile(pyprojectTomlPath, pyprojectTomlContents);
 	let uvLockContents = readFile(uvLockPath);
-	uvLockContents = uvLockContents.replace('"tbd"', projectName.toLowerCase());
+	uvLockContents = uvLockContents.replace(
+		'"tbd"',
+		`${"projectName.toLowerCase()"}`,
+	);
 	writeFile(uvLockPath, uvLockContents);
 	s.stop(`${brandColor("updated")} ${dim("`pyproject.toml`")}`);
 }
