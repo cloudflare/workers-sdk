@@ -17,6 +17,11 @@ test("basic hello-world functionality", async () => {
 	);
 });
 
+test("the project path can contain a non-ascii character", async () => {
+	// For context see https://github.com/cloudflare/workers-sdk/issues/10717
+	expect(rootDir).toContain("♫");
+});
+
 test("preserves entry signatures", async () => {
 	expect(serverLogs.info.join()).toContain("__preserves-entry-signatures__");
 });
