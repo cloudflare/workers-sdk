@@ -21,6 +21,7 @@ export interface Config {
 	v8Flags?: string[];
 	extensions?: Extension[];
 	autogates?: string[];
+	structuredLogging?: boolean;
 }
 
 export type Socket = {

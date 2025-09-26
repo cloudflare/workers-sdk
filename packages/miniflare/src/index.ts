@@ -10,6 +10,7 @@ import { Duplex, Transform, Writable } from "stream";
 import { ReadableStream } from "stream/web";
 import util from "util";
 import zlib from "zlib";
+import { checkMacOSVersion } from "@cloudflare/cli";
 import exitHook from "exit-hook";
 import { $ as colors$ } from "kleur/colors";
 import stoppable from "stoppable";
@@ -319,9 +320,7 @@ function getDurableObjectClassNames(
 				className,
 				// Fallback to current worker service if name not defined
 				serviceName = workerServiceName,
-				enableSql,
-				unsafeUniqueKey,
-				unsafePreventEviction,
+				...doConfigs
 			} = normaliseDurableObject(designator);
 			// Get or create `Map` mapping class name to optional unsafe unique key
 			let classNames = serviceClassNames.get(serviceName);
@@ -329,40 +328,74 @@ function getDurableObjectClassNames(
 				classNames = new Map();
 				serviceClassNames.set(serviceName, classNames);
 			}
+
 			if (classNames.has(className)) {
 				// If we've already seen this class in this service, make sure the
 				// unsafe unique keys and unsafe prevent eviction values match
 				const existingInfo = classNames.get(className);
-				if (existingInfo?.enableSql !== enableSql) {
+
+				const isDoUnacceptableDiff = (
+					field: Extract<
+						keyof typeof doConfigs,
+						"enableSql" | "unsafeUniqueKey" | "unsafePreventEviction"
+					>
+				) => {
+					if (!existingInfo) {
+						return false;
+					}
+
+					const same = existingInfo[field] === doConfigs[field];
+					if (same) {
+						return false;
+					}
+
+					const oneIsUndefined =
+						existingInfo[field] === undefined || doConfigs[field] === undefined;
+
+					// If one of the configurations is `undefined` (either the current one or the existing one) then there we
+					// want to consider this as an acceptable difference since we might be in a potentially valid situation in
+					// which worker A defines a DO with a config, while worker B simply uses the DO from worker A but without
+					// providing the configuration (thus leaving it `undefined`) (this for example is exactly what Wrangler does
+					// with the implicitly defined `enableSql` flag)
+					if (oneIsUndefined) {
+						return false;
+					}
+
+					return true;
+				};
+
+				if (isDoUnacceptableDiff("enableSql")) {
 					throw new MiniflareCoreError(
 						"ERR_DIFFERENT_STORAGE_BACKEND",
 						`Different storage backends defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
-							enableSql
+							doConfigs.enableSql
 						)} and ${JSON.stringify(existingInfo?.enableSql)}`
 					);
 				}
-				if (existingInfo?.unsafeUniqueKey !== unsafeUniqueKey) {
+
+				if (isDoUnacceptableDiff("unsafeUniqueKey")) {
 					throw new MiniflareCoreError(
 						"ERR_DIFFERENT_UNIQUE_KEYS",
 						`Multiple unsafe unique keys defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
-							unsafeUniqueKey
+							doConfigs.unsafeUniqueKey
 						)} and ${JSON.stringify(existingInfo?.unsafeUniqueKey)}`
 					);
 				}
-				if (existingInfo?.unsafePreventEviction !== unsafePreventEviction) {
+
+				if (isDoUnacceptableDiff("unsafePreventEviction")) {
 					throw new MiniflareCoreError(
 						"ERR_DIFFERENT_PREVENT_EVICTION",
 						`Multiple unsafe prevent eviction values defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
-							unsafePreventEviction
+							doConfigs.unsafePreventEviction
 						)} and ${JSON.stringify(existingInfo?.unsafePreventEviction)}`
 					);
 				}
 			} else {
 				// Otherwise, just add it
 				classNames.set(className, {
-					enableSql,
-					unsafeUniqueKey,
-					unsafePreventEviction,
+					enableSql: doConfigs.enableSql,
+					unsafeUniqueKey: doConfigs.unsafeUniqueKey,
+					unsafePreventEviction: doConfigs.unsafePreventEviction,
 				});
 			}
 		}
@@ -720,6 +753,8 @@ export class Miniflare {
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
 
+	#structuredWorkerdLogs: boolean;
+
 	#cfObject?: Record<string, any> = {};
 
 	// Path to temporary directory for use as scratch space/"in-memory" Durable
@@ -747,6 +782,8 @@ export class Miniflare {
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
+
+		checkMacOSVersion({ shouldThrow: true });
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 
@@ -759,6 +796,8 @@ export class Miniflare {
 		}
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
+		this.#structuredWorkerdLogs =
+			this.#sharedOpts.core.structuredWorkerdLogs ?? false;
 
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
 		this.#webSocketServer = new WebSocketServer({
@@ -1375,7 +1414,13 @@ export class Miniflare {
 					"Ensure wrapped bindings don't have bindings to themselves."
 			);
 		}
-		return { services: servicesArray, sockets, extensions };
+
+		return {
+			services: servicesArray,
+			sockets,
+			extensions,
+			structuredLogging: this.#structuredWorkerdLogs,
+		};
 	}
 
 	async #assembleAndUpdateConfig() {
@@ -1626,6 +1671,9 @@ export class Miniflare {
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
+		this.#structuredWorkerdLogs =
+			this.#sharedOpts.core.structuredWorkerdLogs ??
+			this.#structuredWorkerdLogs;
 
 		// Send to runtime and wait for updates to process
 		await this.#assembleAndUpdateConfig();

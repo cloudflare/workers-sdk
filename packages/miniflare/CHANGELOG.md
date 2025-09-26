@@ -1,5 +1,28 @@
 # miniflare
 
+## 3.20250718.1
+
+### Minor Changes
+
+- [#10015](https://github.com/cloudflare/workers-sdk/pull/10015) [`b5d9bb0`](https://github.com/cloudflare/workers-sdk/commit/b5d9bb026ebfb4c732c3c4999aa5ac0757f1a1b2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add `structuredWorkerdLogs` option
+
+  add a new top-level option named `structuredWorkerdLogs` that makes workerd print to stdout structured logs (stringified jsons of the following shape: `{ timestamp: number, level: string, message: string }`) instead of printing logs to stdout and stderr
+
+### Patch Changes
+
+- [#10216](https://github.com/cloudflare/workers-sdk/pull/10216) [`76d3002`](https://github.com/cloudflare/workers-sdk/commit/76d3002bf7e03f4b5ee255c9fd0eaa81f092311d) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Add macOS version validation to prevent EPIPE errors on unsupported macOS versions (below 13.5). Miniflare and C3 fail hard while Wrangler shows warnings but continues execution.
+
+## 3.20250718.0
+
+### Patch Changes
+
+- [#10019](https://github.com/cloudflare/workers-sdk/pull/10019) [`cce7f6f`](https://github.com/cloudflare/workers-sdk/commit/cce7f6f6c966d43894d57e8adfe05779605b1f65) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: update workerd dependency to latest
+
+- [#10035](https://github.com/cloudflare/workers-sdk/pull/10035) [`028f689`](https://github.com/cloudflare/workers-sdk/commit/028f6896dca78901f5b5a36a938667241d501244) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix D1 SQL dump generation: escape identifiers and handle SQLite's dynamic typing
+
+  Escape column and table names to prevent SQL syntax errors.
+  Escape values based on their runtime type to support SQLite's flexible typing.
+
 ## 3.20250408.2
 
 ### Patch Changes

@@ -1,8 +1,11 @@
 import assert from "assert";
 import fs from "fs/promises";
+import { type D1Database } from "@cloudflare/workers-types/experimental";
+import { ExecutionContext } from "ava";
 import { Miniflare, MiniflareOptions } from "miniflare";
 import { useTmp, utf8Encode } from "../../test-shared";
 import { binding, getDatabase, opts, test } from "./test";
+import type { Context } from "./test";
 
 export const SCHEMA = (
 	tableColours: string,
@@ -580,3 +583,149 @@ test("it properly handles ROWS_AND_COLUMNS results format", async (t) => {
 	}
 	t.deepEqual(results, expectedResults);
 });
+
+/**
+ * Test that the `dumpSql` method returns a valid SQL dump of the database.
+ * This test creates a new D1 database, fills it with dummy data, and then
+ * exports the SQL dump using the `PRAGMA miniflare_d1_export` command.
+ * It then executes the dump in a new D1 database and checks if both databases
+ * are equal in terms of schema and data.
+ */
+test("dumpSql exports and imports complete database structure and content correctly", async (t) => {
+	// Create a new Miniflare instance with D1 database
+	const originalMF = new Miniflare({
+		...opts,
+		d1Databases: { test: "test" },
+	});
+	const mirrorMF = new Miniflare({
+		...opts,
+		d1Databases: { test: "test" },
+	});
+
+	t.teardown(() => originalMF.dispose());
+	t.teardown(() => mirrorMF.dispose());
+
+	const originalDb = await originalMF.getD1Database("test");
+	const mirrorDb = await mirrorMF.getD1Database("test");
+
+	// Fill the original database with dummy data
+	await fillDummyData(originalDb);
+
+	// Export the database schema and data
+	const result = await originalDb
+		.prepare("PRAGMA miniflare_d1_export(?,?,?);")
+		.bind(0, 0)
+		.raw();
+
+	const [dumpStatements] = result as [string[]];
+	const dump = dumpStatements.join("\n");
+
+	await mirrorDb.exec(dump);
+
+	// Verify that the schema and data in both databases are equal
+	await isDatabaseEqual(t, originalDb, mirrorDb);
+});
+
+/**
+ * Populates a D1 database with test data for schema export testing.
+ * Creates tables with various schema features (foreign keys, special characters, etc.)
+ * and inserts sample data including edge cases like NULL values and type mismatches.
+ */
+async function fillDummyData(db: D1Database) {
+	// Create schema with various SQL features to test export compatibility
+	// Each table must have an ID column as primary key so that we can use it for ordering in equality tests
+
+	const schemas = [
+		// Create basic table with text primary key
+		`CREATE TABLE "classrooms"(id TEXT PRIMARY KEY, capacity INTEGER, test_blob BLOB)`,
+
+		// Create table with foreign key constraint
+		`CREATE TABLE "students" (id INTEGER PRIMARY KEY, name TEXT NOT NULL, classroom TEXT NOT NULL, FOREIGN KEY (classroom) REFERENCES "classrooms" (id) ON DELETE CASCADE)`,
+
+		// Create table with spaces in name to test quoting
+		`CREATE TABLE "test space table" (id INTEGER PRIMARY KEY, name TEXT NOT NULL)`,
+
+		// Create table with escaped quotes and SQL reserved keywords
+		`CREATE TABLE "test""name" (id INTEGER PRIMARY KEY, "escaped""column" TEXT, "order" INTEGER)`,
+	];
+
+	await db.exec(schemas.join(";"));
+
+	// Prepare sample data
+	const classroomData = [
+		// Standard numeric data
+		...Array.from({ length: 10 }, (_, i) => ({
+			id: `classroom_${i + 1}`,
+			capacity: (i + 1) * 10,
+			test_blob: utf8Encode(`Blob data for classroom ${i + 1}`),
+		})),
+
+		// Edge case: type mismatch (string where number expected)
+		{ id: "different_type_classroom", capacity: "not_a_number" },
+
+		// Edge case: NULL value
+		{ id: "null_classroom", capacity: null },
+	];
+
+	// Insert classroom data
+	const classroomStmt = db.prepare(
+		`INSERT INTO classrooms (id, capacity) VALUES (?, ?)`
+	);
+
+	for (const classroom of classroomData) {
+		await classroomStmt.bind(classroom.id, classroom.capacity).run();
+	}
+
+	// Generate and insert student data with classroom references
+	const studentStmt = db.prepare(
+		`INSERT INTO students (id, name, classroom) VALUES (?, ?, ?)`
+	);
+
+	// Create 2 students for each classroom
+	for (let i = 0; i < 10; i++) {
+		for (let j = 1; j <= 2; j++) {
+			const studentId = i * 2 + j;
+			await studentStmt
+				.bind(studentId, `student_${studentId}`, `classroom_${i + 1}`)
+				.run();
+		}
+	}
+}
+
+/**
+ * Compares two D1 databases to check if they are equal in terms of schema and data.
+ * It retrieves the schema of both databases, compares the tables, and then
+ * checks if the data in each table is identical.
+ */
+async function isDatabaseEqual(
+	t: ExecutionContext<Context>,
+	db: D1Database,
+	db2: D1Database
+) {
+	// SQL to select schema excluding internal tables
+	const selectSchemaSQL =
+		"SELECT * FROM sqlite_master WHERE type = 'table' AND (name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%')";
+
+	// Check if schema (tables) in both databases is equal
+	const tablesFromMirror = (await db2.prepare(selectSchemaSQL).all()).results;
+	const tablesFromOriginal = (await db.prepare(selectSchemaSQL).all()).results;
+	t.deepEqual(tablesFromMirror, tablesFromOriginal);
+
+	// Check if data in each table is equal
+	// We will use a simple SELECT * FROM table ORDER BY id to ensure consistent ordering
+	for (const table of tablesFromMirror) {
+		const tableName = table.name as string;
+
+		// Escape and ORDER BY to ensure consistent ordering
+		const selectTableSQL = `SELECT * FROM "${tableName.replace(/"/g, '""')}" ORDER BY id ASC`;
+
+		const originalData = (await db.prepare(selectTableSQL).all()).results;
+		const mirrorData = (await db2.prepare(selectTableSQL).all()).results;
+
+		t.deepEqual(
+			originalData,
+			mirrorData,
+			`Data mismatch in table: ${tableName}`
+		);
+	}
+}

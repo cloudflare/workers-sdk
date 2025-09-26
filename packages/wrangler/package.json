@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "3.114.11",
+	"version": "3.114.14",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -78,7 +78,7 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.14",
-		"workerd": "1.20250408.0"
+		"workerd": "1.20250718.0"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",

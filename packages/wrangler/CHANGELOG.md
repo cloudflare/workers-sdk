@@ -1,5 +1,88 @@
 # wrangler
 
+## 3.114.14
+
+### Patch Changes
+
+- [#10330](https://github.com/cloudflare/workers-sdk/pull/10330) [`dab7683`](https://github.com/cloudflare/workers-sdk/commit/dab768338918ca3ae19ef6ec432beeb4b11032ed) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Do not attempt to update queue producer settings when deploying a Worker with a queue binding
+
+  Previously, each deployed Worker would update a subset of the queue producer's settings for each queue binding, which could result in broken queue producers or at least conflicts where different Workers tried to set different producer settings on a shared queue.
+
+- [#10233](https://github.com/cloudflare/workers-sdk/pull/10233) [`a00a124`](https://github.com/cloudflare/workers-sdk/commit/a00a1246d478fe8184d1f7249394afa99bcddc72) Thanks [@veggiedefender](https://github.com/veggiedefender)! - Increase the maxBuffer size for capnp uploads
+
+- [#10228](https://github.com/cloudflare/workers-sdk/pull/10228) [`77a4364`](https://github.com/cloudflare/workers-sdk/commit/77a43641c2d5eb7700adb9c3ef7bc3b04eaa3207) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix `NonRetryableError` thrown with an empty error message not stopping workflow retries locally
+
+- Updated dependencies []:
+  - miniflare@3.20250718.1
+
+## 3.114.13
+
+### Patch Changes
+
+- [#10015](https://github.com/cloudflare/workers-sdk/pull/10015) [`b5d9bb0`](https://github.com/cloudflare/workers-sdk/commit/b5d9bb026ebfb4c732c3c4999aa5ac0757f1a1b2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix `wrangler dev` logs being logged on the incorrect level in some cases
+
+  currently the way `wrangler dev` prints logs is faulty, for example the following code
+
+  ```js
+  console.error("this is an error");
+  console.warn("this is a warning");
+  console.debug("this is a debug");
+  ```
+
+  inside a worker would cause the following logs:
+
+  ```text
+  ✘ [ERROR] this is an error
+
+  ✘ [ERROR] this is a warning
+
+  this is a debug
+  ```
+
+  (note that the warning is printed as an error and the debug log is printed even if by default it should not)
+
+  the changes here make sure that the logs are instead logged to their correct level, so for the code about the following will be logged instead:
+
+  ```text
+  ✘ [ERROR] this is an error
+
+  ▲ [WARNING] this is a warning
+  ```
+
+  (running `wrangler dev` with the `--log-level=debug` flag will also cause the debug log to be included as well)
+
+- [#10187](https://github.com/cloudflare/workers-sdk/pull/10187) [`f480ec7`](https://github.com/cloudflare/workers-sdk/commit/f480ec74d1aaf05681fb8ebabcbcf147cfd6ea8a) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Deleting when Pages project binds to worker requires confirmation
+
+- [#10182](https://github.com/cloudflare/workers-sdk/pull/10182) [`1f686ef`](https://github.com/cloudflare/workers-sdk/commit/1f686ef3d20e2986d1c2d6d554a7fb99004b9924) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - fix: report startup errors before workerd profiling
+
+- [#10226](https://github.com/cloudflare/workers-sdk/pull/10226) [`989e17e`](https://github.com/cloudflare/workers-sdk/commit/989e17e71aeefad3d021a368b57d2f6af6827d1a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Enforce 64-character limit for Workflow binding names locally to match production validation
+
+- [#10216](https://github.com/cloudflare/workers-sdk/pull/10216) [`76d3002`](https://github.com/cloudflare/workers-sdk/commit/76d3002bf7e03f4b5ee255c9fd0eaa81f092311d) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Add macOS version validation to prevent EPIPE errors on unsupported macOS versions (below 13.5). Miniflare and C3 fail hard while Wrangler shows warnings but continues execution.
+
+- [#10261](https://github.com/cloudflare/workers-sdk/pull/10261) [`8c38b65`](https://github.com/cloudflare/workers-sdk/commit/8c38b65a7fcb424e5674575595c1663b6b363be9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: strip ANSI escape codes from log files to improve readability and parsing
+
+- [#10171](https://github.com/cloudflare/workers-sdk/pull/10171) [`0d73563`](https://github.com/cloudflare/workers-sdk/commit/0d73563833d47bb61582eb5569b0af74e8f4de1e) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Handle UTF BOM in config files - detect and remove UTF-8 BOMs, error on unsupported BOMs (UTF-16, UTF-32)
+
+- Updated dependencies [[`b5d9bb0`](https://github.com/cloudflare/workers-sdk/commit/b5d9bb026ebfb4c732c3c4999aa5ac0757f1a1b2), [`76d3002`](https://github.com/cloudflare/workers-sdk/commit/76d3002bf7e03f4b5ee255c9fd0eaa81f092311d)]:
+  - miniflare@3.20250718.1
+
+## 3.114.12
+
+### Patch Changes
+
+- [#10019](https://github.com/cloudflare/workers-sdk/pull/10019) [`cce7f6f`](https://github.com/cloudflare/workers-sdk/commit/cce7f6f6c966d43894d57e8adfe05779605b1f65) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: update workerd dependency to latest
+
+- [#10050](https://github.com/cloudflare/workers-sdk/pull/10050) [`ef003a2`](https://github.com/cloudflare/workers-sdk/commit/ef003a2b5dc057575651418e3805521d69251065) Thanks [@emily-shen](https://github.com/emily-shen)! - remove banner from r2 getobject in pipe mode
+
+- [#10003](https://github.com/cloudflare/workers-sdk/pull/10003) [`6940d39`](https://github.com/cloudflare/workers-sdk/commit/6940d39464669e8635e6da710a0449e1204d71be) Thanks [@emily-shen](https://github.com/emily-shen)! - Include more (sanitised) user errors in telemetry.
+
+  We manually vet and sanitised error messages before including them in our telemetry collection - this PR just includes a couple more.
+
+- [#9973](https://github.com/cloudflare/workers-sdk/pull/9973) [`58c09cf`](https://github.com/cloudflare/workers-sdk/commit/58c09cf06e96ebc78d0f5de1b3483285f6a5558c) Thanks [@penalosa](https://github.com/penalosa)! - Make Wrangler warn more loudly if you're missing auth scopes
+
+- Updated dependencies [[`cce7f6f`](https://github.com/cloudflare/workers-sdk/commit/cce7f6f6c966d43894d57e8adfe05779605b1f65), [`028f689`](https://github.com/cloudflare/workers-sdk/commit/028f6896dca78901f5b5a36a938667241d501244)]:
+  - miniflare@3.20250718.0
+
 ## 3.114.11
 
 ### Patch Changes

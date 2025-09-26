@@ -3,7 +3,6 @@ import { gzipSync } from "node:zlib";
 import chalk from "chalk";
 import { logger } from "../logger";
 import type { CfModule } from "./worker";
-import type { Metafile } from "esbuild";
 
 const ONE_KIB_BYTES = 1024;
 // Current max is 3 MiB for free accounts, 10 MiB for paid accounts.
@@ -42,33 +41,4 @@ export async function printBundleSize(
 				: chalk.green(bundleReport);
 
 	logger.log(`Total Upload: ${colorizedReport}`);
-}
-
-export function printOffendingDependencies(
-	dependencies: Metafile["outputs"][string]["inputs"]
-) {
-	const warning: string[] = [];
-
-	const dependenciesSorted = Object.entries(dependencies);
-	dependenciesSorted.sort(
-		([_adep, aData], [_bdep, bData]) =>
-			bData.bytesInOutput - aData.bytesInOutput
-	);
-	const topLargest = dependenciesSorted.slice(0, 5);
-
-	if (topLargest.length > 0) {
-		warning.push(
-			`Here are the ${topLargest.length} largest dependencies included in your script:`
-		);
-
-		for (const [dep, data] of topLargest) {
-			warning.push(
-				`- ${dep} - ${(data.bytesInOutput / ONE_KIB_BYTES).toFixed(2)} KiB`
-			);
-		}
-
-		warning.push("If these are unnecessary, consider removing them");
-
-		logger.warn(warning.join("\n"));
-	}
 }

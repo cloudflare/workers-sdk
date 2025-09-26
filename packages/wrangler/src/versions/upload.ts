@@ -96,6 +96,7 @@ export const versionsUploadCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
+	positionalArgs: ["script"],
 	args: {
 		script: {
 			describe: "The path to an entry point for your Worker",
@@ -776,12 +777,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					printBindings({ ...bindings, vars: maskedVars });
 				}
 
-				await helpIfErrorIsSizeOrScriptStartup(
+				const message = await helpIfErrorIsSizeOrScriptStartup(
 					err,
 					dependencies,
 					workerBundle,
 					props.projectRoot
 				);
+				if (message) {
+					logger.error(message);
+				}
 
 				// Apply source mapping to validation startup errors if possible
 				if (

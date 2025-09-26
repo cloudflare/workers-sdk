@@ -10,11 +10,8 @@ import {
 	logConsoleMessage,
 	maybeHandleNetworkLoadResource,
 } from "../../dev/inspect";
-import {
-	castLogLevel,
-	handleRuntimeStdio,
-	WranglerLog,
-} from "../../dev/miniflare";
+import { castLogLevel, WranglerLog } from "../../dev/miniflare";
+import { handleRuntimeStdioWithStructuredLogs } from "../../dev/miniflare/stdio";
 import { getHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
@@ -163,7 +160,8 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 					// if debugging, log requests with specic ProxyWorker prefix
 					logger.loggerLevel === "debug" ? "wrangler-ProxyWorker" : "wrangler",
 			}),
-			handleRuntimeStdio,
+			handleRuntimeStdio: handleRuntimeStdioWithStructuredLogs,
+			structuredWorkerdLogs: true,
 			liveReload: false,
 		};
 

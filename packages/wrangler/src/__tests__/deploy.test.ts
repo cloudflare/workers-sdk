@@ -10,13 +10,12 @@ import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { File } from "undici";
 import { vi } from "vitest";
-import {
-	printBundleSize,
-	printOffendingDependencies,
-} from "../deployment-bundle/bundle-reporter";
+import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { sniffUserAgent } from "../package-manager";
+import { ParseError } from "../parse";
 import { writeAuthConfigFile } from "../user";
+import { diagnoseScriptSizeError } from "../utils/friendly-validator-errors";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -57,11 +56,7 @@ import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type {
-	PostQueueBody,
-	PostTypedConsumerBody,
-	QueueResponse,
-} from "../queues/client";
+import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
 import type { FormData } from "undici";
 import type { Mock } from "vitest";
 
@@ -11666,15 +11661,10 @@ export default{
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 4 largest dependencies included in your script:[0m
-
-				  - index.js - xx KiB
-				  - add.wasm - xx KiB
-				  - dependency.js - xx KiB
-				  - message.txt - xx KiB
-				  If these are unnecessary, consider removing them
-
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				",
+				  "warn": "",
 				}
 			`);
 		});
@@ -11715,43 +11705,9 @@ export default{
 				main: "index.js",
 			});
 
-			await expect(runWrangler("deploy")).rejects.toThrowError();
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYour Worker failed validation because it exceeded startup limits.[0m
-
-
-				  A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions)
-				  failed.
-				   - Error: Script startup exceeded CPU time limit. [code: 10021]
-
-				  To ensure fast responses, there are constraints on Worker startup, such as how much CPU it can
-				  use, or how long it can take. Your Worker has hit one of these startup limits. Try reducing the
-				  amount of work done during startup (outside the event handler), either by removing code or
-				  relocating it inside the event handler.
-
-				  Refer to [4mhttps://developers.cloudflare.com/workers/platform/limits/#worker-startup-time[0m for more
-				  details
-				  A CPU Profile of your Worker's startup phase has been written to
-				  .wrangler/tmp/startup-profile-<HASH>/worker.cpuprofile - load it into the Chrome DevTools profiler
-				  (or directly in VSCode) to view a flamegraph.
-
-				",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
-
-				  Error: Script startup exceeded CPU time limit. [code: 10021]
-
-				  If you think this is a bug, please open an issue at:
-				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-
-				",
-				  "warn": "",
-				}
-			`);
+			await expect(runWrangler("deploy")).rejects.toThrowError(
+				`Your Worker failed validation because it exceeded startup limits.`
+			);
 		});
 
 		describe("unit tests", () => {
@@ -11796,25 +11752,26 @@ export default{
 					"node_modules/k-mod/module.js": { bytesInOutput: 79 },
 				};
 
-				printOffendingDependencies(deps);
-				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 5 largest dependencies included in your script:[0m
+				const message = diagnoseScriptSizeError(
+					new ParseError({ text: "too big" }),
+					deps
+				);
+				expect(message).toMatchInlineSnapshot(`
+					"Your Worker failed validation because it exceeded size limits.
 
-			  - node_modules/d-mod/module.js - xx KiB
-			  - node_modules/g-mod/module.js - xx KiB
-			  - node_modules/e-mod/module.js - xx KiB
-			  - node_modules/i-mod/module.js - xx KiB
-			  - node_modules/j-mod/module.js - xx KiB
-			  If these are unnecessary, consider removing them
+					too big
 
-			",
-			}
-		`);
+					Here are the 5 largest dependencies included in your script:
+
+					- node_modules/d-mod/module.js - 2061.72 KiB
+					- node_modules/g-mod/module.js - 77.05 KiB
+					- node_modules/e-mod/module.js - 8.02 KiB
+					- node_modules/i-mod/module.js - 1.95 KiB
+					- node_modules/j-mod/module.js - 0.88 KiB
+
+					If these are unnecessary, consider removing them
+					"
+				`);
 			});
 		});
 	});
@@ -11952,10 +11909,6 @@ export default{
 				modified_on: "",
 			};
 			mockGetQueueByName(queueName, existingQueue);
-			mockPutQueueById(queueId, {
-				queue_name: queueName,
-				settings: {},
-			});
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -11998,12 +11951,7 @@ export default{
 				modified_on: "",
 			};
 			mockGetQueueByName(queueName, existingQueue);
-			mockPutQueueById(queueId, {
-				queue_name: queueName,
-				settings: {
-					delivery_delay: 10,
-				},
-			});
+
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
@@ -13934,37 +13882,6 @@ function mockPostConsumerById(
 				});
 			},
 			{ once: true }
-		)
-	);
-	return requests;
-}
-
-function mockPutQueueById(
-	expectedQueueId: string,
-	expectedBody: PostQueueBody
-) {
-	const requests = { count: 0 };
-	msw.use(
-		http.put(
-			`*/accounts/:accountId/queues/:queueId`,
-			async ({ request, params }) => {
-				const body = await request.json();
-				expect(params.queueId).toEqual(expectedQueueId);
-				expect(params.accountId).toEqual("some-account-id");
-				expect(body).toEqual(expectedBody);
-				requests.count += 1;
-				return HttpResponse.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: {
-						queue: expectedBody.queue_name,
-						settings: {
-							delivery_delay: expectedBody.settings?.delivery_delay,
-						},
-					},
-				});
-			}
 		)
 	);
 	return requests;
