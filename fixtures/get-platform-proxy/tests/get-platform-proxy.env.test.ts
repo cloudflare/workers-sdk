@@ -16,6 +16,7 @@ import type {
 	Hyperdrive,
 	ImagesBinding,
 	KVNamespace,
+	Workflow,
 } from "@cloudflare/workers-types";
 import type { Unstable_DevWorker } from "wrangler";
 
@@ -31,16 +32,21 @@ type Env = {
 	MY_HYPERDRIVE: Hyperdrive;
 	ASSETS: Fetcher;
 	IMAGES: ImagesBinding;
+	MY_WORKFLOW_INTERNAL: Workflow;
+	MY_WORKFLOW_EXTERNAL: Workflow;
 };
 
 const wranglerConfigFilePath = path.join(__dirname, "..", "wrangler.jsonc");
 
 describe("getPlatformProxy - env", () => {
 	let devWorkers: Unstable_DevWorker[];
+	let warn = {} as MockInstance<typeof console.warn>;
 
 	beforeEach(() => {
 		// Hide stdout messages from the test logs
 		vi.spyOn(console, "log").mockImplementation(() => {});
+		vi.spyOn(console, "error").mockImplementation(() => {});
+		warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 	});
 
 	describe("var bindings", () => {
@@ -261,41 +267,20 @@ describe("getPlatformProxy - env", () => {
 	});
 
 	describe("DO warnings", () => {
-		let warn = {} as MockInstance<typeof console.warn>;
-		beforeEach(() => {
-			warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-		});
-		afterEach(() => {
-			warn.mockRestore();
-		});
-
 		it("warns about internal DOs and doesn't crash", async () => {
 			await getPlatformProxy<Env>({
 				configPath: path.join(__dirname, "..", "wrangler_internal_do.jsonc"),
 			});
-			expect(warn).toMatchInlineSnapshot(`
-				[MockFunction warn] {
-				  "calls": [
-				    [
-				      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following internal Durable Objects:[0m
-
-				  				- {"class_name":"MyDurableObject","name":"MY_DURABLE_OBJECT"}
-				  				These will not work in local development, but they should work in production.
-				  
-				  				If you want to develop these locally, you can define your DO in a separate Worker, with a separate configuration file.
-				  				For detailed instructions, refer to the Durable Objects section here: [4mhttps://developers.cloudflare.com/workers/wrangler/api#supported-bindings[0m
-
-				",
-				    ],
-				  ],
-				  "results": [
-				    {
-				      "type": "return",
-				      "value": undefined,
-				    },
-				  ],
-				}
-			`);
+			expect(warn.mock.calls[0][0].replaceAll(/[\r\n]+/g, "\n"))
+				.toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following internal Durable Objects:[0m
+					  				- {"class_name":"MyDurableObject","name":"MY_DURABLE_OBJECT"}
+					  				These will not work in local development, but they should work in production.
+					  
+					  				If you want to develop these locally, you can define your DO in a separate Worker, with a separate configuration file.
+					  				For detailed instructions, refer to the Durable Objects section here: [4mhttps://developers.cloudflare.com/workers/wrangler/api#supported-bindings[0m
+					"
+				`);
 		});
 
 		it("doesn't warn about external DOs and doesn't crash", async () => {
@@ -303,6 +288,20 @@ describe("getPlatformProxy - env", () => {
 				configPath: path.join(__dirname, "..", "wrangler_external_do.jsonc"),
 			});
 			expect(warn).not.toHaveBeenCalled();
+		});
+
+		it("warns about Workflows and doesn't crash", async () => {
+			await getPlatformProxy<Env>({
+				configPath: path.join(__dirname, "..", "wrangler_workflow.jsonc"),
+			});
+			expect(warn.mock.calls[0][0].replaceAll(/[\r\n]+/g, "\n"))
+				.toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following Workflows:[0m
+					  				- {"binding":"MY_WORKFLOW_INTERNAL","name":"my-workflow-internal","class_name":"MyWorkflowInternal"}
+					  - {"binding":"MY_WORKFLOW_EXTERNAL","name":"my-workflow-external","class_name":"MyWorkflowExternal","script_name":"OtherWorker"}
+					  				These are not available in local development, so you will not be able to bind to them when testing locally, but they should work in production.
+					"
+				`);
 		});
 	});
 
