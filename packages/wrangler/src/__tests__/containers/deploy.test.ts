@@ -1957,7 +1957,7 @@ function mockDockerBuild(
 		expect(args).toEqual([
 			"build",
 			"-t",
-			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
+			`${containerName}:${tag}`,
 			"--platform",
 			"linux/amd64",
 			"--provenance=false",
@@ -1998,7 +1998,7 @@ function mockDockerImageInspectDigests(containerName: string, tag: string) {
 		expect(args).toEqual([
 			"image",
 			"inspect",
-			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
+			`${containerName}:${tag}`,
 			"--format",
 			"{{ json .RepoDigests }} {{ .Id }}",
 		]);
@@ -2034,7 +2034,7 @@ function mockDockerImageInspectSize(containerName: string, tag: string) {
 		expect(args).toEqual([
 			"image",
 			"inspect",
-			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
+			`${containerName}:${tag}`,
 			"--format",
 			"{{ .Size }} {{ len .RootFS.Layers }}",
 		]);
@@ -2113,7 +2113,7 @@ function mockDockerTag(from: string, to: string, tag: string) {
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([
 			"tag",
-			`${getCloudflareContainerRegistry()}/${from}:${tag}`,
+			`${from}:${tag}`,
 			`${getCloudflareContainerRegistry()}/${to}:${tag}`,
 		]);
 		return defaultChildProcess();

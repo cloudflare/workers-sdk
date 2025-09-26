@@ -5,8 +5,6 @@ import {
 	dockerBuild,
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
-	getCloudflareContainerRegistry,
-	getCloudflareRegistryWithAccountNamespace,
 	isDir,
 	resolveImageName,
 	runDockerCmd,
@@ -98,7 +96,7 @@ export async function buildAndMaybePush(
 	containerConfig?: Exclude<ContainerNormalizedConfig, ImageURIConfig>
 ): Promise<ImageRef> {
 	try {
-		const imageTag = `${getCloudflareContainerRegistry()}/${args.tag}`;
+		const imageTag = args.tag;
 		const { buildCmd, dockerfile } = await constructBuildCommand(
 			{
 				tag: imageTag,
@@ -220,7 +218,7 @@ export async function buildAndMaybePush(
 				}
 			}
 			// Re-tag the image to include the account ID
-			const namespacedImageTag = getCloudflareRegistryWithAccountNamespace(
+			const namespacedImageTag = resolveImageName(
 				account.external_account_id,
 				args.tag
 			);
@@ -280,11 +278,9 @@ export async function pushCommand(
 ) {
 	try {
 		await dockerLoginManagedRegistry(args.pathToDocker);
+
 		const accountId = await getAccountId(config);
-		const newTag = getCloudflareRegistryWithAccountNamespace(
-			accountId,
-			args.TAG
-		);
+		const newTag = resolveImageName(accountId, args.TAG);
 		const dockerPath = args.pathToDocker ?? getDockerPath();
 		await checkImagePlatform(dockerPath, args.TAG);
 		await runDockerCmd(dockerPath, ["tag", args.TAG, newTag]);
