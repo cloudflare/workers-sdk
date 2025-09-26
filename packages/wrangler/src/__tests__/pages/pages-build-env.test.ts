@@ -120,7 +120,15 @@ describe("pages build env", () => {
 		await runWrangler("pages functions build-env . --outfile data.json");
 
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
-		expect(std.err).toContain("ParseError");
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid character, expected \\"=\\"[0m
+
+			    <cwd>/wrangler.toml:1:8:
+			[37m      1 │ INVALID [32m[37m\\"FILE
+			        ╵         [32m^[0m
+
+			"
+		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"Checking for configuration in a Wrangler configuration file (BETA)
 
