@@ -1,4 +1,4 @@
-const USER_ERROR_CODES = new Set([
+export const USER_ERROR_CODES = new Set([
 	"ERR_ADDRESS_IN_USE", // Runtime failed to start because the address was in use
 	"ERR_DISPOSED", // Attempted to use Miniflare instance after calling dispose()
 	"ERR_MODULE_PARSE", // SyntaxError when attempting to parse/locate modules
@@ -18,7 +18,7 @@ const USER_ERROR_CODES = new Set([
 	"ERR_MISSING_INSPECTOR_PROXY_PORT", // An inspector proxy has been requested but no inspector port to use has been specified
 ] as const);
 
-const SYSTEM_ERROR_CODES = new Set([
+export const SYSTEM_ERROR_CODES = new Set([
 	"ERR_RUNTIME_FAILURE", // Runtime failed to start
 	"ERR_CYCLIC", // Generate cyclic workerd config
 	"ERR_PLUGIN_LOADING_FAILED",
@@ -50,7 +50,7 @@ export class MiniflareError<Code extends string = string> extends Error {
 	}
 }
 
-type KeyTypes<T> = T extends Set<infer Keys> ? Keys : never;
+export type KeyTypes<T> = T extends Set<infer Keys> ? Keys : never;
 
 export type MiniflareCoreErrorCode =
 	| KeyTypes<typeof USER_ERROR_CODES>

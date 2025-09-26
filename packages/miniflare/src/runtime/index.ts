@@ -186,13 +186,13 @@ class StartupLogBuffer {
 			chunk.includes("Address already in use; toString() = ")
 		);
 		if (addressInUseLog) {
-			const [_, host, port] = addressInUseLog.match(
+			const match = addressInUseLog.match(
 				/Address already in use; toString\(\) = (.+):(.+)/
 			) ?? ["", "unknown", "unknown"];
 
 			throw new MiniflareCoreError(
 				"ERR_ADDRESS_IN_USE",
-				`Address already in use (${host}:${port}). Please check that you are not already running a server on this address or specify a different port with --port.`
+				`Address already in use (${match[1]}:${match[2]}). Please check that you are not already running a server on this address or specify a different port with --port.`
 			);
 		}
 	}
