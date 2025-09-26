@@ -53,10 +53,38 @@ export const space = (n = 1) => {
 	return hidden("\u200A".repeat(n));
 };
 
+const LOGGER_LEVELS = {
+	none: -1,
+	error: 0,
+	warn: 1,
+	info: 2,
+	log: 3,
+	debug: 4,
+} as const;
+
+export type LoggerLevel = keyof typeof LOGGER_LEVELS;
+
+// Global log level that can be set by consuming packages
+let currentLogLevel: LoggerLevel = "log";
+
+export function setLogLevel(level: LoggerLevel) {
+	currentLogLevel = level;
+}
+
+export function getLogLevel(): LoggerLevel {
+	return currentLogLevel;
+}
+
 // Primitive for printing to stdout. Use this instead of
 // console.log or printing to stdout directly
 export const logRaw = (msg: string) => {
-	stdout.write(`${msg}\n`);
+	// treat all log calls as 'log' level logs
+	const currentLevel = getLogLevel();
+
+	// Only output if current log level allows 'log' level messages
+	if (LOGGER_LEVELS[currentLevel] >= LOGGER_LEVELS.log) {
+		stdout.write(`${msg}\n`);
+	}
 };
 
 // A simple stylized log for use within a prompt
@@ -237,7 +265,9 @@ export const error = (
 	extra?: string,
 	corner = shapes.corners.bl
 ) => {
-	if (msg) {
+	// Only output if current log level allows 'error' level messages
+	const currentLevel = getLogLevel();
+	if (msg && LOGGER_LEVELS[currentLevel] >= LOGGER_LEVELS.error) {
 		stderr.write(
 			`${gray(corner)} ${status.error} ${dim(msg)}\n${
 				extra ? space() + extra + "\n" : ""
