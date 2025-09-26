@@ -19,7 +19,7 @@ import {
 	unstable_convertConfigBindingsToStartWorkerBindings,
 	unstable_getMiniflareWorkerOptions,
 } from "wrangler";
-import { getAssetsConfig } from "./asset-config";
+import { getAssetsConfig } from "../asset-config";
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
@@ -27,17 +27,18 @@ import {
 	PUBLIC_DIR_PREFIX,
 	ROUTER_WORKER_NAME,
 	VITE_PROXY_WORKER_NAME,
-} from "./constants";
-import { additionalModuleRE } from "./shared";
-import { withTrailingSlash } from "./utils";
-import type { CloudflareDevEnvironment } from "./cloudflare-environment";
+} from "../constants";
+import { additionalModuleRE } from "../shared";
+import { withTrailingSlash } from "../utils";
+import { getRuntimeStdioWithStructuredLogsHandler } from "./stdio";
+import type { CloudflareDevEnvironment } from "../cloudflare-environment";
 import type {
 	AssetsOnlyResolvedConfig,
 	PersistState,
 	PreviewResolvedConfig,
 	WorkerConfig,
 	WorkersResolvedConfig,
-} from "./plugin-config";
+} from "../plugin-config";
 import type { MiniflareOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
@@ -534,13 +535,8 @@ export async function getDevMiniflareOptions(config: {
 		unsafeInspectorProxy: inspectorPort !== false,
 		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		unsafeTriggerHandlers: true,
-		handleRuntimeStdio(stdout, stderr) {
-			const decoder = new TextDecoder();
-			stdout.forEach((data) => logger.info(decoder.decode(data)));
-			stderr.forEach((error) =>
-				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
-			);
-		},
+		structuredWorkerdLogs: true,
+		handleRuntimeStdio: getRuntimeStdioWithStructuredLogsHandler(logger),
 		defaultPersistRoot: getPersistenceRoot(
 			resolvedViteConfig.root,
 			resolvedPluginConfig.persistState
@@ -794,13 +790,8 @@ export async function getPreviewMiniflareOptions(config: {
 		unsafeInspectorProxy: inspectorPort !== false,
 		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		unsafeTriggerHandlers: true,
-		handleRuntimeStdio(stdout, stderr) {
-			const decoder = new TextDecoder();
-			stdout.forEach((data) => logger.info(decoder.decode(data)));
-			stderr.forEach((error) =>
-				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
-			);
-		},
+		structuredWorkerdLogs: true,
+		handleRuntimeStdio: getRuntimeStdioWithStructuredLogsHandler(logger),
 		defaultPersistRoot: getPersistenceRoot(
 			resolvedViteConfig.root,
 			resolvedPluginConfig.persistState
