@@ -1,5 +1,18 @@
 # wrangler
 
+## 3.114.15
+
+### Patch Changes
+
+- [#10516](https://github.com/cloudflare/workers-sdk/pull/10516) [`dfa81fd`](https://github.com/cloudflare/workers-sdk/commit/dfa81fd44cab178922fb4f0b1855e7668351727a) Thanks [@workers-devprod](https://github.com/workers-devprod)! - fix: script should be accepted as a positional arg in the `versions upload` command
+
+- [#10760](https://github.com/cloudflare/workers-sdk/pull/10760) [`cb7ace5`](https://github.com/cloudflare/workers-sdk/commit/cb7ace562e9d5fd310bf7bd69a80cc2cbf8a64ac) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support the deletion of secrets with complex names
+
+- [#9991](https://github.com/cloudflare/workers-sdk/pull/9991) [`3d9b3a0`](https://github.com/cloudflare/workers-sdk/commit/3d9b3a042cd5c0b4c795a5b4c112fc98e09eb30c) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Fix startup profiling when sourcemaps are enabled
+
+- Updated dependencies [[`6de07fb`](https://github.com/cloudflare/workers-sdk/commit/6de07fb1f815109966b7be631a092d4470a01b6f), [`ab47329`](https://github.com/cloudflare/workers-sdk/commit/ab473299f0d2e7d375aeaaf8973f2d2930efb0ce)]:
+  - miniflare@3.20250718.2
+
 ## 3.114.14
 
 ### Patch Changes
