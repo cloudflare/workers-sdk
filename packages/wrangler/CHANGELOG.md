@@ -1,5 +1,11 @@
 # wrangler
 
+## 4.40.2
+
+### Patch Changes
+
+- [#10771](https://github.com/cloudflare/workers-sdk/pull/10771) [`b455281`](https://github.com/cloudflare/workers-sdk/commit/b45528102031350ef60048839e5e64252e8784b3) Thanks [@penalosa](https://github.com/penalosa)! - Fix Worker Loader binding type
+
 ## 4.40.1
 
 ### Patch Changes
