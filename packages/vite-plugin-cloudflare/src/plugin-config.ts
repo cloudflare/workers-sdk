@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import * as vite from "vite";
 import { getWorkerConfigs } from "./deploy-config";
-import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
+import { hasNodeJsCompat, NodeJsCompat } from "./plugins/nodejs-compat";
 import {
 	getValidatedWranglerConfigPath,
 	getWorkerConfig,

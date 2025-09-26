@@ -1,12 +1,11 @@
 import assert from "node:assert";
 import * as util from "node:util";
 import * as vite from "vite";
-import { MAIN_ENTRY_NAME } from "./constants";
+import { VIRTUAL_WORKER_ENTRY } from "./plugins/virtual-modules";
 import {
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
 	UNKNOWN_HOST,
-	VIRTUAL_WORKER_ENTRY,
 	WORKER_ENTRY_PATH_HEADER,
 } from "./shared";
 import { getOutputDirectory } from "./utils";
@@ -18,6 +17,8 @@ import type {
 	ReplaceWorkersTypes,
 	WebSocket,
 } from "miniflare";
+
+export const MAIN_ENTRY_NAME = "index";
 
 interface WebSocketContainer {
 	webSocket?: WebSocket;

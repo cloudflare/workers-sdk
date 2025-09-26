@@ -2,12 +2,15 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import colors from "picocolors";
+import { VIRTUAL_CLIENT_FALLBACK_ENTRY } from "./plugins/virtual-modules";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type * as vite from "vite";
 import type { Unstable_Config } from "wrangler";
+
+const CLIENT_FALLBACK_ENTRY_NAME = "__cloudflare_fallback_entry__";
 
 export function createBuildApp(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig
@@ -136,13 +139,11 @@ async function fallbackBuild(
 	builder: vite.ViteBuilder,
 	environment: vite.BuildEnvironment
 ): Promise<void> {
-	const fallbackEntryName = "__cloudflare_fallback_entry__";
-
 	environment.config.build.rollupOptions = {
-		input: "virtual:__cloudflare_fallback_entry__",
+		input: VIRTUAL_CLIENT_FALLBACK_ENTRY,
 		logLevel: "silent",
 		output: {
-			entryFileNames: fallbackEntryName,
+			entryFileNames: CLIENT_FALLBACK_ENTRY_NAME,
 		},
 	};
 
@@ -151,7 +152,7 @@ async function fallbackBuild(
 	const fallbackEntryPath = path.resolve(
 		builder.config.root,
 		environment.config.build.outDir,
-		fallbackEntryName
+		CLIENT_FALLBACK_ENTRY_NAME
 	);
 
 	fs.unlinkSync(fallbackEntryPath);

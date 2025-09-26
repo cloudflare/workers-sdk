@@ -22,13 +22,11 @@ import {
 import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
-	ASSET_WORKERS_COMPATIBILITY_DATE,
 	kRequestType,
-	PUBLIC_DIR_PREFIX,
 	ROUTER_WORKER_NAME,
 	VITE_PROXY_WORKER_NAME,
 } from "./constants";
-import { additionalModuleRE } from "./shared";
+import { additionalModuleRE } from "./plugins/additional-modules";
 import { withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
@@ -45,6 +43,10 @@ import type {
 	RemoteProxySession,
 	SourcelessWorkerOptions,
 } from "wrangler";
+
+const INTERNAL_WORKERS_COMPATIBILITY_DATE = "2024-10-04";
+// Used to mark HTML assets as being in the public directory so that they can be resolved from their root relative paths
+const PUBLIC_DIR_PREFIX = "/__vite_public_dir__";
 
 function getPersistenceRoot(
 	root: string,
@@ -259,7 +261,7 @@ export async function getDevMiniflareOptions(config: {
 	const assetWorkers: Array<WorkerOptions> = [
 		{
 			name: ROUTER_WORKER_NAME,
-			compatibilityDate: ASSET_WORKERS_COMPATIBILITY_DATE,
+			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			modulesRoot: miniflareModulesRoot,
 			modules: [
 				{
@@ -282,7 +284,7 @@ export async function getDevMiniflareOptions(config: {
 		},
 		{
 			name: ASSET_WORKER_NAME,
-			compatibilityDate: ASSET_WORKERS_COMPATIBILITY_DATE,
+			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			modulesRoot: miniflareModulesRoot,
 			modules: [
 				{
@@ -360,7 +362,7 @@ export async function getDevMiniflareOptions(config: {
 		},
 		{
 			name: VITE_PROXY_WORKER_NAME,
-			compatibilityDate: ASSET_WORKERS_COMPATIBILITY_DATE,
+			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			modulesRoot: miniflareModulesRoot,
 			modules: [
 				{

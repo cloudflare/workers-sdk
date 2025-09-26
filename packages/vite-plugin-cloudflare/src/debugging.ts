@@ -1,10 +1,12 @@
 import assert from "node:assert";
 import getPort, { portNumbers } from "get-port";
 import colors from "picocolors";
-import { DEBUG_PATH, DEFAULT_INSPECTOR_PORT } from "./constants";
 import type { ResolvedPluginConfig } from "./plugin-config";
 import type { Miniflare } from "miniflare";
 import type * as vite from "vite";
+
+export const DEBUG_PATH = "/__debug";
+const DEFAULT_INSPECTOR_PORT = 9229;
 
 /**
  * Gets the inspector port option that should be passed to Miniflare based on the user's plugin config
