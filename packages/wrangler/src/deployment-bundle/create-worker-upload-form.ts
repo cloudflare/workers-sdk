@@ -198,6 +198,7 @@ type WorkerMetadataPut = {
 	logpush?: boolean;
 	placement?: CfPlacement;
 	tail_consumers?: CfTailConsumer[];
+	streaming_tail_consumers?: CfTailConsumer[];
 	limits?: CfUserLimits;
 
 	assets?: {
@@ -235,6 +236,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		logpush,
 		placement,
 		tail_consumers,
+		streaming_tail_consumers,
 		limits,
 		annotations,
 		keep_assets,
@@ -772,6 +774,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(logpush !== undefined && { logpush }),
 		...(placement && { placement }),
 		...(tail_consumers && { tail_consumers }),
+		...(streaming_tail_consumers && { streaming_tail_consumers }),
 		...(limits && { limits }),
 		...(annotations && { annotations }),
 		...(keep_assets !== undefined && { keep_assets }),

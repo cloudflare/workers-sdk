@@ -105,6 +105,7 @@ export interface StartDevWorkerInput {
 	triggers?: Trigger[];
 
 	tailConsumers?: CfTailConsumer[];
+	streamingTailConsumers?: CfTailConsumer[];
 
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.

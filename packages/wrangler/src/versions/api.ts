@@ -1,5 +1,9 @@
 import { fetchResult } from "../cfetch";
-import type { Observability, TailConsumer } from "../config/environment";
+import type {
+	Observability,
+	StreamingTailConsumer,
+	TailConsumer,
+} from "../config/environment";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	ApiDeployment,
@@ -157,6 +161,7 @@ export type NonVersionedScriptSettings = {
 	logpush: boolean;
 	tags: string[] | null;
 	tail_consumers: TailConsumer[];
+	streaming_tail_consumers?: StreamingTailConsumer[];
 	observability: Observability;
 };
 
