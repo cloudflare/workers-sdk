@@ -17,7 +17,11 @@ export class UserError extends Error {
 	telemetryMessage: string | undefined;
 	constructor(
 		message?: string | undefined,
-		options?: (ErrorOptions & TelemetryMessage) | undefined
+		options?:
+			| ({
+					cause?: unknown;
+			  } & TelemetryMessage)
+			| undefined
 	) {
 		super(message, options);
 		// Restore prototype chain:
