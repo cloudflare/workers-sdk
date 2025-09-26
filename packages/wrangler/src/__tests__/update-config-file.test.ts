@@ -2,12 +2,7 @@ import { readFile } from "node:fs/promises";
 import { updateConfigFile } from "../config";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import {
-	clearDialogs,
-	mockConfirm,
-	mockPrompt,
-	mockSelect,
-} from "./helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
@@ -34,8 +29,7 @@ describe("updateConfigFile()", () => {
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
-			undefined,
-			true
+			undefined
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
@@ -48,7 +42,7 @@ describe("updateConfigFile()", () => {
 			  ]
 			}
 			? Would you like Wrangler to add it on your behalf?
-			🤖 Using fallback value in non-interactive context: No"
+			🤖 Using fallback value in non-interactive context: no"
 		`);
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 			`
@@ -64,17 +58,16 @@ describe("updateConfigFile()", () => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(true);
-		mockSelect({
+		mockConfirm({
 			text: "Would you like Wrangler to add it on your behalf?",
-			result: "no",
+			result: false,
 		});
 
 		await updateConfigFile(
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
-			undefined,
-			true
+			undefined
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
@@ -101,9 +94,13 @@ describe("updateConfigFile()", () => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(true);
-		mockSelect({
+		mockConfirm({
 			text: "Would you like Wrangler to add it on your behalf?",
-			result: "yes",
+			result: true,
+		});
+		mockPrompt({
+			text: "What binding name would you like to use?",
+			result: "KV",
 		});
 		mockConfirm({
 			text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
@@ -114,8 +111,7 @@ describe("updateConfigFile()", () => {
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
-			undefined,
-			true
+			undefined
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
@@ -148,9 +144,13 @@ describe("updateConfigFile()", () => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(true);
-		mockSelect({
+		mockConfirm({
 			text: "Would you like Wrangler to add it on your behalf?",
-			result: "yes",
+			result: true,
+		});
+		mockPrompt({
+			text: "What binding name would you like to use?",
+			result: "KV",
 		});
 		mockConfirm({
 			text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
@@ -161,8 +161,7 @@ describe("updateConfigFile()", () => {
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
-			"testEnv",
-			true
+			"testEnv"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file in the \\"testEnv\\" environment:
@@ -200,9 +199,9 @@ describe("updateConfigFile()", () => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(true);
-		mockSelect({
+		mockConfirm({
 			text: "Would you like Wrangler to add it on your behalf?",
-			result: "yes-but",
+			result: true,
 		});
 
 		mockPrompt({
@@ -218,8 +217,7 @@ describe("updateConfigFile()", () => {
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
-			undefined,
-			true
+			undefined
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
@@ -257,8 +255,7 @@ describe("updateConfigFile()", () => {
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.toml",
-			undefined,
-			true
+			undefined
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
@@ -283,8 +280,7 @@ describe("updateConfigFile()", () => {
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			undefined,
-			undefined,
-			true
+			undefined
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
@@ -312,8 +308,7 @@ describe("updateConfigFile()", () => {
 				database_id: "database_id",
 			}),
 			"wrangler.json",
-			undefined,
-			true
+			undefined
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new D1 Database in your Worker, add the following snippet to your configuration file:
@@ -326,7 +321,52 @@ describe("updateConfigFile()", () => {
 			  ]
 			}
 			? Would you like Wrangler to add it on your behalf?
-			🤖 Using fallback value in non-interactive context: No"
+			🤖 Using fallback value in non-interactive context: no"
 		`);
+	});
+
+	describe("defaults", () => {
+		it("no prompts if all defaults provided", async () => {
+			writeWranglerConfig({ name: "worker" }, "wrangler.json");
+
+			setIsTTY(true);
+
+			await updateConfigFile(
+				"kv_namespaces",
+				(name) => ({ binding: name ?? "KV", id: "random-id" }),
+				"wrangler.json",
+				undefined,
+				{
+					binding: "HELLO",
+					updateConfig: true,
+					useRemote: false,
+				}
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+				"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
+				{
+				  \\"kv_namespaces\\": [
+				    {
+				      \\"binding\\": \\"HELLO\\",
+				      \\"id\\": \\"random-id\\"
+				    }
+				  ]
+				}"
+			`);
+			expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
+				`
+			"{
+				\\"compatibility_date\\": \\"2022-01-12\\",
+				\\"name\\": \\"worker\\",
+				\\"kv_namespaces\\": [
+					{
+						\\"binding\\": \\"HELLO\\",
+						\\"id\\": \\"random-id\\"
+					}
+				]
+			}"
+		`
+			);
+		});
 	});
 });

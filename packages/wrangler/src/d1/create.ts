@@ -1,6 +1,6 @@
 import dedent from "ts-dedent";
 import { fetchResult } from "../cfetch";
-import { updateConfigFile } from "../config";
+import { sharedResourceCreationArgs, updateConfigFile } from "../config";
 import { createCommand } from "../core/create-command";
 import { getD1ExtraLocationChoices } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -70,9 +70,10 @@ export const d1CreateCommand = createCommand({
 
 					`,
 		},
+		...sharedResourceCreationArgs,
 	},
 	positionalArgs: ["name"],
-	async handler({ name, location, env }, { config }) {
+	async handler({ name, location, env, ...args }, { config }) {
 		const accountId = await requireAuth(config);
 
 		const db = await createD1Database(config, accountId, name, location);
@@ -96,7 +97,8 @@ export const d1CreateCommand = createCommand({
 				database_id: db.uuid,
 			}),
 			config.configPath,
-			env
+			env,
+			args
 		);
 	},
 });

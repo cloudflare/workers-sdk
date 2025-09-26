@@ -9,7 +9,7 @@ import {
 	clearDialogs,
 	mockConfirm,
 	mockPrompt,
-	mockSelect,
+	mockConfirm,
 } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockProcess } from "./helpers/mock-process";
@@ -161,7 +161,10 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --preview  Interact with a preview namespace  [boolean]"
+					      --preview        Interact with a preview namespace  [boolean]
+					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
+					      --update-config  Automatically update your config file with the newly added resource  [boolean]
+					      --binding        The binding name of this resource in your Worker  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -194,7 +197,10 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --preview  Interact with a preview namespace  [boolean]"
+					      --preview        Interact with a preview namespace  [boolean]
+					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
+					      --update-config  Automatically update your config file with the newly added resource  [boolean]
+					      --binding        The binding name of this resource in your Worker  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
@@ -207,17 +213,8 @@ describe("wrangler", () => {
 				it("should create a namespace", async () => {
 					writeWranglerConfig({ name: "worker" }, configPath);
 					mockCreateRequest("UnitTestNamespace");
-					if (configPath === "wrangler.json") {
-						mockSelect({
-							text: "Would you like Wrangler to add it on your behalf?",
-							result: "yes",
-						});
-						mockConfirm({
-							text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
-							result: false,
-						});
-					}
-					await runWrangler("kv namespace create UnitTestNamespace");
+
+					await runWrangler("kv namespace create UnitTestNamespace --binding MY_NS");
 					expect(std.out).toMatchSnapshot();
 					expect(await readFile(configPath, "utf8")).toMatchSnapshot();
 				});
@@ -226,9 +223,9 @@ describe("wrangler", () => {
 					writeWranglerConfig({ name: "worker" }, configPath);
 					mockCreateRequest("UnitTestNamespace");
 					if (configPath === "wrangler.json") {
-						mockSelect({
+						mockConfirm({
 							text: "Would you like Wrangler to add it on your behalf?",
-							result: "yes-but",
+							result:true,
 						});
 						mockPrompt({
 							text: "What binding name would you like to use?",
@@ -257,16 +254,17 @@ describe("wrangler", () => {
 
 					mockCreateRequest("UnitTestNamespace");
 					if (configPath === "wrangler.json") {
-						mockSelect({
-							text: "Would you like Wrangler to add it on your behalf?",
-							result: "yes",
-						});
 						mockConfirm({
-							text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
-							result: false,
+							text: "Would you like Wrangler to add it on your behalf?",
+							result:true,
 						});
+						mockPrompt({
+							text: "What binding name would you like to use?",
+							result: "HELLO",
+						});
+
 					}
-					await runWrangler("kv namespace create UnitTestNamespace");
+					await runWrangler("kv namespace create UnitTestNamespace --use-remote");
 					expect(std.out).toMatchSnapshot();
 					expect(await readFile(configPath, "utf8")).toMatchSnapshot();
 				});
@@ -286,9 +284,13 @@ describe("wrangler", () => {
 
 					mockCreateRequest("customEnv-UnitTestNamespace");
 					if (configPath === "wrangler.json") {
-						mockSelect({
+						mockConfirm({
 							text: "Would you like Wrangler to add it on your behalf?",
-							result: "yes",
+							result: true,
+						});
+						mockPrompt({
+							text: "What binding name would you like to use?",
+							result: "HELLO",
 						});
 						mockConfirm({
 							text: "For local dev, do you want to connect to the remote resource instead of a local resource?",

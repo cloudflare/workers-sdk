@@ -1,4 +1,4 @@
-import { updateConfigFile } from "../config";
+import { sharedResourceCreationArgs, updateConfigFile } from "../config";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -61,6 +61,7 @@ export const vectorizeCreateCommand = createCommand({
 			description:
 				"Create a deprecated Vectorize V1 index. This is not recommended and indexes created with this option need all other Vectorize operations to have this option enabled.",
 		},
+		...sharedResourceCreationArgs,
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
@@ -121,7 +122,8 @@ export const vectorizeCreateCommand = createCommand({
 				index_name: indexResult.name,
 			}),
 			config.configPath,
-			args.env
+			args.env,
+			args
 		);
 	},
 });

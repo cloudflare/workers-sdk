@@ -226,7 +226,7 @@ export async function displayUsageExamples(
 		}),
 		config.configPath,
 		args.env,
-		false // Don't offer to update automatically
+		{ updateConfig: false }
 	);
 
 	logger.log("\nIn your Worker:");
