@@ -69,6 +69,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			expect(output).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m<<<<<this is an error>>>>>[0m
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m<<<<<this is a warning>>>>>[0m
+				<<<<<this is a debug message>>>>>
 				<<<<<this is a log>>>>>
 				<<<<<this is an info message>>>>>"
 			`);
@@ -79,6 +80,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			expect(output).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m<<<<<this is an error>>>>>[0m
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m<<<<<this is a warning>>>>>[0m
+				<<<<<this is a debug message>>>>>
 				<<<<<this is a log>>>>>
 				<<<<<this is an info message>>>>>"
 			`);
@@ -89,6 +91,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			expect(output).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m<<<<<this is an error>>>>>[0m
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m<<<<<this is a warning>>>>>[0m
+				<<<<<this is a debug message>>>>>
 				<<<<<this is an info message>>>>>"
 			`);
 		});
