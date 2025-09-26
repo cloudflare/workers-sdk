@@ -319,7 +319,7 @@ export async function mapWorkerMetadataBindings(
 							];
 						}
 						break;
-					case "worker-loader":
+					case "worker_loader":
 						{
 							configObj.worker_loaders = [
 								...(configObj.worker_loaders ?? []),
