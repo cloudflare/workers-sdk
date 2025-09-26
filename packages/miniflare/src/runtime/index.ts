@@ -205,8 +205,9 @@ export class Runtime {
 	async updateConfig(
 		configBuffer: Buffer,
 		options: Abortable & RuntimeOptions,
-		workerNames: string[]
-	): Promise<SocketPorts> {
+		workerNames: string[],
+		abortSignal: AbortSignal
+	): Promise<SocketPorts | undefined> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
 		// TODO: what happens if runtime crashes?
@@ -283,13 +284,8 @@ export class Runtime {
 
 		startupLogBuffer.stopBuffering();
 
-		if (!ports) {
+		if (ports === undefined && !abortSignal.aborted) {
 			startupLogBuffer.handleStartupFailure();
-			throw new MiniflareCoreError(
-				"ERR_RUNTIME_FAILURE",
-				"The Workers runtime failed to start. " +
-					"There is likely additional logging output above."
-			);
 		}
 
 		return ports;
