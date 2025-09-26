@@ -579,12 +579,12 @@ describe("Create Cloudflare CLI", () => {
 					        Fetch a Worker initialized from the Cloudflare dashboard.
 					  --framework=<value>, -f
 					    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
-					    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (e.g. "create-astro" is used for Astro).
+					    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (ex. "create-remix" is used for Remix).
 					    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
 					    npm create cloudflare -- --framework next -- --ts
 					    pnpm create cloudflare --framework next -- --ts
 					    Allowed Values:
-					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, solid, svelte, vue
+					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, remix, solid, svelte, vue, waku
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:
