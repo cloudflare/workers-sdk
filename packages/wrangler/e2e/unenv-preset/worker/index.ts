@@ -22,7 +22,7 @@ export default {
 
 			default: {
 				// `/<test name>` executes the test or returns an html list of tests when not found
-				const testName = url.pathname.slice(1);
+				const testName = url.pathname.slice(1) as keyof typeof WorkerdTests;
 				const test = WorkerdTests[testName];
 				if (!test) {
 					return generateTestListResponse(testName);
@@ -59,7 +59,91 @@ function generateTestListResponse(testName: string): Response {
 
 // Test functions executed on worked.
 // The test can be executing by fetching the `/${testName}` url.
-export const WorkerdTests: Record<string, () => void> = {
+export const WorkerdTests = {
+	async testConsole() {
+		const consoleImport = await import("node:console");
+		const consoleGlobal = console;
+
+		assert.strictEqual(
+			typeof consoleImport.default,
+			"object",
+			`expected \`consoleImport.default\` to be of type \`object\` but got \`${typeof consoleImport.default}\``
+		);
+
+		assert.strictEqual(
+			consoleGlobal,
+			consoleImport.default,
+			"expected `console` to be the same as `consoleImport.default`"
+		);
+
+		testProperty("Console", "function");
+		testProperty("assert", "function");
+		testProperty("clear", "function");
+		testProperty("count", "function");
+		testProperty("countReset", "function");
+		testProperty("debug", "function");
+		testProperty("dir", "function");
+		testProperty("dirxml", "function");
+		testProperty("error", "function");
+		testProperty("group", "function");
+		testProperty("groupCollapsed", "function");
+		testProperty("groupEnd", "function");
+		testProperty("info", "function");
+		testProperty("log", "function");
+		testProperty("profile", "function");
+		testProperty("profileEnd", "function");
+		testProperty("table", "function");
+		testProperty("time", "function");
+		testProperty("timeEnd", "function");
+		testProperty("timeLog", "function");
+		testProperty("trace", "function");
+		testProperty("warn", "function");
+
+		// The undocumented APIs are supported in workerd natively.
+		testProperty("context", "function");
+		testProperty("createTask", "function");
+
+		// These undocumented APIs are only on the global object not the import.
+		testGlobalProperty("_stderr", "object");
+		testGlobalProperty("_stdout", "object");
+		testGlobalProperty("_times", "object");
+		testGlobalProperty("_stdoutErrorHandler", "function");
+		testGlobalProperty("_stderrErrorHandler", "function");
+		testGlobalProperty("_ignoreErrors", "boolean");
+
+		function testProperty(
+			property: keyof Console | UndocumentedConsoleApis,
+			type: string
+		) {
+			testImportProperty(property, type);
+			testGlobalProperty(property, type);
+		}
+
+		function testImportProperty(
+			property: keyof Console | UndocumentedConsoleApis,
+			type: string
+		) {
+			const propertyType = typeof consoleImport[property as keyof Console];
+			assert.strictEqual(
+				propertyType,
+				type,
+				`expected \`consoleImport.${property}\` to be of type \`${type}\` but got \`${propertyType}\``
+			);
+		}
+
+		function testGlobalProperty(
+			property: keyof Console | UndocumentedConsoleApis,
+			type: string
+		) {
+			const propertyType = typeof consoleGlobal[property as keyof Console];
+			assert.strictEqual(
+				propertyType,
+				type,
+				`expected \`consoleGlobal.${property}\` to be of type \`${type}\` but got \`${propertyType}\``
+			);
+		}
+	},
+
 	async testCryptoGetRandomValues() {
 		const crypto = await import("node:crypto");
 
@@ -545,3 +629,13 @@ export const WorkerdTests: Record<string, () => void> = {
 		}
 	},
 };
+
+type UndocumentedConsoleApis =
+	| "context"
+	| "createTask"
+	| "_stderr"
+	| "_stdout"
+	| "_times"
+	| "_stdoutErrorHandler"
+	| "_stderrErrorHandler"
+	| "_ignoreErrors";
