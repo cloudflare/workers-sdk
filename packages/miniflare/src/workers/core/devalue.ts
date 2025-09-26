@@ -149,7 +149,7 @@ export function createHTTPReducers(
 ): ReducersRevivers {
 	return {
 		Headers(val) {
-			if (val instanceof impl.Headers) return Object.fromEntries(val);
+			if (val instanceof impl.Headers) return [...val.entries()];
 		},
 		Request(val) {
 			if (val instanceof impl.Request) {
@@ -169,7 +169,7 @@ export function createHTTPRevivers<RS>(
 	return {
 		Headers(value) {
 			assert(typeof value === "object" && value !== null);
-			return new impl.Headers(value as Record<string, string>);
+			return new impl.Headers(value as string[][]);
 		},
 		Request(value) {
 			assert(Array.isArray(value));
