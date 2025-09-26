@@ -331,7 +331,10 @@ describe("r2", () => {
 					OPTIONS
 					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
 					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
-					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]"
+					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
+					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
+					      --update-config  Automatically update your config file with the newly added resource  [boolean]
+					      --binding        The binding name of this resource in your Worker  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -366,7 +369,10 @@ describe("r2", () => {
 					OPTIONS
 					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
 					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
-					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]"
+					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
+					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
+					      --update-config  Automatically update your config file with the newly added resource  [boolean]
+					      --binding        The binding name of this resource in your Worker  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m

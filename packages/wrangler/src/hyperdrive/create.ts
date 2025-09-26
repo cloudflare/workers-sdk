@@ -25,6 +25,20 @@ export const hyperdriveCreateCommand = createCommand({
 			description: "The name of the Hyperdrive config",
 		},
 		...upsertOptions("postgresql"),
+		binding: {
+			type: "string",
+			description: "The binding name of this resource in your Worker",
+		},
+		"use-remote": {
+			type: "boolean",
+			description:
+				"Use a remote binding when adding the newly created resource to your config",
+		},
+		"update-config": {
+			type: "boolean",
+			description:
+				"Automatically update your config file with the newly added resource",
+		},
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
@@ -49,7 +63,8 @@ export const hyperdriveCreateCommand = createCommand({
 				id: database.id,
 			}),
 			config.configPath,
-			args.env
+			args.env,
+			args
 		);
 	},
 });

@@ -62,7 +62,7 @@ describe("create", () => {
 				});
 			})
 		);
-		await runWrangler("d1 create test --location oc");
+		await runWrangler("d1 create test --location oc --binding MY_TEST_DB");
 		expect(std.out).toMatchInlineSnapshot(`
 			"✅ Successfully created DB 'test' in region OC
 			Created your new D1 database.
@@ -71,14 +71,12 @@ describe("create", () => {
 			{
 			  \\"d1_databases\\": [
 			    {
-			      \\"binding\\": \\"test\\",
+			      \\"binding\\": \\"MY_TEST_DB\\",
 			      \\"database_name\\": \\"test\\",
 			      \\"database_id\\": \\"51e7c314-456e-4167-b6c3-869ad188fc23\\"
 			    }
 			  ]
-			}
-			? Would you like Wrangler to add it on your behalf?
-			🤖 Using fallback value in non-interactive context: No"
+			}"
 		`);
 	});
 });

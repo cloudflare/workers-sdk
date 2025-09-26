@@ -1,5 +1,5 @@
 import dedent from "ts-dedent";
-import { updateConfigFile } from "../config";
+import { sharedResourceCreationArgs, updateConfigFile } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -60,6 +60,7 @@ export const r2BucketCreateCommand = createCommand({
 			requiresArg: true,
 			type: "string",
 		},
+		...sharedResourceCreationArgs,
 	},
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
@@ -103,7 +104,8 @@ export const r2BucketCreateCommand = createCommand({
 				binding: getValidBindingName(bindingName ?? args.name, "r2"),
 			}),
 			config.configPath,
-			args.env
+			args.env,
+			args
 		);
 
 		metrics.sendMetricsEvent("create r2 bucket", {
