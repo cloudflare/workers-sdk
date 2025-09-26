@@ -69,6 +69,25 @@ describe("wrangler deploy with containers", () => {
 		`
 		);
 	});
+	it("should fail early if the account id doesn't match the account id in the image uri", async () => {
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					name: "my-container",
+					class_name: "ExampleDurableObject",
+					image:
+						"registry.cloudflare.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/hello:world",
+				},
+			],
+		});
+		await expect(runWrangler("deploy index.js")).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Image "registry.cloudflare.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/hello:world" does not belong to your account
+			Image appears to belong to account: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+			Current account: "some-account-id"]
+		`);
+	});
 	it("should be able to deploy a new container from a dockerfile", async () => {
 		mockGetVersion("Galaxy-Class");
 		setupDockerMocks("my-container", "Galaxy");
