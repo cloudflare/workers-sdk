@@ -701,9 +701,34 @@ describe("wrangler workflows", () => {
 			});
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
-			expect(std.err).toContain("must be 64 characters or less");
-			expect(std.err).toContain("but got 65 characters");
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - \\"workflows[0]\\" binding \\"name\\" field is invalid. Workflow names must be 1-64 characters long,
+				  start with a letter, number, or underscore, and may only contain letters, numbers, underscores, or
+				  hyphens.
+
+				"
+			`);
 		});
+
+		it.each(["", "   ", "\n\nhello", "#1231231!!!!", "-badName"])(
+			"should reject workflow binding with name with invalid characters",
+			async function (invalidName) {
+				writeWranglerConfig({
+					workflows: [
+						{
+							binding: "MY_WORKFLOW",
+							name: invalidName,
+							class_name: "MyWorkflow",
+						},
+					],
+				});
+
+				await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+				expect(std.err).toContain('binding "name" field is invalid');
+			}
+		);
 
 		it("should accept workflow binding with name exactly 64 characters", async () => {
 			const maxLengthName = "a".repeat(64); // exactly 64 characters
