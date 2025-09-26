@@ -877,9 +877,7 @@ describe("pages download config", () => {
 			",
 			  "info": "",
 			  "out": "",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pages download config\` is an experimental command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-
-			",
+			  "warn": "",
 			}
 		`);
 	});

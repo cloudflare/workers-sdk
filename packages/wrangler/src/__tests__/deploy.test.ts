@@ -452,26 +452,21 @@ describe("deploy", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
-
-		  Authentication error [code: 10000]
-
-
 			📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
 			Please ensure it has the correct permissions for this operation.
 
 			Getting User settings...
-			👋 You are logged in with an User API Token, associated with the email user@example.com.
 			ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN environment variable.
-			┌─┬─┐
-			│ Account Name │ Account ID │
-			├─┼─┤
-			│ Account One │ account-1 │
-			├─┼─┤
-			│ Account Two │ account-2 │
-			├─┼─┤
-			│ Account Three │ account-3 │
-			└─┴─┘
+			👋 You are logged in with an User API Token, associated with the email user@example.com.
+			┌───────────────┬────────────┐
+			│ Account Name  │ Account ID │
+			├───────────────┼────────────┤
+			│ Account One   │ account-1  │
+			├───────────────┼────────────┤
+			│ Account Two   │ account-2  │
+			├───────────────┼────────────┤
+			│ Account Three │ account-3  │
+			└───────────────┴────────────┘
 			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens."
 		`);
 	});
@@ -11555,11 +11550,7 @@ export default{
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
 				  Worker Startup Timed out. This could be due to script exceeding size limits or expensive code in
 				  the global scope. [code: 11337]
@@ -11570,6 +11561,7 @@ export default{
 				",
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
 				",
 				  "warn": "",
 				}
@@ -11646,9 +11638,6 @@ export default{
 				  If these are unnecessary, consider removing them
 
 
-				",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
@@ -11660,9 +11649,7 @@ export default{
 				",
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
 				",
 				  "warn": "",
 				}

@@ -1106,7 +1106,8 @@ describe("wrangler secret", () => {
 				  "info": "",
 				  "out": "
 				 ⛅️ wrangler x.x.x
-				──────────────────
+				------------------
+
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 
 				🚨 Secrets failed to upload
