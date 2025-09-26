@@ -4,6 +4,12 @@ import configShared from "../../vitest.shared";
 export default mergeConfig(
 	configShared,
 	defineProject({
-		test: {},
+		test: {
+			pool: "threads",
+			poolOptions: {
+				threads: { singleThread: true },
+			},
+			maxConcurrency: 1,
+		},
 	})
 );
