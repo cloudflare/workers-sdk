@@ -1441,12 +1441,12 @@ function getDeployConfirmFunction(
 	const nonInteractive = isNonInteractiveOrCI();
 
 	if (nonInteractive && strictMode) {
-		return () => {
+		return async () => {
 			logger.error(
 				"Aborting the deployment operation (due to strict mode, to prevent this failure either remove the `--strict` flag)"
 			);
 			process.exitCode = 1;
-			return Promise.resolve(false);
+			return false;
 		};
 	}
 
