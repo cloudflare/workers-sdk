@@ -58,6 +58,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			const output = await getWranglerDevOutput("module");
 			expect(output).toMatchInlineSnapshot(`
 				[
+				  "<<<<< console.debug() message >>>>>",
 				  "<<<<< console.info() message >>>>>",
 				  "<<<<< console.log() message >>>>>",
 				  "<<<<< stderr.write() message >>>>>",
@@ -72,6 +73,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			const output = await getWranglerDevOutput("module", ["--log-level=log"]);
 			expect(output).toMatchInlineSnapshot(`
 				[
+				  "<<<<< console.debug() message >>>>>",
 				  "<<<<< console.info() message >>>>>",
 				  "<<<<< console.log() message >>>>>",
 				  "<<<<< stderr.write() message >>>>>",
@@ -86,6 +88,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			const output = await getWranglerDevOutput("module", ["--log-level=info"]);
 			expect(output).toMatchInlineSnapshot(`
 				[
+				  "<<<<< console.debug() message >>>>>",
 				  "<<<<< console.info() message >>>>>",
 				  "X [ERROR] <<<<< console.error() message >>>>>",
 				  "▲ [WARNING] <<<<< console.warning() message >>>>>",
@@ -315,6 +318,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			]);
 			expect(output).toMatchInlineSnapshot(`
 				[
+				  "<<<<< console.debug() message >>>>>",
 				  "<<<<< console.info() message >>>>>",
 				  "<<<<< console.log() message >>>>>",
 				  "X [ERROR] <<<<< console.error() message >>>>>",
