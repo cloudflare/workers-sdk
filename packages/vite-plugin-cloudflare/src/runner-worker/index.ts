@@ -249,7 +249,7 @@ export function createWorkerEntrypointWrapper(
 						}
 
 						// Set the Worker entry path
-						workerEntryPath = workerEntryPathHeader;
+						workerEntryPath = decodeURIComponent(workerEntryPathHeader);
 						isEntryWorker = isEntryWorkerHeader === "true";
 						const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
 

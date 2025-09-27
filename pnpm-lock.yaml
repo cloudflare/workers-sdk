@@ -3225,7 +3225,7 @@ importers:
         specifier: workspace:*
         version: link:../../../wrangler
 
-  packages/vite-plugin-cloudflare/playground/worker:
+  packages/vite-plugin-cloudflare/playground/worker-♫:
     devDependencies:
       '@cloudflare/vite-plugin':
         specifier: workspace:*

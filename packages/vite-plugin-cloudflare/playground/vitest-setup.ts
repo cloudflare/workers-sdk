@@ -88,7 +88,7 @@ beforeAll(async (s) => {
 	const suite = s as RunnerTestFile;
 
 	testPath = suite.filepath!;
-	testName = slash(testPath).match(/playground\/([\w-]+)\//)?.[1]!;
+	testName = slash(testPath).match(/playground\/([\w-♫]+)\//)?.[1]!;
 	testDir = path.dirname(testPath);
 	if (testName) {
 		testDir = path.resolve(workspaceRoot, "playground", testName);
