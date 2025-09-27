@@ -5,6 +5,7 @@ import chalk from "chalk";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { configFileName } from "../config";
 import { createCommand } from "../core/create-command";
+import { ensureConfigExists, ConfigWithMetadata } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { confirm, prompt } from "../dialogs";
 import { getCIOverrideName } from "../environment-variables/misc-variables";
@@ -41,10 +42,6 @@ export const deployCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		// We want to have a --no-bundle flag, but yargs requires that
-		// we also have a --bundle flag (that it adds the --no to by itself)
-		// So we make a --bundle flag, but hide it, and then add a --no-bundle flag
-		// that's visible to the user but doesn't "do" anything.
 		bundle: {
 			describe: "Run Wrangler's compilation step before publishing",
 			type: "boolean",
@@ -226,6 +223,18 @@ export const deployCommand = createCommand({
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		"auto-config": {
+			describe: "Automatically detect framework and generate configuration",
+			type: "boolean",
+			default: true,
+			alias: "auto"
+		},
+		"skip-framework-detection": {
+			describe: "Skip automatic framework detection and adapter installation",
+			type: "boolean",
+			default: false,
+			hidden: true
+		},
 		"containers-rollout": {
 			describe:
 				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. ",
@@ -256,6 +265,7 @@ export const deployCommand = createCommand({
 			);
 		}
 	},
+
 	async handler(args, { config }) {
 		if (config.pages_build_output_dir) {
 			throw new UserError(
@@ -264,13 +274,49 @@ export const deployCommand = createCommand({
 				{ telemetryMessage: true }
 			);
 		}
-		// We use the `userConfigPath` to compute the root of a project,
-		// rather than a redirected (potentially generated) `configPath`.
+		
 		const projectRoot =
 			config.userConfigPath && path.dirname(config.userConfigPath);
 
-		if (!config.configPath) {
-			// Attempt to interactively handle `wrangler deploy <directory>`
+		let finalConfig = config;
+		let configPath = config.configPath;
+		let wasConfigGenerated = false;
+
+		// Framework detection and auto-generation
+		if (!config.configPath && args.autoConfig && !args.skipFrameworkDetection) {
+			try {
+				logger.debug("No configuration found, attempting framework detection...");
+				
+				const configResult = await ensureConfigExists(
+					undefined,
+					!isNonInteractiveOrCI()
+				);
+				
+				finalConfig = configResult.config;
+				configPath = configResult.configPath;
+				wasConfigGenerated = configResult.wasGenerated;
+
+				if (wasConfigGenerated) {
+					const frameworkName = (finalConfig as ConfigWithMetadata)._framework;
+					logger.log(`Detected ${frameworkName} project and generated configuration`);
+					
+					// Try to install framework adapter
+					if (!args.skipFrameworkDetection && frameworkName) {
+						try {
+							const { installFrameworkAdapter } = await import("../framework-detection/adapters");
+							await installFrameworkAdapter(frameworkName, projectRoot);
+						} catch (error) {
+							logger.debug("Framework adapter installation failed:", error);
+						}
+					}
+				}
+			} catch (error) {
+				logger.debug("Framework detection failed, continuing with original flow");
+			}
+		}
+
+		// Handle directory arguments (original Wrangler logic)
+		if (!configPath) {
 			if (args.script) {
 				try {
 					const stats = statSync(args.script);
@@ -278,45 +324,40 @@ export const deployCommand = createCommand({
 						args = await handleMaybeAssetsDeployment(args.script, args);
 					}
 				} catch (error) {
-					// If this is our UserError, re-throw it
 					if (error instanceof UserError) {
 						throw error;
 					}
-					// If stat fails, let the original flow handle the error
 				}
 			}
-			// atttempt to interactively handle `wrangler deploy --assets <directory>` missing compat date or name
 			else if (args.assets && (!args.compatibilityDate || !args.name)) {
 				args = await handleMaybeAssetsDeployment(args.assets, args);
 			}
 		}
 
-		const entry = await getEntry(args, config, "deploy");
-		validateAssetsArgsAndConfig(args, config);
-
-		const assetsOptions = getAssetsOptions(args, config);
+		const entry = await getEntry(args, finalConfig, "deploy");
+		validateAssetsArgsAndConfig(args, finalConfig);
+		const assetsOptions = getAssetsOptions(args, finalConfig);
 
 		if (args.latest) {
 			logger.warn(
-				`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(config.configPath)} file.`
+				`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(configPath)} file.`
 			);
 		}
 
 		const cliVars = collectKeyValues(args.var);
 		const cliDefines = collectKeyValues(args.define);
 		const cliAlias = collectKeyValues(args.alias);
-
-		const accountId = args.dryRun ? undefined : await requireAuth(config);
+		const accountId = args.dryRun ? undefined : await requireAuth(finalConfig);
 
 		const siteAssetPaths = getSiteAssetPaths(
-			config,
+			finalConfig,
 			args.site,
 			args.siteInclude,
 			args.siteExclude
 		);
 
 		const beforeUpload = Date.now();
-		let name = getScriptName(args, config);
+		let name = getScriptName(args, finalConfig);
 
 		const ciOverrideName = getCIOverrideName();
 		let workerNameOverridden = false;
@@ -338,17 +379,18 @@ export const deployCommand = createCommand({
 		if (!args.dryRun) {
 			assert(accountId, "Missing account ID");
 			await verifyWorkerMatchesCITag(
-				config,
+				finalConfig,
 				accountId,
 				name,
-				config.configPath
+				configPath
 			);
 		}
+		
 		const { sourceMapSize, versionId, workerTag, targets } = await deploy({
-			config,
+			config: finalConfig,
 			accountId,
 			name,
-			rules: getRules(config),
+			rules: getRules(finalConfig),
 			entry,
 			env: args.env,
 			compatibilityDate: args.latest
@@ -366,14 +408,14 @@ export const deployCommand = createCommand({
 			domains: args.domains,
 			assetsOptions,
 			legacyAssetPaths: siteAssetPaths,
-			legacyEnv: isLegacyEnv(config),
+			legacyEnv: isLegacyEnv(finalConfig),
 			minify: args.minify,
-			isWorkersSite: Boolean(args.site || config.site),
+			isWorkersSite: Boolean(args.site || finalConfig.site),
 			outDir: args.outdir,
 			outFile: args.outfile,
 			dryRun: args.dryRun,
 			metafile: args.metafile,
-			noBundle: !(args.bundle ?? !config.no_bundle),
+			noBundle: !(args.bundle ?? !finalConfig.no_bundle),
 			keepVars: args.keepVars,
 			logpush: args.logpush,
 			uploadSourceMaps: args.uploadSourceMaps,
@@ -403,7 +445,7 @@ export const deployCommand = createCommand({
 				sourceMapSize,
 			},
 			{
-				sendMetrics: config.send_metrics,
+				sendMetrics: finalConfig.send_metrics,
 			}
 		);
 	},
@@ -411,14 +453,6 @@ export const deployCommand = createCommand({
 
 export type DeployArgs = (typeof deployCommand)["args"];
 
-/**
- * Handles the case where:
- * - a user provides a directory as a positional argument probably intending to deploy static assets. e.g. wrangler deploy ./public
- * - a user provides `--assets` but does not provide a name or compatibility date.
- * We then interactively take the user through deployment (missing name and/or compatibility date)
- * and ask to output this as a wrangler.jsonc for future deployments.
- * If this successfully completes, continue deploying with the updated values.
- */
 export async function handleMaybeAssetsDeployment(
 	assetDirectory: string,
 	args: DeployArgs
@@ -427,7 +461,6 @@ export async function handleMaybeAssetsDeployment(
 		return args;
 	}
 
-	// Ask if user intended to deploy assets only
 	logger.log("");
 	if (!args.assets) {
 		const deployAssets = await confirm(
@@ -439,12 +472,10 @@ export async function handleMaybeAssetsDeployment(
 			args.assets = assetDirectory;
 			args.script = undefined;
 		} else {
-			// let the usual error handling path kick in
 			return args;
 		}
 	}
 
-	// Check if name is provided, if not ask for it
 	if (!args.name) {
 		const defaultName = process.cwd().split(path.sep).pop()?.replace("_", "-");
 		const isValidName = defaultName && /^[a-zA-Z0-9-]+$/.test(defaultName);
@@ -455,7 +486,6 @@ export async function handleMaybeAssetsDeployment(
 		logger.log("");
 	}
 
-	// Set compatibility date if not provided
 	if (!args.compatibilityDate) {
 		const compatibilityDate = formatCompatibilityDate(new Date());
 		args.compatibilityDate = compatibilityDate;
@@ -466,7 +496,6 @@ export async function handleMaybeAssetsDeployment(
 		logger.log("");
 	}
 
-	// Ask if user wants to write config file
 	const writeConfig = await confirm(
 		`Do you want Wrangler to write a wrangler.json config file to store this configuration?\n${chalk.dim("This will allow you to simply run `wrangler deploy` on future deployments.")}`
 	);
