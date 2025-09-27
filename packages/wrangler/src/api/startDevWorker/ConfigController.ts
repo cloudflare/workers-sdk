@@ -17,7 +17,10 @@ import {
 } from "../../dev";
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
-import { getDockerPath } from "../../environment-variables/misc-variables";
+import {
+	getDisableConfigWatching,
+	getDockerPath,
+} from "../../environment-variables/misc-variables";
 import { UserError } from "../../errors";
 import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
@@ -561,7 +564,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				{ useRedirectIfAvailable: true }
 			);
 
-			await this.#ensureWatchingConfig(fileConfig.configPath);
+			if (!getDisableConfigWatching()) {
+				await this.#ensureWatchingConfig(fileConfig.configPath);
+			}
 
 			if (this.#tearingDown || signal.aborted) {
 				return;
