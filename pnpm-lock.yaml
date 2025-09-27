@@ -3652,6 +3652,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20250926.0
+      '@cloudflare/workflows-shared':
+        specifier: workspace:*
+        version: link:../workflows-shared
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1

@@ -85,6 +85,7 @@
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workflows-shared": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@sentry/node": "^7.86.0",
