@@ -2,7 +2,11 @@ import { strict as assert } from "node:assert";
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
-import { readConfig, updateConfigFile } from "../config";
+import {
+	readConfig,
+	sharedResourceCreationArgs,
+	updateConfigFile,
+} from "../config";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
@@ -82,9 +86,9 @@ export const kvNamespaceCreateCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with a preview namespace",
 		},
+		...sharedResourceCreationArgs,
 	},
 	positionalArgs: ["namespace"],
-
 	async handler(args, { sdk }) {
 		const config = readConfig(args);
 		const environment = args.env ? `${args.env}-` : "";
@@ -108,17 +112,14 @@ export const kvNamespaceCreateCommand = createCommand({
 		const previewString = args.preview ? "preview_" : "";
 
 		await updateConfigFile(
+			"kv_namespaces",
 			(name) => ({
-				kv_namespaces: [
-					{
-						binding: getValidBindingName(name ?? args.namespace, "KV"),
-						[`${previewString}id`]: namespaceId,
-					},
-				],
+				binding: getValidBindingName(name ?? args.namespace, "KV"),
+				[`${previewString}id`]: namespaceId,
 			}),
 			config.configPath,
 			args.env,
-			!args.preview
+			{ ...args, updateConfig: preview ? false : args.updateConfig }
 		);
 	},
 });

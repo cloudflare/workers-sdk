@@ -8,7 +8,7 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 {
   \\"kv_namespaces\\": [
     {
-      \\"binding\\": \\"UnitTestNamespace\\",
+      \\"binding\\": \\"MY_NS\\",
       \\"id\\": \\"some-namespace-id\\"
     }
   ]
@@ -21,7 +21,7 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 	\\"name\\": \\"worker\\",
 	\\"kv_namespaces\\": [
 		{
-			\\"binding\\": \\"UnitTestNamespace\\",
+			\\"binding\\": \\"MY_NS\\",
 			\\"id\\": \\"some-namespace-id\\"
 		}
 	]
@@ -52,8 +52,9 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 			\\"name\\": \\"worker\\",
 			\\"kv_namespaces\\": [
 				{
-					\\"binding\\": \\"UnitTestNamespace\\",
-					\\"id\\": \\"some-namespace-id\\"
+					\\"binding\\": \\"HELLO\\",
+					\\"id\\": \\"some-namespace-id\\",
+					\\"remote\\": true
 				}
 			]
 		}
@@ -70,7 +71,8 @@ To access your new KV Namespace in your Worker, add the following snippet to you
   \\"kv_namespaces\\": [
     {
       \\"binding\\": \\"UnitTestNamespace\\",
-      \\"id\\": \\"some-namespace-id\\"
+      \\"id\\": \\"some-namespace-id\\",
+      \\"remote\\": true
     }
   ]
 }"
@@ -82,8 +84,9 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 	\\"name\\": \\"other-worker\\",
 	\\"kv_namespaces\\": [
 		{
-			\\"binding\\": \\"UnitTestNamespace\\",
-			\\"id\\": \\"some-namespace-id\\"
+			\\"binding\\": \\"HELLO\\",
+			\\"id\\": \\"some-namespace-id\\",
+			\\"remote\\": true
 		}
 	]
 }"
@@ -111,7 +114,8 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 	\\"kv_namespaces\\": [
 		{
 			\\"binding\\": \\"HELLO\\",
-			\\"id\\": \\"some-namespace-id\\"
+			\\"id\\": \\"some-namespace-id\\",
+			\\"remote\\": true
 		}
 	]
 }"
@@ -138,7 +142,7 @@ exports[`wrangler > kv namespace > create > wrangler.toml > should create a name
 ✨ Success!
 To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 [[kv_namespaces]]
-binding = \\"UnitTestNamespace\\"
+binding = \\"MY_NS\\"
 id = \\"some-namespace-id\\"
 "
 `;
@@ -177,6 +181,7 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 [[kv_namespaces]]
 binding = \\"UnitTestNamespace\\"
 id = \\"some-namespace-id\\"
+remote = true
 "
 `;
 
