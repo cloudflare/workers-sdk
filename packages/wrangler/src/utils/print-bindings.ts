@@ -191,7 +191,7 @@ export function printBindings(
 					type: friendlyBindingNames.kv_namespaces,
 					value: id,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
+						isSimulatedLocally: !remote,
 					}),
 				};
 			})
@@ -226,9 +226,7 @@ export function printBindings(
 					type: friendlyBindingNames.send_email,
 					value,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-							? !emailBinding.remote
-							: true,
+						isSimulatedLocally: !emailBinding.remote,
 					}),
 				};
 			})
@@ -243,7 +241,7 @@ export function printBindings(
 					type: friendlyBindingNames.queues,
 					value: queue_name,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
+						isSimulatedLocally: !remote,
 					}),
 				};
 			})
@@ -269,7 +267,7 @@ export function printBindings(
 						name: binding,
 						type: friendlyBindingNames.d1_databases,
 						mode: getMode({
-							isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
+							isSimulatedLocally: !remote,
 						}),
 						value,
 					};
@@ -286,13 +284,7 @@ export function printBindings(
 					type: friendlyBindingNames.vectorize,
 					value: index_name,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-							? remote
-								? false
-								: undefined
-							: context.vectorizeBindToProd
-								? false
-								: /* Vectorize doesn't support local mode */ undefined,
+						isSimulatedLocally: remote ? false : undefined,
 					}),
 				};
 			})
@@ -314,12 +306,12 @@ export function printBindings(
 
 	if (vpc_services !== undefined && vpc_services.length > 0) {
 		output.push(
-			...vpc_services.map(({ binding, service_id }) => {
+			...vpc_services.map(({ binding, service_id, remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.vpc_services,
 					value: service_id,
-					mode: getMode({ isSimulatedLocally: false }),
+					mode: getMode({ isSimulatedLocally: remote ? false : undefined }),
 				};
 			})
 		);
@@ -340,7 +332,7 @@ export function printBindings(
 					type: friendlyBindingNames.r2_buckets,
 					value: value,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
+						isSimulatedLocally: !remote,
 					}),
 				};
 			})
@@ -396,7 +388,7 @@ export function printBindings(
 					value += `#${entrypoint}`;
 				}
 
-				if (remote && getFlag("REMOTE_BINDINGS")) {
+				if (remote) {
 					mode = getMode({ isSimulatedLocally: false });
 				} else if (context.local && context.registry !== null) {
 					const registryDefinition = context.registry?.[service];
@@ -456,7 +448,7 @@ export function printBindings(
 			type: friendlyBindingNames.browser,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally: !(getFlag("REMOTE_BINDINGS") && browser.remote),
+				isSimulatedLocally: !browser.remote,
 			}),
 		});
 	}
@@ -467,11 +459,7 @@ export function printBindings(
 			type: friendlyBindingNames.images,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-					? images.remote === true || images.remote === undefined
-						? false
-						: undefined
-					: !!context.imagesLocalMode,
+				isSimulatedLocally: !images.remote,
 			}),
 		});
 	}
@@ -482,11 +470,8 @@ export function printBindings(
 			type: friendlyBindingNames.ai,
 			value: ai.staging ? `staging` : undefined,
 			mode: getMode({
-				isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-					? ai.remote === true || ai.remote === undefined
-						? false
-						: undefined
-					: false,
+				isSimulatedLocally:
+					ai.remote === true || ai.remote === undefined ? false : undefined,
 			}),
 		});
 	}
@@ -498,7 +483,7 @@ export function printBindings(
 				type: friendlyBindingNames.pipelines,
 				value: pipeline,
 				mode: getMode({
-					isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
+					isSimulatedLocally: !remote,
 				}),
 			}))
 		);
@@ -592,11 +577,7 @@ export function printBindings(
 						? `${namespace} (outbound -> ${outbound.service})`
 						: namespace,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-							? remote
-								? false
-								: undefined
-							: undefined,
+						isSimulatedLocally: remote ? false : undefined,
 					}),
 				};
 			})
@@ -611,11 +592,7 @@ export function printBindings(
 					type: friendlyBindingNames.mtls_certificates,
 					value: certificate_id,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-							? remote === true || remote === undefined
-								? false
-								: undefined
-							: false,
+						isSimulatedLocally: remote ? false : undefined,
 					}),
 				};
 			})

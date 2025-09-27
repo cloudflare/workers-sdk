@@ -8,7 +8,6 @@ import { validateRoutes } from "./deploy/deploy";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { UserError } from "./errors";
-import { getFlag } from "./experimental-flags";
 import { logger } from "./logger";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
@@ -38,9 +37,6 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			REMOTE_BINDINGS: args.local
-				? false
-				: args.experimentalRemoteBindings ?? true,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
 		}),
 	},
@@ -259,20 +255,6 @@ export const dev = createCommand({
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 			type: "boolean",
 		},
-		"experimental-vectorize-bind-to-prod": {
-			type: "boolean",
-			describe:
-				"Bind to production Vectorize indexes in local development mode",
-			default: false,
-			hidden: true,
-		},
-		"experimental-images-local-mode": {
-			type: "boolean",
-			describe:
-				"Use a local lower-fidelity implementation of the Images binding",
-			default: false,
-			hidden: true,
-		},
 	},
 	async validateArgs(args) {
 		if (args.nodeCompat) {
@@ -470,8 +452,7 @@ export function getBindings(
 	env: string | undefined,
 	envFiles: string[] | undefined,
 	local: boolean,
-	args: AdditionalDevProps,
-	remoteBindingsEnabled = getFlag("REMOTE_BINDINGS")
+	args: AdditionalDevProps
 ): CfWorkerInit["bindings"] {
 	/**
 	 * In Pages, KV, DO, D1, R2, AI and service bindings can be specified as
@@ -502,7 +483,7 @@ export function getBindings(
 			return {
 				binding,
 				id: preview_id ?? id,
-				remote: remoteBindingsEnabled && remote,
+				remote: remote,
 			} satisfies CfKvNamespace;
 		}
 	);
@@ -523,7 +504,7 @@ export function getBindings(
 		if (local) {
 			return {
 				...d1Db,
-				remote: remoteBindingsEnabled && d1Db.remote,
+				remote: d1Db.remote,
 				database_id,
 			} satisfies CfD1Database;
 		}
@@ -556,7 +537,7 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
-					remote: remoteBindingsEnabled && remote,
+					remote: remote,
 				} satisfies CfR2Bucket;
 			}
 		) || [];
@@ -574,8 +555,7 @@ export function getBindings(
 		(service) =>
 			({
 				...service,
-				remote:
-					remoteBindingsEnabled && "remote" in service && !!service.remote,
+				remote: "remote" in service && !!service.remote,
 			}) satisfies CfService
 	);
 
@@ -628,7 +608,7 @@ export function getBindings(
 				binding: queue.binding,
 				queue_name: queue.queue,
 				delivery_delay: queue.delivery_delay,
-				remote: remoteBindingsEnabled && queue.remote,
+				remote: queue.remote,
 			} satisfies CfQueue;
 		}),
 	];
