@@ -87,5 +87,41 @@
 				},
 			},
 		},
+		"fed-prod": {
+			"name": "router-worker-fed-prod",
+			"account_id": "fca6c231dc1d1780777997c5bce5a5e3", // workers assets
+			"version_metadata": {
+				"binding": "VERSION_METADATA",
+			},
+			"compliance_region": "fedramp_high",
+			"unsafe": {
+				"bindings": [
+					{
+						"name": "CONFIG",
+						"type": "param",
+						"param": "routerConfig",
+					},
+					{
+						"name": "ASSET_WORKER",
+						"type": "internal_assets",
+						"fetcherApi": "fetcher",
+					},
+					{
+						"name": "USER_WORKER",
+						"type": "origin",
+					},
+					{
+						"name": "workers-router-worker",
+						"type": "internal_capability_grants",
+					},
+				],
+				"metadata": {
+					"build_options": {
+						"stable_id": "cloudflare/cf_router_worker",
+						"networks": ["cf"],
+					},
+				},
+			},
+		},
 	},
 }
