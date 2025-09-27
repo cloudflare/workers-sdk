@@ -73,7 +73,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("cert", () => {
 			"? Are you sure you want to delete certificate 00000000-0000-0000-0000-000000000000 (tmp-e2e-mtls-cert-00000000-0000-0000-0000-000000000000)?
 			🤖 Using fallback value in non-interactive context: yes
 			Deleted certificate 00000000-0000-0000-0000-000000000000 (tmp-e2e-mtls-cert-00000000-0000-0000-0000-000000000000) successfully"
-			`
+		`
 		);
 	});
 
@@ -86,7 +86,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("cert", () => {
 			"? Are you sure you want to delete certificate 00000000-0000-0000-0000-000000000000 (tmp-e2e-ca-cert-00000000-0000-0000-0000-000000000000)?
 			🤖 Using fallback value in non-interactive context: yes
 			Deleted certificate 00000000-0000-0000-0000-000000000000 (tmp-e2e-ca-cert-00000000-0000-0000-0000-000000000000) successfully"
-			`
+		`
 		);
 	});
 });

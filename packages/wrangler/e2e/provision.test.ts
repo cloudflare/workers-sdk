@@ -210,11 +210,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						`,
 			});
 
-			await helper.run(`wrangler r2 bucket delete ${workerName}-r2`);
-			await helper.run(`wrangler d1 delete ${workerName}-d1 -y`);
-			await helper.run(`wrangler delete`);
-			await helper.run(`wrangler kv namespace delete --namespace-id ${kvId}`);
-			await helper.run(`wrangler kv namespace delete --namespace-id ${kvId2}`);
+			await Promise.allSettled([
+				helper.run(`wrangler r2 bucket delete ${workerName}-r2`),
+				helper.run(`wrangler d1 delete ${workerName}-d1 -y`),
+				helper.run(`wrangler delete`),
+				helper.run(`wrangler kv namespace delete --namespace-id ${kvId}`),
+				helper.run(`wrangler kv namespace delete --namespace-id ${kvId2}`),
+			]);
 		}, TIMEOUT);
 	}
 );
