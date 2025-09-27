@@ -1,5 +1,19 @@
 # miniflare
 
+## 4.20250926.0
+
+### Patch Changes
+
+- [#10775](https://github.com/cloudflare/workers-sdk/pull/10775) [`6ff41a6`](https://github.com/cloudflare/workers-sdk/commit/6ff41a68877ae593e2550fc789a7d91166cfe94f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20250924.0 | 1.20250926.0 |
+
+- [#10683](https://github.com/cloudflare/workers-sdk/pull/10683) [`2432022`](https://github.com/cloudflare/workers-sdk/commit/24320222be2cb46b391a93f0c8952037a4dd4633) Thanks [@yuripave](https://github.com/yuripave)! - fix: api proxy preserve multiple Set-Cookie headers
+
 ## 4.20250924.0
 
 ### Patch Changes

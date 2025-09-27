@@ -1,5 +1,11 @@
 # @cloudflare/workflows-shared
 
+## 0.3.6
+
+### Patch Changes
+
+- [#10785](https://github.com/cloudflare/workers-sdk/pull/10785) [`d09cab3`](https://github.com/cloudflare/workers-sdk/commit/d09cab3b86149a67c471401daa64ff631cfb4e49) Thanks [@pombosilva](https://github.com/pombosilva)! - Workflows names and instance IDs are now properly validated with production limits.
+
 ## 0.3.5
 
 ### Patch Changes

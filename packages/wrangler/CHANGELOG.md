@@ -1,5 +1,25 @@
 # wrangler
 
+## 4.40.3
+
+### Patch Changes
+
+- [#10602](https://github.com/cloudflare/workers-sdk/pull/10602) [`ff82d80`](https://github.com/cloudflare/workers-sdk/commit/ff82d80a2c5798f6a18653ac1351cc662b4b35ba) Thanks [@tukiminya](https://github.com/tukiminya)! - fix: update Secrets Store command status from alpha to open-beta
+
+- [#10623](https://github.com/cloudflare/workers-sdk/pull/10623) [`7a6381c`](https://github.com/cloudflare/workers-sdk/commit/7a6381c4f9494dd871f70c305763d22e7049a0be) Thanks [@IRCody](https://github.com/IRCody)! - Handle more cases for correctly resolving the full uri for an image when using containers push.
+
+- [#10112](https://github.com/cloudflare/workers-sdk/pull/10112) [`8d07576`](https://github.com/cloudflare/workers-sdk/commit/8d07576b8161e865e54da166887f3eb95ec6581e) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - fix: allow Workflow bindings when calling getPlatformProxy()
+
+  Workflow bindings are not supported in practice when using `getPlatformProxy()`.
+  But their existence in a Wrangler config file should not prevent other bindings from working.
+  Previously, calling `getPlatformProxy()` would crash if there were any Workflow bindings defined.
+  Now, instead, you get a warning telling you that these bindings are not available.
+
+- [#10785](https://github.com/cloudflare/workers-sdk/pull/10785) [`d09cab3`](https://github.com/cloudflare/workers-sdk/commit/d09cab3b86149a67c471401daa64ff631cfb4e49) Thanks [@pombosilva](https://github.com/pombosilva)! - Workflows names and instance IDs are now properly validated with production limits.
+
+- Updated dependencies [[`6ff41a6`](https://github.com/cloudflare/workers-sdk/commit/6ff41a68877ae593e2550fc789a7d91166cfe94f), [`2432022`](https://github.com/cloudflare/workers-sdk/commit/24320222be2cb46b391a93f0c8952037a4dd4633)]:
+  - miniflare@4.20250926.0
+
 ## 4.40.2
 
 ### Patch Changes

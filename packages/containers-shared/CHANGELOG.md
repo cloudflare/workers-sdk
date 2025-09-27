@@ -1,5 +1,11 @@
 # @cloudflare/containers-shared
 
+## 0.3.0
+
+### Minor Changes
+
+- [#10623](https://github.com/cloudflare/workers-sdk/pull/10623) [`7a6381c`](https://github.com/cloudflare/workers-sdk/commit/7a6381c4f9494dd871f70c305763d22e7049a0be) Thanks [@IRCody](https://github.com/IRCody)! - Handle more cases for correctly resolving the full uri for an image when using containers push.
+
 ## 0.2.10
 
 ### Patch Changes
