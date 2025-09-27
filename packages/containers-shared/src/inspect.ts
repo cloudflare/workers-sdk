@@ -1,4 +1,5 @@
 import { spawn } from "child_process";
+import { UserError } from "./error";
 
 export async function dockerImageInspect(
 	dockerPath: string,
@@ -22,7 +23,7 @@ export async function dockerImageInspect(
 		proc.on("close", (code) => {
 			if (code !== 0) {
 				return reject(
-					new Error(`failed inspecting image locally: ${stderr.trim()}`)
+					new UserError(`failed inspecting image locally: ${stderr.trim()}`)
 				);
 			}
 			resolve(stdout.trim());

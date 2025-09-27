@@ -4,13 +4,14 @@ import { randomBytes } from "crypto";
 import { Abortable, once } from "events";
 import path from "path";
 import rl from "readline";
-import { Readable } from "stream";
+import { Readable, Transform } from "stream";
 import { $ as $colors, red } from "kleur/colors";
 import workerdPath, {
 	compatibilityDate as supportedCompatibilityDate,
 } from "workerd";
 import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
+import { MiniflareCoreError } from "../shared";
 import { Awaitable } from "../workers";
 
 const ControlMessageSchema = z.discriminatedUnion("event", [
@@ -149,6 +150,54 @@ function getInspectorOptions() {
 	}
 }
 
+class StartupLogBuffer {
+	stdoutStream: Transform;
+	stderrStream: Transform;
+	stdoutBuffer: string[] = [];
+	stderrBuffer: string[] = [];
+
+	buffering = true;
+
+	constructor() {
+		this.stdoutStream = new Transform({
+			transform: (chunk, encoding, callback) => {
+				if (this.buffering) {
+					this.stdoutBuffer.push(chunk.toString());
+				}
+				callback(null, chunk);
+			},
+		});
+		this.stderrStream = new Transform({
+			transform: (chunk, encoding, callback) => {
+				if (this.buffering) {
+					this.stderrBuffer.push(chunk.toString());
+				}
+				callback(null, chunk);
+			},
+		});
+	}
+
+	stopBuffering() {
+		this.buffering = false;
+	}
+
+	handleStartupFailure() {
+		const addressInUseLog = this.stderrBuffer.find((chunk) =>
+			chunk.includes("Address already in use; toString() = ")
+		);
+		if (addressInUseLog) {
+			const match = addressInUseLog.match(
+				/Address already in use; toString\(\) = (.+):(.+)/
+			) ?? ["", "unknown", "unknown"];
+
+			throw new MiniflareCoreError(
+				"ERR_ADDRESS_IN_USE",
+				`Address already in use (${match[1]}:${match[2]}). Please check that you are not already running a server on this address or specify a different port with --port.`
+			);
+		}
+	}
+}
+
 export class Runtime {
 	#process?: childProcess.ChildProcess;
 	#processExitPromise?: Promise<void>;
@@ -156,7 +205,8 @@ export class Runtime {
 	async updateConfig(
 		configBuffer: Buffer,
 		options: Abortable & RuntimeOptions,
-		workerNames: string[]
+		workerNames: string[],
+		abortSignal: AbortSignal
 	): Promise<SocketPorts | undefined> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
@@ -172,11 +222,16 @@ export class Runtime {
 			stdio: ["pipe", "pipe", "pipe", "pipe"],
 			env: { ...process.env, FORCE_COLOR },
 		});
+		const startupLogBuffer = new StartupLogBuffer();
 		this.#process = runtimeProcess;
 		this.#processExitPromise = waitForExit(runtimeProcess);
 
 		const handleRuntimeStdio = options.handleRuntimeStdio ?? pipeOutput;
-		handleRuntimeStdio(runtimeProcess.stdout, runtimeProcess.stderr);
+
+		handleRuntimeStdio(
+			runtimeProcess.stdout.pipe(startupLogBuffer.stdoutStream),
+			runtimeProcess.stderr.pipe(startupLogBuffer.stderrStream)
+		);
 
 		const controlPipe = runtimeProcess.stdio[3];
 		assert(controlPipe instanceof Readable);
@@ -226,6 +281,13 @@ export class Runtime {
 				p.unref();
 			}
 		}
+
+		startupLogBuffer.stopBuffering();
+
+		if (ports === undefined && !abortSignal.aborted) {
+			startupLogBuffer.handleStartupFailure();
+		}
+
 		return ports;
 	}
 

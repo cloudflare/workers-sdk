@@ -533,7 +533,7 @@ async function pollUntilComplete(
 	db: Database
 ): Promise<ImportPollingResponse> {
 	if (!response.success) {
-		throw new Error(response.error);
+		throw new UserError(response.error);
 	}
 
 	response.messages.forEach((line) => {

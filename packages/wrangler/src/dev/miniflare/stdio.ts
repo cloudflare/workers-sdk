@@ -61,9 +61,17 @@ function getProcessStreamDataListener(processStream: "stdout" | "stderr") {
 				logStructuredLog(structuredLog, processStream);
 			} else {
 				const level = processStream === "stdout" ? "log" : "error";
-				// Unexpectedly we've received a line that is not a structured log, so we simply
-				// log it to the most likely appropriate logger level
-				logger[level](line);
+				// Unexpectedly we've received a line that is not a structured log.
+				// Directly logging it would bypass the filtering in `logStructuredLog()`, so
+				// we construct a "fake" structured log
+				logStructuredLog(
+					{
+						timestamp: Date.now(),
+						level,
+						message: line,
+					},
+					processStream
+				);
 			}
 		}
 	};
@@ -122,23 +130,8 @@ function logStructuredLog(
 	// TODO: the following code analyzes the message without considering its log level,
 	//       ideally, in order to avoid false positives, we should run this logic scoped
 	//       to the relevant log levels (as we do for `isCodeMovedWarning`)
-	if (messageClassifiers.isBarf(message)) {
-		// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
-
-		// CLEANABLE:
-		// known case to cleanup: Address in use errors
-		if (messageClassifiers.isAddressInUse(message)) {
-			const address = message.match(
-				/Address already in use; toString\(\) = (.+)\n/
-			)?.[1];
-
-			logger.error(
-				`Address already in use (${address}). Please check that you are not already running a server on this address or specify a different port with --port.`
-			);
-
-			// Also log the original error to the debug logs.
-			return logger.debug(message);
-		}
+	if (messageClassifiers.isInternal(message)) {
+		// this is an internal message from workerd that we want to hijack to cleanup/ignore
 
 		// In the past we have seen Access Violation errors on Windows, which may be caused by an outdated
 		// version of the Windows OS or the Microsoft Visual C++ Redistributable.
@@ -161,6 +154,13 @@ function logStructuredLog(
 		// anything else not handled above is considered ignorable
 		// so send it to the debug logs which are discarded unless
 		// the user explicitly sets a logLevel indicating they care
+		return logger.debug(message);
+	}
+
+	if (level === "error" && messageClassifiers.isAddressInUse(message)) {
+		// Miniflare handles startup failures that result in an address in use message
+		// and will turn them into thrown MiniflareCoreErrors. As such, don't show the log to
+		// the user, or they'd see it twice
 		return logger.debug(message);
 	}
 
@@ -200,8 +200,8 @@ function logStructuredLog(
 }
 
 const messageClassifiers = {
-	// Is this chunk a big chonky barf from workerd that we want to hijack to cleanup/ignore?
-	isBarf(chunk: string) {
+	// Is this chunk an internal message from workerd that we want to hijack to cleanup/ignore?
+	isInternal(chunk: string) {
 		const containsLlvmSymbolizerWarning = chunk.includes(
 			"Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set"
 		);

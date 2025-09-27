@@ -1,4 +1,5 @@
 import { buildImage } from "./build";
+import { UserError } from "./error";
 import {
 	getCloudflareContainerRegistry,
 	isCloudflareRegistryLink,
@@ -73,7 +74,7 @@ export async function prepareContainerImagesForDev(args: {
 	} = args;
 	let aborted = false;
 	if (process.platform === "win32") {
-		throw new Error(
+		throw new UserError(
 			"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container part of your application."
 		);
 	}
@@ -95,7 +96,7 @@ export async function prepareContainerImagesForDev(args: {
 			});
 		} else {
 			if (!isCloudflareRegistryLink(options.image_uri)) {
-				throw new Error(
+				throw new UserError(
 					`Image "${options.image_uri}" is a registry link but does not point to the Cloudflare container registry.\n` +
 						`To use an existing image from another repository, see https://developers.cloudflare.com/containers/image-management/#using-existing-images`
 				);

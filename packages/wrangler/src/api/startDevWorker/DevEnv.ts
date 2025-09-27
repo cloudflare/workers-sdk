@@ -1,5 +1,7 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
+import { MiniflareCoreError } from "miniflare";
+import { UserError } from "../../errors";
 import { logger, runWithLogLevel } from "../../logger";
 import { formatMessage, ParseError } from "../../parse";
 import { BundlerController } from "./BundlerController";
@@ -123,7 +125,9 @@ export class DevEnv extends EventEmitter {
 	}
 
 	emitErrorEvent(ev: ErrorEvent) {
-		if (
+		if (ev.cause instanceof MiniflareCoreError && ev.cause.isUserError()) {
+			this.emit("error", new UserError(ev.cause.message));
+		} else if (
 			ev.source === "ProxyController" &&
 			(ev.reason.startsWith("Failed to send message to") ||
 				ev.reason.startsWith("Could not connect to InspectorProxyWorker"))

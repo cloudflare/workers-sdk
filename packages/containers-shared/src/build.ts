@@ -1,5 +1,6 @@
 import { spawn } from "child_process";
 import { readFileSync } from "fs";
+import { UserError } from "./error";
 import type {
 	BuildArgs,
 	ContainerDevOptions,
@@ -70,7 +71,7 @@ export function dockerBuild(
 			resolve();
 		} else if (!errorHandled) {
 			errorHandled = true;
-			reject(new Error(`Docker build exited with code: ${code}`));
+			reject(new UserError(`Docker build exited with code: ${code}`));
 		}
 	});
 	child.on("error", (err) => {

@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion } from "@cloudflare/cli";
 import { ApiError } from "@cloudflare/containers-shared";
+import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import chalk from "chalk";
 import Cloudflare from "cloudflare";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -1770,7 +1771,10 @@ export async function main(argv: string[]): Promise<void> {
 				logger.debug(loggableException.stack);
 			}
 
-			if (!(loggableException instanceof UserError)) {
+			if (
+				!(loggableException instanceof UserError) &&
+				!(loggableException instanceof ContainersUserError)
+			) {
 				await logPossibleBugMessage();
 			}
 		}
@@ -1780,6 +1784,7 @@ export async function main(argv: string[]): Promise<void> {
 			mayReport &&
 			// ...and it's not a user error
 			!(loggableException instanceof UserError) &&
+			!(loggableException instanceof ContainersUserError) &&
 			// ...and it's not an un-reportable API error
 			!(loggableException instanceof APIError && !loggableException.reportable)
 		) {
@@ -1797,7 +1802,10 @@ export async function main(argv: string[]): Promise<void> {
 				durationMinutes: durationMs / 1000 / 60,
 				errorType:
 					errorType ?? (e instanceof Error ? e.constructor.name : undefined),
-				errorMessage: e instanceof UserError ? e.telemetryMessage : undefined,
+				errorMessage:
+					e instanceof UserError || e instanceof ContainersUserError
+						? e.telemetryMessage
+						: undefined,
 			},
 			argv
 		);
