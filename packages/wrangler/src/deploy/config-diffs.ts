@@ -28,8 +28,10 @@ export function getRemoteConfigDiff(
 	remoteConfig: RawConfig,
 	localResolvedConfig: Config
 ): ConfigDiff {
-	const normalizedLocalConfig =
-		normalizeLocalResolvedConfigAsRemote(localResolvedConfig);
+	const normalizedLocalConfig = normalizeLocalResolvedConfigAsRemote(
+		remoteConfig,
+		localResolvedConfig
+	);
 	const normalizedRemoteConfig = normalizeRemoteConfigAsResolvedLocal(
 		remoteConfig,
 		localResolvedConfig
@@ -100,11 +102,12 @@ function configDiffOnlyHasAdditionsIfAny(diff: Diff): boolean {
  * @returns The normalized config
  */
 function normalizeLocalResolvedConfigAsRemote(
+	remoteConfig: RawConfig,
 	localResolvedConfig: Config
 ): Config {
 	const subdomainValues = getSubdomainValues(
-		localResolvedConfig.workers_dev,
-		localResolvedConfig.preview_urls,
+		localResolvedConfig,
+		remoteConfig,
 		localResolvedConfig.routes ?? []
 	);
 	const normalizedConfig: Config = {
