@@ -635,16 +635,20 @@ describe("Create Cloudflare CLI", () => {
 		});
 	});
 
-	test("error when trying to create a solid app on Pages", async ({
-		logStream,
-	}) => {
-		const { errors } = await runC3(
-			["--platform=pages", "--framework=solid", "my-app"],
-			[],
-			logStream,
-		);
-		expect(errors).toMatch(
-			/Error: The .*? framework doesn't support the "pages" platform/,
+	describe("frameworks related", () => {
+		["solid", "next"].forEach((framework) =>
+			test(`error when trying to create a ${framework} app on Pages`, async ({
+				logStream,
+			}) => {
+				const { errors } = await runC3(
+					["--platform=pages", `--framework=${framework}`, "my-app"],
+					[],
+					logStream,
+				);
+				expect(errors).toMatch(
+					/Error: The .*? framework doesn't support the "pages" platform/,
+				);
+			}),
 		);
 	});
 });
