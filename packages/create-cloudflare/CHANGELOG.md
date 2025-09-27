@@ -1,5 +1,27 @@
 # create-cloudflare
 
+## 2.52.0
+
+### Minor Changes
+
+- [#10700](https://github.com/cloudflare/workers-sdk/pull/10700) [`8e05701`](https://github.com/cloudflare/workers-sdk/commit/8e05701f9b350612ba58e0883035b1fb1651787d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove the Remix option since the framework is no longer recommended by the Remix team for new applications
+
+- [#10781](https://github.com/cloudflare/workers-sdk/pull/10781) [`8eb7197`](https://github.com/cloudflare/workers-sdk/commit/8eb7197572d46703850ca0425e4b85ded0f07beb) Thanks [@dom96](https://github.com/dom96)! - Adds Python-specific folders to gitignore in Python templates
+
+- [#10699](https://github.com/cloudflare/workers-sdk/pull/10699) [`2acbdbe`](https://github.com/cloudflare/workers-sdk/commit/2acbdbe2a09be15ccd7962e5b6c48280744df4f6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove the next-on-pages (Next.js on the Pages platform) option since the package has been deprecated
+
+### Patch Changes
+
+- [#10567](https://github.com/cloudflare/workers-sdk/pull/10567) [`64e403b`](https://github.com/cloudflare/workers-sdk/commit/64e403ba8cfc1c2ea53ef2405787cd1bf64d064a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.9.2 | 0.9.6 |
+
+- [#10790](https://github.com/cloudflare/workers-sdk/pull/10790) [`c563ebe`](https://github.com/cloudflare/workers-sdk/commit/c563ebeb49612f1d38835c59b6552afecf0d8171) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - pin the URL for the react-router template since it was deleted from the project
+
 ## 2.51.7
 
 ### Patch Changes
