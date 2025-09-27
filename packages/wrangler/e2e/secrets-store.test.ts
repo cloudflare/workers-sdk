@@ -148,7 +148,7 @@ describe.each(RUNTIMES)(
 				"🔐 Getting secret... (ID: 00000000000000000000000000000000)"
 			);
 			if (runtime === "remote") {
-				expect(normalize(output.stdout)).toContain(
+				expect(normalize(output.stderr)).toContain(
 					"secret_not_found [code: 1001]"
 				);
 			} else {
@@ -180,7 +180,7 @@ describe.each(RUNTIMES)(
 			expect(normalize(output.stdout)).toContain(
 				"🔐 Getting secret... (ID: 00000000000000000000000000000000)"
 			);
-			expect(normalize(output.stdout)).toContain(
+			expect(normalize(output.stderr)).toContain(
 				"store_not_found [code: 1001]"
 			);
 		});

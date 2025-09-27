@@ -464,13 +464,16 @@ describe("deploy", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.]`
 		);
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
 
 			  Authentication error [code: 10000]
 
-
+			",
+			  "info": "",
+			  "out": "
 			📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
 			Please ensure it has the correct permissions for this operation.
 
@@ -486,7 +489,9 @@ describe("deploy", () => {
 			├─┼─┤
 			│ Account Three │ account-3 │
 			└─┴─┘
-			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens."
+			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens.",
+			  "warn": "",
+			}
 		`);
 	});
 
@@ -11381,11 +11386,7 @@ export default{
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
 				  Worker Startup Timed out. This could be due to script exceeding size limits or expensive code in
 				  the global scope. [code: 11337]
@@ -11393,6 +11394,9 @@ export default{
 				  If you think this is a bug, please open an issue at:
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				",
 				  "warn": "",
 				}
@@ -11469,9 +11473,6 @@ export default{
 				  If these are unnecessary, consider removing them
 
 
-				",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
@@ -11480,6 +11481,9 @@ export default{
 				  If you think this is a bug, please open an issue at:
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				",
 				  "warn": "",
 				}
@@ -11544,9 +11548,6 @@ export default{
 				  .wrangler/tmp/startup-profile-<HASH>/worker.cpuprofile - load it into the Chrome DevTools profiler
 				  (or directly in VSCode) to view a flamegraph.
 
-				",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
@@ -11555,6 +11556,9 @@ export default{
 				  If you think this is a bug, please open an issue at:
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				",
 				  "warn": "",
 				}
