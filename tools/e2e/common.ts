@@ -241,7 +241,16 @@ export const deleteContainerApplication = async (app: ContainerApplication) => {
 
 export const listTmpKVNamespaces = async () => {
 	return (await apiFetchList<KVNamespaceInfo>(`/storage/kv/namespaces`)).filter(
-		(kv) => kv.title.includes("tmp-e2e") || kv.title.includes("tmp_e2e")
+		(kv) => {
+			const isTempE2E =
+				kv.title.includes("tmp-e2e") || kv.title.includes("tmp_e2e");
+			// Since KV namespaces don't have creation date metadata, we encode the date-time in the title
+			const creationDate = new Date(
+				Number(kv.title.match(/tmp[-_]e2e[-_]kv(\d+)-$/)?.[1] ?? 0)
+			);
+			// Temp KV namespaces that are more than an hour old (or any age if no date is found)
+			return isTempE2E && Date.now() - creationDate.valueOf() > 1000 * 60 * 60;
+		}
 	);
 };
 

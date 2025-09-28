@@ -33,6 +33,7 @@ export function runCommand(
 	{ cwd, env, timeout = DEFAULT_TIMEOUT }: CommandOptions = {}
 ) {
 	try {
+		console.log(`Running command: ${command}`);
 		const { status, stdout, stderr, output } = spawnSync(command, [], {
 			shell: true,
 			cwd,

@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
 import * as forge from "node-forge";
+import { generateResourceName } from "./generate-resource-name";
 
 // Generate X509 self signed root key pair and certificate
 export function generateRootCertificate() {
@@ -109,9 +109,9 @@ export function generateRootCaCert() {
 }
 
 export function generateMtlsCertName() {
-	return `tmp-e2e-mtls-cert-${randomUUID()}`;
+	return generateResourceName("mtls-cert");
 }
 
 export function generateCaCertName() {
-	return `tmp-e2e-ca-cert-${randomUUID()}`;
+	return generateResourceName("ca-cert");
 }
