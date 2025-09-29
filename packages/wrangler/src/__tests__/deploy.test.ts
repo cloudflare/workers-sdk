@@ -14077,7 +14077,7 @@ export default{
 			`);
 
 			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation (due to strict mode, to prevent this failure either remove the \`--strict\` flag)[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
 
 				"
 			`);
@@ -14105,7 +14105,7 @@ export default{
 			"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation (due to strict mode, to prevent this failure either remove the \`--strict\` flag)[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
 
 				"
 			`);
