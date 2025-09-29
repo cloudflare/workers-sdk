@@ -472,7 +472,9 @@ describe("pipelines", () => {
 
 				"
 			`);
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`"Retrieving config for Pipeline \\"bad-pipeline\\"."`);
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(
+				`"Retrieving config for Pipeline \\"bad-pipeline\\"."`
+			);
 			expect(requests.count).toEqual(1);
 		});
 	});
@@ -644,7 +646,9 @@ describe("pipelines", () => {
 
 				"
 			`);
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`"Deleting Pipeline bad-pipeline."`);
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(
+				`"Deleting Pipeline bad-pipeline."`
+			);
 			expect(requests.count).toEqual(1);
 		});
 	});

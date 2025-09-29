@@ -11692,9 +11692,44 @@ export default{
 				main: "index.js",
 			});
 
-			await expect(runWrangler("deploy")).rejects.toThrowError(
-				`Your Worker failed validation because it exceeded startup limits.`
-			);
+			await expect(runWrangler("deploy")).rejects.toThrowError();
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYour Worker failed validation because it exceeded startup limits.[0m
+
+
+				  A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions)
+				  failed.
+				   - Error: Script startup exceeded CPU time limit. [code: 10021]
+
+				  To ensure fast responses, there are constraints on Worker startup, such as how much CPU it can
+				  use, or how long it can take. Your Worker has hit one of these startup limits. Try reducing the
+				  amount of work done during startup (outside the event handler), either by removing code or
+				  relocating it inside the event handler.
+
+				  Refer to [4mhttps://developers.cloudflare.com/workers/platform/limits/#worker-startup-time[0m for more
+				  details
+				  A CPU Profile of your Worker's startup phase has been written to
+				  .wrangler/tmp/startup-profile-<HASH>/worker.cpuprofile - load it into the Chrome DevTools profiler
+				  (or directly in VSCode) to view a flamegraph.
+
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
+
+				  Error: Script startup exceeded CPU time limit. [code: 10021]
+
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
+				",
+				  "warn": "",
+				}
+			`);
 		});
 
 		describe("unit tests", () => {
