@@ -342,6 +342,8 @@ async function resolveConfig(
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
 		complianceRegion: input.complianceRegion ?? config.compliance_region,
+		pythonModulesExcludes:
+			input.pythonModulesExcludes ?? config.python_modules_excludes,
 		entrypoint: entry.file,
 		projectRoot: entry.projectRoot,
 		bindings,
