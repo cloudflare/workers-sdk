@@ -534,6 +534,55 @@ describe.each([{ cmd: "wrangler dev" }])(
 
 			await worker.waitForReady();
 		});
+
+		it(`can exclude vendored module during ${cmd}`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.py"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["python_workers"]
+					[python_modules]
+					exclude = ["excluded_module.py"]
+			`,
+				"src/arithmetic.py": dedent`
+					def mul(a,b):
+						return a*b`,
+				"python_modules/excluded_module.py": dedent`
+					def excluded(a,b):
+						return a*b`,
+				"src/index.py": dedent`
+					from arithmetic import mul
+
+					from js import Response
+					def on_fetch(request):
+						print(f"hello {mul(2,3)}")
+						try:
+							import excluded_module
+							print("excluded_module found")
+						except ImportError:
+							print("excluded_module not found")
+						print(f"end")
+						return Response.new(f"py hello world {mul(2,3)}")`,
+				"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+			});
+			const worker = helper.runLongLived(cmd);
+
+			const { url } = await worker.waitForReady();
+
+			await expect(fetchText(url)).resolves.toBe("py hello world 6");
+
+			await worker.readUntil(/hello 6/);
+			await worker.readUntil(/excluded_module not found/);
+			await worker.readUntil(/end/);
+		});
 	}
 );
 

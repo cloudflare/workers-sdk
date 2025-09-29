@@ -50,7 +50,7 @@ function isValidPythonPackageName(name: string): boolean {
 	return regex.test(name);
 }
 
-function filterPythonVendorModules(
+function removePythonVendorModules(
 	isPythonEntrypoint: boolean,
 	modules: CfModule[]
 ): CfModule[] {
@@ -74,7 +74,8 @@ function getPythonVendorModulesSize(modules: CfModule[]): number {
 export async function findAdditionalModules(
 	entry: Entry,
 	rules: Rule[] | ParsedRules,
-	attachSourcemaps = false
+	attachSourcemaps = false,
+	pythonModulesExcludes: string[] = []
 ): Promise<CfModule[]> {
 	const files = getFiles(
 		entry.configPath,
@@ -176,13 +177,24 @@ export async function findAdditionalModules(
 					pythonModulesDir,
 					parseRules(vendoredRules)
 				)
-			).map((m) => {
-				const prefixedPath = path.join("python_modules", m.name);
-				return {
-					...m,
-					name: prefixedPath,
-				};
-			});
+			)
+				.filter((m) => {
+					// Check if the file matches any exclusion pattern
+					for (const pattern of pythonModulesExcludes) {
+						const regexp = globToRegExp(pattern, { globstar: true });
+						if (regexp.test(m.name)) {
+							return false; // Exclude this file
+						}
+					}
+					return true; // Include this file
+				})
+				.map((m) => {
+					const prefixedPath = path.join("python_modules", m.name);
+					return {
+						...m,
+						name: prefixedPath,
+					};
+				});
 
 			modules.push(...vendoredModules);
 		} else {
@@ -200,7 +212,7 @@ export async function findAdditionalModules(
 
 	if (modules.length > 0) {
 		logger.info(`Attaching additional modules:`);
-		const filteredModules = filterPythonVendorModules(
+		const filteredModules = removePythonVendorModules(
 			isPythonEntrypoint,
 			modules
 		);

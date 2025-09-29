@@ -13484,6 +13484,7 @@ export default{
 			writeWranglerConfig({
 				main: "src/index.py",
 				compatibility_flags: ["python_workers"],
+				// python_modules.exclude is set to `**/*.pyc` by default
 			});
 
 			// Create main Python file
@@ -13503,6 +13504,16 @@ export default{
 				"# Python vendor module 2\nprint('hello')"
 			);
 
+			await fs.promises.writeFile(
+				"python_modules/test.pyc",
+				"this shouldn't be deployed"
+			);
+			await fs.promises.mkdir("python_modules/other", { recursive: true });
+			await fs.promises.writeFile(
+				"python_modules/other/test.pyc",
+				"this shouldn't be deployed"
+			);
+
 			// Create a regular Python module
 			await fs.promises.writeFile(
 				"src/helper.py",
@@ -13512,12 +13523,19 @@ export default{
 			const expectedModules = {
 				"index.py": mainPython,
 				"helper.py": "# Helper module\ndef helper(): pass",
+				[`python_modules${path.sep}module1.so`]: "binary content for module 1",
+				[`python_modules${path.sep}module2.py`]:
+					"# Python vendor module 2\nprint('hello')",
 			};
 
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedMainModule: "index.py",
 				expectedModules,
+				excludedModules: [
+					`python_modules${path.sep}test.pyc`,
+					`python_modules${path.sep}other${path.sep}test.pyc`,
+				],
 			});
 
 			await runWrangler("deploy");

@@ -1591,6 +1591,14 @@ function normalizeAndValidateEnvironment(
 			isOneOf("public", "fedramp_high"),
 			undefined
 		),
+		python_modules: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"python_modules",
+			validatePythonModules,
+			{ exclude: ["**/*.pyc"] }
+		),
 	};
 
 	warnIfDurableObjectsHaveNoMigrations(
@@ -4419,6 +4427,37 @@ function warnIfDurableObjectsHaveNoMigrations(
 		}
 	}
 }
+
+const validatePythonModules: ValidatorFn = (
+	diagnostics,
+	field,
+	value,
+	topLevelEnv
+) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const val = value as { exclude?: unknown };
+	if (!("exclude" in val)) {
+		return false;
+	}
+
+	if (
+		!isStringArray(diagnostics, `${field}.exclude`, val.exclude, topLevelEnv)
+	) {
+		return false;
+	}
+
+	return true;
+};
 
 function isRemoteValid(
 	targetObject: object,

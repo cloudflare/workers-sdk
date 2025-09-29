@@ -589,6 +589,22 @@ interface EnvironmentInheritable {
 	 * it can be set to `undefined` in configuration to delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable.
 	 */
 	compliance_region: "public" | "fedramp_high" | undefined;
+
+	/**
+	 * Configuration for Python modules.
+	 *
+	 * @inheritable
+	 */
+	python_modules: {
+		/**
+		 * A list of glob patterns to exclude files from the python_modules directory when bundling.
+		 *
+		 * Patterns are relative to the python_modules directory and use glob syntax.
+		 *
+		 * @default ["**\*.pyc"]
+		 */
+		exclude: string[];
+	};
 }
 
 export type DurableObjectBindings = {
