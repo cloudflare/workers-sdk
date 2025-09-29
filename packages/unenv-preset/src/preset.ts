@@ -125,7 +125,7 @@ export function getCloudflarePreset({
 			clearImmediate: false,
 			setImmediate: false,
 			console: "@cloudflare/unenv-preset/node/console",
-			process: processOverrides.inject,
+			...processOverrides.inject,
 		},
 		polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
 		external: dynamicNativeModules.flatMap((p) => [p, `node:${p}`]),
@@ -326,7 +326,7 @@ function getProcessOverrides({
 }): {
 	nativeModules: string[];
 	hybridModules: string[];
-	inject: string | false;
+	inject: { process: string | false };
 } {
 	const disabledV2ByFlag = compatibilityFlags.includes(
 		"disable_nodejs_process_v2"
@@ -344,12 +344,12 @@ function getProcessOverrides({
 				nativeModules: ["process"],
 				hybridModules: [],
 				// We can use the native global, return `false` to drop the unenv default
-				inject: false,
+				inject: { process: false },
 			}
 		: {
 				nativeModules: [],
 				hybridModules: ["process"],
 				// Use the module default export as the global `process`
-				inject: "@cloudflare/unenv-preset/node/process",
+				inject: { process: "@cloudflare/unenv-preset/node/process" },
 			};
 }
