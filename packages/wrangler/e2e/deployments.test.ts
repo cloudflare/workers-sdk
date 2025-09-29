@@ -31,7 +31,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		// Seeded files will leak between tests.
 		const workerName = generateResourceName();
 		const helper = new WranglerE2ETestHelper();
-		let deployedUrl: string;
 
 		afterAll(async () => {
 			// clean up user Worker after all tests
@@ -62,11 +61,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const output = await helper.run(`wrangler deploy`);
 
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = getDeployedUrl(output);
 
 			const response = await retry(
 				(resp) => !resp.ok,
@@ -101,11 +96,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			});
 			const output = await helper.run(`wrangler deploy`);
 
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			deployedUrl = match.groups.url;
+			const deployedUrl = getDeployedUrl(output);
 
 			const response = await retry(
 				(resp) => !resp.ok,
@@ -294,30 +285,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			const normalizedStdout = normalize(output.stdout);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/index.html",
+				"/[boop].html",
+			]);
 
-			expect(normalizedStdout).toEqual(`🌀 Building list of assets...
-✨ Read 3 files from the assets directory /tmpdir
-🌀 Starting asset upload...
-🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
-+ /404.html
-+ /index.html
-+ /[boop].html
-Uploaded 1 of 3 assets
-Uploaded 2 of 3 assets
-Uploaded 3 of 3 assets
-✨ Success! Uploaded 3 files (TIMINGS)
-Total Upload: xx KiB / gzip: xx KiB
-Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
-  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
-Current Version ID: 00000000-0000-0000-0000-000000000000`);
-
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			const deployedUrl = match.groups.url;
+			const deployedUrl = getDeployedUrl(output);
 
 			const testCases: AssetTestCase[] = [
 				// Tests html_handling = "auto_trailing_slash" (default):
@@ -381,33 +355,13 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			const normalizedStdout = normalize(output.stdout);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/index.html",
+				"/[boop].html",
+			]);
 
-			expect(normalizedStdout).toContain(`🌀 Building list of assets...
-✨ Read 3 files from the assets directory /tmpdir
-🌀 Starting asset upload...
-🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
-+ /404.html
-+ /index.html
-+ /[boop].html
-Uploaded 1 of 3 assets
-Uploaded 2 of 3 assets
-Uploaded 3 of 3 assets
-✨ Success! Uploaded 3 files (TIMINGS)
-Total Upload: xx KiB / gzip: xx KiB
-Your Worker has access to the following bindings:
-Binding            Resource
-env.ASSETS         Assets
-Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
-  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
-Current Version ID: 00000000-0000-0000-0000-000000000000`);
-
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			const deployedUrl = match.groups.url;
+			const deployedUrl = getDeployedUrl(output);
 
 			const testCases: AssetTestCase[] = [
 				// because html handling has now been set to "none", only exact matches will be served
@@ -458,38 +412,14 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			const output = await helper.run(`wrangler deploy`, {
 				debug: true,
 			});
-			const normalizedStdout = normalize(output.stdout);
 
-			expect(normalizedStdout).toContain(`🌀 Building list of assets...
-✨ Read 3 files from the assets directory /tmpdir`);
-			// turns out these files are read in a diff order in Windows
-			// therefore asserting on each file individually :sigh:
-			expect(normalizedStdout).toContain("/404.html");
-			expect(normalizedStdout).toContain("/index.html");
-			expect(normalizedStdout).toContain("/[boop].html");
-			expect(normalizedStdout).toContain("🌀 Starting asset upload...");
-			expect(normalizedStdout)
-				.toContain(`🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
-+ /404.html
-+ /index.html
-+ /[boop].html`);
-			expect(normalizedStdout).toContain("Uploaded 1 of 3 assets");
-			expect(normalizedStdout).toContain("Uploaded 2 of 3 assets");
-			expect(normalizedStdout).toContain("Uploaded 3 of 3 assets");
-			// since we can't guarantee the order in which the files are uploaded,
-			// we need to check the listing of the uploaded files separately
-			expect(normalizedStdout).toContain("✨ /[boop].html");
-			expect(normalizedStdout).toContain("✨ /index.html");
-			expect(normalizedStdout).toContain("✨ /404.html");
-			expect(normalizedStdout).toContain(
-				"✨ Success! Uploaded 3 files (TIMINGS)"
+			validateAssetUploadLogs(
+				output,
+				["/404.html", "/index.html", "/[boop].html"],
+				{ includeDebug: true }
 			);
 
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			const deployedUrl = match.groups.url;
+			const deployedUrl = getDeployedUrl(output);
 
 			const testCases: AssetTestCase[] = [
 				// Tests html_handling = "auto_trailing_slash" (default):
@@ -548,33 +478,13 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			const normalizedStdout = normalize(output.stdout);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/index.html",
+				"/[boop].html",
+			]);
 
-			expect(normalizedStdout).toContain(`🌀 Building list of assets...
-✨ Read 3 files from the assets directory /tmpdir
-🌀 Starting asset upload...
-🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
-+ /404.html
-+ /index.html
-+ /[boop].html
-Uploaded 1 of 3 assets
-Uploaded 2 of 3 assets
-Uploaded 3 of 3 assets
-✨ Success! Uploaded 3 files (TIMINGS)
-Total Upload: xx KiB / gzip: xx KiB
-Your Worker has access to the following bindings:
-Binding            Resource
-env.ASSETS         Assets
-Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
-  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
-Current Version ID: 00000000-0000-0000-0000-000000000000`);
-
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			const deployedUrl = match.groups.url;
+			const deployedUrl = getDeployedUrl(output);
 
 			const testCases: AssetTestCase[] = [
 				{
@@ -619,36 +529,16 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			const normalizedStdout = normalize(output.stdout);
 
-			expect(normalizedStdout).toContain(dedent`
-				🌀 Building list of assets...
-				✨ Read 7 files from the assets directory /tmpdir
-				🌀 Starting asset upload...
-				🌀 Found 5 new or modified static assets to upload. Proceeding with upload...
-				+ /404.html
-				+ /api/index.html
-				+ /index.html
-				+ /api/assets/test.html
-				+ /[boop].html
-			`);
-			expect(normalizedStdout).toContain(dedent`
-				✨ Success! Uploaded 5 files (TIMINGS)
-				Total Upload: xx KiB / gzip: xx KiB
-				Your Worker has access to the following bindings:
-				Binding            Resource
-				env.ASSETS         Assets
-				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-				Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
-				  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
-				Current Version ID: 00000000-0000-0000-0000-000000000000
-			`);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/api/index.html",
+				"/index.html",
+				"/api/assets/test.html",
+				"/[boop].html",
+			]);
 
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			const deployedUrl = match.groups.url;
+			const deployedUrl = getDeployedUrl(output);
 
 			const testCases: AssetTestCase[] = [
 				{ path: "/index.html", content: "<h1>index.html</h1>" },
@@ -725,22 +615,11 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			output = await helper.run(
 				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
 			);
-			normalizedStdout = normalize(output.stdout);
-			expect(normalizedStdout).toEqual(`🌀 Building list of assets...
-✨ Read 3 files from the assets directory /tmpdir
-🌀 Starting asset upload...
-🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
-+ /404.html
-+ /index.html
-+ /[boop].html
-Uploaded 1 of 3 assets
-Uploaded 2 of 3 assets
-Uploaded 3 of 3 assets
-✨ Success! Uploaded 3 files (TIMINGS)
-Total Upload: xx KiB / gzip: xx KiB
-Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-  Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
-Current Version ID: 00000000-0000-0000-0000-000000000000`);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/index.html",
+				"/[boop].html",
+			]);
 
 			// deploy dispatch Worker && verify output
 			output = await helper.run(
@@ -756,11 +635,7 @@ Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
 
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			const deployedUrl = match.groups.url;
+			const deployedUrl = getDeployedUrl(output);
 
 			const testCases: AssetTestCase[] = [
 				// Tests html_handling = "auto_trailing_slash" (default):
@@ -835,25 +710,11 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			output = await helper.run(
 				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
 			);
-			normalizedStdout = normalize(output.stdout);
-			expect(normalizedStdout).toContain(`🌀 Building list of assets...
-✨ Read 3 files from the assets directory /tmpdir
-🌀 Starting asset upload...
-🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
-+ /404.html
-+ /index.html
-+ /[boop].html
-Uploaded 1 of 3 assets
-Uploaded 2 of 3 assets
-Uploaded 3 of 3 assets
-✨ Success! Uploaded 3 files (TIMINGS)
-Total Upload: xx KiB / gzip: xx KiB
-Your Worker has access to the following bindings:
-Binding            Resource
-env.ASSETS         Assets
-Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-  Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
-Current Version ID: 00000000-0000-0000-0000-000000000000`);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/index.html",
+				"/[boop].html",
+			]);
 
 			// deploy dispatch Worker && verify output
 			output = await helper.run(
@@ -869,11 +730,7 @@ Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
 
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			const deployedUrl = match.groups.url;
+			const deployedUrl = getDeployedUrl(output);
 
 			const testCases: AssetTestCase[] = [
 				// because html handling has now been set to "none", only exact matches will be served
@@ -946,25 +803,11 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			output = await helper.run(
 				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
 			);
-			normalizedStdout = normalize(output.stdout);
-			expect(normalizedStdout).toContain(`🌀 Building list of assets...
-✨ Read 3 files from the assets directory /tmpdir
-🌀 Starting asset upload...
-🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
-+ /404.html
-+ /index.html
-+ /[boop].html
-Uploaded 1 of 3 assets
-Uploaded 2 of 3 assets
-Uploaded 3 of 3 assets
-✨ Success! Uploaded 3 files (TIMINGS)
-Total Upload: xx KiB / gzip: xx KiB
-Your Worker has access to the following bindings:
-Binding            Resource
-env.ASSETS         Assets
-Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-  Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
-Current Version ID: 00000000-0000-0000-0000-000000000000`);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/index.html",
+				"/[boop].html",
+			]);
 
 			// deploy dispatch Worker && verify output
 			output = await helper.run(
@@ -980,11 +823,7 @@ Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
 
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			const deployedUrl = match.groups.url;
+			const deployedUrl = getDeployedUrl(output);
 
 			const testCases: AssetTestCase[] = [
 				{
@@ -1072,19 +911,17 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			async () => {
 				const output = await helper.run(`wrangler deploy`);
 
-				const match = output.stdout.match(
-					/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-				);
-				assert(match?.groups);
+				const deployedUrl = getDeployedUrl(output);
+
 				const matchApplicationId = output.stdout.match(
 					/([(]Application ID: (?<applicationId>.+?)[)])/
 				);
 				assert(matchApplicationId?.groups);
-				const url = match.groups.url;
+
 				try {
 					await vi.waitFor(
 						async () => {
-							const response = await fetch(`${url}/do`);
+							const response = await fetch(`${deployedUrl}/do`);
 							if (!response.ok) {
 								throw new Error(
 									"Durable object transient error: " + (await response.text())
@@ -1107,3 +944,53 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		);
 	});
 });
+
+/**
+ * Checks the logs that are output during asset upload to ensure they are correct.
+ *
+ * @param output The output from the `wrangler deploy` command.
+ * @param files An array of file paths that should be uploaded.
+ * @param includeDebug Whether to check for debug logs as well. Default is false.
+ */
+function validateAssetUploadLogs(
+	output: { stdout: string },
+	files: string[],
+	{ includeDebug = false } = {}
+) {
+	const normalizedStdout = normalize(output.stdout);
+
+	expect(normalizedStdout).toContain(`🌀 Building list of assets...`);
+	expect(normalizedStdout).toMatch(
+		/✨ Read \d+ files from the assets directory \/tmpdir/
+	);
+
+	expect(normalizedStdout).toContain("🌀 Starting asset upload...");
+	expect(normalizedStdout).toContain(
+		`🌀 Found ${files.length} new or modified static assets to upload. Proceeding with upload...`
+	);
+
+	// We can't guarantee that the files will be uploaded one at a time
+	expect(normalizedStdout).toMatch(
+		new RegExp(`Uploaded \\d+ of ${files.length} assets`)
+	);
+	if (includeDebug) {
+		for (let i = 1; i <= files.length; i++) {
+			expect(normalizedStdout).toContain(`✨ ${files[i - 1]}`);
+		}
+	}
+
+	expect(normalizedStdout).toContain(
+		`✨ Success! Uploaded ${files.length} files (TIMINGS)`
+	);
+}
+
+/**
+ * Extracts the deployed URL from the output of a Wrangler command.
+ */
+function getDeployedUrl(output: { stdout: string }) {
+	const match = output.stdout.match(
+		/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+	);
+	assert(match?.groups);
+	return match.groups.url;
+}
