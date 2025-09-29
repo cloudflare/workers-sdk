@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import path from "node:path";
-import dedent from "ts-dedent";
 import { syncAssets } from "../assets";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
