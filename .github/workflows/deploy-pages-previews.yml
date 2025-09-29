@@ -76,7 +76,7 @@ jobs:
         run: |
           output=$(pnpm --filter workers-playground run build:testing && pnpm --filter workers-playground run deploy)
           echo "Extracting deployed URL from command output"
-          url=$(echo "$output" | grep -oP 'Take a peek over at \K\S+')
+          url=$(echo "$output" | grep -o 'Take a peek over at \S+')
           echo "Extracted URL: $url"
           echo "PLAYGROUND_URL=$url" >> $GITHUB_ENV
         env:
@@ -89,7 +89,7 @@ jobs:
         with:
           header: ${{ steps.finder.outputs.pr }}
           message: |
-            The Wrangler DevTools preview is now live. You can access it directly at: ${{ env.VITE_DEVTOOLS_PREVIEW_URL }}/js_app
+            The Wrangler DevTools preview is now live. ${{ env.VITE_DEVTOOLS_PREVIEW_URL }}/js_app
 
             In order to test the DevTools preview in `wrangler`:
 
@@ -112,5 +112,5 @@ jobs:
 
             ---
 
-            The Workers Playground preview is also now live. The Playground preview embeds the above DevTools preview, so you can see them working together at:
+            The Workers Playground preview is also now live. The Playground preview embeds the above DevTools preview. 
             ${{ env.PLAYGROUND_URL }}/playground
