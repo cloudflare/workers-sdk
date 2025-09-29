@@ -25,7 +25,7 @@ const config: TemplateConfig = {
 	transformPackageJson: async () => ({
 		scripts: {
 			deploy: `${npm} run build && wrangler deploy`,
-			preview: `${npm} run build && wrangler dev`,
+			preview: `NODE_ENV=production ${npm} run build && wrangler dev`,
 		},
 	}),
 	devScript: "dev",
