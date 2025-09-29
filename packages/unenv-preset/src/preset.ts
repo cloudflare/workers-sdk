@@ -46,9 +46,6 @@ const nativeModules = [
 	"zlib",
 ];
 
-// Modules implemented via a mix of workerd APIs and polyfills.
-const hybridModules = ["process"];
-
 /**
  * Creates the Cloudflare preset for the given compatibility date and compatibility flags
  *
@@ -84,6 +81,7 @@ export function getCloudflarePreset({
 	const dgramOverrides = getDgramOverrides(compat);
 	const streamWrapOverrides = getStreamWrapOverrides(compat);
 	const replOverrides = getReplOverrides(compat);
+	const processOverrides = getProcessOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -104,11 +102,11 @@ export function getCloudflarePreset({
 		...dgramOverrides.nativeModules,
 		...streamWrapOverrides.nativeModules,
 		...replOverrides.nativeModules,
+		...processOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicHybridModules = [
-		...hybridModules,
 		...httpOverrides.hybridModules,
 		...http2Overrides.hybridModules,
 		...osOverrides.hybridModules,
@@ -125,6 +123,7 @@ export function getCloudflarePreset({
 		...dgramOverrides.hybridModules,
 		...streamWrapOverrides.hybridModules,
 		...replOverrides.hybridModules,
+		...processOverrides.hybridModules,
 	];
 
 	return {
@@ -158,7 +157,7 @@ export function getCloudflarePreset({
 			clearImmediate: false,
 			setImmediate: false,
 			...consoleOverrides.inject,
-			process: "@cloudflare/unenv-preset/node/process",
+			...processOverrides.inject,
 		},
 		polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
 		external: dynamicNativeModules.flatMap((p) => [p, `node:${p}`]),
@@ -798,4 +797,105 @@ function getReplOverrides({
 				nativeModules: [],
 				hybridModules: [],
 			};
+}
+
+/**
+ * Returns the overrides for `node:process` and `node:fs/promises`
+ *
+ * The native process v2 implementation:
+ * - is enabled starting from 2025-09-15
+ * - can be enabled with the "enable_nodejs_process_v2" flag
+ * - can be disabled with the "disable_nodejs_process_v2" flag
+ */
+function getProcessOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): {
+	nativeModules: string[];
+	hybridModules: string[];
+	inject: { process: string | false };
+} {
+	const disabledV2ByFlag = compatibilityFlags.includes(
+		"disable_nodejs_process_v2"
+	);
+
+	const enabledV2ByFlag = compatibilityFlags.includes(
+		"enable_nodejs_process_v2"
+	);
+	const enabledV2ByDate = compatibilityDate >= "2025-09-15";
+
+	// When `node:process` v2 is enabled, astro will detect workerd as it was Node.js.
+	// This causes astro to take a code path that uses iterable request/response bodies.
+	// So we need to make sure that the fixes for iterable bodies are also enabled.
+	// @see https://github.com/cloudflare/workers-sdk/issues/10855
+	const hasFixes = hasFetchIterableFixes({
+		compatibilityDate,
+		compatibilityFlags,
+	});
+
+	const useV2 =
+		hasFixes && (enabledV2ByFlag || enabledV2ByDate) && !disabledV2ByFlag;
+
+	return useV2
+		? {
+				nativeModules: ["process"],
+				hybridModules: [],
+				// We can use the native global, return `false` to drop the unenv default
+				inject: { process: false },
+			}
+		: {
+				nativeModules: [],
+				hybridModules: ["process"],
+				// Use the module default export as the global `process`
+				inject: { process: "@cloudflare/unenv-preset/node/process" },
+			};
+}
+
+/**
+ * Workerd fixes to iterable request/response bodies when both these compatibility flags are used:
+ * - `fetch_iterable_type_support`
+ * - `fetch_iterable_type_support_override_adjustment`
+ *
+ * @see https://github.com/cloudflare/workerd/issues/2746
+ * @see https://github.com/cloudflare/workerd/blob/main/src/workerd/io/compatibility-date.capnp
+ */
+function hasFetchIterableFixes({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): boolean {
+	const supportEnabledByFlag = compatibilityFlags.includes(
+		"fetch_iterable_type_support"
+	);
+
+	const supportDisabledByFlag = compatibilityFlags.includes(
+		"no_fetch_iterable_type_support"
+	);
+
+	// TODO: add `supportEnabledByDate` when workerd adds the date for it
+	const supportEnabled = supportEnabledByFlag && !supportDisabledByFlag;
+
+	if (!supportEnabled) {
+		return false;
+	}
+
+	const adjustmentEnabledByFlag = compatibilityFlags.includes(
+		"fetch_iterable_type_support_override_adjustment"
+	);
+	const adjustmentDisabledByFlag = compatibilityFlags.includes(
+		"no_fetch_iterable_type_support_override_adjustment"
+	);
+	// At this point, we know that `supportEnabled` is `true`
+	const adjustmentImpliedBySupport = compatibilityDate >= "2026-01-15";
+
+	const adjustmentEnabled =
+		(adjustmentEnabledByFlag || adjustmentImpliedBySupport) &&
+		!adjustmentDisabledByFlag;
+
+	return adjustmentEnabled;
 }
