@@ -176,29 +176,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				Message:     -
 				Handlers:            fetch
 				Compatibility Date:  2023-01-01
-				[
-				  {
-				    "database_id": "00000000-0000-0000-0000-000000000000",
-				    "id": "00000000-0000-0000-0000-000000000000",
-				    "name": "D1",
-				    "type": "d1"
-				  },
-				  {
-				    "name": "KV",
-				    "namespace_id": "00000000000000000000000000000000",
-				    "type": "kv_namespace"
-				  },
-				  {
-				    "bucket_name": "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2",
-				    "name": "R2",
-				    "type": "r2_bucket"
-				  },
-				  {
-				    "bucket_name": "does-not-exist",
-				    "name": "R2_WITH_NAME",
-				    "type": "r2_bucket"
-				  }
-				]
 				Your Worker has access to the following bindings:
 				Binding                                                                        Resource
 				env.KV (00000000000000000000000000000000)                                      KV Namespace
