@@ -294,3 +294,8 @@ export const getCloudflareIncludeProcessEnvFromEnv =
 export const getTraceHeader = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_TRACE_ID",
 });
+
+export const getDisableConfigWatching = getBooleanEnvironmentVariableFactory({
+	variableName: "WRANGLER_CI_DISABLE_CONFIG_WATCHING",
+	defaultValue: false,
+});

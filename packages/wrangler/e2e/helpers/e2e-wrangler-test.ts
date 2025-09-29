@@ -80,7 +80,7 @@ export class WranglerE2ETestHelper {
 	}
 
 	async kv(isLocal: boolean) {
-		const name = generateResourceName("kv").replaceAll("-", "_");
+		const name = generateResourceName("kv" + Date.now()).replaceAll("-", "_");
 		if (isLocal) {
 			return name;
 		}
@@ -163,6 +163,11 @@ export class WranglerE2ETestHelper {
 		if (isLocal) {
 			return { id: crypto.randomUUID(), name };
 		}
+
+		assert(
+			process.env.HYPERDRIVE_DATABASE_URL,
+			"HYPERDRIVE_DATABASE_URL must be set in order to create a Hyperdrive resource for this test"
+		);
 
 		const result = await this.run(
 			`wrangler hyperdrive create ${name} --connection-string="${process.env.HYPERDRIVE_DATABASE_URL}"`

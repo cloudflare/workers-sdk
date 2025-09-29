@@ -527,7 +527,11 @@ describe("dev with remote bindings", { sequential: true }, () => {
 				),
 				"index.js": `export default { fetch() { return new Response("hello") } }`,
 			});
-			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0", {
+				// We need to turn off the WRANGLER_CI_DISABLE_CONFIG_WATCHING env var so that the ConfigController
+				// enables watching for config changes, which is required to trigger reloading.
+				WRANGLER_CI_DISABLE_CONFIG_WATCHING: "false",
+			});
 			const match = await vi.waitUntil(
 				() => std.out.match(/Ready on (?<url>http:\/\/[^:]+:\d{4}.+)/),
 

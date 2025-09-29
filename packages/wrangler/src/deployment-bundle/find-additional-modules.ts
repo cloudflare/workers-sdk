@@ -168,7 +168,7 @@ export async function findAdditionalModules(
 				entry.projectRoot
 			);
 			const vendoredRules: Rule[] = [
-				{ type: "Data", globs: ["**/*.so", "**/*.py"] },
+				{ type: "Data", globs: ["**/*"], fallthrough: true },
 			];
 			const vendoredModules = (
 				await matchFiles(

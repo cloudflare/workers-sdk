@@ -106,7 +106,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
 				headers: {
-					[WORKER_ENTRY_PATH_HEADER]: workerConfig.main,
+					[WORKER_ENTRY_PATH_HEADER]: encodeURIComponent(workerConfig.main),
 					[IS_ENTRY_WORKER_HEADER]: String(isEntryWorker),
 					upgrade: "websocket",
 				},

@@ -16,3 +16,7 @@ export class WorkflowFatalError extends Error {
 		};
 	}
 }
+
+export class WorkflowError extends Error {
+	name = "WorkflowError";
+}

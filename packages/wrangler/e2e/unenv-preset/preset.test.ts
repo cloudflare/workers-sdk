@@ -141,7 +141,13 @@ const testConfigs: TestConfig[] = [
 				enable_nodejs_os_module: false,
 			},
 		},
-		// TODO: add a config when os is enabled by default (>= 2025-09-15)
+		{
+			name: "os enabled by date",
+			compatibilityDate: "2025-09-15",
+			expectRuntimeFlags: {
+				enable_nodejs_os_module: true,
+			},
+		},
 		{
 			name: "os enabled by flag",
 			compatibilityDate: "2024-09-23",
@@ -150,10 +156,9 @@ const testConfigs: TestConfig[] = [
 				enable_nodejs_os_module: true,
 			},
 		},
-		// TODO: change the date pass the default enabled date (>= 2025-09-15)
 		{
 			name: "os disabled by flag",
-			compatibilityDate: "2025-07-26",
+			compatibilityDate: "2025-09-15",
 			compatibilityFlags: ["disable_nodejs_os_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_os_module: false,
@@ -169,7 +174,13 @@ const testConfigs: TestConfig[] = [
 				enable_nodejs_fs_module: false,
 			},
 		},
-		// TODO: add a config when fs is enabled by default (>= 2025-09-15)
+		{
+			name: "fs enabled by date",
+			compatibilityDate: "2025-09-15",
+			expectRuntimeFlags: {
+				enable_nodejs_fs_module: true,
+			},
+		},
 		{
 			name: "fs enabled by flag",
 			compatibilityDate: "2024-09-23",
@@ -178,10 +189,9 @@ const testConfigs: TestConfig[] = [
 				enable_nodejs_fs_module: true,
 			},
 		},
-		// TODO: change the date pass the default enabled date (>= 2025-09-15)
 		{
 			name: "fs disabled by flag",
-			compatibilityDate: "2025-07-26",
+			compatibilityDate: "2025-09-15",
 			compatibilityFlags: ["disable_nodejs_fs_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_fs_module: false,
@@ -191,13 +201,19 @@ const testConfigs: TestConfig[] = [
 	// node:process v2
 	[
 		{
-			name: "process v1  by date",
+			name: "process v1 by date",
 			compatibilityDate: "2024-09-23",
 			expectRuntimeFlags: {
 				enable_nodejs_process_v2: false,
 			},
 		},
-		// TODO: add a config when v2 is enabled by default (>= 2025-09-15)
+		{
+			name: "process v2 by date",
+			compatibilityDate: "2025-09-15",
+			expectRuntimeFlags: {
+				enable_nodejs_process_v2: true,
+			},
+		},
 		{
 			name: "process v2 by flag",
 			compatibilityDate: "2024-09-23",
@@ -206,10 +222,9 @@ const testConfigs: TestConfig[] = [
 				enable_nodejs_process_v2: true,
 			},
 		},
-		// TODO: change the date pass the default enabled date (>= 2025-09-15)
 		{
 			name: "process v1 by flag",
-			compatibilityDate: "2024-09-23",
+			compatibilityDate: "2025-09-15",
 			compatibilityFlags: ["disable_nodejs_process_v2"],
 			expectRuntimeFlags: {
 				enable_nodejs_process_v2: false,

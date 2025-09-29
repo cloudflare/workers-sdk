@@ -96,6 +96,8 @@ type VariableNames =
 	| "WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST"
 	/** CI preview alias generation (internal use). */
 	| "WRANGLER_CI_GENERATE_PREVIEW_ALIAS"
+	/** Disable config watching in ConfigController. */
+	| "WRANGLER_CI_DISABLE_CONFIG_WATCHING"
 
 	// ## Docker Configuration
 

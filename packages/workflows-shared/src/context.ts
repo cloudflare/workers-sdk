@@ -8,7 +8,7 @@ import {
 	WorkflowTimeoutError,
 } from "./lib/errors";
 import { calcRetryDuration } from "./lib/retries";
-import { MAX_STEP_NAME_LENGTH, validateStepName } from "./lib/validators";
+import { isValidStepName, MAX_STEP_NAME_LENGTH } from "./lib/validators";
 import type { Engine } from "./engine";
 import type { InstanceMetadata } from "./instance";
 import type {
@@ -85,7 +85,7 @@ export class Context extends RpcTarget {
 			stepConfig = {};
 		}
 
-		if (!validateStepName(name)) {
+		if (!isValidStepName(name)) {
 			// NOTE(lduarte): marking errors as user error allows the observability layer to avoid leaking
 			// user errors to sentry while making everything more observable. `isUserError` is not serialized
 			// into userland code due to how workerd serialzises errors over RPC - we also set it as undefined

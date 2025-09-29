@@ -9,6 +9,7 @@ import { processArgument } from "@cloudflare/cli/args";
 import { dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
+import YAML from "yaml";
 import { wrap } from "../cloudchamber/helpers/wrap";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -116,10 +117,9 @@ export async function infoCommand(
 		);
 	}
 
-	const details = flatDetails(application);
 	const applicationDetails = {
 		label: `${application.name} (${application.created_at})`,
-		details: details,
+		details: YAML.stringify(application).split("\n"),
 		value: application.id,
 	};
 	await inputPrompt({
@@ -145,29 +145,6 @@ export async function listCommand(
 	}
 
 	await listCommandHandle(listArgs, config);
-}
-
-function flatDetails<T extends Record<string, unknown>>(
-	obj: T,
-	indentLevel = 0
-): string[] {
-	const indent = "  ".repeat(indentLevel);
-	return Object.entries(obj).reduce<string[]>((acc, [key, value]) => {
-		if (
-			value !== undefined &&
-			value !== null &&
-			typeof value === "object" &&
-			!Array.isArray(value)
-		) {
-			acc.push(`${indent}${key}:`);
-			acc.push(
-				...flatDetails(value as Record<string, unknown>, indentLevel + 1)
-			);
-		} else if (value !== undefined) {
-			acc.push(`${indent}${key}: ${value}`);
-		}
-		return acc;
-	}, []);
 }
 
 async function listCommandHandle(
@@ -202,10 +179,9 @@ async function listCommandHandle(
 		}
 
 		const applicationDetails = (a: Application) => {
-			const details = flatDetails(a);
 			return {
 				label: `${a.name} (${a.created_at})`,
-				details: details,
+				details: YAML.stringify(a).split("\n"),
 				value: a.id,
 			};
 		};

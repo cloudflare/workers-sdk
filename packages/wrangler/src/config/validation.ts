@@ -1,11 +1,13 @@
 import assert from "node:assert";
 import path from "node:path";
 import { isDockerfile } from "@cloudflare/containers-shared";
+import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
 import { friendlyBindingNames } from "../utils/print-bindings";
+import { workflowNameFormatMessage } from "../workflows/utils";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -2082,9 +2084,9 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 			)}.`
 		);
 		isValid = false;
-	} else if (value.name.length > 64) {
+	} else if (!isValidWorkflowName(value.name)) {
 		diagnostics.errors.push(
-			`"${field}" binding "name" field must be 64 characters or less, but got ${value.name.length} characters.`
+			`"${field}" binding "name" field is invalid. ${workflowNameFormatMessage}`
 		);
 		isValid = false;
 	}

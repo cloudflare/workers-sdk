@@ -1,5 +1,6 @@
 import { execFileSync } from "child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { UserError } from "../src/error";
 import { resolveDockerHost } from "../src/utils";
 
 vi.mock("node:child_process");
@@ -41,7 +42,7 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 
 		it("should fall back to platform default when context fails", () => {
 			vi.mocked(execFileSync).mockImplementation(() => {
-				throw new Error("Docker command failed");
+				throw new UserError("Docker command failed");
 			});
 
 			const result = resolveDockerHost("/no/op/docker");

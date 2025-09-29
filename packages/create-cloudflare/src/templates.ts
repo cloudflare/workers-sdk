@@ -39,7 +39,6 @@ import queuesTemplate from "templates/queues/c3";
 import qwikTemplate from "templates/qwik/c3";
 import reactRouterTemplate from "templates/react-router/c3";
 import reactTemplate from "templates/react/c3";
-import remixTemplate from "templates/remix/c3";
 import scheduledTemplate from "templates/scheduled/c3";
 import solidTemplate from "templates/solid/c3";
 import svelteTemplate from "templates/svelte/c3";
@@ -202,7 +201,6 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			qwik: qwikTemplate,
 			react: reactTemplate,
 			"react-router": reactRouterTemplate,
-			remix: remixTemplate,
 			solid: solidTemplate,
 			svelte: svelteTemplate,
 			vue: vueTemplate,
@@ -835,10 +833,16 @@ function updatePythonPackageName(path: string, projectName: string) {
 	const s = spinner();
 	s.start("Updating name in `pyproject.toml`");
 	let pyprojectTomlContents = readFile(pyprojectTomlPath);
-	pyprojectTomlContents = pyprojectTomlContents.replace('"TBD"', projectName);
+	pyprojectTomlContents = pyprojectTomlContents.replace(
+		'"TBD"',
+		`"${projectName}"`,
+	);
 	writeFile(pyprojectTomlPath, pyprojectTomlContents);
 	let uvLockContents = readFile(uvLockPath);
-	uvLockContents = uvLockContents.replace('"tbd"', projectName.toLowerCase());
+	uvLockContents = uvLockContents.replace(
+		'"tbd"',
+		`${"projectName.toLowerCase()"}`,
+	);
 	writeFile(uvLockPath, uvLockContents);
 	s.stop(`${brandColor("updated")} ${dim("`pyproject.toml`")}`);
 }
