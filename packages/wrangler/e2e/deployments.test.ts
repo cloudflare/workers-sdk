@@ -285,7 +285,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			validateAssetUploadLogs(output);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/index.html",
+				"/[boop].html",
+			]);
 
 			const deployedUrl = getDeployedUrl(output);
 
@@ -351,7 +355,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			validateAssetUploadLogs(output);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/index.html",
+				"/[boop].html",
+			]);
 
 			const deployedUrl = getDeployedUrl(output);
 
@@ -405,7 +413,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 				debug: true,
 			});
 
-			validateAssetUploadLogs(output, { includeDebug: true });
+			validateAssetUploadLogs(
+				output,
+				["/404.html", "/index.html", "/[boop].html"],
+				{ includeDebug: true }
+			);
 
 			const deployedUrl = getDeployedUrl(output);
 
@@ -466,7 +478,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			validateAssetUploadLogs(output);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/index.html",
+				"/[boop].html",
+			]);
 
 			const deployedUrl = getDeployedUrl(output);
 
@@ -514,15 +530,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
 
-			validateAssetUploadLogs(output, {
-				files: [
-					"/404.html",
-					"/api/index.html",
-					"/index.html",
-					"/api/assets/test.html",
-					"/[boop].html",
-				],
-			});
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/api/index.html",
+				"/index.html",
+				"/api/assets/test.html",
+				"/[boop].html",
+			]);
 
 			const deployedUrl = getDeployedUrl(output);
 
@@ -601,7 +615,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			output = await helper.run(
 				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
 			);
-			validateAssetUploadLogs(output);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/index.html",
+				"/[boop].html",
+			]);
 
 			// deploy dispatch Worker && verify output
 			output = await helper.run(
@@ -692,7 +710,11 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			output = await helper.run(
 				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
 			);
-			validateAssetUploadLogs(output);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/index.html",
+				"/[boop].html",
+			]);
 
 			// deploy dispatch Worker && verify output
 			output = await helper.run(
@@ -781,7 +803,11 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			output = await helper.run(
 				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
 			);
-			validateAssetUploadLogs(output);
+			validateAssetUploadLogs(output, [
+				"/404.html",
+				"/index.html",
+				"/[boop].html",
+			]);
 
 			// deploy dispatch Worker && verify output
 			output = await helper.run(
@@ -919,12 +945,17 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 	});
 });
 
+/**
+ * Checks the logs that are output during asset upload to ensure they are correct.
+ *
+ * @param output The output from the `wrangler deploy` command.
+ * @param files An array of file paths that should be uploaded.
+ * @param includeDebug Whether to check for debug logs as well. Default is false.
+ */
 function validateAssetUploadLogs(
 	output: { stdout: string },
-	{
-		includeDebug = false,
-		files = ["/404.html", "/index.html", "/[boop].html"],
-	} = {}
+	files: string[],
+	{ includeDebug = false } = {}
 ) {
 	const normalizedStdout = normalize(output.stdout);
 
@@ -953,6 +984,9 @@ function validateAssetUploadLogs(
 	);
 }
 
+/**
+ * Extracts the deployed URL from the output of a Wrangler command.
+ */
 function getDeployedUrl(output: { stdout: string }) {
 	const match = output.stdout.match(
 		/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
