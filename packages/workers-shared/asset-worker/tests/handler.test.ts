@@ -273,6 +273,54 @@ describe("[Asset Worker] `handleRequest`", () => {
 		expect(cacheMissResponse.headers.get("CF-Cache-Status")).toBe("MISS");
 	});
 
+	it("adds noindex header for workers.dev requests", async () => {
+		const configuration: AssetConfig = normalizeConfiguration({
+			html_handling: "none",
+			not_found_handling: "none",
+		});
+		const eTag = "some-etag";
+		const exists = vi.fn().mockReturnValue(eTag);
+		let getByEtag = vi.fn().mockReturnValueOnce({
+			readableStream: new ReadableStream(),
+			contentType: "text/html",
+			cacheStatus: "HIT",
+		});
+
+		// Test workers.dev
+		const workersDevResponse = await handleRequest(
+			new Request("https://my-worker.subdomain.workers.dev/"),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
+			configuration,
+			exists,
+			getByEtag,
+			analytics
+		);
+
+		expect(workersDevResponse.status).toBe(200);
+		expect(workersDevResponse.headers.get("X-Robots-Tag")).toBe("noindex");
+
+		// Test custom domain
+		getByEtag = vi.fn().mockReturnValueOnce({
+			readableStream: new ReadableStream(),
+			contentType: "text/html",
+			cacheStatus: "MISS",
+		});
+
+		const customDomainResponse = await handleRequest(
+			new Request("https://example.com/"),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
+			configuration,
+			exists,
+			getByEtag,
+			analytics
+		);
+
+		expect(customDomainResponse.status).toBe(200);
+		expect(customDomainResponse.headers.get("X-Robots-Tag")).toBeNull();
+	});
+
 	describe("_headers", () => {
 		it("attaches custom headers", async () => {
 			const configuration: AssetConfig = normalizeConfiguration({

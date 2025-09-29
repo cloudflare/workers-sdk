@@ -253,6 +253,12 @@ export const handleRequest = async (
 					analytics
 				);
 
+	// If we're viewing a preview or on workers.dev, attach a noindex header to prevent this appearing in search engines
+	const { hostname } = new URL(request.url);
+	if (hostname.endsWith(".workers.dev")) {
+		response.headers.set("X-Robots-Tag", "noindex");
+	}
+
 	return attachCustomHeaders(request, response, configuration, env);
 };
 
