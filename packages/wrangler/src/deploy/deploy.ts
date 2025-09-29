@@ -1443,7 +1443,7 @@ function getDeployConfirmFunction(
 	if (nonInteractive && strictMode) {
 		return async () => {
 			logger.error(
-				"Aborting the deployment operation (due to strict mode, to prevent this failure either remove the `--strict` flag)"
+				"Aborting the deployment operation because of conflicts. To override and deploy anyway remove the `--strict` flag"
 			);
 			process.exitCode = 1;
 			return false;
