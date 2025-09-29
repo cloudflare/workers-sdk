@@ -12605,6 +12605,11 @@ export default{
 				"# Python vendor module 2\nprint('hello')"
 			);
 
+			await fs.promises.writeFile(
+				"python_modules/test.pyc",
+				"this shouldn't be deployed"
+			);
+
 			// Create a regular Python module
 			await fs.promises.writeFile(
 				"src/helper.py",
@@ -12614,12 +12619,15 @@ export default{
 			const expectedModules = {
 				"index.py": mainPython,
 				"helper.py": "# Helper module\ndef helper(): pass",
+				"python_modules/module1.so": "binary content for module 1",
+				"python_modules/module2.py": "# Python vendor module 2\nprint('hello')",
 			};
 
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedMainModule: "index.py",
 				expectedModules,
+				excludedModules: ["python_modules/test.pyc"],
 			});
 
 			await runWrangler("deploy");

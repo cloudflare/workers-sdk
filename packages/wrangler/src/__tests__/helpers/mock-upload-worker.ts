@@ -23,6 +23,7 @@ export function mockUploadWorkerRequest(
 		expectedType?: "esm" | "sw" | "none";
 		expectedBindings?: unknown;
 		expectedModules?: Record<string, string | null>;
+		excludedModules?: string[];
 		expectedCompatibilityDate?: string;
 		expectedCompatibilityFlags?: string[];
 		expectedMigrations?: CfWorkerInit["migrations"];
@@ -135,6 +136,9 @@ export function mockUploadWorkerRequest(
 		for (const [name, content] of Object.entries(expectedModules)) {
 			expect(await serialize(formBody.get(name))).toEqual(content);
 		}
+		for (const name of excludedModules) {
+			expect(formBody.get(name)).toBeNull();
+		}
 
 		if (useOldUploadApi) {
 			return HttpResponse.json(
@@ -173,6 +177,7 @@ export function mockUploadWorkerRequest(
 		expectedType = "esm",
 		expectedBindings,
 		expectedModules = {},
+		excludedModules = [],
 		expectedCompatibilityDate,
 		expectedCompatibilityFlags,
 		env = undefined,

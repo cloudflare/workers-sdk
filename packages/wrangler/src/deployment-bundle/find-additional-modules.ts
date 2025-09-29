@@ -176,13 +176,30 @@ export async function findAdditionalModules(
 					pythonModulesDir,
 					parseRules(vendoredRules)
 				)
-			).map((m) => {
-				const prefixedPath = path.join("python_modules", m.name);
-				return {
-					...m,
-					name: prefixedPath,
-				};
-			});
+			)
+				.filter(
+					// Exclude certain file extensions to avoid bundling files that aren't
+					// necessary and which increase the size of the bundle considerably.
+					(m) =>
+						!m.name.endsWith(".pyc") &&
+						// Translation files
+						!m.name.endsWith(".po") &&
+						// Static files shouldn't be included
+						!m.name.endsWith(".svg") &&
+						!m.name.endsWith(".png") &&
+						!m.name.endsWith(".jpg") &&
+						!m.name.endsWith(".css") &&
+						!m.name.endsWith(".gz") &&
+						!m.name.endsWith(".txt") &&
+						!m.name.endsWith(".js")
+				)
+				.map((m) => {
+					const prefixedPath = path.join("python_modules", m.name);
+					return {
+						...m,
+						name: prefixedPath,
+					};
+				});
 
 			modules.push(...vendoredModules);
 		} else {
