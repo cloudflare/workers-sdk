@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import dedent from "ts-dedent";
 import { syncAssets } from "../assets";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
@@ -60,12 +61,9 @@ export function handlePreviewSessionCreationError(
 	// give them friendly instructions
 	// for error 10063 (workers.dev subdomain required)
 	if ("code" in err && err.code === 10063) {
-		const errorMessage =
-			"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
-		const solutionMessage =
-			"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-		const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
-		logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+		logger.error(
+			`You need to register a workers.dev subdomain before running the dev command in remote mode. You can either enable local mode by pressing l, or register a workers.dev subdomain here: https://dash.cloudflare.com/${accountId}/workers/onboarding`
+		);
 	} else if (
 		"cause" in err &&
 		(err.cause as { code: string; hostname: string })?.code === "ENOTFOUND"
@@ -252,14 +250,8 @@ function handleUserFriendlyError(error: unknown, accountId?: string) {
 					error.notes[0].text ===
 					"binding DB of type d1 must have a valid `id` specified [code: 10021]"
 				) {
-					const errorMessage =
-						"Error: You must use a real database in the preview_database_id configuration.";
-					const solutionMessage =
-						"You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here:";
-					const documentationLink = `https://developers.cloudflare.com/d1/configuration/local-development`;
-
 					logger.error(
-						`${errorMessage}\n${solutionMessage}\n${documentationLink}`
+						`You must use a real database in the preview_database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development`
 					);
 
 					return true;
@@ -270,15 +262,13 @@ function handleUserFriendlyError(error: unknown, accountId?: string) {
 
 			// for error 10063 (workers.dev subdomain required)
 			case 10063: {
-				const errorMessage =
-					"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
-				const solutionMessage =
-					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
 				const onboardingLink = accountId
 					? `https://dash.cloudflare.com/${accountId}/workers/onboarding`
 					: "https://dash.cloudflare.com/?to=/:account/workers/onboarding";
 
-				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+				logger.error(
+					`You need to register a workers.dev subdomain before running the dev command in remote mode. You can either enable local mode by pressing l, or register a workers.dev subdomain here: ${onboardingLink}`
+				);
 
 				return true;
 			}
