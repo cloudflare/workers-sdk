@@ -125,9 +125,7 @@ export function getCloudflarePreset({
 			clearImmediate: false,
 			setImmediate: false,
 			console: "@cloudflare/unenv-preset/node/console",
-			process: processOverrides.isV2
-				? false
-				: "@cloudflare/unenv-preset/node/process",
+			process: processOverrides.inject,
 		},
 		polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
 		external: dynamicNativeModules.flatMap((p) => [p, `node:${p}`]),
@@ -317,7 +315,7 @@ function getFsOverrides({
  * The native process v2 implementation:
  * - is enabled starting from 2025-09-15
  * - can be enabled with the "enable_nodejs_process_v2" flag
- * - can be disabled with the "disable_nodejs_fs_module" flag
+ * - can be disabled with the "disable_nodejs_process_v2" flag
  */
 function getProcessOverrides({
 	compatibilityDate,
@@ -325,7 +323,11 @@ function getProcessOverrides({
 }: {
 	compatibilityDate: string;
 	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[]; isV2: boolean } {
+}): {
+	nativeModules: string[];
+	hybridModules: string[];
+	inject: string | false;
+} {
 	const disabledV2ByFlag = compatibilityFlags.includes(
 		"disable_nodejs_process_v2"
 	);
@@ -341,11 +343,13 @@ function getProcessOverrides({
 		? {
 				nativeModules: ["process"],
 				hybridModules: [],
-				isV2,
+				// We can use the native global, return `false` to drop the unenv default
+				inject: false,
 			}
 		: {
 				nativeModules: [],
 				hybridModules: ["process"],
-				isV2,
+				// Use the module default export as the global `process`
+				inject: "@cloudflare/unenv-preset/node/process",
 			};
 }
