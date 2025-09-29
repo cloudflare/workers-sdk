@@ -964,8 +964,8 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 	 * ```
 	 * .env
 	 * .env*
-	 * .env.<local|production|staging>
-	 * /env*.<local|production|staging>
+	 * .env.<local|production|staging|...>
+	 * .env*.<local|production|staging|...>
 	 * ```
 	 *
 	 * Any of these may alone on a line or be followed by a space and a trailing comment:

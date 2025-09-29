@@ -8,5 +8,5 @@ Previously we only looked for `.env*` in the `gitignore` but now we cover more c
 
 - `.env`
 - `.env\*`
-- `.env.<local|production|staging>`
-- `/env\*.<local|production|staging>`
+- `.env.<local|production|staging|...>`
+- `.env\*.<local|production|staging|...>`
