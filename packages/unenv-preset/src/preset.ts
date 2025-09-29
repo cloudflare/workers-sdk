@@ -47,7 +47,7 @@ const nativeModules = [
 ];
 
 // Modules implemented via a mix of workerd APIs and polyfills.
-const hybridModules = ["console", "process"];
+const hybridModules = ["console"];
 
 /**
  * Creates the Cloudflare preset for the given compatibility date and compatibility flags
@@ -72,6 +72,7 @@ export function getCloudflarePreset({
 	const http2Overrides = getHttp2Overrides(compat);
 	const osOverrides = getOsOverrides(compat);
 	const fsOverrides = getFsOverrides(compat);
+	const processOverrides = getProcessOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -80,6 +81,7 @@ export function getCloudflarePreset({
 		...http2Overrides.nativeModules,
 		...osOverrides.nativeModules,
 		...fsOverrides.nativeModules,
+		...processOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -89,6 +91,7 @@ export function getCloudflarePreset({
 		...http2Overrides.hybridModules,
 		...osOverrides.hybridModules,
 		...fsOverrides.hybridModules,
+		...processOverrides.hybridModules,
 	];
 
 	return {
@@ -122,7 +125,7 @@ export function getCloudflarePreset({
 			clearImmediate: false,
 			setImmediate: false,
 			console: "@cloudflare/unenv-preset/node/console",
-			process: "@cloudflare/unenv-preset/node/process",
+			...processOverrides.inject,
 		},
 		polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
 		external: dynamicNativeModules.flatMap((p) => [p, `node:${p}`]),
@@ -303,5 +306,50 @@ function getFsOverrides({
 		: {
 				nativeModules: [],
 				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:process` and `node:fs/promises`
+ *
+ * The native process v2 implementation:
+ * - is enabled starting from 2025-09-15
+ * - can be enabled with the "enable_nodejs_process_v2" flag
+ * - can be disabled with the "disable_nodejs_process_v2" flag
+ */
+function getProcessOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): {
+	nativeModules: string[];
+	hybridModules: string[];
+	inject: { process: string | false };
+} {
+	const disabledV2ByFlag = compatibilityFlags.includes(
+		"disable_nodejs_process_v2"
+	);
+
+	const enabledV2ByFlag = compatibilityFlags.includes(
+		"enable_nodejs_process_v2"
+	);
+	const enabledV2ByDate = compatibilityDate >= "2025-09-15";
+
+	const isV2 = (enabledV2ByFlag || enabledV2ByDate) && !disabledV2ByFlag;
+
+	return isV2
+		? {
+				nativeModules: ["process"],
+				hybridModules: [],
+				// We can use the native global, return `false` to drop the unenv default
+				inject: { process: false },
+			}
+		: {
+				nativeModules: [],
+				hybridModules: ["process"],
+				// Use the module default export as the global `process`
+				inject: { process: "@cloudflare/unenv-preset/node/process" },
 			};
 }
