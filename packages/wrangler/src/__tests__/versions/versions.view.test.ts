@@ -664,30 +664,30 @@ describe("versions view", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Your Worker has access to the following bindings:
-				Binding                                                            Resource
-				env.DO (DurableObject)                                             Durable Object
-				env.DO_2 (DurableObject, defined in other-worker)                  Durable Object
-				env.KV (kv-id)                                                     KV Namespace
-				env.MAIL (unrestricted)                                            Send Email
-				env.MAIL_2 (dest@example.com)                                      Send Email
-				env.MAIL_3 (dest@example.com)                                      Send Email
-				env.QUEUE (queue)                                                  Queue
-				env.QUEUE_2 (queue)                                                Queue
-				env.D1 (d1-id)                                                     D1 Database
-				env.VECTORIZE (index)                                              Vectorize Index
-				env.HYPERDRIVE (hyperdrive-id)                                     Hyperdrive Config
-				env.R2 (r2-bucket)                                                 R2 Bucket
-				env.R2_2 (r2-bucket (eu))                                          R2 Bucket
-				env.SERVICE (worker)                                               Worker
-				env.SERVICE_2 (worker#Enterypoint)                                 Worker
-				env.AE (datset)                                                    Analytics Engine Dataset
-				env.BROWSER                                                        Browser
-				env.AI                                                             AI
-				env.VERSION_METADATA                                               Worker Version Metadata
-				env.WFP (wfp-namespace)                                            Dispatch Namespace
-				env.WFP_2 (wfp-namespace)                                          Dispatch Namespace
-				env.WFP_3 (wfp-namespace)                                          Dispatch Namespace
-				env.MTLS (mtls-id)                                                 mTLS Certificate
+				Binding                                                                  Resource
+				env.DO (DurableObject)                                                   Durable Object
+				env.DO_2 (DurableObject, defined in other-worker)                        Durable Object
+				env.KV (kv-id)                                                           KV Namespace
+				env.MAIL (unrestricted)                                                  Send Email
+				env.MAIL_2 (dest@example.com)                                            Send Email
+				env.MAIL_3 (dest@example.com - senders: 3@a.com, 4@a.com)                Send Email
+				env.QUEUE (queue)                                                        Queue
+				env.QUEUE_2 (queue)                                                      Queue
+				env.D1 (d1-id)                                                           D1 Database
+				env.VECTORIZE (index)                                                    Vectorize Index
+				env.HYPERDRIVE (hyperdrive-id)                                           Hyperdrive Config
+				env.R2 (r2-bucket)                                                       R2 Bucket
+				env.R2_2 (r2-bucket (eu))                                                R2 Bucket
+				env.SERVICE (worker)                                                     Worker
+				env.SERVICE_2 (worker#Enterypoint)                                       Worker
+				env.AE (datset)                                                          Analytics Engine Dataset
+				env.BROWSER                                                              Browser
+				env.AI                                                                   AI
+				env.VERSION_METADATA                                                     Worker Version Metadata
+				env.WFP (wfp-namespace)                                                  Dispatch Namespace
+				env.WFP_2 (wfp-namespace)                                                Dispatch Namespace
+				env.WFP_3 (wfp-namespace)                                                Dispatch Namespace
+				env.MTLS (mtls-id)                                                       mTLS Certificate
 				"
 			`);
 		});
