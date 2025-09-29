@@ -5,12 +5,7 @@ import { BATCH_MAX_ERRORS_WARNINGS } from "../kv/helpers";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import {
-	clearDialogs,
-	mockConfirm,
-	mockPrompt,
-	mockConfirm,
-} from "./helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockProcess } from "./helpers/mock-process";
 import { msw } from "./helpers/msw";
@@ -214,7 +209,9 @@ describe("wrangler", () => {
 					writeWranglerConfig({ name: "worker" }, configPath);
 					mockCreateRequest("UnitTestNamespace");
 
-					await runWrangler("kv namespace create UnitTestNamespace --binding MY_NS");
+					await runWrangler(
+						"kv namespace create UnitTestNamespace --binding MY_NS"
+					);
 					expect(std.out).toMatchSnapshot();
 					expect(await readFile(configPath, "utf8")).toMatchSnapshot();
 				});
@@ -225,7 +222,7 @@ describe("wrangler", () => {
 					if (configPath === "wrangler.json") {
 						mockConfirm({
 							text: "Would you like Wrangler to add it on your behalf?",
-							result:true,
+							result: true,
 						});
 						mockPrompt({
 							text: "What binding name would you like to use?",
@@ -256,15 +253,16 @@ describe("wrangler", () => {
 					if (configPath === "wrangler.json") {
 						mockConfirm({
 							text: "Would you like Wrangler to add it on your behalf?",
-							result:true,
+							result: true,
 						});
 						mockPrompt({
 							text: "What binding name would you like to use?",
 							result: "HELLO",
 						});
-
 					}
-					await runWrangler("kv namespace create UnitTestNamespace --use-remote");
+					await runWrangler(
+						"kv namespace create UnitTestNamespace --use-remote"
+					);
 					expect(std.out).toMatchSnapshot();
 					expect(await readFile(configPath, "utf8")).toMatchSnapshot();
 				});

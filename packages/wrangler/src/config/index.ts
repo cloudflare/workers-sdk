@@ -1,5 +1,4 @@
 import TOML from "@iarna/toml";
-import { NamedArgDefinitions } from "../core/types";
 import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
@@ -93,7 +92,7 @@ type ValidKeys = Exclude<
 	| "unsafe_hello_world"
 >;
 
-export const sharedResourceCreationArgs: NamedArgDefinitions = {
+export const sharedResourceCreationArgs = {
 	"use-remote": {
 		type: "boolean",
 		description:
