@@ -103,7 +103,7 @@ jobs:
             ```
 
       - name: "Comment on PR with Workers Playground Link"
-        if: contains(github.event.*.labels.*.name, 'preview:chrome-devtools-patches') && contains(github.event.*.labels.*.name, 'preview:workers-playground')
+        if: contains(github.event.*.labels.*.name, 'preview:workers-playground')
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: ${{ steps.finder.outputs.pr }}
@@ -112,5 +112,5 @@ jobs:
 
             ---
 
-            The Workers Playground preview is also now live. The Playground preview embeds the above DevTools preview. 
+            The Workers Playground preview is also now live.
             ${{ env.PLAYGROUND_URL }}/playground
