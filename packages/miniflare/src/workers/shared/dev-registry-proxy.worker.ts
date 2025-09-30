@@ -1,4 +1,4 @@
-import { newWorkersRpcResponse } from "@cloudflare/jsrpc";
+import { newWorkersRpcResponse } from "capnweb";
 import { WorkerEntrypoint } from "cloudflare:workers";
 
 function isJSRPCRequest(request: Request): boolean {

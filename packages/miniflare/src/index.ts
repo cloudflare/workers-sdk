@@ -1888,8 +1888,8 @@ export class Miniflare {
 							esModule: DEV_REGISTRY_PROXY(),
 						},
 					],
-					compatibilityDate: "2025-01-01",
-					compatibilityFlags: ["experimental"],
+					compatibilityDate: "2025-09-27",
+					compatibilityFlags: ["enable_ctx_exports"],
 					bindings: [
 						{
 							name: "REGISTRY_PATH",

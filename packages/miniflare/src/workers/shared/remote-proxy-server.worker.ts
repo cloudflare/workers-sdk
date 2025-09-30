@@ -1,6 +1,5 @@
-import { newWorkersRpcResponse } from "@cloudflare/jsrpc";
+import { newWorkersRpcResponse } from "capnweb";
 import { EmailMessage } from "cloudflare:email";
-import { DurableObject } from "cloudflare:workers";
 
 interface Env extends Record<string, unknown> {}
 
