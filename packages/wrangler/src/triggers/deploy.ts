@@ -379,17 +379,21 @@ async function subdomainDeploy(
 	// Update subdomain enablement status if needed.
 
 	if (!allInSync) {
-		await fetchResult(config, `${workerUrl}/subdomain`, {
-			method: "POST",
-			body: JSON.stringify({
-				enabled: wantWorkersDev,
-				previews_enabled: wantPreviews,
-			}),
-			headers: {
-				"Content-Type": "application/json",
-				"Cloudflare-Workers-Script-Api-Date": "2025-08-01",
-			},
-		});
+		// Occasionally this update to the subdomain endpoint fails due to some internal API error.
+		// We retry this request a few times to mitigate that.
+		await retryOnAPIFailure(async () =>
+			fetchResult(config, `${workerUrl}/subdomain`, {
+				method: "POST",
+				body: JSON.stringify({
+					enabled: wantWorkersDev,
+					previews_enabled: wantPreviews,
+				}),
+				headers: {
+					"Content-Type": "application/json",
+					"Cloudflare-Workers-Script-Api-Date": "2025-08-01",
+				},
+			})
+		);
 	}
 
 	if (workersDevURL) {
