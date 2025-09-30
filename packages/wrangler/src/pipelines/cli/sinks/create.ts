@@ -6,6 +6,7 @@ import { requireAuth } from "../../../user";
 import { createSink } from "../../client";
 import { applyDefaultsToSink, SINK_DEFAULTS } from "../../defaults";
 import { authorizeR2Bucket } from "../../index";
+import { validateEntityName } from "../../validate";
 import { displaySinkConfiguration } from "./utils";
 import type { CreateSinkRequest, SinkFormat } from "../../types";
 
@@ -102,6 +103,8 @@ export const pipelinesSinksCreateCommand = createCommand({
 		},
 	},
 	validateArgs: (args) => {
+		validateEntityName("sink", args.sink);
+
 		const sinkType = parseSinkType(args.type);
 
 		if (!isValidR2BucketName(args.bucket)) {
