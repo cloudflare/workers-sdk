@@ -161,6 +161,5 @@ export function resolveImageName(accountId: string, image: string): string {
 	}
 
 	// is managed registry and doesn't have the account id,add it to the path
-	// is managed registry and doesn't have the account id,add it to the path
 	return `${url.hostname}/${accountId}${url.pathname}`;
 }
