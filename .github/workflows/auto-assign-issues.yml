@@ -1,0 +1,30 @@
+name: Auto-assign Issues
+
+on:
+  issues:
+    types: [labeled, unlabeled]
+
+jobs:
+  assign-issue:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Auto-assign issue
+        run: node -r esbuild-register tools/github-workflow-helpers/auto-assign-issues.ts
+        env:
+          INPUT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
