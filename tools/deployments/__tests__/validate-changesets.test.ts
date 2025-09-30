@@ -21,7 +21,6 @@ describe("findPackageNames()", () => {
 	}) => {
 		expect(findPackageNames()).toEqual(
 			new Set([
-				"@cloudflare/auto-assign-issues",
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli",
 				"@cloudflare/kv-asset-handler",
