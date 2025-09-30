@@ -1,5 +1,17 @@
 # @cloudflare/containers-shared
 
+## 0.2.11
+
+### Patch Changes
+
+- [#10623](https://github.com/cloudflare/workers-sdk/pull/10623) [`7a6381c`](https://github.com/cloudflare/workers-sdk/commit/7a6381c4f9494dd871f70c305763d22e7049a0be) Thanks [@IRCody](https://github.com/IRCody)! - Handle more cases for correctly resolving the full uri for an image when using containers push.
+
+- [#10808](https://github.com/cloudflare/workers-sdk/pull/10808) [`a7f6966`](https://github.com/cloudflare/workers-sdk/commit/a7f6966825df066e7d9e254164471a1916b40247) Thanks [@nikitassharma](https://github.com/nikitassharma)! - When returning the default managed registry, inspect the environment variable
+  `WRANGLER_API_ENVIRONMENT` to determine if we should be returning the production
+  or staging registry.
+
+- [#10769](https://github.com/cloudflare/workers-sdk/pull/10769) [`0a554f9`](https://github.com/cloudflare/workers-sdk/commit/0a554f9323bb323c97dd07cfb5805ea5d20b371d) Thanks [@penalosa](https://github.com/penalosa)! - Mark more errors as `UserError` to disable Sentry reporting
+
 ## 0.2.10
 
 ### Patch Changes
