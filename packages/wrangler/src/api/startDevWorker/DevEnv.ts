@@ -3,7 +3,7 @@ import { EventEmitter } from "node:events";
 import { MiniflareCoreError } from "miniflare";
 import { UserError } from "../../errors";
 import { logger, runWithLogLevel } from "../../logger";
-import { formatMessage, ParseError } from "../../parse";
+import { ParseError } from "../../parse";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
 import { LocalRuntimeController } from "./LocalRuntimeController";
@@ -141,7 +141,7 @@ export class DevEnv extends EventEmitter {
 			ev.source === "ConfigController" &&
 			ev.cause instanceof ParseError
 		) {
-			logger.log(formatMessage(ev.cause));
+			logger.error(ev.cause);
 		}
 		// if other knowable + recoverable errors occur, handle them here
 		else {

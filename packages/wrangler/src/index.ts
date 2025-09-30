@@ -148,7 +148,7 @@ import {
 } from "./pages/secret";
 import { pagesProjectUploadCommand } from "./pages/upload";
 import { pagesProjectValidateCommand } from "./pages/validate";
-import { APIError, formatMessage, ParseError } from "./parse";
+import { APIError, ParseError } from "./parse";
 import { pipelinesNamespace } from "./pipelines";
 import { pipelinesCreateCommand } from "./pipelines/cli/create";
 import { pipelinesDeleteCommand } from "./pipelines/cli/delete";
@@ -1678,7 +1678,7 @@ export async function main(argv: string[]): Promise<void> {
 				logger.error(e.cause);
 			} else {
 				assert(isAuthenticationError(e));
-				logger.log(formatMessage(e));
+				logger.error(e);
 			}
 			const envAuth = getAuthFromEnv();
 			if (envAuth !== undefined && "apiToken" in envAuth) {
@@ -1701,7 +1701,7 @@ export async function main(argv: string[]): Promise<void> {
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 			});
-			logger.log(formatMessage(e));
+			logger.error(e);
 		} else if (e instanceof JsonFriendlyFatalError) {
 			logger.log(e.message);
 		} else if (
@@ -1748,7 +1748,7 @@ export async function main(argv: string[]): Promise<void> {
 			error.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 			});
-			logger.log(formatMessage(error));
+			logger.error(error);
 		} else {
 			if (
 				// Is this a StartDevEnv error event? If so, unwrap the cause, which is usually the user-recognisable error

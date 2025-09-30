@@ -1186,22 +1186,27 @@ describe("wrangler secret", () => {
 				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.]`
 			);
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
-
-				🚨 Secrets failed to upload
-
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.[0m
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.[0m
 
 				  This is a helpful error [code: 1]
 
 				  If you think this is a bug, please open an issue at:
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-				"
+				",
+				  "info": "",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Creating the secrets for the Worker \\"script-name\\"
+
+				🚨 Secrets failed to upload
+				",
+				  "warn": "",
+				}
 			`);
 		});
 

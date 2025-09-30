@@ -5,6 +5,7 @@ import CLITable from "cli-table3";
 import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import { getSanitizeLogs } from "./environment-variables/misc-variables";
+import { formatMessage, ParseError } from "./parse";
 import { appendToDebugLogFile } from "./utils/log-file";
 import type { Message } from "esbuild";
 
@@ -121,7 +122,16 @@ export class Logger {
 	info = (...args: unknown[]) => this.doLog("info", args);
 	log = (...args: unknown[]) => this.doLog("log", args);
 	warn = (...args: unknown[]) => this.doLog("warn", args);
-	error = (...args: unknown[]) => this.doLog("error", args);
+
+	error(...args: unknown[]): void;
+	error(error: ParseError): void;
+	error(...args: unknown[] | [ParseError]) {
+		if (args.length === 1 && args[0] instanceof ParseError) {
+			this.doLog("error", formatMessage(args[0]));
+		} else {
+			this.doLog("error", args);
+		}
+	}
 	table<Keys extends string>(
 		data: TableRow<Keys>[],
 		options?: { wordWrap: boolean; head?: Keys[] }
@@ -185,8 +195,13 @@ export class Logger {
 		}
 	}
 
-	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
-		const message = this.formatMessage(messageLevel, format(...args));
+	private doLog(
+		messageLevel: Exclude<LoggerLevel, "none">,
+		args: unknown[] | string
+	) {
+		const message = Array.isArray(args)
+			? this.formatMessage(messageLevel, format(...args))
+			: args;
 
 		// unless in unit-tests, send ALL logs to the debug log file (even non-debug logs for context & order)
 		const inUnitTests = typeof vitest !== "undefined";

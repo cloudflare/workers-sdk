@@ -147,10 +147,10 @@ describe("throwFetchError", () => {
 			`[APIError: A request to the Cloudflare API (/user) failed.]`
 		);
 
-		expect(std.out).toMatchInlineSnapshot(`
-			"Getting User settings...
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/user) failed.[0m
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/user) failed.[0m
 
 			  error one [code: 10001]
 			  To learn more about this error, visit: [4mhttps://example.com/1[0m
@@ -169,7 +169,12 @@ describe("throwFetchError", () => {
 			  If you think this is a bug, please open an issue at:
 			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-			"
+			",
+			  "info": "",
+			  "out": "Getting User settings...
+			",
+			  "warn": "",
+			}
 		`);
 	});
 

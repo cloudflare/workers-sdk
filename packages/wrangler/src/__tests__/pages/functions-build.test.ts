@@ -1172,6 +1172,14 @@ export default {
 		expect(buildMetadataExists).toBeFalsy();
 
 		// This logs a parsing error, but continues anyway
-		expect(std.err).toContain("ParseError");
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnexpected character, expected only whitespace or comments till end of line[0m
+
+			    <cwd>/wrangler.toml:5:23:
+			[37m      5 │ limits = { cpu_ms = 50 [32m[37m}\\"
+			        ╵                        [32m^[0m
+
+			"
+		`);
 	});
 });

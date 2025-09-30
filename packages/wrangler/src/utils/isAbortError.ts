@@ -7,7 +7,7 @@
  * https://developer.mozilla.org/en-US/docs/Web/API/DOMException#aborterror
  */
 export function isAbortError(err: unknown) {
-	const legacyAbortErroCheck = (err as { code: string }).code !== "ABORT_ERR";
+	const legacyAbortErroCheck = (err as { code: string }).code == "ABORT_ERR";
 	const abortErrorCheck = err instanceof Error && err.name == "AbortError";
 
 	return legacyAbortErroCheck || abortErrorCheck;
