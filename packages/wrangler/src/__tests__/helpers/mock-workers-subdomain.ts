@@ -79,18 +79,21 @@ export function mockUpdateWorkerSubdomain({
 	env,
 	legacyEnv = false,
 	expectedScriptName = "test-name",
+	flakes = 0,
 }: {
 	enabled: boolean;
 	previews_enabled?: boolean;
 	env?: string | undefined;
 	legacyEnv?: boolean | undefined;
 	expectedScriptName?: string;
+	flakes?: number;
 }) {
 	const url =
 		env && !legacyEnv
 			? `*/accounts/:accountId/workers/services/:scriptName/environments/:envName/subdomain`
 			: `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`;
-	msw.use(
+
+	const handlers = [
 		http.post(
 			url,
 			async ({ request, params }) => {
@@ -108,6 +111,23 @@ export function mockUpdateWorkerSubdomain({
 				);
 			},
 			{ once: true }
-		)
-	);
+		),
+	];
+	while (flakes > 0) {
+		flakes--;
+		handlers.unshift(
+			http.post(
+				url,
+				() =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10013, message: "An unknown error has occurred." },
+						]),
+						{ status: 500 }
+					),
+				{ once: true }
+			)
+		);
+	}
+	msw.use(...handlers);
 }
