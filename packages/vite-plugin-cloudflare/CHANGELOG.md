@@ -1,5 +1,18 @@
 # @cloudflare/vite-plugin
 
+## 1.13.8
+
+### Patch Changes
+
+- [#10593](https://github.com/cloudflare/workers-sdk/pull/10593) [`2ff7e6d`](https://github.com/cloudflare/workers-sdk/commit/2ff7e6d11585b359fbbaf7bb489e4c660c006254) Thanks [@BlankParticle](https://github.com/BlankParticle)! - fix: restore original url before passing request to miniflare in vite dev
+
+- [#10774](https://github.com/cloudflare/workers-sdk/pull/10774) [`ed04ed3`](https://github.com/cloudflare/workers-sdk/commit/ed04ed36b4f6933fd9f76c9209ba3da87bb04e61) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix vite plugin not working when projects are in a path that contains a non-ascii character
+
+- Updated dependencies [[`ff82d80`](https://github.com/cloudflare/workers-sdk/commit/ff82d80a2c5798f6a18653ac1351cc662b4b35ba), [`7a6381c`](https://github.com/cloudflare/workers-sdk/commit/7a6381c4f9494dd871f70c305763d22e7049a0be), [`6ff41a6`](https://github.com/cloudflare/workers-sdk/commit/6ff41a68877ae593e2550fc789a7d91166cfe94f), [`0c208e1`](https://github.com/cloudflare/workers-sdk/commit/0c208e1321676f81e8432567112483572b61bda6), [`2432022`](https://github.com/cloudflare/workers-sdk/commit/24320222be2cb46b391a93f0c8952037a4dd4633), [`d0801b1`](https://github.com/cloudflare/workers-sdk/commit/d0801b1fd47e19a7f08a11f039a4a0664b347df1), [`325d22e`](https://github.com/cloudflare/workers-sdk/commit/325d22ea52b992d6881d21fbb59ad32ecfb03e8f), [`8d07576`](https://github.com/cloudflare/workers-sdk/commit/8d07576b8161e865e54da166887f3eb95ec6581e), [`0a554f9`](https://github.com/cloudflare/workers-sdk/commit/0a554f9323bb323c97dd07cfb5805ea5d20b371d), [`6244a9e`](https://github.com/cloudflare/workers-sdk/commit/6244a9eb75fbccc4f143e935362486a36bd27cad), [`d09cab3`](https://github.com/cloudflare/workers-sdk/commit/d09cab3b86149a67c471401daa64ff631cfb4e49)]:
+  - wrangler@4.40.3
+  - miniflare@4.20250927.0
+  - @cloudflare/unenv-preset@2.7.5
+
 ## 1.13.7
 
 ### Patch Changes
