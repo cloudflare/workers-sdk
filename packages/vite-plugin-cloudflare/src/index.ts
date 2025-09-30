@@ -1,11 +1,7 @@
 import assert from "node:assert";
 import * as util from "node:util";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
-import {
-	cleanupContainers,
-	generateContainerBuildId,
-	resolveDockerHost,
-} from "@cloudflare/containers-shared/src/utils";
+import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import { CoreHeaders, Miniflare } from "miniflare";
 import colors from "picocolors";
@@ -22,7 +18,7 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "./constants";
-import { getDockerPath, prepareContainerImages } from "./containers";
+import { getDockerPath } from "./containers";
 import {
 	addDebugToVitePrintUrls,
 	DEBUG_PATH,

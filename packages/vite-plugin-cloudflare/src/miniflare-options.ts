@@ -565,7 +565,6 @@ export async function getDevMiniflareOptions(config: {
 			log: logger,
 			logRequests: false,
 			inspectorPort: inspectorPort === false ? undefined : inspectorPort,
-			unsafeInspectorProxy: inspectorPort !== false,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			handleRuntimeStdio(stdout, stderr) {
@@ -855,7 +854,6 @@ export async function getPreviewMiniflareOptions(config: {
 		config: {
 			log: logger,
 			inspectorPort: inspectorPort === false ? undefined : inspectorPort,
-			unsafeInspectorProxy: inspectorPort !== false,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			handleRuntimeStdio(stdout, stderr) {

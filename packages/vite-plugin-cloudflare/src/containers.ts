@@ -1,6 +1,4 @@
-import assert from "node:assert";
 import path from "node:path";
-import { prepareContainerImagesForDev } from "@cloudflare/containers-shared/src/images";
 import { getDevContainerImageName } from "@cloudflare/containers-shared/src/knobs";
 import { isDockerfile } from "@cloudflare/containers-shared/src/utils";
 import type { WorkerConfig } from "./plugin-config";

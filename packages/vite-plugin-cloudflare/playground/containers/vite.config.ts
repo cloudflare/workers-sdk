@@ -4,7 +4,6 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	plugins: [
 		cloudflare({
-			inspectorPort: false,
 			persistState: false,
 			configPath: "entry.wrangler.jsonc",
 			auxiliaryWorkers: [{ configPath: "wrangler.jsonc" }],
