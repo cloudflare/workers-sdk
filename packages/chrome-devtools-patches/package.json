@@ -2,17 +2,13 @@
 	"name": "@cloudflare/auto-assign-issues",
 	"version": "0.1.4",
 	"private": true,
-	"description": "Chrome Devtools hosted for easy use with Workers tooling and applications (Wrangler, Playground, Quick Editor).",
+	"description": "Issue auto-assigner for the Workers SDK monorepo.",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",
-	"scripts": {
-		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 make publish",
-		"testenv": "make testenv"
-	},
 	"devDependencies": {
 		"wrangler": "workspace:*"
 	},
