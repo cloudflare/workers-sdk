@@ -31,7 +31,7 @@ export const deploymentsListCommand = createCommand({
 		},
 	},
 	behaviour: {
-		printBanner: false,
+		printBanner: (args) => !args.json,
 	},
 	handler: async function versionsDeploymentsListHandler(args, { config }) {
 		metrics.sendMetricsEvent(

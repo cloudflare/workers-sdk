@@ -6,7 +6,6 @@ import { UserError } from "../../errors";
 import * as metrics from "../../metrics";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
-import { printWranglerBanner } from "../../wrangler-banner";
 import { fetchLatestDeployment, fetchVersions } from "../api";
 import { getDeploymentSource } from "./list";
 import type { VersionCache } from "../types";
@@ -32,13 +31,9 @@ export const deploymentsStatusCommand = createCommand({
 		},
 	},
 	behaviour: {
-		printBanner: false,
+		printBanner: (args) => !args.json,
 	},
 	handler: async function versionsDeploymentsStatusHandler(args, { config }) {
-		if (!args.json) {
-			await printWranglerBanner();
-		}
-
 		metrics.sendMetricsEvent(
 			"view latest versioned deployment",
 			{},
