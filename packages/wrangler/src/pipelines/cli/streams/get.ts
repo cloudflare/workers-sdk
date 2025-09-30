@@ -10,6 +10,9 @@ export const pipelinesStreamsGetCommand = createCommand({
 		owner: "Product: Pipelines",
 		status: "open-beta",
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	positionalArgs: ["stream"],
 	args: {
 		stream: {
