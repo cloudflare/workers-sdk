@@ -1,5 +1,5 @@
 {
-	"name": "@cloudflare/chrome-devtools-patches",
+	"name": "@cloudflare/auto-assign-issues",
 	"version": "0.1.4",
 	"private": true,
 	"description": "Chrome Devtools hosted for easy use with Workers tooling and applications (Wrangler, Playground, Quick Editor).",
