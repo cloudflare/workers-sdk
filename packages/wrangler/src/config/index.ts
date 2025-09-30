@@ -1,5 +1,5 @@
 import TOML from "@iarna/toml";
-import { prompt, select } from "../dialogs";
+import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
@@ -65,48 +65,123 @@ export function formatConfigSnippet(
 	}
 }
 
-export async function updateConfigFile(
-	snippet: (
-		bindingName?: string
-	) => Partial<{ [K in keyof CfWorkerInit["bindings"]]: RawConfig[K] }>,
+// All config keys that follow a "regular" binding shape (Binding[]) and so can be modified using `updateConfigFile`.
+type ValidKeys = Exclude<
+	keyof CfWorkerInit["bindings"],
+	| "ai"
+	| "browser"
+	| "vars"
+	| "wasm_modules"
+	| "text_blobs"
+	| "data_blobs"
+	| "logfwdr"
+	| "queues"
+	| "assets"
+	| "durable_objects"
+	| "version_metadata"
+	| "images"
+	| "unsafe"
+	| "ratelimits"
+	| "workflows"
+	| "send_email"
+	| "services"
+	| "analytics_engine_datasets"
+	| "mtls_certificates"
+	| "dispatch_namespaces"
+	| "secrets_store_secrets"
+	| "unsafe_hello_world"
+>;
+
+export const sharedResourceCreationArgs = {
+	"use-remote": {
+		type: "boolean",
+		description:
+			"Use a remote binding when adding the newly created resource to your config",
+	},
+	"update-config": {
+		type: "boolean",
+		description:
+			"Automatically update your config file with the newly added resource",
+	},
+	binding: {
+		type: "string",
+		description: "The binding name of this resource in your Worker",
+	},
+} as const;
+
+export async function updateConfigFile<K extends ValidKeys>(
+	resource: K,
+	snippet: (bindingName?: string) => Partial<NonNullable<RawConfig[K]>[number]>,
 	configPath: Config["configPath"],
 	env: string | undefined,
-	offerToUpdate: boolean = true
+	/**
+	 * How should this behave interactively?
+	 *
+	 * - If `updateConfig` is provided, Wrangler won't ask for permission to write to your config file
+	 * - `binding` sets the value of the binding name in the config file, and/or the value of the binding name in the echoed output. It also implies `updateConfig`
+	 * - `useRemote` sets the value of the `remote` field in the config file, and/or the value of the `remote` field in the echoed output
+	 */
+	defaults?: {
+		binding?: string;
+		useRemote?: boolean;
+		updateConfig?: boolean;
+	}
 ) {
-	const resource = Object.keys(snippet())[0] as keyof CfWorkerInit["bindings"];
 	const envString = env ? ` in the "${env}" environment` : "";
 	logger.log(
 		`To access your new ${friendlyBindingNames[resource]} in your Worker, add the following snippet to your configuration file${envString}:`
 	);
 
-	logger.log(formatConfigSnippet(snippet(), configPath));
-
-	if (configPath && offerToUpdate && configFormat(configPath) === "jsonc") {
-		const autoAdd = await select(
-			"Would you like Wrangler to add it on your behalf?",
+	logger.log(
+		formatConfigSnippet(
 			{
-				choices: [
-					{ title: "Yes", value: "yes" },
+				[resource]: [
 					{
-						title: "Yes, but let me choose the binding name",
-						value: "yes-but",
+						...snippet(defaults?.binding),
+						...(defaults?.useRemote === true ? { remote: true } : {}),
 					},
-					{ title: "No", value: "no" },
 				],
-				defaultOption: 0,
-				fallbackOption: 2,
-			}
-		);
-		let bindingName;
+			},
+			configPath
+		)
+	);
 
-		if (autoAdd === "yes-but") {
-			bindingName = await prompt("What binding name would you like to use?");
-		}
+	// This is a JSONC config file that we're capable of editing
+	if (configPath && configFormat(configPath) === "jsonc") {
+		const writeToConfig =
+			defaults?.binding ??
+			defaults?.updateConfig ??
+			(await confirm("Would you like Wrangler to add it on your behalf?", {
+				defaultValue: true,
+				// We don't want to automatically write to config in CI
+				fallbackValue: false,
+			}));
 
-		if (autoAdd !== "no") {
+		if (writeToConfig) {
+			const bindingName =
+				defaults?.binding ??
+				(await prompt("What binding name would you like to use?", {
+					defaultValue: snippet().binding,
+				}));
+
+			const useRemote =
+				defaults?.useRemote ??
+				(defaults?.binding || defaults?.updateConfig
+					? false
+					: await confirm(
+							"For local dev, do you want to connect to the remote resource instead of a local resource?",
+							{ defaultValue: false }
+						));
+
+			const configFilePatch = {
+				[resource]: [
+					{ ...snippet(bindingName), ...(useRemote ? { remote: true } : {}) },
+				],
+			};
+
 			experimental_patchConfig(
 				configPath,
-				env ? { env: { [env]: snippet(bindingName) } } : snippet(bindingName),
+				env ? { env: { [env]: configFilePatch } } : configFilePatch,
 				true
 			);
 		}

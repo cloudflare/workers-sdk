@@ -13,7 +13,7 @@ To access your new R2 Bucket in your Worker, add the following snippet to your c
   ]
 }
 ? Would you like Wrangler to add it on your behalf?
-🤖 Using fallback value in non-interactive context: No"
+🤖 Using fallback value in non-interactive context: no"
 `;
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket with the expected default storage class 1`] = `
@@ -29,7 +29,7 @@ To access your new R2 Bucket in your Worker, add the following snippet to your c
   ]
 }
 ? Would you like Wrangler to add it on your behalf?
-🤖 Using fallback value in non-interactive context: No"
+🤖 Using fallback value in non-interactive context: no"
 `;
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket with the expected jurisdiction 1`] = `
@@ -45,7 +45,7 @@ To access your new R2 Bucket in your Worker, add the following snippet to your c
   ]
 }
 ? Would you like Wrangler to add it on your behalf?
-🤖 Using fallback value in non-interactive context: No"
+🤖 Using fallback value in non-interactive context: no"
 `;
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket with the expected location hint 1`] = `
@@ -61,7 +61,7 @@ To access your new R2 Bucket in your Worker, add the following snippet to your c
   ]
 }
 ? Would you like Wrangler to add it on your behalf?
-🤖 Using fallback value in non-interactive context: No"
+🤖 Using fallback value in non-interactive context: no"
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket & check request inputs 1`] = `
