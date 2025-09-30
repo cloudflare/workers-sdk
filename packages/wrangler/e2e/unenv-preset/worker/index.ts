@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/consistent-type-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import assert from "node:assert";
 
@@ -22,7 +23,7 @@ export default {
 
 			default: {
 				// `/<test name>` executes the test or returns an html list of tests when not found
-				const testName = url.pathname.slice(1);
+				const testName = url.pathname.slice(1) as keyof typeof WorkerdTests;
 				const test = WorkerdTests[testName];
 				if (!test) {
 					return generateTestListResponse(testName);
@@ -59,7 +60,75 @@ function generateTestListResponse(testName: string): Response {
 
 // Test functions executed on worked.
 // The test can be executing by fetching the `/${testName}` url.
-export const WorkerdTests: Record<string, () => void> = {
+export const WorkerdTests = {
+	async testConsole() {
+		type UndocumentedConsoleApis = Record<
+			| "context"
+			| "createTask"
+			| "_stderr"
+			| "_stdout"
+			| "_times"
+			| "_stdoutErrorHandler"
+			| "_stderrErrorHandler"
+			| "_ignoreErrors",
+			unknown
+		>;
+
+		const {
+			testPropertyType,
+			testGlobalPropertyType,
+			testImportPropertyType,
+			importNamespace,
+			globalObject,
+		} = await getPropertyTester<
+			typeof import("node:console"),
+			Console & UndocumentedConsoleApis
+		>("node:console", "console");
+
+		assert.strictEqual(
+			globalObject,
+			importNamespace.default,
+			"expected `console` to be the same as `consoleImport.default`"
+		);
+
+		testImportPropertyType("default", "object");
+
+		testPropertyType("Console", "function");
+		testPropertyType("assert", "function");
+		testPropertyType("clear", "function");
+		testPropertyType("count", "function");
+		testPropertyType("countReset", "function");
+		testPropertyType("debug", "function");
+		testPropertyType("dir", "function");
+		testPropertyType("dirxml", "function");
+		testPropertyType("error", "function");
+		testPropertyType("group", "function");
+		testPropertyType("groupCollapsed", "function");
+		testPropertyType("groupEnd", "function");
+		testPropertyType("info", "function");
+		testPropertyType("log", "function");
+		testPropertyType("profile", "function");
+		testPropertyType("profileEnd", "function");
+		testPropertyType("table", "function");
+		testPropertyType("time", "function");
+		testPropertyType("timeEnd", "function");
+		testPropertyType("timeLog", "function");
+		testPropertyType("trace", "function");
+		testPropertyType("warn", "function");
+
+		// The undocumented APIs are supported in workerd natively.
+		testPropertyType("context", "function");
+		testPropertyType("createTask", "function");
+
+		// These undocumented APIs are only on the global object not the import.
+		testGlobalPropertyType("_stderr", "object");
+		testGlobalPropertyType("_stdout", "object");
+		testGlobalPropertyType("_times", "object");
+		testGlobalPropertyType("_stdoutErrorHandler", "function");
+		testGlobalPropertyType("_stderrErrorHandler", "function");
+		testGlobalPropertyType("_ignoreErrors", "boolean");
+	},
+
 	async testCryptoGetRandomValues() {
 		const crypto = await import("node:crypto");
 
@@ -545,3 +614,43 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.equal(typeof gProcess.setMaxListeners, "function");
 	},
 };
+
+async function getPropertyTester<ImportType, GlobalType>(
+	importSpecifier: string,
+	globalProperty: keyof typeof globalThis
+) {
+	const importNamespace = (await import(importSpecifier)) as ImportType & {
+		default: unknown;
+	};
+	const globalObject = globalThis[
+		globalProperty as keyof typeof globalThis
+	] as GlobalType;
+
+	return {
+		testImportPropertyType(
+			property: "default" | keyof ImportType,
+			type: string
+		) {
+			const propertyType = typeof importNamespace[property];
+			assert.strictEqual(
+				propertyType,
+				type,
+				`expected \`(await import("${importSpecifier}")).${property as string}\` to be of type \`${type}\` but got \`${propertyType}\``
+			);
+		},
+		testGlobalPropertyType(property: keyof GlobalType, type: string) {
+			const propertyType = typeof globalObject[property];
+			assert.strictEqual(
+				propertyType,
+				type,
+				`expected \`${globalProperty as string}.${property as string}\` to be of type \`${type}\` but got \`${propertyType}\``
+			);
+		},
+		testPropertyType(property: keyof (GlobalType & ImportType), type: string) {
+			this.testImportPropertyType(property as keyof ImportType, type);
+			this.testGlobalPropertyType(property as keyof GlobalType, type);
+		},
+		importNamespace,
+		globalObject,
+	};
+}

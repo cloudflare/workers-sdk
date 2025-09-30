@@ -46,9 +46,6 @@ const nativeModules = [
 	"zlib",
 ];
 
-// Modules implemented via a mix of workerd APIs and polyfills.
-const hybridModules = ["console"];
-
 /**
  * Creates the Cloudflare preset for the given compatibility date and compatibility flags
  *
@@ -73,6 +70,7 @@ export function getCloudflarePreset({
 	const osOverrides = getOsOverrides(compat);
 	const fsOverrides = getFsOverrides(compat);
 	const processOverrides = getProcessOverrides(compat);
+	const consoleOverrides = getConsoleOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -82,16 +80,17 @@ export function getCloudflarePreset({
 		...osOverrides.nativeModules,
 		...fsOverrides.nativeModules,
 		...processOverrides.nativeModules,
+		...consoleOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicHybridModules = [
-		...hybridModules,
 		...httpOverrides.hybridModules,
 		...http2Overrides.hybridModules,
 		...osOverrides.hybridModules,
 		...fsOverrides.hybridModules,
 		...processOverrides.hybridModules,
+		...consoleOverrides.hybridModules,
 	];
 
 	return {
@@ -124,7 +123,7 @@ export function getCloudflarePreset({
 			global: false,
 			clearImmediate: false,
 			setImmediate: false,
-			console: "@cloudflare/unenv-preset/node/console",
+			...consoleOverrides.inject,
 			...processOverrides.inject,
 		},
 		polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
@@ -351,5 +350,49 @@ function getProcessOverrides({
 				hybridModules: ["process"],
 				// Use the module default export as the global `process`
 				inject: { process: "@cloudflare/unenv-preset/node/process" },
+			};
+}
+
+/**
+ * Returns the overrides for `node:console` (unenv or workerd)
+ *
+ * The native console implementation:
+ * - is enabled starting from 2025-09-21
+ * - can be enabled with the "enable_nodejs_console_module" flag
+ * - can be disabled with the "disable_nodejs_console_module" flag
+ */
+function getConsoleOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): {
+	nativeModules: string[];
+	hybridModules: string[];
+	inject: Record<string, string>;
+} {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_console_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_console_module"
+	);
+	const enabledByDate = compatibilityDate >= "2025-09-21";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	// The native `console` module implements all the node APIs so we can use them directly
+	return enabled
+		? {
+				nativeModules: ["console"],
+				hybridModules: [],
+				inject: {},
+			}
+		: {
+				nativeModules: [],
+				hybridModules: ["console"],
+				inject: { console: "@cloudflare/unenv-preset/node/console" },
 			};
 }
