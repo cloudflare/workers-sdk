@@ -8,6 +8,7 @@ import { runWrangler } from "./../helpers/run-wrangler";
 import type { Deployment } from "./../../pages/types";
 
 describe("pages deployment list", () => {
+	vi.unmock("../../wrangler-banner");
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
@@ -47,7 +48,10 @@ describe("pages deployment list", () => {
 
 		expect(requests.count).toBe(1);
 		expect(std.out).toMatchInlineSnapshot(`
-			"┌─┬─┬─┬─┬─┬─┬─┐
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			┌─┬─┬─┬─┬─┬─┬─┐
 			│ Id │ Environment │ Branch │ Source │ Deployment │ Status │ Build │
 			├─┼─┼─┼─┼─┼─┼─┤
 			│ 87bbc8fe-16be-45cd-81e0-63d722e82cdf │ Preview │ main │ c764936 │ https://87bbc8fe.images.pages.dev │ 3 years ago │ https://dash.cloudflare.com/some-account-id/pages/view/images/87bbc8fe-16be-45cd-81e0-63d722e82cdf │
