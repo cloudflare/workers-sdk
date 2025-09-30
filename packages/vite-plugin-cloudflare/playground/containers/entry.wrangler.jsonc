@@ -1,5 +1,5 @@
 {
-	"name": "entryp",
+	"name": "entry",
 	"main": "./src/entry.ts",
 	"compatibility_date": "2025-04-03",
 	"services": [
