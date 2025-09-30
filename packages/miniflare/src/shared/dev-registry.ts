@@ -72,7 +72,19 @@ export class DevRegistry {
 		this.externalServices = new Map(services);
 
 		if (!this.watcher) {
-			this.watcher = watch(this.registryPath).on("all", () => this.refresh());
+			this.watcher = watch(this.registryPath, {
+				ignoreInitial: true,
+				awaitWriteFinish: true,
+				usePolling: true,
+				depth: 1,
+				followSymlinks: false,
+			})
+				.on("ready", () => this.refresh())
+				.on("add", () => this.refresh())
+				.on("change", () => this.refresh())
+				.on("unlink", () => this.refresh())
+				.on("error", (error) => this.log.error(error));
+
 			this.refresh();
 		}
 	}
@@ -137,6 +149,11 @@ export class DevRegistry {
 	}
 
 	private unregisterWorkers() {
+		console.log(
+			"Unregistering all workers from the dev registry",
+			this.registryPath,
+			this.registeredWorkers
+		);
 		for (const worker of this.registeredWorkers) {
 			this.unregister(worker);
 		}
@@ -229,14 +246,16 @@ export class DevRegistry {
 	}
 
 	public register(workers: Record<string, WorkerDefinition>) {
-		if (!this.registryPath) {
+		const entries = Object.entries(workers);
+
+		if (!this.registryPath || entries.length === 0) {
 			return;
 		}
 
 		// Make sure the registry path exists
 		mkdirSync(this.registryPath, { recursive: true });
 
-		for (const [name, definition] of Object.entries(workers)) {
+		for (const [name, definition] of entries) {
 			const definitionPath = path.join(this.registryPath, name);
 			const existingHeartbeat = this.heartbeats.get(name);
 			if (existingHeartbeat) {

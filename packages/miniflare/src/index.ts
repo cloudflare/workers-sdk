@@ -2159,7 +2159,7 @@ export class Miniflare {
 		const entries = await Promise.all(
 			this.#workerOpts.map<Promise<[string, WorkerDefinition] | undefined>>(
 				async (workerOpts) => {
-					if (!workerOpts.core.name) {
+					if (!workerOpts.core.name || !workerOpts.core.unsafeRegisterWorker) {
 						return;
 					}
 
