@@ -928,7 +928,9 @@ function getExposedOverRegistry(allWorkerOpts: PluginWorkerOptions[]) {
 					name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`,
 				}
 			: {
-					name: getUserServiceName(workerOpts.core.name),
+					name: getUserServiceName(
+						workerOpts.core.unsafeExposedName ?? workerOpts.core.name
+					),
 				};
 		exposeOverRegistry.set(`${workerOpts.core.name}:default`, {
 			name: `${workerOpts.core.name}:entrypoint:default`,

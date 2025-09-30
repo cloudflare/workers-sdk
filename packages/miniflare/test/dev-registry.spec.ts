@@ -514,141 +514,11 @@ test("DevRegistry: RPC to default entrypoint with node bindings", async (t) => {
 	});
 });
 
-test("DevRegistry: fetch to durable object with do proxy disabled", async (t) => {
-	const unsafeDevRegistryPath = await useTmp(t);
-	const remote = new Miniflare({
-		name: "remote-worker",
-		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: false,
-		compatibilityFlags: ["experimental"],
-		durableObjects: {
-			DO: {
-				className: "MyDurableObject",
-			},
-		},
-		modules: true,
-		script: `
-			import { DurableObject } from "cloudflare:workers";
-			export class MyDurableObject extends DurableObject {
-				fetch() {
-					return new Response('Hello from Durable Object!');
-				}
-			};
-
-			export default {
-				async fetch(request, env, ctx) {
-                    return new Response("Hello from the default Worker Entrypoint!");
-				}
-			}
-		`,
-	});
-	t.teardown(() => remote.dispose());
-
-	await remote.ready;
-
-	const local = new Miniflare({
-		name: "local-worker",
-		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: false,
-		durableObjects: {
-			DO: {
-				className: "MyDurableObject",
-				scriptName: "remote-worker",
-			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
-			export default {
-				async fetch(request, env, ctx) {
-	                const ns = env.DO;
-					const id = ns.newUniqueId();
-					const stub = ns.get(id);
-					return stub.fetch(request);
-				}
-			}
-		`,
-	});
-	t.teardown(() => local.dispose());
-
-	const res = await local.dispatchFetch("http://placeholder");
-	const result = await res.text();
-	t.is(result, "Service Unavailable");
-	t.is(res.status, 503);
-});
-
-test("DevRegistry: RPC to durable object with do proxy disabled", async (t) => {
-	const unsafeDevRegistryPath = await useTmp(t);
-	const remote = new Miniflare({
-		name: "remote-worker",
-		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: false,
-		compatibilityFlags: ["experimental"],
-		durableObjects: {
-			DO: {
-				className: "MyDurableObject",
-			},
-		},
-		modules: true,
-		script: `
-			import { DurableObject } from "cloudflare:workers";
-			export class MyDurableObject extends DurableObject {
-				ping() {
-					return "pong";
-				}
-			};
-		`,
-	});
-	t.teardown(() => remote.dispose());
-
-	await remote.ready;
-
-	const local = new Miniflare({
-		name: "local-worker",
-		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: false,
-		durableObjects: {
-			DO: {
-				className: "MyDurableObject",
-				scriptName: "remote-worker",
-			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
-			export default {
-				async fetch(request, env, ctx) {
-					try {
-						const ns = env.DO;
-						const id = ns.newUniqueId();
-						const stub = ns.get(id);
-						const result = await stub.ping();
-
-						return new Response(result);
-					} catch (ex) {
-						return new Response(ex.message, { status: 500 });
-					}
-				}
-			}
-		`,
-	});
-	t.teardown(() => local.dispose());
-
-	const res = await local.dispatchFetch("http://placeholder");
-	const result = await res.text();
-	t.is(
-		result,
-		`Couldn't find the durable Object "MyDurableObject" of script "remote-worker".`
-	);
-	t.is(res.status, 500);
-});
-
 test("DevRegistry: fetch to durable object", async (t) => {
 	const unsafeDevRegistryPath = await useTmp(t);
 	const local = new Miniflare({
 		name: "local-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: true,
 		durableObjects: {
 			DO: {
 				className: "MyDurableObject",
@@ -673,13 +543,15 @@ test("DevRegistry: fetch to durable object", async (t) => {
 	t.teardown(() => local.dispose());
 
 	const res = await local.dispatchFetch("http://placeholder");
-	t.is(await res.text(), "Service Unavailable");
+	t.is(
+		await res.text(),
+		`Couldn\'t find a local dev session for the "MyDurableObject" entrypoint of service "remote-worker" to proxy to`
+	);
 	t.is(res.status, 503);
 
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: true,
 		compatibilityFlags: ["experimental"],
 		durableObjects: {
 			DO: {
@@ -717,7 +589,6 @@ test("DevRegistry: RPC to durable object", async (t) => {
 	const local = new Miniflare({
 		name: "local-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: true,
 		durableObjects: {
 			DO: {
 				className: "MyDurableObject",
@@ -748,14 +619,13 @@ test("DevRegistry: RPC to durable object", async (t) => {
 	const res = await local.dispatchFetch("http://placeholder");
 	t.is(
 		await res.text(),
-		`Cannot access "MyDurableObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.`
+		`Cannot access "ping" as we couldn\'t find a local dev session for the "MyDurableObject" entrypoint of service "remote-worker" to proxy to.`
 	);
 	t.is(res.status, 500);
 
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: true,
 		compatibilityFlags: ["experimental"],
 		durableObjects: {
 			DO: {
@@ -777,11 +647,8 @@ test("DevRegistry: RPC to durable object", async (t) => {
 	await remote.ready;
 	await waitUntil(t, async (t) => {
 		const res = await local.dispatchFetch("http://placeholder");
-		t.is(
-			await res.text(),
-			`Cannot access "MyDurableObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.`
-		);
-		t.is(res.status, 500);
+		t.is(await res.text(), `Response from remote worker: pong`);
+		t.is(res.status, 200);
 	});
 });
 
@@ -1061,7 +928,6 @@ test("DevRegistry: fetch to durable object with https enabled", async (t) => {
 	const local = new Miniflare({
 		name: "local-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: true,
 		durableObjects: {
 			DO: {
 				className: "MyDurableObject",
@@ -1086,13 +952,15 @@ test("DevRegistry: fetch to durable object with https enabled", async (t) => {
 	t.teardown(() => local.dispose());
 
 	const res = await local.dispatchFetch("http://placeholder");
-	t.is(await res.text(), "Service Unavailable");
+	t.is(
+		await res.text(),
+		`Couldn\'t find a local dev session for the "MyDurableObject" entrypoint of service "remote-worker" to proxy to`
+	);
 	t.is(res.status, 503);
 
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: true,
 		https: true,
 		compatibilityFlags: ["experimental"],
 		durableObjects: {

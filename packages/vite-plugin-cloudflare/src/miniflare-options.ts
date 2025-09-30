@@ -455,6 +455,11 @@ export async function getDevMiniflareOptions(config: {
 													},
 												]
 											: [],
+									unsafeExposedName:
+										environmentName ===
+										resolvedPluginConfig.entryWorkerEnvironmentName
+											? VITE_PROXY_WORKER_NAME
+											: undefined,
 									modulesRoot: miniflareModulesRoot,
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 									serviceBindings: {

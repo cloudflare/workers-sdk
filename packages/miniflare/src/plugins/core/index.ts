@@ -161,6 +161,9 @@ const CoreOptionsSchemaInput = z.intersection(
 		// TODO(soon): remove this in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
+		// Vite projects handle injecting an Asset worker themselves (bypassing Miniflare's default handling)
+		// However, the Vite Asset worker should still be exposed over the dev registry in front of the user worker
+		unsafeExposedName: z.string().optional(),
 
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
