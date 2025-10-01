@@ -143,9 +143,20 @@ export function resolveImageName(accountId: string, image: string): string {
 	if (url.hostname !== getCloudflareContainerRegistry()) {
 		return image;
 	}
-
 	// is managed registry and has the account id, passthrough
 	if (url.pathname.startsWith(`/${accountId}`)) {
+		return image;
+	}
+	// check if already looks like it has an account id (32 char hex string)
+	const accountIdPattern = /^\/([a-f0-9]{32})\//;
+	const match = accountIdPattern.exec(url.pathname);
+	if (match) {
+		const foundAccountId = match[1];
+		if (foundAccountId !== accountId) {
+			throw new Error(
+				`Image "${image}" does not belong to your account\nImage appears to belong to account: "${foundAccountId}"\nCurrent account: "${accountId}"`
+			);
+		}
 		return image;
 	}
 
