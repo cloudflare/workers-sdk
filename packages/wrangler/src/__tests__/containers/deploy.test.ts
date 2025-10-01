@@ -811,6 +811,7 @@ describe("wrangler deploy with containers", () => {
 			"
 		`);
 	});
+
 	it("skips an existing application if there are no changes", async () => {
 		mockGetVersion("Galaxy-Class");
 		setupDockerMocks("my-container", "Galaxy");
@@ -1672,6 +1673,106 @@ describe("wrangler deploy with containers", () => {
 			`);
 		});
 	});
+	it("should not repush image if it already exists remotely", async () => {
+		mockGetVersion("Galaxy-Class");
+		const containerName = "my-container";
+		const tag = "Galaxy";
+		const imageId = "sha256:config-sha";
+
+		vi.mocked(spawn)
+			.mockImplementationOnce(mockDockerInfo())
+			.mockImplementationOnce(
+				mockDockerBuild(containerName, tag, "FROM scratch", process.cwd())
+			)
+			.mockImplementationOnce(
+				mockDockerImageInspectDigestsWithRepoDigest(containerName, tag, imageId)
+			)
+			.mockImplementationOnce(mockDockerImageInspectSize(containerName, tag))
+			.mockImplementationOnce(mockDockerLogin("mockpassword"))
+			// Mock docker image rm call since we skip the push
+			.mockImplementationOnce(mockDockerImageDelete(containerName, tag))
+			// Add fallback mocks in case we fall through to push (for debugging)
+			.mockImplementationOnce(
+				mockDockerTag(containerName, `some-account-id/${containerName}`, tag)
+			)
+			.mockImplementationOnce(
+				mockDockerPush(`some-account-id/${containerName}`, tag)
+			)
+			.mockImplementationOnce(
+				mockDockerImageDelete(`some-account-id/${containerName}`, tag)
+			);
+
+		vi.mocked(execFileSync).mockImplementation(
+			(_file: string, args?: readonly string[]) => {
+				if (args && args[0] === "manifest" && args[1] === "inspect") {
+					// Verify the format: registry.cloudflare.com/account-id/image@hash
+					expect(args[3]).toBe(
+						`${getCloudflareContainerRegistry()}/some-account-id/${containerName}@sha256:three`
+					);
+					// Return a manifest that matches the imageId, indicating the image exists remotely
+					return JSON.stringify({
+						Descriptor: {
+							digest: imageId,
+						},
+					});
+				}
+				return "";
+			}
+		);
+
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [DEFAULT_CONTAINER_FROM_DOCKERFILE],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container",
+				instances: 0,
+				max_instances: 10,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				rollout_active_grace_period: 0,
+				configuration: {
+					image: `${getCloudflareContainerRegistry()}/some-account-id/my-container:Galaxy`,
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tier: 1,
+				},
+				durable_objects: {
+					namespace_id: "1",
+				},
+			},
+		]);
+		fs.writeFileSync("./Dockerfile", "FROM scratch");
+		mockGenerateImageRegistryCredentials();
+
+		await runWrangler("deploy index.js");
+
+		expect(std.out).toContain("Image already exists remotely, skipping push");
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ no changes my-container
+			│
+			╰ No changes to be made
+
+			"
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+	});
 });
 
 // This is a separate describe block because we intentionally do not mock any
@@ -2064,6 +2165,47 @@ function mockDockerImageInspectDigests(containerName: string, tag: string) {
 			stdout.emit(
 				"data",
 				`["${getCloudflareContainerRegistry()}/${containerName}@sha256:three"] config-sha`
+			);
+		});
+
+		return child as unknown as ChildProcess;
+	};
+}
+
+function mockDockerImageInspectDigestsWithRepoDigest(
+	containerName: string,
+	tag: string,
+	imageId: string
+) {
+	return (cmd: string, args: readonly string[]) => {
+		expect(cmd).toBe("/usr/bin/docker");
+		expect(args).toEqual([
+			"image",
+			"inspect",
+			`${containerName}:${tag}`,
+			"--format",
+			"{{ json .RepoDigests }} {{ .Id }}",
+		]);
+
+		const stdout = new PassThrough();
+		const stderr = new PassThrough();
+
+		const child = {
+			stdout,
+			stderr,
+			on(event: string, cb: (code: number) => void) {
+				if (event === "close") {
+					setImmediate(() => cb(0));
+				}
+				return this;
+			},
+		};
+
+		setImmediate(() => {
+			// Include account-id in the digest to match the managed registry format
+			stdout.emit(
+				"data",
+				`["${getCloudflareContainerRegistry()}/some-account-id/${containerName}@sha256:three"] ${imageId}`
 			);
 		});
 

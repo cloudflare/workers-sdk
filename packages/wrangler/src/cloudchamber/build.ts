@@ -160,20 +160,23 @@ export async function buildAndMaybePush(
 					imageTag
 				).split(":")[0];
 
-				// if this succeeds it means this image already exists remotely
-				// if it fails it means it doesn't exist remotely and should be pushed.
+				logger.debug("respositoryOnly:", repositoryOnly);
+
 				const [digest, ...rest] = parsedDigests.filter((d): d is string => {
 					const resolved = resolveImageName(account.external_account_id, d);
+					logger.debug(
+						`Comparing ${resolved.split("@")[0]} to ${repositoryOnly}`
+					);
 					return (
 						typeof d === "string" && resolved.split("@")[0] === repositoryOnly
 					);
 				});
 				if (rest.length > 0) {
 					throw new Error(
-						`Expected there to only be 1 valid digests for this repository: ${repositoryOnly} but there were ${rest.length + 1}`
+						`Expected there to only be 1 valid digests for this repository: ${repositoryOnly} but there were ${rest.length + 1}+ (${[digest, ...rest].join(", ")})`
 					);
 				}
-
+				logger.debug("digest", digest);
 				// Resolve the image name to include the user's
 				// account ID before checking if it exists in
 				// the managed registry.
@@ -182,22 +185,24 @@ export async function buildAndMaybePush(
 					account.external_account_id,
 					image
 				);
+
 				const remoteDigest = `${resolvedImage}@${hash}`;
+				logger.debug(remoteDigest);
 
 				// NOTE: this is an experimental docker command so the API may change
 				// and break this flow. Hopefully not!
 				// http://docs.docker.com/reference/cli/docker/manifest/inspect/
-				// Checks if this image already exists in the managed registry
-				// If this errors, it probably doesn't exist. Either way, we fall
-				// back to pushing the image, which is safer.
+				// Checks if this image already exists in the managed registry -
+				// if this succeeds it means this image already exists remotely.
+				// If this errors, it probably doesn't exist and we should push.
 				const remoteManifest = runDockerCmdWithOutput(pathToDocker, [
 					"manifest",
 					"inspect",
 					"-v",
-					remoteDigest,
+					`${resolveImageName(account.external_account_id, remoteDigest)}`,
 				]);
 				logger.debug(
-					`'docker manifest inspect -v ${remoteDigest}:`,
+					`'docker manifest inspect -v ${resolveImageName(account.external_account_id, remoteDigest)}:`,
 					remoteManifest
 				);
 				const parsedRemoteManifest = JSON.parse(remoteManifest);
