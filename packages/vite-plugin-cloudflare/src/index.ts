@@ -192,10 +192,19 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					try {
 						restartingServer = true;
 						debuglog("From server.restart(): Restarting server...");
+						await miniflare?.dispose().catch((error) => {
+							debuglog(
+								"buildEnd: failed to dispose Miniflare instance:",
+								error
+							);
+						});
+						miniflare = undefined;
 						await restartServer();
 						debuglog("From server.restart(): Restarted server...");
 					} finally {
-						restartingServer = false;
+						setTimeout(() => {
+							restartingServer = false;
+						}, 100);
 					}
 				};
 
@@ -490,10 +499,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				debuglog("buildEnd:", restartingServer ? "restarted" : "disposing");
 				if (!restartingServer) {
 					debuglog("buildEnd: disposing Miniflare instance");
-					await miniflare?.dispose().catch((error) => {
-						debuglog("buildEnd: failed to dispose Miniflare instance:", error);
-					});
-					miniflare = undefined;
+					// await miniflare?.dispose().catch((error) => {
+					// 	debuglog("buildEnd: failed to dispose Miniflare instance:", error);
+					// });
+					// miniflare = undefined;
 				}
 			},
 		},
