@@ -1229,7 +1229,7 @@ async function publishRoutesFallback(
 			{ telemetryMessage: true }
 		);
 	}
-	logger.warn(
+	logger.info(
 		"The current authentication token does not have 'All Zones' permissions.\n" +
 			"Falling back to using the zone-based API endpoint to update each route individually.\n" +
 			"Note that there is no access to routes associated with zones that the API token does not have permission for.\n" +
