@@ -430,6 +430,13 @@ export default <ExportedHandler<Env>>{
 						ctx
 					);
 				}
+
+				if (url.pathname.startsWith("/cdn-cgi/handler/")) {
+					return new Response(
+						`"${url.pathname}" is not a valid handler. Did you mean to use "/cdn-cgi/handler/scheduled" or "/cdn-cgi/handler/email"?`,
+						{ status: 404 }
+					);
+				}
 			}
 
 			let response = await service.fetch(request);

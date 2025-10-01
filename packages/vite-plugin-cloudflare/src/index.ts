@@ -595,19 +595,25 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					const entryWorkerName = entryWorkerConfig.name;
 
 					// cron && email triggers
-					viteDevServer.middlewares.use("/cdn-cgi/", (req, res, next) => {
-						const requestHandler = createRequestHandler((request) => {
-							assert(miniflare, `Miniflare not defined`);
+					viteDevServer.middlewares.use(
+						"/cdn-cgi/handler/",
+						(req, res, next) => {
+							const requestHandler = createRequestHandler((request) => {
+								assert(miniflare, `Miniflare not defined`);
 
-							// set the target service that handles these requests
-							// to point to the User Worker (see `getTargetService` fn in
-							// `packages/miniflare/src/workers/core/entry.worker.ts`)
-							request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
-							return miniflare.dispatchFetch(request, { redirect: "manual" });
-						});
+								// set the target service that handles these requests
+								// to point to the User Worker (see `getTargetService` fn in
+								// `packages/miniflare/src/workers/core/entry.worker.ts`)
+								request.headers.set(
+									CoreHeaders.ROUTE_OVERRIDE,
+									entryWorkerName
+								);
+								return miniflare.dispatchFetch(request, { redirect: "manual" });
+							});
 
-						requestHandler(req, res, next);
-					});
+							requestHandler(req, res, next);
+						}
+					);
 				}
 			},
 		},
