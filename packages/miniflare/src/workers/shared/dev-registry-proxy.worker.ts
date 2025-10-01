@@ -13,7 +13,7 @@ function extractServiceFetchProxyTarget(
 
 	const binding = req.headers.get("MF-Binding") as string;
 
-	const [target, _, entrypoint] = (binding ?? url ?? "").split(":");
+	const [target, , entrypoint] = (binding ?? url ?? "").split(":");
 
 	if (target) {
 		return { worker: target, entrypoint };

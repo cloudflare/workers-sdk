@@ -10,7 +10,6 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { FSWatcher, watch } from "chokidar";
-import { Worker_Binding } from "../runtime";
 import { Log } from "./log";
 import { getGlobalWranglerConfigPath } from "./wrangler";
 

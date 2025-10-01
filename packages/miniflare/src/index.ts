@@ -938,7 +938,7 @@ function getExposedOverRegistry(allWorkerOpts: PluginWorkerOptions[]) {
 		});
 
 		// Expose all DOs implemented by this Worker
-		for (const [_, designator] of Object.entries(
+		for (const [, designator] of Object.entries(
 			workerOpts.do.durableObjects ?? {}
 		)) {
 			const { className, scriptName, remoteProxyConnectionString } =
@@ -2277,7 +2277,7 @@ export class Miniflare {
 		return new URL(this.#runtimeEntryURL.toString());
 	}
 
-	async #registerWorkers(url: URL): Promise<void> {
+	async #registerWorkers(): Promise<void> {
 		if (!this.#devRegistry.isEnabled()) {
 			return;
 		}
@@ -2326,7 +2326,7 @@ export class Miniflare {
 			assert(this.#socketPorts !== undefined);
 
 			// Register all workers with the dev registry
-			await this.#registerWorkers(url);
+			await this.#registerWorkers();
 
 			return url;
 		});
@@ -2450,7 +2450,7 @@ export class Miniflare {
 				);
 
 				// Register all workers with the dev registry
-				return this.#registerWorkers(this.#runtimeEntryURL);
+				return this.#registerWorkers();
 			});
 	}
 

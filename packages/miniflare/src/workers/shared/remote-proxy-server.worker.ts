@@ -1,19 +1,17 @@
 import { newWorkersRpcResponse } from "capnweb";
 import { EmailMessage } from "cloudflare:email";
 
-interface Env extends Record<string, unknown> {}
+type Env = Record<string, unknown>;
 
 class BindingNotFoundError extends Error {
-	constructor(name: string | undefined, available: string[]) {
-		super(
-			`Binding ${name ? `"${name}"` : ""} not found. Available: ${available.join(", ")}`
-		);
+	constructor(name?: string) {
+		super(`Binding ${name ? `"${name}"` : ""} not found`);
 	}
 }
 
 /**
  * For most bindings, we expose them as
- *  - RPC stubs directly to @cloudflare/jsrpc, or
+ *  - RPC stubs directly to capnweb, or
  *  - HTTP based fetchers
  * However, there are some special cases:
  *  - SendEmail bindings need to take EmailMessage as their first parameter,
@@ -34,12 +32,12 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 	const url = new URL(request.url);
 	const bindingName = url.searchParams.get("MF-Binding");
 	if (!bindingName) {
-		throw new BindingNotFoundError(undefined, Object.keys(env));
+		throw new BindingNotFoundError();
 	}
 
 	const targetBinding = env[bindingName];
 	if (!targetBinding) {
-		throw new BindingNotFoundError(bindingName, Object.keys(env));
+		throw new BindingNotFoundError(bindingName);
 	}
 
 	if (targetBinding.constructor.name === "SendEmail") {
@@ -54,7 +52,7 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 
 	if (url.searchParams.has("MF-Dispatch-Namespace-Options")) {
 		const { name, args, options } = JSON.parse(
-			url.searchParams.get("MF-Dispatch-Namespace-Options")!
+			url.searchParams.get("MF-Dispatch-Namespace-Options") as string
 		);
 		return (targetBinding as DispatchNamespace).get(name, args, options);
 	}
@@ -71,12 +69,12 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 function getExposedFetcher(request: Request, env: Env) {
 	const bindingName = request.headers.get("MF-Binding");
 	if (!bindingName) {
-		throw new BindingNotFoundError(undefined, Object.keys(env));
+		throw new BindingNotFoundError();
 	}
 
 	const targetBinding = env[bindingName];
 	if (!targetBinding) {
-		throw new BindingNotFoundError(bindingName, Object.keys(env));
+		throw new BindingNotFoundError(bindingName);
 	}
 
 	// Special case the Dispatch Namespace binding because it has a top-level synchronous .get() call
@@ -101,7 +99,7 @@ function getExposedFetcher(request: Request, env: Env) {
  * This Worker can proxy two types of remote binding:
  *  1. "raw" bindings, where this Worker has been configured to pass through the raw
  *     fetch from a local workerd instance to the relevant binding
- *  2. JSRPC bindings, where this Worker uses @cloudflare/jsrpc to proxy RPC
+ *  2. JSRPC bindings, where this Worker uses capnweb to proxy RPC
  *     communication in userland. This is always over a WebSocket connection
  */
 function isJSRPCBinding(request: Request): boolean {

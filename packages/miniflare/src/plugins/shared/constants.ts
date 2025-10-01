@@ -103,7 +103,7 @@ export function remoteProxyClientWorker(
 				text: binding,
 			},
 		],
-		globalOutbound: { name: outboundService },
+		...(outboundService ? { globalOutbound: { name: outboundService } } : {}),
 		...(durableObjectSettings
 			? {
 					durableObjectStorage: { inMemory: kVoid },
