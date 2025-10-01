@@ -41,7 +41,6 @@ export type RunnerConfig = {
 		previewArgs?: string[];
 		route: string;
 		expectedText: string;
-		useLocalHost?: boolean;
 	};
 	/**
 	 * Specifies whether to run the test script for the project and verify the exit code.

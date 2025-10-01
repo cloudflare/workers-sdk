@@ -180,18 +180,15 @@ export async function verifyPreviewScript(
 	);
 
 	try {
-		// TODO: check if this is necessary of if we can always just use localhost
-		const host = verifyPreview.useLocalHost ? "localhost" : "127.0.0.1";
-
 		// Some frameworks take quite a long time to build the application (e.g. Docusaurus)
 		// so wait up to 5 mins for the dev-server to be ready.
 		await retry(
 			{ times: 300, sleepMs: 5000 },
-			async () => await fetch(`http://${host}:${port}${verifyPreview.route}`),
+			async () => await fetch(`http://localhost:${port}${verifyPreview.route}`),
 		);
 
 		// Make a request to the specified test route
-		const res = await fetch(`http://${host}:${port}${verifyPreview.route}`);
+		const res = await fetch(`http://localhost:${port}${verifyPreview.route}`);
 		expect(await res.text()).toContain(verifyPreview.expectedText);
 	} finally {
 		// Kill the process gracefully so ports can be cleaned up

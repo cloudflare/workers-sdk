@@ -593,7 +593,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			verifyPreview: {
 				route: "/",
 				expectedText: "Learn TanStack",
-				useLocalHost: true,
 			},
 			nodeCompat: true,
 		},
