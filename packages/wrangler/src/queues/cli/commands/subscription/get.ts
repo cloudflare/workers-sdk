@@ -10,6 +10,9 @@ export const queuesSubscriptionGetCommand = createCommand({
 		owner: "Product: Queues",
 		status: "stable",
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	positionalArgs: ["queue"],
 	args: {
 		queue: {
