@@ -958,7 +958,25 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 		wranglerGitIgnoreFilesToAdd.push("!.dev.vars.example");
 	}
 
-	const hasDotEnv = existingGitIgnoreContent.match(/^\/?\.env\*(\s|$)/m);
+	/**
+	 * We check for the following type of occurrences:
+	 *
+	 * ```
+	 * .env
+	 * .env*
+	 * .env.<local|production|staging|...>
+	 * .env*.<local|production|staging|...>
+	 * ```
+	 *
+	 * Any of these may alone on a line or be followed by a space and a trailing comment:
+	 *
+	 * ```
+	 * .env.<local|production|staging> # some trailing comment
+	 * ```
+	 */
+	const hasDotEnv = existingGitIgnoreContent.match(
+		/^\/?\.env\*?(\..*?)?(\s|$)/m,
+	);
 	if (!hasDotEnv) {
 		wranglerGitIgnoreFilesToAdd.push(".env*");
 	}
