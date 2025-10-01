@@ -272,6 +272,12 @@ export const getDockerPath = getEnvironmentVariableFactory({
 	},
 });
 
+export const getSubdomainMixedStateCheckDisabled =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "WRANGLER_DISABLE_SUBDOMAIN_MIXED_STATE_CHECK",
+		defaultValue: false,
+	});
+
 /**
 /**
  * `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV` specifies whether to load vars for local dev from `.env` files.

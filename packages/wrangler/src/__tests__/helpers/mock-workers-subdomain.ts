@@ -4,7 +4,8 @@ import { createFetchResult, msw } from "./msw";
 /** Create a mock handler for the request to get the account's subdomain. */
 export function mockSubDomainRequest(
 	subdomain = "test-sub-domain",
-	registeredWorkersDev = true
+	registeredWorkersDev = true,
+	once = true
 ) {
 	if (registeredWorkersDev) {
 		msw.use(
@@ -13,7 +14,7 @@ export function mockSubDomainRequest(
 				() => {
 					return HttpResponse.json(createFetchResult({ subdomain }));
 				},
-				{ once: true }
+				{ once }
 			)
 		);
 	} else {
@@ -27,7 +28,7 @@ export function mockSubDomainRequest(
 						])
 					);
 				},
-				{ once: true }
+				{ once }
 			)
 		);
 	}
