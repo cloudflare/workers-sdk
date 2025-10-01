@@ -227,7 +227,7 @@ describe("getNormalizedContainerOptions", () => {
 		expect(result[0]).toMatchObject({
 			name: "test-container",
 			class_name: "TestContainer",
-			max_instances: 1,
+			max_instances: 20,
 			rollout_step_percentage: 100,
 		});
 	});

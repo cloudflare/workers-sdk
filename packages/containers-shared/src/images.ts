@@ -98,7 +98,7 @@ export async function prepareContainerImagesForDev(args: {
 			if (!isCloudflareRegistryLink(options.image_uri)) {
 				throw new UserError(
 					`Image "${options.image_uri}" is a registry link but does not point to the Cloudflare container registry.\n` +
-						`To use an existing image from another repository, see https://developers.cloudflare.com/containers/image-management/#using-existing-images`
+						`To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images`
 				);
 			}
 			const pull = await pullImage(dockerPath, options);
