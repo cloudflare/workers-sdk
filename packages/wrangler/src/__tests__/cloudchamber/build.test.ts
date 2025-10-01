@@ -9,6 +9,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { UserError } from "../../errors";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccountV4 as mockAccount } from "./utils";
@@ -31,6 +32,7 @@ describe("buildAndMaybePush", () => {
 	runInTempDir();
 	mockApiToken();
 	mockAccountId();
+	mockConsoleMethods();
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(dockerImageInspect)
