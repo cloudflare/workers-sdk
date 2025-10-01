@@ -146,7 +146,15 @@ export default class extends WorkerEntrypoint<Env> {
 			handle = await this.env.WORKFLOW2.get(id);
 		} else if (url.pathname === "/get3") {
 			handle = await this.env.WORKFLOW3.get(id);
-		} else {
+		} else if (url.pathname === "/createWithRedirect") {
+			console.log("create with redirect called");
+			handle = await this.env.WORKFLOW.create();
+
+			return Response.redirect(
+				new URL(`/status?workflowName=${handle.id}`, url).toString(),
+				302
+			);
+		} else if (url.pathname === "/status") {
 			handle = await this.env.WORKFLOW.get(id);
 		}
 
