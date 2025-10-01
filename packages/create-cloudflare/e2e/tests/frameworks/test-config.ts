@@ -582,6 +582,21 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			},
 			nodeCompat: false,
 		},
+		{
+			name: "tanstack",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Learn TanStack",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Learn TanStack",
+				useLocalHost: true,
+			},
+			nodeCompat: true,
+		},
 	];
 }
 
