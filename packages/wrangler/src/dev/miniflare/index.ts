@@ -1002,6 +1002,10 @@ export async function buildMiniflareOptions(
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
 		liveReload: config.liveReload,
 		upstream,
+		cf:
+			typeof process.env.CLOUDFLARE_CF === "string"
+				? process.env.CLOUDFLARE_CF
+				: undefined,
 		unsafeDevRegistryPath: config.devRegistry,
 		unsafeDevRegistryDurableObjectProxy: true,
 		unsafeHandleDevRegistryUpdate: onDevRegistryUpdate,
