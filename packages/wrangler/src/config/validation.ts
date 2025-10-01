@@ -2796,7 +2796,7 @@ function validateContainerApp(
 			// representing a predefined instance type or (2) an object that optionally defines vcpu,
 			// memory, and disk.
 			//
-			// If an instance type is not set, a 'dev' instance type will be used. If a custom instance
+			// If an instance type is not set, a 'lite' instance type will be used. If a custom instance
 			// type doesn't set a value, that value will default to the corresponding value in a 'dev'
 			// instance type
 			if (typeof containerAppOptional.instance_type === "string") {

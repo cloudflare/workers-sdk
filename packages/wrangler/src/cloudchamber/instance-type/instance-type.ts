@@ -38,18 +38,18 @@ const instanceTypes = {
 		disk_mb: 8000,
 	},
 	"standard-2": {
-		vcpu: 0.5,
-		memory_mib: 4096,
+		vcpu: 1,
+		memory_mib: 6144,
 		disk_mb: 12000,
 	},
 	"standard-3": {
-		vcpu: 0.5,
-		memory_mib: 4096,
+		vcpu: 2,
+		memory_mib: 8192,
 		disk_mb: 16000,
 	},
 	"standard-4": {
 		vcpu: 4,
-		memory_mib: 4096,
+		memory_mib: 12_288,
 		disk_mb: 20000,
 	},
 } as const;
@@ -92,14 +92,10 @@ export async function promptForInstanceType(
 		options,
 	});
 
-	switch (action) {
-		case "dev":
-		case "basic":
-		case "standard":
-			return action as InstanceType;
-		default:
-			return undefined;
+	if (instanceTypesNames.includes(action)) {
+		return action as InstanceType;
 	}
+	return undefined;
 }
 
 // Checks that instance type is one of allowed names and that it is not being set alongside memory or vcpu.
