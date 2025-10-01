@@ -513,8 +513,6 @@ describe("entrypoints", () => {
 	test("should support binding to Durable Object in another worker", async ({
 		dev,
 	}) => {
-		// RPC isn't supported in this case yet :(
-
 		await dev({
 			"wrangler.toml": dedent`
 			name = "bound"
@@ -560,10 +558,7 @@ describe("entrypoints", () => {
 
 					const { pathname } = new URL(request.url);
 					if (pathname === "/rpc") {
-						const errors = [];
-						try { await stub.property; } catch (e) { errors.push(e); }
-						try { await stub.method(); } catch (e) { errors.push(e); }
-						return Response.json(errors.map(String));
+						return new Response(await stub.method());
 					}
 
 					return stub.fetch("https://placeholder:9999/", {
@@ -583,13 +578,7 @@ describe("entrypoints", () => {
 		});
 
 		const rpcResponse = await fetch(new URL("/rpc", url));
-		const errors = await rpcResponse.json();
-		expect(errors).toMatchInlineSnapshot(`
-			[
-			  "Error: Cannot access "ThingObject#property" as Durable Object RPC is not yet supported between multiple dev sessions.",
-			  "Error: Cannot access "ThingObject#method" as Durable Object RPC is not yet supported between multiple dev sessions.",
-			]
-		`);
+		expect(await rpcResponse.text()).toBe("method:ping");
 	});
 
 	test("should support binding to Durable Object in same worker", async ({
@@ -660,59 +649,6 @@ describe("entrypoints", () => {
 
 		const response = await fetch(url);
 		expect(await response.text()).toBe("pong");
-	});
-
-	test("should throw if binding to named entrypoint exported by version of wrangler without entrypoints support", async ({
-		dev,
-		isolatedDevRegistryPath,
-	}) => {
-		// Start entry worker first, so the server starts with a stubbed service not
-		// found binding
-		const { url } = await dev({
-			"wrangler.toml": dedent`
-			name = "entry"
-			main = "index.ts"
-
-			[[services]]
-			binding = "SERVICE"
-			service = "bound"
-			entrypoint = "ThingEntrypoint"
-		`,
-			"index.ts": dedent`
-			export default {
-				async fetch(request, env, ctx) {
-					return env.SERVICE.fetch("https://placeholder:9999/");
-				}
-			}
-		`,
-		});
-		let response = await fetch(url);
-		expect(response.status).toBe(503);
-		expect(await response.text()).toBe(
-			'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
-		);
-
-		await writeFile(
-			path.join(isolatedDevRegistryPath, "bound"),
-			JSON.stringify({
-				protocol: "http",
-				mode: "local",
-				port: 0,
-				host: "localhost",
-				durableObjects: [],
-				durableObjectsHost: "localhost",
-				durableObjectsPort: 0,
-				// Intentionally omitting `entrypointAddresses`
-			})
-		);
-
-		await waitFor(async () => {
-			let response = await fetch(url);
-			expect(response.status).toBe(503);
-			expect(await response.text()).toBe(
-				'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
-			);
-		});
 	});
 
 	test("should throw if wrangler session doesn't export expected entrypoint", async ({
@@ -816,57 +752,6 @@ describe("entrypoints", () => {
 			const response = await fetch(url);
 			const text = await response.text();
 			expect(text).toBe("secure");
-		});
-	});
-
-	test("should support binding to version of wrangler without entrypoints support over HTTPS", async ({
-		dev,
-		isolatedDevRegistryPath,
-	}) => {
-		// Start entry worker first, so the server starts with a stubbed service not
-		// found binding
-		const { url } = await dev({
-			"wrangler.toml": dedent`
-			name = "entry"
-			main = "index.ts"
-			[[services]]
-			binding = "SERVICE"
-			service = "bound"
-		`,
-			"index.ts": dedent`
-			export default {
-				async fetch(request, env, ctx) {
-					return env.SERVICE.fetch('http://placeholder/');
-				}
-			}
-		`,
-		});
-		let response = await fetch(url);
-		expect(await response.text()).toBe(
-			'Couldn\'t find a local dev session for the "default" entrypoint of service "bound" to proxy to'
-		);
-
-		const boundWorker = new Miniflare({
-			name: "bound",
-			unsafeDevRegistryPath: isolatedDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			https: true,
-			script: `
-				export default {
-					async fetch(request, env, ctx) {
-						return new Response("Hello from bound!");
-					}
-				}
-			`,
-			// No direct sockets so that no entrypointAddresses will be registered
-		});
-		onTestFinished(() => boundWorker.dispose());
-
-		await boundWorker.ready;
-		await waitFor(async () => {
-			let response = await fetch(url);
-			expect(await response.text()).toBe("Hello from bound!");
 		});
 	});
 

@@ -128,11 +128,14 @@ export default {
 					}
 				}
 
+				const cfHeader = request.headers.get("MF-CF-Blob");
+
 				return fetcher.fetch(
 					request.headers.get("MF-URL") ?? "http://example.com",
 					new Request(request, {
 						redirect: "manual",
 						headers: originalHeaders,
+						cf: cfHeader ? JSON.parse(cfHeader) : undefined,
 					})
 				);
 			}
