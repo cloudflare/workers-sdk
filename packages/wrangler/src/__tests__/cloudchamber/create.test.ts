@@ -190,7 +190,7 @@ describe("cloudchamber create", () => {
 			runWrangler("cloudchamber create ")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			` [Error: Processing wrangler.toml configuration:
-  - "instance_type" should be one of 'dev', 'basic', or 'standard', but got invalid]`
+  - "instance_type" should be one of 'lite', 'basic', 'standard-1', 'standard-2', 'standard-3', or 'standard-4', but got invalid]`
 		);
 	});
 
