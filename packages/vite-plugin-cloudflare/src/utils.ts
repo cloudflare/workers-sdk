@@ -85,5 +85,6 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 		headers: [["accept-encoding", "identity"], ...request.headers],
 		body: request.body,
 		duplex: "half",
+		signal: request.signal,
 	});
 }
