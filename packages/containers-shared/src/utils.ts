@@ -2,6 +2,7 @@ import { execFileSync, spawn } from "child_process";
 import { randomUUID } from "crypto";
 import { existsSync, statSync } from "fs";
 import path from "path";
+import { UserError } from "./error";
 import { dockerImageInspect } from "./inspect";
 import type { ContainerDevOptions } from "./types";
 import type { StdioOptions } from "child_process";
@@ -38,13 +39,13 @@ export const runDockerCmd = (
 			resolve({ aborted });
 		} else if (!errorHandled) {
 			errorHandled = true;
-			reject(new Error(`Docker command exited with code: ${code}`));
+			reject(new UserError(`Docker command exited with code: ${code}`));
 		}
 	});
 	child.on("error", (err) => {
 		if (!errorHandled) {
 			errorHandled = true;
-			reject(new Error(`Docker command failed: ${err.message}`));
+			reject(new UserError(`Docker command failed: ${err.message}`));
 		}
 	});
 	return {
@@ -66,7 +67,7 @@ export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
 		const stdout = execFileSync(dockerPath, args, { encoding: "utf8" });
 		return stdout.trim();
 	} catch (error) {
-		throw new Error(
+		throw new UserError(
 			`Failed running docker command: ${(error as Error).message}. Command: ${dockerPath} ${args.join(" ")}`
 		);
 	}
@@ -81,7 +82,7 @@ export const verifyDockerInstalled = async (
 		await runDockerCmd(dockerPath, ["info"], ["inherit", "pipe", "pipe"]);
 	} catch {
 		// We assume this command is unlikely to fail for reasons other than the Docker daemon not running, or the Docker CLI not being installed or in the PATH.
-		throw new Error(
+		throw new UserError(
 			`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.\n` +
 				`Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with DOCKER_HOST.` +
 				`${isDev ? "\nTo suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false." : ""}`
@@ -103,7 +104,7 @@ export const isDockerfile = (
 	const maybeDockerfile = path.resolve(baseDir, image);
 	if (existsSync(maybeDockerfile)) {
 		if (isDir(maybeDockerfile)) {
-			throw new Error(
+			throw new UserError(
 				`${image} is a directory, you should specify a path to the Dockerfile`
 			);
 		}
@@ -116,14 +117,14 @@ export const isDockerfile = (
 		new URL(`https://${image}`);
 	} catch (e) {
 		if (e instanceof Error) {
-			throw new Error(errorPrefix + e.message);
+			throw new UserError(errorPrefix + e.message);
 		}
 		throw e;
 	}
 	const imageParts = image.split("/");
 
 	if (!imageParts[imageParts.length - 1]?.includes(":")) {
-		throw new Error(
+		throw new UserError(
 			errorPrefix +
 				`If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)`
 		);
@@ -131,7 +132,7 @@ export const isDockerfile = (
 
 	// validate URL
 	if (image.includes("://")) {
-		throw new Error(
+		throw new UserError(
 			errorPrefix +
 				`Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
 		);
@@ -218,7 +219,7 @@ export async function checkExposedPorts(
 		formatString: "{{ len .Config.ExposedPorts }}",
 	});
 	if (output === "0") {
-		throw new Error(
+		throw new UserError(
 			`The container "${options.class_name}" does not expose any ports. In your Dockerfile, please expose any ports you intend to connect to.\n` +
 				"For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.\n"
 		);

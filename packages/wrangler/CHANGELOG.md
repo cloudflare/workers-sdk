@@ -1,5 +1,32 @@
 # wrangler
 
+## 4.40.3
+
+### Patch Changes
+
+- [#10602](https://github.com/cloudflare/workers-sdk/pull/10602) [`ff82d80`](https://github.com/cloudflare/workers-sdk/commit/ff82d80a2c5798f6a18653ac1351cc662b4b35ba) Thanks [@tukiminya](https://github.com/tukiminya)! - fix: update Secrets Store command status from alpha to open-beta
+
+- [#10623](https://github.com/cloudflare/workers-sdk/pull/10623) [`7a6381c`](https://github.com/cloudflare/workers-sdk/commit/7a6381c4f9494dd871f70c305763d22e7049a0be) Thanks [@IRCody](https://github.com/IRCody)! - Handle more cases for correctly resolving the full uri for an image when using containers push.
+
+- [#10779](https://github.com/cloudflare/workers-sdk/pull/10779) [`325d22e`](https://github.com/cloudflare/workers-sdk/commit/325d22ea52b992d6881d21fbb59ad32ecfb03e8f) Thanks [@hoodmane](https://github.com/hoodmane)! - Add fallthrough: true for python_modules data rule
+
+- [#10112](https://github.com/cloudflare/workers-sdk/pull/10112) [`8d07576`](https://github.com/cloudflare/workers-sdk/commit/8d07576b8161e865e54da166887f3eb95ec6581e) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - fix: allow Workflow bindings when calling getPlatformProxy()
+
+  Workflow bindings are not supported in practice when using `getPlatformProxy()`.
+  But their existence in a Wrangler config file should not prevent other bindings from working.
+  Previously, calling `getPlatformProxy()` would crash if there were any Workflow bindings defined.
+  Now, instead, you get a warning telling you that these bindings are not available.
+
+- [#10769](https://github.com/cloudflare/workers-sdk/pull/10769) [`0a554f9`](https://github.com/cloudflare/workers-sdk/commit/0a554f9323bb323c97dd07cfb5805ea5d20b371d) Thanks [@penalosa](https://github.com/penalosa)! - Mark more errors as `UserError` to disable Sentry reporting
+
+- [#10679](https://github.com/cloudflare/workers-sdk/pull/10679) [`6244a9e`](https://github.com/cloudflare/workers-sdk/commit/6244a9eb75fbccc4f143e935362486a36bd27cad) Thanks [@KianNH](https://github.com/KianNH)! - Fix rendering for nested objects in `containers list` and `containers info [ID]`
+
+- [#10785](https://github.com/cloudflare/workers-sdk/pull/10785) [`d09cab3`](https://github.com/cloudflare/workers-sdk/commit/d09cab3b86149a67c471401daa64ff631cfb4e49) Thanks [@pombosilva](https://github.com/pombosilva)! - Workflows names and instance IDs are now properly validated with production limits.
+
+- Updated dependencies [[`6ff41a6`](https://github.com/cloudflare/workers-sdk/commit/6ff41a68877ae593e2550fc789a7d91166cfe94f), [`0c208e1`](https://github.com/cloudflare/workers-sdk/commit/0c208e1321676f81e8432567112483572b61bda6), [`2432022`](https://github.com/cloudflare/workers-sdk/commit/24320222be2cb46b391a93f0c8952037a4dd4633), [`d0801b1`](https://github.com/cloudflare/workers-sdk/commit/d0801b1fd47e19a7f08a11f039a4a0664b347df1), [`0a554f9`](https://github.com/cloudflare/workers-sdk/commit/0a554f9323bb323c97dd07cfb5805ea5d20b371d)]:
+  - miniflare@4.20250927.0
+  - @cloudflare/unenv-preset@2.7.5
+
 ## 4.40.2
 
 ### Patch Changes

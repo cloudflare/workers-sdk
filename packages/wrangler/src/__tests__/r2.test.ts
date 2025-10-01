@@ -331,7 +331,10 @@ describe("r2", () => {
 					OPTIONS
 					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
 					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
-					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]"
+					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
+					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
+					      --update-config  Automatically update your config file with the newly added resource  [boolean]
+					      --binding        The binding name of this resource in your Worker  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -366,7 +369,10 @@ describe("r2", () => {
 					OPTIONS
 					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
 					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
-					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]"
+					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
+					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
+					      --update-config  Automatically update your config file with the newly added resource  [boolean]
+					      --binding        The binding name of this resource in your Worker  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
@@ -448,17 +454,22 @@ describe("r2", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.]`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-					"Creating bucket 'test-bucket'...
-
-					[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
+				expect(std).toMatchInlineSnapshot(`
+					Object {
+					  "debug": "",
+					  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
 
 					  The JSON you provided was not well formed. [code: 10040]
 
 					  If you think this is a bug, please open an issue at:
 					  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-					"
+					",
+					  "info": "",
+					  "out": "Creating bucket 'test-bucket'...
+					",
+					  "warn": "",
+					}
 				`);
 			});
 		});
@@ -536,17 +547,9 @@ describe("r2", () => {
 						`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets/testBucket) failed.]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Updating bucket testBucket to Foo default storage class.
-
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets/testBucket) failed.[0m
-
-				  The storage class specified is not valid. [code: 10062]
-
-				  If you think this is a bug, please open an issue at:
-				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-
-				"
-		`);
+						"Updating bucket testBucket to Foo default storage class.
+						"
+					`);
 				});
 
 				it("should update the default storage class", async () => {

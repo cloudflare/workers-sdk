@@ -38,6 +38,8 @@ type VariableNames =
 	| "CLOUDFLARE_INCLUDE_PROCESS_ENV"
 	/** Include a trace header in all API requests that Wrangler makes (for internal use only) */
 	| "WRANGLER_TRACE_ID"
+	/** Disable the check for mixed state of subdomain flags (`workers_dev`, `preview_urls`, etc.) (default: false). */
+	| "WRANGLER_DISABLE_SUBDOMAIN_MIXED_STATE_CHECK"
 
 	// ## Logging & Output
 
@@ -96,6 +98,8 @@ type VariableNames =
 	| "WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST"
 	/** CI preview alias generation (internal use). */
 	| "WRANGLER_CI_GENERATE_PREVIEW_ALIAS"
+	/** Disable config watching in ConfigController. */
+	| "WRANGLER_CI_DISABLE_CONFIG_WATCHING"
 
 	// ## Docker Configuration
 

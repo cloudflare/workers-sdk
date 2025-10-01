@@ -464,13 +464,16 @@ describe("deploy", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.]`
 		);
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
 
 			  Authentication error [code: 10000]
 
-
+			",
+			  "info": "",
+			  "out": "
 			📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
 			Please ensure it has the correct permissions for this operation.
 
@@ -486,7 +489,9 @@ describe("deploy", () => {
 			├─┼─┤
 			│ Account Three │ account-3 │
 			└─┴─┘
-			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens."
+			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens.",
+			  "warn": "",
+			}
 		`);
 	});
 
@@ -1539,15 +1544,7 @@ describe("deploy", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe current authentication token does not have 'All Zones' permissions.[0m
-
-				  Falling back to using the zone-based API endpoint to update each route individually.
-				  Note that there is no access to routes associated with zones that the API token does not have
-				  permission for.
-				  Existing routes for this Worker in such zones will not be deleted.
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
 
 				  The following routes were already associated with this worker, and have not been deleted:
 				   - \\"foo.example.com/other-route\\"
@@ -6076,6 +6073,27 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should deploy successfully if the /subdomain POST request is flaky", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false });
+			mockSubDomainRequest();
+			mockUpdateWorkerSubdomain({ enabled: true, flakeCount: 1 });
+
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
 		it("should deploy to the workers.dev domain if workers_dev is `true`", async () => {
 			writeWranglerConfig({
 				workers_dev: true,
@@ -6944,6 +6962,154 @@ addEventListener('fetch', event => {});`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorker has preview URLs enabled, but 'preview_urls' is not in the config.[0m
 
 				  Using default config 'preview_urls = false', current status will be overwritten.
+
+				"
+			`);
+		});
+	});
+
+	describe("workers_dev mixed state warnings", () => {
+		beforeEach(() => {
+			vi.stubEnv("WRANGLER_DISABLE_SUBDOMAIN_MIXED_STATE_CHECK", "false");
+		});
+
+		afterEach(() => {
+			vi.unstubAllEnvs();
+		});
+
+		it("should not warn when config is the same as remote", async () => {
+			writeWranglerConfig({
+				workers_dev: false,
+				preview_urls: true,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false, previews_enabled: true });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				No deploy targets for test-name (TIMINGS)
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn when workers_dev=false,preview_urls=false", async () => {
+			writeWranglerConfig({
+				workers_dev: false,
+				preview_urls: false,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+			mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: false });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				No deploy targets for test-name (TIMINGS)
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn when workers_dev=true,preview_urls=true", async () => {
+			writeWranglerConfig({
+				workers_dev: true,
+				preview_urls: true,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false, previews_enabled: false });
+			mockUpdateWorkerSubdomain({ enabled: true, previews_enabled: true });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should warn when workers_dev=false,preview_urls=true", async () => {
+			writeWranglerConfig({
+				workers_dev: false,
+				preview_urls: true,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+			mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: true });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				No deploy targets for test-name (TIMINGS)
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are disabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still enabled.[0m
+
+				  Preview URLs will automatically generate a unique, shareable link for each new version which will
+				  be accessible at:
+				    [4mhttps://<VERSION_PREFIX>-test-name.test-sub-domain.workers.dev[0m
+
+				  To prevent this Worker from being unintentionally public, you may want to disable the Preview URLs
+				  as well by setting \`preview_urls = false\` in your Wrangler config file.
+
+				"
+			`);
+		});
+
+		it("should warn when workers_dev=true,preview_urls=false", async () => {
+			writeWranglerConfig({
+				workers_dev: true,
+				preview_urls: false,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false, previews_enabled: false });
+			mockUpdateWorkerSubdomain({ enabled: true, previews_enabled: false });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are enabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still disabled.[0m
+
+				  Preview URLs will automatically generate a unique, shareable link for each new version which will
+				  be accessible at:
+				    [4mhttps://<VERSION_PREFIX>-test-name.test-sub-domain.workers.dev[0m
+
+				  You may want to enable the Preview URLs as well by setting \`preview_urls = true\` in your Wrangler
+				  config file.
 
 				"
 			`);
@@ -11381,11 +11547,7 @@ export default{
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
 				  Worker Startup Timed out. This could be due to script exceeding size limits or expensive code in
 				  the global scope. [code: 11337]
@@ -11393,6 +11555,9 @@ export default{
 				  If you think this is a bug, please open an issue at:
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				",
 				  "warn": "",
 				}
@@ -11469,9 +11634,6 @@ export default{
 				  If these are unnecessary, consider removing them
 
 
-				",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
@@ -11480,6 +11642,9 @@ export default{
 				  If you think this is a bug, please open an issue at:
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				",
 				  "warn": "",
 				}
@@ -11544,9 +11709,6 @@ export default{
 				  .wrangler/tmp/startup-profile-<HASH>/worker.cpuprofile - load it into the Chrome DevTools profiler
 				  (or directly in VSCode) to view a flamegraph.
 
-				",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
@@ -11555,6 +11717,9 @@ export default{
 				  If you think this is a bug, please open an issue at:
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				",
 				  "warn": "",
 				}
@@ -14020,6 +14185,99 @@ export default{
 
 			return normalizedLog;
 		}
+	});
+
+	describe("with strict mode enabled", () => {
+		it("should error if there are remote config difference (with --x-remote-diff-check) in non-interactive mode", async () => {
+			setIsTTY(false);
+
+			writeWorkerSource();
+			mockGetServiceByName("test-name", "production", "dash");
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+				},
+				"./wrangler.json"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetServiceBindings("test-name", []);
+			mockGetServiceRoutes("test-name", []);
+			mockGetServiceCustomDomainRecords([]);
+			mockGetServiceSubDomainData("test-name", {
+				enabled: true,
+				previews_enabled: false,
+			});
+			mockGetServiceSchedules("test-name", { schedules: [] });
+			mockGetServiceMetadata("test-name", {
+				created_on: "2025-08-07T09:34:47.846308Z",
+				modified_on: "2025-08-08T10:48:12.688997Z",
+				script: {
+					created_on: "2025-08-07T09:34:47.846308Z",
+					modified_on: "2025-08-08T10:48:12.688997Z",
+					id: "silent-firefly-dbe3",
+					observability: { enabled: true, head_sampling_rate: 1 },
+					compatibility_date: "2024-04-24",
+				},
+			} as unknown as ServiceMetadataRes["default_environment"]);
+
+			await runWrangler("deploy --x-remote-diff-check --strict");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
+
+				        \\"bindings\\": []
+				      },
+				      \\"observability\\": {
+				  -     \\"enabled\\": true,
+				  +     \\"enabled\\": false,
+				        \\"head_sampling_rate\\": 1,
+				        \\"logs\\": {
+				          \\"enabled\\": false,
+
+				  Deploying the Worker will override the remote configuration with your local one.
+
+				"
+			`);
+
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
+
+				"
+			`);
+			// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
+			//       to set a non-zero exit code
+			expect(process.exitCode).not.toBe(0);
+		});
+
+		it("should error when worker was last deployed from api", async () => {
+			setIsTTY(false);
+
+			msw.use(...mswSuccessDeploymentScriptAPI);
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler("deploy ./index --strict");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
+
+			  Edits that have been made via the script API will be overridden by your local code and config.
+
+			"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
+
+				"
+			`);
+			// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
+			//       to set a non-zero exit code
+			expect(process.exitCode).not.toBe(0);
+		});
 	});
 });
 

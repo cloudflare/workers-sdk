@@ -1,5 +1,23 @@
 # @cloudflare/unenv-preset
 
+## 2.7.5
+
+### Patch Changes
+
+- [#10805](https://github.com/cloudflare/workers-sdk/pull/10805) [`d0801b1`](https://github.com/cloudflare/workers-sdk/commit/d0801b1fd47e19a7f08a11f039a4a0664b347df1) Thanks [@vicb](https://github.com/vicb)! - Drop `node:process` polyfill when v2 is available
+
+  Note that EventEmitters (`on`, `off`, `addListener`, `removeListener`, ...) used to be available on the import while they should not have been. They are now only available on the global process:
+
+  ```
+  import p from "node:process";
+
+  // Working before this PR, not working after this PR
+  p.on("exit", exitHandler);
+
+  // Use the global process instead (works before and after the PR)
+  process.on("exit", exitHandler);
+  ```
+
 ## 2.7.4
 
 ### Patch Changes

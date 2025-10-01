@@ -11,6 +11,7 @@ import { mockGetQueueByNameRequest } from "./mock-utils";
 import type { PostTypedConsumerBody, QueueResponse } from "../../queues/client";
 
 describe("wrangler", () => {
+	vi.unmock("../../wrangler-banner");
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
@@ -133,7 +134,10 @@ describe("wrangler", () => {
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"┌─┬─┬─┬─┬─┬─┐
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					┌─┬─┬─┬─┬─┬─┐
 					│ id │ name │ created_on │ modified_on │ producers │ consumers │
 					├─┼─┼─┼─┼─┼─┤
 					│ 5e1b9969eb974d8c99c48d19df104c7a │ queue-1 │ 01-01-2001 │ 01-01-2001 │ 0 │ 0 │
@@ -165,7 +169,10 @@ describe("wrangler", () => {
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"┌─┬─┬─┬─┬─┬─┐
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					┌─┬─┬─┬─┬─┬─┐
 					│ id │ name │ created_on │ modified_on │ producers │ consumers │
 					├─┼─┼─┼─┼─┼─┤
 					│ 7f7c2df28cee49ad-bbb46c9e5426e850 │ queue-100 │ 01-01-2001 │ 01-01-2001 │ 0 │ 0 │
@@ -300,33 +307,36 @@ describe("wrangler", () => {
 					"queues create testQueue --message-retention-period-secs=100"
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-          "🌀 Creating queue 'testQueue'
-          ✅ Created queue 'testQueue'
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					🌀 Creating queue 'testQueue'
+					✅ Created queue 'testQueue'
 
-          Configure your Worker to send messages to this queue:
+					Configure your Worker to send messages to this queue:
 
-          {
-            \\"queues\\": {
-              \\"producers\\": [
-                {
-                  \\"queue\\": \\"testQueue\\",
-                  \\"binding\\": \\"testQueue\\"
-                }
-              ]
-            }
-          }
-          Configure your Worker to consume messages from this queue:
+					{
+					  \\"queues\\": {
+					    \\"producers\\": [
+					      {
+					        \\"queue\\": \\"testQueue\\",
+					        \\"binding\\": \\"testQueue\\"
+					      }
+					    ]
+					  }
+					}
+					Configure your Worker to consume messages from this queue:
 
-          {
-            \\"queues\\": {
-              \\"consumers\\": [
-                {
-                  \\"queue\\": \\"testQueue\\"
-                }
-              ]
-            }
-          }"
-        `);
+					{
+					  \\"queues\\": {
+					    \\"consumers\\": [
+					      {
+					        \\"queue\\": \\"testQueue\\"
+					      }
+					    ]
+					  }
+					}"
+				`);
 				expect(requests.count).toEqual(1);
 			});
 
@@ -488,9 +498,12 @@ describe("wrangler", () => {
 				expect(getrequests.count).toEqual(1);
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Updating queue testQueue.
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Updating queue testQueue.
 					Updated queue testQueue."
-			  `);
+				`);
 			});
 
 			it("should show an error when two message retention periods are set", async () => {
@@ -638,9 +651,12 @@ describe("wrangler", () => {
 				const deleteRequest = mockDeleteRequest(expectedQueueId);
 				await runWrangler("queues delete testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Deleting queue testQueue.
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Deleting queue testQueue.
 					Deleted queue testQueue."
-			  `);
+				`);
 				expect(queueNameResolveRequest.count).toEqual(1);
 				expect(deleteRequest.count).toEqual(1);
 			});
@@ -782,8 +798,11 @@ describe("wrangler", () => {
 					expect(postRequest.count).toEqual(1);
 
 					expect(std.out).toMatchInlineSnapshot(`
-							"Adding consumer to queue testQueue.
-							Added consumer to queue testQueue."
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding consumer to queue testQueue.
+						Added consumer to queue testQueue."
 					`);
 				});
 
@@ -825,7 +844,10 @@ describe("wrangler", () => {
 					expect(postRequest.count).toEqual(1);
 
 					expect(std.out).toMatchInlineSnapshot(`
-						"Adding consumer to queue testQueue.
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
 					`);
 				});
@@ -868,7 +890,10 @@ describe("wrangler", () => {
 					expect(postRequest.count).toEqual(1);
 
 					expect(std.out).toMatchInlineSnapshot(`
-						"Adding consumer to queue testQueue.
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
 					`);
 				});
@@ -1116,9 +1141,12 @@ describe("wrangler", () => {
 						expect(queueNameResolveRequest.count).toEqual(1);
 						expect(deleteRequest.count).toEqual(1);
 						expect(std.out).toMatchInlineSnapshot(`
-						"Removing consumer from queue testQueue.
-						Removed consumer from queue testQueue."
-					`);
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Removing consumer from queue testQueue.
+							Removed consumer from queue testQueue."
+						`);
 					});
 
 					it("should show error when deleting a non-existing consumer", async () => {
@@ -1193,9 +1221,12 @@ describe("wrangler", () => {
 						expect(queueNameResolveRequest.count).toEqual(1);
 						expect(deleteRequest.count).toEqual(1);
 						expect(std.out).toMatchInlineSnapshot(`
-						"Removing consumer from queue testQueue.
-						Removed consumer from queue testQueue."
-					`);
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Removing consumer from queue testQueue.
+							Removed consumer from queue testQueue."
+						`);
 					});
 
 					it("should show error when deleting a non-matching environment", async () => {
@@ -1272,8 +1303,11 @@ describe("wrangler", () => {
 						expect(deleteRequest.count).toEqual(1);
 						expect(serviceRequest.count).toEqual(1);
 						expect(std.out).toMatchInlineSnapshot(`
-						"Removing consumer from queue testQueue.
-						Removed consumer from queue testQueue."
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Removing consumer from queue testQueue.
+							Removed consumer from queue testQueue."
 						`);
 					});
 
@@ -1324,9 +1358,12 @@ describe("wrangler", () => {
 							expect(serviceRequest.count).toEqual(1);
 							expect(deleteRequest.count).toEqual(1);
 							expect(std.out).toMatchInlineSnapshot(`
-							"Removing consumer from queue testQueue.
-							Removed consumer from queue testQueue."
-						`);
+								"
+								 ⛅️ wrangler x.x.x
+								──────────────────
+								Removing consumer from queue testQueue.
+								Removed consumer from queue testQueue."
+							`);
 						});
 
 						it("should delete matching consumer with env set", async () => {
@@ -1371,7 +1408,10 @@ describe("wrangler", () => {
 							expect(queueNameResolveRequest.count).toEqual(1);
 							expect(deleteRequest.count).toEqual(1);
 							expect(std.out).toMatchInlineSnapshot(`
-								"Removing consumer from queue testQueue.
+								"
+								 ⛅️ wrangler x.x.x
+								──────────────────
+								Removing consumer from queue testQueue.
 								Removed consumer from queue testQueue."
 							`);
 						});
@@ -1537,8 +1577,11 @@ describe("wrangler", () => {
 					expect(queueNameResolveRequest.count).toEqual(1);
 					expect(postRequest.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
-							"Adding consumer to queue testQueue.
-							Added consumer to queue testQueue."
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding consumer to queue testQueue.
+						Added consumer to queue testQueue."
 					`);
 				});
 
@@ -1575,7 +1618,10 @@ describe("wrangler", () => {
 					expect(queueNameResolveRequest.count).toEqual(1);
 					expect(postRequest.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Adding consumer to queue testQueue.
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
 					`);
 				});
@@ -1661,9 +1707,12 @@ describe("wrangler", () => {
 					expect(postRequest.count).toEqual(1);
 					expect(queueNameResolveRequest.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
-							"Removing consumer from queue testQueue.
-							Removed consumer from queue testQueue."
-						`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Removing consumer from queue testQueue.
+						Removed consumer from queue testQueue."
+					`);
 				});
 			});
 		});
@@ -1723,7 +1772,10 @@ describe("wrangler", () => {
 				mockGetQueueByNameRequest(expectedQueueName, mockQueue);
 				await runWrangler("queues info testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Queue Name: testQueue
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Queue Name: testQueue
 					Queue ID: 1234567
 					Created On: 2024-05-20T14:43:56.70498Z
 					Last Modified: 2024-07-19T14:43:56.70498Z
@@ -1741,7 +1793,10 @@ describe("wrangler", () => {
 				mockGetQueueByNameRequest(expectedQueueName, mockHTTPPullQueue);
 				await runWrangler("queues info testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Queue Name: testQueue
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Queue Name: testQueue
 					Queue ID: 1234567
 					Created On: 2024-05-20T14:43:56.70498Z
 					Last Modified: 2024-07-19T14:43:56.70498Z
@@ -1777,7 +1832,10 @@ describe("wrangler", () => {
 				);
 				await runWrangler("queues info testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Queue Name: testQueue
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Queue Name: testQueue
 					Queue ID: 1234567
 					Created On: 2024-05-20T14:43:56.70498Z
 					Last Modified: 2024-07-19T14:43:56.70498Z
@@ -1895,7 +1953,10 @@ describe("wrangler", () => {
 			expect(getrequests.count).toEqual(1);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Pausing message delivery for queue testQueue.
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Pausing message delivery for queue testQueue.
 				Paused message delivery for queue testQueue."
 			`);
 		});
@@ -2006,7 +2067,10 @@ describe("wrangler", () => {
 			expect(getrequests.count).toEqual(1);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Resuming message delivery for queue testQueue.
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Resuming message delivery for queue testQueue.
 				Resumed message delivery for queue testQueue."
 			`);
 		});
@@ -2114,7 +2178,12 @@ describe("wrangler", () => {
 			expect(requests.count).toEqual(0);
 			expect(getrequests.count).toEqual(0);
 
-			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				"
+			`);
 		});
 
 		it("allows purge with the --force flag in non-interactive mode", async () => {
@@ -2126,7 +2195,12 @@ describe("wrangler", () => {
 			expect(requests.count).toEqual(1);
 			expect(getrequests.count).toEqual(1);
 
-			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Purged Queue 'testQueue'"
+			`);
 		});
 
 		it("allows purge with the --force flag in non-interactive mode", async () => {
@@ -2138,7 +2212,12 @@ describe("wrangler", () => {
 			expect(requests.count).toEqual(1);
 			expect(getrequests.count).toEqual(1);
 
-			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Purged Queue 'testQueue'"
+			`);
 		});
 
 		it("allows purge with the --force flag in interactive mode", async () => {
@@ -2150,7 +2229,12 @@ describe("wrangler", () => {
 			expect(requests.count).toEqual(1);
 			expect(getrequests.count).toEqual(1);
 
-			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Purged Queue 'testQueue'"
+			`);
 		});
 
 		it("rejects invalid confirmation in interactive mode", async () => {
@@ -2170,7 +2254,12 @@ describe("wrangler", () => {
 			expect(requests.count).toEqual(0);
 			expect(getrequests.count).toEqual(0);
 
-			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				"
+			`);
 		});
 
 		it("allows purge with correct confirmation in interactive mode", async () => {
@@ -2186,7 +2275,12 @@ describe("wrangler", () => {
 			expect(requests.count).toEqual(1);
 			expect(getrequests.count).toEqual(1);
 
-			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Purged Queue 'testQueue'"
+			`);
 		});
 	});
 });

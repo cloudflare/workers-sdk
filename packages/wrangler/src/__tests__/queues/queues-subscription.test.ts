@@ -19,6 +19,7 @@ import type {
 } from "../../queues/subscription-types";
 
 describe("queues subscription", () => {
+	vi.unmock("../../wrangler-banner");
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
@@ -129,7 +130,10 @@ describe("queues subscription", () => {
 			expect(createRequest.count).toEqual(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Creating event subscription for queue 'testQueue'...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Creating event subscription for queue 'testQueue'...
 				✨ Successfully created event subscription 'testQueue workersBuilds.worker' with id 'sub-123'."
 			`);
 		});
@@ -172,7 +176,10 @@ describe("queues subscription", () => {
 			expect(createRequest.count).toEqual(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Creating event subscription for queue 'testQueue'...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Creating event subscription for queue 'testQueue'...
 				✨ Successfully created event subscription 'Custom Subscription' with id 'sub-123'."
 			`);
 		});
@@ -276,7 +283,10 @@ describe("queues subscription", () => {
 			expect(listRequest.count).toEqual(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"No event subscriptions found for queue 'testQueue'."
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				No event subscriptions found for queue 'testQueue'."
 			`);
 		});
 
@@ -306,7 +316,10 @@ describe("queues subscription", () => {
 			expect(listRequest.count).toEqual(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Event subscriptions for queue 'testQueue':
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Event subscriptions for queue 'testQueue':
 				┌─┬─┬─┬─┬─┬─┐
 				│ ID │ Name │ Source │ Events │ Resource │ Enabled │
 				├─┼─┼─┼─┼─┼─┤
@@ -314,6 +327,67 @@ describe("queues subscription", () => {
 				├─┼─┼─┼─┼─┼─┤
 				│ sub-456 │ Test Subscription 2 │ kv │ namespace.created │ │ No │
 				└─┴─┴─┴─┴─┴─┘"
+			`);
+		});
+
+		it('supports json output with "--json" flag', async () => {
+			mockGetQueueByNameRequest(expectedQueueName, {
+				queue_id: expectedQueueId,
+				queue_name: expectedQueueName,
+				created_on: "",
+				producers: [],
+				consumers: [],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+				modified_on: "",
+			});
+			mockListSubscriptionsRequest(expectedQueueId, [
+				mockSubscription1,
+				mockSubscription2,
+			]);
+
+			await runWrangler("queues subscription list testQueue --json");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"[
+				  {
+				    \\"id\\": \\"sub-123\\",
+				    \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
+				    \\"modified_at\\": \\"2024-01-01T00:00:00Z\\",
+				    \\"name\\": \\"Test Subscription 1\\",
+				    \\"enabled\\": true,
+				    \\"source\\": {
+				      \\"type\\": \\"workersBuilds.worker\\",
+				      \\"worker_name\\": \\"my-worker\\"
+				    },
+				    \\"destination\\": {
+				      \\"type\\": \\"queues.queue\\",
+				      \\"queue_id\\": \\"queueId\\"
+				    },
+				    \\"events\\": [
+				      \\"build.completed\\",
+				      \\"build.failed\\"
+				    ]
+				  },
+				  {
+				    \\"id\\": \\"sub-456\\",
+				    \\"created_at\\": \\"2024-01-02T00:00:00Z\\",
+				    \\"modified_at\\": \\"2024-01-02T00:00:00Z\\",
+				    \\"name\\": \\"Test Subscription 2\\",
+				    \\"enabled\\": false,
+				    \\"source\\": {
+				      \\"type\\": \\"kv\\"
+				    },
+				    \\"destination\\": {
+				      \\"type\\": \\"queues.queue\\",
+				      \\"queue_id\\": \\"queueId\\"
+				    },
+				    \\"events\\": [
+				      \\"namespace.created\\"
+				    ]
+				  }
+				]"
 			`);
 		});
 
@@ -380,7 +454,10 @@ describe("queues subscription", () => {
 			expect(getRequest.count).toEqual(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"ID:           sub-123
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				ID:           sub-123
 				Name:         Test Subscription 1
 				Source:       workersBuilds.worker
 				Resource:     my-worker
@@ -389,6 +466,47 @@ describe("queues subscription", () => {
 				Enabled:      Yes
 				Created At:   1/1/2024, 12:00:00 AM
 				Modified At:  1/1/2024, 12:00:00 AM"
+			`);
+		});
+
+		it('supports json output with "--json" flag', async () => {
+			mockGetQueueByNameRequest("testQueue", {
+				queue_id: expectedQueueId,
+				queue_name: "testQueue",
+				created_on: "",
+				modified_on: "",
+				producers: [],
+				consumers: [],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+			});
+			mockGetSubscriptionRequest("sub-123", mockSubscription1);
+
+			await runWrangler(
+				"queues subscription get testQueue --id sub-123 --json"
+			);
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"{
+				  \\"id\\": \\"sub-123\\",
+				  \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
+				  \\"modified_at\\": \\"2024-01-01T00:00:00Z\\",
+				  \\"name\\": \\"Test Subscription 1\\",
+				  \\"enabled\\": true,
+				  \\"source\\": {
+				    \\"type\\": \\"workersBuilds.worker\\",
+				    \\"worker_name\\": \\"my-worker\\"
+				  },
+				  \\"destination\\": {
+				    \\"type\\": \\"queues.queue\\",
+				    \\"queue_id\\": \\"queueId\\"
+				  },
+				  \\"events\\": [
+				    \\"build.completed\\",
+				    \\"build.failed\\"
+				  ]
+				}"
 			`);
 		});
 
@@ -462,7 +580,10 @@ describe("queues subscription", () => {
 			expect(deleteRequest.count).toEqual(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"✨ Successfully deleted event subscription 'Test Subscription 1' with id 'sub-123'."
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Successfully deleted event subscription 'Test Subscription 1' with id 'sub-123'."
 			`);
 		});
 
@@ -491,7 +612,10 @@ describe("queues subscription", () => {
 			expect(deleteRequest.count).toEqual(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"✨ Successfully deleted event subscription 'Test Subscription 1' with id 'sub-123'."
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Successfully deleted event subscription 'Test Subscription 1' with id 'sub-123'."
 			`);
 		});
 
@@ -551,8 +675,71 @@ describe("queues subscription", () => {
 
 			expect(requests.count).toBe(1);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Updating event subscription...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Updating event subscription...
 				✨ Successfully updated event subscription 'updated-subscription' with id 'subscription-123'."
+			`);
+		});
+
+		it('supports json output with "--json" flag', async () => {
+			const subscriptionId = "subscription-123";
+			mockGetQueueByNameRequest("test-queue", {
+				queue_id: "queue-id-1",
+				queue_name: "test-queue",
+				created_on: "",
+				modified_on: "",
+				producers: [],
+				consumers: [],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+			});
+			mockUpdateSubscriptionRequest(subscriptionId, {
+				name: "new-name",
+				events: ["build.completed", "build.failed"],
+				enabled: false,
+			});
+			mockGetSubscriptionRequest(subscriptionId, {
+				id: subscriptionId,
+				name: "old-subscription",
+				source: {
+					type: EventSourceType.WORKERS_BUILDS_WORKER,
+					worker_name: "my-worker",
+				},
+				destination: {
+					type: "queues.queue",
+					queue_id: "queue-id-1",
+				},
+				events: ["build.completed"],
+				enabled: true,
+				created_at: "2023-01-01T00:00:00.000Z",
+				modified_at: "2023-01-01T00:00:00.000Z",
+			});
+
+			await runWrangler(
+				`queues subscription update test-queue --id ${subscriptionId} --name new-name --events "build.completed,build.failed" --enabled false --json`
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Updating event subscription...
+				{
+				  \\"id\\": \\"subscription-123\\",
+				  \\"name\\": \\"updated-subscription\\",
+				  \\"source\\": {
+				    \\"type\\": \\"workersBuilds.worker\\",
+				    \\"worker_name\\": \\"my-worker\\"
+				  },
+				  \\"destination\\": {
+				    \\"queue_id\\": \\"queue-id-1\\"
+				  },
+				  \\"events\\": [
+				    \\"build.completed\\",
+				    \\"build.failed\\"
+				  ],
+				  \\"enabled\\": false,
+				  \\"modified_at\\": \\"2023-01-01T00:00:00.000Z\\"
+				}"
 			`);
 		});
 

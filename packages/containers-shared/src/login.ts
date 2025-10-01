@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { ImageRegistriesService, ImageRegistryPermissions } from "./client";
+import { UserError } from "./error";
 import { getCloudflareContainerRegistry } from "./knobs";
 
 /**
@@ -44,7 +45,7 @@ export async function dockerLoginManagedRegistry(pathToDocker: string) {
 			if (code === 0) {
 				resolve();
 			} else {
-				reject(new Error(`Login failed with code: ${code}`));
+				reject(new UserError(`Login failed with code: ${code}`));
 			}
 		});
 	});

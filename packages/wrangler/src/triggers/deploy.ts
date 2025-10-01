@@ -9,7 +9,9 @@ import {
 	updateQueueConsumers,
 	validateRoutes,
 } from "../deploy/deploy";
+import { getSubdomainMixedStateCheckDisabled } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
@@ -310,6 +312,85 @@ export function getSubdomainValues(
 	};
 }
 
+async function validateSubdomainMixedState(
+	props: Props,
+	accountId: string,
+	scriptName: string,
+	configFlags: { workers_dev?: boolean; preview_urls?: boolean },
+	desired: { workers_dev: boolean; preview_urls: boolean },
+	remote: { workers_dev: boolean; preview_urls: boolean },
+	firstDeploy: boolean
+): Promise<{
+	workers_dev: boolean;
+	preview_urls: boolean;
+}> {
+	const { config } = props;
+
+	const changed =
+		desired.workers_dev !== remote.workers_dev ||
+		desired.preview_urls !== remote.preview_urls;
+
+	// Early return if config values are the same as remote values (so we only warn on change)
+	if (!changed) {
+		return desired;
+	}
+
+	// Early return if check disabled through environment variable.
+	if (getSubdomainMixedStateCheckDisabled()) {
+		return desired;
+	}
+
+	// Early return if non-interactive or CI
+	if (isNonInteractiveOrCI()) {
+		return desired;
+	}
+
+	// Early return if this is the first deploy
+	if (firstDeploy) {
+		return desired;
+	}
+
+	// Early return if config values are the same (e.g. both true or both false, not in mixed state)
+	if (desired.workers_dev === desired.preview_urls) {
+		return desired;
+	}
+
+	const userSubdomain = await getWorkersDevSubdomain(
+		config,
+		accountId,
+		config.configPath
+	);
+	const previewUrl = `https://<VERSION_PREFIX>-${scriptName}.${userSubdomain}`;
+
+	// Scenario 1: User disables workers.dev while having preview URLs enabled
+	if (!desired.workers_dev && desired.preview_urls) {
+		logger.warn(
+			[
+				"You are disabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still enabled.",
+				"Preview URLs will automatically generate a unique, shareable link for each new version which will be accessible at:",
+				`  ${previewUrl}`,
+				"",
+				"To prevent this Worker from being unintentionally public, you may want to disable the Preview URLs as well by setting `preview_urls = false` in your Wrangler config file.",
+			].join("\n")
+		);
+	}
+
+	// Scenario 2: User enables workers.dev when Preview URLs are off
+	if (desired.workers_dev && !desired.preview_urls) {
+		logger.warn(
+			[
+				"You are enabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still disabled.",
+				"Preview URLs will automatically generate a unique, shareable link for each new version which will be accessible at:",
+				`  ${previewUrl}`,
+				"",
+				"You may want to enable the Preview URLs as well by setting `preview_urls = true` in your Wrangler config file.",
+			].join("\n")
+		);
+	}
+
+	return desired;
+}
+
 async function subdomainDeploy(
 	props: Props,
 	accountId: string,
@@ -322,11 +403,6 @@ async function subdomainDeploy(
 ) {
 	const { config } = props;
 
-	// Get desired subdomain enablement status.
-
-	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
-		getSubdomainValues(config.workers_dev, config.preview_urls, routes);
-
 	// Get current subdomain enablement status.
 
 	const { enabled: currWorkersDev, previews_enabled: currPreviews } =
@@ -334,6 +410,25 @@ async function subdomainDeploy(
 			enabled: boolean;
 			previews_enabled: boolean;
 		}>(config, `${workerUrl}/subdomain`);
+
+	// Get desired subdomain enablement status.
+
+	const desiredSubdomain = await getSubdomainValues(
+		config.workers_dev,
+		config.preview_urls,
+		routes
+	);
+
+	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
+		await validateSubdomainMixedState(
+			props,
+			accountId,
+			scriptName,
+			config,
+			desiredSubdomain,
+			{ workers_dev: currWorkersDev, preview_urls: currPreviews },
+			firstDeploy
+		);
 
 	const workersDevInSync = wantWorkersDev === currWorkersDev;
 	const previewsInSync = wantPreviews === currPreviews;
@@ -379,17 +474,21 @@ async function subdomainDeploy(
 	// Update subdomain enablement status if needed.
 
 	if (!allInSync) {
-		await fetchResult(config, `${workerUrl}/subdomain`, {
-			method: "POST",
-			body: JSON.stringify({
-				enabled: wantWorkersDev,
-				previews_enabled: wantPreviews,
-			}),
-			headers: {
-				"Content-Type": "application/json",
-				"Cloudflare-Workers-Script-Api-Date": "2025-08-01",
-			},
-		});
+		// Occasionally this update to the subdomain endpoint fails due to some internal API error.
+		// We retry this request a few times to mitigate that.
+		await retryOnAPIFailure(async () =>
+			fetchResult(config, `${workerUrl}/subdomain`, {
+				method: "POST",
+				body: JSON.stringify({
+					enabled: wantWorkersDev,
+					previews_enabled: wantPreviews,
+				}),
+				headers: {
+					"Content-Type": "application/json",
+					"Cloudflare-Workers-Script-Api-Date": "2025-08-01",
+				},
+			})
+		);
 	}
 
 	if (workersDevURL) {

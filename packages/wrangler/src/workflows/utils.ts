@@ -74,3 +74,5 @@ export const validateStatus = (status: string): InstanceStatus => {
 			);
 	}
 };
+
+export const workflowNameFormatMessage = `Workflow names must be 1-64 characters long, start with a letter, number, or underscore, and may only contain letters, numbers, underscores, or hyphens.`;

@@ -1,4 +1,4 @@
-export type Environment = "production" | "staging";
+export type Environment = "production" | "staging" | "fed-prod";
 
 export interface ReadyAnalytics {
 	logEvent: (e: ReadyAnalyticsEvent) => void;

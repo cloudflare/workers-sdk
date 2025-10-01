@@ -1736,6 +1736,47 @@ This is a random email body.
 	t.is(await res.text(), "true");
 });
 
+test("Miniflare: unimplemented /cdn-cgi/handler/ routes", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+			export default {
+				fetch() {
+					return new Response("Hello world");
+				}
+			}
+		`,
+		unsafeTriggerHandlers: true,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/foo");
+	t.is(
+		await res.text(),
+		`"/cdn-cgi/handler/foo" is not a valid handler. Did you mean to use "/cdn-cgi/handler/scheduled" or "/cdn-cgi/handler/email"?`
+	);
+	t.is(res.status, 404);
+});
+
+test("Miniflare: other /cdn-cgi/ routes", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+			export default {
+				fetch() {
+					return new Response("Hello world");
+				}
+			}
+		`,
+		unsafeTriggerHandlers: true,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("http://localhost/cdn-cgi/foo");
+	t.is(await res.text(), "Hello world");
+	t.is(res.status, 200);
+});
+
 test("Miniflare: listens on ipv6", async (t) => {
 	const log = new TestLog(t);
 

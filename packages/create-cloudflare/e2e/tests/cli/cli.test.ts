@@ -584,7 +584,7 @@ describe("Create Cloudflare CLI", () => {
 					    npm create cloudflare -- --framework next -- --ts
 					    pnpm create cloudflare --framework next -- --ts
 					    Allowed Values:
-					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, solid, svelte, vue
+					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, solid, svelte, vue, waku
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:
@@ -635,16 +635,20 @@ describe("Create Cloudflare CLI", () => {
 		});
 	});
 
-	test("error when trying to create a solid app on Pages", async ({
-		logStream,
-	}) => {
-		const { errors } = await runC3(
-			["--platform=pages", "--framework=solid", "my-app"],
-			[],
-			logStream,
-		);
-		expect(errors).toMatch(
-			/Error: The .*? framework doesn't support the "pages" platform/,
+	describe("frameworks related", () => {
+		["solid", "next"].forEach((framework) =>
+			test(`error when trying to create a ${framework} app on Pages`, async ({
+				logStream,
+			}) => {
+				const { errors } = await runC3(
+					["--platform=pages", `--framework=${framework}`, "my-app"],
+					[],
+					logStream,
+				);
+				expect(errors).toMatch(
+					/Error: The .*? framework doesn't support the "pages" platform/,
+				);
+			}),
 		);
 	});
 });

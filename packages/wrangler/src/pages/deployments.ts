@@ -21,6 +21,7 @@ export const pagesDeploymentListCommand = createCommand({
 	},
 	behaviour: {
 		provideConfig: false,
+		printBanner: (args) => !args.json,
 	},
 	args: {
 		"project-name": {

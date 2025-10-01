@@ -250,7 +250,7 @@ describe("versions upload", () => {
 		writeWorkerSource();
 		setIsTTY(false);
 
-		const result = runWrangler("versions upload");
+		const result = runWrangler("versions upload", { WRANGLER_LOG: "debug" });
 
 		await expect(result).resolves.toBeUndefined();
 
@@ -265,7 +265,7 @@ describe("versions upload", () => {
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
 		`);
 
-		expect(std.info).toContain("Retrying API call after error...");
+		expect(std.debug).toContain("Retrying API call after error...");
 	});
 
 	test("correctly detects python workers", async () => {
@@ -770,6 +770,7 @@ describe("versions upload", () => {
 const mockExecSync = vi.fn();
 
 describe("generatePreviewAlias", () => {
+	mockConsoleMethods();
 	vi.mock("child_process", () => ({
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		execSync: (...args: any[]) => mockExecSync(...args),

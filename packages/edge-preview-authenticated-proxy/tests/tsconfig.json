@@ -1,8 +1,8 @@
 {
 	"compilerOptions": {
-		"target": "es2021" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
+		"target": "esnext" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
 		"lib": [
-			"es2021"
+			"esnext"
 		] /* Specify a set of bundled library declaration files that describe the target runtime environment. */,
 		"module": "es2022" /* Specify what module code is generated. */,
 		"moduleResolution": "node" /* Specify how TypeScript looks up a file from a given module specifier. */,

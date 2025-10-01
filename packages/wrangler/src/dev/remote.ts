@@ -7,6 +7,7 @@ import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getInferredHost } from "../dev";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { APIError } from "../parse";
 import { syncWorkersSite } from "../sites";
 import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
@@ -20,7 +21,6 @@ import type {
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { ParseError } from "../parse";
 import type { LegacyAssetPaths } from "../sites";
 import type { ApiCredentials } from "../user";
 import type { CfAccount } from "./create-worker-preview";
@@ -35,7 +35,7 @@ export function handlePreviewSessionUploadError(
 	// since it could recover after the developer fixes whatever's wrong
 	// instead of logging the raw API error to the user,
 	// give them friendly instructions
-	if (isAbortError(err)) {
+	if (!isAbortError(err)) {
 		// code 10049 happens when the preview token expires
 		if ("code" in err && err.code === 10049) {
 			logger.log("Preview token expired, fetching a new one");
@@ -44,7 +44,7 @@ export function handlePreviewSessionUploadError(
 			// lets increment the counter, and trigger a rerun of
 			// the useEffect above
 			return true;
-		} else if (!handleUserFriendlyError(err as ParseError, accountId)) {
+		} else if (!handleUserFriendlyError(err, accountId)) {
 			logger.error("Error on remote worker:", err);
 		}
 	}
@@ -60,12 +60,9 @@ export function handlePreviewSessionCreationError(
 	// give them friendly instructions
 	// for error 10063 (workers.dev subdomain required)
 	if ("code" in err && err.code === 10063) {
-		const errorMessage =
-			"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
-		const solutionMessage =
-			"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-		const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
-		logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+		logger.error(
+			`You need to register a workers.dev subdomain before running the dev command in remote mode. You can either enable local mode by pressing l, or register a workers.dev subdomain here: https://dash.cloudflare.com/${accountId}/workers/onboarding`
+		);
 	} else if (
 		"cause" in err &&
 		(err.cause as { code: string; hostname: string })?.code === "ENOTFOUND"
@@ -78,7 +75,7 @@ export function handlePreviewSessionCreationError(
 	}
 	// we want to log the error, but not end the process
 	// since it could recover after the developer fixes whatever's wrong
-	else if (isAbortError(err)) {
+	else if (!isAbortError(err)) {
 		logger.error("Error while creating remote dev session:", err);
 	}
 }
@@ -241,49 +238,44 @@ export async function getWorkerAccountAndContext(props: {
  * messages, does not perform any logic other than logging errors.
  * @returns if the error was handled or not
  */
-function handleUserFriendlyError(error: ParseError, accountId?: string) {
-	switch ((error as unknown as { code: number }).code) {
-		// code 10021 is a validation error
-		case 10021: {
-			// if it is the following message, give a more user friendly
-			// error, otherwise do not handle this error in this function
-			if (
-				error.notes[0].text ===
-				"binding DB of type d1 must have a valid `id` specified [code: 10021]"
-			) {
-				const errorMessage =
-					"Error: You must use a real database in the preview_database_id configuration.";
-				const solutionMessage =
-					"You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here:";
-				const documentationLink = `https://developers.cloudflare.com/d1/configuration/local-development`;
+function handleUserFriendlyError(error: unknown, accountId?: string) {
+	if (error instanceof APIError) {
+		switch (error.code) {
+			// code 10021 is a validation error
+			case 10021: {
+				// if it is the following message, give a more user friendly
+				// error, otherwise do not handle this error in this function
+				if (
+					error.notes[0].text ===
+					"binding DB of type d1 must have a valid `id` specified [code: 10021]"
+				) {
+					logger.error(
+						`You must use a real database in the preview_database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development`
+					);
+
+					return true;
+				}
+
+				return false;
+			}
+
+			// for error 10063 (workers.dev subdomain required)
+			case 10063: {
+				const onboardingLink = accountId
+					? `https://dash.cloudflare.com/${accountId}/workers/onboarding`
+					: "https://dash.cloudflare.com/?to=/:account/workers/onboarding";
 
 				logger.error(
-					`${errorMessage}\n${solutionMessage}\n${documentationLink}`
+					`You need to register a workers.dev subdomain before running the dev command in remote mode. You can either enable local mode by pressing l, or register a workers.dev subdomain here: ${onboardingLink}`
 				);
 
 				return true;
 			}
 
-			return false;
-		}
-
-		// for error 10063 (workers.dev subdomain required)
-		case 10063: {
-			const errorMessage =
-				"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
-			const solutionMessage =
-				"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-			const onboardingLink = accountId
-				? `https://dash.cloudflare.com/${accountId}/workers/onboarding`
-				: "https://dash.cloudflare.com/?to=/:account/workers/onboarding";
-
-			logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
-
-			return true;
-		}
-
-		default: {
-			return false;
+			default: {
+				logger.error(error);
+				return true;
+			}
 		}
 	}
 }

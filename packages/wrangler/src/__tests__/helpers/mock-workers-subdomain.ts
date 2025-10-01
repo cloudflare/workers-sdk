@@ -4,7 +4,8 @@ import { createFetchResult, msw } from "./msw";
 /** Create a mock handler for the request to get the account's subdomain. */
 export function mockSubDomainRequest(
 	subdomain = "test-sub-domain",
-	registeredWorkersDev = true
+	registeredWorkersDev = true,
+	once = true
 ) {
 	if (registeredWorkersDev) {
 		msw.use(
@@ -13,7 +14,7 @@ export function mockSubDomainRequest(
 				() => {
 					return HttpResponse.json(createFetchResult({ subdomain }));
 				},
-				{ once: true }
+				{ once }
 			)
 		);
 	} else {
@@ -27,7 +28,7 @@ export function mockSubDomainRequest(
 						])
 					);
 				},
-				{ once: true }
+				{ once }
 			)
 		);
 	}
@@ -79,18 +80,21 @@ export function mockUpdateWorkerSubdomain({
 	env,
 	legacyEnv = false,
 	expectedScriptName = "test-name",
+	flakeCount = 0,
 }: {
 	enabled: boolean;
 	previews_enabled?: boolean;
 	env?: string | undefined;
 	legacyEnv?: boolean | undefined;
 	expectedScriptName?: string;
+	flakeCount?: number; // The first `flakeCount` requests will fail with a 500 error
 }) {
 	const url =
 		env && !legacyEnv
 			? `*/accounts/:accountId/workers/services/:scriptName/environments/:envName/subdomain`
 			: `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`;
-	msw.use(
+
+	const handlers = [
 		http.post(
 			url,
 			async ({ request, params }) => {
@@ -108,6 +112,23 @@ export function mockUpdateWorkerSubdomain({
 				);
 			},
 			{ once: true }
-		)
-	);
+		),
+	];
+	while (flakeCount > 0) {
+		flakeCount--;
+		handlers.unshift(
+			http.post(
+				url,
+				() =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10013, message: "An unknown error has occurred." },
+						]),
+						{ status: 500 }
+					),
+				{ once: true }
+			)
+		);
+	}
+	msw.use(...handlers);
 }

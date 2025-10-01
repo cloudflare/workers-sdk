@@ -2,8 +2,9 @@ import assert from "node:assert";
 import os from "node:os";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import { checkMacOSVersion } from "@cloudflare/cli";
+import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
 import { ApiError } from "@cloudflare/containers-shared";
+import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import chalk from "chalk";
 import Cloudflare from "cloudflare";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -63,6 +64,7 @@ import {
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
+import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "./environment-variables/misc-variables";
 import {
 	CommandLineArgsError,
@@ -147,7 +149,7 @@ import {
 } from "./pages/secret";
 import { pagesProjectUploadCommand } from "./pages/upload";
 import { pagesProjectValidateCommand } from "./pages/validate";
-import { APIError, formatMessage, ParseError } from "./parse";
+import { APIError, ParseError } from "./parse";
 import { pipelinesNamespace } from "./pipelines";
 import { pipelinesCreateCommand } from "./pipelines/cli/create";
 import { pipelinesDeleteCommand } from "./pipelines/cli/delete";
@@ -1596,6 +1598,14 @@ export async function main(argv: string[]): Promise<void> {
 		// Update logger level, before we do any logging
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
+			// Also set the CLI package log level to match
+			setLogLevel(args.logLevel as LoggerLevel);
+		}
+		const envLogLevel = getEnvironmentVariableFactory({
+			variableName: "WRANGLER_LOG",
+		})()?.toLowerCase();
+		if (envLogLevel) {
+			setLogLevel(envLogLevel as LoggerLevel);
 		}
 		// Middleware called for each sub-command, but only want to record once
 		if (recordedCommand) {
@@ -1677,7 +1687,7 @@ export async function main(argv: string[]): Promise<void> {
 				logger.error(e.cause);
 			} else {
 				assert(isAuthenticationError(e));
-				logger.log(formatMessage(e));
+				logger.error(e);
 			}
 			const envAuth = getAuthFromEnv();
 			if (envAuth !== undefined && "apiToken" in envAuth) {
@@ -1700,7 +1710,7 @@ export async function main(argv: string[]): Promise<void> {
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 			});
-			logger.log(formatMessage(e));
+			logger.error(e);
 		} else if (e instanceof JsonFriendlyFatalError) {
 			logger.log(e.message);
 		} else if (
@@ -1747,7 +1757,7 @@ export async function main(argv: string[]): Promise<void> {
 			error.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 			});
-			logger.log(formatMessage(error));
+			logger.error(error);
 		} else {
 			if (
 				// Is this a StartDevEnv error event? If so, unwrap the cause, which is usually the user-recognisable error
@@ -1770,7 +1780,10 @@ export async function main(argv: string[]): Promise<void> {
 				logger.debug(loggableException.stack);
 			}
 
-			if (!(loggableException instanceof UserError)) {
+			if (
+				!(loggableException instanceof UserError) &&
+				!(loggableException instanceof ContainersUserError)
+			) {
 				await logPossibleBugMessage();
 			}
 		}
@@ -1780,6 +1793,7 @@ export async function main(argv: string[]): Promise<void> {
 			mayReport &&
 			// ...and it's not a user error
 			!(loggableException instanceof UserError) &&
+			!(loggableException instanceof ContainersUserError) &&
 			// ...and it's not an un-reportable API error
 			!(loggableException instanceof APIError && !loggableException.reportable)
 		) {
@@ -1797,7 +1811,10 @@ export async function main(argv: string[]): Promise<void> {
 				durationMinutes: durationMs / 1000 / 60,
 				errorType:
 					errorType ?? (e instanceof Error ? e.constructor.name : undefined),
-				errorMessage: e instanceof UserError ? e.telemetryMessage : undefined,
+				errorMessage:
+					e instanceof UserError || e instanceof ContainersUserError
+						? e.telemetryMessage
+						: undefined,
 			},
 			argv
 		);

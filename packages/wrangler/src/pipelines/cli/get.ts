@@ -12,6 +12,9 @@ export const pipelinesGetCommand = createCommand({
 		owner: "Product: Pipelines",
 		status: "open-beta",
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	args: {
 		pipeline: {
 			type: "string",

@@ -15,7 +15,7 @@ export class MyWorkflow extends WorkflowEntrypoint {
   }
   export default {
 	async fetch(request, env, ctx) {
-		const workflow = await env.MY_WORKFLOW.create({id: "i'm an id"})
+		const workflow = await env.MY_WORKFLOW.create({id: "an-id"})
 
 		return new Response(JSON.stringify(await workflow.status()))
 	},

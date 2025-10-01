@@ -257,6 +257,23 @@ describe("Workflows", () => {
 		);
 	});
 
+	it("should create an instance after immediate redirect", async ({
+		expect,
+	}) => {
+		await expect(fetchJson(`http://${ip}:${port}/createWithRedirect`)).resolves
+			.toMatchInlineSnapshot(`
+			{
+			  "__LOCAL_DEV_STEP_OUTPUTS": [
+			    {
+			      "output": "First step result",
+			    },
+			  ],
+			  "output": null,
+			  "status": "running",
+			}
+		`);
+	});
+
 	it("should persist instances across lifetimes", async ({ expect }) => {
 		await fetchJson(`http://${ip}:${port}/create?workflowName=something`);
 

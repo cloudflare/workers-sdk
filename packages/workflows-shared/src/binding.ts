@@ -1,5 +1,7 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { InstanceEvent, instanceStatusName } from "./instance";
+import { WorkflowError } from "./lib/errors";
+import { isValidWorkflowInstanceId } from "./lib/validators";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
@@ -19,10 +21,14 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		id = crypto.randomUUID(),
 		params = {},
 	}: WorkflowInstanceCreateOptions = {}): Promise<WorkflowInstance> {
+		if (!isValidWorkflowInstanceId(id)) {
+			throw new WorkflowError("Workflow instance has invalid id");
+		}
+
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 
-		void stub.init(
+		const initPromise = stub.init(
 			0, // accountId: number,
 			{} as DatabaseWorkflow, // workflow: DatabaseWorkflow,
 			{} as DatabaseVersion, // version: DatabaseVersion,
@@ -33,6 +39,8 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 				instanceId: id,
 			}
 		);
+
+		this.ctx.waitUntil(initPromise);
 
 		const handle = new WorkflowHandle(id, stub);
 		return {
@@ -49,7 +57,6 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 	public async get(id: string): Promise<WorkflowInstance> {
 		const engineStubId = this.env.ENGINE.idFromName(id);
 		const engineStub = this.env.ENGINE.get(engineStubId);
-
 		const handle = new WorkflowHandle(id, engineStub);
 
 		try {

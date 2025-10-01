@@ -334,27 +334,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			nodeCompat: true,
 		},
 		{
-			name: "next:pages",
-			argv: ["--platform", "pages"],
-			timeout: LONG_TIMEOUT,
-			testCommitMessage: true,
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Create Next App",
-			},
-			// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
-			unsupportedOSs: ["win32"],
-			verifyPreview: {
-				previewArgs: ["--inspector-port=0"],
-				route: "/",
-				expectedText: "Create Next App",
-			},
-			nodeCompat: true,
-			flags: ["--yes", "--no-install", "--import-alias", "@/*"],
-		},
-		{
-			name: "next:workers",
-			argv: ["--platform", "workers"],
+			name: "next",
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
 			flags: ["--yes", "--import-alias", "@/*"],
@@ -584,6 +564,21 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				previewArgs: ["--host=127.0.0.1"],
 				route: "/",
 				expectedText: "Vite App",
+			},
+			nodeCompat: false,
+		},
+		{
+			name: "waku",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Waku",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Waku",
 			},
 			nodeCompat: false,
 		},
