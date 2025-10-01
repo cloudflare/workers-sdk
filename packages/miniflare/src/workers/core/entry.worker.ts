@@ -30,6 +30,7 @@ type Env = {
 	[CoreBindings.TRIGGER_HANDLERS]: boolean;
 	[CoreBindings.LOG_REQUESTS]: boolean;
 	[CoreBindings.STRIP_DISABLE_PRETTY_ERROR]: boolean;
+	DEV_REGISTRY_PROXY: Fetcher;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -430,6 +431,9 @@ export default <ExportedHandler<Env>>{
 						ctx
 					);
 				}
+			}
+			if (url.pathname === "/cdn-cgi/registry") {
+				return env.DEV_REGISTRY_PROXY.fetch(request);
 			}
 
 			let response = await service.fetch(request);

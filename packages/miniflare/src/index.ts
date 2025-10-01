@@ -1901,25 +1901,6 @@ export class Miniflare {
 				},
 			});
 
-			const address = this.#getSocketAddress(
-				"remote-bindings-proxy-socket",
-				0,
-				"127.0.0.1",
-				0
-			);
-
-			const service = {
-				name: "remote-bindings-proxy",
-			};
-
-			sockets.push({
-				name: "remote-bindings-proxy-socket",
-				address,
-				service,
-				http: {
-					cfBlobHeader: CoreHeaders.CF_BLOB,
-				},
-			});
 			for (const [
 				serviceName,
 				{ entrypoints, durableObjects },
@@ -1931,7 +1912,9 @@ export class Miniflare {
 							`${serviceName}:entrypoint:${entrypoint ?? "default"}`
 						)}`,
 						worker: remoteProxyClientWorker(
-							new URL("http://example.com") as RemoteProxyConnectionString,
+							new URL(
+								"http://example.com/cdn-cgi/registry"
+							) as RemoteProxyConnectionString,
 							`${serviceName}:entrypoint:${entrypoint ?? "default"}`,
 							"dev-registry-proxy"
 						),
@@ -1948,7 +1931,9 @@ export class Miniflare {
 						)}`,
 
 						worker: remoteProxyClientWorker(
-							new URL("http://example.com") as RemoteProxyConnectionString,
+							new URL(
+								"http://example.com/cdn-cgi/registry"
+							) as RemoteProxyConnectionString,
 							`${serviceName}:durable-object:${className}`,
 							"dev-registry-proxy",
 							durableObject
@@ -1960,55 +1945,24 @@ export class Miniflare {
 				}
 			}
 
-			// const externalObjects = Array.from(externalServices ?? []).flatMap(
-			// 	([scriptName, { classNames }]) =>
-			// 		Array.from(classNames).map<[string, string]>((className) => [
-			// 			scriptName,
-			// 			className,
-			// 		])
-			// );
-			// const outboundDoProxyService = createOutboundDoProxyService(
-			// 	externalObjects,
-			// 	`http://${proxyAddress}`,
-			// 	this.#devRegistry.isDurableObjectProxyEnabled()
-			// );
-
-			// assert(outboundDoProxyService.name !== undefined);
-			// services.set(outboundDoProxyService.name, outboundDoProxyService);
 			if (externalServices) {
 				await this.#devRegistry.watch(new Set(externalServices.keys()));
-				// Watch the dev registry for changes
-				// await this.#devRegistry.watch(externalServices);
 			}
+		} else {
+			services.set("remote-bindings-proxy", {
+				name: "remote-bindings-proxy",
+				worker: {
+					modules: [
+						{
+							name: "index.js",
+							esModule: REMOTE_PROXY_SERVER(),
+						},
+					],
+					compatibilityDate: "2025-01-01",
+					bindings: [],
+				},
+			});
 		}
-
-		// // Expose all internal durable object with a proxy service
-		// if (this.#devRegistry.isDurableObjectProxyEnabled()) {
-		// 	const internalObjects = allWorkerOpts.flatMap((workerOpts) => {
-		// 		const scriptName = workerOpts.core.name;
-		// 		const serviceName = getUserServiceName(scriptName);
-		// 		const classNames = durableObjectClassNames.get(serviceName);
-
-		// 		if (!classNames || !scriptName) {
-		// 			return [];
-		// 		}
-
-		// 		return Array.from(classNames.keys()).map<[string, string]>(
-		// 			(className) => [scriptName, className]
-		// 		);
-		// 	});
-
-		// 	if (internalObjects.length > 0) {
-		// 		const service = createInboundDoProxyService(internalObjects);
-		// 		assert(service.name !== undefined);
-		// 		services.set(service.name, service);
-		// 		// Set up a custom route for the internal durable object proxy service
-		// 		// This is needed for compatibility with the Wrangler Dev Registry implementation
-		// 		allWorkerRoutes.set(INBOUND_DO_PROXY_SERVICE_NAME, [
-		// 			`*/${INBOUND_DO_PROXY_SERVICE_PATH}`,
-		// 		]);
-		// 	}
-		// }
 
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
@@ -2277,21 +2231,10 @@ export class Miniflare {
 		return new URL(this.#runtimeEntryURL.toString());
 	}
 
-	async #registerWorkers(): Promise<void> {
+	async #registerWorkers(url: URL): Promise<void> {
 		if (!this.#devRegistry.isEnabled()) {
 			return;
 		}
-		const proxyPort = this.#socketPorts?.get("remote-bindings-proxy-socket");
-
-		if (!proxyPort) {
-			this.#log.error(new Error("Failed to register Workers"));
-
-			return;
-		}
-
-		const host = "127.0.0.1";
-		const accessibleHost =
-			maybeGetLocallyAccessibleHost(host) ?? getURLSafeHost(host);
 
 		const exposeOverRegistry = getExposedOverRegistry(this.#workerOpts);
 
@@ -2318,7 +2261,7 @@ export class Miniflare {
 			perWorker.set(workerName, entry);
 		}
 
-		this.#devRegistry.register(perWorker, accessibleHost, proxyPort);
+		this.#devRegistry.register(perWorker, url.hostname, Number(url.port));
 	}
 
 	get ready(): Promise<URL> {
@@ -2326,7 +2269,7 @@ export class Miniflare {
 			assert(this.#socketPorts !== undefined);
 
 			// Register all workers with the dev registry
-			await this.#registerWorkers();
+			await this.#registerWorkers(url);
 
 			return url;
 		});
@@ -2450,7 +2393,7 @@ export class Miniflare {
 				);
 
 				// Register all workers with the dev registry
-				return this.#registerWorkers();
+				return this.#registerWorkers(this.#runtimeEntryURL);
 			});
 	}
 

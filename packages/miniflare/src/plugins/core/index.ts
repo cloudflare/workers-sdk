@@ -951,6 +951,12 @@ export function getGlobalServices({
 			name: CoreBindings.STRIP_DISABLE_PRETTY_ERROR,
 			json: JSON.stringify(sharedOptions.stripDisablePrettyError),
 		},
+		{
+			name: "DEV_REGISTRY_PROXY",
+			service: {
+				name: "remote-bindings-proxy",
+			},
+		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
 	];
