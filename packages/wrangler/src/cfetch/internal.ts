@@ -158,7 +158,7 @@ export async function fetchInternal<ResponseType>(
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal,
 	apiToken?: ApiCredentials
-): Promise<ResponseType> {
+): Promise<{ response: ResponseType; status: number }> {
 	const method = init.method ?? "GET";
 	const response = await performApiFetch(
 		complianceConfig,
@@ -181,12 +181,20 @@ export async function fetchInternal<ResponseType>(
 	// HTTP 204 and HTTP 205 responses do not return a body. We need to special-case this
 	// as otherwise parseJSON will throw an error back to the user.
 	if (!jsonText && (response.status === 204 || response.status === 205)) {
-		const emptyBody = `{"result": {}, "success": true, "errors": [], "messages": []}`;
-		return parseJSON(emptyBody) as ResponseType;
+		return {
+			response: {
+				result: {},
+				success: true,
+				errors: [],
+				messages: [],
+			} as ResponseType,
+			status: response.status,
+		};
 	}
 
 	try {
-		return parseJSON(jsonText) as ResponseType;
+		const json = parseJSON(jsonText) as ResponseType;
+		return { response: json, status: response.status };
 	} catch {
 		throw new APIError({
 			text: "Received a malformed response from the API",

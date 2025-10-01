@@ -31,18 +31,13 @@ export async function fetchResult<ResponseType>(
 	abortSignal?: AbortSignal,
 	apiToken?: ApiCredentials
 ): Promise<ResponseType> {
-	const json = await fetchInternal<FetchResult<ResponseType>>(
-		complianceConfig,
-		resource,
-		init,
-		queryParams,
-		abortSignal,
-		apiToken
-	);
+	const { response: json, status } = await fetchInternal<
+		FetchResult<ResponseType>
+	>(complianceConfig, resource, init, queryParams, abortSignal, apiToken);
 	if (json.success) {
 		return json.result;
 	} else {
-		throwFetchError(resource, json);
+		throwFetchError(resource, json, status);
 	}
 }
 
@@ -54,7 +49,7 @@ export async function fetchGraphqlResult<ResponseType>(
 	init: RequestInit = {},
 	abortSignal?: AbortSignal
 ): Promise<ResponseType> {
-	const json = await fetchInternal<ResponseType>(
+	const { response: json } = await fetchInternal<ResponseType>(
 		complianceConfig,
 		"/graphql",
 		{ ...init, method: "POST" }, //Cloudflare API v4 doesn't allow GETs to /graphql
@@ -87,12 +82,9 @@ export async function fetchListResult<ResponseType>(
 			queryParams = new URLSearchParams(queryParams);
 			queryParams.set("cursor", cursor);
 		}
-		const json = await fetchInternal<FetchResult<ResponseType[]>>(
-			complianceConfig,
-			resource,
-			init,
-			queryParams
-		);
+		const { response: json, status } = await fetchInternal<
+			FetchResult<ResponseType[]>
+		>(complianceConfig, resource, init, queryParams);
 		if (json.success) {
 			results.push(...json.result);
 			if (hasCursor(json.result_info)) {
@@ -101,7 +93,7 @@ export async function fetchListResult<ResponseType>(
 				getMoreResults = false;
 			}
 		} else {
-			throwFetchError(resource, json);
+			throwFetchError(resource, json, status);
 		}
 	}
 	return results;
@@ -127,12 +119,9 @@ export async function fetchPagedListResult<ResponseType>(
 		queryParams = new URLSearchParams(queryParams);
 		queryParams.set("page", String(page));
 
-		const json = await fetchInternal<FetchResult<ResponseType[]>>(
-			complianceConfig,
-			resource,
-			init,
-			queryParams
-		);
+		const { response: json, status } = await fetchInternal<
+			FetchResult<ResponseType[]>
+		>(complianceConfig, resource, init, queryParams);
 		if (json.success) {
 			results.push(...json.result);
 			if (hasMorePages(json.result_info)) {
@@ -141,7 +130,7 @@ export async function fetchPagedListResult<ResponseType>(
 				getMoreResults = false;
 			}
 		} else {
-			throwFetchError(resource, json);
+			throwFetchError(resource, json, status);
 		}
 	}
 	return results;
@@ -171,7 +160,8 @@ export function hasMorePages(
 
 function throwFetchError(
 	resource: string,
-	response: FetchResult<unknown>
+	response: FetchResult<unknown>,
+	status: number
 ): never {
 	// This is an error from within an MSW handler
 	if (typeof vitest !== "undefined" && !("errors" in response)) {
@@ -187,6 +177,7 @@ function throwFetchError(
 			...response.errors.map((err) => ({ text: renderError(err) })),
 			...(response.messages?.map((text) => ({ text })) ?? []),
 		],
+		status,
 	});
 	// add the first error code directly to this error
 	// so consumers can use it for specific behaviour

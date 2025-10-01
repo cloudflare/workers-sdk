@@ -6081,6 +6081,27 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should deploy successfully if the /subdomain POST request is flaky", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false });
+			mockSubDomainRequest();
+			mockUpdateWorkerSubdomain({ enabled: true, flakeCount: 1 });
+
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
 		it("should deploy to the workers.dev domain if workers_dev is `true`", async () => {
 			writeWranglerConfig({
 				workers_dev: true,
