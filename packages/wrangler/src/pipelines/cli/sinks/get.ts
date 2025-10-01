@@ -12,6 +12,9 @@ export const pipelinesSinksGetCommand = createCommand({
 		owner: "Product: Pipelines",
 		status: "open-beta",
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	positionalArgs: ["sink"],
 	args: {
 		sink: {

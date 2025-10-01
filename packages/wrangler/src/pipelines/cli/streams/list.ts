@@ -9,6 +9,9 @@ export const pipelinesStreamsListCommand = createCommand({
 		owner: "Product: Pipelines",
 		status: "open-beta",
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	args: {
 		page: {
 			describe: "Page number for pagination",
