@@ -6087,7 +6087,7 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			mockGetWorkerSubdomain({ enabled: false });
 			mockSubDomainRequest();
-			mockUpdateWorkerSubdomain({ enabled: true, flakes: 1 });
+			mockUpdateWorkerSubdomain({ enabled: true, flakeCount: 1 });
 
 			await runWrangler("deploy ./index");
 
