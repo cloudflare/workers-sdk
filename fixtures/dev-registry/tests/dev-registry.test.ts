@@ -614,7 +614,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 					[["[Module Worker]"], ["some other log"]],
 				]),
 			});
-		});
+		}, waitForTimeout);
 
 		await vi.waitFor(async () => {
 			// Trigger tail handler of module-worker via worker-entrypoint
