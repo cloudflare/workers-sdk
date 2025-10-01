@@ -79,14 +79,14 @@ export function mockUpdateWorkerSubdomain({
 	env,
 	legacyEnv = false,
 	expectedScriptName = "test-name",
-	flakes = 0,
+	flakeCount = 0,
 }: {
 	enabled: boolean;
 	previews_enabled?: boolean;
 	env?: string | undefined;
 	legacyEnv?: boolean | undefined;
 	expectedScriptName?: string;
-	flakes?: number;
+	flakeCount?: number; // The first `flakeCount` requests will fail with a 500 error
 }) {
 	const url =
 		env && !legacyEnv
@@ -113,8 +113,8 @@ export function mockUpdateWorkerSubdomain({
 			{ once: true }
 		),
 	];
-	while (flakes > 0) {
-		flakes--;
+	while (flakeCount > 0) {
+		flakeCount--;
 		handlers.unshift(
 			http.post(
 				url,
