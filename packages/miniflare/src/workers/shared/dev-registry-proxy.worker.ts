@@ -81,7 +81,7 @@ export default {
 				if (isJSRPCRequest(request)) {
 					return newWorkersRpcResponse(
 						request,
-						// @ts-ignore
+						// @ts-expect-error TODO ctx.exports needs a better typing story
 						ctx.exports.NotFoundEntrypoint({
 							props: { worker: target.worker, entrypoint: target.entrypoint },
 						})
@@ -89,7 +89,7 @@ export default {
 				} else {
 					return (
 						ctx.exports
-							// @ts-ignore
+							// @ts-expect-error TODO ctx.exports needs a better typing story
 							.NotFoundEntrypoint({
 								props: { worker: target.worker, entrypoint: target.entrypoint },
 							})

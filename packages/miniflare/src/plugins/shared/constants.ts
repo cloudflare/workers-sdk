@@ -76,7 +76,7 @@ export function objectEntryWorker(
 }
 
 export function remoteProxyClientWorker(
-	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
+	remoteProxyConnectionString: RemoteProxyConnectionString,
 	binding: string,
 	outboundService?: string,
 	durableObjectSettings?: Worker_DurableObjectNamespace
@@ -90,14 +90,10 @@ export function remoteProxyClientWorker(
 			},
 		],
 		bindings: [
-			...(remoteProxyConnectionString
-				? [
-						{
-							name: "remoteProxyConnectionString",
-							text: remoteProxyConnectionString.href,
-						},
-					]
-				: []),
+			{
+				name: "remoteProxyConnectionString",
+				text: remoteProxyConnectionString.href,
+			},
 			{
 				name: "binding",
 				text: binding,
