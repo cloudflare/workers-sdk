@@ -13,9 +13,9 @@ import type {
 
 const MB = 1000 * 1000;
 const commonLimits = {
-	vcpu_per_deployment: 1,
-	memory_mib_per_deployment: 4096,
-	disk_mb_per_deployment: 4000,
+	vcpu_per_deployment: 4,
+	memory_mib_per_deployment: 12288,
+	disk_mb_per_deployment: 20000,
 };
 
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {

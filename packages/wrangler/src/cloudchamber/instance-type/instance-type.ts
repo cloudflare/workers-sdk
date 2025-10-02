@@ -54,7 +54,7 @@ const instanceTypes = {
 	},
 } as const;
 
-const instanceTypesNames = Object.keys(instanceTypes);
+const instanceTypeNames = Object.keys(instanceTypes);
 
 // prompts for instance type
 export async function promptForInstanceType(
@@ -92,7 +92,7 @@ export async function promptForInstanceType(
 		options,
 	});
 
-	if (instanceTypesNames.includes(action)) {
+	if (instanceTypeNames.includes(action)) {
 		return action as InstanceType;
 	}
 	return undefined;
@@ -121,7 +121,7 @@ export function checkInstanceType(
 		);
 	}
 
-	if (instanceTypesNames.includes(instance_type)) {
+	if (instanceTypeNames.includes(instance_type)) {
 		return instance_type as InstanceType;
 	} else {
 		throw new UserError(

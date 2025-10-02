@@ -2882,7 +2882,7 @@ const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 	if ("instance_type" in value && value.instance_type !== undefined) {
 		if (
 			typeof value.instance_type !== "string" ||
-			ALLOWED_INSTANCE_TYPES.includes(value.instance_type)
+			!ALLOWED_INSTANCE_TYPES.includes(value.instance_type)
 		) {
 			diagnostics.errors.push(
 				`"instance_type" should be one of 'lite', 'basic', 'standard-1', 'standard-2', 'standard-3', or 'standard-4', but got ${value.instance_type}`

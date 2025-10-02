@@ -2479,7 +2479,7 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Expected \\"containers.max_instances\\" to be of type number but got \\"invalid\\".
 					  - Expected \\"containers.image_vars\\" to be of type object but got \\"invalid\\".
 					  - Expected \\"containers.scheduling_policy\\" field to be one of [\\"regional\\",\\"moon\\",\\"default\\"] but got \\"invalid\\".
-					  - Expected \\"containers.instance_type\\" field to be one of [\\"dev\\",\\"basic\\",\\"standard\\"] but got \\"invalid\\"."
+					  - Expected \\"containers.instance_type\\" field to be one of [\\"lite\\",\\"basic\\",\\"standard-1\\",\\"standard-2\\",\\"standard-3\\",\\"standard-4\\",\\"dev\\",\\"standard\\"] but got \\"invalid\\"."
 				`);
 			});
 
