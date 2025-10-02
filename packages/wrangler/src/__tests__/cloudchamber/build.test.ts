@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "fs";
 import {
 	dockerBuild,
 	dockerImageInspect,
-	dockerLoginManagedRegistry,
+	dockerLoginImageRegistry,
 	getCloudflareContainerRegistry,
 	runDockerCmd,
 	runDockerCmdWithOutput,
@@ -17,7 +17,7 @@ import { mockAccountV4 as mockAccount } from "./utils";
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	const actual = await importOriginal();
 	return Object.assign({}, actual, {
-		dockerLoginManagedRegistry: vi.fn(),
+		dockerLoginImageRegistry: vi.fn(),
 		runDockerCmd: vi.fn(),
 		runDockerCmdWithOutput: vi.fn(),
 		dockerBuild: vi.fn(() => ({ abort: () => {}, ready: Promise.resolve() })),
@@ -98,7 +98,7 @@ describe("buildAndMaybePush", () => {
 			imageTag: `test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 		});
-		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
+		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 
 	it("should be able to build image and push with registry.cloudflare.com/test-app:tag", async () => {
@@ -146,7 +146,7 @@ describe("buildAndMaybePush", () => {
 			imageTag: `${getCloudflareContainerRegistry()}/test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 		});
-		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
+		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 
 	it("should be able to build image and push with registry.cloudflare.com/some-account-id/test-app:tag", async () => {
@@ -194,7 +194,7 @@ describe("buildAndMaybePush", () => {
 			imageTag: `registry.cloudflare.com/some-account-id/test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 		});
-		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
+		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 
 	it("should use a custom docker path if provided", async () => {
@@ -237,8 +237,9 @@ describe("buildAndMaybePush", () => {
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
-		expect(dockerLoginManagedRegistry).toHaveBeenCalledWith(
-			"/custom/docker/path"
+		expect(dockerLoginImageRegistry).toHaveBeenCalledWith(
+			"/custom/docker/path",
+			"registry.cloudflare.com"
 		);
 	});
 
@@ -287,7 +288,7 @@ describe("buildAndMaybePush", () => {
 			imageTag: `test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 		});
-		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
+		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 
 	it("should be able to build image and not push if it already exists in remote if config sha and digest both match", async () => {
@@ -345,7 +346,7 @@ describe("buildAndMaybePush", () => {
 			imageTag: `test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 		});
-		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
+		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 
 	it("should be able to build image and not push", async () => {
@@ -366,7 +367,7 @@ describe("buildAndMaybePush", () => {
 			dockerfile,
 		});
 		expect(dockerImageInspect).not.toHaveBeenCalledOnce();
-		expect(dockerLoginManagedRegistry).not.toHaveBeenCalled();
+		expect(dockerLoginImageRegistry).not.toHaveBeenCalled();
 	});
 
 	it("should add --network=host flag if WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST is set", async () => {
@@ -433,7 +434,7 @@ describe("buildAndMaybePush", () => {
 	it("should throw UserError when docker login fails", async () => {
 		const errorMessage = "Docker login failed";
 		vi.mocked(dockerBuild).mockRejectedValue(new Error(errorMessage));
-		vi.mocked(dockerLoginManagedRegistry).mockRejectedValue(
+		vi.mocked(dockerLoginImageRegistry).mockRejectedValue(
 			new Error(errorMessage)
 		);
 		await expect(
