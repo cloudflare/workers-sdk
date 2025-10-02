@@ -2796,7 +2796,7 @@ function validateContainerApp(
 					"instance_type",
 					containerAppOptional.instance_type,
 					"string",
-					["dev", "basic", "standard"]
+					["lite", "basic", "standard-1", "standard-2", "standard-3", "standard-4"]
 				);
 			} else if (
 				validateOptionalProperty(
@@ -2871,7 +2871,7 @@ const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 	if ("instance_type" in value && value.instance_type !== undefined) {
 		if (
 			typeof value.instance_type !== "string" ||
-			!["dev", "basic", "standard"].includes(value.instance_type)
+			!["lite", "basic", "standard-1", "standard-2", "standard-3", "standard-4"].includes(value.instance_type)
 		) {
 			diagnostics.errors.push(
 				`"instance_type" should be one of 'dev', 'basic', or 'standard', but got ${value.instance_type}`

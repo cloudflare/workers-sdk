@@ -78,7 +78,7 @@ export function modifyCommandOptionalYargs(yargs: CommonYargsArgv) {
 		})
 		.option("instance-type", {
 			requiresArg: true,
-			choices: ["dev", "basic", "standard"] as const,
+			choices: ["lite", "basic", "standard-1", "standard-2", "standard-3", "standard-4"] as const,
 			demandOption: false,
 			describe:
 				"The new instance type that the deployment will have from now on",
