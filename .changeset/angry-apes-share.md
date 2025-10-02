@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-allow WRANGLER_SEND_METRICS to override whether to report Wrangler crashes to Sentry
+Allow WRANGLER_SEND_ERROR_REPORTS env var to override whether to report Wrangler crashes to Sentry

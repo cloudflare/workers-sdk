@@ -123,7 +123,7 @@ describe("sentry", () => {
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
-		it("should not hit sentry (or even ask) after reportable error if WRANGLER_SEND_METRICS is explicitly false", async () => {
+		it("should not hit sentry (or even ask) after reportable error if WRANGLER_SEND_ERROR_REPORTS is explicitly false", async () => {
 			// Trigger an API error
 			msw.use(
 				http.get(
@@ -138,7 +138,7 @@ describe("sentry", () => {
 				})
 			);
 			await expect(
-				runWrangler("whoami", { WRANGLER_SEND_METRICS: "false" })
+				runWrangler("whoami", { WRANGLER_SEND_ERROR_REPORTS: "false" })
 			).rejects.toMatchInlineSnapshot(`[TypeError: Failed to fetch]`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Getting User settings...
@@ -454,7 +454,7 @@ describe("sentry", () => {
 			});
 		});
 
-		it("should hit sentry after reportable error (without confirmation) if WRANGLER_SEND_METRICS is explicitly true", async () => {
+		it("should hit sentry after reportable error (without confirmation) if WRANGLER_SEND_ERROR_REPORTS is explicitly true", async () => {
 			// Trigger an API error
 			msw.use(
 				http.get(
@@ -469,7 +469,7 @@ describe("sentry", () => {
 				})
 			);
 			await expect(
-				runWrangler("whoami", { WRANGLER_SEND_METRICS: "true" })
+				runWrangler("whoami", { WRANGLER_SEND_ERROR_REPORTS: "true" })
 			).rejects.toMatchInlineSnapshot(`[TypeError: Failed to fetch]`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Getting User settings...

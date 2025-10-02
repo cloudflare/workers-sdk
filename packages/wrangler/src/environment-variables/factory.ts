@@ -88,6 +88,8 @@ type VariableNames =
 	| "WRANGLER_C3_COMMAND"
 	/** Enable/disable telemetry data collection. */
 	| "WRANGLER_SEND_METRICS"
+	/** Enable/disable error reporting to Sentry. */
+	| "WRANGLER_SEND_ERROR_REPORTS"
 	/** CI branch name (internal use). */
 	| "WORKERS_CI_BRANCH"
 	/** CI tag matching configuration (internal use). */
