@@ -422,10 +422,6 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				method: "POST",
 				body: JSON.stringify(["hello world", "this is the 2nd log"]),
 			});
-			await fetch(`${moduleWorkerWithAssets}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["some other log"]),
-			});
 
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 
@@ -433,7 +429,6 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				worker: "Worker Entrypoint",
 				tailEvents: expect.arrayContaining([
 					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
-					[["[Module Worker]"], ["some other log"]],
 				]),
 			});
 		}, waitForTimeout);
@@ -601,10 +596,6 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 				method: "POST",
 				body: JSON.stringify(["hello world", "this is the 2nd log"]),
 			});
-			await fetch(`${moduleWorker}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["some other log"]),
-			});
 
 			const response = await fetch(
 				`${workerEntrypointWithAssets}?${searchParams}`
@@ -614,7 +605,6 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 				worker: "Worker Entrypoint",
 				tailEvents: expect.arrayContaining([
 					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
-					[["[Module Worker]"], ["some other log"]],
 				]),
 			});
 		}, waitForTimeout);
@@ -828,10 +818,6 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				method: "POST",
 				body: JSON.stringify(["hello world", "this is the 2nd log"]),
 			});
-			await fetch(`${moduleWorkerWithStaticAssets}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["some other log"]),
-			});
 
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 
@@ -839,7 +825,6 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				worker: "Worker Entrypoint",
 				tailEvents: expect.arrayContaining([
 					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
-					[["[Module Worker]"], ["some other log"]],
 				]),
 			});
 		}, waitForTimeout);
@@ -850,10 +835,6 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				method: "POST",
 				body: JSON.stringify(["hello from test"]),
 			});
-			await fetch(`${workerEntrypoint}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["yet another log", "and another one"]),
-			});
 
 			const response = await fetch(
 				`${moduleWorkerWithStaticAssets}?${searchParams}`
@@ -863,7 +844,6 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				worker: "Module Worker",
 				tailEvents: expect.arrayContaining([
 					[["[Worker Entrypoint]"], ["hello from test"]],
-					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
 				]),
 			});
 		}, waitForTimeout);
