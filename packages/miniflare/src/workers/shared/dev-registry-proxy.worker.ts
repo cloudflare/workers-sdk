@@ -104,7 +104,7 @@ export default {
 				const { origin } = await res.json<WorkerDefinition>();
 				const originalURL = new URL(request.url);
 				const url = new URL(originalURL.pathname + originalURL.search, origin);
-				return fetch(url, request);
+				return await fetch(url, request);
 			}
 
 			return new Response("Dev Registry target not found", { status: 404 });

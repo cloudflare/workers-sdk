@@ -129,9 +129,9 @@ export default {
 				}
 
 				if (request.headers.has("MF-Tail")) {
-					ctx.waitUntil(
-						// @ts-expect-error This is guaranteed to have a tail method
-						fetcher.tail(JSON.parse(await request.text(), tailEventsReviver))
+					// @ts-expect-error This is guaranteed to have a tail method
+					await fetcher.tail(
+						JSON.parse(await request.text(), tailEventsReviver)
 					);
 					return new Response("OK");
 				}
