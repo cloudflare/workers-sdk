@@ -1,4 +1,5 @@
 import * as vite from "vite";
+import { assertWranglerVersion } from "./assert-wrangler-version";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
@@ -28,6 +29,8 @@ const sharedContext: SharedContext = {
 	hasShownWorkerConfigWarnings: false,
 	isRestartingDevServer: false,
 };
+
+assertWranglerVersion();
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
