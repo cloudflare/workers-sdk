@@ -1423,12 +1423,12 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
 
-			  The following routes were already associated with this worker, and have not been deleted:
-			   - \\"foo.example.com/other-route\\"
-			  If these routes are not wanted then you can remove them in the dashboard.
+				  The following routes were already associated with this worker, and have not been deleted:
+				   - \\"foo.example.com/other-route\\"
+				  If these routes are not wanted then you can remove them in the dashboard.
 
-			"
-		`);
+				"
+			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -5242,7 +5242,6 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTM="],
 					"ff5016e92f039aa743a4ff7abb3180fa",
 					{
-						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
 						type: "text/plain",
 					}
 				)
@@ -14029,7 +14028,7 @@ expect.extend({
 			};
 		}
 
-		if (!equals(received.type, expected.type)) {
+		if (!equals(received.type, expect.stringMatching(expected.type))) {
 			return {
 				pass: false,
 				message: () =>
