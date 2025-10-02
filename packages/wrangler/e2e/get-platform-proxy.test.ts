@@ -230,11 +230,8 @@ describe("getPlatformProxy()", () => {
 									};
 								}
 
-								asJsonResponse(args: unknown): {
-									status: number;
-									text: () => Promise<string>;
-								} {
-									return Response.json(args);
+								asJson(args: unknown): unknown {
+									return args;
 								}
 								getCounter() {
 									return new Counter();
@@ -309,14 +306,13 @@ describe("getPlatformProxy()", () => {
 					"
 				`);
 			});
-			it("can call RPC methods returning a Response", async () => {
+			it("can call RPC methods returning JSON", async () => {
 				await expect(
 					runInNode(/* javascript */ `await (async () => {
-							const r = await env.WORKER.asJsonResponse([1, 2, 3]);
-							return JSON.stringify({status: r.status, text: await r.text()})
+							return await env.WORKER.asJson([1, 2, 3]);
 						})()`)
 				).resolves.toMatchInlineSnapshot(`
-					"{"status":200,"text":"[1,2,3]"}
+					"[ 1, 2, 3 ]
 					"
 				`);
 			});
