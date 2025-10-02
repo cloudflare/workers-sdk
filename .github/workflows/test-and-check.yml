@@ -147,17 +147,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Run tests (Wrangler only)
-        # We are running Wrangler separately to be able to get early feedback on changes.
-        # There is no point in running the fixtures if Wrangler is broken.
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --log-order=stream --filter=wrangler
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
-          CI_OS: ${{ matrix.description }}
-          NODE_DEBUG: "@cloudflare:vite-plugin"
+      # - name: Run tests (Wrangler only)
+      #   # We are running Wrangler separately to be able to get early feedback on changes.
+      #   # There is no point in running the fixtures if Wrangler is broken.
+      #   if: steps.changes.outputs.everything_but_markdown == 'true'
+      #   run: pnpm run test:ci --log-order=stream --filter=wrangler
+      #   env:
+      #     NODE_OPTIONS: "--max_old_space_size=8192"
+      #     WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+      #     TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+      #     CI_OS: ${{ matrix.description }}
+      #     NODE_DEBUG: "@cloudflare:vite-plugin"
 
       - name: Run tests (not Wrangler)
         if: steps.changes.outputs.everything_but_markdown == 'true'

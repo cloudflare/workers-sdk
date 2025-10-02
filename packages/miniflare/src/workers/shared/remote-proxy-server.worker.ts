@@ -148,6 +148,9 @@ export default {
 				);
 			}
 		} catch (e) {
+			console.log(
+				"Something unexpected went wrong in the proxy server" + (e as Error)
+			);
 			if (e instanceof BindingNotFoundError) {
 				return new Response(e.message, { status: 400 });
 			}
