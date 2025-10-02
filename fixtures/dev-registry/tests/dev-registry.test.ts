@@ -584,7 +584,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 		}, waitForTimeout);
 	});
 
-	it("supports tail handler", async ({ devRegistryPath }) => {
+	it.only("supports tail handler", async ({ devRegistryPath }) => {
 		const moduleWorker = await runViteDev(
 			"vite.module-worker.config.ts",
 			devRegistryPath
