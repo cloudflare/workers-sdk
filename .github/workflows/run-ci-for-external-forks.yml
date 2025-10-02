@@ -55,7 +55,10 @@ jobs:
           COMMIT_SHA: ${{ inputs.commit-sha }}
 
       - name: Push Branch
-        run: git push origin HEAD --force
+        run: |
+          # Rewrite last commit so GitHub considers it new and runs the CI jobs with our secrets
+          git commit --amend --no-edit
+          git push origin HEAD --force
 
       - name: "Create Draft PR"
         run: |
