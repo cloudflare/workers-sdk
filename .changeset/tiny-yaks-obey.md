@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 Enabling or disabling `workers_dev` is often an indication that
