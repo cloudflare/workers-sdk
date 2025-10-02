@@ -102,7 +102,7 @@ export default class Worker extends WorkerEntrypoint<{
 		}
 	}
 
-	tail(events) {
+	taill(events) {
 		const logs = [];
 
 		for (const event of events) {

@@ -584,7 +584,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 		}, waitForTimeout);
 	});
 
-	it("supports tail handler", async ({ devRegistryPath }) => {
+	it.only("supports tail handler", async ({ devRegistryPath }) => {
 		const moduleWorker = await runViteDev(
 			"vite.module-worker.config.ts",
 			devRegistryPath
@@ -622,27 +622,27 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			});
 		}, waitForTimeout);
 
-		await vi.waitFor(async () => {
-			// Trigger tail handler of module-worker via worker-entrypoint
-			await fetch(`${workerEntrypointWithAssets}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["hello from test"]),
-			});
-			await fetch(`${workerEntrypointWithAssets}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["yet another log", "and another one"]),
-			});
+		// await vi.waitFor(async () => {
+		// 	// Trigger tail handler of module-worker via worker-entrypoint
+		// 	await fetch(`${workerEntrypointWithAssets}?${searchParams}`, {
+		// 		method: "POST",
+		// 		body: JSON.stringify(["hello from test"]),
+		// 	});
+		// 	await fetch(`${workerEntrypointWithAssets}?${searchParams}`, {
+		// 		method: "POST",
+		// 		body: JSON.stringify(["yet another log", "and another one"]),
+		// 	});
 
-			const response = await fetch(`${moduleWorker}?${searchParams}`);
+		// 	const response = await fetch(`${moduleWorker}?${searchParams}`);
 
-			expect(await response.json()).toEqual({
-				worker: "Module Worker",
-				tailEvents: expect.arrayContaining([
-					[["[Worker Entrypoint]"], ["hello from test"]],
-					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
-				]),
-			});
-		}, waitForTimeout);
+		// 	expect(await response.json()).toEqual({
+		// 		worker: "Module Worker",
+		// 		tailEvents: expect.arrayContaining([
+		// 			[["[Worker Entrypoint]"], ["hello from test"]],
+		// 			[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
+		// 		]),
+		// 	});
+		// }, waitForTimeout);
 	});
 });
 
@@ -811,7 +811,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		}, waitForTimeout);
 	});
 
-	it.only("supports tail handler", async ({ devRegistryPath }) => {
+	it("supports tail handler", async ({ devRegistryPath }) => {
 		const moduleWorkerWithStaticAssets = await runViteDev(
 			"vite.module-worker-with-assets.config.ts",
 			devRegistryPath

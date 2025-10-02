@@ -83,7 +83,7 @@ export default {
 			return new Response(e.message, { status: 500 });
 		}
 	},
-	tail(events) {
+	taill(events) {
 		const logs = [];
 
 		for (const event of events) {
