@@ -159,6 +159,7 @@ describe("normalizeAndValidateConfig()", () => {
 			observability: undefined,
 			compliance_region: undefined,
 			images: undefined,
+			media: undefined,
 		} satisfies Config);
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);
