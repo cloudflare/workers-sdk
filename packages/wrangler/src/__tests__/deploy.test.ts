@@ -1419,6 +1419,12 @@ describe("deploy", () => {
 			});
 			await runWrangler("deploy ./index");
 
+			expect(std.info).toMatchInlineSnapshot(`
+				"The current authentication token does not have 'All Zones' permissions.
+				Falling back to using the zone-based API endpoint to update each route individually.
+				Note that there is no access to routes associated with zones that the API token does not have permission for.
+				Existing routes for this Worker in such zones will not be deleted."
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
