@@ -1,5 +1,19 @@
 # miniflare
 
+## 4.20251001.0
+
+### Patch Changes
+
+- [#10834](https://github.com/cloudflare/workers-sdk/pull/10834) [`c8d5282`](https://github.com/cloudflare/workers-sdk/commit/c8d5282781adf527ad4acfe74001e93affd7af34) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20250927.0 | 1.20251001.0 |
+
+- [#10673](https://github.com/cloudflare/workers-sdk/pull/10673) [`bffd2a9`](https://github.com/cloudflare/workers-sdk/commit/bffd2a9c93455f0d23d5a70d587bb851d1031e59) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Send a 404 response for unimplemented `/cdn-cgi/handler/` routes.
+
 ## 4.20250927.0
 
 ### Patch Changes

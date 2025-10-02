@@ -1,5 +1,11 @@
 # @cloudflare/containers-shared
 
+## 0.2.12
+
+### Patch Changes
+
+- [#10634](https://github.com/cloudflare/workers-sdk/pull/10634) [`62656bd`](https://github.com/cloudflare/workers-sdk/commit/62656bd8863e650e498552d5dff5f281f5506c4e) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: error if the container image uri has an account id that doesn't match the current account
+
 ## 0.2.11
 
 ### Patch Changes
