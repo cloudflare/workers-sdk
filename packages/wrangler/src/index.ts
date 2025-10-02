@@ -1644,7 +1644,9 @@ export async function main(argv: string[]): Promise<void> {
 
 	let cliHandlerThrew = false;
 	try {
+		console.log('before command');
 		await wranglerWithMiddleware.parse();
+		console.log('after command');
 
 		const durationMs = Date.now() - startTime;
 
