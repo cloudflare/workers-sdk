@@ -2679,6 +2679,44 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"containers.rollout_step_percentage\\" cannot have more steps (4) than \\"max_instances\\" (2)"
 				`);
 			});
+
+			it("should warn when dev instance type is used", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								instance_type: "dev",
+							},
+						],
+						durable_objects: {
+							bindings: [
+								{
+									name: "TEST_DO",
+									class_name: "TestClass",
+								},
+							],
+						},
+						migrations: [
+							{
+								tag: "v1",
+								new_sqlite_classes: ["TestClass"],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The \\"dev\\" instance_type has been renamed to \\"lite\\" and will be removed in a subsequent version. Please update your configuration to use \\"lite\\" instead."
+				`);
+			});
 		});
 
 		describe("[kv_namespaces]", () => {

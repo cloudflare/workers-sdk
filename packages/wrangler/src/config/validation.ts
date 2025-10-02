@@ -2809,6 +2809,16 @@ function validateContainerApp(
 					"string",
 					ALLOWED_INSTANCE_TYPES
 				);
+				if (containerAppOptional.instance_type === "dev") {
+					diagnostics.warnings.push(
+						`The "dev" instance_type has been renamed to "lite" and will be removed in a subsequent version. Please update your configuration to use "lite" instead.`
+					);
+				}
+				if (containerAppOptional.instance_type === "standard") {
+					diagnostics.warnings.push(
+						`The "standard" instance_type has been renamed to "standard-1" and will be removed in a subsequent version. Please update your configuration to use "standard-1" instead.`
+					);
+				}
 			} else if (
 				validateOptionalProperty(
 					diagnostics,
