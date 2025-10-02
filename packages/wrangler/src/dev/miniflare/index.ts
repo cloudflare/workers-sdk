@@ -1029,12 +1029,7 @@ export async function buildMiniflareOptions(
 				...sitesOptions,
 				...assetOptions,
 				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
-				unsafeDirectSockets: entrypointNames.map((name) => ({
-					host: "127.0.0.1",
-					port: 0,
-					entrypoint: name,
-					proxy: true,
-				})),
+				unsafeExposedEntrypoints: entrypointNames,
 				containerEngine: config.containerEngine,
 			},
 			...externalWorkers,

@@ -898,7 +898,7 @@ export function _initialiseInstanceRegistry() {
  * Given a list of Worker options, figure out what entrypoints & durable objects should be exposed over the registry
  * This includes:
  *  - Each Worker's default entrypoint (optionally with assets in front)
- *  - Each configured entrypoint per Worker (configured via the `unsafeDirectSockets` MF option—TODO: these no longer need to actually expose sockets)
+ *  - Each configured entrypoint per Worker (configured via the `unsafeExposedEntrypoints` MF option)
  *  - For each Worker, the Durable Objects it implements
  * These are returned as `Worker_Binding` objects so that the registry proxy can bind to everything that should be exposed
  */
@@ -907,20 +907,14 @@ function getExposedOverRegistry(allWorkerOpts: PluginWorkerOptions[]) {
 
 	for (const workerOpts of allWorkerOpts) {
 		// Expose all entrypoints from this Worker
-		for (const directSocket of workerOpts.core.unsafeDirectSockets ?? []) {
-			exposeOverRegistry.set(
-				`${workerOpts.core.name}:${directSocket.entrypoint ?? "default"}`,
-				{
-					name: `${workerOpts.core.name}:entrypoint:${directSocket.entrypoint ?? "default"}`,
-					service: {
-						name: getUserServiceName(workerOpts.core.name),
-						entrypoint:
-							directSocket.entrypoint === "default"
-								? undefined
-								: directSocket.entrypoint,
-					},
-				}
-			);
+		for (const entrypoint of workerOpts.core.unsafeExposedEntrypoints ?? []) {
+			exposeOverRegistry.set(`${workerOpts.core.name}:${entrypoint}`, {
+				name: `${workerOpts.core.name}:entrypoint:${entrypoint}`,
+				service: {
+					name: getUserServiceName(workerOpts.core.name),
+					entrypoint,
+				},
+			});
 		}
 		// Make sure we expose the right default service. Workers with Assets have an assets service that comes first
 		const defaultService = workerOpts.assets.assets

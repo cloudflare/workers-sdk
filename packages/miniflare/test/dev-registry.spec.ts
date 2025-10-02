@@ -1,6 +1,6 @@
 import test from "ava";
 import { Miniflare, MiniflareOptions, WorkerRegistry } from "miniflare";
-import { useTmp, waitUntil } from "./test-shared";
+import { useTmp, waitFor, waitUntil } from "./test-shared";
 
 test("DevRegistry: fetch to service worker", async (t) => {
 	const unsafeDevRegistryPath = await useTmp(t);
@@ -11,12 +11,6 @@ test("DevRegistry: fetch to service worker", async (t) => {
 		script: `addEventListener("fetch", (event) => {
 			event.respondWith(new Response("Hello from service worker!"));
 		})`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
-			},
-		],
 	});
 
 	await remote.ready;
@@ -108,12 +102,6 @@ test("DevRegistry: fetch to module worker", async (t) => {
 				}
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
-			},
-		],
 	});
 	t.teardown(() => remote.dispose());
 
@@ -201,12 +189,6 @@ test("DevRegistry: WebSocket upgrade to module worker", async (t) => {
 				}
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
-			},
-		],
 	});
 	t.teardown(() => remote.dispose());
 
@@ -264,12 +246,6 @@ test("DevRegistry: RPC to default entrypoint", async (t) => {
 				ping() { return "pong"; }
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
-			},
-		],
 	});
 
 	await remote.ready;
@@ -337,12 +313,7 @@ test("DevRegistry: RPC to custom entrypoint", async (t) => {
 				ping() { return "pong"; }
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: "TestEntrypoint",
-				proxy: true,
-			},
-		],
+		unsafeExposedEntrypoints: ["TestEntrypoint"],
 	});
 
 	await remote.ready;
@@ -411,12 +382,6 @@ test("DevRegistry: fetch to module worker with node bindings", async (t) => {
 				}
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
-			},
-		],
 	});
 
 	await remote.ready;
@@ -485,12 +450,6 @@ test("DevRegistry: RPC to default entrypoint with node bindings", async (t) => {
 				ping() { return "pong"; }
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
-			},
-		],
 	});
 
 	await remote.ready;
@@ -659,35 +618,22 @@ test("DevRegistry: tail to default entrypoint", async (t) => {
 		unsafeDevRegistryPath,
 		compatibilityFlags: ["experimental"],
 		modules: true,
+		kvNamespaces: ["KV"],
+		kvPersist: true,
 		script: `
-			let resolve, reject;
-			const promise = new Promise((res, rej) => {
-				resolve = res;
-				reject = rej;
-			});
 			export default {
-				async fetch() {
+				async fetch(req, env) {
 					try {
-						const event = await Promise.race([
-							promise,
-							new Promise((_, cancel) => setTimeout(cancel, 1000))
-						]);
-						return Response.json(event[0].logs[0].message);
+						return new Response(await env.KV.get("tail"));
 					} catch {
 						return new Response("No tail event received", { status: 500 });
 					}
 				},
-				tail(e) {
-					resolve(e);
+				tail(e, env, ctx) {
+					ctx.waitUntil(env.KV.put("tail", e[0].logs[0].message[0]))
 				}
 			};
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
-			},
-		],
 	});
 	t.teardown(() => remote.dispose());
 
@@ -716,14 +662,15 @@ test("DevRegistry: tail to default entrypoint", async (t) => {
 	});
 	t.teardown(() => local.dispose());
 
-	const res = await local.dispatchFetch("http://example.com");
-	const result = await res.text();
-	t.is(result, "Hello from local-worker!");
+	await waitFor(async () => {
+		const res = await local.dispatchFetch("http://example.com");
+		const result = await res.text();
+		t.is(result, "Hello from local-worker!");
 
-	const res2 = await local.dispatchFetch("http://example.com/remote-worker");
-	const result2 = await res2.json();
-
-	t.deepEqual(result2, ["log event"]);
+		const res2 = await local.dispatchFetch("http://example.com/remote-worker");
+		const result2 = await res2.text();
+		t.deepEqual(result2, "log event");
+	}, 5_000);
 });
 
 test("DevRegistry: tail to unknown worker", async (t) => {
@@ -799,12 +746,6 @@ test("DevRegistry: miniflare with different registry path", async (t) => {
 				ping() { return "pong"; }
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
-			},
-		],
 	};
 
 	const local = new Miniflare({
@@ -1049,12 +990,6 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 				}
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
-			},
-		],
 	});
 	t.teardown(() => unrelated.dispose());
 
@@ -1076,12 +1011,6 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 				ping() { return "pong"; }
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
-			},
-		],
 	});
 	t.teardown(async () => {
 		try {

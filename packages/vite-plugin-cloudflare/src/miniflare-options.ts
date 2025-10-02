@@ -442,19 +442,6 @@ export async function getDevMiniflareOptions(config: {
 									...workerOptions,
 									name: workerOptions.name ?? workerConfig.name,
 									unsafeInspectorProxy: inspectorPort !== false,
-									unsafeDirectSockets:
-										environmentName ===
-										resolvedPluginConfig.entryWorkerEnvironmentName
-											? [
-													{
-														// This exposes the default entrypoint of the asset proxy worker
-														// on the dev registry with the name of the entry worker
-														serviceName: VITE_PROXY_WORKER_NAME,
-														entrypoint: undefined,
-														proxy: true,
-													},
-												]
-											: [],
 									unsafeExposedName:
 										environmentName ===
 										resolvedPluginConfig.entryWorkerEnvironmentName
@@ -779,10 +766,6 @@ export async function getPreviewMiniflareOptions(config: {
 						...workerOptions,
 						name: workerOptions.name ?? workerConfig.name,
 						unsafeInspectorProxy: inspectorPort !== false,
-						unsafeDirectSockets:
-							// This exposes the default entrypoint of the entry worker on the dev registry
-							// Assuming that the first worker config to be the entry worker.
-							i === 0 ? [{ entrypoint: undefined, proxy: true }] : [],
 						...(miniflareWorkerOptions.main
 							? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
 							: { modules: true, script: "" }),
