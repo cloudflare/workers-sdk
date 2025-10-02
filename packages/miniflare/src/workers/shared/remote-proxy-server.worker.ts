@@ -143,7 +143,11 @@ export default {
 			if (e instanceof BindingNotFoundError) {
 				return new Response(e.message, { status: 400 });
 			}
-			return new Response((e as Error).message, { status: 500 });
+			return new Response(
+				"Something unexpected went wrong in the proxy server" +
+					(e as Error).message,
+				{ status: 500 }
+			);
 		}
 	},
 } satisfies ExportedHandler<Env>;

@@ -72,37 +72,47 @@ export class NotFoundEntrypoint extends WorkerEntrypoint<
 
 export default {
 	async fetch(request, env, ctx: ExecutionContext) {
-		const target = extractServiceFetchProxyTarget(request);
-		if (target) {
-			const res = await env.REGISTRY_PATH.fetch(
-				`http://placeholder/${target.worker}`
-			);
-			if (res.status !== 200) {
-				if (isJSRPCRequest(request)) {
-					return newWorkersRpcResponse(
-						request,
-						// @ts-expect-error TODO ctx.exports needs a better typing story
-						ctx.exports.NotFoundEntrypoint({
-							props: { worker: target.worker, entrypoint: target.entrypoint },
-						})
-					);
-				} else {
-					return (
-						ctx.exports
+		try {
+			const target = extractServiceFetchProxyTarget(request);
+			if (target) {
+				const res = await env.REGISTRY_PATH.fetch(
+					`http://placeholder/${target.worker}`
+				);
+				if (res.status !== 200) {
+					if (isJSRPCRequest(request)) {
+						return newWorkersRpcResponse(
+							request,
 							// @ts-expect-error TODO ctx.exports needs a better typing story
-							.NotFoundEntrypoint({
+							ctx.exports.NotFoundEntrypoint({
 								props: { worker: target.worker, entrypoint: target.entrypoint },
 							})
-							.fetch(request)
-					);
+						);
+					} else {
+						return (
+							ctx.exports
+								// @ts-expect-error TODO ctx.exports needs a better typing story
+								.NotFoundEntrypoint({
+									props: {
+										worker: target.worker,
+										entrypoint: target.entrypoint,
+									},
+								})
+								.fetch(request)
+						);
+					}
 				}
+				const { origin } = await res.json<WorkerDefinition>();
+				const originalURL = new URL(request.url);
+				const url = new URL(originalURL.pathname + originalURL.search, origin);
+				return fetch(url, request);
 			}
-			const { origin } = await res.json<WorkerDefinition>();
-			const originalURL = new URL(request.url);
-			const url = new URL(originalURL.pathname + originalURL.search, origin);
-			return fetch(url, request);
-		}
 
-		return new Response("Dev Registry target not found", { status: 404 });
+			return new Response("Dev Registry target not found", { status: 404 });
+		} catch (e) {
+			return new Response(
+				"Something unexpected went wrong in the dev registry proxy: " + e,
+				{ status: 500 }
+			);
+		}
 	},
 } satisfies ExportedHandler<{ REGISTRY_PATH: Fetcher }>;

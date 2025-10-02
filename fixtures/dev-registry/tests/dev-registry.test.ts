@@ -29,7 +29,10 @@ const it = test.extend<{
 	async devRegistryPath({}, use) {
 		const tmpPath = await fs.realpath(await fs.mkdtemp(tmpPathBase));
 		await use(tmpPath);
-		await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
+		try {
+			// Ignore EBUSY errors on Windows
+			await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
+		} catch {}
 	},
 });
 
