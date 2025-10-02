@@ -1,0 +1,6 @@
+{
+	"name": "cloudflare-vite-e2e-invalid-wrangler-version",
+	"main": "./src/index.ts",
+	"compatibility_date": "2024-12-30",
+	"compatibility_flags": ["nodejs_compat"],
+}
