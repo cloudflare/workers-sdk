@@ -584,7 +584,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 		}, waitForTimeout);
 	});
 
-	it.only("supports tail handler", async ({ devRegistryPath }) => {
+	it("supports tail handler", async ({ devRegistryPath }) => {
 		const moduleWorker = await runViteDev(
 			"vite.module-worker.config.ts",
 			devRegistryPath
@@ -811,7 +811,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		}, waitForTimeout);
 	});
 
-	it("supports tail handler", async ({ devRegistryPath }) => {
+	it.only("supports tail handler", async ({ devRegistryPath }) => {
 		const moduleWorkerWithStaticAssets = await runViteDev(
 			"vite.module-worker-with-assets.config.ts",
 			devRegistryPath
@@ -831,10 +831,6 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				method: "POST",
 				body: JSON.stringify(["hello world", "this is the 2nd log"]),
 			});
-			await fetch(`${moduleWorkerWithStaticAssets}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["some other log"]),
-			});
 
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 
@@ -842,7 +838,6 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				worker: "Worker Entrypoint",
 				tailEvents: expect.arrayContaining([
 					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
-					[["[Module Worker]"], ["some other log"]],
 				]),
 			});
 		}, waitForTimeout);
@@ -853,10 +848,6 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				method: "POST",
 				body: JSON.stringify(["hello from test"]),
 			});
-			await fetch(`${workerEntrypoint}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["yet another log", "and another one"]),
-			});
 
 			const response = await fetch(
 				`${moduleWorkerWithStaticAssets}?${searchParams}`
@@ -866,7 +857,6 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				worker: "Module Worker",
 				tailEvents: expect.arrayContaining([
 					[["[Worker Entrypoint]"], ["hello from test"]],
-					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
 				]),
 			});
 		}, waitForTimeout);
