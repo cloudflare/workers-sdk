@@ -94,7 +94,7 @@ describe("ensureContainerLimits", () => {
 					} as ContainerNormalizedConfig,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Exceeded account limits: Your container configuration uses 4000 MB of disk which exceeds the account limit of 2000 MB.]`
+				`[Error: Exceeded account limits: Your container configuration uses 8000 MB of disk which exceeds the account limit of 2000 MB.]`
 			);
 		});
 
@@ -129,7 +129,7 @@ describe("ensureContainerLimits", () => {
 					} as ContainerNormalizedConfig,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Exceeded account limits: Your container configuration uses 5 vCPU which exceeds the account limit of 1 vCPU.]`
+				`[Error: Exceeded account limits: Your container configuration uses 5 vCPU which exceeds the account limit of 4 vCPU.]`
 			);
 		});
 
@@ -163,11 +163,11 @@ describe("ensureContainerLimits", () => {
 					containerConfig: {
 						vcpu: 1,
 						memory_mib: 4096,
-						disk_bytes: 6000 * MB,
+						disk_bytes: 60000 * MB,
 					} as ContainerNormalizedConfig,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Exceeded account limits: Your container configuration uses 6000 MB of disk which exceeds the account limit of 4000 MB.]`
+				`[Error: Exceeded account limits: Your container configuration uses 60000 MB of disk which exceeds the account limit of 20000 MB.]`
 			);
 		});
 

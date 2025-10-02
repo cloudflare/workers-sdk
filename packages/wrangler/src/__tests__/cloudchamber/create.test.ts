@@ -189,7 +189,8 @@ describe("cloudchamber create", () => {
 		await expect(
 			runWrangler("cloudchamber create ")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: "instance_type" field value is expected to be one of 'lite', 'basic', 'standard-1', 'standard-2', 'standard-3', 'standard-4', but got "invalid"]`
+			`[Error: Processing wrangler.toml configuration:
+			  - "instance_type" should be one of 'lite', 'basic', 'standard-1', 'standard-2', 'standard-3', or 'standard-4', but got invalid]`
 		);
 	});
 
