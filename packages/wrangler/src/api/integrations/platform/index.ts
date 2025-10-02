@@ -133,9 +133,6 @@ export async function getPlatformProxy<
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
-	const experimentalRemoteBindings =
-		options.experimental?.remoteBindings ?? true;
-
 	const env = options.environment;
 
 	const config = readConfig({
@@ -144,7 +141,7 @@ export async function getPlatformProxy<
 	});
 
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
-	if (experimentalRemoteBindings && config.configPath) {
+	if (config.configPath) {
 		remoteProxySession = (
 			(await maybeStartOrUpdateRemoteProxySession({
 				path: config.configPath,
