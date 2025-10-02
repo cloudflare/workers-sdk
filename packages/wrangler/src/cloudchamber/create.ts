@@ -98,7 +98,14 @@ export function createCommandOptionalYargs(yargs: CommonYargsArgv) {
 		})
 		.option("instance-type", {
 			requiresArg: true,
-			choices: ["dev", "basic", "standard"] as const,
+			choices: [
+				"lite",
+				"basic",
+				"standard-1",
+				"standard-2",
+				"standard-3",
+				"standard-4",
+			] as const,
 			demandOption: false,
 			describe: "Instance type to allocate to this deployment",
 		})

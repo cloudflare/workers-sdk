@@ -13,9 +13,9 @@ import type {
 
 const MB = 1000 * 1000;
 const commonLimits = {
-	vcpu_per_deployment: 1,
-	memory_mib_per_deployment: 4096,
-	disk_mb_per_deployment: 4000,
+	vcpu_per_deployment: 4,
+	memory_mib_per_deployment: 12288,
+	disk_mb_per_deployment: 20000,
 };
 
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
@@ -94,7 +94,7 @@ describe("ensureContainerLimits", () => {
 					} as ContainerNormalizedConfig,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Exceeded account limits: Your container configuration uses 4000 MB of disk which exceeds the account limit of 2000 MB.]`
+				`[Error: Exceeded account limits: Your container configuration uses 8000 MB of disk which exceeds the account limit of 2000 MB.]`
 			);
 		});
 
@@ -129,7 +129,7 @@ describe("ensureContainerLimits", () => {
 					} as ContainerNormalizedConfig,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Exceeded account limits: Your container configuration uses 5 vCPU which exceeds the account limit of 1 vCPU.]`
+				`[Error: Exceeded account limits: Your container configuration uses 5 vCPU which exceeds the account limit of 4 vCPU.]`
 			);
 		});
 
@@ -143,12 +143,12 @@ describe("ensureContainerLimits", () => {
 					} as CompleteAccountCustomer,
 					containerConfig: {
 						vcpu: 1,
-						memory_mib: 8192,
+						memory_mib: 999999,
 						disk_bytes: 4000 * MB,
 					} as ContainerNormalizedConfig,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Exceeded account limits: Your container configuration uses 8192 MiB of memory which exceeds the account limit of 4096 MiB.]`
+				`[Error: Exceeded account limits: Your container configuration uses 999999 MiB of memory which exceeds the account limit of 12288 MiB.]`
 			);
 		});
 
@@ -163,11 +163,11 @@ describe("ensureContainerLimits", () => {
 					containerConfig: {
 						vcpu: 1,
 						memory_mib: 4096,
-						disk_bytes: 6000 * MB,
+						disk_bytes: 60000 * MB,
 					} as ContainerNormalizedConfig,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Exceeded account limits: Your container configuration uses 6000 MB of disk which exceeds the account limit of 4000 MB.]`
+				`[Error: Exceeded account limits: Your container configuration uses 60000 MB of disk which exceeds the account limit of 20000 MB.]`
 			);
 		});
 

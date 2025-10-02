@@ -131,7 +131,7 @@ describe("cloudchamber apply", () => {
 			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/something:hello\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -199,7 +199,7 @@ describe("cloudchamber apply", () => {
 			│
 			│   ...
 			│
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│     [containers.constraints]
 			│ -   tier = 3
 			│ +   tier = 2
@@ -289,7 +289,7 @@ describe("cloudchamber apply", () => {
 			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/other-app:boop\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│
 			│     [containers.constraints]
 			│     tier = 1
@@ -377,7 +377,7 @@ describe("cloudchamber apply", () => {
 			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/other-app:boop\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│
 			│     [containers.constraints]
 			│     tier = 1
@@ -461,7 +461,7 @@ describe("cloudchamber apply", () => {
 			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/other-app:boop\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│
 			│     [containers.constraints]
 			│     tier = 1
@@ -998,7 +998,7 @@ describe("cloudchamber apply", () => {
 			├ EDIT my-container-app
 			│
 			│     image = \\"docker.io/beep:boop\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│ + [containers.configuration.observability.logs]
 			│ + enabled = true
 			│     [containers.constraints]
@@ -1065,7 +1065,7 @@ describe("cloudchamber apply", () => {
 			├ EDIT my-container-app
 			│
 			│     image = \\"docker.io/beep:boop\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│ + [containers.configuration.observability.logs]
 			│ + enabled = true
 			│     [containers.constraints]
@@ -1136,7 +1136,7 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
@@ -1208,7 +1208,7 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
@@ -1279,7 +1279,7 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
@@ -1353,7 +1353,7 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
@@ -1555,7 +1555,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					instances: 3,
 					class_name: "DurableObjectClass",
-					instance_type: "dev",
+					instance_type: "lite",
 					image: "docker.io/beep:boop",
 					constraints: {
 						tier: 2,
@@ -1583,7 +1583,7 @@ describe("cloudchamber apply", () => {
 			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/beep:boop\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -1709,7 +1709,7 @@ describe("cloudchamber apply", () => {
 			│   scheduling_policy = \\"regional\\"
 			│     [containers.configuration]
 			│     image = \\"docker.io/beep:boop\\"
-			│ -   instance_type = \\"dev\\"
+			│ -   instance_type = \\"lite\\"
 			│ +   instance_type = \\"standard\\"
 			│     [containers.constraints]
 			│ -   tier = 3
@@ -1870,7 +1870,7 @@ describe("cloudchamber apply", () => {
 			│     [containers.configuration]
 			│     image = \\"docker.io/beep:boop\\"
 			│ -   instance_type = \\"basic\\"
-			│ +   instance_type = \\"dev\\"
+			│ +   instance_type = \\"lite\\"
 			│     [containers.constraints]
 			│ -   tier = 3
 			│ +   tier = 2
@@ -1884,7 +1884,7 @@ describe("cloudchamber apply", () => {
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		const app = await applicationReqBodyPromise;
-		expect(app.configuration?.instance_type).toEqual("dev");
+		expect(app.configuration?.instance_type).toEqual("lite");
 	});
 
 	test("expands image names from managed registry when creating an application", async () => {
@@ -1934,7 +1934,7 @@ describe("cloudchamber apply", () => {
 			│
 			│     [containers.configuration]
 			│     image = \\"${registry}/some-account-id/hello:1.0\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -2000,7 +2000,7 @@ describe("cloudchamber apply", () => {
 			│
 			│     [containers.configuration]
 			│     image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
-			│ -   instance_type = \\"dev\\"
+			│ -   instance_type = \\"lite\\"
 			│ +   instance_type = \\"standard\\"
 			│     [containers.constraints]
 			│ -   tier = 3
@@ -2029,7 +2029,7 @@ describe("cloudchamber apply", () => {
 					instances: 3,
 					class_name: "DurableObjectClass",
 					image: `${registry}/hello:1.0`,
-					instance_type: "dev",
+					instance_type: "lite",
 					constraints: {
 						tier: 1,
 					},
@@ -2093,6 +2093,6 @@ describe("cloudchamber apply", () => {
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		const app = await applicationReqBodyPromise;
-		expect(app.configuration?.instance_type).toEqual("dev");
+		expect(app.configuration?.instance_type).toEqual("lite");
 	});
 });
