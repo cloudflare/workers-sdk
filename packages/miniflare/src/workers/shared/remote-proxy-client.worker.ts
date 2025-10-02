@@ -14,7 +14,7 @@ export default class Client extends WorkerEntrypoint<Env> {
 		)(request);
 	}
 
-	async tail(events: TraceItem[]) {
+	tail(events: TraceItem[]) {
 		// Temporary workaround: the tail events is not serializable over capnproto yet
 		// But they are effectively JSON, so we are serializing them to JSON and parsing it back to make it transferable.
 		// FIXME when https://github.com/cloudflare/workerd/pull/4595 lands
@@ -26,8 +26,10 @@ export default class Client extends WorkerEntrypoint<Env> {
 			new Headers({ "MF-Tail": "true" })
 		);
 
-		await fetcher(
-			new Request("http://example.com", { method: "POST", body: serialized })
+		this.ctx.waitUntil(
+			fetcher(
+				new Request("http://example.com", { method: "POST", body: serialized })
+			)
 		);
 	}
 
