@@ -40,8 +40,15 @@ const strictPeerDeps = {
 /** Seed a test project from a fixture. */
 export function seed(
 	fixture: string,
-	pm: "pnpm" | "yarn" | "npm",
-	replacements: Record<string, string> = {}
+	{
+		pm,
+		replacements = {},
+		useStrictPeerDeps = true,
+	}: {
+		pm: "pnpm" | "yarn" | "npm";
+		replacements?: Record<string, string>;
+		useStrictPeerDeps?: boolean;
+	}
 ) {
 	const root = inject("root");
 	const projectPath = path.resolve(root, fixture, pm);
@@ -56,9 +63,13 @@ export function seed(
 		debuglog("Fixing up replacements in seeded files");
 		await fixupReplacements(projectPath, replacements);
 		debuglog("Updated vite-plugin version in package.json");
-		runCommand(`${pm} install ${strictPeerDeps[pm]}`, projectPath, {
-			attempts: 2,
-		});
+		runCommand(
+			`${pm} install ${useStrictPeerDeps ? strictPeerDeps[pm] : ""}`,
+			projectPath,
+			{
+				attempts: 2,
+			}
+		);
 		debuglog("Installed node modules");
 	}, 200_000);
 
