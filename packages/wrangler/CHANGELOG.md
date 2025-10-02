@@ -1,5 +1,53 @@
 # wrangler
 
+## 4.41.0
+
+### Minor Changes
+
+- [#10507](https://github.com/cloudflare/workers-sdk/pull/10507) [`21a0bef`](https://github.com/cloudflare/workers-sdk/commit/21a0befcbe7d28cc0568ad9c21cfba243078e5e2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add strict mode for the `wrangler deploy` command
+
+  Add a new flag: `--strict` that makes the `wrangler deploy` command be more strict and not deploy workers when the deployment could be potentially problematic. This "strict mode" currently only affects non-interactive sessions where conflicts with the remote settings for the worker (for example when the worker has been re-deployed via the dashboard) will cause the deployment to fail instead of automatically overriding the remote settings.
+
+- [#10710](https://github.com/cloudflare/workers-sdk/pull/10710) [`7f2386e`](https://github.com/cloudflare/workers-sdk/commit/7f2386e4d48a81d18a3d756c6e17fdcb22d996bb) Thanks [@penalosa](https://github.com/penalosa)! - Add prompt to resource creation flow allowing for newly created resources to be remote.
+
+### Patch Changes
+
+- [#10822](https://github.com/cloudflare/workers-sdk/pull/10822) [`4c06766`](https://github.com/cloudflare/workers-sdk/commit/4c06766be5211a77a7dc4d06a7d2a813161b75eb) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: skip banner when using `--json` flag in `wrangler pages deployment` commands
+
+- [#10838](https://github.com/cloudflare/workers-sdk/pull/10838) [`d3aee31`](https://github.com/cloudflare/workers-sdk/commit/d3aee31fa2130f6268bcc5bd4ed70a22db741c18) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: skip banner when using `--json` flag in `wrangler queues subscription` commands
+
+- [#10829](https://github.com/cloudflare/workers-sdk/pull/10829) [`59e8ef0`](https://github.com/cloudflare/workers-sdk/commit/59e8ef069422d0629d937efb4d7cf3d010061676) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: skip banner when using `--json` flag in `wrangler pipelines` commands
+
+- [#10764](https://github.com/cloudflare/workers-sdk/pull/10764) [`79a6b7d`](https://github.com/cloudflare/workers-sdk/commit/79a6b7dd811fea5a413b084fcd281915a418a85a) Thanks [@emily-shen](https://github.com/emily-shen)! - containers: default `max_instances` to 20 instead of 1.
+
+- [#10844](https://github.com/cloudflare/workers-sdk/pull/10844) [`7a4d0da`](https://github.com/cloudflare/workers-sdk/commit/7a4d0da31a01a81f7e0534f80c9d632cb5f93d60) Thanks [@mikenomitch](https://github.com/mikenomitch)! - Adds new Container instance types, and rename `dev` to `lite` and `standard` to `standard-1`. The new instance_types are now:
+
+  | Instance Type                    | vCPU | Memory  | Disk  |
+  | -------------------------------- | ---- | ------- | ----- |
+  | lite (previously dev)            | 1/16 | 256 MiB | 2 GB  |
+  | basic                            | 1/4  | 1 GiB   | 4 GB  |
+  | standard-1 (previously standard) | 1/2  | 4 GiB   | 8 GB  |
+  | standard-2                       | 1    | 6 GiB   | 12 GB |
+  | standard-3                       | 2    | 8 GiB   | 16 GB |
+  | standard-4                       | 4    | 12 GiB  | 20 GB |
+
+- [#10634](https://github.com/cloudflare/workers-sdk/pull/10634) [`62656bd`](https://github.com/cloudflare/workers-sdk/commit/62656bd8863e650e498552d5dff5f281f5506c4e) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: error if the container image uri has an account id that doesn't match the current account
+
+- [#10761](https://github.com/cloudflare/workers-sdk/pull/10761) [`886e577`](https://github.com/cloudflare/workers-sdk/commit/886e577f5722ddffeba015d2213228d20430066f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - switch zone route warning to an info message
+
+- [#10734](https://github.com/cloudflare/workers-sdk/pull/10734) [`8d7f32e`](https://github.com/cloudflare/workers-sdk/commit/8d7f32ebd3a46724c7266a6a216cf78614e090e5) Thanks [@penalosa](https://github.com/penalosa)! - Improve formatting of logged errors in some cases
+
+- [#10832](https://github.com/cloudflare/workers-sdk/pull/10832) [`f9d37db`](https://github.com/cloudflare/workers-sdk/commit/f9d37dbf43e5382ea86416a053517ea61028a942) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - retry subdomain requests to be more resilient to flakes
+
+- [#10770](https://github.com/cloudflare/workers-sdk/pull/10770) [`835d6f7`](https://github.com/cloudflare/workers-sdk/commit/835d6f7bf7f6191074cdfe19bb8d6446db52852d) Thanks [@danielrs](https://github.com/danielrs)! - Enabling or disabling `workers_dev` is often an indication that
+  the user is also trying to enable or disable `preview_urls`. Warn the
+  user when these enter mixed state.
+
+- [#10764](https://github.com/cloudflare/workers-sdk/pull/10764) [`79a6b7d`](https://github.com/cloudflare/workers-sdk/commit/79a6b7dd811fea5a413b084fcd281915a418a85a) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: respect the log level set by wrangler when logging using @cloudflare/cli
+
+- Updated dependencies [[`c8d5282`](https://github.com/cloudflare/workers-sdk/commit/c8d5282781adf527ad4acfe74001e93affd7af34), [`bffd2a9`](https://github.com/cloudflare/workers-sdk/commit/bffd2a9c93455f0d23d5a70d587bb851d1031e59)]:
+  - miniflare@4.20251001.0
+
 ## 4.40.3
 
 ### Patch Changes

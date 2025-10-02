@@ -119,7 +119,7 @@ describe("cloudchamber create", () => {
 			      --label          Deployment labels  [array]
 			      --all-ssh-keys   To add all SSH keys configured on your account to be added to this deployment, set this option to true  [boolean]
 			      --ssh-key-id     ID of the SSH key to add to the deployment  [array]
-			      --instance-type  Instance type to allocate to this deployment  [choices: \\"dev\\", \\"basic\\", \\"standard\\"]
+			      --instance-type  Instance type to allocate to this deployment  [choices: \\"lite\\", \\"basic\\", \\"standard-1\\", \\"standard-2\\", \\"standard-3\\", \\"standard-4\\"]
 			      --vcpu           Number of vCPUs to allocate to this deployment.  [number]
 			      --memory         Amount of memory (GiB, MiB...) to allocate to this deployment. Ex: 4GiB.  [string]
 			      --ipv4           Include an IPv4 in the deployment  [boolean]"
@@ -189,8 +189,8 @@ describe("cloudchamber create", () => {
 		await expect(
 			runWrangler("cloudchamber create ")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			` [Error: Processing wrangler.toml configuration:
-  - "instance_type" should be one of 'dev', 'basic', or 'standard', but got invalid]`
+			`[Error: Processing wrangler.toml configuration:
+  - "instance_type" should be one of 'lite', 'basic', 'standard-1', 'standard-2', 'standard-3', or 'standard-4', but got invalid]`
 		);
 	});
 
@@ -204,7 +204,7 @@ describe("cloudchamber create", () => {
 					image: "hello:world",
 					location: "sfo06",
 					vcpu: 2,
-					instance_type: "dev",
+					instance_type: "lite",
 				},
 			}),
 
@@ -242,7 +242,7 @@ describe("cloudchamber create", () => {
 				async ({ request }) => {
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					const r = (await request.json()) as Record<string, any>;
-					expect(r.instance_type).toEqual("dev");
+					expect(r.instance_type).toEqual("lite");
 					return HttpResponse.json({});
 				},
 				{ once: true }
@@ -250,7 +250,7 @@ describe("cloudchamber create", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler(
-			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --instance-type dev --ipv4 true"
+			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --instance-type lite --ipv4 true"
 		);
 		expect(std.out).toMatchInlineSnapshot(`"{}"`);
 	});
@@ -284,7 +284,7 @@ describe("cloudchamber create", () => {
 		setWranglerConfig({
 			image: "hello:world",
 			ipv4: true,
-			instance_type: "dev",
+			instance_type: "lite",
 			location: "sfo06",
 		});
 		// if values are not read by wrangler, this mock won't work
@@ -296,7 +296,7 @@ describe("cloudchamber create", () => {
 				async ({ request }) => {
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					const r = (await request.json()) as Record<string, any>;
-					expect(r.instance_type).toEqual("dev");
+					expect(r.instance_type).toEqual("lite");
 					return HttpResponse.json({});
 				},
 				{ once: true }

@@ -1,5 +1,11 @@
 # @cloudflare/cli
 
+## 1.1.3
+
+### Patch Changes
+
+- [#10764](https://github.com/cloudflare/workers-sdk/pull/10764) [`79a6b7d`](https://github.com/cloudflare/workers-sdk/commit/79a6b7dd811fea5a413b084fcd281915a418a85a) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: respect the log level set by wrangler when logging using @cloudflare/cli
+
 ## 1.1.2
 
 ### Patch Changes

@@ -4,6 +4,10 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+	generateContainerBuildId,
+	resolveDockerHost,
+} from "@cloudflare/containers-shared";
+import {
 	getDefaultDevRegistryPath,
 	kCurrentWorker,
 	kUnsafeEphemeralUniqueKey,
@@ -26,6 +30,7 @@ import {
 	ROUTER_WORKER_NAME,
 	VITE_PROXY_WORKER_NAME,
 } from "./constants";
+import { getContainerOptions, getDockerPath } from "./containers";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
@@ -242,13 +247,14 @@ export async function getDevMiniflareOptions(config: {
 	viteDevServer: vite.ViteDevServer;
 	inspectorPort: number | false;
 	containerBuildId?: string;
-}): Promise<MiniflareOptions> {
-	const {
-		resolvedPluginConfig,
-		viteDevServer,
-		inspectorPort,
-		containerBuildId,
-	} = config;
+}): Promise<{
+	config: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
+	allContainerOptions: Map<
+		string,
+		NonNullable<ReturnType<typeof getContainerOptions>>[number]
+	>;
+}> {
+	const { resolvedPluginConfig, viteDevServer, inspectorPort } = config;
 	const resolvedViteConfig = viteDevServer.config;
 	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
 
@@ -384,6 +390,11 @@ export async function getDevMiniflareOptions(config: {
 		},
 	];
 
+	let allContainerOptions = new Map<
+		string,
+		NonNullable<ReturnType<typeof getContainerOptions>>[number]
+	>();
+
 	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
 			? await Promise.all(
@@ -414,6 +425,26 @@ export async function getDevMiniflareOptions(config: {
 									workerConfig.configPath,
 									remoteProxySessionData
 								);
+							}
+
+							let containerBuildId: string | undefined;
+							if (
+								workerConfig.containers?.length &&
+								workerConfig.dev.enable_containers
+							) {
+								const dockerPath = getDockerPath();
+								workerConfig.dev.container_engine =
+									resolveDockerHost(dockerPath);
+								containerBuildId = generateContainerBuildId();
+
+								const options = await getContainerOptions({
+									containersConfig: workerConfig.containers,
+									containerBuildId,
+									configPath: workerConfig.configPath,
+								});
+								for (const option of options ?? []) {
+									allContainerOptions.set(option.image_tag, option);
+								}
 							}
 
 							const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
@@ -530,153 +561,157 @@ export async function getDevMiniflareOptions(config: {
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
-		log: logger,
-		logRequests: false,
-		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
-		unsafeInspectorProxy: inspectorPort !== false,
-		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
-		unsafeTriggerHandlers: true,
-		handleRuntimeStdio(stdout, stderr) {
-			const decoder = new TextDecoder();
-			stdout.forEach((data) => logger.info(decoder.decode(data)));
-			stderr.forEach((error) =>
-				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
-			);
+		config: {
+			log: logger,
+			logRequests: false,
+			inspectorPort: inspectorPort === false ? undefined : inspectorPort,
+			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
+			unsafeTriggerHandlers: true,
+			handleRuntimeStdio(stdout, stderr) {
+				const decoder = new TextDecoder();
+				stdout.forEach((data) => logger.info(decoder.decode(data)));
+				stderr.forEach((error) =>
+					logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
+				);
+			},
+			defaultPersistRoot: getPersistenceRoot(
+				resolvedViteConfig.root,
+				resolvedPluginConfig.persistState
+			),
+			workers: [
+				...assetWorkers,
+				...externalWorkers,
+				...userWorkers.map((workerOptions) => {
+					const wrappers = [
+						`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from '${RUNNER_PATH}';`,
+						`export { __VITE_RUNNER_OBJECT__ } from '${RUNNER_PATH}';`,
+						`export default createWorkerEntrypointWrapper('default');`,
+					];
+
+					const workerEntrypointNames = workerToWorkerEntrypointNamesMap.get(
+						workerOptions.name
+					);
+					assert(
+						workerEntrypointNames,
+						`WorkerEntrypoint names not found for worker ${workerOptions.name}`
+					);
+
+					for (const entrypointName of [...workerEntrypointNames].sort()) {
+						wrappers.push(
+							`export const ${entrypointName} = createWorkerEntrypointWrapper('${entrypointName}');`
+						);
+					}
+
+					const durableObjectClassNames =
+						workerToDurableObjectClassNamesMap.get(workerOptions.name);
+					assert(
+						durableObjectClassNames,
+						`DurableObject class names not found for worker ${workerOptions.name}`
+					);
+
+					for (const className of [...durableObjectClassNames].sort()) {
+						wrappers.push(
+							`export const ${className} = createDurableObjectWrapper('${className}');`
+						);
+					}
+
+					const workflowEntrypointClassNames =
+						workerToWorkflowEntrypointClassNamesMap.get(workerOptions.name);
+					assert(
+						workflowEntrypointClassNames,
+						`WorkflowEntrypoint class names not found for worker: ${workerOptions.name}`
+					);
+
+					for (const className of [...workflowEntrypointClassNames].sort()) {
+						wrappers.push(
+							`export const ${className} = createWorkflowEntrypointWrapper('${className}');`
+						);
+					}
+
+					logUnknownTails(
+						workerOptions.tails,
+						userWorkers,
+						viteDevServer.config.logger.warn
+					);
+
+					return {
+						...workerOptions,
+						durableObjects: {
+							...workerOptions.durableObjects,
+							__VITE_RUNNER_OBJECT__: {
+								className: "__VITE_RUNNER_OBJECT__",
+								unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
+								unsafePreventEviction: true,
+							},
+						},
+						modules: [
+							{
+								type: "ESModule",
+								path: path.join(miniflareModulesRoot, WRAPPER_PATH),
+								contents: wrappers.join("\n"),
+							},
+							{
+								type: "ESModule",
+								path: path.join(miniflareModulesRoot, RUNNER_PATH),
+								contents: fs.readFileSync(
+									fileURLToPath(new URL(RUNNER_PATH, import.meta.url))
+								),
+							},
+						],
+						unsafeUseModuleFallbackService: true,
+					} satisfies WorkerOptions;
+				}),
+			],
+			async unsafeModuleFallbackService(request) {
+				const url = new URL(request.url);
+				const rawSpecifier = url.searchParams.get("rawSpecifier");
+				assert(
+					rawSpecifier,
+					`Unexpected error: no specifier in request to module fallback service.`
+				);
+
+				const match = additionalModuleRE.exec(rawSpecifier);
+				assert(
+					match,
+					`Unexpected error: no match for module: ${rawSpecifier}.`
+				);
+				const [full, moduleType, modulePath] = match;
+				assert(
+					moduleType,
+					`Unexpected error: module type not found in reference: ${full}.`
+				);
+				assert(
+					modulePath,
+					`Unexpected error: module path not found in reference: ${full}.`
+				);
+
+				let contents: Buffer;
+
+				try {
+					contents = await fsp.readFile(modulePath);
+				} catch (error) {
+					throw new Error(
+						`Import "${modulePath}" not found. Does the file exist?`
+					);
+				}
+
+				switch (moduleType) {
+					case "CompiledWasm": {
+						return MiniflareResponse.json({ wasm: Array.from(contents) });
+					}
+					case "Data": {
+						return MiniflareResponse.json({ data: Array.from(contents) });
+					}
+					case "Text": {
+						return MiniflareResponse.json({ text: contents.toString() });
+					}
+					default: {
+						return MiniflareResponse.error();
+					}
+				}
+			},
 		},
-		defaultPersistRoot: getPersistenceRoot(
-			resolvedViteConfig.root,
-			resolvedPluginConfig.persistState
-		),
-		workers: [
-			...assetWorkers,
-			...externalWorkers,
-			...userWorkers.map((workerOptions) => {
-				const wrappers = [
-					`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from '${RUNNER_PATH}';`,
-					`export { __VITE_RUNNER_OBJECT__ } from '${RUNNER_PATH}';`,
-					`export default createWorkerEntrypointWrapper('default');`,
-				];
-
-				const workerEntrypointNames = workerToWorkerEntrypointNamesMap.get(
-					workerOptions.name
-				);
-				assert(
-					workerEntrypointNames,
-					`WorkerEntrypoint names not found for worker ${workerOptions.name}`
-				);
-
-				for (const entrypointName of [...workerEntrypointNames].sort()) {
-					wrappers.push(
-						`export const ${entrypointName} = createWorkerEntrypointWrapper('${entrypointName}');`
-					);
-				}
-
-				const durableObjectClassNames = workerToDurableObjectClassNamesMap.get(
-					workerOptions.name
-				);
-				assert(
-					durableObjectClassNames,
-					`DurableObject class names not found for worker ${workerOptions.name}`
-				);
-
-				for (const className of [...durableObjectClassNames].sort()) {
-					wrappers.push(
-						`export const ${className} = createDurableObjectWrapper('${className}');`
-					);
-				}
-
-				const workflowEntrypointClassNames =
-					workerToWorkflowEntrypointClassNamesMap.get(workerOptions.name);
-				assert(
-					workflowEntrypointClassNames,
-					`WorkflowEntrypoint class names not found for worker: ${workerOptions.name}`
-				);
-
-				for (const className of [...workflowEntrypointClassNames].sort()) {
-					wrappers.push(
-						`export const ${className} = createWorkflowEntrypointWrapper('${className}');`
-					);
-				}
-
-				logUnknownTails(
-					workerOptions.tails,
-					userWorkers,
-					viteDevServer.config.logger.warn
-				);
-
-				return {
-					...workerOptions,
-					durableObjects: {
-						...workerOptions.durableObjects,
-						__VITE_RUNNER_OBJECT__: {
-							className: "__VITE_RUNNER_OBJECT__",
-							unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
-							unsafePreventEviction: true,
-						},
-					},
-					modules: [
-						{
-							type: "ESModule",
-							path: path.join(miniflareModulesRoot, WRAPPER_PATH),
-							contents: wrappers.join("\n"),
-						},
-						{
-							type: "ESModule",
-							path: path.join(miniflareModulesRoot, RUNNER_PATH),
-							contents: fs.readFileSync(
-								fileURLToPath(new URL(RUNNER_PATH, import.meta.url))
-							),
-						},
-					],
-					unsafeUseModuleFallbackService: true,
-				} satisfies WorkerOptions;
-			}),
-		],
-		async unsafeModuleFallbackService(request) {
-			const url = new URL(request.url);
-			const rawSpecifier = url.searchParams.get("rawSpecifier");
-			assert(
-				rawSpecifier,
-				`Unexpected error: no specifier in request to module fallback service.`
-			);
-
-			const match = additionalModuleRE.exec(rawSpecifier);
-			assert(match, `Unexpected error: no match for module: ${rawSpecifier}.`);
-			const [full, moduleType, modulePath] = match;
-			assert(
-				moduleType,
-				`Unexpected error: module type not found in reference: ${full}.`
-			);
-			assert(
-				modulePath,
-				`Unexpected error: module path not found in reference: ${full}.`
-			);
-
-			let contents: Buffer;
-
-			try {
-				contents = await fsp.readFile(modulePath);
-			} catch (error) {
-				throw new Error(
-					`Import "${modulePath}" not found. Does the file exist?`
-				);
-			}
-
-			switch (moduleType) {
-				case "CompiledWasm": {
-					return MiniflareResponse.json({ wasm: Array.from(contents) });
-				}
-				case "Data": {
-					return MiniflareResponse.json({ data: Array.from(contents) });
-				}
-				case "Text": {
-					return MiniflareResponse.json({ text: contents.toString() });
-				}
-				default: {
-					return MiniflareResponse.error();
-				}
-			}
-		},
+		allContainerOptions,
 	};
 }
 
@@ -709,15 +744,21 @@ export async function getPreviewMiniflareOptions(config: {
 	resolvedPluginConfig: PreviewResolvedConfig;
 	vitePreviewServer: vite.PreviewServer;
 	inspectorPort: number | false;
-	containerBuildId?: string;
-}): Promise<MiniflareOptions> {
-	const {
-		resolvedPluginConfig,
-		vitePreviewServer,
-		inspectorPort,
-		containerBuildId,
-	} = config;
+}): Promise<{
+	config: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
+	allContainerOptions: Map<
+		string,
+		NonNullable<ReturnType<typeof getContainerOptions>>[number]
+	>;
+}> {
+	const { resolvedPluginConfig, vitePreviewServer, inspectorPort } = config;
 	const resolvedViteConfig = vitePreviewServer.config;
+
+	let allContainerOptions = new Map<
+		string,
+		NonNullable<ReturnType<typeof getContainerOptions>>[number]
+	>();
+
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
 			resolvedPluginConfig.workers.map(async (workerConfig, i) => {
@@ -744,6 +785,25 @@ export async function getPreviewMiniflareOptions(config: {
 						workerConfig.configPath,
 						remoteProxySessionData
 					);
+				}
+
+				let containerBuildId: string | undefined;
+				if (
+					workerConfig.containers?.length &&
+					workerConfig.dev.enable_containers
+				) {
+					const dockerPath = getDockerPath();
+					workerConfig.dev.container_engine = resolveDockerHost(dockerPath);
+					containerBuildId = generateContainerBuildId();
+
+					const options = await getContainerOptions({
+						containersConfig: workerConfig.containers,
+						containerBuildId,
+						configPath: workerConfig.configPath,
+					});
+					for (const option of options ?? []) {
+						allContainerOptions.set(option.image_tag, option);
+					}
 				}
 
 				const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
@@ -791,23 +851,25 @@ export async function getPreviewMiniflareOptions(config: {
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
-		log: logger,
-		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
-		unsafeInspectorProxy: inspectorPort !== false,
-		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
-		unsafeTriggerHandlers: true,
-		handleRuntimeStdio(stdout, stderr) {
-			const decoder = new TextDecoder();
-			stdout.forEach((data) => logger.info(decoder.decode(data)));
-			stderr.forEach((error) =>
-				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
-			);
+		config: {
+			log: logger,
+			inspectorPort: inspectorPort === false ? undefined : inspectorPort,
+			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
+			unsafeTriggerHandlers: true,
+			handleRuntimeStdio(stdout, stderr) {
+				const decoder = new TextDecoder();
+				stdout.forEach((data) => logger.info(decoder.decode(data)));
+				stderr.forEach((error) =>
+					logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
+				);
+			},
+			defaultPersistRoot: getPersistenceRoot(
+				resolvedViteConfig.root,
+				resolvedPluginConfig.persistState
+			),
+			workers,
 		},
-		defaultPersistRoot: getPersistenceRoot(
-			resolvedViteConfig.root,
-			resolvedPluginConfig.persistState
-		),
-		workers,
+		allContainerOptions,
 	};
 }
 

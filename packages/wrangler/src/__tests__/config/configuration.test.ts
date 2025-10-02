@@ -2479,7 +2479,7 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Expected \\"containers.max_instances\\" to be of type number but got \\"invalid\\".
 					  - Expected \\"containers.image_vars\\" to be of type object but got \\"invalid\\".
 					  - Expected \\"containers.scheduling_policy\\" field to be one of [\\"regional\\",\\"moon\\",\\"default\\"] but got \\"invalid\\".
-					  - Expected \\"containers.instance_type\\" field to be one of [\\"dev\\",\\"basic\\",\\"standard\\"] but got \\"invalid\\"."
+					  - Expected \\"containers.instance_type\\" field to be one of [\\"lite\\",\\"basic\\",\\"standard-1\\",\\"standard-2\\",\\"standard-3\\",\\"standard-4\\",\\"dev\\",\\"standard\\"] but got \\"invalid\\"."
 				`);
 			});
 
@@ -2677,6 +2677,44 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - \\"containers.rollout_step_percentage\\" cannot have more steps (4) than \\"max_instances\\" (2)"
+				`);
+			});
+
+			it("should warn when dev instance type is used", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								instance_type: "dev",
+							},
+						],
+						durable_objects: {
+							bindings: [
+								{
+									name: "TEST_DO",
+									class_name: "TestClass",
+								},
+							],
+						},
+						migrations: [
+							{
+								tag: "v1",
+								new_sqlite_classes: ["TestClass"],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The \\"dev\\" instance_type has been renamed to \\"lite\\" and will be removed in a subsequent version. Please update your configuration to use \\"lite\\" instead."
 				`);
 			});
 		});

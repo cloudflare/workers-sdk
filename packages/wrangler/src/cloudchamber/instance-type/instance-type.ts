@@ -11,7 +11,12 @@ import type {
 } from "@cloudflare/containers-shared";
 
 const instanceTypes = {
-	// dev is the default instance type when REQUIRE_INSTANCE_TYPE is set
+	// lite is the default instance type when REQUIRE_INSTANCE_TYPE is set
+	lite: {
+		vcpu: 0.0625,
+		memory_mib: 256,
+		disk_mb: 2000,
+	},
 	dev: {
 		vcpu: 0.0625,
 		memory_mib: 256,
@@ -25,18 +30,55 @@ const instanceTypes = {
 	standard: {
 		vcpu: 0.5,
 		memory_mib: 4096,
-		disk_mb: 4000,
+		disk_mb: 8000,
+	},
+	"standard-1": {
+		vcpu: 0.5,
+		memory_mib: 4096,
+		disk_mb: 8000,
+	},
+	"standard-2": {
+		vcpu: 1,
+		memory_mib: 6144,
+		disk_mb: 12000,
+	},
+	"standard-3": {
+		vcpu: 2,
+		memory_mib: 8192,
+		disk_mb: 16000,
+	},
+	"standard-4": {
+		vcpu: 4,
+		memory_mib: 12_288,
+		disk_mb: 20000,
 	},
 } as const;
+
+const instanceTypeNames = Object.keys(instanceTypes);
 
 // prompts for instance type
 export async function promptForInstanceType(
 	allowSkipping: boolean
 ): Promise<InstanceType | undefined> {
 	let options = [
-		{ label: "dev: 1/16 vCPU, 256 MiB memory, 2 GB disk", value: "dev" },
+		{ label: "lite: 1/16 vCPU, 256 MiB memory, 2 GB disk", value: "lite" },
 		{ label: "basic: 1/4 vCPU, 1 GiB memory, 4 GB disk", value: "basic" },
-		{ label: "standard: 1/2 vCPU, 4 GiB memory, 4 GB disk", value: "standard" },
+		{
+			label: "standard-1: 1/2 vCPU, 4 GiB memory, 8 GB disk",
+			value: "standard-1",
+		},
+		{
+			label: "standard-2: 1/2 vCPU, 4 GiB memory, 12 GB disk",
+			value: "standard-2",
+		},
+		{
+			label: "standard-3: 1/2 vCPU, 4 GiB memory, 16 GB disk",
+			value: "standard-3",
+		},
+		{
+			label: "standard-4: 4 vCPU, 4 GiB memory, 20 GB disk",
+			value: "standard-4",
+		},
 	];
 	if (allowSkipping) {
 		options = [{ label: "Do not set", value: "skip" }].concat(options);
@@ -50,17 +92,13 @@ export async function promptForInstanceType(
 		options,
 	});
 
-	switch (action) {
-		case "dev":
-		case "basic":
-		case "standard":
-			return action as InstanceType;
-		default:
-			return undefined;
+	if (instanceTypeNames.includes(action)) {
+		return action as InstanceType;
 	}
+	return undefined;
 }
 
-// Checks that instance type is one of 'dev', 'basic', or 'standard' and that it is not being set alongside memory or vcpu.
+// Checks that instance type is one of allowed names and that it is not being set alongside memory or vcpu.
 // Returns the instance type to use if correctly set.
 export function checkInstanceType(
 	args: {
@@ -83,15 +121,12 @@ export function checkInstanceType(
 		);
 	}
 
-	switch (instance_type) {
-		case "dev":
-		case "basic":
-		case "standard":
-			return instance_type as InstanceType;
-		default:
-			throw new UserError(
-				`"instance_type" field value is expected to be one of "dev", "basic", or "standard", but got "${instance_type}"`
-			);
+	if (instanceTypeNames.includes(instance_type)) {
+		return instance_type as InstanceType;
+	} else {
+		throw new UserError(
+			`"instance_type" field value is expected to be one of 'lite', 'basic', 'standard-1', 'standard-2', 'standard-3', 'standard-4', but got "${instance_type}"`
+		);
 	}
 }
 

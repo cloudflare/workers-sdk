@@ -66,6 +66,17 @@ export type NormalizeAndValidateConfigArgs = {
 
 const ENGLISH = new Intl.ListFormat("en-US");
 
+const ALLOWED_INSTANCE_TYPES = [
+	"lite",
+	"basic",
+	"standard-1",
+	"standard-2",
+	"standard-3",
+	"standard-4",
+	"dev", // legacy
+	"standard", // legacy
+];
+
 export function isPagesConfig(rawConfig: RawConfig): boolean {
 	return rawConfig.pages_build_output_dir !== undefined;
 }
@@ -2785,7 +2796,7 @@ function validateContainerApp(
 			// representing a predefined instance type or (2) an object that optionally defines vcpu,
 			// memory, and disk.
 			//
-			// If an instance type is not set, a 'dev' instance type will be used. If a custom instance
+			// If an instance type is not set, a 'lite' instance type will be used. If a custom instance
 			// type doesn't set a value, that value will default to the corresponding value in a 'dev'
 			// instance type
 			if (typeof containerAppOptional.instance_type === "string") {
@@ -2796,8 +2807,18 @@ function validateContainerApp(
 					"instance_type",
 					containerAppOptional.instance_type,
 					"string",
-					["dev", "basic", "standard"]
+					ALLOWED_INSTANCE_TYPES
 				);
+				if (containerAppOptional.instance_type === "dev") {
+					diagnostics.warnings.push(
+						`The "dev" instance_type has been renamed to "lite" and will be removed in a subsequent version. Please update your configuration to use "lite" instead.`
+					);
+				}
+				if (containerAppOptional.instance_type === "standard") {
+					diagnostics.warnings.push(
+						`The "standard" instance_type has been renamed to "standard-1" and will be removed in a subsequent version. Please update your configuration to use "standard-1" instead.`
+					);
+				}
 			} else if (
 				validateOptionalProperty(
 					diagnostics,
@@ -2871,10 +2892,10 @@ const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 	if ("instance_type" in value && value.instance_type !== undefined) {
 		if (
 			typeof value.instance_type !== "string" ||
-			!["dev", "basic", "standard"].includes(value.instance_type)
+			!ALLOWED_INSTANCE_TYPES.includes(value.instance_type)
 		) {
 			diagnostics.errors.push(
-				`"instance_type" should be one of 'dev', 'basic', or 'standard', but got ${value.instance_type}`
+				`"instance_type" should be one of 'lite', 'basic', 'standard-1', 'standard-2', 'standard-3', or 'standard-4', but got ${value.instance_type}`
 			);
 		}
 

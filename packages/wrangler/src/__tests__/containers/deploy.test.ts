@@ -143,7 +143,7 @@ describe("wrangler deploy with containers", () => {
 			│
 			│     [containers.configuration]
 			│     image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│
 			│     [containers.constraints]
 			│     tier = 1
@@ -213,7 +213,7 @@ describe("wrangler deploy with containers", () => {
 			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/hello:world\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│
 			│     [containers.constraints]
 			│     tier = 1
@@ -613,7 +613,7 @@ describe("wrangler deploy with containers", () => {
 			│     [containers.configuration]
 			│ -   image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
 			│ +   image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│     [containers.constraints]
 			│
 			│
@@ -754,7 +754,7 @@ describe("wrangler deploy with containers", () => {
 			│     [containers.configuration]
 			│ -   image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
 			│ +   image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│     [containers.constraints]
 			│
 			│
@@ -777,7 +777,7 @@ describe("wrangler deploy with containers", () => {
 			│
 			│     [containers.configuration]
 			│     image = \\"docker.io/hello:world\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│
 			│     [containers.constraints]
 			│     tier = 1
@@ -1090,7 +1090,7 @@ describe("wrangler deploy with containers", () => {
 				├ EDIT my-container
 				│
 				│     image = \\"docker.io/hello:world\\"
-				│     instance_type = \\"dev\\"
+				│     instance_type = \\"lite\\"
 				│ + [containers.configuration.observability.logs]
 				│ + enabled = true
 				│     [containers.constraints]
@@ -1133,7 +1133,7 @@ describe("wrangler deploy with containers", () => {
 				├ EDIT my-container
 				│
 				│     image = \\"docker.io/hello:world\\"
-				│     instance_type = \\"dev\\"
+				│     instance_type = \\"lite\\"
 				│ + [containers.configuration.observability.logs]
 				│ + enabled = true
 				│     [containers.constraints]
@@ -1188,7 +1188,7 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     instance_type = \\"dev\\"
+				│     instance_type = \\"lite\\"
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
@@ -1244,7 +1244,7 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     instance_type = \\"dev\\"
+				│     instance_type = \\"lite\\"
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
@@ -1296,7 +1296,7 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     instance_type = \\"dev\\"
+				│     instance_type = \\"lite\\"
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
@@ -1353,7 +1353,7 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     instance_type = \\"dev\\"
+				│     instance_type = \\"lite\\"
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
@@ -1464,7 +1464,7 @@ describe("wrangler deploy with containers", () => {
 					max_instances: 10,
 					class_name: "ExampleDurableObject",
 					image: `${registry}/hello:1.0`,
-					instance_type: "dev",
+					instance_type: "lite",
 					constraints: {
 						tier: 2,
 					},
@@ -1479,7 +1479,7 @@ describe("wrangler deploy with containers", () => {
 			max_instances: 10,
 			configuration: {
 				image: `${registry}/some-account-id/hello:1.0`,
-				instance_type: InstanceType.DEV,
+				instance_type: InstanceType.LITE,
 			},
 		});
 
@@ -1501,7 +1501,7 @@ describe("wrangler deploy with containers", () => {
 			│
 			│     [containers.configuration]
 			│     image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
-			│     instance_type = \\"dev\\"
+			│     instance_type = \\"lite\\"
 			│
 			│     [containers.constraints]
 			│     tier = 2
@@ -1555,7 +1555,7 @@ describe("wrangler deploy with containers", () => {
 				│
 				│     [containers.configuration]
 				│     image = \\"docker.io/hello:world\\"
-				│     instance_type = \\"dev\\"
+				│     instance_type = \\"lite\\"
 				│
 				│     [containers.constraints]
 				│     tier = 1

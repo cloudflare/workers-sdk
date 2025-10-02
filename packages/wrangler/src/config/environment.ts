@@ -34,7 +34,15 @@ export type Route =
 export type CloudchamberConfig = {
 	image?: string;
 	location?: string;
-	instance_type?: "dev" | "basic" | "standard";
+	instance_type?:
+		| "dev"
+		| "basic"
+		| "standard"
+		| "lite"
+		| "standard-1"
+		| "standard-2"
+		| "standard-3"
+		| "standard-4";
 	vcpu?: number;
 	memory?: string;
 	ipv4?: boolean;
@@ -130,9 +138,14 @@ export type ContainerApp = {
 	/**
 	 * The instance type to be used for the container.
 	 * Select from one of the following named instance types:
-	 *  - dev: 1/16 vCPU, 256 MiB memory, and 2 GB disk
+	 *  - lite: 1/16 vCPU, 256 MiB memory, and 2 GB disk
 	 *  - basic: 1/4 vCPU, 1 GiB memory, and 4 GB disk
-	 *  - standard: 1/2 vCPU, 4 GiB memory, and 4 GB disk
+	 *  - standard-1: 1/2 vCPU, 4 GiB memory, and 8 GB disk
+	 *  - standard-2: 1 vCPU, 6 GiB memory, and 12 GB disk
+	 *  - standard-3: 2 vCPU, 8 GiB memory, and 16 GB disk
+	 *  - standard-4: 4 vCPU, 12 GiB memory, and 20 GB disk
+	 *  - dev: 1/16 vCPU, 256 MiB memory, and 2 GB disk (deprecated, use "lite" instead)
+	 *  - standard: 1 vCPU, 4 GiB memory, and 4 GB disk (deprecated, use "standard-1" instead)
 	 *
 	 * Customers on an enterprise plan have the additional option to set custom limits.
 	 *
@@ -143,6 +156,11 @@ export type ContainerApp = {
 		| "dev"
 		| "basic"
 		| "standard"
+		| "lite"
+		| "standard-1"
+		| "standard-2"
+		| "standard-3"
+		| "standard-4"
 		| {
 				/** @defaults to 0.0625 (1/16 vCPU) */
 				vcpu?: number;

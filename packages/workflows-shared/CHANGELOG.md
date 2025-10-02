@@ -1,5 +1,11 @@
 # @cloudflare/workflows-shared
 
+## 0.3.7
+
+### Patch Changes
+
+- [#10813](https://github.com/cloudflare/workers-sdk/pull/10813) [`545afe5`](https://github.com/cloudflare/workers-sdk/commit/545afe504ab6c3c44373fc47d58a2641aadb0d2d) Thanks [@pombosilva](https://github.com/pombosilva)! - Workflows are now created if the Request gets redirected after creation
+
 ## 0.3.6
 
 ### Patch Changes
