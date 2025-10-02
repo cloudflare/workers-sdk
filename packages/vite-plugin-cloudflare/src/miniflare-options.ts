@@ -16,7 +16,7 @@ import {
 } from "miniflare";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
-import wrangler from "wrangler";
+import * as wrangler from "wrangler";
 import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,

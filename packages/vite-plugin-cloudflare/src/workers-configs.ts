@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import wrangler from "wrangler";
+import * as wrangler from "wrangler";
 import type {
 	ResolvedAssetsOnlyConfig,
 	ResolvedWorkerConfig,

@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import wrangler from "wrangler";
+import * as wrangler from "wrangler";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
