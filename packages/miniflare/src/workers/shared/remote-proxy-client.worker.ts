@@ -14,6 +14,23 @@ export default class Client extends WorkerEntrypoint<Env> {
 		)(request);
 	}
 
+	async tail(events: TraceItem[]) {
+		// Temporary workaround: the tail events is not serializable over capnproto yet
+		// But they are effectively JSON, so we are serializing them to JSON and parsing it back to make it transferable.
+		// FIXME when https://github.com/cloudflare/workerd/pull/4595 lands
+		const serialized = JSON.stringify(events, tailEventsReplacer);
+
+		const fetcher = makeFetch(
+			this.env.remoteProxyConnectionString,
+			this.env.binding,
+			new Headers({ "MF-Tail": "true" })
+		);
+
+		await fetcher(
+			new Request("http://example.com", { method: "POST", body: serialized })
+		);
+	}
+
 	constructor(ctx: ExecutionContext, env: Env) {
 		const url = new URL(env.remoteProxyConnectionString);
 		url.protocol = "ws:";
@@ -26,20 +43,6 @@ export default class Client extends WorkerEntrypoint<Env> {
 			get(target, prop) {
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
-				}
-
-				if (prop === "tail") {
-					return (events: TraceItem[]) => {
-						// Temporary workaround: the tail events is not serializable over capnproto yet
-						// But they are effectively JSON, so we are serializing them to JSON and parsing it back to make it transferable.
-						// @ts-expect-error FIXME when https://github.com/cloudflare/workerd/pull/4595 lands
-						return stub.tail(
-							JSON.parse(
-								JSON.stringify(events, tailEventsReplacer),
-								tailEventsReviver
-							)
-						);
-					};
 				}
 
 				return Reflect.get(stub, prop);
@@ -87,14 +90,5 @@ function tailEventsReplacer(_: string, value: any) {
 	if (value instanceof Date) {
 		return { [serializedDate]: value.toISOString() };
 	}
-	return value;
-}
-
-function tailEventsReviver(_: string, value: any) {
-	// To restore Date objects from the serialized events
-	if (value && typeof value === "object" && serializedDate in value) {
-		return new Date(value[serializedDate]);
-	}
-
 	return value;
 }

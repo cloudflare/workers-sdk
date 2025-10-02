@@ -108,7 +108,7 @@ function isJSRPCBinding(request: Request): boolean {
 }
 
 export default {
-	async fetch(request, env) {
+	async fetch(request, env, ctx) {
 		try {
 			if (isJSRPCBinding(request)) {
 				return newWorkersRpcResponse(
@@ -126,6 +126,13 @@ export default {
 						//   TypeError: Worker tried to return a WebSocket in a response to a request which did not contain the header "Upgrade: websocket"
 						originalHeaders.set(name, value);
 					}
+				}
+
+				if (request.headers.has("MF-Tail")) {
+					ctx.waitUntil(
+						fetcher.tail(JSON.parse(await request.text(), tailEventsReviver))
+					);
+					return new Response("OK");
 				}
 
 				const cfHeader = request.headers.get("MF-CF-Blob");
@@ -151,3 +158,14 @@ export default {
 		}
 	},
 } satisfies ExportedHandler<Env>;
+
+const serializedDate = "___serialized_date___";
+
+function tailEventsReviver(_: string, value: any) {
+	// To restore Date objects from the serialized events
+	if (value && typeof value === "object" && serializedDate in value) {
+		return new Date(value[serializedDate]);
+	}
+
+	return value;
+}
