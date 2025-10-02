@@ -4,7 +4,9 @@ import { runLongLived, seed } from "./helpers";
 // The test here just makes sure that the validation takes place.
 // Unit tests for the validation are in `src/__tests__/validate-worker-environment-options.spec.ts`
 describe("validate Worker environment options", () => {
-	const projectPath = seed("invalid-worker-environment-options", "pnpm");
+	const projectPath = seed("invalid-worker-environment-options", {
+		pm: "pnpm",
+	});
 
 	test("throws an error for invalid environment options", async ({
 		expect,
