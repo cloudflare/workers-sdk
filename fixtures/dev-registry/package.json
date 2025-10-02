@@ -5,7 +5,7 @@
 	"scripts": {
 		"check:types": "tsc --build",
 		"test": "vitest",
-		"test:ci": "vitest run",
+		"test:ci": "vitest run --allowOnly",
 		"vite": "vite dev",
 		"wrangler": "wrangler dev"
 	},
