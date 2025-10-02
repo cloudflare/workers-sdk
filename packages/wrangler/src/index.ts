@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import os from "node:os";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
@@ -1722,7 +1721,7 @@ export async function main(argv: string[]): Promise<void> {
 			// https://github.com/vadimdemedes/ink/blob/546fe16541fd05ad4e638d6842ca4cbe88b4092b/src/components/App.tsx#L138-L148
 			mayReport = false;
 
-			const currentPlatform = os.platform();
+			const currentPlatform = process.platform;
 
 			const thisTerminalIsUnsupported =
 				"This terminal doesn't support raw mode.";
