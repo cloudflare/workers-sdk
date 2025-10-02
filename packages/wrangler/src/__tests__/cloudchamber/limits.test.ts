@@ -143,12 +143,12 @@ describe("ensureContainerLimits", () => {
 					} as CompleteAccountCustomer,
 					containerConfig: {
 						vcpu: 1,
-						memory_mib: 8192,
+						memory_mib: 999999,
 						disk_bytes: 4000 * MB,
 					} as ContainerNormalizedConfig,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Exceeded account limits: Your container configuration uses 8192 MiB of memory which exceeds the account limit of 4096 MiB.]`
+				`[Error: Exceeded account limits: Your container configuration uses 999999 MiB of memory which exceeds the account limit of 12288 MiB.]`
 			);
 		});
 
