@@ -3,26 +3,11 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import { Log, LogLevel } from "miniflare";
-import {
-	EXTERNAL_AI_WORKER_NAME,
-	EXTERNAL_AI_WORKER_SCRIPT,
-	getAIFetcher,
-} from "../../ai/fetcher";
 import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
 import { withSourceURLs } from "../../deployment-bundle/source-url";
-import {
-	EXTERNAL_IMAGES_WORKER_NAME,
-	EXTERNAL_IMAGES_WORKER_SCRIPT,
-	getImagesRemoteFetcher,
-} from "../../images/fetcher";
 import { logger } from "../../logger";
 import { updateCheck } from "../../update-check";
 import { warnOrError } from "../../utils/print-bindings";
-import {
-	EXTERNAL_VECTORIZE_WORKER_NAME,
-	EXTERNAL_VECTORIZE_WORKER_SCRIPT,
-	MakeVectorizeFetcher,
-} from "../../vectorize/fetcher";
 import { getClassNamesWhichUseSQLite } from "../class-names-sqlite";
 import { handleRuntimeStdioWithStructuredLogs } from "./stdio";
 import type { ServiceFetch } from "../../api";

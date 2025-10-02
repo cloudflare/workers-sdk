@@ -52,11 +52,9 @@ export function printBindings(
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
-		imagesLocalMode?: boolean;
 		name?: string;
 		provisioning?: boolean;
 		warnIfNoBindings?: boolean;
-		vectorizeBindToProd?: boolean;
 	} = {}
 ) {
 	let hasConnectionStatus = false;

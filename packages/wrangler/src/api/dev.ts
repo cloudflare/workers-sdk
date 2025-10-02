@@ -84,8 +84,6 @@ export interface Unstable_DevOptions {
 		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
 		devEnv?: boolean;
 		fileBasedRegistry?: boolean;
-		vectorizeBindToProd?: boolean;
-		imagesLocalMode?: boolean;
 		enableIpc?: boolean;
 		enableContainers?: boolean; // Whether to build and connect to containers in dev mode. Defaults to true.
 		dockerPath?: string; // Path to the docker binary, if not on $PATH
@@ -132,8 +130,6 @@ export async function unstable_dev(
 		showInteractiveDevSession,
 		testMode,
 		testScheduled,
-		vectorizeBindToProd,
-		imagesLocalMode,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
 		enablePagesAssetsServiceBinding,

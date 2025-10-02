@@ -240,18 +240,6 @@ export const pagesDevCommand = createCommand({
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 			type: "boolean",
 		},
-		"experimental-vectorize-bind-to-prod": {
-			type: "boolean",
-			description:
-				"Bind to production Vectorize indexes in local development mode",
-			default: false,
-		},
-		"experimental-images-local-mode": {
-			type: "boolean",
-			description:
-				"Use a local lower-fidelity implementation of the Images binding",
-			default: false,
-		},
 	},
 	positionalArgs: ["directory", "command"],
 	async handler(args) {
