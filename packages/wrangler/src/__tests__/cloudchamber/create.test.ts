@@ -119,7 +119,7 @@ describe("cloudchamber create", () => {
 			      --label          Deployment labels  [array]
 			      --all-ssh-keys   To add all SSH keys configured on your account to be added to this deployment, set this option to true  [boolean]
 			      --ssh-key-id     ID of the SSH key to add to the deployment  [array]
-			      --instance-type  Instance type to allocate to this deployment  [choices: \\"dev\\", \\"basic\\", \\"standard\\"]
+			      --instance-type  Instance type to allocate to this deployment  [choices: \\"dev\\", \\"standard\\", \\"lite\\", \\"basic\\", \\"standard-1\\", \\"standard-2\\", \\"standard-3\\", \\"standard-4\\"]
 			      --vcpu           Number of vCPUs to allocate to this deployment.  [number]
 			      --memory         Amount of memory (GiB, MiB...) to allocate to this deployment. Ex: 4GiB.  [string]
 			      --ipv4           Include an IPv4 in the deployment  [boolean]"
@@ -250,7 +250,7 @@ describe("cloudchamber create", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler(
-			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --instance-type dev --ipv4 true"
+			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --instance-type lite --ipv4 true"
 		);
 		expect(std.out).toMatchInlineSnapshot(`"{}"`);
 	});
