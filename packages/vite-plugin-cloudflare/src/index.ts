@@ -1,10 +1,7 @@
 import assert from "node:assert";
 import * as util from "node:util";
-import {
-	cleanupContainers,
-	generateContainerBuildId,
-	resolveDockerHost,
-} from "@cloudflare/containers-shared/src/utils";
+import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
+import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import { CoreHeaders, Miniflare } from "miniflare";
 import colors from "picocolors";
@@ -21,7 +18,7 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "./constants";
-import { getDockerPath, prepareContainerImages } from "./containers";
+import { getDockerPath } from "./containers";
 import {
 	addDebugToVitePrintUrls,
 	DEBUG_PATH,
@@ -234,23 +231,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				const entryWorkerConfig = getEntryWorkerConfig(
 					ctx.resolvedPluginConfig
 				);
-				const hasDevContainers =
-					entryWorkerConfig?.containers?.length &&
-					entryWorkerConfig.dev.enable_containers;
-				const dockerPath = getDockerPath();
 
-				if (hasDevContainers) {
-					containerBuildId = generateContainerBuildId();
-					entryWorkerConfig.dev.container_engine =
-						resolveDockerHost(dockerPath);
-				}
-
-				const miniflareDevOptions = await getDevMiniflareOptions({
-					resolvedPluginConfig: ctx.resolvedPluginConfig,
-					viteDevServer,
-					inspectorPort: inputInspectorPort,
-					containerBuildId,
-				});
+				const { config: miniflareDevOptions, allContainerOptions } =
+					await getDevMiniflareOptions({
+						resolvedPluginConfig: ctx.resolvedPluginConfig,
+						viteDevServer,
+						inspectorPort: inputInspectorPort,
+						containerBuildId,
+					});
 
 				if (!miniflare) {
 					debuglog("Creating new Miniflare instance");
@@ -318,7 +306,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						};
 					}
 
-					if (hasDevContainers) {
+					if (allContainerOptions.size > 0) {
 						viteDevServer.config.logger.info(
 							colors.dim(
 								colors.yellow(
@@ -326,13 +314,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 								)
 							)
 						);
-						containerImageTagsSeen = await prepareContainerImages({
-							containersConfig: entryWorkerConfig.containers,
-							containerBuildId,
-							isContainersEnabled: entryWorkerConfig.dev.enable_containers,
-							dockerPath,
-							configPath: entryWorkerConfig.configPath,
+						await prepareContainerImagesForDev({
+							dockerPath: getDockerPath(),
+							containerOptions: [...allContainerOptions.values()],
+							onContainerImagePreparationStart: () => {},
+							onContainerImagePreparationEnd: () => {},
 						});
+
+						containerImageTagsSeen = new Set(allContainerOptions.keys());
 						viteDevServer.config.logger.info(
 							colors.dim(
 								colors.yellow(
@@ -356,8 +345,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						 *
 						 */
 						process.on("exit", async () => {
-							if (containerImageTagsSeen.size) {
-								cleanupContainers(dockerPath, containerImageTagsSeen);
+							if (allContainerOptions.size > 0) {
+								cleanupContainers(getDockerPath(), containerImageTagsSeen);
 							}
 						});
 					}
@@ -415,27 +404,15 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					vitePreviewServer
 				);
 
-				// first Worker in the Array is always the entry Worker
-				const entryWorkerConfig = ctx.resolvedPluginConfig.workers[0];
-				const hasDevContainers =
-					entryWorkerConfig?.containers?.length &&
-					entryWorkerConfig.dev.enable_containers;
-				let containerBuildId: string | undefined;
-
-				if (hasDevContainers) {
-					containerBuildId = generateContainerBuildId();
-				}
-
-				miniflare = new Miniflare(
+				const { config: miniflareOptions, allContainerOptions } =
 					await getPreviewMiniflareOptions({
 						resolvedPluginConfig: ctx.resolvedPluginConfig,
 						vitePreviewServer,
 						inspectorPort: inputInspectorPort,
-						containerBuildId,
-					})
-				);
+					});
+				miniflare = new Miniflare(miniflareOptions);
 
-				if (hasDevContainers) {
+				if (allContainerOptions.size > 0) {
 					const dockerPath = getDockerPath();
 
 					vitePreviewServer.config.logger.info(
@@ -445,13 +422,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							)
 						)
 					);
-					containerImageTagsSeen = await prepareContainerImages({
-						containersConfig: entryWorkerConfig.containers,
-						containerBuildId,
-						isContainersEnabled: entryWorkerConfig.dev.enable_containers,
-						dockerPath,
-						configPath: entryWorkerConfig.configPath,
+					await prepareContainerImagesForDev({
+						dockerPath: getDockerPath(),
+						containerOptions: [...allContainerOptions.values()],
+						onContainerImagePreparationStart: () => {},
+						onContainerImagePreparationEnd: () => {},
 					});
+					containerImageTagsSeen = new Set(allContainerOptions.keys());
+
 					vitePreviewServer.config.logger.info(
 						colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
 					);
