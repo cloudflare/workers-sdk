@@ -90,15 +90,10 @@ export default class Worker extends WorkerEntrypoint<{
 					return new Response("ok");
 				}
 
-				try {
-					return Response.json({
-						worker: "Worker Entrypoint",
-						tailEvents,
-					});
-				} finally {
-					// Clear the tail events after sending them
-					tailEvents = [];
-				}
+				return Response.json({
+					worker: "Worker Entrypoint",
+					tailEvents,
+				});
 			}
 
 			return new Response("Hello from Worker Entrypoint!");

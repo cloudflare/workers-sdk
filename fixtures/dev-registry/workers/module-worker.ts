@@ -72,15 +72,10 @@ export default {
 					return new Response("ok");
 				}
 
-				try {
-					return Response.json({
-						worker: "Module Worker",
-						tailEvents,
-					});
-				} finally {
-					// Clear the tail events after sending them
-					tailEvents = [];
-				}
+				return Response.json({
+					worker: "Module Worker",
+					tailEvents,
+				});
 			}
 
 			return new Response("Hello from Module Worker!");
