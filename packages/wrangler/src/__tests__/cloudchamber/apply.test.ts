@@ -1555,7 +1555,7 @@ describe("cloudchamber apply", () => {
 					name: "my-container-app",
 					instances: 3,
 					class_name: "DurableObjectClass",
-					instance_type: "dev",
+					instance_type: "lite",
 					image: "docker.io/beep:boop",
 					constraints: {
 						tier: 2,
@@ -1884,7 +1884,7 @@ describe("cloudchamber apply", () => {
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		const app = await applicationReqBodyPromise;
-		expect(app.configuration?.instance_type).toEqual("dev");
+		expect(app.configuration?.instance_type).toEqual("lite");
 	});
 
 	test("expands image names from managed registry when creating an application", async () => {
@@ -2029,7 +2029,7 @@ describe("cloudchamber apply", () => {
 					instances: 3,
 					class_name: "DurableObjectClass",
 					image: `${registry}/hello:1.0`,
-					instance_type: "dev",
+					instance_type: "lite",
 					constraints: {
 						tier: 1,
 					},
@@ -2093,6 +2093,6 @@ describe("cloudchamber apply", () => {
 		`);
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		const app = await applicationReqBodyPromise;
-		expect(app.configuration?.instance_type).toEqual("dev");
+		expect(app.configuration?.instance_type).toEqual("lite");
 	});
 });

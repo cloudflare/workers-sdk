@@ -140,7 +140,7 @@ export const getNormalizedContainerOptions = async (
 		) {
 			instanceTypeOrLimits = {
 				instance_type: (container.instance_type ??
-					InstanceType.DEV) as InstanceType,
+					InstanceType.LITE) as InstanceType,
 			};
 		} else {
 			// set a custom instance type

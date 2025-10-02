@@ -211,13 +211,13 @@ function containerAppToInstanceType(
 		};
 	}
 
-	// if no other configuration is set, we fall back to the default "dev" instance type
+	// if no other configuration is set, we fall back to the default "lite" instance type
 	if (
 		configuration.disk?.size_mb === undefined &&
 		configuration.vcpu === undefined &&
 		configuration.memory_mib === undefined
 	) {
-		return { instance_type: InstanceType.DEV };
+		return { instance_type: InstanceType.LITE };
 	}
 
 	return configuration;
@@ -330,7 +330,7 @@ export async function apply(
 			image: "docker.io/cloudflare/hello-world:1.0",
 			instances: 2,
 			name: config.name ?? "my-containers-application",
-			instance_type: "dev",
+			instance_type: "lite",
 		};
 		const endConfig: JsonMap =
 			args.env !== undefined

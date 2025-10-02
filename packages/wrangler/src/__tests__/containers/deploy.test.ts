@@ -1464,7 +1464,7 @@ describe("wrangler deploy with containers", () => {
 					max_instances: 10,
 					class_name: "ExampleDurableObject",
 					image: `${registry}/hello:1.0`,
-					instance_type: "dev",
+					instance_type: "lite",
 					constraints: {
 						tier: 2,
 					},
@@ -1479,7 +1479,7 @@ describe("wrangler deploy with containers", () => {
 			max_instances: 10,
 			configuration: {
 				image: `${registry}/some-account-id/hello:1.0`,
-				instance_type: InstanceType.DEV,
+				instance_type: InstanceType.LITE,
 			},
 		});
 
