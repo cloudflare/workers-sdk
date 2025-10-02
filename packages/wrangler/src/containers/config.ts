@@ -144,7 +144,7 @@ export const getNormalizedContainerOptions = async (
 			};
 		} else {
 			// set a custom instance type
-			// any limits that are not set will default to a dev instance type
+			// any limits that are not set will default to a lite instance type
 			instanceTypeOrLimits = {
 				disk_bytes: (container.instance_type.disk_mb ?? 2000) * MB,
 				vcpu: container.instance_type.vcpu ?? 0.0625,
