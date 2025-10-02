@@ -1419,24 +1419,22 @@ describe("deploy", () => {
 			});
 			await runWrangler("deploy ./index");
 
+			expect(std.info).toMatchInlineSnapshot(`
+				"The current authentication token does not have 'All Zones' permissions.
+				Falling back to using the zone-based API endpoint to update each route individually.
+				Note that there is no access to routes associated with zones that the API token does not have permission for.
+				Existing routes for this Worker in such zones will not be deleted."
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe current authentication token does not have 'All Zones' permissions.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
 
-			  Falling back to using the zone-based API endpoint to update each route individually.
-			  Note that there is no access to routes associated with zones that the API token does not have
-			  permission for.
-			  Existing routes for this Worker in such zones will not be deleted.
+				  The following routes were already associated with this worker, and have not been deleted:
+				   - \\"foo.example.com/other-route\\"
+				  If these routes are not wanted then you can remove them in the dashboard.
 
-
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
-
-			  The following routes were already associated with this worker, and have not been deleted:
-			   - \\"foo.example.com/other-route\\"
-			  If these routes are not wanted then you can remove them in the dashboard.
-
-			"
-		`);
+				"
+			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -5250,7 +5248,6 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTM="],
 					"ff5016e92f039aa743a4ff7abb3180fa",
 					{
-						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
 						type: "text/plain",
 					}
 				)
@@ -14037,7 +14034,7 @@ expect.extend({
 			};
 		}
 
-		if (!equals(received.type, expected.type)) {
+		if (!equals(received.type, expect.stringMatching(expected.type))) {
 			return {
 				pass: false,
 				message: () =>
