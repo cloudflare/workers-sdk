@@ -2238,7 +2238,7 @@ export class Miniflare {
 
 		const exposeOverRegistry = getExposedOverRegistry(this.#workerOpts);
 
-		const perWorker = new Map<string, Partial<WorkerDefinition>>();
+		const perWorker = new Map<string, Omit<WorkerDefinition, "origin">>();
 
 		for (const [name, binding] of exposeOverRegistry) {
 			const [workerName] = name.split(":");
@@ -2261,7 +2261,7 @@ export class Miniflare {
 			perWorker.set(workerName, entry);
 		}
 
-		this.#devRegistry.register(perWorker, url.hostname, Number(url.port));
+		this.#devRegistry.register(perWorker, url.origin);
 	}
 
 	get ready(): Promise<URL> {

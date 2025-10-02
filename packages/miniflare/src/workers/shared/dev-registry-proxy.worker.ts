@@ -1,6 +1,12 @@
 import { newWorkersRpcResponse } from "capnweb";
 import { WorkerEntrypoint } from "cloudflare:workers";
 
+type WorkerDefinition = {
+	origin: string;
+	durableObjects: { className: string }[];
+	entrypoints: string[];
+};
+
 function isJSRPCRequest(request: Request): boolean {
 	const url = new URL(request.url);
 	return request.headers.has("Upgrade") && url.searchParams.has("MF-Binding");
@@ -91,10 +97,9 @@ export default {
 					);
 				}
 			}
-			const { host, port } = await res.json<{ host: string; port: number }>();
-			const url = new URL(request.url);
-			url.hostname = host;
-			url.port = String(port);
+			const { origin } = await res.json<WorkerDefinition>();
+			const originalURL = new URL(request.url);
+			const url = new URL(originalURL.pathname + originalURL.search, origin);
 			return fetch(url, request);
 		}
 

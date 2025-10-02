@@ -16,8 +16,7 @@ import { getGlobalWranglerConfigPath } from "./wrangler";
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
 export type WorkerDefinition = {
-	host: string;
-	port: number;
+	origin: string;
 	durableObjects: { className: string }[];
 	entrypoints: string[];
 };
@@ -130,9 +129,8 @@ export class DevRegistry {
 	}
 
 	public register(
-		exposeOverRegistry: Map<string, Partial<WorkerDefinition>>,
-		host: string,
-		port: number
+		exposeOverRegistry: Map<string, Omit<WorkerDefinition, "origin">>,
+		origin: string
 	) {
 		if (!this.registryPath) {
 			return;
@@ -140,10 +138,9 @@ export class DevRegistry {
 
 		for (const [name, partialDefinition] of exposeOverRegistry) {
 			const definition = {
-				host,
-				port,
 				...partialDefinition,
-			};
+				origin,
+			} satisfies WorkerDefinition;
 
 			const definitionPath = path.join(this.registryPath, name);
 			const existingHeartbeat = this.heartbeats.get(name);

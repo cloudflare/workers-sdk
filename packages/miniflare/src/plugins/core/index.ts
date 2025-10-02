@@ -12,6 +12,7 @@ import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
 import { z } from "zod";
 import { fetch } from "../../http";
+import { CERT } from "../../http/cert";
 import {
 	Extension,
 	kVoid,
@@ -99,6 +100,16 @@ if (process.env.NODE_EXTRA_CA_CERTS !== undefined) {
 		}
 	} catch {}
 }
+
+/**
+ * When using the dev registry to connect multiple Miniflare instances together, we need to
+ * make fetch() requests between multiple Miniflare instances that originate in workerd.
+ * As an example, consider two Miniflare instances A & B, with `https: true` enabled on B.
+ * A fetch() from A to B will fail, because the HTTPS certs exposed by B are self-signed (by Miniflare).
+ * workerd has no option to allow self-signed certificates on a per-connection basis, and so
+ * we add Miniflare's self-signed certificate to the list of certs that workerd will trust
+ */
+trustedCertificates.push(CERT);
 
 const encoder = new TextEncoder();
 const numericCompare = new Intl.Collator(undefined, { numeric: true }).compare;
