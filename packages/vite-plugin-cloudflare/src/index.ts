@@ -6,6 +6,7 @@ import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/ass
 import { CoreHeaders, Miniflare } from "miniflare";
 import colors from "picocolors";
 import * as vite from "vite";
+import { assertWranglerVersion } from "./assert-wrangler-version";
 import { hasAssetsConfigChanged } from "./asset-config";
 import { createBuildApp } from "./build";
 import {
@@ -67,6 +68,8 @@ let workersConfigsWarningShown = false;
 /** Used to track whether hooks are being called because of a server restart or a server close event. */
 let restartingServer = false;
 let miniflare: Miniflare | undefined;
+
+assertWranglerVersion();
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
