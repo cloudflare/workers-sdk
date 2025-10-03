@@ -425,19 +425,15 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				method: "POST",
 				body: JSON.stringify(["hello world", "this is the 2nd log"]),
 			});
-			await fetch(`${moduleWorkerWithAssets}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["some other log"]),
-			});
 
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 
 			expect(await response.json()).toEqual({
 				worker: "Worker Entrypoint",
-				tailEvents: expect.arrayContaining([
-					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
-					[["[Module Worker]"], ["some other log"]],
-				]),
+				tailEvents: [
+					["[Module Worker]"],
+					["hello world", "this is the 2nd log"],
+				],
 			});
 		}, waitForTimeout);
 
@@ -447,24 +443,15 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				method: "POST",
 				body: JSON.stringify(["hello from test"]),
 			});
-			await fetch(`${workerEntrypoint}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["yet another log", "and another one"]),
-			});
+
 			const response = await fetch(`${moduleWorkerWithAssets}?${searchParams}`);
 
 			expect(await response.json()).toEqual({
 				worker: "Module Worker",
-				tailEvents: expect.arrayContaining([
-					[
-						["[worker-entrypoint]", "[Worker Entrypoint]"],
-						["[worker-entrypoint]", "hello from test"],
-					],
-					[
-						["[worker-entrypoint]", "[Worker Entrypoint]"],
-						["[worker-entrypoint]", "yet another log", "and another one"],
-					],
-				]),
+				tailEvents: [
+					["[worker-entrypoint]", "[Worker Entrypoint]"],
+					["[worker-entrypoint]", "hello from test"],
+				],
 			});
 		}, waitForTimeout);
 	});
@@ -825,9 +812,10 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Worker Entrypoint",
-				tailEvents: expect.arrayContaining([
-					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
-				]),
+				tailEvents: [
+					["[Module Worker]"],
+					["hello world", "this is the 2nd log"],
+				],
 			});
 		}, waitForTimeout);
 
@@ -844,9 +832,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Module Worker",
-				tailEvents: expect.arrayContaining([
-					[["[Worker Entrypoint]"], ["hello from test"]],
-				]),
+				tailEvents: [["[Worker Entrypoint]"], ["hello from test"]],
 			});
 		}, waitForTimeout);
 	});
