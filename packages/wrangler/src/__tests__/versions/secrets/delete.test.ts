@@ -42,7 +42,10 @@ describe("versions secret delete", () => {
 		await runWrangler("versions secret delete SECRET --name script-name");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Deleting the secret SECRET on the Worker script-name
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🌀 Deleting the secret SECRET on the Worker script-name
 			✨ Success! Created version id with deleted secret SECRET.
 			➡️  To deploy this version without the secret SECRET to production traffic use the command \\"wrangler versions deploy\\"."
 		`);
@@ -67,7 +70,10 @@ describe("versions secret delete", () => {
 		await runWrangler("versions secret delete SECRET --name script-name");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"? Are you sure you want to permanently delete the secret SECRET on the Worker script-name?
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			? Are you sure you want to permanently delete the secret SECRET on the Worker script-name?
 			🤖 Using fallback value in non-interactive context: yes
 			🌀 Deleting the secret SECRET on the Worker script-name
 			✨ Success! Created version id with deleted secret SECRET.
@@ -95,7 +101,10 @@ describe("versions secret delete", () => {
 		await runWrangler("versions secret delete SECRET");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"? Are you sure you want to permanently delete the secret SECRET on the Worker script-name?
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			? Are you sure you want to permanently delete the secret SECRET on the Worker script-name?
 			🤖 Using fallback value in non-interactive context: yes
 			🌀 Deleting the secret SECRET on the Worker script-name
 			✨ Success! Created version id with deleted secret SECRET.

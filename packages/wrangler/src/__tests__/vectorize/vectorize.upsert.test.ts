@@ -101,10 +101,13 @@ describe("dataset upsert", () => {
 
 		expect(insertRequestCount).toBe(2);
 		expect(std.out).toMatchInlineSnapshot(`
-		"✨ Uploading vector batch (3 vectors)
-		✨ Uploading vector batch (2 vectors)
-		✅ Successfully inserted 5 vectors into index 'my-index'"
-	`);
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Uploading vector batch (3 vectors)
+			✨ Uploading vector batch (2 vectors)
+			✅ Successfully inserted 5 vectors into index 'my-index'"
+		`);
 	});
 
 	it("should batch uploads in ndjson format for Vectorize", async () => {
@@ -159,10 +162,13 @@ describe("dataset upsert", () => {
 
 		expect(insertRequestCount).toBe(2);
 		expect(std.out).toMatchInlineSnapshot(`
-		"✨ Enqueued 3 vectors into index 'my-index' for insertion. Mutation changeset identifier: ${mutationId}
-		✨ Enqueued 2 vectors into index 'my-index' for insertion. Mutation changeset identifier: ${mutationId}
-		✅ Successfully enqueued 5 vectors into index 'my-index' for insertion."
-	`);
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Enqueued 3 vectors into index 'my-index' for insertion. Mutation changeset identifier: a5c71e2f-74a1-4536-92d2-9ba58d662161
+			✨ Enqueued 2 vectors into index 'my-index' for insertion. Mutation changeset identifier: a5c71e2f-74a1-4536-92d2-9ba58d662161
+			✅ Successfully enqueued 5 vectors into index 'my-index' for insertion."
+		`);
 	});
 
 	it("should batch uploads for upsert in ndjson format for Vectorize", async () => {
@@ -217,10 +223,13 @@ describe("dataset upsert", () => {
 
 		expect(insertRequestCount).toBe(2);
 		expect(std.out).toMatchInlineSnapshot(`
-		"✨ Enqueued 3 vectors into index 'my-index' for upsertion. Mutation changeset identifier: ${mutationId}
-		✨ Enqueued 2 vectors into index 'my-index' for upsertion. Mutation changeset identifier: ${mutationId}
-		✅ Successfully enqueued 5 vectors into index 'my-index' for upsertion."
-	`);
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Enqueued 3 vectors into index 'my-index' for upsertion. Mutation changeset identifier: 2589f9c4-6e77-4931-9868-ef2436ecea92
+			✨ Enqueued 2 vectors into index 'my-index' for upsertion. Mutation changeset identifier: 2589f9c4-6e77-4931-9868-ef2436ecea92
+			✅ Successfully enqueued 5 vectors into index 'my-index' for upsertion."
+		`);
 	});
 
 	it("should reject an invalid file param", async () => {

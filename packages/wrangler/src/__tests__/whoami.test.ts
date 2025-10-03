@@ -235,7 +235,10 @@ describe("whoami", () => {
 		);
 		await runWrangler(`whoami --account "account-2"`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"Getting User settings...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Getting User settings...
 			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
 			┌─┬─┐
 			│ Account Name │ Account ID │
@@ -292,7 +295,10 @@ describe("whoami", () => {
 		);
 		await runWrangler(`whoami --account "account-2"`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"Getting User settings...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Getting User settings...
 			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
 			┌─┬─┐
 			│ Account Name │ Account ID │

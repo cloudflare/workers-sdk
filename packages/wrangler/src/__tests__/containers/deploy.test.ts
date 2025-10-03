@@ -112,7 +112,10 @@ describe("wrangler deploy with containers", () => {
 		await runWrangler("deploy index.js");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
@@ -184,17 +187,20 @@ describe("wrangler deploy with containers", () => {
 		await runWrangler("deploy index.js");
 
 		expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Your Worker has access to the following bindings:
-					Binding                                            Resource
-					env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your Worker has access to the following bindings:
+			Binding                                            Resource
+			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
@@ -267,17 +273,20 @@ describe("wrangler deploy with containers", () => {
 		await runWrangler("deploy index.js");
 
 		expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Your Worker has access to the following bindings:
-					Binding                                            Resource
-					env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your Worker has access to the following bindings:
+			Binding                                            Resource
+			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
 		expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -362,17 +371,20 @@ describe("wrangler deploy with containers", () => {
 		await runWrangler("deploy index.js");
 
 		expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Your Worker has access to the following bindings:
-					Binding                                            Resource
-					env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your Worker has access to the following bindings:
+			Binding                                            Resource
+			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
 		// no deprecation warnings should show up on this run
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -459,7 +471,10 @@ describe("wrangler deploy with containers", () => {
 		await runWrangler("deploy --cwd src");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
@@ -519,7 +534,10 @@ describe("wrangler deploy with containers", () => {
 		await runWrangler("deploy -c nested/wrangler.json");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
@@ -1692,7 +1710,10 @@ describe("wrangler deploy with containers dry run", () => {
 
 		await runWrangler("deploy --dry-run index.js");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
 			Building image my-container:worker
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
@@ -1717,7 +1738,10 @@ describe("wrangler deploy with containers dry run", () => {
 
 		await runWrangler("deploy --dry-run index.js");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object

@@ -270,6 +270,9 @@ describe("metrics", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+
+					 ⛅️ wrangler x.x.x
+					──────────────────
 					Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -407,6 +410,9 @@ describe("metrics", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+
+					 ⛅️ wrangler x.x.x
+					──────────────────
 					Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -492,6 +498,9 @@ describe("metrics", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 						"
 						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+
+						 ⛅️ wrangler x.x.x
+						──────────────────
 						Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
 					`);
 
@@ -524,6 +533,9 @@ describe("metrics", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 						"
 						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+
+						 ⛅️ wrangler x.x.x
+						──────────────────
 						Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
 					`);
 					expect(requests.count).toBe(2);
@@ -559,7 +571,10 @@ describe("metrics", () => {
 
 					await runWrangler("telemetry status");
 					expect(std.out).toMatchInlineSnapshot(`
-						"Status: Enabled
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Status: Enabled
 
 						To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
 						You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.

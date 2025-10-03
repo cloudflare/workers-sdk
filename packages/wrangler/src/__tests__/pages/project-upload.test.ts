@@ -95,10 +95,13 @@ describe("pages project upload", () => {
 		await runWrangler("pages project upload .");
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 1 files (TIMINGS)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 1 files (TIMINGS)
 
-		✨ Upload complete!"
-	`);
+			✨ Upload complete!"
+		`);
 	});
 
 	it("should avoid uploading some files", async () => {
@@ -219,10 +222,13 @@ describe("pages project upload", () => {
 		});
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 3 files (TIMINGS)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 3 files (TIMINGS)
 
-		✨ Upload complete!"
-	`);
+			✨ Upload complete!"
+		`);
 	});
 
 	it("should retry uploads", async () => {
@@ -313,10 +319,13 @@ describe("pages project upload", () => {
 		}
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 1 files (TIMINGS)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 1 files (TIMINGS)
 
-		✨ Upload complete!"
-	`);
+			✨ Upload complete!"
+		`);
 	});
 
 	it("should retry uploads after gateway failures", async () => {
@@ -394,10 +403,13 @@ describe("pages project upload", () => {
 		}
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 1 files (TIMINGS)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 1 files (TIMINGS)
 
-		✨ Upload complete!"
-	`);
+			✨ Upload complete!"
+		`);
 	});
 
 	it("should try to use multiple buckets (up to the max concurrency)", async () => {
@@ -507,10 +519,13 @@ describe("pages project upload", () => {
 		);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 4 files (TIMINGS)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 4 files (TIMINGS)
 
-		✨ Upload complete!"
-	`);
+			✨ Upload complete!"
+		`);
 	});
 
 	it("should handle a very large number of assets", async () => {

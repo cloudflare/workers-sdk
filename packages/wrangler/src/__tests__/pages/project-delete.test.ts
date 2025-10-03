@@ -58,9 +58,12 @@ describe("pages project delete", () => {
 		await runWrangler("pages project delete some-project-name");
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"Deleting some-project-name
-		Successfully deleted some-project-name"
-	`);
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Deleting some-project-name
+			Successfully deleted some-project-name"
+		`);
 	});
 
 	it("should error if no project name is specified", async () => {
@@ -79,7 +82,11 @@ describe("pages project delete", () => {
 
 		await runWrangler("pages project delete some-project-name-2");
 
-		expect(std.out).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────"
+		`);
 	});
 
 	it("should delete a project without asking if --yes provided", async () => {
@@ -106,9 +113,12 @@ describe("pages project delete", () => {
 		await runWrangler("pages project delete some-project-name -y");
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"Deleting some-project-name
-		Successfully deleted some-project-name"
-	`);
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Deleting some-project-name
+			Successfully deleted some-project-name"
+		`);
 	});
 
 	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async () => {

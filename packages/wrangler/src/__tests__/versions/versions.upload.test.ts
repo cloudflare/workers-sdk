@@ -139,7 +139,10 @@ describe("versions upload", () => {
 		await expect(result).resolves.toBeUndefined();
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
 			Your Worker has access to the following bindings:
 			Binding                                   Resource
@@ -170,7 +173,10 @@ describe("versions upload", () => {
 		await expect(result).resolves.toBeUndefined();
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
 			Uploaded test-name (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
@@ -199,7 +205,10 @@ describe("versions upload", () => {
 		await expect(result).resolves.toBeUndefined();
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
 			Your Worker has access to the following bindings:
 			Binding                       Resource
@@ -225,7 +234,10 @@ describe("versions upload", () => {
 		await runWrangler("versions upload --preview-alias abcd1234");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
 			Uploaded test-name (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
@@ -255,7 +267,10 @@ describe("versions upload", () => {
 		await expect(result).resolves.toBeUndefined();
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
 			Your Worker has access to the following bindings:
 			Binding                       Resource
@@ -292,7 +307,10 @@ describe("versions upload", () => {
 		});
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"┌─┬─┬─┐
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			┌─┬─┬─┐
 			│ Name │ Type │ Size │
 			├─┼─┼─┤
 			│ another.py │ python │ xx KiB │

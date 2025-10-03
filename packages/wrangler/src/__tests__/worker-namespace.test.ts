@@ -109,7 +109,12 @@ describe("dispatch-namespace", () => {
 			await runWrangler(`dispatch-namespace create ${namespaceName}`);
 
 			expect(std.out).toMatchInlineSnapshot(
-				`"Created dispatch namespace \\"my-namespace\\" with ID \\"some-namespace-id\\""`
+				`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Created dispatch namespace \\"my-namespace\\" with ID \\"some-namespace-id\\""
+			`
 			);
 		});
 	});
@@ -161,7 +166,12 @@ describe("dispatch-namespace", () => {
 			await runWrangler(`dispatch-namespace delete ${namespaceName}`);
 
 			expect(std.out).toMatchInlineSnapshot(
-				`"Deleted dispatch namespace \\"my-namespace\\""`
+				`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Deleted dispatch namespace \\"my-namespace\\""
+			`
 			);
 		});
 	});
@@ -222,15 +232,18 @@ describe("dispatch-namespace", () => {
 			await runWrangler(`dispatch-namespace get ${namespaceName}`);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  namespace_id: 'some-namespace-id',
-			  namespace_name: 'namespace-name',
-			  created_on: '2022-06-29T14:30:08.16152Z',
-			  created_by: '1fc1df98cc4420fe00367c3ab68c1639',
-			  modified_on: '2022-06-29T14:30:08.16152Z',
-			  modified_by: '1fc1df98cc4420fe00367c3ab68c1639'
-			}"
-		`);
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				{
+				  namespace_id: 'some-namespace-id',
+				  namespace_name: 'namespace-name',
+				  created_on: '2022-06-29T14:30:08.16152Z',
+				  created_by: '1fc1df98cc4420fe00367c3ab68c1639',
+				  modified_on: '2022-06-29T14:30:08.16152Z',
+				  modified_by: '1fc1df98cc4420fe00367c3ab68c1639'
+				}"
+			`);
 		});
 	});
 
@@ -263,17 +276,20 @@ describe("dispatch-namespace", () => {
 		it("should list all namespaces", async () => {
 			await runWrangler("dispatch-namespace list");
 			expect(std.out).toMatchInlineSnapshot(`
-			"[
-			  {
-			    namespace_id: 'some-namespace-id',
-			    namespace_name: 'namespace-name',
-			    created_on: '2022-06-29T14:30:08.16152Z',
-			    created_by: '1fc1df98cc4420fe00367c3ab68c1639',
-			    modified_on: '2022-06-29T14:30:08.16152Z',
-			    modified_by: '1fc1df98cc4420fe00367c3ab68c1639'
-			  }
-			]"
-		`);
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				[
+				  {
+				    namespace_id: 'some-namespace-id',
+				    namespace_name: 'namespace-name',
+				    created_on: '2022-06-29T14:30:08.16152Z',
+				    created_by: '1fc1df98cc4420fe00367c3ab68c1639',
+				    modified_on: '2022-06-29T14:30:08.16152Z',
+				    modified_by: '1fc1df98cc4420fe00367c3ab68c1639'
+				  }
+				]"
+			`);
 		});
 	});
 
@@ -337,7 +353,12 @@ describe("dispatch-namespace", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(
-				`"Renamed dispatch namespace \\"my-namespace\\" to \\"new-namespace\\""`
+				`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Renamed dispatch namespace \\"my-namespace\\" to \\"new-namespace\\""
+			`
 			);
 			expect((printWranglerBanner as Mock).mock.calls.length).toEqual(1);
 		});

@@ -7,8 +7,6 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
-vi.unmock("../../wrangler-banner");
-
 describe("versions view", () => {
 	mockAccountId();
 	mockApiToken();

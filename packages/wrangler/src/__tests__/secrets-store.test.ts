@@ -106,9 +106,12 @@ describe("secrets-store store commands", () => {
       `);
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "🔐 Creating store... (Name: test-store)
-✅ Created store! (Name: test-store, ID: 8b9199cad1954bc39add51c948767679)"
-      `);
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🔐 Creating store... (Name: test-store)
+				✅ Created store! (Name: test-store, ID: 8b9199cad1954bc39add51c948767679)"
+			`);
 		});
 
 		it("errors in creating a store when no name passed", async () => {
@@ -130,7 +133,10 @@ describe("secrets-store store commands", () => {
 			await runWrangler("secrets-store store list --remote");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"🔐 Listing stores...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🔐 Listing stores...
 				┌─┬─┬─┬─┬─┐
 				│ Name │ ID │ AccountID │ Created │ Modified │
 				├─┼─┼─┼─┼─┤
@@ -212,6 +218,9 @@ describe("secrets-store secret commands", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+
 				🔐 Creating secret... (Name: TEST_SECRET, Value: REDACTED, Scopes: workers, Comment: wrangler secret)
 				✅ Created secret! (ID: 36dabbe4d01c49de82847b9a22673cbd)
 				┌─┬─┬─┬─┬─┬─┬─┬─┐
@@ -313,7 +322,10 @@ describe("secrets-store secret commands", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"🔐 Listing secrets... (store-id: 850e0805c1084551bb46d150b5dfe414, page: 1, per-page: 10)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🔐 Listing secrets... (store-id: 850e0805c1084551bb46d150b5dfe414, page: 1, per-page: 10)
 				┌─┬─┬─┬─┬─┬─┬─┐
 				│ Name │ ID │ Comment │ Scopes │ Status │ Created │ Modified │
 				├─┼─┼─┼─┼─┼─┼─┤
@@ -363,7 +375,10 @@ describe("secrets-store secret commands", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"🔐 Getting secret... (ID: df3f6eb1159a4f10ac5fe836e2b8169c)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🔐 Getting secret... (ID: df3f6eb1159a4f10ac5fe836e2b8169c)
 				┌─┬─┬─┬─┬─┬─┬─┬─┐
 				│ Name │ ID │ StoreID │ Comment │ Scopes │ Status │ Created │ Modified │
 				├─┼─┼─┼─┼─┼─┼─┼─┤
@@ -409,9 +424,12 @@ describe("secrets-store secret commands", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "🔐 Deleting secret... (ID: df3f6eb1159a4f10ac5fe836e2b8169c)
-✅ Deleted secret! (ID: df3f6eb1159a4f10ac5fe836e2b8169c)"
-      `);
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🔐 Deleting secret... (ID: df3f6eb1159a4f10ac5fe836e2b8169c)
+				✅ Deleted secret! (ID: df3f6eb1159a4f10ac5fe836e2b8169c)"
+			`);
 		});
 
 		it("errors in deleting a secret when no store-id passed", async () => {
@@ -478,7 +496,10 @@ describe("secrets-store secret commands", () => {
       `);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"🔐 Updating secret... (ID: df3f6eb1159a4f10ac5fe836e2b8169c)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🔐 Updating secret... (ID: df3f6eb1159a4f10ac5fe836e2b8169c)
 				✅ Updated secret! (ID: 36dabbe4d01c49de82847b9a22673cbd)
 				┌─┬─┬─┬─┬─┬─┬─┬─┐
 				│ Name │ ID │ StoreID │ Comment │ Scopes │ Status │ Created │ Modified │
@@ -580,7 +601,10 @@ describe("secrets-store secret commands", () => {
       `);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"🔐 Duplicating secret... (ID: df3f6eb1159a4f10ac5fe836e2b8169c)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🔐 Duplicating secret... (ID: df3f6eb1159a4f10ac5fe836e2b8169c)
 				✅ Duplicated secret! (ID: 36dabbe4d01c49de82847b9a22673cbd)
 				┌─┬─┬─┬─┬─┬─┬─┬─┐
 				│ Name │ ID │ StoreID │ Comment │ Scopes │ Status │ Created │ Modified │

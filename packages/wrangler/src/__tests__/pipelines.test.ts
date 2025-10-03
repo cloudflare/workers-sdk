@@ -11,8 +11,6 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { Pipeline, SchemaField, Sink, Stream } from "../pipelines/types";
 
 describe("wrangler pipelines", () => {
-	vi.unmock("../wrangler-banner");
-
 	const std = mockConsoleMethods();
 	mockAccountId();
 	mockApiToken();

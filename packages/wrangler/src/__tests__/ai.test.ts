@@ -86,7 +86,10 @@ describe("ai commands", () => {
 		mockAIListFinetuneRequest();
 		await runWrangler("ai finetune list");
 		expect(std.out).toMatchInlineSnapshot(`
-			"┌─┬─┬─┐
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			┌─┬─┬─┐
 			│ finetune_id │ name │ description │
 			├─┼─┼─┤
 			│ 4d73459a-0000-4688-0000-b19fbb0e0fa5 │ instruct-demo1 │ │
@@ -108,7 +111,10 @@ describe("ai commands", () => {
 		mockAISearchRequest();
 		await runWrangler("ai models");
 		expect(std.out).toMatchInlineSnapshot(`
-			"┌─┬─┬─┬─┐
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			┌─┬─┬─┬─┐
 			│ model │ name │ description │ task │
 			├─┼─┼─┼─┤
 			│ 429b9e8b-d99e-44de-91ad-706cf8183658 │ @cloudflare/embeddings_bge_large_en │ │ │
@@ -126,7 +132,10 @@ describe("ai commands", () => {
 		mockAIOverflowRequest();
 		await runWrangler("ai models");
 		expect(std.out).toMatchInlineSnapshot(`
-			"┌─┬─┬─┬─┐
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			┌─┬─┬─┬─┐
 			│ model │ name │ description │ task │
 			├─┼─┼─┼─┤
 			│ 429b9e8b-d99e-44de-91ad-706cf8183658 │ @cloudflare/embeddings_bge_large_en │ │ │
@@ -144,7 +153,10 @@ describe("ai commands", () => {
 		mockAIPaginatedRequest();
 		await runWrangler("ai models");
 		expect(std.out).toMatchInlineSnapshot(`
-			"┌─┬─┬─┬─┐
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			┌─┬─┬─┬─┐
 			│ model │ name │ description │ task │
 			├─┼─┼─┼─┤
 			│ 429b9e8b-d99e-44de-91ad-706cf8183658 │ @cloudflare/embeddings_bge_large_en │ │ │

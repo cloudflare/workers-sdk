@@ -426,7 +426,10 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Deleting KV namespace env-bound-id.
 					Deleted KV namespace env-bound-id."
 				`);
@@ -553,7 +556,10 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Renaming KV namespace some-namespace-id to \\"new-namespace-name\\".
 					✨ Successfully renamed namespace to \\"new-namespace-name\\""
 				`);
@@ -576,7 +582,10 @@ describe("wrangler", () => {
 				expect(listRequests.count).toEqual(1);
 				expect(updateRequests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Renaming KV namespace some-namespace-id to \\"new-namespace-name\\".
 					✨ Successfully renamed namespace to \\"new-namespace-name\\""
 				`);
@@ -691,7 +700,10 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace some-namespace-id."
 				`
 				);
@@ -711,7 +723,10 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Writing the value \\"my-value\\" to key \\"/my-key\\" on namespace DS9."
 				`
 				);
@@ -730,7 +745,10 @@ describe("wrangler", () => {
 
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace bound-id."
 				`
 				);
@@ -751,7 +769,10 @@ describe("wrangler", () => {
 
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace preview-bound-id."
 				`
 				);
@@ -772,7 +793,10 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace some-namespace-id."
 				`
 				);
@@ -790,7 +814,10 @@ describe("wrangler", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace env-bound-id."
 				`
 				);
@@ -810,7 +837,10 @@ describe("wrangler", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Writing the contents of foo.txt to the key \\"my-key\\" on namespace some-namespace-id."
 				`
 				);
@@ -833,7 +863,10 @@ describe("wrangler", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Writing the contents of test.png to the key \\"my-key\\" on namespace another-namespace-id."
 				`
 				);
@@ -855,7 +888,10 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Writing the value \\"dVal\\" to key \\"dKey\\" on namespace some-namespace-id with metadata \\"{\\"mKey\\":\\"mValue\\"}\\"."
 				`
 				);
@@ -881,7 +917,10 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Writing the contents of test.png to the key \\"another-my-key\\" on namespace some-namespace-id with metadata \\"{\\"mKey\\":\\"mValue\\"}\\"."
 				`
 				);
@@ -941,6 +980,9 @@ describe("wrangler", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+
 					wrangler kv key put <key> [value]
 
 					Write a single key/value pair to the given namespace
@@ -987,6 +1029,9 @@ describe("wrangler", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+
 					wrangler kv key put <key> [value]
 
 					Write a single key/value pair to the given namespace
@@ -1031,6 +1076,9 @@ describe("wrangler", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+
 					wrangler kv key put <key> [value]
 
 					Write a single key/value pair to the given namespace
@@ -1121,6 +1169,9 @@ describe("wrangler", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+
 					wrangler kv key put <key> [value]
 
 					Write a single key/value pair to the given namespace
@@ -1165,7 +1216,10 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -1189,7 +1243,10 @@ describe("wrangler", () => {
 					`[Error: someBinding has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -1762,7 +1819,10 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Deleting the key \\"/NCC-74656\\" on namespace voyager."
 				`
 				);
@@ -1810,7 +1870,10 @@ describe("wrangler", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Deleting the key \\"someKey\\" on namespace env-bound-id."
 				`
 				);
@@ -1872,7 +1935,10 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Success!"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1891,7 +1957,10 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(12);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Uploaded 0% (0 out of 12,000)
 					Uploaded 8% (1,000 out of 12,000)
 					Uploaded 16% (2,000 out of 12,000)
@@ -1923,7 +1992,10 @@ describe("wrangler", () => {
 					Expected an array of key-value objects but got type "object".]
 				`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1987,7 +2059,10 @@ describe("wrangler", () => {
 				`);
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -2119,7 +2194,10 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Success!"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2142,7 +2220,10 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Success!"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2162,7 +2243,10 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(12);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Deleted 0% (0 out of 12,000)
 					Deleted 8% (1,000 out of 12,000)
 					Deleted 16% (2,000 out of 12,000)
@@ -2194,7 +2278,10 @@ describe("wrangler", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Not deleting keys read from \\"keys.json\\"."
 				`
 				);
@@ -2211,7 +2298,10 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Success!"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2227,7 +2317,10 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Success!"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2251,7 +2344,10 @@ describe("wrangler", () => {
 					12354]
 				`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2276,7 +2372,10 @@ describe("wrangler", () => {
 					The item at index 3 is type: "object" - null]
 				`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
