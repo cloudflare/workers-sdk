@@ -118,6 +118,8 @@ export const getNormalizedContainerOptions = async (
 					config.observability?.logs?.enabled ??
 					config.observability?.enabled === true,
 			},
+			wrangler_ssh: container.wrangler_ssh,
+			authorized_keys: container.authorized_keys,
 		};
 
 		let instanceTypeOrLimits: InstanceTypeOrLimits;
