@@ -402,7 +402,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 		}, waitForTimeout);
 	});
 
-	it.only("supports tail handler", async ({ devRegistryPath }) => {
+	it("supports tail handler", async ({ devRegistryPath }) => {
 		const moduleWorkerWithAssets = await runWranglerDev(
 			"wrangler.module-worker-with-assets.jsonc",
 			devRegistryPath
@@ -571,7 +571,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 		}, waitForTimeout);
 	});
 
-	it.only("supports tail handler", async ({ devRegistryPath }) => {
+	it("supports tail handler", async ({ devRegistryPath }) => {
 		const moduleWorker = await runViteDev(
 			"vite.module-worker.config.ts",
 			devRegistryPath
@@ -787,7 +787,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		}, waitForTimeout);
 	});
 
-	it.only("supports tail handler", async ({ devRegistryPath }) => {
+	it("supports tail handler", async ({ devRegistryPath }) => {
 		const moduleWorkerWithStaticAssets = await runViteDev(
 			"vite.module-worker-with-assets.config.ts",
 			devRegistryPath
