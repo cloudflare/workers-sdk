@@ -67,7 +67,7 @@ const debuglog = util.debuglog("@cloudflare:vite-plugin");
 let workersConfigsWarningShown = false;
 let miniflare: Miniflare | undefined;
 
-assertWranglerVersion();
+await assertWranglerVersion();
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
