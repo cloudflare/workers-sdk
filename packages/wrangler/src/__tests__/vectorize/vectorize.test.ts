@@ -533,7 +533,7 @@ describe("vectorize commands", () => {
 		await runWrangler(
 			"vectorize query test-index --vector 1 2 3 '4' 1.5 '2.6' a 'b' null 7 abc 8 undefined"
 		);
-		expect(std.out).toMatchInlineSnapshot(querySnapshot`
+		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
@@ -578,7 +578,7 @@ describe("vectorize commands", () => {
 	it("should handle a query with a vector-id", async () => {
 		mockVectorizeV2Request();
 		await runWrangler("vectorize query test-index --vector-id some-vector-id");
-		expect(std.out).toMatchInlineSnapshot(querySnapshot`
+		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
@@ -629,7 +629,7 @@ describe("vectorize commands", () => {
 		await runWrangler(
 			`vectorize query test-index --vector 1 2 3 '4' --top-k=2 --return-values=true --return-metadata=indexed --namespace=abc --filter '{ "p1": "abc", "p2": { "$ne": true }, "p3": 10, "p4": false, "nested.p5": "abcd" }'`
 		);
-		expect(std.out).toMatchInlineSnapshot(querySnapshot`
+		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
@@ -679,7 +679,7 @@ describe("vectorize commands", () => {
 		await runWrangler(
 			"vectorize query test-index --vector 1 2 3 '4' --filter='{ 'p1': [1,2,3] }'"
 		);
-		expect(std.out).toMatchInlineSnapshot(querySnapshot`
+		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
@@ -1122,43 +1122,6 @@ describe("vectorize query filter", () => {
 		]);
 	});
 });
-
-const querySnapshot = `
-			"📋 Searching for relevant vectors...
-{
-  \\"count\\": 2,
-  \\"matches\\": [
-    {
-      \\"id\\": \\"a\\",
-      \\"score\\": 0.5,
-      \\"values\\": [
-        1,
-        2,
-        3,
-        4
-      ],
-      \\"namespace\\": \\"abcd\\",
-      \\"metadata\\": {
-        \\"a\\": true,
-        \\"b\\": 123
-      }
-    },
-    {
-      \\"id\\": \\"b\\",
-      \\"score\\": 0.75,
-      \\"values\\": [
-        5,
-        6,
-        7,
-        8
-      ],
-      \\"metadata\\": {
-        \\"c\\": false,
-        \\"b\\": \\"123\\"
-      }
-    }
-  ]
-}"`;
 
 /** Create a mock handler for the Vectorize API */
 function mockVectorizeRequest() {
