@@ -286,6 +286,24 @@ const testCases: TestCase<string>[] = [
 		matches: [expect.stringContaining(`image/avif`)],
 	},
 	{
+		name: "Media",
+		scriptPath: "media.js",
+		remoteProxySessionConfig: [
+			{
+				MEDIA: {
+					type: "media",
+				},
+			},
+		],
+		miniflareConfig: (connection) => ({
+			media: {
+				binding: "MEDIA",
+				remoteProxyConnectionString: connection,
+			},
+		}),
+		matches: [expect.stringContaining(`image/jpeg`)],
+	},
+	{
 		name: "Dispatch Namespace",
 		scriptPath: "dispatch-namespace.js",
 		setup: async (helper) => {
@@ -550,7 +568,7 @@ async function runTestCase<T>(
 			);
 
 	const mf = new Miniflare({
-		compatibilityDate: "2025-01-01",
+		compatibilityDate: "2025-09-06",
 		// @ts-expect-error TS doesn't like the spreading of miniflareConfig
 		modules: true,
 		scriptPath: path.resolve(helper.tmpPath, testCase.scriptPath),

@@ -332,6 +332,7 @@ export const defaultWranglerConfig: Config = {
 	analytics_engine_datasets: [],
 	ai: undefined,
 	images: undefined,
+	media: undefined,
 	version_metadata: undefined,
 	unsafe_hello_world: [],
 	ratelimits: [],
