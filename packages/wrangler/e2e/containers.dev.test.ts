@@ -32,13 +32,8 @@ for (const source of imageSource) {
 	// When pulling images an account id is necessary
 	const isPullWithoutAccountId = source === "pull" && !CLOUDFLARE_ACCOUNT_ID;
 
-	const dockerIsRunning = await isDockerRunning(getDockerPath());
-	/** Indicates whether the test is being run locally (not in CI) AND docker is currently not running on the system */
-	const isLocalWithoutDockerRunning =
-		process.env.CI !== "true" && !dockerIsRunning;
-
 	describe.skipIf(
-		isCINonLinux || isPullWithoutAccountId || isLocalWithoutDockerRunning
+		isCINonLinux || isPullWithoutAccountId || process.env.LOCAL_TESTS_WITHOUT_DOCKER
 	)(`containers local dev tests: ${source}`, { timeout: 90_000 }, () => {
 		let helper: WranglerE2ETestHelper;
 		let workerName: string;

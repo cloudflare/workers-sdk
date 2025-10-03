@@ -89,7 +89,8 @@ export const verifyDockerInstalled = async (
 	dockerPath: string,
 	isDev = true
 ) => {
-	if (!isDockerRunning(dockerPath)) {
+	const dockerIsRunning = await isDockerRunning(dockerPath);
+	if (!dockerIsRunning) {
 		throw new UserError(
 			`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.\n` +
 				`Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with DOCKER_HOST.` +

@@ -294,7 +294,7 @@ const isCINonLinux = process.platform !== "linux" && process.env.CI === "true";
 
 function isDockerRunning() {
 	try {
-		execSync("docker ps");
+		execSync("docker ps", { stdio: "ignore" });
 		return true;
 	} catch (e) {
 		return false;
@@ -304,6 +304,12 @@ function isDockerRunning() {
 /** Indicates whether the test is being run locally (not in CI) AND docker is currently not running on the system */
 const isLocalWithoutDockerRunning =
 	process.env.CI !== "true" && !isDockerRunning();
+
+if (isLocalWithoutDockerRunning) {
+	console.warn(
+		"The tests are running locally but there is no docker instance running on the system, skipping containers tests"
+	);
+}
 
 baseDescribe.skipIf(
 	isCINonLinux ||
