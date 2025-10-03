@@ -36,4 +36,10 @@
 			"service": "worker-entrypoint-with-assets",
 		},
 	],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "kv-id",
+		},
+	],
 }

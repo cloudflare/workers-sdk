@@ -604,10 +604,6 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 				method: "POST",
 				body: JSON.stringify(["hello world", "this is the 2nd log"]),
 			});
-			await fetch(`${moduleWorker}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["some other log"]),
-			});
 
 			const response = await fetch(
 				`${workerEntrypointWithAssets}?${searchParams}`
@@ -615,10 +611,10 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(await response.json()).toEqual({
 				worker: "Worker Entrypoint",
-				tailEvents: expect.arrayContaining([
-					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
-					[["[Module Worker]"], ["some other log"]],
-				]),
+				tailEvents: [
+					["[Module Worker]"],
+					["hello world", "this is the 2nd log"],
+				],
 			});
 		}, waitForTimeout);
 

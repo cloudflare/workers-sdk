@@ -17,4 +17,10 @@
 			"new_sqlite_classes": ["TestObject"],
 		},
 	],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "kv-id",
+		},
+	],
 }

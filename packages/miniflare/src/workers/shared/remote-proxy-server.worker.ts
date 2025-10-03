@@ -130,12 +130,10 @@ export default {
 
 				if (request.headers.has("MF-Tail")) {
 					// @ts-expect-error This is guaranteed to have a tail method
-					// await fetcher.tail(
-					// 	JSON.parse(await request.text(), tailEventsReviver)
-					// );
-					await fetcher.taill(
+					await fetcher.tail(
 						JSON.parse(await request.text(), tailEventsReviver)
 					);
+
 					return new Response("OK");
 				}
 

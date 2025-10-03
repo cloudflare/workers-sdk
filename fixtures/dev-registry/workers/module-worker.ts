@@ -1,7 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 
-let tailEvents = [];
-
 export class NamedEntrypoint extends WorkerEntrypoint {
 	ping() {
 		return "Pong from Named Entrypoint";
@@ -74,7 +72,7 @@ export default {
 
 				return Response.json({
 					worker: "Module Worker",
-					tailEvents,
+					tailEvents: JSON.parse(await env.KV.get("tail")),
 				});
 			}
 
@@ -83,7 +81,7 @@ export default {
 			return new Response(e.message, { status: 500 });
 		}
 	},
-	taill(events) {
+	async tail(events, env) {
 		const logs = [];
 
 		for (const event of events) {
@@ -93,7 +91,7 @@ export default {
 		}
 
 		if (logs.length > 0) {
-			tailEvents.push(logs);
+			await env.KV.put("tail", JSON.stringify(logs));
 		}
 	},
 } satisfies ExportedHandler<{
@@ -103,4 +101,5 @@ export default {
 	WORKER_ENTRYPOINT_WITH_ASSETS: Fetcher;
 	NAMED_ENTRYPOINT: Fetcher;
 	NAMED_ENTRYPOINT_WITH_ASSETS: Fetcher;
+	KV: KVNamespace;
 }>;
