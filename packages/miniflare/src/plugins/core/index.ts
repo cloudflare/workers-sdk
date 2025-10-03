@@ -1,7 +1,6 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import fs from "fs/promises";
-import { platform } from "node:os";
 import path from "path";
 import { Readable } from "stream";
 import tls from "tls";
@@ -1085,7 +1084,7 @@ function getContainerEngine(
 	if (!engineOrSocketPath) {
 		// TODO: workerd does not support win named pipes
 		engineOrSocketPath =
-			platform() === "win32"
+			process.platform === "win32"
 				? "//./pipe/docker_engine"
 				: "unix:///var/run/docker.sock";
 	}
