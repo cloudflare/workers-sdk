@@ -35,8 +35,6 @@ interface AuxiliaryWorkerConfig extends BaseWorkerConfig {
 interface Experimental {
 	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 	headersAndRedirectsDevModeSupport?: boolean;
-	/** Experimental support for remote bindings (where bindings configured with `remote: true` access remote resources). */
-	remoteBindings?: boolean;
 }
 
 export interface PluginConfig extends EntryWorkerConfig {

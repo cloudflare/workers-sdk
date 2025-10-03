@@ -414,15 +414,13 @@ export async function getDevMiniflareOptions(config: {
 								: undefined;
 
 							const remoteProxySessionData =
-								resolvedPluginConfig.experimental.remoteBindings ?? true
-									? await maybeStartOrUpdateRemoteProxySession(
-											{
-												name: workerConfig.name,
-												bindings: bindings ?? {},
-											},
-											preExistingRemoteProxySession ?? null
-										)
-									: undefined;
+								await maybeStartOrUpdateRemoteProxySession(
+									{
+										name: workerConfig.name,
+										bindings: bindings ?? {},
+									},
+									preExistingRemoteProxySession ?? null
+								);
 
 							if (workerConfig.configPath && remoteProxySessionData) {
 								remoteProxySessionsDataMap.set(
@@ -767,15 +765,13 @@ export async function getPreviewMiniflareOptions(config: {
 					: undefined;
 
 				const remoteProxySessionData =
-					resolvedPluginConfig.experimental.remoteBindings ?? true
-						? await maybeStartOrUpdateRemoteProxySession(
-								{
-									name: workerConfig.name,
-									bindings: bindings ?? {},
-								},
-								preExistingRemoteProxySessionData ?? null
-							)
-						: undefined;
+					await maybeStartOrUpdateRemoteProxySession(
+						{
+							name: workerConfig.name,
+							bindings: bindings ?? {},
+						},
+						preExistingRemoteProxySessionData ?? null
+					);
 
 				if (workerConfig.configPath && remoteProxySessionData) {
 					remoteProxySessionsDataMap.set(
