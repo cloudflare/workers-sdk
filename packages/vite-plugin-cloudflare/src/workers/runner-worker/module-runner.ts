@@ -1,7 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { ModuleRunner, ssrModuleExportsKey } from "vite/module-runner";
-import { VIRTUAL_WORKER_ENTRY } from "../plugins/virtual-modules";
-import { INIT_PATH, UNKNOWN_HOST } from "../shared";
+import { VIRTUAL_WORKER_ENTRY } from "../../plugins/virtual-modules";
+import { INIT_PATH, UNKNOWN_HOST } from "../../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
 import type {
