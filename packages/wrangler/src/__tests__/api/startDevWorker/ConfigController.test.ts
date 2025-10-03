@@ -82,7 +82,8 @@ describe("ConfigController", () => {
 			`,
 			"wrangler.toml": dedent`
 				main = \"./some/base_dir/nested/index.js\"
-base_dir = \"./some/base_dir\"`,
+				compatibility_date = \"2024-06-01\"
+				base_dir = \"./some/base_dir\"`,
 		});
 
 		const config: StartDevWorkerInput = {};
@@ -205,6 +206,7 @@ base_dir = \"./some/base_dir\"`,
 			"wrangler.toml": dedent/* toml */ `
                 name = "my-worker"
                 main = "src/index.ts"
+								compatibility_date = \"2024-06-01\"
             `,
 		});
 
@@ -222,6 +224,7 @@ base_dir = \"./some/base_dir\"`,
 			"wrangler.toml": dedent/* toml */ `
                 name = "my-worker"
                 main = "src/index.ts"
+								compatibility_date = \"2024-06-01\"
                 account_id = "1234567890"
             `,
 		});
