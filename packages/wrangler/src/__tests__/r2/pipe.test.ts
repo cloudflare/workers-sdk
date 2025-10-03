@@ -3,7 +3,6 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
-vi.unmock("../../wrangler-banner");
 const decoder = new TextDecoder();
 describe("pipe test", () => {
 	const consoleSpy = mockConsoleMethods();

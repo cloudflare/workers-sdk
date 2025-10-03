@@ -3,7 +3,10 @@
 exports[`pages deploy > with wrangler.json configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `"2ea0b43fa4411e79883bfbfc1dcb4360d1789067eca64a492604d59b8eab932c"`;
 
 exports[`pages deploy > with wrangler.json configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 2`] = `
-"✨ Success! Uploaded 1 files (TIMINGS)
+"
+ ⛅️ wrangler x.x.x
+──────────────────
+✨ Success! Uploaded 1 files (TIMINGS)
 
 ✨ Compiled Worker successfully
 ✨ Uploading Worker bundle
@@ -16,7 +19,10 @@ exports[`pages deploy > with wrangler.json configuration > should error if user 
 exports[`pages deploy > with wrangler.json configuration > should support wrangler.json 1`] = `"b6a9158832033622c937859452cd6fe4d9542ec8a863c17aa84f761140b750b9"`;
 
 exports[`pages deploy > with wrangler.json configuration > should support wrangler.json 2`] = `
-"✨ Success! Uploaded 1 files (TIMINGS)
+"
+ ⛅️ wrangler x.x.x
+──────────────────
+✨ Success! Uploaded 1 files (TIMINGS)
 
 ✨ Compiled Worker successfully
 ✨ Uploading Worker bundle
@@ -29,7 +35,10 @@ exports[`pages deploy > with wrangler.json configuration > should warn and ignor
 exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `"b5f53af7922efd0f0b73c7bf288f7e3f14df5c31e8b654e98027ddf85ea7e574"`;
 
 exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 2`] = `
-"✨ Success! Uploaded 1 files (TIMINGS)
+"
+ ⛅️ wrangler x.x.x
+──────────────────
+✨ Success! Uploaded 1 files (TIMINGS)
 
 ✨ Compiled Worker successfully
 ✨ Uploading Worker bundle
@@ -42,7 +51,10 @@ exports[`pages deploy > with wrangler.toml configuration > should error if user 
 exports[`pages deploy > with wrangler.toml configuration > should support wrangler.toml 1`] = `"62e8895a4896fc18db089b5590f7ecce38de8c1f38b515b1861da4bfd6ae7596"`;
 
 exports[`pages deploy > with wrangler.toml configuration > should support wrangler.toml 2`] = `
-"✨ Success! Uploaded 1 files (TIMINGS)
+"
+ ⛅️ wrangler x.x.x
+──────────────────
+✨ Success! Uploaded 1 files (TIMINGS)
 
 ✨ Compiled Worker successfully
 ✨ Uploading Worker bundle

@@ -876,7 +876,10 @@ describe("pages download config", () => {
 
 			",
 			  "info": "",
-			  "out": "",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pages download config\` is an experimental command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
 			",
@@ -1046,7 +1049,10 @@ describe("pages download config", () => {
 			"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"? Your existing Wrangler configuration file will be overwritten. Continue?
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				? Your existing Wrangler configuration file will be overwritten. Continue?
 				🤖 Using fallback value in non-interactive context: no
 				"
 			`);
@@ -1221,6 +1227,9 @@ describe("pages download config", () => {
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 			`);
 		});

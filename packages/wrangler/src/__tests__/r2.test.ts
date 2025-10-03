@@ -252,13 +252,16 @@ describe("r2", () => {
 
 				await runWrangler(`r2 bucket list`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Listing buckets...
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Listing buckets...
 					name:           bucket-1-local-once
 					creation_date:  01-01-2001
 
 					name:           bucket-2-local-once
 					creation_date:  01-01-2001"
-				  `);
+				`);
 			});
 		});
 
@@ -293,14 +296,17 @@ describe("r2", () => {
 				);
 				await runWrangler(`r2 bucket info ${bucketName}`);
 				expect(std.out).toMatchInlineSnapshot(`
-						"Getting info for 'my-bucket'...
-						name:                   my-bucket
-						created:                01-01-2001
-						location:               WNAM
-						default_storage_class:  Standard
-						object_count:           0
-						bucket_size:            0 B"
-					  `);
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Getting info for 'my-bucket'...
+					name:                   my-bucket
+					created:                01-01-2001
+					location:               WNAM
+					default_storage_class:  Standard
+					object_count:           0
+					bucket_size:            0 B"
+				`);
 			});
 		});
 
@@ -466,7 +472,10 @@ describe("r2", () => {
 
 					",
 					  "info": "",
-					  "out": "Creating bucket 'test-bucket'...
+					  "out": "
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Creating bucket 'test-bucket'...
 					",
 					  "warn": "",
 					}
@@ -547,7 +556,10 @@ describe("r2", () => {
 						`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets/testBucket) failed.]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Updating bucket testBucket to Foo default storage class.
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Updating bucket testBucket to Foo default storage class.
 						"
 					`);
 				});
@@ -557,9 +569,12 @@ describe("r2", () => {
 						"r2 bucket update storage-class testBucket -s InfrequentAccess"
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-				            "Updating bucket testBucket to InfrequentAccess default storage class.
-				            Updated bucket testBucket to InfrequentAccess default storage class."
-			          `);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Updating bucket testBucket to InfrequentAccess default storage class.
+						Updated bucket testBucket to InfrequentAccess default storage class."
+					`);
 				});
 			});
 		});
@@ -683,9 +698,12 @@ describe("r2", () => {
 				);
 				await runWrangler(`r2 bucket delete some-bucket`);
 				expect(std.out).toMatchInlineSnapshot(`
-				"Deleting bucket some-bucket.
-				Deleted bucket some-bucket."
-			`);
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Deleting bucket some-bucket.
+					Deleted bucket some-bucket."
+				`);
 			});
 		});
 
@@ -755,7 +773,12 @@ describe("r2", () => {
 						"r2 bucket sippy enable testBucket --r2-access-key-id=some-key --r2-secret-access-key=some-secret --provider=AWS --access-key-id=aws-key --secret-access-key=aws-secret --region=awsRegion --bucket=awsBucket"
 					);
 					expect(std.out).toMatchInlineSnapshot(
-						`"✨ Successfully enabled Sippy on the 'testBucket' bucket."`
+						`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						✨ Successfully enabled Sippy on the 'testBucket' bucket."
+					`
 					);
 				});
 
@@ -788,7 +811,12 @@ describe("r2", () => {
 						"r2 bucket sippy enable testBucket --r2-access-key-id=some-key --r2-secret-access-key=some-secret --provider=GCS --client-email=gcs-client-email --private-key=gcs-private-key --bucket=gcsBucket"
 					);
 					expect(std.out).toMatchInlineSnapshot(
-						`"✨ Successfully enabled Sippy on the 'testBucket' bucket."`
+						`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						✨ Successfully enabled Sippy on the 'testBucket' bucket."
+					`
 					);
 				});
 
@@ -884,7 +912,12 @@ describe("r2", () => {
 					);
 					await runWrangler("r2 bucket sippy disable testBucket");
 					expect(std.out).toMatchInlineSnapshot(
-						`"✨ Successfully disabled Sippy on the 'testBucket' bucket."`
+						`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						✨ Successfully disabled Sippy on the 'testBucket' bucket."
+					`
 					);
 				});
 			});
@@ -945,7 +978,12 @@ describe("r2", () => {
 				);
 				await runWrangler("r2 bucket sippy get testBucket");
 				expect(std.out).toMatchInlineSnapshot(
-					`"Sippy configuration: https://storage.googleapis.com/storage/v1/b/testBucket"`
+					`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Sippy configuration: https://storage.googleapis.com/storage/v1/b/testBucket"
+				`
 				);
 			});
 		});
@@ -1005,14 +1043,19 @@ describe("r2", () => {
 					);
 					await runWrangler("r2 bucket catalog enable testBucket");
 					expect(std.out).toMatchInlineSnapshot(
-						`"✨ Successfully enabled data catalog on bucket 'testBucket'.
+						`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						✨ Successfully enabled data catalog on bucket 'testBucket'.
 
-Catalog URI: 'https://catalog.cloudflarestorage.com/test-account-id/test-warehouse-name'
-Warehouse: 'test-account-id_test-warehouse-name'
+						Catalog URI: 'https://catalog.cloudflarestorage.com/test-account-id/test-warehouse-name'
+						Warehouse: 'test-account-id_test-warehouse-name'
 
-Use this Catalog URI with Iceberg-compatible query engines (Spark, PyIceberg etc.) to query data as tables.
-Note: You will need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
-For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"`
+						Use this Catalog URI with Iceberg-compatible query engines (Spark, PyIceberg etc.) to query data as tables.
+						Note: You will need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
+						For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
+					`
 					);
 				});
 
@@ -1096,7 +1139,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					);
 					await runWrangler("r2 bucket catalog disable testBucket");
 					expect(std.out).toMatchInlineSnapshot(
-						`"Successfully disabled the data catalog on bucket 'testBucket'."`
+						`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Successfully disabled the data catalog on bucket 'testBucket'."
+					`
 					);
 				});
 
@@ -1133,7 +1181,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 
 					await runWrangler("r2 bucket catalog disable testBucket");
 					expect(std.out).toMatchInlineSnapshot(`
-						"Data catalog is not enabled for bucket 'testBucket'. Please use 'wrangler r2 bucket catalog enable testBucket' to first enable the data catalog on this bucket."
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Data catalog is not enabled for bucket 'testBucket'. Please use 'wrangler r2 bucket catalog enable testBucket' to first enable the data catalog on this bucket."
 					`);
 				});
 			});
@@ -1194,12 +1245,15 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					);
 					await runWrangler("r2 bucket catalog get test-bucket");
 					expect(std.out).toMatchInlineSnapshot(`
-					"Getting data catalog status for 'test-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Getting data catalog status for 'test-bucket'...
 
-					Catalog URI:  https://catalog.cloudflarestorage.com/test-account-id/test-name
-					Warehouse:    test-account-id_test-name
-					Status:       active"
-				`);
+						Catalog URI:  https://catalog.cloudflarestorage.com/test-account-id/test-name
+						Warehouse:    test-account-id_test-name
+						Status:       active"
+					`);
 				});
 
 				it("should inform user if the catalog was never enabled for the bucket", async () => {
@@ -1229,10 +1283,13 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					);
 					await runWrangler("r2 bucket catalog get test-bucket");
 					expect(std.out).toMatchInlineSnapshot(`
-					"Getting data catalog status for 'test-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Getting data catalog status for 'test-bucket'...
 
-					Data catalog is not enabled for bucket 'test-bucket'. Please use 'wrangler r2 bucket catalog enable test-bucket' to first enable the data catalog on this bucket."
-				`);
+						Data catalog is not enabled for bucket 'test-bucket'. Please use 'wrangler r2 bucket catalog enable test-bucket' to first enable the data catalog on this bucket."
+					`);
 				});
 			});
 
@@ -1307,7 +1364,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							"r2 bucket catalog compaction enable testBucket --token fakecloudflaretoken --target-size 512"
 						);
 						expect(std.out).toMatchInlineSnapshot(
-							`"✨ Successfully enabled file compaction for the data catalog for bucket 'testBucket'."`
+							`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							✨ Successfully enabled file compaction for the data catalog for bucket 'testBucket'."
+						`
 						);
 					});
 
@@ -1416,7 +1478,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							"r2 bucket catalog compaction disable testBucket"
 						);
 						expect(std.out).toMatchInlineSnapshot(
-							`"Successfully disabled file compaction for the data catalog for bucket 'testBucket'."`
+							`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Successfully disabled file compaction for the data catalog for bucket 'testBucket'."
+						`
 						);
 					});
 
@@ -1429,7 +1496,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						await runWrangler(
 							"r2 bucket catalog compaction disable testBucket"
 						);
-						expect(std.out).toMatchInlineSnapshot(`"Disable cancelled."`);
+						expect(std.out).toMatchInlineSnapshot(`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Disable cancelled."
+						`);
 					});
 				});
 			});
@@ -1482,14 +1554,17 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						await runWrangler(`r2 bucket notification list ${bucketName}`)
 					).toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Fetching notification rules for bucket my-bucket...
-				rule_id:     8cdcce8a-89b3-474f-a087-3eb4fcacfa37
-				created_at:  2024-09-05T01:02:03.000Z
-				queue_name:  my-queue
-				prefix:      (all prefixes)
-				suffix:      (all suffixes)
-				event_type:  PutObject,CompleteMultipartUpload,CopyObject"
-			`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Fetching notification rules for bucket my-bucket...
+						rule_id:     8cdcce8a-89b3-474f-a087-3eb4fcacfa37
+						created_at:  2024-09-05T01:02:03.000Z
+						queue_name:  my-queue
+						prefix:      (all prefixes)
+						suffix:      (all suffixes)
+						event_type:  PutObject,CompleteMultipartUpload,CopyObject"
+					`);
 				});
 
 				it("is backwards compatible with old API version", async () => {
@@ -1548,14 +1623,17 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						await runWrangler(`r2 bucket notification list ${bucketName}`)
 					).toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Fetching notification rules for bucket my-bucket...
-				rule_id:
-				created_at:
-				queue_name:  my-queue
-				prefix:      (all prefixes)
-				suffix:      (all suffixes)
-				event_type:  PutObject,CompleteMultipartUpload,CopyObject"
-			`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Fetching notification rules for bucket my-bucket...
+						rule_id:
+						created_at:
+						queue_name:  my-queue
+						prefix:      (all prefixes)
+						suffix:      (all suffixes)
+						event_type:  PutObject,CompleteMultipartUpload,CopyObject"
+					`);
 				});
 
 				it("shows correct output on error", async () => {
@@ -1663,9 +1741,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
-				Event notification rule created successfully!"
-			`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
+						Event notification rule created successfully!"
+					`);
 				});
 
 				it("follows happy path as expected with prefix", async () => {
@@ -1745,9 +1826,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
-				Event notification rule created successfully!"
-			`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
+						Event notification rule created successfully!"
+					`);
 				});
 
 				it("follows happy path as expected with suffix", async () => {
@@ -1827,9 +1911,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
-				Event notification rule created successfully!"
-			`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
+						Event notification rule created successfully!"
+					`);
 				});
 
 				it("follows happy path as expected with description", async () => {
@@ -1915,9 +2002,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
-				Event notification rule created successfully!"
-			`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
+						Event notification rule created successfully!"
+					`);
 				});
 
 				it("errors if required options are not provided", async () => {
@@ -2011,9 +2101,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Deleting event notification rules associated with queue my-queue...
-				Event notification rule deleted successfully!"
-			`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Deleting event notification rules associated with queue my-queue...
+						Event notification rule deleted successfully!"
+					`);
 				});
 
 				it("follows happy path as expected with specified rules", async () => {
@@ -2075,9 +2168,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Deleting event notifications rule \\"rule123456789\\"...
-				Event notification rule deleted successfully!"
-			`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Deleting event notifications rule \\"rule123456789\\"...
+						Event notification rule deleted successfully!"
+					`);
 				});
 
 				it("errors if required options are not provided", async () => {
@@ -2151,7 +2247,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket domain get ${bucketName} --domain ${domainName}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Retrieving custom domain 'test.com' connected to bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Retrieving custom domain 'test.com' connected to bucket 'my-bucket'...
 						domain:            test.com
 						enabled:           No
 						ownership_status:  pending
@@ -2159,7 +2258,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						min_tls_version:   1.0
 						zone_id:           zone-id-456
 						zone_name:         test-zone"
-					  `);
+					`);
 				});
 			});
 			describe("add", () => {
@@ -2198,9 +2297,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket domain add ${bucketName} --domain ${domainName} --zone-id ${zoneId}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Connecting custom domain 'example.com' to bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Connecting custom domain 'example.com' to bucket 'my-bucket'...
 						✨ Custom domain 'example.com' connected successfully."
-					  `);
+					`);
 				});
 
 				it("should error if domain and zone-id are not provided", async () => {
@@ -2262,7 +2364,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					);
 					await runWrangler(`r2 bucket domain list ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Listing custom domains connected to bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Listing custom domains connected to bucket 'my-bucket'...
 						domain:            example.com
 						enabled:           Yes
 						ownership_status:  verified
@@ -2278,7 +2383,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						min_tls_version:   1.0
 						zone_id:           zone-id-456
 						zone_name:         test-zone"
-					  `);
+					`);
 				});
 			});
 			describe("remove", () => {
@@ -2313,9 +2418,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket domain remove ${bucketName} --domain ${domainName}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Removing custom domain 'example.com' from bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Removing custom domain 'example.com' from bucket 'my-bucket'...
 						Custom domain 'example.com' removed successfully."
-					  `);
+					`);
 				});
 			});
 			describe("update", () => {
@@ -2348,9 +2456,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket domain update ${bucketName} --domain ${domainName} --min-tls 1.3`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Updating custom domain 'example.com' for bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Updating custom domain 'example.com' for bucket 'my-bucket'...
 						✨ Custom domain 'example.com' updated successfully."
-					  `);
+					`);
 				});
 			});
 		});
@@ -2380,8 +2491,11 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					);
 					await runWrangler(`r2 bucket dev-url get ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Public access is enabled at 'https://pub-bucket-id-123.r2.dev'."
-					  `);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Public access is enabled at 'https://pub-bucket-id-123.r2.dev'."
+					`);
 				});
 
 				it("should show that public access is disabled when it is disabled", async () => {
@@ -2405,8 +2519,11 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					);
 					await runWrangler(`r2 bucket dev-url get ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Public access via the r2.dev URL is disabled."
-					  `);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Public access via the r2.dev URL is disabled."
+					`);
 				});
 			});
 
@@ -2442,9 +2559,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					);
 					await runWrangler(`r2 bucket dev-url enable ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Enabling public access for bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Enabling public access for bucket 'my-bucket'...
 						✨ Public access enabled at 'https://pub-bucket-id-123.r2.dev'."
-					  `);
+					`);
 				});
 			});
 
@@ -2480,9 +2600,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					);
 					await runWrangler(`r2 bucket dev-url disable ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Disabling public access for bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Disabling public access for bucket 'my-bucket'...
 						Public access disabled at 'https://pub-bucket-id-123.r2.dev'."
-					  `);
+					`);
 				});
 			});
 		});
@@ -2524,12 +2647,15 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					);
 					await runWrangler(`r2 bucket lifecycle list ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
-					"Listing lifecycle rules for bucket 'my-bucket'...
-					name:     rule-1
-					enabled:  Yes
-					prefix:   images/
-					action:   Expire objects after 30 days"
-				  `);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Listing lifecycle rules for bucket 'my-bucket'...
+						name:     rule-1
+						enabled:  Yes
+						prefix:   images/
+						action:   Expire objects after 30 days"
+					`);
 				});
 			});
 			describe("add", () => {
@@ -2586,9 +2712,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lifecycle add ${bucketName} --name ${ruleId} --prefix ${prefix} --expire-days ${conditionValue}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
 						✨ Added lifecycle rule 'my-rule' to bucket 'my-bucket'."
-					  `);
+					`);
 				});
 
 				it("it should add a date lifecycle rule using command-line arguments and id alias", async () => {
@@ -2644,9 +2773,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lifecycle add ${bucketName} --id ${ruleId} --prefix ${prefix} --expire-date ${conditionValue}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
 						✨ Added lifecycle rule 'my-rule' to bucket 'my-bucket'."
-					  `);
+					`);
 				});
 			});
 			describe("remove", () => {
@@ -2692,9 +2824,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lifecycle remove ${bucketName} --name ${ruleId}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Removing lifecycle rule 'my-rule' from bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Removing lifecycle rule 'my-rule' from bucket 'my-bucket'...
 						Lifecycle rule 'my-rule' removed from bucket 'my-bucket'."
-					  `);
+					`);
 				});
 				it("should remove a lifecycle rule as expected with id alias", async () => {
 					const bucketName = "my-bucket";
@@ -2738,9 +2873,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lifecycle remove ${bucketName} --id ${ruleId}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Removing lifecycle rule 'my-rule' from bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Removing lifecycle rule 'my-rule' from bucket 'my-bucket'...
 						Lifecycle rule 'my-rule' removed from bucket 'my-bucket'."
-					  `);
+					`);
 				});
 				it("should handle removing non-existant rule ID as expected", async () => {
 					const bucketName = "my-bucket";
@@ -2818,9 +2956,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lifecycle set ${bucketName} --file ${filePath}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Setting lifecycle configuration (1 rules) for bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Setting lifecycle configuration (1 rules) for bucket 'my-bucket'...
 						✨ Set lifecycle configuration for bucket 'my-bucket'."
-					  `);
+					`);
 				});
 			});
 		});
@@ -2861,13 +3002,16 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					);
 					await runWrangler(`r2 bucket cors list ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
-					"Listing CORS rules for bucket 'my-bucket'...
-					allowed_origins:  https://www.example.com
-					allowed_methods:  GET, PUT
-					allowed_headers:  Content-Type, Authorization
-					exposed_headers:  ETag, Content-Length
-					max_age_seconds:  8640"
-				  `);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Listing CORS rules for bucket 'my-bucket'...
+						allowed_origins:  https://www.example.com
+						allowed_methods:  GET, PUT
+						allowed_headers:  Content-Type, Authorization
+						exposed_headers:  ETag, Content-Length
+						max_age_seconds:  8640"
+					`);
 				});
 			});
 			describe("set", () => {
@@ -2917,9 +3061,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket cors set ${bucketName} --file ${filePath}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Setting CORS configuration (1 rules) for bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Setting CORS configuration (1 rules) for bucket 'my-bucket'...
 						✨ Set CORS configuration for bucket 'my-bucket'."
-					  `);
+					`);
 				});
 			});
 			describe("delete", () => {
@@ -2967,9 +3114,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					);
 					await runWrangler(`r2 bucket cors delete ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Deleting the CORS configuration for bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Deleting the CORS configuration for bucket 'my-bucket'...
 						CORS configuration deleted for bucket 'my-bucket'."
-					  `);
+					`);
 				});
 			});
 		});
@@ -3026,22 +3176,25 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					);
 					await runWrangler(`r2 bucket lock list ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
-					"Listing lock rules for bucket 'my-bucket'...
-					name:       rule-age
-					enabled:    Yes
-					prefix:     images/age
-					condition:  after 1 day
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Listing lock rules for bucket 'my-bucket'...
+						name:       rule-age
+						enabled:    Yes
+						prefix:     images/age
+						condition:  after 1 day
 
-					name:       rule-date
-					enabled:    Yes
-					prefix:     images/date
-					condition:  on 2025-01-30
+						name:       rule-date
+						enabled:    Yes
+						prefix:     images/date
+						condition:  on 2025-01-30
 
-					name:       rule-indefinite
-					enabled:    Yes
-					prefix:     images/indefinite
-					condition:  indefinitely"
-				  `);
+						name:       rule-indefinite
+						enabled:    Yes
+						prefix:     images/indefinite
+						condition:  indefinitely"
+					`);
 				});
 			});
 			describe("add", () => {
@@ -3075,9 +3228,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lock add ${bucketName} --name "rule-no-prefix" --retention-days 1`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Adding lock rule 'rule-no-prefix' to bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding lock rule 'rule-no-prefix' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-no-prefix' to bucket 'my-bucket'."
-					  `);
+					`);
 				});
 				it("it should fail to add lock rule using command-line arguments without condition", async () => {
 					setIsTTY(true);
@@ -3096,8 +3252,11 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lock add ${bucketName} --name 'rule-not-indefinite' --prefix prefix-not-indefinite`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Add cancelled."
-					  `);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Add cancelled."
+					`);
 				});
 				it("it should add an age lock rule using command-line arguments and id alias", async () => {
 					setIsTTY(true);
@@ -3119,9 +3278,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --retention-days 1`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Adding lock rule 'rule-age' to bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding lock rule 'rule-age' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-age' to bucket 'my-bucket'."
-					  `);
+					`);
 				});
 				it("it should fail an age lock rule using command-line arguments with invalid age string", async () => {
 					setIsTTY(true);
@@ -3181,9 +3343,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lock add ${bucketName} --name rule-date --prefix prefix-date --retention-date 2025-01-30`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Adding lock rule 'rule-date' to bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding lock rule 'rule-date' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-date' to bucket 'my-bucket'."
-					  `);
+					`);
 				});
 				it("it should fail to add an invalid date lock rule using command-line arguments if retention is not", async () => {
 					setIsTTY(true);
@@ -3218,9 +3383,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lock add ${bucketName} --name rule-indefinite --prefix prefix-indefinite --retention-indefinite`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Adding lock rule 'rule-indefinite' to bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding lock rule 'rule-indefinite' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-indefinite' to bucket 'my-bucket'."
-					  `);
+					`);
 				});
 				it("it should add an indefinite lock rule using command-line arguments and prompt if not initially specified", async () => {
 					setIsTTY(false);
@@ -3248,11 +3416,14 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lock add ${bucketName} --name rule-indefinite --prefix prefix-indefinite`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"? Are you sure you want to add lock rule 'rule-indefinite' to bucket 'my-bucket' without retention? The lock rule will apply to all matching objects indefinitely.
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						? Are you sure you want to add lock rule 'rule-indefinite' to bucket 'my-bucket' without retention? The lock rule will apply to all matching objects indefinitely.
 						🤖 Using fallback value in non-interactive context: yes
 						Adding lock rule 'rule-indefinite' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-indefinite' to bucket 'my-bucket'."
-					  `);
+					`);
 				});
 				it("it should fail to add a lock rule if retenion is indefinite but false", async () => {
 					setIsTTY(true);
@@ -3309,9 +3480,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lock remove ${bucketName} --name ${ruleId}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Removing lock rule 'my-rule' from bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Removing lock rule 'my-rule' from bucket 'my-bucket'...
 						Lock rule 'my-rule' removed from bucket 'my-bucket'."
-					  `);
+					`);
 				});
 				it("should remove a lock rule as expected with id alias", async () => {
 					const bucketName = "my-bucket";
@@ -3331,9 +3505,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lock remove ${bucketName} --id ${ruleId}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"Removing lock rule 'my-rule' from bucket 'my-bucket'...
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Removing lock rule 'my-rule' from bucket 'my-bucket'...
 						Lock rule 'my-rule' removed from bucket 'my-bucket'."
-					  `);
+					`);
 				});
 				it("should handle removing non-existant rule ID as expected", async () => {
 					const bucketName = "my-bucket";
@@ -3401,11 +3578,14 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						`r2 bucket lock set ${bucketName} --file ${filePath}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"? Are you sure you want to overwrite all existing lock rules for bucket 'my-bucket'?
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						? Are you sure you want to overwrite all existing lock rules for bucket 'my-bucket'?
 						🤖 Using fallback value in non-interactive context: yes
 						Setting lock configuration (2 rules) for bucket 'my-bucket'...
 						✨ Set lock configuration for bucket 'my-bucket'."
-					  `);
+					`);
 				});
 			});
 		});
@@ -3445,7 +3625,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
 					Download complete."
 				`);
@@ -3467,7 +3650,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
 					Upload complete."
 				`);
@@ -3480,7 +3666,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucket-object-test\\".
 					Upload complete."
 				`);
@@ -3560,7 +3749,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
 					Upload complete."
 				`);
@@ -3572,7 +3764,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 					Deleting object \\"wormhole-img.png\\" from bucket \\"bucket-object-test\\".
 					Delete complete."
 				`);

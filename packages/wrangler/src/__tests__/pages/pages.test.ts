@@ -255,13 +255,23 @@ describe("pages", () => {
 				`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in your Wrangler configuration file.]`
 			);
 
-			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				"
+			`);
 		});
 
 		it("should display for pages:functions:build", async () => {
 			await expect(runWrangler("pages functions build")).rejects.toThrowError();
 
-			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				"
+			`);
 		});
 
 		it("should display for pages:functions:optimize-routes", async () => {
@@ -271,7 +281,12 @@ describe("pages", () => {
 				)
 			).rejects.toThrowError();
 
-			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				"
+			`);
 		});
 	});
 });

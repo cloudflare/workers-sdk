@@ -1,7 +1,10 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket & check request inputs 1`] = `
-"Creating bucket 'test-bucket'...
+"
+ ⛅️ wrangler x.x.x
+──────────────────
+Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with default storage class of Standard.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 {
@@ -17,7 +20,10 @@ To access your new R2 Bucket in your Worker, add the following snippet to your c
 `;
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket with the expected default storage class 1`] = `
-"Creating bucket 'test-bucket'...
+"
+ ⛅️ wrangler x.x.x
+──────────────────
+Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with default storage class of InfrequentAccess.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 {
@@ -33,7 +39,10 @@ To access your new R2 Bucket in your Worker, add the following snippet to your c
 `;
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket with the expected jurisdiction 1`] = `
-"Creating bucket 'test-bucket (eu)'...
+"
+ ⛅️ wrangler x.x.x
+──────────────────
+Creating bucket 'test-bucket (eu)'...
 ✅ Created bucket 'test-bucket (eu)' with default storage class of Standard.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 {
@@ -49,7 +58,10 @@ To access your new R2 Bucket in your Worker, add the following snippet to your c
 `;
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket with the expected location hint 1`] = `
-"Creating bucket 'test-bucket'...
+"
+ ⛅️ wrangler x.x.x
+──────────────────
+Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with location hint weur and default storage class of Standard.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 {
@@ -65,7 +77,10 @@ To access your new R2 Bucket in your Worker, add the following snippet to your c
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket & check request inputs 1`] = `
-"Creating bucket 'test-bucket'...
+"
+ ⛅️ wrangler x.x.x
+──────────────────
+Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with default storage class of Standard.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
@@ -75,7 +90,10 @@ binding = \\"test_bucket\\"
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket with the expected default storage class 1`] = `
-"Creating bucket 'test-bucket'...
+"
+ ⛅️ wrangler x.x.x
+──────────────────
+Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with default storage class of InfrequentAccess.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
@@ -85,7 +103,10 @@ binding = \\"test_bucket\\"
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket with the expected jurisdiction 1`] = `
-"Creating bucket 'test-bucket (eu)'...
+"
+ ⛅️ wrangler x.x.x
+──────────────────
+Creating bucket 'test-bucket (eu)'...
 ✅ Created bucket 'test-bucket (eu)' with default storage class of Standard.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
@@ -95,7 +116,10 @@ binding = \\"test_bucket\\"
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket with the expected location hint 1`] = `
-"Creating bucket 'test-bucket'...
+"
+ ⛅️ wrangler x.x.x
+──────────────────
+Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with location hint weur and default storage class of Standard.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]

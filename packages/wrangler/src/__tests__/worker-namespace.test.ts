@@ -11,6 +11,8 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Mock } from "vitest";
 
+vi.mock("../wrangler-banner");
+
 describe("dispatch-namespace", () => {
 	const std = mockConsoleMethods();
 	beforeEach(() => msw.use(...mswSuccessNamespacesHandlers));
@@ -222,15 +224,15 @@ describe("dispatch-namespace", () => {
 			await runWrangler(`dispatch-namespace get ${namespaceName}`);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  namespace_id: 'some-namespace-id',
-			  namespace_name: 'namespace-name',
-			  created_on: '2022-06-29T14:30:08.16152Z',
-			  created_by: '1fc1df98cc4420fe00367c3ab68c1639',
-			  modified_on: '2022-06-29T14:30:08.16152Z',
-			  modified_by: '1fc1df98cc4420fe00367c3ab68c1639'
-			}"
-		`);
+				"{
+				  namespace_id: 'some-namespace-id',
+				  namespace_name: 'namespace-name',
+				  created_on: '2022-06-29T14:30:08.16152Z',
+				  created_by: '1fc1df98cc4420fe00367c3ab68c1639',
+				  modified_on: '2022-06-29T14:30:08.16152Z',
+				  modified_by: '1fc1df98cc4420fe00367c3ab68c1639'
+				}"
+			`);
 		});
 	});
 
@@ -263,17 +265,17 @@ describe("dispatch-namespace", () => {
 		it("should list all namespaces", async () => {
 			await runWrangler("dispatch-namespace list");
 			expect(std.out).toMatchInlineSnapshot(`
-			"[
-			  {
-			    namespace_id: 'some-namespace-id',
-			    namespace_name: 'namespace-name',
-			    created_on: '2022-06-29T14:30:08.16152Z',
-			    created_by: '1fc1df98cc4420fe00367c3ab68c1639',
-			    modified_on: '2022-06-29T14:30:08.16152Z',
-			    modified_by: '1fc1df98cc4420fe00367c3ab68c1639'
-			  }
-			]"
-		`);
+				"[
+				  {
+				    namespace_id: 'some-namespace-id',
+				    namespace_name: 'namespace-name',
+				    created_on: '2022-06-29T14:30:08.16152Z',
+				    created_by: '1fc1df98cc4420fe00367c3ab68c1639',
+				    modified_on: '2022-06-29T14:30:08.16152Z',
+				    modified_by: '1fc1df98cc4420fe00367c3ab68c1639'
+				  }
+				]"
+			`);
 		});
 	});
 

@@ -97,9 +97,12 @@ describe("wrangler pages secret", () => {
 					"pages secret put secret-name --project some-project-name"
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secret for the Pages project \\"some-project-name\\" (production)
-			✨ Success! Uploaded secret secret-name"
-		`);
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					🌀 Creating the secret for the Pages project \\"some-project-name\\" (production)
+					✨ Success! Uploaded secret secret-name"
+				`);
 			});
 
 			it("should create a secret", async () => {
@@ -115,9 +118,12 @@ describe("wrangler pages secret", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secret for the Pages project \\"some-project-name\\" (production)
-			✨ Success! Uploaded secret the-key"
-		`);
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					🌀 Creating the secret for the Pages project \\"some-project-name\\" (production)
+					✨ Success! Uploaded secret the-key"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
@@ -134,9 +140,12 @@ describe("wrangler pages secret", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secret for the Pages project \\"some-project-name\\" (preview)
-			✨ Success! Uploaded secret the-key"
-		`);
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					🌀 Creating the secret for the Pages project \\"some-project-name\\" (preview)
+					✨ Success! Uploaded secret the-key"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
@@ -184,9 +193,12 @@ describe("wrangler pages secret", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secret for the Pages project \\"some-project-name\\" (production)
-			✨ Success! Uploaded secret the-key"
-		`);
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					🌀 Creating the secret for the Pages project \\"some-project-name\\" (production)
+					✨ Success! Uploaded secret the-key"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -200,9 +212,12 @@ describe("wrangler pages secret", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secret for the Pages project \\"some-project-name\\" (production)
-			✨ Success! Uploaded secret the-key"
-		`);
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					🌀 Creating the secret for the Pages project \\"some-project-name\\" (production)
+					✨ Success! Uploaded secret the-key"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -217,9 +232,12 @@ describe("wrangler pages secret", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+
+					[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
@@ -331,9 +349,12 @@ describe("wrangler pages secret", () => {
 				"pages secret delete the-key --project some-project-name"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Deleting the secret the-key on the Pages project some-project-name (production)
-			✨ Success! Deleted secret the-key"
-		`);
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Deleting the secret the-key on the Pages project some-project-name (production)
+				✨ Success! Deleted secret the-key"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -347,9 +368,12 @@ describe("wrangler pages secret", () => {
 				"pages secret delete the-key --project some-project-name --env preview"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Deleting the secret the-key on the Pages project some-project-name (preview)
-			✨ Success! Deleted secret the-key"
-		`);
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Deleting the secret the-key on the Pages project some-project-name (preview)
+				✨ Success! Deleted secret the-key"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -416,10 +440,13 @@ describe("wrangler pages secret", () => {
 			mockListRequest();
 			await runWrangler("pages secret list --project some-project-name");
 			expect(std.out).toMatchInlineSnapshot(`
-			"The \\"production\\" environment of your Pages project \\"some-project-name\\" has access to the following secrets:
-			  - the-secret-name: Value Encrypted
-			  - the-secret-name-2: Value Encrypted"
-		`);
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				The \\"production\\" environment of your Pages project \\"some-project-name\\" has access to the following secrets:
+				  - the-secret-name: Value Encrypted
+				  - the-secret-name-2: Value Encrypted"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -429,9 +456,12 @@ describe("wrangler pages secret", () => {
 				"pages secret list --project some-project-name --env preview"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"The \\"preview\\" environment of your Pages project \\"some-project-name\\" has access to the following secrets:
-			  - the-secret-name-preview: Value Encrypted"
-		`);
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				The \\"preview\\" environment of your Pages project \\"some-project-name\\" has access to the following secrets:
+				  - the-secret-name-preview: Value Encrypted"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -531,7 +561,10 @@ describe("wrangler pages secret", () => {
 
 			await runWrangler(`pages secret bulk --project some-project-name`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
 				Finished processing secrets file:
 				✨ 2 secrets successfully uploaded"
 			`);
@@ -562,7 +595,10 @@ describe("wrangler pages secret", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
 				Finished processing secrets file:
 				✨ 2 secrets successfully uploaded"
 			`);
@@ -592,7 +628,10 @@ describe("wrangler pages secret", () => {
 			await runWrangler("pages secret bulk .env --project some-project-name");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
 				Finished processing secrets file:
 				✨ 3 secrets successfully uploaded"
 			`);
@@ -627,7 +666,10 @@ describe("wrangler pages secret", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (preview)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Creating the secrets for the Pages project \\"some-project-name\\" (preview)
 				Finished processing secrets file:
 				✨ 2 secrets successfully uploaded"
 			`);
@@ -685,7 +727,10 @@ describe("wrangler pages secret", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
 				🚨 Secrets failed to upload
 
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
@@ -749,7 +794,10 @@ describe("wrangler pages secret", () => {
 
 				",
 				  "info": "",
-				  "out": "🌀 Creating the secrets for the Worker \\"script-name\\"
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Creating the secrets for the Worker \\"script-name\\"
 
 				🚨 Secrets failed to upload
 				",

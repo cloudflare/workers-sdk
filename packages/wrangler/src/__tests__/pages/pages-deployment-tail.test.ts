@@ -21,8 +21,6 @@ import type {
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
-// we want to include the banner to make sure it doesn't show up in the output when --format=json
-vi.unmock("../../wrangler-banner");
 vi.mock("ws", async (importOriginal) => {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	const realModule = await importOriginal<typeof import("ws")>();

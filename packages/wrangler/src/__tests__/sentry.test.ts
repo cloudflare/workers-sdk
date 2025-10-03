@@ -64,7 +64,10 @@ describe("sentry", () => {
 				`[TypeError: Failed to fetch]`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Getting User settings...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Getting User settings...
 
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 				? Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.
@@ -90,7 +93,12 @@ describe("sentry", () => {
 			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
 				`[Error: A worker name must be defined, either via --name, or in your Wrangler configuration file]`
 			);
-			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				"
+			`);
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
@@ -116,10 +124,13 @@ describe("sentry", () => {
 				`[TypeError: Failed to fetch]`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Getting User settings...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Getting User settings...
 
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+			`);
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
@@ -141,10 +152,13 @@ describe("sentry", () => {
 				runWrangler("whoami", { WRANGLER_SEND_ERROR_REPORTS: "false" })
 			).rejects.toMatchInlineSnapshot(`[TypeError: Failed to fetch]`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Getting User settings...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Getting User settings...
 
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+			`);
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
@@ -170,10 +184,13 @@ describe("sentry", () => {
 				`[TypeError: Failed to fetch]`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Getting User settings...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Getting User settings...
 
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+			`);
 
 			// Sentry sends multiple HTTP requests to capture breadcrumbs
 			expect(sentryRequests?.length).toBeGreaterThan(0);
@@ -472,10 +489,13 @@ describe("sentry", () => {
 				runWrangler("whoami", { WRANGLER_SEND_ERROR_REPORTS: "true" })
 			).rejects.toMatchInlineSnapshot(`[TypeError: Failed to fetch]`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Getting User settings...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Getting User settings...
 
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+			`);
 
 			// Sentry sends multiple HTTP requests to capture breadcrumbs
 			expect(sentryRequests?.length).toBeGreaterThan(0);

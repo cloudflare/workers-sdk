@@ -424,12 +424,17 @@ describe("wrangler", () => {
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					expect(std.out).toEqual(
-						`Uploading mTLS Certificate...
-Success! Uploaded mTLS Certificate
-ID: 1234
-Issuer: example.com...
-Expires on ${oneYearLater.toLocaleDateString()}`
+					expect(std.out).toMatchInlineSnapshot(
+						`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Uploading mTLS Certificate...
+						Success! Uploaded mTLS Certificate
+						ID: 1234
+						Issuer: example.com...
+						Expires on 10/3/2026"
+					`
 					);
 				});
 
@@ -444,12 +449,17 @@ Expires on ${oneYearLater.toLocaleDateString()}`
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					expect(std.out).toEqual(
-						`Uploading mTLS Certificate my-cert...
-Success! Uploaded mTLS Certificate my-cert
-ID: 1234
-Issuer: example.com...
-Expires on ${oneYearLater.toLocaleDateString()}`
+					expect(std.out).toMatchInlineSnapshot(
+						`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Uploading mTLS Certificate my-cert...
+						Success! Uploaded mTLS Certificate my-cert
+						ID: 1234
+						Issuer: example.com...
+						Expires on 10/3/2026"
+					`
 					);
 				});
 			});
@@ -461,21 +471,26 @@ Expires on ${oneYearLater.toLocaleDateString()}`
 					await runWrangler("mtls-certificate list");
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					expect(std.out).toEqual(
-						`ID: 1234
-Name: cert one
-Issuer: example.com...
-Created on: ${now.toLocaleDateString()}
-Expires on: ${oneYearLater.toLocaleDateString()}
+					expect(std.out).toMatchInlineSnapshot(
+						`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						ID: 1234
+						Name: cert one
+						Issuer: example.com...
+						Created on: 10/3/2025
+						Expires on: 10/3/2026
 
 
-ID: 5678
-Name: cert two
-Issuer: example.com...
-Created on: ${now.toLocaleDateString()}
-Expires on: ${oneYearLater.toLocaleDateString()}
+						ID: 5678
+						Name: cert two
+						Issuer: example.com...
+						Created on: 10/3/2025
+						Expires on: 10/3/2026
 
-`
+						"
+					`
 					);
 				});
 			});
@@ -489,7 +504,11 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 
 				"
 			`);
-					expect(std.out).toMatchInlineSnapshot(`""`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────"
+					`);
 				});
 
 				it("should require not providing --id and --name", async () => {
@@ -500,7 +519,11 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 
 				"
 			`);
-					expect(std.out).toMatchInlineSnapshot(`""`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────"
+					`);
 				});
 
 				it("should delete certificate by id", async () => {
@@ -516,7 +539,12 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(
-						`"Deleted certificate 1234 (my-cert) successfully"`
+						`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Deleted certificate 1234 (my-cert) successfully"
+					`
 					);
 				});
 
@@ -533,7 +561,12 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(
-						`"Deleted certificate 1234 (my-cert) successfully"`
+						`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Deleted certificate 1234 (my-cert) successfully"
+					`
 					);
 				});
 
@@ -545,7 +578,12 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 					).rejects.toMatchInlineSnapshot(
 						`[Error: certificate not found with name "my-cert"]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`""`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						"
+					`);
 				});
 
 				it("should not delete when many certificates are found by name", async () => {
@@ -573,7 +611,12 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 					).rejects.toMatchInlineSnapshot(
 						`[Error: multiple certificates found with name "my-cert"]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`""`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						"
+					`);
 				});
 
 				it("should not delete when confirmation fails", async () => {
@@ -586,7 +629,12 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 
 					await runWrangler("mtls-certificate delete --id 1234");
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					expect(std.out).toMatchInlineSnapshot(`"Not deleting"`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Not deleting"
+					`);
 				});
 			});
 		});

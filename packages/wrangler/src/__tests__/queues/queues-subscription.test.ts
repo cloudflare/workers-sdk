@@ -19,7 +19,6 @@ import type {
 } from "../../queues/subscription-types";
 
 describe("queues subscription", () => {
-	vi.unmock("../../wrangler-banner");
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();

@@ -82,8 +82,6 @@ function mockNoWorkerFound(isBulk = false) {
 	}
 }
 
-vi.unmock("../wrangler-banner");
-
 describe("wrangler secret", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();

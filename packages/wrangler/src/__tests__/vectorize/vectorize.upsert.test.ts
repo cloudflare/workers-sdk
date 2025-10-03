@@ -101,10 +101,13 @@ describe("dataset upsert", () => {
 
 		expect(insertRequestCount).toBe(2);
 		expect(std.out).toMatchInlineSnapshot(`
-		"✨ Uploading vector batch (3 vectors)
-		✨ Uploading vector batch (2 vectors)
-		✅ Successfully inserted 5 vectors into index 'my-index'"
-	`);
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Uploading vector batch (3 vectors)
+			✨ Uploading vector batch (2 vectors)
+			✅ Successfully inserted 5 vectors into index 'my-index'"
+		`);
 	});
 
 	it("should batch uploads in ndjson format for Vectorize", async () => {
@@ -158,11 +161,16 @@ describe("dataset upsert", () => {
 		);
 
 		expect(insertRequestCount).toBe(2);
-		expect(std.out).toMatchInlineSnapshot(`
-		"✨ Enqueued 3 vectors into index 'my-index' for insertion. Mutation changeset identifier: ${mutationId}
-		✨ Enqueued 2 vectors into index 'my-index' for insertion. Mutation changeset identifier: ${mutationId}
-		✅ Successfully enqueued 5 vectors into index 'my-index' for insertion."
-	`);
+		expect(
+			std.out.replaceAll(mutationId, "00000000-0000-0000-0000-000000000000")
+		).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Enqueued 3 vectors into index 'my-index' for insertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
+			✨ Enqueued 2 vectors into index 'my-index' for insertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
+			✅ Successfully enqueued 5 vectors into index 'my-index' for insertion."
+		`);
 	});
 
 	it("should batch uploads for upsert in ndjson format for Vectorize", async () => {
@@ -216,11 +224,16 @@ describe("dataset upsert", () => {
 		);
 
 		expect(insertRequestCount).toBe(2);
-		expect(std.out).toMatchInlineSnapshot(`
-		"✨ Enqueued 3 vectors into index 'my-index' for upsertion. Mutation changeset identifier: ${mutationId}
-		✨ Enqueued 2 vectors into index 'my-index' for upsertion. Mutation changeset identifier: ${mutationId}
-		✅ Successfully enqueued 5 vectors into index 'my-index' for upsertion."
-	`);
+		expect(
+			std.out.replaceAll(mutationId, "00000000-0000-0000-0000-000000000000")
+		).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Enqueued 3 vectors into index 'my-index' for upsertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
+			✨ Enqueued 2 vectors into index 'my-index' for upsertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
+			✅ Successfully enqueued 5 vectors into index 'my-index' for upsertion."
+		`);
 	});
 
 	it("should reject an invalid file param", async () => {

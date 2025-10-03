@@ -32,14 +32,17 @@ describe("delete", () => {
 		await runWrangler("delete --name my-script");
 
 		expect(std).toMatchInlineSnapshot(`
-		Object {
-		  "debug": "",
-		  "err": "",
-		  "info": "",
-		  "out": "Successfully deleted my-script",
-		  "warn": "",
-		}
-	`);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Successfully deleted my-script",
+			  "warn": "",
+			}
+		`);
 	});
 
 	it("should delete a script by configuration", async () => {
@@ -55,28 +58,34 @@ describe("delete", () => {
 		await runWrangler("delete");
 
 		expect(std).toMatchInlineSnapshot(`
-		Object {
-		  "debug": "",
-		  "err": "",
-		  "info": "",
-		  "out": "Successfully deleted test-name",
-		  "warn": "",
-		}
-	`);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Successfully deleted test-name",
+			  "warn": "",
+			}
+		`);
 	});
 
 	it("shouldn't delete a service when doing a --dry-run", async () => {
 		await runWrangler("delete --name xyz --dry-run");
 
 		expect(std).toMatchInlineSnapshot(`
-		Object {
-		  "debug": "",
-		  "err": "",
-		  "info": "",
-		  "out": "--dry-run: exiting now.",
-		  "warn": "",
-		}
-	`);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			--dry-run: exiting now.",
+			  "warn": "",
+			}
+		`);
 	});
 
 	it('shouldn\'t delete when the user says "no"', async () => {
@@ -88,14 +97,16 @@ describe("delete", () => {
 		await runWrangler("delete --name xyz");
 
 		expect(std).toMatchInlineSnapshot(`
-		Object {
-		  "debug": "",
-		  "err": "",
-		  "info": "",
-		  "out": "",
-		  "warn": "",
-		}
-	`);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────",
+			  "warn": "",
+			}
+		`);
 	});
 
 	it("should delete a site namespace associated with a worker", async () => {
@@ -136,15 +147,18 @@ describe("delete", () => {
 		mockDeleteWorkerRequest({ name: "my-script" });
 		await runWrangler("delete --name my-script");
 		expect(std).toMatchInlineSnapshot(`
-		Object {
-		  "debug": "",
-		  "err": "",
-		  "info": "",
-		  "out": "🌀 Deleted asset namespace for Workers Site \\"__my-script-workers_sites_assets\\"
-		Successfully deleted my-script",
-		  "warn": "",
-		}
-	`);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🌀 Deleted asset namespace for Workers Site \\"__my-script-workers_sites_assets\\"
+			Successfully deleted my-script",
+			  "warn": "",
+			}
+		`);
 	});
 
 	it("should delete a site namespace associated with a worker, including it's preview namespace", async () => {
@@ -217,16 +231,19 @@ describe("delete", () => {
 		mockDeleteWorkerRequest({ name: "my-script" });
 		await runWrangler("delete --name my-script");
 		expect(std).toMatchInlineSnapshot(`
-		Object {
-		  "debug": "",
-		  "err": "",
-		  "info": "",
-		  "out": "🌀 Deleted asset namespace for Workers Site \\"__my-script-workers_sites_assets\\"
-		🌀 Deleted asset namespace for Workers Site \\"__my-script-workers_sites_assets_preview\\"
-		Successfully deleted my-script",
-		  "warn": "",
-		}
-	`);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🌀 Deleted asset namespace for Workers Site \\"__my-script-workers_sites_assets\\"
+			🌀 Deleted asset namespace for Workers Site \\"__my-script-workers_sites_assets_preview\\"
+			Successfully deleted my-script",
+			  "warn": "",
+			}
+		`);
 	});
 
 	it("should error helpfully if pages_build_output_dir is set", async () => {
@@ -316,14 +333,17 @@ Are you sure you want to continue?`,
 			await runWrangler("delete");
 
 			expect(std).toMatchInlineSnapshot(`
-			      Object {
-			        "debug": "",
-			        "err": "",
-			        "info": "",
-			        "out": "Successfully deleted test-name",
-			        "warn": "",
-			      }
-		    `);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Successfully deleted test-name",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should not delete when extra confirmation to use force is denied", async () => {
@@ -358,14 +378,16 @@ Are you sure you want to continue?`,
 			await runWrangler("delete");
 
 			expect(std).toMatchInlineSnapshot(`
-			      Object {
-			        "debug": "",
-			        "err": "",
-			        "info": "",
-			        "out": "",
-			        "warn": "",
-			      }
-		    `);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should not require confirmation when --force is used", async () => {
@@ -375,14 +397,17 @@ Are you sure you want to continue?`,
 			await runWrangler("delete --force");
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Successfully deleted test-name",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Successfully deleted test-name",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should prompt for extra confirmation when worker is used by a Pages function", async () => {
@@ -413,14 +438,17 @@ Are you sure you want to continue?`,
 			await runWrangler("delete");
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Successfully deleted test-name",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Successfully deleted test-name",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should include Pages function in confirmation when combined with other dependencies", async () => {
@@ -468,14 +496,17 @@ Are you sure you want to continue?`,
 			await runWrangler("delete");
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Successfully deleted test-name",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Successfully deleted test-name",
+				  "warn": "",
+				}
+			`);
 		});
 	});
 });

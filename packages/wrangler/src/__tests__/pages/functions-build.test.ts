@@ -47,7 +47,12 @@ describe("pages functions build", () => {
 		await runWrangler(`pages functions build`);
 
 		expect(existsSync("_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Compiled Worker successfully"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
@@ -83,7 +88,12 @@ describe("pages functions build", () => {
 		await runWrangler(`pages functions build --outfile=_worker.bundle`);
 
 		expect(existsSync("_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Compiled Worker successfully"
+		`);
 
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them
@@ -157,7 +167,12 @@ describe("pages functions build", () => {
 		await runWrangler(`pages functions build --outdir=dist`);
 
 		expect(existsSync("dist")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Compiled Worker successfully"
+		`);
 
 		expect(readdirSync("dist").sort()).toMatchInlineSnapshot(`
 		Array [
@@ -226,7 +241,12 @@ export default {
 			`pages functions build --build-output-directory=public --outfile=_worker.bundle`
 		);
 		expect(existsSync("_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Compiled Worker successfully"
+		`);
 
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them
@@ -302,7 +322,12 @@ export default {
 
 		// built to _worker.js by default
 		expect(existsSync("_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Compiled Worker successfully"
+		`);
 
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them
@@ -373,7 +398,12 @@ export default {
 		await runWrangler(`pages functions build --outfile=public/_worker.bundle`);
 
 		expect(existsSync("public/_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Compiled Worker successfully"
+		`);
 
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them
@@ -432,7 +462,12 @@ export default {
 		);
 
 		expect(existsSync("public/_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Compiled Worker successfully"
+		`);
 
 		expect(readFileSync("public/_worker.bundle", "utf-8")).toContain(
 			`import { AsyncLocalStorage } from "node:async_hooks";`
@@ -498,7 +533,10 @@ export const cat = "dog";`
 
 		expect(existsSync("public/_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
-			"┌─┬─┬─┐
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			┌─┬─┬─┐
 			│ Name │ Type │ Size │
 			├─┼─┼─┤
 			│ cat.js │ esm │ xx KiB │
@@ -701,7 +739,12 @@ export default {
 			`pages functions build --build-output-directory public --outfile=_worker.bundle --build-metadata-path build-metadata.json --project-directory .`
 		);
 		expect(existsSync("_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Compiled Worker successfully"
+		`);
 
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them
@@ -871,7 +914,12 @@ export default {
 			`pages functions build --build-output-directory dist-test --outfile=_worker.bundle --build-metadata-path build-metadata.json --project-directory .`
 		);
 		expect(existsSync("_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Compiled Worker successfully"
+		`);
 
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them
@@ -1039,7 +1087,12 @@ export default {
 			`pages functions build --build-output-directory dist-test --outfile=_worker.bundle --build-metadata-path build-metadata.json --project-directory .`
 		);
 		expect(existsSync("_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Compiled Worker successfully"
+		`);
 
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them
@@ -1128,7 +1181,12 @@ export default {
 			`pages functions build --build-output-directory dist-test --outfile=_worker.bundle --build-metadata-path build-metadata.json --project-directory .`
 		);
 		expect(existsSync("_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Compiled Worker successfully"
+		`);
 
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them

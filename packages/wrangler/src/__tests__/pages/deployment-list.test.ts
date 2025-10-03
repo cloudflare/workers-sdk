@@ -8,7 +8,6 @@ import { runWrangler } from "./../helpers/run-wrangler";
 import type { Deployment } from "./../../pages/types";
 
 describe("pages deployment list", () => {
-	vi.unmock("../../wrangler-banner");
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();

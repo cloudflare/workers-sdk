@@ -87,7 +87,6 @@ vi.mock("undici", async (importOriginal) => {
 vi.mock("../package-manager");
 
 vi.mock("../update-check");
-vi.mock("../wrangler-banner");
 
 beforeAll(() => {
 	msw.listen({

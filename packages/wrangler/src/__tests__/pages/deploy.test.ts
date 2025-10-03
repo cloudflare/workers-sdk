@@ -247,7 +247,10 @@ describe("pages deploy", () => {
 
 		expect(getProjectRequestCount).toBe(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 1 files (TIMINGS)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 1 files (TIMINGS)
 
 			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
@@ -418,7 +421,10 @@ describe("pages deploy", () => {
 		expect(getProjectRequestCount).toBe(2);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 1 files (TIMINGS)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 1 files (TIMINGS)
 
 			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
@@ -582,7 +588,10 @@ describe("pages deploy", () => {
 		expect(requests.length).toBe(2);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 1 files (TIMINGS)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 1 files (TIMINGS)
 
 			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
@@ -802,7 +811,10 @@ describe("pages deploy", () => {
 		expect(getProjectRequestCount).toEqual(2);
 		expect(getDeploymentDetailsRequestCount).toEqual(3);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Compiled Worker successfully
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Compiled Worker successfully
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			✨ Uploading Functions bundle
@@ -1010,7 +1022,10 @@ describe("pages deploy", () => {
 		await runWrangler("pages deploy . --project-name=foo");
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 1 files (TIMINGS)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 1 files (TIMINGS)
 
 			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
@@ -1204,7 +1219,10 @@ describe("pages deploy", () => {
 		);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 4 files (TIMINGS)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 4 files (TIMINGS)
 
 			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
@@ -1397,7 +1415,10 @@ describe("pages deploy", () => {
 		);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 4 files (TIMINGS)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 4 files (TIMINGS)
 
 			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
@@ -1592,7 +1613,10 @@ describe("pages deploy", () => {
 		);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 4 files (TIMINGS)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 4 files (TIMINGS)
 
 			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
@@ -1933,7 +1957,10 @@ describe("pages deploy", () => {
 
 		expect(getProjectRequestCount).toBe(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Successfully created the 'foo' project.
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Successfully created the 'foo' project.
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			🌎 Deploying...
@@ -2181,7 +2208,10 @@ describe("pages deploy", () => {
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-				"✨ Compiled Worker successfully
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Compiled Worker successfully
 				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Uploading Functions bundle
@@ -2436,7 +2466,10 @@ async function onRequest() {
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-				"✨ Compiled Worker successfully
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Compiled Worker successfully
 				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Uploading Functions bundle
@@ -2704,7 +2737,10 @@ async function onRequest() {
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-				"✨ Compiled Worker successfully
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Compiled Worker successfully
 				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Uploading Functions bundle
@@ -3238,7 +3274,10 @@ and that at least one include rule is provided.
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-				"✨ Success! Uploaded 1 files (TIMINGS)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Compiled Worker successfully
 				✨ Uploading Worker bundle
@@ -3508,7 +3547,10 @@ and that at least one include rule is provided.
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-				"✨ Success! Uploaded 1 files (TIMINGS)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Compiled Worker successfully
 				✨ Uploading Worker bundle
@@ -3775,7 +3817,10 @@ and that at least one include rule is provided.
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-				"✨ Success! Uploaded 1 files (TIMINGS)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Compiled Worker successfully
 				✨ Uploading Worker bundle
@@ -4137,7 +4182,10 @@ and that at least one include rule is provided.
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-				"✨ Success! Uploaded 1 files (TIMINGS)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Compiled Worker successfully
 				✨ Uploading Worker bundle
@@ -4503,7 +4551,10 @@ and that at least one include rule is provided.
 			await runWrangler("pages deploy public --project-name=foo --no-bundle");
 
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-				"✨ Success! Uploaded 1 files (TIMINGS)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Uploading Worker bundle
 				🌎 Deploying...
@@ -5606,7 +5657,10 @@ and that at least one include rule is provided.
 			await runWrangler("pages deploy public --project-name=foo");
 
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-				"✨ Success! Uploaded 1 files (TIMINGS)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Success! Uploaded 1 files (TIMINGS)
 
 				🌎 Deploying...
 				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/
@@ -5626,7 +5680,10 @@ and that at least one include rule is provided.
 			await runWrangler("pages deploy public --project-name=foo");
 
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-				"✨ Success! Uploaded 1 files (TIMINGS)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Success! Uploaded 1 files (TIMINGS)
 
 				🌎 Deploying...
 				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
@@ -5645,7 +5702,10 @@ and that at least one include rule is provided.
 			await runWrangler("pages deploy public --project-name=foo");
 
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-				"✨ Success! Uploaded 1 files (TIMINGS)
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Success! Uploaded 1 files (TIMINGS)
 
 				🌎 Deploying...
 				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"

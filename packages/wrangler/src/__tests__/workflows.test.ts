@@ -214,7 +214,10 @@ describe("wrangler workflows", () => {
 			expect(std.info).toMatchInlineSnapshot(`"Showing last 2 workflows:"`);
 			expect(std.out).toMatchInlineSnapshot(
 				`
-				"┌─┬─┬─┬─┬─┐
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				┌─┬─┬─┬─┬─┐
 				│ Name │ Script name │ Class name │ Created │ Modified │
 				├─┼─┼─┼─┼─┤
 				│ wf_1 │ wf_script_1 │ wf_class_1 │ [mock-create-date] │ [mock-modified-date] │
@@ -296,7 +299,10 @@ describe("wrangler workflows", () => {
 			);
 			expect(std.out).toMatchInlineSnapshot(
 				`
-				"┌─┬─┬─┬─┬─┐
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				┌─┬─┬─┬─┬─┐
 				│ Id │ Version │ Created │ Modified │ Status │
 				├─┼─┼─┼─┼─┤
 				│ a │ c │ [mock-create-date] │ [mock-modified-date] │ ✅ Completed │
@@ -405,7 +411,10 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances describe some-workflow bar`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"  Name:      event
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				  Name:      event
 				  Type:      👀 Waiting for event
 				  Start:     [mock-start-date]
 				  End:       [mock-end-date]
@@ -432,7 +441,10 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances describe some-workflow`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"  Name:      event
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				  Name:      event
 				  Type:      👀 Waiting for event
 				  Start:     [mock-start-date]
 				  End:       [mock-end-date]
@@ -662,7 +674,10 @@ describe("wrangler workflows", () => {
 			await runWrangler(`workflows delete some-workflow`);
 			expect(std.out).toMatchInlineSnapshot(
 				`
-				"✅ Workflow \\"some-workflow\\" removed successfully.
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✅ Workflow \\"some-workflow\\" removed successfully.
 				 Note that running instances might take a few minutes to be properly terminated."
 			`
 			);

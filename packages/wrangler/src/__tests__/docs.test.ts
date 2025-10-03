@@ -68,7 +68,10 @@ describe("wrangler docs", () => {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
-			  "out": "Opening a link in your default browser: https://developers.cloudflare.com/workers/wrangler/commands/",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Opening a link in your default browser: https://developers.cloudflare.com/workers/wrangler/commands/",
 			  "warn": "",
 			}
 		`);
@@ -86,7 +89,10 @@ describe("wrangler docs", () => {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
-			  "out": "Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=dev&hitsPerPage=1&getRankingInfo=0\\"}",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=dev&hitsPerPage=1&getRankingInfo=0\\"}",
 			  "warn": "",
 			}
 		`);
@@ -104,7 +110,10 @@ describe("wrangler docs", () => {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
-			  "out": "Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=foo+bar&hitsPerPage=1&getRankingInfo=0\\"}",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=foo+bar&hitsPerPage=1&getRankingInfo=0\\"}",
 			  "warn": "",
 			}
 		`);

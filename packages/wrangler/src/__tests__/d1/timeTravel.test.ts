@@ -10,10 +10,6 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
-// we want to include the banner to make sure it doesn't show up in the output when
-// when --json=true
-vi.unmock("../../wrangler-banner");
-
 describe("time-travel", () => {
 	const std = mockConsoleMethods();
 	mockAccountId({ accountId: null });

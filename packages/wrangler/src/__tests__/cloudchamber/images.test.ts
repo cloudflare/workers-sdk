@@ -1,7 +1,6 @@
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
-import { vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -9,10 +8,6 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
-
-// we want to include the banner to make sure it doesn't show up in the output
-// when using --json
-vi.unmock("../wrangler-banner");
 
 describe("cloudchamber image", () => {
 	const std = mockConsoleMethods();

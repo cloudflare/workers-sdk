@@ -104,7 +104,10 @@ describe("versions secret list", () => {
 		await runWrangler("versions secret list --name script-name");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"-- Version version-id-1 (100%) secrets --
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			-- Version version-id-1 (100%) secrets --
 			Secret Name: SECRET_1
 			Secret Name: SECRET_2
 			Secret Name: SECRET_3
@@ -121,7 +124,10 @@ describe("versions secret list", () => {
 		await runWrangler("versions secret list --name script-name");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"-- Version version-id-1 (50%) secrets --
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			-- Version version-id-1 (50%) secrets --
 			Secret Name: SECRET_1
 			Secret Name: SECRET_2
 			Secret Name: SECRET_3
@@ -144,7 +150,10 @@ describe("versions secret list", () => {
 		await runWrangler("versions secret list");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"-- Version version-id-1 (100%) secrets --
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			-- Version version-id-1 (100%) secrets --
 			Secret Name: SECRET_1
 			Secret Name: SECRET_2
 			Secret Name: SECRET_3
@@ -248,7 +257,10 @@ describe("versions secret list", () => {
 		await runWrangler("versions secret list --latest-version");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"-- Version version-id-3 (0%) secrets --
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			-- Version version-id-3 (0%) secrets --
 			Secret Name: SECRET_1
 			Secret Name: SECRET_1
 			Secret Name: SECRET_1
