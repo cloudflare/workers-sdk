@@ -69,7 +69,7 @@ let workersConfigsWarningShown = false;
 let restartingServer = false;
 let miniflare: Miniflare | undefined;
 
-assertWranglerVersion();
+await assertWranglerVersion();
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
