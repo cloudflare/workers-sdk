@@ -765,6 +765,125 @@ describe("versions upload", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 	});
+
+	describe("keep_vars", () => {
+		beforeEach(() => {
+			mockGetScript();
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+			writeWorkerSource();
+			setIsTTY(false);
+		});
+
+		test("should include plain_text and json in keep_bindings when keep_vars is true", async () => {
+			const mockUploadVersionCapture = captureRequestsFrom(
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
+					async () => {
+						return HttpResponse.json(
+							createFetchResult({
+								id: "version-id",
+								startup_time_ms: 500,
+								metadata: {
+									has_preview: false,
+								},
+							})
+						);
+					}
+				)
+			)();
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				keep_vars: true,
+			});
+
+			await runWrangler("versions upload");
+
+			const request = mockUploadVersionCapture.requests[0];
+			const formBody = await request.clone().formData();
+			const metadata = JSON.parse(
+				await toString(formBody.get("metadata"))
+			) as WorkerMetadata;
+
+			expect(metadata.keep_bindings).toEqual(
+				expect.arrayContaining(["plain_text", "json"])
+			);
+		});
+
+		test("should not include plain_text and json in keep_bindings when keep_vars is false", async () => {
+			const mockUploadVersionCapture = captureRequestsFrom(
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
+					async () => {
+						return HttpResponse.json(
+							createFetchResult({
+								id: "version-id",
+								startup_time_ms: 500,
+								metadata: {
+									has_preview: false,
+								},
+							})
+						);
+					}
+				)
+			)();
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				keep_vars: false,
+			});
+
+			await runWrangler("versions upload");
+
+			const request = mockUploadVersionCapture.requests[0];
+			const formBody = await request.clone().formData();
+			const metadata = JSON.parse(
+				await toString(formBody.get("metadata"))
+			) as WorkerMetadata;
+
+			expect(metadata.keep_bindings).not.toEqual(
+				expect.arrayContaining(["plain_text", "json"])
+			);
+		});
+
+		test("should not include plain_text and json in keep_bindings when keep_vars is not provided", async () => {
+			const mockUploadVersionCapture = captureRequestsFrom(
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
+					async () => {
+						return HttpResponse.json(
+							createFetchResult({
+								id: "version-id",
+								startup_time_ms: 500,
+								metadata: {
+									has_preview: false,
+								},
+							})
+						);
+					}
+				)
+			)();
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+
+			await runWrangler("versions upload");
+
+			const request = mockUploadVersionCapture.requests[0];
+			const formBody = await request.clone().formData();
+			const metadata = JSON.parse(
+				await toString(formBody.get("metadata"))
+			) as WorkerMetadata;
+
+			expect(metadata.keep_bindings).not.toEqual(
+				expect.arrayContaining(["plain_text", "json"])
+			);
+		});
+	});
 });
 
 const mockExecSync = vi.fn();

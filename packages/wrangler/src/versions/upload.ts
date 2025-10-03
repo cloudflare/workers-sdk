@@ -383,7 +383,7 @@ export const versionsUploadCommand = createCommand({
 				outDir: args.outdir,
 				dryRun: args.dryRun,
 				noBundle: !(args.bundle ?? !config.no_bundle),
-				keepVars: false,
+				keepVars: config.keep_vars,
 				projectRoot: entry.projectRoot,
 				tag: args.tag,
 				message: args.message,
@@ -701,7 +701,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				: undefined,
 			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
-			keepVars: false, // the wrangler.toml should be the source-of-truth for vars
+			keepVars: props.keepVars ?? false,
 			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
 			placement,
 			tail_consumers: config.tail_consumers,
