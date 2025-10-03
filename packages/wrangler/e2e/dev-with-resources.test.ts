@@ -831,18 +831,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		await expect(res.text()).resolves.toBe("env.WORKFLOW is available");
 	});
 
-	describe.sequential.each([
-		{
-			imagesMode: "local",
-			extraFlags: "--experimental-images-local-mode",
-		},
-		...(CLOUDFLARE_ACCOUNT_ID
-			? [{ imagesMode: "remote", extraFlags: "" }]
-			: []),
-	])("Images Binding Mode: $imagesMode", async ({ extraFlags }) => {
-		it("exposes Images bindings", async () => {
-			await helper.seed({
-				"wrangler.toml": dedent`
+	it("exposes Images bindings", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
 					name = "my-images-demo"
 					main = "src/index.ts"
 					compatibility_date = "2024-12-27"
@@ -850,7 +841,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 					[images]
 					binding = "IMAGES"
 				`,
-				"src/index.ts": dedent`
+			"src/index.ts": dedent`
 					export default {
 						async fetch(request, env, ctx) {
 							if (env.IMAGES === undefined) {
@@ -861,13 +852,12 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 						}
 					}
 				`,
-			});
-			const worker = helper.runLongLived(`wrangler dev ${flags} ${extraFlags}`);
-			const { url } = await worker.waitForReady();
-			const res = await fetch(url);
-
-			await expect(res.text()).resolves.toBe("env.IMAGES is available");
 		});
+		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url);
+
+		await expect(res.text()).resolves.toBe("env.IMAGES is available");
 	});
 
 	it.skipIf(!CLOUDFLARE_ACCOUNT_ID)("exposes Media bindings", async () => {
