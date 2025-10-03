@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { logger } from "../../logger";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -68,7 +69,15 @@ export type ControllerEventMap = {
 export abstract class Controller<
 	EventMap extends ControllerEventMap = ControllerEventMap,
 > extends TypedEventEmitterImpl<EventMap> {
+	#tearingDown = false;
+	async teardown(): Promise<void> {
+		this.#tearingDown = true;
+	}
 	emitErrorEvent(data: ErrorEvent) {
+		if (this.#tearingDown) {
+			logger.debug("Suppressing error event during teardown");
+			return;
+		}
 		this.emit("error", data);
 	}
 }
@@ -86,7 +95,6 @@ export abstract class RuntimeController extends Controller<RuntimeControllerEven
 	abstract onBundleStart(_: BundleStartEvent): void;
 	abstract onBundleComplete(_: BundleCompleteEvent): void;
 	abstract onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void;
-	abstract teardown(): Promise<void>;
 
 	// *********************
 	//   Event Dispatchers

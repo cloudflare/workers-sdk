@@ -488,7 +488,6 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 	#configWatcher?: ReturnType<typeof watch>;
 	#abortController?: AbortController;
-	#tearingDown = false;
 
 	async #ensureWatchingConfig(configPath: string | undefined) {
 		await this.#configWatcher?.close();
@@ -505,17 +504,28 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 					this.latestInput,
 					"Cannot be watching config without having first set an input"
 				);
-				void this.#updateConfig(this.latestInput);
+				logger.debug("config file changed", configPath);
+				this.#updateConfig(this.latestInput).catch((err) => {
+					this.emitErrorEvent({
+						type: "error",
+						reason: "Error resolving config after change",
+						cause: castErrorCause(err),
+						source: "ConfigController",
+						data: undefined,
+					});
+				});
 			});
 		}
 	}
 
 	public set(input: StartDevWorkerInput, throwErrors = false) {
+		logger.debug("setting config");
 		return runWithLogLevel(input.dev?.logLevel, () =>
 			this.#updateConfig(input, throwErrors)
 		);
 	}
 	public patch(input: Partial<StartDevWorkerInput>) {
+		logger.debug("patching config");
 		assert(
 			this.latestInput,
 			"Cannot call updateConfig without previously calling setConfig"
@@ -532,9 +542,11 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	}
 
 	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
-		if (this.#tearingDown) {
-			return;
-		}
+		logger.debug(
+			"Updating config...",
+			this.#abortController?.signal,
+			this.#configWatcher?.closed
+		);
 		this.#abortController?.abort();
 		this.#abortController = new AbortController();
 		const signal = this.#abortController.signal;
@@ -568,14 +580,10 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				await this.#ensureWatchingConfig(fileConfig.configPath);
 			}
 
-			if (this.#tearingDown || signal.aborted) {
-				return;
-			}
-
 			const { config: resolvedConfig, printCurrentBindings } =
 				await resolveConfig(fileConfig, input);
 
-			if (this.#tearingDown || signal.aborted) {
+			if (signal.aborted) {
 				return;
 			}
 			this.latestConfig = resolvedConfig;
@@ -584,9 +592,14 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 			return this.latestConfig;
 		} catch (err) {
+			logger.debug("Error updating config", (err as Error).stack);
 			if (throwErrors) {
 				throw err;
 			} else {
+				if (this.#configWatcher?.closed) {
+					logger.debug("Suppressing config error after watcher closed");
+					return;
+				}
 				this.emitErrorEvent({
 					type: "error",
 					reason: "Error resolving config",
@@ -606,9 +619,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		this.#printCurrentBindings?.(event.registry);
 	}
 
-	async teardown() {
+	override async teardown() {
 		logger.debug("ConfigController teardown beginning...");
-		this.#tearingDown = true;
+		await super.teardown();
 		this.#abortController?.abort();
 		await this.#configWatcher?.close();
 		logger.debug("ConfigController teardown complete");

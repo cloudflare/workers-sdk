@@ -434,7 +434,8 @@ export class LocalRuntimeController extends RuntimeController {
 
 		logger.debug("LocalRuntimeController teardown complete");
 	};
-	async teardown() {
+	override async teardown() {
+		await super.teardown();
 		return this.#mutex.runWith(this.#teardown);
 	}
 

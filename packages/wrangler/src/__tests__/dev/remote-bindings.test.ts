@@ -31,13 +31,10 @@ vi.mock("../../dev/start-dev", async () => {
 		async startDev(args: StartDevOptions) {
 			const result = await actual.startDev(args);
 			stopWrangler = () => {
-				try {
-					return result.devEnv.teardown();
-				} finally {
-					stopWrangler = async () => {
-						throw new Error("Stop worker already called");
-					};
-				}
+				stopWrangler = async () => {
+					throw new Error("Stop worker already called");
+				};
+				return result.devEnv.teardown();
 			};
 			return result;
 		},

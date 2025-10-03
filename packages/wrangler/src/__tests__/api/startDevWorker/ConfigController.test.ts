@@ -4,11 +4,12 @@ import dedent from "ts-dedent";
 import { describe, it } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
+import { logger } from "../../../logger";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { seed } from "../../helpers/seed";
-import type { ConfigUpdateEvent, StartDevWorkerInput } from "../../../api";
+import type { ConfigUpdateEvent } from "../../../api";
 
 async function waitForConfigUpdate(
 	controller: ConfigController
@@ -34,8 +35,14 @@ describe("ConfigController", () => {
 	let controller: ConfigController;
 	beforeEach(() => {
 		controller = new ConfigController();
+		logger.loggerLevel = "debug";
 	});
-	afterEach(() => controller.teardown());
+	afterEach(async () => {
+		logger.debug("tearing down");
+		await controller.teardown();
+		logger.debug("teardown complete");
+		logger.resetLoggerLevel();
+	});
 
 	it("should emit configUpdate events with defaults applied", async () => {
 		const event = waitForConfigUpdate(controller);
@@ -48,11 +55,10 @@ describe("ConfigController", () => {
 				} satisfies ExportedHandler
 			`,
 		});
-		const config: StartDevWorkerInput = {
-			entrypoint: "src/index.ts",
-		};
 
-		await controller.set(config);
+		await controller.set({
+			entrypoint: "src/index.ts",
+		});
 
 		await expect(event).resolves.toMatchObject({
 			type: "configUpdate",
@@ -86,9 +92,7 @@ describe("ConfigController", () => {
 				base_dir = \"./some/base_dir\"`,
 		});
 
-		const config: StartDevWorkerInput = {};
-
-		await controller.set(config);
+		await controller.set({});
 
 		await expect(event).resolves.toMatchObject({
 			type: "configUpdate",
@@ -105,6 +109,7 @@ describe("ConfigController", () => {
 			},
 		});
 	});
+
 	it("should shallow merge patched config", async () => {
 		const event1 = waitForConfigUpdate(controller);
 		await seed({
@@ -116,11 +121,10 @@ describe("ConfigController", () => {
 				} satisfies ExportedHandler
 			`,
 		});
-		const config: StartDevWorkerInput = {
-			entrypoint: "src/index.ts",
-		};
 
-		await controller.set(config);
+		await controller.set({
+			entrypoint: "src/index.ts",
+		});
 
 		await expect(event1).resolves.toMatchObject({
 			type: "configUpdate",
@@ -228,7 +232,6 @@ describe("ConfigController", () => {
                 account_id = "1234567890"
             `,
 		});
-		await controller.set({ config: "./wrangler.toml" });
 
 		const { config: config2 } = await event2;
 		await expect(unwrapHook(config2.dev.auth)).resolves.toMatchObject({
