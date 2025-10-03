@@ -7,7 +7,7 @@ import {
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
 	WORKER_ENTRY_PATH_HEADER,
-} from "../shared";
+} from "../../shared";
 import { stripInternalEnv } from "./env";
 import { maybeCaptureError } from "./errors";
 import { getWorkerEntryExport } from "./module-runner";

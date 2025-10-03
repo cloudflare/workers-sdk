@@ -1,22 +1,6 @@
 import { defineConfig } from "tsdown";
 import type { Options } from "tsdown";
 
-function worker(options: Options): Options {
-	return {
-		platform: "neutral",
-		inputOptions: {
-			resolve: {
-				mainFields: ["module", "main"],
-			},
-		},
-		dts: false,
-		external: ["cloudflare:workers"],
-		tsconfig: "tsconfig.worker.json",
-		ignoreWatch: "dist",
-		...options,
-	};
-}
-
 export default defineConfig([
 	{
 		entry: "src/index.ts",
@@ -34,21 +18,29 @@ export default defineConfig([
 			},
 		},
 	},
-	worker({
-		entry: "src/asset-workers/router-worker.ts",
-		outDir: "dist/asset-workers",
-	}),
-	worker({
-		entry: "src/asset-workers/asset-worker.ts",
-		outDir: "dist/asset-workers",
-	}),
-	worker({
-		entry: "src/runner-worker/index.ts",
-		outDir: "dist/runner-worker",
-		noExternal: ["vite/module-runner"],
-	}),
-	worker({
-		entry: "src/vite-proxy-worker/index.ts",
-		outDir: "dist/vite-proxy-worker",
-	}),
+	worker("asset-worker"),
+	worker("router-worker"),
+	worker("runner-worker", { noExternal: ["vite/module-runner"] }),
+	worker("vite-proxy-worker"),
 ]);
+
+/**
+ * Helper function to create the config for bundling a Worker
+ */
+function worker(name: string, options: Options = {}): Options {
+	return {
+		entry: { [name]: `src/workers/${name}/index.ts` },
+		outDir: "dist/workers",
+		platform: "neutral",
+		inputOptions: {
+			resolve: {
+				mainFields: ["module", "main"],
+			},
+		},
+		dts: false,
+		external: ["cloudflare:workers"],
+		tsconfig: "tsconfig.worker.json",
+		ignoreWatch: "dist",
+		...options,
+	};
+}
