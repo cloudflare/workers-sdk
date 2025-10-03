@@ -1,16 +1,10 @@
-import { isDockerRunning } from "@cloudflare/containers-shared";
 import { expect, test, vi } from "vitest";
 import {
 	getTextResponse,
 	isCINonLinux,
+	isLocalWithoutDockerRunning,
 	viteTestUrl,
 } from "../../__test-utils__";
-import { getDockerPath } from "../../../src/containers";
-
-const dockerIsRunning = await isDockerRunning(getDockerPath());
-/** Indicates whether the test is being run locally (not in CI) AND docker is currently not running on the system */
-const isLocalWithoutDockerRunning =
-	process.env.CI !== "true" && !dockerIsRunning;
 
 // We can only really run these tests on Linux, because we build our images for linux/amd64,
 // and github runners don't really support container virtualization in any sane way

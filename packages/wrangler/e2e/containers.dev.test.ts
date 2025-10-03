@@ -11,10 +11,7 @@ import {
 	vi,
 } from "vitest";
 import { buildImage } from "../../containers-shared/src/build";
-import {
-	generateContainerBuildId,
-	isDockerRunning,
-} from "../../containers-shared/src/utils";
+import { generateContainerBuildId } from "../../containers-shared/src/utils";
 import { getDockerPath } from "../src/environment-variables/misc-variables";
 import { dedent } from "../src/utils/dedent";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
