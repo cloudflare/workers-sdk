@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import wrangler from "wrangler";
+import * as wrangler from "wrangler";
 import type { AssetsOnlyConfig, WorkerConfig } from "./plugin-config";
 import type { Optional } from "./utils";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";

@@ -1,5 +1,11 @@
 import { createRequire } from "node:module";
 
+/**
+ * Asserts that the installed version of Wrangler that gets pulled in at runtime by the `@cloudflare/vite-plugin`
+ * matches the version that `@cloudflare/vite-plugin` actually depends upon.
+ *
+ * This can sometime be broken by package managers that deduplicate dependencies, such as `pnpm`.
+ */
 export function assertWranglerVersion() {
 	const require = createRequire(import.meta.url);
 	const installedVersion = require("wrangler/package.json").version as string;
