@@ -81,7 +81,7 @@ import {
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
 import { pages } from "./pages";
-import { APIError, formatMessage, ParseError } from "./parse";
+import { APIError, ParseError } from "./parse";
 import { pipelines } from "./pipelines";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
@@ -1103,7 +1103,7 @@ export async function main(argv: string[]): Promise<void> {
 		} else if (isAuthenticationError(e)) {
 			mayReport = false;
 			errorType = "AuthenticationError";
-			logger.log(formatMessage(e));
+			logger.error(e);
 			const envAuth = getAuthFromEnv();
 			if (envAuth !== undefined && "apiToken" in envAuth) {
 				const message =
@@ -1117,7 +1117,7 @@ export async function main(argv: string[]): Promise<void> {
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 			});
-			logger.log(formatMessage(e));
+			logger.error(e);
 		} else if (e instanceof JsonFriendlyFatalError) {
 			logger.log(e.message);
 		} else if (

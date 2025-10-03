@@ -451,29 +451,24 @@ describe("deploy", () => {
 			`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.]`
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
+			"
+			📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+			Please ensure it has the correct permissions for this operation.
 
-		  Authentication error [code: 10000]
-
-
-		📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
-		Please ensure it has the correct permissions for this operation.
-
-		Getting User settings...
-		ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN environment variable.
-		👋 You are logged in with an User API Token, associated with the email user@example.com.
-		┌───────────────┬────────────┐
-		│ Account Name  │ Account ID │
-		├───────────────┼────────────┤
-		│ Account One   │ account-1  │
-		├───────────────┼────────────┤
-		│ Account Two   │ account-2  │
-		├───────────────┼────────────┤
-		│ Account Three │ account-3  │
-		└───────────────┴────────────┘
-		🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens."
-	`);
+			Getting User settings...
+			ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN environment variable.
+			👋 You are logged in with an User API Token, associated with the email user@example.com.
+			┌───────────────┬────────────┐
+			│ Account Name  │ Account ID │
+			├───────────────┼────────────┤
+			│ Account One   │ account-1  │
+			├───────────────┼────────────┤
+			│ Account Two   │ account-2  │
+			├───────────────┼────────────┤
+			│ Account Three │ account-3  │
+			└───────────────┴────────────┘
+			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens."
+		`);
 	});
 
 	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async () => {
@@ -11552,12 +11547,7 @@ export default{
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				No bindings found.
-
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
 				  Worker Startup Timed out. This could be due to script exceeding size limits or expensive code in
 				  the global scope. [code: 11337]
@@ -11565,6 +11555,10 @@ export default{
 				  If you think this is a bug, please open an issue at:
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
 				",
 				  "warn": "",
 				}
@@ -11641,10 +11635,6 @@ export default{
 				  If these are unnecessary, consider removing them
 
 
-				",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				No bindings found.
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
@@ -11653,6 +11643,10 @@ export default{
 				  If you think this is a bug, please open an issue at:
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
 				",
 				  "warn": "",
 				}
@@ -11717,10 +11711,6 @@ export default{
 				  .wrangler/tmp/startup-profile-<HASH>/worker.cpuprofile - load it into the Chrome DevTools profiler
 				  (or directly in VSCode) to view a flamegraph.
 
-				",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				No bindings found.
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
@@ -11729,6 +11719,10 @@ export default{
 				  If you think this is a bug, please open an issue at:
 				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
+				",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
 				",
 				  "warn": "",
 				}
