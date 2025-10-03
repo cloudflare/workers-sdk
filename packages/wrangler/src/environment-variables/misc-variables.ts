@@ -46,6 +46,14 @@ export const getWranglerSendMetricsFromEnv =
 	});
 
 /**
+ * `WRANGLER_SEND_ERROR_REPORTS` can override whether we attempt to send error reports to Sentry.
+ */
+export const getWranglerSendErrorReportsFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "WRANGLER_SEND_ERROR_REPORTS",
+	});
+
+/**
  * Set `WRANGLER_API_ENVIRONMENT` environment variable to "staging" to tell Wrangler to hit the staging APIs rather than production.
  */
 export const getCloudflareApiEnvironmentFromEnv = getEnvironmentVariableFactory(
