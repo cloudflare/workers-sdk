@@ -33,7 +33,9 @@ for (const source of imageSource) {
 	const isPullWithoutAccountId = source === "pull" && !CLOUDFLARE_ACCOUNT_ID;
 
 	describe.skipIf(
-		isCINonLinux || isPullWithoutAccountId || process.env.LOCAL_TESTS_WITHOUT_DOCKER
+		isCINonLinux ||
+			isPullWithoutAccountId ||
+			process.env.LOCAL_TESTS_WITHOUT_DOCKER
 	)(`containers local dev tests: ${source}`, { timeout: 90_000 }, () => {
 		let helper: WranglerE2ETestHelper;
 		let workerName: string;
