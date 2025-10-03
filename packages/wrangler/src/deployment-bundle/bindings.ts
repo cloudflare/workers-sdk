@@ -170,12 +170,6 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 		return this.binding.bucket_name as string;
 	}
 
-	override inherit(): void {
-		if (!this.binding.bucket_name) {
-			this.binding.bucket_name = INHERIT_SYMBOL;
-		}
-	}
-
 	async create(name: string) {
 		await createR2Bucket(
 			this.complianceConfig,
@@ -193,6 +187,21 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 	) {
 		super("r2_bucket", binding, "bucket_name", complianceConfig, accountId);
 	}
+
+	/**
+	 * Inheriting an R2 binding replaces the id property (bucket_name for R2) with the inheritance symbol.
+	 * This works when deploying (and is appropriate for all other binding types), but it means that the
+	 * bucket_name for an R2 bucket is not displayed when deploying. As such, only use the inheritance symbol
+	 * if the R2 binding has no `bucket_name`.
+	 */
+	override inherit(): void {
+		this.binding.bucket_name ??= INHERIT_SYMBOL;
+	}
+
+	/**
+	 * R2 bindings can be inherited if the binding name and jusrisdiction match.
+	 * Additionally, if the user has specified a bucket_name in config, make sure that matches
+	 */
 	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
 			(existing) =>
@@ -457,11 +466,11 @@ export async function provisionBindings(
 	);
 
 	if (pendingResources.length > 0) {
-		if (!config.configPath) {
-			throw new UserError(
-				"Provisioning resources is not supported without a config file"
-			);
-		}
+		assert(
+			config.configPath,
+			"Provisioning resources is not possible without a config file"
+		);
+
 		if (!isLegacyEnv(config)) {
 			throw new UserError(
 				"Provisioning resources is not supported with a service environment"
@@ -498,7 +507,6 @@ export async function provisionBindings(
 			patch[resource.resourceType] = config[resource.resourceType].map(
 				(binding) => {
 					if (binding.binding === resource.binding) {
-						// Using an early return here would be nicer but makes TS blow up
 						binding = resource.handler.binding;
 					}
 
@@ -523,9 +531,8 @@ export async function provisionBindings(
 					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard—either way future deploys will continue to work."
 				);
 			} catch (e) {
-				if (e instanceof PatchConfigError) {
-					// no-op — if the user is using TOML config we can't update it.
-				} else {
+				// no-op — if the user is using TOML config we can't update it.
+				if (!(e instanceof PatchConfigError)) {
 					throw e;
 				}
 			}
