@@ -45,7 +45,7 @@ jobs:
         uses: ./.github/actions/install-dependencies
         with:
           node-version: 22
-          
+
       - name: Install grep
         run: brew install grep
 
