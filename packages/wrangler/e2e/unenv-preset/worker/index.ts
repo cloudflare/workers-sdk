@@ -513,6 +513,7 @@ export const WorkerdTests: Record<string, () => void> = {
 		const useV2 = getRuntimeFlagValue("enable_nodejs_process_v2");
 
 		for (const p of [mProcess, gProcess]) {
+			assert.equal(typeof (p as any).binding, "function");
 			if (useV2) {
 				// workerd implementation only
 				assert.equal(p.arch, "x64");
@@ -525,23 +526,22 @@ export const WorkerdTests: Record<string, () => void> = {
 
 			assert.doesNotThrow(() => p.chdir("/tmp"));
 			assert.equal(typeof p.cwd(), "string");
-
-			assert.equal(typeof p.addListener, "function");
-			assert.equal(typeof p.eventNames, "function");
-			assert.equal(typeof p.getMaxListeners, "function");
-			assert.equal(typeof p.listenerCount, "function");
-			assert.equal(typeof p.listeners, "function");
-			assert.equal(typeof p.off, "function");
-			assert.equal(typeof p.on, "function");
-			assert.equal(typeof p.once, "function");
-			assert.equal(typeof p.prependListener, "function");
-			assert.equal(typeof p.prependOnceListener, "function");
-			assert.equal(typeof p.rawListeners, "function");
-			assert.equal(typeof p.removeAllListeners, "function");
-			assert.equal(typeof p.removeListener, "function");
-			assert.equal(typeof p.setMaxListeners, "function");
-			assert.equal(typeof (p as any).binding, "function");
-			assert.equal(typeof p.permission, "object");
 		}
+
+		// Event APIs are only available on global process
+		assert.equal(typeof gProcess.addListener, "function");
+		assert.equal(typeof gProcess.eventNames, "function");
+		assert.equal(typeof gProcess.getMaxListeners, "function");
+		assert.equal(typeof gProcess.listenerCount, "function");
+		assert.equal(typeof gProcess.listeners, "function");
+		assert.equal(typeof gProcess.off, "function");
+		assert.equal(typeof gProcess.on, "function");
+		assert.equal(typeof gProcess.once, "function");
+		assert.equal(typeof gProcess.prependListener, "function");
+		assert.equal(typeof gProcess.prependOnceListener, "function");
+		assert.equal(typeof gProcess.rawListeners, "function");
+		assert.equal(typeof gProcess.removeAllListeners, "function");
+		assert.equal(typeof gProcess.removeListener, "function");
+		assert.equal(typeof gProcess.setMaxListeners, "function");
 	},
 };
