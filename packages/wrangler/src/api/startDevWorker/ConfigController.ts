@@ -22,7 +22,6 @@ import {
 	getDockerPath,
 } from "../../environment-variables/misc-variables";
 import { UserError } from "../../errors";
-import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -158,13 +157,7 @@ async function resolveDevConfig(
 		// absolute resolved path
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
-		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
-		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
-		experimentalRemoteBindings:
-			input.dev?.experimentalRemoteBindings ??
-			getFlag("REMOTE_BINDINGS") ??
-			true,
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
@@ -210,8 +203,7 @@ async function resolveBindings(
 				"version_metadata",
 				input.bindings
 			)?.[0],
-		},
-		input.dev?.experimentalRemoteBindings ?? true
+		}
 	);
 
 	// Create a print function that captures the current bindings context
@@ -227,9 +219,7 @@ async function resolveBindings(
 			{
 				registry,
 				local: !input.dev?.remote,
-				imagesLocalMode: input.dev?.imagesLocalMode,
 				name: config.name,
-				vectorizeBindToProd: input.dev?.bindVectorizeToProd,
 			}
 		);
 	};

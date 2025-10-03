@@ -25,117 +25,102 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 		return cleanup;
 	}, 35_000);
 
-	describe.each([
-		{ experimentalRemoteBindings: true },
-		{ experimentalRemoteBindings: false },
-	])(
-		`with experimentalRemoteBindings = $experimentalRemoteBindings`,
-		({ experimentalRemoteBindings }) => {
-			const testOpts: NonNullable<Parameters<typeof it>[1]> = {
-				fails: !experimentalRemoteBindings,
-				retry: !experimentalRemoteBindings ? 0 : undefined,
-			};
-
-			it("allows connecting to a remote worker", testOpts, async () => {
-				await helper.seed({
-					"wrangler.json": JSON.stringify({
-						name: "remote-bindings-test",
-						main: "simple-service-binding.js",
-						compatibility_date: "2025-05-07",
-						services: [
-							{
-								binding: "REMOTE_WORKER",
-								service: remoteWorkerName,
-								remote: true,
-							},
-						],
-					}),
-				});
-
-				const worker = await startWorker({
-					config: `${helper.tmpPath}/wrangler.json`,
-					dev: {
-						experimentalRemoteBindings,
-						inspector: false,
-						server: { port: 0 },
+	it("allows connecting to a remote worker", async () => {
+		await helper.seed({
+			"wrangler.json": JSON.stringify({
+				name: "remote-bindings-test",
+				main: "simple-service-binding.js",
+				compatibility_date: "2025-05-07",
+				services: [
+					{
+						binding: "REMOTE_WORKER",
+						service: remoteWorkerName,
+						remote: true,
 					},
-				});
+				],
+			}),
+		});
 
-				await worker.ready;
+		const worker = await startWorker({
+			config: `${helper.tmpPath}/wrangler.json`,
+			dev: {
+				inspector: false,
+				server: { port: 0 },
+			},
+		});
 
-				await expect(
-					(await worker.fetch("http://example.com")).text()
-				).resolves.toContain("REMOTE<WORKER>: Hello from a remote worker");
+		await worker.ready;
 
-				await worker.dispose();
-			});
+		await expect(
+			(await worker.fetch("http://example.com")).text()
+		).resolves.toContain("REMOTE<WORKER>: Hello from a remote worker");
 
-			it("handles code changes during development", testOpts, async () => {
-				await helper.seed({
-					"wrangler.json": JSON.stringify({
-						name: "remote-bindings-test",
-						main: "simple-service-binding.js",
-						compatibility_date: "2025-05-07",
-						services: [
-							{
-								binding: "REMOTE_WORKER",
-								service: remoteWorkerName,
-								remote: true,
-							},
-						],
-					}),
-				});
+		await worker.dispose();
+	});
 
-				const worker = await startWorker({
-					config: `${helper.tmpPath}/wrangler.json`,
-					dev: {
-						experimentalRemoteBindings,
-						inspector: false,
-						server: { port: 0 },
+	it("handles code changes during development", async () => {
+		await helper.seed({
+			"wrangler.json": JSON.stringify({
+				name: "remote-bindings-test",
+				main: "simple-service-binding.js",
+				compatibility_date: "2025-05-07",
+				services: [
+					{
+						binding: "REMOTE_WORKER",
+						service: remoteWorkerName,
+						remote: true,
 					},
-				});
+				],
+			}),
+		});
 
-				await worker.ready;
+		const worker = await startWorker({
+			config: `${helper.tmpPath}/wrangler.json`,
+			dev: {
+				inspector: false,
+				server: { port: 0 },
+			},
+		});
 
-				await expect(
-					(await worker.fetch("http://example.com")).text()
-				).resolves.toContain("REMOTE<WORKER>: Hello from a remote worker");
+		await worker.ready;
 
-				const indexContent = await readFile(
-					`${helper.tmpPath}/simple-service-binding.js`,
-					"utf8"
-				);
-				await writeFile(
-					`${helper.tmpPath}/simple-service-binding.js`,
-					indexContent.replace(
-						"REMOTE<WORKER>:",
-						"The remote worker responded with:"
-					),
-					"utf8"
-				);
+		await expect(
+			(await worker.fetch("http://example.com")).text()
+		).resolves.toContain("REMOTE<WORKER>: Hello from a remote worker");
 
-				await setTimeout(500);
+		const indexContent = await readFile(
+			`${helper.tmpPath}/simple-service-binding.js`,
+			"utf8"
+		);
+		await writeFile(
+			`${helper.tmpPath}/simple-service-binding.js`,
+			indexContent.replace(
+				"REMOTE<WORKER>:",
+				"The remote worker responded with:"
+			),
+			"utf8"
+		);
 
-				await expect(
-					(await worker.fetch("http://example.com")).text()
-				).resolves.toContain(
-					"The remote worker responded with: Hello from a remote worker"
-				);
+		await setTimeout(500);
 
-				await writeFile(
-					`${helper.tmpPath}/simple-service-binding.js`,
-					indexContent,
-					"utf8"
-				);
+		await expect(
+			(await worker.fetch("http://example.com")).text()
+		).resolves.toContain(
+			"The remote worker responded with: Hello from a remote worker"
+		);
 
-				await setTimeout(500);
+		await writeFile(
+			`${helper.tmpPath}/simple-service-binding.js`,
+			indexContent,
+			"utf8"
+		);
 
-				await expect(
-					(await worker.fetch("http://example.com")).text()
-				).resolves.toContain("REMOTE<WORKER>: Hello from a remote worker");
+		await setTimeout(500);
 
-				await worker.dispose();
-			});
-		}
-	);
+		await expect(
+			(await worker.fetch("http://example.com")).text()
+		).resolves.toContain("REMOTE<WORKER>: Hello from a remote worker");
+
+		await worker.dispose();
+	});
 });

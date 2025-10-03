@@ -81,13 +81,6 @@ export type GetPlatformProxyOptions = {
 	 * If `false` is specified no data is persisted on the filesystem.
 	 */
 	persist?: boolean | { path: string };
-	/**
-	 * Experimental flags (note: these can change at any time and are not version-controlled use at your own risk)
-	 */
-	experimental?: {
-		/** whether access to remove bindings should be enabled */
-		remoteBindings?: boolean;
-	};
 };
 
 /**
@@ -133,9 +126,6 @@ export async function getPlatformProxy<
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
-	const experimentalRemoteBindings =
-		options.experimental?.remoteBindings ?? true;
-
 	const env = options.environment;
 
 	const config = readConfig({
@@ -144,7 +134,7 @@ export async function getPlatformProxy<
 	});
 
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
-	if (experimentalRemoteBindings && config.configPath) {
+	if (config.configPath) {
 		remoteProxySession = (
 			(await maybeStartOrUpdateRemoteProxySession({
 				path: config.configPath,
@@ -158,7 +148,6 @@ export async function getPlatformProxy<
 		options,
 		remoteProxyConnectionString:
 			remoteProxySession?.remoteProxyConnectionString,
-		remoteBindingsEnabled: experimentalRemoteBindings,
 	});
 
 	const mf = new Miniflare(miniflareOptions);
@@ -194,22 +183,15 @@ async function getMiniflareOptionsFromConfig(args: {
 	config: Config;
 	options: GetPlatformProxyOptions;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
-	remoteBindingsEnabled: boolean;
 }): Promise<MiniflareOptions> {
-	const {
-		config,
-		options,
-		remoteProxyConnectionString,
-		remoteBindingsEnabled,
-	} = args;
+	const { config, options, remoteProxyConnectionString } = args;
 
 	const bindings = getBindings(
 		config,
 		options.environment,
 		options.envFiles,
 		true,
-		{},
-		remoteBindingsEnabled
+		{}
 	);
 
 	if (config["durable_objects"]) {
@@ -246,7 +228,6 @@ async function getMiniflareOptionsFromConfig(args: {
 			services: bindings.services,
 			serviceBindings: {},
 			migrations: config.migrations,
-			imagesLocalMode: true,
 			tails: [],
 			containerDOClassNames: new Set(
 				config.containers?.map((c) => c.class_name)
@@ -254,8 +235,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			containerBuildId: undefined,
 			enableContainers: config.dev.enable_containers,
 		},
-		remoteProxyConnectionString,
-		remoteBindingsEnabled
+		remoteProxyConnectionString
 	);
 
 	let processedAssetOptions: AssetsOptions | undefined;
@@ -349,9 +329,7 @@ export function unstable_getMiniflareWorkerOptions(
 	configPath: string,
 	env?: string,
 	options?: {
-		imagesLocalMode?: boolean;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
-		remoteBindingsEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 			enableContainers?: boolean;
@@ -363,9 +341,7 @@ export function unstable_getMiniflareWorkerOptions(
 	config: Config,
 	env?: string,
 	options?: {
-		imagesLocalMode?: boolean;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
-		remoteBindingsEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 			enableContainers?: boolean;
@@ -378,9 +354,7 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		envFiles?: string[];
-		imagesLocalMode?: boolean;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
-		remoteBindingsEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 			enableContainers?: boolean;
@@ -404,7 +378,7 @@ export function unstable_getMiniflareWorkerOptions(
 	const containerDOClassNames = new Set(
 		config.containers?.map((c) => c.class_name)
 	);
-	const bindings = getBindings(config, env, options?.envFiles, true, {}, true);
+	const bindings = getBindings(config, env, options?.envFiles, true, {});
 
 	const enableContainers =
 		options?.overrides?.enableContainers !== undefined
@@ -420,14 +394,12 @@ export function unstable_getMiniflareWorkerOptions(
 			services: [],
 			serviceBindings: {},
 			migrations: config.migrations,
-			imagesLocalMode: !!options?.imagesLocalMode,
 			tails: config.tail_consumers,
 			containerDOClassNames,
 			containerBuildId: options?.containerBuildId,
 			enableContainers,
 		},
-		options?.remoteProxyConnectionString,
-		options?.remoteBindingsEnabled ?? false
+		options?.remoteProxyConnectionString
 	);
 
 	// This function is currently only exported for the Workers Vitest pool.
