@@ -16,6 +16,7 @@ import {
 } from "../client";
 import { SINK_DEFAULTS } from "../defaults";
 import { authorizeR2Bucket } from "../index";
+import { validateEntityName } from "../validate";
 import {
 	displayUsageExamples,
 	formatSchemaFieldsForTable,
@@ -91,11 +92,7 @@ async function setupPipelineNaming(
 		throw new UserError("Pipeline name is required");
 	}
 
-	if (!/^[a-zA-Z0-9_-]+$/.test(pipelineName)) {
-		throw new UserError(
-			"Pipeline name must contain only letters, numbers, hyphens, and underscores"
-		);
-	}
+	validateEntityName("pipeline", pipelineName);
 
 	const streamName = `${pipelineName}_stream`;
 	const sinkName = `${pipelineName}_sink`;
