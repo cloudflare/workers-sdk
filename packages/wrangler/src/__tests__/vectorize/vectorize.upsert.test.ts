@@ -161,12 +161,14 @@ describe("dataset upsert", () => {
 		);
 
 		expect(insertRequestCount).toBe(2);
-		expect(std.out).toMatchInlineSnapshot(`
+		expect(
+			std.out.replaceAll(mutationId, "00000000-0000-0000-0000-000000000000")
+		).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			✨ Enqueued 3 vectors into index 'my-index' for insertion. Mutation changeset identifier: a5c71e2f-74a1-4536-92d2-9ba58d662161
-			✨ Enqueued 2 vectors into index 'my-index' for insertion. Mutation changeset identifier: a5c71e2f-74a1-4536-92d2-9ba58d662161
+			✨ Enqueued 3 vectors into index 'my-index' for insertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
+			✨ Enqueued 2 vectors into index 'my-index' for insertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
 			✅ Successfully enqueued 5 vectors into index 'my-index' for insertion."
 		`);
 	});
@@ -222,12 +224,14 @@ describe("dataset upsert", () => {
 		);
 
 		expect(insertRequestCount).toBe(2);
-		expect(std.out).toMatchInlineSnapshot(`
+		expect(
+			std.out.replaceAll(mutationId, "00000000-0000-0000-0000-000000000000")
+		).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			✨ Enqueued 3 vectors into index 'my-index' for upsertion. Mutation changeset identifier: 2589f9c4-6e77-4931-9868-ef2436ecea92
-			✨ Enqueued 2 vectors into index 'my-index' for upsertion. Mutation changeset identifier: 2589f9c4-6e77-4931-9868-ef2436ecea92
+			✨ Enqueued 3 vectors into index 'my-index' for upsertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
+			✨ Enqueued 2 vectors into index 'my-index' for upsertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
 			✅ Successfully enqueued 5 vectors into index 'my-index' for upsertion."
 		`);
 	});
