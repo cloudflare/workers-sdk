@@ -2233,6 +2233,9 @@ importers:
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
+      '@types/semver':
+        specifier: ^7.5.1
+        version: 7.5.1
       '@types/ws':
         specifier: ^8.5.13
         version: 8.5.13
@@ -2242,6 +2245,9 @@ importers:
       mlly:
         specifier: ^1.7.4
         version: 1.7.4
+      semver:
+        specifier: ^7.7.1
+        version: 7.7.2
       tsdown:
         specifier: ^0.15.4
         version: 0.15.4(typescript@5.8.3)
@@ -14434,7 +14440,7 @@ snapshots:
       package-manager-detector: 0.2.9
       picocolors: 1.1.1
       resolve-from: 5.0.0
-      semver: 7.7.1
+      semver: 7.7.2
       spawndamnit: 3.0.1
       term-size: 2.2.1
 
@@ -14835,7 +14841,7 @@ snapshots:
       devalue: 4.3.3
       esbuild: 0.17.19
       miniflare: 3.20250310.0
-      semver: 7.7.1
+      semver: 7.7.2
       vitest: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.29.2)
       wrangler: 3.114.1(@cloudflare/workers-types@4.20251011.0)
       zod: 3.22.3
@@ -15554,7 +15560,7 @@ snapshots:
       '@babel/traverse': 7.25.9
       '@babel/types': 7.26.3
       prettier: 3.2.5
-      semver: 7.7.1
+      semver: 7.7.2
     optionalDependencies:
       '@vue/compiler-sfc': 3.3.4
     transitivePeerDependencies:
@@ -15712,7 +15718,7 @@ snapshots:
   '@jridgewell/gen-mapping@0.3.5':
     dependencies:
       '@jridgewell/set-array': 1.2.1
-      '@jridgewell/sourcemap-codec': 1.5.0
+      '@jridgewell/sourcemap-codec': 1.5.5
       '@jridgewell/trace-mapping': 0.3.25
 
   '@jridgewell/resolve-uri@3.1.0': {}
@@ -15726,7 +15732,7 @@ snapshots:
   '@jridgewell/trace-mapping@0.3.25':
     dependencies:
       '@jridgewell/resolve-uri': 3.1.0
-      '@jridgewell/sourcemap-codec': 1.5.0
+      '@jridgewell/sourcemap-codec': 1.5.5
 
   '@jridgewell/trace-mapping@0.3.31':
     dependencies:
@@ -15748,7 +15754,7 @@ snapshots:
       parse-github-url: 1.0.2
       picocolors: 1.1.1
       sembear: 0.7.0
-      semver: 7.7.1
+      semver: 7.7.2
       tinyexec: 0.3.2
       validate-npm-package-name: 5.0.1
 
