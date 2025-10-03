@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -197,6 +198,7 @@ describe("--x-provision", () => {
 				Provisioning R2 (R2 Bucket)...
 				✨ R2 provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard—either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
@@ -317,6 +319,7 @@ describe("--x-provision", () => {
 				Provisioning R2 (R2 Bucket)...
 				✨ R2 provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard—either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
@@ -450,6 +453,7 @@ describe("--x-provision", () => {
 				🌀 Creating new R2 Bucket \\"new-r2\\"...
 				✨ R2 provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard—either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
@@ -466,6 +470,26 @@ describe("--x-provision", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+
+			// IDs should be written back to the config file
+			expect(await readFile("wrangler.toml", "utf-8")).toMatchInlineSnapshot(`
+				"compatibility_date = \\"2022-01-12\\"
+				name = \\"test-name\\"
+				main = \\"index.js\\"
+
+				[[kv_namespaces]]
+				binding = \\"KV\\"
+				id = \\"new-kv-id\\"
+
+				[[r2_buckets]]
+				binding = \\"R2\\"
+				bucket_name = \\"new-r2\\"
+
+				[[d1_databases]]
+				binding = \\"D1\\"
+				database_id = \\"new-d1-id\\"
+				"
+			`);
 		});
 
 		it("can prefill d1 database name from config file if provided", async () => {
@@ -522,6 +546,7 @@ describe("--x-provision", () => {
 				🌀 Creating new D1 Database \\"prefilled-d1-name\\"...
 				✨ D1 provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard—either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
@@ -650,6 +675,7 @@ describe("--x-provision", () => {
 				🌀 Creating new D1 Database \\"new-d1-name\\"...
 				✨ D1 provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard—either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
@@ -728,6 +754,7 @@ describe("--x-provision", () => {
 				🌀 Creating new R2 Bucket \\"prefilled-r2-name\\"...
 				✨ BUCKET provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard—either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
@@ -923,6 +950,7 @@ describe("--x-provision", () => {
 				🌀 Creating new R2 Bucket \\"existing-bucket-name\\"...
 				✨ BUCKET provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard—either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms

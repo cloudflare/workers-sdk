@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { readFile } from "node:fs/promises";
 import { assertNever } from "../../utils/assert-never";
 import type { ConfigBindingOptions } from "../../config";
+import type { WorkerMetadataBinding } from "../../deployment-bundle/create-worker-upload-form";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type {
 	Binding,
@@ -308,8 +309,22 @@ export function convertCfWorkerInitBindingsToBindings(
 	return output;
 }
 
+/**
+ * Convert either StartDevWorkerOptions["bindings"] or WorkerMetadataBinding[] to CfWorkerInit["bindings"]
+ * This function is by design temporary, but has lived longer than originally expected.
+ * For some context, CfWorkerInit is the in-memory representation of a Worker that Wrangler uses,
+ * WorkerMetadataBinding is the representation of bindings that comes from the API, and StartDevWorkerOptions
+ * is the "new" in-memory representation of a Worker that's used in Wrangler's dev flow. Over
+ * time, all uses of CfWorkerInit should transition to StartDevWorkerOptions, but that's a pretty big refactor.
+ * As such, in the meantime we have conversion functions so that different code paths can deal with the format they
+ * expect and were written for.
+ *
+ * WARNING: Using this with WorkerMetadataBinding[] will lose information about certain
+ * binding types (i.e. WASM modules, text blobs, and data blobs). These binding types are deprecated
+ * but may still be used by some Workers in the wild.
+ */
 export async function convertBindingsToCfWorkerInitBindings(
-	inputBindings: StartDevWorkerOptions["bindings"]
+	inputBindings: StartDevWorkerOptions["bindings"] | WorkerMetadataBinding[]
 ): Promise<{
 	bindings: CfWorkerInit["bindings"];
 	fetchers: Record<string, ServiceFetch>;
@@ -349,23 +364,39 @@ export async function convertBindingsToCfWorkerInitBindings(
 
 	const fetchers: Record<string, ServiceFetch> = {};
 
-	for (const [name, binding] of Object.entries(inputBindings ?? {})) {
+	const iterator: [string, WorkerMetadataBinding | Binding][] = Array.isArray(
+		inputBindings
+	)
+		? inputBindings.map((b) => [b.name, b])
+		: Object.entries(inputBindings ?? {});
+
+	for (const [name, binding] of iterator) {
 		if (binding.type === "plain_text") {
 			bindings.vars ??= {};
-			bindings.vars[name] = binding.value;
+			bindings.vars[name] = "value" in binding ? binding.value : binding.text;
 		} else if (binding.type === "json") {
 			bindings.vars ??= {};
-			bindings.vars[name] = binding.value;
+			bindings.vars[name] = "value" in binding ? binding.value : binding.json;
 		} else if (binding.type === "kv_namespace") {
 			bindings.kv_namespaces ??= [];
-			bindings.kv_namespaces.push({ ...binding, binding: name });
+			bindings.kv_namespaces.push({
+				...binding,
+				binding: name,
+				id: "namespace_id" in binding ? binding.namespace_id : binding.id,
+			});
 		} else if (binding.type === "send_email") {
 			bindings.send_email ??= [];
 			bindings.send_email.push({ ...binding, name: name });
 		} else if (binding.type === "wasm_module") {
+			if (!("source" in binding)) {
+				continue;
+			}
 			bindings.wasm_modules ??= {};
 			bindings.wasm_modules[name] = await getBinaryFileContents(binding.source);
 		} else if (binding.type === "text_blob") {
+			if (!("source" in binding)) {
+				continue;
+			}
 			bindings.text_blobs ??= {};
 
 			if (typeof binding.source.path === "string") {
@@ -377,6 +408,9 @@ export async function convertBindingsToCfWorkerInitBindings(
 				);
 			}
 		} else if (binding.type === "data_blob") {
+			if (!("source" in binding)) {
+				continue;
+			}
 			bindings.data_blobs ??= {};
 			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
 		} else if (binding.type === "browser") {
@@ -398,7 +432,11 @@ export async function convertBindingsToCfWorkerInitBindings(
 			bindings.r2_buckets.push({ ...binding, binding: name });
 		} else if (binding.type === "d1") {
 			bindings.d1_databases ??= [];
-			bindings.d1_databases.push({ ...binding, binding: name });
+			bindings.d1_databases.push({
+				...binding,
+				binding: name,
+				database_id: "id" in binding ? binding.id : binding.database_id,
+			});
 		} else if (binding.type === "vectorize") {
 			bindings.vectorize ??= [];
 			bindings.vectorize.push({ ...binding, binding: name });
@@ -415,7 +453,14 @@ export async function convertBindingsToCfWorkerInitBindings(
 			bindings.analytics_engine_datasets.push({ ...binding, binding: name });
 		} else if (binding.type === "dispatch_namespace") {
 			bindings.dispatch_namespaces ??= [];
-			bindings.dispatch_namespaces.push({ ...binding, binding: name });
+			bindings.dispatch_namespaces.push({
+				...binding,
+				binding: name,
+				outbound:
+					binding.outbound && "worker" in binding.outbound
+						? undefined
+						: binding.outbound,
+			});
 		} else if (binding.type === "mtls_certificate") {
 			bindings.mtls_certificates ??= [];
 			bindings.mtls_certificates.push({ ...binding, binding: name });
