@@ -11,6 +11,8 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Mock } from "vitest";
 
+vi.mock("../wrangler-banner");
+
 describe("dispatch-namespace", () => {
 	const std = mockConsoleMethods();
 	beforeEach(() => msw.use(...mswSuccessNamespacesHandlers));
@@ -109,12 +111,7 @@ describe("dispatch-namespace", () => {
 			await runWrangler(`dispatch-namespace create ${namespaceName}`);
 
 			expect(std.out).toMatchInlineSnapshot(
-				`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Created dispatch namespace \\"my-namespace\\" with ID \\"some-namespace-id\\""
-			`
+				`"Created dispatch namespace \\"my-namespace\\" with ID \\"some-namespace-id\\""`
 			);
 		});
 	});
@@ -166,12 +163,7 @@ describe("dispatch-namespace", () => {
 			await runWrangler(`dispatch-namespace delete ${namespaceName}`);
 
 			expect(std.out).toMatchInlineSnapshot(
-				`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Deleted dispatch namespace \\"my-namespace\\""
-			`
+				`"Deleted dispatch namespace \\"my-namespace\\""`
 			);
 		});
 	});
@@ -232,10 +224,7 @@ describe("dispatch-namespace", () => {
 			await runWrangler(`dispatch-namespace get ${namespaceName}`);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				{
+				"{
 				  namespace_id: 'some-namespace-id',
 				  namespace_name: 'namespace-name',
 				  created_on: '2022-06-29T14:30:08.16152Z',
@@ -276,10 +265,7 @@ describe("dispatch-namespace", () => {
 		it("should list all namespaces", async () => {
 			await runWrangler("dispatch-namespace list");
 			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				[
+				"[
 				  {
 				    namespace_id: 'some-namespace-id',
 				    namespace_name: 'namespace-name',
@@ -353,12 +339,7 @@ describe("dispatch-namespace", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(
-				`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Renamed dispatch namespace \\"my-namespace\\" to \\"new-namespace\\""
-			`
+				`"Renamed dispatch namespace \\"my-namespace\\" to \\"new-namespace\\""`
 			);
 			expect((printWranglerBanner as Mock).mock.calls.length).toEqual(1);
 		});
