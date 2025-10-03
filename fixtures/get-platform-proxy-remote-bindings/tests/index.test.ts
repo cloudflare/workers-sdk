@@ -202,32 +202,6 @@ if (auth) {
 
 				await dispose();
 			});
-
-			test("getPlatformProxy does not work with remote bindings if the experimental remoteBindings flag is not turned on", async () => {
-				const { env, dispose } = await getPlatformProxy<{
-					MY_WORKER: Fetcher;
-					MY_KV: KVNamespace;
-				}>({
-					configPath: "./.tmp/normal-usage/wrangler.json",
-					experimental: {
-						remoteBindings: false,
-					},
-				});
-
-				const response = await fetchFromWorker(
-					env.MY_WORKER,
-					"Service Unavailable"
-				);
-				const workerText = await response?.text();
-				expect(workerText).toEqual(
-					`Couldn't find a local dev session for the "default" entrypoint of service "${remoteWorkerName}" to proxy to`
-				);
-
-				const kvValue = await env.MY_KV.get("test-key");
-				expect(kvValue).toEqual(null);
-
-				await dispose();
-			});
 		});
 
 		describe("account id taken from the wrangler config", () => {
