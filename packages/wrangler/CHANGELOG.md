@@ -1,5 +1,24 @@
 # wrangler
 
+## 3.114.15
+
+### Patch Changes
+
+- [#10758](https://github.com/cloudflare/workers-sdk/pull/10758) [`c9d567e`](https://github.com/cloudflare/workers-sdk/commit/c9d567edfb986d761750b3526334a43ebe7bee66) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix `console.debug` logs not being logged at the `info` level (as users expect)
+
+- [#10762](https://github.com/cloudflare/workers-sdk/pull/10762) [`081647b`](https://github.com/cloudflare/workers-sdk/commit/081647b6ed88cadb1eae82a39e6b58f6af1dd046) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - switch zone route warning to an info message
+
+- [#10782](https://github.com/cloudflare/workers-sdk/pull/10782) [`9e79d9d`](https://github.com/cloudflare/workers-sdk/commit/9e79d9d9846de7f4100cb5c2351c1f29617c0e0c) Thanks [@penalosa](https://github.com/penalosa)! - Improve formatting of logged errors in some cases
+
+- [#10516](https://github.com/cloudflare/workers-sdk/pull/10516) [`dfa81fd`](https://github.com/cloudflare/workers-sdk/commit/dfa81fd44cab178922fb4f0b1855e7668351727a) Thanks [@workers-devprod](https://github.com/workers-devprod)! - fix: script should be accepted as a positional arg in the `versions upload` command
+
+- [#10760](https://github.com/cloudflare/workers-sdk/pull/10760) [`cb7ace5`](https://github.com/cloudflare/workers-sdk/commit/cb7ace562e9d5fd310bf7bd69a80cc2cbf8a64ac) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support the deletion of secrets with complex names
+
+- [#9991](https://github.com/cloudflare/workers-sdk/pull/9991) [`3d9b3a0`](https://github.com/cloudflare/workers-sdk/commit/3d9b3a042cd5c0b4c795a5b4c112fc98e09eb30c) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Fix startup profiling when sourcemaps are enabled
+
+- Updated dependencies [[`a879fe0`](https://github.com/cloudflare/workers-sdk/commit/a879fe070ce9694693d2c1a01fbe6ddbbfe0ae9c), [`6de07fb`](https://github.com/cloudflare/workers-sdk/commit/6de07fb1f815109966b7be631a092d4470a01b6f), [`ab47329`](https://github.com/cloudflare/workers-sdk/commit/ab473299f0d2e7d375aeaaf8973f2d2930efb0ce)]:
+  - miniflare@3.20250718.2
+
 ## 3.114.14
 
 ### Patch Changes
