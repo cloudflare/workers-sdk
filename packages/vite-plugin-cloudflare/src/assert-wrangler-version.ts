@@ -26,7 +26,7 @@ export function assertWranglerVersion() {
 	if (compare(installedVersion, wranglerDependency) < 0) {
 		throw new Error(
 			`The installed version of Wrangler (${installedVersion.format()}) is older than the version required by @cloudflare/vite-plugin (${wranglerDependency.format()}).\n` +
-				`Please upgrade your installation of Wrangler to at least ${wranglerDependency}.`
+				`Please install Wrangler version ${wranglerDependency} in your project.`
 		);
 	}
 
