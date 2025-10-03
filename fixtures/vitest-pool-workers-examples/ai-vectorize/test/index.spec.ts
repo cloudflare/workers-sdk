@@ -19,10 +19,12 @@ describe("Tests that do hit the AI binding", () => {
 			const ctx = createExecutionContext();
 
 			// mock the AI run function by directly modifying `env`
-			env.AI.run = vi.fn().mockResolvedValue({
-				shape: [1, 2],
-				data: [[0, 0]],
-			});
+			env.AI = {
+				run: vi.fn().mockResolvedValue({
+					shape: [1, 2],
+					data: [[0, 0]],
+				}),
+			} as unknown as Ai;
 			const response = await worker.fetch(request, env, ctx);
 
 			await waitOnExecutionContext(ctx);
@@ -37,10 +39,12 @@ describe("Tests that do hit the AI binding", () => {
 
 			// mock the vectorize upsert function by directly modifying `env`
 			const mockVectorizeStore: VectorizeVector[] = [];
-			env.VECTORIZE.upsert = vi.fn().mockImplementation(async (vectors) => {
-				mockVectorizeStore.push(...vectors);
-				return { mutationId: "123" };
-			});
+			env.VECTORIZE = {
+				upsert: vi.fn().mockImplementation(async (vectors) => {
+					mockVectorizeStore.push(...vectors);
+					return { mutationId: "123" };
+				}),
+			} as unknown as VectorizeIndex;
 
 			const response = await worker.fetch(request, env, ctx);
 
