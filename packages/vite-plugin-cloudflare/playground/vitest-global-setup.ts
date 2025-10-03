@@ -1,4 +1,6 @@
+import { isDockerRunning } from "@cloudflare/containers-shared";
 import { chromium } from "playwright-chromium";
+import { getDockerPath } from "../src/containers";
 import type { BrowserServer } from "playwright-chromium";
 import type { GlobalSetupContext } from "vitest/node";
 
@@ -17,6 +19,22 @@ export async function setup({ provide }: GlobalSetupContext): Promise<void> {
 	});
 
 	provide("wsEndpoint", browserServer.wsEndpoint());
+}
+
+const dockerIsRunning = await isDockerRunning(getDockerPath());
+
+/** Indicates whether the test is being run locally (not in CI) AND docker is currently not running on the system */
+const isLocalWithoutDockerRunning =
+	process.env.CI !== "true" && !dockerIsRunning;
+
+if (isLocalWithoutDockerRunning) {
+	process.env.LOCAL_TESTS_WITHOUT_DOCKER = "true";
+}
+
+if (isLocalWithoutDockerRunning) {
+	console.warn(
+		"The tests are running locally but there is no docker instance running on the system, skipping containers tests\n"
+	);
 }
 
 export async function teardown(): Promise<void> {
