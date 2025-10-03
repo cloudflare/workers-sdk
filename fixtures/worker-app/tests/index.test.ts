@@ -22,21 +22,33 @@ describe("'wrangler dev' correctly renders pages", () => {
 		));
 	});
 
-	afterAll(async () => {
+	afterAll(async (ctx) => {
 		await stop?.();
 	});
 
 	it("renders ", async ({ expect }) => {
-		await vi.waitFor(
-			async () => {
-				// Note that the local protocol defaults to http
-				const response = await fetch(`http://${ip}:${port}/`);
-				const text = await response.text();
-				expect(response.status).toBe(200);
-				expect(text).toContain(`https://prod.example.org/`);
-			},
-			{ interval: 1000, timeout: 5000 }
-		);
+		await vi
+			.waitFor(
+				async () => {
+					console.error("Pinging the Worker...");
+					// Note that the local protocol defaults to http
+					const response = await fetch(`http://${ip}:${port}/`);
+					console.error("Response received from the Worker");
+					expect(response.status).toBe(200);
+					const text = await response.text();
+					console.error("Response text received from the Worker");
+					expect(text).toContain(`https://prod.example.org/`);
+				},
+				{ interval: 1000, timeout: 5000 }
+			)
+			.catch((e) => {
+				console.error(
+					"!!!! Something failed - here is the output from the Worker:"
+				);
+				// Log the output so we can see any errors
+				console.error(getOutput());
+				throw e;
+			});
 
 		// Wait up to 5s for all request logs to be flushed
 		for (let i = 0; i < 10; i++) {
