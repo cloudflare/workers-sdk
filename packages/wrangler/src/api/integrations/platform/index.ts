@@ -81,13 +81,6 @@ export type GetPlatformProxyOptions = {
 	 * If `false` is specified no data is persisted on the filesystem.
 	 */
 	persist?: boolean | { path: string };
-	/**
-	 * Experimental flags (note: these can change at any time and are not version-controlled use at your own risk)
-	 */
-	experimental?: {
-		/** whether access to remove bindings should be enabled */
-		remoteBindings?: boolean;
-	};
 };
 
 /**
