@@ -154,7 +154,7 @@ describe("wrangler", () => {
 		return config;
 	}
 
-	const now = new Date();
+	const now = new Date(2025, 1, 1);
 	const oneYearLater = new Date(now);
 	oneYearLater.setFullYear(now.getFullYear() + 1);
 
@@ -433,7 +433,7 @@ describe("wrangler", () => {
 						Success! Uploaded mTLS Certificate
 						ID: 1234
 						Issuer: example.com...
-						Expires on 10/3/2026"
+						Expires on 2/1/2026"
 					`
 					);
 				});
@@ -458,7 +458,7 @@ describe("wrangler", () => {
 						Success! Uploaded mTLS Certificate my-cert
 						ID: 1234
 						Issuer: example.com...
-						Expires on 10/3/2026"
+						Expires on 2/1/2026"
 					`
 					);
 				});
@@ -479,15 +479,15 @@ describe("wrangler", () => {
 						ID: 1234
 						Name: cert one
 						Issuer: example.com...
-						Created on: 10/3/2025
-						Expires on: 10/3/2026
+						Created on: 2/1/2025
+						Expires on: 2/1/2026
 
 
 						ID: 5678
 						Name: cert two
 						Issuer: example.com...
-						Created on: 10/3/2025
-						Expires on: 10/3/2026
+						Created on: 2/1/2025
+						Expires on: 2/1/2026
 
 						"
 					`
