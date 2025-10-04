@@ -1,5 +1,5 @@
 import AssetWorker from "@cloudflare/workers-shared/asset-worker";
-import { UNKNOWN_HOST } from "../shared";
+import { UNKNOWN_HOST } from "../../shared";
 import type { Env as _Env } from "@cloudflare/workers-shared/asset-worker";
 import type { ResolvedConfig } from "vite";
 

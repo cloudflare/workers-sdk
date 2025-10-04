@@ -109,7 +109,10 @@ describe("vpc service commands", () => {
 		`);
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating VPC service 'test-http-ipv4'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating VPC service 'test-http-ipv4'
 			✅ Created VPC service: service-uuid
 			   Name: test-http-ipv4
 			   Type: http
@@ -161,7 +164,10 @@ describe("vpc service commands", () => {
 		await runWrangler("vpc service list");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"📋 Listing VPC services
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			📋 Listing VPC services
 			┌─┬─┬─┬─┬─┬─┬─┬─┐
 			│ id │ name │ type │ ports │ host │ tunnel │ created │ modified │
 			├─┼─┼─┼─┼─┼─┼─┼─┤
@@ -175,7 +181,10 @@ describe("vpc service commands", () => {
 		await runWrangler("vpc service get service-uuid");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"🔍 Getting VPC service 'service-uuid'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🔍 Getting VPC service 'service-uuid'
 			✅ Retrieved VPC service: service-uuid
 			   Name: test-web-service
 			   Type: http
@@ -194,7 +203,10 @@ describe("vpc service commands", () => {
 		await runWrangler("vpc service delete service-uuid");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"🗑️  Deleting VPC service 'service-uuid'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🗑️  Deleting VPC service 'service-uuid'
 			✅ Deleted VPC service: service-uuid"
 		`);
 	});
@@ -247,7 +259,10 @@ describe("vpc service commands", () => {
 		await runWrangler("vpc service get service-uuid");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"🔍 Getting VPC service 'service-uuid'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🔍 Getting VPC service 'service-uuid'
 			✅ Retrieved VPC service: service-uuid
 			   Name: test-web-service
 			   Type: http
@@ -293,7 +308,10 @@ describe("vpc service commands", () => {
 		);
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating VPC service 'test-no-resolver'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating VPC service 'test-no-resolver'
 			✅ Created VPC service: service-uuid
 			   Name: test-no-resolver
 			   Type: http

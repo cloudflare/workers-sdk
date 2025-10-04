@@ -28,7 +28,11 @@ describe("pages project validate", () => {
 
 		await runWrangler("pages project validate .");
 
-		expect(std.out).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 

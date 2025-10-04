@@ -29,7 +29,10 @@ describe("pages build env", () => {
 		});
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Checking for configuration in a Wrangler configuration file (BETA)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration...
 			pages_build_output_dir: dist
@@ -62,7 +65,10 @@ describe("pages build env", () => {
 
 		expect(process.exitCode).toEqual(EXIT_CODE_NO_CONFIG_FOUND);
 		expect(std.out).toMatchInlineSnapshot(`
-			"Checking for configuration in a Wrangler configuration file (BETA)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Checking for configuration in a Wrangler configuration file (BETA)
 			"
 		`);
 		expect(std.debug).toContain(
@@ -104,7 +110,10 @@ describe("pages build env", () => {
 
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
 		expect(std.out).toMatchInlineSnapshot(`
-			"Checking for configuration in a Wrangler configuration file (BETA)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration..."
 		`);
@@ -130,7 +139,10 @@ describe("pages build env", () => {
 			"
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"Checking for configuration in a Wrangler configuration file (BETA)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration..."
 		`);
@@ -170,7 +182,10 @@ describe("pages build env", () => {
 
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
 		expect(std.out).toMatchInlineSnapshot(`
-			"Checking for configuration in a Wrangler configuration file (BETA)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration..."
 		`);
@@ -217,7 +232,10 @@ describe("pages build env", () => {
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
 		expect(std.out).toMatchInlineSnapshot(`
-			"Checking for configuration in a Wrangler configuration file (BETA)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration..."
 		`);
@@ -253,7 +271,10 @@ describe("pages build env", () => {
 		});
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Checking for configuration in a Wrangler configuration file (BETA)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration...
 			pages_build_output_dir: dist
@@ -299,7 +320,10 @@ describe("pages build env", () => {
 		);
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Checking for configuration in a Wrangler configuration file (BETA)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.json file. Reading build configuration...
 			pages_build_output_dir: dist
@@ -342,7 +366,10 @@ describe("pages build env", () => {
 		});
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Checking for configuration in a Wrangler configuration file (BETA)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration...
 			pages_build_output_dir: dist
@@ -386,7 +413,10 @@ describe("pages build env", () => {
 		});
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Checking for configuration in a Wrangler configuration file (BETA)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration...
 			pages_build_output_dir: dist
@@ -417,7 +447,10 @@ describe("pages build env", () => {
 
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Checking for configuration in a Wrangler configuration file (BETA)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.json file. Reading build configuration...
 			pages_build_output_dir: build/dist

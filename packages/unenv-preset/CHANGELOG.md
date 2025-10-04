@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.7.6
+
+### Patch Changes
+
+- [#10860](https://github.com/cloudflare/workers-sdk/pull/10860) [`2594130`](https://github.com/cloudflare/workers-sdk/commit/259413027f2d0c77041c121ce946fb3131de3241) Thanks [@vicb](https://github.com/vicb)! - Revert "Drop `node:process` polyfill when v2 is available"
+
 ## 2.7.5
 
 ### Patch Changes

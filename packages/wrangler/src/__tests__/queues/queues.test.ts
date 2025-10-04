@@ -11,7 +11,6 @@ import { mockGetQueueByNameRequest } from "./mock-utils";
 import type { PostTypedConsumerBody, QueueResponse } from "../../queues/client";
 
 describe("wrangler", () => {
-	vi.unmock("../../wrangler-banner");
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();

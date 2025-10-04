@@ -25,7 +25,12 @@ describe("versions secret bulk", () => {
 		);
 		await runWrangler(`versions secret bulk --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
-			`"🌀 Creating the secrets for the Worker \\"script-name\\" "`
+			`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🌀 Creating the secrets for the Worker \\"script-name\\" "
+		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo content found in file or piped input.[0m
@@ -64,7 +69,10 @@ describe("versions secret bulk", () => {
 		await runWrangler(`versions secret bulk secrets.json --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
 			`
-			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🌀 Creating the secrets for the Worker \\"script-name\\"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
@@ -85,7 +93,10 @@ describe("versions secret bulk", () => {
 		await runWrangler(`versions secret bulk .env --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
 			`
-			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🌀 Creating the secrets for the Worker \\"script-name\\"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
@@ -135,7 +146,10 @@ describe("versions secret bulk", () => {
 		await runWrangler(`versions secret bulk --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
 			`
-			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🌀 Creating the secrets for the Worker \\"script-name\\"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
@@ -180,7 +194,12 @@ describe("versions secret bulk", () => {
 
 		await runWrangler(`versions secret bulk --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
-			`"🌀 Creating the secrets for the Worker \\"script-name\\" "`
+			`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🌀 Creating the secrets for the Worker \\"script-name\\" "
+		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo content found in file or piped input.[0m
@@ -224,7 +243,10 @@ describe("versions secret bulk", () => {
 		await runWrangler(`versions secret bulk secrets.json --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
 			`
-			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🌀 Creating the secrets for the Worker \\"script-name\\"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
@@ -269,7 +291,10 @@ describe("versions secret bulk", () => {
 		await runWrangler(`versions secret bulk secrets.json --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
 			`
-			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🌀 Creating the secrets for the Worker \\"script-name\\"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3

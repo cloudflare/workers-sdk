@@ -1,5 +1,18 @@
 # wrangler
 
+## 4.42.0
+
+### Minor Changes
+
+- [#10735](https://github.com/cloudflare/workers-sdk/pull/10735) [`103fbf0`](https://github.com/cloudflare/workers-sdk/commit/103fbf0c7207818acbb58919ce6c36d0ccd878a3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Allow WRANGLER_SEND_ERROR_REPORTS env var to override whether to report Wrangler crashes to Sentry
+
+### Patch Changes
+
+- [#10757](https://github.com/cloudflare/workers-sdk/pull/10757) [`59d5911`](https://github.com/cloudflare/workers-sdk/commit/59d5911a9106dec41fe3e6af742a20efa1b8ba0b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix `console.debug` logs not being logged at the `info` level (as users expect)
+
+- Updated dependencies [[`2594130`](https://github.com/cloudflare/workers-sdk/commit/259413027f2d0c77041c121ce946fb3131de3241)]:
+  - @cloudflare/unenv-preset@2.7.6
+
 ## 4.41.0
 
 ### Minor Changes

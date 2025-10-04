@@ -65,7 +65,10 @@ describe("init", () => {
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "🌀 Running \`mockpm create cloudflare@^2.5.0\`...",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Running \`mockpm create cloudflare@^2.5.0\`...",
 				  "warn": "",
 				}
 			`);
@@ -112,7 +115,10 @@ describe("init", () => {
 					  "debug": "",
 					  "err": "",
 					  "info": "",
-					  "out": "🌀 Running \`mockpm run create-cloudflare\`...",
+					  "out": "
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					🌀 Running \`mockpm run create-cloudflare\`...",
 					  "warn": "",
 					}
 				`);
@@ -770,14 +776,17 @@ describe("init", () => {
 			});
 
 			expect(std).toMatchInlineSnapshot(`
-					Object {
-					  "debug": "",
-					  "err": "",
-					  "info": "",
-					  "out": "🌀 Running \`mockpm create cloudflare@^2.5.0 existing-memory-crystal --existing-script existing-memory-crystal\`...",
-					  "warn": "",
-					}
-				`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Running \`mockpm create cloudflare@^2.5.0 existing-memory-crystal --existing-script existing-memory-crystal\`...",
+				  "warn": "",
+				}
+			`);
 
 			expect(execa).toHaveBeenCalledTimes(1);
 			expect(execa).toHaveBeenCalledWith(

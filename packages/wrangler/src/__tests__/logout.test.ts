@@ -13,13 +13,23 @@ describe("logout", () => {
 
 	it("should exit with a message stating the user is not logged in", async () => {
 		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
-		expect(std.out).toMatchInlineSnapshot(`"Not logged in, exiting..."`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Not logged in, exiting..."
+		`);
 	});
 
 	it("should exit with a message stating the user logged in via API token", async () => {
 		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: "DUMMY_TOKEN" });
 		expect(std.out).toMatchInlineSnapshot(
-			`"You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the environment to log out."`
+			`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the environment to log out."
+		`
 		);
 	});
 
@@ -47,7 +57,12 @@ describe("logout", () => {
 
 		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
 
-		expect(std.out).toMatchInlineSnapshot(`"Successfully logged out."`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Successfully logged out."
+		`);
 		expect(fs.existsSync(config)).toBeFalsy();
 		expect(counter).toBe(1);
 	});
@@ -76,7 +91,12 @@ describe("logout", () => {
 
 		await runWrangler("logout");
 
-		expect(std.out).toMatchInlineSnapshot(`"Successfully logged out."`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Successfully logged out."
+		`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(fs.existsSync(config)).toBeFalsy();

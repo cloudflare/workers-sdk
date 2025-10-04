@@ -381,7 +381,10 @@ describe("generate types", () => {
 			outFile: "worker-configuration.d.ts",
 		});
 		expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
 
 			declare namespace Cloudflare {
 				interface Env {
@@ -401,6 +404,9 @@ describe("generate types", () => {
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
 			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 
+
+			 ⛅️ wrangler x.x.x
+			──────────────────
 			Generating project types...
 
 			declare namespace Cloudflare {
@@ -421,6 +427,9 @@ describe("generate types", () => {
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
 			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 
+
+			 ⛅️ wrangler x.x.x
+			──────────────────
 			Generating project types...
 
 			declare namespace Cloudflare {
@@ -468,7 +477,10 @@ describe("generate types", () => {
 
 		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
 
 			declare namespace Cloudflare {
 				interface GlobalProps {
@@ -568,7 +580,10 @@ describe("generate types", () => {
 
 		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
 
 			declare namespace Cloudflare {
 				interface GlobalProps {
@@ -731,7 +746,10 @@ describe("generate types", () => {
 			"types --include-runtime=false -c a/wrangler.jsonc -c b/wrangler.jsonc -c c/wrangler.jsonc --path a/worker-configuration.d.ts"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"- Found Worker 'service_name' at 'b/index.ts' (b/wrangler.jsonc)
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			- Found Worker 'service_name' at 'b/index.ts' (b/wrangler.jsonc)
 			- Found Worker 'service_name_2' at 'c/index.ts' (c/wrangler.jsonc)
 			Generating project types...
 
@@ -868,7 +886,10 @@ describe("generate types", () => {
 			await runWrangler("types --include-runtime=false");
 			expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Generating project types...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
 
 				No project types to add.
 
@@ -902,7 +923,10 @@ describe("generate types", () => {
 					<runtime types go here>"
 				`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Generating project types...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
 
 				No project types to add.
 
@@ -935,7 +959,10 @@ describe("generate types", () => {
 			await runWrangler("types --include-runtime=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Generating project types...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
 
 				declare namespace Cloudflare {
 					interface GlobalProps {
@@ -1002,7 +1029,10 @@ describe("generate types", () => {
 
 		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
 
 			export {};
 			declare global {
@@ -1030,7 +1060,10 @@ describe("generate types", () => {
 
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
 
 			declare namespace Cloudflare {
 				interface Env {
@@ -1069,7 +1102,10 @@ describe("generate types", () => {
 
 		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
 
 			declare namespace Cloudflare {
 				interface Env {
@@ -1123,7 +1159,10 @@ describe("generate types", () => {
 		await runWrangler("types --include-runtime=false");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
 
 			declare namespace Cloudflare {
 				interface Env {
@@ -1168,7 +1207,10 @@ describe("generate types", () => {
 		await runWrangler("types --include-runtime=false");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
 
 			declare namespace Cloudflare {
 				interface Env {
@@ -1206,7 +1248,10 @@ describe("generate types", () => {
 		await runWrangler("types --strict-vars=false --include-runtime=false");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
 
 			declare namespace Cloudflare {
 				interface Env {
@@ -1248,7 +1293,10 @@ describe("generate types", () => {
 		await runWrangler("types --include-runtime=false");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
 
 			declare namespace Cloudflare {
 				interface Env {
@@ -1287,7 +1335,10 @@ describe("generate types", () => {
 		await runWrangler("types --include-runtime=false");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
 
 			declare namespace Cloudflare {
 				interface Env {
@@ -1349,7 +1400,10 @@ describe("generate types", () => {
 			await runWrangler("types --include-runtime=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Generating project types...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
 
 				declare namespace Cloudflare {
 					interface Env {
@@ -1373,7 +1427,10 @@ describe("generate types", () => {
 			await runWrangler("types --strict-vars=false --include-runtime=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Generating project types...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
 
 				declare namespace Cloudflare {
 					interface Env {
@@ -1409,7 +1466,10 @@ describe("generate types", () => {
 					"types --include-runtime=false --env-interface CloudflareEnv"
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Generating project types...
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Generating project types...
 
 					declare namespace Cloudflare {
 						interface Env {
@@ -1619,7 +1679,10 @@ describe("generate types", () => {
 			);
 			await runWrangler("types --include-env=false");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Generating runtime types...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating runtime types...
 
 				Runtime types generated.
 
@@ -1652,7 +1715,10 @@ describe("generate types", () => {
 			fs.writeFileSync("./.wrangler/types/runtime.d.ts", "blah");
 			await runWrangler("types --include-env=false");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Generating runtime types...
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating runtime types...
 
 				Runtime types generated.
 
@@ -1698,7 +1764,10 @@ describe("generate types", () => {
 
 		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
 
 			declare namespace Cloudflare {
 				interface GlobalProps {

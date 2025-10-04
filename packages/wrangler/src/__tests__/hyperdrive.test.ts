@@ -121,7 +121,10 @@ describe("hyperdrive commands", () => {
 		`);
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -157,7 +160,10 @@ describe("hyperdrive commands", () => {
 		`);
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			[[hyperdrive]]
@@ -187,7 +193,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -221,7 +230,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -259,7 +271,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -294,7 +309,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -328,7 +346,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -362,7 +383,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -396,7 +420,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -430,7 +457,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -464,7 +494,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -498,7 +531,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -573,7 +609,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -607,7 +646,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -673,7 +715,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -710,7 +755,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Creating 'test123'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
@@ -782,7 +830,10 @@ describe("hyperdrive commands", () => {
 		mockHyperdriveGetListOrDelete();
 		await runWrangler("hyperdrive list");
 		expect(std.out).toMatchInlineSnapshot(`
-			"📋 Listing Hyperdrive configs
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			📋 Listing Hyperdrive configs
 			┌─┬─┬─┬─┬─┬─┬─┬─┬─┬─┐
 			│ id │ name │ user │ host │ port │ scheme │ database │ caching │ mtls │ origin_connection_limit │
 			├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤
@@ -799,7 +850,10 @@ describe("hyperdrive commands", () => {
 		mockHyperdriveGetListOrDelete();
 		await runWrangler("hyperdrive get xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
 		expect(std.out).toMatchInlineSnapshot(`
-			"{
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			{
 			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
 			  \\"name\\": \\"test123\\",
 			  \\"origin\\": {
@@ -818,9 +872,12 @@ describe("hyperdrive commands", () => {
 		mockHyperdriveGetListOrDelete();
 		await runWrangler("hyperdrive delete xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
 		expect(std.out).toMatchInlineSnapshot(`
-		"🗑️ Deleting Hyperdrive database config xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-		✅ Deleted"
-	`);
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🗑️ Deleting Hyperdrive database config xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			✅ Deleted"
+		`);
 	});
 
 	it("should handle updating a hyperdrive config's origin", async () => {
@@ -837,7 +894,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
 			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
@@ -868,7 +928,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
 			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
@@ -896,7 +959,12 @@ describe("hyperdrive commands", () => {
 
 			"
 		`);
-		expect(std.out).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			"
+		`);
 	});
 
 	it("should throw an exception when updating a hyperdrive config's origin but not all fields are set", async () => {
@@ -927,7 +995,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
 			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
@@ -962,7 +1033,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
 			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
@@ -994,7 +1068,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
 			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
@@ -1023,7 +1100,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
 			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
@@ -1059,7 +1139,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
 			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
@@ -1087,7 +1170,12 @@ describe("hyperdrive commands", () => {
 
 			"
 		`);
-		expect(std.out).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			"
+		`);
 	});
 
 	it("should throw an exception when updating a hyperdrive config's origin with access credentials but no other origin fields", async () => {
@@ -1102,7 +1190,12 @@ describe("hyperdrive commands", () => {
 
 			"
 		`);
-		expect(std.out).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			"
+		`);
 	});
 
 	it("should reject an update command if the access client ID is provided but not the access client secret", async () => {
@@ -1148,7 +1241,10 @@ describe("hyperdrive commands", () => {
 			}
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
 			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",

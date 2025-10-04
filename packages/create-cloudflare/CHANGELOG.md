@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.52.2
+
+### Patch Changes
+
+- [#10457](https://github.com/cloudflare/workers-sdk/pull/10457) [`862034c`](https://github.com/cloudflare/workers-sdk/commit/862034c6a64bef8d45fe6adb2a3fab76207a7f24) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To     |
+  | ------------ | ----- | ------ |
+  | create-solid | 0.6.7 | 0.6.11 |
+
 ## 2.52.1
 
 ### Patch Changes

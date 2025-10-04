@@ -1,5 +1,15 @@
 # @cloudflare/vite-plugin
 
+## 1.13.10
+
+### Patch Changes
+
+- [#10825](https://github.com/cloudflare/workers-sdk/pull/10825) [`4c509ec`](https://github.com/cloudflare/workers-sdk/commit/4c509ec640f78737661dddfbf072ba60e3eee866) Thanks [@penalosa](https://github.com/penalosa)! - Support containers defined for Vite auxiliary Workers
+
+- Updated dependencies [[`103fbf0`](https://github.com/cloudflare/workers-sdk/commit/103fbf0c7207818acbb58919ce6c36d0ccd878a3), [`2594130`](https://github.com/cloudflare/workers-sdk/commit/259413027f2d0c77041c121ce946fb3131de3241), [`59d5911`](https://github.com/cloudflare/workers-sdk/commit/59d5911a9106dec41fe3e6af742a20efa1b8ba0b)]:
+  - wrangler@4.42.0
+  - @cloudflare/unenv-preset@2.7.6
+
 ## 1.13.9
 
 ### Patch Changes

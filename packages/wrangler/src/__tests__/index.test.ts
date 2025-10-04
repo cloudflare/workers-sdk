@@ -317,7 +317,10 @@ describe("wrangler", () => {
 		await runWrangler("build");
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
 			No bindings found.
 			--dry-run: exiting now."
 		`);

@@ -4,8 +4,6 @@ import { requireAuth } from "../../user";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runWrangler } from "../helpers/run-wrangler";
 
-vi.unmock("../../wrangler-banner");
-
 vi.mock("../../r2/helpers");
 vi.mock("../../user");
 
