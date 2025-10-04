@@ -12,6 +12,7 @@ import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
 import { z } from "zod";
 import { fetch } from "../../http";
+import { CERT } from "../../http/cert";
 import {
 	Extension,
 	kVoid,
@@ -100,6 +101,16 @@ if (process.env.NODE_EXTRA_CA_CERTS !== undefined) {
 	} catch {}
 }
 
+/**
+ * When using the dev registry to connect multiple Miniflare instances together, we need to
+ * make fetch() requests between multiple Miniflare instances that originate in workerd.
+ * As an example, consider two Miniflare instances A & B, with `https: true` enabled on B.
+ * A fetch() from A to B will fail, because the HTTPS certs exposed by B are self-signed (by Miniflare).
+ * workerd has no option to allow self-signed certificates on a per-connection basis, and so
+ * we add Miniflare's self-signed certificate to the list of certs that workerd will trust
+ */
+trustedCertificates.push(CERT);
+
 const encoder = new TextEncoder();
 const numericCompare = new Intl.Collator(undefined, { numeric: true }).compare;
 
@@ -161,6 +172,11 @@ const CoreOptionsSchemaInput = z.intersection(
 		// TODO(soon): remove this in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
+		// List of entrypoints from this Worker that should be exposed over the dev registry
+		unsafeExposedEntrypoints: z.string().array().optional(),
+		// Vite projects handle injecting an Asset worker themselves (bypassing Miniflare's default handling)
+		// However, the Vite Asset worker should still be exposed over the dev registry in front of the user worker
+		unsafeExposedName: z.string().optional(),
 
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
@@ -246,8 +262,7 @@ export const CoreSharedOptionsSchema = z.object({
 
 	// Enable auto service / durable objects discovery with the dev registry
 	unsafeDevRegistryPath: z.string().optional(),
-	// Enable External Durable Objects Proxy / Internal DOs registration
-	unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
+
 	// Called when external workers this instance depends on are updated in the dev registry
 	unsafeHandleDevRegistryUpdate: z
 		.function(z.tuple([z.custom<WorkerRegistry>()]))
@@ -948,6 +963,12 @@ export function getGlobalServices({
 		{
 			name: CoreBindings.STRIP_DISABLE_PRETTY_ERROR,
 			json: JSON.stringify(sharedOptions.stripDisablePrettyError),
+		},
+		{
+			name: "DEV_REGISTRY_PROXY",
+			service: {
+				name: "remote-bindings-proxy",
+			},
 		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,

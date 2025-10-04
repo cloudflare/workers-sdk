@@ -36,4 +36,10 @@
 			"service": "module-worker-with-assets",
 		},
 	],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "kv-id",
+		},
+	],
 }

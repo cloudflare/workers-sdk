@@ -17,6 +17,9 @@ export function makeFetch(
 			}
 		}
 		proxiedHeaders.set("MF-URL", request.url);
+		if (request.cf) {
+			proxiedHeaders.set("MF-CF-Blob", JSON.stringify(request.cf));
+		}
 		proxiedHeaders.set("MF-Binding", bindingName);
 		const req = new Request(request, {
 			headers: proxiedHeaders,

@@ -1,7 +1,7 @@
 import { newWorkersRpcResponse } from "capnweb";
 import { EmailMessage } from "cloudflare:email";
 
-interface Env extends Record<string, unknown> {}
+type Env = Record<string, unknown>;
 
 class BindingNotFoundError extends Error {
 	constructor(name?: string) {
@@ -52,9 +52,15 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 
 	if (url.searchParams.has("MF-Dispatch-Namespace-Options")) {
 		const { name, args, options } = JSON.parse(
-			url.searchParams.get("MF-Dispatch-Namespace-Options")!
+			url.searchParams.get("MF-Dispatch-Namespace-Options") as string
 		);
 		return (targetBinding as DispatchNamespace).get(name, args, options);
+	}
+
+	const doID = url.searchParams.get("MF-DO-ID");
+	if (doID) {
+		const id = (targetBinding as DurableObjectNamespace).idFromString(doID);
+		return (targetBinding as DurableObjectNamespace).get(id);
 	}
 
 	return targetBinding;
@@ -79,6 +85,13 @@ function getExposedFetcher(request: Request, env: Env) {
 		const { name, args, options } = JSON.parse(dispatchNamespaceOptions);
 		return (targetBinding as DispatchNamespace).get(name, args, options);
 	}
+
+	const doID = request.headers.get("MF-DO-ID");
+	if (doID) {
+		const id = (targetBinding as DurableObjectNamespace).idFromString(doID);
+		return (targetBinding as DurableObjectNamespace).get(id);
+	}
+
 	return targetBinding as Fetcher;
 }
 
@@ -95,7 +108,7 @@ function isJSRPCBinding(request: Request): boolean {
 }
 
 export default {
-	async fetch(request, env) {
+	async fetch(request, env, ctx) {
 		try {
 			if (isJSRPCBinding(request)) {
 				return newWorkersRpcResponse(
@@ -115,19 +128,49 @@ export default {
 					}
 				}
 
+				if (request.headers.has("MF-Tail")) {
+					// @ts-expect-error This is guaranteed to have a tail method
+					await fetcher.tail(
+						JSON.parse(await request.text(), tailEventsReviver)
+					);
+
+					return new Response("OK");
+				}
+
+				const cfHeader = request.headers.get("MF-CF-Blob");
+
 				return fetcher.fetch(
 					request.headers.get("MF-URL") ?? "http://example.com",
 					new Request(request, {
 						redirect: "manual",
 						headers: originalHeaders,
+						cf: cfHeader ? JSON.parse(cfHeader) : undefined,
 					})
 				);
 			}
 		} catch (e) {
+			console.log(
+				"Something unexpected went wrong in the proxy server" + (e as Error)
+			);
 			if (e instanceof BindingNotFoundError) {
 				return new Response(e.message, { status: 400 });
 			}
-			return new Response((e as Error).message, { status: 500 });
+			return new Response(
+				"Something unexpected went wrong in the proxy server" +
+					(e as Error).message,
+				{ status: 500 }
+			);
 		}
 	},
 } satisfies ExportedHandler<Env>;
+
+const serializedDate = "___serialized_date___";
+
+function tailEventsReviver(_: string, value: any) {
+	// To restore Date objects from the serialized events
+	if (value && typeof value === "object" && serializedDate in value) {
+		return new Date(value[serializedDate]);
+	}
+
+	return value;
+}

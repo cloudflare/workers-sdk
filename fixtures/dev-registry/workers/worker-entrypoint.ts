@@ -1,7 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 
-let tailEvents = [];
-
 export class NamedEntrypoint extends WorkerEntrypoint {
 	ping() {
 		return "Pong from Named Entrypoint";
@@ -20,6 +18,7 @@ export default class Worker extends WorkerEntrypoint<{
 	NAMED_ENTRYPOINT: Fetcher;
 	NAMED_ENTRYPOINT_WITH_ASSETS: Fetcher;
 	DURABLE_OBJECT: DurableObjectNamespace;
+	KV: KVNamespace;
 }> {
 	ping() {
 		return "Pong";
@@ -90,15 +89,10 @@ export default class Worker extends WorkerEntrypoint<{
 					return new Response("ok");
 				}
 
-				try {
-					return Response.json({
-						worker: "Worker Entrypoint",
-						tailEvents,
-					});
-				} finally {
-					// Clear the tail events after sending them
-					tailEvents = [];
-				}
+				return Response.json({
+					worker: "Worker Entrypoint",
+					tailEvents: JSON.parse(await this.env.KV.get("tail")),
+				});
 			}
 
 			return new Response("Hello from Worker Entrypoint!");
@@ -107,7 +101,7 @@ export default class Worker extends WorkerEntrypoint<{
 		}
 	}
 
-	tail(events) {
+	async tail(events) {
 		const logs = [];
 
 		for (const event of events) {
@@ -117,7 +111,7 @@ export default class Worker extends WorkerEntrypoint<{
 		}
 
 		if (logs.length > 0) {
-			tailEvents.push(logs);
+			await this.env.KV.put("tail", JSON.stringify(logs));
 		}
 	}
 }
