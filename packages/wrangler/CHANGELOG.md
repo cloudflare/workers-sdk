@@ -1,5 +1,11 @@
 # wrangler
 
+## 4.42.1
+
+### Patch Changes
+
+- [#10865](https://github.com/cloudflare/workers-sdk/pull/10865) [`26adce7`](https://github.com/cloudflare/workers-sdk/commit/26adce7ff803b2b3833ed018902ba288927594b6) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Respect keep_vars for wrangler versions upload.
+
 ## 4.42.0
 
 ### Minor Changes
