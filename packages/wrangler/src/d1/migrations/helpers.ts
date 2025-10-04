@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import path from "path";
+import path from "node:path";
 import { configFileName } from "../../config";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
@@ -129,15 +129,26 @@ const listAppliedMigrations = async ({
 	return response[0].results as Migration[];
 };
 
-function getMigrationNames(migrationsPath: string): Array<string> {
-	const migrations = [];
+/*
+ * Returns the names of all migrations in the given directory.
+ * A migration is either a .sql file or a directory containing .sql files.
+ */
+function getMigrationNames(migrationsPath: string): string[] {
+	const migrations: string[] = [];
 
 	const dir = fs.opendirSync(migrationsPath);
 
+	const hasSqlFile = (f: string) => f.endsWith(".sql");
+
 	let dirent;
 	while ((dirent = dir.readSync()) !== null) {
-		if (dirent.name.endsWith(".sql")) {
+		if (dirent.isFile() && hasSqlFile(dirent.name)) {
 			migrations.push(dirent.name);
+		} else if (dirent.isDirectory()) {
+			// A non-recursive check for .sql files in the directory
+			const sub = fs.readdirSync(path.join(migrationsPath, dirent.name));
+			const hasSql = sub.some(hasSqlFile);
+			if (hasSql) migrations.push(dirent.name);
 		}
 	}
 
