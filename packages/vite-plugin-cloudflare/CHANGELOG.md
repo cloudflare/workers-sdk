@@ -1,5 +1,14 @@
 # @cloudflare/vite-plugin
 
+## 1.13.11
+
+### Patch Changes
+
+- [#10866](https://github.com/cloudflare/workers-sdk/pull/10866) [`f62d0b6`](https://github.com/cloudflare/workers-sdk/commit/f62d0b665bc971a791e5bac2300dd638b603e670) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use tsdown to bundle the package.
+
+- Updated dependencies [[`26adce7`](https://github.com/cloudflare/workers-sdk/commit/26adce7ff803b2b3833ed018902ba288927594b6)]:
+  - wrangler@4.42.1
+
 ## 1.13.10
 
 ### Patch Changes
