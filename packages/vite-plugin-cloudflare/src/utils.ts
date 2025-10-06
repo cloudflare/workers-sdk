@@ -73,11 +73,11 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 	const host = request.headers.get("Host");
 	const xForwardedHost = request.headers.get("X-Forwarded-Host");
 
-	if (host) {
-		// Pass through the original `x-forwarded-host` header if it is set or otherwise set it to the host of the Vite server
+	if (host && !xForwardedHost) {
+		// Set the `x-forwarded-host` header to the host of the Vite server if it is not already set
 		// Note that the `host` header inside the Worker will contain the workerd host
 		// TODO: reconsider this when adopting `miniflare.dispatchFetch` as it may be possible to provide the Vite server host in the `host` header
-		request.headers.set("X-Forwarded-Host", xForwardedHost ?? host);
+		request.headers.set("X-Forwarded-Host", host);
 	}
 
 	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
