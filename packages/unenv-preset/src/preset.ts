@@ -72,6 +72,7 @@ export function getCloudflarePreset({
 	const http2Overrides = getHttp2Overrides(compat);
 	const osOverrides = getOsOverrides(compat);
 	const fsOverrides = getFsOverrides(compat);
+	const punycodeOverrides = getPunycodeOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -80,6 +81,7 @@ export function getCloudflarePreset({
 		...http2Overrides.nativeModules,
 		...osOverrides.nativeModules,
 		...fsOverrides.nativeModules,
+		...punycodeOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -89,6 +91,7 @@ export function getCloudflarePreset({
 		...http2Overrides.hybridModules,
 		...osOverrides.hybridModules,
 		...fsOverrides.hybridModules,
+		...punycodeOverrides.hybridModules,
 	];
 
 	return {
@@ -298,6 +301,44 @@ function getFsOverrides({
 	return enabled
 		? {
 				nativeModules: ["fs/promises", "fs"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:punycode` (unenv or workerd)
+ *
+ * The native punycode implementation:
+ * - is experimental
+ * - can be enabled with the "enable_nodejs_punycode_module" flag
+ * - can be disabled with the "disable_nodejs_punycode_module" flag
+ */
+function getPunycodeOverrides({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_punycode_module"
+	);
+
+	// TODO: add `enabledByDate` when a date is defined in workerd
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_punycode_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["punycode"],
 				hybridModules: [],
 			}
 		: {
