@@ -14711,6 +14711,34 @@ export default{
 		});
 	});
 
+	function normalizeLogWithConfigDiff(log: string): string {
+		// If the path is long the log could be wrapped so we need to remove the potential wrapping
+		let normalizedLog = log.replace(/"main":\s*"/, '"main": "');
+
+		if (process.platform === "win32") {
+			// On windows the snapshot paths incorrectly use double slashes, such as:
+			//  `\"main\": \"C://Users//RUNNER~1//AppData//Local//Temp//wrangler-testse63LuJ//index.js\",
+			// so in the `main` field we replace all possible occurrences of `//` with just `\\`
+			// (so that the path normalization of `normalizeString` can appropriately work)
+			normalizedLog = normalizedLog.replace(
+				/"main": "(.*?)"/,
+				(_, mainPath: string) => `"main": "${mainPath.replaceAll("//", "\\")}"`
+			);
+		}
+
+		normalizedLog = normalizeString(normalizedLog);
+
+		// Let's remove the various extra characters for colors to get a more clear output
+		normalizedLog = normalizedLog
+			.replaceAll("", "X")
+			.replaceAll(/X\[\d+(?:;\d+)?m/g, "");
+
+		// Let's also normalize Windows newlines
+		normalizedLog = normalizedLog.replaceAll("\r\n", "\n");
+
+		return normalizedLog;
+	}
+
 	describe("config remote differences", () => {
 		it("should present a diff warning to the user when there are differences between the local config (json/jsonc) and the dash config", async () => {
 			writeWorkerSource();
@@ -14760,16 +14788,15 @@ export default{
 			await runWrangler("deploy --x-remote-diff-check");
 
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
+				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
 
-				      \\"workers_dev\\": true,
-				      \\"preview_urls\\": false,
-				      \\"vars\\": {
-				  -     \\"MY_VAR\\": \\"abc\\"
-				  +     \\"MY_VAR\\": 123
-				      },
-				      \\"define\\": {},
-				      \\"durable_objects\\": {
+				   {
+				     vars: {
+				  -    MY_VAR: \\"abc\\"
+				  +    MY_VAR: 123
+				     }
+				   }
+
 
 				  Deploying the Worker will override the remote configuration with your local one.
 
@@ -14828,43 +14855,21 @@ export default{
 			//       to be able to show toml content/diffs, that combined with the fact that json(c) config files are the
 			//       recommended ones moving forward makes this small shortcoming of the config diffing acceptable
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
+				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
 
-				      \\"workers_dev\\": true,
-				      \\"preview_urls\\": false,
-				      \\"vars\\": {
-				  -     \\"MY_VAR\\": \\"abc\\"
-				  +     \\"MY_VAR\\": \\"this is a toml file\\"
-				      },
-				      \\"define\\": {},
-				      \\"durable_objects\\": {
+				   {
+				     vars: {
+				  -    MY_VAR: \\"abc\\"
+				  +    MY_VAR: \\"this is a toml file\\"
+				     }
+				   }
+
 
 				  Deploying the Worker will override the remote configuration with your local one.
 
 				"
 			`);
 		});
-
-		function normalizeLogWithConfigDiff(log: string): string {
-			// If the path is long the log could be wrapped so we need to remove the potential wrapping
-			let normalizedLog = log.replace(/"main":\s*"/, '"main": "');
-
-			if (process.platform === "win32") {
-				// On windows the snapshot paths incorrectly use double slashes, such as:
-				//  `\"main\": \"C://Users//RUNNER~1//AppData//Local//Temp//wrangler-testse63LuJ//index.js\",
-				// so in the `main` field we replace all possible occurrences of `//` with just `\\`
-				// (so that the path normalization of `normalizeString` can appropriately work)
-				normalizedLog = normalizedLog.replace(
-					/"main": "(.*?)"/,
-					(_, mainPath: string) =>
-						`"main": "${mainPath.replaceAll("//", "\\")}"`
-				);
-			}
-
-			normalizedLog = normalizeString(normalizedLog);
-
-			return normalizedLog;
-		}
 	});
 
 	describe("with strict mode enabled", () => {
@@ -14904,17 +14909,16 @@ export default{
 
 			await runWrangler("deploy --x-remote-diff-check --strict");
 
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:[0m
+			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
+				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
 
-				        \\"bindings\\": []
-				      },
-				      \\"observability\\": {
-				  -     \\"enabled\\": true,
-				  +     \\"enabled\\": false,
-				        \\"head_sampling_rate\\": 1,
-				        \\"logs\\": {
-				          \\"enabled\\": false,
+				   {
+				     observability: {
+				  -    enabled: true
+				  +    enabled: false
+				     }
+				   }
+
 
 				  Deploying the Worker will override the remote configuration with your local one.
 
