@@ -1,5 +1,17 @@
 # miniflare
 
+## 3.20250718.2
+
+### Patch Changes
+
+- [#10716](https://github.com/cloudflare/workers-sdk/pull/10716) [`a879fe0`](https://github.com/cloudflare/workers-sdk/commit/a879fe070ce9694693d2c1a01fbe6ddbbfe0ae9c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: api proxy preserve multiple Set-Cookie headers
+
+- [#10465](https://github.com/cloudflare/workers-sdk/pull/10465) [`6de07fb`](https://github.com/cloudflare/workers-sdk/commit/6de07fb1f815109966b7be631a092d4470a01b6f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Loosen validation around different configurations for Durable Object
+
+  Allow durable objects to have `enableSql`, `unsafeUniqueKey` and `unsafePreventEviction` configurations set to `undefined` even if they same durable objects are defined with those configurations set to a different value (this would allow workers using external durable objects not to have to duplicate such configurations in their options)
+
+- [#10484](https://github.com/cloudflare/workers-sdk/pull/10484) [`ab47329`](https://github.com/cloudflare/workers-sdk/commit/ab473299f0d2e7d375aeaaf8973f2d2930efb0ce) Thanks [@edmundhung](https://github.com/edmundhung)! - chore: bump `devalue` version to 5.3.2
+
 ## 3.20250718.1
 
 ### Minor Changes
