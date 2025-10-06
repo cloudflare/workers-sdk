@@ -3,7 +3,10 @@ import { readFile } from "node:fs/promises";
 import { assertNever } from "../../utils/assert-never";
 import type { ConfigBindingOptions } from "../../config";
 import type { WorkerMetadataBinding } from "../../deployment-bundle/create-worker-upload-form";
-import type { CfWorkerInit } from "../../deployment-bundle/worker";
+import type {
+	CfDispatchNamespace,
+	CfWorkerInit,
+} from "../../deployment-bundle/worker";
 import type {
 	Binding,
 	File,
@@ -458,13 +461,18 @@ export async function convertBindingsToCfWorkerInitBindings(
 			});
 		} else if (binding.type === "dispatch_namespace") {
 			bindings.dispatch_namespaces ??= [];
+			const outbound: CfDispatchNamespace["outbound"] =
+				binding.outbound && "worker" in binding.outbound
+					? {
+							service: binding.outbound.worker.service,
+							environment: binding.outbound.worker.environment,
+							parameters: binding.outbound.params?.map((p) => p.name),
+						}
+					: binding.outbound;
 			bindings.dispatch_namespaces.push({
 				...omitType(binding),
 				binding: name,
-				outbound:
-					binding.outbound && "worker" in binding.outbound
-						? undefined
-						: binding.outbound,
+				outbound,
 			});
 		} else if (binding.type === "mtls_certificate") {
 			bindings.mtls_certificates ??= [];
