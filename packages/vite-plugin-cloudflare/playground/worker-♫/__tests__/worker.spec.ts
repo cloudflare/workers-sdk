@@ -32,7 +32,15 @@ test("basic dev logging", async () => {
 	expect(serverLogs.errors.join()).toContain("__console warn__");
 });
 
-test("receives the original host as the `X-Forwarded-Host` header", async () => {
+test("receives the original `x-forwarded-host` header if it is set", async () => {
+	const response = await fetch(`${viteTestUrl}/x-forwarded-host`, {
+		headers: { "x-forwarded-host": "example.com:8080" },
+	});
+
+	expect(await response.text()).toBe("example.com:8080");
+});
+
+test("receives the Vite server host as the `x-forwarded-host` header if the `x-forwarded-host` header is not set", async () => {
 	const testUrl = new URL(viteTestUrl);
 	await vi.waitFor(
 		async () =>
