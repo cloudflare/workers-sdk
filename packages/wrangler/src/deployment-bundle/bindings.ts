@@ -571,7 +571,7 @@ export async function provisionBindings(
 					false
 				);
 				logger.log(
-					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard—either way future deploys will continue to work."
+					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work."
 				);
 			} catch (e) {
 				// no-op — if the user is using TOML config we can't update it.
