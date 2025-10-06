@@ -200,7 +200,7 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 	}
 
 	/**
-	 * R2 bindings can be inherited if the binding name and jusrisdiction match.
+	 * R2 bindings can be inherited if the binding name and jurisdiction match.
 	 * Additionally, if the user has specified a bucket_name in config, make sure that matches
 	 */
 	canInherit(settings: Settings | undefined): boolean {
