@@ -224,16 +224,6 @@ export class LocalRuntimeController extends RuntimeController {
 							undefined
 						: await unwrapHook(data.config.dev.auth);
 
-				if (getFlag("RESOURCES_PROVISION") && auth) {
-					await provisionBindings(
-						configBundle.bindings,
-						auth?.accountId,
-						data.config.name,
-						getFlag("AUTOCREATE_RESOURCES"),
-						data.config,
-						true
-					);
-				}
 				this.#remoteProxySessionData =
 					await maybeStartOrUpdateRemoteProxySession(
 						{
