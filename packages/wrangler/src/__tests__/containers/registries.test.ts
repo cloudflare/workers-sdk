@@ -162,7 +162,7 @@ describe("containers registry list", () => {
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ List configured container registries
 			│
-			╰ No external registries configured for this account
+			╰ No registries configured for this account
 
 			"
 		`);
@@ -180,7 +180,9 @@ describe("containers registry list", () => {
 			│
 			├ 123456789012.dkr.ecr.us-west-2.amazonaws.com
 			│
-			╰ 987654321098.dkr.ecr.eu-west-1.amazonaws.com
+			├ 987654321098.dkr.ecr.eu-west-1.amazonaws.com
+			│
+			╰ End
 
 			"
 		`);

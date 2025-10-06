@@ -16,8 +16,9 @@ import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { APIError, parseJSON } from "../parse";
+import { parseJSON } from "../parse";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
+import { formatError } from "./deploy";
 import { containersScope } from ".";
 import type {
 	CommonYargsArgv,
@@ -28,7 +29,7 @@ export const registryCommands = (yargs: CommonYargsArgv) => {
 	return yargs
 		.command(
 			"put <DOMAIN>",
-			"Add or update credentials for a non-Cloudflare container registry",
+			"Add credentials for a non-Cloudflare container registry",
 			(args) => registryPutYargs(args),
 			(args) =>
 				handleFailure(
@@ -107,7 +108,9 @@ async function registryPutCommand(
 					`A registry with the domain ${configureArgs.DOMAIN} already exists. Use "wrangler containers registry delete ${configureArgs.DOMAIN}" to delete it first if you want to reconfigure it.`
 				);
 			}
-			throw new FatalError(e.body.error ?? "Unknown API error");
+			throw new FatalError(
+				"Error configuring container registry:\n" + formatError(e)
+			);
 		} else {
 			throw e;
 		}
@@ -189,22 +192,18 @@ async function registryListCommand(
 		if (listArgs.json || isNonInteractiveOrCI()) {
 			logger.json(res);
 		} else if (res.length === 0) {
-			endSection("No external registries configured for this account");
+			endSection("No registries configured for this account");
 		} else {
-			let counter = 0;
-			for (const registry of res) {
-				if (counter < res.length - 1) {
-					updateStatus(registry.domain);
-				} else {
-					endSection(registry.domain);
-				}
-				counter++;
-				// do we want any other info?
-			}
+			res.forEach((registry) => {
+				updateStatus(registry.domain);
+			});
+			endSection(`End`);
 		}
 	} catch (e) {
 		if (e instanceof ApiError) {
-			throw new FatalError(e.body.error ?? "Unknown API error");
+			throw new FatalError(
+				"Error listing container registries:\n" + formatError(e)
+			);
 		} else {
 			throw e;
 		}
@@ -251,7 +250,9 @@ async function registryDeleteCommand(
 					`The registry ${deleteArgs.DOMAIN} does not exist.`
 				);
 			}
-			throw new APIError(e.body.error ?? "Unknown API error");
+			throw new FatalError(
+				`Error deleting container registry:\n` + formatError(e)
+			);
 		} else {
 			throw e;
 		}
