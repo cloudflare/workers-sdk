@@ -544,4 +544,21 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.equal(typeof gProcess.removeListener, "function");
 		assert.equal(typeof gProcess.setMaxListeners, "function");
 	},
+
+	async testPunycode() {
+		const punycode = await import("node:punycode");
+
+		assert.strictEqual(typeof punycode.decode, "function");
+		assert.strictEqual(typeof punycode.encode, "function");
+		assert.strictEqual(typeof punycode.toASCII, "function");
+		assert.strictEqual(typeof punycode.toUnicode, "function");
+		assert.strictEqual(
+			punycode.toASCII("Bücher@日本語.com"),
+			"Bücher@xn--wgv71a119e.com"
+		);
+		assert.strictEqual(
+			punycode.toUnicode("Bücher@xn--wgv71a119e.com"),
+			"Bücher@日本語.com"
+		);
+	},
 };

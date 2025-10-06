@@ -231,6 +231,28 @@ const testConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:punycode
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "punycode enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_punycode_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_punycode_module: true,
+			},
+		},
+		// TODO: update the date past the default enable date (when defined)
+		{
+			name: "punycode disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_punycode_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_punycode_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(testConfigs)(
