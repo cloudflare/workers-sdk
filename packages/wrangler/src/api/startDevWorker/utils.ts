@@ -364,13 +364,12 @@ export async function convertBindingsToCfWorkerInitBindings(
 
 	const fetchers: Record<string, ServiceFetch> = {};
 
-	const iterator: [string, WorkerMetadataBinding | Binding][] = Array.isArray(
-		inputBindings
-	)
-		? inputBindings.map((b) => [b.name, b])
-		: Object.entries(inputBindings ?? {});
+	const bindingEntries: [string, WorkerMetadataBinding | Binding][] =
+		Array.isArray(inputBindings)
+			? inputBindings.map((b) => [b.name, b])
+			: Object.entries(inputBindings ?? {});
 
-	for (const [name, binding] of iterator) {
+	for (const [name, binding] of bindingEntries) {
 		if (binding.type === "plain_text") {
 			bindings.vars ??= {};
 			bindings.vars[name] = "value" in binding ? binding.value : binding.text;
@@ -380,13 +379,13 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "kv_namespace") {
 			bindings.kv_namespaces ??= [];
 			bindings.kv_namespaces.push({
-				...binding,
+				...omitType(binding),
 				binding: name,
 				id: "namespace_id" in binding ? binding.namespace_id : binding.id,
 			});
 		} else if (binding.type === "send_email") {
 			bindings.send_email ??= [];
-			bindings.send_email.push({ ...binding, name: name });
+			bindings.send_email.push({ ...omitType(binding), name: name });
 		} else if (binding.type === "wasm_module") {
 			if (!("source" in binding)) {
 				continue;
@@ -414,47 +413,53 @@ export async function convertBindingsToCfWorkerInitBindings(
 			bindings.data_blobs ??= {};
 			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
 		} else if (binding.type === "browser") {
-			bindings.browser = { ...binding, binding: name };
+			bindings.browser = { ...omitType(binding), binding: name };
 		} else if (binding.type === "ai") {
-			bindings.ai = { ...binding, binding: name };
+			bindings.ai = { ...omitType(binding), binding: name };
 		} else if (binding.type === "images") {
-			bindings.images = { ...binding, binding: name };
+			bindings.images = { ...omitType(binding), binding: name };
 		} else if (binding.type === "version_metadata") {
 			bindings.version_metadata = { binding: name };
 		} else if (binding.type === "durable_object_namespace") {
 			bindings.durable_objects ??= { bindings: [] };
-			bindings.durable_objects.bindings.push({ ...binding, name: name });
+			bindings.durable_objects.bindings.push({
+				...omitType(binding),
+				name: name,
+			});
 		} else if (binding.type === "queue") {
 			bindings.queues ??= [];
-			bindings.queues.push({ ...binding, binding: name });
+			bindings.queues.push({ ...omitType(binding), binding: name });
 		} else if (binding.type === "r2_bucket") {
 			bindings.r2_buckets ??= [];
-			bindings.r2_buckets.push({ ...binding, binding: name });
+			bindings.r2_buckets.push({ ...omitType(binding), binding: name });
 		} else if (binding.type === "d1") {
 			bindings.d1_databases ??= [];
 			bindings.d1_databases.push({
-				...binding,
+				...omitType(binding),
 				binding: name,
 				database_id: "id" in binding ? binding.id : binding.database_id,
 			});
 		} else if (binding.type === "vectorize") {
 			bindings.vectorize ??= [];
-			bindings.vectorize.push({ ...binding, binding: name });
+			bindings.vectorize.push({ ...omitType(binding), binding: name });
 		} else if (binding.type === "hyperdrive") {
 			bindings.hyperdrive ??= [];
-			bindings.hyperdrive.push({ ...binding, binding: name });
+			bindings.hyperdrive.push({ ...omitType(binding), binding: name });
 		} else if (binding.type === "service") {
 			bindings.services ??= [];
-			bindings.services.push({ ...binding, binding: name });
+			bindings.services.push({ ...omitType(binding), binding: name });
 		} else if (binding.type === "fetcher") {
 			fetchers[name] = binding.fetcher;
 		} else if (binding.type === "analytics_engine") {
 			bindings.analytics_engine_datasets ??= [];
-			bindings.analytics_engine_datasets.push({ ...binding, binding: name });
+			bindings.analytics_engine_datasets.push({
+				...omitType(binding),
+				binding: name,
+			});
 		} else if (binding.type === "dispatch_namespace") {
 			bindings.dispatch_namespaces ??= [];
 			bindings.dispatch_namespaces.push({
-				...binding,
+				...omitType(binding),
 				binding: name,
 				outbound:
 					binding.outbound && "worker" in binding.outbound
@@ -463,31 +468,34 @@ export async function convertBindingsToCfWorkerInitBindings(
 			});
 		} else if (binding.type === "mtls_certificate") {
 			bindings.mtls_certificates ??= [];
-			bindings.mtls_certificates.push({ ...binding, binding: name });
+			bindings.mtls_certificates.push({ ...omitType(binding), binding: name });
 		} else if (binding.type === "pipeline") {
 			bindings.pipelines ??= [];
-			bindings.pipelines.push({ ...binding, binding: name });
+			bindings.pipelines.push({ ...omitType(binding), binding: name });
 		} else if (binding.type === "logfwdr") {
 			bindings.logfwdr ??= { bindings: [] };
-			bindings.logfwdr.bindings.push({ ...binding, name: name });
+			bindings.logfwdr.bindings.push({ ...omitType(binding), name: name });
 		} else if (binding.type === "workflow") {
 			bindings.workflows ??= [];
-			bindings.workflows.push({ ...binding, binding: name });
+			bindings.workflows.push({ ...omitType(binding), binding: name });
 		} else if (binding.type === "secrets_store_secret") {
 			bindings.secrets_store_secrets ??= [];
-			bindings.secrets_store_secrets.push({ ...binding, binding: name });
+			bindings.secrets_store_secrets.push({
+				...omitType(binding),
+				binding: name,
+			});
 		} else if (binding.type === "unsafe_hello_world") {
 			bindings.unsafe_hello_world ??= [];
-			bindings.unsafe_hello_world.push({ ...binding, binding: name });
+			bindings.unsafe_hello_world.push({ ...omitType(binding), binding: name });
 		} else if (binding.type === "ratelimit") {
 			bindings.ratelimits ??= [];
-			bindings.ratelimits.push({ ...binding, name: name });
+			bindings.ratelimits.push({ ...omitType(binding), name: name });
 		} else if (binding.type === "worker_loader") {
 			bindings.worker_loaders ??= [];
-			bindings.worker_loaders.push({ ...binding, binding: name });
+			bindings.worker_loaders.push({ ...omitType(binding), binding: name });
 		} else if (binding.type === "vpc_service") {
 			bindings.vpc_services ??= [];
-			bindings.vpc_services.push({ ...binding, binding: name });
+			bindings.vpc_services.push({ ...omitType(binding), binding: name });
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],
@@ -509,6 +517,13 @@ export async function convertBindingsToCfWorkerInitBindings(
 
 function isUnsafeBindingType(type: string): type is `unsafe_${string}` {
 	return type.startsWith("unsafe_");
+}
+
+function omitType<T extends Record<string, unknown>>({
+	type: _,
+	...value
+}: T): Omit<T, "type"> {
+	return value;
 }
 
 export function extractBindingsOfType<

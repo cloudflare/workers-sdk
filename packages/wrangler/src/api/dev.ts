@@ -222,6 +222,7 @@ export async function unstable_dev(
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
+		experimentalAutoCreate: false,
 		experimentalRemoteBindings: true,
 		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,
 		experimentalImagesLocalMode: imagesLocalMode ?? false,
@@ -240,6 +241,7 @@ export async function unstable_dev(
 			RESOURCES_PROVISION: false,
 			REMOTE_BINDINGS: false,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
+			AUTOCREATE_RESOURCES: false,
 		},
 		() => startDev(devOptions)
 	);

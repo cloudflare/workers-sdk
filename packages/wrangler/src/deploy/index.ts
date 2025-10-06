@@ -219,13 +219,6 @@ export const deployCommand = createCommand({
 				"Name of a dispatch namespace to deploy the Worker to (Workers for Platforms)",
 			type: "string",
 		},
-		"experimental-auto-create": {
-			describe: "Automatically provision draft bindings with new resources",
-			type: "boolean",
-			default: true,
-			hidden: true,
-			alias: "x-auto-create",
-		},
 		"containers-rollout": {
 			describe:
 				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. ",
@@ -251,6 +244,7 @@ export const deployCommand = createCommand({
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? true,
 			DEPLOY_REMOTE_DIFF_CHECK: args.experimentalDeployRemoteDiffCheck ?? false,
+			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
