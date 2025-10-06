@@ -407,6 +407,13 @@ export function createCLIParser(argv: string[]) {
 			hidden: true,
 			alias: ["x-provision"],
 		},
+		"experimental-auto-create": {
+			describe: "Automatically provision draft bindings with new resources",
+			type: "boolean",
+			default: true,
+			hidden: true,
+			alias: "x-auto-create",
+		},
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options

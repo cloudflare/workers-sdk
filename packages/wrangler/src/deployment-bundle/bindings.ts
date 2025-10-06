@@ -17,6 +17,7 @@ import { APIError } from "../parse";
 import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
+import type { StartDevWorkerOptions } from "../api";
 import type { Config, RawConfig } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { WorkerMetadataBinding } from "./create-worker-upload-form";
@@ -409,7 +410,8 @@ async function collectPendingResources(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string,
-	bindings: CfWorkerInit["bindings"]
+	bindings: CfWorkerInit["bindings"],
+	requireRemote: boolean
 ): Promise<PendingResource[]> {
 	let settings: Settings | undefined;
 
@@ -430,6 +432,9 @@ async function collectPendingResources(
 		HANDLERS
 	) as (keyof typeof HANDLERS)[]) {
 		for (const resource of bindings[resourceType] ?? []) {
+			if (requireRemote && !resource.remote) {
+				continue;
+			}
 			const h = new HANDLERS[resourceType].Handler(
 				resource,
 				complianceConfig,
@@ -456,18 +461,26 @@ export async function provisionBindings(
 	accountId: string,
 	scriptName: string,
 	autoCreate: boolean,
-	config: Config
+	config: Config | StartDevWorkerOptions,
+	requireRemote = false
 ): Promise<void> {
+	const configPath = "configPath" in config ? config.configPath : config.config;
 	const pendingResources = await collectPendingResources(
-		config,
+		{
+			compliance_region:
+				"compliance_region" in config
+					? config.compliance_region
+					: config.complianceRegion,
+		},
 		accountId,
 		scriptName,
-		bindings
+		bindings,
+		requireRemote
 	);
 
 	if (pendingResources.length > 0) {
 		assert(
-			config.configPath,
+			configPath,
 			"Provisioning resources is not possible without a config file"
 		);
 
@@ -482,7 +495,10 @@ export async function provisionBindings(
 			printable[resource.resourceType] ??= [];
 			printable[resource.resourceType].push({ binding: resource.binding });
 		}
-		printBindings(printable, config.tail_consumers, { provisioning: true });
+
+		const tailConsumers =
+			"configPath" in config ? config.tail_consumers : config.tailConsumers;
+		printBindings(printable, tailConsumers, { provisioning: true });
 		logger.log();
 
 		const existingResources: Record<string, NormalisedResourceInfo[]> = {};
@@ -490,7 +506,15 @@ export async function provisionBindings(
 		for (const resource of pendingResources) {
 			existingResources[resource.resourceType] ??= await LOADERS[
 				resource.resourceType
-			](config, accountId);
+			](
+				{
+					compliance_region:
+						"compliance_region" in config
+							? config.compliance_region
+							: config.complianceRegion,
+				},
+				accountId
+			);
 
 			await runProvisioningFlow(
 				resource,
@@ -503,22 +527,37 @@ export async function provisionBindings(
 
 		const patch: RawConfig = {};
 
-		for (const resource of pendingResources) {
-			patch[resource.resourceType] = config[resource.resourceType].map(
-				(binding) => {
-					if (binding.binding === resource.binding) {
-						binding = resource.handler.binding;
-					}
+		const allChanges: Map<string, CfKvNamespace | CfR2Bucket | CfD1Database> =
+			new Map();
 
-					return Object.fromEntries(
-						Object.entries(binding).filter(
+		for (const resource of pendingResources) {
+			allChanges.set(resource.binding, resource.handler.binding);
+		}
+
+		for (const resourceType of [
+			"kv_namespaces",
+			"r2_buckets",
+			"d1_databases",
+		] as const) {
+			for (const binding of bindings[resourceType] ?? []) {
+				patch[resourceType] ??= [];
+
+				const bindingToWrite = allChanges.has(binding.binding)
+					? // Gated by Map.has()
+						// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+						allChanges.get(binding.binding)!
+					: binding;
+
+				patch[resourceType].push(
+					Object.fromEntries(
+						Object.entries(bindingToWrite).filter(
 							// Make sure all the values are JSON serialisable.
 							// Otherwise we end up with "undefined" in the config
 							([_, value]) => typeof value === "string"
 						)
-					) as typeof binding;
-				}
-			);
+					) as NonNullable<(typeof patch)[typeof resourceType]>[number]
+				);
+			}
 		}
 
 		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
@@ -526,7 +565,11 @@ export async function provisionBindings(
 		// portability of the config file, and adds robustness to bindings being renamed.
 		if (!isNonInteractiveOrCI()) {
 			try {
-				await experimental_patchConfig(config.configPath, patch, false);
+				await experimental_patchConfig(
+					config.userConfigPath ?? configPath,
+					patch,
+					false
+				);
 				logger.log(
 					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard—either way future deploys will continue to work."
 				);
@@ -547,8 +590,11 @@ export async function provisionBindings(
 			{} as Record<string, number>
 		);
 		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
+
+		const sendMetrics =
+			"send_metrics" in config ? config.send_metrics : config.sendMetrics;
 		metrics.sendMetricsEvent("provision resources", resourceCount, {
-			sendMetrics: config.send_metrics,
+			sendMetrics,
 		});
 	}
 }

@@ -9,8 +9,10 @@ import {
 } from "@cloudflare/containers-shared";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
+import { provisionBindings } from "../../deployment-bundle/bindings";
 import * as MF from "../../dev/miniflare";
 import { getDockerPath } from "../../environment-variables/misc-variables";
+import { getFlag } from "../../experimental-flags";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -222,6 +224,16 @@ export class LocalRuntimeController extends RuntimeController {
 							undefined
 						: await unwrapHook(data.config.dev.auth);
 
+				if (getFlag("RESOURCES_PROVISION") && auth) {
+					await provisionBindings(
+						configBundle.bindings,
+						auth?.accountId,
+						data.config.name,
+						getFlag("AUTOCREATE_RESOURCES"),
+						data.config,
+						true
+					);
+				}
 				this.#remoteProxySessionData =
 					await maybeStartOrUpdateRemoteProxySession(
 						{

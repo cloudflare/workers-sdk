@@ -42,6 +42,7 @@ export const dev = createCommand({
 				? false
 				: args.experimentalRemoteBindings ?? true,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
+			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 	},
 	metadata: {
@@ -482,23 +483,6 @@ export function getBindings(
 	// merge KV bindings
 	const kvConfig = (configParam.kv_namespaces || []).map<CfKvNamespace>(
 		({ binding, preview_id, id, remote }) => {
-			// In remote `dev`, we make folks use a separate kv namespace called
-			// `preview_id` instead of `id` so that they don't
-			// break production data. So here we check that a `preview_id`
-			// has actually been configured.
-			// This whole block of code will be obsoleted in the future
-			// when we have copy-on-write for previews on edge workers.
-			if (!preview_id && !local) {
-				// TODO: This error has to be a _lot_ better, ideally just asking
-				// to create a preview namespace for the user automatically
-				throw new UserError(
-					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`,
-					{
-						telemetryMessage:
-							"no preview kv namespace configured in remote dev",
-					}
-				); // Ugh, I really don't like this message very much
-			}
 			return {
 				binding,
 				id: preview_id ?? id,
@@ -542,16 +526,6 @@ export function getBindings(
 	const r2Config: EnvironmentNonInheritable["r2_buckets"] =
 		configParam.r2_buckets?.map(
 			({ binding, preview_bucket_name, bucket_name, jurisdiction, remote }) => {
-				// same idea as kv namespace preview id,
-				// same copy-on-write TODO
-				if (!preview_bucket_name && !local) {
-					throw new UserError(
-						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your ${configFileName(configParam.configPath)} file`,
-						{
-							telemetryMessage: "no preview r2 bucket configured in remote dev",
-						}
-					);
-				}
 				return {
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,

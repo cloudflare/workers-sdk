@@ -6,6 +6,7 @@ export type ExperimentalFlags = {
 	RESOURCES_PROVISION: boolean;
 	REMOTE_BINDINGS: boolean;
 	DEPLOY_REMOTE_DIFF_CHECK: boolean;
+	AUTOCREATE_RESOURCES: boolean;
 };
 
 const flags = new AsyncLocalStorage<ExperimentalFlags>();
@@ -13,7 +14,9 @@ const flags = new AsyncLocalStorage<ExperimentalFlags>();
 export const run = <V>(flagValues: ExperimentalFlags, cb: () => V) =>
 	flags.run(flagValues, cb);
 
-export const getFlag = <F extends keyof ExperimentalFlags>(flag: F) => {
+export const getFlag = <F extends keyof ExperimentalFlags>(
+	flag: F
+): ExperimentalFlags[F] => {
 	const store = flags.getStore();
 	if (store === undefined) {
 		logger.debug("No experimental flag store instantiated");
@@ -24,5 +27,5 @@ export const getFlag = <F extends keyof ExperimentalFlags>(flag: F) => {
 			`Attempted to use flag "${flag}" which has not been instantiated`
 		);
 	}
-	return value;
+	return value ?? false;
 };
