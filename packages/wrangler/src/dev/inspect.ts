@@ -1,5 +1,4 @@
 import { readFileSync } from "fs";
-import os from "node:os";
 import { fileURLToPath, URL } from "node:url";
 import path from "path";
 import open from "open";
@@ -265,7 +264,7 @@ export const openInspector = async (
 
 	// see: https://github.com/sindresorhus/open/issues/177#issue-610016699
 	let braveBrowser: string;
-	switch (os.platform()) {
+	switch (process.platform) {
 		case "darwin":
 		case "win32":
 			braveBrowser = "Brave";

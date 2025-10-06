@@ -6,7 +6,7 @@ export function getWranglerVersion() {
 }
 // used by "new" metrics
 export function getPlatform() {
-	const platform = os.platform();
+	const platform = process.platform;
 
 	switch (platform) {
 		case "win32":
