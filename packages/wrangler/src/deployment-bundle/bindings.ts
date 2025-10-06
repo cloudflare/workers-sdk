@@ -17,7 +17,6 @@ import { APIError } from "../parse";
 import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
-import type { StartDevWorkerOptions } from "../api";
 import type { Config, RawConfig } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { WorkerMetadataBinding } from "./create-worker-upload-form";
