@@ -594,7 +594,10 @@ describe("--x-provision", () => {
 			await runWrangler("deploy --x-provision --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
 
 				The following bindings need to be provisioned:
 				Binding        Resource
