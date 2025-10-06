@@ -22,7 +22,7 @@ export default {
 
 			default: {
 				// `/<test name>` executes the test or returns an html list of tests when not found
-				const testName = url.pathname.slice(1);
+				const testName = url.pathname.slice(1) as keyof typeof WorkerdTests;
 				const test = WorkerdTests[testName];
 				if (!test) {
 					return generateTestListResponse(testName);
@@ -32,7 +32,7 @@ export default {
 					await test();
 					return new Response("passed");
 				} catch (e) {
-					return new Response(`failed\n${e}`);
+					return new Response(`failed\n${(e as Error).stack ?? e}`);
 				}
 			}
 		}
@@ -59,7 +59,7 @@ function generateTestListResponse(testName: string): Response {
 
 // Test functions executed on worked.
 // The test can be executing by fetching the `/${testName}` url.
-export const WorkerdTests: Record<string, () => void> = {
+export const WorkerdTests = {
 	async testCryptoGetRandomValues() {
 		const crypto = await import("node:crypto");
 
@@ -562,3 +562,57 @@ export const WorkerdTests: Record<string, () => void> = {
 		);
 	},
 };
+
+/**
+ * Creates helper functions to test the properties of an imported module and a global object.
+ *
+ * Depending upon the compat flags and date, the namespace and global may be native or polyfilled.
+ * We can't infer the imported namespace from the import specifier because the bundler would treat it as dynamic
+ * and not provide the polyfill.
+ *
+ * @param importSpecifier The module specifier of the module being tested.
+ * @param importNamespace The imported module namespace object.
+ * @param globalProperty The property of the global object to test.
+ * @param globalObject The global object being tested.
+ * @returns A set of helper functions for testing the properties of the imported module and global object.
+ */
+async function getPropertyTester<ImportType, GlobalType>({
+	importSpecifier,
+	importNamespace,
+	globalProperty,
+	globalObject,
+}: {
+	importSpecifier: string;
+	importNamespace: ImportType;
+	globalProperty: keyof typeof globalThis;
+	globalObject: GlobalType;
+}) {
+	function testImportPropertyType(
+		property: "default" | keyof ImportType,
+		type: string
+	) {
+		const propertyType = typeof importNamespace[property as keyof ImportType];
+		assert.strictEqual(
+			propertyType,
+			type,
+			`expected \`(await import("${importSpecifier}")).${property as string}\` to be of type \`${type}\` but got \`${propertyType}\``
+		);
+	}
+	function testGlobalPropertyType(property: keyof GlobalType, type: string) {
+		const propertyType = typeof globalObject[property];
+		assert.strictEqual(
+			propertyType,
+			type,
+			`expected \`${globalProperty as string}.${property as string}\` to be of type \`${type}\` but got \`${propertyType}\``
+		);
+	}
+	function testPropertyType(
+		property: keyof (GlobalType & ImportType),
+		type: string
+	) {
+		testImportPropertyType(property as keyof ImportType, type);
+		testGlobalPropertyType(property as keyof GlobalType, type);
+	}
+
+	return { testImportPropertyType, testGlobalPropertyType, testPropertyType };
+}
