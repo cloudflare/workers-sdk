@@ -684,6 +684,72 @@ export async function upsertR2DataCatalogCredential(
 	);
 }
 
+/**
+ * Enable compaction for a specific table in the R2 catalog
+ */
+export async function enableR2CatalogTableCompaction(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	namespace: string,
+	tableName: string,
+	targetSizeMb?: number
+): Promise<void> {
+	const body: {
+		compaction: {
+			state: string;
+			target_size_mb?: number;
+		};
+	} = {
+		compaction: {
+			state: "enabled",
+		},
+	};
+
+	if (targetSizeMb !== undefined) {
+		body.compaction.target_size_mb = targetSizeMb;
+	}
+
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/namespaces/${namespace}/tables/${tableName}/maintenance-configs`,
+		{
+			method: "POST",
+			body: JSON.stringify(body),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+}
+
+/**
+ * Disable compaction for a specific table in the R2 catalog
+ */
+export async function disableR2CatalogTableCompaction(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	namespace: string,
+	tableName: string
+): Promise<void> {
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/namespaces/${namespace}/tables/${tableName}/maintenance-configs`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				compaction: {
+					state: "disabled",
+				},
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+}
+
 export type R2EventableOperation =
 	| "PutObject"
 	| "DeleteObject"

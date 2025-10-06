@@ -1,6 +1,7 @@
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError } from "../parse";
 import { requireAuth } from "../user";
@@ -8,8 +9,10 @@ import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	disableR2Catalog,
 	disableR2CatalogCompaction,
+	disableR2CatalogTableCompaction,
 	enableR2Catalog,
 	enableR2CatalogCompaction,
+	enableR2CatalogTableCompaction,
 	getR2Catalog,
 	upsertR2DataCatalogCredential,
 } from "./helpers";
@@ -170,16 +173,28 @@ export const r2BucketCatalogCompactionNamespace = createNamespace({
 
 export const r2BucketCatalogCompactionEnableCommand = createCommand({
 	metadata: {
-		description: "Enable automatic file compaction for your R2 data catalog",
+		description:
+			"Enable automatic file compaction for your R2 data catalog or a specific table",
 		status: "open-beta",
 		owner: "Product: R2 Data Catalog",
 	},
-	positionalArgs: ["bucket"],
+	positionalArgs: ["bucket", "namespace", "table"],
 	args: {
 		bucket: {
 			describe: "The name of the bucket which contains the catalog",
 			type: "string",
 			demandOption: true,
+		},
+		namespace: {
+			describe:
+				"The namespace containing the table (optional, for table-level compaction)",
+			type: "string",
+			demandOption: false,
+		},
+		table: {
+			describe: "The name of the table (optional, for table-level compaction)",
+			type: "string",
+			demandOption: false,
 		},
 		"target-size": {
 			describe:
@@ -190,63 +205,141 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 		},
 		token: {
 			describe:
-				"A cloudflare api token with access to R2 and R2 Data Catalog which will be used to read/write files for compaction.",
-			demandOption: true,
+				"A cloudflare api token with access to R2 and R2 Data Catalog (required for catalog-level compaction settings only)",
+			demandOption: false,
 			type: "string",
 		},
 	},
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		await upsertR2DataCatalogCredential(
-			config,
-			accountId,
-			args.bucket,
-			args.token
-		);
+		// Validate namespace and table are provided together
+		if (args.namespace && !args.table) {
+			throw new UserError("Table name is required when namespace is specified");
+		}
+		if (!args.namespace && args.table) {
+			throw new UserError("Namespace is required when table is specified");
+		}
 
-		await enableR2CatalogCompaction(
-			config,
-			accountId,
-			args.bucket,
-			args.targetSize
-		);
+		if (args.namespace && args.table) {
+			// Table-level compaction
+			await enableR2CatalogTableCompaction(
+				config,
+				accountId,
+				args.bucket,
+				args.namespace,
+				args.table,
+				args.targetSize !== 128 ? args.targetSize : undefined
+			);
 
-		logger.log(
-			`✨ Successfully enabled file compaction for the data catalog for bucket '${args.bucket}'.`
-		);
+			logger.log(
+				`✨ Successfully enabled file compaction for table '${args.namespace}.${args.table}' in bucket '${args.bucket}'.`
+			);
+		} else {
+			// Catalog-level compaction - token is required
+			if (!args.token) {
+				throw new UserError(
+					"Token is required for catalog-level compaction. Use --token flag to provide a Cloudflare API token."
+				);
+			}
+
+			await upsertR2DataCatalogCredential(
+				config,
+				accountId,
+				args.bucket,
+				args.token
+			);
+
+			await enableR2CatalogCompaction(
+				config,
+				accountId,
+				args.bucket,
+				args.targetSize
+			);
+
+			logger.log(
+				`✨ Successfully enabled file compaction for the data catalog for bucket '${args.bucket}'.
+
+Compaction will automatically combine small files into larger ones to improve query performance.
+For more details, refer to: https://developers.cloudflare.com/r2/data-catalog/about-compaction/`
+			);
+		}
 	},
 });
 
 export const r2BucketCatalogCompactionDisableCommand = createCommand({
 	metadata: {
-		description: "Disable automatic file compaction for your R2 data catalog",
+		description:
+			"Disable automatic file compaction for your R2 data catalog or a specific table",
 		status: "open-beta",
 		owner: "Product: R2 Data Catalog",
 	},
-	positionalArgs: ["bucket"],
+	positionalArgs: ["bucket", "namespace", "table"],
 	args: {
 		bucket: {
 			describe: "The name of the bucket which contains the catalog",
 			type: "string",
 			demandOption: true,
 		},
+		namespace: {
+			describe:
+				"The namespace containing the table (optional, for table-level compaction)",
+			type: "string",
+			demandOption: false,
+		},
+		table: {
+			describe: "The name of the table (optional, for table-level compaction)",
+			type: "string",
+			demandOption: false,
+		},
 	},
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		const confirmedDisable = await confirm(
-			`Are you sure you want to disable file compaction for the data catalog for bucket '${args.bucket}'?`
-		);
-		if (!confirmedDisable) {
-			logger.log("Disable cancelled.");
-			return;
+		// Validate namespace and table are provided together
+		if (args.namespace && !args.table) {
+			throw new UserError("Table name is required when namespace is specified");
+		}
+		if (!args.namespace && args.table) {
+			throw new UserError("Namespace is required when table is specified");
 		}
 
-		await disableR2CatalogCompaction(config, accountId, args.bucket);
+		if (args.namespace && args.table) {
+			// Table-level compaction
+			const confirmedDisable = await confirm(
+				`Are you sure you want to disable file compaction for table '${args.namespace}.${args.table}' in bucket '${args.bucket}'?`
+			);
+			if (!confirmedDisable) {
+				logger.log("Disable cancelled.");
+				return;
+			}
 
-		logger.log(
-			`Successfully disabled file compaction for the data catalog for bucket '${args.bucket}'.`
-		);
+			await disableR2CatalogTableCompaction(
+				config,
+				accountId,
+				args.bucket,
+				args.namespace,
+				args.table
+			);
+
+			logger.log(
+				`Successfully disabled file compaction for table '${args.namespace}.${args.table}' in bucket '${args.bucket}'.`
+			);
+		} else {
+			// Catalog-level compaction
+			const confirmedDisable = await confirm(
+				`Are you sure you want to disable file compaction for the data catalog for bucket '${args.bucket}'?`
+			);
+			if (!confirmedDisable) {
+				logger.log("Disable cancelled.");
+				return;
+			}
+
+			await disableR2CatalogCompaction(config, accountId, args.bucket);
+
+			logger.log(
+				`Successfully disabled file compaction for the data catalog for bucket '${args.bucket}'.`
+			);
+		}
 	},
 });
