@@ -44,6 +44,44 @@ describe("ConfigController", () => {
 		logger.resetLoggerLevel();
 	});
 
+	it("should use account_id from config file before env var", async () => {
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+                export default {}
+            `,
+			"wrangler.toml": dedent/* toml */ `
+                name = "my-worker"
+                main = "src/index.ts"
+								compatibility_date = \"2024-06-01\"
+            `,
+		});
+
+		const event = waitForConfigUpdate(controller);
+		await controller.set({ config: "./wrangler.toml" });
+
+		const { config } = await event;
+		await expect(unwrapHook(config.dev.auth)).resolves.toMatchObject({
+			accountId: "some-account-id",
+			apiToken: { apiToken: "some-api-token" },
+		});
+
+		const event2 = waitForConfigUpdate(controller);
+		await seed({
+			"wrangler.toml": dedent/* toml */ `
+                name = "my-worker"
+                main = "src/index.ts"
+								compatibility_date = \"2024-06-01\"
+                account_id = "1234567890"
+            `,
+		});
+
+		const { config: config2 } = await event2;
+		await expect(unwrapHook(config2.dev.auth)).resolves.toMatchObject({
+			accountId: "1234567890",
+			apiToken: { apiToken: "some-api-token" },
+		});
+	});
+
 	it("should emit configUpdate events with defaults applied", async () => {
 		const event = waitForConfigUpdate(controller);
 		await seed({
@@ -199,44 +237,6 @@ describe("ConfigController", () => {
 					origin: { hostname: "myexample.com" },
 				},
 			},
-		});
-	});
-
-	it("should use account_id from config file before env var", async () => {
-		await seed({
-			"src/index.ts": dedent/* javascript */ `
-                export default {}
-            `,
-			"wrangler.toml": dedent/* toml */ `
-                name = "my-worker"
-                main = "src/index.ts"
-								compatibility_date = \"2024-06-01\"
-            `,
-		});
-
-		const event = waitForConfigUpdate(controller);
-		await controller.set({ config: "./wrangler.toml" });
-
-		const { config } = await event;
-		await expect(unwrapHook(config.dev.auth)).resolves.toMatchObject({
-			accountId: "some-account-id",
-			apiToken: { apiToken: "some-api-token" },
-		});
-
-		const event2 = waitForConfigUpdate(controller);
-		await seed({
-			"wrangler.toml": dedent/* toml */ `
-                name = "my-worker"
-                main = "src/index.ts"
-								compatibility_date = \"2024-06-01\"
-                account_id = "1234567890"
-            `,
-		});
-
-		const { config: config2 } = await event2;
-		await expect(unwrapHook(config2.dev.auth)).resolves.toMatchObject({
-			accountId: "1234567890",
-			apiToken: { apiToken: "some-api-token" },
 		});
 	});
 });
