@@ -685,8 +685,8 @@ describe("versions view", () => {
 				env.AI                                                                   AI
 				env.VERSION_METADATA                                                     Worker Version Metadata
 				env.WFP (wfp-namespace)                                                  Dispatch Namespace
-				env.WFP_2 (wfp-namespace)                                                Dispatch Namespace
-				env.WFP_3 (wfp-namespace)                                                Dispatch Namespace
+				env.WFP_2 (wfp-namespace (outbound -> outbound-worker))                  Dispatch Namespace
+				env.WFP_3 (wfp-namespace (outbound -> outbound-worker))                  Dispatch Namespace
 				env.MTLS (mtls-id)                                                       mTLS Certificate
 				"
 			`);

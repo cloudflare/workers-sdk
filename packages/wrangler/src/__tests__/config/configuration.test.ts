@@ -2820,6 +2820,7 @@ describe("normalizeAndValidateConfig()", () => {
 						MULTIWORKER: false,
 						REMOTE_BINDINGS: false,
 						DEPLOY_REMOTE_DIFF_CHECK: false,
+						AUTOCREATE_RESOURCES: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2977,6 +2978,7 @@ describe("normalizeAndValidateConfig()", () => {
 						MULTIWORKER: false,
 						REMOTE_BINDINGS: false,
 						DEPLOY_REMOTE_DIFF_CHECK: false,
+						AUTOCREATE_RESOURCES: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -3316,6 +3318,7 @@ describe("normalizeAndValidateConfig()", () => {
 						MULTIWORKER: false,
 						REMOTE_BINDINGS: false,
 						DEPLOY_REMOTE_DIFF_CHECK: false,
+						AUTOCREATE_RESOURCES: false,
 					},
 					() =>
 						normalizeAndValidateConfig(

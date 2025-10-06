@@ -133,6 +133,7 @@ function configDefaults(
 		build: unusable<StartDevWorkerOptions["build"]>(),
 		legacy: {},
 		dev: { persist: "./persist" },
+		userConfigPath: undefined,
 		...config,
 	};
 }

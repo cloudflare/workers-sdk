@@ -475,7 +475,6 @@ describe("dev with remote bindings", { sequential: true }, () => {
 								name: "EMAIL",
 								remote: true,
 								remoteProxyConnectionString,
-								type: "send_email",
 							},
 						],
 					},

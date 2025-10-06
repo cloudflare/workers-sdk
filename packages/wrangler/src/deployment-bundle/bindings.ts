@@ -461,17 +461,12 @@ export async function provisionBindings(
 	accountId: string,
 	scriptName: string,
 	autoCreate: boolean,
-	config: Config | StartDevWorkerOptions,
+	config: Config,
 	requireRemote = false
 ): Promise<void> {
-	const configPath = "configPath" in config ? config.configPath : config.config;
+	const configPath = config.userConfigPath ?? config.configPath;
 	const pendingResources = await collectPendingResources(
-		{
-			compliance_region:
-				"compliance_region" in config
-					? config.compliance_region
-					: config.complianceRegion,
-		},
+		config,
 		accountId,
 		scriptName,
 		bindings,
@@ -496,9 +491,7 @@ export async function provisionBindings(
 			printable[resource.resourceType].push({ binding: resource.binding });
 		}
 
-		const tailConsumers =
-			"configPath" in config ? config.tail_consumers : config.tailConsumers;
-		printBindings(printable, tailConsumers, { provisioning: true });
+		printBindings(printable, config.tail_consumers, { provisioning: true });
 		logger.log();
 
 		const existingResources: Record<string, NormalisedResourceInfo[]> = {};
@@ -506,15 +499,7 @@ export async function provisionBindings(
 		for (const resource of pendingResources) {
 			existingResources[resource.resourceType] ??= await LOADERS[
 				resource.resourceType
-			](
-				{
-					compliance_region:
-						"compliance_region" in config
-							? config.compliance_region
-							: config.complianceRegion,
-				},
-				accountId
-			);
+			](config, accountId);
 
 			await runProvisioningFlow(
 				resource,
@@ -534,11 +519,9 @@ export async function provisionBindings(
 			allChanges.set(resource.binding, resource.handler.binding);
 		}
 
-		for (const resourceType of [
-			"kv_namespaces",
-			"r2_buckets",
-			"d1_databases",
-		] as const) {
+		for (const resourceType of Object.keys(
+			HANDLERS
+		) as (keyof typeof HANDLERS)[]) {
 			for (const binding of bindings[resourceType] ?? []) {
 				patch[resourceType] ??= [];
 
@@ -565,11 +548,7 @@ export async function provisionBindings(
 		// portability of the config file, and adds robustness to bindings being renamed.
 		if (!isNonInteractiveOrCI()) {
 			try {
-				await experimental_patchConfig(
-					config.userConfigPath ?? configPath,
-					patch,
-					false
-				);
+				await experimental_patchConfig(configPath, patch, false);
 				logger.log(
 					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work."
 				);
@@ -591,10 +570,8 @@ export async function provisionBindings(
 		);
 		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
 
-		const sendMetrics =
-			"send_metrics" in config ? config.send_metrics : config.sendMetrics;
 		metrics.sendMetricsEvent("provision resources", resourceCount, {
-			sendMetrics,
+			sendMetrics: config.send_metrics,
 		});
 	}
 }
