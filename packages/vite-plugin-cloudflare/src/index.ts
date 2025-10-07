@@ -64,6 +64,8 @@ const debuglog = util.debuglog("@cloudflare:vite-plugin");
 
 // this flag is used to show the workers configs warning only once
 let workersConfigsWarningShown = false;
+/** Used to track whether hooks are being called because of a server restart or a server close event. */
+let restartingServer = false;
 let miniflare: Miniflare | undefined;
 
 /**
@@ -76,8 +78,6 @@ let miniflare: Miniflare | undefined;
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	const ctx = new PluginContext();
 	let containerImageTagsSeen = new Set<string>();
-	/** Used to track whether hooks are being called because of a server restart or a server close event. */
-	let restartingServer = false;
 
 	return [
 		{
