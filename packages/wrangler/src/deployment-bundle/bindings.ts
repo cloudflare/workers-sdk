@@ -15,7 +15,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { APIError } from "../parse";
 import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
+import { enableServiceEnvironments } from "../utils/enableServiceEnvironments";
 import { printBindings } from "../utils/print-bindings";
 import type { Config, RawConfig } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
@@ -479,7 +479,7 @@ export async function provisionBindings(
 			"Provisioning resources is not possible without a config file"
 		);
 
-		if (!isLegacyEnv(config)) {
+		if (enableServiceEnvironments(config)) {
 			throw new UserError(
 				"Provisioning resources is not supported with a service environment"
 			);
