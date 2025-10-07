@@ -82,7 +82,7 @@ export function inheritable<K extends keyof Environment>(
 /**
  * Get an inheritable environment field, but only if we are in legacy environments
  */
-export function inheritableInLegacyEnvironments<K extends keyof Environment>(
+export function inheritableInWranglerEnvironments<K extends keyof Environment>(
 	diagnostics: Diagnostics,
 	enableServiceEnvironments: boolean | undefined,
 	topLevelEnv: Environment | undefined,

@@ -952,14 +952,7 @@ describe("versions deploy", () => {
 					"versions deploy 10000000-0000-0000-0000-000000000000 --yes --env test"
 				);
 
-				expect(consoleStd.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-					  PRODUCTION.
-
-					"
-				`);
+				expect(consoleStd.warn).toMatchInlineSnapshot(`""`);
 			});
 
 			it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
@@ -969,14 +962,7 @@ describe("versions deploy", () => {
 					"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
 				);
 
-				expect(consoleStd.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-					  PRODUCTION.
-
-					"
-				`);
+				expect(consoleStd.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
 	});

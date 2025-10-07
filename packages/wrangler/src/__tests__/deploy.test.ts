@@ -918,7 +918,7 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				env: "some-env",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 
 			await runWrangler("deploy index.js --env some-env");
@@ -943,7 +943,7 @@ describe("deploy", () => {
 				writeWorkerSource();
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
-					legacyEnv: true,
+					enableServiceEnvironments: false,
 				});
 
 				await runWrangler("deploy index.js --legacy-env true");
@@ -968,7 +968,7 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					env: "some-env",
-					legacyEnv: true,
+					enableServiceEnvironments: false,
 				});
 
 				await runWrangler("deploy index.js --env some-env --legacy-env true");
@@ -993,7 +993,7 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					env: "some-env",
-					legacyEnv: true,
+					enableServiceEnvironments: false,
 				});
 
 				await runWrangler("deploy index.js --env some-env --legacy-env true");
@@ -1053,7 +1053,7 @@ describe("deploy", () => {
 				mockUploadWorkerRequest({
 					env: "some-env",
 					expectedScriptName: "voyager",
-					legacyEnv: true,
+					enableServiceEnvironments: false,
 				});
 				await runWrangler(
 					"deploy index.js --name voyager --env some-env --legacy-env true"
@@ -1067,7 +1067,7 @@ describe("deploy", () => {
 				writeWorkerSource();
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
-					legacyEnv: false,
+					enableServiceEnvironments: true,
 				});
 
 				await runWrangler("deploy index.js --legacy-env false");
@@ -1099,7 +1099,7 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					env: "some-env",
-					legacyEnv: false,
+					enableServiceEnvironments: true,
 					useOldUploadApi: true,
 				});
 
@@ -1423,12 +1423,12 @@ describe("deploy", () => {
 			mockUpdateWorkerSubdomain({
 				enabled: false,
 				env: "staging",
-				legacyEnv: false,
+				enableServiceEnvironments: true,
 			});
 			mockUploadWorkerRequest({
 				expectedType: "esm",
 				env: "staging",
-				legacyEnv: false,
+				enableServiceEnvironments: true,
 				useOldUploadApi: true,
 			});
 			// These run during route conflict resolution.
@@ -1480,7 +1480,7 @@ describe("deploy", () => {
 					"more-examples.com/*",
 				],
 				env: "staging",
-				legacyEnv: false,
+				enableServiceEnvironments: true,
 			});
 			await runWrangler("deploy ./index --legacy-env false --env staging");
 			expect(std).toMatchInlineSnapshot(`
@@ -1523,12 +1523,12 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUpdateWorkerSubdomain({
 				enabled: false,
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 				env: "dev",
 			});
 			mockUploadWorkerRequest({
 				expectedType: "esm",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 				env: "dev",
 			});
 			// These run during route conflict resolution.
@@ -1550,7 +1550,7 @@ describe("deploy", () => {
 			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 			mockPublishRoutesRequest({
 				routes: ["dev-example.com/some-route/*"],
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 				env: "dev",
 			});
 			await runWrangler("deploy ./index --env dev --legacy-env true");
@@ -3888,8 +3888,8 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should make environment specific kv namespace for assets, even for legacy envs", async () => {
-			// And this is the same test as the one before this, but with legacyEnv:true
+		it("should make environment specific kv namespace for assets, even for wrangler environments", async () => {
+			// And this is the same test as the one before this, but with enableServiceEnvironments:false
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -3908,7 +3908,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 				env: "some-env",
 				expectedBindings: [
 					{
@@ -7054,18 +7054,21 @@ addEventListener('fetch', event => {});`
 				},
 			});
 			writeWorkerSource();
-			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
+			mockUploadWorkerRequest({
+				env: "production",
+				enableServiceEnvironments: false,
+			});
 			mockGetWorkerSubdomain({
 				enabled: false,
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			mockGetZones("production.example.com", [{ id: "example-id" }]);
 			mockGetZoneWorkerRoutes("example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			await runWrangler("deploy index.js --env production");
 
@@ -7094,18 +7097,21 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			mockSubDomainRequest();
-			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
+			mockUploadWorkerRequest({
+				env: "production",
+				enableServiceEnvironments: false,
+			});
 			mockGetWorkerSubdomain({
 				enabled: false,
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			mockGetZones("production.example.com", [{ id: "example-id" }]);
 			mockGetZoneWorkerRoutes("example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			await runWrangler("deploy index.js --env production");
 
@@ -7171,22 +7177,25 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			mockSubDomainRequest();
-			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
+			mockUploadWorkerRequest({
+				env: "production",
+				enableServiceEnvironments: false,
+			});
 			mockGetWorkerSubdomain({
 				enabled: false,
 				previews_enabled: true,
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			mockUpdateWorkerSubdomain({
 				enabled: true,
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			await runWrangler("deploy index.js --env production");
 
@@ -7217,22 +7226,25 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			mockSubDomainRequest();
-			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
+			mockUploadWorkerRequest({
+				env: "production",
+				enableServiceEnvironments: false,
+			});
 			mockGetWorkerSubdomain({
 				enabled: false,
 				previews_enabled: true,
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			mockUpdateWorkerSubdomain({
 				enabled: true,
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			await runWrangler("deploy index.js --env production");
 
@@ -7263,18 +7275,21 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			mockSubDomainRequest();
-			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
+			mockUploadWorkerRequest({
+				env: "production",
+				enableServiceEnvironments: false,
+			});
 			mockGetWorkerSubdomain({
 				enabled: false,
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			mockGetZones("production.example.com", [{ id: "example-id" }]);
 			mockGetZoneWorkerRoutes("example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			await runWrangler("deploy index.js --env production");
 
@@ -7304,18 +7319,21 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			mockSubDomainRequest();
-			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
+			mockUploadWorkerRequest({
+				env: "production",
+				enableServiceEnvironments: false,
+			});
 			mockGetWorkerSubdomain({
 				enabled: false,
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			mockGetZones("production.example.com", [{ id: "example-id" }]);
 			mockGetZoneWorkerRoutes("example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 			await runWrangler("deploy index.js --env production");
 
@@ -7882,7 +7900,7 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({
 				env: "testEnv",
 				expectedType: "esm",
-				legacyEnv: false,
+				enableServiceEnvironments: true,
 				expectedEntry: `fetch(){return new Response("hello Cpt Picard")`,
 			});
 
@@ -7930,7 +7948,7 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({
 				env: "testEnv",
 				expectedType: "esm",
-				legacyEnv: false,
+				enableServiceEnvironments: true,
 				expectedEntry: (str) => {
 					expect(str).toMatch(underscoreUnderscoreNameRegex);
 				},
@@ -7970,7 +7988,7 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({
 				env: "testEnv",
 				expectedType: "esm",
-				legacyEnv: false,
+				enableServiceEnvironments: true,
 				expectedEntry: (str) => {
 					expect(str).not.toMatch(underscoreUnderscoreNameRegex);
 				},
@@ -8253,7 +8271,7 @@ addEventListener('fetch', event => {});`
 				mockSubDomainRequest();
 				mockServiceScriptData({}); // no scripts at all
 				mockUploadWorkerRequest({
-					legacyEnv: false,
+					enableServiceEnvironments: true,
 					expectedMigrations: {
 						new_tag: "v2",
 						steps: [
@@ -8322,7 +8340,7 @@ addEventListener('fetch', event => {});`
 				mockSubDomainRequest();
 				mockServiceScriptData({ env: "xyz" }); // no scripts at all
 				mockUploadWorkerRequest({
-					legacyEnv: false,
+					enableServiceEnvironments: true,
 					env: "xyz",
 					expectedMigrations: {
 						new_tag: "v2",
@@ -8384,7 +8402,7 @@ addEventListener('fetch', event => {});`
 					script: { id: "test-name", migration_tag: "v2" },
 				});
 				mockUploadWorkerRequest({
-					legacyEnv: false,
+					enableServiceEnvironments: true,
 					expectedMigrations: {
 						new_tag: "v2",
 						steps: [
@@ -8462,7 +8480,7 @@ addEventListener('fetch', event => {});`
 					env: "xyz",
 				});
 				mockUploadWorkerRequest({
-					legacyEnv: false,
+					enableServiceEnvironments: true,
 					env: "xyz",
 					expectedMigrations: {
 						old_tag: "v1",
@@ -14355,7 +14373,7 @@ export default{
 			mockGetScriptWithTags(null);
 			mockUploadWorkerRequest({
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -14403,7 +14421,7 @@ export default{
 			mockGetScriptWithTags(["some-tag"]);
 			mockUploadWorkerRequest({
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -14431,7 +14449,7 @@ export default{
 			mockGetScriptWithTags(["some-tag", "cf:service=test-name"]);
 			mockUploadWorkerRequest({
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -14484,7 +14502,7 @@ export default{
 			]);
 			mockUploadWorkerRequest({
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -14541,7 +14559,7 @@ export default{
 			]);
 			mockUploadWorkerRequest({
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -14594,7 +14612,7 @@ export default{
 			]);
 			mockUploadWorkerRequest({
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -14644,7 +14662,7 @@ export default{
 			mockGetScriptWithTags(["some-tag", "cf:service=undefined"]);
 			mockUploadWorkerRequest({
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -14680,7 +14698,7 @@ export default{
 			]);
 			mockUploadWorkerRequest({
 				env: "production",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -14796,7 +14814,7 @@ export default{
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				env: "test",
-				legacyEnv: true,
+				enableServiceEnvironments: false,
 			});
 
 			await runWrangler("deploy -e test");
@@ -15102,14 +15120,16 @@ function mockLastDeploymentRequest() {
 function mockPublishSchedulesRequest({
 	crons = [],
 	env = undefined,
-	legacyEnv = false,
+	enableServiceEnvironments = true,
 }: {
 	crons: Config["triggers"]["crons"];
 	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
+	enableServiceEnvironments?: boolean | undefined;
 }) {
-	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-	const environment = env && !legacyEnv ? "/environments/:envName" : "";
+	const servicesOrScripts =
+		env && enableServiceEnvironments ? "services" : "scripts";
+	const environment =
+		env && enableServiceEnvironments ? "/environments/:envName" : "";
 
 	msw.use(
 		http.put(
@@ -15117,9 +15137,9 @@ function mockPublishSchedulesRequest({
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual(
-					legacyEnv && env ? `test-name-${env}` : "test-name"
+					!enableServiceEnvironments && env ? `test-name-${env}` : "test-name"
 				);
-				if (!legacyEnv) {
+				if (enableServiceEnvironments) {
 					expect(params.envName).toEqual(env);
 				}
 				const body = (await request.json()) as [{ cron: string }];
@@ -15134,14 +15154,16 @@ function mockPublishSchedulesRequest({
 function mockPublishRoutesRequest({
 	routes = [],
 	env = undefined,
-	legacyEnv = false,
+	enableServiceEnvironments = true,
 }: {
 	routes: Config["routes"];
 	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
+	enableServiceEnvironments?: boolean | undefined;
 }) {
-	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-	const environment = env && !legacyEnv ? "/environments/:envName" : "";
+	const servicesOrScripts =
+		env && enableServiceEnvironments ? "services" : "scripts";
+	const environment =
+		env && enableServiceEnvironments ? "/environments/:envName" : "";
 
 	msw.use(
 		http.put(
@@ -15149,9 +15171,9 @@ function mockPublishRoutesRequest({
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual(
-					legacyEnv && env ? `test-name-${env}` : "test-name"
+					!enableServiceEnvironments && env ? `test-name-${env}` : "test-name"
 				);
-				if (!legacyEnv) {
+				if (enableServiceEnvironments) {
 					expect(params.envName).toEqual(env);
 				}
 				const body = await request.json();
@@ -15169,13 +15191,15 @@ function mockPublishRoutesRequest({
 
 function mockUnauthorizedPublishRoutesRequest({
 	env = undefined,
-	legacyEnv = false,
+	enableServiceEnvironments = true,
 }: {
 	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
+	enableServiceEnvironments?: boolean | undefined;
 } = {}) {
-	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-	const environment = env && !legacyEnv ? "/environments/:envName" : "";
+	const servicesOrScripts =
+		env && enableServiceEnvironments ? "services" : "scripts";
+	const environment =
+		env && enableServiceEnvironments ? "/environments/:envName" : "";
 
 	msw.use(
 		http.put(
@@ -15229,24 +15253,26 @@ function mockCustomDomainsChangesetRequest({
 	originConflicts = [],
 	dnsRecordConflicts = [],
 	env = undefined,
-	legacyEnv = false,
+	enableServiceEnvironments = true,
 }: {
 	originConflicts?: Array<CustomDomain>;
 	dnsRecordConflicts?: Array<CustomDomain>;
 	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
+	enableServiceEnvironments?: boolean | undefined;
 }) {
-	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-	const environment = env && !legacyEnv ? "/environments/:envName" : "";
+	const servicesOrScripts =
+		env && enableServiceEnvironments ? "services" : "scripts";
+	const environment =
+		env && enableServiceEnvironments ? "/environments/:envName" : "";
 	msw.use(
 		http.post<{ accountId: string; scriptName: string; envName: string }>(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/changeset`,
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual(
-					legacyEnv && env ? `test-name-${env}` : "test-name"
+					!enableServiceEnvironments && env ? `test-name-${env}` : "test-name"
 				);
-				if (!legacyEnv) {
+				if (enableServiceEnvironments) {
 					expect(params.envName).toEqual(env);
 				}
 
@@ -15287,7 +15313,7 @@ function mockPublishCustomDomainsRequest({
 	publishFlags,
 	domains = [],
 	env = undefined,
-	legacyEnv = false,
+	enableServiceEnvironments = true,
 }: {
 	publishFlags: {
 		override_scope: boolean;
@@ -15298,10 +15324,12 @@ function mockPublishCustomDomainsRequest({
 		{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
 	>;
 	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
+	enableServiceEnvironments?: boolean | undefined;
 }) {
-	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-	const environment = env && !legacyEnv ? "/environments/:envName" : "";
+	const servicesOrScripts =
+		env && enableServiceEnvironments ? "services" : "scripts";
+	const environment =
+		env && enableServiceEnvironments ? "/environments/:envName" : "";
 
 	msw.use(
 		http.put(
@@ -15309,9 +15337,9 @@ function mockPublishCustomDomainsRequest({
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual(
-					legacyEnv && env ? `test-name-${env}` : "test-name"
+					!enableServiceEnvironments && env ? `test-name-${env}` : "test-name"
 				);
-				if (!legacyEnv) {
+				if (enableServiceEnvironments) {
 					expect(params.envName).toEqual(env);
 				}
 				const body = await request.json();
