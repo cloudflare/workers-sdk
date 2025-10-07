@@ -738,10 +738,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars: props.keepVars ?? false,
-			keepSecrets: props.secretsFile ? false : true,
-			keepBindings: props.secretsFile
-				? ["secret_key", "secret_text"]
-				: undefined,
+			// we never delete secret bindings when uploading, even if we are setting secrets from a file
+			// so inherit all unchanged secrets from the previous Worker Version
+			keepSecrets: true,
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
