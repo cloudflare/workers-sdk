@@ -42,7 +42,7 @@ test("persists Workflow data on file-system between runs", async (t) => {
 	let res = await mf.dispatchFetch("http://localhost");
 	t.is(
 		await res.text(),
-		'{"status":"running","__LOCAL_DEV_STEP_OUTPUTS":[],"output":null}'
+		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
 	);
 
 	// there's no waitUntil in ava haha
