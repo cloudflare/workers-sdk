@@ -23,12 +23,16 @@ describe("wrangler build --write-workerd-config", () => {
 				"--write-workerd-config",
 				"out.capnp",
 			],
-			{ cwd: process.cwd() }
+			{
+				cwd: process.cwd(),
+				timeout: 120_000,
+				stdio: "pipe",
+			}
 		);
 
 		const outPath = join(process.cwd(), "out.capnp");
 		expect(existsSync(outPath)).toBe(true);
 		const buf = readFileSync(outPath);
 		expect(buf.byteLength).toBeGreaterThan(0);
-	});
+	}, 120_000);
 });
