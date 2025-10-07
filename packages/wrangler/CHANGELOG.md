@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.114.16
+
+### Patch Changes
+
+- [#10889](https://github.com/cloudflare/workers-sdk/pull/10889) [`204616c`](https://github.com/cloudflare/workers-sdk/commit/204616c0fc4ab47a18c58af06a427634eb5897fa) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Clarify that `wrangler check startup` generates a local CPU profile
+
 ## 3.114.15
 
 ### Patch Changes
