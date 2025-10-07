@@ -293,7 +293,7 @@ async function setupDevEnv(
 							}
 						: undefined;
 				},
-				enableServiceEnvironments: !(args.legacyEnv ?? true),
+				useServiceEnvironments: !(args.legacyEnv ?? true),
 			},
 			assets: args.assets,
 		} satisfies StartDevWorkerInput,

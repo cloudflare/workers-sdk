@@ -7,7 +7,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { printWranglerBanner } from "../wrangler-banner";
 import { getWorkerForZone } from "../zones";
 import {
@@ -151,11 +151,11 @@ export const tailCommand = createCommand({
 			scriptName,
 			filters,
 			args.debug,
-			!isLegacyEnv(config) ? args.env : undefined
+			useServiceEnvironments(config) ? args.env : undefined
 		);
 
 		const scriptDisplayName = `${scriptName}${
-			args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
+			useServiceEnvironments(config) && args.env ? ` (${args.env})` : ""
 		}`;
 
 		if (args.format === "pretty") {

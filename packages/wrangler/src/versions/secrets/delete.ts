@@ -6,7 +6,7 @@ import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
-import { isLegacyEnv } from "../../utils/isLegacyEnv";
+import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { VersionDetails, WorkerVersion } from "./index";
 
@@ -59,18 +59,18 @@ export const versionsSecretDeleteCommand = createCommand({
 
 		const accountId = await requireAuth(config);
 
+		const isServiceEnv = args.env && useServiceEnvironments(config);
+
 		if (
 			await confirm(
 				`Are you sure you want to permanently delete the secret ${
 					args.key
-				} on the Worker ${scriptName}${
-					args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
-				}?`
+				} on the Worker ${scriptName}${isServiceEnv ? ` (${args.env})` : ""}?`
 			)
 		) {
 			logger.log(
 				`🌀 Deleting the secret ${args.key} on the Worker ${scriptName}${
-					args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
+					isServiceEnv ? ` (${args.env})` : ""
 				}`
 			);
 
