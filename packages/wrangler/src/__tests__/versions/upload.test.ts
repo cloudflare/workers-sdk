@@ -81,7 +81,7 @@ describe("versions upload --secrets-file", () => {
 						},
 					]);
 
-					expect(metadata.keep_bindings).toEqual(["secret_key", "secret_text"]);
+					expect(metadata.keep_bindings).toEqual(["secret_text", "secret_key"]);
 
 					return HttpResponse.json(
 						createFetchResult({
@@ -145,7 +145,7 @@ SECRET3=value3`
 						])
 					);
 
-					expect(metadata.keep_bindings).toEqual(["secret_key", "secret_text"]);
+					expect(metadata.keep_bindings).toEqual(["secret_text", "secret_key"]);
 
 					return HttpResponse.json(
 						createFetchResult({
@@ -185,7 +185,7 @@ SECRET3=value3`
 					const formData = await request.formData();
 					const metadata = JSON.parse(formData.get("metadata") as string);
 
-					expect(metadata.keep_bindings).toEqual(["secret_key", "secret_text"]);
+					expect(metadata.keep_bindings).toEqual(["secret_text", "secret_key"]);
 
 					return HttpResponse.json(
 						createFetchResult({
