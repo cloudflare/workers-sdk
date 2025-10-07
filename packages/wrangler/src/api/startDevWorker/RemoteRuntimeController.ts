@@ -331,7 +331,8 @@ export class RemoteRuntimeController extends RuntimeController {
 		notImplemented(this.onPreviewTokenExpired.name, this.constructor.name);
 	}
 
-	async teardown() {
+	override async teardown() {
+		await super.teardown();
 		if (this.#session) {
 			logger.log(chalk.dim("⎔ Shutting down remote preview..."));
 		}

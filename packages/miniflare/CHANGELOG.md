@@ -1,5 +1,19 @@
 # miniflare
 
+## 4.20251004.0
+
+### Patch Changes
+
+- [#10858](https://github.com/cloudflare/workers-sdk/pull/10858) [`51f9dc1`](https://github.com/cloudflare/workers-sdk/commit/51f9dc113487e0000a6ecc1e45f6e8e3e9c5a9a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251001.0 | 1.20251004.0 |
+
+- [#10856](https://github.com/cloudflare/workers-sdk/pull/10856) [`1334102`](https://github.com/cloudflare/workers-sdk/commit/1334102e35d69a70181c2832b94df2d77b25a279) Thanks [@anonrig](https://github.com/anonrig)! - Removes unnecessary calls to "node:os"
+
 ## 4.20251001.0
 
 ### Patch Changes

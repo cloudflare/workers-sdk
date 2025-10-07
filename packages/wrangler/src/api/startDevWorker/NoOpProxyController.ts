@@ -11,5 +11,4 @@ export class NoOpProxyController extends ProxyController {
 	onBundleStart(_data: BundleStartEvent) {}
 	onReloadStart(_data: ReloadStartEvent) {}
 	onReloadComplete(_data: ReloadCompleteEvent) {}
-	async teardown() {}
 }
