@@ -152,9 +152,16 @@ export class Logger {
 			? this.formatMessage(messageLevel, format(...args))
 			: args;
 
-		// unless in unit-tests, send ALL logs to the debug log file (even non-debug logs for context & order)
-		const inUnitTests = typeof vitest !== "undefined";
-		if (!inUnitTests) {
+		if (
+			// only send logs to the debug log file if either
+			//  - `WRANGLER_LOG_PATH` has been set by the user (and is not the default)
+			//  - the configured log level is debug
+			// Even though we send non debug logs to the log file, we shouldn't overwhelm the user's
+			// system with loads of needless log files. There's very little value in non debug log files
+			process.env.WRANGLER_LOG_PATH ||
+			this.loggerLevel === "debug"
+		) {
+			// send ALL logs to the debug log file (even non-debug logs for context & order)
 			void appendToDebugLogFile(messageLevel, message);
 		}
 
