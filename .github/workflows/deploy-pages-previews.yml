@@ -46,9 +46,6 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install grep
-        run: brew install grep
-
       - name: Build tools and libraries
         run: pnpm run build
         env:
@@ -60,7 +57,7 @@ jobs:
         run: |
           output=$(pnpm --filter @cloudflare/chrome-devtools-patches run deploy)
           echo "Extracting deployed URL from command output"
-          url=$(echo "$output" | ggrep -oP 'Take a peek over at \K\S+')
+          url=$(echo "$output" | grep -oP 'Take a peek over at \K\S+')
           echo "Extracted URL: $url"
           echo "VITE_DEVTOOLS_PREVIEW_URL=$url" >> $GITHUB_ENV
         env:
@@ -76,11 +73,10 @@ jobs:
 
       - name: Deploy Workers Playground preview
         if: contains(github.event.*.labels.*.name, 'preview:workers-playground')
-        shell: bash
         run: |
           output=$(pnpm --filter workers-playground run build:testing && pnpm --filter workers-playground run deploy)
           echo "Extracting deployed URL from command output"
-          url=$(echo "$output" | ggrep -oP 'Take a peek over at \K\S+')
+          url=$(echo "$output" | grep -oP 'Take a peek over at \K\S+')
           echo "Extracted URL: $url"
           echo "PLAYGROUND_URL=$url" >> $GITHUB_ENV
         env:
