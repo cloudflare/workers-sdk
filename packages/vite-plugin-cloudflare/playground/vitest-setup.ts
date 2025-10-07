@@ -70,7 +70,7 @@ export let browser: Browser = undefined!;
 export let viteTestUrl: string = "";
 export let watcher: Rollup.RollupWatcher | undefined = undefined;
 
-const vite = getViteModuleToTest();
+const vite = await getViteModuleToTest();
 
 export function setViteUrl(url: string): void {
 	viteTestUrl = url;

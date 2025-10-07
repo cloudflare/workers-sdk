@@ -21,7 +21,7 @@ export async function setup({ provide }: GlobalSetupContext): Promise<void> {
 
 	provide("wsEndpoint", browserServer.wsEndpoint());
 
-	const viteModule = getViteModuleToTest();
+	const viteModule = await getViteModuleToTest();
 	const viteInUseMessage = `Running playground tests against ${viteModule.packageName}@${viteModule.version}`;
 	const lineLength = viteInUseMessage.length + 8;
 	console.log(`┌${"─".repeat(lineLength)}┐`);
