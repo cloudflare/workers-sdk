@@ -575,6 +575,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	let sourceMapSize;
+	let emittedEntryPath = "";
 	const normalisedContainerConfig = await getNormalizedContainerOptions(
 		config,
 		props
@@ -672,6 +673,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					: module.content.byteLength;
 			dependencies[modulePath] = { bytesInOutput };
 		}
+		emittedEntryPath = resolvedEntryPointPath;
 
 		const content = readFileSync(resolvedEntryPointPath, {
 			encoding: "utf-8",
@@ -1110,7 +1112,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag, emittedEntryPath: resolvedEntryPointPath };
+		return { versionId, workerTag, emittedEntryPath };
 	}
 
 	const uploadMs = Date.now() - start;
@@ -1120,7 +1122,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag, emittedEntryPath: resolvedEntryPointPath };
+		return { versionId, workerTag, emittedEntryPath };
 	}
 
 	if (normalisedContainerConfig.length) {
@@ -1146,7 +1148,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		sourceMapSize,
 		versionId,
 		workerTag,
-		emittedEntryPath: resolvedEntryPointPath,
+		emittedEntryPath,
 		targets: targets ?? [],
 	};
 }
