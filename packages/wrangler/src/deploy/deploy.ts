@@ -54,6 +54,7 @@ import {
 	putConsumer,
 	putConsumerById,
 } from "../queues/client";
+import { parseBulkInputToObject } from "../secret";
 import { syncWorkersSite } from "../sites";
 import {
 	getSourceMappedString,
@@ -77,6 +78,7 @@ import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 import type { AssetsOptions } from "../assets";
+import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 import type { Entry } from "../deployment-bundle/entry";
 import type { PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
@@ -136,6 +138,7 @@ type Props = {
 	strict: boolean | undefined;
 	tag: string | undefined;
 	message: string | undefined;
+	secretsFile: string | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -824,6 +827,20 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			};
 		}
 
+		let rawBindings: WorkerMetadataBinding[] | undefined;
+		if (props.secretsFile) {
+			const secretsContent = await parseBulkInputToObject(props.secretsFile);
+			if (secretsContent) {
+				rawBindings = Object.entries(secretsContent).map(
+					([secretName, secretValue]) => ({
+						type: "secret_text",
+						name: secretName,
+						text: secretValue,
+					})
+				);
+			}
+		}
+
 		if (workersSitesAssets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
@@ -845,6 +862,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main,
+			rawBindings,
 			migrations,
 			modules,
 			containers: config.containers,
@@ -854,7 +872,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars,
-			keepSecrets: keepVars, // keepVars implies keepSecrets
+			keepSecrets: true,
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
 			placement,
 			tail_consumers: config.tail_consumers,
