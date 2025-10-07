@@ -1,7 +1,3 @@
-import * as rolldownVite from "rolldown-vite";
-import * as defaultVite from "vite";
-import * as vite6 from "vite-6";
-import * as vite7 from "vite-7";
 import type {
 	createBuilder,
 	createServer,
@@ -16,7 +12,7 @@ import type {
  *
  * @returns The vite module to test
  */
-export function getViteModuleToTest(): {
+export async function getViteModuleToTest(): Promise<{
 	packageName: "vite" | "rolldown-vite";
 	version: typeof ViteVersion;
 	loadConfigFromFile: typeof loadConfigFromFile;
@@ -24,7 +20,7 @@ export function getViteModuleToTest(): {
 	createServer: typeof createServer;
 	createBuilder: typeof createBuilder;
 	preview: typeof preview;
-} {
+}> {
 	if (process.env.VITE_VERSION_TO_TEST === undefined) {
 		return {
 			packageName: "vite",
@@ -32,28 +28,28 @@ export function getViteModuleToTest(): {
 			//       (instead of falling back to one of the options below) because we want to make sure that
 			//       the vite version can be correctly overridden in the vite-ecosystem-ci runs
 			//       (ref: https://github.com/vitejs/vite-ecosystem-ci/blob/a0fab/tests/vite-plugin-cloudflare.ts)
-			...defaultVite,
+			...(await import("vite")),
 		};
 	}
 
 	if (process.env.VITE_VERSION_TO_TEST === "6") {
 		return {
 			packageName: "vite",
-			...vite6,
+			...(await import("vite-6")),
 		} as any;
 	}
 
 	if (process.env.VITE_VERSION_TO_TEST === "7") {
 		return {
 			packageName: "vite",
-			...vite7,
+			...(await import("vite-7")),
 		} as any;
 	}
 
 	if (process.env.VITE_VERSION_TO_TEST === "rolldown-vite") {
 		return {
 			packageName: "rolldown-vite",
-			...rolldownVite,
+			...(await import("rolldown-vite")),
 		} as any;
 	}
 
