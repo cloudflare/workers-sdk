@@ -84,7 +84,7 @@ export function inheritable<K extends keyof Environment>(
  */
 export function inheritableInLegacyEnvironments<K extends keyof Environment>(
 	diagnostics: Diagnostics,
-	isLegacyEnv: boolean | undefined,
+	enableServiceEnvironments: boolean | undefined,
 	topLevelEnv: Environment | undefined,
 	rawEnv: RawEnvironment,
 	field: K,
@@ -92,8 +92,16 @@ export function inheritableInLegacyEnvironments<K extends keyof Environment>(
 	transformFn: TransformFn<Environment[K]> = (v) => v,
 	defaultValue: Environment[K]
 ): Environment[K] {
-	return topLevelEnv === undefined || isLegacyEnv === true
-		? inheritable(
+	const usingServiceEnvironments =
+		enableServiceEnvironments && topLevelEnv !== undefined;
+	return usingServiceEnvironments
+		? notAllowedInNamedServiceEnvironment(
+				diagnostics,
+				topLevelEnv,
+				rawEnv,
+				field
+			)
+		: inheritable(
 				diagnostics,
 				topLevelEnv,
 				rawEnv,
@@ -101,12 +109,6 @@ export function inheritableInLegacyEnvironments<K extends keyof Environment>(
 				validate,
 				defaultValue,
 				transformFn
-			)
-		: notAllowedInNamedServiceEnvironment(
-				diagnostics,
-				topLevelEnv,
-				rawEnv,
-				field
 			);
 }
 

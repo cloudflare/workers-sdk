@@ -153,16 +153,22 @@ export function normalizeAndValidateConfig(
 		"string"
 	);
 
-	// TODO: set the default to false to turn on service environments as the default
-	const isLegacyEnv =
-		typeof args["legacy-env"] === "boolean"
-			? args["legacy-env"]
-			: rawConfig.legacy_env ?? true;
+	/**
+	 * Legacy env refers to wrangler environments, which are not actually legacy in any way.
+	 * This is opposed to service environments, which are deprecated.
+	 * Unfortunately legacy-env is a public facing arg and config option, so we have to leave the name.
+	 * However we can change the internal handling to be less confusing.
+	 */
 
-	// TODO: remove this once service environments goes GA.
-	if (!isLegacyEnv) {
+	const enableServiceEnvironments = !(
+		args["legacy-env"] ??
+		rawConfig.legacy_env ??
+		true
+	);
+
+	if (enableServiceEnvironments) {
 		diagnostics.warnings.push(
-			"Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+			"Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
 		);
 	}
 
@@ -247,7 +253,7 @@ export function normalizeAndValidateConfig(
 					preserveOriginalMain,
 					envName,
 					topLevelEnv,
-					isLegacyEnv,
+					enableServiceEnvironments,
 					rawConfig
 				);
 				diagnostics.addChild(envDiagnostics);
@@ -260,7 +266,7 @@ export function normalizeAndValidateConfig(
 					preserveOriginalMain,
 					envName,
 					topLevelEnv,
-					isLegacyEnv,
+					enableServiceEnvironments,
 					rawConfig
 				);
 				const envNames = rawConfig.env
@@ -302,7 +308,8 @@ export function normalizeAndValidateConfig(
 			configPath,
 			rawConfig.pages_build_output_dir
 		),
-		legacy_env: isLegacyEnv,
+		/** Legacy_env is wrangler environments, as opposed to service environments. Wrangler environments is not legacy.  */
+		legacy_env: !enableServiceEnvironments,
 		send_metrics: rawConfig.send_metrics,
 		keep_vars: rawConfig.keep_vars,
 		...activeEnv,
@@ -1021,7 +1028,7 @@ function normalizeAndValidateEnvironment(
 	preserveOriginalMain: boolean,
 	envName: string,
 	topLevelEnv: Environment,
-	isLegacyEnv: boolean,
+	enableServiceEnvironments: boolean,
 	rawConfig: RawConfig
 ): Environment;
 function normalizeAndValidateEnvironment(
@@ -1032,7 +1039,7 @@ function normalizeAndValidateEnvironment(
 	preserveOriginalMain: boolean,
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
-	isLegacyEnv?: boolean,
+	enableServiceEnvironments?: boolean,
 	rawConfig?: RawConfig | undefined
 ): Environment {
 	deprecated(
@@ -1052,7 +1059,7 @@ function normalizeAndValidateEnvironment(
 
 	const account_id = inheritableInLegacyEnvironments(
 		diagnostics,
-		isLegacyEnv,
+		enableServiceEnvironments,
 		topLevelEnv,
 		mutateEmptyStringAccountIDValue(diagnostics, rawEnv),
 		"account_id",
@@ -1132,7 +1139,7 @@ function normalizeAndValidateEnvironment(
 		rules: validateAndNormalizeRules(diagnostics, topLevelEnv, rawEnv, envName),
 		name: inheritableInLegacyEnvironments(
 			diagnostics,
-			isLegacyEnv,
+			enableServiceEnvironments,
 			topLevelEnv,
 			rawEnv,
 			"name",

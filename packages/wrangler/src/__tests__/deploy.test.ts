@@ -1085,8 +1085,8 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-					    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
-					  the future. DO NOT USE IN PRODUCTION.
+					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
+					  PRODUCTION.
 
 					"
 				`);
@@ -1118,8 +1118,8 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-					    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
-					  the future. DO NOT USE IN PRODUCTION.
+					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
+					  PRODUCTION.
 
 					"
 				`);
@@ -1502,8 +1502,8 @@ describe("deploy", () => {
 				Current Version ID: Galaxy-Class",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
-				  the future. DO NOT USE IN PRODUCTION.
+				    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
+				  PRODUCTION.
 
 				",
 				}
@@ -8178,8 +8178,8 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-					    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
-					  the future. DO NOT USE IN PRODUCTION.
+					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
+					  PRODUCTION.
 
 					"
 				`);
@@ -8248,8 +8248,8 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-					    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
-					  the future. DO NOT USE IN PRODUCTION.
+					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
+					  PRODUCTION.
 
 					"
 				`);
@@ -8314,8 +8314,8 @@ addEventListener('fetch', event => {});`
 					Current Version ID: Galaxy-Class",
 					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-					    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
-					  the future. DO NOT USE IN PRODUCTION.
+					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
+					  PRODUCTION.
 
 					",
 					}
@@ -8391,8 +8391,8 @@ addEventListener('fetch', event => {});`
 					Current Version ID: Galaxy-Class",
 					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-					    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
-					  the future. DO NOT USE IN PRODUCTION.
+					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
+					  PRODUCTION.
 
 					",
 					}
