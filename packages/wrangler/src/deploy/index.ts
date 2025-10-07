@@ -357,46 +357,47 @@ export const deployCommand = createCommand({
 				config.configPath
 			);
 		}
-		const { sourceMapSize, versionId, workerTag, targets } = await deploy({
-			config,
-			accountId,
-			name,
-			rules: getRules(config),
-			entry,
-			env: args.env,
-			compatibilityDate: args.latest
-				? formatCompatibilityDate(new Date())
-				: args.compatibilityDate,
-			compatibilityFlags: args.compatibilityFlags,
-			vars: cliVars,
-			defines: cliDefines,
-			alias: cliAlias,
-			triggers: args.triggers,
-			jsxFactory: args.jsxFactory,
-			jsxFragment: args.jsxFragment,
-			tsconfig: args.tsconfig,
-			routes: args.routes,
-			domains: args.domains,
-			assetsOptions,
-			legacyAssetPaths: siteAssetPaths,
-			legacyEnv: isLegacyEnv(config),
-			minify: args.minify,
-			isWorkersSite: Boolean(args.site || config.site),
-			outDir: args.outdir,
-			outFile: args.outfile,
-			dryRun: args.dryRun,
-			metafile: args.metafile,
-			noBundle: !(args.bundle ?? !config.no_bundle),
-			keepVars: args.keepVars,
-			logpush: args.logpush,
-			uploadSourceMaps: args.uploadSourceMaps,
-			oldAssetTtl: args.oldAssetTtl,
-			projectRoot,
-			dispatchNamespace: args.dispatchNamespace,
-			experimentalAutoCreate: args.experimentalAutoCreate,
-			containersRollout: args.containersRollout,
-			strict: args.strict,
-		});
+		const { sourceMapSize, versionId, workerTag, targets, emittedEntryPath } =
+			await deploy({
+				config,
+				accountId,
+				name,
+				rules: getRules(config),
+				entry,
+				env: args.env,
+				compatibilityDate: args.latest
+					? formatCompatibilityDate(new Date())
+					: args.compatibilityDate,
+				compatibilityFlags: args.compatibilityFlags,
+				vars: cliVars,
+				defines: cliDefines,
+				alias: cliAlias,
+				triggers: args.triggers,
+				jsxFactory: args.jsxFactory,
+				jsxFragment: args.jsxFragment,
+				tsconfig: args.tsconfig,
+				routes: args.routes,
+				domains: args.domains,
+				assetsOptions,
+				legacyAssetPaths: siteAssetPaths,
+				legacyEnv: isLegacyEnv(config),
+				minify: args.minify,
+				isWorkersSite: Boolean(args.site || config.site),
+				outDir: args.outdir,
+				outFile: args.outfile,
+				dryRun: args.dryRun,
+				metafile: args.metafile,
+				noBundle: !(args.bundle ?? !config.no_bundle),
+				keepVars: args.keepVars,
+				logpush: args.logpush,
+				uploadSourceMaps: args.uploadSourceMaps,
+				oldAssetTtl: args.oldAssetTtl,
+				projectRoot,
+				dispatchNamespace: args.dispatchNamespace,
+				experimentalAutoCreate: args.experimentalAutoCreate,
+				containersRollout: args.containersRollout,
+				strict: args.strict,
+			});
 
 		writeOutput({
 			type: "deploy",
@@ -426,39 +427,12 @@ export const deployCommand = createCommand({
 			const fs = await import("node:fs/promises");
 			const { serializeConfig } = await import("miniflare");
 
-			const outDir = args.outdir ?? "dist";
 			const serviceName = name ?? "worker";
 
-			const candidateEntrypoints = [
-				"index.mjs",
-				"index.js",
-				"worker.mjs",
-				"worker.js",
-				"script.js",
-			].map((p) => path.join(outDir, p));
-
-			let chosenEntry = "";
-			for (const p of candidateEntrypoints) {
-				try {
-					const st = await fs.stat(p);
-					if (st.isFile()) {
-						chosenEntry = p;
-						break;
-					}
-				} catch {}
-			}
-			if (!chosenEntry) {
-				try {
-					const files = await fs.readdir(outDir);
-					const js = files.find((f) => f.endsWith(".js") || f.endsWith(".mjs"));
-					if (js) {
-						chosenEntry = path.join(outDir, js);
-					}
-				} catch {}
-			}
+			const chosenEntry = emittedEntryPath;
 			if (!chosenEntry) {
 				throw new UserError(
-					"Failed to locate dry-run bundle entry to generate workerd config. Please ensure bundling succeeded."
+					"Failed to determine emitted bundle entry to generate workerd config. Please ensure bundling succeeded."
 				);
 			}
 

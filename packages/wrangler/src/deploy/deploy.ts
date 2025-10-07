@@ -358,6 +358,7 @@ export default async function deploy(props: Props): Promise<{
 	versionId: string | null;
 	workerTag: string | null;
 	targets?: string[];
+	emittedEntryPath: string;
 }> {
 	const deployConfirm = getDeployConfirmFunction(props.strict);
 
@@ -422,7 +423,7 @@ export default async function deploy(props: Props): Promise<{
 								"Deploying the Worker will override the remote configuration with your local one."
 						);
 						if (!(await deployConfirm("Would you like to continue?"))) {
-							return { versionId, workerTag };
+							return { versionId, workerTag, emittedEntryPath: "" };
 						}
 					}
 				} else {
@@ -430,7 +431,7 @@ export default async function deploy(props: Props): Promise<{
 						`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
 					);
 					if (!(await deployConfirm("Would you like to continue?"))) {
-						return { versionId, workerTag };
+						return { versionId, workerTag, emittedEntryPath: "" };
 					}
 				}
 			} else if (script.last_deployed_from === "api") {
@@ -438,7 +439,7 @@ export default async function deploy(props: Props): Promise<{
 					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
 				);
 				if (!(await deployConfirm("Would you like to continue?"))) {
-					return { versionId, workerTag };
+					return { versionId, workerTag, emittedEntryPath: "" };
 				}
 			}
 		} catch (e) {
@@ -537,7 +538,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 		if (!yes) {
 			cancel("Aborting deploy...");
-			return { versionId, workerTag };
+			return { versionId, workerTag, emittedEntryPath: "" };
 		}
 	}
 
@@ -1109,7 +1110,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag };
+		return { versionId, workerTag, emittedEntryPath: resolvedEntryPointPath };
 	}
 
 	const uploadMs = Date.now() - start;
@@ -1119,7 +1120,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag };
+		return { versionId, workerTag, emittedEntryPath: resolvedEntryPointPath };
 	}
 
 	if (normalisedContainerConfig.length) {
@@ -1145,6 +1146,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		sourceMapSize,
 		versionId,
 		workerTag,
+		emittedEntryPath: resolvedEntryPointPath,
 		targets: targets ?? [],
 	};
 }
