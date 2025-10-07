@@ -52,6 +52,7 @@ import { writeOutput } from "../output";
 import { getWranglerTmpDir } from "../paths";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
+import { parseBulkInputToObject } from "../secret";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -68,6 +69,7 @@ import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import { patchNonVersionedScriptSettings } from "./api";
 import type { AssetsOptions } from "../assets";
+import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 import type { Entry } from "../deployment-bundle/entry";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
@@ -104,6 +106,7 @@ type Props = {
 	tag: string | undefined;
 	message: string | undefined;
 	previewAlias: string | undefined;
+	secretsFile: string | undefined;
 };
 
 export const versionsUploadCommand = createCommand({
@@ -266,6 +269,12 @@ export const versionsUploadCommand = createCommand({
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		"secrets-file": {
+			describe:
+				"Path to a file containing secrets to upload with the version (JSON or .env format)",
+			type: "string",
+			requiresArg: true,
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -391,6 +400,7 @@ export const versionsUploadCommand = createCommand({
 				previewAlias: previewAlias,
 				experimentalAutoCreate: args.experimentalAutoCreate,
 				outFile: args.outfile,
+				secretsFile: args.secretsFile,
 			});
 
 		writeOutput({
@@ -687,6 +697,20 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
+		let rawBindings: WorkerMetadataBinding[] | undefined;
+		if (props.secretsFile) {
+			const secretsContent = await parseBulkInputToObject(props.secretsFile);
+			if (secretsContent) {
+				rawBindings = Object.entries(secretsContent).map(
+					([secretName, secretValue]) => ({
+						type: "secret_text",
+						name: secretName,
+						text: secretValue,
+					})
+				);
+			}
+		}
+
 		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
@@ -699,6 +723,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main,
+			rawBindings,
 			migrations,
 			modules,
 			containers: config.containers,
@@ -708,7 +733,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars: props.keepVars ?? false,
-			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
+			keepSecrets: props.secretsFile ? false : true,
+			keepBindings: props.secretsFile
+				? ["secret_key", "secret_text"]
+				: undefined,
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
