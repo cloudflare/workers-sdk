@@ -1,5 +1,19 @@
 # wrangler
 
+## 4.42.1
+
+### Patch Changes
+
+- [#10865](https://github.com/cloudflare/workers-sdk/pull/10865) [`26adce7`](https://github.com/cloudflare/workers-sdk/commit/26adce7ff803b2b3833ed018902ba288927594b6) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Respect keep_vars for wrangler versions upload.
+
+- [#10833](https://github.com/cloudflare/workers-sdk/pull/10833) [`196ccbf`](https://github.com/cloudflare/workers-sdk/commit/196ccbfc328d4ae3de2ff6600e46570b2d3025f9) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - Validate Pipeline entity names in Wrangler config before sending to the API.
+
+- [#10856](https://github.com/cloudflare/workers-sdk/pull/10856) [`1334102`](https://github.com/cloudflare/workers-sdk/commit/1334102e35d69a70181c2832b94df2d77b25a279) Thanks [@anonrig](https://github.com/anonrig)! - Removes unnecessary calls to "node:os"
+
+- Updated dependencies [[`51f9dc1`](https://github.com/cloudflare/workers-sdk/commit/51f9dc113487e0000a6ecc1e45f6e8e3e9c5a9a7), [`f29b0b0`](https://github.com/cloudflare/workers-sdk/commit/f29b0b0863377df1818727cfbe39f0cd30e8b768), [`1334102`](https://github.com/cloudflare/workers-sdk/commit/1334102e35d69a70181c2832b94df2d77b25a279)]:
+  - miniflare@4.20251004.0
+  - @cloudflare/unenv-preset@2.7.7
+
 ## 4.42.0
 
 ### Minor Changes
