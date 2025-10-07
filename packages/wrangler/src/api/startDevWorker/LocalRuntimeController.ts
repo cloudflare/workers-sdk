@@ -194,9 +194,9 @@ export class LocalRuntimeController extends RuntimeController {
 	};
 
 	onBundleStart(_: BundleStartEvent) {
-		process.on("exit", () => {
-			this.cleanupContainers();
-		});
+		// Remove any existing listener, then add a new one.
+		process.off("exit", this.cleanupContainers);
+		process.on("exit", this.cleanupContainers);
 	}
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
@@ -416,6 +416,8 @@ export class LocalRuntimeController extends RuntimeController {
 	#teardown = async (): Promise<void> => {
 		logger.debug("LocalRuntimeController teardown beginning...");
 
+		process.off("exit", this.cleanupContainers);
+
 		if (this.#mf) {
 			logger.log(chalk.dim("⎔ Shutting down local server..."));
 		}
@@ -432,7 +434,8 @@ export class LocalRuntimeController extends RuntimeController {
 
 		logger.debug("LocalRuntimeController teardown complete");
 	};
-	async teardown() {
+	override async teardown() {
+		await super.teardown();
 		return this.#mutex.runWith(this.#teardown);
 	}
 
