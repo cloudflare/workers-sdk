@@ -138,9 +138,10 @@ function configDefaults(
 }
 
 describe("LocalRuntimeController", () => {
-	const teardown = useTeardown();
 	mockConsoleMethods();
 	runInTempDir();
+	// Make sure teardown is declared after runInTempDir so it runs before we delete the temp directory
+	const teardown = useTeardown();
 
 	describe("Core", () => {
 		it("should start Miniflare with module worker", async () => {

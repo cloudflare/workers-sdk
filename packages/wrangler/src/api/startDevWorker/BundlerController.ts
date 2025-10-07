@@ -374,8 +374,9 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		});
 	}
 
-	async teardown() {
+	override async teardown() {
 		logger.debug("BundlerController teardown beginning...");
+		await super.teardown();
 		this.#customBuildAborter?.abort();
 		this.#tmpDir?.remove();
 		await Promise.all([

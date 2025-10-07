@@ -1,5 +1,18 @@
 # @cloudflare/vite-plugin
 
+## 1.13.11
+
+### Patch Changes
+
+- [#10866](https://github.com/cloudflare/workers-sdk/pull/10866) [`f62d0b6`](https://github.com/cloudflare/workers-sdk/commit/f62d0b665bc971a791e5bac2300dd638b603e670) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use tsdown to bundle the package.
+
+- [#10887](https://github.com/cloudflare/workers-sdk/pull/10887) [`0de7511`](https://github.com/cloudflare/workers-sdk/commit/0de75114d5c2caa55521b1c1a1b8e0b82ea6d707) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Preserve the original `x-forwarded-host` header if it is set.
+
+- Updated dependencies [[`51f9dc1`](https://github.com/cloudflare/workers-sdk/commit/51f9dc113487e0000a6ecc1e45f6e8e3e9c5a9a7), [`26adce7`](https://github.com/cloudflare/workers-sdk/commit/26adce7ff803b2b3833ed018902ba288927594b6), [`196ccbf`](https://github.com/cloudflare/workers-sdk/commit/196ccbfc328d4ae3de2ff6600e46570b2d3025f9), [`f29b0b0`](https://github.com/cloudflare/workers-sdk/commit/f29b0b0863377df1818727cfbe39f0cd30e8b768), [`1334102`](https://github.com/cloudflare/workers-sdk/commit/1334102e35d69a70181c2832b94df2d77b25a279)]:
+  - miniflare@4.20251004.0
+  - wrangler@4.42.1
+  - @cloudflare/unenv-preset@2.7.7
+
 ## 1.13.10
 
 ### Patch Changes

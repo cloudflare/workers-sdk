@@ -1123,6 +1123,14 @@ describe("wrangler pipelines", () => {
 			);
 		});
 
+		it("should error when name contains invalid characters", async () => {
+			await expect(
+				runWrangler("pipelines streams create my-stream")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: stream name must contain only letters, numbers, and underscores]`
+			);
+		});
+
 		it("should create stream with default settings", async () => {
 			setIsTTY(true);
 			mockConfirm({
@@ -1563,6 +1571,16 @@ describe("wrangler pipelines", () => {
 			);
 			return requests;
 		}
+
+		it("should error when name contains invalid characters", async () => {
+			await expect(
+				runWrangler(
+					"pipelines sinks create my-sink --bucket my-bucket --type r2"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: sink name must contain only letters, numbers, and underscores]`
+			);
+		});
 
 		it("should error when type is missing", async () => {
 			await expect(

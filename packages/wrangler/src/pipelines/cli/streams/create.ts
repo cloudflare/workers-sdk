@@ -6,6 +6,7 @@ import { logger } from "../../../logger";
 import { parseJSON } from "../../../parse";
 import { requireAuth } from "../../../user";
 import { createStream } from "../../client";
+import { validateEntityName } from "../../validate";
 import { displayStreamConfiguration } from "./utils";
 import type { CreateStreamRequest, SchemaField } from "../../types";
 
@@ -41,6 +42,9 @@ export const pipelinesStreamsCreateCommand = createCommand({
 			type: "string",
 			array: true,
 		},
+	},
+	validateArgs: (args) => {
+		validateEntityName("stream", args.stream);
 	},
 	async handler(args, { config }) {
 		await requireAuth(config);

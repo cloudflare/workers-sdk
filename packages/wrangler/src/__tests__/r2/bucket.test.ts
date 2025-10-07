@@ -15,8 +15,6 @@ const mockGetR2BucketMetrics = vi.mocked(getR2BucketMetrics);
 
 describe("r2 bucket info", () => {
 	beforeEach(() => {
-		vi.resetAllMocks();
-
 		mockRequireAuth.mockResolvedValue("test-account-id");
 		mockGetR2Bucket.mockResolvedValue({
 			name: "my-bucket-name",

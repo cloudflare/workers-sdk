@@ -313,7 +313,8 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 		logger.debug("MultiworkerRuntimeController teardown complete");
 	};
-	async teardown() {
+	override async teardown() {
+		await super.teardown();
 		return this.#mutex.runWith(this.#teardown);
 	}
 }

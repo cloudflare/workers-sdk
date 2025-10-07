@@ -550,7 +550,8 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 	}
 
 	_torndown = false;
-	async teardown() {
+	override async teardown() {
+		await super.teardown();
 		logger.debug("ProxyController teardown beginning...");
 		this._torndown = true;
 

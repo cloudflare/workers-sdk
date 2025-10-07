@@ -1,5 +1,24 @@
-import { UserError } from "../errors";
+import { CommandLineArgsError, UserError } from "../errors";
 
+/**
+ * Validate entity name is used for Pipelines V1 API entities such as sources, sinks and pipelines.
+ * @param label the name of the entity to validate
+ * @param name the user provided name
+ */
+export function validateEntityName(label: string, name: string) {
+	if (!name.match(/^[a-zA-Z0-9_]+$/)) {
+		throw new CommandLineArgsError(
+			`${label} name must contain only letters, numbers, and underscores`
+		);
+	}
+}
+
+/**
+ * Validate name is used for legacy Pipelines. This validation should not be used for Pipelines V1 entities.
+ * @param label the name of the entity to validate
+ * @param name the user provided name
+ * @deprecated use validateEntityName instead
+ */
 export function validateName(label: string, name: string) {
 	if (!name.match(/^[a-zA-Z0-9-]+$/)) {
 		throw new UserError(`Must provide a valid ${label}`);
