@@ -22,6 +22,7 @@ import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import deploy from "./deploy";
+import type { Config } from "miniflare";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -179,6 +180,12 @@ export const deployCommand = createCommand({
 		"dry-run": {
 			describe: "Don't actually deploy",
 			type: "boolean",
+		},
+		"write-workerd-config": {
+			describe:
+				"Path to write a workerd capnp config for running the built worker in workerd (only with --dry-run)",
+			type: "string",
+			requiresArg: true,
 		},
 		metafile: {
 			describe:
@@ -413,6 +420,83 @@ export const deployCommand = createCommand({
 				sendMetrics: config.send_metrics,
 			}
 		);
+
+		if (args.dryRun && args.writeWorkerdConfig) {
+			const outPathArg = args.writeWorkerdConfig as string;
+			const fs = await import("node:fs/promises");
+			const { serializeConfig } = await import("miniflare");
+
+			const outDir = args.outdir ?? "dist";
+			const serviceName = name ?? "worker";
+
+			const candidateEntrypoints = [
+				"index.mjs",
+				"index.js",
+				"worker.mjs",
+				"worker.js",
+				"script.js",
+			].map((p) => path.join(outDir, p));
+
+			let chosenEntry = "";
+			for (const p of candidateEntrypoints) {
+				try {
+					const st = await fs.stat(p);
+					if (st.isFile()) {
+						chosenEntry = p;
+						break;
+					}
+				} catch {}
+			}
+			if (!chosenEntry) {
+				try {
+					const files = await fs.readdir(outDir);
+					const js = files.find((f) => f.endsWith(".js") || f.endsWith(".mjs"));
+					if (js) {
+						chosenEntry = path.join(outDir, js);
+					}
+				} catch {}
+			}
+			if (!chosenEntry) {
+				throw new UserError(
+					"Failed to locate dry-run bundle entry to generate workerd config. Please ensure bundling succeeded."
+				);
+			}
+
+			const workerdConfig: Config = {
+				services: [
+					{
+						name: serviceName,
+						worker: {
+							modules: [
+								{
+									name: path.basename(chosenEntry),
+									esModule: chosenEntry,
+								},
+							],
+							compatibilityDate: args.latest
+								? formatCompatibilityDate(new Date())
+								: args.compatibilityDate ?? config.compatibility_date,
+							compatibilityFlags:
+								args.compatibilityFlags ?? config.compatibility_flags,
+						},
+					},
+				],
+			};
+
+			let outputPath = outPathArg;
+			try {
+				const stat = await fs.stat(outPathArg);
+				if (stat.isDirectory()) {
+					outputPath = path.join(outPathArg, "workerd.capnp");
+				}
+			} catch {
+				await fs.mkdir(path.dirname(outPathArg), { recursive: true });
+			}
+
+			const buf = serializeConfig(workerdConfig);
+			await fs.writeFile(outputPath, buf);
+			logger.log(`Wrote workerd config to ${path.resolve(outputPath)}`);
+		}
 	},
 });
 
