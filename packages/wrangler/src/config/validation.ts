@@ -18,7 +18,7 @@ import {
 	getBindingNames,
 	hasProperty,
 	inheritable,
-	inheritableInLegacyEnvironments,
+	inheritableInWranglerEnvironments,
 	isBoolean,
 	isMutuallyExclusiveWith,
 	isOneOf,
@@ -1057,7 +1057,7 @@ function normalizeAndValidateEnvironment(
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
-	const account_id = inheritableInLegacyEnvironments(
+	const account_id = inheritableInWranglerEnvironments(
 		diagnostics,
 		enableServiceEnvironments,
 		topLevelEnv,
@@ -1137,7 +1137,7 @@ function normalizeAndValidateEnvironment(
 			configPath
 		),
 		rules: validateAndNormalizeRules(diagnostics, topLevelEnv, rawEnv, envName),
-		name: inheritableInLegacyEnvironments(
+		name: inheritableInWranglerEnvironments(
 			diagnostics,
 			enableServiceEnvironments,
 			topLevelEnv,
