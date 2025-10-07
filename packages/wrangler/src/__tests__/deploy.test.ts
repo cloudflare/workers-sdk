@@ -16324,29 +16324,6 @@ SECRET3=value3`
 	`);
 	});
 
-	it("should inherit secrets when not providing secrets file", async () => {
-		mockServiceScriptData({
-			scriptName: workerName,
-			script: { id: workerName },
-		});
-		mockSubDomainRequest();
-		mockUploadWorkerRequest({
-			expectedCompatibilityDate: "2022-01-12",
-			expectedMainModule: "index.js",
-			keepSecrets: true,
-		});
-
-		await runWrangler("deploy");
-
-		expect(std.out).toMatchInlineSnapshot(`
-		"Total Upload: xx KiB / gzip: xx KiB
-		Uploaded test-worker (TIMINGS)
-		Deployed test-worker triggers (TIMINGS)
-		  https://test-worker.test-sub-domain.workers.dev
-		Current Version ID: Galaxy-Class"
-	`);
-	});
-
 	it("should fail when secrets file does not exist", async () => {
 		await expect(
 			runWrangler("deploy --secrets-file non-existent-file.json")
