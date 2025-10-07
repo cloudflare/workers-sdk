@@ -243,6 +243,12 @@ export const deployCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
+		"secrets-file": {
+			describe:
+				"Path to a file containing secrets to upload with the deployment (JSON or .env format)",
+			type: "string",
+			requiresArg: true,
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -389,6 +395,7 @@ export const deployCommand = createCommand({
 			experimentalAutoCreate: args.experimentalAutoCreate,
 			containersRollout: args.containersRollout,
 			strict: args.strict,
+			secretsFile: args.secretsFile,
 		});
 
 		writeOutput({
