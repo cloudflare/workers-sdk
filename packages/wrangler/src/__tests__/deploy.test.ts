@@ -16162,3 +16162,203 @@ declare module "vitest" {
 	interface Assertion extends CustomMatchers {}
 	interface AsymmetricMatchersContaining extends CustomMatchers {}
 }
+
+describe("deploy --secrets-file", () => {
+	const std = mockConsoleMethods();
+	runInTempDir();
+	mockAccountId();
+	mockApiToken();
+
+	const workerName = "test-worker";
+
+	beforeEach(() => {
+		mockLastDeploymentRequest();
+		mockDeploymentsListRequest();
+		writeWranglerConfig({
+			name: workerName,
+			main: "./index.js",
+		});
+		writeWorkerSource();
+	});
+
+	it("should upload secrets from a JSON file alongside the worker", async () => {
+		const secretsFile = "secrets.json";
+		fs.writeFileSync(
+			secretsFile,
+			JSON.stringify({
+				SECRET1: "value1",
+				SECRET2: "value2",
+			})
+		);
+
+		mockServiceScriptData({
+			scriptName: workerName,
+			script: { id: workerName },
+		});
+		mockSubDomainRequest();
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					type: "secret_text",
+					name: "SECRET1",
+					text: "value1",
+				},
+				{
+					type: "secret_text",
+					name: "SECRET2",
+					text: "value2",
+				},
+			],
+			expectedCompatibilityDate: "2022-01-12",
+			expectedMainModule: "index.js",
+			keepSecrets: true,
+		});
+
+		await runWrangler(`deploy --secrets-file ${secretsFile}`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"Total Upload: xx KiB / gzip: xx KiB
+		Your worker has access to the following bindings:
+		- Secrets:
+		  - SECRET1: (hidden)
+		  - SECRET2: (hidden)
+		Uploaded test-worker (TIMINGS)
+		Deployed test-worker triggers (TIMINGS)
+		  https://test-worker.test-sub-domain.workers.dev
+		Current Version ID: Galaxy-Class"
+	`);
+	});
+
+	it("should upload secrets from a .env file alongside the worker", async () => {
+		const secretsFile = ".env.production";
+		fs.writeFileSync(
+			secretsFile,
+			`SECRET1=value1
+SECRET2=value2
+# Comment line
+SECRET3=value3`
+		);
+
+		mockServiceScriptData({
+			scriptName: workerName,
+			script: { id: workerName },
+		});
+		mockSubDomainRequest();
+		mockUploadWorkerRequest({
+			expectedBindings: expect.arrayContaining([
+				{
+					type: "secret_text",
+					name: "SECRET1",
+					text: "value1",
+				},
+				{
+					type: "secret_text",
+					name: "SECRET2",
+					text: "value2",
+				},
+				{
+					type: "secret_text",
+					name: "SECRET3",
+					text: "value3",
+				},
+			]),
+			expectedCompatibilityDate: "2022-01-12",
+			expectedMainModule: "index.js",
+			keepSecrets: true,
+		});
+
+		await runWrangler(`deploy --secrets-file ${secretsFile}`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"Total Upload: xx KiB / gzip: xx KiB
+		Your worker has access to the following bindings:
+		- Secrets:
+		  - SECRET1: (hidden)
+		  - SECRET2: (hidden)
+		  - SECRET3: (hidden)
+		Uploaded test-worker (TIMINGS)
+		Deployed test-worker triggers (TIMINGS)
+		  https://test-worker.test-sub-domain.workers.dev
+		Current Version ID: Galaxy-Class"
+	`);
+	});
+
+	it("should set keepSecrets to inherit non-provided secrets when providing secrets file", async () => {
+		const secretsFile = "secrets.json";
+		fs.writeFileSync(
+			secretsFile,
+			JSON.stringify({
+				MY_SECRET: "secret_value",
+			})
+		);
+
+		mockServiceScriptData({
+			scriptName: workerName,
+			script: { id: workerName },
+		});
+		mockSubDomainRequest();
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					type: "secret_text",
+					name: "MY_SECRET",
+					text: "secret_value",
+				},
+			],
+			expectedCompatibilityDate: "2022-01-12",
+			expectedMainModule: "index.js",
+			keepSecrets: true,
+		});
+
+		await runWrangler(`deploy --secrets-file ${secretsFile}`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"Total Upload: xx KiB / gzip: xx KiB
+		Your worker has access to the following bindings:
+		- Secrets:
+		  - MY_SECRET: (hidden)
+		Uploaded test-worker (TIMINGS)
+		Deployed test-worker triggers (TIMINGS)
+		  https://test-worker.test-sub-domain.workers.dev
+		Current Version ID: Galaxy-Class"
+	`);
+	});
+
+	it("should inherit secrets when not providing secrets file", async () => {
+		mockServiceScriptData({
+			scriptName: workerName,
+			script: { id: workerName },
+		});
+		mockSubDomainRequest();
+		mockUploadWorkerRequest({
+			expectedCompatibilityDate: "2022-01-12",
+			expectedMainModule: "index.js",
+			keepSecrets: true,
+		});
+
+		await runWrangler("deploy");
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"Total Upload: xx KiB / gzip: xx KiB
+		Uploaded test-worker (TIMINGS)
+		Deployed test-worker triggers (TIMINGS)
+		  https://test-worker.test-sub-domain.workers.dev
+		Current Version ID: Galaxy-Class"
+	`);
+	});
+
+	it("should fail when secrets file does not exist", async () => {
+		await expect(
+			runWrangler("deploy --secrets-file non-existent-file.json")
+		).rejects.toThrowError();
+	});
+
+	it("should fail when secrets file contains invalid JSON", async () => {
+		const secretsFile = "invalid.json";
+		fs.writeFileSync(secretsFile, "{ invalid json }");
+
+		await expect(
+			runWrangler(`deploy --secrets-file ${secretsFile}`)
+		).rejects.toThrowError();
+	});
+});
