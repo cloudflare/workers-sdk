@@ -73,12 +73,14 @@ export abstract class Controller<
 	async teardown(): Promise<void> {
 		this.#tearingDown = true;
 	}
-	emitErrorEvent(data: ErrorEvent) {
+	emitErrorEvent(event: ErrorEvent) {
 		if (this.#tearingDown) {
 			logger.debug("Suppressing error event during teardown");
+			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
+			logger.debug("=> Error contextual data:", event.data);
 			return;
 		}
-		this.emit("error", data);
+		this.emit("error", event);
 	}
 }
 
