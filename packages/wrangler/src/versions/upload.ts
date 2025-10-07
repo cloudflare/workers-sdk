@@ -1,7 +1,10 @@
 import assert from "node:assert";
+import { execSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
+import { Response } from "undici";
 import {
 	getAssetsOptions,
 	syncAssets,
@@ -25,7 +28,16 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
-import { getCIOverrideName } from "../environment-variables/misc-variables";
+import {
+	getCIGeneratePreviewAlias,
+	getCIOverrideName,
+	getWorkersCIBranchName,
+} from "../environment-variables/misc-variables";
+import {
+	applyServiceAndEnvironmentTags,
+	tagsAreEqual,
+	warnOnErrorUpdatingServiceAndEnvironmentTags,
+} from "../environments";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
@@ -44,12 +56,14 @@ import {
 } from "../sourcemap";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import { patchNonVersionedScriptSettings } from "./api";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
@@ -63,7 +77,7 @@ type Props = {
 	entry: Entry;
 	rules: Config["rules"];
 	name: string;
-	legacyEnv: boolean | undefined;
+	useServiceEnvironments: boolean | undefined;
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
@@ -77,7 +91,6 @@ type Props = {
 	isWorkersSite: boolean;
 	minify: boolean | undefined;
 	uploadSourceMaps: boolean | undefined;
-	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
 	outFile: string | undefined;
 	dryRun: boolean | undefined;
@@ -88,6 +101,7 @@ type Props = {
 
 	tag: string | undefined;
 	message: string | undefined;
+	previewAlias: string | undefined;
 };
 
 export const versionsUploadCommand = createCommand({
@@ -104,17 +118,33 @@ export const versionsUploadCommand = createCommand({
 			requiresArg: true,
 		},
 		name: {
-			describe: "Name of the worker",
+			describe: "Name of the Worker",
+			type: "string",
+			requiresArg: true,
+		},
+		tag: {
+			describe: "A tag for this Worker Gradual Rollouts Version",
+			type: "string",
+			requiresArg: true,
+		},
+		message: {
+			describe:
+				"A descriptive message for this Worker Gradual Rollouts Version",
+			type: "string",
+			requiresArg: true,
+		},
+		"preview-alias": {
+			describe: "Name of an alias for this Worker version",
 			type: "string",
 			requiresArg: true,
 		},
 		bundle: {
-			describe: "Run wrangler's compilation step before publishing",
+			describe: "Run Wrangler's compilation step before publishing",
 			type: "boolean",
 			hidden: true,
 		},
 		"no-bundle": {
-			describe: "Skip internal build steps and directly deploy Worker",
+			describe: "Skip internal build steps and directly upload Worker",
 			type: "boolean",
 			default: false,
 		},
@@ -149,19 +179,6 @@ export const versionsUploadCommand = createCommand({
 			describe: "Static assets to be served. Replaces Workers Sites.",
 			type: "string",
 			requiresArg: true,
-		},
-		format: {
-			choices: ["modules", "service-worker"] as const,
-			describe: "Choose an entry type",
-			deprecated: true,
-			hidden: true,
-		},
-		"legacy-assets": {
-			describe: "Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
 		},
 		site: {
 			describe: "Root folder of static assets for Workers Sites",
@@ -233,21 +250,12 @@ export const versionsUploadCommand = createCommand({
 		"node-compat": {
 			describe: "Enable Node.js compatibility",
 			type: "boolean",
+			hidden: true,
+			deprecated: true,
 		},
 		"dry-run": {
-			describe: "Don't actually deploy",
+			describe: "Compile a project without actually uploading the version.",
 			type: "boolean",
-		},
-		tag: {
-			describe: "A tag for this Worker Gradual Rollouts Version",
-			type: "string",
-			requiresArg: true,
-		},
-		message: {
-			describe:
-				"A descriptive message for this Worker Gradual Rollouts Version",
-			type: "string",
-			requiresArg: true,
 		},
 		"experimental-auto-create": {
 			describe: "Automatically provision draft bindings with new resources",
@@ -262,8 +270,11 @@ export const versionsUploadCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			ASSETS_RPC: false,
+			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? true,
+			DEPLOY_REMOTE_DIFF_CHECK: false,
+			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
 		const entry = await getEntry(args, config, "versions upload");
@@ -277,29 +288,21 @@ export const versionsUploadCommand = createCommand({
 			}
 		);
 
+		if (args.nodeCompat) {
+			throw new UserError(
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+			);
+		}
+
 		if (args.site || config.site) {
 			throw new UserError(
 				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
 				{ telemetryMessage: true }
 			);
 		}
-		if (args.legacyAssets || config.legacy_assets) {
-			throw new UserError(
-				"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
-				{ telemetryMessage: true }
-			);
-		}
-
-		if (config.workflows?.length) {
-			logger.once.warn("Workflows is currently in open beta.");
-		}
 
 		validateAssetsArgsAndConfig(
 			{
-				// given that legacyAssets and sites are not supported by
-				// `wrangler versions upload` pass them as undefined to
-				// skip the corresponding mutual exclusivity validation
-				legacyAssets: undefined,
 				site: undefined,
 				assets: args.assets,
 				script: args.script,
@@ -339,47 +342,56 @@ export const versionsUploadCommand = createCommand({
 			);
 		}
 
-		if (!args.dryRun) {
-			assert(accountId, "Missing account ID");
-			await verifyWorkerMatchesCITag(accountId, name, config.configPath);
-		}
+		const previewAlias =
+			args.previewAlias ??
+			(getCIGeneratePreviewAlias() === "true"
+				? generatePreviewAlias(name)
+				: undefined);
 
 		if (!args.dryRun) {
-			await standardPricingWarning(config);
+			assert(accountId, "Missing account ID");
+			await verifyWorkerMatchesCITag(
+				config,
+				accountId,
+				name,
+				config.configPath
+			);
 		}
-		const { versionId, workerTag, versionPreviewUrl } = await versionsUpload({
-			config,
-			accountId,
-			name,
-			rules: getRules(config),
-			entry,
-			legacyEnv: isLegacyEnv(config),
-			env: args.env,
-			compatibilityDate: args.latest
-				? new Date().toISOString().substring(0, 10)
-				: args.compatibilityDate,
-			compatibilityFlags: args.compatibilityFlags,
-			vars: cliVars,
-			defines: cliDefines,
-			alias: cliAlias,
-			jsxFactory: args.jsxFactory,
-			jsxFragment: args.jsxFragment,
-			tsconfig: args.tsconfig,
-			assetsOptions,
-			minify: args.minify,
-			uploadSourceMaps: args.uploadSourceMaps,
-			nodeCompat: args.nodeCompat,
-			isWorkersSite: Boolean(args.site || config.site),
-			outDir: args.outdir,
-			dryRun: args.dryRun,
-			noBundle: !(args.bundle ?? !config.no_bundle),
-			keepVars: false,
-			projectRoot: entry.projectRoot,
-			tag: args.tag,
-			message: args.message,
-			experimentalAutoCreate: args.experimentalAutoCreate,
-			outFile: args.outfile,
-		});
+
+		const { versionId, workerTag, versionPreviewUrl, versionPreviewAliasUrl } =
+			await versionsUpload({
+				config,
+				accountId,
+				name,
+				rules: getRules(config),
+				entry,
+				useServiceEnvironments: useServiceEnvironments(config),
+				env: args.env,
+				compatibilityDate: args.latest
+					? formatCompatibilityDate(new Date())
+					: args.compatibilityDate,
+				compatibilityFlags: args.compatibilityFlags,
+				vars: cliVars,
+				defines: cliDefines,
+				alias: cliAlias,
+				jsxFactory: args.jsxFactory,
+				jsxFragment: args.jsxFragment,
+				tsconfig: args.tsconfig,
+				assetsOptions,
+				minify: args.minify,
+				uploadSourceMaps: args.uploadSourceMaps,
+				isWorkersSite: Boolean(args.site || config.site),
+				outDir: args.outdir,
+				dryRun: args.dryRun,
+				noBundle: !(args.bundle ?? !config.no_bundle),
+				keepVars: config.keep_vars,
+				projectRoot: entry.projectRoot,
+				tag: args.tag,
+				message: args.message,
+				previewAlias: previewAlias,
+				experimentalAutoCreate: args.experimentalAutoCreate,
+				outFile: args.outfile,
+			});
 
 		writeOutput({
 			type: "version-upload",
@@ -388,29 +400,24 @@ export const versionsUploadCommand = createCommand({
 			worker_tag: workerTag,
 			version_id: versionId,
 			preview_url: versionPreviewUrl,
+			preview_alias_url: versionPreviewAliasUrl,
 			wrangler_environment: args.env,
 			worker_name_overridden: workerNameOverridden,
 		});
 	},
 });
 
-async function standardPricingWarning(config: Config) {
-	if (config.usage_model !== undefined) {
-		logger.warn(
-			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
-		);
-	}
-}
-
 export default async function versionsUpload(props: Props): Promise<{
 	versionId: string | null;
 	workerTag: string | null;
 	versionPreviewUrl?: string | undefined;
+	versionPreviewAliasUrl?: string | undefined;
 }> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
 	let versionId: string | null = null;
 	let workerTag: string | null = null;
+	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
 
 	if (accountId && name) {
 		try {
@@ -420,14 +427,17 @@ export default async function versionsUpload(props: Props): Promise<{
 				default_environment: {
 					script: {
 						tag: string;
+						tags: string[] | null;
 						last_deployed_from: "dash" | "wrangler" | "api";
 					};
 				};
 			}>(
+				config,
 				`/accounts/${accountId}/workers/services/${name}` // TODO(consider): should this be a /versions endpoint?
 			);
 
 			workerTag = script.tag;
+			tags = script.tags ?? tags;
 
 			if (script.last_deployed_from === "dash") {
 				logger.warn(
@@ -459,12 +469,13 @@ export default async function versionsUpload(props: Props): Promise<{
 		}
 	}
 
-	if (!(props.compatibilityDate || config.compatibility_date)) {
-		const compatibilityDateStr = `${new Date().getFullYear()}-${(
-			new Date().getMonth() +
-			1 +
-			""
-		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
+	const compatibilityDate =
+		props.compatibilityDate || config.compatibility_date;
+	const compatibilityFlags =
+		props.compatibilityFlags ?? config.compatibility_flags;
+
+	if (!compatibilityDate) {
+		const compatibilityDateStr = formatCompatibilityDate(new Date());
 
 		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
@@ -480,16 +491,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const minify = props.minify ?? config.minify;
 
 	const nodejsCompatMode = validateNodeCompatMode(
-		props.compatibilityDate ?? config.compatibility_date,
-		props.compatibilityFlags ?? config.compatibility_flags,
+		compatibilityDate,
+		compatibilityFlags,
 		{
-			nodeCompat: props.nodeCompat ?? config.node_compat,
 			noBundle: props.noBundle ?? config.no_bundle,
 		}
 	);
-
-	const compatibilityFlags =
-		props.compatibilityFlags ?? config.compatibility_flags;
 
 	// Warn if user tries minify or node-compat with no-bundle
 	if (props.noBundle && minify) {
@@ -589,30 +596,28 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						serveLegacyAssetsFromWorker: false,
 						doBindings: config.durable_objects.bindings,
 						workflowBindings: config.workflows,
 						jsxFactory,
 						jsxFragment,
 						tsconfig: props.tsconfig ?? config.tsconfig,
 						minify,
+						keepNames: config.keep_names ?? true,
 						sourcemap: uploadSourceMaps,
 						nodejsCompatMode,
+						compatibilityDate,
+						compatibilityFlags,
 						define: { ...config.define, ...props.defines },
 						alias: { ...config.alias, ...props.alias },
 						checkFetch: false,
-						legacyAssets: config.legacy_assets,
-						mockAnalyticsEngineDatasets: [],
-						// enable the cache when publishing
-						bypassAssetCache: false,
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
 						local: false,
 						projectRoot: props.projectRoot,
 						defineNavigatorUserAgent: isNavigatorDefined(
-							props.compatibilityDate ?? config.compatibility_date,
-							props.compatibilityFlags ?? config.compatibility_flags
+							compatibilityDate,
+							compatibilityFlags
 						),
 						plugins: [logBuildOutput(nodejsCompatMode)],
 
@@ -625,6 +630,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// These options are dev-only
 						testScheduled: undefined,
 						watch: undefined,
+						metafile: undefined,
 					}
 				);
 
@@ -650,7 +656,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			? await getMigrationsToUpload(scriptName, {
 					accountId,
 					config,
-					legacyEnv: props.legacyEnv,
+					useServiceEnvironments: props.useServiceEnvironments,
 					env: props.env,
 					dispatchNamespace: undefined,
 				})
@@ -659,7 +665,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// Upload assets if assets is being used
 		const assetsJwt =
 			props.assetsOptions && !props.dryRun
-				? await syncAssets(accountId, props.assetsOptions.directory, scriptName)
+				? await syncAssets(
+						config,
+						accountId,
+						props.assetsOptions.directory,
+						scriptName
+					)
 				: undefined;
 
 		const bindings = getBindings({
@@ -689,9 +700,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
-			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
+			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
-			keepVars: false, // the wrangler.toml should be the source-of-truth for vars
+			keepVars: props.keepVars ?? false,
 			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
 			placement,
 			tail_consumers: config.tail_consumers,
@@ -699,6 +710,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			annotations: {
 				"workers/message": props.message,
 				"workers/tag": props.tag,
+				"workers/alias": props.previewAlias,
 			},
 			assets:
 				props.assetsOptions && assetsJwt
@@ -708,6 +720,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							assetConfig: props.assetsOptions.assetConfig,
 							_redirects: props.assetsOptions._redirects,
 							_headers: props.assetsOptions._headers,
+							run_worker_first: props.assetsOptions.run_worker_first,
 						}
 					: undefined,
 			logpush: undefined, // both logpush and observability are not supported in versions upload
@@ -734,7 +747,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		if (props.dryRun) {
 			workerBundle = createWorkerUploadForm(worker);
-			printBindings({ ...bindings, vars: maskedVars });
+			printBindings({ ...bindings, vars: maskedVars }, config.tail_consumers);
 		} else {
 			assert(accountId, "Missing accountId");
 			if (getFlag("RESOURCES_PROVISION")) {
@@ -760,7 +773,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						metadata: {
 							has_preview: boolean;
 						};
-					}>(`${workerUrl}/versions`, {
+					}>(config, `${workerUrl}/versions`, {
 						method: "POST",
 						body: workerBundle,
 						headers: await getMetricsUsageHeaders(config.send_metrics),
@@ -769,12 +782,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
-				printBindings({ ...bindings, vars: maskedVars });
+				printBindings({ ...bindings, vars: maskedVars }, config.tail_consumers);
 				versionId = result.id;
 				hasPreview = result.metadata.has_preview;
 			} catch (err) {
 				if (!bindingsPrinted) {
-					printBindings({ ...bindings, vars: maskedVars });
+					printBindings(
+						{ ...bindings, vars: maskedVars },
+						config.tail_consumers
+					);
 				}
 
 				const message = await helpIfErrorIsSizeOrScriptStartup(
@@ -822,6 +838,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				throw err;
 			}
+
+			// Update service and environment tags when using environments
+
+			const nextTags = applyServiceAndEnvironmentTags(config, tags);
+			if (!tagsAreEqual(tags, nextTags)) {
+				try {
+					await patchNonVersionedScriptSettings(config, accountId, scriptName, {
+						tags: nextTags,
+					});
+				} catch {
+					warnOnErrorUpdatingServiceAndEnvironmentTags();
+				}
+			}
 		}
 		if (props.outFile) {
 			// we're using a custom output file,
@@ -854,21 +883,28 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	logger.log("Worker Version ID:", versionId);
 
 	let versionPreviewUrl: string | undefined = undefined;
+	let versionPreviewAliasUrl: string | undefined = undefined;
 
 	if (versionId && hasPreview) {
 		const { previews_enabled: previews_available_on_subdomain } =
 			await fetchResult<{
 				previews_enabled: boolean;
-			}>(`${workerUrl}/subdomain`);
+			}>(config, `${workerUrl}/subdomain`);
 
 		if (previews_available_on_subdomain) {
 			const userSubdomain = await getWorkersDevSubdomain(
+				config,
 				accountId,
 				config.configPath
 			);
 			const shortVersion = versionId.slice(0, 8);
-			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}.workers.dev`;
+			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}`;
 			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
+
+			if (props.previewAlias) {
+				versionPreviewAliasUrl = `https://${props.previewAlias}-${workerName}.${userSubdomain}`;
+				logger.log(`Version Preview Alias URL: ${versionPreviewAliasUrl}`);
+			}
 		}
 	}
 
@@ -884,9 +920,113 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 `)
 	);
 
-	return { versionId, workerTag, versionPreviewUrl };
+	return { versionId, workerTag, versionPreviewUrl, versionPreviewAliasUrl };
 }
 
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
+}
+
+// Constants for DNS label constraints and hash configuration
+const MAX_DNS_LABEL_LENGTH = 63;
+const HASH_LENGTH = 4;
+const ALIAS_VALIDATION_REGEX = /^[a-z](?:[a-z0-9-]*[a-z0-9])?$/i;
+
+/**
+ * Sanitizes a branch name to create a valid DNS label alias.
+ * Converts to lowercase, replaces invalid chars with dashes, removes consecutive dashes.
+ */
+function sanitizeBranchName(branchName: string): string {
+	return branchName
+		.replace(/[^a-zA-Z0-9-]/g, "-")
+		.replace(/-+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.toLowerCase();
+}
+
+/**
+ * Gets the current branch name from CI environment or git.
+ */
+function getBranchName(): string | undefined {
+	// Try CI environment variable first
+	const ciBranchName = getWorkersCIBranchName();
+	if (ciBranchName) {
+		return ciBranchName;
+	}
+
+	// Fall back to git commands
+	try {
+		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
+		return execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim();
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Creates a truncated alias with hash suffix when the branch name is too long.
+ * Hash from original branch name to preserve uniqueness.
+ */
+function createTruncatedAlias(
+	branchName: string,
+	sanitizedAlias: string,
+	availableSpace: number
+): string | undefined {
+	const spaceForHash = HASH_LENGTH + 1; // +1 for hyphen separator
+	const maxPrefixLength = availableSpace - spaceForHash;
+
+	if (maxPrefixLength < 1) {
+		// Not enough space even with truncation
+		return undefined;
+	}
+
+	const hash = createHash("sha256")
+		.update(branchName)
+		.digest("hex")
+		.slice(0, HASH_LENGTH);
+
+	const truncatedPrefix = sanitizedAlias.slice(0, maxPrefixLength);
+	return `${truncatedPrefix}-${hash}`;
+}
+
+/**
+ * Generates a preview alias based on the current git branch.
+ * Alias must be <= 63 characters, alphanumeric + dashes only, and start with a letter.
+ * Returns undefined if not in a git directory or requirements cannot be met.
+ */
+export function generatePreviewAlias(scriptName: string): string | undefined {
+	const warnAndExit = () => {
+		logger.warn(
+			`Preview alias generation requested, but could not be autogenerated.`
+		);
+		return undefined;
+	};
+
+	const branchName = getBranchName();
+	if (!branchName) {
+		return warnAndExit();
+	}
+
+	const sanitizedAlias = sanitizeBranchName(branchName);
+
+	// Validate the sanitized alias meets DNS label requirements
+	if (!ALIAS_VALIDATION_REGEX.test(sanitizedAlias)) {
+		return warnAndExit();
+	}
+
+	const availableSpace = MAX_DNS_LABEL_LENGTH - scriptName.length - 1;
+
+	// If the sanitized alias fits within the remaining space, return it,
+	// otherwise otherwise try truncation with hash suffixed
+	if (sanitizedAlias.length <= availableSpace) {
+		return sanitizedAlias;
+	}
+
+	const truncatedAlias = createTruncatedAlias(
+		branchName,
+		sanitizedAlias,
+		availableSpace
+	);
+
+	return truncatedAlias || warnAndExit();
 }

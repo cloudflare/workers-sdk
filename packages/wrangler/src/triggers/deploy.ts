@@ -9,7 +9,9 @@ import {
 	updateQueueConsumers,
 	validateRoutes,
 } from "../deploy/deploy";
+import { getSubdomainMixedStateCheckDisabled } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
@@ -26,10 +28,11 @@ type Props = {
 	name: string | undefined;
 	env: string | undefined;
 	triggers: string[] | undefined;
-	routes: string[] | undefined;
-	legacyEnv: boolean | undefined;
+	routes: Route[] | undefined;
+	useServiceEnvironments: boolean | undefined;
 	dryRun: boolean | undefined;
 	assetsOptions: AssetsOptions | undefined;
+	firstDeploy: boolean;
 };
 
 export default async function triggersDeploy(
@@ -51,9 +54,6 @@ export default async function triggersDeploy(
 		}
 	}
 
-	// deployToWorkersDev defaults to true only if there aren't any routes defined
-	const deployToWorkersDev = config.workers_dev ?? routes.length === 0;
-
 	if (!scriptName) {
 		throw new UserError(
 			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
@@ -64,19 +64,15 @@ export default async function triggersDeploy(
 	const envName = props.env ?? "production";
 
 	const start = Date.now();
-	const notProd = Boolean(!props.legacyEnv && props.env);
-	const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
-	const workerUrl = notProd
+	const useServiceEnvironments = Boolean(
+		props.useServiceEnvironments && props.env
+	);
+	const workerName = useServiceEnvironments
+		? `${scriptName} (${envName})`
+		: scriptName;
+	const workerUrl = useServiceEnvironments
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
-
-	const {
-		enabled: available_on_subdomain,
-		previews_enabled: previews_available_on_subdomain,
-	} = await fetchResult<{
-		enabled: boolean;
-		previews_enabled: boolean;
-	}>(`${workerUrl}/subdomain`);
 
 	if (!props.dryRun) {
 		await ensureQueuesExistByConfig(config);
@@ -94,54 +90,18 @@ export default async function triggersDeploy(
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<string[]>[] = [];
 
-	const deploymentInSync = deployToWorkersDev === available_on_subdomain;
-	const previewsInSync =
-		config.preview_urls === previews_available_on_subdomain;
+	const { wantWorkersDev, workersDevInSync } = await subdomainDeploy(
+		props,
+		accountId,
+		scriptName,
+		envName,
+		workerUrl,
+		routes,
+		deployments,
+		props.firstDeploy
+	);
 
-	if (deployToWorkersDev) {
-		// Deploy to a subdomain of `workers.dev`
-		const userSubdomain = await getWorkersDevSubdomain(
-			accountId,
-			config.configPath
-		);
-
-		const deploymentURL =
-			props.legacyEnv || !props.env
-				? `${scriptName}.${userSubdomain}.workers.dev`
-				: `${envName}.${scriptName}.${userSubdomain}.workers.dev`;
-
-		if (deploymentInSync && previewsInSync) {
-			deployments.push(Promise.resolve([deploymentURL]));
-		} else {
-			// Enable the `workers.dev` subdomain.
-			deployments.push(
-				fetchResult(`${workerUrl}/subdomain`, {
-					method: "POST",
-					body: JSON.stringify({
-						enabled: true,
-						previews_enabled: config.preview_urls,
-					}),
-					headers: {
-						"Content-Type": "application/json",
-					},
-				}).then(() => [deploymentURL])
-			);
-		}
-	}
-	if (!deployToWorkersDev && (!deploymentInSync || !previewsInSync)) {
-		// Disable the workers.dev deployment
-		await fetchResult(`${workerUrl}/subdomain`, {
-			method: "POST",
-			body: JSON.stringify({
-				enabled: false,
-				previews_enabled: config.preview_urls,
-			}),
-			headers: {
-				"Content-Type": "application/json",
-			},
-		});
-	}
-	if (!deployToWorkersDev && deploymentInSync && routes.length !== 0) {
+	if (!wantWorkersDev && workersDevInSync && routes.length !== 0) {
 		// TODO is this true? How does last subdomain status affect route confict??
 		// Why would we only need to validate route conflicts if didn't need to
 		// disable the subdomain deployment?
@@ -172,7 +132,11 @@ export default async function triggersDeploy(
 		for (const route of routes) {
 			queuePromises.push(
 				queue.add(async () => {
-					const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
+					const zone = await getZoneForRoute(
+						config,
+						{ route, accountId },
+						zoneIdCache
+					);
 					if (!zone) {
 						return;
 					}
@@ -186,7 +150,7 @@ export default async function triggersDeploy(
 							fetchListResult<{
 								pattern: string;
 								script: string;
-							}>(`/zones/${zone.id}/workers/routes`)
+							}>(config, `/zones/${zone.id}/workers/routes`)
 						);
 						zoneRoutesCache.set(zone.id, routesInZone);
 					}
@@ -232,10 +196,10 @@ export default async function triggersDeploy(
 	// Update routing table for the script.
 	if (routesOnly.length > 0) {
 		deployments.push(
-			publishRoutes(routesOnly, {
+			publishRoutes(config, routesOnly, {
 				workerUrl,
 				scriptName,
-				notProd,
+				useServiceEnvironments,
 				accountId,
 			}).then(() => {
 				if (routesOnly.length > 10) {
@@ -252,7 +216,7 @@ export default async function triggersDeploy(
 	// Update custom domains for the script
 	if (customDomainsOnly.length > 0) {
 		deployments.push(
-			publishCustomDomains(workerUrl, accountId, customDomainsOnly)
+			publishCustomDomains(config, workerUrl, accountId, customDomainsOnly)
 		);
 	}
 
@@ -261,7 +225,7 @@ export default async function triggersDeploy(
 	// If it is an empty array we will remove all schedules.
 	if (schedules) {
 		deployments.push(
-			fetchResult(`${workerUrl}/schedules`, {
+			fetchResult(config, `${workerUrl}/schedules`, {
 				// Note: PUT will override previous schedules on this script.
 				method: "PUT",
 				body: JSON.stringify(schedules.map((cron) => ({ cron }))),
@@ -287,8 +251,6 @@ export default async function triggersDeploy(
 	}
 
 	if (config.workflows?.length) {
-		logger.once.warn("Workflows is currently in open beta.");
-
 		for (const workflow of config.workflows) {
 			// NOTE: if the user provides a script_name thats not this script (aka bounds to another worker)
 			// we don't want to send this worker's config.
@@ -300,16 +262,20 @@ export default async function triggersDeploy(
 			}
 
 			deployments.push(
-				fetchResult(`/accounts/${accountId}/workflows/${workflow.name}`, {
-					method: "PUT",
-					body: JSON.stringify({
-						script_name: scriptName,
-						class_name: workflow.class_name,
-					}),
-					headers: {
-						"Content-Type": "application/json",
-					},
-				}).then(() => [`workflow: ${workflow.name}`])
+				fetchResult(
+					config,
+					`/accounts/${accountId}/workflows/${workflow.name}`,
+					{
+						method: "PUT",
+						body: JSON.stringify({
+							script_name: scriptName,
+							class_name: workflow.class_name,
+						}),
+						headers: {
+							"Content-Type": "application/json",
+						},
+					}
+				).then(() => [`workflow: ${workflow.name}`])
 			);
 		}
 	}
@@ -332,4 +298,236 @@ export default async function triggersDeploy(
 	} else {
 		logger.log("No deploy targets for", workerName, formatTime(deployMs));
 	}
+}
+
+// getSubdomainValues returns the values for workers_dev and preview_urls.
+// Defaults are computed at the API level.
+export function getSubdomainValues(
+	config_workers_dev: boolean | undefined,
+	config_preview_urls: boolean | undefined,
+	routes: Route[]
+): {
+	workers_dev: boolean;
+	preview_urls?: boolean;
+} {
+	const defaultWorkersDev = routes.length === 0; // Default to true only if there aren't any routes defined.
+	const workers_dev = config_workers_dev ?? defaultWorkersDev;
+	const defaultPreviewUrls = undefined; // Undefined lets the API compute the default.
+	const preview_urls = config_preview_urls ?? defaultPreviewUrls;
+	return {
+		workers_dev,
+		preview_urls,
+	};
+}
+
+// getSubdomainValuesAPIMock returns the values for workers_dev and preview_urls.
+// Mimics the logic in the API, ideally we would obtain defaults from the API.
+export function getSubdomainValuesAPIMock(
+	config_workers_dev: boolean | undefined,
+	config_preview_urls: boolean | undefined,
+	routes: Route[]
+): {
+	workers_dev: boolean;
+	preview_urls: boolean;
+} {
+	const defaultWorkersDev = routes.length === 0; // Default to true only if there aren't any routes defined.
+	const workers_dev = config_workers_dev ?? defaultWorkersDev;
+	const defaultPreviewUrls = defaultWorkersDev; // Default to workers_dev status.
+	const preview_urls = config_preview_urls ?? defaultPreviewUrls;
+	return {
+		workers_dev,
+		preview_urls,
+	};
+}
+
+async function validateSubdomainMixedState(
+	props: Props,
+	accountId: string,
+	scriptName: string,
+	before: { workers_dev: boolean; preview_urls: boolean },
+	after: { workers_dev: boolean; preview_urls: boolean },
+	firstDeploy: boolean
+): Promise<{
+	workers_dev: boolean;
+	preview_urls: boolean;
+}> {
+	const { config } = props;
+
+	const changed =
+		after.workers_dev !== before.workers_dev ||
+		after.preview_urls !== before.preview_urls;
+
+	// Early return if config values are the same as remote values (so we only warn on change)
+	if (!changed) {
+		return after;
+	}
+
+	// Early return if check disabled through environment variable.
+	if (getSubdomainMixedStateCheckDisabled()) {
+		return after;
+	}
+
+	// Early return if non-interactive or CI
+	if (isNonInteractiveOrCI()) {
+		return after;
+	}
+
+	// Early return if this is the first deploy
+	if (firstDeploy) {
+		return after;
+	}
+
+	// Early return if config values are the same (e.g. both true or both false, not in mixed state)
+	if (after.workers_dev === after.preview_urls) {
+		return after;
+	}
+
+	const userSubdomain = await getWorkersDevSubdomain(
+		config,
+		accountId,
+		config.configPath
+	);
+	const previewUrl = `https://<VERSION_PREFIX>-${scriptName}.${userSubdomain}`;
+
+	// Scenario 1: User disables workers.dev while having preview URLs enabled
+	if (!after.workers_dev && after.preview_urls) {
+		logger.warn(
+			[
+				"You are disabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still enabled.",
+				"Preview URLs will automatically generate a unique, shareable link for each new version which will be accessible at:",
+				`  ${previewUrl}`,
+				"",
+				"To prevent this Worker from being unintentionally public, you may want to disable the Preview URLs as well by setting `preview_urls = false` in your Wrangler config file.",
+			].join("\n")
+		);
+	}
+
+	// Scenario 2: User enables workers.dev when Preview URLs are off
+	if (after.workers_dev && !after.preview_urls) {
+		logger.warn(
+			[
+				"You are enabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still disabled.",
+				"Preview URLs will automatically generate a unique, shareable link for each new version which will be accessible at:",
+				`  ${previewUrl}`,
+				"",
+				"You may want to enable the Preview URLs as well by setting `preview_urls = true` in your Wrangler config file.",
+			].join("\n")
+		);
+	}
+
+	return after;
+}
+
+async function subdomainDeploy(
+	props: Props,
+	accountId: string,
+	scriptName: string,
+	envName: string,
+	workerUrl: string,
+	routes: Route[],
+	deployments: Array<Promise<string[]>>,
+	firstDeploy: boolean
+) {
+	const { config } = props;
+
+	// Get desired subdomain enablement status.
+
+	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
+		getSubdomainValues(config.workers_dev, config.preview_urls, routes);
+
+	// workers.dev URL is only set if we want to deploy to workers.dev.
+
+	let workersDevURL: string | undefined;
+	if (wantWorkersDev) {
+		const userSubdomain = await getWorkersDevSubdomain(
+			config,
+			accountId,
+			config.configPath
+		);
+		workersDevURL =
+			!props.useServiceEnvironments || !props.env
+				? `${scriptName}.${userSubdomain}`
+				: `${envName}.${scriptName}.${userSubdomain}`;
+	}
+
+	// Get current subdomain enablement status.
+
+	const before = await fetchResult<{
+		enabled: boolean;
+		previews_enabled: boolean;
+	}>(config, `${workerUrl}/subdomain`);
+
+	// Update subdomain status.
+	// Occasionally this update to the subdomain endpoint fails due to some internal API error,
+	// we retry this request a few times to mitigate that.
+
+	const after = await retryOnAPIFailure(async () =>
+		fetchResult<{
+			enabled: boolean;
+			previews_enabled: boolean;
+		}>(config, `${workerUrl}/subdomain`, {
+			method: "POST",
+			body: JSON.stringify({
+				enabled: wantWorkersDev,
+				previews_enabled: wantPreviews,
+			}),
+			headers: {
+				"Content-Type": "application/json",
+				"Cloudflare-Workers-Script-Api-Date": "2025-08-01",
+			},
+		})
+	);
+
+	// Warn about mismatching config and current values.
+
+	if (
+		!firstDeploy &&
+		config.workers_dev == undefined &&
+		after.enabled !== before.enabled
+	) {
+		const beforeStatus = before.enabled ? "enabled" : "disabled";
+		logger.warn(
+			[
+				`Worker has workers.dev ${beforeStatus}, but 'workers_dev' is not in the config.`,
+				`Using default config 'workers_dev = ${after.enabled}', current status will be overwritten.`,
+			].join("\n")
+		);
+	}
+
+	if (
+		!firstDeploy &&
+		config.preview_urls == undefined &&
+		after.previews_enabled !== before.previews_enabled
+	) {
+		const beforeStatus = before.previews_enabled ? "enabled" : "disabled";
+		logger.warn(
+			[
+				`Worker has preview URLs ${beforeStatus}, but 'preview_urls' is not in the config.`,
+				`Using default config 'preview_urls = ${after.previews_enabled}', current status will be overwritten.`,
+			].join("\n")
+		);
+	}
+
+	// Warn about mixed status.
+
+	await validateSubdomainMixedState(
+		props,
+		accountId,
+		scriptName,
+		{ workers_dev: before.enabled, preview_urls: before.previews_enabled },
+		{ workers_dev: after.enabled, preview_urls: after.previews_enabled },
+		firstDeploy
+	);
+
+	// Done.
+
+	if (workersDevURL) {
+		deployments.push(Promise.resolve([workersDevURL]));
+	}
+	return {
+		wantWorkersDev,
+		wantPreviews,
+		workersDevInSync: before.enabled === after.enabled,
+		previewsInSync: before.previews_enabled === after.previews_enabled,
+	};
 }

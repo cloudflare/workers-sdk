@@ -26,7 +26,7 @@ export function mockUploadWorkerRequest(
 		expectedCapnpSchema?: string;
 		expectedLimits?: CfWorkerInit["limits"];
 		env?: string;
-		legacyEnv?: boolean;
+		useServiceEnvironments?: boolean;
 		keepVars?: boolean;
 		keepSecrets?: boolean;
 		tag?: string;
@@ -45,10 +45,8 @@ export function mockUploadWorkerRequest(
 	const handleUpload: HttpResponseResolver = async ({ params, request }) => {
 		const url = new URL(request.url);
 		expect(params.accountId).toEqual("some-account-id");
-		expect(params.scriptName).toEqual(
-			legacyEnv && env ? `${expectedScriptName}-${env}` : expectedScriptName
-		);
-		if (!legacyEnv) {
+		expect(params.scriptName).toEqual(expectedScriptName);
+		if (useServiceEnvironments) {
 			expect(params.envName).toEqual(env);
 		}
 		if (useOldUploadApi) {
@@ -166,7 +164,7 @@ export function mockUploadWorkerRequest(
 		expectedCompatibilityDate,
 		expectedCompatibilityFlags,
 		env = undefined,
-		legacyEnv = false,
+		useServiceEnvironments = true,
 		expectedMigrations,
 		expectedTailConsumers,
 		expectedUnsafeMetaData,
@@ -179,7 +177,12 @@ export function mockUploadWorkerRequest(
 		expectedObservability,
 		expectedSettingsPatch,
 	} = options;
-	if (env && !legacyEnv) {
+
+	const expectedScriptName =
+		options.expectedScriptName ??
+		"test-name" + (!useServiceEnvironments && env ? `-${env}` : "");
+
+	if (env && useServiceEnvironments) {
 		msw.use(
 			http.put(
 				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
@@ -228,7 +231,7 @@ export function mockUploadWorkerRequest(
 	mockGetWorkerSubdomain({
 		enabled: true,
 		env,
-		legacyEnv,
+		useServiceEnvironments,
 		expectedScriptName,
 	});
 }

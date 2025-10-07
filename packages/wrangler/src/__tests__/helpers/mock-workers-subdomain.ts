@@ -38,17 +38,18 @@ export function mockGetWorkerSubdomain({
 	enabled,
 	previews_enabled = true,
 	env,
-	legacyEnv = false,
-	expectedScriptName = "test-name",
+	useServiceEnvironments = true,
+	expectedScriptName = "test-name" +
+		(!useServiceEnvironments && env ? `-${env}` : ""),
 }: {
 	enabled: boolean;
 	previews_enabled?: boolean;
 	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
-	expectedScriptName?: string;
+	useServiceEnvironments?: boolean | undefined;
+	expectedScriptName?: string | false;
 }) {
 	const url =
-		env && !legacyEnv
+		useServiceEnvironments && env
 			? `*/accounts/:accountId/workers/services/:scriptName/environments/:envName/subdomain`
 			: `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`;
 	msw.use(
@@ -56,10 +57,10 @@ export function mockGetWorkerSubdomain({
 			url,
 			({ params }) => {
 				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toEqual(
-					legacyEnv && env ? `${expectedScriptName}-${env}` : expectedScriptName
-				);
-				if (!legacyEnv) {
+				if (expectedScriptName !== false) {
+					expect(params.scriptName).toEqual(expectedScriptName);
+				}
+				if (useServiceEnvironments) {
 					expect(params.envName).toEqual(env);
 				}
 
@@ -77,17 +78,20 @@ export function mockUpdateWorkerSubdomain({
 	enabled,
 	previews_enabled = true,
 	env,
-	legacyEnv = false,
-	expectedScriptName = "test-name",
+	useServiceEnvironments = true,
+	expectedScriptName = "test-name" +
+		(!useServiceEnvironments && env ? `-${env}` : ""),
+	flakeCount = 0,
 }: {
 	enabled: boolean;
 	previews_enabled?: boolean;
 	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
-	expectedScriptName?: string;
+	useServiceEnvironments?: boolean | undefined;
+	expectedScriptName?: string | false;
+	flakeCount?: number; // The first `flakeCount` requests will fail with a 500 error
 }) {
 	const url =
-		env && !legacyEnv
+		env && useServiceEnvironments
 			? `*/accounts/:accountId/workers/services/:scriptName/environments/:envName/subdomain`
 			: `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`;
 	msw.use(
@@ -95,10 +99,10 @@ export function mockUpdateWorkerSubdomain({
 			url,
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toEqual(
-					legacyEnv && env ? `${expectedScriptName}-${env}` : expectedScriptName
-				);
-				if (!legacyEnv) {
+				if (expectedScriptName !== false) {
+					expect(params.scriptName).toEqual(expectedScriptName);
+				}
+				if (useServiceEnvironments) {
 					expect(params.envName).toEqual(env);
 				}
 				const body = await request.json();

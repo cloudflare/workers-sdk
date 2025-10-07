@@ -1,85 +1,80 @@
 import { getAssetsOptions } from "../assets";
-import { readConfig } from "../config";
+import { createCommand, createNamespace } from "../core/create-command";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getScriptName } from "../utils/getScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
-import { printWranglerBanner } from "../wrangler-banner";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import triggersDeploy from "./deploy";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 
-export default function registerTriggersSubcommands(
-	triggersYargs: CommonYargsArgv
-) {
-	triggersYargs.command(
-		"deploy",
-		"Updates the triggers of your current deployment [beta]",
-		triggersDeployOptions,
-		triggersDeployHandler
-	);
-}
-
-function triggersDeployOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.option("name", {
+export const triggersNamespace = createNamespace({
+	metadata: {
+		description: "🎯 Updates the triggers of your current deployment",
+		status: "experimental",
+		owner: "Workers: Authoring and Testing",
+	},
+});
+export const triggersDeployCommand = createCommand({
+	metadata: {
+		description: "Updates the triggers of your current deployment",
+		status: "experimental",
+		owner: "Workers: Authoring and Testing",
+	},
+	args: {
+		name: {
 			describe: "Name of the worker",
 			type: "string",
 			requiresArg: true,
-		})
-		.option("triggers", {
+		},
+		triggers: {
 			describe: "cron schedules to attach",
 			alias: ["schedule", "schedules"],
 			type: "string",
 			requiresArg: true,
 			array: true,
-		})
-		.option("routes", {
+		},
+		routes: {
 			describe: "Routes to upload",
 			alias: "route",
 			type: "string",
 			requiresArg: true,
 			array: true,
-		})
-		.option("dry-run", {
+		},
+		"dry-run": {
 			describe: "Don't actually deploy",
 			type: "boolean",
-		})
-		.option("legacy-env", {
+		},
+		"legacy-env": {
 			type: "boolean",
 			describe: "Use legacy environments",
 			hidden: true,
+		},
+	},
+	behaviour: {
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+	},
+	async handler(args, { config }) {
+		const assetsOptions = getAssetsOptions({ assets: undefined }, config);
+		metrics.sendMetricsEvent(
+			"deploy worker triggers",
+			{},
+			{
+				sendMetrics: config.send_metrics,
+			}
+		);
+
+		const accountId = args.dryRun ? undefined : await requireAuth(config);
+
+		await triggersDeploy({
+			config,
+			accountId,
+			name: getScriptName(args, config),
+			env: args.env,
+			triggers: args.triggers,
+			routes: args.routes,
+			useServiceEnvironments: useServiceEnvironments(config),
+			dryRun: args.dryRun,
+			assetsOptions,
+			firstDeploy: false, // at this point the Worker should already exist.
 		});
-}
-
-async function triggersDeployHandler(
-	args: StrictYargsOptionsToInterface<typeof triggersDeployOptions>
-) {
-	await printWranglerBanner();
-
-	const config = readConfig(args);
-	const assetsOptions = getAssetsOptions({ assets: undefined }, config);
-	metrics.sendMetricsEvent(
-		"deploy worker triggers",
-		{},
-		{
-			sendMetrics: config.send_metrics,
-		}
-	);
-
-	const accountId = args.dryRun ? undefined : await requireAuth(config);
-
-	await triggersDeploy({
-		config,
-		accountId,
-		name: getScriptName(args, config),
-		env: args.env,
-		triggers: args.triggers,
-		routes: args.routes,
-		legacyEnv: isLegacyEnv(config),
-		dryRun: args.dryRun,
-		assetsOptions,
-	});
-}
+	},
+});

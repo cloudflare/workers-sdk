@@ -22,9 +22,9 @@ import {
 import { getDevCompatibilityDate } from "../../utils/getDevCompatibilityDate";
 import { getRules } from "../../utils/getRules";
 import { getScriptName } from "../../utils/getScriptName";
-import { isLegacyEnv } from "../../utils/isLegacyEnv";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
 import { printBindings } from "../../utils/print-bindings";
+import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
 import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -309,8 +309,8 @@ async function resolveConfig(
 		legacy: {
 			site: legacySite,
 			legacyAssets: legacyAssets,
-			enableServiceEnvironments:
-				input.legacy?.enableServiceEnvironments ?? !isLegacyEnv(config),
+			useServiceEnvironments:
+				input.legacy?.useServiceEnvironments ?? useServiceEnvironments(config),
 		},
 		unsafe: {
 			capnp: input.unsafe?.capnp ?? unsafe?.capnp,
@@ -434,8 +434,8 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 					config: input.config,
 					env: input.env,
 					"dispatch-namespace": undefined,
-					"legacy-env": !input.legacy?.enableServiceEnvironments,
-					remote: input.dev?.remote,
+					"legacy-env": !input.legacy?.useServiceEnvironments,
+					remote: !!input.dev?.remote,
 					upstreamProtocol:
 						input.dev?.origin?.secure === undefined
 							? undefined
