@@ -46,7 +46,8 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 
 		expect(std).toMatchInlineSnapshot(`
 			Object {
-			  "debug": "An error occurred while trying to locally profile the Worker: Error: workerd profiling failed",
+			  "debug": "🪵  Writing logs to \\"/Users/penalosa/.wrangler/logs/wrangler-2025-10-07_23-25-03_725.log\\"
+			An error occurred while trying to locally profile the Worker: Error: workerd profiling failed",
 			  "err": "",
 			  "info": "",
 			  "out": "",
