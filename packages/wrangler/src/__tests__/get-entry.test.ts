@@ -130,8 +130,8 @@ describe("getEntry()", () => {
 			{
 				...defaultWranglerConfig,
 				main: "src/index.ts",
-				configPath: "other-worker/wrangler.toml",
-				userConfigPath: "other-worker/wrangler.toml",
+				configPath: "other-worker/wrangler.jsonc",
+				userConfigPath: "other-worker/wrangler.jsonc",
 			},
 			"deploy"
 		);
