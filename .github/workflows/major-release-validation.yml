@@ -1,0 +1,46 @@
+name: Major release validation
+
+on:
+  merge_group:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-major-release-validation
+      cancel-in-progress: true
+
+    name: "Major release validation"
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 100
+
+      # Find all the changesets that were modified or added in this pull request
+      - uses: dorny/paths-filter@v3
+        id: filters
+        with:
+          list-files: "json"
+          predicate-quantifier: "every"
+          filters: |
+            updated_changesets:
+              - added|modified: '.changeset/*.md'
+              - added|modified: '!.changeset/README.md'
+
+      - name: Install Dependencies
+        if: steps.filters.outputs.updated_changesets == 'true'
+        uses: ./.github/actions/install-dependencies
+
+      # Validate that the pull request is marked with the appropriate label if any of the modified or added changesets have major releases
+      - name: Validate major changes
+        if: steps.filters.outputs.updated_changesets == 'true'
+        run: node -r esbuild-register tools/deployments/validate-major-changes.ts
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          CHANGES: ${{ steps.filters.outputs.updated_changesets_files }}
+          LABEL: "breaking-change"
