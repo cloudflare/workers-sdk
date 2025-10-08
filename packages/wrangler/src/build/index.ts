@@ -12,14 +12,26 @@ export const buildCommand = createCommand({
 		printBanner: false,
 		provideConfig: false,
 	},
+	args: {
+		"write-workerd-config": {
+			type: "string",
+			describe:
+				"Path to write a workerd capnp config for running the built worker in workerd",
+			requiresArg: true,
+		},
+	},
 	async handler(buildArgs) {
-		const { wrangler } = createCLIParser([
+		const argv = [
 			"deploy",
 			"--dry-run",
 			"--outdir=dist",
 			...(buildArgs.env ? ["--env", buildArgs.env] : []),
 			...(buildArgs.config ? ["--config", buildArgs.config] : []),
-		]);
+			...(buildArgs.writeWorkerdConfig
+				? ["--write-workerd-config", buildArgs.writeWorkerdConfig as string]
+				: []),
+		];
+		const { wrangler } = createCLIParser(argv);
 		await wrangler.parse();
 	},
 });
