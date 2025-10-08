@@ -1865,6 +1865,32 @@ describe.sequential("wrangler dev", () => {
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should show self-bindings as connected", async () => {
+			writeWranglerConfig({
+				name: "my-worker",
+				services: [
+					{ binding: "SELF", service: "my-worker" },
+					{
+						binding: "NAMED",
+						service: "my-worker",
+						entrypoint: "MyEntrypoint",
+					},
+				],
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWranglerUntilConfig("dev index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+
+				Your worker has access to the following bindings:
+				- Services:
+				  - SELF: my-worker [connected]
+				  - NAMED: my-worker#MyEntrypoint [connected]
+				"
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 
 	describe("print bindings", () => {

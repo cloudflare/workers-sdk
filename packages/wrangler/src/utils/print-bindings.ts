@@ -292,12 +292,15 @@ export function printBindings(
 		output.push({
 			name: friendlyBindingNames.services,
 			entries: services.map(({ binding, service, entrypoint }) => {
+				const isSelfBinding = service === context.name;
 				let value = service;
 				if (entrypoint) {
 					value += `#${entrypoint}`;
 				}
 
-				if (context.local && context.registry !== null) {
+				if (isSelfBinding) {
+					value = value + " " + chalk.green("[connected]");
+				} else if (context.local && context.registry !== null) {
 					const registryDefinition = context.registry?.[service];
 					hasConnectionStatus = true;
 
