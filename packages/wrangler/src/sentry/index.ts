@@ -3,6 +3,7 @@ import { rejectedSyncPromise } from "@sentry/utils";
 import { fetch } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { confirm } from "../dialogs";
+import { getWranglerSendErrorReportsFromEnv } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import type { BaseTransportOptions, TransportRequest } from "@sentry/types";
 import type { RequestInit } from "undici";
@@ -150,10 +151,14 @@ export function addBreadcrumb(
 // consent if not already granted.
 export async function captureGlobalException(e: unknown) {
 	if (typeof SENTRY_DSN !== "undefined") {
-		sentryReportingAllowed = await confirm(
-			"Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
-			{ fallbackValue: false }
-		);
+		const sendErrorReportsEnvVar = getWranglerSendErrorReportsFromEnv();
+		sentryReportingAllowed =
+			sendErrorReportsEnvVar !== undefined
+				? sendErrorReportsEnvVar
+				: await confirm(
+						"Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
+						{ fallbackValue: false }
+					);
 
 		if (!sentryReportingAllowed) {
 			logger.debug(`Sentry: Reporting disabled - would have sent ${e}.`);
