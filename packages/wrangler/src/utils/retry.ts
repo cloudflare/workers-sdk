@@ -29,7 +29,7 @@ export async function retryOnAPIFailure<T>(
 			throw err;
 		}
 
-		logger.info(chalk.dim(`Retrying API call after error...`));
+		logger.debug(chalk.dim(`Retrying API call after error...`));
 		logger.debug(err);
 
 		if (attempts <= 1) {
