@@ -394,33 +394,33 @@ export function printBindings(
 
 				if (entrypoint) {
 					value += `#${entrypoint}`;
-				}
+			}
 
-				if (remote && getFlag("REMOTE_BINDINGS")) {
-					mode = getMode({ isSimulatedLocally: false });
-				} else if (context.local && context.registry !== null) {
-					const isSelfBinding = service === context.name;
+			if (remote && getFlag("REMOTE_BINDINGS")) {
+				mode = getMode({ isSimulatedLocally: false });
+			} else if (context.local && context.registry !== null) {
+				const isSelfBinding = service === context.name;
 
-					if (isSelfBinding) {
-						hasConnectionStatus = true;
+				if (isSelfBinding) {
+					hasConnectionStatus = true;
+					mode = getMode({ isSimulatedLocally: true, connected: true });
+				} else {
+					const registryDefinition = context.registry?.[service];
+					hasConnectionStatus = true;
+
+					if (
+						registryDefinition &&
+						(!entrypoint ||
+							registryDefinition.entrypointAddresses?.[entrypoint])
+					) {
 						mode = getMode({ isSimulatedLocally: true, connected: true });
 					} else {
-						const registryDefinition = context.registry?.[service];
-						hasConnectionStatus = true;
-
-						if (
-							registryDefinition &&
-							(!entrypoint ||
-								registryDefinition.entrypointAddresses?.[entrypoint])
-						) {
-							mode = getMode({ isSimulatedLocally: true, connected: true });
-						} else {
-							mode = getMode({ isSimulatedLocally: true, connected: false });
-						}
+						mode = getMode({ isSimulatedLocally: true, connected: false });
 					}
 				}
+			}
 
-				return {
+			return {
 					name: binding,
 					type: friendlyBindingNames.services,
 					value,

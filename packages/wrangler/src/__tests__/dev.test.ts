@@ -2044,9 +2044,9 @@ describe.sequential("wrangler dev", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Your Worker has access to the following bindings:
-				Binding                             Resource      Mode
-				env.SELF (my-worker)                Worker        local [connected]
-				env.NAMED (my-worker#MyEntrypoint)  Worker        local [connected]
+				Binding                                 Resource      Mode
+				env.SELF (my-worker)                    Worker        local [connected]
+				env.NAMED (my-worker#MyEntrypoint)      Worker        local [connected]
 
 				"
 			`);
