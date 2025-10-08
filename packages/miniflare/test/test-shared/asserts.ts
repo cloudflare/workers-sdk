@@ -53,9 +53,9 @@ export async function waitFor<T>(
 	const start = Date.now();
 	while (true) {
 		try {
-			return callback();
+			return await callback();
 		} catch (error) {
-			if (Date.now() < start + timeout) {
+			if (Date.now() > start + timeout) {
 				throw error;
 			}
 		}

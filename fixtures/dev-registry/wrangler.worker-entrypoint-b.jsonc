@@ -29,4 +29,10 @@
 			"service": "module-worker",
 		},
 	],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "kv-id",
+		},
+	],
 }

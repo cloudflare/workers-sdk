@@ -1,7 +1,5 @@
 import path from "path";
 import getPort from "get-port";
-import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
-import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
 import type { Config } from "../../config";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker";
@@ -26,15 +24,14 @@ export async function startRemoteProxySession(
 		])
 	);
 
-	const proxyServerWorkerWranglerConfig = path.resolve(
-		getBasePath(),
-		"templates/remoteBindings/wrangler.jsonc"
+	const remoteProxyWorker = path.join(
+		require.resolve("miniflare"),
+		"../workers/shared/remote-proxy-server.worker.js"
 	);
 
 	const worker = await startWorker({
 		name: options?.workerName,
-		entrypoint: remoteBindingsWorkerPath,
-		config: proxyServerWorkerWranglerConfig,
+		entrypoint: remoteProxyWorker,
 		compatibilityDate: "2025-04-28",
 		dev: {
 			remote: "minimal",
