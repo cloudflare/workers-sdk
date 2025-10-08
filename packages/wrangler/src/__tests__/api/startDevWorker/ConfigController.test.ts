@@ -267,4 +267,56 @@ describe("ConfigController", () => {
 			},
 		});
 	});
+
+	it("should only log warnings once even with multiple config updates", async () => {
+		const std = mockConsoleMethods();
+
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("hello world")
+					}
+				} satisfies ExportedHandler
+			`,
+			"wrangler.toml": dedent/* toml */ `
+				name = "my-worker"
+				main = "src/index.ts"
+				compatibility_date = "2024-06-01"
+				
+				[[queues.consumers]]
+				queue = "my-queue"
+				max_batch_size = 10
+			`,
+		});
+
+		const event1 = waitForConfigUpdate(controller);
+		await controller.set({
+			config: "./wrangler.toml",
+			dev: { remote: true },
+		});
+		await event1;
+
+		const event2 = waitForConfigUpdate(controller);
+		await controller.patch({
+			dev: { liveReload: true },
+		});
+		await event2;
+
+		const event3 = waitForConfigUpdate(controller);
+		await controller.patch({
+			dev: { server: { port: 8787 } },
+		});
+		await event3;
+
+		const warningCount = std.warn
+			.split("\n")
+			.filter((line) =>
+				line.includes(
+					"Queues are not yet supported in wrangler dev remote mode"
+				)
+			).length;
+
+		expect(warningCount).toBe(1);
+	});
 });

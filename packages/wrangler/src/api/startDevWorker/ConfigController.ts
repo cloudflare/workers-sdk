@@ -389,7 +389,7 @@ async function resolveConfig(
 		!resolved.dev.remote &&
 		resolved.build.format === "service-worker"
 	) {
-		logger.warn(
+		logger.once.warn(
 			"Analytics Engine is not supported locally when using the service-worker format. Please migrate to the module worker format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/"
 		);
 	}
@@ -398,7 +398,7 @@ async function resolveConfig(
 
 	const services = extractBindingsOfType("service", resolved.bindings);
 	if (services && services.length > 0 && resolved.dev?.remote) {
-		logger.warn(
+		logger.once.warn(
 			`This worker is bound to live services: ${services
 				.map(
 					(service) =>
@@ -411,7 +411,7 @@ async function resolveConfig(
 	}
 
 	if (!resolved.dev?.origin?.secure && resolved.dev?.remote) {
-		logger.warn(
+		logger.once.warn(
 			"Setting upstream-protocol to http is not currently supported for remote mode.\n" +
 				"If this is required in your project, please add your use case to the following issue:\n" +
 				"https://github.com/cloudflare/workers-sdk/issues/583."
@@ -435,7 +435,9 @@ async function resolveConfig(
 		(queues?.length ||
 			resolved.triggers?.some((t) => t.type === "queue-consumer"))
 	) {
-		logger.warn("Queues are not yet supported in wrangler dev remote mode.");
+		logger.once.warn(
+			"Queues are not yet supported in wrangler dev remote mode."
+		);
 	}
 
 	if (resolved.dev.remote) {
@@ -446,7 +448,7 @@ async function resolveConfig(
 			resolved.containers &&
 			resolved.containers.length > 0
 		) {
-			logger.warn(
+			logger.once.warn(
 				"Containers are only supported in local mode, to suppress this warning set `dev.enable_containers` to `false` or pass `--enable-containers=false` to the `wrangler dev` command"
 			);
 		}
@@ -459,7 +461,9 @@ async function resolveConfig(
 			resolved.dev.remote &&
 			Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
 		) {
-			logger.warn("SQLite in Durable Objects is only supported in local mode.");
+			logger.once.warn(
+				"SQLite in Durable Objects is only supported in local mode."
+			);
 		}
 	}
 
