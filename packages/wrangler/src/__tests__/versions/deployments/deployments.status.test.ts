@@ -18,7 +18,7 @@ describe("deployments list", () => {
 		msw.use(mswListNewDeployments, mswGetVersion());
 	});
 
-	describe("without wrangler.jsonc", () => {
+	describe("without wrangler.toml", () => {
 		test("fails with no args", async () => {
 			const result = runWrangler("deployments status");
 
@@ -88,7 +88,7 @@ describe("deployments list", () => {
 		});
 	});
 
-	describe("with wrangler.jsonc", () => {
+	describe("with wrangler.toml", () => {
 		beforeEach(() => writeWranglerConfig());
 
 		test("prints latest deployment to stdout", async () => {

@@ -159,9 +159,9 @@ describe("wrangler", () => {
 			);
 
 			await expect(
-				runWrangler("--config=wrangler.jsonc -c example")
+				runWrangler("--config=wrangler.toml -c example")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The argument "--config" expects a single value, but received multiple: ["wrangler.jsonc","example"].]`
+				`[Error: The argument "--config" expects a single value, but received multiple: ["wrangler.toml","example"].]`
 			);
 		});
 
