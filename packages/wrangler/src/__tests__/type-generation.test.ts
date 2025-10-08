@@ -516,7 +516,7 @@ describe("generate types", () => {
 					SOME_TEXT_BLOB2: string;
 					testing_unsafe: any;
 					UNSAFE_RATELIMIT: RateLimit;
-					TEST_QUEUE_BINDING: Queue;
+					TEST_QUEUE_BINDING: Queue<unknown>;
 					SEND_EMAIL_BINDING: SendEmail;
 					VECTORIZE_BINDING: VectorizeIndex;
 					HYPERDRIVE_BINDING: Hyperdrive;
@@ -620,7 +620,7 @@ describe("generate types", () => {
 					SOME_TEXT_BLOB2: string;
 					testing_unsafe: any;
 					UNSAFE_RATELIMIT: RateLimit;
-					TEST_QUEUE_BINDING: Queue;
+					TEST_QUEUE_BINDING: Queue<unknown>;
 					SEND_EMAIL_BINDING: SendEmail;
 					VECTORIZE_BINDING: VectorizeIndex;
 					HYPERDRIVE_BINDING: Hyperdrive;
@@ -788,7 +788,7 @@ describe("generate types", () => {
 					SOME_TEXT_BLOB2: string;
 					testing_unsafe: any;
 					UNSAFE_RATELIMIT: RateLimit;
-					TEST_QUEUE_BINDING: Queue;
+					TEST_QUEUE_BINDING: Queue<unknown>;
 					SEND_EMAIL_BINDING: SendEmail;
 					VECTORIZE_BINDING: VectorizeIndex;
 					HYPERDRIVE_BINDING: Hyperdrive;

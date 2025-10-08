@@ -99,6 +99,7 @@ import {
 	kvNamespaceNamespace,
 	kvNamespaceRenameCommand,
 } from "./kv";
+import { listCommand } from "./list";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { getMetricsDispatcher } from "./metrics";
 import {
@@ -297,7 +298,13 @@ import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
 import { typesCommand } from "./type-generation";
 import { getAuthFromEnv } from "./user";
-import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
+import {
+	authNamespace,
+	authTokenCommand,
+	loginCommand,
+	logoutCommand,
+	whoamiCommand,
+} from "./user/commands";
 import { whoami } from "./user/whoami";
 import { betaCmdColor, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
@@ -651,6 +658,9 @@ export function createCLIParser(argv: string[]) {
 
 	registry.define([{ command: "wrangler delete", definition: deleteCommand }]);
 	registry.registerNamespace("delete");
+
+	registry.define([{ command: "wrangler list", definition: listCommand }]);
+	registry.registerNamespace("list");
 
 	// tail
 	registry.define([{ command: "wrangler tail", definition: tailCommand }]);
@@ -1526,6 +1536,18 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("whoami");
+
+	registry.define([
+		{
+			command: "wrangler auth",
+			definition: authNamespace,
+		},
+		{
+			command: "wrangler auth token",
+			definition: authTokenCommand,
+		},
+	]);
+	registry.registerNamespace("auth");
 
 	registry.define([
 		{
