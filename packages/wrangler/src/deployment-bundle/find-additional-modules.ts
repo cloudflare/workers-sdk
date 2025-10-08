@@ -167,9 +167,36 @@ export async function findAdditionalModules(
 				pythonModulesDir,
 				entry.projectRoot
 			);
-			const vendoredRules: Rule[] = [
-				{ type: "Data", globs: ["**/*"], fallthrough: true },
-			];
+
+			const vendoredRules: Rule[] = [];
+
+			// If user defined any vendor rules, use them instead of default ones
+			for (const rule of rules.rules) {
+				if (rule.type !== "Data") {
+					continue;
+				}
+
+				const newRule: Rule = { type: "Data", globs: [], fallthrough: true };
+				for (const glob of rule.globs) {
+					if (glob.startsWith("python_modules/")) {
+						newRule.globs.push(glob.replace("python_modules/", ""));
+					}
+				}
+
+				if (newRule.globs.length > 0) {
+					vendoredRules.push(newRule);
+				}
+			}
+
+			// If there is no user defined vendor rules, enable the default one
+			if (vendoredRules.length === 0) {
+				vendoredRules.push({
+					type: "Data",
+					globs: ["**/*"],
+					fallthrough: true,
+				});
+			}
+
 			const vendoredModules = (
 				await matchFiles(
 					pythonModulesFiles,
