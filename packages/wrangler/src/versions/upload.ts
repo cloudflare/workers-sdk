@@ -272,6 +272,7 @@ export const versionsUploadCommand = createCommand({
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? true,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
+			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},

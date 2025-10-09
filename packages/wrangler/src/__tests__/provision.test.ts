@@ -1,3 +1,5 @@
+import { rmSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -18,7 +20,10 @@ import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
+import {
+	writeRedirectedWranglerConfig,
+	writeWranglerConfig,
+} from "./helpers/write-wrangler-config";
 import type { DatabaseInfo } from "../d1/types";
 import type { Settings } from "../deployment-bundle/bindings";
 
@@ -197,6 +202,7 @@ describe("--x-provision", () => {
 				Provisioning R2 (R2 Bucket)...
 				✨ R2 provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
@@ -317,6 +323,7 @@ describe("--x-provision", () => {
 				Provisioning R2 (R2 Bucket)...
 				✨ R2 provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
@@ -450,6 +457,7 @@ describe("--x-provision", () => {
 				🌀 Creating new R2 Bucket \\"new-r2\\"...
 				✨ R2 provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
@@ -466,6 +474,189 @@ describe("--x-provision", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+
+			// IDs should be written back to the config file
+			expect(await readFile("wrangler.toml", "utf-8")).toMatchInlineSnapshot(`
+				"compatibility_date = \\"2022-01-12\\"
+				name = \\"test-name\\"
+				main = \\"index.js\\"
+
+				[[kv_namespaces]]
+				binding = \\"KV\\"
+				id = \\"new-kv-id\\"
+
+				[[r2_buckets]]
+				binding = \\"R2\\"
+				bucket_name = \\"new-r2\\"
+
+				[[d1_databases]]
+				binding = \\"D1\\"
+				database_id = \\"new-d1-id\\"
+				"
+			`);
+		});
+
+		it("can provision KV, R2 and D1 bindings with new resources w/ redirected config", async () => {
+			writeRedirectedWranglerConfig({
+				main: "../index.js",
+				compatibility_flags: ["nodejs_compat"],
+				kv_namespaces: [{ binding: "KV" }],
+				r2_buckets: [{ binding: "R2" }],
+				d1_databases: [{ binding: "D1" }],
+			});
+			mockGetSettings();
+			mockListKVNamespacesRequest({
+				title: "test-kv",
+				id: "existing-kv-id",
+			});
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", async () => {
+					return HttpResponse.json(
+						createFetchResult([
+							{
+								name: "db-name",
+								uuid: "existing-d1-id",
+							},
+						])
+					);
+				}),
+				http.get("*/accounts/:accountId/r2/buckets", async () => {
+					return HttpResponse.json(
+						createFetchResult({
+							buckets: [
+								{
+									name: "existing-bucket-name",
+								},
+							],
+						})
+					);
+				})
+			);
+
+			mockSelect({
+				text: "Would you like to connect an existing KV Namespace or create a new one?",
+				result: "__WRANGLER_INTERNAL_NEW",
+			});
+			mockPrompt({
+				text: "Enter a name for your new KV Namespace",
+				result: "new-kv",
+			});
+			mockCreateKVNamespace({
+				assertTitle: "new-kv",
+				resultId: "new-kv-id",
+			});
+
+			mockSelect({
+				text: "Would you like to connect an existing D1 Database or create a new one?",
+				result: "__WRANGLER_INTERNAL_NEW",
+			});
+			mockPrompt({
+				text: "Enter a name for your new D1 Database",
+				result: "new-d1",
+			});
+			mockCreateD1Database({
+				assertName: "new-d1",
+				resultId: "new-d1-id",
+			});
+
+			mockSelect({
+				text: "Would you like to connect an existing R2 Bucket or create a new one?",
+				result: "__WRANGLER_INTERNAL_NEW",
+			});
+			mockPrompt({
+				text: "Enter a name for your new R2 Bucket",
+				result: "new-r2",
+			});
+			mockCreateR2Bucket({
+				assertBucketName: "new-r2",
+			});
+
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "KV",
+						type: "kv_namespace",
+						namespace_id: "new-kv-id",
+					},
+					{
+						name: "R2",
+						type: "r2_bucket",
+						bucket_name: "new-r2",
+					},
+					{
+						name: "D1",
+						type: "d1",
+						id: "new-d1-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-provision --x-auto-create=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+
+				The following bindings need to be provisioned:
+				Binding        Resource
+				env.KV         KV Namespace
+				env.D1         D1 Database
+				env.R2         R2 Bucket
+
+
+				Provisioning KV (KV Namespace)...
+				🌀 Creating new KV Namespace \\"new-kv\\"...
+				✨ KV provisioned 🎉
+
+				Provisioning D1 (D1 Database)...
+				🌀 Creating new D1 Database \\"new-d1\\"...
+				✨ D1 provisioned 🎉
+
+				Provisioning R2 (R2 Bucket)...
+				🌀 Creating new R2 Bucket \\"new-r2\\"...
+				✨ R2 provisioned 🎉
+
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
+				🎉 All resources provisioned, continuing with deployment...
+
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                 Resource
+				env.KV (new-kv-id)      KV Namespace
+				env.D1 (new-d1-id)      D1 Database
+				env.R2 (new-r2)         R2 Bucket
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+
+			// IDs should be written back to the user config file
+			expect(await readFile("wrangler.toml", "utf-8")).toMatchInlineSnapshot(`
+				"compatibility_date = \\"2022-01-12\\"
+				name = \\"test-name\\"
+				main = \\"index.js\\"
+
+				[[kv_namespaces]]
+				binding = \\"KV\\"
+				id = \\"new-kv-id\\"
+
+				[[r2_buckets]]
+				binding = \\"R2\\"
+				bucket_name = \\"new-r2\\"
+
+				[[d1_databases]]
+				binding = \\"D1\\"
+				database_id = \\"new-d1-id\\"
+				"
+			`);
+
+			rmSync(".wrangler/deploy/config.json");
 		});
 
 		it("can prefill d1 database name from config file if provided", async () => {
@@ -522,6 +713,7 @@ describe("--x-provision", () => {
 				🌀 Creating new D1 Database \\"prefilled-d1-name\\"...
 				✨ D1 provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
@@ -650,6 +842,7 @@ describe("--x-provision", () => {
 				🌀 Creating new D1 Database \\"new-d1-name\\"...
 				✨ D1 provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
@@ -728,6 +921,7 @@ describe("--x-provision", () => {
 				🌀 Creating new R2 Bucket \\"prefilled-r2-name\\"...
 				✨ BUCKET provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
@@ -923,6 +1117,7 @@ describe("--x-provision", () => {
 				🌀 Creating new R2 Bucket \\"existing-bucket-name\\"...
 				✨ BUCKET provisioned 🎉
 
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms

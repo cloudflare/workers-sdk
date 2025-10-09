@@ -159,6 +159,7 @@ function createHandler(def: CommandDefinition, commandName: string) {
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
 						REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
 						DEPLOY_REMOTE_DIFF_CHECK: false,
+						AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 					};
 
 			await run(experimentalFlags, () => {
