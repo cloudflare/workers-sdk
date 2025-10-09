@@ -18,12 +18,16 @@ import type { Observability } from "./Observability";
 import type { Port } from "./Port";
 import type { ProvisionerConfiguration } from "./ProvisionerConfiguration";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
+import type { SSHPublicKeyItemV3 } from "./SSHPublicKeyItemV3";
+import type { WranglerSSHConfig } from "./WranglerSSHConfig";
 
 /**
  * Properties required to modify a cloudchamber deployment specified by the user.
  */
 export type ModifyUserDeploymentConfiguration = {
 	image?: Image;
+	wrangler_ssh?: WranglerSSHConfig;
+	authorized_keys?: Array<SSHPublicKeyItemV3>;
 	/**
 	 * A list of SSH public key IDs from the account
 	 */
