@@ -361,8 +361,8 @@ export interface CfDurableObjectMigrations {
 }
 
 export interface CfPlacement {
-	mode: "smart";
-	hint?: string;
+	mode: "smart" | "hyper";
+	hint?: string | { scheme: string; target: string };
 }
 
 export interface CfTailConsumer {
