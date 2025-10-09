@@ -380,6 +380,7 @@ export const defaultWranglerConfig: Config = {
 	observability: { enabled: true },
 	/** The default here is undefined so that we can delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable. */
 	compliance_region: undefined,
+	python_modules_excludes: [],
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},

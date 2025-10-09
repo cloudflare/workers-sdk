@@ -1581,6 +1581,14 @@ function normalizeAndValidateEnvironment(
 			isOneOf("public", "fedramp_high"),
 			undefined
 		),
+		python_modules_excludes: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"python_modules_excludes",
+			isStringArray,
+			[]
+		),
 	};
 
 	warnIfDurableObjectsHaveNoMigrations(
