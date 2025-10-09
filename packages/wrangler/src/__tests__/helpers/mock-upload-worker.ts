@@ -31,7 +31,7 @@ export function mockUploadWorkerRequest(
 		expectedCapnpSchema?: string;
 		expectedLimits?: CfWorkerInit["limits"];
 		env?: string;
-		legacyEnv?: boolean;
+		enableServiceEnvironments?: boolean;
 		keepVars?: boolean;
 		keepSecrets?: boolean;
 		tag?: string;
@@ -54,7 +54,7 @@ export function mockUploadWorkerRequest(
 		);
 		expect(params.accountId).toEqual("some-account-id");
 		expect(params.scriptName).toEqual(expectedScriptName);
-		if (!legacyEnv) {
+		if (enableServiceEnvironments) {
 			expect(params.envName).toEqual(env);
 		}
 		if (useOldUploadApi) {
@@ -176,7 +176,7 @@ export function mockUploadWorkerRequest(
 		expectedCompatibilityDate,
 		expectedCompatibilityFlags,
 		env = undefined,
-		legacyEnv = false,
+		enableServiceEnvironments = true,
 		expectedMigrations,
 		expectedTailConsumers,
 		expectedUnsafeMetaData,
@@ -193,9 +193,9 @@ export function mockUploadWorkerRequest(
 
 	const expectedScriptName =
 		options.expectedScriptName ??
-		"test-name" + (legacyEnv && env ? `-${env}` : "");
+		"test-name" + (!enableServiceEnvironments && env ? `-${env}` : "");
 
-	if (env && !legacyEnv) {
+	if (env && enableServiceEnvironments) {
 		msw.use(
 			http.put(
 				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
@@ -265,7 +265,7 @@ export function mockUploadWorkerRequest(
 		enabled: workers_dev,
 		previews_enabled: preview_urls,
 		env,
-		legacyEnv,
+		enableServiceEnvironments,
 		expectedScriptName,
 	});
 }
