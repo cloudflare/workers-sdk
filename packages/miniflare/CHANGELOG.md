@@ -1,5 +1,19 @@
 # miniflare
 
+## 4.20251008.0
+
+### Patch Changes
+
+- [#10917](https://github.com/cloudflare/workers-sdk/pull/10917) [`42e256f`](https://github.com/cloudflare/workers-sdk/commit/42e256f2ec97a9ea805949e491ca59834003378a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251004.0 | 1.20251008.0 |
+
+- [#10686](https://github.com/cloudflare/workers-sdk/pull/10686) [`4462bc1`](https://github.com/cloudflare/workers-sdk/commit/4462bc1f5b0940b7e69e300b353290fc14745052) Thanks [@alsuren](https://github.com/alsuren)! - Document that dumpSql is shared with d1-worker, and incorporate some D1 internal stats gathering machinery (which is currently unused by miniflare)
+
 ## 4.20251004.0
 
 ### Patch Changes

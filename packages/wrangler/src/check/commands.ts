@@ -90,7 +90,13 @@ async function checkStartupHandler(
 	await writeFile(outfile, JSON.stringify(await cpuProfileResult));
 
 	log(
-		`CPU Profile written to ${outfile}. Load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.`
+		[
+			`CPU Profile has been written to ${outfile}. Load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.`,
+			"",
+			"Note that the CPU Profile was measured on your Worker running locally on your machine, which has a different CPU than when your Worker runs on Cloudflare.",
+			"",
+			"As such, CPU Profile can be used to understand where time is spent at startup, but the overall startup time in the profile should not be expected to exactly match what your Worker's startup time will be when deploying to Cloudflare.",
+		].join("\n")
 	);
 }
 

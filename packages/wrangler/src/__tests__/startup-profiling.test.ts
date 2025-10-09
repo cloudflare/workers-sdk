@@ -23,7 +23,7 @@ describe("wrangler check startup", () => {
 		await runWrangler("check startup");
 
 		expect(std.out).toContain(
-			`CPU Profile written to worker-startup.cpuprofile`
+			`CPU Profile has been written to worker-startup.cpuprofile`
 		);
 
 		await expect(
@@ -37,7 +37,7 @@ describe("wrangler check startup", () => {
 		await runWrangler("check startup");
 
 		expect(std.out).toContain(
-			`CPU Profile written to worker-startup.cpuprofile`
+			`CPU Profile has been written to worker-startup.cpuprofile`
 		);
 
 		await expect(
@@ -50,7 +50,9 @@ describe("wrangler check startup", () => {
 
 		await runWrangler("check startup --outfile worker.cpuprofile");
 
-		expect(std.out).toContain(`CPU Profile written to worker.cpuprofile`);
+		expect(std.out).toContain(
+			`CPU Profile has been written to worker.cpuprofile`
+		);
 	});
 	test("--args passed through to deploy", async () => {
 		writeWranglerConfig({ main: "index.js" });
@@ -103,7 +105,7 @@ describe("wrangler check startup", () => {
 		expect(std.out).toContain(`Pages project detected`);
 
 		expect(std.out).toContain(
-			`CPU Profile written to worker-startup.cpuprofile`
+			`CPU Profile has been written to worker-startup.cpuprofile`
 		);
 
 		await expect(
@@ -135,7 +137,7 @@ describe("wrangler check startup", () => {
 		expect(std.out).toContain(`Pages project detected`);
 
 		expect(std.out).toContain(
-			`CPU Profile written to worker-startup.cpuprofile`
+			`CPU Profile has been written to worker-startup.cpuprofile`
 		);
 
 		await expect(
