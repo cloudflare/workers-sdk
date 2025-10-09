@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 Add table-level compaction commands for R2 Data Catalog:
