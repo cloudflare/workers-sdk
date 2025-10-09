@@ -4,7 +4,8 @@ import {
 	constructBuildCommand,
 	dockerBuild,
 	dockerImageInspect,
-	dockerLoginManagedRegistry,
+	dockerLoginImageRegistry,
+	getCloudflareContainerRegistry,
 	isDir,
 	resolveImageName,
 	runDockerCmd,
@@ -140,7 +141,12 @@ export async function buildAndMaybePush(
 				containerConfig,
 			});
 
-			await dockerLoginManagedRegistry(pathToDocker);
+			await dockerLoginImageRegistry(
+				pathToDocker,
+				// Won't be an external registry since this is building from a Dockerfile
+				// rather than specifying an image uri.
+				getCloudflareContainerRegistry()
+			);
 			try {
 				const [digests, imageId] = imageInfo.split(" ");
 				// We don't try to parse until this point
@@ -277,7 +283,10 @@ export async function pushCommand(
 	config: Config
 ) {
 	try {
-		await dockerLoginManagedRegistry(args.pathToDocker);
+		await dockerLoginImageRegistry(
+			args.pathToDocker,
+			getCloudflareContainerRegistry()
+		);
 
 		const accountId = await getAccountId(config);
 		const newTag = resolveImageName(accountId, args.TAG);
