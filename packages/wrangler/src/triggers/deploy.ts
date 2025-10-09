@@ -305,10 +305,12 @@ export function getSubdomainValues(
 	preview_urls: boolean;
 } {
 	const defaultWorkersDev = routes.length === 0; // Default to true only if there aren't any routes defined.
-	const defaultPreviewUrls = false;
+	const workers_dev = config_workers_dev ?? defaultWorkersDev;
+	const defaultPreviewUrls = workers_dev; // Default to workers_dev status (mimics the API behavior).
+	const preview_urls = config_preview_urls ?? defaultPreviewUrls;
 	return {
-		workers_dev: config_workers_dev ?? defaultWorkersDev,
-		preview_urls: config_preview_urls ?? defaultPreviewUrls,
+		workers_dev,
+		preview_urls,
 	};
 }
 
@@ -413,7 +415,7 @@ async function subdomainDeploy(
 
 	// Get desired subdomain enablement status.
 
-	const desiredSubdomain = await getSubdomainValues(
+	const desiredSubdomain = getSubdomainValues(
 		config.workers_dev,
 		config.preview_urls,
 		routes
@@ -451,7 +453,7 @@ async function subdomainDeploy(
 		logger.warn(
 			[
 				`Worker has preview URLs ${currPreviewsStatus}, but 'preview_urls' is not in the config.`,
-				`Using default config 'preview_urls = ${wantPreviews}', current status will be overwritten.`,
+				`Using default config 'preview_urls = workers_dev = ${wantPreviews}', current status will be overwritten.`,
 			].join("\n")
 		);
 	}
