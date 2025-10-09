@@ -10,6 +10,7 @@ import { getWorkerAccountAndContext } from "../dev/remote";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import { CI } from "../is-ci";
+import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -2110,6 +2111,10 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("containers", () => {
+		beforeEach(() => {
+			logger.clearHistory();
+		});
+
 		const containerConfig = {
 			main: "index.js",
 			compatibility_date: "2024-01-01",
