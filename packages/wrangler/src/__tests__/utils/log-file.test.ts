@@ -1,8 +1,11 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { logger } from "../../logger";
 import { appendToDebugLogFile, debugLogFilepath } from "../../utils/log-file";
 import { runInTempDir } from "../helpers/run-in-tmp";
+
+vi.mock("../../utils/log-file", { spy: true });
 
 describe("appendToDebugLogFile", () => {
 	runInTempDir();
@@ -61,6 +64,28 @@ describe("appendToDebugLogFile", () => {
 
 		const logContent = getLogFileContent();
 		expect(logContent).toContain(plainMessage);
+	});
+
+	it("should not write to log file with default log path & non debug level", async () => {
+		vi.stubEnv("WRANGLER_LOG_PATH", "");
+		const plainMessage = "This is a random plain log message";
+
+		logger.info(plainMessage);
+
+		expect(vi.mocked(appendToDebugLogFile).mock.calls.length).toBe(0);
+	});
+
+	it("should write to log file with default path & debug level", async () => {
+		vi.stubEnv("WRANGLER_LOG_PATH", "");
+
+		vi.stubEnv("WRANGLER_LOG", "debug");
+		const plainMessage = "This is a debug log message";
+
+		logger.info(plainMessage);
+
+		expect(vi.mocked(appendToDebugLogFile).mock.calls.length).toBeGreaterThan(
+			0
+		);
 	});
 
 	it("should handle multiline messages with ANSI codes", async () => {
