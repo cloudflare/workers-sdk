@@ -560,7 +560,10 @@ interface EnvironmentInheritable {
 	 *
 	 * @inheritable
 	 */
-	placement: { mode: "off" | "smart"; hint?: string } | undefined;
+	placement:
+		| { mode: "off" | "smart"; hint?: string }
+		| { mode?: "targeted"; region?: string; host?: string; hostname?: string }
+		| undefined;
 
 	/**
 	 * Specify the directory of static assets to deploy/serve

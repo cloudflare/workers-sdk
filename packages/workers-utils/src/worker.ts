@@ -364,10 +364,14 @@ export interface CfDurableObjectMigrations {
 	}[];
 }
 
-export interface CfPlacement {
-	mode: "smart";
-	hint?: string;
-}
+export type CfPlacement =
+	| { mode: "smart"; hint?: string }
+	| {
+			mode?: "targeted";
+			region?: string;
+			host?: string;
+			hostname?: string;
+	  };
 
 export interface CfTailConsumer {
 	service: string;
