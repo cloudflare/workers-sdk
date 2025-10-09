@@ -1,5 +1,21 @@
 # wrangler
 
+## 4.42.2
+
+### Patch Changes
+
+- [#10881](https://github.com/cloudflare/workers-sdk/pull/10881) [`ce832d5`](https://github.com/cloudflare/workers-sdk/commit/ce832d5222f1034bd02c3bac4952c72ec99020bc) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - Add table-level compaction commands for R2 Data Catalog:
+
+  - `wrangler r2 bucket catalog compaction enable <bucket> [namespace] [table]`
+  - `wrangler r2 bucket catalog compaction disable <bucket> [namespace] [table]`
+
+  This allows you to enable and disable automatic file compaction for a specific R2 data catalog table.
+
+- [#10888](https://github.com/cloudflare/workers-sdk/pull/10888) [`d0ab919`](https://github.com/cloudflare/workers-sdk/commit/d0ab919b80aee3b6a81756a457b9244c20881906) Thanks [@lrapoport-cf](https://github.com/lrapoport-cf)! - Clarify that `wrangler check startup` generates a local CPU profile
+
+- Updated dependencies [[`42e256f`](https://github.com/cloudflare/workers-sdk/commit/42e256f2ec97a9ea805949e491ca59834003378a), [`4462bc1`](https://github.com/cloudflare/workers-sdk/commit/4462bc1f5b0940b7e69e300b353290fc14745052)]:
+  - miniflare@4.20251008.0
+
 ## 4.42.1
 
 ### Patch Changes
