@@ -73,15 +73,24 @@ export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
 	}
 };
 
+/** Checks whether docker is running on the system */
+export const isDockerRunning = async (dockerPath: string) => {
+	try {
+		await runDockerCmd(dockerPath, ["info"], ["inherit", "pipe", "pipe"]);
+	} catch {
+		// We assume this command is unlikely to fail for reasons other than the Docker daemon not running, or the Docker CLI not being installed or in the PATH.
+		return false;
+	}
+	return true;
+};
+
 /** throws when docker is not installed */
 export const verifyDockerInstalled = async (
 	dockerPath: string,
 	isDev = true
 ) => {
-	try {
-		await runDockerCmd(dockerPath, ["info"], ["inherit", "pipe", "pipe"]);
-	} catch {
-		// We assume this command is unlikely to fail for reasons other than the Docker daemon not running, or the Docker CLI not being installed or in the PATH.
+	const dockerIsRunning = await isDockerRunning(dockerPath);
+	if (!dockerIsRunning) {
 		throw new UserError(
 			`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.\n` +
 				`Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with DOCKER_HOST.` +
