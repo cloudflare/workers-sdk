@@ -15,6 +15,7 @@ import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { sniffUserAgent } from "../package-manager";
 import { ParseError } from "../parse";
+import { getSubdomainValues } from "../triggers/deploy";
 import { writeAuthConfigFile } from "../user";
 import { diagnoseScriptSizeError } from "../utils/friendly-validator-errors";
 import { captureRequestsFrom } from "./helpers/capture-requests-from";
@@ -6237,6 +6238,109 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
+	describe("workers_dev defaults", () => {
+		const tests = [
+			// workers_dev
+			{
+				name: "workers_dev=undefined, routes empty",
+				config_workers_dev: undefined,
+				config_preview_urls: false,
+				config_routes: [],
+				expected: {
+					workers_dev: true,
+					preview_urls: false,
+				},
+			},
+			{
+				name: "workers_dev=undefined, routes populated",
+				config_workers_dev: undefined,
+				config_preview_urls: false,
+				config_routes: ["https://example.com/*"],
+				expected: {
+					workers_dev: false,
+					preview_urls: false,
+				},
+			},
+			{
+				name: "workers_dev override, routes empty",
+				config_workers_dev: false,
+				config_preview_urls: false,
+				config_routes: [],
+				expected: {
+					workers_dev: false,
+					preview_urls: false,
+				},
+			},
+			{
+				name: "workers_dev override, routes populated",
+				config_workers_dev: true,
+				config_preview_urls: false,
+				config_routes: ["https://example.com/*"],
+				expected: {
+					workers_dev: true,
+					preview_urls: false,
+				},
+			},
+			// preview_urls
+			{
+				name: "preview_urls=undefined, workers_dev=default=true",
+				config_workers_dev: undefined,
+				config_preview_urls: undefined,
+				config_routes: [],
+				expected: {
+					workers_dev: true,
+					preview_urls: true,
+				},
+			},
+			{
+				name: "preview_urls=undefined, workers_dev=default=false",
+				config_workers_dev: undefined,
+				config_preview_urls: undefined,
+				config_routes: ["https://example.com/*"],
+				expected: {
+					workers_dev: false,
+					preview_urls: false,
+				},
+			},
+			{
+				name: "preview_urls=undefined, workers_dev=true",
+				config_workers_dev: true,
+				config_preview_urls: undefined,
+				config_routes: ["https://example.com/*"],
+				expected: {
+					workers_dev: true,
+					preview_urls: true,
+				},
+			},
+			{
+				name: "preview_urls override",
+				config_workers_dev: true,
+				config_preview_urls: false,
+				config_routes: ["https://example.com/*"],
+				expected: {
+					workers_dev: true,
+					preview_urls: false,
+				},
+			},
+		];
+		it.each(tests)(
+			"$name",
+			async ({
+				config_workers_dev,
+				config_preview_urls,
+				config_routes,
+				expected,
+			}) => {
+				const result = getSubdomainValues(
+					config_workers_dev,
+					config_preview_urls,
+					config_routes
+				);
+				expect(result).toEqual(expected);
+			}
+		);
+	});
+
 	describe("workers_dev setting", () => {
 		beforeEach(() => {
 			vi.useFakeTimers();
@@ -7020,7 +7124,7 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("can deploy to both workers.dev and routes if both defined ", async () => {
+		it("can deploy to both workers.dev and routes if both defined", async () => {
 			writeWranglerConfig({
 				workers_dev: true,
 				routes: ["http://example.com/*"],
@@ -7030,9 +7134,11 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			mockGetWorkerSubdomain({
 				enabled: false,
+				previews_enabled: true,
 			});
 			mockUpdateWorkerSubdomain({
 				enabled: true,
+				previews_enabled: true,
 			});
 			mockPublishRoutesRequest({
 				routes: ["http://example.com/*"],
@@ -7069,11 +7175,13 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
 			mockGetWorkerSubdomain({
 				enabled: false,
+				previews_enabled: true,
 				env: "production",
 				legacyEnv: true,
 			});
 			mockUpdateWorkerSubdomain({
 				enabled: true,
+				previews_enabled: true,
 				env: "production",
 				legacyEnv: true,
 			});
@@ -7114,11 +7222,13 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
 			mockGetWorkerSubdomain({
 				enabled: false,
+				previews_enabled: true,
 				env: "production",
 				legacyEnv: true,
 			});
 			mockUpdateWorkerSubdomain({
 				enabled: true,
+				previews_enabled: true,
 				env: "production",
 				legacyEnv: true,
 			});
@@ -7232,8 +7342,8 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetWorkerSubdomain({ enabled: false });
-			mockUpdateWorkerSubdomain({ enabled: true });
+			mockGetWorkerSubdomain({ enabled: false, previews_enabled: true });
+			mockUpdateWorkerSubdomain({ enabled: true, previews_enabled: true });
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -7258,12 +7368,12 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should warn the user if preview_urls default is different from remote", async () => {
-			writeWranglerConfig({}); // Default preview_urls should be false.
+			writeWranglerConfig({}); // Default preview_urls should be same as workers_dev (i.e. true).
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
-			mockUpdateWorkerSubdomain({ enabled: true, previews_enabled: false });
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+			mockUpdateWorkerSubdomain({ enabled: true, previews_enabled: true });
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -7279,9 +7389,9 @@ addEventListener('fetch', event => {});`
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorker has preview URLs enabled, but 'preview_urls' is not in the config.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorker has preview URLs disabled, but 'preview_urls' is not in the config.[0m
 
-				  Using default config 'preview_urls = false', current status will be overwritten.
+				  Using default config 'preview_urls = workers_dev = true', current status will be overwritten.
 
 				"
 			`);
@@ -14765,7 +14875,7 @@ export default{
 			mockGetServiceCustomDomainRecords([]);
 			mockGetServiceSubDomainData("test-name", {
 				enabled: true,
-				previews_enabled: false,
+				previews_enabled: true,
 			});
 			mockGetServiceSchedules("test-name", { schedules: [] });
 			mockGetServiceMetadata("test-name", {
@@ -14829,7 +14939,7 @@ export default{
 			mockGetServiceCustomDomainRecords([]);
 			mockGetServiceSubDomainData("test-name", {
 				enabled: true,
-				previews_enabled: false,
+				previews_enabled: true,
 			});
 			mockGetServiceSchedules("test-name", { schedules: [] });
 			mockGetServiceMetadata("test-name", {
@@ -14892,7 +15002,7 @@ export default{
 			mockGetServiceCustomDomainRecords([]);
 			mockGetServiceSubDomainData("test-name", {
 				enabled: true,
-				previews_enabled: false,
+				previews_enabled: true,
 			});
 			mockGetServiceSchedules("test-name", { schedules: [] });
 			mockGetServiceMetadata("test-name", {

@@ -37,7 +37,7 @@ export function mockSubDomainRequest(
 /** Create a mock handler to fetch the  <script>.<user>.workers.dev subdomain status*/
 export function mockGetWorkerSubdomain({
 	enabled,
-	previews_enabled = false,
+	previews_enabled = enabled,
 	env,
 	legacyEnv = false,
 	expectedScriptName = "test-name" + (legacyEnv && env ? `-${env}` : ""),
@@ -76,7 +76,7 @@ export function mockGetWorkerSubdomain({
 /** Create a mock handler to toggle a <script>.<user>.workers.dev subdomain status */
 export function mockUpdateWorkerSubdomain({
 	enabled,
-	previews_enabled = false,
+	previews_enabled = enabled,
 	env,
 	legacyEnv = false,
 	expectedScriptName = "test-name",
