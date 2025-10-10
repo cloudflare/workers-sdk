@@ -189,6 +189,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					try {
 						restartingServer = true;
 						debuglog("From server.restart(): Restarting server...");
+						debuglog("From server.restart(): disposing Miniflare instance");
+						await miniflare?.dispose().catch((error) => {
+							debuglog(
+								"From server.restart(): failed to dispose Miniflare instance:",
+								error
+							);
+						});
+						miniflare = undefined;
 						await restartServer();
 						debuglog("From server.restart(): Restarted server...");
 					} finally {
@@ -466,13 +474,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 
 				debuglog("buildEnd:", restartingServer ? "restarted" : "disposing");
-				if (!restartingServer) {
-					debuglog("buildEnd: disposing Miniflare instance");
-					await miniflare?.dispose().catch((error) => {
-						debuglog("buildEnd: failed to dispose Miniflare instance:", error);
-					});
-					miniflare = undefined;
-				}
 			},
 		},
 		// Plugin that provides a `__debug` path for debugging the Workers
