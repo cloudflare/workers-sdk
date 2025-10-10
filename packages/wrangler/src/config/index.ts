@@ -80,6 +80,7 @@ type ValidKeys = Exclude<
 	| "durable_objects"
 	| "version_metadata"
 	| "images"
+	| "media"
 	| "unsafe"
 	| "ratelimits"
 	| "workflows"

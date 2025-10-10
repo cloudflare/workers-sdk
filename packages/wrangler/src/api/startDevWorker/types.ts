@@ -21,6 +21,7 @@ import type {
 	CfImagesBinding,
 	CfKvNamespace,
 	CfLogfwdrBinding,
+	CfMediaBinding,
 	CfModule,
 	CfMTlsCertificate,
 	CfPipeline,
@@ -310,6 +311,7 @@ export type Binding =
 	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
 	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
 	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
+	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
 
