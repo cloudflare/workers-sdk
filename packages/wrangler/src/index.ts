@@ -438,6 +438,10 @@ export function createCLIParser(argv: string[]) {
 			if (_argv.cwd) {
 				process.chdir(_argv.cwd);
 			}
+			// Use CLOUDFLARE_ENV as a fallback for the --env flag.
+			if (_argv.env === undefined && process.env.CLOUDFLARE_ENV) {
+				(_argv as { env: string | undefined }).env = process.env.CLOUDFLARE_ENV;
+			}
 		})
 		.check(
 			demandSingleValue(

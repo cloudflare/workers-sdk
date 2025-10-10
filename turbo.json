@@ -3,7 +3,7 @@
 	"remoteCache": {
 		"signature": true
 	},
-	"globalEnv": ["CI_OS", "NODE_VERSION"],
+	"globalEnv": ["CI_OS", "NODE_VERSION", "CLOUDFLARE_ENV"],
 	"globalPassThroughEnv": [
 		"NODE_EXTRA_CA_CERTS",
 		"CI",
