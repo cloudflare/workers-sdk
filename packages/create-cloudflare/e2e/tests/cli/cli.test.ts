@@ -442,11 +442,14 @@ describe("Create Cloudflare CLI", () => {
 				);
 				expect(output).toContain("Pre-existing Worker (from Dashboard)");
 				expect(output).toContain("Application created successfully!");
-				expect(fs.existsSync(join(project.path, "wrangler.jsonc"))).toBe(false);
+				expect(fs.existsSync(join(project.path, "wrangler.jsonc"))).toBe(true);
 				expect(fs.existsSync(join(project.path, "wrangler.json"))).toBe(false);
+				expect(fs.existsSync(join(project.path, "wrangler.toml"))).toBe(false);
 				expect(
-					fs.readFileSync(join(project.path, "wrangler.toml"), "utf8"),
-				).toContain('FOO = "bar"');
+					JSON.parse(
+						fs.readFileSync(join(project.path, "wrangler.jsonc"), "utf8"),
+					),
+				).toMatchObject({ vars: { FOO: "bar" } });
 			},
 		);
 	});

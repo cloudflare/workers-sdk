@@ -1,6 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path, { dirname } from "node:path";
-import TOML from "@iarna/toml";
 import { execa } from "execa";
 import { fetchResult } from "./cfetch";
 import { fetchWorkerDefinitionFromDash } from "./cfetch/internal";
@@ -123,8 +122,8 @@ export const init = createCommand({
 			}
 
 			await writeFile(
-				path.join(creationDir, "wrangler.toml"),
-				TOML.stringify(config as TOML.JsonMap)
+				path.join(creationDir, "wrangler.jsonc"),
+				JSON.stringify(config, null, 2)
 			);
 		} else {
 			logger.log(`🌀 Running ${replacementC3Command}...`);
