@@ -172,13 +172,15 @@ function createHandler(def: CommandDefinition, commandName: string) {
 						: defaultWranglerConfig;
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
+					// We want to warn if the user has defined envs in their config, but hasn't
+					// specified one on the command line or through the CLOUDFLARE_ENV env var
 					if (!("env" in args)) {
 						if (hasDefinedEnvironments(config)) {
 							logger.warn(
 								dedent`
 										Multiple environments are defined in the Wrangler configuration file, but no target environment was specified for the ${commandName.replace(/^wrangler\s+/, "")} command.
-										To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify the target environment using the \`-e|--env\` flag.
-										If your intention is to use the top-level environment of your configuration simply pass an empty string to the flag to target such environment. For example \`--env=""\`.
+										To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify the target environment using the \`-e|--env\` flag or by setting the CLOUDFLARE_ENV environment variable.
+										If your intention is to use the top-level environment of your configuration, you can specify this by passing an empty string to the flag, for example: \`--env=""\`.
 									`
 							);
 						}
