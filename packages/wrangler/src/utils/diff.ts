@@ -50,6 +50,13 @@ type BestPath = {
 	lastComponent?: Result;
 };
 
+/**
+ * @deprecated When trying to compute the difference between two json object use `diffJsonObjects` instead
+ *             (as it includes a more polished print representation and it also includes information regarding
+ *             the difference between the two objects)
+ *             (For diffing other values, such as TOMLs this class should still be used, hopefully we'll be
+ *              able to move away from TOML files at some point)
+ */
 export class Diff {
 	#results: Result[] = [];
 
