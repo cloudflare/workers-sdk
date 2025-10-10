@@ -394,13 +394,6 @@ export function createCLIParser(argv: string[]) {
 			array: true,
 			requiresArg: true,
 		},
-		"experimental-remote-bindings": {
-			describe: `Experimental: Enable Remote Bindings`,
-			type: "boolean",
-			hidden: true,
-			default: true,
-			alias: ["x-remote-bindings"],
-		},
 		"experimental-provision": {
 			describe: `Experimental: Enable automatic resource provisioning`,
 			type: "boolean",
