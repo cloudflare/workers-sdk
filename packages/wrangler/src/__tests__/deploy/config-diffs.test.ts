@@ -8,7 +8,7 @@ describe("getRemoteConfigsDiff", () => {
 				name: "silent-firefly-dbe3",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
-				preview_urls: false,
+				preview_urls: true,
 				compatibility_date: "2025-07-08",
 				compatibility_flags: undefined,
 				placement: undefined,
@@ -39,7 +39,7 @@ describe("getRemoteConfigsDiff", () => {
 				name: "silent-firefly-dbe3",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
-				preview_urls: false,
+				preview_urls: true,
 				compatibility_date: "2025-07-08",
 				compatibility_flags: undefined,
 				placement: undefined,
@@ -77,7 +77,7 @@ describe("getRemoteConfigsDiff", () => {
 				name: "silent-firefly-dbe3",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
-				preview_urls: false,
+				preview_urls: true,
 				compatibility_date: "2025-07-08",
 				compatibility_flags: undefined,
 				placement: undefined,
@@ -118,7 +118,7 @@ describe("getRemoteConfigsDiff", () => {
 				name: "silent-firefly-dbe3",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
-				preview_urls: false,
+				preview_urls: true,
 				compatibility_date: "2025-07-08",
 				compatibility_flags: undefined,
 				placement: undefined,
@@ -155,8 +155,8 @@ describe("getRemoteConfigsDiff", () => {
 			    },
 			    \\"account_id\\": \\"account-id-123\\",
 			    \\"workers_dev\\": true,
-			+   \\"preview_urls\\": false
-			-   \\"preview_urls\\": false,
+			+   \\"preview_urls\\": true
+			-   \\"preview_urls\\": true,
 			-   \\"kv_namespaces\\": [
 			-     {
 			-       \\"binding\\": \\"MY_KV\\",
@@ -182,7 +182,7 @@ describe("getRemoteConfigsDiff", () => {
 				{
 					observability: remoteObservability,
 					workers_dev: true,
-					preview_urls: false,
+					preview_urls: true,
 				},
 				{
 					observability: localObservability,
