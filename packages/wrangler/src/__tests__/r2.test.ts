@@ -1312,8 +1312,8 @@ describe("r2", () => {
 						Control settings for automatic file compaction maintenance jobs for your R2 data catalog [open-beta]
 
 						COMMANDS
-						  wrangler r2 bucket catalog compaction enable <bucket>   Enable automatic file compaction for your R2 data catalog [open-beta]
-						  wrangler r2 bucket catalog compaction disable <bucket>  Disable automatic file compaction for your R2 data catalog [open-beta]
+						  wrangler r2 bucket catalog compaction enable <bucket> [namespace] [table]   Enable automatic file compaction for your R2 data catalog or a specific table [open-beta]
+						  wrangler r2 bucket catalog compaction disable <bucket> [namespace] [table]  Disable automatic file compaction for your R2 data catalog or a specific table [open-beta]
 
 						GLOBAL FLAGS
 						  -c, --config    Path to Wrangler configuration file  [string]
@@ -1368,7 +1368,10 @@ describe("r2", () => {
 							"
 							 ⛅️ wrangler x.x.x
 							──────────────────
-							✨ Successfully enabled file compaction for the data catalog for bucket 'testBucket'."
+							✨ Successfully enabled file compaction for the data catalog for bucket 'testBucket'.
+
+							Compaction will automatically combine small files into larger ones to improve query performance.
+							For more details, refer to: https://developers.cloudflare.com/r2/data-catalog/about-compaction/"
 						`
 						);
 					});
@@ -1381,12 +1384,14 @@ describe("r2", () => {
 						);
 						expect(std.out).toMatchInlineSnapshot(`
 							"
-							wrangler r2 bucket catalog compaction enable <bucket>
+							wrangler r2 bucket catalog compaction enable <bucket> [namespace] [table]
 
-							Enable automatic file compaction for your R2 data catalog [open-beta]
+							Enable automatic file compaction for your R2 data catalog or a specific table [open-beta]
 
 							POSITIONALS
-							  bucket  The name of the bucket which contains the catalog  [string] [required]
+							  bucket     The name of the bucket which contains the catalog  [string] [required]
+							  namespace  The namespace containing the table (optional, for table-level compaction)  [string]
+							  table      The name of the table (optional, for table-level compaction)  [string]
 
 							GLOBAL FLAGS
 							  -c, --config    Path to Wrangler configuration file  [string]
@@ -1398,7 +1403,7 @@ describe("r2", () => {
 
 							OPTIONS
 							      --target-size  The target size for compacted files in MB (allowed values: 64, 128, 256, 512)  [number] [default: 128]
-							      --token        A cloudflare api token with access to R2 and R2 Data Catalog which will be used to read/write files for compaction.  [string] [required]"
+							      --token        A cloudflare api token with access to R2 and R2 Data Catalog (required for catalog-level compaction settings only)  [string]"
 						`);
 						expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1407,13 +1412,99 @@ describe("r2", () => {
 				`);
 					});
 
-					it("should error if --token is not provided", async () => {
+					it("should error if --token is not provided for catalog-level", async () => {
 						await expect(
 							runWrangler(
 								"r2 bucket catalog compaction enable testBucket --target-size 512"
 							)
 						).rejects.toThrowErrorMatchingInlineSnapshot(
-							`[Error: Missing required argument: token]`
+							`[Error: Token is required for catalog-level compaction. Use --token flag to provide a Cloudflare API token.]`
+						);
+					});
+
+					it("should enable table compaction without token", async () => {
+						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/namespaces/testNamespace/tables/testTable/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										compaction: {
+											state: "enabled",
+										},
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							)
+						);
+						await runWrangler(
+							"r2 bucket catalog compaction enable testBucket testNamespace testTable"
+						);
+						expect(std.out).toMatchInlineSnapshot(
+							`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							✨ Successfully enabled file compaction for table 'testNamespace.testTable' in bucket 'testBucket'."
+						`
+						);
+					});
+
+					it("should enable table compaction with custom target size", async () => {
+						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/namespaces/testNamespace/tables/testTable/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										compaction: {
+											state: "enabled",
+											target_size_mb: 256,
+										},
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							)
+						);
+						await runWrangler(
+							"r2 bucket catalog compaction enable testBucket testNamespace testTable --target-size 256"
+						);
+						expect(std.out).toMatchInlineSnapshot(
+							`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							✨ Successfully enabled file compaction for table 'testNamespace.testTable' in bucket 'testBucket'."
+						`
+						);
+					});
+
+					it("should error if only namespace is provided", async () => {
+						await expect(
+							runWrangler(
+								"r2 bucket catalog compaction enable testBucket testNamespace"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Table name is required when namespace is specified]`
+						);
+					});
+
+					it("should error if only table is provided", async () => {
+						// This test ensures that if table is passed as namespace position, it errors properly
+						await expect(
+							runWrangler(
+								'r2 bucket catalog compaction enable testBucket "" testTable'
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Namespace is required when table is specified]`
 						);
 					});
 				});
@@ -1429,12 +1520,14 @@ describe("r2", () => {
 						);
 						expect(std.out).toMatchInlineSnapshot(`
 							"
-							wrangler r2 bucket catalog compaction disable <bucket>
+							wrangler r2 bucket catalog compaction disable <bucket> [namespace] [table]
 
-							Disable automatic file compaction for your R2 data catalog [open-beta]
+							Disable automatic file compaction for your R2 data catalog or a specific table [open-beta]
 
 							POSITIONALS
-							  bucket  The name of the bucket which contains the catalog  [string] [required]
+							  bucket     The name of the bucket which contains the catalog  [string] [required]
+							  namespace  The namespace containing the table (optional, for table-level compaction)  [string]
+							  table      The name of the table (optional, for table-level compaction)  [string]
 
 							GLOBAL FLAGS
 							  -c, --config    Path to Wrangler configuration file  [string]
@@ -1495,6 +1588,60 @@ describe("r2", () => {
 						});
 						await runWrangler(
 							"r2 bucket catalog compaction disable testBucket"
+						);
+						expect(std.out).toMatchInlineSnapshot(`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Disable cancelled."
+						`);
+					});
+
+					it("should disable table compaction when confirmed", async () => {
+						setIsTTY(true);
+						mockConfirm({
+							text: "Are you sure you want to disable file compaction for table 'testNamespace.testTable' in bucket 'testBucket'?",
+							result: true,
+						});
+						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/namespaces/testNamespace/tables/testTable/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										compaction: {
+											state: "disabled",
+										},
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							)
+						);
+						await runWrangler(
+							"r2 bucket catalog compaction disable testBucket testNamespace testTable"
+						);
+						expect(std.out).toMatchInlineSnapshot(
+							`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Successfully disabled file compaction for table 'testNamespace.testTable' in bucket 'testBucket'."
+						`
+						);
+					});
+
+					it("should cancel table compaction disable when rejected", async () => {
+						setIsTTY(true);
+						mockConfirm({
+							text: "Are you sure you want to disable file compaction for table 'testNamespace.testTable' in bucket 'testBucket'?",
+							result: false,
+						});
+						await runWrangler(
+							"r2 bucket catalog compaction disable testBucket testNamespace testTable"
 						);
 						expect(std.out).toMatchInlineSnapshot(`
 							"
