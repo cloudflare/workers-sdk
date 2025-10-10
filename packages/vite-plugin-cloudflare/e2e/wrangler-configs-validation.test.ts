@@ -5,7 +5,9 @@ import { runLongLived, seed } from "./helpers";
 //       testing regarding the validation there are unit tests in src/__tests__/get-validated-wrangler-config-path.spec.ts
 
 describe("during development wrangler config files are validated", () => {
-	const noWranglerConfigProjectPath = seed("no-wrangler-config", "pnpm");
+	const noWranglerConfigProjectPath = seed("no-wrangler-config", {
+		pm: "pnpm",
+	});
 	test("for the entry worker", async ({ expect }) => {
 		const proc = await runLongLived("pnpm", "dev", noWranglerConfigProjectPath);
 		expect(await proc.exitCode).not.toBe(0);
@@ -16,7 +18,7 @@ describe("during development wrangler config files are validated", () => {
 
 	const noWranglerConfigAuxProjectPath = seed(
 		"no-wrangler-config-for-auxiliary-worker",
-		"pnpm"
+		{ pm: "pnpm" }
 	);
 	test("for auxiliary workers", async ({ expect }) => {
 		const proc = await runLongLived(

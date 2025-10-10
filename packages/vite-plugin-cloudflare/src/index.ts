@@ -6,6 +6,7 @@ import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/ass
 import { CoreHeaders, Miniflare } from "miniflare";
 import colors from "picocolors";
 import * as vite from "vite";
+import { assertWranglerVersion } from "./assert-wrangler-version";
 import { hasAssetsConfigChanged } from "./asset-config";
 import { createBuildApp } from "./build";
 import {
@@ -65,6 +66,8 @@ const debuglog = util.debuglog("@cloudflare:vite-plugin");
 // this flag is used to show the workers configs warning only once
 let workersConfigsWarningShown = false;
 let miniflare: Miniflare | undefined;
+
+await assertWranglerVersion();
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
