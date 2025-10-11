@@ -64,7 +64,7 @@
 		"mlly": "^1.7.4",
 		"tsdown": "^0.15.4",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {

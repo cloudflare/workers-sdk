@@ -20,7 +20,7 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@playground/main-resolution-package": "file:./package",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }

@@ -12,7 +12,7 @@ import { z } from "zod";
 import { getProjectPath, getRelativeProjectPath } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
-import type { WorkspaceProject } from "vitest/node";
+import type { TestProject } from "vitest/node";
 import type { Binding, RemoteProxySession } from "wrangler";
 import type { ParseParams, ZodError } from "zod";
 
@@ -342,7 +342,7 @@ async function parseCustomPoolOptions(
 }
 
 export async function parseProjectOptions(
-	project: WorkspaceProject
+	project: TestProject
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
@@ -368,8 +368,6 @@ export async function parseProjectOptions(
 	}
 
 	const projectPath = getProjectPath(project);
-	const rootPath =
-		typeof projectPath === "string" ? path.dirname(projectPath) : "";
 	const poolOptions = project.config.poolOptions;
 	let workersPoolOptions = poolOptions?.workers ?? {};
 	try {
@@ -382,7 +380,7 @@ export async function parseProjectOptions(
 			};
 			workersPoolOptions = await workersPoolOptions({ inject });
 		}
-		return await parseCustomPoolOptions(rootPath, workersPoolOptions, {
+		return await parseCustomPoolOptions(projectPath, workersPoolOptions, {
 			path: OPTIONS_PATH_ARRAY,
 		});
 	} catch (e) {

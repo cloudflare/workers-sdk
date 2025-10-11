@@ -29,7 +29,8 @@ function importModule(
 				"Use your package manager's `why` command to list versions and why each is installed (e.g. `npm why vitest`).";
 			throw new Error(message);
 		}
-		return instance.executor.executeId(specifier);
+		// return import(specifier);
+		return instance.executor.import(specifier);
 	});
 }
 

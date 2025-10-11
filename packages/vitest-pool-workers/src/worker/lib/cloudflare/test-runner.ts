@@ -40,7 +40,7 @@ class WorkersSnapshotEnvironment extends NodeSnapshotEnvironment {
 		return `// Vitest Snapshot v${this.getVersion()}, https://vitest.dev/guide/snapshot.html`;
 	}
 
-	resolvePath(filePath: string): Promise<string> {
+	async resolvePath(filePath: string): Promise<string> {
 		return this.rpc.resolveSnapshotPath(filePath);
 	}
 

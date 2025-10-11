@@ -20,7 +20,8 @@ import {
 } from "../../../miniflare/src/workers/core/devalue";
 import { createChunkingSocket } from "../shared/chunking-socket";
 import type { SocketLike } from "../shared/chunking-socket";
-import type { VitestExecutor as VitestExecutorType } from "vitest/execute";
+// @ts-expect-error Vitest doesn't export this type
+import type { VitestModuleRunner as VitestModuleRunnerType } from "vitest/internal/module-runner";
 
 function structuredSerializableStringify(value: unknown): string {
 	return devalue.stringify(value, structuredSerializableReducers);
@@ -239,7 +240,7 @@ function applyDefines() {
 // `RunnerObject` is a singleton and "colo local" ephemeral object. Refer to:
 // https://github.com/cloudflare/workerd/blob/v1.20231206.0/src/workerd/server/workerd.capnp#L529-L543
 export class RunnerObject implements DurableObject {
-	executor: VitestExecutorType | undefined;
+	executor: VitestModuleRunnerType | undefined;
 
 	constructor(_state: DurableObjectState, env: Record<string, unknown> & Env) {
 		vm._setUnsafeEval(env.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
@@ -276,14 +277,19 @@ export class RunnerObject implements DurableObject {
 			// method we know is called to get the singleton. :see_no_evil:
 			// TODO(soon): see if we can get `startViteNode()` (https://github.com/vitest-dev/vitest/blob/8d183da4f7cc2986d11c802d16bacd221fb69b96/packages/vitest/src/runtime/execute.ts#L45)
 			//  exported in `vitest/execute` (https://github.com/vitest-dev/vitest/blob/main/packages/vitest/src/public/execute.ts)
-			const { VitestExecutor } = await import("vitest/execute");
-			const originalResolveUrl = VitestExecutor.prototype.resolveUrl;
+			const { VitestModuleRunner } = await import(
+				// @ts-expect-error Vitest doesn't provide types for this
+				"vitest/internal/module-runner"
+			);
+			const originalResolveUrl = VitestModuleRunner.prototype.import;
 			// eslint-disable-next-line @typescript-eslint/no-this-alias
 			const that = this;
-			VitestExecutor.prototype.resolveUrl = function (...args) {
+			VitestModuleRunner.prototype.import = function (...args: unknown[]) {
 				that.executor = this;
 				return originalResolveUrl.apply(this, args);
 			};
+
+			// this.executor = startVitestModuleRunner();
 
 			(wd.data as { port: WebSocketMessagePort }).port = port;
 			module[wd.name](wd.data)

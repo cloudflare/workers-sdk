@@ -17,7 +17,7 @@
 		"postal-mime": "2.4.4",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }

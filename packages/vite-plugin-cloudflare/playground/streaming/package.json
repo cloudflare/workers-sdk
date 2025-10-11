@@ -17,7 +17,7 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@vitejs/plugin-basic-ssl": "^2.0.0",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }

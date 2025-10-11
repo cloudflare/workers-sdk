@@ -1,0 +1,23 @@
+diff --git a/dist/chunks/worker.d.DSgBAZPX.d.ts b/dist/chunks/worker.d.DSgBAZPX.d.ts
+index 42856a2b5fc870e160cf3f4d090f01fb66e067b4..92dc92ad715605fcf6ba0f231203798bde60fe17 100644
+--- a/dist/chunks/worker.d.DSgBAZPX.d.ts
++++ b/dist/chunks/worker.d.DSgBAZPX.d.ts
+@@ -133,4 +133,4 @@ interface WorkerGlobalState {
+ 	onFilterStackTrace?: (trace: string) => string;
+ }
+ 
+-export type { AfterSuiteRunMeta as A, BirpcReturn as B, ContextRPC as C, LabelColor as L, ModuleGraphData as M, ProvidedContext as P, RunnerRPC as R, TestExecutionMethod as T, UserConsoleLog as U, WorkerGlobalState as W, RuntimeRPC as a, ContextTestEnvironment as b, ResolveFunctionResult as c };
++export type { AfterSuiteRunMeta as A, BirpcReturn as B, ContextRPC as C, LabelColor as L, ModuleGraphData as M, ProvidedContext as P, RunnerRPC as R, TestExecutionMethod as T, UserConsoleLog as U, WorkerGlobalState as W, RuntimeRPC as a, ContextTestEnvironment as b, ResolveFunctionResult as c, WorkerRPC as wr };
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+index 88bce4ca964976a3b6f26bd0f85872e785150e4f..19aa50a16f0659ed3b7fac8e31a3538a390c3b8d 100644
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -6,7 +6,7 @@ export { CancelReason, ImportDuration, OnTestFailedHandler, OnTestFinishedHandle
+ import { Awaitable } from '@vitest/utils';
+ export { ParsedStack, SerializedError, TestError } from '@vitest/utils';
+ import { U as UserConsoleLog, L as LabelColor, M as ModuleGraphData, B as BirpcReturn, P as ProvidedContext } from './chunks/worker.d.DSgBAZPX.js';
+-export { A as AfterSuiteRunMeta, C as ContextRPC, b as ContextTestEnvironment, R as RunnerRPC, a as RuntimeRPC, T as TestExecutionMethod, W as WorkerGlobalState } from './chunks/worker.d.DSgBAZPX.js';
++export { A as AfterSuiteRunMeta, C as ContextRPC, b as ContextTestEnvironment, R as RunnerRPC, a as RuntimeRPC, T as TestExecutionMethod, W as WorkerGlobalState, wr as WorkerRPC } from './chunks/worker.d.DSgBAZPX.js';
+ import { S as SerializedConfig, F as FakeTimerInstallOpts, R as RuntimeOptions } from './chunks/config.d.C4PpNy7v.js';
+ export { b as RuntimeConfig, a as SerializedCoverageConfig } from './chunks/config.d.C4PpNy7v.js';
+ import { ExpectStatic } from '@vitest/expect';

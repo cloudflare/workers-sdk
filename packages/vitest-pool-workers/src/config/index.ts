@@ -10,8 +10,14 @@ import type {
 	WorkersPoolOptions,
 } from "../pool/config";
 import type { Plugin } from "vite";
-import type { Awaitable, inject } from "vitest";
-import type { ConfigEnv, UserConfig, UserWorkspaceConfig } from "vitest/config";
+import type { inject } from "vitest";
+import type {
+	ConfigEnv,
+	UserWorkspaceConfig,
+	ViteUserConfig,
+} from "vitest/config";
+
+type Awaitable<T> = T | PromiseLike<T>;
 
 const cloudflareTestPath = path.resolve(
 	__dirname,
@@ -33,26 +39,26 @@ globalThis.structuredClone ??= function (value, options) {
 	return message.message;
 };
 
-type ConfigFn<T extends UserConfig> = (env: ConfigEnv) => T | Promise<T>;
+type ConfigFn<T extends ViteUserConfig> = (env: ConfigEnv) => T | Promise<T>;
 
-export type AnyConfigExport<T extends UserConfig> =
+export type AnyConfigExport<T extends ViteUserConfig> =
 	| T
 	| Promise<T>
 	| ConfigFn<T>;
 
-function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
+function mapAnyConfigExport<T extends ViteUserConfig, U extends ViteUserConfig>(
 	f: (t: T) => U,
 	config: T
 ): U;
-function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
+function mapAnyConfigExport<T extends ViteUserConfig, U extends ViteUserConfig>(
 	f: (t: T) => U,
 	config: Promise<T>
 ): Promise<U>;
-function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
+function mapAnyConfigExport<T extends ViteUserConfig, U extends ViteUserConfig>(
 	f: (t: T) => U,
 	config: ConfigFn<T>
 ): ConfigFn<U>;
-function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
+function mapAnyConfigExport<T extends ViteUserConfig, U extends ViteUserConfig>(
 	f: (t: T) => U,
 	config: AnyConfigExport<T>
 ): AnyConfigExport<U> {
@@ -77,7 +83,7 @@ export interface WorkerPoolOptionsContext {
 	// in Miniflare options (e.g. bindings, upstream, hyperdrives, ...)
 	inject: typeof inject;
 }
-export type WorkersUserConfig<T extends UserConfig> = T & {
+export type WorkersViteUserConfig<T extends ViteUserConfig> = T & {
 	test?: {
 		pool?: "@cloudflare/vitest-pool-workers";
 		poolMatchGlobs?: never;
@@ -89,8 +95,9 @@ export type WorkersUserConfig<T extends UserConfig> = T & {
 	};
 };
 
-export type WorkersUserConfigExport = WorkersUserConfig<UserConfig>;
-export type WorkersProjectConfigExport = WorkersUserConfig<UserWorkspaceConfig>;
+export type WorkersViteUserConfigExport = WorkersViteUserConfig<ViteUserConfig>;
+export type WorkersProjectConfigExport =
+	WorkersViteUserConfig<UserWorkspaceConfig>;
 
 function ensureArrayIncludes<T>(array: T[], items: T[]) {
 	for (const item of items) {
@@ -190,24 +197,24 @@ function createConfigPlugin(): Plugin<WorkersConfigPluginAPI> {
 	};
 }
 
-function ensureWorkersConfig<T extends UserConfig>(config: T): T {
+function ensureWorkersConfig<T extends ViteUserConfig>(config: T): T {
 	config.plugins ??= [];
 	config.plugins.push(createConfigPlugin());
 	return config;
 }
 
 export function defineWorkersConfig(
-	config: WorkersUserConfigExport
-): WorkersUserConfigExport;
+	config: WorkersViteUserConfigExport
+): WorkersViteUserConfigExport;
 export function defineWorkersConfig(
-	config: Promise<WorkersUserConfigExport>
-): Promise<WorkersUserConfigExport>;
+	config: Promise<WorkersViteUserConfigExport>
+): Promise<WorkersViteUserConfigExport>;
 export function defineWorkersConfig(
-	config: ConfigFn<WorkersUserConfigExport>
-): ConfigFn<WorkersUserConfigExport>;
+	config: ConfigFn<WorkersViteUserConfigExport>
+): ConfigFn<WorkersViteUserConfigExport>;
 export function defineWorkersConfig(
-	config: AnyConfigExport<WorkersUserConfigExport>
-): AnyConfigExport<WorkersUserConfigExport> {
+	config: AnyConfigExport<WorkersViteUserConfigExport>
+): AnyConfigExport<WorkersViteUserConfigExport> {
 	if (typeof config === "function") {
 		return mapAnyConfigExport(ensureWorkersConfig, config);
 	} else if (config instanceof Promise) {
