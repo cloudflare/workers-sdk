@@ -6,6 +6,7 @@ import { minimalVitestConfig, test } from "./helpers";
 
 test(
 	"disk snapshots",
+	{ timeout: 90_000 },
 	async ({ expect, seed, vitestRun, tmpPath }) => {
 		// Check writes new snapshots
 		await seed({
@@ -108,12 +109,12 @@ test(
 		expect(result.stdout).toMatch("Snapshots  1 files removed");
 		expect(exitCode).toBe(0);
 		expect(existsSync(snapshotPath)).toBe(false);
-	},
-	{ timeout: 90_000 }
+	}
 );
 
 test.skipIf(process.platform === "win32")(
 	"inline snapshots",
+	{ timeout: 90_000 },
 	async ({ expect, seed, vitestRun, tmpPath }) => {
 		// Check writes new snapshots
 		await seed({
@@ -184,6 +185,5 @@ test.skipIf(process.platform === "win32")(
 			expect(4).toMatchInlineSnapshot(\`4\`);
 		});"
 	`);
-	},
-	{ timeout: 90_000 }
+	}
 );

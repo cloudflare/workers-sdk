@@ -35,7 +35,7 @@
 		"html-rewriter-wasm": "^0.4.1",
 		"rimraf": "catalog:default",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "4.0.0-beta.17"
 	},
 	"volta": {
 		"extends": "../../package.json"

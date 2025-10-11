@@ -55,17 +55,13 @@ import type {
 } from "miniflare";
 import type { Readable } from "node:stream";
 import type { MessagePort } from "node:worker_threads";
-import type {
-	RunnerRPC,
-	RuntimeRPC,
-	SerializedConfig,
-	WorkerContext,
-} from "vitest";
+import type { RunnerRPC, RuntimeRPC, SerializedConfig } from "vitest";
 import type {
 	ProcessPool,
+	TestProject,
 	TestSpecification,
 	Vitest,
-	WorkspaceProject,
+	WorkerContext,
 } from "vitest/node";
 
 interface SerializedOptions {
@@ -78,11 +74,11 @@ interface SerializedOptions {
 }
 
 // https://github.com/vitest-dev/vitest/blob/v2.1.1/packages/vite-node/src/client.ts#L468
-declare const __vite_ssr_import__: unknown;
-assert(
-	typeof __vite_ssr_import__ === "undefined",
-	"Expected `@cloudflare/vitest-pool-workers` not to be transformed by Vite"
-);
+// declare const __vite_ssr_import__: unknown;
+// assert(
+// 	typeof __vite_ssr_import__ === "undefined",
+// 	"Expected `@cloudflare/vitest-pool-workers` not to be transformed by Vite"
+// );
 
 function structuredSerializableStringify(value: unknown): string {
 	// Vitest v2+ sends a sourcemap to it's runner, which we can't serialise currently
@@ -169,7 +165,7 @@ function forEachMiniflare(
 }
 
 interface Project {
-	project: WorkspaceProject;
+	project: TestProject;
 	options: WorkersPoolOptionsWithDefines;
 	testFiles: Set<string>;
 	relativePath: string | number;
@@ -178,8 +174,8 @@ interface Project {
 }
 const allProjects = new Map<string /* projectName */, Project>();
 
-function getRunnerName(project: WorkspaceProject, testFile?: string) {
-	const name = `${WORKER_NAME_PREFIX}runner-${project.getName().replace(/[^a-z0-9-]/gi, "_")}`;
+function getRunnerName(project: TestProject, testFile?: string) {
+	const name = `${WORKER_NAME_PREFIX}runner-${project.name.replace(/[^a-z0-9-]/gi, "_")}`;
 	if (testFile === undefined) {
 		return name;
 	}
@@ -630,8 +626,7 @@ function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
 	if (service !== undefined) {
 		return service;
 	}
-	// @ts-expect-error ctx.vitenode is marked as internal
-	service = handleModuleFallbackRequest.bind(undefined, ctx.vitenode.server);
+	service = handleModuleFallbackRequest.bind(undefined, ctx.vite);
 	moduleFallbackServices.set(ctx, service);
 	return service;
 }
@@ -762,7 +757,7 @@ function maybeGetResolvedMainPath(project: Project): string | undefined {
 		return;
 	}
 	if (typeof projectPath === "string") {
-		return path.resolve(path.dirname(projectPath), main);
+		return path.resolve(projectPath, main);
 	} else {
 		return path.resolve(main);
 	}
@@ -778,20 +773,18 @@ async function runTests(
 	invalidates: string[] = [],
 	method: "run" | "collect"
 ) {
-	const workerPath = path.join(ctx.distPath, "worker.js");
-	const threadsWorkerPath = path.join(ctx.distPath, "workers", "threads.js");
+	const workerPath = path.join(ctx.distPath, "worker-base.js");
 
 	ctx.state.clearFiles(project.project, files);
 	const data: WorkerContext = {
 		pool: "threads",
-		worker: pathToFileURL(threadsWorkerPath).href,
 		port: undefined as unknown as MessagePort,
 		config,
 		files,
 		invalidates,
 		environment: { name: "node", options: null },
 		workerId: 0,
-		projectName: project.project.getName(),
+		projectName: project.project.name,
 		providedContext: project.project.getProvidedContext(),
 	};
 
@@ -799,11 +792,12 @@ async function runTests(
 	// This allows that plugin to inject a virtual dependency on main so that vitest
 	// will automatically re-run tests when that gets updated, avoiding the user having
 	// to manually add such an import in their tests.
-	const configPlugin = project.project.server.config.plugins.find(
+	const configPlugin = project.project.vite.config.plugins.find(
 		({ name }) => name === "@cloudflare/vitest-pool-workers:config"
 	);
 	if (configPlugin !== undefined) {
 		const api = configPlugin.api as WorkersConfigPluginAPI;
+
 		api.setMain(project.options.main);
 	}
 
@@ -867,7 +861,7 @@ async function runTests(
 				(/^(cloudflare|workerd):/.test(specifier) ||
 					workerdBuiltinModules.has(specifier))
 			) {
-				return { externalize: specifier };
+				return { externalize: specifier, type: "module" };
 			}
 
 			// If the specifier matches any module rules, force it to be loaded as
@@ -876,8 +870,13 @@ async function runTests(
 				testRegExps(rule.include, specifier)
 			);
 			if (maybeRule !== undefined) {
-				const externalize = specifier + `?mf_vitest_force=${maybeRule.type}`;
-				return { externalize };
+				const modulePath = path.join(
+					getProjectPath(project.project),
+					specifier
+				);
+
+				const externalize = modulePath + `?mf_vitest_force=${maybeRule.type}`;
+				return { externalize, type: "module" };
 			}
 
 			return localRpcFunctions.fetch(...args);
@@ -911,7 +910,7 @@ async function runTests(
 			});
 		},
 	});
-	project.project.ctx.onCancel((reason) => rpc.onCancel(reason));
+	project.project.vitest.onCancel((reason) => rpc.onCancel(reason));
 	webSocket.accept();
 
 	const [event] = (await events.once(webSocket, "close")) as [CloseEvent];
@@ -1027,10 +1026,10 @@ async function executeMethod(
 	// always have an empty, fully-popped stacked at the end of a run.
 
 	// 1. Collect new specs
-	const parsedProjectOptions = new Set<WorkspaceProject>();
-	for (const [project, testFile] of specs) {
+	const parsedProjectOptions = new Set<TestProject>();
+	for (const { project, moduleId: testFile } of specs) {
 		// Vitest validates all project names are unique
-		const projectName = project.getName();
+		const projectName = project.name;
 		let workersProject = allProjects.get(projectName);
 		// Parse project options once per project per re-run
 		if (workersProject === undefined) {
@@ -1053,8 +1052,8 @@ async function executeMethod(
 
 	// 2. Run just the required tests
 	const resultPromises: Promise<void>[] = [];
-	const filesByProject = new Map<WorkspaceProject, string[]>();
-	for (const [project, file] of specs) {
+	const filesByProject = new Map<TestProject, string[]>();
+	for (const { project, moduleId: file } of specs) {
 		let group = filesByProject.get(project);
 		if (group === undefined) {
 			filesByProject.set(project, (group = []));
@@ -1062,11 +1061,11 @@ async function executeMethod(
 		group.push(file);
 	}
 	for (const [workspaceProject, files] of filesByProject) {
-		const project = allProjects.get(workspaceProject.getName());
+		const project = allProjects.get(workspaceProject.name);
 		assert(project !== undefined); // Defined earlier in this function
 		const options = project.options;
 
-		const config = workspaceProject.getSerializableConfig();
+		const config = workspaceProject.serializedConfig;
 
 		// Use our custom test runner. We don't currently support custom
 		// runners, since we need our own for isolated storage/fetch mock resets

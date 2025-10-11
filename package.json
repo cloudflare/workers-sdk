@@ -74,7 +74,6 @@
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
 			"@types/node": "$@types/node",
-			"vitest>vite": "^5.0.0",
 			"@types/node>undici-types": "catalog:default"
 		},
 		"patchedDependencies": {
@@ -85,7 +84,8 @@
 			"postal-mime": "patches/postal-mime.patch",
 			"@changesets/assemble-release-plan": "patches/@changesets__assemble-release-plan.patch",
 			"youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch",
-			"comment-json": "patches/comment-json.patch"
+			"comment-json": "patches/comment-json.patch",
+			"vitest@4.0.0-beta.17": "patches/vitest@4.0.0-beta.17.patch"
 		}
 	}
 }

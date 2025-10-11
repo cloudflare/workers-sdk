@@ -314,6 +314,7 @@ test("shared storage with multiple workers", async ({
 
 test(
 	"shared storage with single worker",
+	{ timeout: 60_000 },
 	async ({ expect, seed, vitestRun }) => {
 		// Check shared global scopes, storage shared, and shared auxiliaries:
 		// https://developers.cloudflare.com/workers/testing/vitest-integration/isolation-and-concurrency/#isolatedstorage-false-singleworker-true
@@ -401,6 +402,5 @@ test(
 		});
 		result = await vitestRun();
 		expect(await result.exitCode).toBe(0);
-	},
-	{ timeout: 60_000 }
+	}
 );

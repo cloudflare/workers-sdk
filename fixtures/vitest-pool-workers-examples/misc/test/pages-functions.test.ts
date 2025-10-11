@@ -84,7 +84,7 @@ it("requires next property to call next()", async () => {
 	const fn: BareFunction = (ctx) => ctx.next();
 	const request = new IncomingRequest("https://example.com");
 	const ctx = createPagesEventContext<typeof fn>({ request });
-	expect(fn(ctx)).rejects.toThrowErrorMatchingInlineSnapshot(
+	await expect(fn(ctx)).rejects.toThrowErrorMatchingInlineSnapshot(
 		`[TypeError: Cannot call \`EventContext#next()\` without including \`next\` property in 2nd argument to \`createPagesEventContext()\`]`
 	);
 });
