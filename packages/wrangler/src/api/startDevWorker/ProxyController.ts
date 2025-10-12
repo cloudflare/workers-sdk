@@ -14,7 +14,10 @@ import { castLogLevel, WranglerLog } from "../../dev/miniflare";
 import { handleRuntimeStdioWithStructuredLogs } from "../../dev/miniflare/stdio";
 import { getHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
-import { getSourceMappedStack } from "../../sourcemap";
+import {
+	getSourceMappedStack,
+	maybeRetrieveFileSourceMap,
+} from "../../sourcemap";
 import { assertNever } from "../../utils/assert-never";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -484,7 +487,37 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 					return;
 				}
 
-				const stack = getSourceMappedStack(message.params.exceptionDetails);
+				// Create a sourcemap retriever that can map module names to file paths
+				const maybeNameToFilePath = (moduleName: string) => {
+					if (!this.latestBundle) {
+						return undefined;
+					}
+					const { path: entrypointPath, modules, type } = this.latestBundle;
+
+					// If this is a service worker, always return the entrypoint path.
+					// Service workers can't have additional JavaScript modules.
+					if (type === "commonjs") {
+						return entrypointPath;
+					}
+					// Similarly, if the name matches the entrypoint, return its path
+					const entryPointName = path.basename(entrypointPath);
+					if (moduleName === entryPointName) {
+						return entrypointPath;
+					}
+					// Otherwise, return the file path of the matching module (if any)
+					for (const module of modules) {
+						if (moduleName === module.name) {
+							return module.filePath;
+						}
+					}
+				};
+				const retrieveSourceMap = (moduleName: string) =>
+					maybeRetrieveFileSourceMap(maybeNameToFilePath(moduleName));
+
+				const stack = getSourceMappedStack(
+					message.params.exceptionDetails,
+					retrieveSourceMap
+				);
 				logger.error(message.params.exceptionDetails.text, stack);
 				break;
 			}

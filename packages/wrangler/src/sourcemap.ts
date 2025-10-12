@@ -93,7 +93,8 @@ function getSourceMappingPrepareStackTrace(
 }
 
 export function getSourceMappedStack(
-	details: Protocol.Runtime.ExceptionDetails
+	details: Protocol.Runtime.ExceptionDetails,
+	retrieveSourceMap?: RetrieveSourceMapFunction
 ): string {
 	const description = details.exception?.description ?? "";
 	const callFrames = details.stackTrace?.callFrames;
@@ -108,7 +109,7 @@ export function getSourceMappedStack(
 	const error = new Error(nameMessage.substring(colonIndex + 2));
 	error.name = nameMessage.substring(0, colonIndex);
 	const callSites = callFrames.map(callFrameToCallSite);
-	return getSourceMappingPrepareStackTrace()(error, callSites);
+	return getSourceMappingPrepareStackTrace(retrieveSourceMap)(error, callSites);
 }
 
 function callFrameToCallSite(frame: Protocol.Runtime.CallFrame): CallSite {
