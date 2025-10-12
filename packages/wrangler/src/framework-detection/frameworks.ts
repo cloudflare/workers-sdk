@@ -291,6 +291,30 @@ export default defineCloudflareConfig({
 		}
 	},
 	{
+		name: 'nodejs-http',
+		detection: {
+			// Detection will be done via custom logic in detector.ts
+			// looking for createServer usage in source files
+		},
+		build: {
+			command: '', // No build needed initially
+			outputDir: 'src'
+		},
+		deploy: {
+			type: 'ssr',
+			compatibility_flags: ['nodejs_compat'],
+			main: './src/server.ts'
+		},
+		dev: {
+			command: 'npm run dev',
+			port: 8080
+		},
+		c3Config: {
+			templateId: 'nodejs-http',
+			packages: []
+		}
+	},
+	{
 		name: 'static',
 		detection: {
 			staticFiles: ['index.html']

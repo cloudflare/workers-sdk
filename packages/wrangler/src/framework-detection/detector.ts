@@ -25,7 +25,7 @@ export class FrameworkDetector {
 		logger.debug('Detecting framework...');
 
 		const packageJson = await this.readPackageJson();
-		
+
 		// If no package.json, check for static site
 		if (!packageJson) {
 			const staticFramework = await this.detectStaticSite();
@@ -40,8 +40,21 @@ export class FrameworkDetector {
 			return null;
 		}
 
+		// Check for Node.js createServer usage first (higher priority)
+		const nodeServerDetection = await this.detectNodeServer();
+		if (nodeServerDetection) {
+			const { npm: packageManager } = detectPackageManager();
+			logger.debug(`Detected Node.js HTTP server with high confidence`);
+			return {
+				framework: nodeServerDetection.framework,
+				packageManager,
+				confidence: nodeServerDetection.confidence,
+				packageJson
+			};
+		}
+
 		const scores = await Promise.all(
-			FRAMEWORKS.filter(f => f.name !== 'static').map(async (framework) => ({
+			FRAMEWORKS.filter(f => f.name !== 'static' && f.name !== 'nodejs-http').map(async (framework) => ({
 				framework,
 				score: await this.scoreFramework(framework, packageJson)
 			}))
@@ -69,7 +82,7 @@ export class FrameworkDetector {
 		const { npm: packageManager } = detectPackageManager();
 
 		logger.debug(`Detected ${bestMatch.framework.name} with ${confidence} confidence`);
-		
+
 		return {
 			framework: bestMatch.framework,
 			packageManager,
@@ -175,6 +188,75 @@ export class FrameworkDetector {
 		if (score >= 150) return 'high';
 		if (score >= 75) return 'medium';
 		return 'low';
+	}
+
+	private async detectNodeServer(): Promise<{ framework: FrameworkConfig; confidence: 'high' | 'medium' | 'low' } | null> {
+		logger.debug('Checking for Node.js HTTP server...');
+
+		// Look for common server file locations
+		const serverFiles = [
+			'src/server.ts',
+			'src/server.js',
+			'server.ts',
+			'server.js',
+			'src/index.ts',
+			'src/index.js',
+			'index.ts',
+			'index.js'
+		];
+
+		let serverFilePath: string | null = null;
+		for (const file of serverFiles) {
+			if (this.pathExists(file)) {
+				serverFilePath = file;
+				break;
+			}
+		}
+
+		if (!serverFilePath) {
+			return null;
+		}
+
+		// Read the file and check for createServer usage
+		try {
+			const content = readFileSync(`${this.projectRoot}/${serverFilePath}`, 'utf-8');
+
+			// Check for createServer patterns
+			const hasCreateServer =
+				content.includes('createServer') &&
+				(content.includes("require('http')") ||
+				 content.includes("require('https')") ||
+				 content.includes("require('node:http')") ||
+				 content.includes("require('node:https')") ||
+				 content.includes("from 'http'") ||
+				 content.includes("from 'https'") ||
+				 content.includes("from 'node:http'") ||
+				 content.includes("from 'node:https'") ||
+				 content.includes('import http') ||
+				 content.includes('import https'));
+
+			if (hasCreateServer) {
+				const nodeServerFramework = FRAMEWORKS.find(f => f.name === 'nodejs-http');
+				if (nodeServerFramework) {
+					// Update the main entry point based on detected file
+					const updatedFramework = {
+						...nodeServerFramework,
+						deploy: {
+							...nodeServerFramework.deploy,
+							main: `./${serverFilePath}`
+						}
+					};
+					return {
+						framework: updatedFramework,
+						confidence: 'high'
+					};
+				}
+			}
+		} catch (error) {
+			logger.debug(`Failed to read ${serverFilePath}:`, error);
+		}
+
+		return null;
 	}
 
 	private async readPackageJson(): Promise<any> {

@@ -50,13 +50,18 @@ export async function installFrameworkAdapter(
 			case 'react-router':
 				await setupReactRouter();
 				break;
+			case 'nodejs-http':
+				await setupNodeServer(projectRoot);
+				break;
 			default:
 				logger.debug(`No specific setup needed for ${frameworkName}`);
 				return;
 		}
 
-		// Build the project after setup
-		await buildProject();
+		// Build the project after setup (skip for nodejs-http as no build needed)
+		if (frameworkName !== 'nodejs-http') {
+			await buildProject();
+		}
 		
 		logger.log(`${frameworkName} setup completed successfully`);
 	} catch (error) {
@@ -310,9 +315,91 @@ async function setupRemix(): Promise<void> {
 
 async function setupReactRouter(): Promise<void> {
 	const { npm } = detectPackageManager();
-	
+
 	logger.log("Installing React Router Cloudflare adapter...");
 	await execa(npm, ['install', '@react-router/cloudflare'], { stdio: 'inherit' });
+}
+
+async function setupNodeServer(projectRoot?: string): Promise<void> {
+	logger.log("Adapting Node.js HTTP server for Cloudflare Workers...");
+
+	const root = projectRoot || process.cwd();
+
+	// Find the server file
+	const serverFiles = [
+		'src/server.ts',
+		'src/server.js',
+		'server.ts',
+		'server.js',
+		'src/index.ts',
+		'src/index.js',
+		'index.ts',
+		'index.js'
+	];
+
+	let serverFilePath: string | null = null;
+	for (const file of serverFiles) {
+		if (existsSync(`${root}/${file}`)) {
+			serverFilePath = `${root}/${file}`;
+			break;
+		}
+	}
+
+	if (!serverFilePath) {
+		logger.warn("Could not find server file to adapt");
+		return;
+	}
+
+	logger.log(`Adapting ${serverFilePath.replace(root + '/', '')} for Cloudflare Workers...`);
+
+	try {
+		let content = readFileSync(serverFilePath, 'utf-8');
+
+		// Add the cloudflare:node import at the top
+		const cloudflareImport = "import { httpServerHandler } from 'cloudflare:node';\n";
+
+		// Check if import already exists
+		if (!content.includes("from 'cloudflare:node'")) {
+			// Add import after other imports or at the beginning
+			const importRegex = /^((?:import.*;\n)*)/m;
+			const match = content.match(importRegex);
+
+			if (match) {
+				content = content.replace(importRegex, match[0] + cloudflareImport);
+			} else {
+				content = cloudflareImport + content;
+			}
+		}
+
+		// Find the port number used in server.listen()
+		const listenMatch = content.match(/\.listen\s*\(\s*(\d+|[a-zA-Z_$][\w$]*)\s*[,)]/);
+		let port = '8080'; // Default port
+
+		if (listenMatch) {
+			port = listenMatch[1];
+
+			// If port is a variable, try to find its value
+			if (isNaN(parseInt(port))) {
+				const portVarMatch = content.match(new RegExp(`(?:const|let|var)\\s+${port}\\s*=\\s*(\\d+)`));
+				if (portVarMatch) {
+					port = portVarMatch[1];
+				}
+			}
+		}
+
+		// Add the export default at the end if not already present
+		if (!content.includes('httpServerHandler')) {
+			content += `\n\nexport default httpServerHandler({ port: ${port} });\n`;
+		}
+
+		// Write the modified content back
+		writeFileSync(serverFilePath, content, 'utf-8');
+		logger.log(`Successfully adapted ${serverFilePath.replace(root + '/', '')}`);
+
+	} catch (error) {
+		logger.warn(`Failed to adapt server file: ${error}`);
+		throw error;
+	}
 }
 
 async function buildProject(): Promise<void> {
