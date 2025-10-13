@@ -185,7 +185,6 @@ export const r2ObjectPutCommand = createCommand({
 		},
 		expires: {
 			describe: "The date and time at which the object is no longer cacheable",
-			alias: "e",
 			requiresArg: true,
 			type: "string",
 		},
