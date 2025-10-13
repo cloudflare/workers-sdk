@@ -260,6 +260,8 @@ describe("ConfigController", () => {
 
 		await event;
 
+		const event2 = waitForConfigUpdate(controller);
+
 		await seed({
 			"wrangler.toml": dedent/* toml */ `
 		        name = "my-worker"
@@ -267,7 +269,7 @@ describe("ConfigController", () => {
 				compatibility_date = \"2025-06-01\"
 		    `,
 		});
-
+		await event2;
 		await vi.waitFor(() => {
 			expect(std.out).toContain("❓ Your types might be out of date.");
 		});
