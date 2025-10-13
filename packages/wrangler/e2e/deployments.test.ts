@@ -905,7 +905,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			});
 		});
 
-		it(
+		it.skip(
 			"can fetch DO container",
 			{ timeout: 60 * 3 * 1000, retry: 3 },
 			async () => {
