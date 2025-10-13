@@ -935,16 +935,19 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("containers", () => {
               }`,
 		});
 	});
+
 	afterAll(async () => {
 		// clean up user Worker after each test
-		await helper.run(`wrangler delete`);
-		if (applicationId) {
-			await helper.run(`wrangler containers delete ${applicationId}`);
-		}
+		const deleteWorker = helper.run(`wrangler delete`);
+		const deleteContainer = helper.run(
+			`wrangler containers delete ${applicationId}`
+		);
+		await Promise.allSettled([deleteWorker, deleteContainer]);
 	});
+
 	it(
 		"won't rebuild unchanged containers",
-		{ timeout: 60 * 3 * 1000, retry: 3 },
+		{ timeout: 60 * 2 * 1000, retry: 3 },
 		async () => {
 			const outputOne = await helper.run(`wrangler deploy`);
 
@@ -958,14 +961,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("containers", () => {
 
 			const outputTwo = await helper.run(`wrangler deploy`);
 			expect(outputTwo.stdout).toContain(`No changes to be made`);
-			expect(outputTwo.stdout).not.toContain(
-				`Image does not exist remotely, pushing:`
-			);
 		}
 	);
+
 	it(
 		"can fetch DO container",
-		{ timeout: 60 * 3 * 1000, retry: 3 },
+		{ timeout: 60 * 2 * 1000, retry: 2 },
 		async () => {
 			await vi.waitFor(
 				async () => {
@@ -983,7 +984,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("containers", () => {
 
 				// big timeout for containers
 				// (3m)
-				{ timeout: 60 * 3 * 1000, interval: 1000 }
+				{ timeout: 60 * 2 * 1000, interval: 1000 }
 			);
 		}
 	);

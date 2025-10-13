@@ -1673,34 +1673,38 @@ describe("wrangler deploy with containers", () => {
 			`);
 		});
 	});
+
 	it("should not repush image if it already exists remotely", async () => {
 		mockGetVersion("Galaxy-Class");
 		const containerName = "my-container";
 		const tag = "Galaxy";
-		const imageId = "sha256:config-sha";
-
+		vi.mocked(spawn).mockReset();
 		vi.mocked(spawn)
 			.mockImplementationOnce(mockDockerInfo())
 			.mockImplementationOnce(
 				mockDockerBuild(containerName, tag, "FROM scratch", process.cwd())
 			)
 			.mockImplementationOnce(
-				mockDockerImageInspectDigestsWithRepoDigest(containerName, tag, imageId)
+				mockDockerImageInspectDigestsWithRepoDigest(
+					containerName,
+					tag,
+					"sha256:three"
+				)
 			)
 			.mockImplementationOnce(mockDockerImageInspectSize(containerName, tag))
 			.mockImplementationOnce(mockDockerLogin("mockpassword"))
 			// Mock docker image rm call since we skip the push
-			.mockImplementationOnce(mockDockerImageDelete(containerName, tag))
-			// Add fallback mocks in case we fall through to push (for debugging)
-			.mockImplementationOnce(
-				mockDockerTag(containerName, `some-account-id/${containerName}`, tag)
-			)
-			.mockImplementationOnce(
-				mockDockerPush(`some-account-id/${containerName}`, tag)
-			)
-			.mockImplementationOnce(
-				mockDockerImageDelete(`some-account-id/${containerName}`, tag)
-			);
+			.mockImplementationOnce(mockDockerImageDelete(containerName, tag));
+		// // Add fallback mocks in case we fall through to push (for debugging)
+		// .mockImplementationOnce(
+		// 	mockDockerTag(containerName, `some-account-id/${containerName}`, tag)
+		// )
+		// .mockImplementationOnce(
+		// 	mockDockerPush(`some-account-id/${containerName}`, tag)
+		// )
+		// .mockImplementationOnce(
+		// 	mockDockerImageDelete(`some-account-id/${containerName}`, tag)
+		// );
 
 		vi.mocked(execFileSync).mockImplementation(
 			(_file: string, args?: readonly string[]) => {
@@ -1709,10 +1713,10 @@ describe("wrangler deploy with containers", () => {
 					expect(args[3]).toBe(
 						`${getCloudflareContainerRegistry()}/some-account-id/${containerName}@sha256:three`
 					);
-					// Return a manifest that matches the imageId, indicating the image exists remotely
+					// Return a manifest that matches the sha, indicating the image exists remotely
 					return JSON.stringify({
 						Descriptor: {
-							digest: imageId,
+							digest: "sha256:three",
 						},
 					});
 				}
@@ -1789,6 +1793,7 @@ describe("wrangler deploy with containers dry run", () => {
 
 	afterEach(() => {
 		vi.unstubAllEnvs();
+		vi.mocked(spawn).mockReset();
 	});
 
 	it("builds the image without pushing", async () => {
@@ -1874,7 +1879,6 @@ function createDockerMockChain(
 		// Skip manifest inspect mock - it's not being called due to empty repoDigests
 		mockDockerTag(containerName, "some-account-id/" + containerName, tag),
 		mockDockerPush("some-account-id/" + containerName, tag),
-		mockDockerImageDelete("some-account-id/" + containerName, tag),
 	];
 
 	return mocks;
@@ -1892,6 +1896,10 @@ function setupDockerMocks(
 		dockerfilePath,
 		buildContext
 	);
+
+	// Clear any existing mock state
+	vi.mocked(spawn).mockReset();
+
 	vi.mocked(spawn)
 		.mockImplementationOnce(mocks[0])
 		.mockImplementationOnce(mocks[1])
@@ -1904,7 +1912,6 @@ function setupDockerMocks(
 	// Default mock for execFileSync to handle docker verification and other calls
 	vi.mocked(execFileSync).mockImplementation(
 		(_file: string, args?: readonly string[]) => {
-			// Handle docker info calls (for verification)
 			if (args && args[0] === "manifest") {
 				return "i promise I am an unsuccessful docker manifest call";
 			}
@@ -2144,7 +2151,7 @@ function mockDockerImageInspectDigests(containerName: string, tag: string) {
 			"inspect",
 			`${containerName}:${tag}`,
 			"--format",
-			"{{ json .RepoDigests }} {{ .Id }}",
+			"{{ json .RepoDigests }}",
 		]);
 
 		const stdout = new PassThrough();
@@ -2184,7 +2191,7 @@ function mockDockerImageInspectDigestsWithRepoDigest(
 			"inspect",
 			`${containerName}:${tag}`,
 			"--format",
-			"{{ json .RepoDigests }} {{ .Id }}",
+			"{{ json .RepoDigests }}",
 		]);
 
 		const stdout = new PassThrough();
@@ -2249,11 +2256,7 @@ function mockDockerImageInspectSize(containerName: string, tag: string) {
 function mockDockerImageDelete(containerName: string, tag: string) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
-		expect(args).toEqual([
-			"image",
-			"rm",
-			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
-		]);
+		expect(args).toEqual(["image", "rm", `${containerName}:${tag}`]);
 		return defaultChildProcess();
 	};
 }

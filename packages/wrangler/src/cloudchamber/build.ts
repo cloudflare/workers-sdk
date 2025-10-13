@@ -195,7 +195,8 @@ export async function buildAndMaybePush(
 				// http://docs.docker.com/reference/cli/docker/manifest/inspect/
 				// Checks if this image already exists in the managed registry -
 				// if this succeeds it means this image already exists remotely.
-				// If this errors, it probably doesn't exist and we should push.
+				// If this errors, it probably doesn't exist and we should push,
+				// which we will do in the catch block.
 				logger.debug(
 					`'docker manifest inspect -v ${resolveImageName(account.external_account_id, remoteDigest)}:`
 				);
@@ -203,10 +204,8 @@ export async function buildAndMaybePush(
 					"manifest",
 					"inspect",
 					"-v",
-					`${resolveImageName(account.external_account_id, remoteDigest)}`,
+					resolveImageName(account.external_account_id, remoteDigest),
 				]);
-				logger.debug(remoteManifest);
-
 				const parsedRemoteManifest = JSON.parse(remoteManifest);
 
 				if (parsedRemoteManifest.Descriptor.digest === hash) {
