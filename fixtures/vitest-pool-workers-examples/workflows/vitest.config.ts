@@ -6,6 +6,7 @@ export default defineWorkersProject({
 		target: "ES2022",
 	},
 	test: {
+		name: "@scoped/workflows",
 		poolOptions: {
 			workers: {
 				singleWorker: true,
