@@ -1,0 +1,28 @@
+name: Auto-assign Issues
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  assign-issue:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+
+      - name: Install Dependencies
+        run: pnpm i -F tools --frozen-lockfile
+
+      - name: Auto-assign issue
+        run: node -r esbuild-register tools/github-workflow-helpers/auto-assign-issues.ts
+        env:
+          INPUT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
