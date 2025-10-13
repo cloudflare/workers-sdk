@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import os from "node:os";
 import * as path from "node:path";
 import { vi } from "vitest";
+import { logger } from "../../logger";
 import { reinitialiseAuthTokens } from "../../user";
 
 const originalCwd = process.cwd();
@@ -32,6 +33,7 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 	});
 
 	afterEach(() => {
+		logger.debug("fs teardown");
 		if (fs.existsSync(tmpDir)) {
 			process.chdir(originalCwd);
 			process.env.PWD = originalCwd;
@@ -51,5 +53,6 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 				// }
 			}
 		}
+		logger.debug("fs torndown");
 	});
 }

@@ -593,13 +593,18 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			return this.latestConfig;
 		} catch (err) {
 			logger.debug("Error updating config", (err as Error).stack);
+			if (signal.aborted) {
+				logger.debug("Suppressing config error after signal aborted");
+
+				return;
+			}
+			if (this.#configWatcher?.closed) {
+				logger.debug("Suppressing config error after watcher closed");
+				return;
+			}
 			if (throwErrors) {
 				throw err;
 			} else {
-				if (this.#configWatcher?.closed) {
-					logger.debug("Suppressing config error after watcher closed");
-					return;
-				}
 				this.emitErrorEvent({
 					type: "error",
 					reason: "Error resolving config",
