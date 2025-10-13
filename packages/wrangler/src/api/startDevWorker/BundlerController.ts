@@ -208,10 +208,13 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			void this.#runCustomBuild(config, String(pathsToWatch));
 		});
 
-		this.#customBuildWatcher.on(
-			"all",
-			(_event, filePath) => void this.#runCustomBuild(config, filePath)
+		const debouncedRunCustomBuild = debounce(
+			(_event: string, filePath: string) =>
+				void this.#runCustomBuild(config, filePath),
+			50
 		);
+
+		this.#customBuildWatcher.on("all", debouncedRunCustomBuild);
 	}
 
 	#bundlerCleanup?: ReturnType<typeof runBuild>;

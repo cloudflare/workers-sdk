@@ -3,16 +3,20 @@
  * `delayMs` milliseconds have elapsed since the last time the debounced
  * function was invoked.
  */
-export function debounce(fn: () => void, delayMs = 100) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function debounce<T extends (...args: any[]) => void>(
+	fn: T,
+	delayMs = 100
+): (...args: Parameters<T>) => void {
 	let crrTimeoutId: NodeJS.Timeout | undefined;
 
-	return () => {
+	return (...args: Parameters<T>) => {
 		if (crrTimeoutId) {
 			clearTimeout(crrTimeoutId);
 		}
 
 		crrTimeoutId = setTimeout(() => {
-			fn();
+			fn(...args);
 		}, delayMs);
 	};
 }
