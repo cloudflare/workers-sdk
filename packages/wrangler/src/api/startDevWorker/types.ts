@@ -141,6 +141,8 @@ export interface StartDevWorkerInput {
 			workingDirectory?: string;
 			/** Filepath(s) to watch for changes. Upon changes, the command will be rerun. */
 			watch?: string | string[];
+			/** Glob pattern(s) to ignore when watching for changes. */
+			watchIgnore?: string | string[];
 		};
 		jsxFactory?: string;
 		jsxFragment?: string;
