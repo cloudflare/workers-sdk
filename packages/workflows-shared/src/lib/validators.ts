@@ -1,3 +1,9 @@
+import { ms } from "itty-time";
+import { z } from "zod";
+import type { WorkflowStepConfig } from "cloudflare:workers";
+
+export const MAX_INSTANCE_STEPS = 1024;
+
 export const MAX_WORKFLOW_NAME_LENGTH = 64;
 
 export const MAX_WORKFLOW_INSTANCE_ID_LENGTH = 100;
@@ -42,4 +48,41 @@ export function isValidStepName(name: string): boolean {
 	}
 
 	return !CONTROL_CHAR_REGEX.test(name);
+}
+
+const STEP_CONFIG_SCHEMA = z
+	.object({
+		retries: z
+			.object({
+				// NOTE(lduarte): delay of 0 is dubvious but i'm afraid of breaking changes
+				delay: z.number().gte(0).or(z.string()),
+				limit: z.number().gte(0),
+				backoff: z.enum(["constant", "linear", "exponential"]).optional(),
+			})
+			.strict()
+			.optional(),
+		timeout: z.number().gte(0).or(z.string()).optional(),
+	})
+	.strict();
+
+export function isValidStepConfig(stepConfig: WorkflowStepConfig): boolean {
+	if (!STEP_CONFIG_SCHEMA.safeParse(stepConfig).success) {
+		return false;
+	}
+
+	if (
+		stepConfig.retries !== undefined &&
+		Number.isNaN(ms(stepConfig.retries.delay))
+	) {
+		return false;
+	}
+
+	if (stepConfig.timeout !== undefined) {
+		const timeout = stepConfig.timeout;
+		if (timeout == 0 || Number.isNaN(ms(stepConfig.timeout))) {
+			return false;
+		}
+	}
+
+	return true;
 }
