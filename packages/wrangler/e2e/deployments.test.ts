@@ -1,4 +1,6 @@
 import assert from "node:assert";
+import { skip } from "node:test";
+import isCI from "is-ci";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import {
@@ -845,7 +847,9 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 	});
 });
 
-describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("containers", () => {
+const skipContainersTest =
+	!CLOUDFLARE_ACCOUNT_ID || (isCI && process.platform !== "linux");
+describe.skipIf(skipContainersTest)("containers", () => {
 	let helper: WranglerE2ETestHelper;
 	let workerName: string;
 	let applicationId: string | undefined;
