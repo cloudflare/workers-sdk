@@ -2,7 +2,7 @@ name: Auto-assign Issues
 
 on:
   issues:
-    types: [labeled, unlabeled]
+    types: [labeled]
 
 jobs:
   assign-issue:
@@ -18,11 +18,9 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
-        with:
-          node-version: "20"
 
       - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
+        run: pnpm i -F tools --frozen-lockfile
 
       - name: Auto-assign issue
         run: node -r esbuild-register tools/github-workflow-helpers/auto-assign-issues.ts

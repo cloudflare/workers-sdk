@@ -1,4 +1,4 @@
-import core from "@actions/core";
+import * as core from "@actions/core";
 import { context, getOctokit } from "@actions/github";
 import dedent from "ts-dedent";
 import type { IssuesLabeledEvent } from "@octokit/webhooks-types";
@@ -11,64 +11,55 @@ const TEAM_ASSIGNMENTS: { [label: string]: { [jobRole: string]: string } } = {
 };
 
 if (require.main === module) {
-	run().catch((e) => {
-		console.error(e instanceof Error ? e.stack : e);
-		process.exit(1);
+	run().catch((error) => {
+		core.setFailed(error);
 	});
 }
 
 async function run() {
-	try {
-		console.log(dedent`
+	core.info(dedent`
 			Auto Assign Issues
 			==================
 			`);
 
-		if (isIssuesLabeledEvent(context.payload)) {
-			const issue = context.payload.issue;
-			const label = context.payload.label;
-			const labelName = label.name;
+	if (isIssuesLabeledEvent(context.payload)) {
+		const issue = context.payload.issue;
+		const label = context.payload.label;
+		const labelName = label.name;
 
-			core.info(
-				`Processing new label: ${labelName} for issue #${issue.number}`
-			);
+		core.info(`Processing new label: ${labelName} for issue #${issue.number}`);
 
-			const teamConfig = TEAM_ASSIGNMENTS[labelName];
-			if (!teamConfig) {
-				core.info(`No team assignment found for label: ${labelName}`);
-				return;
-			}
-
-			const assignees = new Set(Object.values(teamConfig));
-			for (const assignee of issue.assignees ?? []) {
-				assignees.delete(assignee.login);
-			}
-			if (assignees.size === 0) {
-				core.info(
-					`All potential assignees are already assigned to issue #${issue.number}. Skipping auto-assignment.`
-				);
-				return;
-			}
-
-			const assigneeList = new Intl.ListFormat("en").format(assignees);
-			core.info(`Assigning issue #${issue.number} to: ${assigneeList}`);
-
-			const token = core.getInput("github_token", { required: true });
-			const octokit = getOctokit(token);
-			await octokit.rest.issues.addAssignees({
-				owner: context.repo.owner,
-				repo: context.repo.repo,
-				issue_number: issue.number,
-				assignees: Array.from(assignees),
-			});
-
-			core.info(
-				`Successfully assigned issue #${issue.number} to ${assigneeList}`
-			);
+		const teamConfig = TEAM_ASSIGNMENTS[labelName];
+		if (!teamConfig) {
+			core.info(`No team assignment found for label: ${labelName}`);
+			return;
 		}
-	} catch (error) {
-		core.setFailed(
-			`Action failed: ${error instanceof Error ? error.message : error}`
+
+		const assignees = new Set(Object.values(teamConfig));
+		for (const assignee of issue.assignees ?? []) {
+			assignees.delete(assignee.login);
+		}
+		if (assignees.size === 0) {
+			core.info(
+				`All potential assignees are already assigned to issue #${issue.number}. Skipping auto-assignment.`
+			);
+			return;
+		}
+
+		const assigneeList = new Intl.ListFormat("en").format(assignees);
+		core.info(`Assigning issue #${issue.number} to: ${assigneeList}`);
+
+		const token = core.getInput("github_token", { required: true });
+		const octokit = getOctokit(token);
+		await octokit.rest.issues.addAssignees({
+			owner: context.repo.owner,
+			repo: context.repo.repo,
+			issue_number: issue.number,
+			assignees: Array.from(assignees),
+		});
+
+		core.info(
+			`Successfully assigned issue #${issue.number} to ${assigneeList}`
 		);
 	}
 }
