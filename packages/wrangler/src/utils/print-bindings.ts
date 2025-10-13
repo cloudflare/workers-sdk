@@ -484,11 +484,11 @@ export function printBindings(
 			type: friendlyBindingNames.media,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally:
-					(getFlag("REMOTE_BINDINGS") && media.remote === true) ||
-					media.remote === undefined
+				isSimulatedLocally: getFlag("REMOTE_BINDINGS")
+					? media.remote === true || media.remote === undefined
 						? false
-						: undefined,
+						: undefined
+					: false,
 			}),
 		});
 	}

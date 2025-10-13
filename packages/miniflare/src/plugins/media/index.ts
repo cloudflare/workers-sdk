@@ -29,7 +29,7 @@ export const MEDIA_PLUGIN: Plugin<typeof MediaOptionsSchema> = {
 
 		assert(
 			options.media.remoteProxyConnectionString,
-			"Media binding only supports Mixed Mode"
+			"Media only supports running remotely"
 		);
 
 		return [
