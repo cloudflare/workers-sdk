@@ -164,34 +164,6 @@ describe("types", () => {
 		expect(file2).toContain("FAKE RUNTIME");
 	});
 
-	it("should prompt you to update types if they've been changed", async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed(seed);
-		await helper.run(`wrangler types`);
-		seed["wrangler.toml"] = dedent`
-				name = "test-worker"
-				main = "src/index.ts"
-				compatibility_date = "2023-01-01"
-				compatibility_flags = ["nodejs_compat", "no_global_navigator"]
-				[vars]
-				BEEP = "BOOP"
-			`;
-		await helper.seed(seed);
-		const worker = helper.runLongLived("wrangler dev");
-		await worker.readUntil(/❓ Your types might be out of date./);
-		seed["wrangler.toml"] = dedent`
-			name = "test-worker"
-			main = "src/index.ts"
-			compatibility_date = "2023-01-01"
-			compatibility_flags = ["nodejs_compat"]
-			[vars]
-			BEEP = "BOOP"
-			ASDf = "ADSfadsf"
-		`;
-		await helper.seed(seed);
-		await worker.readUntil(/❓ Your types might be out of date./);
-	});
-
 	it("should read .env files for secret env vars", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seed);

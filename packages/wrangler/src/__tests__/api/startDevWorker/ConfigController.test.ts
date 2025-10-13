@@ -8,6 +8,7 @@ import { logger } from "../../../logger";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
+import { runWrangler } from "../../helpers/run-wrangler";
 import { seed } from "../../helpers/seed";
 import type { ConfigUpdateEvent } from "../../../api";
 
@@ -20,7 +21,7 @@ async function waitForConfigUpdate(
 
 describe("ConfigController", () => {
 	runInTempDir();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 	mockAccountId();
 	mockApiToken();
 
@@ -52,7 +53,7 @@ describe("ConfigController", () => {
 			"wrangler.toml": dedent/* toml */ `
                 name = "my-worker"
                 main = "src/index.ts"
-								compatibility_date = \"2024-06-01\"
+				compatibility_date = \"2024-06-01\"
             `,
 		});
 
@@ -237,6 +238,38 @@ describe("ConfigController", () => {
 					origin: { hostname: "myexample.com" },
 				},
 			},
+		});
+	});
+
+	it("should prompt user to update types if they're out of date", async () => {
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+                export default {}
+            `,
+			"wrangler.toml": dedent/* toml */ `
+                name = "my-worker"
+                main = "src/index.ts"
+				compatibility_date = \"2024-06-01\"
+            `,
+		});
+		await runWrangler("types");
+
+		const event = waitForConfigUpdate(controller);
+
+		await controller.set({ config: "./wrangler.toml" });
+
+		await event;
+
+		await seed({
+			"wrangler.toml": dedent/* toml */ `
+		        name = "my-worker"
+		        main = "src/index.ts"
+				compatibility_date = \"2025-06-01\"
+		    `,
+		});
+
+		await vi.waitFor(() => {
+			expect(std.out).toContain("❓ Your types might be out of date.");
 		});
 	});
 });
