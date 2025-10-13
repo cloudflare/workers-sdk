@@ -253,6 +253,28 @@ const testConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:cluster
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "cluster enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_cluster_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_cluster_module: true,
+			},
+		},
+		// TODO: update the date past the default enable date (when defined)
+		{
+			name: "cluster disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_cluster_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_cluster_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(testConfigs)(
