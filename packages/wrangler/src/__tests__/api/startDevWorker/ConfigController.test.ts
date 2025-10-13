@@ -272,28 +272,25 @@ describe("ConfigController", () => {
 		const std = mockConsoleMethods();
 
 		await seed({
-			"src/index.ts": dedent/* javascript */ `
-				export default {
-					fetch(request, env, ctx) {
-						return new Response("hello world")
-					}
-				} satisfies ExportedHandler
+			"src/index.js": dedent/* javascript */ `
+				addEventListener('fetch', event => {
+					event.respondWith(new Response('hello world'))
+				})
 			`,
 			"wrangler.toml": dedent/* toml */ `
 				name = "my-worker"
-				main = "src/index.ts"
+				main = "src/index.js"
 				compatibility_date = "2024-06-01"
 				
-				[[queues.consumers]]
-				queue = "my-queue"
-				max_batch_size = 10
+				[[analytics_engine_datasets]]
+				binding = "ANALYTICS"
+				dataset = "analytics_dataset"
 			`,
 		});
 
 		const event1 = waitForConfigUpdate(controller);
 		await controller.set({
 			config: "./wrangler.toml",
-			dev: { remote: true },
 		});
 		await event1;
 
@@ -313,7 +310,7 @@ describe("ConfigController", () => {
 			.split("\n")
 			.filter((line) =>
 				line.includes(
-					"Queues are not yet supported in wrangler dev remote mode"
+					"Analytics Engine is not supported locally when using the service-worker format"
 				)
 			).length;
 
