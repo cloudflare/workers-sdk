@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { rm } from "node:fs/promises";
 import os from "node:os";
 import * as path from "node:path";
 import { vi } from "vitest";
@@ -33,13 +34,11 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 	});
 
 	afterEach(() => {
-		logger.debug("fs teardown");
 		if (fs.existsSync(tmpDir)) {
 			process.chdir(originalCwd);
 			process.env.PWD = originalCwd;
-			try {
-				fs.rmSync(tmpDir, { recursive: true, force: true });
-			} catch {
+			// Don't block on deleting the tmp dir
+			void rm(tmpDir).catch(() => {
 				// Best effort - try once then just move on - they are only temp files after all.
 				// It seems that Windows doesn't let us delete this, with errors like:
 				//
@@ -50,9 +49,7 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 				// 	"errno": -4082,
 				// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
 				// 	"syscall": "rmdir",
-				// }
-			}
+			});
 		}
-		logger.debug("fs torndown");
 	});
 }
