@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { skip } from "node:test";
 import isCI from "is-ci";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
