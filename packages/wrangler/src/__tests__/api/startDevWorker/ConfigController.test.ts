@@ -223,4 +223,62 @@ base_dir = \"./some/base_dir\"`,
 			apiToken: { apiToken: "some-api-token" },
 		});
 	});
+
+	it("should only log warnings once even with multiple config updates", async () => {
+		const std = mockConsoleMethods();
+		const controller = new ConfigController();
+
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+				export default class MyDurableObject {
+					constructor(state, env) {}
+					async fetch(request) {
+						return new Response("Hello");
+					}
+				}
+			`,
+			"wrangler.toml": dedent/* toml */ `
+				name = "my-worker"
+				main = "src/index.ts"
+				compatibility_date = "2024-06-01"
+
+				[[durable_objects.bindings]]
+				name = "MY_DO"
+				class_name = "MyDurableObject"
+
+				[[migrations]]
+				tag = "v1"
+				new_sqlite_classes = ["MyDurableObject"]
+			`,
+		});
+
+		const event1 = waitForConfigUpdate(controller);
+		await controller.set({
+			config: "./wrangler.toml",
+			dev: { remote: true },
+		});
+		await event1;
+
+		const event2 = waitForConfigUpdate(controller);
+		await controller.patch({
+			dev: { liveReload: true },
+		});
+		await event2;
+
+		const event3 = waitForConfigUpdate(controller);
+		await controller.patch({
+			dev: { server: { port: 8787 } },
+		});
+		await event3;
+
+		const warningCount = std.warn
+			.split("\n")
+			.filter((line) =>
+				line.includes(
+					"SQLite in Durable Objects is only supported in local mode"
+				)
+			).length;
+
+		expect(warningCount).toBe(1);
+	});
 });
