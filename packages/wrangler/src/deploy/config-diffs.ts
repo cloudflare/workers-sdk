@@ -1,4 +1,4 @@
-import { getSubdomainValues } from "../triggers/deploy";
+import { getSubdomainValuesAPIMock } from "../triggers/deploy";
 import { diffJsonObjects, isNonDestructive } from "../utils/diff-json";
 import type { Config, RawConfig } from "../config";
 import type { DiffJson, Json } from "../utils/diff-json";
@@ -57,7 +57,7 @@ export function getRemoteConfigDiff(
 function normalizeLocalResolvedConfigAsRemote(
 	localResolvedConfig: Config
 ): Config {
-	const subdomainValues = getSubdomainValues(
+	const subdomainValues = getSubdomainValuesAPIMock(
 		localResolvedConfig.workers_dev,
 		localResolvedConfig.preview_urls,
 		localResolvedConfig.routes ?? []
