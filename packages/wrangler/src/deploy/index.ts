@@ -243,6 +243,17 @@ export const deployCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
+		tag: {
+			describe: "A tag for this Worker Gradual Rollouts Version",
+			type: "string",
+			requiresArg: true,
+		},
+		message: {
+			describe:
+				"A descriptive message for this Worker Gradual Rollouts Version",
+			type: "string",
+			requiresArg: true,
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -389,6 +400,8 @@ export const deployCommand = createCommand({
 			experimentalAutoCreate: args.experimentalAutoCreate,
 			containersRollout: args.containersRollout,
 			strict: args.strict,
+			tag: args.tag,
+			message: args.message,
 		});
 
 		writeOutput({

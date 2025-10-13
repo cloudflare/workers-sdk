@@ -14959,6 +14959,89 @@ export default{
 			expect(process.exitCode).not.toBe(0);
 		});
 	});
+
+	describe("annotations", () => {
+		it("should include annotations when --tag and --message are provided", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAnnotations: {
+					"workers/message": "Test deployment message",
+					"workers/tag": "v1.0.0",
+				},
+			});
+
+			await runWrangler(
+				"deploy ./index --tag v1.0.0 --message 'Test deployment message'"
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should include only tag annotation when --tag is provided", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAnnotations: {
+					"workers/tag": "v2.0.0",
+				},
+			});
+
+			await runWrangler("deploy ./index --tag v2.0.0");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should include only message annotation when --message is provided", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAnnotations: {
+					"workers/message": "Another test message",
+				},
+			});
+
+			await runWrangler("deploy ./index --message 'Another test message'");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
