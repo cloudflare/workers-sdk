@@ -19,6 +19,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
       - name: Install Dependencies
         run: pnpm i -F tools --frozen-lockfile
 
