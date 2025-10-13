@@ -56,7 +56,7 @@ describe("init", () => {
 					"./src/index.ts": false,
 					"./tsconfig.json": false,
 					"./package.json": false,
-					"./wrangler.toml": false,
+					"./wrangler.jsonc": false,
 				},
 			});
 
@@ -106,7 +106,7 @@ describe("init", () => {
 						"./src/index.ts": false,
 						"./tsconfig.json": false,
 						"./package.json": false,
-						"./wrangler.toml": false,
+						"./wrangler.jsonc": false,
 					},
 				});
 
@@ -771,7 +771,7 @@ describe("init", () => {
 					"./src/index.ts": false,
 					"./tsconfig.json": false,
 					"./package.json": false,
-					"./wrangler.toml": false,
+					"./wrangler.jsonc": false,
 				},
 			});
 
@@ -823,30 +823,35 @@ describe("init", () => {
 				"init --from-dash isolinear-optical-chip --no-delegate-c3"
 			);
 
-			expect(fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8"))
+			expect(fs.readFileSync("./isolinear-optical-chip/wrangler.jsonc", "utf8"))
 				.toMatchInlineSnapshot(`
-					"name = \\"isolinear-optical-chip\\"
-					main = \\"src/index.js\\"
-					workers_dev = false
-					compatibility_date = \\"1987-09-27\\"
-
-					[[routes]]
-					pattern = \\"delta.quadrant\\"
-					zone_name = \\"delta.quadrant\\"
-
-					[[routes]]
-					pattern = \\"random.host.name\\"
-					zone_name = \\"some-zone-name\\"
-					custom_domain = true
-
-					[[tail_consumers]]
-					service = \\"listener\\"
-
-					[observability]
-					enabled = true
-					head_sampling_rate = 0.5
-					"
-				`);
+				"{
+				  \\"name\\": \\"isolinear-optical-chip\\",
+				  \\"main\\": \\"src/index.js\\",
+				  \\"workers_dev\\": false,
+				  \\"compatibility_date\\": \\"1987-09-27\\",
+				  \\"routes\\": [
+				    {
+				      \\"pattern\\": \\"delta.quadrant\\",
+				      \\"zone_name\\": \\"delta.quadrant\\"
+				    },
+				    {
+				      \\"pattern\\": \\"random.host.name\\",
+				      \\"zone_name\\": \\"some-zone-name\\",
+				      \\"custom_domain\\": true
+				    }
+				  ],
+				  \\"tail_consumers\\": [
+				    {
+				      \\"service\\": \\"listener\\"
+				    }
+				  ],
+				  \\"observability\\": {
+				    \\"enabled\\": true,
+				    \\"head_sampling_rate\\": 0.5
+				  }
+				}"
+			`);
 		});
 
 		it("should fail on init --from-dash on non-existent worker name", async () => {
@@ -896,130 +901,182 @@ describe("init", () => {
 				"init --from-dash isolinear-optical-chip --no-delegate-c3"
 			);
 
-			expect(fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8"))
+			expect(fs.readFileSync("./isolinear-optical-chip/wrangler.jsonc", "utf8"))
 				.toMatchInlineSnapshot(`
-					"name = \\"isolinear-optical-chip\\"
-					main = \\"src/index.js\\"
-					workers_dev = true
-					compatibility_date = \\"1987-09-27\\"
-
-					[[routes]]
-					pattern = \\"delta.quadrant\\"
-					zone_name = \\"delta.quadrant\\"
-
-					[[migrations]]
-					tag = \\"some-migration-tag\\"
-					new_classes = [ \\"Durability\\" ]
-
-					[triggers]
-					crons = [ \\"0 0 0 * * *\\" ]
-
-					[[tail_consumers]]
-					service = \\"listener\\"
-
-					[observability]
-					enabled = true
-					head_sampling_rate = 0.5
-
-					[vars]
-					ANOTHER-NAME = \\"thing-TEXT\\"
-
-					[[durable_objects.bindings]]
-					name = \\"DURABLE_TEST\\"
-					class_name = \\"Durability\\"
-					script_name = \\"another-durable-object-worker\\"
-					environment = \\"production\\"
-
-					[[kv_namespaces]]
-					id = \\"some-namespace-id\\"
-					binding = \\"kv_testing\\"
-
-					[[r2_buckets]]
-					binding = \\"test-bucket\\"
-					bucket_name = \\"test-bucket\\"
-
-					[[services]]
-					binding = \\"website\\"
-					service = \\"website\\"
-					environment = \\"production\\"
-					entrypoint = \\"WWWHandler\\"
-
-					[[dispatch_namespaces]]
-					binding = \\"name-namespace-mock\\"
-					namespace = \\"namespace-mock\\"
-
-					[[logfwdr.bindings]]
-					name = \\"httplogs\\"
-					destination = \\"httplogs\\"
-
-					[[logfwdr.bindings]]
-					name = \\"trace\\"
-					destination = \\"trace\\"
-
-					[wasm_modules]
-					WASM_MODULE_ONE = \\"./some_wasm.wasm\\"
-					WASM_MODULE_TWO = \\"./more_wasm.wasm\\"
-
-					[text_blobs]
-					TEXT_BLOB_ONE = \\"./my-entire-app-depends-on-this.cfg\\"
-					TEXT_BLOB_TWO = \\"./the-entirety-of-human-knowledge.txt\\"
-
-					[[d1_databases]]
-					binding = \\"DB\\"
-					database_id = \\"40160e84-9fdb-4ce7-8578-23893cecc5a3\\"
-					database_name = \\"mydb\\"
-
-					[data_blobs]
-					DATA_BLOB_ONE = \\"DATA_BLOB_ONE\\"
-					DATA_BLOB_TWO = \\"DATA_BLOB_TWO\\"
-
-					[unsafe]
-					  [[unsafe.bindings]]
-					  type = \\"some unsafe thing\\"
-					  name = \\"UNSAFE_BINDING_ONE\\"
-
-					[unsafe.bindings.data.some]
-					unsafe = \\"thing\\"
-
-					  [[unsafe.bindings]]
-					  type = \\"another unsafe thing\\"
-					  name = \\"UNSAFE_BINDING_TWO\\"
-					  data = 1_337
-
-					  [[unsafe.bindings]]
-					  type = \\"inherit\\"
-					  name = \\"INHERIT_BINDING\\"
-
-					[[pipelines]]
-					binding = \\"PIPELINE_BINDING\\"
-					pipeline = \\"some-name\\"
-
-					[[mtls_certificates]]
-					binding = \\"MTLS_BINDING\\"
-					certificate_id = \\"some-id\\"
-
-					[[hyperdrive]]
-					binding = \\"HYPER_BINDING\\"
-					id = \\"some-id\\"
-
-					[[vectorize]]
-					binding = \\"VECTOR_BINDING\\"
-					index_name = \\"some-name\\"
-
-					[[queues.producers]]
-					binding = \\"queue_BINDING\\"
-					queue = \\"some-name\\"
-					delivery_delay = 1
-
-					[[send_email]]
-					name = \\"EMAIL_BINDING\\"
-					destination_address = \\"some@address.com\\"
-					allowed_destination_addresses = [ \\"some2@address.com\\" ]
-					allowed_sender_addresses = [ \\"some2@address.com\\" ]
-
-					[version_metadata]
-					binding = \\"Version_BINDING\\"
-					"
+					"{
+					  \\"name\\": \\"isolinear-optical-chip\\",
+					  \\"main\\": \\"src/index.js\\",
+					  \\"workers_dev\\": true,
+					  \\"compatibility_date\\": \\"1987-09-27\\",
+					  \\"routes\\": [
+					    {
+					      \\"pattern\\": \\"delta.quadrant\\",
+					      \\"zone_name\\": \\"delta.quadrant\\"
+					    }
+					  ],
+					  \\"migrations\\": [
+					    {
+					      \\"tag\\": \\"some-migration-tag\\",
+					      \\"new_classes\\": [
+					        \\"Durability\\"
+					      ]
+					    }
+					  ],
+					  \\"triggers\\": {
+					    \\"crons\\": [
+					      \\"0 0 0 * * *\\"
+					    ]
+					  },
+					  \\"tail_consumers\\": [
+					    {
+					      \\"service\\": \\"listener\\"
+					    }
+					  ],
+					  \\"observability\\": {
+					    \\"enabled\\": true,
+					    \\"head_sampling_rate\\": 0.5
+					  },
+					  \\"vars\\": {
+					    \\"ANOTHER-NAME\\": \\"thing-TEXT\\"
+					  },
+					  \\"durable_objects\\": {
+					    \\"bindings\\": [
+					      {
+					        \\"name\\": \\"DURABLE_TEST\\",
+					        \\"class_name\\": \\"Durability\\",
+					        \\"script_name\\": \\"another-durable-object-worker\\",
+					        \\"environment\\": \\"production\\"
+					      }
+					    ]
+					  },
+					  \\"kv_namespaces\\": [
+					    {
+					      \\"id\\": \\"some-namespace-id\\",
+					      \\"binding\\": \\"kv_testing\\"
+					    }
+					  ],
+					  \\"r2_buckets\\": [
+					    {
+					      \\"binding\\": \\"test-bucket\\",
+					      \\"bucket_name\\": \\"test-bucket\\"
+					    }
+					  ],
+					  \\"services\\": [
+					    {
+					      \\"binding\\": \\"website\\",
+					      \\"service\\": \\"website\\",
+					      \\"environment\\": \\"production\\",
+					      \\"entrypoint\\": \\"WWWHandler\\"
+					    }
+					  ],
+					  \\"dispatch_namespaces\\": [
+					    {
+					      \\"binding\\": \\"name-namespace-mock\\",
+					      \\"namespace\\": \\"namespace-mock\\"
+					    }
+					  ],
+					  \\"logfwdr\\": {
+					    \\"bindings\\": [
+					      {
+					        \\"name\\": \\"httplogs\\",
+					        \\"destination\\": \\"httplogs\\"
+					      },
+					      {
+					        \\"name\\": \\"trace\\",
+					        \\"destination\\": \\"trace\\"
+					      }
+					    ]
+					  },
+					  \\"wasm_modules\\": {
+					    \\"WASM_MODULE_ONE\\": \\"./some_wasm.wasm\\",
+					    \\"WASM_MODULE_TWO\\": \\"./more_wasm.wasm\\"
+					  },
+					  \\"text_blobs\\": {
+					    \\"TEXT_BLOB_ONE\\": \\"./my-entire-app-depends-on-this.cfg\\",
+					    \\"TEXT_BLOB_TWO\\": \\"./the-entirety-of-human-knowledge.txt\\"
+					  },
+					  \\"d1_databases\\": [
+					    {
+					      \\"binding\\": \\"DB\\",
+					      \\"database_id\\": \\"40160e84-9fdb-4ce7-8578-23893cecc5a3\\",
+					      \\"database_name\\": \\"mydb\\"
+					    }
+					  ],
+					  \\"data_blobs\\": {
+					    \\"DATA_BLOB_ONE\\": \\"DATA_BLOB_ONE\\",
+					    \\"DATA_BLOB_TWO\\": \\"DATA_BLOB_TWO\\"
+					  },
+					  \\"unsafe\\": {
+					    \\"bindings\\": [
+					      {
+					        \\"type\\": \\"some unsafe thing\\",
+					        \\"name\\": \\"UNSAFE_BINDING_ONE\\",
+					        \\"data\\": {
+					          \\"some\\": {
+					            \\"unsafe\\": \\"thing\\"
+					          }
+					        }
+					      },
+					      {
+					        \\"type\\": \\"another unsafe thing\\",
+					        \\"name\\": \\"UNSAFE_BINDING_TWO\\",
+					        \\"data\\": 1337
+					      },
+					      {
+					        \\"type\\": \\"inherit\\",
+					        \\"name\\": \\"INHERIT_BINDING\\"
+					      }
+					    ]
+					  },
+					  \\"pipelines\\": [
+					    {
+					      \\"binding\\": \\"PIPELINE_BINDING\\",
+					      \\"pipeline\\": \\"some-name\\"
+					    }
+					  ],
+					  \\"mtls_certificates\\": [
+					    {
+					      \\"binding\\": \\"MTLS_BINDING\\",
+					      \\"certificate_id\\": \\"some-id\\"
+					    }
+					  ],
+					  \\"hyperdrive\\": [
+					    {
+					      \\"binding\\": \\"HYPER_BINDING\\",
+					      \\"id\\": \\"some-id\\"
+					    }
+					  ],
+					  \\"vectorize\\": [
+					    {
+					      \\"binding\\": \\"VECTOR_BINDING\\",
+					      \\"index_name\\": \\"some-name\\"
+					    }
+					  ],
+					  \\"queues\\": {
+					    \\"producers\\": [
+					      {
+					        \\"binding\\": \\"queue_BINDING\\",
+					        \\"queue\\": \\"some-name\\",
+					        \\"delivery_delay\\": 1
+					      }
+					    ]
+					  },
+					  \\"send_email\\": [
+					    {
+					      \\"name\\": \\"EMAIL_BINDING\\",
+					      \\"destination_address\\": \\"some@address.com\\",
+					      \\"allowed_destination_addresses\\": [
+					        \\"some2@address.com\\"
+					      ],
+					      \\"allowed_sender_addresses\\": [
+					        \\"some2@address.com\\"
+					      ]
+					    }
+					  ],
+					  \\"version_metadata\\": {
+					    \\"binding\\": \\"Version_BINDING\\"
+					  }
+					}"
 				`);
 
 			checkFiles({
@@ -1027,7 +1084,7 @@ describe("init", () => {
 					"isolinear-optical-chip/src/index.js": {
 						contents: worker.content,
 					},
-					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+					"isolinear-optical-chip/wrangler.jsonc": wranglerToml({
 						...mockConfigExpected,
 						name: "isolinear-optical-chip",
 					}),
@@ -1049,7 +1106,7 @@ describe("init", () => {
 					},
 					"isolinear-optical-chip/src/index.ts": false,
 					"isolinear-optical-chip/tsconfig.json": false,
-					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+					"isolinear-optical-chip/wrangler.jsonc": wranglerToml({
 						...mockConfigExpected,
 						name: "isolinear-optical-chip",
 						main: "src/index.js",
@@ -1120,7 +1177,7 @@ describe("init", () => {
 					"isolinear-optical-chip/src/index.js": {
 						contents: worker.content,
 					},
-					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+					"isolinear-optical-chip/wrangler.jsonc": wranglerToml({
 						...mockConfigExpected,
 						compatibility_date: mockDate,
 						name: "isolinear-optical-chip",
@@ -1168,7 +1225,7 @@ describe("init", () => {
 
 			checkFiles({
 				items: {
-					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+					"isolinear-optical-chip/wrangler.jsonc": wranglerToml({
 						compatibility_date: "1988-08-07",
 						main: "src/index.js",
 						workers_dev: true,
@@ -1195,7 +1252,7 @@ describe("init", () => {
 					"isolinear-optical-chip/src/index.ts": false,
 					"isolinear-optical-chip/package.json": false,
 					"isolinear-optical-chip/tsconfig.json": false,
-					"isolinear-optical-chip/wrangler.toml": false,
+					"isolinear-optical-chip/wrangler.jsonc": false,
 				},
 			});
 		});
@@ -1254,7 +1311,7 @@ describe("init", () => {
 					},
 					"isolinear-optical-chip/src/index.ts": false,
 					"isolinear-optical-chip/tsconfig.json": false,
-					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+					"isolinear-optical-chip/wrangler.jsonc": wranglerToml({
 						...mockConfigExpected,
 						name: "isolinear-optical-chip",
 						main: "src/index.js",
@@ -1294,7 +1351,7 @@ function parse(name: string, value: string): unknown {
 	if (name.endsWith("tsconfig.json")) {
 		return parseConfigFileTextToJson(name, value);
 	}
-	if (name.endsWith(".json")) {
+	if (name.endsWith(".json") || name.endsWith(".jsonc")) {
 		return JSON.parse(value);
 	}
 	return value;
