@@ -947,7 +947,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("containers", () => {
 
 	it(
 		"won't rebuild unchanged containers",
-		{ timeout: 60 * 2 * 1000, retry: 3 },
+		{ timeout: 60 * 2 * 1000 },
 		async () => {
 			const outputOne = await helper.run(`wrangler deploy`);
 
@@ -964,30 +964,26 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("containers", () => {
 		}
 	);
 
-	it(
-		"can fetch DO container",
-		{ timeout: 60 * 2 * 1000, retry: 2 },
-		async () => {
-			await vi.waitFor(
-				async () => {
-					const response = await fetch(`${deployedUrl}/do`, {
-						signal: AbortSignal.timeout(5_000),
-					});
-					if (!response.ok) {
-						throw new Error(
-							"Durable object transient error: " + (await response.text())
-						);
-					}
+	it("can fetch DO container", { timeout: 60 * 2 * 1000 }, async () => {
+		await vi.waitFor(
+			async () => {
+				const response = await fetch(`${deployedUrl}/do`, {
+					signal: AbortSignal.timeout(5_000),
+				});
+				if (!response.ok) {
+					throw new Error(
+						"Durable object transient error: " + (await response.text())
+					);
+				}
 
-					expect(await response.text()).toEqual("hello from container");
-				},
+				expect(await response.text()).toEqual("hello from container");
+			},
 
-				// big timeout for containers
-				// (3m)
-				{ timeout: 60 * 2 * 1000, interval: 1000 }
-			);
-		}
-	);
+			// big timeout for containers
+			// (3m)
+			{ timeout: 60 * 2 * 1000, interval: 1000 }
+		);
+	});
 });
 
 /**
