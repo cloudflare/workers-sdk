@@ -2112,6 +2112,10 @@ describe.sequential("wrangler dev", () => {
 
 	describe("containers", () => {
 		beforeEach(() => {
+			// Clear logger.once history between tests to ensure test isolation.
+			// Without this, warnings logged via logger.once.warn() in one test
+			// would be suppressed in subsequent tests since they track logged
+			// messages globally across the test process.
 			logger.clearHistory();
 		});
 
