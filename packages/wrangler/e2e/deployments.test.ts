@@ -4,6 +4,7 @@ import { fetch } from "undici";
 import {
 	afterAll,
 	afterEach,
+	beforeAll,
 	beforeEach,
 	describe,
 	expect,
@@ -842,11 +843,19 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			await checkAssets(testCases, deployedUrl);
 		});
 	});
+});
 
-	describe("durable objects [containers]", () => {
-		beforeEach(async () => {
-			await helper.seed({
-				"wrangler.toml": dedent`
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("containers", () => {
+	let helper: WranglerE2ETestHelper;
+	let workerName: string;
+	let applicationId: string | undefined;
+	let deployedUrl: string;
+
+	beforeAll(async () => {
+		helper = new WranglerE2ETestHelper();
+		workerName = generateResourceName();
+		await helper.seed({
+			"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
@@ -859,14 +868,36 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 						[[containers]]
 						name = "e2e-test-${workerName}"
 						class_name = "MyDurableObject"
-						image = "registry.cloudchamber.cfdata.org/e2e-test:1.0"
+						image = "./Dockerfile"
 						max_instances = 1
 
 						[[migrations]]
 						tag = "v1"
 						new_sqlite_classes = ["MyDurableObject"]
+
+						[observability]
+						enabled = true
 				`,
-				"src/index.ts": dedent`
+			"container/index.js": dedent`
+				const { createServer } = require("http");
+
+				const server = createServer((req, res) => {
+				  res.writeHead(200, { 'Content-Type': 'text/plain' });
+				  res.end('hello from container');
+				});
+
+				server.listen(80, () => {
+				  console.log('Server running on port 80');
+				});
+				`,
+			Dockerfile: dedent`
+				FROM node:18-slim
+				WORKDIR /app
+				COPY container/index.js .
+				CMD ["node", "index.js"]
+				EXPOSE 80
+				`,
+			"src/index.ts": dedent`
               export default {
                 async fetch(req, env) {
                   const url = new URL(req.url)
@@ -902,47 +933,60 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
                   return this.ctx.container.getTcpPort(80).fetch(new Request("http://foo"));
                 }
               }`,
-			});
 		});
-
-		it.skip(
-			"can fetch DO container",
-			{ timeout: 60 * 3 * 1000, retry: 3 },
-			async () => {
-				const output = await helper.run(`wrangler deploy`);
-
-				const deployedUrl = getDeployedUrl(output);
-
-				const matchApplicationId = output.stdout.match(
-					/([(]Application ID: (?<applicationId>.+?)[)])/
-				);
-				assert(matchApplicationId?.groups);
-
-				try {
-					await vi.waitFor(
-						async () => {
-							const response = await fetch(`${deployedUrl}/do`);
-							if (!response.ok) {
-								throw new Error(
-									"Durable object transient error: " + (await response.text())
-								);
-							}
-
-							expect(await response.text()).toEqual("hello from container");
-						},
-
-						// big timeout for containers
-						// (3m)
-						{ timeout: 60 * 3 * 1000, interval: 1000 }
-					);
-				} finally {
-					await helper.run(
-						`wrangler containers delete ${matchApplicationId.groups.applicationId}`
-					);
-				}
-			}
-		);
 	});
+	afterAll(async () => {
+		// clean up user Worker after each test
+		await helper.run(`wrangler delete`);
+		if (applicationId) {
+			await helper.run(`wrangler containers delete ${applicationId}`);
+		}
+	});
+	it(
+		"won't rebuild unchanged containers",
+		{ timeout: 60 * 3 * 1000, retry: 3 },
+		async () => {
+			const outputOne = await helper.run(`wrangler deploy`);
+
+			deployedUrl = getDeployedUrl(outputOne);
+
+			const matchApplicationId = outputOne.stdout.match(
+				/([(]Application ID: (?<applicationId>.+?)[)])/
+			);
+			applicationId = matchApplicationId?.groups?.applicationId;
+			assert(matchApplicationId?.groups);
+
+			const outputTwo = await helper.run(`wrangler deploy`);
+			expect(outputTwo.stdout).toContain(`No changes to be made`);
+			expect(outputTwo.stdout).not.toContain(
+				`Image does not exist remotely, pushing:`
+			);
+		}
+	);
+	it(
+		"can fetch DO container",
+		{ timeout: 60 * 3 * 1000, retry: 3 },
+		async () => {
+			await vi.waitFor(
+				async () => {
+					const response = await fetch(`${deployedUrl}/do`, {
+						signal: AbortSignal.timeout(5_000),
+					});
+					if (!response.ok) {
+						throw new Error(
+							"Durable object transient error: " + (await response.text())
+						);
+					}
+
+					expect(await response.text()).toEqual("hello from container");
+				},
+
+				// big timeout for containers
+				// (3m)
+				{ timeout: 60 * 3 * 1000, interval: 1000 }
+			);
+		}
+	);
 });
 
 /**
