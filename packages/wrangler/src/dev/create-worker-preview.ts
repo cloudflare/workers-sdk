@@ -247,7 +247,7 @@ async function createPreviewToken(
 	const { value, host, inspectorUrl, prewarmUrl } = session;
 	const { accountId } = account;
 	const url =
-		ctx.env && !ctx.legacyEnv
+		ctx.env && ctx.useServiceEnvironments
 			? `/accounts/${accountId}/workers/services/${worker.name}/environments/${ctx.env}/edge-preview`
 			: `/accounts/${accountId}/workers/scripts/${worker.name}/edge-preview`;
 
@@ -298,7 +298,7 @@ async function createPreviewToken(
 						// TODO: this should also probably have the env prefix
 						// but it doesn't appear to work yet, instead giving us the
 						// "There is nothing here yet" screen
-						// ctx.env && !ctx.legacyEnv
+						// ctx.env && ctx.useServiceEnvironments
 						//   ? `${ctx.env}.${worker.name}`
 						//   : worker.name
 					}.${host.split(".").slice(1).join(".")}`
