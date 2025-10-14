@@ -356,7 +356,7 @@ function getPunycodeOverrides({
  * The native cluster implementation:
  * - is experimental
  * - can be enabled with the "enable_nodejs_cluster_module" flag
- * - can be disabled with the "disable_nodejs_punycode_module" flag
+ * - can be disabled with the "disable_nodejs_cluster_module" flag
  */
 function getClusterOverrides({
 	// eslint-disable-next-line unused-imports/no-unused-vars
