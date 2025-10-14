@@ -23,9 +23,10 @@ async function run() {
 			`);
 
 	if (isIssuesLabeledEvent(context.payload)) {
-		const issue = context.payload.issue;
-		const label = context.payload.label;
-		const labelName = label.name;
+		const {
+			issue,
+			label: { name: labelName },
+		} = context.payload;
 
 		core.info(`Processing new label: ${labelName} for issue #${issue.number}`);
 
@@ -35,31 +36,44 @@ async function run() {
 			return;
 		}
 
-		const assignees = new Set(Object.values(teamConfig));
-		for (const assignee of issue.assignees ?? []) {
-			assignees.delete(assignee.login);
-		}
-		if (assignees.size === 0) {
+		const teamAssignees = new Set(Object.values(teamConfig));
+		const currentAssignees = new Set(issue.assignees?.map((a) => a.login));
+		const toBeAssigned = teamAssignees.difference(currentAssignees);
+
+		if (toBeAssigned.size === 0) {
 			core.info(
-				`All potential assignees are already assigned to issue #${issue.number}. Skipping auto-assignment.`
+				`All potential assignees are already assigned to issue. Skipping auto-assignment.`
 			);
 			return;
 		}
 
-		const assigneeList = new Intl.ListFormat("en").format(assignees);
-		core.info(`Assigning issue #${issue.number} to: ${assigneeList}`);
+		core.info(
+			`Assigning to: ${new Intl.ListFormat("en").format(toBeAssigned)}`
+		);
 
 		const token = core.getInput("github_token", { required: true });
 		const octokit = getOctokit(token);
-		await octokit.rest.issues.addAssignees({
+		const result = await octokit.rest.issues.addAssignees({
 			owner: context.repo.owner,
 			repo: context.repo.repo,
 			issue_number: issue.number,
-			assignees: Array.from(assignees),
+			assignees: Array.from(toBeAssigned),
 		});
 
+		const assigned = new Set(result.data.assignees?.map((a) => a.login));
+		const missing = toBeAssigned.difference(assigned);
+
+		if (missing.size > 0) {
+			core.warning(
+				dedent`
+          Not all assignees were added to the issue. They may not be collaborators on the repository.
+          Missing assignees: ${new Intl.ListFormat("en").format(missing)}
+        `
+			);
+		}
+
 		core.info(
-			`Successfully assigned issue #${issue.number} to ${assigneeList}`
+			`Issue assigned to ${new Intl.ListFormat("en").format(assigned)}`
 		);
 	}
 }
