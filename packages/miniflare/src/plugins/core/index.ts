@@ -216,9 +216,9 @@ export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
 	return value;
 });
 
-export type WorkerdStructuredLog = z.infer<typeof workerdStructuredLogSchema>;
+export type WorkerdStructuredLog = z.infer<typeof WorkerdStructuredLogSchema>;
 
-const workerdStructuredLogSchema = z.object({
+export const WorkerdStructuredLogSchema = z.object({
 	timestamp: z.number(),
 	level: z.string(),
 	message: z.string(),
@@ -246,7 +246,7 @@ export const CoreSharedOptionsSchema = z.object({
 		.optional(),
 
 	handleStructuredLogs: z
-		.function(z.tuple([workerdStructuredLogSchema]))
+		.function(z.tuple([WorkerdStructuredLogSchema]))
 		.returns(z.void())
 		.optional(),
 

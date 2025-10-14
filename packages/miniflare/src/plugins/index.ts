@@ -166,6 +166,7 @@ export {
 	getFreshSourceMapSupport,
 	kCurrentWorker,
 	getNodeCompat,
+	WorkerdStructuredLogSchema as workerdStructuredLogSchema,
 } from "./core";
 export type {
 	CompiledModuleRule,

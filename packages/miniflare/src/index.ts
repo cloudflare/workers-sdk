@@ -81,7 +81,6 @@ import {
 	NameSourceOptions,
 	reviveError,
 	ServiceDesignatorSchema,
-	WorkerdStructuredLog,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { imagesLocalFetcher } from "./plugins/images/fetcher";
