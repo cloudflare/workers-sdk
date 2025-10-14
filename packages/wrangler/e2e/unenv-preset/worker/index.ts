@@ -60,6 +60,83 @@ function generateTestListResponse(testName: string): Response {
 // Test functions executed on worked.
 // The test can be executing by fetching the `/${testName}` url.
 export const WorkerdTests: Record<string, () => void> = {
+	async testConsole() {
+		const importNamespace = await import("node:console");
+		const globalObject = globalThis.console;
+
+		assert.strictEqual(
+			globalThis.console,
+			importNamespace.default,
+			"expected `console` to be the same as `consoleImport.default`"
+		);
+
+		assertType(importNamespace.default, "object", "consoleImport.default");
+
+		for (const [key, target] of [
+			["import('node:console')", importNamespace],
+			["global.console", globalObject],
+		] as const) {
+			assertType(target.Console, "function", `${key}.Console`);
+			assertType(target.assert, "function", `${key}.assert`);
+			assertType(target.clear, "function", `${key}.clear`);
+			assertType(target.count, "function", `${key}.count`);
+			assertType(target.countReset, "function", `${key}.countReset`);
+			assertType(target.debug, "function", `${key}.debug`);
+			assertType(target.dir, "function", `${key}.dir`);
+			assertType(target.dirxml, "function", `${key}.dirxml`);
+			assertType(target.error, "function", `${key}.error`);
+			assertType(target.group, "function", `${key}.group`);
+			assertType(target.groupCollapsed, "function", `${key}.groupCollapsed`);
+			assertType(target.groupEnd, "function", `${key}.groupEnd`);
+			assertType(target.info, "function", `${key}.info`);
+			assertType(target.log, "function", `${key}.log`);
+			assertType(target.profile, "function", `${key}.profile`);
+			assertType(target.profileEnd, "function", `${key}.profileEnd`);
+			assertType(target.table, "function", `${key}.table`);
+			assertType(target.time, "function", `${key}.time`);
+			assertType(target.timeEnd, "function", `${key}.timeEnd`);
+			assertType(target.timeLog, "function", `${key}.timeLog`);
+			assertType(target.trace, "function", `${key}.trace`);
+			assertType(target.warn, "function", `${key}.warn`);
+
+			// These undocumented APIs are supported in Node.js, unenv, and workerd natively.
+			assertType((target as any).context, "function", `${key}.context`);
+			assertType((target as any).createTask, "function", `${key}.createTask`);
+		}
+
+		// These undocumented APIs are only on the global object not the import.
+		assertType(
+			(global.console as any)._stderr,
+			"object",
+			"global.console._stderr"
+		);
+		assertType(
+			(global.console as any)._stdout,
+			"object",
+			"global.console._stdout"
+		);
+		assertType(
+			(global.console as any)._times,
+			"object",
+			"global.console._times"
+		);
+		assertType(
+			(global.console as any)._stdoutErrorHandler,
+			"function",
+			"global.console._stdoutErrorHandler"
+		);
+		assertType(
+			(global.console as any)._stderrErrorHandler,
+			"function",
+			"global.console._stderrErrorHandler"
+		);
+		assertType(
+			(global.console as any)._ignoreErrors,
+			"boolean",
+			"global.console._ignoreErrors"
+		);
+	},
+
 	async testCryptoGetRandomValues() {
 		const crypto = await import("node:crypto");
 
@@ -562,3 +639,11 @@ export const WorkerdTests: Record<string, () => void> = {
 		);
 	},
 };
+
+function assertType(value: unknown, type: string, name: string) {
+	assert.strictEqual(
+		typeof value,
+		type,
+		`Expected ${name} to be of type ${type}, but got ${typeof value}`
+	);
+}
