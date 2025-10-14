@@ -11,8 +11,7 @@ permissions:
   # note: no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
 
 env:
-  # quick editor build requires Node.js 22
-  NODE_VERSION: 22
+  NODE_VERSION: 24
 
 jobs:
   release:
