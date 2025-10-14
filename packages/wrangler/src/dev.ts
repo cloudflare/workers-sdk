@@ -687,6 +687,7 @@ export function getBindings(
 		unsafe_hello_world: configParam.unsafe_hello_world,
 		ratelimits: configParam.ratelimits,
 		worker_loaders: configParam.worker_loaders,
+		media: configParam.media,
 	};
 
 	return bindings;

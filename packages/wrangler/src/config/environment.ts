@@ -1013,6 +1013,23 @@ export interface EnvironmentNonInheritable {
 		| undefined;
 
 	/**
+	 * Binding to Cloudflare Media Transformations
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	media:
+		| {
+				binding: string;
+				/** Whether the Media binding should be remote or not */
+				remote?: boolean;
+		  }
+		| undefined;
+
+	/**
 	 * Binding to the Worker Version's metadata
 	 */
 	version_metadata:

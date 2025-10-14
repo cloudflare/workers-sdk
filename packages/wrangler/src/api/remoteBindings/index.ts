@@ -20,8 +20,8 @@ export function pickRemoteBindings(
 ): Record<string, Binding> {
 	return Object.fromEntries(
 		Object.entries(bindings ?? {}).filter(([, binding]) => {
-			if (binding.type === "ai") {
-				// AI is always remote
+			if (binding.type === "ai" || binding.type === "media") {
+				// AI and 'media' bindings are always remote
 				return true;
 			}
 
