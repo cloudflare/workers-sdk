@@ -6,6 +6,7 @@ on:
       - main
 
 permissions:
+  id-token: write
   contents: read
   # note: no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
 
