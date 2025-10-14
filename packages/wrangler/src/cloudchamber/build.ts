@@ -127,7 +127,7 @@ export async function buildAndMaybePush(
 			 */
 			const imageInfo = await dockerImageInspect(pathToDocker, {
 				imageTag,
-				formatString: "{{ json .RepoDigests }} {{ .Id }}",
+				formatString: "{{ json .RepoDigests }}",
 			});
 			logger.debug(`'docker image inspect ${imageTag}':`, imageInfo);
 
@@ -142,7 +142,8 @@ export async function buildAndMaybePush(
 
 			await dockerLoginManagedRegistry(pathToDocker);
 			try {
-				const [digests, imageId] = imageInfo.split(" ");
+				const [digests] = imageInfo.split(" ");
+
 				// We don't try to parse until this point
 				// because we don't want to fail on parse errors if we
 				// won't be pushing the image anyways.
@@ -160,20 +161,24 @@ export async function buildAndMaybePush(
 					imageTag
 				).split(":")[0];
 
-				// if this succeeds it means this image already exists remotely
-				// if it fails it means it doesn't exist remotely and should be pushed.
-				const [digest, ...rest] = parsedDigests.filter((d): d is string => {
+				logger.debug("respositoryOnly:", repositoryOnly);
+
+				// make sure the repository + name provided in wrangler config
+				// matches the repository + name from the digests
+				const digest = parsedDigests.find((d): d is string => {
 					const resolved = resolveImageName(account.external_account_id, d);
+					logger.debug(
+						`Comparing ${resolved.split("@")[0]} to ${repositoryOnly}`
+					);
 					return (
 						typeof d === "string" && resolved.split("@")[0] === repositoryOnly
 					);
 				});
-				if (rest.length > 0) {
+				if (!digest) {
 					throw new Error(
-						`Expected there to only be 1 valid digests for this repository: ${repositoryOnly} but there were ${rest.length + 1}`
+						`Could not find a digest for the image ${repositoryOnly}. Found digests: ${parsedDigests.join(", ")}`
 					);
 				}
-
 				// Resolve the image name to include the user's
 				// account ID before checking if it exists in
 				// the managed registry.
@@ -182,32 +187,35 @@ export async function buildAndMaybePush(
 					account.external_account_id,
 					image
 				);
+
 				const remoteDigest = `${resolvedImage}@${hash}`;
 
 				// NOTE: this is an experimental docker command so the API may change
 				// and break this flow. Hopefully not!
 				// http://docs.docker.com/reference/cli/docker/manifest/inspect/
-				// Checks if this image already exists in the managed registry
-				// If this errors, it probably doesn't exist. Either way, we fall
-				// back to pushing the image, which is safer.
+				// Checks if this image already exists in the managed registry -
+				// if this succeeds it means this image already exists remotely.
+				// If this errors, it probably doesn't exist and we should push,
+				// which we will do in the catch block.
+				logger.debug(
+					`'docker manifest inspect -v ${resolveImageName(account.external_account_id, remoteDigest)}:`
+				);
 				const remoteManifest = runDockerCmdWithOutput(pathToDocker, [
 					"manifest",
 					"inspect",
 					"-v",
-					remoteDigest,
+					resolveImageName(account.external_account_id, remoteDigest),
 				]);
-				logger.debug(
-					`'docker manifest inspect -v ${remoteDigest}:`,
-					remoteManifest
-				);
 				const parsedRemoteManifest = JSON.parse(remoteManifest);
 
-				if (parsedRemoteManifest.Descriptor.digest === imageId) {
+				if (parsedRemoteManifest.Descriptor.digest === hash) {
 					logger.log("Image already exists remotely, skipping push");
 					logger.debug(
 						`Untagging built image: ${args.tag} since there was no change.`
 					);
+
 					await runDockerCmd(pathToDocker, ["image", "rm", imageTag]);
+
 					return { remoteDigest };
 				}
 			} catch (error) {
@@ -227,7 +235,6 @@ export async function buildAndMaybePush(
 			);
 			await runDockerCmd(pathToDocker, ["tag", imageTag, namespacedImageTag]);
 			await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
-			await runDockerCmd(pathToDocker, ["image", "rm", namespacedImageTag]);
 		}
 
 		return { newTag: imageTag };
