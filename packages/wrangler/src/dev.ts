@@ -42,6 +42,7 @@ export const dev = createCommand({
 				? false
 				: args.experimentalRemoteBindings ?? true,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
+			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 	},
 	metadata: {
