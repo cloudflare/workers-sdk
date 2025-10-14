@@ -81,6 +81,7 @@ import {
 	NameSourceOptions,
 	reviveError,
 	ServiceDesignatorSchema,
+	WorkerdStructuredLog,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { imagesLocalFetcher } from "./plugins/images/fetcher";
@@ -1965,6 +1966,16 @@ export class Miniflare {
 			requiredSockets.push(kInspectorSocket);
 		}
 
+		if (
+			!this.#sharedOpts.core.structuredWorkerdLogs &&
+			this.#sharedOpts.core.handleStructuredLogs
+		) {
+			throw new MiniflareCoreError(
+				"ERR_INVALID_STRUCTURED_LOGS_HANDLER",
+				"A `handleStructuredLogs` has been provided but `structuredWorkerdLogs` is set to `false`"
+			);
+		}
+
 		// Reload runtime
 		const entryAddress = this.#getSocketAddress(
 			SOCKET_ENTRY,
@@ -1997,6 +2008,7 @@ export class Miniflare {
 			inspectorAddress: runtimeInspectorAddress,
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
+			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
 		};
 		const maybeSocketPorts = await this.#runtime.updateConfig(
 			configBuffer,
@@ -2689,6 +2701,8 @@ export class Miniflare {
 		}
 	}
 }
+
+export type { WorkerdStructuredLog } from "./plugins/core";
 
 export * from "./http";
 export * from "./plugins";

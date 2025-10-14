@@ -23,26 +23,29 @@ import {
 	unstable_convertConfigBindingsToStartWorkerBindings,
 	unstable_getMiniflareWorkerOptions,
 } from "wrangler";
-import { getAssetsConfig } from "../asset-config";
+import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
 	kRequestType,
 	ROUTER_WORKER_NAME,
 	VITE_PROXY_WORKER_NAME,
-} from "../constants";
-import { getContainerOptions, getDockerPath } from "../containers";
-import { additionalModuleRE } from "../plugins/additional-modules";
-import { withTrailingSlash } from "../utils";
-import { getRuntimeStdioWithStructuredLogsHandler } from "./stdio";
-import type { CloudflareDevEnvironment } from "../cloudflare-environment";
+} from "./constants";
+import { getContainerOptions, getDockerPath } from "./containers";
+import { additionalModuleRE } from "./plugins/additional-modules";
+import { withTrailingSlash } from "./utils";
+import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	AssetsOnlyResolvedConfig,
 	PersistState,
 	PreviewResolvedConfig,
 	WorkerConfig,
 	WorkersResolvedConfig,
-} from "../plugin-config";
-import type { MiniflareOptions, WorkerOptions } from "miniflare";
+} from "./plugin-config";
+import type {
+	MiniflareOptions,
+	WorkerdStructuredLog,
+	WorkerOptions,
+} from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
 	Binding,
@@ -569,7 +572,7 @@ export async function getDevMiniflareOptions(config: {
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			structuredWorkerdLogs: true,
-			handleRuntimeStdio: getRuntimeStdioWithStructuredLogsHandler(logger),
+			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
@@ -852,8 +855,7 @@ export async function getPreviewMiniflareOptions(config: {
 			inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
-			structuredWorkerdLogs: true,
-			handleRuntimeStdio: getRuntimeStdioWithStructuredLogsHandler(logger),
+			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
@@ -903,4 +905,24 @@ function miniflareLogLevelFromViteLogLevel(
 		case "silent":
 			return LogLevel.NONE;
 	}
+}
+
+/**
+ * Generates a log handler to be passed as the `handleStructuredLogs` option to miniflare
+ *
+ * @param logger the vite logger to use
+ * @returns the log handler to pass to miniflare
+ */
+function getStructuredLogsLogger(logger: Log) {
+	return ({ level, message }: WorkerdStructuredLog) => {
+		if (level === "warn") {
+			return logger.warn(message);
+		}
+
+		if (level === "error") {
+			return logger.logWithLevel(LogLevel.ERROR, message);
+		}
+
+		return logger.info(message);
+	};
 }

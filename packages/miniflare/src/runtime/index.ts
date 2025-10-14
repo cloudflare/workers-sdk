@@ -11,8 +11,10 @@ import workerdPath, {
 } from "workerd";
 import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
+import { WorkerdStructuredLog } from "../plugins/core";
 import { MiniflareCoreError } from "../shared";
 import { Awaitable } from "../workers";
+import { getProcessStructuredLogStreamListener } from "./structured-logs";
 
 const ControlMessageSchema = z.discriminatedUnion("event", [
 	z.object({
@@ -37,6 +39,7 @@ export interface RuntimeOptions {
 	inspectorAddress?: string;
 	verbose?: boolean;
 	handleRuntimeStdio?: (stdout: Readable, stderr: Readable) => void;
+	handleStructuredLogs?: (structuredLog: WorkerdStructuredLog) => void;
 }
 
 async function waitForPorts(
@@ -226,12 +229,28 @@ export class Runtime {
 		this.#process = runtimeProcess;
 		this.#processExitPromise = waitForExit(runtimeProcess);
 
-		const handleRuntimeStdio = options.handleRuntimeStdio ?? pipeOutput;
+		const handleRuntimeStdio =
+			options.handleRuntimeStdio ??
+			(options.handleStructuredLogs
+				? // If `handleStructuredLogs` is provided then be default Miniflare should not pipe through the stream's output
+					() => {}
+				: pipeOutput);
 
 		handleRuntimeStdio(
 			runtimeProcess.stdout.pipe(startupLogBuffer.stdoutStream),
 			runtimeProcess.stderr.pipe(startupLogBuffer.stderrStream)
 		);
+
+		if (options.handleStructuredLogs) {
+			runtimeProcess.stdout.on(
+				"data",
+				getProcessStructuredLogStreamListener(options.handleStructuredLogs)
+			);
+			runtimeProcess.stderr.on(
+				"data",
+				getProcessStructuredLogStreamListener(options.handleStructuredLogs)
+			);
+		}
 
 		const controlPipe = runtimeProcess.stdio[3];
 		assert(controlPipe instanceof Readable);
