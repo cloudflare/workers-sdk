@@ -389,7 +389,6 @@ async function resolveConfig(
 		},
 		assets: assetsOptions,
 		tailConsumers: config.tail_consumers ?? [],
-		userConfigPath: config.userConfigPath,
 	} satisfies StartDevWorkerOptions;
 
 	if (

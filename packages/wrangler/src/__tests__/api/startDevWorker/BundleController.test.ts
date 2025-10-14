@@ -35,7 +35,6 @@ function configDefaults(
 		build: unusable<StartDevWorkerOptions["build"]>(),
 		legacy: {},
 		dev: { persist },
-		userConfigPath: undefined,
 		...config,
 	};
 }

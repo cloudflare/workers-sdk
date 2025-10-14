@@ -247,7 +247,6 @@ export type StartDevWorkerOptions = Omit<
 	containers?: ContainerNormalizedConfig[];
 	name: string;
 	complianceRegion: Config["compliance_region"];
-	userConfigPath: Config["userConfigPath"];
 };
 
 export type HookValues = string | number | boolean | object | undefined | null;
