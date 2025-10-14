@@ -1109,7 +1109,7 @@ export function isUnsafeServiceBindingWithDevCfg(
  *
  * @param structuredLog log to print
  */
-function handleStructuredLogs({ level, message }: WorkerdStructuredLog) {
+export function handleStructuredLogs({ level, message }: WorkerdStructuredLog) {
 	if (level === "warn") {
 		return logger.warn(message);
 	}
