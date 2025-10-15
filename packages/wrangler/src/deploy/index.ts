@@ -22,6 +22,7 @@ import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import deploy from "./deploy";
+import type { Config } from "miniflare";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -179,6 +180,12 @@ export const deployCommand = createCommand({
 		"dry-run": {
 			describe: "Don't actually deploy",
 			type: "boolean",
+		},
+		"write-workerd-config": {
+			describe:
+				"Path to write a workerd capnp config for running the built worker in workerd (only with --dry-run)",
+			type: "string",
+			requiresArg: true,
 		},
 		metafile: {
 			describe:
@@ -344,46 +351,47 @@ export const deployCommand = createCommand({
 				config.configPath
 			);
 		}
-		const { sourceMapSize, versionId, workerTag, targets } = await deploy({
-			config,
-			accountId,
-			name,
-			rules: getRules(config),
-			entry,
-			env: args.env,
-			compatibilityDate: args.latest
-				? formatCompatibilityDate(new Date())
-				: args.compatibilityDate,
-			compatibilityFlags: args.compatibilityFlags,
-			vars: cliVars,
-			defines: cliDefines,
-			alias: cliAlias,
-			triggers: args.triggers,
-			jsxFactory: args.jsxFactory,
-			jsxFragment: args.jsxFragment,
-			tsconfig: args.tsconfig,
-			routes: args.routes,
-			domains: args.domains,
-			assetsOptions,
-			legacyAssetPaths: siteAssetPaths,
-			legacyEnv: isLegacyEnv(config),
-			minify: args.minify,
-			isWorkersSite: Boolean(args.site || config.site),
-			outDir: args.outdir,
-			outFile: args.outfile,
-			dryRun: args.dryRun,
-			metafile: args.metafile,
-			noBundle: !(args.bundle ?? !config.no_bundle),
-			keepVars: args.keepVars,
-			logpush: args.logpush,
-			uploadSourceMaps: args.uploadSourceMaps,
-			oldAssetTtl: args.oldAssetTtl,
-			projectRoot,
-			dispatchNamespace: args.dispatchNamespace,
-			experimentalAutoCreate: args.experimentalAutoCreate,
-			containersRollout: args.containersRollout,
-			strict: args.strict,
-		});
+		const { sourceMapSize, versionId, workerTag, targets, emittedEntryPath } =
+			await deploy({
+				config,
+				accountId,
+				name,
+				rules: getRules(config),
+				entry,
+				env: args.env,
+				compatibilityDate: args.latest
+					? formatCompatibilityDate(new Date())
+					: args.compatibilityDate,
+				compatibilityFlags: args.compatibilityFlags,
+				vars: cliVars,
+				defines: cliDefines,
+				alias: cliAlias,
+				triggers: args.triggers,
+				jsxFactory: args.jsxFactory,
+				jsxFragment: args.jsxFragment,
+				tsconfig: args.tsconfig,
+				routes: args.routes,
+				domains: args.domains,
+				assetsOptions,
+				legacyAssetPaths: siteAssetPaths,
+				legacyEnv: isLegacyEnv(config),
+				minify: args.minify,
+				isWorkersSite: Boolean(args.site || config.site),
+				outDir: args.outdir,
+				outFile: args.outfile,
+				dryRun: args.dryRun,
+				metafile: args.metafile,
+				noBundle: !(args.bundle ?? !config.no_bundle),
+				keepVars: args.keepVars,
+				logpush: args.logpush,
+				uploadSourceMaps: args.uploadSourceMaps,
+				oldAssetTtl: args.oldAssetTtl,
+				projectRoot,
+				dispatchNamespace: args.dispatchNamespace,
+				experimentalAutoCreate: args.experimentalAutoCreate,
+				containersRollout: args.containersRollout,
+				strict: args.strict,
+			});
 
 		writeOutput({
 			type: "deploy",
@@ -407,6 +415,56 @@ export const deployCommand = createCommand({
 				sendMetrics: config.send_metrics,
 			}
 		);
+
+		if (args.dryRun && args.writeWorkerdConfig) {
+			const outPathArg = args.writeWorkerdConfig as string;
+			const fs = await import("node:fs/promises");
+			const { serializeConfig } = await import("miniflare");
+
+			const serviceName = name ?? "worker";
+
+			const chosenEntry = emittedEntryPath;
+			if (!chosenEntry) {
+				throw new UserError(
+					"Failed to determine emitted bundle entry to generate workerd config. Please ensure bundling succeeded."
+				);
+			}
+
+			const workerdConfig: Config = {
+				services: [
+					{
+						name: serviceName,
+						worker: {
+							modules: [
+								{
+									name: path.basename(chosenEntry),
+									esModule: chosenEntry,
+								},
+							],
+							compatibilityDate: args.latest
+								? formatCompatibilityDate(new Date())
+								: args.compatibilityDate ?? config.compatibility_date,
+							compatibilityFlags:
+								args.compatibilityFlags ?? config.compatibility_flags,
+						},
+					},
+				],
+			};
+
+			let outputPath = outPathArg;
+			try {
+				const stat = await fs.stat(outPathArg);
+				if (stat.isDirectory()) {
+					outputPath = path.join(outPathArg, "workerd.capnp");
+				}
+			} catch {
+				await fs.mkdir(path.dirname(outPathArg), { recursive: true });
+			}
+
+			const buf = serializeConfig(workerdConfig);
+			await fs.writeFile(outputPath, buf);
+			logger.log(`Wrote workerd config to ${path.resolve(outputPath)}`);
+		}
 	},
 });
 
