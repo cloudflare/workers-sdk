@@ -979,7 +979,10 @@ export class Miniflare {
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
 		this.#structuredWorkerdLogs =
-			this.#sharedOpts.core.structuredWorkerdLogs ?? false;
+			this.#sharedOpts.core.structuredWorkerdLogs ??
+			// If there is a `handleStructuredLogs` set then `structuredWorkerdLogs` defaults
+			// to true, otherwise it defaults to false
+			(this.#sharedOpts.core.handleStructuredLogs ? true : false);
 
 		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
 		// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
@@ -1966,7 +1969,7 @@ export class Miniflare {
 		}
 
 		if (
-			!this.#sharedOpts.core.structuredWorkerdLogs &&
+			!this.#sharedOpts.core.structuredWorkerdLogs === false &&
 			this.#sharedOpts.core.handleStructuredLogs
 		) {
 			throw new MiniflareCoreError(

@@ -141,7 +141,6 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				this.localServerReady.promise
 			),
 			handleStructuredLogs,
-			structuredWorkerdLogs: true,
 			liveReload: false,
 		};
 

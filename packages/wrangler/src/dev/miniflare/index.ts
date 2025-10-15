@@ -1029,7 +1029,6 @@ export async function buildMiniflareOptions(
 		logRequests: false,
 		log,
 		verbose: logger.loggerLevel === "debug",
-		structuredWorkerdLogs: true,
 		handleStructuredLogs,
 		defaultPersistRoot,
 		workers: [

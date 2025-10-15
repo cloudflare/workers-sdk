@@ -282,9 +282,10 @@ export const CoreSharedOptionsSchema = z.object({
 	// Strip the MF-DISABLE_PRETTY_ERROR header from user request
 	stripDisablePrettyError: z.boolean().default(true),
 
-	// Whether to get structured logs from workerd or not (default to `false`)
+	// Whether to get structured logs from workerd or not (defaults to `true` is a
+	// `handleStructuredLogs` is set, to `false` otherwise)
 	// This option is useful in combination with a custom handleRuntimeStdio.
-	structuredWorkerdLogs: z.boolean().default(false),
+	structuredWorkerdLogs: z.boolean().optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";
