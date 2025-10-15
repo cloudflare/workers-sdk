@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20250718.3
+
+### Patch Changes
+
+- [#10890](https://github.com/cloudflare/workers-sdk/pull/10890) [`4ae9ead`](https://github.com/cloudflare/workers-sdk/commit/4ae9eaded24a76c3ac1e1c1e00c9620e1b86fda2) Thanks [@alsuren](https://github.com/alsuren)! - Document that dumpSql is shared with d1-worker, and incorporate some D1 internal stats gathering machinery (which is currently unused by miniflare)
+
 ## 3.20250718.2
 
 ### Patch Changes
