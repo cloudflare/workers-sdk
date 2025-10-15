@@ -1969,7 +1969,7 @@ export class Miniflare {
 		}
 
 		if (
-			!this.#sharedOpts.core.structuredWorkerdLogs === false &&
+			this.#sharedOpts.core.structuredWorkerdLogs === false &&
 			this.#sharedOpts.core.handleStructuredLogs
 		) {
 			throw new MiniflareCoreError(
