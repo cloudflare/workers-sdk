@@ -86,7 +86,7 @@ export async function runC3ForFrameworkTest(
 	return match[1];
 }
 
-export async function updateWranglerConfig(
+export function updateWranglerConfig(
 	projectPath: string,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	handleUpdate: <T extends Record<string, any>>(config: T) => T,
@@ -97,14 +97,32 @@ export async function updateWranglerConfig(
 	if (existsSync(wranglerTomlPath)) {
 		const wranglerToml = readToml(wranglerTomlPath);
 
-		writeToml(wranglerTomlPath, handleUpdate(wranglerToml));
+		writeToml(
+			wranglerTomlPath,
+			handleUpdate(JSON.parse(JSON.stringify(wranglerToml))),
+		);
+
+		return () => {
+			writeToml(wranglerTomlPath, handleUpdate(wranglerToml));
+		};
 	} else if (existsSync(wranglerJsoncPath)) {
 		const wranglerJsonc = readJSON(wranglerJsoncPath) as {
 			vars: Record<string, string>;
 		};
 
-		writeJSON(wranglerJsoncPath, handleUpdate(wranglerJsonc));
+		writeJSON(
+			wranglerJsoncPath,
+			handleUpdate(JSON.parse(JSON.stringify(wranglerJsonc))),
+		);
+
+		return () => {
+			writeJSON(wranglerJsoncPath, wranglerJsonc);
+		};
 	}
+
+	throw new Error(
+		`Could not find a wrangler.toml or wrangler.jsonc file in ${projectPath}`,
+	);
 }
 
 /**
@@ -114,7 +132,7 @@ export async function updateWranglerConfig(
  * which overwrites any that comes from the framework's template.
  */
 export async function addTestVarsToWranglerToml(projectPath: string) {
-	await updateWranglerConfig(projectPath, (config) => {
+	updateWranglerConfig(projectPath, (config) => {
 		return {
 			...config,
 			vars: {
@@ -189,6 +207,8 @@ export async function verifyDevScript(
 		logStream,
 	);
 
+	let restoreConfig: (() => void) | undefined;
+
 	try {
 		await retry(
 			{ times: 300, sleepMs: 5000 },
@@ -202,7 +222,8 @@ export async function verifyDevScript(
 		if (verifyDev.configChanges) {
 			const { configChanges } = verifyDev;
 			const updatedVars = configChanges.vars;
-			await updateWranglerConfig(projectPath, (config) => ({
+
+			restoreConfig = updateWranglerConfig(projectPath, (config) => ({
 				...config,
 				vars: {
 					...config.vars,
@@ -218,6 +239,8 @@ export async function verifyDevScript(
 	} finally {
 		// Kill the process gracefully so ports can be cleaned up
 		await kill(proc);
+		// Restore the wrangler config if we modified it
+		restoreConfig?.();
 		// Wait for a second to allow process to exit cleanly. Otherwise, the port might
 		// end up camped and cause future runs to fail
 		await sleep(1000);
