@@ -11,10 +11,12 @@ import workerdPath, {
 } from "workerd";
 import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
-import { WorkerdStructuredLog } from "../plugins/core";
 import { MiniflareCoreError } from "../shared";
 import { Awaitable } from "../workers";
-import { getProcessStructuredLogStreamListener } from "./structured-logs";
+import {
+	handleStructuredLogsFromStream,
+	StructuredLogsHandler,
+} from "./structured-logs";
 
 const ControlMessageSchema = z.discriminatedUnion("event", [
 	z.object({
@@ -39,7 +41,7 @@ export interface RuntimeOptions {
 	inspectorAddress?: string;
 	verbose?: boolean;
 	handleRuntimeStdio?: (stdout: Readable, stderr: Readable) => void;
-	handleStructuredLogs?: (structuredLog: WorkerdStructuredLog) => void;
+	handleStructuredLogs?: StructuredLogsHandler;
 }
 
 async function waitForPorts(
@@ -242,13 +244,13 @@ export class Runtime {
 		);
 
 		if (options.handleStructuredLogs) {
-			startupLogBuffer.stdoutStream.on(
-				"data",
-				getProcessStructuredLogStreamListener(options.handleStructuredLogs)
+			handleStructuredLogsFromStream(
+				startupLogBuffer.stdoutStream,
+				options.handleStructuredLogs
 			);
-			startupLogBuffer.stderrStream.on(
-				"data",
-				getProcessStructuredLogStreamListener(options.handleStructuredLogs)
+			handleStructuredLogsFromStream(
+				startupLogBuffer.stderrStream,
+				options.handleStructuredLogs
 			);
 		}
 

@@ -1,14 +1,23 @@
 import { WorkerdStructuredLog } from "../plugins/core";
+import type { Stream } from "node:stream";
+
+export type StructuredLogsHandler = (
+	structuredLog: WorkerdStructuredLog
+) => void;
 
 /**
- * TODO
+ * Handles the structured logs emitted by a given stream
+ *
+ * @param stream The target stream
+ * @param structuredLogsHandler The handler function to use to process the structured logs
  */
-export function getProcessStructuredLogStreamListener(
-	structuredLogsHandler: (structuredLog: WorkerdStructuredLog) => void
+export function handleStructuredLogsFromStream(
+	stream: Stream,
+	structuredLogsHandler: StructuredLogsHandler
 ) {
 	let streamAccumulator = "";
 
-	return (chunk: Buffer | string) => {
+	stream.on("data", (chunk: Buffer | string) => {
 		const fullStreamOutput = `${streamAccumulator}${chunk}`;
 
 		let currentLogsStr = "";
@@ -18,7 +27,7 @@ export function getProcessStructuredLogStreamListener(
 		// one or more structured logs
 		const lastNewlineIdx = fullStreamOutput.lastIndexOf("\n");
 
-		const adjustedStructuredLogsHandler = getAdjustedStructuredLogsHandler(
+		const adjustedStructuredLogsHandler = improveStructuredLogsHandler(
 			structuredLogsHandler
 		);
 
@@ -55,7 +64,7 @@ export function getProcessStructuredLogStreamListener(
 				});
 			}
 		}
-	};
+	});
 }
 
 const messageClassifiers = {
@@ -90,8 +99,15 @@ const messageClassifiers = {
 	},
 };
 
-function getAdjustedStructuredLogsHandler(
-	structuredLogsHandler: (structuredLog: WorkerdStructuredLog) => void
+/**
+ * Improves a structuredLogsHandler function so that it then performs extra filtering and
+ * remapping to logs so that known unhelpful/noisy logs are improved or removed altogether
+ *
+ * @param structuredLogsHandler The target handler function to improve
+ * @returns The improved handler function
+ */
+function improveStructuredLogsHandler(
+	structuredLogsHandler: StructuredLogsHandler
 ) {
 	return (structuredLog: WorkerdStructuredLog) => {
 		// TODO: the following code analyzes the message without considering its log level,
