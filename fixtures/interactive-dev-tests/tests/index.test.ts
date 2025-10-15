@@ -7,7 +7,7 @@ import rl from "node:readline";
 import stream from "node:stream";
 import { setTimeout } from "node:timers/promises";
 import stripAnsi from "strip-ansi";
-import { fetch, RequestInfo } from "undici";
+import { fetch } from "undici";
 import {
 	afterAll,
 	afterEach,
@@ -473,7 +473,8 @@ baseDescribe.skipIf(
 				expect(ids.length).toBe(1);
 			}, WAITFOR_OPTIONS);
 
-			wrangler.pty.kill("SIGINT");
+			// ctrl + c
+			wrangler.pty.write("\x03");
 			await new Promise<void>((resolve) => {
 				wrangler.pty.onExit(() => resolve());
 			});
@@ -756,7 +757,8 @@ baseDescribe.skipIf(
 			const ids = getContainerIds();
 			expect(ids.length).toBe(2);
 
-			wrangler.pty.kill("SIGINT");
+			// ctrl + c
+			wrangler.pty.write("\x03");
 			await new Promise<void>((resolve) => {
 				wrangler.pty.onExit(() => resolve());
 			});

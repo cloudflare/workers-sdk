@@ -415,8 +415,8 @@ export class LocalRuntimeController extends RuntimeController {
 
 	#teardown = async (): Promise<void> => {
 		logger.debug("LocalRuntimeController teardown beginning...");
-
 		process.off("exit", this.cleanupContainers);
+		this.cleanupContainers();
 
 		if (this.#mf) {
 			logger.log(chalk.dim("⎔ Shutting down local server..."));
