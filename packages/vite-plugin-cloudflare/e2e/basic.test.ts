@@ -27,7 +27,9 @@ describe("basic e2e tests", () => {
 				}
 			);
 
-			test.skipIf(isBuildAndPreviewOnWindows(command))(
+			// Aborting requests doesn't trigger the abort event listener on Windows at the moment
+			// See https://github.com/cloudflare/workerd/pull/5062
+			test.skipIf(process.platform === "win32")(
 				"can listen to abort signals on the request",
 				async ({ expect }) => {
 					const proc = await runLongLived(pm, command, projectPath);
