@@ -119,10 +119,6 @@ export function updateWranglerConfig(
 			writeJSON(wranglerJsoncPath, wranglerJsonc);
 		};
 	}
-
-	throw new Error(
-		`Could not find a wrangler.toml or wrangler.jsonc file in ${projectPath}`,
-	);
 }
 
 /**
