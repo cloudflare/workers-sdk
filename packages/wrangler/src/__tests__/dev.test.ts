@@ -1,3 +1,4 @@
+
 import * as fs from "node:fs";
 import module from "node:module";
 import getPort from "get-port";
@@ -1144,6 +1145,35 @@ describe.sequential("wrangler dev", () => {
 				);
 			});
 		});
+
+		it("should not crash when custom build fails during development", async () => {
+			// Create a valid initial file
+			fs.writeFileSync("index.js", `export default { fetch() { return new Response("initial") } }`);
+
+			writeWranglerConfig({
+				main: "index.js",
+				build: {
+					// This command will fail
+					command: `node -e "process.exit(1)"`,
+				},
+			});
+
+			// The initial config should succeed even though the build command fails
+			// because we have a valid index.js file already
+			const config = await runWranglerUntilConfig("dev");
+
+			// Verify the config was parsed successfully
+			expect(config.build.custom).toEqual({
+				command: 'node -e "process.exit(1)"',
+				workingDirectory: undefined,
+				watch: "src",
+			});
+
+			// Verify that the build failure was logged but didn't crash
+			expect(std.out).toContain("[custom build] Running: node -e");
+			expect(std.err).toContain("Custom build failed");
+			expect(std.out).toContain("Development server will continue running");
+		});
 	});
 
 	describe("upstream-protocol", () => {
@@ -2197,3 +2227,5 @@ function mockGetZones(domain: string, zones: { id: string }[] = []) {
 		})
 	);
 }
+
+
