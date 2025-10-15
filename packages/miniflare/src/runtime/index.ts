@@ -34,6 +34,8 @@ export const kInspectorSocket = Symbol("kInspectorSocket");
 export type SocketIdentifier = string | typeof kInspectorSocket;
 export type SocketPorts = Map<SocketIdentifier, number /* port */>;
 
+export type { StructuredLogsHandler } from "./structured-logs";
+
 export interface RuntimeOptions {
 	entryAddress: string;
 	loopbackAddress: string;
