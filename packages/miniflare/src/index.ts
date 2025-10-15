@@ -981,7 +981,7 @@ export class Miniflare {
 		this.#structuredWorkerdLogs =
 			this.#sharedOpts.core.structuredWorkerdLogs ??
 			// If there is a `handleStructuredLogs` set then `structuredWorkerdLogs` defaults
-			// to true, otherwise it defaults to false
+			// to `true`, otherwise it defaults to `false`
 			(this.#sharedOpts.core.handleStructuredLogs ? true : false);
 
 		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
