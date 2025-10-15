@@ -3,9 +3,9 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"start": "wrangler dev"
+		"deploy": "uv run pywrangler deploy",
+		"dev": "uv run pywrangler dev",
+		"start": "uv run pywrangler dev"
 	},
 	"devDependencies": {
 		"wrangler": "^3.101.0"
