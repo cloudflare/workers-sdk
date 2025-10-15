@@ -176,6 +176,7 @@ export async function verifyDevScript(
 			"run",
 			devScript,
 			...(packageManager.name === "npm" ? ["--"] : []),
+			...(verifyDev.devArgs ?? []),
 			"--port",
 			`${port}`,
 		],
@@ -199,7 +200,8 @@ export async function verifyDevScript(
 		expect(await res.text()).toContain(verifyDev.expectedText);
 
 		if (verifyDev.configChanges) {
-			const updatedVars = verifyDev.configChanges.vars;
+			const { configChanges } = verifyDev;
+			const updatedVars = configChanges.vars;
 			await updateWranglerConfig(projectPath, (config) => ({
 				...config,
 				vars: {
@@ -208,8 +210,10 @@ export async function verifyDevScript(
 				},
 			}));
 
-			const res2 = await fetch(`http://127.0.0.1:${port}${verifyDev.route}`);
-			expect(await res2.text()).toContain(verifyDev.configChanges.expectedText);
+			await retry({ times: 10, sleepMs: 500 }, async () => {
+				const res2 = await fetch(`http://127.0.0.1:${port}${verifyDev.route}`);
+				expect(await res2.text()).toContain(configChanges.expectedText);
+			});
 		}
 	} finally {
 		// Kill the process gracefully so ports can be cleaned up

@@ -50,6 +50,7 @@ export type RunnerConfig = {
 	 * Specifies whether to run the dev script for the project and verify the response from the specified route.
 	 */
 	verifyDev?: {
+		devArgs?: string[];
 		route: string;
 		expectedText: string;
 		configChanges?: {
