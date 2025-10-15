@@ -27,6 +27,7 @@ export const friendlyBindingNames: Record<
 	browser: "Browser",
 	ai: "AI",
 	images: "Images",
+	media: "Media",
 	version_metadata: "Worker Version Metadata",
 	unsafe: "Unsafe Metadata",
 	vars: "Environment Variable",
@@ -110,6 +111,7 @@ export function printBindings(
 		ratelimits,
 		assets,
 		unsafe_hello_world,
+		media,
 	} = bindings;
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
@@ -472,6 +474,21 @@ export function printBindings(
 						? false
 						: undefined
 					: !!context.imagesLocalMode,
+			}),
+		});
+	}
+
+	if (media !== undefined) {
+		output.push({
+			name: media.binding,
+			type: friendlyBindingNames.media,
+			value: undefined,
+			mode: getMode({
+				isSimulatedLocally: getFlag("REMOTE_BINDINGS")
+					? media.remote === true || media.remote === undefined
+						? false
+						: undefined
+					: false,
 			}),
 		});
 	}

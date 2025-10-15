@@ -6,12 +6,12 @@ on:
       - main
 
 permissions:
+  id-token: write
   contents: read
   # note: no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
 
 env:
-  # quick editor build requires Node.js 22
-  NODE_VERSION: 22
+  NODE_VERSION: 24
 
 jobs:
   release:
@@ -59,7 +59,6 @@ jobs:
           publish: pnpm exec changeset publish
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
 
       - name: Deploy non-NPM Packages
         id: deploy
@@ -75,7 +74,6 @@ jobs:
           WORKERS_SHARED_SENTRY_ACCESS_ID: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_ID }}
           WORKERS_SHARED_SENTRY_ACCESS_SECRET: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_SECRET }}
           WORKERS_SHARED_SENTRY_AUTH_TOKEN: ${{ secrets.WORKERS_SHARED_SENTRY_AUTH_TOKEN }}
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       - name: Send Alert
         if: always()

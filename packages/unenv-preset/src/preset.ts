@@ -73,6 +73,7 @@ export function getCloudflarePreset({
 	const osOverrides = getOsOverrides(compat);
 	const fsOverrides = getFsOverrides(compat);
 	const punycodeOverrides = getPunycodeOverrides(compat);
+	const clusterOverrides = getClusterOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -82,6 +83,7 @@ export function getCloudflarePreset({
 		...osOverrides.nativeModules,
 		...fsOverrides.nativeModules,
 		...punycodeOverrides.nativeModules,
+		...clusterOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -92,6 +94,7 @@ export function getCloudflarePreset({
 		...osOverrides.hybridModules,
 		...fsOverrides.hybridModules,
 		...punycodeOverrides.hybridModules,
+		...clusterOverrides.hybridModules,
 	];
 
 	return {
@@ -339,6 +342,44 @@ function getPunycodeOverrides({
 	return enabled
 		? {
 				nativeModules: ["punycode"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:cluster` (unenv or workerd)
+ *
+ * The native cluster implementation:
+ * - is experimental
+ * - can be enabled with the "enable_nodejs_cluster_module" flag
+ * - can be disabled with the "disable_nodejs_cluster_module" flag
+ */
+function getClusterOverrides({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_cluster_module"
+	);
+
+	// TODO: add `enabledByDate` when a date is defined in workerd
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_cluster_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["cluster"],
 				hybridModules: [],
 			}
 		: {

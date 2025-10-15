@@ -32,6 +32,9 @@ export const isWindows = process.platform === "win32";
 export const isCINonLinux =
 	process.platform !== "linux" && process.env.CI === "true";
 
+export const isLocalWithoutDockerRunning =
+	process.env.LOCAL_TESTS_WITHOUT_DOCKER === "true";
+
 /**
  * Vite Dev Server when testing serve
  */

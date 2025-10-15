@@ -643,7 +643,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				Source:      Unknown (version_upload)
 				Tag:         e2e-upload-assets
 				Message:     Upload via e2e test
-				------------------------------------------------------------
 				Compatibility Date:  2023-01-01"
 			`);
 		});

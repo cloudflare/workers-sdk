@@ -30,6 +30,13 @@ describe("experimental_getWranglerCommands", () => {
 			    "requiresArg": true,
 			    "type": "string",
 			  },
+			  "experimental-auto-create": Object {
+			    "alias": "x-auto-create",
+			    "default": true,
+			    "describe": "Automatically provision draft bindings with new resources",
+			    "hidden": true,
+			    "type": "boolean",
+			  },
 			  "experimental-provision": Object {
 			    "alias": Array [
 			      "x-provision",
