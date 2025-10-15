@@ -45,6 +45,8 @@ export function createRequestHandler(
 	next: vite.Connect.NextFunction
 ) => Promise<void> {
 	return async (req, res, next) => {
+		let request: Request | undefined;
+
 		try {
 			// Built in vite middleware trims out the base path when passing in the request
 			// We can restore it by using the `originalUrl` property
@@ -52,7 +54,8 @@ export function createRequestHandler(
 			if (req.originalUrl) {
 				req.url = req.originalUrl;
 			}
-			const request = createRequest(req, res);
+			request = createRequest(req, res);
+
 			let response = await handler(toMiniflareRequest(request), req);
 
 			// Vite uses HTTP/2 when `server.https` or `preview.https` is enabled
@@ -64,6 +67,11 @@ export function createRequestHandler(
 
 			await sendResponse(res, response as unknown as Response);
 		} catch (error) {
+			if (request?.signal.aborted) {
+				// If the request was aborted, ignore the error
+				return;
+			}
+
 			next(error);
 		}
 	};
@@ -90,5 +98,6 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 		headers: [["accept-encoding", "identity"], ...request.headers],
 		body: request.body,
 		duplex: "half",
+		signal: request.signal,
 	});
 }

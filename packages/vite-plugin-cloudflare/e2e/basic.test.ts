@@ -1,5 +1,5 @@
 import { rm, writeFile } from "node:fs/promises";
-import { describe, test } from "vitest";
+import { describe, test, vi } from "vitest";
 import {
 	fetchJson,
 	isBuildAndPreviewOnWindows,
@@ -24,6 +24,35 @@ describe("basic e2e tests", () => {
 					expect(await fetchJson(url + "/api/")).toEqual({
 						name: "Cloudflare",
 					});
+				}
+			);
+
+			// Aborting requests doesn't trigger the abort event listener on Windows at the moment
+			// See https://github.com/cloudflare/workerd/pull/5062
+			test.skipIf(process.platform === "win32")(
+				"can listen to abort signals on the request",
+				async ({ expect }) => {
+					const proc = await runLongLived(pm, command, projectPath);
+					const url = await waitForReady(proc);
+
+					// Check that no request has been aborted yet
+					const response = await fetch(url + "/aborted");
+					await expect(response.text()).resolves.toEqual("Request not aborted");
+
+					// Send a request that we will abort after 1 second
+					await Promise.allSettled([
+						fetch(url + "/wait", {
+							signal: AbortSignal.timeout(1000),
+						}),
+					]);
+
+					await vi.waitFor(
+						async () => {
+							const response = await fetch(url + "/aborted");
+							await expect(response.text()).resolves.toEqual("Request aborted");
+						},
+						{ timeout: 10000 }
+					);
 				}
 			);
 

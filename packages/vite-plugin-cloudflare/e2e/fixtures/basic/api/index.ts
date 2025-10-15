@@ -7,8 +7,10 @@ interface Env {
 	AI: Ai;
 }
 
+let requestAborted = false;
+
 export default {
-	async fetch(request, env) {
+	async fetch(request, env, ctx) {
 		const url = new URL(request.url);
 
 		if (url.pathname.startsWith("/api/")) {
@@ -19,6 +21,35 @@ export default {
 
 		if (url.pathname === "/env/") {
 			return Response.json(env);
+		}
+
+		if (url.pathname === "/wait") {
+			request.signal.addEventListener("abort", () => {
+				requestAborted = true;
+			});
+
+			async function sendPing(writable: WritableStream) {
+				const writer = writable.getWriter();
+				const enc = new TextEncoder();
+
+				for (let i = 0; i < 6; i++) {
+					// Send 'ping' every 500ms to keep the connection alive for 3 seconds
+					await writer.write(enc.encode("ping\r\n"));
+					await scheduler.wait(500);
+				}
+			}
+
+			const { readable, writable } = new IdentityTransformStream();
+			ctx.waitUntil(sendPing(writable));
+			return new Response(readable, {
+				headers: { "Content-Type": "text/plain" },
+			});
+		}
+
+		if (url.pathname === "/aborted") {
+			return new Response(
+				requestAborted ? "Request aborted" : "Request not aborted"
+			);
 		}
 
 		return env.ASSETS.fetch(request);
