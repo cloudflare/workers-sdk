@@ -122,6 +122,8 @@ type Props = {
 	metafile: string | boolean | undefined;
 	containersRollout: "immediate" | "gradual" | undefined;
 	strict: boolean | undefined;
+	tag: string | undefined;
+	message: string | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -770,6 +772,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
+			...(props.message || props.tag
+				? {
+						annotations: {
+							"workers/message": props.message,
+							"workers/tag": props.tag,
+						},
+					}
+				: {}),
 			assets:
 				props.assetsOptions && assetsJwt
 					? {
