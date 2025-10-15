@@ -39,6 +39,9 @@ export function getProcessStructuredLogStreamListener(
 		const lines = currentLogsStr.split("\n");
 
 		for (const line of lines) {
+			if (!line) {
+				continue;
+			}
 			const structuredLog = parseStructuredLog(line);
 			if (structuredLog) {
 				adjustedStructuredLogsHandler(structuredLog);
