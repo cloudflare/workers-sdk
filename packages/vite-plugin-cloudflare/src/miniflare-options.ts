@@ -119,9 +119,10 @@ function getWorkerToDurableObjectClassNamesMap(
 					const classNames = workerToDurableObjectClassNamesMap.get(
 						value.scriptName
 					);
-					assert(classNames, missingWorkerErrorMessage(value.scriptName));
 
-					classNames.add(value.className);
+					if (classNames) {
+						classNames.add(value.className);
+					}
 				} else {
 					const classNames = workerToDurableObjectClassNamesMap.get(
 						worker.name
