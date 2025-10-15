@@ -638,7 +638,29 @@ export async function generateEnvTypes(
 
 	if (configToDTS.workflows) {
 		for (const workflow of configToDTS.workflows) {
-			envTypeStructure.push([constructTypeKey(workflow.binding), "Workflow"]);
+			const doEntrypoint = workflow.script_name
+				? serviceEntries?.get(workflow.script_name)
+				: entrypoint;
+
+			const importPath = doEntrypoint
+				? generateImportSpecifier(fullOutputPath, doEntrypoint.file)
+				: undefined;
+
+			const exportExists = doEntrypoint?.exports?.some(
+				(e) => e === workflow.class_name
+			);
+
+			let typeName: string;
+
+			if (importPath && exportExists) {
+				typeName = `Workflow<Parameters<import("${importPath}").${workflow.class_name}['run']>[0]['payload']>`;
+			} else if (workflow.script_name) {
+				typeName = `Workflow /* ${workflow.class_name} from ${workflow.script_name} */`;
+			} else {
+				typeName = `Workflow /* ${workflow.class_name} */`;
+			}
+
+			envTypeStructure.push([constructTypeKey(workflow.binding), typeName]);
 		}
 	}
 
