@@ -1,4 +1,6 @@
 import stripAnsi from "strip-ansi";
+import { expect } from "vitest";
+import { CLOUDFLARE_ACCOUNT_ID } from "./account-id";
 
 export function normalizeOutput(
 	stdout: string,
@@ -27,6 +29,8 @@ export function normalizeOutput(
 		normalizeDebugLogFilepath,
 		removeLocalPort,
 		removeZeroWidthSpaces,
+		normalizeAuthor,
+		normalizeAccountId,
 	];
 	for (const f of functions) {
 		stdout = f(stdout);
@@ -202,4 +206,52 @@ function removeStandardPricingWarning(stdout: string): string {
 
 function removeZeroWidthSpaces(stdout: string) {
 	return stdout.replaceAll(/\u200a|\u200b/g, " ");
+}
+
+function normalizeAuthor(stdout: string) {
+	return stdout.replaceAll(/^Author:.*$/gm, "Author:      person@example.com");
+}
+
+function normalizeAccountId(stdout: string) {
+	return stdout.replaceAll(CLOUDFLARE_ACCOUNT_ID, "CLOUDFLARE_ACCOUNT_ID");
+}
+
+/**
+ * Checks the logs that are output during asset upload to ensure they are correct.
+ *
+ * @param output The output from the `wrangler deploy` command.
+ * @param files An array of file paths that should be uploaded.
+ * @param includeDebug Whether to check for debug logs as well. Default is false.
+ */
+export function validateAssetUploadLogs(
+	output: { stdout: string },
+	files: string[],
+	{ includeDebug = false } = {}
+) {
+	const normalizedStdout = normalizeOutput(output.stdout);
+	const plural = files.length === 1 ? "" : "s";
+
+	expect(normalizedStdout).toContain(`🌀 Building list of assets...`);
+	expect(normalizedStdout).toMatch(
+		/✨ Read \d+ files? from the assets directory \/tmpdir/
+	);
+
+	expect(normalizedStdout).toContain("🌀 Starting asset upload...");
+	expect(normalizedStdout).toContain(
+		`🌀 Found ${files.length} new or modified static asset${plural} to upload. Proceeding with upload...`
+	);
+
+	// We can't guarantee that the files will be uploaded one at a time
+	expect(normalizedStdout).toMatch(
+		new RegExp(`Uploaded \\d+ of ${files.length} asset${plural}`)
+	);
+	if (includeDebug) {
+		for (let i = 1; i <= files.length; i++) {
+			expect(normalizedStdout).toContain(`✨ ${files[i - 1]}`);
+		}
+	}
+
+	expect(normalizedStdout).toContain(
+		`✨ Success! Uploaded ${files.length} file${plural} (TIMINGS)`
+	);
 }
