@@ -856,6 +856,7 @@ export async function getPreviewMiniflareOptions(config: {
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			handleStructuredLogs: getStructuredLogsLogger(logger),
+			structuredWorkerdLogs: true,
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
