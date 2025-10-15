@@ -170,7 +170,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			expect(normalizeOutput(versionView.output)).toMatchInlineSnapshot(`
 				"Version ID:  00000000-0000-0000-0000-000000000000
 				Created:     TIMESTAMP
-				Author:
+				Author:      person@example.com
 				Source:      Unknown (version_upload)
 				Tag:         -
 				Message:     -
