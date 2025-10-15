@@ -242,11 +242,11 @@ export class Runtime {
 		);
 
 		if (options.handleStructuredLogs) {
-			runtimeProcess.stdout.on(
+			startupLogBuffer.stdoutStream.on(
 				"data",
 				getProcessStructuredLogStreamListener(options.handleStructuredLogs)
 			);
-			runtimeProcess.stderr.on(
+			startupLogBuffer.stderrStream.on(
 				"data",
 				getProcessStructuredLogStreamListener(options.handleStructuredLogs)
 			);
