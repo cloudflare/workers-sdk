@@ -561,4 +561,16 @@ export const WorkerdTests: Record<string, () => void> = {
 			"Bücher@日本語.com"
 		);
 	},
+
+	async testCluster() {
+		const { default: cluster } = await import("node:cluster");
+
+		assert.strictEqual(cluster.isMaster, true);
+		assert.strictEqual(cluster.isPrimary, true);
+		assert.strictEqual(cluster.isWorker, false);
+		assert.throws(() => cluster.setupPrimary(), /not implemented/);
+		assert.throws(() => cluster.setupMaster(), /not implemented/);
+		assert.throws(() => cluster.disconnect(), /not implemented/);
+		assert.throws(() => cluster.fork(), /not implemented/);
+	},
 };

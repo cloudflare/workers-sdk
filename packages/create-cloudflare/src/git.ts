@@ -86,7 +86,7 @@ export const gitCommit = async (ctx: C3Context) => {
 		cwd: ctx.project.path,
 	});
 
-	await runCommand(["git", "commit", "-m", ctx.commitMessage], {
+	await runCommand(["git", "commit", "-m", ctx.commitMessage, "--no-verify"], {
 		silent: true,
 		cwd: ctx.project.path,
 	});

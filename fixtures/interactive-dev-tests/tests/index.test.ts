@@ -7,7 +7,7 @@ import rl from "node:readline";
 import stream from "node:stream";
 import { setTimeout } from "node:timers/promises";
 import stripAnsi from "strip-ansi";
-import { fetch, RequestInfo } from "undici";
+import { fetch } from "undici";
 import {
 	afterAll,
 	afterEach,
@@ -290,12 +290,35 @@ it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {
 	}
 });
 
-// it seems like if we spam the container too often, it freezes up and crashes
-const WAITFOR_OPTIONS = { timeout: 2000, interval: 500 };
-baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
-	"container dev",
-	{ retry: 0, timeout: 90000 },
-	() => {
+const isCINonLinux = process.platform !== "linux" && process.env.CI === "true";
+
+function isDockerRunning() {
+	try {
+		execSync("docker ps", { stdio: "ignore" });
+		return true;
+	} catch (e) {
+		return false;
+	}
+}
+
+/** Indicates whether the test is being run locally (not in CI) AND docker is currently not running on the system */
+const isLocalWithoutDockerRunning =
+	process.env.CI !== "true" && !isDockerRunning();
+
+if (isLocalWithoutDockerRunning) {
+	console.warn(
+		"The tests are running locally but there is no docker instance running on the system, skipping containers tests"
+	);
+}
+
+baseDescribe.skipIf(
+	isCINonLinux ||
+		// If the tests are being run locally and docker is not running we just skip this test
+		isLocalWithoutDockerRunning
+)("containers", () => {
+	// it seems like if we spam the container too often, it freezes up and crashes
+	const WAITFOR_OPTIONS = { timeout: 2000, interval: 500 };
+	baseDescribe("container dev", { retry: 0, timeout: 90000 }, () => {
 		let tmpDir: string;
 		beforeAll(async () => {
 			tmpDir = fs.mkdtempSync(path.join(tmpdir(), "wrangler-container-"));
@@ -397,15 +420,15 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				path.join(tmpDir, "container", "simple-node-app.js"),
 				`const { createServer } = require("http");
 
-				const server = createServer(function (req, res) {
-					res.writeHead(200, { "Content-Type": "text/plain" });
-					res.write("Blah! " + process.env.MESSAGE);
-					res.end();
-				});
+					const server = createServer(function (req, res) {
+						res.writeHead(200, { "Content-Type": "text/plain" });
+						res.write("Blah! " + process.env.MESSAGE);
+						res.end();
+					});
 
-				server.listen(8080, function () {
-					console.log("Server listening on port 8080");
-				});`,
+					server.listen(8080, function () {
+						console.log("Server listening on port 8080");
+					});`,
 				"utf-8"
 			);
 
@@ -450,7 +473,8 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				expect(ids.length).toBe(1);
 			}, WAITFOR_OPTIONS);
 
-			wrangler.pty.kill("SIGINT");
+			// ctrl + c
+			wrangler.pty.write("\x03");
 			await new Promise<void>((resolve) => {
 				wrangler.pty.onExit(() => resolve());
 			});
@@ -460,136 +484,134 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				expect(remainingIds.length).toBe(0);
 			});
 		});
-	}
-);
+	});
 
-baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
-	"container dev where image build takes a long time",
-	{ retry: 0, timeout: 90000 },
-	() => {
-		let tmpDir: string;
-		beforeAll(async () => {
-			tmpDir = fs.mkdtempSync(path.join(tmpdir(), "wrangler-container-sleep-"));
-			fs.cpSync(
-				path.resolve(__dirname, "../", "container-app"),
-				path.join(tmpDir),
-				{
-					recursive: true,
+	baseDescribe(
+		"container dev where image build takes a long time",
+		{ retry: 0, timeout: 90000 },
+		() => {
+			let tmpDir: string;
+			beforeAll(async () => {
+				tmpDir = fs.mkdtempSync(
+					path.join(tmpdir(), "wrangler-container-sleep-")
+				);
+				fs.cpSync(
+					path.resolve(__dirname, "../", "container-app"),
+					path.join(tmpDir),
+					{
+						recursive: true,
+					}
+				);
+				const tmpDockerFilePath = path.join(tmpDir, "Dockerfile");
+				fs.rmSync(tmpDockerFilePath);
+				fs.renameSync(
+					path.join(tmpDir, "DockerfileWithLongSleep"),
+					tmpDockerFilePath
+				);
+
+				const ids = getContainerIds();
+				if (ids.length > 0) {
+					execSync("docker rm -f " + ids.join(" "), {
+						encoding: "utf8",
+					});
 				}
-			);
-			const tmpDockerFilePath = path.join(tmpDir, "Dockerfile");
-			fs.rmSync(tmpDockerFilePath);
-			fs.renameSync(
-				path.join(tmpDir, "DockerfileWithLongSleep"),
-				tmpDockerFilePath
-			);
+			});
 
-			const ids = getContainerIds();
-			if (ids.length > 0) {
-				execSync("docker rm -f " + ids.join(" "), {
-					encoding: "utf8",
-				});
-			}
-		});
+			afterEach(async () => {
+				const ids = getContainerIds();
+				if (ids.length > 0) {
+					execSync("docker rm -f " + ids.join(" "), {
+						encoding: "utf8",
+					});
+				}
+			});
 
-		afterEach(async () => {
-			const ids = getContainerIds();
-			if (ids.length > 0) {
-				execSync("docker rm -f " + ids.join(" "), {
-					encoding: "utf8",
-				});
-			}
-		});
+			afterAll(async () => {
+				try {
+					fs.rmSync(tmpDir, { recursive: true, force: true });
+				} catch (e) {
+					// It seems that Windows doesn't let us delete this, with errors like:
+					//
+					// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
+					// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+					// Serialized Error: {
+					// 	"code": "EBUSY",
+					// 	"errno": -4082,
+					// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
+					// 	"syscall": "rmdir",
+					// }
+					console.error(e);
+				}
+			});
 
-		afterAll(async () => {
-			try {
-				fs.rmSync(tmpDir, { recursive: true, force: true });
-			} catch (e) {
-				// It seems that Windows doesn't let us delete this, with errors like:
-				//
-				// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
-				// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-				// Serialized Error: {
-				// 	"code": "EBUSY",
-				// 	"errno": -4082,
-				// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
-				// 	"syscall": "rmdir",
-				// }
-				console.error(e);
-			}
-		});
+			it("should allow quitting while the image is building", async () => {
+				const wrangler = await startWranglerDev(
+					["dev", "-c", path.join(tmpDir, "wrangler.jsonc")],
+					true
+				);
 
-		it("should allow quitting while the image is building", async () => {
-			const wrangler = await startWranglerDev(
-				["dev", "-c", path.join(tmpDir, "wrangler.jsonc")],
-				true
-			);
+				const waitForOptions = {
+					timeout: 10_000,
+					interval: WAITFOR_OPTIONS.interval,
+				};
 
-			const waitForOptions = {
-				timeout: 10_000,
-				interval: WAITFOR_OPTIONS.interval,
-			};
+				// wait for long sleep instruction to start
+				await vi.waitFor(async () => {
+					expect(wrangler.stdout).toContain("RUN sleep 50000");
+				}, waitForOptions);
 
-			// wait for long sleep instruction to start
-			await vi.waitFor(async () => {
-				expect(wrangler.stdout).toContain("RUN sleep 50000");
-			}, waitForOptions);
+				wrangler.pty.write("q");
 
-			wrangler.pty.write("q");
+				await vi.waitFor(async () => {
+					expect(wrangler.stdout).toMatch(/CANCELED \[.*?\] RUN sleep 50000/);
+				}, waitForOptions);
+			});
 
-			await vi.waitFor(async () => {
-				expect(wrangler.stdout).toMatch(/CANCELED \[.*?\] RUN sleep 50000/);
-			}, waitForOptions);
-		});
+			it("should rebuilding while the image is building", async () => {
+				const wrangler = await startWranglerDev(
+					["dev", "-c", path.join(tmpDir, "wrangler.jsonc")],
+					true
+				);
 
-		it("should rebuilding while the image is building", async () => {
-			const wrangler = await startWranglerDev(
-				["dev", "-c", path.join(tmpDir, "wrangler.jsonc")],
-				true
-			);
+				const waitForOptions = {
+					timeout: 15_000,
+					interval: 1_500,
+				};
 
-			const waitForOptions = {
-				timeout: 15_000,
-				interval: 1_500,
-			};
+				// wait for long sleep instruction to start
+				await vi.waitFor(async () => {
+					expect(wrangler.stdout).toContain("RUN sleep 50000");
+				}, waitForOptions);
 
-			// wait for long sleep instruction to start
-			await vi.waitFor(async () => {
-				expect(wrangler.stdout).toContain("RUN sleep 50000");
-			}, waitForOptions);
-
-			let logOccurrencesBefore =
-				wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
-					?.length ?? 0;
-
-			wrangler.pty.write("r");
-
-			await vi.waitFor(async () => {
-				const logOccurrences =
+				let logOccurrencesBefore =
 					wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
 						?.length ?? 0;
-				expect(logOccurrences).toBeGreaterThan(1);
-				logOccurrencesBefore = logOccurrences;
-			}, waitForOptions);
 
-			await vi.waitFor(async () => {
-				await setTimeout(700);
 				wrangler.pty.write("r");
-				const logOccurrences =
-					wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
-						?.length ?? 0;
-				expect(logOccurrences).toBeGreaterThan(logOccurrencesBefore);
-			}, waitForOptions);
 
-			wrangler.pty.kill();
-		});
-	}
-);
+				await vi.waitFor(async () => {
+					const logOccurrences =
+						wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
+							?.length ?? 0;
+					expect(logOccurrences).toBeGreaterThan(1);
+					logOccurrencesBefore = logOccurrences;
+				}, waitForOptions);
 
-baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
-	"multi-containers dev",
-	{ retry: 0, timeout: 50000 },
-	() => {
+				await vi.waitFor(async () => {
+					await setTimeout(700);
+					wrangler.pty.write("r");
+					const logOccurrences =
+						wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
+							?.length ?? 0;
+					expect(logOccurrences).toBeGreaterThan(logOccurrencesBefore);
+				}, waitForOptions);
+
+				wrangler.pty.kill();
+			});
+		}
+	);
+
+	baseDescribe("multi-containers dev", { retry: 0, timeout: 50000 }, () => {
 		let tmpDir: string;
 		beforeAll(async () => {
 			tmpDir = fs.mkdtempSync(
@@ -735,7 +757,8 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			const ids = getContainerIds();
 			expect(ids.length).toBe(2);
 
-			wrangler.pty.kill("SIGINT");
+			// ctrl + c
+			wrangler.pty.write("\x03");
 			await new Promise<void>((resolve) => {
 				wrangler.pty.onExit(() => resolve());
 			});
@@ -744,144 +767,144 @@ baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				expect(remainingIds.length).toBe(0);
 			});
 		});
-	}
-);
-
-baseDescribe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
-	"multi-workers containers dev",
-	{ retry: 0, timeout: 50000 },
-	() => {
-		let tmpDir: string;
-		beforeAll(async () => {
-			tmpDir = fs.mkdtempSync(
-				path.join(tmpdir(), "wrangler-multi-workers-containers-")
-			);
-			fs.cpSync(
-				path.resolve(__dirname, "../", "multi-workers-containers-app"),
-				path.join(tmpDir),
-				{
-					recursive: true,
-				}
-			);
-
-			const ids = getContainerIds();
-			if (ids.length > 0) {
-				execSync("docker rm -f " + ids.join(" "), {
-					encoding: "utf8",
-				});
-			}
-		});
-
-		afterEach(async () => {
-			const ids = getContainerIds();
-
-			if (ids.length > 0) {
-				execSync("docker rm -f " + ids.join(" "), {
-					encoding: "utf8",
-				});
-			}
-		});
-		afterAll(async () => {
-			try {
-				fs.rmSync(tmpDir, { recursive: true, force: true });
-			} catch (e) {
-				// It seems that Windows doesn't let us delete this, with errors like:
-				//
-				// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
-				// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-				// Serialized Error: {
-				// 	"code": "EBUSY",
-				// 	"errno": -4082,
-				// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
-				// 	"syscall": "rmdir",
-				// }
-				console.error(e);
-			}
-		});
-
-		it("should be able to interact with both workers, rebuild the containers with the hotkey and all containers should be cleaned up at the end", async () => {
-			const wrangler = await startWranglerDev([
-				"dev",
-				"-c",
-				path.join(tmpDir, "workerA/wrangler.jsonc"),
-				"-c",
-				path.join(tmpDir, "workerB/wrangler.jsonc"),
-			]);
-
-			await vi.waitFor(
-				async () => {
-					const json = await (
-						await fetch(wrangler.url, { signal: AbortSignal.timeout(5_000) })
-					).json();
-					expect(json).toEqual({
-						containerAText: "Hello from Container A",
-						containerBText: "Hello from Container B",
-					});
-				},
-				{ timeout: 10_000, interval: 1000 }
-			);
-
-			const tmpDockerfileAPath = path.join(tmpDir, "workerA/Dockerfile");
-			const dockerFileAContent = fs.readFileSync(tmpDockerfileAPath, "utf8");
-			fs.writeFileSync(
-				tmpDockerfileAPath,
-				dockerFileAContent.replace(
-					'"Hello from Container A"',
-					'"Hello World from Container A"'
-				),
-				"utf-8"
-			);
-
-			const tmpDockerfileBPath = path.join(tmpDir, "workerB/Dockerfile");
-			const dockerFileBContent = fs.readFileSync(tmpDockerfileBPath, "utf8");
-			fs.writeFileSync(
-				tmpDockerfileBPath,
-				dockerFileBContent.replace(
-					'"Hello from Container B"',
-					'"Hello from the B Container"'
-				),
-				"utf-8"
-			);
-
-			wrangler.pty.write("r");
-
-			await vi.waitFor(
-				async () => {
-					const json = await (
-						await fetch(wrangler.url, { signal: AbortSignal.timeout(5_000) })
-					).json();
-					expect(json).toEqual({
-						containerAText: "Hello World from Container A",
-						containerBText: "Hello from the B Container",
-					});
-				},
-				{ timeout: 30_000, interval: 1000 }
-			);
-
-			fs.writeFileSync(tmpDockerfileAPath, dockerFileAContent, "utf-8");
-			fs.writeFileSync(tmpDockerfileBPath, dockerFileBContent, "utf-8");
-
-			wrangler.pty.kill("SIGINT");
-		});
-	}
-);
-
-/** gets any containers that were created by running this fixture */
-const getContainerIds = () => {
-	// note the -a to include stopped containers
-	const allContainers = execSync(`docker ps -a --format json`)
-		.toString()
-		.split("\n")
-		.filter((line) => line.trim());
-	if (allContainers.length === 0) {
-		return [];
-	}
-	const jsonOutput = allContainers.map((line) => JSON.parse(line));
-
-	const matches = jsonOutput.map((container) => {
-		if (container.Image.includes("cloudflare-dev/fixturetestcontainer")) {
-			return container.ID;
-		}
 	});
-	return matches.filter(Boolean);
-};
+
+	baseDescribe(
+		"multi-workers containers dev",
+		{ retry: 0, timeout: 50000 },
+		() => {
+			let tmpDir: string;
+			beforeAll(async () => {
+				tmpDir = fs.mkdtempSync(
+					path.join(tmpdir(), "wrangler-multi-workers-containers-")
+				);
+				fs.cpSync(
+					path.resolve(__dirname, "../", "multi-workers-containers-app"),
+					path.join(tmpDir),
+					{
+						recursive: true,
+					}
+				);
+
+				const ids = getContainerIds();
+				if (ids.length > 0) {
+					execSync("docker rm -f " + ids.join(" "), {
+						encoding: "utf8",
+					});
+				}
+			});
+
+			afterEach(async () => {
+				const ids = getContainerIds();
+
+				if (ids.length > 0) {
+					execSync("docker rm -f " + ids.join(" "), {
+						encoding: "utf8",
+					});
+				}
+			});
+			afterAll(async () => {
+				try {
+					fs.rmSync(tmpDir, { recursive: true, force: true });
+				} catch (e) {
+					// It seems that Windows doesn't let us delete this, with errors like:
+					//
+					// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
+					// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+					// Serialized Error: {
+					// 	"code": "EBUSY",
+					// 	"errno": -4082,
+					// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
+					// 	"syscall": "rmdir",
+					// }
+					console.error(e);
+				}
+			});
+
+			it("should be able to interact with both workers, rebuild the containers with the hotkey and all containers should be cleaned up at the end", async () => {
+				const wrangler = await startWranglerDev([
+					"dev",
+					"-c",
+					path.join(tmpDir, "workerA/wrangler.jsonc"),
+					"-c",
+					path.join(tmpDir, "workerB/wrangler.jsonc"),
+				]);
+
+				await vi.waitFor(
+					async () => {
+						const json = await (
+							await fetch(wrangler.url, { signal: AbortSignal.timeout(5_000) })
+						).json();
+						expect(json).toEqual({
+							containerAText: "Hello from Container A",
+							containerBText: "Hello from Container B",
+						});
+					},
+					{ timeout: 10_000, interval: 1000 }
+				);
+
+				const tmpDockerfileAPath = path.join(tmpDir, "workerA/Dockerfile");
+				const dockerFileAContent = fs.readFileSync(tmpDockerfileAPath, "utf8");
+				fs.writeFileSync(
+					tmpDockerfileAPath,
+					dockerFileAContent.replace(
+						'"Hello from Container A"',
+						'"Hello World from Container A"'
+					),
+					"utf-8"
+				);
+
+				const tmpDockerfileBPath = path.join(tmpDir, "workerB/Dockerfile");
+				const dockerFileBContent = fs.readFileSync(tmpDockerfileBPath, "utf8");
+				fs.writeFileSync(
+					tmpDockerfileBPath,
+					dockerFileBContent.replace(
+						'"Hello from Container B"',
+						'"Hello from the B Container"'
+					),
+					"utf-8"
+				);
+
+				wrangler.pty.write("r");
+
+				await vi.waitFor(
+					async () => {
+						const json = await (
+							await fetch(wrangler.url, { signal: AbortSignal.timeout(5_000) })
+						).json();
+						expect(json).toEqual({
+							containerAText: "Hello World from Container A",
+							containerBText: "Hello from the B Container",
+						});
+					},
+					{ timeout: 30_000, interval: 1000 }
+				);
+
+				fs.writeFileSync(tmpDockerfileAPath, dockerFileAContent, "utf-8");
+				fs.writeFileSync(tmpDockerfileBPath, dockerFileBContent, "utf-8");
+
+				wrangler.pty.kill("SIGINT");
+			});
+		}
+	);
+
+	/** gets any containers that were created by running this fixture */
+	const getContainerIds = () => {
+		// note the -a to include stopped containers
+		const allContainers = execSync(`docker ps -a --format json`)
+			.toString()
+			.split("\n")
+			.filter((line) => line.trim());
+		if (allContainers.length === 0) {
+			return [];
+		}
+		const jsonOutput = allContainers.map((line) => JSON.parse(line));
+
+		const matches = jsonOutput.map((container) => {
+			if (container.Image.includes("cloudflare-dev/fixturetestcontainer")) {
+				return container.ID;
+			}
+		});
+		return matches.filter(Boolean);
+	};
+});

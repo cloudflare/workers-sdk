@@ -886,6 +886,7 @@ export const pagesDevCommand = createCommand({
 				RESOURCES_PROVISION: false,
 				REMOTE_BINDINGS: false,
 				DEPLOY_REMOTE_DIFF_CHECK: false,
+				AUTOCREATE_RESOURCES: false,
 			},
 			() =>
 				startDev({
@@ -955,6 +956,7 @@ export const pagesDevCommand = createCommand({
 					experimentalRemoteBindings: true,
 					experimentalVectorizeBindToProd: false,
 					experimentalImagesLocalMode: false,
+					experimentalAutoCreate: false,
 					enableIpc: true,
 					config: Array.isArray(args.config) ? args.config : undefined,
 					site: undefined,

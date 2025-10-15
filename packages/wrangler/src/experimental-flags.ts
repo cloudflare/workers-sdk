@@ -6,6 +6,7 @@ export type ExperimentalFlags = {
 	RESOURCES_PROVISION: boolean;
 	REMOTE_BINDINGS: boolean;
 	DEPLOY_REMOTE_DIFF_CHECK: boolean;
+	AUTOCREATE_RESOURCES: boolean;
 };
 
 const flags = new AsyncLocalStorage<ExperimentalFlags>();

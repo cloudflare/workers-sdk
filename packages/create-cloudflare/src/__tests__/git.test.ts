@@ -306,7 +306,7 @@ describe("git helpers", () => {
 				expect.any(Object),
 			);
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
-				["git", "commit", "-m", expect.any(String)],
+				["git", "commit", "-m", expect.any(String), "--no-verify"],
 				expect.any(Object),
 			);
 			expect(spinner.stop).toHaveBeenCalledOnce();

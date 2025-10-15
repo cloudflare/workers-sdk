@@ -148,7 +148,13 @@ const bindingsConfigMock: Omit<
 			],
 		},
 	],
-	workflows: [],
+	workflows: [
+		{
+			name: "workflows",
+			binding: "MY_WORKFLOW",
+			class_name: "MyWorkflow",
+		},
+	],
 	containers: undefined,
 	r2_buckets: [
 		{
@@ -212,6 +218,9 @@ const bindingsConfigMock: Omit<
 	},
 	images: {
 		binding: "IMAGES_BINDING",
+	},
+	media: {
+		binding: "MEDIA_BINDING",
 	},
 	version_metadata: {
 		binding: "VERSION_METADATA_BINDING",
@@ -456,12 +465,17 @@ describe("generate types", () => {
 	it("should log the interface type generated and declare modules", async () => {
 		fs.writeFileSync(
 			"./index.ts",
-			`import { DurableObject } from 'cloudflare:workers';
+			`import { DurableObject, WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
 				export default { async fetch () {} };
 				export class DurableDirect extends DurableObject {}
 				export { DurableReexport } from './durable-2.js';
 				// This should not be picked up, because it's external:
-				export class DurableExternal extends DurableObject {}`
+				export class DurableExternal extends DurableObject {}
+
+			type Params = { email: string; metadata: Record<string, string> };
+			export class MyWorkflow extends WorkflowEntrypoint<Env, Params> {
+				async run(event: WorkflowEvent<Params>, step: WorkflowStep) { }
+			}`
 		);
 		fs.writeFileSync(
 			"./wrangler.jsonc",
@@ -525,8 +539,10 @@ describe("generate types", () => {
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
+					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
+					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
 					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}
@@ -554,12 +570,17 @@ describe("generate types", () => {
 	it("should include stringified process.env types for vars, secrets, and json", async () => {
 		fs.writeFileSync(
 			"./index.ts",
-			`import { DurableObject } from 'cloudflare:workers';
+			`import { DurableObject, WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
 				export default { async fetch () {} };
 				export class DurableDirect extends DurableObject {}
 				export { DurableReexport } from './durable-2.js';
 				// This should not be picked up, because it's external:
-				export class DurableExternal extends DurableObject {}`
+				export class DurableExternal extends DurableObject {}
+
+			type Params = { email: string; metadata: Record<string, string> };
+			export class MyWorkflow extends WorkflowEntrypoint<Env, Params> {
+				async run(event: WorkflowEvent<Params>, step: WorkflowStep) { }
+			}`
 		);
 		fs.writeFileSync(
 			"./wrangler.jsonc",
@@ -629,8 +650,10 @@ describe("generate types", () => {
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
+					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
+					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
 					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}
@@ -666,9 +689,14 @@ describe("generate types", () => {
 
 		fs.writeFileSync(
 			"./a/index.ts",
-			`import { DurableObject } from 'cloudflare:workers';
+			`import { DurableObject, WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
 				export default { async fetch () {} };
-				export class DurableDirect extends DurableObject {}`
+				export class DurableDirect extends DurableObject {}
+
+			type Params = { email: string; metadata: Record<string, string> };
+			export class MyWorkflow extends WorkflowEntrypoint<Env, Params> {
+				async run(event: WorkflowEvent<Params>, step: WorkflowStep) { }
+			}`
 		);
 		fs.writeFileSync(
 			"./a/wrangler.jsonc",
@@ -797,8 +825,10 @@ describe("generate types", () => {
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
+					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
+					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
 					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}

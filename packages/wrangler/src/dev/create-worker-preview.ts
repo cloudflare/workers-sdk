@@ -172,20 +172,24 @@ export async function createPreviewSession(
 		apiToken
 	);
 
-	const switchedExchangeUrl = switchHost(
-		exchange_url,
-		ctx.host,
-		!!ctx.zone
-	).toString();
+	const switchedExchangeUrl = switchHost(exchange_url, ctx.host, !!ctx.zone);
+
+	const headers: HeadersInit = {};
+	const accessToken = await getAccessToken(switchedExchangeUrl.hostname);
+
+	if (accessToken) {
+		headers.cookie = `CF_Authorization=${accessToken}`;
+	}
 
 	logger.debugWithSanitization(
 		"-- START EXCHANGE API REQUEST:",
-		` GET ${switchedExchangeUrl}`
+		` GET ${switchedExchangeUrl.href}`
 	);
 
 	logger.debug("-- END EXCHANGE API REQUEST");
 	const exchangeResponse = await fetch(switchedExchangeUrl, {
 		signal: abortSignal,
+		headers,
 	});
 	const bodyText = await exchangeResponse.text();
 	logger.debug(

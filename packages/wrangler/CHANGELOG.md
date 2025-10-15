@@ -1,5 +1,24 @@
 # wrangler
 
+## 4.43.0
+
+### Minor Changes
+
+- [#10911](https://github.com/cloudflare/workers-sdk/pull/10911) [`940b44d`](https://github.com/cloudflare/workers-sdk/commit/940b44db728a1b62595286deda6ab640a1ab3cf4) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - feat: `wrangler init --from-dash` now generates `wrangler.jsonc` config files instead of `wrangler.toml` files
+
+### Patch Changes
+
+- [#10938](https://github.com/cloudflare/workers-sdk/pull/10938) [`e52d0ec`](https://github.com/cloudflare/workers-sdk/commit/e52d0ecf4284030e3092a91fc0a893c887382ae8) Thanks [@penalosa](https://github.com/penalosa)! - Acquire Cloudflare Access tokens for additional requests made during a `wrangler dev --remote` session
+
+- [#10923](https://github.com/cloudflare/workers-sdk/pull/10923) [`2429533`](https://github.com/cloudflare/workers-sdk/commit/2429533d7c6810165761aad828462614c50a585f) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: update `docker manifest inspect` to use full image registry uri when checking if the image exists remotely
+
+- [#10521](https://github.com/cloudflare/workers-sdk/pull/10521) [`88b5b7f`](https://github.com/cloudflare/workers-sdk/commit/88b5b7ff1ace3bf982d2562ad1e01e39ffce9517) Thanks [@penalosa](https://github.com/penalosa)! - Improves the Wrangler auto-provisioning feature (gated behind the experimental flag `--x-provision`) by:
+
+  - Writing back changes to the user's config file (not necessary, but can make it resilient to binding name changes)
+  - Fixing `--dry-run`, which previously threw an error when your config file had auto provisioned resources
+  - Improve R2 bindings display to include the `bucket_name` from the config file on upload
+  - Fixing bindings view for specific versions to not display TOML
+
 ## 4.42.2
 
 ### Patch Changes

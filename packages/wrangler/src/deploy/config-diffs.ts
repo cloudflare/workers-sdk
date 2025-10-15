@@ -1,14 +1,14 @@
-import { green, red } from "@cloudflare/cli/colors";
 import { getSubdomainValues } from "../triggers/deploy";
-import { Diff } from "../utils/diff";
+import { diffJsonObjects, isNonDestructive } from "../utils/diff-json";
 import type { Config, RawConfig } from "../config";
+import type { DiffJson, Json } from "../utils/diff-json";
 
 /**
  * Object representing the difference of two configuration objects.
  */
 type ConfigDiff = {
 	/** The actual (raw) computed diff of the two objects */
-	diff: Diff;
+	diff: Record<string, DiffJson> | null;
 	/**
 	 * Flag indicating whether the difference includes some destructive changes.
 	 *
@@ -35,60 +35,15 @@ export function getRemoteConfigDiff(
 		localResolvedConfig
 	);
 
-	const diff = new Diff(
-		JSON.stringify(normalizedRemoteConfig, null, 2),
-		JSON.stringify(normalizedLocalConfig, null, 2)
+	const diff = diffJsonObjects(
+		normalizedRemoteConfig as unknown as Record<string, Json>,
+		normalizedLocalConfig as unknown as Record<string, Json>
 	);
 
 	return {
 		diff,
-		nonDestructive: configDiffOnlyHasAdditionsIfAny(diff),
+		nonDestructive: isNonDestructive(diff),
 	};
-}
-
-/**
- * Given a diff object, representing the diff of config files, it computes whether such diff
- * object only represents at most additions (so no removal nor modifications).
- *
- * For example the diff:
- *  ```
- *   - "name": "my-worker"
- *   + "name": "my-worker",
- *   + "vars": {
- *   +   MY_VAR: "my variable",
- *   + },
- *  ```
- * only contains additions.
- *
- * While
- *  ```
- *    "name": "my-worker",
- *    "vars": {
- *   -   MY_VAR: "my variable",
- *   +   MY_VAR: "my modified variable",
- *    },
- *	 - compatibility_date: "2025-07-08",
- *  ```
- * contains also a modification and a removal
- *
- * @param diff The diff object to analyze
- * @returns true if there are only additions or no diffs at all, false otherwise
- */
-function configDiffOnlyHasAdditionsIfAny(diff: Diff): boolean {
-	const diffLines = diff.toString().split("\n");
-	const removalLines = diffLines.filter((line) => {
-		const withoutLeadingSpaces = line.replace(/^\s*/, "");
-		return withoutLeadingSpaces.startsWith(red("-"));
-	});
-	const diffLinesSet = new Set(diffLines);
-	return removalLines.every((line) => {
-		if (line.endsWith(",")) {
-			const removalButAsAdditionAndWithCommaRemoved = `${line.slice(0, -1).replace(red("-"), green("+"))}`;
-			return diffLinesSet.has(removalButAsAdditionAndWithCommaRemoved);
-		}
-		const removalButAsAdditionAndWithComma = `${line.replace(red("-"), green("+"))},`;
-		return diffLinesSet.has(removalButAsAdditionAndWithComma);
-	});
 }
 
 /**

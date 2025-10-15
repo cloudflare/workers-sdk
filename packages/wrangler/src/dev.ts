@@ -42,6 +42,7 @@ export const dev = createCommand({
 				? false
 				: args.experimentalRemoteBindings ?? true,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
+			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 	},
 	metadata: {
@@ -686,6 +687,7 @@ export function getBindings(
 		unsafe_hello_world: configParam.unsafe_hello_world,
 		ratelimits: configParam.ratelimits,
 		worker_loaders: configParam.worker_loaders,
+		media: configParam.media,
 	};
 
 	return bindings;

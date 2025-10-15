@@ -291,7 +291,6 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	#teardown = async (): Promise<void> => {
 		logger.debug("MultiworkerRuntimeController teardown beginning...");
-
 		if (this.#mf) {
 			logger.log(chalk.dim("⎔ Shutting down local server..."));
 		}

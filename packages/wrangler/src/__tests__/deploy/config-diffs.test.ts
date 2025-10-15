@@ -1,6 +1,20 @@
 import { getRemoteConfigDiff } from "../../deploy/config-diffs";
 import type { Config, RawConfig } from "../../config";
 
+function normalizeDiff(log: string): string {
+	let normalizedLog = log;
+
+	// Let's remove the various extra characters for colors to get a more clear
+	normalizedLog = normalizedLog
+		.replaceAll("", "X")
+		.replaceAll(/X\[\d+(?:;\d+)?m/g, "");
+
+	// Let's also normalize Windows newlines
+	normalizedLog = normalizedLog.replaceAll("\r\n", "\n");
+
+	return normalizedLog;
+}
+
 describe("getRemoteConfigsDiff", () => {
 	it("should handle a very simple diffing scenario (no diffs, random order)", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
@@ -29,7 +43,7 @@ describe("getRemoteConfigsDiff", () => {
 			} as unknown as Config
 		);
 
-		expect(diff.toString()).toEqual("");
+		expect(diff).toBe(null);
 		expect(nonDestructive).toBe(true);
 	});
 
@@ -60,13 +74,13 @@ describe("getRemoteConfigsDiff", () => {
 			} as unknown as Config
 		);
 
-		expect(diff.toString()).toMatchInlineSnapshot(`
-			"  {
-			-   \\"compatibility_date\\": \\"2025-07-08\\",
-			+   \\"compatibility_date\\": \\"2025-07-09\\",
-			    \\"main\\": \\"/tmp/src/index.js\\",
-			    \\"compatibility_flags\\": [],
-			    \\"name\\": \\"silent-firefly-dbe3\\","
+		assert(diff);
+		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
+			" {
+			-  compatibility_date: \\"2025-07-08\\"
+			+  compatibility_date: \\"2025-07-09\\"
+			 }
+			"
 		`);
 		expect(nonDestructive).toBe(false);
 	});
@@ -97,19 +111,63 @@ describe("getRemoteConfigsDiff", () => {
 				],
 			} as unknown as Config
 		);
-		expect(diff.toString()).toMatchInlineSnapshot(`
-			"      {
-			        \\"binding\\": \\"MY_KV\\",
-			        \\"id\\": \\"my-kv-123\\"
-			+     },
-			+     {
-			+       \\"binding\\": \\"MY_KV_2\\",
-			+       \\"id\\": \\"my-kv-456\\"
-			      }
-			    ],
-			    \\"workers_dev\\": true,"
+		assert(diff);
+		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
+			" {
+			   kv_namespaces: [
+			     ...
+			+    {
+			+      binding: \\"MY_KV_2\\"
+			+      id: \\"my-kv-456\\"
+			+    }
+			   ]
+			 }
+			"
 		`);
 		expect(nonDestructive).toBe(true);
+	});
+
+	it("should handle a diffing scenario with only deletions", () => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "silent-firefly-dbe3",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: false,
+				compatibility_date: "2025-07-08",
+				compatibility_flags: undefined,
+				placement: undefined,
+				limits: undefined,
+				tail_consumers: undefined,
+				account_id: "account-id-123",
+				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
+			},
+			{
+				name: "silent-firefly-dbe3",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: false,
+				compatibility_date: "2025-07-08",
+				compatibility_flags: undefined,
+				placement: undefined,
+				limits: undefined,
+				tail_consumers: undefined,
+				account_id: "account-id-123",
+			} as unknown as Config
+		);
+		assert(diff);
+		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
+			" {
+			-  kv_namespaces: [
+			-    {
+			-      binding: \\"MY_KV\\"
+			-      id: \\"my-kv-123\\"
+			-    }
+			-  ]
+			 }
+			"
+		`);
+		expect(nonDestructive).toBe(false);
 	});
 
 	it("should handle a diffing scenario with modifications and removals", () => {
@@ -137,33 +195,23 @@ describe("getRemoteConfigsDiff", () => {
 				account_id: "account-id-123",
 			} as unknown as Config
 		);
-		expect(diff.toString()).toMatchInlineSnapshot(`
-			"  {
-			    \\"name\\": \\"silent-firefly-dbe3\\",
-			    \\"main\\": \\"src/index.js\\",
-			-   \\"compatibility_date\\": \\"2025-07-08\\",
-			+   \\"compatibility_date\\": \\"2025-07-09\\",
-			    \\"observability\\": {
-			-     \\"enabled\\": true,
-			+     \\"enabled\\": false,
-			      \\"head_sampling_rate\\": 1,
-			      \\"logs\\": {
-			        \\"enabled\\": false,
-
-			  ...
-
-			    },
-			    \\"account_id\\": \\"account-id-123\\",
-			    \\"workers_dev\\": true,
-			+   \\"preview_urls\\": false
-			-   \\"preview_urls\\": false,
-			-   \\"kv_namespaces\\": [
-			-     {
-			-       \\"binding\\": \\"MY_KV\\",
-			-       \\"id\\": \\"my-kv-123\\"
-			-     }
-			-   ]
-			  }"
+		assert(diff);
+		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
+			" {
+			-  kv_namespaces: [
+			-    {
+			-      binding: \\"MY_KV\\"
+			-      id: \\"my-kv-123\\"
+			-    }
+			-  ]
+			-  compatibility_date: \\"2025-07-08\\"
+			+  compatibility_date: \\"2025-07-09\\"
+			   observability: {
+			-    enabled: true
+			+    enabled: false
+			   }
+			 }
+			"
 		`);
 		expect(nonDestructive).toBe(false);
 	});
@@ -196,7 +244,7 @@ describe("getRemoteConfigsDiff", () => {
 				undefined,
 				{ enabled: false }
 			);
-			expect(diff.toString()).toMatchInlineSnapshot(`""`);
+			expect(diff).toBe(null);
 		});
 
 		it("should treat a remote undefined equal to a remote { enabled: false, logs: { enabled: false } }", () => {
@@ -205,7 +253,7 @@ describe("getRemoteConfigsDiff", () => {
 				undefined,
 				{ enabled: false, logs: { enabled: false } }
 			);
-			expect(diff.toString()).toMatchInlineSnapshot(`""`);
+			expect(diff).toBe(null);
 		});
 
 		it("should correctly show the diff of boolean when the remote is undefined and the local is { enabled: true }", () => {
@@ -214,14 +262,15 @@ describe("getRemoteConfigsDiff", () => {
 				undefined,
 				{ enabled: true }
 			);
-			expect(diff.toString()).toMatchInlineSnapshot(`
-				"  {
-				    \\"observability\\": {
-				-     \\"enabled\\": false,
-				+     \\"enabled\\": true,
-				      \\"head_sampling_rate\\": 1,
-				      \\"logs\\": {
-				        \\"enabled\\": false,"
+			assert(diff);
+			expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
+				" {
+				   observability: {
+				-    enabled: false
+				+    enabled: true
+				   }
+				 }
+				"
 			`);
 		});
 
@@ -231,15 +280,17 @@ describe("getRemoteConfigsDiff", () => {
 				undefined,
 				{ logs: { enabled: true } }
 			);
-			expect(diff.toString()).toMatchInlineSnapshot(`
-				"  {
-				    \\"observability\\": {
-				      \\"logs\\": {
-				-       \\"enabled\\": false,
-				+       \\"enabled\\": true,
-				        \\"head_sampling_rate\\": 1,
-				        \\"invocation_logs\\": true
-				      },"
+			assert(diff);
+			expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
+				" {
+				   observability: {
+				     logs: {
+				-      enabled: false
+				+      enabled: true
+				     }
+				   }
+				 }
+				"
 			`);
 		});
 
@@ -249,7 +300,7 @@ describe("getRemoteConfigsDiff", () => {
 				{ enabled: false, head_sampling_rate: 1, logs: { enabled: true } },
 				{ enabled: false, logs: { enabled: true, invocation_logs: true } }
 			);
-			expect(diff.toString()).toMatchInlineSnapshot(`""`);
+			expect(diff).toBe(null);
 		});
 
 		it("should correctly not show logs.invocation_logs being added remotely", () => {
@@ -260,15 +311,17 @@ describe("getRemoteConfigsDiff", () => {
 				},
 				{ logs: { enabled: true, head_sampling_rate: 0.9 } }
 			);
-			expect(diff.toString()).toMatchInlineSnapshot(`
-				"    \\"observability\\": {
-				      \\"logs\\": {
-				        \\"enabled\\": true,
-				-       \\"head_sampling_rate\\": 1,
-				+       \\"head_sampling_rate\\": 0.9,
-				        \\"invocation_logs\\": true
-				      },
-				      \\"enabled\\": false,"
+			assert(diff);
+			expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
+				" {
+				   observability: {
+				     logs: {
+				-      head_sampling_rate: 1
+				+      head_sampling_rate: 0.9
+				     }
+				   }
+				 }
+				"
 			`);
 		});
 	});

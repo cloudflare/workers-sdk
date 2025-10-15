@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.42.2",
+	"version": "4.43.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -73,7 +73,7 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.21",
-		"workerd": "1.20251008.0"
+		"workerd": "1.20251011.0"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -95,6 +95,7 @@
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/is-ci": "^3.0.0",
 		"@types/javascript-time-ago": "^2.0.3",
+		"@types/json-diff": "^1.0.3",
 		"@types/mime": "^3.0.4",
 		"@types/minimatch": "^5.1.2",
 		"@types/node": "catalog:default",
@@ -128,6 +129,7 @@
 		"is-ci": "^3.0.1",
 		"itty-time": "^1.0.6",
 		"javascript-time-ago": "^2.5.4",
+		"json-diff": "^1.0.6",
 		"md5-file": "5.0.0",
 		"mime": "^3.0.0",
 		"minimatch": "^5.1.0",

@@ -67,6 +67,7 @@ export type WorkerMetadataBinding =
 	| { type: "version_metadata"; name: string }
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
+	| { type: "media"; name: string }
 	| {
 			type: "send_email";
 			name: string;
@@ -219,7 +220,10 @@ export type WorkerMetadata = WorkerMetadataPut | WorkerMetadataVersionsPost;
 /**
  * Creates a `FormData` upload from a `CfWorkerInit`.
  */
-export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
+export function createWorkerUploadForm(
+	worker: CfWorkerInit,
+	options?: { dryRun: true }
+): FormData {
 	const formData = new FormData();
 	const {
 		main,
@@ -279,6 +283,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	});
 
 	bindings.kv_namespaces?.forEach(({ id, binding, raw }) => {
+		// If we're doing a dry run there's no way to know whether or not a KV namespace
+		// is inheritable or requires provisioning (since that would require hitting the API).
+		// As such, _assume_ any undefined IDs are inheritable when doing a dry run.
+		// When this Worker is actually deployed, some may be provisioned at the point of deploy
+		if (options?.dryRun) {
+			id ??= INHERIT_SYMBOL;
+		}
+
 		if (id === undefined) {
 			throw new UserError(`${binding} bindings must have an "id" field`);
 		}
@@ -357,6 +369,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 	bindings.r2_buckets?.forEach(
 		({ binding, bucket_name, jurisdiction, raw }) => {
+			if (options?.dryRun) {
+				bucket_name ??= INHERIT_SYMBOL;
+			}
 			if (bucket_name === undefined) {
 				throw new UserError(
 					`${binding} bindings must have a "bucket_name" field`
@@ -382,6 +397,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 	bindings.d1_databases?.forEach(
 		({ binding, database_id, database_internal_env, raw }) => {
+			if (options?.dryRun) {
+				database_id ??= INHERIT_SYMBOL;
+			}
 			if (database_id === undefined) {
 				throw new UserError(
 					`${binding} bindings must have a "database_id" field`
@@ -568,6 +586,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			name: bindings.images.binding,
 			type: "images",
 			raw: bindings.images.raw,
+		});
+	}
+
+	if (bindings.media !== undefined) {
+		metadataBindings.push({
+			name: bindings.media.binding,
+			type: "media",
 		});
 	}
 
