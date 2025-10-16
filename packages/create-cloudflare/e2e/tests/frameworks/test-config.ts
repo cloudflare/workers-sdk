@@ -599,11 +599,11 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			timeout: LONG_TIMEOUT,
 			verifyDeploy: {
 				route: "/",
-				expectedText: "Learn TanStack",
+				expectedText: "TanStack Start Starter",
 			},
 			verifyPreview: {
 				route: "/",
-				expectedText: "Learn TanStack",
+				expectedText: "TanStack Start Starter",
 			},
 			nodeCompat: true,
 		},
