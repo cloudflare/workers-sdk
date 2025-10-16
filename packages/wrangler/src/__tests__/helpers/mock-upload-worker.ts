@@ -1,7 +1,13 @@
 import { http, HttpResponse } from "msw";
 import { ParseError } from "../../parse";
-import { getSubdomainValues } from "../../triggers/deploy";
-import { mockGetWorkerSubdomain } from "./mock-workers-subdomain";
+import {
+	getSubdomainValues,
+	getSubdomainValuesAPIMock,
+} from "../../triggers/deploy";
+import {
+	mockGetWorkerSubdomain,
+	mockUpdateWorkerSubdomain,
+} from "./mock-workers-subdomain";
 import { createFetchResult, msw } from "./msw";
 import { serialize, toString } from "./serialize-form-data-entry";
 import { readWranglerConfig } from "./write-wrangler-config";
@@ -17,6 +23,7 @@ import type { HttpResponseResolver } from "msw";
 /** Create a mock handler for the request to upload a worker script. */
 export function mockUploadWorkerRequest(
 	options: {
+		wranglerConfigPath?: string;
 		expectedBaseUrl?: string;
 		expectedEntry?: string | RegExp | ((entry: string | null) => void);
 		expectedMainModule?: string;
@@ -240,11 +247,11 @@ export function mockUploadWorkerRequest(
 			)
 		);
 	}
-	// Every upload is followed by a GET subdomain request, to check if the worker is enabled.
+	// Every upload is followed by subdomain requests, to check and set subdomain status.
 	// TODO: make this explicit by callers?
 	let config: RawConfig = {};
 	try {
-		config = readWranglerConfig();
+		config = readWranglerConfig(options.wranglerConfigPath);
 	} catch (e) {
 		if (e instanceof ParseError) {
 			// Ignore, config is either bad or doesn't exist.
@@ -256,14 +263,30 @@ export function mockUploadWorkerRequest(
 	if (env) {
 		envConfig = config.env?.[env] ?? {};
 	}
-	const { workers_dev, preview_urls } = getSubdomainValues(
+	const subdomainDefaults = getSubdomainValuesAPIMock(
 		envConfig.workers_dev,
 		envConfig.preview_urls,
 		envConfig.routes ?? []
 	);
 	mockGetWorkerSubdomain({
-		enabled: workers_dev,
-		previews_enabled: preview_urls,
+		enabled: subdomainDefaults.workers_dev,
+		previews_enabled: subdomainDefaults.preview_urls,
+		env,
+		legacyEnv,
+		expectedScriptName,
+	});
+	const subdomainValues = getSubdomainValues(
+		envConfig.workers_dev,
+		envConfig.preview_urls,
+		envConfig.routes ?? []
+	);
+	mockUpdateWorkerSubdomain({
+		enabled: subdomainValues.workers_dev,
+		previews_enabled: subdomainValues.preview_urls,
+		response: {
+			enabled: subdomainDefaults.workers_dev,
+			previews_enabled: subdomainDefaults.preview_urls,
+		},
 		env,
 		legacyEnv,
 		expectedScriptName,

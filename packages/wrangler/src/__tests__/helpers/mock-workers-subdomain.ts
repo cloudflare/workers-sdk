@@ -37,7 +37,7 @@ export function mockSubDomainRequest(
 /** Create a mock handler to fetch the  <script>.<user>.workers.dev subdomain status*/
 export function mockGetWorkerSubdomain({
 	enabled,
-	previews_enabled = false,
+	previews_enabled = enabled,
 	env,
 	legacyEnv = false,
 	expectedScriptName = "test-name" + (legacyEnv && env ? `-${env}` : ""),
@@ -76,17 +76,27 @@ export function mockGetWorkerSubdomain({
 /** Create a mock handler to toggle a <script>.<user>.workers.dev subdomain status */
 export function mockUpdateWorkerSubdomain({
 	enabled,
-	previews_enabled = false,
+	previews_enabled,
+	response = {
+		enabled,
+		previews_enabled: previews_enabled ?? enabled, // Mimics API behavior.
+	},
 	env,
 	legacyEnv = false,
-	expectedScriptName = "test-name",
+	expectedScriptName = "test-name" + (legacyEnv && env ? `-${env}` : ""),
 	flakeCount = 0,
 }: {
+	// Request values (kept as separate fields and not an object to avoid having to change all tests).
 	enabled: boolean;
 	previews_enabled?: boolean;
+	// Response values.
+	response?: {
+		enabled: boolean;
+		previews_enabled: boolean;
+	};
 	env?: string | undefined;
 	legacyEnv?: boolean | undefined;
-	expectedScriptName?: string;
+	expectedScriptName?: string | false;
 	flakeCount?: number; // The first `flakeCount` requests will fail with a 500 error
 }) {
 	const url =
@@ -99,17 +109,16 @@ export function mockUpdateWorkerSubdomain({
 			url,
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toEqual(
-					legacyEnv && env ? `${expectedScriptName}-${env}` : expectedScriptName
-				);
+				if (expectedScriptName !== false) {
+					expect(params.scriptName).toEqual(expectedScriptName);
+				}
 				if (!legacyEnv) {
 					expect(params.envName).toEqual(env);
 				}
 				const body = await request.json();
-				expect(body).toEqual({ enabled, previews_enabled });
-				return HttpResponse.json(
-					createFetchResult({ enabled, previews_enabled })
-				);
+				const expectBody = { enabled, previews_enabled };
+				expect(body).toEqual(expectBody);
+				return HttpResponse.json(createFetchResult(response));
 			},
 			{ once: true }
 		),
