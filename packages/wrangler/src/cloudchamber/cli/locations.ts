@@ -19,8 +19,7 @@ export async function getLocation(
 	args: { location?: string },
 	options: { skipLocation?: boolean } = {}
 ): Promise<LocationID | "Skip"> {
-	const { external_account_id } = await loadAccount();
-	const locations = await getLocations();
+	const { external_account_id, locations } = await loadAccount();
 
 	if (locations.length === 0) {
 		throw new Error(`No allowed locations found for account ${external_account_id}`);
@@ -30,7 +29,7 @@ export async function getLocation(
 		args.location !== undefined &&
 		!locations.find((location) => location.location === args.location)
 	) {
-		locations.push({
+		(locations as Location[]).push({
 			name: `Other (${args.location})`,
 			location: args.location,
 			region: "",

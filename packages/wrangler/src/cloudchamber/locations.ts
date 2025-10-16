@@ -20,10 +20,6 @@ export async function loadAccount(): Promise<CompleteAccountCustomer> {
 	return cachedAccount;
 }
 
-export async function getLocations(): Promise<Location[]> {
-	return (await loadAccount()).locations;
-}
-
 export function idToLocationName(locationId: string): string {
 	if (!cachedAccount) {
 		throw new Error("Needs a call to loadAccount beforehand");
