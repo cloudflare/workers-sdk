@@ -236,7 +236,7 @@ export class Runtime {
 		const handleRuntimeStdio =
 			options.handleRuntimeStdio ??
 			(options.handleStructuredLogs
-				? // If `handleStructuredLogs` is provided then be default Miniflare should not pipe through the stream's output
+				? // If `handleStructuredLogs` is provided then by default Miniflare should not pipe through the stream's output
 					() => {}
 				: pipeOutput);
 
