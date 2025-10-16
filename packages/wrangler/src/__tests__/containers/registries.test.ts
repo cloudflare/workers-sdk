@@ -8,7 +8,7 @@ import { useMockStdin } from "../helpers/mock-stdin";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
-describe("containers registry put", () => {
+describe("containers registries put", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 	const cliStd = mockCLIOutput();
@@ -46,7 +46,7 @@ describe("containers registry put", () => {
 	});
 
 	it("should reject unsupported registry domains", async () => {
-		await expect(runWrangler(`containers registry put docker.io`)).rejects
+		await expect(runWrangler(`containers registries put docker.io`)).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: docker.io is not a supported image registry.
 			Currently we support the following non-Cloudflare registries: AWS ECR.
@@ -55,9 +55,9 @@ describe("containers registry put", () => {
 	});
 
 	it("should no-op on cloudflare registry (default)", async () => {
-		await runWrangler(`containers registry put registry.cloudflare.com`);
+		await runWrangler(`containers registries put registry.cloudflare.com`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Configure container registry
+			"╭ Configure a container registry
 			│
 			│ Configuring Cloudflare Containers Managed Registry registry: registry.cloudflare.com
 			│
@@ -86,7 +86,7 @@ describe("containers registry put", () => {
 			});
 			mockPutRegistry();
 			await expect(
-				runWrangler(`containers registry put ${awsEcrDomain}`)
+				runWrangler(`containers registries put ${awsEcrDomain}`)
 			).resolves.not.toThrow();
 		});
 
@@ -105,14 +105,14 @@ describe("containers registry put", () => {
 
 				mockStdIn.send(validJson);
 				mockPutRegistry();
-				await runWrangler(`containers registry put ${awsEcrDomain}`);
+				await runWrangler(`containers registries put ${awsEcrDomain}`);
 			});
 
 			it("should error with invalid JSON from piped input", async () => {
 				const invalidJson = "not valid json";
 
 				mockStdIn.send(invalidJson);
-				await expect(runWrangler(`containers registry put ${awsEcrDomain}`))
+				await expect(runWrangler(`containers registries put ${awsEcrDomain}`))
 					.rejects.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Invalid JSON input. Please provide AWS credentials in this format:
 				{"AWS_ACCESS_KEY_ID":"your-access-key","AWS_SECRET_ACCESS_KEY":"your-secret-key"}]
@@ -127,7 +127,7 @@ describe("containers registry put", () => {
 
 				mockStdIn.send(incompleteJson);
 				await expect(
-					runWrangler(`containers registry put ${awsEcrDomain}`)
+					runWrangler(`containers registries put ${awsEcrDomain}`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Missing required credentials. JSON must include both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.]`
 				);
@@ -135,17 +135,17 @@ describe("containers registry put", () => {
 
 			it("should error with no piped input", async () => {
 				mockStdIn.send("");
-				await expect(runWrangler(`containers registry put ${awsEcrDomain}`))
+				await expect(runWrangler(`containers registries put ${awsEcrDomain}`))
 					.rejects.toThrowErrorMatchingInlineSnapshot(`
 				[Error: No input provided. In non-interactive mode, please pipe AWS credentials as JSON:
-				echo '{"AWS_ACCESS_KEY_ID":"...","AWS_SECRET_ACCESS_KEY":"..."}' | wrangler containers registry put 123456789012.dkr.ecr.us-west-2.amazonaws.com]
+				echo '{"AWS_ACCESS_KEY_ID":"...","AWS_SECRET_ACCESS_KEY":"..."}' | wrangler containers registries put 123456789012.dkr.ecr.us-west-2.amazonaws.com]
 			`);
 			});
 		});
 	});
 });
 
-describe("containers registry list", () => {
+describe("containers registries list", () => {
 	const std = mockConsoleMethods();
 	const cliStd = mockCLIOutput();
 	mockAccountId();
@@ -158,7 +158,7 @@ describe("containers registry list", () => {
 
 	it("should list empty registries", async () => {
 		mockListRegistries([]);
-		await runWrangler("containers registry list");
+		await runWrangler("containers registries list");
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ List configured container registries
 			│
@@ -174,7 +174,12 @@ describe("containers registry list", () => {
 			{ domain: "987654321098.dkr.ecr.eu-west-1.amazonaws.com" },
 		];
 		mockListRegistries(mockRegistries);
-		await runWrangler("containers registry list");
+		await runWrangler("containers registries list");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────"
+		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ List configured container registries
 			│
@@ -193,7 +198,7 @@ describe("containers registry list", () => {
 			{ domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com" },
 		];
 		mockListRegistries(mockRegistries);
-		await runWrangler("containers registry list --json");
+		await runWrangler("containers registries list --json");
 		expect(std.out).toMatchInlineSnapshot(`
 			"[
 			    {
@@ -204,7 +209,7 @@ describe("containers registry list", () => {
 	});
 });
 
-describe("containers registry delete", () => {
+describe("containers registries delete", () => {
 	const cliStd = mockCLIOutput();
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -226,7 +231,7 @@ describe("containers registry delete", () => {
 			result: true,
 		});
 		mockDeleteRegistry(domain);
-		await runWrangler(`containers registry delete ${domain}`);
+		await runWrangler(`containers registries delete ${domain}`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Delete registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
 			│
@@ -244,7 +249,7 @@ describe("containers registry delete", () => {
 			text: `Are you sure you want to delete the registry ${domain}? This action cannot be undone.`,
 			result: false,
 		});
-		await runWrangler(`containers registry delete ${domain}`);
+		await runWrangler(`containers registries delete ${domain}`);
 		expect(cliStd.stdout).toContain("The operation has been cancelled");
 	});
 
@@ -252,7 +257,7 @@ describe("containers registry delete", () => {
 		setIsTTY(false);
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		mockDeleteRegistry(domain);
-		await runWrangler(`containers registry delete ${domain}`);
+		await runWrangler(`containers registries delete ${domain}`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Delete registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
 			│
@@ -272,7 +277,7 @@ describe("containers registry delete", () => {
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		mockDeleteRegistry(domain);
 		await runWrangler(
-			`containers registry delete ${domain} --skip-confirmation`
+			`containers registries delete ${domain} --skip-confirmation`
 		);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Delete registry 123456789012.dkr.ecr.us-west-2.amazonaws.com

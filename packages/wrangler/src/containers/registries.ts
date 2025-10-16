@@ -33,7 +33,7 @@ export const registryCommands = (yargs: CommonYargsArgv) => {
 			(args) => registryPutYargs(args),
 			(args) =>
 				handleFailure(
-					`wrangler containers registry put`,
+					`wrangler containers registries put`,
 					registryPutCommand,
 					containersScope
 				)(args)
@@ -44,7 +44,7 @@ export const registryCommands = (yargs: CommonYargsArgv) => {
 			(args) => registryListYargs(args),
 			(args) =>
 				handleFailure(
-					`wrangler containers registry list`,
+					`wrangler containers registries list`,
 					registryListCommand,
 					containersScope
 				)(args)
@@ -55,7 +55,7 @@ export const registryCommands = (yargs: CommonYargsArgv) => {
 			(args) => registryDeleteYargs(args),
 			(args) =>
 				handleFailure(
-					`wrangler containers registry delete`,
+					`wrangler containers registries delete`,
 					registryDeleteCommand,
 					containersScope
 				)(args)
@@ -72,7 +72,7 @@ function registryPutYargs(args: CommonYargsArgv) {
 async function registryPutCommand(
 	configureArgs: StrictYargsOptionsToInterface<typeof registryPutYargs>
 ) {
-	startSection("Configure container registry");
+	startSection("Configure a container registry");
 
 	const registryType = getAndValidateRegistryType(configureArgs.DOMAIN);
 
@@ -105,7 +105,7 @@ async function registryPutCommand(
 		if (e instanceof ApiError) {
 			if (e.status === 409) {
 				throw new UserError(
-					`A registry with the domain ${configureArgs.DOMAIN} already exists. Use "wrangler containers registry delete ${configureArgs.DOMAIN}" to delete it first if you want to reconfigure it.`
+					`A registry with the domain ${configureArgs.DOMAIN} already exists. Use "wrangler containers registries delete ${configureArgs.DOMAIN}" to delete it first if you want to reconfigure it.`
 				);
 			}
 			throw new FatalError(
@@ -131,7 +131,7 @@ async function configureAwsEcrRegistry(domain: string) {
 		if (!stdinInput) {
 			throw new UserError(
 				"No input provided. In non-interactive mode, please pipe AWS credentials as JSON:\n" +
-					'echo \'{"AWS_ACCESS_KEY_ID":"...","AWS_SECRET_ACCESS_KEY":"..."}\' | wrangler containers registry put ' +
+					'echo \'{"AWS_ACCESS_KEY_ID":"...","AWS_SECRET_ACCESS_KEY":"..."}\' | wrangler containers registries put ' +
 					domain
 			);
 		}
