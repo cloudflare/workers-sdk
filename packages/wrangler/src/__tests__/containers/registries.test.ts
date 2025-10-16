@@ -139,9 +139,11 @@ describe("containers registries put", () => {
 				mockStdIn.send("");
 				await expect(runWrangler(`containers registries put ${awsEcrDomain}`))
 					.rejects.toThrowErrorMatchingInlineSnapshot(`
-				[Error: No input provided. In non-interactive mode, please pipe AWS credentials as JSON:
-				echo '{"AWS_ACCESS_KEY_ID":"...","AWS_SECRET_ACCESS_KEY":"..."}' | wrangler containers registries put 123456789012.dkr.ecr.us-west-2.amazonaws.com]
-			`);
+					[Error: No input provided. In non-interactive mode, please pipe AWS credentials as JSON:
+					\`wrangler containers registries put 123456789012.dkr.ecr.us-west-2.amazonaws.com < credentials.json\`
+					where credentials.json looks like
+					{"AWS_ACCESS_KEY_ID":"...","AWS_SECRET_ACCESS_KEY":"..."}]
+				`);
 			});
 		});
 	});
@@ -229,7 +231,7 @@ describe("containers registries delete", () => {
 		setIsTTY(true);
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		mockConfirm({
-			text: `Are you sure you want to delete the registry ${domain}? This action cannot be undone.`,
+			text: `Are you sure you want to delete the registry credentials for ${domain}? This action cannot be undone.`,
 			result: true,
 		});
 		mockDeleteRegistry(domain);
@@ -248,7 +250,7 @@ describe("containers registries delete", () => {
 		setIsTTY(true);
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		mockConfirm({
-			text: `Are you sure you want to delete the registry ${domain}? This action cannot be undone.`,
+			text: `Are you sure you want to delete the registry credentials for ${domain}? This action cannot be undone.`,
 			result: false,
 		});
 		await runWrangler(`containers registries delete ${domain}`);
@@ -269,7 +271,7 @@ describe("containers registries delete", () => {
 			"
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"? Are you sure you want to delete the registry 123456789012.dkr.ecr.us-west-2.amazonaws.com? This action cannot be undone.
+			"? Are you sure you want to delete the registry credentials for 123456789012.dkr.ecr.us-west-2.amazonaws.com? This action cannot be undone.
 			🤖 Using fallback value in non-interactive context: yes"
 		`);
 	});

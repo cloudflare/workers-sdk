@@ -13,10 +13,10 @@ import {
 import { ExternalRegistryKind } from "@cloudflare/containers-shared/src/client/models/ExternalRegistryKind";
 import { handleFailure, promiseSpinner } from "../cloudchamber/common";
 import { confirm, prompt } from "../dialogs";
-import { FatalError, UserError } from "../errors";
+import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { parseJSON } from "../parse";
+import { APIError, parseJSON } from "../parse";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { formatError } from "./deploy";
 import { containersScope } from ".";
@@ -90,7 +90,7 @@ async function registryPutCommand(
 			credentials = await configureAwsEcrRegistry(configureArgs.DOMAIN);
 			break;
 		default:
-			throw new Error(`Unhandled registry type: ${registryType.type}`);
+			throw new UserError(`Unhandled registry type: ${registryType.type}`);
 	}
 	try {
 		await promiseSpinner(
@@ -108,9 +108,10 @@ async function registryPutCommand(
 					`A registry with the domain ${configureArgs.DOMAIN} already exists. Use "wrangler containers registries delete ${configureArgs.DOMAIN}" to delete it first if you want to reconfigure it.`
 				);
 			}
-			throw new FatalError(
-				"Error configuring container registry:\n" + formatError(e)
-			);
+			throw new APIError({
+				status: e.status,
+				text: "Error configuring container registry:\n" + formatError(e),
+			});
 		} else {
 			throw e;
 		}
@@ -131,8 +132,9 @@ async function configureAwsEcrRegistry(domain: string) {
 		if (!stdinInput) {
 			throw new UserError(
 				"No input provided. In non-interactive mode, please pipe AWS credentials as JSON:\n" +
-					'echo \'{"AWS_ACCESS_KEY_ID":"...","AWS_SECRET_ACCESS_KEY":"..."}\' | wrangler containers registries put ' +
-					domain
+					`\`wrangler containers registries put ${domain} < credentials.json\`\n` +
+					"where credentials.json looks like\n" +
+					`{"AWS_ACCESS_KEY_ID":"...","AWS_SECRET_ACCESS_KEY":"..."}`
 			);
 		}
 
@@ -201,9 +203,10 @@ async function registryListCommand(
 		}
 	} catch (e) {
 		if (e instanceof ApiError) {
-			throw new FatalError(
-				"Error listing container registries:\n" + formatError(e)
-			);
+			throw new APIError({
+				status: e.status,
+				text: "Error listing container registries:\n" + formatError(e),
+			});
 		} else {
 			throw e;
 		}
@@ -231,7 +234,7 @@ async function registryDeleteCommand(
 
 	if (!deleteArgs.skipConfirmation) {
 		const yes = await confirm(
-			`Are you sure you want to delete the registry ${deleteArgs.DOMAIN}? This action cannot be undone.`
+			`Are you sure you want to delete the registry credentials for ${deleteArgs.DOMAIN}? This action cannot be undone.`
 		);
 		if (!yes) {
 			cancel("The operation has been cancelled");
@@ -250,9 +253,10 @@ async function registryDeleteCommand(
 					`The registry ${deleteArgs.DOMAIN} does not exist.`
 				);
 			}
-			throw new FatalError(
-				`Error deleting container registry:\n` + formatError(e)
-			);
+			throw new APIError({
+				status: e.status,
+				text: `Error deleting container registry:\n` + formatError(e),
+			});
 		} else {
 			throw e;
 		}
