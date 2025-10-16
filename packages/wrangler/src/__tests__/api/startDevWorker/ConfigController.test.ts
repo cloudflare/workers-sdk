@@ -45,6 +45,38 @@ describe("ConfigController", () => {
 		logger.resetLoggerLevel();
 	});
 
+	it("should prompt user to update types if they're out of date", async () => {
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+				export default {}
+			`,
+			"wrangler.toml": dedent/* toml */ `
+				name = "my-worker"
+				main = "src/index.ts"
+				compatibility_date = \"2024-06-01\"
+			`,
+		});
+		await runWrangler("types");
+
+		const event = waitForConfigUpdate(controller);
+		await controller.set({ config: "./wrangler.toml" });
+		await event;
+
+		const event2 = waitForConfigUpdate(controller);
+		await seed({
+			"wrangler.toml": dedent/* toml */ `
+				name = "my-worker"
+				main = "src/index.ts"
+				compatibility_date = \"2025-06-01\"
+		    `,
+		});
+		await event2;
+
+		await vi.waitFor(() => {
+			expect(std.out).toContain("Your types might be out of date.");
+		});
+	});
+
 	it("should use account_id from config file before env var", async () => {
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
@@ -238,40 +270,6 @@ describe("ConfigController", () => {
 					origin: { hostname: "myexample.com" },
 				},
 			},
-		});
-	});
-
-	it("should prompt user to update types if they're out of date", async () => {
-		await seed({
-			"src/index.ts": dedent/* javascript */ `
-                export default {}
-            `,
-			"wrangler.toml": dedent/* toml */ `
-                name = "my-worker"
-                main = "src/index.ts"
-				compatibility_date = \"2024-06-01\"
-            `,
-		});
-		await runWrangler("types");
-
-		const event = waitForConfigUpdate(controller);
-
-		await controller.set({ config: "./wrangler.toml" });
-
-		await event;
-
-		const event2 = waitForConfigUpdate(controller);
-
-		await seed({
-			"wrangler.toml": dedent/* toml */ `
-		        name = "my-worker"
-		        main = "src/index.ts"
-				compatibility_date = \"2025-06-01\"
-		    `,
-		});
-		await event2;
-		await vi.waitFor(() => {
-			expect(std.out).toContain("❓ Your types might be out of date.");
 		});
 	});
 });
