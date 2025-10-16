@@ -341,7 +341,7 @@ function logAssetsUploadStatus(
 	uploadedAssetFiles: string[]
 ) {
 	logger.info(
-		`Uploaded ${uploadedAssetsCount} of ${numberFilesToUpload} assets`
+		`Uploaded ${uploadedAssetsCount} of ${numberFilesToUpload} asset${numberFilesToUpload === 1 ? "" : "s"}`
 	);
 	uploadedAssetFiles.forEach((file) => logger.debug(`✨ ${file}`));
 }
