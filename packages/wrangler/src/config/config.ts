@@ -368,7 +368,7 @@ export const defaultWranglerConfig: Config = {
 		crons: undefined,
 	},
 	rules: [],
-	build: { command: undefined, watch_dir: "./src", cwd: undefined },
+	build: { command: undefined, watch_dir: "./src", watch_ignore: undefined, cwd: undefined },
 	no_bundle: undefined,
 	minify: undefined,
 	keep_names: undefined,

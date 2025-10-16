@@ -366,6 +366,7 @@ async function resolveConfig(
 			custom: {
 				command: input.build?.custom?.command ?? config.build?.command,
 				watch: input.build?.custom?.watch ?? config.build?.watch_dir,
+				watchIgnore: input.build?.custom?.watchIgnore ?? config.build?.watch_ignore,
 				workingDirectory:
 					input.build?.custom?.workingDirectory ?? config.build?.cwd,
 			},

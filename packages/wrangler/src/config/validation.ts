@@ -381,7 +381,7 @@ function normalizeAndValidateBuild(
 	rawBuild: Config["build"],
 	configPath: string | undefined
 ): Config["build"] {
-	const { command, cwd, watch_dir = "./src", ...rest } = rawBuild;
+	const { command, cwd, watch_dir = "./src", watch_ignore, ...rest } = rawBuild;
 	validateAdditionalProperties(diagnostics, "build", Object.keys(rest), []);
 
 	validateOptionalProperty(diagnostics, "build", "command", command, "string");
@@ -396,6 +396,23 @@ function normalizeAndValidateBuild(
 			watch_dir,
 			"string"
 		);
+	}
+	// Validate watch_ignore patterns
+	if (watch_ignore !== undefined) {
+		if (Array.isArray(watch_ignore)) {
+			if (watch_ignore.length === 0) {
+				diagnostics.warnings.push(
+					`The "build.watch_ignore" field is an empty array. It will have no effect.`
+				);
+			}
+			validateTypedArray(diagnostics, "build.watch_ignore", watch_ignore, "string");
+		} else if (typeof watch_ignore === "string") {
+			// Valid string pattern
+		} else {
+			diagnostics.errors.push(
+				`The "build.watch_ignore" field must be either a string or an array of strings, but got ${typeof watch_ignore}.`
+			);
+		}
 	}
 
 	return {
@@ -419,6 +436,7 @@ function normalizeAndValidateBuild(
 							path.join(path.dirname(configPath), `${watch_dir}`)
 						)
 				: watch_dir,
+		watch_ignore,
 		cwd,
 	};
 }
