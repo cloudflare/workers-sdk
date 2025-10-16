@@ -17,6 +17,7 @@ import {
 	shouldRunTest,
 	testGitCommitMessage,
 	verifyDeployment,
+	verifyDevScript,
 	verifyPreviewScript,
 	verifyTypes,
 } from "../../helpers/framework-helpers";
@@ -133,6 +134,13 @@ describe
 								});
 							}
 						}
+
+						await verifyDevScript(
+							testConfig,
+							frameworkConfig,
+							project.path,
+							logStream,
+						);
 
 						await verifyPreviewScript(
 							testConfig,

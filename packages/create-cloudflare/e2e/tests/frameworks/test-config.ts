@@ -30,6 +30,17 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "Hello from Cloudflare",
 				previewArgs: ["--host=127.0.0.1"],
 			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello from Cloudflare",
+				devArgs: ["--host=127.0.0.1"],
+				configChanges: {
+					vars: {
+						VALUE_FROM_CLOUDFLARE: "Hello React Router",
+					},
+					expectedText: "Hello React Router",
+				},
+			},
 			nodeCompat: false,
 			flags: ["--no-install", "--no-git-init"],
 		},

@@ -46,6 +46,18 @@ export type RunnerConfig = {
 	 * Specifies whether to run the test script for the project and verify the exit code.
 	 */
 	verifyTest?: boolean;
+	/**
+	 * Specifies whether to run the dev script for the project and verify the response from the specified route.
+	 */
+	verifyDev?: {
+		devArgs?: string[];
+		route: string;
+		expectedText: string;
+		configChanges?: {
+			vars: Record<string, string>;
+			expectedText: string;
+		};
+	};
 };
 
 export const runC3 = async (

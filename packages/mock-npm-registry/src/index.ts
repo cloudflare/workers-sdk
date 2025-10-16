@@ -41,8 +41,12 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 	);
 
 	console.log(
-		`Starting up local npm registry on http://localhost:${registryPort} at ${registryPath}`
+		`Starting up local npm registry on http://localhost:${registryPort} at ${registryPath} with ${pkgs.size} packages published:`
 	);
+
+	for (const [pkg, pkgPath] of pkgs.entries()) {
+		console.log(` - ${pkg} (${pkgPath})`);
+	}
 
 	let stopServer = await startVerdaccioServer(configPath);
 

@@ -30,7 +30,6 @@ import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging } from "./spawn";
 import type { TemplateConfig } from "../../src/templates";
 import type { RunnerConfig } from "./run-c3";
-import type { JsonMap } from "@iarna/toml";
 import type { Writable } from "stream";
 
 export type FrameworkTestConfig = RunnerConfig & {
@@ -87,6 +86,41 @@ export async function runC3ForFrameworkTest(
 	return match[1];
 }
 
+export function updateWranglerConfig(
+	projectPath: string,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	handleUpdate: <T extends Record<string, any>>(config: T) => T,
+) {
+	const wranglerTomlPath = join(projectPath, "wrangler.toml");
+	const wranglerJsoncPath = join(projectPath, "wrangler.jsonc");
+
+	if (existsSync(wranglerTomlPath)) {
+		const wranglerToml = readToml(wranglerTomlPath);
+
+		writeToml(
+			wranglerTomlPath,
+			handleUpdate(JSON.parse(JSON.stringify(wranglerToml))),
+		);
+
+		return () => {
+			writeToml(wranglerTomlPath, handleUpdate(wranglerToml));
+		};
+	} else if (existsSync(wranglerJsoncPath)) {
+		const wranglerJsonc = readJSON(wranglerJsoncPath) as {
+			vars: Record<string, string>;
+		};
+
+		writeJSON(
+			wranglerJsoncPath,
+			handleUpdate(JSON.parse(JSON.stringify(wranglerJsonc))),
+		);
+
+		return () => {
+			writeJSON(wranglerJsoncPath, wranglerJsonc);
+		};
+	}
+}
+
 /**
  * Either update or create a wrangler configuration file to include a `TEST` var.
  *
@@ -94,24 +128,15 @@ export async function runC3ForFrameworkTest(
  * which overwrites any that comes from the framework's template.
  */
 export async function addTestVarsToWranglerToml(projectPath: string) {
-	const wranglerTomlPath = join(projectPath, "wrangler.toml");
-	const wranglerJsoncPath = join(projectPath, "wrangler.jsonc");
-
-	if (existsSync(wranglerTomlPath)) {
-		const wranglerToml = readToml(wranglerTomlPath);
-		wranglerToml.vars ??= {};
-		(wranglerToml.vars as JsonMap).TEST = "C3_TEST";
-
-		writeToml(wranglerTomlPath, wranglerToml);
-	} else if (existsSync(wranglerJsoncPath)) {
-		const wranglerJsonc = readJSON(wranglerJsoncPath) as {
-			vars: Record<string, string>;
+	updateWranglerConfig(projectPath, (config) => {
+		return {
+			...config,
+			vars: {
+				...config.vars,
+				TEST: "C3_TEST",
+			},
 		};
-		wranglerJsonc.vars ??= {};
-		wranglerJsonc.vars.TEST = "C3_TEST";
-
-		writeJSON(wranglerJsoncPath, wranglerJsonc);
-	}
+	});
 }
 
 export async function verifyDeployment(
@@ -139,6 +164,83 @@ export async function verifyDeployment(
 			);
 		}
 	});
+}
+
+export async function verifyDevScript(
+	{ verifyDev }: FrameworkTestConfig,
+	{ devScript }: TemplateConfig,
+	projectPath: string,
+	logStream: Writable,
+) {
+	if (!verifyDev) {
+		return;
+	}
+
+	assert(
+		devScript,
+		"Expected a dev script as we are verifying the dev session in " +
+			projectPath,
+	);
+
+	// Run the dev-server on random ports to avoid colliding with other tests
+	const port = await getPort();
+	const proc = spawnWithLogging(
+		[
+			packageManager.name,
+			"run",
+			devScript,
+			...(packageManager.name === "npm" ? ["--"] : []),
+			...(verifyDev.devArgs ?? []),
+			"--port",
+			`${port}`,
+		],
+		{
+			cwd: projectPath,
+			env: {
+				VITEST: undefined,
+			},
+		},
+		logStream,
+	);
+
+	let restoreConfig: (() => void) | undefined;
+
+	try {
+		await retry(
+			{ times: 300, sleepMs: 5000 },
+			async () => await fetch(`http://127.0.0.1:${port}${verifyDev.route}`),
+		);
+
+		// Make a request to the specified test route
+		const res = await fetch(`http://127.0.0.1:${port}${verifyDev.route}`);
+		expect(await res.text()).toContain(verifyDev.expectedText);
+
+		if (verifyDev.configChanges) {
+			const { configChanges } = verifyDev;
+			const updatedVars = configChanges.vars;
+
+			restoreConfig = updateWranglerConfig(projectPath, (config) => ({
+				...config,
+				vars: {
+					...config.vars,
+					...updatedVars,
+				},
+			}));
+
+			await retry({ times: 10, sleepMs: 500 }, async () => {
+				const res2 = await fetch(`http://127.0.0.1:${port}${verifyDev.route}`);
+				expect(await res2.text()).toContain(configChanges.expectedText);
+			});
+		}
+	} finally {
+		// Kill the process gracefully so ports can be cleaned up
+		await kill(proc);
+		// Restore the wrangler config if we modified it
+		restoreConfig?.();
+		// Wait for a second to allow process to exit cleanly. Otherwise, the port might
+		// end up camped and cause future runs to fail
+		await sleep(1000);
+	}
 }
 
 export async function verifyPreviewScript(
