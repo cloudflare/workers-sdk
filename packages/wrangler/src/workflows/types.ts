@@ -22,6 +22,7 @@ export type InstanceStatus =
 	| "errored"
 	| "terminated"
 	| "waiting"
+	| "waitingForPause"
 	| "complete";
 
 export type InstanceWithoutDates = {

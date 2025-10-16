@@ -1,4 +1,4 @@
-import { fetchResult } from "../../../cfetch";
+import { fetchCursorPage } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
@@ -51,22 +51,32 @@ export const workflowsInstancesListCommand = createCommand({
 			const validatedStatus = validateStatus(args.status);
 			URLParams.set("status", validatedStatus);
 		}
+
 		if (args.perPage !== undefined) {
 			URLParams.set("per_page", args.perPage.toString());
 		}
 
 		URLParams.set("page", args.page.toString());
 
-		const instances = await fetchResult<Instance[]>(
+		// Note(osilva): perform pagination with cursor to list all instances (and not a best effort set,
+		// due to changes in the Workflows control plane)
+		const instances = await fetchCursorPage<Instance[]>(
 			config,
 			`/accounts/${accountId}/workflows/${args.name}/instances`,
 			undefined,
 			URLParams
 		);
 
-		if (instances.length === 0) {
+		if (instances.length === 0 && args.page === 1) {
 			logger.warn(
 				`There are no instances in workflow "${args.name}". You can trigger it with "wrangler workflows trigger ${args.name}"`
+			);
+			return;
+		}
+
+		if (instances.length === 0 && args.page > 1) {
+			logger.warn(
+				`No instances found on page ${args.page}. Please try a smaller page number.`
 			);
 			return;
 		}
@@ -78,11 +88,11 @@ export const workflowsInstancesListCommand = createCommand({
 		const prettierInstances = instances
 			.sort((a, b) =>
 				args.reverse
-					? a.modified_on.localeCompare(b.modified_on)
-					: b.modified_on.localeCompare(a.modified_on)
+					? a.created_on.localeCompare(b.created_on)
+					: b.created_on.localeCompare(a.created_on)
 			)
 			.map((instance) => ({
-				Id: instance.id,
+				"Instance ID": instance.id,
 				Version: instance.version_id,
 				Created: new Date(instance.created_on).toLocaleString(),
 				Modified: new Date(instance.modified_on).toLocaleString(),

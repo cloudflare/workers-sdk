@@ -40,24 +40,31 @@ export const workflowsListCommand = createCommand({
 			URLParams
 		);
 
-		if (workflows.length === 0) {
+		if (workflows.length === 0 && args.page === 1) {
 			logger.warn("There are no deployed Workflows in this account");
-		} else {
-			// TODO(lduarte): can we improve this message once pagination is deployed
-			logger.info(
-				`Showing last ${workflows.length} workflow${workflows.length > 1 ? "s" : ""}:`
-			);
-			// sort by name and make the table head prettier by changing the keys
-			const prettierWorkflows = workflows
-				.sort((a, b) => a.name.localeCompare(b.name))
-				.map((workflow) => ({
-					Name: workflow.name,
-					"Script name": workflow.script_name,
-					"Class name": workflow.class_name,
-					Created: new Date(workflow.created_on).toLocaleString(),
-					Modified: new Date(workflow.modified_on).toLocaleString(),
-				}));
-			logger.table(prettierWorkflows);
+			return;
 		}
+
+		if (workflows.length === 0 && args.page > 1) {
+			logger.warn(
+				`No Workflows found on page ${args.page}. Please try a smaller page number.`
+			);
+			return;
+		}
+
+		logger.info(
+			`Showing ${workflows.length} workflow${workflows.length > 1 ? "s" : ""} from page ${args.page}:`
+		);
+
+		const prettierWorkflows = workflows
+			.sort((a, b) => b.created_on.localeCompare(a.created_on))
+			.map((workflow) => ({
+				Name: workflow.name,
+				"Script name": workflow.script_name,
+				"Class name": workflow.class_name,
+				Created: new Date(workflow.created_on).toLocaleString(),
+				Modified: new Date(workflow.modified_on).toLocaleString(),
+			}));
+		logger.table(prettierWorkflows);
 	},
 });
