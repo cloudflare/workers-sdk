@@ -27,7 +27,7 @@ export function handleStructuredLogsFromStream(
 		// one or more structured logs
 		const lastNewlineIdx = fullStreamOutput.lastIndexOf("\n");
 
-		const adjustedStructuredLogsHandler = improveStructuredLogsHandler(
+		const adjustedStructuredLogsHandler = wrapStructuredLogsHandler(
 			structuredLogsHandler
 		);
 
@@ -92,13 +92,13 @@ const messageClassifiers = {
 };
 
 /**
- * Improves a structuredLogsHandler function so that it then performs extra filtering and
- * remapping to logs so that known unhelpful/noisy logs are improved or removed altogether
+ * Wraps a structuredLogsHandler function so that it then performs extra filtering and
+ * remapping of logs so that known unhelpful/noisy logs are improved or removed altogether
  *
  * @param structuredLogsHandler The target handler function to improve
  * @returns The improved handler function
  */
-function improveStructuredLogsHandler(
+function wrapStructuredLogsHandler(
 	structuredLogsHandler: StructuredLogsHandler
 ) {
 	return (structuredLog: WorkerdStructuredLog) => {
