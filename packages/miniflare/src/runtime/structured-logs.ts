@@ -54,14 +54,6 @@ export function handleStructuredLogsFromStream(
 			const structuredLog = parseStructuredLog(line);
 			if (structuredLog) {
 				adjustedStructuredLogsHandler(structuredLog);
-			} else {
-				// Unexpectedly we've received a line that is not a structured log.
-				// We then log it at an unknown level.
-				adjustedStructuredLogsHandler({
-					timestamp: Date.now(),
-					level: "unknown",
-					message: line,
-				});
 			}
 		}
 	});
@@ -195,6 +187,12 @@ function parseStructuredLog(str: string): WorkerdStructuredLog | null {
 			message: maybeStructuredLog.message,
 		};
 	} catch {
-		return null;
+		// Unexpectedly we've received a line that is not a structured log.
+		// For now we simply log it at the log level, if this turns out problematic we can refine this as needed.
+		return {
+			timestamp: Date.now(),
+			level: "log",
+			message: str,
+		};
 	}
 }
