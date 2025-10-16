@@ -1,6 +1,6 @@
 import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt } from "@cloudflare/cli/interactive";
-import { getLocations, loadAccount } from "../locations";
+import { loadAccount } from "../locations";
 import type { Location, LocationID } from "@cloudflare/containers-shared";
 
 const whichLocationQuestion = "Choose where you want to deploy your container";
