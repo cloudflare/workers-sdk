@@ -1,5 +1,5 @@
 import test from "ava";
-import { Miniflare, MiniflareError, WorkerdStructuredLog } from "miniflare";
+import { Miniflare, MiniflareCoreError, WorkerdStructuredLog } from "miniflare";
 
 test("logs are treated as standard stdout/stderr chunks by default", async (t) => {
 	const collected = {
@@ -202,18 +202,22 @@ test("setting `handleStructuredLogs` when `structuredWorkerdLogs` is `false` tri
 	const mf = new Miniflare({ modules: true, script: "" });
 	t.teardown(() => mf.dispose());
 
-	await t.throwsAsync(
-		mf.setOptions({
-			modules: true,
-			script: "",
-			structuredWorkerdLogs: false,
-			handleStructuredLogs() {},
-		}),
+	t.throws(
+		() =>
+			new Miniflare({
+				modules: true,
+				script: "",
+				structuredWorkerdLogs: false,
+				handleStructuredLogs() {},
+			}),
 		{
-			instanceOf: MiniflareError,
-			code: "ERR_INVALID_STRUCTURED_LOGS_HANDLER",
-			message:
-				"A `handleStructuredLogs` has been provided but `structuredWorkerdLogs` is set to `false`",
+			instanceOf: MiniflareCoreError,
+			code: "ERR_VALIDATION",
+			message(message) {
+				return message.includes(
+					"A `handleStructuredLogs` has been provided but `structuredWorkerdLogs` is set to `false`"
+				);
+			},
 		}
 	);
 });

@@ -1968,16 +1968,6 @@ export class Miniflare {
 			requiredSockets.push(kInspectorSocket);
 		}
 
-		if (
-			this.#sharedOpts.core.structuredWorkerdLogs === false &&
-			this.#sharedOpts.core.handleStructuredLogs
-		) {
-			throw new MiniflareCoreError(
-				"ERR_INVALID_STRUCTURED_LOGS_HANDLER",
-				"A `handleStructuredLogs` has been provided but `structuredWorkerdLogs` is set to `false`"
-			);
-		}
-
 		// Reload runtime
 		const entryAddress = this.#getSocketAddress(
 			SOCKET_ENTRY,
