@@ -276,7 +276,7 @@ describe("containers registries delete", () => {
 		`);
 	});
 
-	it("should delete a registry with --skip-confirmation flag", async () => {
+	it("should delete a registry in interactive mode with --skip-confirmation flag", async () => {
 		setIsTTY(true);
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		mockDeleteRegistry(domain);
