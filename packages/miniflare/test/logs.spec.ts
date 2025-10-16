@@ -1,7 +1,7 @@
 import test from "ava";
 import { Miniflare, MiniflareError, WorkerdStructuredLog } from "miniflare";
 
-test("logs are treated as standard stdout/stderr chunks be default", async (t) => {
+test("logs are treated as standard stdout/stderr chunks by default", async (t) => {
 	const collected = {
 		stdout: "",
 		stderr: "",
