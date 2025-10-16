@@ -1,6 +1,6 @@
 import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt } from "@cloudflare/cli/interactive";
-import { getLocations } from "../locations";
+import { getLocations, loadAccount } from "../locations";
 import type { Location, LocationID } from "@cloudflare/containers-shared";
 
 const whichLocationQuestion = "Choose where you want to deploy your container";
@@ -19,7 +19,13 @@ export async function getLocation(
 	args: { location?: string },
 	options: { skipLocation?: boolean } = {}
 ): Promise<LocationID | "Skip"> {
+	const { external_account_id } = await loadAccount();
 	const locations = await getLocations();
+
+	if (locations.length === 0) {
+		throw new Error(`No allowed locations found for account ${external_account_id}`);
+	}
+
 	if (
 		args.location !== undefined &&
 		!locations.find((location) => location.location === args.location)
