@@ -27,6 +27,8 @@ describe("containers registries put", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers
 
+			📦 Manage Containers
+
 			COMMANDS
 			  wrangler containers build [PATH]  Build a container image
 			  wrangler containers push [TAG]    Push a tagged image to a Cloudflare managed registry
