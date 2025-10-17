@@ -100,6 +100,21 @@ describe("containers push", () => {
 		]);
 	});
 
+	it("should tag image with the correct uri if given an <namespace>/<image>:<tag> argument", async () => {
+		await runWrangler("containers push test-namespace/app:tag");
+
+		expect(runDockerCmd).toHaveBeenCalledTimes(2);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
+			"tag",
+			`test-namespace/app:tag`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-namespace/app:tag`,
+		]);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-namespace/app:tag`,
+		]);
+	});
+
 	it("should tag image with the correct uri if given an registry.cloudflare.com/<image>:<tag> argument", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});

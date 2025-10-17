@@ -132,21 +132,31 @@ export async function prepareContainerImagesForDev(args: {
  * anyother-registry.com/anything -> no change
  */
 export function resolveImageName(accountId: string, image: string): string {
-	let url: URL;
+	let url: URL | undefined;
 	try {
 		url = new URL(`http://${image}`);
 	} catch {
-		// not a valid url so assume it is in the format image:tag and pre-pend the registry
+		// Invalid URL
+	}
+
+	if (
+		url === undefined ||
+		(!url.host.match(/[:.]/) && url.hostname !== "localhost")
+	) {
+		// Not a valid URL so assume it is in the format image:tag and prepend the registry
 		return getCloudflareRegistryWithAccountNamespace(accountId, image);
 	}
-	// hostname not the managed registry, passthrough
+
 	if (url.hostname !== getCloudflareContainerRegistry()) {
+		// hostname not the managed registry, passthrough
 		return image;
 	}
-	// is managed registry and has the account id, passthrough
+
 	if (url.pathname.startsWith(`/${accountId}`)) {
+		// is managed registry and has the account id, passthrough
 		return image;
 	}
+
 	// check if already looks like it has an account id (32 char hex string)
 	const accountIdPattern = /^\/([a-f0-9]{32})\//;
 	const match = accountIdPattern.exec(url.pathname);
