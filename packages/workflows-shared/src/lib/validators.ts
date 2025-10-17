@@ -1,6 +1,5 @@
 import { ms } from "itty-time";
 import { z } from "zod";
-import type { WorkflowStepConfig } from "cloudflare:workers";
 
 export const MAX_INSTANCE_STEPS = 1024;
 
@@ -65,21 +64,23 @@ const STEP_CONFIG_SCHEMA = z
 	})
 	.strict();
 
-export function isValidStepConfig(stepConfig: WorkflowStepConfig): boolean {
-	if (!STEP_CONFIG_SCHEMA.safeParse(stepConfig).success) {
+export function isValidStepConfig(stepConfig: unknown): boolean {
+	const config = STEP_CONFIG_SCHEMA.safeParse(stepConfig);
+
+	if (!config.success) {
 		return false;
 	}
 
 	if (
-		stepConfig.retries !== undefined &&
-		Number.isNaN(ms(stepConfig.retries.delay))
+		config.data.retries !== undefined &&
+		Number.isNaN(ms(config.data.retries.delay))
 	) {
 		return false;
 	}
 
-	if (stepConfig.timeout !== undefined) {
-		const timeout = stepConfig.timeout;
-		if (timeout == 0 || Number.isNaN(ms(stepConfig.timeout))) {
+	if (config.data.timeout !== undefined) {
+		const timeout = config.data.timeout;
+		if (timeout == 0 || Number.isNaN(ms(config.data.timeout))) {
 			return false;
 		}
 	}
