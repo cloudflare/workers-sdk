@@ -1,5 +1,13 @@
 # @cloudflare/unenv-preset
 
+## 2.7.8
+
+### Patch Changes
+
+- [#10954](https://github.com/cloudflare/workers-sdk/pull/10954) [`ee7d710`](https://github.com/cloudflare/workers-sdk/commit/ee7d71075aad422e7ef267ea0e87e2e300aadc67) Thanks [@vicb](https://github.com/vicb)! - Use the native `node:cluster` module when available.
+
+  It is enabled when the `enable_nodejs_cluster_module` compatibility flag is set.
+
 ## 2.7.7
 
 ### Patch Changes
