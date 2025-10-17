@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Update logs handling via the new `handleStructuredLogs` miniflare option
+Update logs handling to use the new `handleStructuredLogs` miniflare option
