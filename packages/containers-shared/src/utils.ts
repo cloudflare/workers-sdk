@@ -361,3 +361,49 @@ export async function cleanupDuplicateImageTags(
 		}
 	} catch {}
 }
+
+/**
+ * Regular expression for matching an image name.
+ *
+ * See: https://github.com/opencontainers/distribution-spec/blob/v1.1.0/spec.md#pulling-manifests
+ */
+const imageRe = (() => {
+	const alphaNumeric = "[a-z0-9]+";
+	const separator = "(?:\\.|_|__|-+)";
+	const port = ":[0-9]+";
+	const host = `${alphaNumeric}(?:(?:${separator}${alphaNumeric})+|(?:${separator}${alphaNumeric})*${port})`;
+	const name = `(?:${alphaNumeric}(?:${separator}${alphaNumeric})*/)*${alphaNumeric}(?:${separator}${alphaNumeric})*`;
+	const tag = ":([a-zA-Z0-9_][a-zA-Z0-9._-]{0,127})";
+	const digest = "@(sha256:[A-Fa-f0-9]+)";
+	const reference = `(?:${tag}(?:${digest})?|${digest})`;
+	return new RegExp(`^(${host}/)?(${name})${reference}$`);
+})();
+
+/**
+ * Parse a container image name.
+ */
+export function parseImageName(value: string): {
+	host?: string;
+	name?: string;
+	tag?: string;
+	digest?: string;
+} {
+	const matches = value.match(imageRe);
+	if (matches === null) {
+		throw new Error(
+			"Invalid image format: expected NAME:TAG[@DIGEST] or NAME@DIGEST"
+		);
+	}
+
+	// Trim trailing slash
+	const host = matches[1]?.slice(0, -1);
+	const name = matches[2];
+	const tag = matches[3];
+	const digest = matches[4] ?? matches[5];
+
+	if (tag === "latest") {
+		throw new Error('"latest" tag is not allowed');
+	}
+
+	return { host, name, tag, digest };
+}

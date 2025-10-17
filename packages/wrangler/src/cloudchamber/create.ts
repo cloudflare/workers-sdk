@@ -12,6 +12,7 @@ import {
 	AssignIPv4,
 	AssignIPv6,
 	DeploymentsService,
+	parseImageName,
 } from "@cloudflare/containers-shared";
 import { parseByteSize } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -22,7 +23,6 @@ import {
 	checkEverythingIsSet,
 	collectEnvironmentVariables,
 	collectLabels,
-	parseImageName,
 	promptForEnvironmentVariables,
 	promptForLabels,
 	renderDeploymentConfiguration,
@@ -153,10 +153,7 @@ export async function createCommand(
 
 		const body = checkEverythingIsSet(args, ["image", "location"]);
 
-		const { err } = parseImageName(body.image);
-		if (err !== undefined) {
-			throw new Error(err);
-		}
+		parseImageName(body.image);
 
 		const keysToAdd = args.allSshKeys
 			? (await pollSSHKeysUntilCondition(() => true)).map((key) => key.id)
@@ -294,8 +291,11 @@ async function handleCreateCommand(
 				value = defaultContainerImage;
 			}
 
-			const { err } = parseImageName(value);
-			return err;
+			try {
+				parseImageName(value);
+			} catch (err) {
+				return (err as Error).message;
+			}
 		},
 		defaultValue: givenImage ?? defaultContainerImage,
 		helpText: 'NAME:TAG ("latest" tag is not allowed)',
