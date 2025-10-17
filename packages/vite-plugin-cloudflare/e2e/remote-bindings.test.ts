@@ -25,7 +25,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 				"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `preserve-e2e-vite-remote-alt`,
 			};
 
-			const projectPath = seed("remote-bindings", "pnpm", replacements);
+			const projectPath = seed("remote-bindings", { pm: "pnpm", replacements });
 
 			beforeAll(async () => {
 				try {
