@@ -383,17 +383,15 @@ export async function bundleWorker(
 		metafile: true,
 		conditions: getBuildConditions(),
 		platform: getBuildPlatform(),
-		...(process.env.NODE_ENV && {
-			define: {
-				...(defineNavigatorUserAgent
-					? { "navigator.userAgent": `"Cloudflare-Workers"` }
-					: {}),
-				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
-				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
-				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
-				...define,
-			},
-		}),
+		define: {
+			...(defineNavigatorUserAgent
+				? { "navigator.userAgent": `"Cloudflare-Workers"` }
+				: {}),
+			// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
+			// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
+			"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
+			...define,
+		},
 		loader: COMMON_ESBUILD_OPTIONS.loader,
 		plugins: [
 			aliasPlugin,
