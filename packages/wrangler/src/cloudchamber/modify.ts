@@ -1,7 +1,10 @@
 import { cancel, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
-import { DeploymentsService } from "@cloudflare/containers-shared";
+import {
+	DeploymentsService,
+	parseImageName,
+} from "@cloudflare/containers-shared";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
@@ -10,7 +13,6 @@ import { getLocation } from "./cli/locations";
 import {
 	collectEnvironmentVariables,
 	collectLabels,
-	parseImageName,
 	promptForEnvironmentVariables,
 	promptForLabels,
 	renderDeploymentConfiguration,
@@ -218,8 +220,11 @@ async function handleModifyCommand(
 				return "Unknown error";
 			}
 
-			const { err } = parseImageName(value);
-			return err;
+			try {
+				parseImageName(value);
+			} catch (err) {
+				return (err as Error).message;
+			}
 		},
 		defaultValue: givenImage ?? deployment.image,
 		initialValue: givenImage ?? deployment.image,
