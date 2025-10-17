@@ -213,7 +213,9 @@ function normalizeAuthor(stdout: string) {
 }
 
 function normalizeAccountId(stdout: string) {
-	return stdout.replaceAll(CLOUDFLARE_ACCOUNT_ID, "CLOUDFLARE_ACCOUNT_ID");
+	return CLOUDFLARE_ACCOUNT_ID
+		? stdout.replaceAll(CLOUDFLARE_ACCOUNT_ID, "CLOUDFLARE_ACCOUNT_ID")
+		: stdout;
 }
 
 /**
