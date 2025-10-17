@@ -2107,6 +2107,7 @@ function mockDockerBuild(
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([
 			"build",
+			"--load",
 			"-t",
 			`${containerName}:${tag}`,
 			"--platform",
