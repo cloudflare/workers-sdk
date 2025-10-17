@@ -15,6 +15,7 @@ export async function constructBuildCommand(
 	const platform = options.platform ?? "linux/amd64";
 	const buildCmd = [
 		"build",
+		"--load",
 		"-t",
 		options.tag,
 		"--platform",
