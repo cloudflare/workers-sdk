@@ -88,6 +88,9 @@ export interface StartDevWorkerInput {
 	/** Specify the compliance region mode of the Worker. */
 	complianceRegion?: Config["compliance_region"];
 
+	/** A list of glob patterns to exclude files from the python_modules directory when bundling. */
+	pythonModulesExcludes?: string[];
+
 	env?: string;
 
 	/**

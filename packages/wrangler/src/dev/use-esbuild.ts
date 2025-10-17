@@ -59,6 +59,7 @@ export function runBuild(
 		onStart,
 		defineNavigatorUserAgent,
 		checkFetch,
+		pythonModulesExcludes,
 	}: {
 		entry: Entry;
 		destination: string | undefined;
@@ -86,6 +87,7 @@ export function runBuild(
 		onStart: () => void;
 		defineNavigatorUserAgent: boolean;
 		checkFetch: boolean;
+		pythonModulesExcludes?: string[];
 	},
 	setBundle: (
 		cb: (previous: EsbuildBundle | undefined) => EsbuildBundle
@@ -110,7 +112,12 @@ export function runBuild(
 	async function getAdditionalModules() {
 		return noBundle
 			? dedupeModulesByName([
-					...((await doFindAdditionalModules(entry, rules)) ?? []),
+					...((await doFindAdditionalModules(
+						entry,
+						rules,
+						false,
+						pythonModulesExcludes ?? []
+					)) ?? []),
 					...additionalModules,
 				])
 			: additionalModules;
