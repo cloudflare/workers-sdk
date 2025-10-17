@@ -2,11 +2,13 @@ import assert from "node:assert";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
+import { vi } from "vitest";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { noopModuleCollector } from "../deployment-bundle/module-collection";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import type { BundleOptions } from "../deployment-bundle/bundle";
 
 /*
  * This file contains inline comments with the word "javascript"
@@ -82,8 +84,25 @@ describe("isNavigatorDefined", () => {
 describe("defineNavigatorUserAgent is respected", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
+	const sharedBundleOptions = {
+		bundle: true,
+		additionalModules: [],
+		moduleCollector: noopModuleCollector,
+		doBindings: [],
+		workflowBindings: [],
+		define: {},
+		alias: {},
+		checkFetch: false,
+		targetConsumer: "deploy",
+		local: true,
+		projectRoot: process.cwd(),
+	} satisfies Partial<BundleOptions>;
 
-	it("defineNavigatorUserAgent = false, navigator preserved", async () => {
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it("preserves `navigator` when `defineNavigatorUserAgent` is `false`", async () => {
 		await seedFs({
 			"src/index.js": dedent/* javascript */ `
 			function randomBytes(length) {
@@ -113,17 +132,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 			path.resolve("dist"),
 			// @ts-expect-error Ignore the requirement for passing undefined values
 			{
-				bundle: true,
-				additionalModules: [],
-				moduleCollector: noopModuleCollector,
-				doBindings: [],
-				workflowBindings: [],
-				define: {},
-				alias: {},
-				checkFetch: false,
-				targetConsumer: "deploy",
-				local: true,
-				projectRoot: process.cwd(),
+				...sharedBundleOptions,
 				defineNavigatorUserAgent: false,
 			}
 		);
@@ -145,7 +154,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 		expect(fileContents).toContain("navigator.userAgent");
 	});
 
-	it("defineNavigatorUserAgent = true, navigator treeshaken", async () => {
+	it("tree shakes `navigator` when `defineNavigatorUserAgent` is `true`", async () => {
 		await seedFs({
 			"src/index.js": dedent/* javascript */ `
 			function randomBytes(length) {
@@ -175,17 +184,53 @@ describe("defineNavigatorUserAgent is respected", () => {
 			path.resolve("dist"),
 			// @ts-expect-error Ignore the requirement for passing undefined values
 			{
-				bundle: true,
-				additionalModules: [],
-				moduleCollector: noopModuleCollector,
-				doBindings: [],
-				workflowBindings: [],
-				define: {},
-				alias: {},
-				checkFetch: false,
-				targetConsumer: "deploy",
-				local: true,
+				...sharedBundleOptions,
+				defineNavigatorUserAgent: true,
+			}
+		);
+
+		// Build time warning is suppressed, because esbuild treeshakes the relevant code path
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+
+		const fileContents = await readFile("dist/index.js", "utf8");
+
+		// navigator.userAgent should have been defined, and so should not be present in the bundle
+		expect(fileContents).not.toContain("navigator.userAgent");
+	});
+
+	it("tree shakes `navigator` when `defineNavigatorUserAgent` is `true` and `process.env.NODE_ENV` is `undefined`", async () => {
+		await seedFs({
+			"src/index.js": dedent/* javascript */ `
+			function randomBytes(length) {
+				if (navigator.userAgent !== "Cloudflare-Workers") {
+					return new Uint8Array(require("node:crypto").randomBytes(length));
+				} else {
+					return crypto.getRandomValues(new Uint8Array(length));
+				}
+			}
+			export default {
+				async fetch(request, env) {
+					return new Response(randomBytes(10))
+				},
+			};
+		`,
+		});
+
+		vi.stubEnv("NODE_ENV", undefined);
+
+		await bundleWorker(
+			{
+				file: path.resolve("src/index.js"),
 				projectRoot: process.cwd(),
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: path.dirname(path.resolve("src/index.js")),
+				exports: [],
+			},
+			path.resolve("dist"),
+			// @ts-expect-error Ignore the requirement for passing undefined values
+			{
+				...sharedBundleOptions,
 				defineNavigatorUserAgent: true,
 			}
 		);
