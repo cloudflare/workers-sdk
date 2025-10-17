@@ -57,12 +57,8 @@ describe("ConfigController", () => {
 			`,
 		});
 		await runWrangler("types");
-
-		const event = waitForConfigUpdate(controller);
 		await controller.set({ config: "./wrangler.toml" });
-		await event;
 
-		const event2 = waitForConfigUpdate(controller);
 		await seed({
 			"wrangler.toml": dedent/* toml */ `
 				name = "my-worker"
@@ -70,7 +66,7 @@ describe("ConfigController", () => {
 				compatibility_date = \"2025-06-01\"
 		    `,
 		});
-		await event2;
+		await controller.set({ config: "./wrangler.toml" });
 
 		await vi.waitFor(() => {
 			expect(std.out).toContain("Your types might be out of date.");
@@ -89,16 +85,14 @@ describe("ConfigController", () => {
             `,
 		});
 
-		const event = waitForConfigUpdate(controller);
 		await controller.set({ config: "./wrangler.toml" });
-
-		const { config } = await event;
-		await expect(unwrapHook(config.dev.auth)).resolves.toMatchObject({
+		await expect(
+			unwrapHook(controller.latestConfig?.dev.auth)
+		).resolves.toMatchObject({
 			accountId: "some-account-id",
 			apiToken: { apiToken: "some-api-token" },
 		});
 
-		const event2 = waitForConfigUpdate(controller);
 		await seed({
 			"wrangler.toml": dedent/* toml */ `
                 name = "my-worker"
@@ -107,9 +101,10 @@ describe("ConfigController", () => {
                 account_id = "1234567890"
             `,
 		});
-
-		const { config: config2 } = await event2;
-		await expect(unwrapHook(config2.dev.auth)).resolves.toMatchObject({
+		await controller.set({ config: "./wrangler.toml" });
+		await expect(
+			unwrapHook(controller.latestConfig?.dev.auth)
+		).resolves.toMatchObject({
 			accountId: "1234567890",
 			apiToken: { apiToken: "some-api-token" },
 		});
