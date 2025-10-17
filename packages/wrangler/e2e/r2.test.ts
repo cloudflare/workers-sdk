@@ -13,11 +13,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 	const normalize = (str: string) =>
 		normalizeOutput(str, {
 			[bucketName]: "tmp-e2e-r2",
-			...(process.env.CLOUDFLARE_ACCOUNT_ID
-				? {
-						[process.env.CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
-					}
-				: {}),
 		});
 	const helper = new WranglerE2ETestHelper();
 
