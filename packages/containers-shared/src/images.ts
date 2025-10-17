@@ -139,7 +139,10 @@ export function resolveImageName(accountId: string, image: string): string {
 		// Invalid URL
 	}
 
-	if (url === undefined || (!url.host.match(/[:.]/) && url.hostname !== "localhost")) {
+	if (
+		url === undefined ||
+		(!url.host.match(/[:.]/) && url.hostname !== "localhost")
+	) {
 		// Not a valid URL so assume it is in the format image:tag and prepend the registry
 		return getCloudflareRegistryWithAccountNamespace(accountId, image);
 	}
