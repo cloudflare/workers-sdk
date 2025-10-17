@@ -843,7 +843,7 @@ function updatePythonPackageName(path: string, projectName: string) {
 	let uvLockContents = readFile(uvLockPath);
 	uvLockContents = uvLockContents.replace(
 		'"tbd"',
-		`${"projectName.toLowerCase()"}`,
+		`"${projectName.toLowerCase()}"`,
 	);
 	writeFile(uvLockPath, uvLockContents);
 	s.stop(`${brandColor("updated")} ${dim("`pyproject.toml`")}`);

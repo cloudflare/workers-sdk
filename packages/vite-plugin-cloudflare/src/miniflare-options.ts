@@ -41,7 +41,11 @@ import type {
 	WorkerConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
-import type { MiniflareOptions, WorkerOptions } from "miniflare";
+import type {
+	MiniflareOptions,
+	WorkerdStructuredLog,
+	WorkerOptions,
+} from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
 	Binding,
@@ -567,13 +571,7 @@ export async function getDevMiniflareOptions(config: {
 			inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
-			handleRuntimeStdio(stdout, stderr) {
-				const decoder = new TextDecoder();
-				stdout.forEach((data) => logger.info(decoder.decode(data)));
-				stderr.forEach((error) =>
-					logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
-				);
-			},
+			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
@@ -856,13 +854,7 @@ export async function getPreviewMiniflareOptions(config: {
 			inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
-			handleRuntimeStdio(stdout, stderr) {
-				const decoder = new TextDecoder();
-				stdout.forEach((data) => logger.info(decoder.decode(data)));
-				stderr.forEach((error) =>
-					logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
-				);
-			},
+			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
@@ -912,4 +904,24 @@ function miniflareLogLevelFromViteLogLevel(
 		case "silent":
 			return LogLevel.NONE;
 	}
+}
+
+/**
+ * Generates a log handler to be passed as the `handleStructuredLogs` option to miniflare
+ *
+ * @param logger the vite logger to use
+ * @returns the log handler to pass to miniflare
+ */
+function getStructuredLogsLogger(logger: Log) {
+	return ({ level, message }: WorkerdStructuredLog) => {
+		if (level === "warn") {
+			return logger.warn(message);
+		}
+
+		if (level === "error") {
+			return logger.logWithLevel(LogLevel.ERROR, message);
+		}
+
+		return logger.info(message);
+	};
 }

@@ -60,6 +60,7 @@ describe("buildAndMaybePush", () => {
 		expect(dockerBuild).toHaveBeenCalledWith("docker", {
 			buildCmd: [
 				"build",
+				"--load",
 				"-t",
 				`test-app:tag`,
 				"--platform",
@@ -104,6 +105,7 @@ describe("buildAndMaybePush", () => {
 		expect(dockerBuild).toHaveBeenCalledWith("docker", {
 			buildCmd: [
 				"build",
+				"--load",
 				"-t",
 				`registry.cloudflare.com/test-app:tag`,
 				"--platform",
@@ -147,6 +149,7 @@ describe("buildAndMaybePush", () => {
 		expect(dockerBuild).toHaveBeenCalledWith("docker", {
 			buildCmd: [
 				"build",
+				"--load",
 				"-t",
 				`registry.cloudflare.com/some-account-id/test-app:tag`,
 				"--platform",
@@ -191,6 +194,7 @@ describe("buildAndMaybePush", () => {
 		expect(dockerBuild).toHaveBeenCalledWith("/custom/docker/path", {
 			buildCmd: [
 				"build",
+				"--load",
 				"-t",
 				`test-app:tag`,
 				"--platform",
@@ -235,6 +239,7 @@ describe("buildAndMaybePush", () => {
 		expect(dockerBuild).toHaveBeenCalledWith("docker", {
 			buildCmd: [
 				"build",
+				"--load",
 				"-t",
 				`test-app:tag`,
 				"--platform",
@@ -293,6 +298,7 @@ describe("buildAndMaybePush", () => {
 		expect(dockerBuild).toHaveBeenCalledWith("docker", {
 			buildCmd: [
 				"build",
+				"--load",
 				"-t",
 				`test-app:tag`,
 				"--platform",
@@ -329,6 +335,7 @@ describe("buildAndMaybePush", () => {
 		expect(dockerBuild).toHaveBeenCalledWith("docker", {
 			buildCmd: [
 				"build",
+				"--load",
 				"-t",
 				`test-app`,
 				"--platform",
@@ -351,6 +358,7 @@ describe("buildAndMaybePush", () => {
 		expect(dockerBuild).toHaveBeenCalledWith("docker", {
 			buildCmd: [
 				"build",
+				"--load",
 				"-t",
 				`test-app`,
 				"--platform",
@@ -373,6 +381,7 @@ describe("buildAndMaybePush", () => {
 		expect(dockerBuild).toHaveBeenCalledWith("docker", {
 			buildCmd: [
 				"build",
+				"--load",
 				"-t",
 				`test-app:tag`,
 				"--platform",

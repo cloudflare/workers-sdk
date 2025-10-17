@@ -13,6 +13,10 @@ import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { MiniflareCoreError } from "../shared";
 import { Awaitable } from "../workers";
+import {
+	handleStructuredLogsFromStream,
+	StructuredLogsHandler,
+} from "./structured-logs";
 
 const ControlMessageSchema = z.discriminatedUnion("event", [
 	z.object({
@@ -30,6 +34,8 @@ export const kInspectorSocket = Symbol("kInspectorSocket");
 export type SocketIdentifier = string | typeof kInspectorSocket;
 export type SocketPorts = Map<SocketIdentifier, number /* port */>;
 
+export type { StructuredLogsHandler } from "./structured-logs";
+
 export interface RuntimeOptions {
 	entryAddress: string;
 	loopbackAddress: string;
@@ -37,6 +43,7 @@ export interface RuntimeOptions {
 	inspectorAddress?: string;
 	verbose?: boolean;
 	handleRuntimeStdio?: (stdout: Readable, stderr: Readable) => void;
+	handleStructuredLogs?: StructuredLogsHandler;
 }
 
 async function waitForPorts(
@@ -226,12 +233,28 @@ export class Runtime {
 		this.#process = runtimeProcess;
 		this.#processExitPromise = waitForExit(runtimeProcess);
 
-		const handleRuntimeStdio = options.handleRuntimeStdio ?? pipeOutput;
+		const handleRuntimeStdio =
+			options.handleRuntimeStdio ??
+			(options.handleStructuredLogs
+				? // If `handleStructuredLogs` is provided then by default Miniflare should not pipe through the stream's output
+					() => {}
+				: pipeOutput);
 
 		handleRuntimeStdio(
 			runtimeProcess.stdout.pipe(startupLogBuffer.stdoutStream),
 			runtimeProcess.stderr.pipe(startupLogBuffer.stderrStream)
 		);
+
+		if (options.handleStructuredLogs) {
+			handleStructuredLogsFromStream(
+				startupLogBuffer.stdoutStream,
+				options.handleStructuredLogs
+			);
+			handleStructuredLogsFromStream(
+				startupLogBuffer.stderrStream,
+				options.handleStructuredLogs
+			);
+		}
 
 		const controlPipe = runtimeProcess.stdio[3];
 		assert(controlPipe instanceof Readable);
