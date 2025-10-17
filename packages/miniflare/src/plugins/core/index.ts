@@ -216,63 +216,90 @@ export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
 	return value;
 });
 
-export const CoreSharedOptionsSchema = z.object({
-	rootPath: UnusableStringSchema.optional(),
+export type WorkerdStructuredLog = z.infer<typeof WorkerdStructuredLogSchema>;
 
-	host: z.string().optional(),
-	port: z.number().optional(),
-
-	https: z.boolean().optional(),
-	httpsKey: z.string().optional(),
-	httpsKeyPath: z.string().optional(),
-	httpsCert: z.string().optional(),
-	httpsCertPath: z.string().optional(),
-
-	inspectorPort: z.number().optional(),
-
-	verbose: z.boolean().optional(),
-
-	log: z.instanceof(Log).optional(),
-	handleRuntimeStdio: z
-		.function(z.tuple([z.instanceof(Readable), z.instanceof(Readable)]))
-		.optional(),
-
-	upstream: z.string().optional(),
-	// TODO: add back validation of cf object
-	cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
-
-	liveReload: z.boolean().optional(),
-
-	// Enable auto service / durable objects discovery with the dev registry
-	unsafeDevRegistryPath: z.string().optional(),
-	// Enable External Durable Objects Proxy / Internal DOs registration
-	unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
-	// Called when external workers this instance depends on are updated in the dev registry
-	unsafeHandleDevRegistryUpdate: z
-		.function(z.tuple([z.custom<WorkerRegistry>()]))
-		.optional(),
-	// This is a shared secret between a proxy server and miniflare that can be
-	// passed in a header to prove that the request came from the proxy and not
-	// some malicious attacker.
-	unsafeProxySharedSecret: z.string().optional(),
-	unsafeModuleFallbackService: CustomFetchServiceSchema.optional(),
-	// Keep blobs when deleting/overwriting keys, required for stacked storage
-	unsafeStickyBlobs: z.boolean().optional(),
-	// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/handler/scheduled`
-	unsafeTriggerHandlers: z.boolean().optional(),
-	// Enable logging requests
-	logRequests: z.boolean().default(true),
-
-	// Path to the root directory for persisting data
-	// Used as the default for all plugins with the plugin name as the subdirectory name
-	defaultPersistRoot: z.string().optional(),
-	// Strip the MF-DISABLE_PRETTY_ERROR header from user request
-	stripDisablePrettyError: z.boolean().default(true),
-
-	// Whether to get structured logs from workerd or not (default to `false`)
-	// This option is useful in combination with a custom handleRuntimeStdio.
-	structuredWorkerdLogs: z.boolean().default(false),
+export const WorkerdStructuredLogSchema = z.object({
+	timestamp: z.number(),
+	level: z.string(),
+	message: z.string(),
 });
+
+export const CoreSharedOptionsSchema = z
+	.object({
+		rootPath: UnusableStringSchema.optional(),
+
+		host: z.string().optional(),
+		port: z.number().optional(),
+
+		https: z.boolean().optional(),
+		httpsKey: z.string().optional(),
+		httpsKeyPath: z.string().optional(),
+		httpsCert: z.string().optional(),
+		httpsCertPath: z.string().optional(),
+
+		inspectorPort: z.number().optional(),
+
+		verbose: z.boolean().optional(),
+
+		log: z.instanceof(Log).optional(),
+		handleRuntimeStdio: z
+			.function(z.tuple([z.instanceof(Readable), z.instanceof(Readable)]))
+			.optional(),
+
+		handleStructuredLogs: z
+			.function(z.tuple([WorkerdStructuredLogSchema]))
+			.returns(z.void())
+			.optional(),
+
+		upstream: z.string().optional(),
+		// TODO: add back validation of cf object
+		cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
+
+		liveReload: z.boolean().optional(),
+
+		// Enable auto service / durable objects discovery with the dev registry
+		unsafeDevRegistryPath: z.string().optional(),
+		// Enable External Durable Objects Proxy / Internal DOs registration
+		unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
+		// Called when external workers this instance depends on are updated in the dev registry
+		unsafeHandleDevRegistryUpdate: z
+			.function(z.tuple([z.custom<WorkerRegistry>()]))
+			.optional(),
+		// This is a shared secret between a proxy server and miniflare that can be
+		// passed in a header to prove that the request came from the proxy and not
+		// some malicious attacker.
+		unsafeProxySharedSecret: z.string().optional(),
+		unsafeModuleFallbackService: CustomFetchServiceSchema.optional(),
+		// Keep blobs when deleting/overwriting keys, required for stacked storage
+		unsafeStickyBlobs: z.boolean().optional(),
+		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/handler/scheduled`
+		unsafeTriggerHandlers: z.boolean().optional(),
+		// Enable logging requests
+		logRequests: z.boolean().default(true),
+
+		// Path to the root directory for persisting data
+		// Used as the default for all plugins with the plugin name as the subdirectory name
+		defaultPersistRoot: z.string().optional(),
+		// Strip the MF-DISABLE_PRETTY_ERROR header from user request
+		stripDisablePrettyError: z.boolean().default(true),
+
+		// Whether to get structured logs from workerd or not (defaults to `true` is a
+		// `handleStructuredLogs` is set, to `false` otherwise)
+		// This option is useful in combination with a custom handleRuntimeStdio.
+		structuredWorkerdLogs: z.boolean().optional(),
+	})
+	.refine(
+		({ structuredWorkerdLogs, handleStructuredLogs }) => {
+			if (structuredWorkerdLogs === false && handleStructuredLogs) {
+				return false;
+			}
+			return true;
+		},
+		{
+			message:
+				"A `handleStructuredLogs` has been provided but `structuredWorkerdLogs` is set to `false`",
+		}
+	);
 
 export const CORE_PLUGIN_NAME = "core";
 

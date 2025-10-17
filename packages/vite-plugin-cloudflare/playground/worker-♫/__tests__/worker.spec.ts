@@ -26,10 +26,14 @@ test("preserves entry signatures", async () => {
 	expect(serverLogs.info.join()).toContain("__preserves-entry-signatures__");
 });
 
-test("basic dev logging", async () => {
+test("basic dev logging (with the default logLevel: info)", async () => {
 	expect(serverLogs.info.join()).toContain("__console log__");
+	expect(serverLogs.info.join()).toContain("__console debug__");
 	expect(serverLogs.errors.join()).toContain("__console error__");
-	expect(serverLogs.errors.join()).toContain("__console warn__");
+	expect(serverLogs.warns.join()).toContain("__console warn__");
+
+	// Historically we've been printing warnings as errors, that's why we also include the following check
+	expect(serverLogs.errors.join()).not.toContain("__console warn__");
 });
 
 test("receives the original `x-forwarded-host` header if it is set", async () => {
