@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { FatalError } from "../errors";
 import { clearOutputFilePath, writeOutput } from "../output";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import { runWrangler } from "./helpers/run-wrangler";
 import type { OutputEntry } from "../output";
 
 describe("writeOutput()", () => {
@@ -184,6 +186,7 @@ describe("writeOutput()", () => {
 			},
 		]);
 	});
+
 	it("should write an alias and environment for pages-deploy-detailed outputs", () => {
 		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "output");
 		vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "");
@@ -238,6 +241,40 @@ describe("writeOutput()", () => {
 				},
 			},
 		]);
+	});
+
+	it("should write an error log when a handler throws an error", async () => {
+		vi.mock("../user/whoami", () => {
+			return {
+				whoami: vi.fn().mockImplementation(() => {
+					throw new FatalError(
+						"A request to the Cloudflare API failed.",
+						10211
+					);
+				}),
+			};
+		});
+
+		const WRANGLER_OUTPUT_FILE_PATH = "output.json";
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "");
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", WRANGLER_OUTPUT_FILE_PATH);
+
+		await expect(runWrangler("whoami")).rejects.toThrow();
+
+		const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
+		const entries = outputFile
+			.split("\n")
+			.filter(Boolean)
+			.map((e) => JSON.parse(e));
+		expect(entries).toHaveLength(2);
+		expect(entries[0].type).toBe("wrangler-session");
+		expect(entries[1]).toMatchObject({
+			version: 1,
+			type: "command-failed",
+			// excluding timestamp
+			message: "A request to the Cloudflare API failed.",
+			code: 10211,
+		});
 	});
 });
 
