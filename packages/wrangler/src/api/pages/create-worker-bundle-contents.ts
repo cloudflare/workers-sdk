@@ -46,10 +46,14 @@ function createWorkerBundleFormData(
 	};
 
 	// The upload API only accepts an empty string or no specified placement for the "off" mode.
-	const placement: CfPlacement | undefined =
-		config?.placement?.mode === "smart"
-			? { mode: "smart", hint: config.placement.hint }
-			: undefined;
+	let placement: CfPlacement | undefined;
+	if (config?.placement?.mode === "smart") {
+		placement = { mode: "smart", hint: config.placement.hint };
+	} else if (config?.placement?.mode === "hyper") {
+		placement = { mode: "hyper", hint: config.placement.hint };
+	} else {
+		placement = undefined;
+	}
 
 	return createWorkerUploadForm({
 		name: mainModule.name,

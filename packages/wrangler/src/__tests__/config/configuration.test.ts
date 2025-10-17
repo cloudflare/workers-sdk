@@ -1192,7 +1192,7 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected \\"tsconfig\\" to be of type string but got true.
 				  - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
 				  - Expected \\"main\\" to be of type string but got 1333.
-				  - Expected \\"placement.mode\\" field to be one of [\\"off\\",\\"smart\\"] but got \\"INVALID\\".
+				  - Expected \\"placement.mode\\" field to be one of [\\"off\\",\\"smart\\",\\"hyper\\"] but got \\"INVALID\\".
 				  - The field \\"define.DEF1\\" should be a string but got 1777.
 				  - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
@@ -4775,7 +4775,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"placement.hint\\" cannot be set if \\"placement.mode\\" is not \\"smart\\""
+					  - \\"placement.hint\\" cannot be set if \\"placement.mode\\" is not \\"smart\\" or \\"hyper\\""
 				`);
 			});
 
@@ -4788,6 +4788,101 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it(`should not error if placement hint object is set with placement mode "hyper"`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { mode: "hyper", hint: { scheme: "http", target: "example.com" } } },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it(`should error if placement hint is not an object with placement mode "hyper"`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { mode: "hyper", hint: "wnam" } },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"placement.hint\\" must be an object when \\"placement.mode\\" is \\"hyper\\""
+				`);
+			});
+
+			it(`should error if placement hint object is missing scheme with placement mode "hyper"`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { mode: "hyper", hint: { target: "example.com" } } },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"placement.hint.scheme\\" is a required field."
+				`);
+			});
+
+			it(`should error if placement hint object is missing target with placement mode "hyper"`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { mode: "hyper", hint: { scheme: "http" } } },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"placement.hint.target\\" is a required field."
+				`);
+			});
+
+			it(`should not error for valid placement.hint.scheme values`, () => {
+				const validSchemes = ["http", "tcp", "aws-region", "gcp-region", "cf-pop"];
+
+				for (const scheme of validSchemes) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{ placement: { mode: "hyper", hint: { scheme, target: "example.com" } } },
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+				}
+			});
+
+			it(`should error if placement.hint.scheme has an invalid value`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { mode: "hyper", hint: { scheme: "invalid-scheme", target: "example.com" } } },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \\"placement.hint.scheme\\" field to be one of [\\"http\\",\\"tcp\\",\\"aws-region\\",\\"gcp-region\\",\\"cf-pop\\"] but got \\"invalid-scheme\\"."
+				`);
+			});
+
+			it(`should error if placement.hint.scheme is not a string`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { mode: "hyper", hint: { scheme: 123, target: "example.com" } } },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \\"placement.hint.scheme\\" to be of type string but got 123."
+				`);
 			});
 		});
 
