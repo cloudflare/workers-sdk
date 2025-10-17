@@ -41,3 +41,9 @@ runs:
     - name: Install NPM Dependencies
       shell: bash
       run: pnpm install --frozen-lockfile
+
+    - name: Install uv for Python
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: "0.9.3"
+        enable-cache: false
