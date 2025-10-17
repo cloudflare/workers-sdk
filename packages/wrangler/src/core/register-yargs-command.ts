@@ -203,8 +203,7 @@ function createHandler(def: CommandDefinition, commandName: string) {
 			// Write handler failure to output file if one exists
 			if (err instanceof Error) {
 				const code = "code" in err ? (err.code as number) : undefined;
-				const message =
-					"message" in err ? (err.message as string) : undefined;
+				const message = "message" in err ? (err.message as string) : undefined;
 				writeOutput({
 					type: "command-failed",
 					version: 1,
