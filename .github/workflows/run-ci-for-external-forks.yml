@@ -57,6 +57,8 @@ jobs:
       - name: Push Branch
         run: |
           # Rewrite last commit so GitHub considers it new and runs the CI jobs with our secrets
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
           git commit --amend --no-edit
           git push origin HEAD --force
 
