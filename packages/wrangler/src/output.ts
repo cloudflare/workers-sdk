@@ -71,7 +71,8 @@ export type OutputEntry =
 	| OutputEntryPagesDeployment
 	| OutputEntryVersionUpload
 	| OutputEntryVersionDeployment
-	| OutputEntryPagesDeploymentDetailed;
+	| OutputEntryPagesDeploymentDetailed
+	| OutputEntryCommandFailed;
 
 interface OutputEntrySession extends OutputEntryBase<"wrangler-session"> {
 	version: 1;
@@ -161,4 +162,12 @@ interface OutputEntryVersionDeployment
 	deployment_id: string;
 	/** The percentage of traffic that goes to each version. */
 	version_traffic: Map<string, number>;
+}
+
+interface OutputEntryCommandFailed extends OutputEntryBase<"command-failed"> {
+	version: 1;
+	/** The code in the error. */
+	code: number | undefined;
+	/** The message in the error. */
+	message: string | undefined;
 }
