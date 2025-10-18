@@ -419,6 +419,7 @@ export async function getDevMiniflareOptions(config: {
 											{
 												name: workerConfig.name,
 												bindings: bindings ?? {},
+												account_id: workerConfig.account_id,
 											},
 											preExistingRemoteProxySession ?? null
 										)
@@ -773,6 +774,7 @@ export async function getPreviewMiniflareOptions(config: {
 								{
 									name: workerConfig.name,
 									bindings: bindings ?? {},
+									account_id: workerConfig.account_id,
 								},
 								preExistingRemoteProxySessionData ?? null
 							)
