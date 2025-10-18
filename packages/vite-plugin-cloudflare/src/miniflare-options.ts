@@ -119,9 +119,10 @@ function getWorkerToDurableObjectClassNamesMap(
 					const classNames = workerToDurableObjectClassNamesMap.get(
 						value.scriptName
 					);
-					assert(classNames, missingWorkerErrorMessage(value.scriptName));
 
-					classNames.add(value.className);
+					if (classNames) {
+						classNames.add(value.className);
+					}
 				} else {
 					const classNames = workerToDurableObjectClassNamesMap.get(
 						worker.name
@@ -404,6 +405,7 @@ export async function getDevMiniflareOptions(config: {
 											{
 												name: workerConfig.name,
 												bindings: bindings ?? {},
+												account_id: workerConfig.account_id,
 											},
 											preExistingRemoteProxySession ?? null
 										)
@@ -726,6 +728,7 @@ export async function getPreviewMiniflareOptions(config: {
 								{
 									name: workerConfig.name,
 									bindings: bindings ?? {},
+									account_id: workerConfig.account_id,
 								},
 								preExistingRemoteProxySessionData ?? null
 							)
