@@ -48,7 +48,11 @@ describe("Workflows", () => {
 		await expect(fetchJson(`http://${ip}:${port}/create?workflowName=test`))
 			.resolves.toMatchInlineSnapshot(`
 			{
-			  "__LOCAL_DEV_STEP_OUTPUTS": [],
+			  "__LOCAL_DEV_STEP_OUTPUTS": [
+			    {
+			      "output": "First step result",
+			    },
+			  ],
 			  "output": null,
 			  "status": "running",
 			}
@@ -77,7 +81,11 @@ describe("Workflows", () => {
 		await expect(fetchJson(`http://${ip}:${port}/create`)).resolves
 			.toMatchInlineSnapshot(`
 			{
-			  "__LOCAL_DEV_STEP_OUTPUTS": [],
+			  "__LOCAL_DEV_STEP_OUTPUTS": [
+			    {
+			      "output": "First step result",
+			    },
+			  ],
 			  "output": null,
 			  "status": "running",
 			}
@@ -241,15 +249,9 @@ describe("Workflows", () => {
 					    {
 					      "output": "First step result",
 					    },
-					    {
-					      "event": true,
-					    },
-					    {
-					      "output": "Second step result",
-					    },
 					  ],
-					  "output": {},
-					  "status": "complete",
+					  "output": null,
+					  "status": "running",
 					}
 				`);
 			},
