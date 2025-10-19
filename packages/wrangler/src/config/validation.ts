@@ -4324,6 +4324,7 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 				"head_sampling_rate",
 				"invocation_logs",
 				"destinations",
+				"persist",
 			]) && isValid;
 	}
 
