@@ -2,7 +2,7 @@
 "wrangler": minor
 ---
 
-Enable automatic resource provisioning by default in Wrangler. This is still an experimental feature, but we're turning on the flag by default to make it easier for people to test it and try it out. It currently works for R2, D1, and KV bindings.
+Enable automatic resource provisioning by default in Wrangler. This is still an experimental feature, but we're turning on the flag by default to make it easier for people to test it and try it out. You can disable the feature using the `--no-x-provision` flag. It currently works for R2, D1, and KV bindings.
 
 To use this feature, add a binding to your config file _without_ a resource ID:
 
