@@ -42,6 +42,7 @@ export type Service = {
 	| { network?: Network }
 	| { external?: ExternalServer }
 	| { disk?: DiskDirectory }
+	| { database?: DatabaseServer }
 );
 
 export interface ServiceDesignator {
@@ -209,6 +210,15 @@ export interface ExternalServer_Https {
 export interface ExternalServer_Tcp {
 	tlsOptions?: TlsOptions;
 	certificateHost?: string;
+}
+
+export interface DatabaseServer {
+	address?: string;
+	tcp: {
+		tlsOptions?: TlsOptions;
+	}
+	scheme?: string;
+	sslmode?: string;
 }
 
 export interface Network {

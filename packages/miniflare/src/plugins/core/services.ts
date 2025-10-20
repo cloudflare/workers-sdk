@@ -9,6 +9,7 @@ import {
 	ExternalServer,
 	HttpOptions_Style,
 	TlsOptions_Version,
+	DatabaseServer,
 } from "../../runtime";
 import type { Awaitable } from "../../workers";
 import type * as http from "node:http";
@@ -80,6 +81,22 @@ export const ExternalServerSchema = z.intersection(
 // just ends up pinned at 100% CPU. Probably unbounded recursion? I guess this
 // type is too complex? Something to investigate... :thinking_face:
 
+export const DatabaseServerSchema = z.intersection(
+	z.object({
+		address: z.string(), // address should be required
+		scheme: z.string(),
+		sslmode: z.string(),
+	}),
+	z.object({
+		tcp: z.optional(
+			z.object({
+				tlsOptions: TlsOptionsSchema.optional(),
+				certificateHost: z.ostring(),
+			}),
+		)
+	}),
+) as z.ZodType<DatabaseServer>;
+
 const DiskDirectorySchema = z.object({
 	path: z.string(), // path should be required
 	writable: z.oboolean(),
@@ -112,5 +129,6 @@ export const ServiceDesignatorSchema = z.union([
 	z.object({ external: ExternalServerSchema }),
 	z.object({ disk: DiskDirectorySchema }),
 	z.object({ node: CustomNodeServiceSchema }),
+	z.object({ database: DatabaseServerSchema }),
 	CustomFetchServiceSchema,
 ]);

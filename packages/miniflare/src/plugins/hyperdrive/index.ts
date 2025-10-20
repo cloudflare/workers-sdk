@@ -117,13 +117,35 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 	},
 	async getServices({ options }) {
 		return Object.entries(options.hyperdrives ?? {}).map<Service>(
-			([name, url]) => ({
-				name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
-				external: {
-					address: `${url.hostname}:${getPort(url)}`,
-					tcp: {},
-				},
-			})
+			([name, url]) => {
+				const scheme = url.protocol.replace(":", "");
+				var sslmode = url.searchParams.get("sslmode");
+				if(!sslmode && scheme == "mysql") {
+					// override mysql ssl-mode to match expected sslmodes in workerd
+					sslmode = url.searchParams.get("ssl-mode");
+					if(sslmode?.toLowerCase() == "required") {
+						sslmode = "require";
+					} else if(!sslmode || sslmode?.toLowerCase() == "preferred") {
+						sslmode = "prefer";
+					}
+				}
+				if(!sslmode) {
+					sslmode = "prefer";
+				}
+				return {
+					name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
+					database: {
+						address: `${url.hostname}:${getPort(url)}`,
+						scheme: scheme,
+						sslmode: sslmode,
+						tcp: {
+							tlsOptions: {
+								trustBrowserCas: true,
+							},
+						},
+					},
+				}
+			}
 		);
 	},
 };
