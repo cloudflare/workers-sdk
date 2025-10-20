@@ -198,6 +198,7 @@ describe("metrics", () => {
 				command: "wrangler docs",
 				args: {
 					xRemoteBindings: true,
+					xProvision: true,
 					xAutoCreate: true,
 					search: ["<REDACTED>"],
 				},

@@ -10,6 +10,7 @@ import {
 	mockListKVNamespacesRequest,
 } from "./helpers/mock-kv";
 import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
+import { mockGetSettings } from "./helpers/mock-worker-settings";
 import { mockSubDomainRequest } from "./helpers/mock-workers-subdomain";
 import {
 	createFetchResult,
@@ -25,9 +26,8 @@ import {
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
 import type { DatabaseInfo } from "../d1/types";
-import type { Settings } from "../deployment-bundle/bindings";
 
-describe("--x-provision", () => {
+describe("resource provisioning", () => {
 	const std = mockConsoleMethods();
 	mockAccountId();
 	mockApiToken();
@@ -92,7 +92,7 @@ describe("--x-provision", () => {
 			],
 		});
 
-		await runWrangler("deploy --x-provision --x-auto-create=false");
+		await runWrangler("deploy --x-auto-create=false");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
@@ -178,7 +178,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision --x-auto-create=false");
+			await runWrangler("deploy --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -299,7 +299,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision --x-auto-create=false");
+			await runWrangler("deploy --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -430,7 +430,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision --x-auto-create=false");
+			await runWrangler("deploy --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -591,7 +591,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision --x-auto-create=false");
+			await runWrangler("deploy --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -695,7 +695,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision --x-auto-create=false");
+			await runWrangler("deploy --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -756,7 +756,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision --x-auto-create=false");
+			await runWrangler("deploy --x-auto-create=false");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
@@ -824,7 +824,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision --x-auto-create=false");
+			await runWrangler("deploy --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -903,7 +903,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision --x-auto-create=false");
+			await runWrangler("deploy --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -975,7 +975,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision --x-auto-create=false");
+			await runWrangler("deploy --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -1023,7 +1023,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision");
+			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -1099,7 +1099,7 @@ describe("--x-provision", () => {
 				assertBucketName: "existing-bucket-name",
 			});
 
-			await runWrangler("deploy --x-provision");
+			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -1142,47 +1142,11 @@ describe("--x-provision", () => {
 			legacy_env: false,
 			kv_namespaces: [{ binding: "KV" }],
 		});
-		await expect(
-			runWrangler("deploy --x-provision --x-auto-create=false")
-		).rejects.toThrow(
+		await expect(runWrangler("deploy --x-auto-create=false")).rejects.toThrow(
 			"Provisioning resources is not supported with a service environment"
 		);
 	});
 });
-
-function mockGetSettings(
-	options: {
-		result?: Settings;
-		assertAccountId?: string;
-		assertScriptName?: string;
-	} = {}
-) {
-	msw.use(
-		http.get(
-			"*/accounts/:accountId/workers/scripts/:scriptName/settings",
-			async ({ params }) => {
-				if (options.assertAccountId) {
-					expect(params.accountId).toEqual(options.assertAccountId);
-				}
-
-				if (options.assertScriptName) {
-					expect(params.scriptName).toEqual(options.assertScriptName);
-				}
-
-				if (!options.result) {
-					return new Response(null, { status: 404 });
-				}
-
-				return HttpResponse.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: options.result,
-				});
-			}
-		)
-	);
-}
 
 function mockCreateD1Database(
 	options: {

@@ -423,11 +423,6 @@ async function collectPendingResources(
 
 	const pendingResources: PendingResource[] = [];
 
-	try {
-		settings = await getSettings(complianceConfig, accountId, scriptName);
-	} catch {
-		logger.debug("No settings found");
-	}
 	for (const resourceType of Object.keys(
 		HANDLERS
 	) as (keyof typeof HANDLERS)[]) {

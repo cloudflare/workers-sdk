@@ -28,7 +28,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		const helper = new WranglerE2ETestHelper();
 
 		it("can run dev without resource ids", async () => {
-			const worker = helper.runLongLived("wrangler dev --x-provision");
+			const worker = helper.runLongLived("wrangler dev");
 
 			const { url } = await worker.waitForReady();
 			await fetch(url);
@@ -76,7 +76,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		});
 
 		it("can provision resources and deploy worker", async () => {
-			const worker = helper.runLongLived(`wrangler deploy --x-provision`);
+			const worker = helper.runLongLived(`wrangler deploy`);
 			await worker.exitCode;
 			const output = await worker.output;
 			expect(normalize(output)).toMatchInlineSnapshot(`
@@ -131,7 +131,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		});
 
 		it("can inherit bindings on re-deploy and won't re-provision", async () => {
-			const worker = helper.runLongLived(`wrangler deploy --x-provision`);
+			const worker = helper.runLongLived(`wrangler deploy`);
 			await worker.exitCode;
 			const output = await worker.output;
 			expect(normalize(output)).toMatchInlineSnapshot(`
@@ -155,16 +155,14 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
 		it("can inspect current bindings", async () => {
-			const versionsRaw = await helper.run(
-				`wrangler versions list --json --x-provision`
-			);
+			const versionsRaw = await helper.run(`wrangler versions list --json`);
 
 			const versions = JSON.parse(versionsRaw.stdout) as unknown[];
 
 			const latest = versions.at(-1) as { id: string };
 
 			const versionView = await helper.run(
-				`wrangler versions view ${latest.id} --x-provision`
+				`wrangler versions view ${latest.id}`
 			);
 
 			expect(normalizeOutput(versionView.output)).toMatchInlineSnapshot(`
@@ -198,9 +196,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						binding = "KV2"
 						`,
 			});
-			const worker = helper.runLongLived(
-				`wrangler versions upload --x-provision`
-			);
+			const worker = helper.runLongLived(`wrangler versions upload`);
 			await worker.exitCode;
 			const output = await worker.output;
 			expect(normalize(output)).toMatchInlineSnapshot(`
