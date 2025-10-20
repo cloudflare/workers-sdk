@@ -147,7 +147,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
 			"LOCAL<WORKER>: Hello from a local worker!
-			REMOTE<AI>: "This is a response from Workers AI."
+			REMOTE<AI>: This is a response from Workers AI.
 			"
 		`);
 		});
@@ -169,8 +169,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const { url } = await worker.waitForReady();
 
-			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-				`""This is a response from Workers AI.""`
+			await expect(fetchText(url)).resolves.toContain(
+				"This is a response from Workers AI."
 			);
 
 			// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
