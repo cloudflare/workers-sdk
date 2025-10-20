@@ -211,7 +211,9 @@ describe("wrangler workflows", () => {
 			await mockGetWorkflows(mockWorkflows);
 
 			await runWrangler(`workflows list`);
-			expect(std.info).toMatchInlineSnapshot(`"Showing last 2 workflows:"`);
+			expect(std.info).toMatchInlineSnapshot(
+				`"Showing 2 workflows from page 1:"`
+			);
 			expect(std.out).toMatchInlineSnapshot(
 				`
 				"
@@ -280,12 +282,20 @@ describe("wrangler workflows", () => {
 				status: "terminated",
 			},
 			{
-				id: "e",
+				id: "f",
 				created_on: mockCreateDate.toISOString(),
 				modified_on: mockModifiedDate.toISOString(),
 				workflow_id: "b",
 				version_id: "c",
 				status: "waiting",
+			},
+			{
+				id: "g",
+				created_on: mockCreateDate.toISOString(),
+				modified_on: mockModifiedDate.toISOString(),
+				workflow_id: "b",
+				version_id: "c",
+				status: "waitingForPause",
 			},
 		];
 
@@ -295,7 +305,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances list some-workflow`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"Showing 7 instances from page 1:"`
+				`"Showing 8 instances from page 1:"`
 			);
 			expect(std.out).toMatchInlineSnapshot(
 				`
@@ -303,7 +313,7 @@ describe("wrangler workflows", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				┌─┬─┬─┬─┬─┐
-				│ Id │ Version │ Created │ Modified │ Status │
+				│ Instance ID │ Version │ Created │ Modified │ Status │
 				├─┼─┼─┼─┼─┤
 				│ a │ c │ [mock-create-date] │ [mock-modified-date] │ ✅ Completed │
 				├─┼─┼─┼─┼─┤
@@ -317,7 +327,9 @@ describe("wrangler workflows", () => {
 				├─┼─┼─┼─┼─┤
 				│ e │ c │ [mock-create-date] │ [mock-modified-date] │ 🚫 Terminated │
 				├─┼─┼─┼─┼─┤
-				│ e │ c │ [mock-create-date] │ [mock-modified-date] │ ⏰ Waiting │
+				│ f │ c │ [mock-create-date] │ [mock-modified-date] │ ⏰ Waiting │
+				├─┼─┼─┼─┼─┤
+				│ g │ c │ [mock-create-date] │ [mock-modified-date] │ ⏱️ Waiting for Pause │
 				└─┴─┴─┴─┴─┘"
 			`
 			);
