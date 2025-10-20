@@ -5,7 +5,6 @@
 
 always load container image into local store during build
 
-
 BuildKit supports different [build drivers](https://docs.docker.com/build/builders/drivers/). When using the more modern `docker-container` driver (which is now the default on some systems, e.g. a standard Docker installation on Fedora Linux), it will not automatically load the built image into the local image store. Since wrangler expects the image to be there (e.g. when calling `getImageRepoTags`), it will thus fail, e.g.:
 
 ```

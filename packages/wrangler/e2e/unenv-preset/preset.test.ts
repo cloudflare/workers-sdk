@@ -293,7 +293,10 @@ const localTestConfigs: TestConfig[] = [
 		{
 			name: "trace_events disabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_trace_events_module", "experimental"],
+			compatibilityFlags: [
+				"disable_nodejs_trace_events_module",
+				"experimental",
+			],
 			expectRuntimeFlags: {
 				enable_nodejs_trace_events_module: false,
 			},
