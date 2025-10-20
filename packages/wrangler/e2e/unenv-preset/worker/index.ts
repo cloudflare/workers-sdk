@@ -573,4 +573,25 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.throws(() => cluster.disconnect(), /not implemented/);
 		assert.throws(() => cluster.fork(), /not implemented/);
 	},
+
+	async testDomain() {
+		const domain = await import("node:domain");
+
+		// Test that the module exports the expected API
+		assert.strictEqual(typeof domain.create, "function");
+		assert.strictEqual(typeof domain.Domain, "function");
+		assert.strictEqual(domain.active, null);
+
+		const d = domain.create();
+		assert.ok(d instanceof domain.Domain);
+
+		// Test that methods throw not implemented errors
+		assert.throws(() => d.run(() => {}), /not implemented/);
+		assert.throws(() => d.bind(() => {}), /not implemented/);
+		assert.throws(() => d.intercept(() => {}), /not implemented/);
+		assert.throws(() => d.enter(), /not implemented/);
+		assert.throws(() => d.exit(), /not implemented/);
+		assert.throws(() => d.add({}), /not implemented/);
+		assert.throws(() => d.remove({}), /not implemented/);
+	},
 };
