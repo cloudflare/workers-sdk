@@ -607,6 +607,18 @@ export const WorkerdTests: Record<string, () => void> = {
 		assertTypeOf(domain, "exit", "function");
 		assertTypeOf(domain, "remove", "function");
 	},
+
+	async testWasi() {
+		const wasi = await import("node:wasi");
+
+		assert.strictEqual(typeof wasi.WASI, "function");
+
+		assert.throws(() => new wasi.WASI(), /not implemented/);
+		assert.throws(
+			() => new wasi.WASI({ version: "preview1" }),
+			/not implemented/
+		);
+	},
 };
 
 function assertTypeOf(target: unknown, property: string, expectType: string) {
