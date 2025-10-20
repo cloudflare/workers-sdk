@@ -46,6 +46,18 @@ export async function startRemoteProxySession(
 			logLevel: "error",
 		},
 		bindings: rawBindings,
+	}).catch((startWorkerError) => {
+		let errorMessage = startWorkerError;
+		if (startWorkerError instanceof Error) {
+			if (startWorkerError.cause instanceof Error) {
+				errorMessage = startWorkerError.cause.message;
+			} else {
+				errorMessage = startWorkerError.message;
+			}
+		}
+		throw new Error(
+			`Failed to start the remote proxy session, see the error details below:\n\n${errorMessage}`
+		);
 	});
 
 	const remoteProxyConnectionString =
