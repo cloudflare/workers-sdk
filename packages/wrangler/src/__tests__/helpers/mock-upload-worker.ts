@@ -272,7 +272,7 @@ export function mockUploadWorkerRequest(
 		enabled: subdomainDefaults.workers_dev,
 		previews_enabled: subdomainDefaults.preview_urls,
 		env,
-		legacyEnv,
+		enableServiceEnvironments,
 		expectedScriptName,
 	});
 	const subdomainValues = getSubdomainValues(

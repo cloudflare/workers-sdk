@@ -13,8 +13,11 @@ export function enableServiceEnvironments(
 	// However we can change the internal handling to be less confusing.
 	//
 	// We only read from config here, because we've already accounted for
-	// args["legacy-env"] in https://github.com/cloudflare/workers-sdk/blob/b24aeb5722370c2e04bce97a84a1fa1e55725d79/packages/wrangler/src/config/validation.ts#L94-L98
+	// // args["legacy-env"] in https://github.com/cloudflare/workers-sdk/blob/b24aeb5722370c2e04bce97a84a1fa1e55725d79/packages/wrangler/src/config/validation.ts#L94-L98
+	// return "legacy_env" in config
+	// 	? config.legacy_env
+	// 	: !config.legacy.enableServiceEnvironments;
 	return "legacy_env" in config
-		? config.legacy_env
-		: !config.legacy.enableServiceEnvironments;
+		? !config.legacy_env
+		: Boolean(config.legacy.enableServiceEnvironments);
 }

@@ -84,7 +84,8 @@ export function mockUpdateWorkerSubdomain({
 	},
 	env,
 	enableServiceEnvironments = true,
-	expectedScriptName = "test-name" + (legacyEnv && env ? `-${env}` : ""),
+	expectedScriptName = "test-name" +
+		(!enableServiceEnvironments && env ? `-${env}` : ""),
 	flakeCount = 0,
 }: {
 	// Request values (kept as separate fields and not an object to avoid having to change all tests).
