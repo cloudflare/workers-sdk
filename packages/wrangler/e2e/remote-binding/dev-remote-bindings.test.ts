@@ -170,7 +170,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const { url } = await worker.waitForReady();
 
 			await expect(fetchText(url)).resolves.toContain(
-				`"This is a response from Workers AI."`
+				"This is a response from Workers AI."
 			);
 
 			// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
