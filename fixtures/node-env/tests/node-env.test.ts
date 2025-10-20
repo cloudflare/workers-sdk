@@ -89,7 +89,7 @@ describe("`process.env.NODE_ENV` replacement in production", () => {
 	}) => {
 		vi.stubEnv("NODE_ENV", "some-value");
 
-		spawnSync("npx wrangler build -c wrangler.jsonc", {
+		spawnSync("npx wrangler build", {
 			shell: true,
 			stdio: "pipe",
 		});

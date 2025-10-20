@@ -10,20 +10,7 @@ export default {
 				React.createElement("h1", null, "Hello world")
 			);
 
-			return new Response(
-				`<!DOCTYPE html>
-				<html>
-					<head>
-						<title>React SSR</title>
-					</head>
-					<body>
-						<div>${content}</div>
-					</body>
-				</html>`,
-				{
-					headers: { "Content-Type": "text/html" },
-				}
-			);
+			return new Response(content);
 		}
 
 		return new Response(
