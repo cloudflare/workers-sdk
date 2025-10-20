@@ -1,5 +1,29 @@
 # @cloudflare/containers-shared
 
+## 0.2.13
+
+### Patch Changes
+
+- [#11007](https://github.com/cloudflare/workers-sdk/pull/11007) [`cf16deb`](https://github.com/cloudflare/workers-sdk/commit/cf16debb668a1ffb69cba9171048c5a295dde6c6) Thanks [@gpanders](https://github.com/gpanders)! - Correctly handle image names that contain a slash
+
+- [#11000](https://github.com/cloudflare/workers-sdk/pull/11000) [`a6de9db`](https://github.com/cloudflare/workers-sdk/commit/a6de9db65185ba40e8a7fcecc5d9e79287c04d2f) Thanks [@jonboulle](https://github.com/jonboulle)! - always load container image into local store during build
+
+  BuildKit supports different [build drivers](https://docs.docker.com/build/builders/drivers/). When using the more modern `docker-container` driver (which is now the default on some systems, e.g. a standard Docker installation on Fedora Linux), it will not automatically load the built image into the local image store. Since wrangler expects the image to be there (e.g. when calling `getImageRepoTags`), it will thus fail, e.g.:
+
+  ```
+  ⎔ Preparing container image(s)...
+  [+] Building 0.3s (8/8) FINISHED                                                                                                                                                                                                     docker-container:default
+
+  [...]
+
+  WARNING: No output specified with docker-container driver. Build result will only remain in the build cache. To push result image into registry use --push or to load image into docker use --load
+
+  ✘ [ERROR] failed inspecting image locally: Error response from daemon: failed to find image cloudflare-dev/sandbox:f86e40e4: docker.io/cloudflare-dev/sandbox:f86e40e4: No such image
+
+  ```
+
+  Explicitly setting the `--load` flag (equivalent to `-o type=docker`) during the build fixes this and should make the build a bit more portable without requiring users to change their default build driver configuration.
+
 ## 0.2.12
 
 ### Patch Changes
