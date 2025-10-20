@@ -1,0 +1,28 @@
+{
+	"name": "@fixture/node-env",
+	"private": true,
+	"scripts": {
+		"check:type": "tsc",
+		"dev": "wrangler dev",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@types/node": "catalog:default",
+		"@types/react": "^18.3.3",
+		"@types/react-dom": "^18.2.0",
+		"miniflare": "workspace:*",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

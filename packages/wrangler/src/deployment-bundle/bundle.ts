@@ -352,6 +352,13 @@ export async function bundleWorker(
 		},
 	};
 
+	const nodeEnvReplacement = JSON.stringify(
+		// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
+		// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
+		process.env["NODE_ENV" + ""] ||
+			(targetConsumer === "deploy" ? "production" : "development")
+	);
+
 	const buildOptions = {
 		// Don't use entryFile here as the file may have been changed when applying the middleware
 		entryPoints: [entry.file],
@@ -383,17 +390,15 @@ export async function bundleWorker(
 		metafile: true,
 		conditions: getBuildConditions(),
 		platform: getBuildPlatform(),
-		...(process.env.NODE_ENV && {
-			define: {
-				...(defineNavigatorUserAgent
-					? { "navigator.userAgent": `"Cloudflare-Workers"` }
-					: {}),
-				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
-				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
-				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
-				...define,
-			},
-		}),
+		define: {
+			...(defineNavigatorUserAgent
+				? { "navigator.userAgent": `"Cloudflare-Workers"` }
+				: {}),
+			"process.env.NODE_ENV": nodeEnvReplacement,
+			"global.process.env.NODE_ENV": nodeEnvReplacement,
+			"globalThis.process.env.NODE_ENV": nodeEnvReplacement,
+			...define,
+		},
 		loader: COMMON_ESBUILD_OPTIONS.loader,
 		plugins: [
 			aliasPlugin,
