@@ -572,4 +572,20 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.throws(() => cluster.disconnect(), /not implemented/);
 		assert.throws(() => cluster.fork(), /not implemented/);
 	},
+
+	async testTraceEvents() {
+		const traceEvents = await import("node:trace_events");
+
+		assert.strictEqual(typeof traceEvents.createTracing, "function");
+		assert.strictEqual(typeof traceEvents.getEnabledCategories, "function");
+
+		const categories = traceEvents.getEnabledCategories();
+		assert.ok(Array.isArray(categories));
+
+		const tracing = traceEvents.createTracing({ categories: ["node.async_hooks"] });
+		assert.strictEqual(typeof tracing.enable, "function");
+		assert.strictEqual(typeof tracing.disable, "function");
+		assert.strictEqual(typeof tracing.enabled, "boolean");
+		assert.strictEqual(typeof tracing.categories, "string");
+	},
 };
