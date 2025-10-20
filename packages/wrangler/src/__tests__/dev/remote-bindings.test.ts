@@ -708,7 +708,7 @@ describe("dev with remote bindings", { sequential: true }, () => {
 		await wranglerStopped;
 	});
 
-	it.only("uses the account_id in the config when starting the remote proxy session", async () => {
+	it("uses the account_id in the config when starting the remote proxy session", async () => {
 		await seed({
 			"wrangler.jsonc": JSON.stringify(
 				{
