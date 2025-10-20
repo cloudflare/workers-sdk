@@ -9,7 +9,7 @@ export default {
 			},
 		];
 
-		const content = await env.AI.run("@hf/thebloke/zephyr-7b-beta-awq", {
+		const content = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
 			messages,
 		});
 
