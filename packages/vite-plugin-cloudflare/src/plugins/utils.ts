@@ -37,6 +37,17 @@ export class PluginContext {
 			: undefined;
 	}
 
+	getAllWorkerConfigs() {
+		switch (this.resolvedPluginConfig.type) {
+			case "workers":
+				return Object.values(this.resolvedPluginConfig.workers);
+			case "preview":
+				return this.resolvedPluginConfig.workers;
+			default:
+				return [];
+		}
+	}
+
 	getNodeJsCompat(environmentName: string) {
 		return this.resolvedPluginConfig.type === "workers"
 			? this.resolvedPluginConfig.nodeJsCompatMap.get(environmentName)

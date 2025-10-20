@@ -44,6 +44,8 @@ export const friendlyBindingNames: Record<
 	vpc_services: "VPC Service",
 } as const;
 
+let isConnectedStatusExplained = false;
+
 /**
  * Print all the bindings a worker using a given config would have access to
  */
@@ -57,7 +59,8 @@ export function printBindings(
 		provisioning?: boolean;
 		warnIfNoBindings?: boolean;
 	} = {}
-) {
+): string {
+	const messages: string[] = [];
 	let hasConnectionStatus = false;
 	const getMode = createGetMode({
 		isProvisioning: context.provisioning,
@@ -627,9 +630,9 @@ export function printBindings(
 	if (output.length === 0) {
 		if (context.warnIfNoBindings) {
 			if (context.name && getFlag("MULTIWORKER")) {
-				logger.log(`No bindings found for ${chalk.blue(context.name)}`);
+				messages.push(`No bindings found for ${chalk.blue(context.name)}`);
 			} else {
-				logger.log("No bindings found.");
+				messages.push("No bindings found.");
 			}
 		}
 	} else {
@@ -684,12 +687,12 @@ export function printBindings(
 				maxModeLength >=
 			process.stdout.columns;
 
-		logger.log(title);
+		messages.push(title);
 		const columnGap = shouldWrap
 			? " ".repeat(columnGapSpacesWrapped)
 			: " ".repeat(columnGapSpaces);
 
-		logger.log(
+		messages.push(
 			`${padEndAnsi(dim(headings.binding), shouldWrap ? bindingPrefix.length + maxNameLength : bindingLength)}${columnGap}${padEndAnsi(dim(headings.resource), maxTypeLength)}${columnGap}${hasMode ? dim(headings.mode) : ""}`
 		);
 
@@ -710,11 +713,11 @@ export function printBindings(
 					: ""
 				: "";
 
-			logger.log(
+			messages.push(
 				`${bindingString}${columnGap}${brandColor(binding.type.padEnd(maxTypeLength))}${columnGap}${hasMode ? binding.mode : ""}${suffix}`
 			);
 		}
-		logger.log();
+		messages.push("");
 	}
 	let title: string;
 	if (context.name && getFlag("MULTIWORKER")) {
@@ -723,7 +726,7 @@ export function printBindings(
 		title = "Your Worker is sending Tail events to the following Workers:";
 	}
 	if (tailConsumers !== undefined && tailConsumers.length > 0) {
-		logger.log(
+		messages.push(
 			`${title}\n${tailConsumers
 				.map(({ service }) => {
 					if (context.local && context.registry !== null) {
@@ -743,13 +746,16 @@ export function printBindings(
 		);
 	}
 
-	if (hasConnectionStatus) {
-		logger.once.info(
+	if (hasConnectionStatus && !isConnectedStatusExplained) {
+		messages.push(
 			dim(
 				`\nService bindings, Durable Object bindings, and Tail consumers connect to other wrangler or vite dev processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
 			)
 		);
+		isConnectedStatusExplained = true;
 	}
+
+	return messages.join("\n");
 }
 
 // Exactly the same as String.padEnd, but doesn't miscount ANSI control characters
