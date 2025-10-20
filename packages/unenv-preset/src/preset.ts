@@ -74,6 +74,12 @@ export function getCloudflarePreset({
 	const fsOverrides = getFsOverrides(compat);
 	const punycodeOverrides = getPunycodeOverrides(compat);
 	const clusterOverrides = getClusterOverrides(compat);
+	const ttyOverrides = getTtyOverrides(compat);
+	const replOverrides = getReplOverrides(compat);
+	const readlineOverrides = getReadlineOverrides(compat);
+	const inspectorOverrides = getInspectorOverrides(compat);
+	const v8Overrides = getV8Overrides(compat);
+	const dgramOverrides = getDgramOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -84,6 +90,12 @@ export function getCloudflarePreset({
 		...fsOverrides.nativeModules,
 		...punycodeOverrides.nativeModules,
 		...clusterOverrides.nativeModules,
+		...ttyOverrides.nativeModules,
+		...replOverrides.nativeModules,
+		...readlineOverrides.nativeModules,
+		...inspectorOverrides.nativeModules,
+		...v8Overrides.nativeModules,
+		...dgramOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -95,6 +107,12 @@ export function getCloudflarePreset({
 		...fsOverrides.hybridModules,
 		...punycodeOverrides.hybridModules,
 		...clusterOverrides.hybridModules,
+		...ttyOverrides.hybridModules,
+		...replOverrides.hybridModules,
+		...readlineOverrides.hybridModules,
+		...inspectorOverrides.hybridModules,
+		...v8Overrides.hybridModules,
+		...dgramOverrides.hybridModules,
 	];
 
 	return {
@@ -380,6 +398,234 @@ function getClusterOverrides({
 	return enabled
 		? {
 				nativeModules: ["cluster"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:tty` (unenv or workerd)
+ *
+ * The native tty implementation:
+ * - is experimental
+ * - can be enabled with the "enable_nodejs_tty_module" flag
+ * - can be disabled with the "disable_nodejs_tty_module" flag
+ */
+function getTtyOverrides({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_tty_module"
+	);
+
+	// TODO: add `enabledByDate` when a date is defined in workerd
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_tty_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["tty"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:repl` (unenv or workerd)
+ *
+ * The native repl implementation:
+ * - is experimental
+ * - can be enabled with the "enable_nodejs_repl_module" flag
+ * - can be disabled with the "disable_nodejs_repl_module" flag
+ */
+function getReplOverrides({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_repl_module"
+	);
+
+	// TODO: add `enabledByDate` when a date is defined in workerd
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_repl_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["repl"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:readline` (unenv or workerd)
+ *
+ * The native readline implementation:
+ * - is experimental
+ * - can be enabled with the "enable_nodejs_readline_module" flag
+ * - can be disabled with the "disable_nodejs_readline_module" flag
+ */
+function getReadlineOverrides({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_readline_module"
+	);
+
+	// TODO: add `enabledByDate` when a date is defined in workerd
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_readline_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["readline"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:inspector` (unenv or workerd)
+ *
+ * The native inspector implementation:
+ * - is experimental
+ * - can be enabled with the "enable_nodejs_inspector_module" flag
+ * - can be disabled with the "disable_nodejs_inspector_module" flag
+ */
+function getInspectorOverrides({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_inspector_module"
+	);
+
+	// TODO: add `enabledByDate` when a date is defined in workerd
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_inspector_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["inspector"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:v8` (unenv or workerd)
+ *
+ * The native v8 implementation:
+ * - is experimental
+ * - can be enabled with the "enable_nodejs_v8_module" flag
+ * - can be disabled with the "disable_nodejs_v8_module" flag
+ */
+function getV8Overrides({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_v8_module"
+	);
+
+	// TODO: add `enabledByDate` when a date is defined in workerd
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_v8_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["v8"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:dgram` (unenv or workerd)
+ *
+ * The native dgram implementation:
+ * - is experimental
+ * - can be enabled with the "enable_nodejs_dgram_module" flag
+ * - can be disabled with the "disable_nodejs_dgram_module" flag
+ */
+function getDgramOverrides({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_dgram_module"
+	);
+
+	// TODO: add `enabledByDate` when a date is defined in workerd
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_dgram_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["dgram"],
 				hybridModules: [],
 			}
 		: {
