@@ -160,13 +160,13 @@ export function normalizeAndValidateConfig(
 	 * However we can change the internal handling to be less confusing.
 	 */
 
-	const enableServiceEnvironments = !(
+	const useServiceEnvironments = !(
 		args["legacy-env"] ??
 		rawConfig.legacy_env ??
 		true
 	);
 
-	if (enableServiceEnvironments) {
+	if (useServiceEnvironments) {
 		diagnostics.warnings.push(
 			"Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
 		);
@@ -253,7 +253,7 @@ export function normalizeAndValidateConfig(
 					preserveOriginalMain,
 					envName,
 					topLevelEnv,
-					enableServiceEnvironments,
+					useServiceEnvironments,
 					rawConfig
 				);
 				diagnostics.addChild(envDiagnostics);
@@ -266,7 +266,7 @@ export function normalizeAndValidateConfig(
 					preserveOriginalMain,
 					envName,
 					topLevelEnv,
-					enableServiceEnvironments,
+					useServiceEnvironments,
 					rawConfig
 				);
 				const envNames = rawConfig.env
@@ -309,7 +309,7 @@ export function normalizeAndValidateConfig(
 			rawConfig.pages_build_output_dir
 		),
 		/** Legacy_env is wrangler environments, as opposed to service environments. Wrangler environments is not legacy.  */
-		legacy_env: !enableServiceEnvironments,
+		legacy_env: !useServiceEnvironments,
 		send_metrics: rawConfig.send_metrics,
 		keep_vars: rawConfig.keep_vars,
 		...activeEnv,
@@ -1028,7 +1028,7 @@ function normalizeAndValidateEnvironment(
 	preserveOriginalMain: boolean,
 	envName: string,
 	topLevelEnv: Environment,
-	enableServiceEnvironments: boolean,
+	useServiceEnvironments: boolean,
 	rawConfig: RawConfig
 ): Environment;
 function normalizeAndValidateEnvironment(
@@ -1039,7 +1039,7 @@ function normalizeAndValidateEnvironment(
 	preserveOriginalMain: boolean,
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
-	enableServiceEnvironments?: boolean,
+	useServiceEnvironments?: boolean,
 	rawConfig?: RawConfig | undefined
 ): Environment {
 	deprecated(
@@ -1059,7 +1059,7 @@ function normalizeAndValidateEnvironment(
 
 	const account_id = inheritableInWranglerEnvironments(
 		diagnostics,
-		enableServiceEnvironments,
+		useServiceEnvironments,
 		topLevelEnv,
 		mutateEmptyStringAccountIDValue(diagnostics, rawEnv),
 		"account_id",
@@ -1139,7 +1139,7 @@ function normalizeAndValidateEnvironment(
 		rules: validateAndNormalizeRules(diagnostics, topLevelEnv, rawEnv, envName),
 		name: inheritableInWranglerEnvironments(
 			diagnostics,
-			enableServiceEnvironments,
+			useServiceEnvironments,
 			topLevelEnv,
 			rawEnv,
 			"name",

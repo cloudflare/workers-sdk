@@ -4,7 +4,7 @@ import type { Config } from "../config";
 /**
  * whether deprecated service environments are enabled.
  */
-export function enableServiceEnvironments(
+export function useServiceEnvironments(
 	config: Config | StartDevWorkerOptions
 ): boolean {
 	// legacy env refers to wrangler environments, which are not actually legacy in any way.
@@ -16,8 +16,8 @@ export function enableServiceEnvironments(
 	// // args["legacy-env"] in https://github.com/cloudflare/workers-sdk/blob/b24aeb5722370c2e04bce97a84a1fa1e55725d79/packages/wrangler/src/config/validation.ts#L94-L98
 	// return "legacy_env" in config
 	// 	? config.legacy_env
-	// 	: !config.legacy.enableServiceEnvironments;
+	// 	: !config.legacy.useServiceEnvironments;
 	return "legacy_env" in config
 		? !config.legacy_env
-		: Boolean(config.legacy.enableServiceEnvironments);
+		: Boolean(config.legacy.useServiceEnvironments);
 }

@@ -201,7 +201,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				accountId: auth.accountId,
 				apiToken: auth.apiToken,
 				env: config.env, // deprecated service environments -- just pass it through for now
-				useServiceEnvironments: config.legacy?.enableServiceEnvironments, // wrangler environment -- just pass it through for now
+				useServiceEnvironments: config.legacy?.useServiceEnvironments, // wrangler environment -- just pass it through for now
 				host: config.dev.origin?.hostname,
 				routes,
 				sendMetrics: config.sendMetrics,
@@ -224,7 +224,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				accountId: auth.accountId,
 				complianceConfig: { compliance_region: config.complianceRegion },
 				name: config.name,
-				useServiceEnvironments: config.legacy?.enableServiceEnvironments,
+				useServiceEnvironments: config.legacy?.useServiceEnvironments,
 				env: config.env,
 				isWorkersSite: config.legacy?.site !== undefined,
 				assets: config.assets,

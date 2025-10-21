@@ -1,4 +1,4 @@
-import { enableServiceEnvironments } from "./enableServiceEnvironments";
+import { useServiceEnvironments } from "./useServiceEnvironments";
 import type { Config } from "../config";
 
 /**
@@ -9,7 +9,7 @@ export function getLegacyScriptName(
 	args: { name: string | undefined; env: string | undefined },
 	config: Config
 ) {
-	return args.name && args.env && !enableServiceEnvironments(config)
+	return args.name && args.env && !useServiceEnvironments(config)
 		? `${args.name}-${args.env}`
 		: args.name ?? config.name;
 }

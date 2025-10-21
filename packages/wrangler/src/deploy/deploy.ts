@@ -103,7 +103,7 @@ type Props = {
 	routes: string[] | undefined;
 	domains: string[] | undefined;
 	/** Deprecated service environments.*/
-	enableServiceEnvironments: boolean | undefined;
+	useServiceEnvironments: boolean | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	tsconfig: string | undefined;
@@ -521,7 +521,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const start = Date.now();
 	/** Whether to use the deprecated service environments path */
 	const useServiceEnvironments = Boolean(
-		props.enableServiceEnvironments && props.env
+		props.useServiceEnvironments && props.env
 	);
 	const workerName = useServiceEnvironments
 		? `${scriptName} (${envName})`
@@ -691,7 +691,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			? await getMigrationsToUpload(scriptName, {
 					accountId,
 					config,
-					enableServiceEnvironments: props.enableServiceEnvironments,
+					useServiceEnvironments: props.useServiceEnvironments,
 					env: props.env,
 					dispatchNamespace: props.dispatchNamespace,
 				})

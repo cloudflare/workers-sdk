@@ -15,7 +15,7 @@ export async function getMigrationsToUpload(
 		accountId: string | undefined;
 		config: Config;
 		/** Deprecated service environments. Previously known as !legacyEnv :-) */
-		enableServiceEnvironments: boolean | undefined;
+		useServiceEnvironments: boolean | undefined;
 		env: string | undefined;
 		dispatchNamespace: string | undefined;
 	}
@@ -40,7 +40,7 @@ export async function getMigrationsToUpload(
 				suppressNotFoundError(err);
 			}
 		} else {
-			if (props.enableServiceEnvironments) {
+			if (props.useServiceEnvironments) {
 				try {
 					if (props.env) {
 						const scriptData = await fetchResult<{

@@ -84,7 +84,7 @@ export function inheritable<K extends keyof Environment>(
  */
 export function inheritableInWranglerEnvironments<K extends keyof Environment>(
 	diagnostics: Diagnostics,
-	enableServiceEnvironments: boolean | undefined,
+	useServiceEnvironments: boolean | undefined,
 	topLevelEnv: Environment | undefined,
 	rawEnv: RawEnvironment,
 	field: K,
@@ -93,7 +93,7 @@ export function inheritableInWranglerEnvironments<K extends keyof Environment>(
 	defaultValue: Environment[K]
 ): Environment[K] {
 	const usingServiceEnvironments =
-		enableServiceEnvironments && topLevelEnv !== undefined;
+		useServiceEnvironments && topLevelEnv !== undefined;
 	return usingServiceEnvironments
 		? notAllowedInNamedServiceEnvironment(
 				diagnostics,

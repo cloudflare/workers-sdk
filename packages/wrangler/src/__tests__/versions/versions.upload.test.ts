@@ -708,7 +708,7 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				enableServiceEnvironments: false,
+				useServiceEnvironments: false,
 			});
 
 			// Setup
@@ -745,7 +745,7 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				enableServiceEnvironments: false,
+				useServiceEnvironments: false,
 				env: "test",
 			});
 

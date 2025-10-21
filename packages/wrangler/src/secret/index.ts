@@ -12,9 +12,9 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { APIError, parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
-import { enableServiceEnvironments } from "../utils/enableServiceEnvironments";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import type { Config } from "../config";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 
@@ -65,7 +65,7 @@ async function createDraftWorker({
 	}
 	await fetchResult(
 		config,
-		enableServiceEnvironments(config) && args.env
+		useServiceEnvironments(config) && args.env
 			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
 			: `/accounts/${accountId}/workers/scripts/${scriptName}`,
 		{
@@ -174,9 +174,7 @@ export const secretPutCommand = createCommand({
 			);
 		}
 
-		const useServiceEnvironments = Boolean(
-			enableServiceEnvironments(config) && args.env
-		);
+		const isServiceEnv = Boolean(useServiceEnvironments(config) && args.env);
 
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
@@ -196,12 +194,12 @@ export const secretPutCommand = createCommand({
 
 		logger.log(
 			`🌀 Creating the secret for the Worker "${scriptName}" ${
-				useServiceEnvironments ? `(${args.env})` : ""
+				isServiceEnv ? `(${args.env})` : ""
 			}`
 		);
 
 		async function submitSecret() {
-			const url = useServiceEnvironments
+			const url = isServiceEnv
 				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`
 				: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
 
@@ -286,8 +284,7 @@ export const secretDeleteCommand = createCommand({
 		},
 	},
 	async handler(args, { config }) {
-		const useServiceEnvironments =
-			enableServiceEnvironments(config) && args.env;
+		const isServiceEnv = useServiceEnvironments(config) && args.env;
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
@@ -308,18 +305,16 @@ export const secretDeleteCommand = createCommand({
 			await confirm(
 				`Are you sure you want to permanently delete the secret ${
 					args.key
-				} on the Worker ${scriptName}${
-					useServiceEnvironments ? ` (${args.env})` : ""
-				}?`
+				} on the Worker ${scriptName}${isServiceEnv ? ` (${args.env})` : ""}?`
 			)
 		) {
 			logger.log(
 				`🌀 Deleting the secret ${args.key} on the Worker ${scriptName}${
-					useServiceEnvironments ? ` (${args.env})` : ""
+					isServiceEnv ? ` (${args.env})` : ""
 				}`
 			);
 
-			const url = useServiceEnvironments
+			const url = isServiceEnv
 				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`
 				: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
 
@@ -366,8 +361,7 @@ export const secretListCommand = createCommand({
 		printBanner: (args) => args.format === "pretty",
 	},
 	async handler(args, { config }) {
-		const useServiceEnvironments =
-			enableServiceEnvironments(config) && args.env;
+		const isServiceEnv = useServiceEnvironments(config) && args.env;
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
@@ -384,7 +378,7 @@ export const secretListCommand = createCommand({
 
 		const accountId = await requireAuth(config);
 
-		const url = useServiceEnvironments
+		const url = isServiceEnv
 			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`
 			: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
 
@@ -440,8 +434,7 @@ export const secretBulkCommand = createCommand({
 			);
 		}
 
-		const useServiceEnvironments =
-			enableServiceEnvironments(config) && args.env;
+		const isServiceEnv = useServiceEnvironments(config) && args.env;
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			const error = new UserError(
@@ -455,7 +448,7 @@ export const secretBulkCommand = createCommand({
 
 		logger.log(
 			`🌀 Creating the secrets for the Worker "${scriptName}" ${
-				useServiceEnvironments ? `(${args.env})` : ""
+				isServiceEnv ? `(${args.env})` : ""
 			}`
 		);
 
@@ -466,7 +459,7 @@ export const secretBulkCommand = createCommand({
 		}
 
 		function getSettings() {
-			const url = useServiceEnvironments
+			const url = isServiceEnv
 				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/settings`
 				: `/accounts/${accountId}/workers/scripts/${scriptName}/settings`;
 
@@ -478,7 +471,7 @@ export const secretBulkCommand = createCommand({
 		function putBindingsSettings(
 			bindings: Array<SecretBindingUpload | InheritBindingUpload>
 		) {
-			const url = useServiceEnvironments
+			const url = isServiceEnv
 				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/settings`
 				: `/accounts/${accountId}/workers/scripts/${scriptName}/settings`;
 

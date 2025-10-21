@@ -96,24 +96,24 @@ describe("wrangler secret", () => {
 		function mockPutRequest(
 			input: { name: string; text: string },
 			env?: string,
-			enableServiceEnvironments = true,
+			useServiceEnvironments = true,
 			expectedScriptName = "script-name"
 		) {
 			const servicesOrScripts =
-				env && enableServiceEnvironments ? "services" : "scripts";
+				env && useServiceEnvironments ? "services" : "scripts";
 			const environment =
-				env && enableServiceEnvironments ? "/environments/:envName" : "";
+				env && useServiceEnvironments ? "/environments/:envName" : "";
 			msw.use(
 				http.put(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
 					async ({ request, params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						expect(params.scriptName).toEqual(
-							!enableServiceEnvironments && env
+							!useServiceEnvironments && env
 								? `${expectedScriptName}-${env}`
 								: expectedScriptName
 						);
-						if (enableServiceEnvironments) {
+						if (useServiceEnvironments) {
 							expect(params.envName).toEqual(env);
 						}
 						const { name, text, type } = (await request.json()) as Record<
@@ -560,19 +560,19 @@ describe("wrangler secret", () => {
 				secretName: string;
 			},
 			env?: string,
-			enableServiceEnvironments = true
+			useServiceEnvironments = true
 		) {
 			const servicesOrScripts =
-				env && enableServiceEnvironments ? "services" : "scripts";
+				env && useServiceEnvironments ? "services" : "scripts";
 			const environment =
-				env && enableServiceEnvironments ? "/environments/:envName" : "";
+				env && useServiceEnvironments ? "/environments/:envName" : "";
 			msw.use(
 				http.delete(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets/:secretName`,
 					({ request, params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						expect(params.scriptName).toEqual(
-							!enableServiceEnvironments && env
+							!useServiceEnvironments && env
 								? `script-name-${env}`
 								: "script-name"
 						);
@@ -773,23 +773,23 @@ describe("wrangler secret", () => {
 		function mockListRequest(
 			input: { scriptName: string },
 			env?: string,
-			enableServiceEnvironments = true
+			useServiceEnvironments = true
 		) {
 			const servicesOrScripts =
-				env && enableServiceEnvironments ? "services" : "scripts";
+				env && useServiceEnvironments ? "services" : "scripts";
 			const environment =
-				env && enableServiceEnvironments ? "/environments/:envName" : "";
+				env && useServiceEnvironments ? "/environments/:envName" : "";
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
 					({ params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						expect(params.scriptName).toEqual(
-							!enableServiceEnvironments && env
+							!useServiceEnvironments && env
 								? `script-name-${env}`
 								: "script-name"
 						);
-						if (enableServiceEnvironments) {
+						if (useServiceEnvironments) {
 							expect(params.envName).toEqual(env);
 						}
 

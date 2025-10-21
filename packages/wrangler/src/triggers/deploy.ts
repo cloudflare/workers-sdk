@@ -29,7 +29,7 @@ type Props = {
 	env: string | undefined;
 	triggers: string[] | undefined;
 	routes: Route[] | undefined;
-	enableServiceEnvironments: boolean | undefined;
+	useServiceEnvironments: boolean | undefined;
 	dryRun: boolean | undefined;
 	assetsOptions: AssetsOptions | undefined;
 	firstDeploy: boolean;
@@ -65,7 +65,7 @@ export default async function triggersDeploy(
 
 	const start = Date.now();
 	const useServiceEnvironments = Boolean(
-		props.enableServiceEnvironments && props.env
+		props.useServiceEnvironments && props.env
 	);
 	const workerName = useServiceEnvironments
 		? `${scriptName} (${envName})`
@@ -445,7 +445,7 @@ async function subdomainDeploy(
 			config.configPath
 		);
 		workersDevURL =
-			!props.enableServiceEnvironments || !props.env
+			!props.useServiceEnvironments || !props.env
 				? `${scriptName}.${userSubdomain}`
 				: `${envName}.${scriptName}.${userSubdomain}`;
 	}
