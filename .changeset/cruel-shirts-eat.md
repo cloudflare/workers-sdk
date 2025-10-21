@@ -1,5 +1,5 @@
 ---
-"@cloudflare/vite-plugin": patch
+"@cloudflare/vite-plugin": minor
 ---
 
 Add request cancellation support
