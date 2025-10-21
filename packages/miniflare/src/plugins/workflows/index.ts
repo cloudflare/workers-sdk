@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import SCRIPT_WORKFLOWS_BINDING from "worker:workflows/binding";
+import SCRIPT_WORKFLOWS_WRAPPED_BINDING from "worker:workflows/wrapped-binding";
 import { z } from "zod";
 import { Service } from "../../runtime";
 import { getUserServiceName } from "../core";
@@ -43,13 +44,21 @@ export const WORKFLOWS_PLUGIN: Plugin<
 		return Object.entries(options.workflows ?? {}).map(
 			([bindingName, workflow]) => ({
 				name: bindingName,
-				service: {
-					name: getUserBindingServiceName(
-						WORKFLOWS_PLUGIN_NAME,
-						workflow.name,
-						workflow.remoteProxyConnectionString
-					),
-					entrypoint: "WorkflowBinding",
+				wrapped: {
+					moduleName: `${WORKFLOWS_PLUGIN_NAME}:local-wrapped-binding`,
+					innerBindings: [
+						{
+							name: "binding",
+							service: {
+								name: getUserBindingServiceName(
+									WORKFLOWS_PLUGIN_NAME,
+									workflow.name,
+									workflow.remoteProxyConnectionString
+								),
+								entrypoint: "WorkflowBinding",
+							},
+						},
+					],
 				},
 			})
 		);
@@ -62,6 +71,20 @@ export const WORKFLOWS_PLUGIN: Plugin<
 				new ProxyNodeBinding(),
 			])
 		);
+	},
+
+	getExtensions({}) {
+		return [
+			{
+				modules: [
+					{
+						name: `${WORKFLOWS_PLUGIN_NAME}:local-wrapped-binding`,
+						esModule: SCRIPT_WORKFLOWS_WRAPPED_BINDING(),
+						internal: true,
+					},
+				],
+			},
+		];
 	},
 
 	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
