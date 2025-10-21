@@ -27,7 +27,6 @@ const TEAM_ASSIGNMENTS: { [label: string]: { [jobRole: string]: string } } = {
 	observability: {},
 	opennext: { em: "lrapoport-cf", pm: "mattietk", tl: "vicb" },
 	pages: { em: "dcartertwo", pm: "irvinebroque" },
-	"pages-shared": { em: "dcartertwo", pm: "irvinebroque" },
 	pipelines: {},
 	"playground-worker": { em: "lrapoport-cf", pm: "mattietk" },
 	python: {},
