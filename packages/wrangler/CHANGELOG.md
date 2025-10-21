@@ -1,5 +1,77 @@
 # wrangler
 
+## 4.44.0
+
+### Minor Changes
+
+- [#10939](https://github.com/cloudflare/workers-sdk/pull/10939) [`d4b4c90`](https://github.com/cloudflare/workers-sdk/commit/d4b4c90ec2e48bcc128f105337979c1d51af6642) Thanks [@danielrs](https://github.com/danielrs)! - Config `preview_urls` defaults to `workers_dev` value.
+
+  Originally, we were defaulting config.preview_urls to `true`, but we
+  were accidentally enabling Preview URLs for users that only had
+  config.workers_dev=false.
+
+  Then, we set the default value of config.preview_urls to `false`, but we
+  were accidentally disabling Preview URLs for users that only had
+  config.workers_dev=true.
+
+  Rather than defaulting config.preview_urls to `true` or `false`, we
+  default to the resolved value of config.workers_dev. Should result in a
+  clearer user experience.
+
+- [#11027](https://github.com/cloudflare/workers-sdk/pull/11027) [`1a2bbf8`](https://github.com/cloudflare/workers-sdk/commit/1a2bbf893833f68398becf12d3bdd62a2dca6ac9) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Statically replace the value of `process.env.NODE_ENV` with `development` for development builds and `production` for production builds if it is not set. Else, use the given value. This ensures that libraries, such as React, that branch code based on `process.env.NODE_ENV` can be properly tree shaken.
+
+- [#9705](https://github.com/cloudflare/workers-sdk/pull/9705) [`0ee1a68`](https://github.com/cloudflare/workers-sdk/commit/0ee1a6897d2e7670b39373efcb9a9f82713f8ff4) Thanks [@hiendv](https://github.com/hiendv)! - Add params type to Workflow type generation. E.g.
+
+  ```ts
+  interface Env {
+  	MY_WORKFLOW: Workflow<
+  		Parameters<import("./src/index").MyWorkflow["run"]>[0]["payload"]
+  	>;
+  }
+  ```
+
+- [#10867](https://github.com/cloudflare/workers-sdk/pull/10867) [`dd5f769`](https://github.com/cloudflare/workers-sdk/commit/dd5f769104e65241ef6af00a2e37ea9ba2b9114f) Thanks [@austin-mc](https://github.com/austin-mc)! - Add media binding support
+
+### Patch Changes
+
+- [#11018](https://github.com/cloudflare/workers-sdk/pull/11018) [`5124818`](https://github.com/cloudflare/workers-sdk/commit/512481809fe59ba9208509ab443872ad4605b6ce) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve potential errors thrown by `startRemoteProxySession` by including more information
+
+- [#11019](https://github.com/cloudflare/workers-sdk/pull/11019) [`6643bd4`](https://github.com/cloudflare/workers-sdk/commit/6643bd41a082f04778739b93a872cb49f52ac201) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix `observability.logs.persist` being flagged as an unexpected field during the wrangler config file validation
+
+- [#10768](https://github.com/cloudflare/workers-sdk/pull/10768) [`8211bc9`](https://github.com/cloudflare/workers-sdk/commit/8211bc90f83ccabb0385b03b2349269b8d8ff9e9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update logs handling to use the new `handleStructuredLogs` miniflare option
+
+- [#10997](https://github.com/cloudflare/workers-sdk/pull/10997) [`3bb034f`](https://github.com/cloudflare/workers-sdk/commit/3bb034f775da86eed07ad5ef1cdcaf0d1687d281) Thanks [@nikitassharma](https://github.com/nikitassharma)! - When either WRANGLER_OUTPUT_FILE_PATH or WRANGLER_OUTPUT_FILE_DIRECTORY are set
+  in the environment, then command failures will append a line to the output file
+  encoding the error code and message, if present.
+
+- [#10986](https://github.com/cloudflare/workers-sdk/pull/10986) [`43503c7`](https://github.com/cloudflare/workers-sdk/commit/43503c764fb55f4ffe0308c92adc808c9add3fb8) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: cleanup any running containers again on wrangler dev exit
+
+- [#11000](https://github.com/cloudflare/workers-sdk/pull/11000) [`a6de9db`](https://github.com/cloudflare/workers-sdk/commit/a6de9db65185ba40e8a7fcecc5d9e79287c04d2f) Thanks [@jonboulle](https://github.com/jonboulle)! - always load container image into local store during build
+
+  BuildKit supports different [build drivers](https://docs.docker.com/build/builders/drivers/). When using the more modern `docker-container` driver (which is now the default on some systems, e.g. a standard Docker installation on Fedora Linux), it will not automatically load the built image into the local image store. Since wrangler expects the image to be there (e.g. when calling `getImageRepoTags`), it will thus fail, e.g.:
+
+  ```
+  ⎔ Preparing container image(s)...
+  [+] Building 0.3s (8/8) FINISHED                                                                                                                                                                                                     docker-container:default
+
+  [...]
+
+  WARNING: No output specified with docker-container driver. Build result will only remain in the build cache. To push result image into registry use --push or to load image into docker use --load
+
+  ✘ [ERROR] failed inspecting image locally: Error response from daemon: failed to find image cloudflare-dev/sandbox:f86e40e4: docker.io/cloudflare-dev/sandbox:f86e40e4: No such image
+
+  ```
+
+  Explicitly setting the `--load` flag (equivalent to `-o type=docker`) during the build fixes this and should make the build a bit more portable without requiring users to change their default build driver configuration.
+
+- [#10994](https://github.com/cloudflare/workers-sdk/pull/10994) [`d39c8b5`](https://github.com/cloudflare/workers-sdk/commit/d39c8b5a26c2572cd07fd138fabc96e740babc1c) Thanks [@pombosilva](https://github.com/pombosilva)! - Make Workflows instances list command cursor based
+
+- [#10892](https://github.com/cloudflare/workers-sdk/pull/10892) [`7d0417b`](https://github.com/cloudflare/workers-sdk/commit/7d0417ba707e27f930569673e34b6206b6232d18) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - improve the diffing representation for `wrangler deploy` (run under `--x-remote-diff-check`)
+
+- Updated dependencies [[`36d7054`](https://github.com/cloudflare/workers-sdk/commit/36d70543eade502d1803f3c14ae4cd728ceac6af), [`dd5f769`](https://github.com/cloudflare/workers-sdk/commit/dd5f769104e65241ef6af00a2e37ea9ba2b9114f), [`ee7d710`](https://github.com/cloudflare/workers-sdk/commit/ee7d71075aad422e7ef267ea0e87e2e300aadc67), [`8211bc9`](https://github.com/cloudflare/workers-sdk/commit/8211bc90f83ccabb0385b03b2349269b8d8ff9e9)]:
+  - miniflare@4.20251011.0
+  - @cloudflare/unenv-preset@2.7.8
+
 ## 4.43.0
 
 ### Minor Changes

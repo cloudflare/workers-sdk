@@ -1,5 +1,23 @@
 # miniflare
 
+## 4.20251011.0
+
+### Minor Changes
+
+- [#10867](https://github.com/cloudflare/workers-sdk/pull/10867) [`dd5f769`](https://github.com/cloudflare/workers-sdk/commit/dd5f769104e65241ef6af00a2e37ea9ba2b9114f) Thanks [@austin-mc](https://github.com/austin-mc)! - Add media binding support
+
+- [#10768](https://github.com/cloudflare/workers-sdk/pull/10768) [`8211bc9`](https://github.com/cloudflare/workers-sdk/commit/8211bc90f83ccabb0385b03b2349269b8d8ff9e9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `handleStructuredLogs` option that allows consumers of the workerd structured logs to print such logs without additional boilerplate
+
+### Patch Changes
+
+- [#10963](https://github.com/cloudflare/workers-sdk/pull/10963) [`36d7054`](https://github.com/cloudflare/workers-sdk/commit/36d70543eade502d1803f3c14ae4cd728ceac6af) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251008.0 | 1.20251011.0 |
+
 ## 4.20251008.0
 
 ### Patch Changes
