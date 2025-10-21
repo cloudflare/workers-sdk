@@ -186,7 +186,7 @@ describe("resource provisioning", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
-				The following bindings need to be provisioned:
+				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
 				env.KV         KV Namespace
 				env.D1         D1 Database
@@ -307,7 +307,7 @@ describe("resource provisioning", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
-				The following bindings need to be provisioned:
+				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
 				env.KV         KV Namespace
 				env.D1         D1 Database
@@ -438,7 +438,7 @@ describe("resource provisioning", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
-				The following bindings need to be provisioned:
+				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
 				env.KV         KV Namespace
 				env.D1         D1 Database
@@ -599,7 +599,7 @@ describe("resource provisioning", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
-				The following bindings need to be provisioned:
+				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
 				env.KV         KV Namespace
 				env.D1         D1 Database
@@ -703,7 +703,7 @@ describe("resource provisioning", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
-				The following bindings need to be provisioned:
+				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
 				env.D1         D1 Database
 
@@ -832,7 +832,7 @@ describe("resource provisioning", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
-				The following bindings need to be provisioned:
+				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
 				env.D1         D1 Database
 
@@ -911,7 +911,7 @@ describe("resource provisioning", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
-				The following bindings need to be provisioned:
+				Experimental: The following bindings need to be provisioned:
 				Binding            Resource
 				env.BUCKET         R2 Bucket
 
@@ -1107,7 +1107,7 @@ describe("resource provisioning", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
-				The following bindings need to be provisioned:
+				Experimental: The following bindings need to be provisioned:
 				Binding            Resource
 				env.BUCKET         R2 Bucket
 
