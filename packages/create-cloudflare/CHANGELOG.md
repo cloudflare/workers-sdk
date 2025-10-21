@@ -1,5 +1,59 @@
 # create-cloudflare
 
+## 2.53.0
+
+### Minor Changes
+
+- [#10989](https://github.com/cloudflare/workers-sdk/pull/10989) [`da37501`](https://github.com/cloudflare/workers-sdk/commit/da37501a6375c599a4deeac9a5d1445aca1bdf6c) Thanks [@dom96](https://github.com/dom96)! - Fixes generation of 'name' in Python uv.lock template
+
+- [#10943](https://github.com/cloudflare/workers-sdk/pull/10943) [`9d843fe`](https://github.com/cloudflare/workers-sdk/commit/9d843fe1f6a329f43d54e95fb15d9d9546efa600) Thanks [@valfz](https://github.com/valfz)! - fixed creating index.js with wrong extension when Vue project is created with JavaScript
+
+- [#10990](https://github.com/cloudflare/workers-sdk/pull/10990) [`c07036b`](https://github.com/cloudflare/workers-sdk/commit/c07036b7740dbeb9d48d71221755d71374725b46) Thanks [@dom96](https://github.com/dom96)! - Python templates' package.json scripts now use pywrangler
+
+### Patch Changes
+
+- [#10948](https://github.com/cloudflare/workers-sdk/pull/10948) [`04c5dc7`](https://github.com/cloudflare/workers-sdk/commit/04c5dc7b611bea475eb82a9d683011a76a52f6b7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.16.1 | 1.17.0 |
+
+- [#10949](https://github.com/cloudflare/workers-sdk/pull/10949) [`44dc255`](https://github.com/cloudflare/workers-sdk/commit/44dc25554fe1b2f3bd1b18f76753190e93e533a3) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 20.3.4 | 20.3.6 |
+
+- [#10950](https://github.com/cloudflare/workers-sdk/pull/10950) [`39dbb39`](https://github.com/cloudflare/workers-sdk/commit/39dbb397ef07f629018a8bbd0f9b33831445c6ca) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.9.7 | 0.9.8 |
+
+- [#10951](https://github.com/cloudflare/workers-sdk/pull/10951) [`46c31e1`](https://github.com/cloudflare/workers-sdk/commit/46c31e18e17f21a019e65beb58b482020290d24c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.28.0 | 3.29.3 |
+
+- [#10952](https://github.com/cloudflare/workers-sdk/pull/10952) [`dcda100`](https://github.com/cloudflare/workers-sdk/commit/dcda100ccdf703cd5b002f3b48da64dfdd6fd5c9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.9.3 | 7.9.4 |
+
+- [#10914](https://github.com/cloudflare/workers-sdk/pull/10914) [`890a606`](https://github.com/cloudflare/workers-sdk/commit/890a606a196e62e1f56f3982e71c3d97246b9a34) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Fix git commit failures when global pre-commit hooks are configured. When initializing projects, create-cloudflare now uses git commit --no-verify to bypass any globally configured git hooks that might fail and block project initialization.
+
 ## 2.52.3
 
 ### Patch Changes
