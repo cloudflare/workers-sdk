@@ -918,7 +918,7 @@ describe("versions deploy", () => {
 		});
 
 		describe("multi-env warning", () => {
-			it.only("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+			it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
 				writeWranglerConfig({
 					env: {
 						test: {},
