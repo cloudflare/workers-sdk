@@ -18,6 +18,7 @@ import {
 	Miniflare,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
+	supportedCompatibilityDate,
 	testRegExps,
 	WebSocket,
 } from "miniflare";
@@ -424,6 +425,14 @@ function buildProjectWorkerOptions(
 	// of the libraries it depends on expect `require()` to return
 	// `module.exports` directly, rather than `{ default: module.exports }`.
 	runnerWorker.compatibilityFlags ??= [];
+
+	if (runnerWorker.compatibilityDate === undefined) {
+		// No compatibility date was provided, so infer the latest supported date
+		runnerWorker.compatibilityDate ??= supportedCompatibilityDate;
+		log.info(
+			`No compatibility date was provided for project ${project.relativePath}, defaulting to latest supported date ${runnerWorker.compatibilityDate}.`
+		);
+	}
 
 	const flagAssertions = new CompatibilityFlagAssertions({
 		compatibilityDate: runnerWorker.compatibilityDate,
