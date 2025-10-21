@@ -136,6 +136,7 @@ describe("normalizeAndValidateConfig()", () => {
 			data_blobs: undefined,
 			workers_dev: undefined,
 			preview_urls: undefined,
+			python_modules: { exclude: ["**/*.pyc"] },
 			no_bundle: undefined,
 			minify: undefined,
 			first_party_worker: undefined,

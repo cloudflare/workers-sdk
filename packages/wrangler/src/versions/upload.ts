@@ -588,7 +588,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			bundleType,
 			...bundle
 		} = props.noBundle
-			? await noBundleWorker(props.entry, props.rules, props.outDir)
+			? await noBundleWorker(
+					props.entry,
+					props.rules,
+					props.outDir,
+					config.python_modules.exclude
+				)
 			: await bundleWorker(
 					props.entry,
 					typeof destination === "string" ? destination : destination.path,

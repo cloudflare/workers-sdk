@@ -9,9 +9,15 @@ import type { Entry } from "./entry";
 export async function noBundleWorker(
 	entry: Entry,
 	rules: Rule[],
-	outDir: string | undefined
+	outDir: string | undefined,
+	pythonModulesExcludes: string[] = []
 ) {
-	const modules = await findAdditionalModules(entry, rules);
+	const modules = await findAdditionalModules(
+		entry,
+		rules,
+		false,
+		pythonModulesExcludes
+	);
 	if (outDir) {
 		await writeAdditionalModules(modules, outDir);
 	}
