@@ -60,9 +60,9 @@ import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { patchNonVersionedScriptSettings } from "./api";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
@@ -77,7 +77,7 @@ type Props = {
 	entry: Entry;
 	rules: Config["rules"];
 	name: string;
-	legacyEnv: boolean | undefined;
+	useServiceEnvironments: boolean | undefined;
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
@@ -365,7 +365,7 @@ export const versionsUploadCommand = createCommand({
 				name,
 				rules: getRules(config),
 				entry,
-				legacyEnv: isLegacyEnv(config),
+				useServiceEnvironments: useServiceEnvironments(config),
 				env: args.env,
 				compatibilityDate: args.latest
 					? formatCompatibilityDate(new Date())
@@ -656,7 +656,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			? await getMigrationsToUpload(scriptName, {
 					accountId,
 					config,
-					legacyEnv: props.legacyEnv,
+					useServiceEnvironments: props.useServiceEnvironments,
 					env: props.env,
 					dispatchNamespace: undefined,
 				})

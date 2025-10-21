@@ -29,7 +29,7 @@ type Props = {
 	env: string | undefined;
 	triggers: string[] | undefined;
 	routes: Route[] | undefined;
-	legacyEnv: boolean | undefined;
+	useServiceEnvironments: boolean | undefined;
 	dryRun: boolean | undefined;
 	assetsOptions: AssetsOptions | undefined;
 	firstDeploy: boolean;
@@ -64,9 +64,13 @@ export default async function triggersDeploy(
 	const envName = props.env ?? "production";
 
 	const start = Date.now();
-	const notProd = Boolean(!props.legacyEnv && props.env);
-	const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
-	const workerUrl = notProd
+	const useServiceEnvironments = Boolean(
+		props.useServiceEnvironments && props.env
+	);
+	const workerName = useServiceEnvironments
+		? `${scriptName} (${envName})`
+		: scriptName;
+	const workerUrl = useServiceEnvironments
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
@@ -195,7 +199,7 @@ export default async function triggersDeploy(
 			publishRoutes(config, routesOnly, {
 				workerUrl,
 				scriptName,
-				notProd,
+				useServiceEnvironments,
 				accountId,
 			}).then(() => {
 				if (routesOnly.length > 10) {
@@ -441,7 +445,7 @@ async function subdomainDeploy(
 			config.configPath
 		);
 		workersDevURL =
-			props.legacyEnv || !props.env
+			!props.useServiceEnvironments || !props.env
 				? `${scriptName}.${userSubdomain}`
 				: `${envName}.${scriptName}.${userSubdomain}`;
 	}

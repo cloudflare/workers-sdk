@@ -705,7 +705,11 @@ describe("versions upload", () => {
 			mockGetScript();
 			mockUploadVersion(true);
 			mockPatchScriptSettings();
-			mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+			mockGetWorkerSubdomain({
+				enabled: true,
+				previews_enabled: false,
+				useServiceEnvironments: false,
+			});
 
 			// Setup
 			writeWranglerConfig({
@@ -741,7 +745,7 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				legacyEnv: true,
+				useServiceEnvironments: false,
 				env: "test",
 			});
 

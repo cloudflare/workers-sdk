@@ -20,7 +20,7 @@ import { collectKeyValues } from "../utils/collectKeyValues";
 import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import deploy from "./deploy";
 
 export const deployCommand = createCommand({
@@ -366,7 +366,7 @@ export const deployCommand = createCommand({
 			domains: args.domains,
 			assetsOptions,
 			legacyAssetPaths: siteAssetPaths,
-			legacyEnv: isLegacyEnv(config),
+			useServiceEnvironments: useServiceEnvironments(config),
 			minify: args.minify,
 			isWorkersSite: Boolean(args.site || config.site),
 			outDir: args.outdir,

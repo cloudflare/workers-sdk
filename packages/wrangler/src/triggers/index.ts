@@ -3,7 +3,7 @@ import { createCommand, createNamespace } from "../core/create-command";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getScriptName } from "../utils/getScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import triggersDeploy from "./deploy";
 
 export const triggersNamespace = createNamespace({
@@ -71,7 +71,7 @@ export const triggersDeployCommand = createCommand({
 			env: args.env,
 			triggers: args.triggers,
 			routes: args.routes,
-			legacyEnv: isLegacyEnv(config),
+			useServiceEnvironments: useServiceEnvironments(config),
 			dryRun: args.dryRun,
 			assetsOptions,
 			firstDeploy: false, // at this point the Worker should already exist.

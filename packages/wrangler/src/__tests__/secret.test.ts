@@ -96,22 +96,24 @@ describe("wrangler secret", () => {
 		function mockPutRequest(
 			input: { name: string; text: string },
 			env?: string,
-			legacyEnv = false,
+			useServiceEnvironments = true,
 			expectedScriptName = "script-name"
 		) {
-			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-			const environment = env && !legacyEnv ? "/environments/:envName" : "";
+			const servicesOrScripts =
+				env && useServiceEnvironments ? "services" : "scripts";
+			const environment =
+				env && useServiceEnvironments ? "/environments/:envName" : "";
 			msw.use(
 				http.put(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
 					async ({ request, params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						expect(params.scriptName).toEqual(
-							legacyEnv && env
+							!useServiceEnvironments && env
 								? `${expectedScriptName}-${env}`
 								: expectedScriptName
 						);
-						if (!legacyEnv) {
+						if (useServiceEnvironments) {
 							expect(params.envName).toEqual(env);
 						}
 						const { name, text, type } = (await request.json()) as Record<
@@ -172,7 +174,7 @@ describe("wrangler secret", () => {
 				`);
 			});
 
-			it("should create a secret", async () => {
+			it("should create a secret: service envs", async () => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -192,7 +194,7 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should create a secret: legacy envs", async () => {
+			it("should create a secret", async () => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -202,7 +204,7 @@ describe("wrangler secret", () => {
 				mockPutRequest(
 					{ name: "the-key", text: "the-secret" },
 					"some-env",
-					true
+					false
 				);
 				await runWrangler(
 					"secret put the-key --name script-name --env some-env --legacy-env"
@@ -228,7 +230,7 @@ describe("wrangler secret", () => {
 				mockPutRequest(
 					{ name: "the-key", text: "the-secret" },
 					"some-env",
-					false
+					true
 				);
 				await runWrangler(
 					"secret put the-key --name script-name --env some-env --legacy-env false"
@@ -487,7 +489,11 @@ describe("wrangler secret", () => {
 						},
 					});
 					mockStdIn.send("the-secret");
-					mockPutRequest({ name: "the-key", text: "the-secret" }, "test", true);
+					mockPutRequest(
+						{ name: "the-key", text: "the-secret" },
+						"test",
+						false
+					);
 					await runWrangler("secret put the-key --name script-name -e test");
 					expect(std.warn).toMatchInlineSnapshot(`""`);
 				});
@@ -554,17 +560,21 @@ describe("wrangler secret", () => {
 				secretName: string;
 			},
 			env?: string,
-			legacyEnv = false
+			useServiceEnvironments = true
 		) {
-			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-			const environment = env && !legacyEnv ? "/environments/:envName" : "";
+			const servicesOrScripts =
+				env && useServiceEnvironments ? "services" : "scripts";
+			const environment =
+				env && useServiceEnvironments ? "/environments/:envName" : "";
 			msw.use(
 				http.delete(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets/:secretName`,
 					({ request, params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						expect(params.scriptName).toEqual(
-							legacyEnv && env ? `script-name-${env}` : "script-name"
+							!useServiceEnvironments && env
+								? `script-name-${env}`
+								: "script-name"
 						);
 						expect(params.secretName).toEqual(input.secretName);
 						expect(
@@ -630,11 +640,11 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should delete a secret: legacy envs", async () => {
+		it("should delete a secret", async () => {
 			mockDeleteRequest(
 				{ scriptName: "script-name", secretName: "the-key" },
 				"some-env",
-				true
+				false
 			);
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name-some-env?",
@@ -733,7 +743,7 @@ describe("wrangler secret", () => {
 				mockDeleteRequest(
 					{ scriptName: "script-name", secretName: "the-key" },
 					"test",
-					true
+					false
 				);
 				mockConfirm({
 					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name-test?",
@@ -763,19 +773,23 @@ describe("wrangler secret", () => {
 		function mockListRequest(
 			input: { scriptName: string },
 			env?: string,
-			legacyEnv = false
+			useServiceEnvironments = true
 		) {
-			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-			const environment = env && !legacyEnv ? "/environments/:envName" : "";
+			const servicesOrScripts =
+				env && useServiceEnvironments ? "services" : "scripts";
+			const environment =
+				env && useServiceEnvironments ? "/environments/:envName" : "";
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
 					({ params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						expect(params.scriptName).toEqual(
-							legacyEnv && env ? `script-name-${env}` : "script-name"
+							!useServiceEnvironments && env
+								? `script-name-${env}`
+								: "script-name"
 						);
-						if (!legacyEnv) {
+						if (useServiceEnvironments) {
 							expect(params.envName).toEqual(env);
 						}
 
@@ -826,8 +840,8 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should list secrets: legacy envs", async () => {
-			mockListRequest({ scriptName: "script-name" }, "some-env", true);
+		it("should list secrets: wrangler environment", async () => {
+			mockListRequest({ scriptName: "script-name" }, "some-env", false);
 			await runWrangler(
 				"secret list --name script-name --env some-env --legacy-env"
 			);

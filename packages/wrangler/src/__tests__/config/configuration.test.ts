@@ -214,7 +214,11 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 
 			expect(config).toEqual(
-				expect.objectContaining({ ...expectedConfig, main: undefined })
+				expect.objectContaining({
+					...expectedConfig,
+					main: undefined,
+					legacy_env: true,
+				})
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -5025,9 +5029,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-		        `);
+					"Processing wrangler configuration:
+					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
+				`);
 			});
 
 			it("should error if named environment contains a `name` field, even if there is no top-level name", () => {
@@ -5051,9 +5055,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-		        `);
+					"Processing wrangler configuration:
+					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -5085,9 +5089,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-		        `);
+					"Processing wrangler configuration:
+					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -5118,7 +5122,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config.account_id).toBeUndefined();
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -5152,7 +5156,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
