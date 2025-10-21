@@ -659,7 +659,7 @@ describe("resource provisioning", () => {
 			rmSync(".wrangler/deploy/config.json");
 		});
 
-		it.only("can inject additional bindings in redirected config that aren't written back to disk", async () => {
+		it("can inject additional bindings in redirected config that aren't written back to disk", async () => {
 			writeRedirectedWranglerConfig({
 				main: "../index.js",
 				compatibility_flags: ["nodejs_compat"],
