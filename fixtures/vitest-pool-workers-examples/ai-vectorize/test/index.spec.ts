@@ -19,12 +19,10 @@ describe("Tests that do hit the AI binding", () => {
 			const ctx = createExecutionContext();
 
 			// mock the AI run function by directly modifying `env`
-			env.AI = {
-				run: vi.fn().mockResolvedValue({
-					shape: [1, 2],
-					data: [[0, 0]],
-				}),
-			} as unknown as Ai;
+			vi.spyOn(env.AI, "run").mockResolvedValue({
+				shape: [1, 2],
+				data: [[0, 0]],
+			});
 			const response = await worker.fetch(request, env, ctx);
 
 			await waitOnExecutionContext(ctx);
