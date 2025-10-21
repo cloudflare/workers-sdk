@@ -120,9 +120,7 @@ const mfLog = new Log(LogLevel.WARN);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DIST_PATH = path.resolve(__dirname, "..");
-const POOL_WORKER_PATH = path.join(DIST_PATH, "worker", "index.mjs");
-
-const NODE_URL_PATH = path.join(DIST_PATH, "worker", "lib", "node", "url.mjs");
+const POOL_WORKER_PATH = path.join(DIST_PATH, "worker/index.mjs");
 
 const symbolizerWarning =
 	"warning: Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set.";
@@ -463,6 +461,7 @@ function buildProjectWorkerOptions(
 		runnerWorker.compatibilityFlags
 	);
 
+	// Force nodejs_compat_v2 flag, even if it is disabled by the user, since we require this native stuff for Vitest to work properly
 	if (mode !== "v2") {
 		if (hasNoNodejsCompatV2Flag) {
 			runnerWorker.compatibilityFlags.splice(
@@ -578,12 +577,26 @@ function buildProjectWorkerOptions(
 			path: path.join(modulesRoot, DEFINES_MODULE_PATH),
 			contents: defines,
 		},
-		// The workerd provided `node:url` module doesn't support everything Vitest needs.
-		// As a short-term fix, inject a `node:url` polyfill into the worker bundle
+		// The native workerd provided nodejs modules don't always support everything Vitest needs.
+		// As a short-term fix, inject polyfills into the worker bundle that override the native modules.
 		{
 			type: "ESModule",
 			path: path.join(modulesRoot, "node:url"),
-			contents: fs.readFileSync(NODE_URL_PATH),
+			contents: fs.readFileSync(
+				path.join(DIST_PATH, "worker/lib/node/url.mjs")
+			),
+		},
+		{
+			type: "ESModule",
+			path: path.join(modulesRoot, "node:vm"),
+			contents: fs.readFileSync(path.join(DIST_PATH, "worker/lib/node/vm.mjs")),
+		},
+		{
+			type: "ESModule",
+			path: path.join(modulesRoot, "node:console"),
+			contents: fs.readFileSync(
+				path.join(DIST_PATH, "worker/lib/node/console.mjs")
+			),
 		},
 	];
 
