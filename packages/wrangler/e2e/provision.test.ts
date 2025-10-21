@@ -81,7 +81,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const output = await worker.output;
 			expect(normalize(output)).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
-				The following bindings need to be provisioned:
+				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
 				env.KV         KV Namespace
 				env.D1         D1 Database
@@ -200,25 +200,25 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await worker.exitCode;
 			const output = await worker.output;
 			expect(normalize(output)).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			The following bindings need to be provisioned:
-			Binding         Resource
-			env.KV2         KV Namespace
-			Provisioning KV2 (KV Namespace)...
-			🌀 Creating new KV Namespace "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-kv2"...
-			✨ KV2 provisioned 🎉
-			🎉 All resources provisioned, continuing with deployment...
-			Worker Startup Time: (TIMINGS)
-			Your Worker has access to the following bindings:
-			Binding                                         Resource
-			env.KV2 (00000000000000000000000000000000)      KV Namespace
-			env.R2 (inherited)                              R2 Bucket
-			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-			Worker Version ID: 00000000-0000-0000-0000-000000000000
-			To deploy this version to production traffic use the command wrangler versions deploy
-			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
-			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Experimental: The following bindings need to be provisioned:
+				Binding         Resource
+				env.KV2         KV Namespace
+				Provisioning KV2 (KV Namespace)...
+				🌀 Creating new KV Namespace "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-kv2"...
+				✨ KV2 provisioned 🎉
+				🎉 All resources provisioned, continuing with deployment...
+				Worker Startup Time: (TIMINGS)
+				Your Worker has access to the following bindings:
+				Binding                                         Resource
+				env.KV2 (00000000000000000000000000000000)      KV Namespace
+				env.R2 (inherited)                              R2 Bucket
+				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+				Worker Version ID: 00000000-0000-0000-0000-000000000000
+				To deploy this version to production traffic use the command wrangler versions deploy
+				Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
+				Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
+			`);
 			const kvMatch = output.match(/env.KV2 \((?<kv>[0-9a-f]{32})/);
 			assert(kvMatch?.groups);
 			kvId2 = kvMatch.groups.kv;
