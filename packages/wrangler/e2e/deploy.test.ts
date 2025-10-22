@@ -18,7 +18,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
 		helper = new WranglerE2ETestHelper();
 	});
 
-	describe("subdomain warnings", () => {
+	describe("subdomain defaults warning", () => {
 		beforeAll(async () => {
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -59,41 +59,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
 			expect(normalize(deploy.stderr)).toMatchInlineSnapshot(`""`);
 		});
 
-		it("show subdomain warnings on 2nd deploy, remote enabled", async () => {
-			// Set remote state using `wrangler triggers deploy`.
-			await helper.seed({
-				"wrangler.toml": dedent`
-                    name = "${workerName}"
-                    main = "src/index.ts"
-                    compatibility_date = "2023-01-01"
-                    workers_dev = true
-                    preview_urls = true
-                `,
-			});
-			await helper.run("wrangler triggers deploy");
-			// Remove `workers_dev` and `preview_urls` props, and redeploy.
-			await helper.seed({
-				"wrangler.toml": dedent`
-                    name = "${workerName}"
-                    main = "src/index.ts"
-                    compatibility_date = "2023-01-01"
-                `,
-			});
-			const deploy = await helper.run("wrangler deploy");
-			expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-				Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
-				  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
-				Current Version ID: 00000000-0000-0000-0000-000000000000"
-			`);
-			expect(normalize(deploy.stderr)).toMatchInlineSnapshot(`
-				"▲ [WARNING] Worker has preview URLs enabled, but 'preview_urls' is not in the config.
-				  Using default config 'preview_urls = false', current status will be overwritten."
-			`);
-		});
-
-		it("show subdomain warnings on 3rd deploy, remote disabled", async () => {
+		it("show subdomain warnings on 2nd deploy, workers_dev", async () => {
 			// Set remote state using `wrangler triggers deploy`.
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -111,6 +77,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
                     name = "${workerName}"
                     main = "src/index.ts"
                     compatibility_date = "2023-01-01"
+                    # workers_dev = true # Defaults to true.
+                    preview_urls = false
                 `,
 			});
 			const deploy = await helper.run("wrangler deploy");
@@ -122,8 +90,44 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
 				Current Version ID: 00000000-0000-0000-0000-000000000000"
 			`);
 			expect(normalize(deploy.stderr)).toMatchInlineSnapshot(`
-				"▲ [WARNING] Worker has workers.dev disabled, but 'workers_dev' is not in the config.
-				  Using default config 'workers_dev = true', current status will be overwritten."
+				"▲ [WARNING] Because 'workers_dev' is not in your Wrangler file, it will be enabled for this deployment by default.
+				  To override this setting, you can disable workers.dev by explicitly setting 'workers_dev = false' in your Wrangler file."
+			`);
+		});
+
+		it("show subdomain warnings on 3rd deploy, preview_urls", async () => {
+			// Set remote state using `wrangler triggers deploy`.
+			await helper.seed({
+				"wrangler.toml": dedent`
+                    name = "${workerName}"
+                    main = "src/index.ts"
+                    compatibility_date = "2023-01-01"
+                    workers_dev = true
+                    preview_urls = true
+                `,
+			});
+			await helper.run("wrangler triggers deploy");
+			// Remove `workers_dev` and `preview_urls` props, and redeploy.
+			await helper.seed({
+				"wrangler.toml": dedent`
+                    name = "${workerName}"
+                    main = "src/index.ts"
+                    compatibility_date = "2023-01-01"
+                    workers_dev = true
+                    # preview_urls = false # Defaults to false.
+                `,
+			});
+			const deploy = await helper.run("wrangler deploy");
+			expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+				Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+				  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+				Current Version ID: 00000000-0000-0000-0000-000000000000"
+			`);
+			expect(normalize(deploy.stderr)).toMatchInlineSnapshot(`
+				"▲ [WARNING] Because your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be disabled for this deployment by default.
+				  To override this setting, you can enable Preview URLs by explicitly setting 'preview_urls = true' in your Wrangler file."
 			`);
 		});
 	});
