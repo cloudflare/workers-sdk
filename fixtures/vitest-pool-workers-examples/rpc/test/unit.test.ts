@@ -22,7 +22,7 @@ describe("named entrypoints", () => {
 			  ],
 			  "method": "GET",
 			  "source": "testNamedHandler",
-			  "url": "https://example.com",
+			  "url": "https://example.com/",
 			}
 		`);
 	});
@@ -31,19 +31,19 @@ describe("named entrypoints", () => {
 			"https://example.com"
 		);
 		expect(await response.json()).toMatchInlineSnapshot(`
-		{
-		  "ctxWaitUntil": "function",
-		  "envKeys": [
-		    "KV_NAMESPACE",
-		    "TEST_NAMED_ENTRYPOINT",
-		    "TEST_NAMED_HANDLER",
-		    "TEST_OBJECT",
-		  ],
-		  "method": "GET",
-		  "source": "TestNamedEntrypoint",
-		  "url": "https://example.com",
-		}
-	`);
+			{
+			  "ctxWaitUntil": "function",
+			  "envKeys": [
+			    "KV_NAMESPACE",
+			    "TEST_NAMED_ENTRYPOINT",
+			    "TEST_NAMED_HANDLER",
+			    "TEST_OBJECT",
+			  ],
+			  "method": "GET",
+			  "source": "TestNamedEntrypoint",
+			  "url": "https://example.com/",
+			}
+		`);
 	});
 	it("calls method with rpc", async () => {
 		const result = await env.TEST_NAMED_ENTRYPOINT.ping();
@@ -85,7 +85,7 @@ describe("Durable Object", () => {
 			  ],
 			  "method": "GET",
 			  "source": "TestObject",
-			  "url": "https://example.com",
+			  "url": "https://example.com/",
 			}
 		`);
 	});

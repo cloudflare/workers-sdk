@@ -1,7 +1,7 @@
 {
 	"name": "container-app",
 	"main": "src/index.ts",
-	"compatibility_date": "2025-04-03",
+	// don't provide compatibility_date so that vitest will infer the latest one
 	"containers": [
 		{
 			"image": "./Dockerfile",

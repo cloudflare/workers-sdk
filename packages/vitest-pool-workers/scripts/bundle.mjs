@@ -78,7 +78,10 @@ await esbuild.build({
 });
 
 // Build pool, worker and libs
-const libPaths = Array.from(walk(path.join(pkgRoot, "src", "worker", "lib")));
+const libPaths = [
+	...walk(path.join(pkgRoot, "src/worker/lib")),
+	...walk(path.join(pkgRoot, "src/worker/node")),
+];
 
 /** @type {import("esbuild").BuildOptions} */
 const commonOptions = {

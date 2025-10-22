@@ -7,5 +7,5 @@ it("dispatches fetch event", async () => {
 	// Importantly, it uses the exact `import("../src").default` instance we could
 	// import in this file as its handler.
 	const response = await SELF.fetch("http://example.com");
-	expect(await response.text()).toBe("👋 http://example.com");
+	expect(await response.text()).toBe("👋 http://example.com/");
 });

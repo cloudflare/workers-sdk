@@ -1,8 +1,7 @@
 {
 	"name": "rpc",
 	"main": "src/index.ts",
-	"compatibility_date": "2024-01-01",
-	"compatibility_flags": ["rpc"],
+	// don't provide compatibility_date so that vitest will infer the latest one
 	"kv_namespaces": [
 		{
 			"binding": "KV_NAMESPACE",

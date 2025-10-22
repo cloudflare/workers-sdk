@@ -1,7 +1,7 @@
 {
 	"name": "d1",
 	"main": "src/index.ts",
-	"compatibility_date": "2024-01-01",
+	// don't provide compatibility_date so that vitest will infer the latest one
 	"env": {
 		"production": {
 			"d1_databases": [
