@@ -1309,8 +1309,6 @@ export type TailConsumer = {
 export type StreamingTailConsumer = {
 	/** The name of the service streaming tail events will be forwarded to. */
 	service: string;
-	/** (Optional) The environment of the service. */
-	environment?: string;
 };
 
 export interface DispatchNamespaceOutbound {

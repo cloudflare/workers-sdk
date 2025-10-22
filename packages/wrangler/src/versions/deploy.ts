@@ -612,11 +612,7 @@ async function maybePatchSettings(
 					.join("\n") ?? "<skipped>",
 			streaming_tail_consumers:
 				patchedSettings.streaming_tail_consumers
-					?.map((stc) =>
-						stc.environment
-							? `${stc.service} (${stc.environment})`
-							: stc.service
-					)
+					?.map((stc) => stc.service)
 					.join("\n") ?? "<skipped>",
 		},
 		{

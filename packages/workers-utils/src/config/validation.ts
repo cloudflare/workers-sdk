@@ -1080,15 +1080,6 @@ function validateStreamingTailConsumer(
 			value.service,
 			"string"
 		);
-	isValid =
-		isValid &&
-		validateOptionalProperty(
-			diagnostics,
-			field,
-			"environment",
-			value.environment,
-			"string"
-		);
 
 	return isValid;
 }

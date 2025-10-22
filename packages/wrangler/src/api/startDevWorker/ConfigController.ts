@@ -215,7 +215,7 @@ async function resolveBindings(
 				vars: maskedVars,
 			},
 			input.tailConsumers ?? config.tail_consumers,
-			config.streaming_tail_consumers,
+			input.streamingTailConsumers ?? config.streaming_tail_consumers,
 			{
 				registry,
 				local: !input.dev?.remote,
