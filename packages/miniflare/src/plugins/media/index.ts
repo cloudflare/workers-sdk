@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import BINDING from "worker:media/binding";
 import { z } from "zod";
 import {
