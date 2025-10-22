@@ -849,8 +849,8 @@ describe("versions deploy", () => {
 				},
 				streaming_tail_consumers: [
 					{ service: "streaming-worker-1" },
-					{ service: "streaming-worker-2", environment: "preview" },
-					{ service: "streaming-worker-3", environment: "staging" },
+					{ service: "streaming-worker-2" },
+					{ service: "streaming-worker-3" },
 				],
 			});
 
@@ -902,8 +902,8 @@ describe("versions deploy", () => {
 				│                                head_sampling_rate:  0.5
 				│               tail_consumers:  <skipped>
 				│     streaming_tail_consumers:  streaming-worker-1
-				│                                streaming-worker-2 (preview)
-				│                                streaming-worker-3 (staging)
+				│                                streaming-worker-2
+				│                                streaming-worker-3
 				│
 				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 			`);
