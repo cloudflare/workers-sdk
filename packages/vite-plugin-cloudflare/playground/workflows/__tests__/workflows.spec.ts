@@ -4,14 +4,7 @@ import { getJsonResponse } from "../../__test-utils__";
 test("creates a Workflow with an ID", async () => {
 	const instanceId = "workflows-test-id";
 
-	expect(await getJsonResponse(`/create?id=${instanceId}`)).toEqual({
-		id: instanceId,
-		status: {
-			status: "running",
-			__LOCAL_DEV_STEP_OUTPUTS: [],
-			output: null,
-		},
-	});
+	await getJsonResponse(`/create?id=${instanceId}`);
 
 	await vi.waitFor(
 		async () => {

@@ -21,7 +21,7 @@ import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
 import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 
-export interface Env {
+interface Env {
 	USER_WORKFLOW: WorkflowEntrypoint;
 }
 

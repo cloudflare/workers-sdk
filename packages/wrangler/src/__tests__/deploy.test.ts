@@ -39,6 +39,7 @@ import {
 	mockOAuthFlow,
 } from "./helpers/mock-oauth-flow";
 import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
+import { mockGetSettings } from "./helpers/mock-worker-settings";
 import {
 	mockGetWorkerSubdomain,
 	mockSubDomainRequest,
@@ -105,7 +106,16 @@ describe("deploy", () => {
 		mockLastDeploymentRequest();
 		mockDeploymentsListRequest();
 		mockPatchScriptSettings();
+		mockGetSettings();
 		msw.use(...mswListNewDeploymentsLatestFull);
+		// Pretend all R2 buckets exist for the purposes of deployment testing.
+		// Otherwise, wrangler deploy would try to provision them. The provisioning
+		// behaviour is tested in provision.test.ts
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
+				return HttpResponse.json(createFetchResult({}));
+			})
+		);
 	});
 
 	afterEach(() => {
@@ -1104,6 +1114,7 @@ describe("deploy", () => {
 				});
 
 				await runWrangler("deploy index.js --env some-env --legacy-env false");
+
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -7374,9 +7385,10 @@ addEventListener('fetch', event => {});`
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorker has workers.dev disabled, but 'workers_dev' is not in the config.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause 'workers_dev' is not in your Wrangler file, it will be enabled for this deployment by default.[0m
 
-				  Using default config 'workers_dev = true', current status will be overwritten.
+				  To override this setting, you can disable workers.dev by explicitly setting 'workers_dev = false'
+				  in your Wrangler file.
 
 				"
 			`);
@@ -7404,9 +7416,10 @@ addEventListener('fetch', event => {});`
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorker has preview URLs disabled, but 'preview_urls' is not in the config.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be enabled for this deployment by default.[0m
 
-				  Using default config 'preview_urls = true', current status will be overwritten.
+				  To override this setting, you can disable Preview URLs by explicitly setting 'preview_urls =
+				  false' in your Wrangler file.
 
 				"
 			`);
@@ -14362,6 +14375,7 @@ export default{
 			msw.use(...mswListNewDeploymentsLatestFull);
 
 			mockSubDomainRequest();
+			mockGetSettings();
 			writeWorkerSource();
 			setIsTTY(false);
 		});

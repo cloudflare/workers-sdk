@@ -635,7 +635,7 @@ export function printBindings(
 	} else {
 		let title: string;
 		if (context.provisioning) {
-			title = "The following bindings need to be provisioned:";
+			title = `${chalk.red("Experimental:")} The following bindings need to be provisioned:`;
 		} else if (context.name && getFlag("MULTIWORKER")) {
 			title = `${chalk.blue(context.name)} has access to the following bindings:`;
 		} else {

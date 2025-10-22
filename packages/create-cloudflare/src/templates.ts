@@ -827,7 +827,6 @@ export const downloadRemoteTemplate = async (
 
 function updatePythonPackageName(path: string, projectName: string) {
 	const pyprojectTomlPath = resolve(path, "pyproject.toml");
-	const uvLockPath = resolve(path, "uv.lock");
 	if (!existsSync(pyprojectTomlPath)) {
 		// Not a python template
 		return;
@@ -840,12 +839,6 @@ function updatePythonPackageName(path: string, projectName: string) {
 		`"${projectName}"`,
 	);
 	writeFile(pyprojectTomlPath, pyprojectTomlContents);
-	let uvLockContents = readFile(uvLockPath);
-	uvLockContents = uvLockContents.replace(
-		'"tbd"',
-		`"${projectName.toLowerCase()}"`,
-	);
-	writeFile(uvLockPath, uvLockContents);
 	s.stop(`${brandColor("updated")} ${dim("`pyproject.toml`")}`);
 }
 

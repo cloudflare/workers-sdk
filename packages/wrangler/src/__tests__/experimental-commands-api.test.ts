@@ -41,6 +41,7 @@ describe("experimental_getWranglerCommands", () => {
 			    "alias": Array [
 			      "x-provision",
 			    ],
+			    "default": true,
 			    "describe": "Experimental: Enable automatic resource provisioning",
 			    "hidden": true,
 			    "type": "boolean",

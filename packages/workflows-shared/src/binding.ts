@@ -16,11 +16,17 @@ type Env = {
 };
 
 // this.env.WORKFLOW is WorkflowBinding
-export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
+export class WorkflowBinding extends WorkerEntrypoint<Env> {
+	constructor(ctx: ExecutionContext, env: Env) {
+		super(ctx, env);
+	}
+
 	public async create({
 		id = crypto.randomUUID(),
 		params = {},
-	}: WorkflowInstanceCreateOptions = {}): Promise<WorkflowInstance> {
+	}: WorkflowInstanceCreateOptions = {}): Promise<{
+		id: string;
+	}> {
 		if (!isValidWorkflowInstanceId(id)) {
 			throw new WorkflowError("Workflow instance has invalid id");
 		}
@@ -28,36 +34,35 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 
-		const initPromise = stub.init(
-			0, // accountId: number,
-			{} as DatabaseWorkflow, // workflow: DatabaseWorkflow,
-			{} as DatabaseVersion, // version: DatabaseVersion,
-			{ id } as DatabaseInstance, // instance: DatabaseInstance,
-			{
-				timestamp: new Date(),
-				payload: params as Readonly<typeof params>,
-				instanceId: id,
-			}
-		);
+		const initPromise = stub
+			.init(
+				0, // accountId: number,
+				{} as DatabaseWorkflow, // workflow: DatabaseWorkflow,
+				{} as DatabaseVersion, // version: DatabaseVersion,
+				{ id } as DatabaseInstance, // instance: DatabaseInstance,
+				{
+					timestamp: new Date(),
+					payload: params as Readonly<typeof params>,
+					instanceId: id,
+				}
+			)
+			.then((val) => {
+				if (val !== undefined) {
+					val[Symbol.dispose]();
+				}
+			});
 
 		this.ctx.waitUntil(initPromise);
 
-		const handle = new WorkflowHandle(id, stub);
 		return {
-			id: id,
-			pause: handle.pause.bind(handle),
-			resume: handle.resume.bind(handle),
-			terminate: handle.terminate.bind(handle),
-			restart: handle.restart.bind(handle),
-			status: handle.status.bind(handle),
-			sendEvent: handle.sendEvent.bind(handle),
+			id,
 		};
 	}
 
 	public async get(id: string): Promise<WorkflowInstance> {
-		const engineStubId = this.env.ENGINE.idFromName(id);
-		const engineStub = this.env.ENGINE.get(engineStubId);
-		const handle = new WorkflowHandle(id, engineStub);
+		const stubId = this.env.ENGINE.idFromName(id);
+		const stub = this.env.ENGINE.get(stubId);
+		const handle = new WorkflowHandle(id, stub);
 
 		try {
 			await handle.status();
@@ -65,33 +70,33 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			throw new Error("instance.not_found");
 		}
 
-		return {
-			id: id,
-			pause: handle.pause.bind(handle),
-			resume: handle.resume.bind(handle),
-			terminate: handle.terminate.bind(handle),
-			restart: handle.restart.bind(handle),
-			status: handle.status.bind(handle),
-			sendEvent: handle.sendEvent.bind(handle),
-		};
+		return handle;
 	}
+
 	public async createBatch(
 		batch: WorkflowInstanceCreateOptions<unknown>[]
-	): Promise<WorkflowInstance[]> {
+	): Promise<{ id: string }[]> {
 		if (batch.length === 0) {
 			throw new Error(
 				"WorkflowError: batchCreate should have at least 1 instance"
 			);
 		}
 
-		return await Promise.all(batch.map((val) => this.create(val)));
+		return await Promise.all(
+			batch.map(async (val) => {
+				const res = await this.create(val);
+				return res;
+			})
+		);
 	}
 
-	public unsafeGetBindingName(): string {
+	public async unsafeGetBindingName(): Promise<string> {
+		// async because of rpc
 		return this.env.BINDING_NAME;
 	}
 
-	public unsafeGetInstanceModifier(instanceId: string): unknown {
+	public async unsafeGetInstanceModifier(instanceId: string): Promise<unknown> {
+		// async because of rpc
 		const stubId = this.env.ENGINE.idFromName(instanceId);
 		const stub = this.env.ENGINE.get(stubId);
 
@@ -165,14 +170,15 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 		const status = await this.stub.getStatus(0, this.id);
 
 		// NOTE(lduarte): for some reason, sync functions over RPC are typed as never instead of Promise<EngineLogs>
-		const { logs } =
-			await (this.stub.readLogs() as unknown as Promise<EngineLogs>);
+		using logs = await (this.stub.readLogs() as unknown as Promise<
+			EngineLogs & Disposable
+		>);
 
-		const workflowSuccessEvent = logs
+		const workflowSuccessEvent = logs.logs
 			.filter((log) => log.event === InstanceEvent.WORKFLOW_SUCCESS)
 			.at(0);
 
-		const filteredLogs = logs.filter(
+		const filteredLogs = logs.logs.filter(
 			(log) =>
 				log.event === InstanceEvent.STEP_SUCCESS ||
 				log.event === InstanceEvent.WAIT_COMPLETE

@@ -485,11 +485,17 @@ async function subdomainDeploy(
 		config.workers_dev == undefined &&
 		after.enabled !== before.enabled
 	) {
-		const beforeStatus = before.enabled ? "enabled" : "disabled";
+		const status = (enabled: boolean, past: boolean) => {
+			if (past) {
+				return enabled ? "enabled" : "disabled";
+			} else {
+				return enabled ? "enable" : "disable";
+			}
+		};
 		logger.warn(
 			[
-				`Worker has workers.dev ${beforeStatus}, but 'workers_dev' is not in the config.`,
-				`Using default config 'workers_dev = ${after.enabled}', current status will be overwritten.`,
+				`Because 'workers_dev' is not in your Wrangler file, it will be ${status(after.enabled, true)} for this deployment by default.`,
+				`To override this setting, you can ${status(before.enabled, false)} workers.dev by explicitly setting 'workers_dev = ${before.enabled}' in your Wrangler file.`,
 			].join("\n")
 		);
 	}
@@ -499,11 +505,17 @@ async function subdomainDeploy(
 		config.preview_urls == undefined &&
 		after.previews_enabled !== before.previews_enabled
 	) {
-		const beforeStatus = before.previews_enabled ? "enabled" : "disabled";
+		const status = (enabled: boolean, past: boolean) => {
+			if (past) {
+				return enabled ? "enabled" : "disabled";
+			} else {
+				return enabled ? "enable" : "disable";
+			}
+		};
 		logger.warn(
 			[
-				`Worker has preview URLs ${beforeStatus}, but 'preview_urls' is not in the config.`,
-				`Using default config 'preview_urls = ${after.previews_enabled}', current status will be overwritten.`,
+				`Because your 'workers.dev' route is ${status(after.enabled, true)} and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be ${status(after.previews_enabled, true)} for this deployment by default.`,
+				`To override this setting, you can ${status(before.previews_enabled, false)} Preview URLs by explicitly setting 'preview_urls = ${before.previews_enabled}' in your Wrangler file.`,
 			].join("\n")
 		);
 	}
