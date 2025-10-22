@@ -714,14 +714,14 @@ export function printBindings(
 		})) ?? []),
 		...(streamingTailConsumers?.map((c) => ({
 			service: c.service,
-			streaming: false,
+			streaming: true,
 		})) ?? []),
 	];
 	if (allTailConsumers.length > 0) {
 		logger.log(
 			`${title}\n${allTailConsumers
 				.map(({ service, streaming }) => {
-					const displayName = `${service}${streaming ? ` (streaming)` : ""}`;
+					const displayName = `${service}${streaming ? `(streaming)` : ""}`;
 					if (context.local && context.registry !== null) {
 						const registryDefinition = context.registry?.[service];
 						hasConnectionStatus = true;
