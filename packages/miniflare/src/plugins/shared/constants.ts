@@ -74,7 +74,7 @@ export function objectEntryWorker(
 }
 
 export function remoteProxyClientWorker(
-	remoteProxyConnectionString: RemoteProxyConnectionString,
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
 	binding: string
 ) {
 	return {
@@ -86,10 +86,14 @@ export function remoteProxyClientWorker(
 			},
 		],
 		bindings: [
-			{
-				name: "remoteProxyConnectionString",
-				text: remoteProxyConnectionString.href,
-			},
+			...(remoteProxyConnectionString?.href
+				? [
+						{
+							name: "remoteProxyConnectionString",
+							text: remoteProxyConnectionString.href,
+						},
+					]
+				: []),
 			{
 				name: "binding",
 				text: binding,

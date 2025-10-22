@@ -277,13 +277,11 @@ async function parseCustomPoolOptions(
 				configPath,
 				options.wrangler.environment,
 				{
-					imagesLocalMode: true,
 					overrides: {
 						assets: options.miniflare.assets,
 						// doesn't work with containers yet so let's just disable it
 						enableContainers: false,
 					},
-					remoteBindingsEnabled: options.remoteBindings ?? true,
 					remoteProxyConnectionString:
 						remoteProxySessionData?.session?.remoteProxyConnectionString,
 				}

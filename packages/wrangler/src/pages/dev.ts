@@ -240,18 +240,6 @@ export const pagesDevCommand = createCommand({
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 			type: "boolean",
 		},
-		"experimental-vectorize-bind-to-prod": {
-			type: "boolean",
-			description:
-				"Bind to production Vectorize indexes in local development mode",
-			default: false,
-		},
-		"experimental-images-local-mode": {
-			type: "boolean",
-			description:
-				"Use a local lower-fidelity implementation of the Images binding",
-			default: false,
-		},
 	},
 	positionalArgs: ["directory", "command"],
 	async handler(args) {
@@ -884,7 +872,6 @@ export const pagesDevCommand = createCommand({
 			{
 				MULTIWORKER: Array.isArray(args.config),
 				RESOURCES_PROVISION: false,
-				REMOTE_BINDINGS: false,
 				DEPLOY_REMOTE_DIFF_CHECK: false,
 				AUTOCREATE_RESOURCES: false,
 			},
@@ -953,9 +940,6 @@ export const pagesDevCommand = createCommand({
 					persistTo: args.persistTo,
 					logLevel: args.logLevel ?? "log",
 					experimentalProvision: undefined,
-					experimentalRemoteBindings: true,
-					experimentalVectorizeBindToProd: false,
-					experimentalImagesLocalMode: false,
 					experimentalAutoCreate: false,
 					enableIpc: true,
 					config: Array.isArray(args.config) ? args.config : undefined,

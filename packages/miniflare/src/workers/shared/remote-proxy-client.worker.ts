@@ -3,7 +3,7 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { makeFetch } from "./remote-bindings-utils";
 
 type Env = {
-	remoteProxyConnectionString: string;
+	remoteProxyConnectionString?: string;
 	binding: string;
 };
 export default class Client extends WorkerEntrypoint<Env> {
@@ -15,10 +15,13 @@ export default class Client extends WorkerEntrypoint<Env> {
 	}
 
 	constructor(ctx: ExecutionContext, env: Env) {
-		const url = new URL(env.remoteProxyConnectionString);
-		url.protocol = "ws:";
-		url.searchParams.set("MF-Binding", env.binding);
-		const stub = newWebSocketRpcSession(url.href);
+		let stub: unknown;
+		if (env.remoteProxyConnectionString) {
+			const url = new URL(env.remoteProxyConnectionString);
+			url.protocol = "ws:";
+			url.searchParams.set("MF-Binding", env.binding);
+			stub = newWebSocketRpcSession(url.href);
+		}
 
 		super(ctx, env);
 
@@ -26,6 +29,9 @@ export default class Client extends WorkerEntrypoint<Env> {
 			get(target, prop) {
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
+				}
+				if (!stub) {
+					throw new Error(`Binding ${env.binding} needs to be run remotely`);
 				}
 
 				return Reflect.get(stub, prop);

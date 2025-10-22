@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import LOCAL_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespace";
 import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
@@ -13,7 +12,9 @@ export const DispatchNamespaceOptionsSchema = z.object({
 		.record(
 			z.object({
 				namespace: z.string(),
-				remoteProxyConnectionString: z.custom<RemoteProxyConnectionString>(),
+				remoteProxyConnectionString: z
+					.custom<RemoteProxyConnectionString>()
+					.optional(),
 			})
 		)
 		.optional(),
@@ -33,20 +34,19 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 		const bindings = Object.entries(
 			options.dispatchNamespaces
 		).map<Worker_Binding>(([name, config]) => {
-			assert(
-				config.remoteProxyConnectionString,
-				"Dispatch Namespace bindings only support running remotely"
-			);
-
 			return {
 				name,
 				wrapped: {
 					moduleName: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-dispatch-namespace`,
 					innerBindings: [
-						{
-							name: "remoteProxyConnectionString",
-							text: config.remoteProxyConnectionString.href,
-						},
+						...(config.remoteProxyConnectionString?.href
+							? [
+									{
+										name: "remoteProxyConnectionString",
+										text: config.remoteProxyConnectionString.href,
+									},
+								]
+							: []),
 						{
 							name: "binding",
 							text: name,

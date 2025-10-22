@@ -84,8 +84,6 @@ export interface Unstable_DevOptions {
 		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
 		devEnv?: boolean;
 		fileBasedRegistry?: boolean;
-		vectorizeBindToProd?: boolean;
-		imagesLocalMode?: boolean;
 		enableIpc?: boolean;
 		enableContainers?: boolean; // Whether to build and connect to containers in dev mode. Defaults to true.
 		dockerPath?: string; // Path to the docker binary, if not on $PATH
@@ -132,8 +130,6 @@ export async function unstable_dev(
 		showInteractiveDevSession,
 		testMode,
 		testScheduled,
-		vectorizeBindToProd,
-		imagesLocalMode,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
 		enablePagesAssetsServiceBinding,
@@ -223,9 +219,6 @@ export async function unstable_dev(
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
 		experimentalAutoCreate: false,
-		experimentalRemoteBindings: true,
-		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,
-		experimentalImagesLocalMode: imagesLocalMode ?? false,
 		enableIpc: options?.experimental?.enableIpc,
 		nodeCompat: undefined,
 		enableContainers: options?.experimental?.enableContainers ?? false,
@@ -239,7 +232,6 @@ export async function unstable_dev(
 			// TODO: can we make this work?
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
-			REMOTE_BINDINGS: false,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
 			AUTOCREATE_RESOURCES: false,
 		},

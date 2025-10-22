@@ -162,7 +162,11 @@ export interface StartDevWorkerInput {
 	dev?: {
 		/** Options applying to the worker's inspector server. False disables the inspector server. */
 		inspector?: { hostname?: string; port?: number; secure?: boolean } | false;
-		/** Whether the worker runs on the edge or locally. Can also be set to "minimal" for minimal mode. */
+		/** Whether the worker runs on the edge or locally. This has several options:
+		 *   - true | "minimal": Run your Worker's code & bindings in a remote preview session, optionally using minimal mode as an internal detail
+		 *   - false: Run your Worker's code & bindings in a local simulator
+		 *   - undefined (default): Run your Worker's code locally, and any configured remote bindings remotely
+		 */
 		remote?: boolean | "minimal";
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
 		auth?: AsyncHook<CfAccount, [Pick<Config, "account_id">]>; // provide config.account_id as a hook param
@@ -192,17 +196,8 @@ export interface StartDevWorkerInput {
 
 		testScheduled?: boolean;
 
-		/** Whether to use Vectorize as a remote binding -- the worker is run locally but accesses to Vectorize are made remotely */
-		bindVectorizeToProd?: boolean;
-
-		/** Whether to use Images local mode -- this is lower fidelity, but doesn't require network access */
-		imagesLocalMode?: boolean;
-
 		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
 		multiworkerPrimary?: boolean;
-
-		/** Whether the experimental remote bindings feature should be enabled */
-		experimentalRemoteBindings?: boolean;
 
 		containerBuildId?: string;
 		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */

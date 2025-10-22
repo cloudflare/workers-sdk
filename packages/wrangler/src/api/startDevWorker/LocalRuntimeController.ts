@@ -139,8 +139,6 @@ export async function convertToConfigBundle(
 		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
 		services: bindings.services,
 		serviceBindings: fetchers,
-		bindVectorizeToProd: event.config.dev?.bindVectorizeToProd ?? false,
-		imagesLocalMode: event.config.dev?.imagesLocalMode ?? false,
 		testScheduled: !!event.config.dev.testScheduled,
 		tails: event.config.tailConsumers,
 		containerDOClassNames: new Set(
@@ -203,10 +201,7 @@ export class LocalRuntimeController extends RuntimeController {
 		try {
 			const configBundle = await convertToConfigBundle(data);
 
-			const experimentalRemoteBindings =
-				data.config.dev.experimentalRemoteBindings ?? true;
-
-			if (experimentalRemoteBindings && !data.config.dev?.remote) {
+			if (data.config.dev?.remote !== false) {
 				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
 				const { maybeStartOrUpdateRemoteProxySession, pickRemoteBindings } =
@@ -292,7 +287,6 @@ export class LocalRuntimeController extends RuntimeController {
 				configBundle,
 				this.#proxyToUserWorkerAuthenticationSecret,
 				this.#remoteProxySessionData?.session?.remoteProxyConnectionString,
-				!!experimentalRemoteBindings,
 				(registry) => {
 					logger.log(chalk.dim("⎔ Connection status updated"));
 					this.emitDevRegistryUpdateEvent({

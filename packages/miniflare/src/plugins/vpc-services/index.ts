@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { z } from "zod";
 import {
 	getUserBindingServiceName,
@@ -10,7 +9,9 @@ import {
 
 const VpcServicesSchema = z.object({
 	service_id: z.string(),
-	remoteProxyConnectionString: z.custom<RemoteProxyConnectionString>(),
+	remoteProxyConnectionString: z
+		.custom<RemoteProxyConnectionString>()
+		.optional(),
 });
 
 export const VpcServicesOptionsSchema = z.object({
@@ -28,11 +29,6 @@ export const VPC_SERVICES_PLUGIN: Plugin<typeof VpcServicesOptionsSchema> = {
 
 		return Object.entries(options.vpcServices).map(
 			([name, { service_id, remoteProxyConnectionString }]) => {
-				assert(
-					remoteProxyConnectionString,
-					"VPC Services only supports running remotely"
-				);
-
 				return {
 					name,
 
@@ -65,11 +61,6 @@ export const VPC_SERVICES_PLUGIN: Plugin<typeof VpcServicesOptionsSchema> = {
 
 		return Object.entries(options.vpcServices).map(
 			([name, { service_id, remoteProxyConnectionString }]) => {
-				assert(
-					remoteProxyConnectionString,
-					"VPC Services only supports running remotely"
-				);
-
 				return {
 					name: getUserBindingServiceName(
 						VPC_SERVICES_PLUGIN_NAME,

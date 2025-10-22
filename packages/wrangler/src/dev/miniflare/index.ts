@@ -3,27 +3,12 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import { Log, LogLevel } from "miniflare";
-import {
-	EXTERNAL_AI_WORKER_NAME,
-	EXTERNAL_AI_WORKER_SCRIPT,
-	getAIFetcher,
-} from "../../ai/fetcher";
 import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
 import { withSourceURLs } from "../../deployment-bundle/source-url";
-import {
-	EXTERNAL_IMAGES_WORKER_NAME,
-	EXTERNAL_IMAGES_WORKER_SCRIPT,
-	getImagesRemoteFetcher,
-} from "../../images/fetcher";
 import { logger } from "../../logger";
 import { getSourceMappedString } from "../../sourcemap";
 import { updateCheck } from "../../update-check";
 import { warnOrError } from "../../utils/print-bindings";
-import {
-	EXTERNAL_VECTORIZE_WORKER_NAME,
-	EXTERNAL_VECTORIZE_WORKER_SCRIPT,
-	MakeVectorizeFetcher,
-} from "../../vectorize/fetcher";
 import { getClassNamesWhichUseSQLite } from "../class-names-sqlite";
 import type { ServiceFetch } from "../../api";
 import type { AssetsOptions } from "../../assets";
@@ -100,8 +85,6 @@ export interface ConfigBundle {
 	services: Config["services"] | undefined;
 	tails: Config["tail_consumers"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
-	bindVectorizeToProd: boolean;
-	imagesLocalMode: boolean;
 	testScheduled: boolean;
 	containerDOClassNames: Set<string> | undefined;
 	containerBuildId: string | undefined;
@@ -351,7 +334,7 @@ function dispatchNamespaceEntry({
 }: CfDispatchNamespace): [string, { namespace: string }];
 function dispatchNamespaceEntry(
 	{ binding, namespace, remote }: CfDispatchNamespace,
-	remoteProxyConnectionString: RemoteProxyConnectionString
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
 ): [
 	string,
 	{
@@ -434,7 +417,6 @@ type MiniflareBindingsConfig = Pick<
 	| "name"
 	| "services"
 	| "serviceBindings"
-	| "imagesLocalMode"
 	| "tails"
 	| "complianceRegion"
 	| "containerDOClassNames"
@@ -447,8 +429,7 @@ type MiniflareBindingsConfig = Pick<
 //  each plugin options schema and use those
 export function buildMiniflareBindingOptions(
 	config: MiniflareBindingsConfig,
-	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
-	remoteBindingsEnabled: boolean
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
 ): {
 	bindingOptions: WorkerOptionsBindings;
 	externalWorkers: WorkerOptions[];
@@ -510,67 +491,13 @@ export function buildMiniflareBindingOptions(
 	const externalWorkers: WorkerOptions[] = [];
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
-	if (bindings.ai?.binding && !remoteBindingsEnabled) {
-		externalWorkers.push({
-			name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
-			modules: [
-				{
-					type: "ESModule",
-					path: "index.mjs",
-					contents: EXTERNAL_AI_WORKER_SCRIPT,
-				},
-			],
-			serviceBindings: {
-				FETCHER: getAIFetcher({
-					compliance_region: config.complianceRegion,
-				}),
-			},
-		});
 
-		wrappedBindings[bindings.ai.binding] = {
-			scriptName: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
-		};
-	}
-
-	if (bindings.ai && remoteBindingsEnabled) {
+	if (bindings.ai) {
 		warnOrError("ai", bindings.ai.remote, "always-remote");
 	}
 
-	if (bindings.media && remoteBindingsEnabled) {
+	if (bindings.media) {
 		warnOrError("media", bindings.media.remote, "always-remote");
-	}
-
-	if (bindings.mtls_certificates && remoteBindingsEnabled) {
-		for (const mtls of bindings.mtls_certificates) {
-			warnOrError("mtls_certificates", mtls.remote, "always-remote");
-		}
-	}
-
-	// Uses the implementation in miniflare instead if the users enable local mode
-	if (
-		bindings.images?.binding &&
-		!config.imagesLocalMode &&
-		!remoteBindingsEnabled
-	) {
-		externalWorkers.push({
-			name: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
-			modules: [
-				{
-					type: "ESModule",
-					path: "index.mjs",
-					contents: EXTERNAL_IMAGES_WORKER_SCRIPT,
-				},
-			],
-			serviceBindings: {
-				FETCHER: getImagesRemoteFetcher({
-					compliance_region: config.complianceRegion,
-				}),
-			},
-		});
-
-		wrappedBindings[bindings.images?.binding] = {
-			scriptName: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
-		};
 	}
 
 	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
@@ -606,39 +533,6 @@ export function buildMiniflareBindingOptions(
 					...devOptions,
 				},
 			});
-		}
-	}
-
-	if (bindings.vectorize && !remoteBindingsEnabled) {
-		for (const vectorizeBinding of bindings.vectorize) {
-			const bindingName = vectorizeBinding.binding;
-			const indexName = vectorizeBinding.index_name;
-			const indexVersion = "v2";
-
-			externalWorkers.push({
-				name: `${EXTERNAL_VECTORIZE_WORKER_NAME}-${config.name}-${bindingName}`,
-				modules: [
-					{
-						type: "ESModule",
-						path: "index.mjs",
-						contents: EXTERNAL_VECTORIZE_WORKER_SCRIPT,
-					},
-				],
-				serviceBindings: {
-					FETCHER: MakeVectorizeFetcher(
-						{ compliance_region: config.complianceRegion },
-						indexName
-					),
-				},
-				bindings: {
-					INDEX_ID: indexName,
-					INDEX_VERSION: indexVersion,
-				},
-			});
-
-			wrappedBindings[bindingName] = {
-				scriptName: `${EXTERNAL_VECTORIZE_WORKER_NAME}-${config.name}-${bindingName}`,
-			};
 		}
 	}
 
@@ -686,13 +580,12 @@ export function buildMiniflareBindingOptions(
 		wasmBindings,
 		unsafeBindings,
 
-		ai:
-			bindings.ai && remoteProxyConnectionString
-				? {
-						binding: bindings.ai.binding,
-						remoteProxyConnectionString,
-					}
-				: undefined,
+		ai: bindings.ai
+			? {
+					binding: bindings.ai.binding,
+					remoteProxyConnectionString,
+				}
+			: undefined,
 
 		kvNamespaces: Object.fromEntries(
 			bindings.kv_namespaces?.map((kv) =>
@@ -761,90 +654,73 @@ export function buildMiniflareBindingOptions(
 						: undefined,
 			})),
 		},
-		images:
-			bindings.images && (config.imagesLocalMode || remoteBindingsEnabled)
-				? {
-						binding: bindings.images.binding,
-						remoteProxyConnectionString:
-							bindings.images.remote && remoteProxyConnectionString
-								? remoteProxyConnectionString
-								: undefined,
-					}
-				: undefined,
-		media:
-			bindings.media && remoteBindingsEnabled && remoteProxyConnectionString
-				? {
-						binding: bindings.media.binding,
-						remoteProxyConnectionString,
-					}
-				: undefined,
+		images: bindings.images
+			? {
+					binding: bindings.images.binding,
+					remoteProxyConnectionString:
+						bindings.images.remote && remoteProxyConnectionString
+							? remoteProxyConnectionString
+							: undefined,
+				}
+			: undefined,
+		media: bindings.media
+			? {
+					binding: bindings.media.binding,
+					remoteProxyConnectionString,
+				}
+			: undefined,
 		browserRendering: bindings.browser?.binding
 			? {
 					binding: bindings.browser.binding,
 					remoteProxyConnectionString:
-						remoteBindingsEnabled &&
-						remoteProxyConnectionString &&
-						bindings.browser?.remote
+						remoteProxyConnectionString && bindings.browser?.remote
 							? remoteProxyConnectionString
 							: undefined,
 				}
 			: undefined,
 
-		vectorize:
-			remoteBindingsEnabled && remoteProxyConnectionString
-				? Object.fromEntries(
-						bindings.vectorize
-							?.filter((v) => {
-								warnOrError("vectorize", v.remote, "remote");
-								return v.remote;
-							})
-							.map((vectorize) => {
-								return [
-									vectorize.binding,
-									{
-										index_name: vectorize.index_name,
-										remoteProxyConnectionString,
-									},
-								];
-							}) ?? []
-					)
-				: undefined,
+		vectorize: Object.fromEntries(
+			bindings.vectorize?.map((vectorize) => {
+				warnOrError("vectorize", vectorize.remote, "remote");
+				return [
+					vectorize.binding,
+					{
+						index_name: vectorize.index_name,
+						remoteProxyConnectionString:
+							vectorize.remote && remoteProxyConnectionString
+								? remoteProxyConnectionString
+								: undefined,
+					},
+				];
+			}) ?? []
+		),
+		vpcServices: Object.fromEntries(
+			bindings.vpc_services?.map((vpc) => {
+				warnOrError("vpc_services", vpc.remote, "always-remote");
+				return [
+					vpc.binding,
+					{
+						service_id: vpc.service_id,
+						remoteProxyConnectionString:
+							vpc.remote && remoteProxyConnectionString
+								? remoteProxyConnectionString
+								: undefined,
+					},
+				];
+			}) ?? []
+		),
 
-		vpcServices:
-			remoteBindingsEnabled && remoteProxyConnectionString
-				? Object.fromEntries(
-						bindings.vpc_services
-							?.filter((vpc) => {
-								warnOrError("vpc_services", vpc.remote, "remote");
-								return vpc.remote;
-							})
-							.map((vpc) => [
-								vpc.binding,
-								{
-									service_id: vpc.service_id,
-									remoteProxyConnectionString,
-								},
-							]) ?? []
-					)
-				: undefined,
-
-		dispatchNamespaces:
-			remoteBindingsEnabled && remoteProxyConnectionString
-				? Object.fromEntries(
-						bindings.dispatch_namespaces
-							?.filter((d) => {
-								warnOrError("dispatch_namespaces", d.remote, "remote");
-								return d.remote;
-							})
-							.map((dispatchNamespace) =>
-								dispatchNamespaceEntry(
-									dispatchNamespace,
-									remoteProxyConnectionString
-								)
-							) ?? []
-					)
-				: undefined,
-
+		dispatchNamespaces: Object.fromEntries(
+			bindings.dispatch_namespaces?.map((dispatchNamespace) => {
+				warnOrError("dispatch_namespaces", dispatchNamespace.remote, "remote");
+				return dispatchNamespaceEntry(
+					dispatchNamespace,
+					dispatchNamespace.remote && remoteProxyConnectionString
+						? remoteProxyConnectionString
+						: undefined
+				);
+			}) ?? []
+		),
 		durableObjects: Object.fromEntries(
 			durableObjects.map(
 				({ name, class_name: className, script_name: scriptName }) => {
@@ -879,24 +755,21 @@ export function buildMiniflareBindingOptions(
 			]) ?? []),
 		]),
 
-		mtlsCertificates:
-			remoteBindingsEnabled && remoteProxyConnectionString
-				? Object.fromEntries(
-						bindings.mtls_certificates
-							?.filter((d) => {
-								warnOrError("mtls_certificates", d.remote, "remote");
-								return d.remote;
-							})
-							.map((mtlsCertificate) => [
-								mtlsCertificate.binding,
-								{
-									remoteProxyConnectionString,
-									certificate_id: mtlsCertificate.certificate_id,
-								},
-							]) ?? []
-					)
-				: undefined,
-
+		mtlsCertificates: Object.fromEntries(
+			bindings.mtls_certificates?.map((mtlsCertificate) => {
+				warnOrError("mtls_certificates", mtlsCertificate.remote, "remote");
+				return [
+					mtlsCertificate.binding,
+					{
+						remoteProxyConnectionString:
+							mtlsCertificate.remote && remoteProxyConnectionString
+								? remoteProxyConnectionString
+								: undefined,
+						certificate_id: mtlsCertificate.certificate_id,
+					},
+				];
+			}) ?? []
+		),
 		serviceBindings,
 		wrappedBindings: wrappedBindings,
 		tails,
@@ -945,8 +818,6 @@ export function buildSitesOptions({
 }
 
 let didWarnMiniflareCronSupport = false;
-let didWarnMiniflareVectorizeSupport = false;
-let didWarnAiAccountUsage = false;
 
 export type Options = Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
 
@@ -955,7 +826,6 @@ export async function buildMiniflareOptions(
 	config: Omit<ConfigBundle, "rules">,
 	proxyToUserWorkerAuthenticationSecret: UUID,
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
-	remoteBindingsEnabled: boolean,
 	onDevRegistryUpdate?: (registry: WorkerRegistry) => void
 ): Promise<Options> {
 	if (config.crons?.length && !config.testScheduled) {
@@ -967,33 +837,6 @@ export async function buildMiniflareOptions(
 		}
 	}
 
-	if (!remoteBindingsEnabled) {
-		if (config.bindings.ai) {
-			if (!didWarnAiAccountUsage) {
-				didWarnAiAccountUsage = true;
-				logger.warn(
-					"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
-				);
-			}
-		}
-
-		if (!config.bindVectorizeToProd && config.bindings.vectorize?.length) {
-			logger.warn(
-				"Vectorize local bindings are not supported yet. You may use the `--experimental-vectorize-bind-to-prod` flag to bind to your production index in local dev mode."
-			);
-			config.bindings.vectorize = [];
-		}
-
-		if (config.bindings.vectorize?.length) {
-			if (!didWarnMiniflareVectorizeSupport) {
-				didWarnMiniflareVectorizeSupport = true;
-				logger.warn(
-					"You are using Vectorize as a remote binding (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
-				);
-			}
-		}
-	}
-
 	const upstream =
 		typeof config.localUpstream === "string"
 			? `${config.upstreamProtocol}://${config.localUpstream}`
@@ -1002,8 +845,7 @@ export async function buildMiniflareOptions(
 	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		config,
-		remoteProxyConnectionString,
-		remoteBindingsEnabled
+		remoteProxyConnectionString
 	);
 	const sitesOptions = buildSitesOptions(config);
 	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);

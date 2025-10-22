@@ -1,9 +1,12 @@
 export function makeFetch(
-	remoteProxyConnectionString: string,
+	remoteProxyConnectionString: string | undefined,
 	bindingName: string,
 	extraHeaders?: Headers
 ) {
 	return (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+		if (!remoteProxyConnectionString) {
+			throw new Error(`Binding ${bindingName} needs to be run remotely`);
+		}
 		const request = new Request(input, init);
 
 		const proxiedHeaders = new Headers(extraHeaders);
