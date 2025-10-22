@@ -3,10 +3,6 @@ import { unstable_printBindings } from "wrangler";
 import type { PluginContext } from "./plugins/utils";
 import type * as vite from "vite";
 
-/**
- * Modifies both the shortcut bindings and the URL printing logic
- * to include the new bindings shortcut
- */
 export function addBindingsShortcut(
 	server: vite.ViteDevServer | vite.PreviewServer,
 	ctx: PluginContext
@@ -17,55 +13,66 @@ export function addBindingsShortcut(
 		return;
 	}
 
-	const printUrls = server.printUrls.bind(server);
-	server.printUrls = () => {
-		printUrls();
-
-		server.config.logger.info(
-			`  ${colors.green("➜")}  ${colors.gray("press")} ${colors.bold("b + enter")} ${colors.gray("to list worker bindings")}`
-		);
-	};
-
 	const bindCLIShortcuts = server.bindCLIShortcuts.bind(server);
 	server.bindCLIShortcuts = (
 		options: vite.BindCLIShortcutsOptions<
-			vite.PreviewServer | vite.ViteDevServer
+			vite.ViteDevServer | vite.PreviewServer
 		>
 	) => {
-		const customShortcuts = [
-			...(options?.customShortcuts ?? []),
-			{
-				key: "b",
-				description: "list worker bindings",
-				action: async () => {
-					server.config.logger.info("");
+		const printBindingShortcut = {
+			key: "b",
+			description: "list worker bindings",
+			action: (server) => {
+				server.config.logger.info("");
 
-					for (const workerConfig of workerConfigs) {
-						const message = unstable_printBindings(
-							{
-								...workerConfig,
-								assets: undefined,
-								unsafe: undefined,
-								queues: undefined,
+				for (const workerConfig of workerConfigs) {
+					const message = unstable_printBindings(
+						{
+							...workerConfig,
+							assets: workerConfig.assets?.binding
+								? {
+										...workerConfig.assets,
+										binding: workerConfig.assets.binding,
+									}
+								: undefined,
+							unsafe: {
+								bindings: workerConfig.unsafe.bindings,
+								metadata: workerConfig.unsafe.metadata,
+								capnp: workerConfig.unsafe.capnp,
 							},
-							workerConfig.tail_consumers,
-							{
-								name:
-									workerConfigs.length > 1
-										? workerConfig.name ?? "worker"
-										: undefined,
-							}
-						);
+							queues: workerConfig.queues.producers?.map((queue) => ({
+								...queue,
+								queue_name: queue.queue,
+							})),
+						},
+						workerConfig.tail_consumers,
+						{
+							multiWorkers: workerConfigs.length > 1,
+							name: workerConfig.name ?? "Your Worker",
+						}
+					);
 
-						server.config.logger.info(message);
-					}
-				},
+					server.config.logger.info(message);
+				}
 			},
-		];
+		} satisfies vite.CLIShortcut<vite.ViteDevServer | vite.PreviewServer>;
+
+		// Print a binding shortcut hint before the help shortcut hint from bindCLIShortcuts
+		if (options.print) {
+			server.config.logger.info(
+				colors.dim(colors.green("  ➜")) +
+					colors.dim("  press ") +
+					colors.bold(`${printBindingShortcut.key} + enter`) +
+					colors.dim(` to ${printBindingShortcut.description}`)
+			);
+		}
 
 		bindCLIShortcuts({
 			...options,
-			customShortcuts,
+			customShortcuts: [
+				...(options?.customShortcuts ?? []),
+				printBindingShortcut,
+			],
 		});
 	};
 }

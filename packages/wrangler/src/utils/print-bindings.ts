@@ -55,11 +55,14 @@ export function printBindings(
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
+		multiWorkers?: boolean;
+		imagesLocalMode?: boolean;
 		name?: string;
 		provisioning?: boolean;
 		warnIfNoBindings?: boolean;
 	} = {}
 ): string {
+	const multiWorkers = context.multiWorkers ?? getFlag("MULTIWORKER");
 	const messages: string[] = [];
 	let hasConnectionStatus = false;
 	const getMode = createGetMode({
@@ -629,7 +632,7 @@ export function printBindings(
 
 	if (output.length === 0) {
 		if (context.warnIfNoBindings) {
-			if (context.name && getFlag("MULTIWORKER")) {
+			if (context.name && multiWorkers) {
 				messages.push(`No bindings found for ${chalk.blue(context.name)}`);
 			} else {
 				messages.push("No bindings found.");
@@ -639,7 +642,7 @@ export function printBindings(
 		let title: string;
 		if (context.provisioning) {
 			title = `${chalk.red("Experimental:")} The following bindings need to be provisioned:`;
-		} else if (context.name && getFlag("MULTIWORKER")) {
+		} else if (context.name && multiWorkers) {
 			title = `${chalk.blue(context.name)} has access to the following bindings:`;
 		} else {
 			title = "Your Worker has access to the following bindings:";
@@ -720,7 +723,7 @@ export function printBindings(
 		messages.push("");
 	}
 	let title: string;
-	if (context.name && getFlag("MULTIWORKER")) {
+	if (context.name && multiWorkers) {
 		title = `${chalk.blue(context.name)} is sending Tail events to the following Workers:`;
 	} else {
 		title = "Your Worker is sending Tail events to the following Workers:";
