@@ -46,7 +46,7 @@ interface WorkflowEntrypointConstructor<T = Cloudflare.Env> {
 }
 
 /** Keys that should be ignored during RPC property access */
-const IGNORED_KEYS = ["self", "tailStream"] as const;
+const IGNORED_KEYS = ["self"] as const;
 
 /** Available methods for `WorkerEntrypoint` class */
 const WORKER_ENTRYPOINT_KEYS = [
@@ -56,6 +56,7 @@ const WORKER_ENTRYPOINT_KEYS = [
 	"test",
 	"trace",
 	"scheduled",
+	"tailStream",
 ] as const;
 
 /** Available methods for `DurableObject` class */
@@ -220,6 +221,7 @@ export function createWorkerEntrypointWrapper(
 	}
 
 	for (const key of WORKER_ENTRYPOINT_KEYS) {
+		// @ts-expect-error tailStream is not in the Worker Entrypoint types yet
 		Wrapper.prototype[key] = async function (arg) {
 			return maybeCaptureError({ isEntryWorker, exportName, key }, async () => {
 				if (key === "fetch") {
@@ -285,7 +287,7 @@ export function createWorkerEntrypointWrapper(
 							`Expected "${exportName}" export of "${workerEntryPath}" to be a subclass of \`WorkerEntrypoint\`.`
 						);
 					}
-
+					// @ts-expect-error tailStream is not in the Worker Entrypoint types yet
 					const maybeFn = instance[key];
 
 					if (typeof maybeFn !== "function") {

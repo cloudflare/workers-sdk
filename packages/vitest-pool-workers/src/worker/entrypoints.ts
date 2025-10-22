@@ -33,7 +33,7 @@ function importModule(
 	});
 }
 
-const IGNORED_KEYS = ["self", "tailStream"];
+const IGNORED_KEYS = ["self"];
 
 /**
  * Create a class extending `superClass` with a `Proxy` as a `prototype`.
@@ -183,6 +183,7 @@ const WORKER_ENTRYPOINT_KEYS = [
 	"scheduled",
 	"queue",
 	"test",
+	"tailStream",
 ] as const;
 const DURABLE_OBJECT_KEYS = [
 	"fetch",
@@ -300,6 +301,7 @@ export function createWorkerEntrypointWrapper(
 	// Add prototype methods for all default handlers
 	// const prototype = Entrypoint.prototype as unknown as Record<string, unknown>;
 	for (const key of WORKER_ENTRYPOINT_KEYS) {
+		// @ts-expect-error tailStream is not in the WorkerEntrypoint types yet
 		Wrapper.prototype[key] = async function (
 			this: WorkerEntrypoint<InternalUserEnv>,
 			thing: unknown
@@ -328,6 +330,7 @@ export function createWorkerEntrypointWrapper(
 						const message = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkerEntrypoint\``;
 						throw new TypeError(message);
 					}
+					// @ts-expect-error tailStream is not in the WorkerEntrypoint types yet
 					const maybeFn = instance[key];
 					if (typeof maybeFn === "function") {
 						return (maybeFn as (arg: unknown) => unknown).call(instance, thing);
