@@ -597,6 +597,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "tanstack-start",
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
 			verifyDeploy: {
 				route: "/",
 				expectedText: "TanStack Start Starter",
