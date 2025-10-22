@@ -10,7 +10,9 @@ import {
 
 const VectorizeSchema = z.object({
 	index_name: z.string(),
-	remoteProxyConnectionString: z.custom<RemoteProxyConnectionString>(),
+	remoteProxyConnectionString: z
+		.custom<RemoteProxyConnectionString>()
+		.optional(),
 });
 
 export const VectorizeOptionsSchema = z.object({
@@ -28,11 +30,6 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 
 		return Object.entries(options.vectorize).map(
 			([name, { index_name, remoteProxyConnectionString }]) => {
-				assert(
-					remoteProxyConnectionString,
-					"Vectorize only supports running remotely"
-				);
-
 				return {
 					name,
 					wrapped: {
@@ -84,11 +81,6 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 
 		return Object.entries(options.vectorize).map(
 			([name, { remoteProxyConnectionString }]) => {
-				assert(
-					remoteProxyConnectionString,
-					"Vectorize only supports running remotely"
-				);
-
 				return {
 					name: getUserBindingServiceName(
 						VECTORIZE_PLUGIN_NAME,

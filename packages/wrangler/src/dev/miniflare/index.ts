@@ -334,7 +334,7 @@ function dispatchNamespaceEntry({
 }: CfDispatchNamespace): [string, { namespace: string }];
 function dispatchNamespaceEntry(
 	{ binding, namespace, remote }: CfDispatchNamespace,
-	remoteProxyConnectionString: RemoteProxyConnectionString
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
 ): [
 	string,
 	{
@@ -580,13 +580,12 @@ export function buildMiniflareBindingOptions(
 		wasmBindings,
 		unsafeBindings,
 
-		ai:
-			bindings.ai && remoteProxyConnectionString
-				? {
-						binding: bindings.ai.binding,
-						remoteProxyConnectionString,
-					}
-				: undefined,
+		ai: bindings.ai
+			? {
+					binding: bindings.ai.binding,
+					remoteProxyConnectionString,
+				}
+			: undefined,
 
 		kvNamespaces: Object.fromEntries(
 			bindings.kv_namespaces?.map((kv) =>
@@ -664,13 +663,12 @@ export function buildMiniflareBindingOptions(
 							: undefined,
 				}
 			: undefined,
-		media:
-			bindings.media && remoteProxyConnectionString
-				? {
-						binding: bindings.media.binding,
-						remoteProxyConnectionString,
-					}
-				: undefined,
+		media: bindings.media
+			? {
+					binding: bindings.media.binding,
+					remoteProxyConnectionString,
+				}
+			: undefined,
 		browserRendering: bindings.browser?.binding
 			? {
 					binding: bindings.browser.binding,
@@ -681,58 +679,48 @@ export function buildMiniflareBindingOptions(
 				}
 			: undefined,
 
-		vectorize: remoteProxyConnectionString
-			? Object.fromEntries(
-					bindings.vectorize
-						?.filter((v) => {
-							warnOrError("vectorize", v.remote, "remote");
-							return v.remote;
-						})
-						.map((vectorize) => {
-							return [
-								vectorize.binding,
-								{
-									index_name: vectorize.index_name,
-									remoteProxyConnectionString,
-								},
-							];
-						}) ?? []
-				)
-			: undefined,
+		vectorize: Object.fromEntries(
+			bindings.vectorize?.map((vectorize) => {
+				warnOrError("vectorize", vectorize.remote, "remote");
+				return [
+					vectorize.binding,
+					{
+						index_name: vectorize.index_name,
+						remoteProxyConnectionString:
+							vectorize.remote && remoteProxyConnectionString
+								? remoteProxyConnectionString
+								: undefined,
+					},
+				];
+			}) ?? []
+		),
+		vpcServices: Object.fromEntries(
+			bindings.vpc_services?.map((vpc) => {
+				warnOrError("vpc_services", vpc.remote, "always-remote");
+				return [
+					vpc.binding,
+					{
+						service_id: vpc.service_id,
+						remoteProxyConnectionString:
+							vpc.remote && remoteProxyConnectionString
+								? remoteProxyConnectionString
+								: undefined,
+					},
+				];
+			}) ?? []
+		),
 
-		vpcServices: remoteProxyConnectionString
-			? Object.fromEntries(
-					bindings.vpc_services
-						?.filter((vpc) => {
-							warnOrError("vpc_services", vpc.remote, "always-remote");
-							return vpc.remote;
-						})
-						.map((vpc) => [
-							vpc.binding,
-							{
-								service_id: vpc.service_id,
-								remoteProxyConnectionString,
-							},
-						]) ?? []
-				)
-			: undefined,
-
-		dispatchNamespaces: remoteProxyConnectionString
-			? Object.fromEntries(
-					bindings.dispatch_namespaces
-						?.filter((d) => {
-							warnOrError("dispatch_namespaces", d.remote, "remote");
-							return d.remote;
-						})
-						.map((dispatchNamespace) =>
-							dispatchNamespaceEntry(
-								dispatchNamespace,
-								remoteProxyConnectionString
-							)
-						) ?? []
-				)
-			: undefined,
-
+		dispatchNamespaces: Object.fromEntries(
+			bindings.dispatch_namespaces?.map((dispatchNamespace) => {
+				warnOrError("dispatch_namespaces", dispatchNamespace.remote, "remote");
+				return dispatchNamespaceEntry(
+					dispatchNamespace,
+					dispatchNamespace.remote && remoteProxyConnectionString
+						? remoteProxyConnectionString
+						: undefined
+				);
+			}) ?? []
+		),
 		durableObjects: Object.fromEntries(
 			durableObjects.map(
 				({ name, class_name: className, script_name: scriptName }) => {
@@ -767,23 +755,21 @@ export function buildMiniflareBindingOptions(
 			]) ?? []),
 		]),
 
-		mtlsCertificates: remoteProxyConnectionString
-			? Object.fromEntries(
-					bindings.mtls_certificates
-						?.filter((d) => {
-							warnOrError("mtls_certificates", d.remote, "remote");
-							return d.remote;
-						})
-						.map((mtlsCertificate) => [
-							mtlsCertificate.binding,
-							{
-								remoteProxyConnectionString,
-								certificate_id: mtlsCertificate.certificate_id,
-							},
-						]) ?? []
-				)
-			: undefined,
-
+		mtlsCertificates: Object.fromEntries(
+			bindings.mtls_certificates?.map((mtlsCertificate) => {
+				warnOrError("mtls_certificates", mtlsCertificate.remote, "remote");
+				return [
+					mtlsCertificate.binding,
+					{
+						remoteProxyConnectionString:
+							mtlsCertificate.remote && remoteProxyConnectionString
+								? remoteProxyConnectionString
+								: undefined,
+						certificate_id: mtlsCertificate.certificate_id,
+					},
+				];
+			}) ?? []
+		),
 		serviceBindings,
 		wrappedBindings: wrappedBindings,
 		tails,

@@ -2,7 +2,7 @@ import { newWebSocketRpcSession } from "capnweb";
 import { makeFetch } from "../shared/remote-bindings-utils";
 
 interface Env {
-	remoteProxyConnectionString: string;
+	remoteProxyConnectionString: string | undefined;
 	binding: string;
 }
 
@@ -13,6 +13,9 @@ export default function (env: Env) {
 			args?: { [key: string]: any },
 			options?: DynamicDispatchOptions
 		): Fetcher {
+			if (!env.remoteProxyConnectionString) {
+				throw new Error(`Binding ${env.binding} needs to be run remotely`);
+			}
 			const url = new URL(env.remoteProxyConnectionString);
 			url.protocol = "ws:";
 			url.searchParams.set("MF-Binding", env.binding);
