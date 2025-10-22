@@ -581,13 +581,6 @@ function buildProjectWorkerOptions(
 		// As a short-term fix, inject polyfills into the worker bundle that override the native modules.
 		{
 			type: "ESModule",
-			path: path.join(modulesRoot, "node:url"),
-			contents: fs.readFileSync(
-				path.join(DIST_PATH, "worker/lib/node/url.mjs")
-			),
-		},
-		{
-			type: "ESModule",
 			path: path.join(modulesRoot, "node:vm"),
 			contents: fs.readFileSync(path.join(DIST_PATH, "worker/lib/node/vm.mjs")),
 		},
