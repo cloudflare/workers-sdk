@@ -875,7 +875,7 @@ export const CORE_PLUGIN: Plugin<
 									);
 								}),
 					containerEngine: getContainerEngine(options.containerEngine),
-				} as any,
+				},
 			});
 		}
 

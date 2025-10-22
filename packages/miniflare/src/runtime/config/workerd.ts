@@ -73,6 +73,7 @@ export type Worker = (
 	durableObjectStorage?: Worker_DurableObjectStorage;
 	moduleFallback?: string;
 	tails?: ServiceDesignator[];
+	streamingTails?: ServiceDesignator[];
 	containerEngine?: Worker_ContainerEngine;
 };
 
