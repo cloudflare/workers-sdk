@@ -479,26 +479,10 @@ function buildProjectWorkerOptions(
 	}
 
 	// The following nodejs compat flags enable features required for Vitest to work properly
-	ensureFlag(
-		runnerWorker.compatibilityFlags,
-		"enable_nodejs_tty_module",
-		"disable_nodejs_tty_module"
-	);
-	ensureFlag(
-		runnerWorker.compatibilityFlags,
-		"enable_nodejs_fs_module",
-		"disable_nodejs_fs_module"
-	);
-	ensureFlag(
-		runnerWorker.compatibilityFlags,
-		"enable_nodejs_http_modules",
-		"disable_nodejs_http_modules"
-	);
-	ensureFlag(
-		runnerWorker.compatibilityFlags,
-		"enable_nodejs_perf_hooks_module",
-		"disable_nodejs_perf_hooks_module"
-	);
+	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_tty_module");
+	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_fs_module");
+	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_http_modules");
+	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_perf_hooks_module");
 
 	// Make sure we define an unsafe eval binding and enable the fallback service
 	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
@@ -1265,22 +1249,23 @@ export default function (ctx: Vitest): ProcessPool {
 }
 
 /**
- * Ensures that the specified compatibility feature is set correctly.
- * @param flags The list of current flags.
- * @param enableFlag The flag that enables the feature.
- * @param disableFlag The flag that disables the feature.
+ * Ensures that the specified compatibility feature is enabled for Vitest to work.
+ * @param compatibilityFlags The list of current compatibility flags.
+ * @param feature The name of the feature to enable.
  */
-function ensureFlag(flags: string[], enableFlag: string, disableFlag: string) {
-	if (!flags.includes(enableFlag)) {
+function ensureFeature(compatibilityFlags: string[], feature: string) {
+	const flagToEnable = `enable_${feature}`;
+	const flagToDisable = `disable_${feature}`;
+	if (!compatibilityFlags.includes(flagToEnable)) {
 		log.debug(
-			`Adding \`${enableFlag}\` compatibility flag during tests as this feature is needed to support the Vitest runner.`
+			`Adding \`${flagToEnable}\` compatibility flag during tests as this feature is needed to support the Vitest runner.`
 		);
-		flags.push(enableFlag);
+		compatibilityFlags.push(flagToEnable);
 	}
-	if (flags.includes(disableFlag)) {
+	if (compatibilityFlags.includes(flagToDisable)) {
 		log.info(
-			`Removing \`${disableFlag}\` compatibility flag during tests as that feature is needed to support the Vitest runner.`
+			`Removing \`${flagToDisable}\` compatibility flag during tests as that feature is needed to support the Vitest runner.`
 		);
-		flags.splice(flags.indexOf(disableFlag), 1);
+		compatibilityFlags.splice(compatibilityFlags.indexOf(flagToDisable), 1);
 	}
 }
