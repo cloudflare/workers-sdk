@@ -729,10 +729,13 @@ describe("dev with remote bindings", { sequential: true }, () => {
 			),
 			"index.js": `export default { fetch() { return new Response("hello") } }`,
 		});
-		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+		const wranglerStopped = runWrangler(
+			"dev --x-provision=false --port=0 --inspector-port=0"
+		);
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 			timeout: 2_000,
 		});
+
 		expect(sessionOptions).toEqual({
 			auth: {
 				accountId: "mock-account-id",
@@ -743,7 +746,9 @@ describe("dev with remote bindings", { sequential: true }, () => {
 			complianceRegion: undefined,
 			workerName: "worker",
 		});
+
 		await stopWrangler();
+
 		await wranglerStopped;
 	});
 });

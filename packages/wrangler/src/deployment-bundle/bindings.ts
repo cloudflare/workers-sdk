@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { fetchResult } from "../cfetch";
+import { experimental_readRawConfig } from "../config";
 import {
 	experimental_patchConfig,
 	PatchConfigError,
@@ -423,11 +424,6 @@ async function collectPendingResources(
 
 	const pendingResources: PendingResource[] = [];
 
-	try {
-		settings = await getSettings(complianceConfig, accountId, scriptName);
-	} catch {
-		logger.debug("No settings found");
-	}
 	for (const resourceType of Object.keys(
 		HANDLERS
 	) as (keyof typeof HANDLERS)[]) {
@@ -519,10 +515,39 @@ export async function provisionBindings(
 			allChanges.set(resource.binding, resource.handler.binding);
 		}
 
+		const existingBindingNames = new Set<string>();
+
+		const isUsingRedirectedConfig =
+			config.userConfigPath && config.userConfigPath !== config.configPath;
+
+		// If we're using a redirected config, then the redirected config potentially has injected
+		// bindings that weren't originally in the user config. These can be provisioned, but we
+		// should not write the IDs back to the user config file (because the bindings weren't there in the first place)
+		if (isUsingRedirectedConfig) {
+			const { rawConfig: unredirectedConfig } =
+				await experimental_readRawConfig(
+					{ config: config.userConfigPath },
+					{ useRedirectIfAvailable: false }
+				);
+			for (const resourceType of Object.keys(
+				HANDLERS
+			) as (keyof typeof HANDLERS)[]) {
+				for (const binding of unredirectedConfig[resourceType] ?? []) {
+					existingBindingNames.add(binding.binding);
+				}
+			}
+		}
 		for (const resourceType of Object.keys(
 			HANDLERS
 		) as (keyof typeof HANDLERS)[]) {
 			for (const binding of bindings[resourceType] ?? []) {
+				// See above for why we skip writing back some bindings to the config file
+				if (
+					isUsingRedirectedConfig &&
+					!existingBindingNames.has(binding.binding)
+				) {
+					continue;
+				}
 				patch[resourceType] ??= [];
 
 				const bindingToWrite = allChanges.has(binding.binding)

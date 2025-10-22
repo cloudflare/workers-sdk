@@ -39,6 +39,7 @@ import {
 	mockOAuthFlow,
 } from "./helpers/mock-oauth-flow";
 import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
+import { mockGetSettings } from "./helpers/mock-worker-settings";
 import {
 	mockGetWorkerSubdomain,
 	mockSubDomainRequest,
@@ -105,7 +106,16 @@ describe("deploy", () => {
 		mockLastDeploymentRequest();
 		mockDeploymentsListRequest();
 		mockPatchScriptSettings();
+		mockGetSettings();
 		msw.use(...mswListNewDeploymentsLatestFull);
+		// Pretend all R2 buckets exist for the purposes of deployment testing.
+		// Otherwise, wrangler deploy would try to provision them. The provisioning
+		// behaviour is tested in provision.test.ts
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
+				return HttpResponse.json(createFetchResult({}));
+			})
+		);
 	});
 
 	afterEach(() => {
@@ -1104,6 +1114,7 @@ describe("deploy", () => {
 				});
 
 				await runWrangler("deploy index.js --env some-env --legacy-env false");
+
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -14364,6 +14375,7 @@ export default{
 			msw.use(...mswListNewDeploymentsLatestFull);
 
 			mockSubDomainRequest();
+			mockGetSettings();
 			writeWorkerSource();
 			setIsTTY(false);
 		});
