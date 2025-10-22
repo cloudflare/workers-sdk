@@ -5,7 +5,7 @@
 		"so that we can use dependabot to update these dependencies automatically."
 	],
 	"dependencies": {
-		"create-astro": "4.13.1",
+		"create-astro": "4.13.2",
 		"create-analog": "1.8.1",
 		"@angular/create": "20.3.6",
 		"create-docusaurus": "3.9.1",
