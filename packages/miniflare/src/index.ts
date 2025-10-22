@@ -1055,7 +1055,9 @@ export class Miniflare {
 				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
 			}
 			// Unregister all workers from the dev registry
-			void this.#devRegistry.dispose();
+			this.#devRegistry.dispose()?.catch((e) => {
+				this.#log.debug(`Error disposing Dev Registry: ${getErrorMessage(e)}`);
+			});
 		});
 
 		this.#disposeController = new AbortController();
