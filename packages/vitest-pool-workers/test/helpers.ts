@@ -73,7 +73,9 @@ function wrap(proc: childProcess.ChildProcess): Process {
 			return stripAnsi(stderr);
 		},
 		get exitCode() {
-			return closePromise.then(([exitCode]) => exitCode ?? -1);
+			return closePromise.then(
+				([exitCode, signal]) => exitCode ?? signal ?? -1
+			);
 		},
 	};
 }
