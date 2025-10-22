@@ -22,7 +22,7 @@ const generate = async (ctx: C3Context) => {
 
 const config: TemplateConfig = {
 	configVersion: 1,
-	id: "tanstack",
+	id: "tanstack-start",
 	platform: "workers",
 	frameworkCli: "@tanstack/create-start",
 	displayName: "TanStack Start",

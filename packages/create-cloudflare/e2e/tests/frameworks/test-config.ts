@@ -594,7 +594,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			nodeCompat: false,
 		},
 		{
-			name: "tanstack",
+			name: "tanstack-start",
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			verifyDeploy: {
