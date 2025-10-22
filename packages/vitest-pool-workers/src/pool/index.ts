@@ -478,6 +478,28 @@ function buildProjectWorkerOptions(
 		runnerWorker.compatibilityFlags.push("unsafe_module");
 	}
 
+	// The following nodejs compat flags enable features required for Vitest to work properly
+	ensureFlag(
+		runnerWorker.compatibilityFlags,
+		"enable_nodejs_tty_module",
+		"disable_nodejs_tty_module"
+	);
+	ensureFlag(
+		runnerWorker.compatibilityFlags,
+		"enable_nodejs_fs_module",
+		"disable_nodejs_fs_module"
+	);
+	ensureFlag(
+		runnerWorker.compatibilityFlags,
+		"enable_nodejs_http_modules",
+		"disable_nodejs_http_modules"
+	);
+	ensureFlag(
+		runnerWorker.compatibilityFlags,
+		"enable_nodejs_perf_hooks_module",
+		"disable_nodejs_perf_hooks_module"
+	);
+
 	// Make sure we define an unsafe eval binding and enable the fallback service
 	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
 	runnerWorker.unsafeUseModuleFallbackService = true;
@@ -581,15 +603,15 @@ function buildProjectWorkerOptions(
 		// As a short-term fix, inject polyfills into the worker bundle that override the native modules.
 		{
 			type: "ESModule",
-			path: path.join(modulesRoot, "node:vm"),
-			contents: fs.readFileSync(path.join(DIST_PATH, "worker/lib/node/vm.mjs")),
+			path: path.join(modulesRoot, "node:console"),
+			contents: fs.readFileSync(
+				path.join(DIST_PATH, `worker/node/console.mjs`)
+			),
 		},
 		{
 			type: "ESModule",
-			path: path.join(modulesRoot, "node:console"),
-			contents: fs.readFileSync(
-				path.join(DIST_PATH, "worker/lib/node/console.mjs")
-			),
+			path: path.join(modulesRoot, "node:vm"),
+			contents: fs.readFileSync(path.join(DIST_PATH, `worker/node/vm.mjs`)),
 		},
 	];
 
@@ -1240,4 +1262,25 @@ export default function (ctx: Vitest): ProcessPool {
 			await Promise.all(promises);
 		},
 	};
+}
+
+/**
+ * Ensures that the specified compatibility feature is set correctly.
+ * @param flags The list of current flags.
+ * @param enableFlag The flag that enables the feature.
+ * @param disableFlag The flag that disables the feature.
+ */
+function ensureFlag(flags: string[], enableFlag: string, disableFlag: string) {
+	if (!flags.includes(enableFlag)) {
+		log.debug(
+			`Adding \`${enableFlag}\` compatibility flag during tests as this feature is needed to support the Vitest runner.`
+		);
+		flags.push(enableFlag);
+	}
+	if (flags.includes(disableFlag)) {
+		log.info(
+			`Removing \`${disableFlag}\` compatibility flag during tests as that feature is needed to support the Vitest runner.`
+		);
+		flags.splice(flags.indexOf(disableFlag), 1);
+	}
 }
