@@ -16,5 +16,6 @@ export default defineConfig({
 			printBasicPrototype: true,
 		},
 		unstubEnvs: true,
+		restoreMocks: true,
 	},
 });
