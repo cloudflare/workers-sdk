@@ -1,0 +1,37 @@
+{
+	"name": "@cloudflare/workers-utils",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Contains utilities used in other packages in this repository",
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-utils#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/workers-utils"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
+	"scripts": {
+		"check:lint": "eslint . --max-warnings=0",
+		"check:type": "tsc",
+		"test:ci": "vitest run"
+	},
+	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"typescript": "catalog:default",
+		"vitest": "~2.1.0"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"dependencies": {
+		"xdg-app-paths": "^8.3.0"
+	}
+}
