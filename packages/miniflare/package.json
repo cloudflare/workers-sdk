@@ -64,6 +64,7 @@
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@microsoft/api-extractor": "^7.52.8",
 		"@puppeteer/browsers": "^2.10.6",

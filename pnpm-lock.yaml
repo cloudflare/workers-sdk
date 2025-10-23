@@ -41,7 +41,7 @@ catalogs:
       version: 1.5.2
     typescript:
       specifier: 5.8.x
-      version: 5.8.3
+      version: 5.8.2
     undici:
       specifier: 7.14.0
       version: 7.14.0
@@ -139,13 +139,13 @@ importers:
         version: 2.2.3
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:default
         version: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
 
   fixtures/additional-modules:
     devDependencies:
@@ -157,13 +157,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -184,10 +184,10 @@ importers:
         version: 20.19.9
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -205,7 +205,7 @@ importers:
         version: 2.2.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -220,13 +220,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -241,13 +241,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -265,13 +265,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -286,7 +286,7 @@ importers:
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -304,7 +304,7 @@ importers:
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -340,7 +340,7 @@ importers:
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -361,13 +361,13 @@ importers:
         version: 6.4.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -385,10 +385,10 @@ importers:
         version: link:../../packages/miniflare
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -406,13 +406,13 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -436,7 +436,7 @@ importers:
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
 
   fixtures/isomorphic-random-example: {}
 
@@ -458,10 +458,10 @@ importers:
         version: 6.0.3
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -494,7 +494,7 @@ importers:
         version: 7.0.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -513,13 +513,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -553,10 +553,10 @@ importers:
         version: link:../../packages/miniflare
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -574,7 +574,7 @@ importers:
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -607,7 +607,7 @@ importers:
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -622,13 +622,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -643,13 +643,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -671,13 +671,13 @@ importers:
         version: link:../pages-plugin-example
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -692,13 +692,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -710,13 +710,13 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -731,13 +731,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -752,13 +752,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -773,13 +773,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -813,13 +813,13 @@ importers:
         version: link:../pages-plugin-example
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -834,13 +834,13 @@ importers:
         version: link:../../packages/miniflare
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -855,7 +855,7 @@ importers:
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -870,13 +870,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -891,13 +891,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -909,13 +909,13 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -927,13 +927,13 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -945,13 +945,13 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -963,13 +963,13 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -981,13 +981,13 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1002,10 +1002,10 @@ importers:
         version: link:../../packages/miniflare
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1020,13 +1020,13 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1041,7 +1041,7 @@ importers:
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1056,7 +1056,7 @@ importers:
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1128,7 +1128,7 @@ importers:
         version: 4.20251125.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1197,13 +1197,13 @@ importers:
         version: 4.0.0(patch_hash=qxsfpdzvzbhq2ecirbu5xq4vlq)
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:default
         version: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1254,13 +1254,13 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1275,10 +1275,10 @@ importers:
         version: 7.1.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1308,7 +1308,7 @@ importers:
         version: 2.2.3
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1332,13 +1332,13 @@ importers:
         version: 1.1.6
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1353,13 +1353,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1374,13 +1374,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1395,13 +1395,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1416,13 +1416,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1449,13 +1449,13 @@ importers:
         version: 1.56.1
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1473,13 +1473,13 @@ importers:
         version: 1.56.1
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1494,13 +1494,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1512,13 +1512,13 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1581,10 +1581,10 @@ importers:
         version: 9.39.1(jiti@2.6.0)
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
 
   packages/create-cloudflare:
     devDependencies:
@@ -1647,10 +1647,10 @@ importers:
         version: 17.0.24
       '@typescript-eslint/eslint-plugin':
         specifier: catalog:default
-        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2))(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)
       '@typescript-eslint/parser':
         specifier: catalog:default
-        version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+        version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)
       chalk:
         specifier: ^5.2.0
         version: 5.3.0
@@ -1719,7 +1719,7 @@ importers:
         version: 1.5.2
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1728,10 +1728,10 @@ importers:
         version: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
       vite-tsconfig-paths:
         specifier: ^4.0.8
-        version: 4.2.0(typescript@5.8.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
+        version: 4.2.0(typescript@5.8.2)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       which-pm-runs:
         specifier: ^1.1.0
         version: 1.1.0
@@ -1959,6 +1959,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20251125.0
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
@@ -1997,16 +2000,16 @@ importers:
         version: 8.5.10
       '@typescript-eslint/eslint-plugin':
         specifier: catalog:default
-        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2))(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)
       '@typescript-eslint/parser':
         specifier: catalog:default
-        version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+        version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)
       ava:
         specifier: ^6.0.1
         version: 6.1.1(@ava/typescript@4.1.0)(encoding@0.1.13)
       capnp-es:
         specifier: ^0.0.11
-        version: 0.0.11(typescript@5.8.3)
+        version: 0.0.11(typescript@5.8.2)
       capnweb:
         specifier: ^0.1.0
         version: 0.1.0
@@ -2072,7 +2075,7 @@ importers:
         version: 2.2.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       which:
         specifier: ^2.0.2
         version: 2.0.2
@@ -2102,7 +2105,7 @@ importers:
         version: 2.2.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       verdaccio:
         specifier: ^6.0.5
         version: 6.0.5(encoding@0.1.13)(typanion@3.14.0)
@@ -2148,10 +2151,10 @@ importers:
         version: 6.0.1
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
 
   packages/playground-preview-worker:
     dependencies:
@@ -2289,10 +2292,10 @@ importers:
         version: '@types/node@22.15.17'
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       unbuild:
         specifier: ^3.2.0
-        version: 3.3.1(typescript@5.8.3)(vue-tsc@2.0.29(typescript@5.8.3))
+        version: 3.3.1(typescript@5.8.2)(vue-tsc@2.0.29(typescript@5.8.2))
 
   packages/vite-plugin-cloudflare:
     dependencies:
@@ -2356,16 +2359,16 @@ importers:
         version: 1.2.2
       tsdown:
         specifier: 0.16.3
-        version: 0.16.3(ms@2.1.3)(typescript@5.8.3)
+        version: 0.16.3(ms@2.1.3)(typescript@5.8.2)
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
 
   packages/vite-plugin-cloudflare/playground:
     devDependencies:
@@ -2383,7 +2386,7 @@ importers:
         version: 2.2.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
 
   packages/vite-plugin-cloudflare/playground/additional-modules:
     devDependencies:
@@ -2398,7 +2401,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2419,7 +2422,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2440,7 +2443,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2461,7 +2464,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2482,7 +2485,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2503,7 +2506,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2524,7 +2527,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2545,7 +2548,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2566,7 +2569,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2587,7 +2590,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2608,7 +2611,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2629,7 +2632,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2650,7 +2653,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2671,7 +2674,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2692,7 +2695,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2725,7 +2728,7 @@ importers:
         version: 2.2.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2746,7 +2749,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2767,7 +2770,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2788,7 +2791,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2809,7 +2812,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2830,7 +2833,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2851,7 +2854,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2875,7 +2878,7 @@ importers:
         version: file:packages/vite-plugin-cloudflare/playground/main-resolution/package
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2902,7 +2905,7 @@ importers:
         version: 5.1.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2932,7 +2935,7 @@ importers:
         version: file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/requires
       '@remix-run/cloudflare':
         specifier: 2.12.0
-        version: 2.12.0(@cloudflare/workers-types@4.20251125.0)(typescript@5.8.3)
+        version: 2.12.0(@cloudflare/workers-types@4.20251125.0)(typescript@5.8.2)
       '@types/react':
         specifier: ^18.3.11
         version: 18.3.18
@@ -2947,7 +2950,7 @@ importers:
         version: 6.2.1(express@4.21.2)
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2968,7 +2971,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3010,7 +3013,7 @@ importers:
         version: 1.2.7
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3044,7 +3047,7 @@ importers:
         version: 19.1.1(@types/react@19.1.0)
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3093,7 +3096,7 @@ importers:
         version: 4.0.15
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3117,13 +3120,13 @@ importers:
         version: 6.16.1
       '@prisma/client':
         specifier: ^6.16.1
-        version: 6.16.1(prisma@6.16.1(typescript@5.8.3))(typescript@5.8.3)
+        version: 6.16.1(prisma@6.16.1(typescript@5.8.2))(typescript@5.8.2)
       prisma:
         specifier: ^6.16.1
-        version: 6.16.1(typescript@5.8.3)
+        version: 6.16.1(typescript@5.8.2)
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3160,7 +3163,7 @@ importers:
         version: 4.3.4(vite@7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1))
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3181,7 +3184,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3202,7 +3205,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3242,7 +3245,7 @@ importers:
         version: 4.3.4(vite@7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1))
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3263,7 +3266,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3284,7 +3287,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3308,7 +3311,7 @@ importers:
         version: 2.0.0(vite@7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1))
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3329,7 +3332,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3350,7 +3353,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3371,7 +3374,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3392,7 +3395,7 @@ importers:
         version: 4.20251125.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:vite-plugin
         version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3453,7 +3456,7 @@ importers:
         version: 3.2.3
       capnp-es:
         specifier: ^0.0.11
-        version: 0.0.11(typescript@5.8.3)
+        version: 0.0.11(typescript@5.8.2)
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.0)
@@ -3462,13 +3465,13 @@ importers:
         version: 2.2.0
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
 
   packages/workers-editor-shared:
     dependencies:
@@ -3493,10 +3496,10 @@ importers:
         version: 18.3.3
       '@typescript-eslint/eslint-plugin':
         specifier: catalog:default
-        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2))(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)
       '@typescript-eslint/parser':
         specifier: catalog:default
-        version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+        version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)
       '@vitejs/plugin-react':
         specifier: ^4.3.3
         version: 4.3.3(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
@@ -3511,13 +3514,13 @@ importers:
         version: 18.3.1(react@18.3.1)
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vite:
         specifier: catalog:default
         version: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
       vite-plugin-dts:
         specifier: ^4.0.1
-        version: 4.0.1(@types/node@20.19.9)(rollup@4.44.1)(typescript@5.8.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
+        version: 4.0.1(@types/node@20.19.9)(rollup@4.44.1)(typescript@5.8.2)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
 
   packages/workers-playground:
     dependencies:
@@ -3683,7 +3686,7 @@ importers:
         version: 4.0.0(patch_hash=qxsfpdzvzbhq2ecirbu5xq4vlq)
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vitest:
         specifier: ~2.1.0
         version: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2)
@@ -3739,16 +3742,16 @@ importers:
         version: 2.2.0
       tsdown:
         specifier: ^0.15.9
-        version: 0.15.9(typescript@5.8.3)
+        version: 0.15.9(typescript@5.8.2)
       tsup:
         specifier: 8.3.0
-        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.8.3)(yaml@2.8.1)
+        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.8.2)(yaml@2.8.1)
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       xdg-app-paths:
         specifier: ^8.3.0
         version: 8.3.0
@@ -3794,10 +3797,10 @@ importers:
         version: 6.0.1
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
 
   packages/wrangler:
     dependencies:
@@ -4021,7 +4024,7 @@ importers:
         version: 9.3.1
       msw:
         specifier: 2.4.3
-        version: 2.4.3(typescript@5.8.3)
+        version: 2.4.3(typescript@5.8.2)
       node-forge:
         specifier: ^1.3.1
         version: 1.3.1
@@ -4081,10 +4084,10 @@ importers:
         version: 1.5.0
       tsup:
         specifier: 8.3.0
-        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.8.3)(yaml@2.8.1)
+        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.8.2)(yaml@2.8.1)
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 5.8.2
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -4093,7 +4096,7 @@ importers:
         version: 1.5.4
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       vitest-websocket-mock:
         specifier: ^0.4.0
         version: 0.4.0(vitest@3.2.3)
@@ -13746,11 +13749,6 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  typescript@5.8.3:
-    resolution: {integrity: sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==}
-    engines: {node: '>=14.17'}
-    hasBin: true
-
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
@@ -15687,7 +15685,7 @@ snapshots:
       devalue: 4.3.3
       miniflare: 4.20250417.0
       semver: 7.7.2
-      vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+      vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler: 4.12.1(@cloudflare/workers-types@4.20251125.0)
       zod: 3.22.3
     transitivePeerDependencies:
@@ -16984,10 +16982,10 @@ snapshots:
       '@prisma/driver-adapter-utils': 6.16.1
       ky: 1.7.5
 
-  '@prisma/client@6.16.1(prisma@6.16.1(typescript@5.8.3))(typescript@5.8.3)':
+  '@prisma/client@6.16.1(prisma@6.16.1(typescript@5.8.2))(typescript@5.8.2)':
     optionalDependencies:
-      prisma: 6.16.1(typescript@5.8.3)
-      typescript: 5.8.3
+      prisma: 6.16.1(typescript@5.8.2)
+      typescript: 5.8.2
 
   '@prisma/config@6.16.1':
     dependencies:
@@ -17167,19 +17165,19 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.3.3
 
-  '@remix-run/cloudflare@2.12.0(@cloudflare/workers-types@4.20251125.0)(typescript@5.8.3)':
+  '@remix-run/cloudflare@2.12.0(@cloudflare/workers-types@4.20251125.0)(typescript@5.8.2)':
     dependencies:
       '@cloudflare/kv-asset-handler': 0.1.3
       '@cloudflare/workers-types': 4.20251125.0
-      '@remix-run/server-runtime': 2.12.0(typescript@5.8.3)
+      '@remix-run/server-runtime': 2.12.0(typescript@5.8.2)
     optionalDependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
 
   '@remix-run/node-fetch-server@0.8.0': {}
 
   '@remix-run/router@1.19.2': {}
 
-  '@remix-run/server-runtime@2.12.0(typescript@5.8.3)':
+  '@remix-run/server-runtime@2.12.0(typescript@5.8.2)':
     dependencies:
       '@remix-run/router': 1.19.2
       '@types/cookie': 0.6.0
@@ -17189,7 +17187,7 @@ snapshots:
       source-map: 0.7.4
       turbo-stream: 2.4.0
     optionalDependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
 
   '@rolldown/binding-android-arm64@1.0.0-beta.44':
     optional: true
@@ -18359,20 +18357,20 @@ snapshots:
       '@types/node': 20.19.9
     optional: true
 
-  '@typescript-eslint/eslint-plugin@8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)':
+  '@typescript-eslint/eslint-plugin@8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2))(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
-      '@typescript-eslint/parser': 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+      '@typescript-eslint/parser': 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)
       '@typescript-eslint/scope-manager': 8.46.3
-      '@typescript-eslint/type-utils': 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
-      '@typescript-eslint/utils': 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+      '@typescript-eslint/type-utils': 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)
+      '@typescript-eslint/utils': 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)
       '@typescript-eslint/visitor-keys': 8.46.3
       eslint: 9.39.1(jiti@2.6.0)
       graphemer: 1.4.0
       ignore: 7.0.5
       natural-compare: 1.4.0
-      ts-api-utils: 2.1.0(typescript@5.8.3)
-      typescript: 5.8.3
+      ts-api-utils: 2.1.0(typescript@5.8.2)
+      typescript: 5.8.2
     transitivePeerDependencies:
       - supports-color
 
@@ -18393,15 +18391,15 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)':
+  '@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.46.3
       '@typescript-eslint/types': 8.46.3
-      '@typescript-eslint/typescript-estree': 8.46.3(typescript@5.8.3)
+      '@typescript-eslint/typescript-estree': 8.46.3(typescript@5.8.2)
       '@typescript-eslint/visitor-keys': 8.46.3
       debug: 4.4.1(supports-color@9.2.2)
       eslint: 9.39.1(jiti@2.6.0)
-      typescript: 5.8.3
+      typescript: 5.8.2
     transitivePeerDependencies:
       - supports-color
 
@@ -18417,12 +18415,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/project-service@8.46.3(typescript@5.8.3)':
+  '@typescript-eslint/project-service@8.46.3(typescript@5.8.2)':
     dependencies:
-      '@typescript-eslint/tsconfig-utils': 8.46.3(typescript@5.8.3)
+      '@typescript-eslint/tsconfig-utils': 8.46.3(typescript@5.8.2)
       '@typescript-eslint/types': 8.46.3
       debug: 4.4.1(supports-color@9.2.2)
-      typescript: 5.8.3
+      typescript: 5.8.2
     transitivePeerDependencies:
       - supports-color
 
@@ -18440,23 +18438,23 @@ snapshots:
       '@typescript-eslint/types': 8.46.3
       '@typescript-eslint/visitor-keys': 8.46.3
 
-  '@typescript-eslint/tsconfig-utils@8.46.3(typescript@5.8.3)':
+  '@typescript-eslint/tsconfig-utils@8.46.3(typescript@5.8.2)':
     dependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
 
   '@typescript-eslint/tsconfig-utils@8.46.3(typescript@5.9.3)':
     dependencies:
       typescript: 5.9.3
 
-  '@typescript-eslint/type-utils@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)':
+  '@typescript-eslint/type-utils@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)':
     dependencies:
       '@typescript-eslint/types': 8.46.3
-      '@typescript-eslint/typescript-estree': 8.46.3(typescript@5.8.3)
-      '@typescript-eslint/utils': 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+      '@typescript-eslint/typescript-estree': 8.46.3(typescript@5.8.2)
+      '@typescript-eslint/utils': 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)
       debug: 4.4.1(supports-color@9.2.2)
       eslint: 9.39.1(jiti@2.6.0)
-      ts-api-utils: 2.1.0(typescript@5.8.3)
-      typescript: 5.8.3
+      ts-api-utils: 2.1.0(typescript@5.8.2)
+      typescript: 5.8.2
     transitivePeerDependencies:
       - supports-color
 
@@ -18474,10 +18472,10 @@ snapshots:
 
   '@typescript-eslint/types@8.46.3': {}
 
-  '@typescript-eslint/typescript-estree@8.46.3(typescript@5.8.3)':
+  '@typescript-eslint/typescript-estree@8.46.3(typescript@5.8.2)':
     dependencies:
-      '@typescript-eslint/project-service': 8.46.3(typescript@5.8.3)
-      '@typescript-eslint/tsconfig-utils': 8.46.3(typescript@5.8.3)
+      '@typescript-eslint/project-service': 8.46.3(typescript@5.8.2)
+      '@typescript-eslint/tsconfig-utils': 8.46.3(typescript@5.8.2)
       '@typescript-eslint/types': 8.46.3
       '@typescript-eslint/visitor-keys': 8.46.3
       debug: 4.4.1(supports-color@9.2.2)
@@ -18485,8 +18483,8 @@ snapshots:
       is-glob: 4.0.3
       minimatch: 9.0.5
       semver: 7.7.3
-      ts-api-utils: 2.1.0(typescript@5.8.3)
-      typescript: 5.8.3
+      ts-api-utils: 2.1.0(typescript@5.8.2)
+      typescript: 5.8.2
     transitivePeerDependencies:
       - supports-color
 
@@ -18506,14 +18504,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/utils@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)':
+  '@typescript-eslint/utils@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.2)':
     dependencies:
       '@eslint-community/eslint-utils': 4.9.0(eslint@9.39.1(jiti@2.6.0))
       '@typescript-eslint/scope-manager': 8.46.3
       '@typescript-eslint/types': 8.46.3
-      '@typescript-eslint/typescript-estree': 8.46.3(typescript@5.8.3)
+      '@typescript-eslint/typescript-estree': 8.46.3(typescript@5.8.2)
       eslint: 9.39.1(jiti@2.6.0)
-      typescript: 5.8.3
+      typescript: 5.8.2
     transitivePeerDependencies:
       - supports-color
 
@@ -18779,13 +18777,13 @@ snapshots:
     optionalDependencies:
       vite: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
 
-  '@vitest/mocker@3.2.3(msw@2.4.3(typescript@5.8.3))(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))':
+  '@vitest/mocker@3.2.3(msw@2.4.3(typescript@5.8.2))(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))':
     dependencies:
       '@vitest/spy': 3.2.3
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      msw: 2.4.3(typescript@5.8.3)
+      msw: 2.4.3(typescript@5.8.2)
       vite: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
 
   '@vitest/pretty-format@2.1.8':
@@ -18871,7 +18869,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+      vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
 
   '@vitest/utils@2.1.8':
     dependencies:
@@ -18969,7 +18967,7 @@ snapshots:
       de-indent: 1.0.2
       he: 1.2.0
 
-  '@vue/language-core@2.0.29(typescript@5.8.3)':
+  '@vue/language-core@2.0.29(typescript@5.8.2)':
     dependencies:
       '@volar/language-core': 2.4.0-alpha.18
       '@vue/compiler-dom': 3.4.36
@@ -18980,7 +18978,7 @@ snapshots:
       muggle-string: 0.4.1
       path-browserify: 1.0.1
     optionalDependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
 
   '@vue/reactivity-transform@3.3.4':
     dependencies:
@@ -19582,9 +19580,9 @@ snapshots:
 
   caniuse-lite@1.0.30001669: {}
 
-  capnp-es@0.0.11(typescript@5.8.3):
+  capnp-es@0.0.11(typescript@5.8.2):
     optionalDependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
 
   capnweb@0.1.0: {}
 
@@ -22664,7 +22662,7 @@ snapshots:
 
   mkdirp@1.0.4: {}
 
-  mkdist@2.2.0(typescript@5.8.3)(vue-tsc@2.0.29(typescript@5.8.3)):
+  mkdist@2.2.0(typescript@5.8.2)(vue-tsc@2.0.29(typescript@5.8.2)):
     dependencies:
       autoprefixer: 10.4.20(postcss@8.5.6)
       citty: 0.1.6
@@ -22680,8 +22678,8 @@ snapshots:
       semver: 7.7.2
       tinyglobby: 0.2.15
     optionalDependencies:
-      typescript: 5.8.3
-      vue-tsc: 2.0.29(typescript@5.8.3)
+      typescript: 5.8.2
+      vue-tsc: 2.0.29(typescript@5.8.2)
 
   mlly@1.7.4:
     dependencies:
@@ -22702,7 +22700,7 @@ snapshots:
 
   ms@2.1.3: {}
 
-  msw@2.4.3(typescript@5.8.3):
+  msw@2.4.3(typescript@5.8.2):
     dependencies:
       '@bundled-es-modules/cookie': 2.0.0
       '@bundled-es-modules/statuses': 1.0.1
@@ -22722,7 +22720,7 @@ snapshots:
       type-fest: 4.26.1
       yargs: 17.7.2
     optionalDependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
 
   muggle-string@0.4.1: {}
 
@@ -23538,12 +23536,12 @@ snapshots:
     dependencies:
       react: 18.3.1
 
-  prisma@6.16.1(typescript@5.8.3):
+  prisma@6.16.1(typescript@5.8.2):
     dependencies:
       '@prisma/config': 6.16.1
       '@prisma/engines': 6.16.1
     optionalDependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
     transitivePeerDependencies:
       - magicast
 
@@ -23964,7 +23962,7 @@ snapshots:
       glob: 11.0.3
       package-json-from-dist: 1.0.0
 
-  rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44)(typescript@5.8.3):
+  rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44)(typescript@5.8.2):
     dependencies:
       '@babel/generator': 7.28.3
       '@babel/parser': 7.28.4
@@ -23977,12 +23975,12 @@ snapshots:
       magic-string: 0.30.21
       rolldown: 1.0.0-beta.44
     optionalDependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
     transitivePeerDependencies:
       - oxc-resolver
       - supports-color
 
-  rolldown-plugin-dts@0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49)(typescript@5.8.3):
+  rolldown-plugin-dts@0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49)(typescript@5.8.2):
     dependencies:
       '@babel/generator': 7.28.5
       '@babel/parser': 7.28.5
@@ -23995,7 +23993,7 @@ snapshots:
       obug: 0.1.3(ms@2.1.3)
       rolldown: 1.0.0-beta.49
     optionalDependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
     transitivePeerDependencies:
       - ms
       - oxc-resolver
@@ -24040,11 +24038,11 @@ snapshots:
       '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.49
       '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.49
 
-  rollup-plugin-dts@6.1.1(rollup@4.30.1)(typescript@5.8.3):
+  rollup-plugin-dts@6.1.1(rollup@4.30.1)(typescript@5.8.2):
     dependencies:
       magic-string: 0.30.21
       rollup: 4.30.1
-      typescript: 5.8.3
+      typescript: 5.8.2
     optionalDependencies:
       '@babel/code-frame': 7.26.2
 
@@ -24906,9 +24904,9 @@ snapshots:
 
   tree-kill@1.2.2: {}
 
-  ts-api-utils@2.1.0(typescript@5.8.3):
+  ts-api-utils@2.1.0(typescript@5.8.2):
     dependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
 
   ts-api-utils@2.1.0(typescript@5.9.3):
     dependencies:
@@ -24928,9 +24926,9 @@ snapshots:
       safe-stable-stringify: 2.4.3
       typescript: 5.3.3
 
-  tsconfck@2.1.1(typescript@5.8.3):
+  tsconfck@2.1.1(typescript@5.8.2):
     optionalDependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
 
   tsconfig-paths@3.15.0:
     dependencies:
@@ -24946,7 +24944,7 @@ snapshots:
       strip-bom: 3.0.0
       strip-json-comments: 2.0.1
 
-  tsdown@0.15.9(typescript@5.8.3):
+  tsdown@0.15.9(typescript@5.8.2):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
@@ -24956,14 +24954,14 @@ snapshots:
       empathic: 2.0.0
       hookable: 5.5.3
       rolldown: 1.0.0-beta.44
-      rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44)(typescript@5.8.3)
+      rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44)(typescript@5.8.2)
       semver: 7.7.3
       tinyexec: 1.0.1
       tinyglobby: 0.2.15
       tree-kill: 1.2.2
       unconfig: 7.3.3
     optionalDependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
     transitivePeerDependencies:
       - '@ts-macro/tsc'
       - '@typescript/native-preview'
@@ -24971,7 +24969,7 @@ snapshots:
       - supports-color
       - vue-tsc
 
-  tsdown@0.16.3(ms@2.1.3)(typescript@5.8.3):
+  tsdown@0.16.3(ms@2.1.3)(typescript@5.8.2):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
@@ -24981,7 +24979,7 @@ snapshots:
       hookable: 5.5.3
       obug: 0.1.3(ms@2.1.3)
       rolldown: 1.0.0-beta.49
-      rolldown-plugin-dts: 0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49)(typescript@5.8.3)
+      rolldown-plugin-dts: 0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49)(typescript@5.8.2)
       semver: 7.7.3
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
@@ -24989,7 +24987,7 @@ snapshots:
       unconfig-core: 7.4.1
       unrun: 0.2.8
     optionalDependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
     transitivePeerDependencies:
       - '@ts-macro/tsc'
       - '@typescript/native-preview'
@@ -25000,7 +24998,7 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tsup@8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.8.3)(yaml@2.8.1):
+  tsup@8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.8.2)(yaml@2.8.1):
     dependencies:
       bundle-require: 5.1.0(esbuild@0.23.1)
       cac: 6.7.14
@@ -25021,7 +25019,7 @@ snapshots:
     optionalDependencies:
       '@microsoft/api-extractor': 7.52.8(@types/node@20.19.9)
       postcss: 8.5.6
-      typescript: 5.8.3
+      typescript: 5.8.2
     transitivePeerDependencies:
       - jiti
       - supports-color
@@ -25204,8 +25202,6 @@ snapshots:
 
   typescript@5.8.2: {}
 
-  typescript@5.8.3: {}
-
   typescript@5.9.3: {}
 
   ufo@1.5.4: {}
@@ -25229,7 +25225,7 @@ snapshots:
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
 
-  unbuild@3.3.1(typescript@5.8.3)(vue-tsc@2.0.29(typescript@5.8.3)):
+  unbuild@3.3.1(typescript@5.8.2)(vue-tsc@2.0.29(typescript@5.8.2)):
     dependencies:
       '@rollup/plugin-alias': 5.1.1(rollup@4.30.1)
       '@rollup/plugin-commonjs': 28.0.2(rollup@4.30.1)
@@ -25244,18 +25240,18 @@ snapshots:
       hookable: 5.5.3
       jiti: 2.4.2
       magic-string: 0.30.17
-      mkdist: 2.2.0(typescript@5.8.3)(vue-tsc@2.0.29(typescript@5.8.3))
+      mkdist: 2.2.0(typescript@5.8.2)(vue-tsc@2.0.29(typescript@5.8.2))
       mlly: 1.7.4
       pathe: 2.0.1
       pkg-types: 1.3.1
       pretty-bytes: 6.1.1
       rollup: 4.30.1
-      rollup-plugin-dts: 6.1.1(rollup@4.30.1)(typescript@5.8.3)
+      rollup-plugin-dts: 6.1.1(rollup@4.30.1)(typescript@5.8.2)
       scule: 1.3.0
       tinyglobby: 0.2.12
       untyped: 1.5.2
     optionalDependencies:
-      typescript: 5.8.3
+      typescript: 5.8.2
     transitivePeerDependencies:
       - sass
       - supports-color
@@ -25526,19 +25522,19 @@ snapshots:
       - tsx
       - yaml
 
-  vite-plugin-dts@4.0.1(@types/node@20.19.9)(rollup@4.44.1)(typescript@5.8.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)):
+  vite-plugin-dts@4.0.1(@types/node@20.19.9)(rollup@4.44.1)(typescript@5.8.2)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)):
     dependencies:
       '@microsoft/api-extractor': 7.47.4(@types/node@20.19.9)
       '@rollup/pluginutils': 5.1.0(rollup@4.44.1)
       '@volar/typescript': 2.3.4
-      '@vue/language-core': 2.0.29(typescript@5.8.3)
+      '@vue/language-core': 2.0.29(typescript@5.8.2)
       compare-versions: 6.1.1
       debug: 4.4.1(supports-color@9.2.2)
       kolorist: 1.8.0
       local-pkg: 0.5.0
       magic-string: 0.30.17
-      typescript: 5.8.3
-      vue-tsc: 2.0.29(typescript@5.8.3)
+      typescript: 5.8.2
+      vue-tsc: 2.0.29(typescript@5.8.2)
     optionalDependencies:
       vite: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
     transitivePeerDependencies:
@@ -25546,11 +25542,11 @@ snapshots:
       - rollup
       - supports-color
 
-  vite-tsconfig-paths@4.2.0(typescript@5.8.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)):
+  vite-tsconfig-paths@4.2.0(typescript@5.8.2)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)):
     dependencies:
       debug: 4.4.1(supports-color@9.2.2)
       globrex: 0.1.2
-      tsconfck: 2.1.1(typescript@5.8.3)
+      tsconfck: 2.1.1(typescript@5.8.2)
     optionalDependencies:
       vite: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
     transitivePeerDependencies:
@@ -25616,7 +25612,7 @@ snapshots:
     dependencies:
       '@vitest/utils': 2.1.8
       mock-socket: 9.3.1
-      vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+      vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1)
 
   vitest@2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2):
     dependencies:
@@ -25694,11 +25690,11 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1):
+  vitest@3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.2))(supports-color@9.2.2)(yaml@2.8.1):
     dependencies:
       '@types/chai': 5.2.2
       '@vitest/expect': 3.2.3
-      '@vitest/mocker': 3.2.3(msw@2.4.3(typescript@5.8.3))(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
+      '@vitest/mocker': 3.2.3(msw@2.4.3(typescript@5.8.2))(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
       '@vitest/pretty-format': 3.2.3
       '@vitest/runner': 3.2.3
       '@vitest/snapshot': 3.2.3
@@ -25739,12 +25735,12 @@ snapshots:
 
   vscode-uri@3.0.8: {}
 
-  vue-tsc@2.0.29(typescript@5.8.3):
+  vue-tsc@2.0.29(typescript@5.8.2):
     dependencies:
       '@volar/typescript': 2.4.0-alpha.18
-      '@vue/language-core': 2.0.29(typescript@5.8.3)
+      '@vue/language-core': 2.0.29(typescript@5.8.2)
       semver: 7.7.2
-      typescript: 5.8.3
+      typescript: 5.8.2
 
   warning@4.0.3:
     dependencies:
