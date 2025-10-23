@@ -1,5 +1,15 @@
 # @cloudflare/vite-plugin
 
+## 1.13.15
+
+### Patch Changes
+
+- [#10741](https://github.com/cloudflare/workers-sdk/pull/10741) [`2f57345`](https://github.com/cloudflare/workers-sdk/commit/2f57345a7a57b6bba75c51e1a8f322894aa8a628) Thanks [@penalosa](https://github.com/penalosa)! - Remove obsolete `--x-remote-bindings` flag
+
+- Updated dependencies [[`4bd4c29`](https://github.com/cloudflare/workers-sdk/commit/4bd4c296d599246d04f3c86034c739411b224659), [`31e1330`](https://github.com/cloudflare/workers-sdk/commit/31e133090af046982b3ee15dc61262055c66ab5e), [`1a8088a`](https://github.com/cloudflare/workers-sdk/commit/1a8088ab32110f7d0503f5c379d4964200c0c140), [`ca6c010`](https://github.com/cloudflare/workers-sdk/commit/ca6c01017ccc39671e8724a6b9a5aa37a5e07e57), [`2f57345`](https://github.com/cloudflare/workers-sdk/commit/2f57345a7a57b6bba75c51e1a8f322894aa8a628)]:
+  - wrangler@4.45.0
+  - miniflare@4.20251011.1
+
 ## 1.13.14
 
 ### Patch Changes

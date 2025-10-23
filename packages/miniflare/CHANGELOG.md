@@ -1,5 +1,11 @@
 # miniflare
 
+## 4.20251011.1
+
+### Patch Changes
+
+- [#10919](https://github.com/cloudflare/workers-sdk/pull/10919) [`ca6c010`](https://github.com/cloudflare/workers-sdk/commit/ca6c01017ccc39671e8724a6b9a5aa37a5e07e57) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - migrate workflow to use a wrapped binding
+
 ## 4.20251011.0
 
 ### Minor Changes

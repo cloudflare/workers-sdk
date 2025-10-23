@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.54.0
+
+### Minor Changes
+
+- [#10842](https://github.com/cloudflare/workers-sdk/pull/10842) [`af18b48`](https://github.com/cloudflare/workers-sdk/commit/af18b483c37d13b33df5dfff5cefc32e5e5bee2d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add TanStack Start framework template
+
+### Patch Changes
+
+- [#10991](https://github.com/cloudflare/workers-sdk/pull/10991) [`0372e86`](https://github.com/cloudflare/workers-sdk/commit/0372e863ec0e9f8da79fb655f61e5f69504c324d) Thanks [@dom96](https://github.com/dom96)! - Adds submodule to Python hello world template
+
+- [#11043](https://github.com/cloudflare/workers-sdk/pull/11043) [`5d9cf0d`](https://github.com/cloudflare/workers-sdk/commit/5d9cf0d097951adc15c294c02d4958ae731c47ac) Thanks [@dom96](https://github.com/dom96)! - Remove lockfiles from Python C3 templates
+
 ## 2.53.0
 
 ### Minor Changes
