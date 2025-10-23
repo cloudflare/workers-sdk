@@ -1,5 +1,41 @@
 # wrangler
 
+## 4.45.0
+
+### Minor Changes
+
+- [#11030](https://github.com/cloudflare/workers-sdk/pull/11030) [`1a8088a`](https://github.com/cloudflare/workers-sdk/commit/1a8088ab32110f7d0503f5c379d4964200c0c140) Thanks [@penalosa](https://github.com/penalosa)! - Enable automatic resource provisioning by default in Wrangler. This is still an experimental feature, but we're turning on the flag by default to make it easier for people to test it and try it out. You can disable the feature using the `--no-x-provision` flag. It currently works for R2, D1, and KV bindings.
+
+  To use this feature, add a binding to your config file _without_ a resource ID:
+
+  ```jsonc
+  {
+  	"kv_namespaces": [{ "binding": "MY_KV" }],
+  	"d1_databases": [{ "binding": "MY_DB" }],
+  	"r2_buckets": [{ "binding": "MY_R2" }],
+  }
+  ```
+
+  `wrangler dev` will automatically create these resources for you locally, and when you next run `wrangler deploy` Wrangler will call the Cloudflare API to create the requested resources and link them to your Worker. They'll stay linked across deploys, and you don't need to add the resource IDs to the config file for future deploys to work. This is especially good for shared templates, which now no longer need to include account-specific resource ID when adding a binding.
+
+### Patch Changes
+
+- [#11037](https://github.com/cloudflare/workers-sdk/pull/11037) [`4bd4c29`](https://github.com/cloudflare/workers-sdk/commit/4bd4c296d599246d04f3c86034c739411b224659) Thanks [@danielrs](https://github.com/danielrs)! - Better Wrangler subdomain defaults warning.
+
+  Improves the warnings that we show users when either `worker_dev` or `preview_urls` are missing.
+
+- [#10927](https://github.com/cloudflare/workers-sdk/pull/10927) [`31e1330`](https://github.com/cloudflare/workers-sdk/commit/31e133090af046982b3ee15dc61262055c66ab5e) Thanks [@dom96](https://github.com/dom96)! - Implements `python_modules.excludes` wrangler config field
+
+  ```toml
+  [python_modules]
+  excludes = ["**/*.pyc", "**/__pycache__"]
+  ```
+
+- [#10741](https://github.com/cloudflare/workers-sdk/pull/10741) [`2f57345`](https://github.com/cloudflare/workers-sdk/commit/2f57345a7a57b6bba75c51e1a8f322894aa8a628) Thanks [@penalosa](https://github.com/penalosa)! - Remove obsolete `--x-remote-bindings` flag
+
+- Updated dependencies [[`ca6c010`](https://github.com/cloudflare/workers-sdk/commit/ca6c01017ccc39671e8724a6b9a5aa37a5e07e57)]:
+  - miniflare@4.20251011.1
+
 ## 4.44.0
 
 ### Minor Changes
