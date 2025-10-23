@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
 import { getWranglerSendMetricsFromEnv } from "../environment-variables/misc-variables";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { logger } from "../logger";
 
 /**

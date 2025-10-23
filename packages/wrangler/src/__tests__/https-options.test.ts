@@ -1,7 +1,7 @@
-import * as fs from "node:fs";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
+import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
 import { getHttpsOptions } from "../https-options";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -103,7 +103,14 @@ describe("getHttpsOptions()", () => {
 	});
 
 	it("should warn if not able to write to the cache (legacy config path)", async () => {
+		// vi.stubEnv("XDG_CONFIG_HOME", path.join(os.homedir(), "test-xdg-config"));
+		// Create a legacy config path at ~/.wrangler
 		fs.mkdirSync(path.join(os.homedir(), ".wrangler"));
+		// Ensure that we cannot migrate from legacy path to the new XDG path
+		vi.spyOn(fs, "renameSync").mockImplementation(() => {
+			throw new Error("Cannot move directory");
+		});
+		// Prevent writing certificates
 		await mockWriteFileSyncThrow(/\.pem$/);
 		await getHttpsOptions();
 		expect(
