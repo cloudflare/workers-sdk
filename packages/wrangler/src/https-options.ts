@@ -1,9 +1,11 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { UserError } from "@cloudflare/workers-utils";
+import fs from "node:fs";
+import path from "node:path";
+import {
+	getGlobalWranglerConfigPath,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { getAccessibleHosts } from "miniflare";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
-import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import { logger } from "./logger";
 import type { Attributes, Options } from "selfsigned";
 
