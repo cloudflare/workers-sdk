@@ -1,7 +1,7 @@
 import path from "node:path";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
+import { getGlobalWranglerConfigPath } from "../xdg-app-paths";
 import {
 	getBooleanEnvironmentVariableFactory,
 	getEnvironmentVariableFactory,

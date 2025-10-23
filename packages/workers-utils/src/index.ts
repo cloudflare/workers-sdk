@@ -80,4 +80,7 @@ export {
 
 export * from "./environment-variables/misc-variables";
 
-export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
+export {
+	getGlobalWranglerCachePath,
+	getGlobalWranglerConfigPath,
+} from "./xdg-app-paths";
