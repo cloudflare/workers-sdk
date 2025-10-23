@@ -2,7 +2,6 @@ import { logRaw } from "@cloudflare/cli";
 import { convertBindingsToCfWorkerInitBindings } from "../api/startDevWorker/utils";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
-import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { printBindings } from "../utils/print-bindings";
@@ -117,10 +116,8 @@ export const versionsViewCommand = createCommand({
 		);
 
 		if (bindings.length > 0) {
-			logger.log(
-				printBindings(
-					(await convertBindingsToCfWorkerInitBindings(bindings)).bindings
-				)
+			printBindings(
+				(await convertBindingsToCfWorkerInitBindings(bindings)).bindings
 			);
 		}
 	},

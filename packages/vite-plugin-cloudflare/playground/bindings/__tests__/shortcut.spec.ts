@@ -1,24 +1,19 @@
 import path from "node:path";
 import { expect, test, vi } from "vitest";
-import {
-	isBuild,
-	resetServerLogs,
-	serverLogs,
-	viteServer,
-} from "../../__test-utils__";
+import { resetServerLogs, serverLogs, viteServer } from "../../__test-utils__";
 import { addBindingsShortcut } from "../../../src/bindings";
 import { resolvePluginConfig } from "../../../src/plugin-config";
 import { PluginContext } from "../../../src/plugins/utils";
 
-test.skipIf(isBuild)("display bindings shortcut by default", () => {
+test("display bindings shortcut by default", () => {
 	viteServer.bindCLIShortcuts({ print: true });
 
-	expect(serverLogs.info.join("\n")).toMatchInlineSnapshot(
-		`"  ➜  press b + enter to list worker bindings"`
+	expect(serverLogs.info.join("\n")).toMatch(
+		"press b + enter to list worker bindings"
 	);
 });
 
-test.skipIf(isBuild)("prints bindings with single worker", () => {
+test("prints bindings with single worker", () => {
 	// Create a test server with a spy on bindCLIShortcuts
 	const mockBindCLIShortcuts = vi.spyOn(viteServer, "bindCLIShortcuts");
 	// Create mock plugin context
@@ -68,17 +63,18 @@ test.skipIf(isBuild)("prints bindings with single worker", () => {
 	).toMatchInlineSnapshot(`
 		"
 		Your Worker has access to the following bindings:
-		Binding                                   Resource
-		env.KV (test-kv-id)                       KV Namespace
-		env.HYPERDRIVE (test-hyperdrive-id)       Hyperdrive Config
-		env.HELLO_WORLD (Timer disabled)          Hello World
-		env.WAE (test)                            Analytics Engine Dataset
-		env.IMAGES                                Images
+		Binding                                    Resource
+		env.KV (test-kv-id)                        KV Namespace
+		env.HYPERDRIVE (test-hyperdrive-id)        Hyperdrive Config
+		env.HELLO_WORLD (Timer disabled)           Hello World
+		env.WAE (test)                             Analytics Engine Dataset
+		env.IMAGES                                 Images
+		env.RATE_LIMITER (ratelimit)               Unsafe Metadata
 		"
 	`);
 });
 
-test.skipIf(isBuild)("prints bindings action with multi workers", () => {
+test("prints bindings action with multi workers", () => {
 	// Create a test server with a spy on bindCLIShortcuts
 	const mockBindCLIShortcuts = vi.spyOn(viteServer, "bindCLIShortcuts");
 	// Create mock plugin context
@@ -133,12 +129,13 @@ test.skipIf(isBuild)("prints bindings action with multi workers", () => {
 	).toMatchInlineSnapshot(`
 		"
 		worker has access to the following bindings:
-		Binding                                   Resource
-		env.KV (test-kv-id)                       KV Namespace
-		env.HYPERDRIVE (test-hyperdrive-id)       Hyperdrive Config
-		env.HELLO_WORLD (Timer disabled)          Hello World
-		env.WAE (test)                            Analytics Engine Dataset
-		env.IMAGES                                Images
+		Binding                                    Resource
+		env.KV (test-kv-id)                        KV Namespace
+		env.HYPERDRIVE (test-hyperdrive-id)        Hyperdrive Config
+		env.HELLO_WORLD (Timer disabled)           Hello World
+		env.WAE (test)                             Analytics Engine Dataset
+		env.IMAGES                                 Images
+		env.RATE_LIMITER (ratelimit)               Unsafe Metadata
 
 		auxiliary-worker has access to the following bindings:
 		Binding                   Resource

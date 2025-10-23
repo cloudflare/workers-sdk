@@ -210,7 +210,7 @@ async function resolveBindings(
 	const printCurrentBindings = (registry: WorkerRegistry | null) => {
 		const maskedVars = maskVars(bindings, config);
 
-		const message = printBindings(
+		printBindings(
 			{
 				...bindings,
 				vars: maskedVars,
@@ -222,10 +222,6 @@ async function resolveBindings(
 				name: config.name,
 			}
 		);
-
-		if (message) {
-			logger.log(message);
-		}
 	};
 
 	// Print the initial bindings table

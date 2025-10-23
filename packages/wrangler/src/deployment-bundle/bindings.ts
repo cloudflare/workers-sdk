@@ -487,9 +487,7 @@ export async function provisionBindings(
 			printable[resource.resourceType].push({ binding: resource.binding });
 		}
 
-		logger.log(
-			printBindings(printable, config.tail_consumers, { provisioning: true })
-		);
+		printBindings(printable, config.tail_consumers, { provisioning: true });
 		logger.log();
 
 		const existingResources: Record<string, NormalisedResourceInfo[]> = {};

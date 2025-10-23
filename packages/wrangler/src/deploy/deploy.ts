@@ -875,12 +875,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}
 
 			workerBundle = createWorkerUploadForm(worker, { dryRun: true });
-			logger.log(
-				printBindings(
-					{ ...withoutStaticAssets, vars: maskedVars },
-					config.tail_consumers,
-					{ warnIfNoBindings: true }
-				)
+			printBindings(
+				{ ...withoutStaticAssets, vars: maskedVars },
+				config.tail_consumers,
+				{ warnIfNoBindings: true }
 			);
 		} else {
 			assert(accountId, "Missing accountId");
@@ -1015,11 +1013,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 				bindingsPrinted = true;
 
-				logger.log(
-					printBindings(
-						{ ...withoutStaticAssets, vars: maskedVars },
-						config.tail_consumers
-					)
+				printBindings(
+					{ ...withoutStaticAssets, vars: maskedVars },
+					config.tail_consumers
 				);
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);
@@ -1046,11 +1042,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 			} catch (err) {
 				if (!bindingsPrinted) {
-					logger.log(
-						printBindings(
-							{ ...withoutStaticAssets, vars: maskedVars },
-							config.tail_consumers
-						)
+					printBindings(
+						{ ...withoutStaticAssets, vars: maskedVars },
+						config.tail_consumers
 					);
 				}
 				const message = await helpIfErrorIsSizeOrScriptStartup(

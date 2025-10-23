@@ -26,7 +26,7 @@ export function addBindingsShortcut(
 				server.config.logger.info("");
 
 				for (const workerConfig of workerConfigs) {
-					const message = unstable_printBindings(
+					unstable_printBindings(
 						{
 							...workerConfig,
 							assets: workerConfig.assets?.binding
@@ -49,10 +49,9 @@ export function addBindingsShortcut(
 						{
 							multiWorkers: workerConfigs.length > 1,
 							name: workerConfig.name ?? "Your Worker",
+							log: (message) => server.config.logger.info(message),
 						}
 					);
-
-					server.config.logger.info(message);
 				}
 			},
 		} satisfies vite.CLIShortcut<vite.ViteDevServer | vite.PreviewServer>;
