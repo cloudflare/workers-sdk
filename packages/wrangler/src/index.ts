@@ -285,7 +285,7 @@ import { triggersDeployCommand, triggersNamespace } from "./triggers";
 import { typesCommand } from "./type-generation";
 import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
 import { betaCmdColor, proxy } from "./utils/constants";
-import { debugLogFilepath } from "./utils/log-file";
+import { getDebugFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
 import { vectorizeDeleteCommand } from "./vectorize/delete";
@@ -450,7 +450,7 @@ export function createCLIParser(argv: string[]) {
 				version: 1,
 				wrangler_version: wranglerVersion,
 				command_line_args: argv,
-				log_file_path: debugLogFilepath,
+				log_file_path: getDebugFilepath(),
 			});
 
 			return true;
