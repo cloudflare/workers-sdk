@@ -2306,6 +2306,9 @@ importers:
       rolldown-vite:
         specifier: ^7.1.16
         version: 7.1.19(@types/node@20.19.9)(esbuild@0.25.4)(jiti@2.6.0)(yaml@2.8.1)
+      strip-ansi:
+        specifier: ^7.1.0
+        version: 7.1.0
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0

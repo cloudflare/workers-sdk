@@ -1,14 +1,21 @@
 import path from "node:path";
+import stripAnsi from "strip-ansi";
 import { expect, test, vi } from "vitest";
 import { resetServerLogs, serverLogs, viteServer } from "../../__test-utils__";
 import { addBindingsShortcut } from "../../../src/bindings";
 import { resolvePluginConfig } from "../../../src/plugin-config";
 import { PluginContext } from "../../../src/plugins/utils";
 
+const normalize = (logs: string[]) =>
+	stripAnsi(logs.join("\n"))
+		.split("\n")
+		.map((line) => line.trim())
+		.join("\n");
+
 test("display bindings shortcut by default", () => {
 	viteServer.bindCLIShortcuts({ print: true });
 
-	expect(serverLogs.info.join("\n")).toMatch(
+	expect(normalize(serverLogs.info)).toMatch(
 		"press b + enter to list worker bindings"
 	);
 });
@@ -56,11 +63,7 @@ test("prints bindings with single worker", () => {
 
 	printBindingShortcut?.action?.(viteServer as any);
 
-	expect(
-		serverLogs.info
-			.flatMap((msg) => msg.split("\n").map((line) => line.trim()))
-			.join("\n")
-	).toMatchInlineSnapshot(`
+	expect(normalize(serverLogs.info)).toMatchInlineSnapshot(`
 		"
 		Your Worker has access to the following bindings:
 		Binding                                    Resource
@@ -122,11 +125,7 @@ test("prints bindings action with multi workers", () => {
 
 	printBindingShortcut?.action?.(viteServer as any);
 
-	expect(
-		serverLogs.info
-			.flatMap((msg) => msg.split("\n").map((line) => line.trim()))
-			.join("\n")
-	).toMatchInlineSnapshot(`
+	expect(normalize(serverLogs.info)).toMatchInlineSnapshot(`
 		"
 		worker has access to the following bindings:
 		Binding                                    Resource

@@ -18,6 +18,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"playwright-chromium": "catalog:default",
 		"rolldown-vite": "^7.1.16",
+		"strip-ansi": "^7.1.0",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
 		"vite-6": "npm:vite@^6.3.6",
