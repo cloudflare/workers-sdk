@@ -53,6 +53,7 @@ export function mockUploadWorkerRequest(
 		expectedObservability?: CfWorkerInit["observability"];
 		expectedSettingsPatch?: Partial<NonVersionedScriptSettings>;
 		expectedContainers?: { class_name: string }[];
+		expectedAnnotations?: Record<string, string | undefined>;
 	} = {}
 ) {
 	const handleUpload: HttpResponseResolver = async ({ params, request }) => {
@@ -134,6 +135,9 @@ export function mockUploadWorkerRequest(
 		if ("expectedContainers" in options) {
 			expect(metadata.containers).toEqual(expectedContainers);
 		}
+		if ("expectedAnnotations" in options) {
+			expect(metadata.annotations).toEqual(expectedAnnotations);
+		}
 
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {
@@ -195,6 +199,7 @@ export function mockUploadWorkerRequest(
 		expectedCapnpSchema,
 		expectedLimits,
 		expectedContainers,
+		expectedAnnotations,
 		keepVars,
 		keepSecrets,
 		expectedDispatchNamespace,
