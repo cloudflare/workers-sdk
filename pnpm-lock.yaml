@@ -1612,6 +1612,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20251011.0
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@iarna/toml':
         specifier: ^3.0.0
         version: 3.0.0
