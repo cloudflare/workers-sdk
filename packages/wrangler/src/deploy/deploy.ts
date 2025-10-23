@@ -28,7 +28,6 @@ import { getMigrationsToUpload } from "../durable";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import {
 	applyServiceAndEnvironmentTags,
-	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "../environments";
 import { UserError } from "../errors";
@@ -754,6 +753,24 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			content: content,
 			type: bundleType,
 		};
+
+		// We can use the new versions/deployments APIs if we:
+		// * are uploading a worker that already exists
+		// * aren't a dispatch namespace deploy
+		// * aren't a service env deploy
+		// * aren't a service Worker
+		// * we don't have DO migrations
+		// * we aren't an fpw
+		// * not a container worker
+		const canUseNewVersionsDeploymentsApi =
+			workerExists &&
+			props.dispatchNamespace === undefined &&
+			prod &&
+			format === "modules" &&
+			migrations === undefined &&
+			!config.first_party_worker &&
+			config.containers === undefined;
+
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main,
@@ -767,12 +784,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars,
-			keepSecrets: keepVars, // keepVars implies keepSecrets
+			keepSecrets: keepVars,
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
-			...(props.message || props.tag
+			...(canUseNewVersionsDeploymentsApi && (props.message || props.tag)
 				? {
 						annotations: {
 							"workers/message": props.message,
@@ -820,23 +837,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				maskedVars[key] = "(hidden)";
 			}
 		}
-
-		// We can use the new versions/deployments APIs if we:
-		// * are uploading a worker that already exists
-		// * aren't a dispatch namespace deploy
-		// * aren't a service env deploy
-		// * aren't a service Worker
-		// * we don't have DO migrations
-		// * we aren't an fpw
-		// * not a container worker
-		const canUseNewVersionsDeploymentsApi =
-			workerExists &&
-			props.dispatchNamespace === undefined &&
-			prod &&
-			format === "modules" &&
-			migrations === undefined &&
-			!config.first_party_worker &&
-			config.containers === undefined;
 
 		let workerBundle: FormData;
 		const dockerPath = getDockerPath();
@@ -985,16 +985,25 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						)
 					);
 
-					// Update service and environment tags when using environments
-					const nextTags = applyServiceAndEnvironmentTags(config, tags);
-					if (!tagsAreEqual(tags, nextTags)) {
+					if (props.message) {
+						logger.warn(
+							"The --message flag is not supported for this deployment type (deployments with Durable Object migrations or other configurations that don't use the new versions API). The message will not be stored with this deployment."
+						);
+					}
+
+					const nextTags = applyServiceAndEnvironmentTags(config, []);
+					const tagsWithWorkerTag = props.tag
+						? [...(nextTags || []), props.tag]
+						: nextTags;
+
+					if (tagsWithWorkerTag && tagsWithWorkerTag.length > 0) {
 						try {
 							await patchNonVersionedScriptSettings(
 								props.config,
 								accountId,
 								scriptName,
 								{
-									tags: nextTags,
+									tags: tagsWithWorkerTag,
 								}
 							);
 						} catch {

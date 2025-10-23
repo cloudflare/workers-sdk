@@ -56,7 +56,10 @@ import {
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
-import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions";
+import {
+	mswListNewDeploymentsLatestFull,
+	mswPatchNonVersionedScriptSettings,
+} from "./helpers/msw/handlers/versions";
 import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -15034,6 +15037,88 @@ export default{
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not include annotations when using old API path (with migrations)", async () => {
+			writeWranglerConfig({
+				durable_objects: {
+					bindings: [
+						{ name: "MY_DO", class_name: "MyDO", script_name: "test" },
+					],
+				},
+				migrations: [{ tag: "v1", new_classes: ["MyDO"] }],
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockLegacyScriptData({ scripts: [] });
+			mockUploadWorkerRequest({
+				expectedAnnotations: undefined,
+				useOldUploadApi: true,
+			});
+			msw.use(mswPatchNonVersionedScriptSettings);
+
+			await runWrangler("deploy ./index --tag v1.0.0 --message 'Test message'");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                                Resource
+				env.MY_DO (MyDO, defined in test)      Durable Object
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.warn).toMatchInlineSnapshot(
+				`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --message flag is not supported for this deployment type (deployments with Durable Object migrations or other configurations that don't use the new versions API). The message will not be stored with this deployment.[0m
+
+				"
+			`
+			);
+		});
+
+		it("should store tag as service tag when using old API path", async () => {
+			writeWranglerConfig({
+				durable_objects: {
+					bindings: [
+						{ name: "MY_DO", class_name: "MyDO", script_name: "test" },
+					],
+				},
+				migrations: [{ tag: "v1", new_classes: ["MyDO"] }],
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockLegacyScriptData({ scripts: [] });
+			mockUploadWorkerRequest({
+				expectedAnnotations: undefined,
+				useOldUploadApi: true,
+			});
+			msw.use(mswPatchNonVersionedScriptSettings);
+
+			await runWrangler("deploy ./index --tag v2.0.0");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                                Resource
+				env.MY_DO (MyDO, defined in test)      Durable Object
+
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
