@@ -6,7 +6,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
+import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
 
 export const USER_ID_CACHE_PATH = "user-id.json";
 

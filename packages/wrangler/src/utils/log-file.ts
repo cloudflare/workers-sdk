@@ -20,7 +20,7 @@ const getDebugFileDir = getEnvironmentVariableFactory({
 	},
 });
 
-function getDebugFilepath() {
+export function getDebugFilepath() {
 	const dir = getDebugFileDir();
 
 	const date = new Date()
@@ -38,7 +38,6 @@ function getDebugFilepath() {
 	return path.resolve(filepath);
 }
 
-export const debugLogFilepath = getDebugFilepath();
 const mutex = new Mutex();
 
 let hasLoggedLocation = false;
@@ -60,6 +59,7 @@ ${stripAnsi(message)}
 
 	if (!hasLoggedLocation) {
 		hasLoggedLocation = true;
+		const debugLogFilepath = getDebugFilepath();
 		logger.debug(`🪵  Writing logs to "${debugLogFilepath}"`); // use logger.debug here to not show this message by default -- since logging to a file is no longer opt-in
 		onExit(() => {
 			// only print the log file location if the log file contains an error message
@@ -82,6 +82,7 @@ ${stripAnsi(message)}
 
 	await mutex.runWith(async () => {
 		try {
+			const debugLogFilepath = getDebugFilepath();
 			await ensureDirectoryExists(debugLogFilepath);
 			await appendFile(debugLogFilepath, entry);
 		} catch (err) {

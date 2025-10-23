@@ -1,7 +1,9 @@
 import path from "node:path";
+import {
+	getGlobalWranglerConfigPath,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { dedent } from "ts-dedent";
-import { UserError } from "../errors";
-import { getGlobalWranglerConfigPath } from "../xdg-app-paths";
 import {
 	getBooleanEnvironmentVariableFactory,
 	getEnvironmentVariableFactory,

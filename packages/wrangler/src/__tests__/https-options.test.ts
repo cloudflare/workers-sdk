@@ -1,4 +1,4 @@
-import * as fs from "node:fs";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
@@ -103,7 +103,13 @@ describe("getHttpsOptions()", () => {
 	});
 
 	it("should warn if not able to write to the cache (legacy config path)", async () => {
+		// Create a legacy config path at ~/.wrangler
 		fs.mkdirSync(path.join(os.homedir(), ".wrangler"));
+		// Ensure that we cannot migrate from legacy path to the new XDG path
+		vi.spyOn(fs, "renameSync").mockImplementation(() => {
+			throw new Error("Cannot move directory");
+		});
+		// Prevent writing certificates
 		await mockWriteFileSyncThrow(/\.pem$/);
 		await getHttpsOptions();
 		expect(

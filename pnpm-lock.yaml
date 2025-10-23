@@ -1615,6 +1615,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20251125.0
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@types/command-exists':
         specifier: ^1.2.0
         version: 1.2.0
