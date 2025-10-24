@@ -1,6 +1,6 @@
 import { FormData } from "undici";
 import { describe, expect, it, vi } from "vitest";
-import * as checkCommands from "../check/commands";
+import * as checkStartupCommand from "../check/startup";
 import { logger } from "../logger";
 import { ParseError } from "../parse";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
@@ -9,7 +9,7 @@ import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 vi.mock("../check/commands", () => ({ analyseBundle: vi.fn() }));
-const mockAnalyseBundle = vi.mocked(checkCommands.analyseBundle);
+const mockAnalyseBundle = vi.mocked(checkStartupCommand.analyseBundle);
 
 describe("helpIfErrorIsSizeOrScriptStartup", () => {
 	const std = mockConsoleMethods();
