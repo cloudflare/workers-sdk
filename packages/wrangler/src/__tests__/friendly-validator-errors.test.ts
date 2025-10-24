@@ -8,7 +8,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
-vi.mock("../check/commands", () => ({ analyseBundle: vi.fn() }));
+vi.mock("../check/startup", () => ({ analyseBundle: vi.fn() }));
 const mockAnalyseBundle = vi.mocked(checkStartupCommand.analyseBundle);
 
 describe("helpIfErrorIsSizeOrScriptStartup", () => {
