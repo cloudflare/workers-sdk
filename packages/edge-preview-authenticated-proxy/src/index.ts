@@ -204,7 +204,7 @@ async function handleRawHttp(request: Request, url: URL) {
 	const token = requestHeaders.get("X-CF-Token");
 	const remote = requestHeaders.get("X-CF-Remote");
 
-	// Fallback to the request method for backward compatiblility
+	// Fallback to the request method for backward compatibility
 	const method = requestHeaders.get("X-CF-Http-Method") ?? request.method;
 
 	if (!token || !remote) {

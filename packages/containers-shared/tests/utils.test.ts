@@ -30,7 +30,7 @@ describe("isDockerfile", () => {
 		expect(isDockerfile("docker.io/httpd:1", undefined)).toBe(false);
 	});
 
-	it("should error if given a non existant dockerfile", async () => {
+	it("should error if given a non existent dockerfile", async () => {
 		expect(() => isDockerfile("./FakeDockerfile", undefined))
 			.toThrowErrorMatchingInlineSnapshot(`
 				[Error: The image "./FakeDockerfile" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
