@@ -17,10 +17,41 @@ import {
 	readMetricsConfig,
 	writeMetricsConfig,
 } from "./metrics-config";
+import {
+	ALLOW,
+	getAllowedArgs,
+	sanitizeArgKeys,
+	sanitizeArgValues,
+} from "./sanitization";
 import type { MetricsConfigOptions } from "./metrics-config";
+import type { AllowList } from "./sanitization";
 import type { CommonEventProperties, Events } from "./types";
 
 const SPARROW_URL = "https://sparrow.cloudflare.com";
+
+/**
+ * A list of all the command args that can be included in the event.
+ *
+ * The "*" command applies to all sub commands at this level.
+ * Specific commands can override or add to the allow list.
+ *
+ * Each arg can have one of three values:
+ * - an array of strings: only those specific values are allowed
+ * - REDACT: the arg value will always be redacted
+ * - ALLOW: all values for that arg are allowed
+ */
+const COMMAND_ARG_ALLOW_LIST: AllowList = {
+	// * applies to all sub commands
+	"wrangler *": {
+		format: ALLOW,
+		logLevel: ALLOW,
+	},
+	"wrangler tail": { status: ALLOW },
+	"wrangler types": {
+		xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
+		path: ["worker-configuration.d.ts"],
+	},
+};
 
 export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	// The SPARROW_SOURCE_KEY will be provided at build time through esbuild's `define` option
@@ -31,20 +62,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	const amplitude_session_id = Date.now();
 	let amplitude_event_id = 0;
 
-	/** We redact strings in arg values, unless they are named here */
-	const allowList: Record<string, AllowedValues> & { "*": AllowedValues } = {
-		// applies to all commands
-		// use camelCase version
-		"*": { format: "*", logLevel: "*" },
-		"wrangler tail": { status: "*" },
-		"wrangler types": {
-			xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
-			path: ["worker-configuration.d.ts"],
-		},
-	};
-
 	return {
-		// TODO: merge two sendEvent functions once all commands use defineCommand and get a global dispatcher
 		/**
 		 * This doesn't have a session id and is not tied to the command events.
 		 *
@@ -98,8 +116,8 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					printMetricsBanner();
 				}
 
-				const argsUsed = sanitiseUserInput(properties.args ?? {}, argv);
-				const argsCombination = argsUsed.sort().join(", ");
+				const sanitizedArgs = sanitizeArgKeys(properties.args ?? {}, argv);
+				const sanitizedArgsKeys = Object.keys(sanitizedArgs).sort();
 				const commonEventProperties: CommonEventProperties = {
 					amplitude_session_id,
 					amplitude_event_id: amplitude_event_id++,
@@ -115,12 +133,17 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					isWorkersCI: isWorkersCI(),
 					isInteractive: isInteractive(),
 					hasAssets: options.hasAssets ?? false,
-					argsUsed,
-					argsCombination,
+					argsUsed: sanitizedArgsKeys,
+					argsCombination: sanitizedArgsKeys.join(", "),
 				};
+
 				// get the args where we don't want to redact their values
-				const allowedArgs = getAllowedArgs(allowList, properties.command ?? "");
-				properties.args = redactArgValues(properties.args ?? {}, allowedArgs);
+				const allowedArgs = getAllowedArgs(
+					COMMAND_ARG_ALLOW_LIST,
+					properties.command ?? "wrangler"
+				);
+				properties.args = sanitizeArgValues(sanitizedArgs, allowedArgs);
+
 				dispatch({
 					name,
 					properties: {
@@ -215,95 +238,3 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 }
 
 export type Properties = Record<string, unknown>;
-
-const normalise = (arg: string) => {
-	const camelize = (str: string) =>
-		str.replace(/-./g, (x) => x[1].toUpperCase());
-	return camelize(arg.replace("experimental", "x"));
-};
-
-const exclude = new Set(["$0", "_"]);
-/**
- * just some pretty naive cleaning so we don't send duplicates of "experimental-versions", "experimentalVersions", "x-versions" and "xVersions" etc.
- * optionally, if an argv is provided remove all args that were not specified in argv (which means that default values will be filtered out)
- */
-const sanitiseUserInput = (
-	argsWithValues: Record<string, unknown>,
-	argv?: string[]
-) => {
-	const result: string[] = [];
-	const args = Object.keys(argsWithValues);
-	for (const arg of args) {
-		if (Array.isArray(argv) && !argv.some((a) => a.includes(arg))) {
-			continue;
-		}
-		if (exclude.has(arg)) {
-			continue;
-		}
-		if (
-			typeof argsWithValues[arg] === "boolean" &&
-			argsWithValues[arg] === false
-		) {
-			continue;
-		}
-
-		const normalisedArg = normalise(arg);
-		if (result.includes(normalisedArg)) {
-			continue;
-		}
-		result.push(normalisedArg);
-	}
-	return result;
-};
-
-type AllowedValues = Record<string, string[] | "*">;
-const getAllowedArgs = (
-	allowList: Record<string, AllowedValues> & { "*": AllowedValues },
-	key: string
-) => {
-	const commandSpecific = allowList[key] ?? [];
-	return { ...commandSpecific, ...allowList["*"] };
-};
-export const redactArgValues = (
-	args: Record<string, unknown>,
-	allowedValues: AllowedValues
-) => {
-	const result: Record<string, unknown> = {};
-
-	for (let [key, value] of Object.entries(args)) {
-		key = normalise(key);
-		if (key === "xIncludeRuntime" && value === "") {
-			value = ".wrangler/types/runtime.d.ts";
-		}
-		const allowedValuesForArg = allowedValues[key] ?? [];
-		if (exclude.has(key)) {
-			continue;
-		}
-		if (
-			typeof value === "number" ||
-			typeof value === "boolean" ||
-			allowedValuesForArg.includes(key)
-		) {
-			result[key] = value;
-		} else if (
-			// redact if its a string, unless the value is in the allow list
-			// * is a special value that allows all values for that arg
-			typeof value === "string" &&
-			!(allowedValuesForArg === "*" || allowedValuesForArg.includes(value))
-		) {
-			result[key] = "<REDACTED>";
-		} else if (Array.isArray(value)) {
-			result[key] = value.map((v) =>
-				// redact if its a string, unless the value is in the allow list
-				// * is a special value that allows all values for that arg
-				typeof v === "string" &&
-				!(allowedValuesForArg === "*" || allowedValuesForArg.includes(v))
-					? "<REDACTED>"
-					: v
-			);
-		} else {
-			result[key] = value;
-		}
-	}
-	return result;
-};
