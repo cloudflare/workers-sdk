@@ -925,19 +925,47 @@ function normalizeAndValidatePlacement(
 			"mode",
 			rawEnv.placement.mode,
 			"string",
-			["off", "smart"]
+			["off", "smart", "hyper"]
 		);
-		validateOptionalProperty(
-			diagnostics,
-			"placement",
-			"hint",
-			rawEnv.placement.hint,
-			"string"
-		);
-		if (rawEnv.placement.hint && rawEnv.placement.mode !== "smart") {
-			diagnostics.errors.push(
-				`"placement.hint" cannot be set if "placement.mode" is not "smart"`
-			);
+
+		const mode = rawEnv.placement.mode;
+		const hint = rawEnv.placement.hint;
+
+		if (mode === "hyper") {
+			// For hyper mode, hint must be an object with scheme and target
+			if (!hint || typeof hint !== "object" || Array.isArray(hint)) {
+				diagnostics.errors.push(
+					`"placement.hint" must be an object when "placement.mode" is "hyper"`
+				);
+			} else {
+				validateRequiredProperty(
+					diagnostics,
+					"placement.hint",
+					"scheme",
+					(hint as Record<string, unknown>).scheme,
+					"string",
+					["http", "tcp", "aws-region", "gcp-region", "cf-pop"]
+				);
+				validateRequiredProperty(
+					diagnostics,
+					"placement.hint",
+					"target",
+					(hint as Record<string, unknown>).target,
+					"string"
+				);
+			}
+		} else {
+			// For off/smart modes, hint must be a string (if provided)
+			if (hint !== undefined && typeof hint !== "string") {
+				diagnostics.errors.push(
+					`"placement.hint" must be a string when "placement.mode" is "${mode}"`
+				);
+			}
+			if (hint && mode !== "smart") {
+				diagnostics.errors.push(
+					`"placement.hint" cannot be set if "placement.mode" is not "smart" or "hyper"`
+				);
+			}
 		}
 	}
 
