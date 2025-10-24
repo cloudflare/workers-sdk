@@ -4,7 +4,7 @@ import {
 	FatalError,
 	MissingConfigError,
 	UserError,
-} from "../errors";
+} from "@cloudflare/workers-utils";
 import { APIError, ParseError } from "../parse";
 
 describe("errors", () => {

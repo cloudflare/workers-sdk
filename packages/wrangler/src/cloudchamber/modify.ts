@@ -24,7 +24,6 @@ import {
 } from "./instance-type/instance-type";
 import { loadAccount } from "./locations";
 import { sshPrompts } from "./ssh/ssh";
-import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -34,6 +33,7 @@ import type {
 	ModifyDeploymentV2RequestBody,
 	SSHPublicKeyID,
 } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function modifyCommandOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs

@@ -1,11 +1,10 @@
 import * as fs from "node:fs";
 import { resolve } from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import TOML from "@iarna/toml";
 import { formatMessagesSync } from "esbuild";
 import * as jsoncParser from "jsonc-parser";
-import { UserError } from "./errors";
-import { logger } from "./logger";
-import type { TelemetryMessage } from "./errors";
+import type { TelemetryMessage } from "@cloudflare/workers-utils";
 import type { ParseError as JsoncParseError } from "jsonc-parser";
 
 export type Message = {
@@ -43,7 +42,7 @@ export function formatMessage(
 	const lines = formatMessagesSync([input], {
 		color,
 		kind: kind,
-		terminalWidth: logger.columns,
+		terminalWidth: process.stdout.columns,
 	});
 	return lines.join("\n");
 }

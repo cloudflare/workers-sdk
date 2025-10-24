@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { updateConfigFile } from "../config";
+import { createdResourceConfig } from "../utils/add-created-resource-config";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
@@ -7,7 +7,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 
-describe("updateConfigFile()", () => {
+describe("createdResourceConfig()", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
@@ -25,7 +25,7 @@ describe("updateConfigFile()", () => {
 	it("non interactive: no prompts and no file update", async () => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
@@ -63,7 +63,7 @@ describe("updateConfigFile()", () => {
 			result: false,
 		});
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
@@ -107,7 +107,7 @@ describe("updateConfigFile()", () => {
 			result: false,
 		});
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
@@ -157,7 +157,7 @@ describe("updateConfigFile()", () => {
 			result: true,
 		});
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
@@ -213,7 +213,7 @@ describe("updateConfigFile()", () => {
 			result: false,
 		});
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.json",
@@ -251,7 +251,7 @@ describe("updateConfigFile()", () => {
 
 		setIsTTY(true);
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			"wrangler.toml",
@@ -276,7 +276,7 @@ describe("updateConfigFile()", () => {
 	it("interactive: no prompts & no file update for no config file", async () => {
 		setIsTTY(true);
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"kv_namespaces",
 			(name) => ({ binding: name ?? "KV", id: "random-id" }),
 			undefined,
@@ -301,7 +301,7 @@ describe("updateConfigFile()", () => {
 	it("logs correct binding type", async () => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"d1_databases",
 			() => ({
 				binding: "D1",
@@ -331,7 +331,7 @@ describe("updateConfigFile()", () => {
 
 			setIsTTY(true);
 
-			await updateConfigFile(
+			await createdResourceConfig(
 				"kv_namespaces",
 				(name) => ({ binding: name ?? "KV", id: "random-id" }),
 				"wrangler.json",

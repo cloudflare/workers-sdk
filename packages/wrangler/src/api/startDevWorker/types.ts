@@ -1,14 +1,9 @@
 import type { AssetsOptions } from "../../assets";
-import type { Config } from "../../config";
-import type {
-	ContainerApp,
-	ContainerEngine,
-	CustomDomainRoute,
-	DurableObjectMigration,
-	Rule,
-	ZoneIdRoute,
-	ZoneNameRoute,
-} from "../../config/environment";
+import type { CfAccount } from "../../dev/create-worker-preview";
+import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { ConfigController } from "./ConfigController";
+import type { DevEnv } from "./DevEnv";
+import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	CfAIBinding,
 	CfAnalyticsEngineDataset,
@@ -38,12 +33,15 @@ import type {
 	CfVpcService,
 	CfWorkerLoader,
 	CfWorkflow,
-} from "../../deployment-bundle/worker";
-import type { CfAccount } from "../../dev/create-worker-preview";
-import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { ConfigController } from "./ConfigController";
-import type { DevEnv } from "./DevEnv";
-import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
+	Config,
+	ContainerApp,
+	ContainerEngine,
+	CustomDomainRoute,
+	DurableObjectMigration,
+	Rule,
+	ZoneIdRoute,
+	ZoneNameRoute,
+} from "@cloudflare/workers-utils";
 import type {
 	DispatchFetch,
 	Json,

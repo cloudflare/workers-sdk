@@ -1,15 +1,19 @@
+import {
+	ENVIRONMENT_TAG_PREFIX,
+	formatCompatibilityDate,
+	mapWorkerMetadataBindings,
+	SERVICE_TAG_PREFIX,
+} from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
-import { formatCompatibilityDate } from "./compatibility-date";
-import { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
-import type { RawConfig } from "../config";
 import type {
 	CustomDomainRoute,
+	RawConfig,
 	Route,
+	ServiceMetadataRes,
+	WorkerMetadata,
 	ZoneNameRoute,
-} from "../config/environment";
-import type { WorkerMetadata } from "../deployment-bundle/create-worker-upload-form";
-import type { ServiceMetadataRes } from "../init";
+} from "@cloudflare/workers-utils";
 
 type RoutesRes = {
 	id: string;
@@ -40,22 +44,11 @@ type CronTriggersRes = {
 	}[];
 };
 
-/**
- * Downloads all the remote information we can gather for a worker and from them generates a raw configuration object that
- * approximates what a wrangler config object for the worker was/would have been.
- *
- * @param workerName The name of the worker
- * @param environment The target environment for the worker
- * @param entrypoint The worker's entrypoint
- * @param accountId The ID of the account owning the worker
- * @returns A RawConfig object that bests represents the remote configuration of the worker
- */
-export async function downloadWorkerConfig(
+export async function fetchWorkerConfig(
+	accountId: string,
 	workerName: string,
-	environment: string,
-	entrypoint: string,
-	accountId: string
-): Promise<RawConfig> {
+	environment: string
+): Promise<FullWorkerConfig> {
 	const [
 		bindings,
 		routes,
@@ -94,12 +87,37 @@ export async function downloadWorkerConfig(
 			{ cause: e }
 		);
 	});
-
-	const mappedBindings = await mapWorkerMetadataBindings(
+	return {
 		bindings,
-		accountId,
-		COMPLIANCE_REGION_CONFIG_UNKNOWN
-	);
+		routes,
+		customDomains,
+		subdomainStatus,
+		serviceEnvMetadata,
+		cronTriggers,
+	};
+}
+interface FullWorkerConfig {
+	bindings: WorkerMetadata["bindings"];
+	routes: RoutesRes;
+	customDomains: CustomDomainsRes;
+	subdomainStatus: WorkerSubdomainRes;
+	serviceEnvMetadata: ServiceMetadataRes["default_environment"];
+	cronTriggers: CronTriggersRes;
+}
+
+async function convertWorkerToWranglerConfig(
+	workerName: string,
+	entrypoint: string,
+	{
+		bindings,
+		routes,
+		customDomains,
+		subdomainStatus,
+		serviceEnvMetadata,
+		cronTriggers,
+	}: FullWorkerConfig
+): Promise<RawConfig> {
+	const mappedBindings = await mapWorkerMetadataBindings(bindings);
 
 	const durableObjectClassNames = bindings
 		.filter((binding) => binding.type === "durable_object_namespace")
@@ -155,4 +173,93 @@ export async function downloadWorkerConfig(
 		observability: serviceEnvMetadata.script.observability,
 		...mappedBindings,
 	};
+}
+
+export async function constructWranglerConfig(
+	workerName: string,
+	entrypoint: string,
+	workerOrWorkers: FullWorkerConfig | FullWorkerConfig[]
+): Promise<RawConfig> {
+	let workers: FullWorkerConfig[];
+	if (Array.isArray(workerOrWorkers)) {
+		workers = workerOrWorkers;
+	} else {
+		workers = [workerOrWorkers];
+	}
+
+	const topLevelEnv = workers.find(
+		(w) =>
+			!w.serviceEnvMetadata.script.tags?.some((t) =>
+				t.startsWith(ENVIRONMENT_TAG_PREFIX)
+			)
+	);
+	let combinedConfig: RawConfig;
+	if (topLevelEnv) {
+		combinedConfig = await convertWorkerToWranglerConfig(
+			workerName,
+			entrypoint,
+			topLevelEnv
+		);
+	} else {
+		// Make a synthetic top level environment
+		combinedConfig = {
+			name: workerName,
+			main: entrypoint,
+		};
+	}
+
+	for (const env of workers) {
+		const serviceTag = env.serviceEnvMetadata.script.tags?.find(
+			(t) => t === `${SERVICE_TAG_PREFIX}${workerName}`
+		);
+		const envTag = env.serviceEnvMetadata.script.tags?.find((t) =>
+			t.startsWith(ENVIRONMENT_TAG_PREFIX)
+		);
+		if (serviceTag !== workerName || envTag === undefined) {
+			continue;
+		}
+		const [_, envName] = envTag.split("=");
+		combinedConfig.env ??= {};
+		combinedConfig.env[envName] = await convertWorkerToWranglerConfig(
+			workerName,
+			entrypoint,
+			env
+		);
+	}
+	return combinedConfig;
+}
+
+/**
+ * Downloads all the remote information we can gather for a worker and from them generates a raw configuration object that
+ * approximates what a wrangler config object for the worker was/would have been.
+ *
+ * @param workerName The name of the worker
+ * @param environment The target environment for the worker
+ * @param entrypoint The worker's entrypoint
+ * @param accountId The ID of the account owning the worker
+ * @returns A RawConfig object that bests represents the remote configuration of the worker
+ */
+export async function downloadWorkerConfig(
+	workerName: string,
+	environment: string,
+	entrypoint: string,
+	accountId: string
+): Promise<RawConfig> {
+	const {
+		bindings,
+		routes,
+		customDomains,
+		subdomainStatus,
+		serviceEnvMetadata,
+		cronTriggers,
+	} = await fetchWorkerConfig(accountId, workerName, environment);
+
+	return constructWranglerConfig(workerName, entrypoint, {
+		bindings,
+		routes,
+		customDomains,
+		subdomainStatus,
+		serviceEnvMetadata,
+		cronTriggers,
+	});
 }

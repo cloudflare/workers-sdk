@@ -6,10 +6,8 @@ import {
 	resolveImageName,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { UserError } from "../errors";
+import { UserError } from "@cloudflare/workers-utils";
 import { getAccountId } from "../user";
-import type { Config } from "../config";
-import type { ContainerApp } from "../config/environment";
 import type {
 	ApplicationAffinities,
 	ApplicationAffinityColocation,
@@ -18,6 +16,7 @@ import type {
 	SharedContainerConfig,
 } from "@cloudflare/containers-shared";
 import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
+import type { Config, ContainerApp } from "@cloudflare/workers-utils";
 
 /**
  * Perform type conversion of affinities so that they can be fed to the API.

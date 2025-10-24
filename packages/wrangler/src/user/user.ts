@@ -212,10 +212,10 @@ import http from "node:http";
 import path from "node:path";
 import url from "node:url";
 import { TextEncoder } from "node:util";
+import { configFileName, UserError } from "@cloudflare/workers-utils";
 import TOML from "@iarna/toml";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { configFileName } from "../config";
 import {
 	getConfigCache,
 	purgeConfigCaches,
@@ -226,7 +226,6 @@ import {
 	getCloudflareApiEnvironmentFromEnv,
 	getCloudflareComplianceRegion,
 } from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";

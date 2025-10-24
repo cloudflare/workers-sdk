@@ -7,9 +7,9 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli/interactive";
+import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
-import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
@@ -24,7 +24,6 @@ import {
 	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
-import type { Config } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	ApiDeployment,
@@ -33,6 +32,7 @@ import type {
 	VersionCache,
 	VersionId,
 } from "./types";
+import type { Config } from "@cloudflare/workers-utils";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish

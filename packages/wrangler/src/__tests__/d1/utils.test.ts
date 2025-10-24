@@ -1,5 +1,5 @@
+import { type Config } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-import { type Config } from "../../config";
 import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromConfig,

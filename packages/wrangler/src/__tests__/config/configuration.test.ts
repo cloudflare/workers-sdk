@@ -1,7 +1,10 @@
 import * as fs from "fs";
 import path from "node:path";
-import { experimental_readRawConfig, readConfig } from "../../config";
-import { normalizeAndValidateConfig } from "../../config/validation";
+import {
+	experimental_readRawConfig,
+	normalizeAndValidateConfig,
+} from "@cloudflare/workers-utils";
+import { readConfig } from "../../config";
 import { run } from "../../experimental-flags";
 import { normalizeString } from "../helpers/normalize";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -12,7 +15,7 @@ import type {
 	RawConfig,
 	RawDevConfig,
 	RawEnvironment,
-} from "../../config";
+} from "@cloudflare/workers-utils";
 
 describe("readConfig()", () => {
 	runInTempDir();

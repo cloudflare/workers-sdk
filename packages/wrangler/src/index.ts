@@ -4,6 +4,12 @@ import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
 import { ApiError } from "@cloudflare/containers-shared";
 import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
+import {
+	CommandLineArgsError,
+	experimental_readRawConfig,
+	JsonFriendlyFatalError,
+	UserError,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import Cloudflare from "cloudflare";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -25,7 +31,7 @@ import {
 import { renderError } from "./cfetch";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
-import { experimental_readRawConfig, readConfig } from "./config";
+import { readConfig } from "./config";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
@@ -65,11 +71,6 @@ import {
 import { docs } from "./docs";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "./environment-variables/misc-variables";
-import {
-	CommandLineArgsError,
-	JsonFriendlyFatalError,
-	UserError,
-} from "./errors";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,

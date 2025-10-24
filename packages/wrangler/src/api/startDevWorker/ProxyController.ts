@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import events from "node:events";
 import path from "node:path";
+import { assertNever } from "@cloudflare/workers-utils";
 import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
@@ -18,7 +19,6 @@ import {
 import { getHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
-import { assertNever } from "../../utils/assert-never";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";

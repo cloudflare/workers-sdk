@@ -1,4 +1,4 @@
-import type { Config } from "../config";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function getScriptName(
 	args: { name: string | undefined; env: string | undefined },

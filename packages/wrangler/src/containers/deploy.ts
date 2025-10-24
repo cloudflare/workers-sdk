@@ -19,10 +19,13 @@ import {
 	resolveImageName,
 	RolloutsService,
 } from "@cloudflare/containers-shared";
+import {
+	FatalError,
+	formatConfigSnippet,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { promiseSpinner } from "../cloudchamber/common";
 import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
-import { formatConfigSnippet } from "../config";
-import { FatalError, UserError } from "../errors";
 import { getAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
@@ -30,8 +33,6 @@ import {
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
 import type { ImageRef } from "../cloudchamber/build";
-import type { Config } from "../config";
-import type { ContainerApp } from "../config/environment";
 import type {
 	Application,
 	ApplicationID,
@@ -42,6 +43,7 @@ import type {
 	Observability as ObservabilityConfiguration,
 	RolloutStepRequest,
 } from "@cloudflare/containers-shared";
+import type { Config, ContainerApp } from "@cloudflare/workers-utils";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
 	if (typeof target !== "object" || target === null) {

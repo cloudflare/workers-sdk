@@ -21,7 +21,7 @@ import type {
 	ReloadCompleteEvent,
 	StartDevWorkerOptions,
 } from "../../../api";
-import type { Rule } from "../../../config/environment";
+import type { Rule } from "@cloudflare/workers-utils";
 
 export type Module<ModuleType extends Rule["type"] = Rule["type"]> = File<
 	string | Uint8Array

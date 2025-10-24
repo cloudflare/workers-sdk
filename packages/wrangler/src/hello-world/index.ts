@@ -1,10 +1,10 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { createCommand, createNamespace } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
-import { UserError } from "../errors";
 import { logger } from "../logger";
-import type { Config } from "../config";
+import type { Config } from "@cloudflare/workers-utils";
 
 export const helloWorldNamespace = createNamespace({
 	metadata: {

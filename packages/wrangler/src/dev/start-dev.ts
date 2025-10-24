@@ -19,10 +19,10 @@ import {
 	collectPlainTextVars,
 } from "../utils/collectKeyValues";
 import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
-import type { Config } from "../config";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
+import type { Config } from "@cloudflare/workers-utils";
 import type { watch } from "chokidar";
 
 /**

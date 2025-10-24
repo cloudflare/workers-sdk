@@ -1,4 +1,4 @@
-import type { Json } from "miniflare";
+import type { Json } from "../types";
 
 /**
  * The `Environment` interface declares all the configuration fields that

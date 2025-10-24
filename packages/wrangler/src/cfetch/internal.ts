@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { UserError } from "@cloudflare/workers-utils";
 import Cloudflare from "cloudflare";
 import { fetch, FormData, Headers, Request, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
@@ -6,7 +7,6 @@ import {
 	getCloudflareApiBaseUrl,
 	getTraceHeader,
 } from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";

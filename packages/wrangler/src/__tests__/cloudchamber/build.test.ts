@@ -7,7 +7,7 @@ import {
 	runDockerCmd,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
-import { UserError } from "../../errors";
+import { UserError } from "@cloudflare/workers-utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";

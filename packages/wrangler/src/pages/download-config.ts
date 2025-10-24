@@ -1,5 +1,6 @@
 import { existsSync } from "fs";
 import { writeFile } from "node:fs/promises";
+import { FatalError, formatCompatibilityDate } from "@cloudflare/workers-utils";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { supportedCompatibilityDate } from "miniflare";
@@ -8,15 +9,13 @@ import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
-import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import type { RawEnvironment } from "../config";
 import type { PagesConfigCache } from "./types";
 import type { Project } from "@cloudflare/types";
+import type { RawEnvironment } from "@cloudflare/workers-utils";
 
 // TODO: fix the Project definition
 type DeploymentConfig = Project["deployment_configs"]["production"];

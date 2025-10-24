@@ -1,6 +1,5 @@
+import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchPagedListResult } from "../cfetch";
-import { configFileName } from "../config";
-import { UserError } from "../errors";
 import { getCloudflareAccountIdFromEnv } from "./auth-variables";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 

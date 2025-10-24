@@ -1,6 +1,6 @@
+import { CommandLineArgsError } from "@cloudflare/workers-utils";
 import { readConfig } from "../config";
 import { confirm } from "../dialogs";
-import { CommandLineArgsError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { parseHumanDuration } from "../parse";

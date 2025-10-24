@@ -1,5 +1,5 @@
-import { UserError } from "../errors";
-import type { Config } from "../config";
+import { UserError } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function getClassNamesWhichUseSQLite(
 	migrations: Config["migrations"] | undefined

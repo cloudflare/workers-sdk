@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
-import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { APIError } from "../../parse";
 import { requireAuth } from "../../user";

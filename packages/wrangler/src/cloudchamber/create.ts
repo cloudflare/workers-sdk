@@ -37,7 +37,6 @@ import {
 import { loadAccount } from "./locations";
 import { getNetworkInput } from "./network/network";
 import { sshPrompts as promptForSSHKeyAndGetAddedSSHKey } from "./ssh/ssh";
-import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -49,6 +48,7 @@ import type {
 	Label,
 	SSHPublicKeyID,
 } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";
 

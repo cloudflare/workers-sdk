@@ -1,6 +1,6 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, prompt } from "../dialogs";
-import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { ParseError, readFileSync } from "../parse";

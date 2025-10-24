@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
+import { UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
-import { UserError } from "../../errors";
 import { logger, runWithLogLevel } from "../../logger";
 import { ParseError } from "../../parse";
 import { BundlerController } from "./BundlerController";

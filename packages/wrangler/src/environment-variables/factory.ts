@@ -1,4 +1,4 @@
-import { UserError } from "../errors";
+import { UserError } from "@cloudflare/workers-utils";
 
 /**
  * Environment variables supported by Wrangler for configuration and authentication.

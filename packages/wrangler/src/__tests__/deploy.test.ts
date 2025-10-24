@@ -4,13 +4,13 @@ import { spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { findWranglerConfig } from "@cloudflare/workers-utils";
 import * as TOML from "@iarna/toml";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { vi } from "vitest";
-import { findWranglerConfig } from "../config/config-helpers";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { sniffUserAgent } from "../package-manager";
@@ -68,11 +68,13 @@ import {
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
-import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
-import type { ServiceMetadataRes } from "../init";
 import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
+import type {
+	Config,
+	ServiceMetadataRes,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 import type { Mock } from "vitest";
 

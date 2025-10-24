@@ -1,4 +1,4 @@
-import type { CfModuleType, CfScriptFormat } from "./worker";
+import type { CfModuleType, CfScriptFormat } from "@cloudflare/workers-utils";
 
 /**
  * Compute the entry-point module type from the bundle format.

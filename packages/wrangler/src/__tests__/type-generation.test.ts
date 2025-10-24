@@ -10,7 +10,7 @@ import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { EnvironmentNonInheritable } from "../config/environment";
+import type { EnvironmentNonInheritable } from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";
 
 describe("isValidIdentifier", () => {
