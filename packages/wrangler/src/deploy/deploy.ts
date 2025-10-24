@@ -10,6 +10,7 @@ import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { buildContainer, deployContainers } from "../cloudchamber/deploy";
 import { configFileName, formatConfigSnippet } from "../config";
+import { experimental_patchConfig } from "../config/patch-config";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -63,9 +64,9 @@ import {
 } from "../versions/api";
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
-import { getRemoteConfigDiff } from "./config-diffs";
+import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { AssetsOptions } from "../assets";
-import type { Config } from "../config";
+import type { Config, RawConfig } from "../config";
 import type {
 	CustomDomainRoute,
 	Route,
@@ -423,6 +424,35 @@ export default async function deploy(props: Props): Promise<{
 								"Deploying the Worker will override the remote configuration with your local one."
 						);
 						if (!(await deployConfirm("Would you like to continue?"))) {
+							if (
+								config.userConfigPath &&
+								/\.jsonc?$/.test(config.userConfigPath)
+							) {
+								const targetingEnvironment = !!props.env;
+
+								if (
+									// TODO: Currently if the user is targeting an environment we don't offer them to update
+									// their config file since that is fairly nuanced, we should also support environments
+									// (the best we can) here
+									!targetingEnvironment &&
+									(await confirm(
+										"Would you like to update the local config file with the conflicting remote values?",
+										{
+											defaultValue: true,
+											fallbackValue: true,
+										}
+									))
+								) {
+									const patchObj: RawConfig = getConfigPatch(configDiff.diff);
+
+									experimental_patchConfig(
+										config.userConfigPath,
+										patchObj,
+										false
+									);
+								}
+							}
+
 							return { versionId, workerTag };
 						}
 					}
