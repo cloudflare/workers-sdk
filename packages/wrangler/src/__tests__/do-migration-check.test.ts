@@ -51,15 +51,23 @@ describe("wrangler check do-migrations", () => {
 		writeWranglerConfig({
 			durable_objects: {
 				bindings: [
-                    { name: "SOMESQLITENAME", class_name: "SomeSQLiteClass" },
-                    { name: "THATOTHERNAME", class_name: "ThatOtherClass"},
+					{ name: "SOMESQLITENAME", class_name: "SomeSQLiteClass" },
+					{ name: "THATOTHERNAME", class_name: "ThatOtherClass" },
 				],
 			},
 			migrations: [
 				{ tag: "v1", new_classes: ["SomeClass"] },
 				{ tag: "v2", new_classes: ["SomeOtherClass"] },
-                { tag: "v3", new_classes: ["ThisOtherClass"], new_sqlite_classes: ["SomeSQLiteClass"] },
-                { tag: "v4", deleted_classes: ["SomeClass", "SomeOtherClass"], renamed_classes: [ {from: "ThisOtherClass", to: "ThatOtherClass" }]}
+				{
+					tag: "v3",
+					new_classes: ["ThisOtherClass"],
+					new_sqlite_classes: ["SomeSQLiteClass"],
+				},
+				{
+					tag: "v4",
+					deleted_classes: ["SomeClass", "SomeOtherClass"],
+					renamed_classes: [{ from: "ThisOtherClass", to: "ThatOtherClass" }],
+				},
 			],
 		});
 		mockLegacyScriptData({
@@ -86,15 +94,23 @@ describe("wrangler check do-migrations", () => {
 		writeWranglerConfig({
 			durable_objects: {
 				bindings: [
-                    { name: "SOMESQLITENAME", class_name: "SomeSQLiteClass" },
-                    { name: "THATOTHERNAME", class_name: "ThatOtherClass"},
+					{ name: "SOMESQLITENAME", class_name: "SomeSQLiteClass" },
+					{ name: "THATOTHERNAME", class_name: "ThatOtherClass" },
 				],
 			},
 			migrations: [
 				{ tag: "v1", new_classes: ["SomeClass"] },
 				{ tag: "v2", new_classes: ["SomeOtherClass"] },
-                { tag: "v3", new_classes: ["ThisOtherClass"], new_sqlite_classes: ["SomeSQLiteClass"] },
-                { tag: "v4", deleted_classes: ["SomeClass", "SomeOtherClass"], renamed_classes: [ {from: "ThisOtherClass", to: "ThatOtherClass" }]}
+				{
+					tag: "v3",
+					new_classes: ["ThisOtherClass"],
+					new_sqlite_classes: ["SomeSQLiteClass"],
+				},
+				{
+					tag: "v4",
+					deleted_classes: ["SomeClass", "SomeOtherClass"],
+					renamed_classes: [{ from: "ThisOtherClass", to: "ThatOtherClass" }],
+				},
 			],
 		});
 		mockLegacyScriptData({
@@ -143,15 +159,23 @@ describe("wrangler check do-migrations", () => {
 		writeWranglerConfig({
 			durable_objects: {
 				bindings: [
-                    { name: "SOMESQLITENAME", class_name: "SomeSQLiteClass" },
-                    { name: "THATOTHERNAME", class_name: "ThatOtherClass"},
+					{ name: "SOMESQLITENAME", class_name: "SomeSQLiteClass" },
+					{ name: "THATOTHERNAME", class_name: "ThatOtherClass" },
 				],
 			},
 			migrations: [
 				{ tag: "v1", new_classes: ["SomeClass"] },
 				{ tag: "v2", new_classes: ["SomeOtherClass"] },
-                { tag: "v3", new_classes: ["ThisOtherClass"], new_sqlite_classes: ["SomeSQLiteClass"] },
-                { tag: "v4", deleted_classes: ["SomeClass", "SomeOtherClass"], renamed_classes: [ {from: "ThisOtherClass", to: "ThatOtherClass" }]}
+				{
+					tag: "v3",
+					new_classes: ["ThisOtherClass"],
+					new_sqlite_classes: ["SomeSQLiteClass"],
+				},
+				{
+					tag: "v4",
+					deleted_classes: ["SomeClass", "SomeOtherClass"],
+					renamed_classes: [{ from: "ThisOtherClass", to: "ThatOtherClass" }],
+				},
 			],
 		});
 		mockLegacyScriptData({
@@ -189,15 +213,23 @@ describe("wrangler check do-migrations", () => {
 		writeWranglerConfig({
 			durable_objects: {
 				bindings: [
-                    { name: "SOMESQLITENAME", class_name: "SomeSQLiteClass" },
-                    { name: "THATOTHERNAME", class_name: "ThatOtherClass"},
+					{ name: "SOMESQLITENAME", class_name: "SomeSQLiteClass" },
+					{ name: "THATOTHERNAME", class_name: "ThatOtherClass" },
 				],
 			},
 			migrations: [
 				{ tag: "v1", new_classes: ["SomeClass"] },
 				{ tag: "v2", new_classes: ["SomeOtherClass"] },
-                { tag: "v3", new_classes: ["ThisOtherClass"], new_sqlite_classes: ["SomeSQLiteClass"] },
-                { tag: "v4", deleted_classes: ["SomeClass", "SomeOtherClass"], renamed_classes: [ {from: "ThisOtherClass", to: "ThatOtherClass" }]}
+				{
+					tag: "v3",
+					new_classes: ["ThisOtherClass"],
+					new_sqlite_classes: ["SomeSQLiteClass"],
+				},
+				{
+					tag: "v4",
+					deleted_classes: ["SomeClass", "SomeOtherClass"],
+					renamed_classes: [{ from: "ThisOtherClass", to: "ThatOtherClass" }],
+				},
 			],
 		});
 		mockLegacyScriptData({
