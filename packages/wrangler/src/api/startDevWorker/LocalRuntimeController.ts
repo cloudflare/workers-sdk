@@ -141,6 +141,7 @@ export async function convertToConfigBundle(
 		serviceBindings: fetchers,
 		testScheduled: !!event.config.dev.testScheduled,
 		tails: event.config.tailConsumers,
+		streamingTails: event.config.streamingTailConsumers,
 		containerDOClassNames: new Set(
 			event.config.containers?.map((c) => c.class_name)
 		),

@@ -229,6 +229,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			serviceBindings: {},
 			migrations: config.migrations,
 			tails: [],
+			streamingTails: [],
 			containerDOClassNames: new Set(
 				config.containers?.map((c) => c.class_name)
 			),
@@ -395,6 +396,7 @@ export function unstable_getMiniflareWorkerOptions(
 			serviceBindings: {},
 			migrations: config.migrations,
 			tails: config.tail_consumers,
+			streamingTails: config.streaming_tail_consumers,
 			containerDOClassNames,
 			containerBuildId: options?.containerBuildId,
 			enableContainers,
