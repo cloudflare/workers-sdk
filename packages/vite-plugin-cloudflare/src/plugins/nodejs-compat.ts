@@ -403,24 +403,15 @@ export class NodeJsCompat {
 	): { unresolved: string; resolved: string } | undefined {
 		const alias = this.#env.alias[source];
 
+		// These aliases must be resolved from the context of this plugin since the alias will refer to one of the
+		// `@cloudflare/unenv-preset` or the `unenv` packages, which are direct dependencies of this package,
+		// and not the user's project.
 		// We exclude `externals` as these should be externalized rather than optimized.
 		if (alias && !this.externals.has(alias)) {
-			try {
-				// These aliases must be resolved from the context of this plugin since the alias can refer to one of
-				// the `@cloudflare/unenv-preset` or the `unenv` packages, which are direct dependencies of this package,
-				// and not the user's project.
-				// When the alias is a package (i.e. the `debug` npm package), `resolvePathSync` will throw
-				return {
-					unresolved: alias,
-					resolved: resolvePathSync(alias, { url: import.meta.url }),
-				};
-			} catch {
-				// Returns the raw alias when it can not be resolved.
-				return {
-					unresolved: source,
-					resolved: alias,
-				};
-			}
+			return {
+				unresolved: alias,
+				resolved: resolvePathSync(alias, { url: import.meta.url }),
+			};
 		}
 
 		if (this.entries.has(source)) {
