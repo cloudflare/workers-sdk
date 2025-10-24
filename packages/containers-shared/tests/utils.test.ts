@@ -1,5 +1,9 @@
 import { mkdirSync, writeFileSync } from "fs";
-import { checkExposedPorts, isDockerfile } from "./../src/utils";
+import {
+	checkExposedPorts,
+	isDockerfile,
+	parseImageName,
+} from "./../src/utils";
 import { runInTempDir } from "./helpers/run-in-tmp-dir";
 import type { ContainerDevOptions } from "../src/types";
 
@@ -96,5 +100,129 @@ describe("checkExposedPorts", () => {
 				For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.
 				]
 			`);
+	});
+});
+
+describe("parseImageName", () => {
+	test.concurrent.for<
+		[
+			string,
+			{
+				host?: string;
+				name?: string;
+				tag?: string;
+				digest?: string;
+				err?: string;
+			},
+		]
+	>([
+		// With hostname and namespace
+		[
+			"docker.io/cloudflare/hello-world:1.0",
+			{ host: "docker.io", name: "cloudflare/hello-world", tag: "1.0" },
+		],
+
+		// With hostname and no namespace
+		[
+			"docker.io/hello-world:1.0",
+			{ host: "docker.io", name: "hello-world", tag: "1.0" },
+		],
+
+		// Hostname with port
+		[
+			"localhost:7777/web:local",
+			{ host: "localhost:7777", name: "web", tag: "local" },
+		],
+		[
+			"registry.com:1234/foo/bar:local",
+			{ host: "registry.com:1234", name: "foo/bar", tag: "local" },
+		],
+
+		// No hostname
+		["hello-world:1.0", { name: "hello-world", tag: "1.0" }],
+
+		// No hostname with namespace
+		[
+			"cloudflare/hello-world:1.0",
+			{ name: "cloudflare/hello-world", tag: "1.0" },
+		],
+
+		// Hostname with sha256 digest
+		[
+			"registry.cloudflare.com/hello/world:1.0@sha256:abcdef0123456789",
+			{
+				host: "registry.cloudflare.com",
+				name: "hello/world",
+				tag: "1.0",
+				digest: "sha256:abcdef0123456789",
+			},
+		],
+
+		// With sha256 digest
+		[
+			"hello/world:1.0@sha256:abcdef0123456789",
+			{ name: "hello/world", tag: "1.0", digest: "sha256:abcdef0123456789" },
+		],
+
+		// sha256 digest but no tag
+		[
+			"hello/world@sha256:abcdef0123456789",
+			{ name: "hello/world", digest: "sha256:abcdef0123456789" },
+		],
+
+		// Invalid name
+		[
+			"bad image name:1",
+			{
+				err: "Invalid image format: expected NAME:TAG[@DIGEST] or NAME@DIGEST",
+			},
+		],
+
+		// Missing tag
+		[
+			"no-tag",
+			{
+				err: "Invalid image format: expected NAME:TAG[@DIGEST] or NAME@DIGEST",
+			},
+		],
+		[
+			"no-tag:",
+			{
+				err: "Invalid image format: expected NAME:TAG[@DIGEST] or NAME@DIGEST",
+			},
+		],
+
+		// Invalid tag
+		[
+			"no-tag::",
+			{
+				err: "Invalid image format: expected NAME:TAG[@DIGEST] or NAME@DIGEST",
+			},
+		],
+
+		// latest tag
+		["name:latest", { err: '"latest" tag is not allowed' }],
+
+		// Too many colons
+		[
+			"registry.com:1234/foobar:4444/image:sometag",
+			{
+				err: "Invalid image format: expected NAME:TAG[@DIGEST] or NAME@DIGEST",
+			},
+		],
+	])("%s", ([input, expected], { expect }) => {
+		let result;
+		try {
+			result = parseImageName(input);
+		} catch (err) {
+			assert.instanceOf(err, Error);
+			expect(err.message).toEqual(expected.err);
+			return;
+		}
+
+		expect(result.host).toEqual(expected.host);
+		expect(result.name).toEqual(expected.name);
+		expect(result.tag).toEqual(expected.tag);
+		expect(result.digest).toEqual(expected.digest);
 	});
 });
