@@ -38,7 +38,7 @@ type CronTriggersRes = {
 	}[];
 };
 
-interface FullWorkerConfig {
+export interface FullWorkerConfig {
 	bindings: WorkerMetadata["bindings"];
 	routes: RoutesRes;
 	customDomains: CustomDomainsRes;

@@ -47,3 +47,7 @@ export * from "./constants";
 export { parseJSONC, parseTOML, readFileSync } from "./parse";
 export { formatCompatibilityDate } from "./format-compatibility-date";
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
+export {
+	constructWranglerConfig,
+	type FullWorkerConfig,
+} from "./construct-wrangler-config";
