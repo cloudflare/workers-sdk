@@ -84,7 +84,7 @@ class InstanceImpl implements WorkflowInstance {
 	public async status(): Promise<InstanceStatus> {
 		const instance = (await this.binding.get(this.id)) as WorkflowInstance &
 			Disposable;
-		using res = (await instance.status()) as InstanceStatus & Disposable;
+		const res = (await instance.status()) as InstanceStatus & Disposable;
 		instance[Symbol.dispose]();
 		return structuredClone(res);
 	}
@@ -95,9 +95,8 @@ class InstanceImpl implements WorkflowInstance {
 	}): Promise<void> {
 		const instance = (await this.binding.get(this.id)) as WorkflowInstance &
 			Disposable;
-		const res = (await instance.sendEvent(args)) as void & Disposable;
+		await instance.sendEvent(args);
 		instance[Symbol.dispose]();
-		res[Symbol.dispose]();
 	}
 }
 
