@@ -1,5 +1,11 @@
 # @cloudflare/vite-plugin
 
+## 1.13.16
+
+### Patch Changes
+
+- [#11083](https://github.com/cloudflare/workers-sdk/pull/11083) [`57fc660`](https://github.com/cloudflare/workers-sdk/commit/57fc660ba9ad2934102620201ea6275b00a12b15) Thanks [@vicb](https://github.com/vicb)! - allow resolving unenv aliases to packages
+
 ## 1.13.15
 
 ### Patch Changes
