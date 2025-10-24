@@ -8,6 +8,13 @@ export type ExperimentalFlags = {
 	AUTOCREATE_RESOURCES: boolean;
 };
 
+// In some contexts (e.g. getPlatformProxy) we don't necessarily have a flag store
+// instantiated when we want to read a value. This provides defaults for some flags in those cases
+const flagDefaults: Partial<Record<keyof ExperimentalFlags, boolean>> = {
+	RESOURCES_PROVISION: true,
+	AUTOCREATE_RESOURCES: true,
+};
+
 const flags = new AsyncLocalStorage<ExperimentalFlags>();
 
 export const run = <V>(flagValues: ExperimentalFlags, cb: () => V) =>
@@ -24,5 +31,5 @@ export const getFlag = <F extends keyof ExperimentalFlags>(flag: F) => {
 			`Attempted to use flag "${flag}" which has not been instantiated`
 		);
 	}
-	return value;
+	return value ?? flagDefaults[flag];
 };
