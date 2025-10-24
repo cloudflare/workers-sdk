@@ -103,7 +103,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
                     main = "src/index.ts"
                     compatibility_date = "2023-01-01"
                     workers_dev = true
-                    preview_urls = true
+                    preview_urls = false
                 `,
 			});
 			await helper.run("wrangler triggers deploy");
@@ -114,7 +114,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
                     main = "src/index.ts"
                     compatibility_date = "2023-01-01"
                     workers_dev = true
-                    # preview_urls = false # Defaults to false.
+                    # preview_urls = workers_dev = true # Defaults to true.
                 `,
 			});
 			const deploy = await helper.run("wrangler deploy");
@@ -126,8 +126,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
 				Current Version ID: 00000000-0000-0000-0000-000000000000"
 			`);
 			expect(normalize(deploy.stderr)).toMatchInlineSnapshot(`
-				"▲ [WARNING] Because your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be disabled for this deployment by default.
-				  To override this setting, you can enable Preview URLs by explicitly setting 'preview_urls = true' in your Wrangler file."
+				"▲ [WARNING] Because your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be enabled for this deployment by default.
+				  To override this setting, you can disable Preview URLs by explicitly setting 'preview_urls = false' in your Wrangler file."
 			`);
 		});
 	});
