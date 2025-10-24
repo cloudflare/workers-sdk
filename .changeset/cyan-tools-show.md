@@ -2,6 +2,8 @@
 "wrangler": patch
 ---
 
-Potentially update local config on `wrangler deploy --x-remote-diff-check` invocations
+Offer to update the local Wrangler configuration file to match remote configuration when running `wrangler deploy`
 
-The changes here update `wrangler deploy`, when run with `--x-remote-diff-check`, to offer the user the possibility to update the local configuration file in case there were conflicts with the remote configuration (and the user has decided not to override the remote configuration with the local one)
+When running `wrangler deploy`, with `--x-remote-diff-check`, Wrangler will display the difference between local and remote configuration.
+If there would be a destructive change to the remote configuration, the user is given the option to cancel the deployment.
+In the case where the user does cancel deployment, Wrangler will now also offer to update the local Wrangler configuration file to match the remote configuration.
