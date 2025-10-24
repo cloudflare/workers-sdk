@@ -2206,8 +2206,8 @@ importers:
   packages/unenv-preset:
     dependencies:
       unenv:
-        specifier: 2.0.0-rc.21
-        version: 2.0.0-rc.21
+        specifier: 2.0.0-rc.22
+        version: 2.0.0-rc.22
       workerd:
         specifier: ^1.20250927.0
         version: 1.20251001.0
@@ -2243,8 +2243,8 @@ importers:
         specifier: ^0.2.12
         version: 0.2.12
       unenv:
-        specifier: 2.0.0-rc.21
-        version: 2.0.0-rc.21
+        specifier: 2.0.0-rc.22
+        version: 2.0.0-rc.22
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -13247,6 +13247,9 @@ packages:
   unenv@2.0.0-rc.21:
     resolution: {integrity: sha512-Wj7/AMtE9MRnAXa6Su3Lk0LNCfqDYgfwVjwRFVum9U7wsto1imuHqk4kTm7Jni+5A0Hn7dttL6O/zjvUvoo+8A==}
 
+  unenv@2.0.0-rc.22:
+    resolution: {integrity: sha512-o1sLtqbAT1WEoZxinE+tgIHIgpzt9p1WdTAwxF7wHHSseSJ5WQbZgZgFegMDz5Fwb5rMKd67p4pv5OnJWeo/bA==}
+
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
     engines: {node: '>=18'}
@@ -23998,6 +24001,14 @@ snapshots:
       ufo: 1.6.1
 
   unenv@2.0.0-rc.21:
+    dependencies:
+      defu: 6.1.4
+      exsolve: 1.0.7
+      ohash: 2.0.11
+      pathe: 2.0.3
+      ufo: 1.6.1
+
+  unenv@2.0.0-rc.22:
     dependencies:
       defu: 6.1.4
       exsolve: 1.0.7
