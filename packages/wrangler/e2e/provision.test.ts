@@ -188,6 +188,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+						preview_urls = false
 
 						[[r2_buckets]]
 						binding = "R2"
