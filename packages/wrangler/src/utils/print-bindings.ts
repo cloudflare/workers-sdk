@@ -44,6 +44,8 @@ export const friendlyBindingNames: Record<
 	vpc_services: "VPC Service",
 } as const;
 
+let isConnectedStatusExplained = false;
+
 /**
  * Print all the bindings a worker using a given config would have access to
  */
@@ -51,14 +53,20 @@ export function printBindings(
 	bindings: Partial<CfWorkerInit["bindings"]>,
 	tailConsumers: CfTailConsumer[] = [],
 	context: {
+		log?: (message: string) => void;
 		registry?: WorkerRegistry | null;
 		local?: boolean;
+		multiWorkers?: boolean;
+		imagesLocalMode?: boolean;
 		name?: string;
 		provisioning?: boolean;
 		warnIfNoBindings?: boolean;
 	} = {}
 ) {
 	let hasConnectionStatus = false;
+
+	const log = context.log ?? logger.log;
+	const multiWorkers = context.multiWorkers ?? getFlag("MULTIWORKER");
 	const getMode = createGetMode({
 		isProvisioning: context.provisioning,
 		isLocalDev: context.local,
@@ -626,17 +634,17 @@ export function printBindings(
 
 	if (output.length === 0) {
 		if (context.warnIfNoBindings) {
-			if (context.name && getFlag("MULTIWORKER")) {
-				logger.log(`No bindings found for ${chalk.blue(context.name)}`);
+			if (context.name && multiWorkers) {
+				log(`No bindings found for ${chalk.blue(context.name)}`);
 			} else {
-				logger.log("No bindings found.");
+				log("No bindings found.");
 			}
 		}
 	} else {
 		let title: string;
 		if (context.provisioning) {
 			title = `${chalk.red("Experimental:")} The following bindings need to be provisioned:`;
-		} else if (context.name && getFlag("MULTIWORKER")) {
+		} else if (context.name && multiWorkers) {
 			title = `${chalk.blue(context.name)} has access to the following bindings:`;
 		} else {
 			title = "Your Worker has access to the following bindings:";
@@ -684,12 +692,12 @@ export function printBindings(
 				maxModeLength >=
 			process.stdout.columns;
 
-		logger.log(title);
+		log(title);
 		const columnGap = shouldWrap
 			? " ".repeat(columnGapSpacesWrapped)
 			: " ".repeat(columnGapSpaces);
 
-		logger.log(
+		log(
 			`${padEndAnsi(dim(headings.binding), shouldWrap ? bindingPrefix.length + maxNameLength : bindingLength)}${columnGap}${padEndAnsi(dim(headings.resource), maxTypeLength)}${columnGap}${hasMode ? dim(headings.mode) : ""}`
 		);
 
@@ -710,20 +718,20 @@ export function printBindings(
 					: ""
 				: "";
 
-			logger.log(
+			log(
 				`${bindingString}${columnGap}${brandColor(binding.type.padEnd(maxTypeLength))}${columnGap}${hasMode ? binding.mode : ""}${suffix}`
 			);
 		}
-		logger.log();
+		log("");
 	}
 	let title: string;
-	if (context.name && getFlag("MULTIWORKER")) {
+	if (context.name && multiWorkers) {
 		title = `${chalk.blue(context.name)} is sending Tail events to the following Workers:`;
 	} else {
 		title = "Your Worker is sending Tail events to the following Workers:";
 	}
 	if (tailConsumers !== undefined && tailConsumers.length > 0) {
-		logger.log(
+		log(
 			`${title}\n${tailConsumers
 				.map(({ service }) => {
 					if (context.local && context.registry !== null) {
@@ -743,12 +751,13 @@ export function printBindings(
 		);
 	}
 
-	if (hasConnectionStatus) {
-		logger.once.info(
+	if (hasConnectionStatus && !isConnectedStatusExplained) {
+		log(
 			dim(
 				`\nService bindings, Durable Object bindings, and Tail consumers connect to other wrangler or vite dev processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
 			)
 		);
+		isConnectedStatusExplained = true;
 	}
 }
 

@@ -7,6 +7,7 @@ import { CoreHeaders, Miniflare } from "miniflare";
 import colors from "picocolors";
 import * as vite from "vite";
 import { hasAssetsConfigChanged } from "./asset-config";
+import { addBindingsShortcut } from "./bindings";
 import { createBuildApp } from "./build";
 import {
 	cloudflareBuiltInModules,
@@ -196,6 +197,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					}
 				};
 
+				addBindingsShortcut(viteDevServer, ctx);
 				assertIsNotPreview(ctx.resolvedPluginConfig);
 
 				const inputInspectorPort = await getInputInspectorPortOption(
@@ -398,6 +400,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			// see https://vite.dev/guide/api-plugin.html#configurepreviewserver
 			async configurePreviewServer(vitePreviewServer) {
 				assertIsPreview(ctx.resolvedPluginConfig);
+				addBindingsShortcut(vitePreviewServer, ctx);
 
 				const inputInspectorPort = await getInputInspectorPortOption(
 					ctx.resolvedPluginConfig,
