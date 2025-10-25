@@ -54,13 +54,9 @@ export const triggersDeployCommand = createCommand({
 	},
 	async handler(args, { config }) {
 		const assetsOptions = getAssetsOptions({ assets: undefined }, config);
-		metrics.sendMetricsEvent(
-			"deploy worker triggers",
-			{},
-			{
-				sendMetrics: config.send_metrics,
-			}
-		);
+		metrics.sendMetricsEvent("deploy worker triggers", {
+			sendMetrics: config.send_metrics,
+		});
 
 		const accountId = args.dryRun ? undefined : await requireAuth(config);
 

@@ -16,10 +16,7 @@ import {
 	readMetricsConfig,
 	writeMetricsConfig,
 } from "../metrics/metrics-config";
-import {
-	getMetricsDispatcher,
-	redactArgValues,
-} from "../metrics/metrics-dispatcher";
+import { getMetricsDispatcher } from "../metrics/metrics-dispatcher";
 import { sniffUserAgent } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -196,11 +193,7 @@ describe("metrics", () => {
 				argsUsed: [],
 				argsCombination: "",
 				command: "wrangler docs",
-				args: {
-					xProvision: true,
-					xAutoCreate: true,
-					search: ["<REDACTED>"],
-				},
+				args: {},
 			};
 			beforeEach(() => {
 				globalThis.ALGOLIA_APP_ID = "FAKE-ID";
@@ -587,40 +580,6 @@ describe("metrics", () => {
 					);
 
 					expect(requests.count).toBe(2);
-				});
-			});
-		});
-
-		describe("redactArgValues()", () => {
-			it("should redact sensitive values", () => {
-				const args = {
-					default: false,
-					array: ["beep", "boop"],
-					// Note how this is normalised
-					"secret-array": ["beep", "boop"],
-					number: 42,
-					string: "secret",
-					secretString: "secret",
-					flagOne: "default",
-					// Note how this is normalised
-					experimentalIncludeRuntime: "",
-				};
-
-				const redacted = redactArgValues(args, {
-					string: "*",
-					array: "*",
-					flagOne: ["default"],
-					xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
-				});
-				expect(redacted).toEqual({
-					default: false,
-					array: ["beep", "boop"],
-					secretArray: ["<REDACTED>", "<REDACTED>"],
-					number: 42,
-					string: "secret",
-					secretString: "<REDACTED>",
-					flagOne: "default",
-					xIncludeRuntime: ".wrangler/types/runtime.d.ts",
 				});
 			});
 		});
