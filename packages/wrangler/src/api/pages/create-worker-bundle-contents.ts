@@ -4,9 +4,8 @@ import { Response } from "undici";
 import { getBindings } from "../../deployment-bundle/bindings";
 import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
 import { loadSourceMaps } from "../../deployment-bundle/source-maps";
-import type { Config } from "../../config";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { CfPlacement } from "../../deployment-bundle/worker";
+import type { CfPlacement, Config } from "@cloudflare/workers-utils";
 import type { Blob } from "node:buffer";
 import type { FormData } from "undici";
 

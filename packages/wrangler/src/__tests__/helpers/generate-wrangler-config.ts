@@ -1,5 +1,4 @@
-import type { RawConfig } from "../../config";
-import type { RawEnvironment } from "../../config/environment";
+import type { RawConfig, RawEnvironment } from "@cloudflare/workers-utils";
 
 /**
  * Returns a feature-complete raw configuration for a Pages project. By

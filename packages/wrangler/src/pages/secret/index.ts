@@ -1,12 +1,15 @@
+import {
+	configFileName,
+	FatalError,
+	findWranglerConfig,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchResult } from "../../cfetch";
-import { configFileName, readPagesConfig } from "../../config";
+import { readPagesConfig } from "../../config";
 import { getConfigCache } from "../../config-cache";
-import { findWranglerConfig } from "../../config/config-helpers";
 import { createCommand, createNamespace } from "../../core/create-command";
 import { confirm, prompt } from "../../dialogs";
 import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../../environment-variables/misc-variables";
-import { FatalError } from "../../errors";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
 import * as metrics from "../../metrics";
@@ -15,9 +18,9 @@ import { requireAuth } from "../../user";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../constants";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../errors";
-import type { Config } from "../../config";
 import type { PagesProject } from "../download-config";
 import type { PagesConfigCache } from "../types";
+import type { Config } from "@cloudflare/workers-utils";
 
 function isPagesEnv(env: string): env is "production" | "preview" {
 	return ["production", "preview"].includes(env);

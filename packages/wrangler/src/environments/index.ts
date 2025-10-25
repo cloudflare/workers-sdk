@@ -1,9 +1,10 @@
+import {
+	ENVIRONMENT_TAG_PREFIX,
+	SERVICE_TAG_PREFIX,
+} from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import type { Config } from "../config";
-
-const SERVICE_TAG_PREFIX = "cf:service=";
-const ENVIRONMENT_TAG_PREFIX = "cf:environment=";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function hasDefinedEnvironments(config: Config) {
 	return (

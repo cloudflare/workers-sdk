@@ -1,16 +1,16 @@
 import { cancel, endSection, startSection } from "@cloudflare/cli";
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
-import { UserError } from "../errors";
+import { UserError } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { logDeployment, pickDeployment } from "./cli/deployments";
 import { wrap } from "./helpers/wrap";
-import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function deleteCommandOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs.positional("deploymentId", {

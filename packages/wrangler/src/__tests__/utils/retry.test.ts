@@ -1,5 +1,5 @@
+import { APIError } from "@cloudflare/workers-utils";
 import { logger } from "../../logger";
-import { APIError } from "../../parse";
 import { retryOnAPIFailure } from "../../utils/retry";
 import { mockConsoleMethods } from "../helpers/mock-console";
 

@@ -1,10 +1,8 @@
-import * as fs from "node:fs";
+import { readFileSync as fsReadFileSync } from "node:fs";
 import { resolve } from "node:path";
 import TOML from "@iarna/toml";
-import { formatMessagesSync } from "esbuild";
 import * as jsoncParser from "jsonc-parser";
 import { UserError } from "./errors";
-import { logger } from "./logger";
 import type { TelemetryMessage } from "./errors";
 import type { ParseError as JsoncParseError } from "jsonc-parser";
 
@@ -27,26 +25,6 @@ export type File = {
 	file?: string;
 	fileText?: string;
 };
-
-/**
- * Formats a `Message` using esbuild's pretty-printing algorithm.
- */
-export function formatMessage(
-	{ text, notes, location, kind = "error" }: Message,
-	color = true
-): string {
-	const input = { text, notes, location };
-	delete input.location?.fileText;
-	for (const note of notes ?? []) {
-		delete note.location?.fileText;
-	}
-	const lines = formatMessagesSync([input], {
-		color,
-		kind: kind,
-		terminalWidth: logger.columns,
-	});
-	return lines.join("\n");
-}
 
 /**
  * An error that's thrown when something fails to parse.
@@ -114,11 +92,11 @@ type TomlError = Error & {
 /**
  * A wrapper around `TOML.parse` that throws a `ParseError`.
  */
-export function parseTOML(input: string, file?: string): TOML.JsonMap | never {
+export function parseTOML<T>(input: string, file?: string): T | never {
 	try {
 		// Normalize CRLF to LF to avoid hitting https://github.com/iarna/iarna-toml/issues/33.
 		const normalizedInput = input.replace(/\r\n/g, "\n");
-		return TOML.parse(normalizedInput);
+		return TOML.parse(normalizedInput) as T;
 	} catch (err) {
 		const { name, message, line, col } = err as TomlError;
 		if (name !== TOML_ERROR_NAME) {
@@ -196,7 +174,7 @@ export function parseJSONC(
  */
 export function readFileSyncToBuffer(file: string): Buffer {
 	try {
-		return fs.readFileSync(file);
+		return fsReadFileSync(file);
 	} catch (err) {
 		const { message } = err as Error;
 		throw new ParseError({
@@ -215,7 +193,7 @@ export function readFileSyncToBuffer(file: string): Buffer {
  */
 export function readFileSync(file: string): string {
 	try {
-		const buffer = fs.readFileSync(file);
+		const buffer = fsReadFileSync(file);
 		return removeBOMAndValidate(buffer, file);
 	} catch (err) {
 		if (err instanceof ParseError) {

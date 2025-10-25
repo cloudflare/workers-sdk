@@ -12,8 +12,9 @@ import { warnOrError } from "../../utils/print-bindings";
 import { getClassNamesWhichUseSQLite } from "../class-names-sqlite";
 import type { ServiceFetch } from "../../api";
 import type { AssetsOptions } from "../../assets";
-import type { Config } from "../../config";
-import type { ContainerEngine } from "../../config/environment";
+import type { LoggerLevel } from "../../logger";
+import type { LegacyAssetPaths } from "../../sites";
+import type { EsbuildBundle } from "../use-esbuild";
 import type {
 	CfD1Database,
 	CfDispatchNamespace,
@@ -26,10 +27,9 @@ import type {
 	CfUnsafeBinding,
 	CfWorkerInit,
 	CfWorkflow,
-} from "../../deployment-bundle/worker";
-import type { LoggerLevel } from "../../logger";
-import type { LegacyAssetPaths } from "../../sites";
-import type { EsbuildBundle } from "../use-esbuild";
+	Config,
+	ContainerEngine,
+} from "@cloudflare/workers-utils";
 import type {
 	DOContainerOptions,
 	MiniflareOptions,

@@ -1,12 +1,15 @@
 import type { DevEnv, ProxyData } from "../api";
 import type { AssetsOptions } from "../assets";
-import type { Config } from "../config";
-import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { LegacyAssetPaths } from "../sites";
+import type {
+	CfModule,
+	CfWorkerInit,
+	Config,
+	Route,
+} from "@cloudflare/workers-utils";
 import type { NodeJSCompatMode } from "miniflare";
 
 export type DevProps = {

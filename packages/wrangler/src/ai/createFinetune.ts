@@ -6,8 +6,8 @@ import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { getErrorMessage } from "./utils";
-import type { Message } from "../parse";
 import type { Finetune } from "./types";
+import type { Message } from "@cloudflare/workers-utils";
 
 const requiredAssets = ["adapter_config.json", "adapter_model.safetensors"];
 

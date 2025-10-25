@@ -13,14 +13,13 @@ import {
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { SshPublicKeysService } from "@cloudflare/containers-shared";
-import { UserError } from "../../errors";
+import { UserError } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { pollSSHKeysUntilCondition } from "../cli";
 import { checkEverythingIsSet, handleFailure } from "../common";
 import { wrap } from "../helpers/wrap";
 import { validatePublicSSHKeyCLI, validateSSHKey } from "./validate";
-import type { Config } from "../../config";
 import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgv,
@@ -33,6 +32,7 @@ import type {
 	SSHPublicKeyID,
 	SSHPublicKeyItem,
 } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 function createSSHPublicKeyOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs

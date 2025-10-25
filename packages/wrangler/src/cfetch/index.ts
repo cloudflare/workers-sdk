@@ -1,5 +1,5 @@
 import { URLSearchParams } from "node:url";
-import { APIError } from "../parse";
+import { APIError } from "@cloudflare/workers-utils";
 import { maybeThrowFriendlyError } from "./errors";
 import { fetchInternal } from "./internal";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";

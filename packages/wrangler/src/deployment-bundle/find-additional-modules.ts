@@ -1,19 +1,18 @@
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getWranglerHiddenDirPath } from "../paths";
 import { getBundleType } from "./bundle-type";
 import { RuleTypeToModuleType } from "./module-collection";
 import { parseRules } from "./rules";
 import { tryAttachSourcemapToModule } from "./source-maps";
-import type { Rule } from "../config/environment";
 import type { Entry } from "./entry";
 import type { ParsedRules } from "./rules";
-import type { CfModule } from "./worker";
+import type { CfModule, Rule } from "@cloudflare/workers-utils";
 
 async function* getFiles(
 	configPath: string | undefined,

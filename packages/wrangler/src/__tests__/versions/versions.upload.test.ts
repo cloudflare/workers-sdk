@@ -19,7 +19,7 @@ import {
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "../helpers/write-wrangler-config";
-import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
+import type { WorkerMetadata } from "@cloudflare/workers-utils";
 
 describe("versions upload", () => {
 	runInTempDir();

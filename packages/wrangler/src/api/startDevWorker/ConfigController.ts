@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
@@ -21,7 +22,6 @@ import {
 	getDisableConfigWatching,
 	getDockerPath,
 } from "../../environment-variables/misc-variables";
-import { UserError } from "../../errors";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -47,8 +47,6 @@ import {
 	extractBindingsOfType,
 	unwrapHook,
 } from "./utils";
-import type { Config } from "../../config";
-import type { CfUnsafe } from "../../deployment-bundle/worker";
 import type { ControllerEventMap } from "./BaseController";
 import type { ConfigUpdateEvent, DevRegistryUpdateEvent } from "./events";
 import type {
@@ -56,6 +54,7 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "./types";
+import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
 
 type ConfigControllerEventMap = ControllerEventMap & {

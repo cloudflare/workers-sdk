@@ -41,7 +41,6 @@
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "catalog:default",
 		"esbuild-register": "^3.5.0",
-		"jsonc-parser": "^3.2.0",
 		"prettier": "^3.2.5",
 		"prettier-plugin-packagejson": "^2.2.18",
 		"tree-kill": "^1.2.2",

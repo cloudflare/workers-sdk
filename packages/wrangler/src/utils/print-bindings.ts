@@ -1,48 +1,11 @@
 import { brandColor, dim, white } from "@cloudflare/cli/colors";
+import { friendlyBindingNames, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import stripAnsi from "strip-ansi";
-import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
-import type { CfTailConsumer, CfWorkerInit } from "../deployment-bundle/worker";
+import type { CfTailConsumer, CfWorkerInit } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
-
-export const friendlyBindingNames: Record<
-	keyof CfWorkerInit["bindings"],
-	string
-> = {
-	data_blobs: "Data Blob",
-	durable_objects: "Durable Object",
-	kv_namespaces: "KV Namespace",
-	send_email: "Send Email",
-	queues: "Queue",
-	d1_databases: "D1 Database",
-	vectorize: "Vectorize Index",
-	hyperdrive: "Hyperdrive Config",
-	r2_buckets: "R2 Bucket",
-	logfwdr: "logfwdr",
-	services: "Worker",
-	analytics_engine_datasets: "Analytics Engine Dataset",
-	text_blobs: "Text Blob",
-	browser: "Browser",
-	ai: "AI",
-	images: "Images",
-	media: "Media",
-	version_metadata: "Worker Version Metadata",
-	unsafe: "Unsafe Metadata",
-	vars: "Environment Variable",
-	wasm_modules: "Wasm Module",
-	dispatch_namespaces: "Dispatch Namespace",
-	mtls_certificates: "mTLS Certificate",
-	workflows: "Workflow",
-	pipelines: "Pipeline",
-	secrets_store_secrets: "Secrets Store Secret",
-	ratelimits: "Rate Limit",
-	assets: "Assets",
-	unsafe_hello_world: "Hello World",
-	worker_loaders: "Worker Loader",
-	vpc_services: "VPC Service",
-} as const;
 
 /**
  * Print all the bindings a worker using a given config would have access to

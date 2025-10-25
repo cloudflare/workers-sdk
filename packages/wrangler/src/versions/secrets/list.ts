@@ -1,7 +1,6 @@
+import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../cfetch";
-import { configFileName } from "../../config";
 import { createCommand } from "../../core/create-command";
-import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { getLegacyScriptName } from "../../utils/getLegacyScriptName";

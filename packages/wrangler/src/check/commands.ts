@@ -5,6 +5,7 @@ import { writeFile } from "node:fs/promises";
 import path from "path";
 import { log } from "@cloudflare/cli";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
+import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Miniflare } from "miniflare";
 import { WebSocket } from "ws";
@@ -15,10 +16,9 @@ import {
 	flipObject,
 	ModuleTypeToRuleType,
 } from "../deployment-bundle/module-collection";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getWranglerTmpDir } from "../paths";
-import type { Config } from "../config";
+import type { Config } from "@cloudflare/workers-utils";
 import type { ModuleDefinition } from "miniflare";
 import type { FormData, FormDataEntryValue } from "undici";
 

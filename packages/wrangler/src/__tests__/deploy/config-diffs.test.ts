@@ -1,5 +1,5 @@
 import { getRemoteConfigDiff } from "../../deploy/config-diffs";
-import type { Config, RawConfig } from "../../config";
+import type { Config, RawConfig } from "@cloudflare/workers-utils";
 
 function normalizeDiff(log: string): string {
 	let normalizedLog = log;

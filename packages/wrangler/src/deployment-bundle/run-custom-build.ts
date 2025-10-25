@@ -1,12 +1,11 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { Writable } from "node:stream";
+import { configFileName, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { execaCommand } from "execa";
-import { configFileName } from "../config";
-import { UserError } from "../errors";
 import { logger } from "../logger";
-import type { Config } from "../config";
+import type { Config } from "@cloudflare/workers-utils";
 
 /**
  * Run the custom build step, if one was provided.

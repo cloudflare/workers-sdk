@@ -1,11 +1,14 @@
+import { UserError } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { fetchResult } from "../cfetch";
-import { sharedResourceCreationArgs, updateConfigFile } from "../config";
 import { createCommand } from "../core/create-command";
 import { getD1ExtraLocationChoices } from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import {
+	createdResourceConfig,
+	sharedResourceCreationArgs,
+} from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import { LOCATION_CHOICES } from "./constants";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
@@ -89,7 +92,7 @@ export const d1CreateCommand = createCommand({
 		);
 		logger.log("Created your new D1 database.\n");
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"d1_databases",
 			(bindingName) => ({
 				binding: getValidBindingName(bindingName ?? db.name, "DB"),

@@ -1,7 +1,9 @@
+import {
+	CommandLineArgsError,
+	formatConfigSnippet,
+} from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-import { formatConfigSnippet } from "../../../config";
 import { createCommand } from "../../../core/create-command";
-import { CommandLineArgsError } from "../../../errors";
 import { logger } from "../../../logger";
 import { getValidBindingName } from "../../../utils/getValidBindingName";
 import { createQueue } from "../../client";

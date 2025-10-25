@@ -1,6 +1,6 @@
 import { logRaw } from "@cloudflare/cli";
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";

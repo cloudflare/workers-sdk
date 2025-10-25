@@ -13,8 +13,8 @@ import {
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { seed } from "../helpers/seed";
-import type { RawConfig } from "../../config";
 import type { StartDevOptions } from "../../dev";
+import type { RawConfig } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 
 // Mock the startDev function to capture the devEnv so we can stop it later

@@ -2,7 +2,7 @@ import { Blob } from "node:buffer";
 import { gzipSync } from "node:zlib";
 import chalk from "chalk";
 import { logger } from "../logger";
-import type { CfModule } from "./worker";
+import type { CfModule } from "@cloudflare/workers-utils";
 
 const ONE_KIB_BYTES = 1024;
 // Current max is 3 MiB for free accounts, 10 MiB for paid accounts.

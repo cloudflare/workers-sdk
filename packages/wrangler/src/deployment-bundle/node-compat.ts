@@ -1,5 +1,5 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { getNodeCompat } from "miniflare";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import type { NodeJSCompatMode } from "miniflare";
 

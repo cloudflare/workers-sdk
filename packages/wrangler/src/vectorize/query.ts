@@ -1,5 +1,5 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { queryIndexByVector, queryIndexByVectorId } from "./client";
 import type {

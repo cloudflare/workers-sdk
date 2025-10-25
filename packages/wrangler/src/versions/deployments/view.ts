@@ -1,5 +1,5 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
-import { UserError } from "../../errors";
 
 export const deploymentsViewCommand = createCommand({
 	metadata: {

@@ -1,12 +1,12 @@
 import path from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import { dedent } from "ts-dedent";
-import { UserError } from "../errors";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import {
 	getBooleanEnvironmentVariableFactory,
 	getEnvironmentVariableFactory,
 } from "./factory";
-import type { Config } from "../config";
+import type { Config } from "@cloudflare/workers-utils";
 
 /**
  * `WRANGLER_C3_COMMAND` can override the command used by `wrangler init` when delegating to C3.

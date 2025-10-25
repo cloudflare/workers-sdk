@@ -1,4 +1,4 @@
-import { UserError } from "../errors";
+import { UserError } from "@cloudflare/workers-utils";
 import { ServiceType } from "./index";
 import type { ConnectivityServiceRequest, ServiceHost } from "./index";
 

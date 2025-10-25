@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import { Miniflare } from "miniflare";
 import { version } from "workerd";
 import { logger } from "../../logger";
-import type { Config } from "../../config/config";
+import type { Config } from "@cloudflare/workers-utils";
 
 const DEFAULT_OUTFILE_RELATIVE_PATH = "worker-configuration.d.ts";
 

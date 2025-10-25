@@ -1,5 +1,5 @@
 import { useServiceEnvironments } from "./useServiceEnvironments";
-import type { Config } from "../config";
+import type { Config } from "@cloudflare/workers-utils";
 
 /**
  * Alternative to the getScriptName() because special Legacy cases allowed

@@ -1,3 +1,4 @@
+import { MissingConfigError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex } from "miniflare";
 import {
@@ -10,7 +11,6 @@ import {
 	handlePreviewSessionCreationError,
 	handlePreviewSessionUploadError,
 } from "../../dev/remote";
-import { MissingConfigError } from "../../errors";
 import { logger } from "../../logger";
 import { getAccessToken } from "../../user/access";
 import { RuntimeController } from "./BaseController";

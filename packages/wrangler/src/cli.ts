@@ -1,5 +1,6 @@
 import "cloudflare/shims/web";
 import process from "process";
+import { FatalError } from "@cloudflare/workers-utils";
 import { hideBin } from "yargs/helpers";
 import {
 	unstable_dev,
@@ -7,7 +8,6 @@ import {
 	unstable_pages,
 	startWorker as unstable_startWorker,
 } from "./api";
-import { FatalError } from "./errors";
 import { main } from ".";
 import type { Unstable_DevOptions, Unstable_DevWorker } from "./api";
 import type { Logger } from "./logger";
@@ -62,8 +62,8 @@ export { generateASSETSBinding as unstable_generateASSETSBinding };
 export {
 	experimental_readRawConfig,
 	type ConfigBindingOptions as Experimental_ConfigBindingOptions,
-} from "./config";
-export { experimental_patchConfig } from "./config/patch-config";
+} from "@cloudflare/workers-utils";
+export { experimental_patchConfig } from "@cloudflare/workers-utils";
 
 export {
 	startRemoteProxySession,

@@ -2,18 +2,22 @@ import crypto from "node:crypto";
 import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import globToRegExp from "glob-to-regexp";
 import { sync as resolveSync } from "resolve";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import {
 	findAdditionalModules,
 	findAdditionalModuleWatchDirs,
 } from "./find-additional-modules";
 import { isJavaScriptModuleRule, parseRules } from "./rules";
-import type { Config, ConfigModuleRuleType } from "../config";
 import type { Entry } from "./entry";
-import type { CfModule, CfModuleType } from "./worker";
+import type {
+	CfModule,
+	CfModuleType,
+	Config,
+	ConfigModuleRuleType,
+} from "@cloudflare/workers-utils";
 import type esbuild from "esbuild";
 
 export function flipObject<

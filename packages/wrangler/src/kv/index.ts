@@ -3,18 +3,23 @@ import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import {
-	readConfig,
-	sharedResourceCreationArgs,
-	updateConfigFile,
-} from "../config";
+	CommandLineArgsError,
+	parseJSON,
+	readFileSync,
+	readFileSyncToBuffer,
+	UserError,
+} from "@cloudflare/workers-utils";
+import { readConfig } from "../config";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
+import {
+	createdResourceConfig,
+	sharedResourceCreationArgs,
+} from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import {
@@ -111,7 +116,7 @@ export const kvNamespaceCreateCommand = createCommand({
 		logger.log("✨ Success!");
 		const previewString = args.preview ? "preview_" : "";
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"kv_namespaces",
 			(name) => ({
 				binding: getValidBindingName(name ?? args.namespace, "KV"),

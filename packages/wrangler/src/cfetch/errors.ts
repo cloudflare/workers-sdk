@@ -1,4 +1,4 @@
-import { ParseError } from "../parse";
+import { ParseError } from "@cloudflare/workers-utils";
 
 export interface FetchError {
 	code: number;

@@ -1,12 +1,5 @@
 import assert from "node:assert";
 import { readFile } from "node:fs/promises";
-import { assertNever } from "../../utils/assert-never";
-import type { ConfigBindingOptions } from "../../config";
-import type { WorkerMetadataBinding } from "../../deployment-bundle/create-worker-upload-form";
-import type {
-	CfDispatchNamespace,
-	CfWorkerInit,
-} from "../../deployment-bundle/worker";
 import type {
 	Binding,
 	File,
@@ -15,6 +8,14 @@ import type {
 	ServiceFetch,
 	StartDevWorkerOptions,
 } from "./types";
+import type {
+	CfDispatchNamespace,
+	CfWorkerInit,
+	ConfigBindingOptions,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
+
+export function assertNever(_value: never) {}
 
 export type MaybePromise<T> = T | Promise<T>;
 export type DeferredPromise<T> = {

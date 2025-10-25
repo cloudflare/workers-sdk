@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { Config } from "../config";
+import type { Config } from "@cloudflare/workers-utils";
 
 /**
  * Get a path to where we shall store persisted state in local dev.

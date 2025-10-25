@@ -1,5 +1,5 @@
 import path from "node:path";
-import { findWranglerConfig } from "../../config/config-helpers";
+import { findWranglerConfig } from "@cloudflare/workers-utils";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { normalizeString } from "../helpers/normalize";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -23,18 +23,22 @@ describe("config findWranglerConfig()", () => {
 				expect(findWranglerConfig(".")).toEqual({
 					configPath: path.resolve(`wrangler.${ext}`),
 					userConfigPath: path.resolve(`wrangler.${ext}`),
+					redirected: false,
 				});
 				expect(findWranglerConfig("./foo")).toEqual({
 					configPath: path.resolve(`foo/wrangler.${ext}`),
 					userConfigPath: path.resolve(`foo/wrangler.${ext}`),
+					redirected: false,
 				});
 				expect(findWranglerConfig("./foo/bar")).toEqual({
 					configPath: path.resolve(`foo/bar/wrangler.${ext}`),
 					userConfigPath: path.resolve(`foo/bar/wrangler.${ext}`),
+					redirected: false,
 				});
 				expect(findWranglerConfig("./foo/bar/qux")).toEqual({
 					configPath: path.resolve(`foo/bar/wrangler.${ext}`),
 					userConfigPath: path.resolve(`foo/bar/wrangler.${ext}`),
+					redirected: false,
 				});
 				expect(std).toEqual(NO_LOGS);
 			}
@@ -53,6 +57,7 @@ describe("config findWranglerConfig()", () => {
 				expect(findWranglerConfig(".")).toEqual({
 					configPath: path.resolve(`wrangler.${ext1}`),
 					userConfigPath: path.resolve(`wrangler.${ext1}`),
+					redirected: false,
 				});
 				expect(std).toEqual(NO_LOGS);
 			});
@@ -65,6 +70,7 @@ describe("config findWranglerConfig()", () => {
 				expect(findWranglerConfig("./foo")).toEqual({
 					configPath: path.resolve(`wrangler.${ext1}`),
 					userConfigPath: path.resolve(`wrangler.${ext1}`),
+					redirected: false,
 				});
 				expect(std).toEqual(NO_LOGS);
 			});
@@ -79,6 +85,7 @@ describe("config findWranglerConfig()", () => {
 			expect(findWranglerConfig(".")).toEqual({
 				configPath: path.resolve(`wrangler.toml`),
 				userConfigPath: path.resolve(`wrangler.toml`),
+				redirected: false,
 			});
 			expect(std).toEqual(NO_LOGS);
 		});
@@ -94,25 +101,22 @@ describe("config findWranglerConfig()", () => {
 			expect(findWranglerConfig(".", { useRedirectIfAvailable: true })).toEqual(
 				{
 					configPath: path.resolve(`dist/wrangler.json`),
+					deployConfigPath: path.resolve(`.wrangler/deploy/config.json`),
+					redirected: true,
 				}
 			);
 			expect(
 				findWranglerConfig("./foo", { useRedirectIfAvailable: true })
 			).toEqual({
 				configPath: path.resolve(`dist/wrangler.json`),
+				deployConfigPath: path.resolve(`.wrangler/deploy/config.json`),
+				redirected: true,
 			});
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
 				  "err": "",
-				  "info": "Using redirected Wrangler configuration.
-				 - Configuration being used: \\"dist/wrangler.json\\"
-				 - Original user's configuration: \\"<no user config found>\\"
-				 - Deploy configuration file: \\".wrangler/deploy/config.json\\"
-				Using redirected Wrangler configuration.
-				 - Configuration being used: \\"dist/wrangler.json\\"
-				 - Original user's configuration: \\"<no user config found>\\"
-				 - Deploy configuration file: \\".wrangler/deploy/config.json\\"",
+				  "info": "",
 				  "out": "",
 				  "warn": "",
 				}
@@ -130,6 +134,8 @@ describe("config findWranglerConfig()", () => {
 				{
 					configPath: path.resolve(`dist/wrangler.json`),
 					userConfigPath: path.resolve(`wrangler.toml`),
+					deployConfigPath: path.resolve(`.wrangler/deploy/config.json`),
+					redirected: true,
 				}
 			);
 			expect(
@@ -137,19 +143,14 @@ describe("config findWranglerConfig()", () => {
 			).toEqual({
 				configPath: path.resolve(`dist/wrangler.json`),
 				userConfigPath: path.resolve(`wrangler.toml`),
+				deployConfigPath: path.resolve(`.wrangler/deploy/config.json`),
+				redirected: true,
 			});
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
 				  "err": "",
-				  "info": "Using redirected Wrangler configuration.
-				 - Configuration being used: \\"dist/wrangler.json\\"
-				 - Original user's configuration: \\"wrangler.toml\\"
-				 - Deploy configuration file: \\".wrangler/deploy/config.json\\"
-				Using redirected Wrangler configuration.
-				 - Configuration being used: \\"dist/wrangler.json\\"
-				 - Original user's configuration: \\"wrangler.toml\\"
-				 - Deploy configuration file: \\".wrangler/deploy/config.json\\"",
+				  "info": "",
 				  "out": "",
 				  "warn": "",
 				}
@@ -168,16 +169,9 @@ describe("config findWranglerConfig()", () => {
 				error = e;
 			}
 
-			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(`
-					"Error: Failed to parse the deploy configuration file at .wrangler/deploy/config.json
-					[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalidSymbol[0m
-
-					    <cwd>/.wrangler/deploy/config.json:1:0:
-					[37m      1 │ [32mINVALID[37m JSON
-					        ╵ [32m~~~~~~~[0m
-
-					"
-				`);
+			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(
+				`"Error: Failed to parse the deploy configuration file at .wrangler/deploy/config.json"`
+			);
 			expect(std).toEqual(NO_LOGS);
 		});
 

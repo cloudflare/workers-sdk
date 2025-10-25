@@ -1,6 +1,6 @@
+import { CommandLineArgsError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
-import { CommandLineArgsError } from "../../../errors";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
 

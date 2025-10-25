@@ -1,10 +1,7 @@
-import { getDatabaseInfoFromIdOrName } from "../d1/utils";
-import { FatalError } from "../errors";
 import { assertNever } from "./assert-never";
-import type { RawConfig } from "../config";
-import type { DatabaseInfo } from "../d1/types";
-import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import { FatalError } from "./errors";
+import type { RawConfig } from "./config";
+import type { WorkerMetadataBinding } from "./types";
 
 /**
  * Maps a set of bindings defined as worker metadata bindings (straight from the Cloudflare API) to bindings defined in the local format.
@@ -14,27 +11,9 @@ import type { ComplianceConfig } from "../environment-variables/misc-variables";
  * @param complianceConfig The compliance region configuration
  * @returns A RawConfig object with its bindings populated based on the provided bindings
  */
-export async function mapWorkerMetadataBindings(
-	bindings: WorkerMetadataBinding[],
-	accountId: string,
-	complianceConfig: ComplianceConfig
-): Promise<RawConfig> {
-	// The binding API doesn't provide us with enough information to make a friendly user experience.
-	// lets call D1's API to get more information
-	const d1BindingsWithInfo: Record<string, DatabaseInfo> = {};
-	await Promise.all(
-		bindings
-			.filter((binding) => binding.type === "d1")
-			.map(async (binding) => {
-				const dbInfo = await getDatabaseInfoFromIdOrName(
-					complianceConfig,
-					accountId,
-					binding.id
-				);
-				d1BindingsWithInfo[binding.id] = dbInfo;
-			})
-	);
-
+export function mapWorkerMetadataBindings(
+	bindings: WorkerMetadataBinding[]
+): RawConfig {
 	return (
 		bindings
 			.filter((binding) => (binding.type as string) !== "secret_text")
@@ -91,7 +70,6 @@ export async function mapWorkerMetadataBindings(
 								{
 									binding: binding.name,
 									database_id: binding.id,
-									database_name: d1BindingsWithInfo[binding.id].name,
 								},
 							];
 						}

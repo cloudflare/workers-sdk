@@ -17,9 +17,8 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { RawConfig } from "../config";
-import type { UserLimits } from "../config/environment";
 import type { PackageManager } from "../package-manager";
+import type { RawConfig, UserLimits } from "@cloudflare/workers-utils";
 import type { Mock } from "vitest";
 
 describe("init", () => {
@@ -170,6 +169,7 @@ describe("init", () => {
 			main = "src/index.js",
 			id = "isolinear-optical-chip",
 			usage_model = "bundled",
+			tags = [],
 			compatibility_date = "1987-09-27",
 			content = dedent/*javascript*/ `
 							export default {
@@ -326,6 +326,7 @@ describe("init", () => {
 		}: {
 			main?: string;
 			id?: string;
+			tags?: string[];
 			usage_model?: string;
 			compatibility_date?: string | null;
 			content?: string | FormData;
@@ -348,6 +349,7 @@ describe("init", () => {
 						script: {
 							id,
 							tag: "test-tag",
+							tags,
 							etag: "some-etag",
 							handlers: [],
 							modified_on: "1987-09-27",
@@ -419,7 +421,6 @@ describe("init", () => {
 				{
 					binding: "DB",
 					database_id: "40160e84-9fdb-4ce7-8578-23893cecc5a3",
-					database_name: "mydb",
 				},
 			],
 			kv_namespaces: [
@@ -998,8 +999,7 @@ describe("init", () => {
 					  \\"d1_databases\\": [
 					    {
 					      \\"binding\\": \\"DB\\",
-					      \\"database_id\\": \\"40160e84-9fdb-4ce7-8578-23893cecc5a3\\",
-					      \\"database_name\\": \\"mydb\\"
+					      \\"database_id\\": \\"40160e84-9fdb-4ce7-8578-23893cecc5a3\\"
 					    }
 					  ],
 					  \\"data_blobs\\": {

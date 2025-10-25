@@ -2,13 +2,12 @@ import assert from "node:assert";
 import http from "node:http";
 import { setTimeout as setTimeoutPromise } from "node:timers/promises";
 import { URLSearchParams } from "node:url";
+import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { requireAuth } from "../user";
-import type { Config } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { R2BucketInfo } from "../r2/helpers";
 import type {
@@ -24,6 +23,7 @@ import type {
 	ValidateSqlRequest,
 	ValidateSqlResponse,
 } from "./types";
+import type { Config } from "@cloudflare/workers-utils";
 
 export async function listPipelines(
 	config: Config,

@@ -1,5 +1,5 @@
-import type { configFormat } from "../config";
 import type { sniffUserAgent } from "../package-manager";
+import type { configFormat } from "@cloudflare/workers-utils";
 
 export type CommonEventProperties = {
 	/** The version of the Wrangler client that is sending the event. */

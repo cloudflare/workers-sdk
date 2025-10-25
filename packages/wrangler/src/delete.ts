@@ -1,9 +1,8 @@
 import assert from "assert";
+import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
-import { configFileName } from "./config";
 import { createCommand } from "./core/create-command";
 import { confirm } from "./dialogs";
-import { UserError } from "./errors";
 import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
 import { logger } from "./logger";
 import * as metrics from "./metrics";

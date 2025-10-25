@@ -1,11 +1,12 @@
 import {
+	APIError,
 	CommandLineArgsError,
 	DeprecationError,
 	FatalError,
 	MissingConfigError,
+	ParseError,
 	UserError,
-} from "../errors";
-import { APIError, ParseError } from "../parse";
+} from "@cloudflare/workers-utils";
 
 describe("errors", () => {
 	describe("UserError", () => {

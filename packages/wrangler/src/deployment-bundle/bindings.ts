@@ -1,37 +1,34 @@
 import assert from "node:assert";
-import { fetchResult } from "../cfetch";
-import { experimental_readRawConfig } from "../config";
 import {
+	APIError,
 	experimental_patchConfig,
+	experimental_readRawConfig,
+	INHERIT_SYMBOL,
 	PatchConfigError,
-} from "../config/patch-config";
+	UserError,
+} from "@cloudflare/workers-utils";
+import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
 import { getDatabaseInfoFromIdOrName } from "../d1/utils";
 import { prompt, select } from "../dialogs";
-import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { APIError } from "../parse";
 import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { printBindings } from "../utils/print-bindings";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import type { Config, RawConfig } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { WorkerMetadataBinding } from "./create-worker-upload-form";
 import type {
 	CfD1Database,
 	CfKvNamespace,
 	CfR2Bucket,
 	CfWorkerInit,
-} from "./worker";
-
-/**
- * A symbol to inherit a binding from the deployed worker.
- */
-export const INHERIT_SYMBOL = Symbol.for("inherit_binding");
+	Config,
+	RawConfig,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
 
 export function getBindings(
 	config: Config | undefined,

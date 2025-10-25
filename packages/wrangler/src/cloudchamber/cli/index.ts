@@ -14,7 +14,7 @@ import {
 	PlacementsService,
 	SshPublicKeysService,
 } from "@cloudflare/containers-shared";
-import { UserError } from "../../errors";
+import { UserError } from "@cloudflare/workers-utils";
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
 import { capitalize } from "./util";

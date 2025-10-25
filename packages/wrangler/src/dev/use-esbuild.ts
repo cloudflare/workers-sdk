@@ -12,10 +12,9 @@ import {
 	getWrangler1xLegacyModuleReferences,
 	noopModuleCollector,
 } from "../deployment-bundle/module-collection";
-import type { Config } from "../config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
+import type { CfModule, CfModuleType, Config } from "@cloudflare/workers-utils";
 import type { Metafile } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
 

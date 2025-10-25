@@ -19,7 +19,6 @@ import { logger } from "../logger";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
 import { capitalize, statusToColored } from "./cli/util";
 import { promiseSpinner } from "./common";
-import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -30,6 +29,7 @@ import type {
 	PlacementEvent,
 	PlacementWithEvents,
 } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function listDeploymentsYargs(args: CommonYargsArgv) {
 	return args

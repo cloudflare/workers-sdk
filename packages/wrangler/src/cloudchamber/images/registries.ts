@@ -12,13 +12,12 @@ import {
 	ImageRegistryAlreadyExistsError,
 	ImageRegistryNotAllowedError,
 } from "@cloudflare/containers-shared";
-import { UserError } from "../../errors";
+import { UserError } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { pollRegistriesUntilCondition } from "../cli";
 import { checkEverythingIsSet, handleFailure, promiseSpinner } from "../common";
 import { wrap } from "../helpers/wrap";
-import type { Config } from "../../config";
 import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgv,
@@ -27,6 +26,7 @@ import type {
 } from "../../yargs-types";
 import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 function configureImageRegistryOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs

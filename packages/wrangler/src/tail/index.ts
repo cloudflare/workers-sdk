@@ -1,8 +1,11 @@
 import { setTimeout } from "node:timers/promises";
+import {
+	configFileName,
+	createFatalError,
+	UserError,
+} from "@cloudflare/workers-utils";
 import onExit from "signal-exit";
-import { configFileName } from "../config";
 import { createCommand } from "../core/create-command";
-import { createFatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";

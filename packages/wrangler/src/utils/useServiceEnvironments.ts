@@ -1,5 +1,5 @@
 import type { StartDevWorkerOptions } from "../api";
-import type { Config } from "../config";
+import type { Config } from "@cloudflare/workers-utils";
 
 /**
  * whether deprecated service environments are enabled.

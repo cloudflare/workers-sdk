@@ -4,7 +4,6 @@ import { getCloudflareComplianceRegion } from "../../environment-variables/misc-
 import { requireApiToken, requireAuth } from "../../user";
 import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
-import type { Config } from "../../config";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type {
 	AsyncHook,
@@ -12,6 +11,7 @@ import type {
 	StartDevWorkerInput,
 } from "../startDevWorker/types";
 import type { RemoteProxySession } from "./start-remote-proxy-session";
+import type { Config } from "@cloudflare/workers-utils";
 
 export * from "./start-remote-proxy-session";
 

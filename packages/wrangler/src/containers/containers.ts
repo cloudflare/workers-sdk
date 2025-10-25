@@ -9,12 +9,11 @@ import { processArgument } from "@cloudflare/cli/args";
 import { dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
 import YAML from "yaml";
 import { wrap } from "../cloudchamber/helpers/wrap";
-import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -23,6 +22,7 @@ import type {
 	Application,
 	ListApplications,
 } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function deleteYargs(args: CommonYargsArgv) {
 	return args.positional("ID", {

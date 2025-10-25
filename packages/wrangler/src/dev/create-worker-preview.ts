@@ -1,17 +1,16 @@
 import crypto from "node:crypto";
 import { URL } from "node:url";
+import { ParseError, parseJSON, UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
-import { UserError } from "../errors";
 import { logger } from "../logger";
-import { ParseError, parseJSON } from "../parse";
 import { getAccessToken } from "../user/access";
 import { isAbortError } from "../utils/isAbortError";
-import type { CfWorkerContext } from "../deployment-bundle/worker";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
 import type { CfWorkerInitWithName } from "./remote";
+import type { CfWorkerContext } from "@cloudflare/workers-utils";
 import type { HeadersInit } from "undici";
 
 /**
