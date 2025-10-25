@@ -6,7 +6,7 @@ import {
 	DeploymentMutationError,
 	OpenAPI,
 } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
+import { parseByteSize, UserError } from "@cloudflare/workers-utils";
 import { addAuthorizationHeader, addUserAgent } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { constructStatusMessage } from "../core/CommandRegistry";
@@ -15,7 +15,6 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getScopes, printScopes, requireApiToken, requireAuth } from "../user";
 import { printWranglerBanner } from "../wrangler-banner";
-import { parseByteSize } from "./../parse";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName } from "./locations";
 import type { containersScope } from "../containers";

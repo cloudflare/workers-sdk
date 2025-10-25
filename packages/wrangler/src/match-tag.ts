@@ -1,4 +1,5 @@
 import {
+	APIError,
 	configFileName,
 	FatalError,
 	formatConfigSnippet,
@@ -6,7 +7,6 @@ import {
 import { fetchResult } from "./cfetch";
 import { getCIMatchTag } from "./environment-variables/misc-variables";
 import { logger } from "./logger";
-import { APIError } from "./parse";
 import { getCloudflareAccountIdFromEnv } from "./user/auth-variables";
 import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { ServiceMetadataRes } from "@cloudflare/workers-utils";

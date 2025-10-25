@@ -1,11 +1,10 @@
 import crypto from "node:crypto";
 import { URL } from "node:url";
-import { UserError } from "@cloudflare/workers-utils";
+import { ParseError, parseJSON, UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { logger } from "../logger";
-import { ParseError, parseJSON } from "../parse";
 import { getAccessToken } from "../user/access";
 import { isAbortError } from "../utils/isAbortError";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";

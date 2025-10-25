@@ -1,8 +1,11 @@
 import path from "node:path";
 import readline from "node:readline";
 import {
+	APIError,
 	configFileName,
 	FatalError,
+	parseJSON,
+	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { parse as dotenvParse } from "dotenv";
@@ -13,7 +16,6 @@ import { createWorkerUploadForm } from "../deployment-bundle/create-worker-uploa
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { APIError, parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";

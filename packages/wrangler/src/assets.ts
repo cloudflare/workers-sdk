@@ -15,7 +15,7 @@ import {
 	maybeGetFile,
 	normalizeFilePath,
 } from "@cloudflare/workers-shared/utils/helpers";
-import { FatalError, UserError } from "@cloudflare/workers-utils";
+import { APIError, FatalError, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
@@ -25,7 +25,6 @@ import { formatTime } from "./deploy/deploy";
 import { logger, LOGGER_LEVELS } from "./logger";
 import { hashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
-import { APIError } from "./parse";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
 import type { StartDevWorkerOptions } from "./api";

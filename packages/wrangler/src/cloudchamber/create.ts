@@ -13,9 +13,9 @@ import {
 	AssignIPv6,
 	DeploymentsService,
 } from "@cloudflare/containers-shared";
+import { parseByteSize } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { parseByteSize } from "./../parse";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
 import {

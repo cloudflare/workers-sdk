@@ -1,4 +1,3 @@
-import { type AssetConfig } from "@cloudflare/workers-shared";
 import type { Observability, TailConsumer } from "./config/environment";
 import type {
 	CfDurableObjectMigrations,
@@ -6,6 +5,7 @@ import type {
 	CfTailConsumer,
 	CfUserLimits,
 } from "./worker";
+import type { AssetConfig } from "@cloudflare/workers-shared";
 
 export type Json =
 	| string

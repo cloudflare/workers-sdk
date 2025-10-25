@@ -5,6 +5,7 @@ import {
 	configFileName,
 	FatalError,
 	findWranglerConfig,
+	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { deploy } from "../api/pages/deploy";
@@ -17,7 +18,6 @@ import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-v
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
-import { ParseError } from "../parse";
 import { requireAuth } from "../user";
 import { diagnoseStartupError } from "../utils/friendly-validator-errors";
 import {

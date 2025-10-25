@@ -5,6 +5,7 @@ import {
 	parseJSONC,
 	parseTOML,
 	PATH_TO_DEPLOY_CONFIG,
+	readFileSync,
 } from "@cloudflare/workers-utils";
 import type { RawConfig, RedirectedRawConfig } from "@cloudflare/workers-utils";
 
@@ -66,11 +67,11 @@ export function writeDeployRedirectConfig(configPath: string) {
 
 export function readWranglerConfig(path = "./wrangler.toml"): RawConfig {
 	if (path.endsWith(".toml")) {
-		return parseTOML(fs.readFileSync(path, "utf-8"), path) as RawConfig;
+		return parseTOML(readFileSync(path), path) as RawConfig;
 	}
 
 	if (path.endsWith(".json") || path.endsWith(".jsonc")) {
-		return parseJSONC(fs.readFileSync(path, "utf-8"), path) as RawConfig;
+		return parseJSONC(readFileSync(path), path) as RawConfig;
 	}
 
 	return {};

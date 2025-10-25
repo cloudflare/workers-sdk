@@ -1,7 +1,6 @@
-import { FatalError, UserError } from "@cloudflare/workers-utils";
+import { APIError, FatalError, UserError } from "@cloudflare/workers-utils";
 import { confirm } from "../../dialogs";
 import { logger } from "../../logger";
-import { APIError } from "../../parse";
 import {
 	authorizeR2Bucket,
 	BYTES_PER_MB,

@@ -29,6 +29,7 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "../api";
+import type { RawConfig } from "@cloudflare/workers-utils";
 import type { Mock, MockInstance } from "vitest";
 
 vi.mock("../api/startDevWorker/ConfigController", (importOriginal) =>
@@ -36,13 +37,6 @@ vi.mock("../api/startDevWorker/ConfigController", (importOriginal) =>
 );
 vi.mock("node:child_process");
 vi.mock("../dev/hotkeys");
-
-vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		isDockerfile: () => true,
-	};
-});
 
 // Don't memoize in tests. If we did, it would memoize across test runs, which causes problems
 vi.mock("../utils/memoizeGetPort", () => {
@@ -1391,7 +1385,7 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("container engine", () => {
-		const minimalContainerConfig = {
+		const minimalContainerConfig: RawConfig = {
 			durable_objects: {
 				bindings: [
 					{
@@ -1454,6 +1448,7 @@ describe.sequential("wrangler dev", () => {
 				},
 				...minimalContainerConfig,
 			});
+
 			fs.writeFileSync("index.js", `export default {};`);
 			vi.stubEnv("WRANGLER_DOCKER_HOST", "blah.sock");
 
@@ -2136,6 +2131,8 @@ describe.sequential("wrangler dev", () => {
 		};
 		it("should warn when run in remote mode with (enabled) containers", async () => {
 			writeWranglerConfig(containerConfig);
+			fs.writeFileSync("Dockerfile", `FROM ubuntu`);
+
 			fs.writeFileSync("index.js", `export default {};`);
 
 			await expect(
@@ -2155,6 +2152,8 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should not warn when run in remote mode with disabled containers", async () => {
+			fs.writeFileSync("Dockerfile", `FROM ubuntu`);
+
 			writeWranglerConfig({
 				...containerConfig,
 				dev: {

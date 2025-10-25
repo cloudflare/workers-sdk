@@ -1,13 +1,12 @@
 import assert from "node:assert";
 import path from "node:path";
-import { UserError } from "@cloudflare/workers-utils";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { syncAssets } from "../assets";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getInferredHost } from "../dev";
 import { logger } from "../logger";
-import { APIError } from "../parse";
 import { syncWorkersSite } from "../sites";
 import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";

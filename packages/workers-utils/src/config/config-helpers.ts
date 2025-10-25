@@ -1,10 +1,10 @@
-import fs from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { findUpSync } from "find-up";
 import dedent from "ts-dedent";
 import { PATH_TO_DEPLOY_CONFIG } from "../constants";
 import { UserError } from "../errors";
-import { formatMessage, ParseError, parseJSONC, readFileSync } from "../parse";
+import { parseJSONC, readFileSync } from "../parse";
 import type { RawConfig, RedirectedRawConfig } from "./config";
 
 export type ResolveConfigPathOptions = {
@@ -115,10 +115,8 @@ function findRedirectedWranglerConfig(
 			path.resolve(path.dirname(deployConfigPath), deployConfig.configPath);
 	} catch (e) {
 		throw new UserError(
-			dedent`
-				Failed to parse the deploy configuration file at ${path.relative(".", deployConfigPath)}
-				${e instanceof ParseError ? formatMessage(e) : e}
-			`
+			`Failed to parse the deploy configuration file at ${path.relative(".", deployConfigPath)}`,
+			{ cause: e }
 		);
 	}
 	if (!redirectedConfigPath) {
@@ -132,7 +130,7 @@ function findRedirectedWranglerConfig(
 		`);
 	}
 
-	if (!fs.existsSync(redirectedConfigPath)) {
+	if (!existsSync(redirectedConfigPath)) {
 		throw new UserError(dedent`
 				There is a deploy configuration at "${path.relative(".", deployConfigPath)}".
 				But the redirected configuration path it points to, "${path.relative(".", redirectedConfigPath)}", does not exist.

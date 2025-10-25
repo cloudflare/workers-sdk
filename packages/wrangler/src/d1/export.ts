@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { spinner, spinnerWhile } from "@cloudflare/cli/interactive";
-import { configFileName, UserError } from "@cloudflare/workers-utils";
+import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Miniflare } from "miniflare";
 import { fetch } from "undici";
@@ -9,7 +9,6 @@ import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { logger } from "../logger";
-import { APIError } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";

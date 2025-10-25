@@ -5,6 +5,7 @@ import {
 	CommandLineArgsError,
 	configFileName,
 	experimental_readRawConfig,
+	parseJSONC,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -16,7 +17,6 @@ import { getEntry } from "../deployment-bundle/entry";
 import { getClassNamesWhichUseSQLite } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
-import { parseJSONC } from "../parse";
 import { isProcessEnvPopulated } from "../process-env";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";

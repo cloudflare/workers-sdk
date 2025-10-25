@@ -1,9 +1,11 @@
-import { CommandLineArgsError } from "@cloudflare/workers-utils";
+import {
+	CommandLineArgsError,
+	parseHumanDuration,
+} from "@cloudflare/workers-utils";
 import { readConfig } from "../config";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { parseHumanDuration } from "../parse";
 import { requireAuth } from "../user";
 import * as pubsub from ".";
 import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";

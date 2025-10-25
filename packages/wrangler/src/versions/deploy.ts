@@ -7,13 +7,12 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli/interactive";
-import { UserError } from "@cloudflare/workers-utils";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
-import { APIError } from "../parse";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {

@@ -4,10 +4,12 @@
 	"tasks": {
 		"build": {
 			"inputs": ["$TURBO_DEFAULT$", "!**/__tests__/**"],
-			"outputs": ["dist/**"]
+			"outputs": ["dist/**"],
+			"env": ["SOURCEMAPS"]
 		},
 		"test:ci": {
-			"dependsOn": ["build"]
+			"dependsOn": ["build"],
+			"env": ["LC_ALL", "TZ"]
 		}
 	}
 }

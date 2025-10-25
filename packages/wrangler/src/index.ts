@@ -5,9 +5,11 @@ import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
 import { ApiError } from "@cloudflare/containers-shared";
 import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {
+	APIError,
 	CommandLineArgsError,
 	experimental_readRawConfig,
 	JsonFriendlyFatalError,
+	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -149,7 +151,6 @@ import {
 } from "./pages/secret";
 import { pagesProjectUploadCommand } from "./pages/upload";
 import { pagesProjectValidateCommand } from "./pages/validate";
-import { APIError, ParseError } from "./parse";
 import { pipelinesNamespace } from "./pipelines";
 import { pipelinesCreateCommand } from "./pipelines/cli/create";
 import { pipelinesDeleteCommand } from "./pipelines/cli/delete";

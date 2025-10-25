@@ -1,9 +1,8 @@
-import { UserError } from "@cloudflare/workers-utils";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
-import { APIError } from "../parse";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {

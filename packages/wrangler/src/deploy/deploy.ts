@@ -5,9 +5,12 @@ import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
+	APIError,
 	configFileName,
 	formatCompatibilityDate,
 	formatConfigSnippet,
+	ParseError,
+	parseNonHyphenedUuid,
 	UserError,
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
@@ -41,7 +44,6 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
-import { APIError, ParseError, parseNonHyphenedUuid } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import {
 	ensureQueuesExistByConfig,

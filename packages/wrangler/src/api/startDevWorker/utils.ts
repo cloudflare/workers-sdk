@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { readFile } from "node:fs/promises";
-import { assertNever } from "@cloudflare/workers-utils";
 import type {
 	Binding,
 	File,
@@ -15,6 +14,8 @@ import type {
 	ConfigBindingOptions,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
+
+export function assertNever(_value: never) {}
 
 export type MaybePromise<T> = T | Promise<T>;
 export type DeferredPromise<T> = {

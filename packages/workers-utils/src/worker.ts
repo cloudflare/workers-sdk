@@ -1,10 +1,7 @@
-import {
-	type AssetConfig,
-	type RouterConfig,
-} from "@cloudflare/workers-shared";
 import type { Observability, Route } from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
 import type { Json, WorkerMetadata, WorkerMetadataBinding } from "./types";
+import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 
 /**
  * The type of Worker

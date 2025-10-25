@@ -13,7 +13,7 @@ import {
 	getUnappliedMigrations,
 	initMigrationsTable,
 } from "./helpers";
-import type { ParseError } from "../../parse";
+import type { ParseError } from "@cloudflare/workers-utils";
 
 export const d1MigrationsApplyCommand = createCommand({
 	metadata: {

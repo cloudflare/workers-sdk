@@ -1,10 +1,9 @@
 import * as cli from "@cloudflare/cli";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
-import { UserError } from "@cloudflare/workers-utils";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { confirm, prompt } from "../../dialogs";
 import { logger } from "../../logger";
-import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
 import { createDeployment, fetchLatestDeployments, fetchVersion } from "../api";
 import { printLatestDeployment, printVersions } from "../deploy";

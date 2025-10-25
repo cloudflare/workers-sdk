@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import {
+	APIError,
 	experimental_patchConfig,
 	experimental_readRawConfig,
 	INHERIT_SYMBOL,
@@ -15,7 +16,6 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { APIError } from "../parse";
 import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { printBindings } from "../utils/print-bindings";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";

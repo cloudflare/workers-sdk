@@ -3,9 +3,11 @@ import assert from "node:assert";
 import path from "node:path";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
 import {
+	APIError,
 	configFileName,
 	createFatalError,
 	JsonFriendlyFatalError,
+	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -17,7 +19,6 @@ import { createCommand } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
-import { APIError, readFileSync } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import splitSqlQuery from "./splitter";

@@ -8,6 +8,7 @@ import {
 	configFileName,
 	formatCompatibilityDate,
 	formatConfigSnippet,
+	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
@@ -50,7 +51,6 @@ import { getMetricsUsageHeaders } from "../metrics";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { writeOutput } from "../output";
-import { ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";

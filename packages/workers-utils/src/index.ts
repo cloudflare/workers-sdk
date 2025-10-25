@@ -24,6 +24,25 @@ export {
 export * from "./worker";
 export * from "./types";
 export {
+	type Message,
+	type Location,
+	type File,
+	ParseError,
+	APIError,
+	parseTOML,
+	type PackageJSON,
+	parsePackageJSON,
+	parseJSON,
+	parseJSONC,
+	readFileSyncToBuffer,
+	readFileSync,
+	indexLocation,
+	searchLocation,
+	parseHumanDuration,
+	parseNonHyphenedUuid,
+	parseByteSize,
+} from "./parse";
+export {
 	friendlyBindingNames,
 	isPagesConfig,
 	normalizeAndValidateConfig,
@@ -44,7 +63,6 @@ export { assertNever } from "./assert-never";
 
 export * from "./constants";
 
-export { parseJSONC, parseTOML, readFileSync } from "./parse";
 export { formatCompatibilityDate } from "./format-compatibility-date";
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 export {

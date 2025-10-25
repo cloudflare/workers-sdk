@@ -2,14 +2,19 @@ import { strict as assert } from "node:assert";
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
-import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
+import {
+	CommandLineArgsError,
+	parseJSON,
+	readFileSync,
+	readFileSyncToBuffer,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { readConfig } from "../config";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
 import {
 	createdResourceConfig,

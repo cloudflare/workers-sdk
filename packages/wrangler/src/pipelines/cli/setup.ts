@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import {
 	bucketFormatMessage,
 	isValidR2BucketName,
+	parseJSON,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { confirm, prompt, select } from "../../dialogs";
 import { logger } from "../../logger";
-import { parseJSON } from "../../parse";
 import { requireAuth } from "../../user";
 import {
 	createPipeline,

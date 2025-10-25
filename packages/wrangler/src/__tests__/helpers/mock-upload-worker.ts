@@ -1,5 +1,5 @@
+import { ParseError } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-import { ParseError } from "../../parse";
 import {
 	getSubdomainValues,
 	getSubdomainValuesAPIMock,

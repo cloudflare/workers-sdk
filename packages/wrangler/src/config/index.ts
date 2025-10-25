@@ -101,11 +101,24 @@ export function readPagesConfig(
 	let rawConfig: RawConfig;
 	let configPath: string | undefined;
 	let userConfigPath: string | undefined;
+	let redirected: boolean;
+	let deployConfigPath: string | undefined;
 	try {
-		({ rawConfig, configPath, userConfigPath } = experimental_readRawConfig(
-			args,
-			options
-		));
+		({ rawConfig, configPath, userConfigPath, deployConfigPath, redirected } =
+			experimental_readRawConfig(args, options));
+		if (redirected) {
+			assert(configPath, "Redirected config found without a configPath");
+			assert(
+				deployConfigPath,
+				"Redirected config found without a deployConfigPath"
+			);
+			logger.info(dedent`
+				Using redirected Wrangler configuration.
+				 - Configuration being used: "${path.relative(".", configPath)}"
+				 - Original user's configuration: "${userConfigPath ? path.relative(".", userConfigPath) : "<no user config found>"}"
+				 - Deploy configuration file: "${path.relative(".", deployConfigPath)}"
+			`);
+		}
 	} catch (e) {
 		logger.error(e);
 		throw new FatalError(
