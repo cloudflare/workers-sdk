@@ -9,7 +9,7 @@ import chalk from "chalk";
 import { Miniflare } from "miniflare";
 import { WebSocket } from "ws";
 import { createCLIParser } from "..";
-import { createCommand, createNamespace } from "../core/create-command";
+import { createCommand } from "../core/create-command";
 import { moduleTypeMimeType } from "../deployment-bundle/create-worker-upload-form";
 import {
 	flipObject,
@@ -23,15 +23,6 @@ import type { ModuleDefinition } from "miniflare";
 import type { FormData, FormDataEntryValue } from "undici";
 
 const mimeTypeModuleType = flipObject(moduleTypeMimeType);
-
-export const checkNamespace = createNamespace({
-	metadata: {
-		description: "☑︎ Run checks on your Worker",
-		owner: "Workers: Authoring and Testing",
-		status: "alpha",
-		hidden: true,
-	},
-});
 
 async function checkStartupHandler(
 	{

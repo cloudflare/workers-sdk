@@ -23,7 +23,9 @@ import {
 	certUploadNamespace,
 } from "./cert/cert";
 import { renderError } from "./cfetch";
-import { checkNamespace, checkStartupCommand } from "./check/commands";
+import { checkNamespace } from "./check/common";
+import { checkDOMigrationCommand } from "./check/migration";
+import { checkStartupCommand } from "./check/startup";
 import { cloudchamber } from "./cloudchamber";
 import { experimental_readRawConfig, readConfig } from "./config";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
@@ -1560,6 +1562,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler check startup",
 			definition: checkStartupCommand,
+		},
+		{
+			command: "wrangler check do-migrations",
+			definition: checkDOMigrationCommand,
 		},
 	]);
 	registry.registerNamespace("check");

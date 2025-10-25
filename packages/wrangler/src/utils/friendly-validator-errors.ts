@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
-import { analyseBundle } from "../check/commands";
+import { analyseBundle } from "../check/startup";
 import { logger } from "../logger";
 import { ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
