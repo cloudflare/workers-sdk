@@ -486,6 +486,12 @@ interface EnvironmentInheritable {
 		cwd?: string;
 		/** The directory to watch for changes while using wrangler dev, defaults to the current working directory */
 		watch_dir?: string | string[];
+		/**
+		 * Glob patterns to ignore when watching for changes.
+		 * Helps prevent infinite rebuild loops caused by code generators.
+		 * Can be a string or array of strings with glob patterns.
+		 */
+		watch_ignore?: string | string[];
 	};
 
 	/**

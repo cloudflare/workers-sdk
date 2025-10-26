@@ -196,14 +196,46 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		}
 
 		const pathsToWatch = config.build.custom.watch;
+		const pathsToIgnore = config.build.custom.watchIgnore;
 
 		// This is always present if a custom command is provided, defaulting to `./src`
 		assert(pathsToWatch, "config.build.custom.watch");
+
+		// Create an ignore function that checks patterns against file paths
+		const createIgnoreFunction = (patterns: string | string[]) => {
+			const normalizedPatterns = Array.isArray(patterns) ? patterns : [patterns];
+
+			return (filePath: string) => {
+				// Normalize path separators for cross-platform compatibility
+				const normalizedPath = filePath.replace(/\\/g, '/');
+
+				for (const pattern of normalizedPatterns) {
+					// Convert glob patterns to simple contains checks for common cases
+					const cleanPattern = pattern.replace(/\*\*/g, '').replace(/\*/g, '').replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
+
+					// Check if the path contains the pattern
+					if (normalizedPath.includes(cleanPattern)) {
+						return true;
+					}
+
+					// Also check for exact glob pattern matches using minimatch-style logic
+					// Handle patterns like "lib/paraglide/**" or "**/.svelte-kit/**"
+					if (pattern.includes('**')) {
+						const basePattern = pattern.replace(/\/?\*\*\/?\*?$/, '');
+						if (normalizedPath.includes(basePattern)) {
+							return true;
+						}
+					}
+				}
+				return false;
+			};
+		};
 
 		this.#customBuildWatcher = watch(pathsToWatch, {
 			persistent: true,
 			// The initial custom build is always done in getEntry()
 			ignoreInitial: true,
+			ignored: pathsToIgnore ? createIgnoreFunction(pathsToIgnore) : undefined,
 		});
 		this.#customBuildWatcher.on("ready", () => {
 			void this.#runCustomBuild(config, String(pathsToWatch));
