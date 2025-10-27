@@ -166,7 +166,6 @@ import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
 import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
 import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
-import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
@@ -1237,15 +1236,6 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("containers", false, (containersArgs) => {
 		return containers(containersArgs.command(subHelp), subHelp);
 	});
-
-	// [PRIVATE BETA] pubsub
-	wrangler.command(
-		"pubsub",
-		`📮 Manage Pub/Sub brokers ${chalk.hex(betaCmdColor)("[private beta]")}`,
-		(pubsubYargs) => {
-			return pubSubCommands(pubsubYargs, subHelp);
-		}
-	);
 
 	registry.define([
 		{
