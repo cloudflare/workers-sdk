@@ -36,6 +36,7 @@ describe("getDatabaseInfoFromConfig", () => {
 			previewDatabaseUuid: undefined,
 			binding: "DATABASE",
 			migrationsTableName: "d1_migrations",
+			name: "db",
 			migrationsFolderPath: "./migrations",
 			internal_env: undefined,
 		});
@@ -57,6 +58,7 @@ describe("getDatabaseInfoFromConfig", () => {
 			previewDatabaseUuid: undefined,
 			binding: "DATABASE",
 			migrationsTableName: "d1_migrations",
+			name: "db",
 			migrationsFolderPath: "./custom_migrations",
 			internal_env: undefined,
 		});
@@ -78,6 +80,7 @@ describe("getDatabaseInfoFromConfig", () => {
 			previewDatabaseUuid: undefined,
 			binding: "DATABASE",
 			migrationsTableName: "custom_migrations",
+			name: "db",
 			migrationsFolderPath: "./migrations",
 			internal_env: undefined,
 		});
@@ -95,6 +98,7 @@ describe("getDatabaseInfoFromConfig", () => {
 			previewDatabaseUuid: undefined,
 			binding: "DATABASE2",
 			migrationsTableName: "d1_migrations",
+			name: "db2",
 			migrationsFolderPath: "./migrations",
 			internal_env: undefined,
 		});
