@@ -269,8 +269,6 @@ describe("ConfigController", () => {
 	});
 
 	it("should only log warnings once even with multiple config updates", async () => {
-		const std = mockConsoleMethods();
-
 		await seed({
 			"src/index.js": dedent/* javascript */ `
 				addEventListener('fetch', event => {
@@ -281,7 +279,7 @@ describe("ConfigController", () => {
 				name = "my-worker"
 				main = "src/index.js"
 				compatibility_date = "2024-06-01"
-				
+
 				[[analytics_engine_datasets]]
 				binding = "ANALYTICS"
 				dataset = "analytics_dataset"
