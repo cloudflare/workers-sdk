@@ -117,6 +117,10 @@ function convertWorkerToWranglerConfig(
 	};
 }
 
+/**
+ * Given the information of multiple Workers (representing different environments),
+ * construct a Wrangler config file for the application.
+ */
 export function constructWranglerConfig(
 	workerName: string,
 	entrypoint: string,

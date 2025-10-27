@@ -3,6 +3,9 @@ import { fetchResult } from "../cfetch";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import type { FullWorkerConfig, RawConfig } from "@cloudflare/workers-utils";
 
+/**
+ * Downloads all information required to construct a Wrangler config file for a Worker from the API
+ */
 export async function fetchWorkerConfig(
 	accountId: string,
 	workerName: string,
