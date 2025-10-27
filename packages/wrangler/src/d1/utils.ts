@@ -15,17 +15,11 @@ export function getDatabaseInfoFromConfig(
 			d1Database.database_id &&
 			(name === d1Database.database_name || name === d1Database.binding)
 		) {
-			// if (!d1Database.database_name) {
-			// 	throw new UserError(
-			// 		`${name} bindings must have a "database_name" field`
-			// 	);
-			// }
-
 			return {
 				uuid: d1Database.database_id,
 				previewDatabaseUuid: d1Database.preview_database_id,
 				binding: d1Database.binding,
-				// name: d1Database.database_name,
+				name: d1Database.database_name,
 				migrationsTableName:
 					d1Database.migrations_table || DEFAULT_MIGRATION_TABLE,
 				migrationsFolderPath:
