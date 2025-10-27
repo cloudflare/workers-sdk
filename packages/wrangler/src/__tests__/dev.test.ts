@@ -2025,6 +2025,34 @@ describe.sequential("wrangler dev", () => {
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should show self-bindings as connected", async () => {
+			writeWranglerConfig({
+				name: "my-worker",
+				services: [
+					{ binding: "SELF", service: "my-worker" },
+					{
+						binding: "NAMED",
+						service: "my-worker",
+						entrypoint: "MyEntrypoint",
+					},
+				],
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWranglerUntilConfig("dev index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Your Worker has access to the following bindings:
+				Binding                                 Resource      Mode
+				env.SELF (my-worker)                    Worker        local [connected]
+				env.NAMED (my-worker#MyEntrypoint)      Worker        local [connected]
+
+				"
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 
 	describe("print bindings", () => {
