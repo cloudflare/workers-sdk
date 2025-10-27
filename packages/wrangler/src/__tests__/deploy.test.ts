@@ -77,7 +77,7 @@ import type { FormData } from "undici";
 import type { Mock } from "vitest";
 
 vi.mock("command-exists");
-vi.mock("../check/commands", async (importOriginal) => {
+vi.mock("../check/startup", async (importOriginal) => {
 	return {
 		...(await importOriginal()),
 		analyseBundle() {
