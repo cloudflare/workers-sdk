@@ -3,7 +3,6 @@ import path from "node:path";
 import { chromium } from "playwright-chromium";
 import { beforeAll, inject } from "vitest";
 import { getViteModuleToTest } from "./vite-module-to-test";
-import type * as http from "node:http";
 import type { Browser, Page } from "playwright-chromium";
 import type {
 	ConfigEnv,
@@ -33,7 +32,7 @@ export const isLocalWithoutDockerRunning =
 /**
  * Vite Dev Server when testing serve
  */
-export let viteServer: ViteDevServer;
+export let viteServer: ViteDevServer | PreviewServer;
 /**
  * Root of the Vite fixture
  */
@@ -77,13 +76,13 @@ export function setViteUrl(url: string): void {
 }
 
 export function resetServerLogs() {
-	serverLogs.info = [];
-	serverLogs.warns = [];
-	serverLogs.errors = [];
+	serverLogs.info.splice(0, serverLogs.info.length);
+	serverLogs.warns.splice(0, serverLogs.warns.length);
+	serverLogs.errors.splice(0, serverLogs.errors.length);
 }
 
 beforeAll(async (s) => {
-	let server: ViteDevServer | http.Server | PreviewServer | undefined;
+	let server: ViteDevServer | PreviewServer | undefined;
 
 	const suite = s as RunnerTestFile;
 
@@ -248,7 +247,7 @@ export async function loadConfig(configEnv: ConfigEnv) {
 }
 
 export async function startDefaultServe(): Promise<
-	ViteDevServer | http.Server | PreviewServer
+	ViteDevServer | PreviewServer
 > {
 	setupConsoleWarnCollector(serverLogs.warns);
 
@@ -295,6 +294,7 @@ export async function startDefaultServe(): Promise<
 		const previewServer = await vite.preview(previewConfig);
 		// prevent preview change NODE_ENV
 		process.env.NODE_ENV = _nodeEnv;
+		viteServer = previewServer;
 		viteTestUrl = previewServer!.resolvedUrls!.local[0]!;
 		if (previewServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
