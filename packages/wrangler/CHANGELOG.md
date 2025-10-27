@@ -1,5 +1,17 @@
 # wrangler
 
+## 4.45.1
+
+### Patch Changes
+
+- [#10959](https://github.com/cloudflare/workers-sdk/pull/10959) [`d0208fe`](https://github.com/cloudflare/workers-sdk/commit/d0208fef543c8a4850614d2cd3cba86a8bf4e3cb) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Fixed conflict between `--env` and `--expires` flags in `wrangler r2 object put`.
+
+  `--e` now aliases `--env` only, and NOT `--expires`.
+
+- [#10915](https://github.com/cloudflare/workers-sdk/pull/10915) [`dbe51c1`](https://github.com/cloudflare/workers-sdk/commit/dbe51c19bc3ad32c61efd5b0ca1fc2749de3bbe9) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Fixed self-bindings (service bindings to the same worker) showing as [not connected] in wrangler dev. Self-bindings now correctly show as [connected] since a worker is always available to itself.
+
+- [#10913](https://github.com/cloudflare/workers-sdk/pull/10913) [`d4f2daf`](https://github.com/cloudflare/workers-sdk/commit/d4f2daf71f64eb1a4529d78c27228877d48c22c4) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Fixed duplicate warning messages appearing during wrangler dev when configuration changes or state transitions occur
+
 ## 4.45.0
 
 ### Minor Changes
