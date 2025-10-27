@@ -33,6 +33,7 @@ import {
 import { renderError } from "./cfetch";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
+import { handleCompletion } from "./complete";
 import { readConfig } from "./config";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
@@ -1586,6 +1587,12 @@ export function createCLIParser(argv: string[]) {
 
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
+
+	// Handle shell completion requests
+	if (argv[0] === "complete") {
+		handleCompletion(argv.slice(1));
+		return;
+	}
 
 	checkMacOSVersion({ shouldThrow: false });
 
