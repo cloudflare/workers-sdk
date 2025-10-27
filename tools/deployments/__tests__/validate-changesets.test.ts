@@ -30,6 +30,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/vitest-pool-workers",
 				"@cloudflare/workers-editor-shared",
 				"@cloudflare/workers-shared",
+				"@cloudflare/workers-utils",
 				"@cloudflare/workflows-shared",
 				"@cloudflare/containers-shared",
 				"@cloudflare/vite-plugin",
