@@ -10,6 +10,7 @@ import { getWorkerAccountAndContext } from "../dev/remote";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import { CI } from "../is-ci";
+import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -2024,6 +2025,34 @@ describe.sequential("wrangler dev", () => {
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should show self-bindings as connected", async () => {
+			writeWranglerConfig({
+				name: "my-worker",
+				services: [
+					{ binding: "SELF", service: "my-worker" },
+					{
+						binding: "NAMED",
+						service: "my-worker",
+						entrypoint: "MyEntrypoint",
+					},
+				],
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWranglerUntilConfig("dev index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Your Worker has access to the following bindings:
+				Binding                                 Resource      Mode
+				env.SELF (my-worker)                    Worker        local [connected]
+				env.NAMED (my-worker#MyEntrypoint)      Worker        local [connected]
+
+				"
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 
 	describe("print bindings", () => {
@@ -2110,6 +2139,14 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("containers", () => {
+		beforeEach(() => {
+			// Clear logger.once history between tests to ensure test isolation.
+			// Without this, warnings logged via logger.once.warn() in one test
+			// would be suppressed in subsequent tests since they track logged
+			// messages globally across the test process.
+			logger.clearHistory();
+		});
+
 		const containerConfig = {
 			main: "index.js",
 			compatibility_date: "2024-01-01",
