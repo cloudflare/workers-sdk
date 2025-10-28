@@ -4374,6 +4374,15 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			) && isValid;
 
 		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"logs.persist",
+				val.logs.persist,
+				"boolean"
+			) && isValid;
+
+		isValid =
 			validateAdditionalProperties(diagnostics, field, Object.keys(val.logs), [
 				"enabled",
 				"head_sampling_rate",
@@ -4414,11 +4423,20 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			) && isValid;
 
 		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"traces.persist",
+				val.traces.persist,
+				"boolean"
+			) && isValid;
+
+		isValid =
 			validateAdditionalProperties(
 				diagnostics,
 				field,
 				Object.keys(val.traces),
-				["enabled", "head_sampling_rate", "destinations"]
+				["enabled", "head_sampling_rate", "destinations", "persist"]
 			) && isValid;
 	}
 
