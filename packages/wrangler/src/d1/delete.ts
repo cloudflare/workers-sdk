@@ -1,8 +1,10 @@
+import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { printResourceLocation } from "../utils/is-local";
 import { getDatabaseByNameOrBinding } from "./utils";
 import type { Database } from "./types";
 
@@ -14,7 +16,6 @@ export const d1DeleteCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: true,
-		printResourceLocation: true,
 	},
 	args: {
 		name: {
@@ -31,6 +32,7 @@ export const d1DeleteCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	async handler({ name, skipConfirmation }, { config }) {
+		printResourceLocation("remote");
 		const accountId = await requireAuth(config);
 
 		const db: Database = await getDatabaseByNameOrBinding(
@@ -39,7 +41,10 @@ export const d1DeleteCommand = createCommand({
 			name
 		);
 
-		logger.log(`About to delete DB '${name}' (${db.uuid}).`);
+		logger.log(
+			`\nAbout to delete ${chalk.bold("remote")} database DB '${name}' (${db.uuid}).\n` +
+				`This action is irreversible and will permanently delete all data in the database.\n`
+		);
 		if (!skipConfirmation) {
 			const response = await confirm(`Ok to proceed?`);
 			if (!response) {
