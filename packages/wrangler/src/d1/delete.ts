@@ -14,7 +14,6 @@ export const d1DeleteCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: true,
-		printResourceLocation: true,
 	},
 	args: {
 		name: {
