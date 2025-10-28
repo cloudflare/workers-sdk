@@ -17,6 +17,9 @@ export const d1MigrationsListCommand = createCommand({
 		status: "stable",
 		owner: "Product: D1",
 	},
+	behaviour: {
+		printResourceLocation: true,
+	},
 	args: {
 		database: {
 			type: "string",
