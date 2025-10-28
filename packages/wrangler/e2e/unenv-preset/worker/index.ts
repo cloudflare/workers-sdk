@@ -573,4 +573,13 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.throws(() => cluster.disconnect(), /not implemented/);
 		assert.throws(() => cluster.fork(), /not implemented/);
 	},
+
+	async testWasi() {
+		const wasi = await import("node:wasi");
+
+		assert.strictEqual(typeof wasi.WASI, "function");
+
+		assert.throws(() => new wasi.WASI({}), /not implemented/);
+		assert.throws(() => new wasi.WASI({ version: "preview1" }), /not implemented/);
+	},
 };
