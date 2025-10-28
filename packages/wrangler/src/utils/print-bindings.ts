@@ -723,6 +723,14 @@ export function printBindings(
 		}
 		logger.log();
 	}
+
+	if (context.local) {
+		logger.once.info(
+			dim(
+				`\n💡 In local mode, use \`--persist-to\` to specify a directory for local persistence (defaults to .wrangler/state)\n`
+			)
+		);
+	}
 	let title: string;
 	if (context.name && getFlag("MULTIWORKER")) {
 		title = `${chalk.blue(context.name)} is sending Tail events to the following Workers:`;

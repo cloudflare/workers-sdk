@@ -87,6 +87,9 @@ export interface EphemeralDirectory {
 export function getWranglerHiddenDirPath(
 	projectRoot: string | undefined
 ): string {
+	if (process.env.WRANGLER_HIDDEN_DIR) {
+		return process.env.WRANGLER_HIDDEN_DIR;
+	}
 	projectRoot ??= process.cwd();
 	return path.join(projectRoot, ".wrangler");
 }
@@ -103,7 +106,10 @@ export function getWranglerTmpDir(
 	prefix: string,
 	cleanup = true
 ): EphemeralDirectory {
-	const tmpRoot = path.join(getWranglerHiddenDirPath(projectRoot), "tmp");
+	const customTmpDir = process.env.WRANGLER_TMP_DIR;
+	const tmpRoot = customTmpDir
+		? path.resolve(customTmpDir)
+		: path.join(getWranglerHiddenDirPath(projectRoot), "tmp");
 	fs.mkdirSync(tmpRoot, { recursive: true });
 
 	const tmpPrefix = path.join(tmpRoot, `${prefix}-`);

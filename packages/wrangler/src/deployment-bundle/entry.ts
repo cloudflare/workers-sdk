@@ -119,7 +119,8 @@ export async function getEntry(
 		paths.absolutePath,
 		paths.relativePath,
 		config.build,
-		config.configPath
+		config.configPath,
+		command === "dev" ? "dev" : "deploy"
 	);
 
 	const projectRoot = paths.projectRoot ?? process.cwd();
