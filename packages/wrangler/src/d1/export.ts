@@ -25,6 +25,9 @@ export const d1ExportCommand = createCommand({
 		status: "stable",
 		owner: "Product: D1",
 	},
+	behaviour: {
+		printResourceLocation: true,
+	},
 	args: {
 		name: {
 			type: "string",
