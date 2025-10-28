@@ -1,22 +1,20 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { spinner, spinnerWhile } from "@cloudflare/cli/interactive";
+import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Miniflare } from "miniflare";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
-import { configFileName } from "../config";
 import { createCommand } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
-import { UserError } from "../errors";
 import { logger } from "../logger";
-import { APIError } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
-import type { Config } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Database, ExportPollingResponse, PollingFailure } from "./types";
+import type { Config } from "@cloudflare/workers-utils";
 
 export const d1ExportCommand = createCommand({
 	metadata: {

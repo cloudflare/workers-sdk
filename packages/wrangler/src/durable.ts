@@ -1,9 +1,8 @@
 import assert from "node:assert";
+import { configFileName } from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
-import { configFileName } from "./config";
 import { logger } from "./logger";
-import type { Config } from "./config";
-import type { CfWorkerInit } from "./deployment-bundle/worker";
+import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 
 /**
  * For a given Worker + migrations config, figure out which migrations

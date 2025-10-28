@@ -1,9 +1,8 @@
 import assert from "assert";
-import { type Config } from "../config";
+import { UserError } from "@cloudflare/workers-utils";
 import { containersScope } from "../containers";
 import { apply } from "../containers/deploy";
 import { getDockerPath } from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { fetchVersion } from "../versions/api";
 import { buildAndMaybePush } from "./build";
@@ -13,6 +12,7 @@ import type {
 	ContainerNormalizedConfig,
 	ImageURIConfig,
 } from "@cloudflare/containers-shared/src/types";
+import type { Config } from "@cloudflare/workers-utils";
 
 export async function buildContainer(
 	containerConfig: Exclude<ContainerNormalizedConfig, ImageURIConfig>,

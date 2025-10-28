@@ -3,7 +3,7 @@ import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { isAuthenticationError } from "../deploy/deploy";
 import { getCloudflareComplianceRegion } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
-import { formatMessage } from "../parse";
+import { formatMessage } from "../utils/format-message";
 import { fetchMembershipRoles } from "./membership";
 import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { ApiCredentials, Scope } from ".";

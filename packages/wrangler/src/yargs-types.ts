@@ -1,4 +1,4 @@
-import type { OnlyCamelCase } from "./config/config";
+import type { OnlyCamelCase } from "./core/types";
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
 
 /**

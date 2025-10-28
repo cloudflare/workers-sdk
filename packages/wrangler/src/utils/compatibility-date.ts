@@ -1,7 +1,7 @@
 import module from "node:module";
-import { configFileName } from "../config";
+import { configFileName } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
-import type { Config } from "../config";
+import type { Config } from "@cloudflare/workers-utils";
 
 /**
  * Returns the compatibility date to use in development.
@@ -33,14 +33,4 @@ export function getDevCompatibilityDate(
 		);
 	}
 	return compatibilityDate ?? workerdDate;
-}
-
-/**
- * Returns the date formatted as a compatibility date
- *
- * @param date
- * @returns The date as a `YYYY-MM-DD` string
- */
-export function formatCompatibilityDate(date: Date): string {
-	return date.toISOString().slice(0, 10);
 }

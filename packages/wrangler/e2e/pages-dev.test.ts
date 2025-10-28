@@ -1,11 +1,11 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { formatCompatibilityDate } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { describe, expect, it } from "vitest";
-import { formatCompatibilityDate } from "../src/utils/compatibility-date";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";

@@ -1,9 +1,8 @@
+import { readFileSync, UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, multiselect, prompt } from "../dialogs";
-import { UserError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
-import { readFileSync } from "../parse";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {

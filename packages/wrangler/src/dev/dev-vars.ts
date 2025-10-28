@@ -7,7 +7,7 @@ import {
 	getCloudflareLoadDevVarsFromDotEnv,
 } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
-import type { Config } from "../config";
+import type { Config } from "@cloudflare/workers-utils";
 
 /**
  * Get the Worker `vars` bindings for a `wrangler dev` instance of a Worker.

@@ -1,7 +1,7 @@
 import { getSubdomainValuesAPIMock } from "../triggers/deploy";
 import { diffJsonObjects, isNonDestructive } from "../utils/diff-json";
-import type { Config, RawConfig } from "../config";
 import type { DiffJson, Json } from "../utils/diff-json";
+import type { Config, RawConfig } from "@cloudflare/workers-utils";
 
 /**
  * Object representing the difference of two configuration objects.

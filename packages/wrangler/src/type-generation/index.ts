@@ -1,26 +1,27 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
+import {
+	CommandLineArgsError,
+	configFileName,
+	experimental_readRawConfig,
+	parseJSONC,
+	UserError,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
-import {
-	configFileName,
-	experimental_readRawConfig,
-	readConfig,
-} from "../config";
+import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { getClassNamesWhichUseSQLite } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
-import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
-import { parseJSONC } from "../parse";
 import { isProcessEnvPopulated } from "../process-env";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
-import type { Config, RawEnvironment } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
+import type { Config, RawEnvironment } from "@cloudflare/workers-utils";
 
 export const typesCommand = createCommand({
 	metadata: {

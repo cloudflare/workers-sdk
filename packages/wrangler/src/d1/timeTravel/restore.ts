@@ -1,7 +1,7 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
-import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { getDatabaseByNameOrBinding } from "../utils";

@@ -1,7 +1,10 @@
 import * as fs from "fs";
 import path from "node:path";
-import { experimental_readRawConfig, readConfig } from "../../config";
-import { normalizeAndValidateConfig } from "../../config/validation";
+import {
+	experimental_readRawConfig,
+	normalizeAndValidateConfig,
+} from "@cloudflare/workers-utils";
+import { readConfig } from "../../config";
 import { run } from "../../experimental-flags";
 import { normalizeString } from "../helpers/normalize";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -12,7 +15,7 @@ import type {
 	RawConfig,
 	RawDevConfig,
 	RawEnvironment,
-} from "../../config";
+} from "@cloudflare/workers-utils";
 
 describe("readConfig()", () => {
 	runInTempDir();
@@ -2871,15 +2874,13 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			            - \\"kv_namespaces[0]\\" bindings should have a string \\"id\\" field but got {}.
-			            - \\"kv_namespaces[1]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\"}.
-			            - \\"kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			            - \\"kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			            - \\"kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}.
-			            - \\"kv_namespaces[4]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
-		        `);
+					"Processing wrangler configuration:
+					  - \\"kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
+					  - \\"kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+					  - \\"kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+					  - \\"kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}.
+					  - \\"kv_namespaces[4]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
+				`);
 			});
 
 			it("should allow the id field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
@@ -3028,15 +3029,10 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"d1_databases[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			  - \\"d1_databases[0]\\" bindings must have a \\"database_id\\" field but got {}.
-			  - \\"d1_databases[1]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\"}.
-			  - \\"d1_databases[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			  - \\"d1_databases[2]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			  - \\"d1_databases[3]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"D1_BINDING_2\\",\\"id\\":\\"my-db\\",\\"preview_id\\":2222}.
-			  - \\"d1_databases[4]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
-		`);
+					"Processing wrangler configuration:
+					  - \\"d1_databases[0]\\" bindings should have a string \\"binding\\" field but got {}.
+					  - \\"d1_databases[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}."
+				`);
 			});
 
 			it("should allow the database_id field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
@@ -3367,8 +3363,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - \\"r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-					  - \\"r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
-					  - \\"r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
 					  - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 					  - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 					  - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"r2-bucket-2\\",\\"preview_bucket_name\\":2555}.
@@ -5980,16 +5974,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"env.ENV1.kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			              - \\"env.ENV1.kv_namespaces[0]\\" bindings should have a string \\"id\\" field but got {}.
-			              - \\"env.ENV1.kv_namespaces[1]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\"}.
-			              - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			              - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			              - \\"env.ENV1.kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"env.ENV1.kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
+					    - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+					    - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+					    - \\"env.ENV1.kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}."
+				`);
 			});
 		});
 
@@ -6091,8 +6083,6 @@ describe("normalizeAndValidateConfig()", () => {
 
 					  - \\"env.ENV1\\" environment configuration
 					    - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-					    - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
-					    - \\"env.ENV1.r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
 					    - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 					    - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 					    - env.ENV1.r2_buckets[3].bucket_name=\\"R2_BUCKET_2\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.

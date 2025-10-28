@@ -1,5 +1,5 @@
+import { type Config } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-import { type Config } from "../../config";
 import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromConfig,
@@ -35,8 +35,8 @@ describe("getDatabaseInfoFromConfig", () => {
 			uuid: "xxxx",
 			previewDatabaseUuid: undefined,
 			binding: "DATABASE",
-			name: "db",
 			migrationsTableName: "d1_migrations",
+			name: "db",
 			migrationsFolderPath: "./migrations",
 			internal_env: undefined,
 		});
@@ -57,8 +57,8 @@ describe("getDatabaseInfoFromConfig", () => {
 			uuid: "xxxx",
 			previewDatabaseUuid: undefined,
 			binding: "DATABASE",
-			name: "db",
 			migrationsTableName: "d1_migrations",
+			name: "db",
 			migrationsFolderPath: "./custom_migrations",
 			internal_env: undefined,
 		});
@@ -79,8 +79,8 @@ describe("getDatabaseInfoFromConfig", () => {
 			uuid: "xxxx",
 			previewDatabaseUuid: undefined,
 			binding: "DATABASE",
-			name: "db",
 			migrationsTableName: "custom_migrations",
+			name: "db",
 			migrationsFolderPath: "./migrations",
 			internal_env: undefined,
 		});
@@ -97,8 +97,8 @@ describe("getDatabaseInfoFromConfig", () => {
 			uuid: "yyyy",
 			previewDatabaseUuid: undefined,
 			binding: "DATABASE2",
-			name: "db2",
 			migrationsTableName: "d1_migrations",
+			name: "db2",
 			migrationsFolderPath: "./migrations",
 			internal_env: undefined,
 		});

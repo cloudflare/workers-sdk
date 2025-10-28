@@ -4,11 +4,9 @@ import { startDev } from "../dev/start-dev";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
-import type { Environment } from "../config";
-import type { Rule } from "../config/environment";
-import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
+import type { CfModule, Environment, Rule } from "@cloudflare/workers-utils";
 import type { Json } from "miniflare";
 import type { RequestInfo, RequestInit, Response } from "undici";
 

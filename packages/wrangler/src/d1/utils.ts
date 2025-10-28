@@ -1,10 +1,10 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
-import { UserError } from "../errors";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "./constants";
 import { listDatabases } from "./list";
-import type { Config } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Database, DatabaseInfo } from "./types";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function getDatabaseInfoFromConfig(
 	config: Config,
@@ -15,12 +15,6 @@ export function getDatabaseInfoFromConfig(
 			d1Database.database_id &&
 			(name === d1Database.database_name || name === d1Database.binding)
 		) {
-			if (!d1Database.database_name) {
-				throw new UserError(
-					`${name} bindings must have a "database_name" field`
-				);
-			}
-
 			return {
 				uuid: d1Database.database_id,
 				previewDatabaseUuid: d1Database.preview_database_id,

@@ -2,23 +2,27 @@ import { createReadStream, promises as fs } from "fs";
 import assert from "node:assert";
 import path from "node:path";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
+import {
+	APIError,
+	configFileName,
+	createFatalError,
+	JsonFriendlyFatalError,
+	readFileSync,
+	UserError,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import md5File from "md5-file";
 import { Miniflare } from "miniflare";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
-import { configFileName } from "../config";
 import { createCommand } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm } from "../dialogs";
-import { createFatalError, JsonFriendlyFatalError, UserError } from "../errors";
 import { logger } from "../logger";
-import { APIError, readFileSync } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
-import type { Config } from "../config";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	Database,
@@ -27,6 +31,7 @@ import type {
 	PollingFailure,
 } from "./types";
 import type { D1Result } from "@cloudflare/workers-types/experimental";
+import type { Config } from "@cloudflare/workers-utils";
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];

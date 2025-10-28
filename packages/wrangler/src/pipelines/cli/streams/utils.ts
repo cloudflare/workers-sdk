@@ -1,8 +1,8 @@
-import { updateConfigFile } from "../../../config";
 import { logger } from "../../../logger";
+import { createdResourceConfig } from "../../../utils/add-created-resource-config";
 import formatLabelledValues from "../../../utils/render-labelled-values";
-import type { Config } from "../../../config";
 import type { SchemaField, Stream } from "../../types";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function formatSchemaFieldsForTable(
 	fields: SchemaField[],
@@ -218,7 +218,7 @@ export async function displayUsageExamples(
 	// Worker binding example (always shown since worker_binding is always enabled)
 	logger.log("\nWorker Integration:");
 
-	await updateConfigFile(
+	await createdResourceConfig(
 		"pipelines",
 		(customBindingName) => ({
 			pipeline: stream.id,

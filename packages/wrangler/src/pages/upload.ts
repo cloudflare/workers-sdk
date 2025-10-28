@@ -1,14 +1,13 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { spinner } from "@cloudflare/cli/interactive";
+import { APIError, FatalError } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
-import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
-import { APIError } from "../parse";
 import {
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_BUCKET_FILE_COUNT,

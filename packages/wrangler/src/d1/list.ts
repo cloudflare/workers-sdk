@@ -44,19 +44,20 @@ export const listDatabases = async (
 	accountId: string,
 	limitCalls: boolean = false,
 	pageSize: number = 10
-): Promise<Array<Database>> => {
+): Promise<Array<Omit<Database, "name"> & { name: string }>> => {
 	let page = 1;
 	const results = [];
 	while (results.length % pageSize === 0) {
-		const json: Array<Database> = await fetchResult(
-			complianceConfig,
-			`/accounts/${accountId}/d1/database`,
-			{},
-			new URLSearchParams({
-				per_page: pageSize.toString(),
-				page: page.toString(),
-			})
-		);
+		const json: Array<Omit<Database, "name"> & { name: string }> =
+			await fetchResult(
+				complianceConfig,
+				`/accounts/${accountId}/d1/database`,
+				{},
+				new URLSearchParams({
+					per_page: pageSize.toString(),
+					page: page.toString(),
+				})
+			);
 		page++;
 		results.push(...json);
 		if (limitCalls && page > 3) {

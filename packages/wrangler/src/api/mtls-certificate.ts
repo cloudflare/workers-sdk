@@ -1,6 +1,5 @@
+import { readFileSync, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
-import { UserError } from "../errors";
-import { readFileSync } from "../parse";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
 /**

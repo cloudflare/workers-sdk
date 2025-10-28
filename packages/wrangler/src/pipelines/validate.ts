@@ -1,4 +1,4 @@
-import { CommandLineArgsError, UserError } from "../errors";
+import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
 
 /**
  * Validate entity name is used for Pipelines V1 API entities such as sources, sinks and pipelines.

@@ -23,9 +23,13 @@ import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import type { AssetsOptions } from "../../../assets";
-import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
+import type {
+	Config,
+	RawConfig,
+	RawEnvironment,
+} from "@cloudflare/workers-utils";
 import type {
 	MiniflareOptions,
 	ModuleRule,

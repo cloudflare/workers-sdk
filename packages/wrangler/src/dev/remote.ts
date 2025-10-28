@@ -1,30 +1,29 @@
 import assert from "node:assert";
 import path from "node:path";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { syncAssets } from "../assets";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getInferredHost } from "../dev";
-import { UserError } from "../errors";
 import { logger } from "../logger";
-import { APIError } from "../parse";
 import { syncWorkersSite } from "../sites";
 import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
 import type { AssetsOptions } from "../assets";
-import type { Route } from "../config/environment";
-import type {
-	CfModule,
-	CfScriptFormat,
-	CfWorkerContext,
-	CfWorkerInit,
-} from "../deployment-bundle/worker";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { LegacyAssetPaths } from "../sites";
 import type { ApiCredentials } from "../user";
 import type { CfAccount } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
+import type {
+	CfModule,
+	CfScriptFormat,
+	CfWorkerContext,
+	CfWorkerInit,
+	Route,
+} from "@cloudflare/workers-utils";
 
 export function handlePreviewSessionUploadError(
 	err: unknown,

@@ -1,24 +1,21 @@
 import assert from "node:assert";
 import events from "node:events";
+import {
+	configFileName,
+	formatConfigSnippet,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
 import { getAssetsOptions } from "./assets";
-import { configFileName, formatConfigSnippet } from "./config";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
-import { UserError } from "./errors";
 import { logger } from "./logger";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
 import type { Trigger } from "./api";
-import type { Config, Environment } from "./config";
-import type {
-	EnvironmentNonInheritable,
-	Route,
-	Rule,
-} from "./config/environment";
-import type { INHERIT_SYMBOL } from "./deployment-bundle/bindings";
+import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
 	CfD1Database,
 	CfKvNamespace,
@@ -27,8 +24,13 @@ import type {
 	CfR2Bucket,
 	CfService,
 	CfWorkerInit,
-} from "./deployment-bundle/worker";
-import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
+	Config,
+	Environment,
+	EnvironmentNonInheritable,
+	INHERIT_SYMBOL,
+	Route,
+	Rule,
+} from "@cloudflare/workers-utils";
 import type { Json } from "miniflare";
 
 export const dev = createCommand({

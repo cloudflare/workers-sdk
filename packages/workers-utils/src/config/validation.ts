@@ -4,10 +4,6 @@ import { isDockerfile } from "@cloudflare/containers-shared";
 import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
-import { getFlag } from "../experimental-flags";
-import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
-import { friendlyBindingNames } from "../utils/print-bindings";
-import { workflowNameFormatMessage } from "../workflows/utils";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -38,7 +34,7 @@ import {
 	validateUniqueNameProperty,
 } from "./validation-helpers";
 import { configFileName, formatConfigSnippet } from ".";
-import type { CfWorkerInit } from "../deployment-bundle/worker";
+import type { CfWorkerInit } from "../worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
@@ -50,6 +46,59 @@ import type {
 	TailConsumer,
 } from "./environment";
 import type { TypeofType, ValidatorFn } from "./validation-helpers";
+
+/**
+ * R2 bucket names must:
+ * - contain lower case letters, numbers, and `-`
+ * - start and end with with a lower case letter or number
+ * - be between 6 and 63 characters long
+ *
+ * See https://developers.cloudflare.com/r2/buckets/create-buckets/#bucket-level-operations
+ */
+export function isValidR2BucketName(name: string | undefined): name is string {
+	return (
+		typeof name === "string" && /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(name)
+	);
+}
+
+export const bucketFormatMessage = `Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.`;
+
+export const friendlyBindingNames: Record<
+	keyof CfWorkerInit["bindings"],
+	string
+> = {
+	data_blobs: "Data Blob",
+	durable_objects: "Durable Object",
+	kv_namespaces: "KV Namespace",
+	send_email: "Send Email",
+	queues: "Queue",
+	d1_databases: "D1 Database",
+	vectorize: "Vectorize Index",
+	hyperdrive: "Hyperdrive Config",
+	r2_buckets: "R2 Bucket",
+	logfwdr: "logfwdr",
+	services: "Worker",
+	analytics_engine_datasets: "Analytics Engine Dataset",
+	text_blobs: "Text Blob",
+	browser: "Browser",
+	ai: "AI",
+	images: "Images",
+	media: "Media",
+	version_metadata: "Worker Version Metadata",
+	unsafe: "Unsafe Metadata",
+	vars: "Environment Variable",
+	wasm_modules: "Wasm Module",
+	dispatch_namespaces: "Dispatch Namespace",
+	mtls_certificates: "mTLS Certificate",
+	workflows: "Workflow",
+	pipelines: "Pipeline",
+	secrets_store_secrets: "Secrets Store Secret",
+	ratelimits: "Rate Limit",
+	assets: "Assets",
+	unsafe_hello_world: "Hello World",
+	worker_loaders: "Worker Loader",
+	vpc_services: "VPC Service",
+} as const;
 
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
@@ -2091,6 +2140,8 @@ const validateDurableObjectBinding: ValidatorFn = (
 	return isValid;
 };
 
+const workflowNameFormatMessage = `Workflow names must be 1-64 characters long, start with a letter, number, or underscore, and may only contain letters, numbers, underscores, or hyphens.`;
+
 /**
  * Check that the given field is a valid "workflow" binding object.
  */
@@ -2958,10 +3009,8 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 	if (
-		getFlag("RESOURCES_PROVISION")
-			? !isOptionalProperty(value, "id", "string") ||
-				(value.id !== undefined && value.id.length === 0)
-			: !isRequiredProperty(value, "id", "string") || value.id.length === 0
+		!isOptionalProperty(value, "id", "string") ||
+		(value.id !== undefined && value.id.length === 0)
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "id" field but got ${JSON.stringify(
@@ -3145,11 +3194,8 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 	if (
-		getFlag("RESOURCES_PROVISION")
-			? !isOptionalProperty(value, "bucket_name", "string") ||
-				(value.bucket_name !== undefined && value.bucket_name.length === 0)
-			: !isRequiredProperty(value, "bucket_name", "string") ||
-				value.bucket_name.length === 0
+		!isOptionalProperty(value, "bucket_name", "string") ||
+		(value.bucket_name !== undefined && value.bucket_name.length === 0)
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "bucket_name" field but got ${JSON.stringify(
@@ -3232,13 +3278,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (
-		getFlag("RESOURCES_PROVISION")
-			? !isOptionalProperty(value, "database_id", "string")
-			: // TODO: allow name only, where we look up the ID dynamically
-				// !isOptionalProperty(value, "database_name", "string") &&
-				!isRequiredProperty(value, "database_id", "string")
-	) {
+	if (!isOptionalProperty(value, "database_id", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a "database_id" field but got ${JSON.stringify(
 				value

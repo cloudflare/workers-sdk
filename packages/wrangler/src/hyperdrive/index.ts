@@ -1,5 +1,5 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { createNamespace } from "../core/create-command";
-import { UserError } from "../errors";
 import type {
 	CachingOptions,
 	Mtls,
