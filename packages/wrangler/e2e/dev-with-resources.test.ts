@@ -24,6 +24,7 @@ const WASM_ADD_MODULE = Buffer.from(
 	"base64"
 );
 
+
 /**
  * We use the same workerName for all of the tests in this suite in hopes of reducing flakes.
  * When creating a new worker, a <workerName>.devprod-testing7928.workers.dev subdomain is created.
