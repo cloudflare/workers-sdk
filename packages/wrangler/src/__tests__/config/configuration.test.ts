@@ -6717,7 +6717,7 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should not warn on full observability conifg", () => {
+			it("should not warn on full observability config", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						observability: {
