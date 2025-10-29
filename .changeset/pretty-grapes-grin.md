@@ -3,4 +3,4 @@
 "@cloudflare/unenv-preset": patch
 ---
 
-Bump `unenv` to 2.0.0-rc.22
+Bump `unenv` to 2.0.0-rc.23
