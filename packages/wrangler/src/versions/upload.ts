@@ -69,13 +69,13 @@ import { retryOnAPIFailure } from "../utils/retry";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { patchNonVersionedScriptSettings } from "./api";
 import type { AssetsOptions } from "../assets";
-import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 import type { Entry } from "../deployment-bundle/entry";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type {
 	CfPlacement,
 	CfWorkerInit,
 	Config,
+	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
