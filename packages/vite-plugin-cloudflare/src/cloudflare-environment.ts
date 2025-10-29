@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as util from "node:util";
 import * as vite from "vite";
+import { additionalModuleRE } from "./plugins/additional-modules";
 import { VIRTUAL_WORKER_ENTRY } from "./plugins/virtual-modules";
 import {
 	INIT_PATH,
@@ -17,6 +18,7 @@ import type {
 	ReplaceWorkersTypes,
 	WebSocket,
 } from "miniflare";
+import type { FetchFunctionOptions } from "vite/module-runner";
 
 export const MAIN_ENTRY_NAME = "index";
 
@@ -120,6 +122,21 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		assert(webSocket, "Failed to establish WebSocket");
 		webSocket.accept();
 		this.#webSocketContainer.webSocket = webSocket;
+	}
+
+	override async fetchModule(
+		id: string,
+		importer?: string,
+		options?: FetchFunctionOptions
+	): Promise<vite.FetchResult> {
+		// Additional modules (CompiledWasm, Data, Text)
+		if (additionalModuleRE.test(id)) {
+			return {
+				externalize: id,
+				type: "module",
+			};
+		}
+		return super.fetchModule(id, importer, options);
 	}
 }
 
