@@ -20,7 +20,7 @@ body:
       label: Please provide a link to a minimal reproduction
       placeholder: https://github.com/foobar-user/minimal-repro
     validations:
-      required: false
+      required: true
   - type: textarea
     attributes:
       label: Describe the Bug
