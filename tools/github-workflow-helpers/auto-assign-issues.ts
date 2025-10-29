@@ -44,7 +44,11 @@ const TEAM_ASSIGNMENTS: { [label: string]: { [jobRole: string]: string } } = {
 	vitest: { em: "lrapoport-cf", pm: "mattietk" },
 	"Workers + Assets": { em: "dcartertwo", pm: "irvinebroque" },
 	"workers ai": {},
-	"workers-builds": { em: "dcartertwo", pm: "yomna-shousha" },
+	"workers-builds": {
+		director: "dcartertwo",
+		pm: "yomna-shousha",
+		em: "robertsapunarich",
+	},
 	workflows: { em: "bruxodasilva", pm: "jonesphillip" },
 	wrangler: { em: "lrapoport-cf", pm: "mattietk" },
 };
