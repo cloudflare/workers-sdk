@@ -78,7 +78,6 @@ import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 import type { AssetsOptions } from "../assets";
-import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 import type { Entry } from "../deployment-bundle/entry";
 import type { PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
@@ -93,6 +92,7 @@ import type {
 	CustomDomainRoute,
 	RawConfig,
 	Route,
+	WorkerMetadataBinding,
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "@cloudflare/workers-utils";
